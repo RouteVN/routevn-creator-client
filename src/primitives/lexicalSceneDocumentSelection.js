@@ -5,9 +5,42 @@ import {
   $isTextNode,
   $setSelection,
 } from "lexical";
+import { EDITOR_CARET_TEXT } from "../internal/ui/sceneEditorLexical/contentModel.js";
 
 const REFERENCE_CHIP_SELECTOR =
   '[data-rvn-mention="true"][data-rvn-reference-key]';
+const REFERENCE_NODE_TYPE = "rvn-mention";
+
+const isReferenceTextNode = (node) => {
+  return $isTextNode(node) && node.getType?.() === REFERENCE_NODE_TYPE;
+};
+
+const getLogicalText = (text) => {
+  return String(text ?? "").replaceAll(EDITOR_CARET_TEXT, "");
+};
+
+const getLogicalTextLength = (text) => {
+  return getLogicalText(text).length;
+};
+
+const getTextNodeOffsetFromLogicalOffset = (text, targetOffset) => {
+  const normalizedTargetOffset = Math.max(0, Number(targetOffset) || 0);
+  let logicalOffset = 0;
+
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === EDITOR_CARET_TEXT) {
+      continue;
+    }
+
+    if (logicalOffset >= normalizedTargetOffset) {
+      return index;
+    }
+
+    logicalOffset += 1;
+  }
+
+  return text.length;
+};
 
 export const walkTextUnits = (node, visitor) => {
   if (
@@ -15,6 +48,7 @@ export const walkTextUnits = (node, visitor) => {
     node.matches?.(REFERENCE_CHIP_SELECTOR)
   ) {
     return visitor({
+      type: "reference",
       length: node.textContent?.length ?? 0,
       setRangeAtOffset: (range, offset) => {
         const parent = node.parentNode;
@@ -27,17 +61,21 @@ export const walkTextUnits = (node, visitor) => {
   }
 
   if (node.nodeType === Node.TEXT_NODE) {
+    const text = node.textContent ?? "";
     return visitor({
-      length: node.textContent.length,
+      type: "text",
+      length: getLogicalTextLength(text),
       setRangeAtOffset: (range, offset) => {
-        range.setStart(node, offset);
-        range.setEnd(node, offset);
+        const textOffset = getTextNodeOffsetFromLogicalOffset(text, offset);
+        range.setStart(node, textOffset);
+        range.setEnd(node, textOffset);
       },
     });
   }
 
   if (node.nodeType === Node.ELEMENT_NODE && node.nodeName === "BR") {
     return visitor({
+      type: "line-break",
       length: 1,
       setRangeAtOffset: (range, offset) => {
         const parent = node.parentNode;
@@ -58,29 +96,44 @@ export const walkTextUnits = (node, visitor) => {
   return false;
 };
 
+const collectTextUnits = (element) => {
+  const units = [];
+  walkTextUnits(element, (unit) => {
+    units.push(unit);
+    return false;
+  });
+  return units;
+};
+
 export const createCollapsedRangeAtPosition = (element, targetPosition) => {
   const range = document.createRange();
   const normalizedTargetPosition = Math.max(0, Number(targetPosition) || 0);
+  const units = collectTextUnits(element);
   let currentPosition = 0;
   let lastUnit;
   let actualPosition = 0;
   let foundNode = false;
 
-  walkTextUnits(element, (unit) => {
+  for (let index = 0; index < units.length; index += 1) {
+    const unit = units[index];
     const nodeLength = unit.length;
     lastUnit = unit;
+    const unitEnd = currentPosition + nodeLength;
 
-    if (currentPosition + nodeLength >= normalizedTargetPosition) {
+    if (
+      normalizedTargetPosition < unitEnd ||
+      (normalizedTargetPosition === unitEnd &&
+        (unit.type !== "reference" || units[index + 1]?.type !== "text"))
+    ) {
       const offset = normalizedTargetPosition - currentPosition;
       unit.setRangeAtOffset(range, offset);
       actualPosition = normalizedTargetPosition;
       foundNode = true;
-      return true;
+      break;
     }
 
-    currentPosition += nodeLength;
-    return false;
-  });
+    currentPosition = unitEnd;
+  }
 
   if (!foundNode && lastUnit) {
     lastUnit.setRangeAtOffset(range, lastUnit.length);
@@ -190,7 +243,7 @@ export const getLexicalTextLength = (node) => {
   }
 
   if ($isTextNode(node)) {
-    return node.getTextContentSize?.() ?? node.getTextContent().length;
+    return getLogicalTextLength(node.getTextContent());
   }
 
   if ($isElementNode(node)) {
@@ -244,11 +297,27 @@ export const resolvePointAtOffset = (node, offset) => {
     };
   }
 
+  if (isReferenceTextNode(node)) {
+    const parent = node.getParent();
+    if (!$isElementNode(parent)) {
+      return undefined;
+    }
+
+    return {
+      key: parent.getKey(),
+      offset: node.getIndexWithinParent() + (targetOffset > 0 ? 1 : 0),
+      type: "element",
+    };
+  }
+
   if ($isTextNode(node)) {
     const textLength = getLexicalTextLength(node);
     return {
       key: node.getKey(),
-      offset: Math.min(targetOffset, textLength),
+      offset: getTextNodeOffsetFromLogicalOffset(
+        node.getTextContent(),
+        Math.min(targetOffset, textLength),
+      ),
       type: "text",
     };
   }
@@ -260,7 +329,8 @@ export const resolvePointAtOffset = (node, offset) => {
   const children = node.getChildren();
   let remainingOffset = targetOffset;
 
-  for (const childNode of children) {
+  for (let index = 0; index < children.length; index += 1) {
+    const childNode = children[index];
     const childLength = getLexicalTextLength(childNode);
     if ($isLineBreakNode(childNode) && remainingOffset <= childLength) {
       return {
@@ -269,6 +339,15 @@ export const resolvePointAtOffset = (node, offset) => {
           childNode.getIndexWithinParent() + (remainingOffset > 0 ? 1 : 0),
         type: "element",
       };
+    }
+
+    if (
+      isReferenceTextNode(childNode) &&
+      remainingOffset === childLength &&
+      $isTextNode(children[index + 1]) &&
+      !isReferenceTextNode(children[index + 1])
+    ) {
+      return resolvePointAtOffset(children[index + 1], 0);
     }
 
     if (remainingOffset <= childLength) {

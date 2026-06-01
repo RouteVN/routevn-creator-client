@@ -25,6 +25,8 @@ import {
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 
+const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
+
 const appendMissingIds = (orderedIds, allIds) => {
   const seen = new Set();
   const result = [];
@@ -1685,10 +1687,11 @@ export const selectViewData = ({ state }) => {
       index,
       name: section.name || `Section ${index + 1}`,
       isSelected: section.id === state.selectedSectionId,
+      selectionActive: section.id === state.selectedSectionId,
       selectedLineId:
         section.id === state.selectedSectionId
-          ? state.selectedLineId
-          : undefined,
+          ? (state.selectedLineId ?? INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID)
+          : INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID,
       editorKey: `document-${section.id}-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
       documentEditorLines: sectionLines,
       documentLineDecorations: buildSceneDocumentLineDecorations({

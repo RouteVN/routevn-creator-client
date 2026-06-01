@@ -4,7 +4,7 @@ const createDefaultValuesFromProps = (props = {}) => {
   const source = props.defaultValues ?? {};
 
   return {
-    name: source.name ?? "Sprite",
+    name: source.name ?? "Image",
   };
 };
 

@@ -482,7 +482,7 @@ const getTextLengthOfNode = (node) => {
   }
 
   if ($isTextNode(node)) {
-    return node.getTextContentSize?.() ?? node.getTextContent().length;
+    return normalizeDialogueText(node.getTextContent()).length;
   }
 
   if ($isElementNode(node)) {

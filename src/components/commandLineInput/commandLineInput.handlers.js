@@ -36,7 +36,7 @@ const dispatchTemporaryPresentationStateChange = (deps) => {
     return;
   }
 
-  const form = store.selectFormData();
+  const form = store.selectFormDataWithEditingDraft();
   dispatchEvent(
     new CustomEvent("temporary-presentation-state-change", {
       detail: {
@@ -62,8 +62,6 @@ export const handleAfterMount = async (deps) => {
   await projectService.ensureRepository();
   const repositoryState = projectService.getRepositoryState();
   store.setRepositoryData({
-    scenes: repositoryState.scenes,
-    animations: repositoryState.animations,
     variables: repositoryState.variables,
   });
   store.hydrateForm({
@@ -78,26 +76,15 @@ export const handleFormChange = (deps, payload) => {
   const { props, render, store } = deps;
   const { name, value } = payload._event.detail;
 
-  if (name === "resourceId") {
-    store.setSelectedResourceId({
-      resourceId: value,
-      layouts: getLayouts({ props }),
-      layoutsData: getLayoutsData({ props }),
-    });
-  } else {
-    store.updateSettingsForm({ field: name, value });
-    if (name === "submitActionType" && value === "nextLine") {
-      store.updateSettingsForm({ field: "submitSceneId", value: "" });
-      store.updateSettingsForm({ field: "submitSectionId", value: "" });
-      store.updateSettingsForm({
-        field: "submitTransitionAnimationId",
-        value: "",
-      });
-    } else if (name === "submitSceneId") {
-      store.updateSettingsForm({ field: "submitSectionId", value: "" });
-    }
+  if (name !== "resourceId") {
+    return;
   }
 
+  store.setSelectedResourceId({
+    resourceId: value,
+    layouts: getLayouts({ props }),
+    layoutsData: getLayoutsData({ props }),
+  });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };
@@ -121,12 +108,65 @@ export const handleFieldConfigChange = (deps, payload) => {
   dispatchTemporaryPresentationStateChange(deps);
 };
 
+export const handleFieldRowClick = (deps, payload) => {
+  const { render, store } = deps;
+  const field = payload._event.currentTarget.dataset?.field;
+
+  if (!field) {
+    return;
+  }
+
+  store.startEditingField({ field });
+  render();
+};
+
+export const handleFieldEditChange = (deps, payload) => {
+  const { render, store } = deps;
+  const name = payload._event.currentTarget.dataset?.name;
+
+  if (!name) {
+    return;
+  }
+
+  store.updateEditFieldConfig({
+    name,
+    value: getEventValue(payload),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleCancelFieldEditClick = (deps, payload = {}) => {
+  payload._event?.stopPropagation?.();
+  const { render, store } = deps;
+
+  store.cancelEditingField();
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleSaveFieldEditClick = (deps, payload = {}) => {
+  payload._event?.stopPropagation?.();
+  const { appService, render, store } = deps;
+
+  if (!store.selectCanSaveEditField()) {
+    appService.showAlert({
+      message: "Choose a string variable for this input field.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  store.saveEditingField();
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
 export const handleSubmitClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { appService, dispatchEvent, store } = deps;
   const resourceId = store.selectSelectedResourceId();
   const fieldRows = store.selectFieldRows();
-  const settingsForm = store.selectSettingsForm();
 
   if (!resourceId) {
     appService.showAlert({
@@ -152,17 +192,6 @@ export const handleSubmitClick = (deps, payload) => {
     return;
   }
 
-  if (
-    settingsForm.submitActionType === "sectionTransition" &&
-    (!settingsForm.submitSceneId || !settingsForm.submitSectionId)
-  ) {
-    appService.showAlert({
-      message: "Please select a scene and section for the submit action.",
-      title: "Warning",
-    });
-    return;
-  }
-
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
@@ -173,7 +202,7 @@ export const handleSubmitClick = (deps, payload) => {
 };
 
 export const handleBreadcumbClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, render, store } = deps;
 
   if (payload._event.detail.id === "actions") {
     dispatchEvent(
@@ -181,5 +210,9 @@ export const handleBreadcumbClick = (deps, payload) => {
         detail: {},
       }),
     );
+  } else if (payload._event.detail.id === "input") {
+    store.cancelEditingField();
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
   }
 };

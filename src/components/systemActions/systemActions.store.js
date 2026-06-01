@@ -5,6 +5,7 @@ import {
 } from "../../internal/runtimeActions.js";
 import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
+import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
 
 export const createInitialState = () => ({
   mode: "actions",
@@ -344,6 +345,27 @@ const truncatePreviewText = (value = "", maxLength = 36) => {
 
 const isPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+};
+
+const toPreviewLabel = (value, fallback = "") => {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (isPlainObject(value)) {
+    const candidate =
+      value.label ?? value.name ?? value.field ?? value.id ?? value.value;
+
+    return candidate === undefined
+      ? fallback
+      : toPreviewLabel(candidate, fallback);
+  }
+
+  return fallback;
 };
 
 const resolveDialogueActionForPreview = ({
@@ -794,29 +816,46 @@ export const selectActionsData = ({ props, state }) => {
   if (actions.form) {
     actionsObject.form = actions.form;
     const variableItems = repositoryStateData.variables?.items || {};
+    const layout = layoutsItems[actions.form.resourceId];
+    const inputFieldItems = getLayoutInputFieldItems({
+      layout,
+      layoutId: actions.form.resourceId,
+      layoutsData: layoutsHierarchy,
+    });
+    const inputFieldsById = new Map(
+      inputFieldItems.map((field) => [field.field, field]),
+    );
     const fields =
       actions.form.fields &&
       typeof actions.form.fields === "object" &&
       !Array.isArray(actions.form.fields)
         ? actions.form.fields
         : {};
-    const fieldItems = Object.entries(fields).map(([fieldId, field]) => {
+    const fieldItems = Object.entries(fields).map(([fieldId, field], index) => {
       const variableId = field?.variableId;
       const variable = variableItems[variableId];
+      const inputField = inputFieldsById.get(fieldId) ?? inputFieldItems[index];
+      const fieldLabel = toPreviewLabel(
+        inputField?.label ?? inputField?.field ?? fieldId,
+        fieldId,
+      );
+      const variableName = toPreviewLabel(
+        variable?.name ?? variableId,
+        "No variable",
+      );
 
       return {
         field: fieldId,
+        fieldLabel,
         variableId,
-        variableName: variable?.name ?? variableId ?? "No variable",
+        variableName,
+        summary: `${fieldLabel}: ${variableName}`,
       };
     });
 
     preview.form = {
-      layout: layoutsItems[actions.form.resourceId],
-      layoutName:
-        layoutsItems[actions.form.resourceId]?.name ??
-        actions.form.resourceId ??
-        "No layout",
+      layout,
+      layoutName: layout?.name ?? actions.form.resourceId ?? "No layout",
       fields: fieldItems,
       fieldCount: fieldItems.length,
       submitActionCount: countActions(actions.form.submitActions),

@@ -95,8 +95,8 @@ export const createAppShellService = ({
       return getCurrentProjectId();
     },
 
-    setPayload(payload) {
-      router.setPayload(payload);
+    setPayload(payload, options) {
+      router.setPayload(payload, options);
     },
 
     back() {

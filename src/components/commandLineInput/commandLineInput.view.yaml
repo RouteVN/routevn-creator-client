@@ -9,51 +9,79 @@ refs:
         handler: handleFormChange
       form-change:
         handler: handleFormChange
-  fieldConfig*:
+  fieldRow*:
+    eventListeners:
+      click:
+        handler: handleFieldRowClick
+  fieldEdit*:
     eventListeners:
       value-change:
-        handler: handleFieldConfigChange
+        handler: handleFieldEditChange
       value-input:
-        handler: handleFieldConfigChange
+        handler: handleFieldEditChange
+  cancelFieldEditButton:
+    eventListeners:
+      click:
+        handler: handleCancelFieldEditClick
+  saveFieldEditButton:
+    eventListeners:
+      click:
+        handler: handleSaveFieldEditClick
   submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
 template:
   - rtgl-view w=f h=f p=lg:
-      - rtgl-view d=h g=md:
-          - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-      - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-          - rtgl-form#form key=${formKey} :form=${form} :defaultValues=${defaultValues} :context=${context} w=f:
-              - rtgl-view slot=${inputFieldsSlot} g=md w=f:
-                  - $if hasFields:
-                      - $for fieldRow, index in fieldRows:
-                          - rtgl-view d=v g=md p=md bgc=mu br=md w=f:
-                              - rtgl-view d=h av=c w=f g=sm:
-                                  - rtgl-text s=sm w=1fg: ${fieldRow.label}
-                                  - rtgl-text s=xs c=mu-fg: ${fieldRow.field}
-                              - rtgl-view d=v g=sm w=f:
-                                  - rtgl-text s=sm c=mu-fg: Variable
-                                  - rtgl-select#fieldConfigVariable${index} data-field="${fieldRow.field}" data-name=variableId w=f :selectedValue=${fieldRow.variableId} :options=${fieldVariableOptions} placeholder="Choose a string variable...": null
-                              - rtgl-view d=h g=md w=f wrap:
-                                  - rtgl-view d=v g=xs w=150:
-                                      - rtgl-text s=sm c=mu-fg: Required
-                                      - rtgl-segmented-control#fieldConfigRequired${index} data-field="${fieldRow.field}" data-name=required w=f no-clear :selectedValue=${fieldRow.required} :options=${booleanOptions}: null
-                                  - rtgl-view d=v g=xs w=150:
-                                      - rtgl-text s=sm c=mu-fg: Trim
-                                      - rtgl-segmented-control#fieldConfigTrim${index} data-field="${fieldRow.field}" data-name=trim w=f no-clear :selectedValue=${fieldRow.trim} :options=${booleanOptions}: null
-                                  - rtgl-view d=v g=xs w=150:
-                                      - rtgl-text s=sm c=mu-fg: Multiline
-                                      - rtgl-segmented-control#fieldConfigMultiline${index} data-field="${fieldRow.field}" data-name=multiline w=f no-clear :selectedValue=${fieldRow.multiline} :options=${booleanOptions}: null
-                              - rtgl-view d=h g=md w=f wrap:
-                                  - rtgl-view d=v g=xs w=1fg:
-                                      - rtgl-text s=sm c=mu-fg: Placeholder
-                                      - rtgl-input#fieldConfigPlaceholder${index} data-field="${fieldRow.field}" data-name=placeholder w=f value=${fieldRow.placeholder}: null
-                                  - rtgl-view d=v g=xs w=150:
-                                      - rtgl-text s=sm c=mu-fg: Max Length
-                                      - rtgl-input#fieldConfigMaxLength${index} data-field="${fieldRow.field}" data-name=maxLength type=number min=0 step=1 w=f value=${fieldRow.maxLength}: null
-                    $else:
-                      - rtgl-view p=md bgc=mu br=md w=f:
-                          - rtgl-text s=sm c=mu-fg: No input fields found.
-      - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-          - rtgl-button#submitButton ?disabled=${submitDisabled}: Submit
+      - $if mode == "list":
+          - 'rtgl-view wh=f style="min-height: 0;"':
+              - rtgl-view d=h g=md:
+                  - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
+              - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+                  - rtgl-form#form key=${formKey} :form=${form} :defaultValues=${defaultValues} :context=${context} w=f:
+                      - rtgl-view slot=${inputFieldsSlot} g=md w=f:
+                          - $if hasFields:
+                              - $for fieldRow, index in fieldRows:
+                                  - rtgl-view#fieldRow${index} data-field="${fieldRow.field}" d=h av=c w=f g=md p=sm bgc=mu br=sm cur=pointer:
+                                      - rtgl-view d=v g=xs w=1fg:
+                                          - rtgl-view d=h av=c w=f g=sm:
+                                              - rtgl-text s=sm w=1fg: ${fieldRow.label}
+                                              - rtgl-text s=xs c=mu-fg: ${fieldRow.field}
+                                          - rtgl-text s=xs c=mu-fg: ${fieldRow.summary}
+                            $else:
+                              - rtgl-view p=md bgc=mu br=md w=f:
+                                  - rtgl-text s=sm c=mu-fg: No input fields found.
+              - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+                  - rtgl-button#submitButton ?disabled=${submitDisabled}: Submit
+        $elif mode == "editField":
+          - 'rtgl-view wh=f style="min-height: 0;"':
+              - rtgl-view d=h g=md:
+                  - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
+              - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+                  - rtgl-view d=v g=lg w=f:
+                      - rtgl-view d=v g=xs w=f:
+                          - rtgl-text s=sm: ${editFieldForm.label}
+                          - rtgl-text s=xs c=mu-fg: ${editFieldForm.field}
+                      - rtgl-view d=v g=sm w=f:
+                          - rtgl-text s=sm c=mu-fg: Variable
+                          - rtgl-select#fieldEditVariable data-name=variableId w=f no-clear :selectedValue=${editFieldForm.variableId} :options=${fieldVariableOptions} placeholder="Choose a string variable...": null
+                      - rtgl-view d=h g=md w=f wrap:
+                          - rtgl-view d=v g=xs w=150:
+                              - rtgl-text s=sm c=mu-fg: Required
+                              - rtgl-segmented-control#fieldEditRequired data-name=required w=f no-clear :selectedValue=${editFieldForm.required} :options=${booleanOptions}: null
+                          - rtgl-view d=v g=xs w=150:
+                              - rtgl-text s=sm c=mu-fg: Trim
+                              - rtgl-segmented-control#fieldEditTrim data-name=trim w=f no-clear :selectedValue=${editFieldForm.trim} :options=${booleanOptions}: null
+                          - rtgl-view d=v g=xs w=150:
+                              - rtgl-text s=sm c=mu-fg: Multiline
+                              - rtgl-segmented-control#fieldEditMultiline data-name=multiline w=f no-clear :selectedValue=${editFieldForm.multiline} :options=${booleanOptions}: null
+                      - rtgl-view d=h g=md w=f wrap:
+                          - rtgl-view d=v g=xs w=1fg:
+                              - rtgl-text s=sm c=mu-fg: Placeholder
+                              - rtgl-input#fieldEditPlaceholder data-name=placeholder w=f value=${editFieldForm.placeholder}: null
+                          - rtgl-view d=v g=xs w=150:
+                              - rtgl-text s=sm c=mu-fg: Max Length
+                              - rtgl-input#fieldEditMaxLength data-name=maxLength type=number min=0 step=1 w=f value=${editFieldForm.maxLength}: null
+              - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+                  - rtgl-button#cancelFieldEditButton v=ol: Cancel
+                  - rtgl-button#saveFieldEditButton ?disabled=${!canSaveEditField}: Save Field

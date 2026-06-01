@@ -2,10 +2,13 @@ import {
   $createParagraphNode,
   $createTextNode,
   $getRoot,
+  $getSelection,
+  $setSelection,
   createEditor,
 } from "lexical";
 import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
+import { EDITOR_CARET_TEXT } from "../../src/internal/ui/sceneEditorLexical/contentModel.js";
 
 const installDomGlobals = () => {
   const dom = new JSDOM("<!doctype html><html><body></body></html>");
@@ -41,6 +44,26 @@ const installDomGlobals = () => {
     }
 
     dom.window.close();
+  };
+};
+
+const installAnimationFrameQueue = () => {
+  const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const callbacks = [];
+  globalThis.requestAnimationFrame = vi.fn((callback) => {
+    callbacks.push(callback);
+    return callbacks.length;
+  });
+
+  return {
+    callbacks,
+    restore() {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+    },
   };
 };
 
@@ -81,6 +104,10 @@ describe("lexical scene document editor line editing", () => {
         configurable: true,
         value: true,
       });
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.scheduleRender = vi.fn();
       editorElement.dispatchSelectedLineChanged = vi.fn();
@@ -108,7 +135,7 @@ describe("lexical scene document editor line editing", () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(event.stopPropagation).toHaveBeenCalledTimes(1);
       expect(editorElement.state.mode).toBe("text-editor");
-      expect(calls).toEqual(["focus", "restore", "restore"]);
+      expect(calls).toEqual(["focus", "restore", "restore", "restore"]);
       expect(editorElement.restoreLineSelection).toHaveBeenCalledWith({
         lineId: "line-1",
         cursorPosition: -1,
@@ -438,6 +465,11 @@ describe("lexical scene document editor line editing", () => {
 
   it("focuses before restoring selection in focusLine recovery", async () => {
     const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
 
     try {
       const { LexicalSceneDocumentEditorElement } = await import(
@@ -451,6 +483,10 @@ describe("lexical scene document editor line editing", () => {
       Object.defineProperty(editorElement, "dataset", {
         configurable: true,
         value: {},
+      });
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
       });
       editorElement.state = {
         mode: "block",
@@ -473,13 +509,122 @@ describe("lexical scene document editor line editing", () => {
       });
 
       expect(didFocus).toBe(true);
-      expect(calls).toEqual(["focus", "restore"]);
+      expect(calls).toEqual(["focus", "restore", "focus", "restore"]);
       expect(editorElement.state.mode).toBe("text-editor");
       expect(editorElement.state.selectedLineId).toBe("line-1");
       expect(editorElement.markProgrammaticFocusRestore).toHaveBeenCalledTimes(
-        2,
+        4,
       );
     } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("ignores stale async focus callbacks after a newer caret restore starts", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const animationFrameCallbacks = [];
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      animationFrameCallbacks.push(callback);
+      return animationFrameCallbacks.length;
+    });
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.focusRestoreSequenceId = 0;
+      editorElement.programmaticFocusRestoreUntil = 0;
+      editorElement.isEditorActiveElement = vi.fn(() => true);
+      editorElement.focus = vi.fn();
+      editorElement.restoreLineSelection = vi.fn(() => true);
+
+      editorElement.restoreLineSelectionAfterLexicalFocus({
+        lineId: "line-1",
+        cursorPosition: 99,
+      });
+      editorElement.restoreLineSelectionAfterLexicalFocus({
+        lineId: "line-1",
+        cursorPosition: 12,
+      });
+
+      animationFrameCallbacks[0]();
+      animationFrameCallbacks[1]();
+
+      expect(editorElement.restoreLineSelection).toHaveBeenCalledTimes(1);
+      expect(editorElement.restoreLineSelection).toHaveBeenCalledWith({
+        lineId: "line-1",
+        cursorPosition: 12,
+      });
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("does not overwrite a native caret that moved before async focus restore", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const animationFrameCallbacks = [];
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      animationFrameCallbacks.push(callback);
+      return animationFrameCallbacks.length;
+    });
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.focusRestoreSequenceId = 0;
+      editorElement.programmaticFocusRestoreUntil = 0;
+      editorElement.isEditorActiveElement = vi.fn(() => true);
+      editorElement.getNativeLineSelectionContext = vi.fn(() => ({
+        lineId: "line-1",
+        start: 12,
+        end: 12,
+      }));
+      editorElement.focus = vi.fn();
+      editorElement.restoreLineSelection = vi.fn(() => true);
+
+      editorElement.restoreLineSelectionAfterLexicalFocus({
+        lineId: "line-1",
+        cursorPosition: 99,
+      });
+
+      animationFrameCallbacks[0]();
+
+      expect(editorElement.restoreLineSelection).not.toHaveBeenCalled();
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
       restoreDomGlobals();
     }
   });
@@ -915,6 +1060,11 @@ describe("lexical scene document editor line editing", () => {
           end: 0,
         })
         .mockReturnValueOnce({
+          lineId: "line-2",
+          start: 0,
+          end: 0,
+        })
+        .mockReturnValueOnce({
           lineId: "line-1",
           start: 3,
           end: 3,
@@ -947,6 +1097,215 @@ describe("lexical scene document editor line editing", () => {
           mode: "text-editor",
         },
       );
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("emits text-mode boundary navigation when ArrowDown cannot move past the last line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const animationFrameCallbacks = [];
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      animationFrameCallbacks.push(callback);
+      return animationFrameCallbacks.length;
+    });
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-2",
+        lines: [{ id: "line-1" }, { id: "line-2" }],
+      };
+      editorElement.getNativeLineSelectionContext = vi.fn(() => ({
+        lineId: "line-2",
+        start: 6,
+        end: 6,
+      }));
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation({
+        key: "ArrowDown",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        isComposing: false,
+      });
+
+      while (animationFrameCallbacks.length > 0) {
+        const callback = animationFrameCallbacks.shift();
+        callback();
+      }
+
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledOnce();
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-2",
+        {
+          cursorPosition: 6,
+          isCollapsed: true,
+          mode: "text-editor",
+          navigationDirection: "down",
+          isBoundaryNavigation: true,
+        },
+      );
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("coalesces held ArrowDown repeats so boundary navigation can finish", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const animationFrameCallbacks = [];
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      animationFrameCallbacks.push(callback);
+      return animationFrameCallbacks.length;
+    });
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-2",
+        lines: [{ id: "line-1" }, { id: "line-2" }],
+      };
+      editorElement.verticalNavigationSelectionSyncId = 0;
+      editorElement.getNativeLineSelectionContext = vi.fn(() => ({
+        lineId: "line-2",
+        start: 6,
+        end: 6,
+      }));
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      const event = {
+        key: "ArrowDown",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        isComposing: false,
+      };
+
+      editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation(
+        event,
+      );
+
+      for (let index = 0; index < 8; index += 1) {
+        editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation({
+          ...event,
+          repeat: true,
+        });
+        const callback = animationFrameCallbacks.shift();
+        if (callback) {
+          callback();
+        }
+        if (editorElement.dispatchSelectedLineChanged.mock.calls.length > 0) {
+          break;
+        }
+      }
+
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledOnce();
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-2",
+        {
+          cursorPosition: 6,
+          isCollapsed: true,
+          mode: "text-editor",
+          navigationDirection: "down",
+          isBoundaryNavigation: true,
+        },
+      );
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("does not emit text-mode boundary navigation when ArrowDown moves within the last line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const animationFrameCallbacks = [];
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      animationFrameCallbacks.push(callback);
+      return animationFrameCallbacks.length;
+    });
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-2",
+        lines: [{ id: "line-1" }, { id: "line-2" }],
+      };
+      editorElement.getNativeLineSelectionContext = vi
+        .fn()
+        .mockReturnValueOnce({
+          lineId: "line-2",
+          start: 6,
+          end: 6,
+        })
+        .mockReturnValueOnce({
+          lineId: "line-2",
+          start: 12,
+          end: 12,
+        });
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation({
+        key: "ArrowDown",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        isComposing: false,
+      });
+
+      animationFrameCallbacks[0]();
+
+      expect(editorElement.dispatchSelectedLineChanged).not.toHaveBeenCalled();
     } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
@@ -1855,6 +2214,1229 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("keeps slash mention popover modal before opening", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const menu = document.createElement("div");
+      const menuShadow = menu.attachShadow({ mode: "open" });
+      const popover = document.createElement("rtgl-popover");
+      const popoverShadow = popover.attachShadow({ mode: "open" });
+      const dialog = document.createElement("dialog");
+      const renderCalls = [];
+
+      popoverShadow.append(dialog);
+      menu.items = [];
+      menu.open = false;
+      menu.render = vi.fn(() => {
+        renderCalls.push({
+          open: menu.open,
+          noOverlay: popover.hasAttribute("no-overlay"),
+        });
+        if (!menuShadow.querySelector("rtgl-popover")) {
+          menuShadow.append(popover);
+        }
+      });
+
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.mentionMenuFocusRestoreTimerId = undefined;
+      editorElement.refs = { mentionMenu: menu };
+      editorElement.state = {
+        mentionMenu: {
+          isOpen: true,
+          query: "",
+          items: [{ id: "character-1", label: "Alex" }],
+          left: 24,
+          top: 48,
+        },
+      };
+
+      editorElement.renderMentionMenu();
+
+      expect(renderCalls).toEqual([
+        { open: false, noOverlay: false },
+        { open: true, noOverlay: false },
+      ]);
+      expect(popover.hasAttribute("no-overlay")).toBe(false);
+      expect(dialog.getAttribute("tabindex")).toBe("-1");
+
+      editorElement.clearMentionMenuFocusRestore();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("removes stale no-overlay from the slash mention popover", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const popover = document.createElement("rtgl-popover");
+      const popoverShadow = popover.attachShadow({ mode: "open" });
+      const dialog = document.createElement("dialog");
+
+      popover.setAttribute("no-overlay", "");
+      popoverShadow.append(dialog);
+      editorElement.getMentionMenuPopover = vi.fn(() => popover);
+
+      editorElement.syncMentionMenuPopover();
+
+      expect(popover.hasAttribute("no-overlay")).toBe(false);
+      expect(dialog.getAttribute("tabindex")).toBe("-1");
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("does not re-render an already matching slash mention menu", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const popover = document.createElement("rtgl-popover");
+
+      editorElement.state = {
+        mentionMenu: {
+          isOpen: true,
+          query: "",
+          items: [
+            {
+              id: "character-1",
+              label: "Alex",
+              variableType: "character",
+            },
+          ],
+          left: 193,
+          top: 193,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          open: true,
+          items: [
+            {
+              id: "mention:character-1",
+              type: "item",
+              label: "Alex",
+              suffixText: "character",
+            },
+          ],
+          x: "193",
+          y: "193",
+          place: "bs",
+          w: "260",
+          h: "240",
+          render: vi.fn(),
+        },
+      };
+      editorElement.getMentionMenuPopover = vi.fn(() => popover);
+      editorElement.syncMentionMenuPopover = vi.fn();
+
+      editorElement.renderMentionMenu();
+
+      expect(editorElement.refs.mentionMenu.render).not.toHaveBeenCalled();
+      expect(editorElement.syncMentionMenuPopover).toHaveBeenCalledTimes(1);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("closes and dismisses the current slash mention trigger from the close event", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.state = {
+        mentionMenu: {
+          isOpen: true,
+          query: "",
+          nodeKey: "node-1",
+          startOffset: 1,
+          endOffset: 2,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          items: [{ id: "character-1", label: "Alex" }],
+          open: true,
+          render: vi.fn(),
+        },
+      };
+      editorElement.mentionMenuFocusRestoreTimerId = undefined;
+      editorElement.hasActiveMentionTrigger = vi.fn(() => true);
+      editorElement.syncMentionMenuPopover = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+
+      editorElement.handleMentionMenuClose();
+
+      expect(editorElement.refs.mentionMenu.open).toBe(false);
+      expect(editorElement.state.mentionMenu.isOpen).toBe(false);
+      expect(editorElement.dismissedMentionTrigger).toEqual({
+        nodeKey: "node-1",
+        startOffset: 1,
+        endOffset: 2,
+        query: "",
+      });
+      expect(editorElement.scheduleRender).not.toHaveBeenCalled();
+      expect(editorElement.syncMentionMenuPopover).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("restores the slash mention trigger caret when the overlay closes the menu", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-slash-mention-overlay-close-selection-test",
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let firstLineKey;
+      let secondLineKey;
+      let triggerTextKey;
+
+      rootElement.tabIndex = 0;
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      Object.defineProperty(editorElement, "dataset", {
+        configurable: true,
+        value: {},
+      });
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.refs = {
+        editor: rootElement,
+        surface: {
+          dataset: {},
+        },
+        mentionMenu: {
+          items: [{ id: "character-1", label: "Alex" }],
+          open: true,
+          render: vi.fn(),
+        },
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const firstLine = $createParagraphNode();
+          const secondLine = $createParagraphNode();
+          const firstText = $createTextNode("first");
+          const prefixText = $createTextNode("say ");
+          const triggerText = $createTextNode("/a");
+          const suffixText = $createTextNode(" later");
+
+          triggerText.setStyle("--rvn-test-trigger: 1;");
+          root.clear();
+          firstLine.append(firstText);
+          secondLine.append(prefixText, triggerText, suffixText);
+          root.append(firstLine, secondLine);
+          firstLineKey = firstLine.getKey();
+          secondLineKey = secondLine.getKey();
+          triggerTextKey = triggerText.getKey();
+          editorElement.lineMetaByKey.set(firstLineKey, {
+            id: "line-1",
+          });
+          editorElement.lineMetaByKey.set(secondLineKey, {
+            id: "line-2",
+          });
+          editorElement.lineKeyById.set("line-1", firstLineKey);
+          editorElement.lineKeyById.set("line-2", secondLineKey);
+          firstText.select(0, 0);
+        },
+        { discrete: true },
+      );
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines: [],
+        selectedLineId: "line-1",
+        mentionTargets: [{ id: "character-1", label: "Alex" }],
+        mentionMenu: {
+          isOpen: true,
+          query: "a",
+          items: [{ id: "character-1", label: "Alex" }],
+          highlightedIndex: 0,
+          nodeKey: triggerTextKey,
+          lineId: "line-2",
+          startOffset: 0,
+          endOffset: 2,
+        },
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.mentionMenuFocusRestoreTimerId = undefined;
+      editorElement.hasActiveMentionTrigger = vi.fn(() => false);
+      editorElement.scheduleRender = vi.fn();
+
+      editorElement.handleMentionMenuClose();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(editorElement.refs.mentionMenu.open).toBe(false);
+      expect(editorElement.state.selectedLineId).toBe("line-2");
+      expect(editorElement.getCurrentSelectionSnapshot()).toEqual({
+        lineId: "line-2",
+        start: 6,
+        end: 6,
+      });
+      expect(editorElement.dismissedMentionTrigger).toEqual({
+        nodeKey: triggerTextKey,
+        lineId: "line-2",
+        startOffset: 0,
+        endOffset: 2,
+        query: "a",
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("prefers the live slash trigger over stale menu state when closing", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-slash-mention-live-close-selection-test",
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const textValue = "say / first /";
+      let lineKey;
+      let textKey;
+
+      rootElement.tabIndex = 0;
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      Object.defineProperty(editorElement, "dataset", {
+        configurable: true,
+        value: {},
+      });
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.refs = {
+        editor: rootElement,
+        surface: {
+          dataset: {},
+        },
+        mentionMenu: {
+          items: [{ id: "character-1", label: "Alex" }],
+          open: true,
+          render: vi.fn(),
+        },
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const text = $createTextNode(textValue);
+
+          text.setStyle("--rvn-test-trigger: 1;");
+          root.clear();
+          line.append(text);
+          root.append(line);
+          lineKey = line.getKey();
+          textKey = text.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+          text.select(textValue.length, textValue.length);
+        },
+        { discrete: true },
+      );
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines: [],
+        selectedLineId: "line-1",
+        mentionTargets: [{ id: "character-1", label: "Alex" }],
+        mentionMenu: {
+          isOpen: true,
+          query: "",
+          items: [{ id: "character-1", label: "Alex" }],
+          highlightedIndex: 0,
+          nodeKey: textKey,
+          lineId: "line-1",
+          startOffset: 4,
+          endOffset: 5,
+        },
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.mentionMenuFocusRestoreTimerId = undefined;
+      editorElement.scheduleRender = vi.fn();
+
+      editorElement.handleMentionMenuClose();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(editorElement.state.selectedLineId).toBe("line-1");
+      expect(editorElement.getCurrentSelectionSnapshot()).toEqual({
+        lineId: "line-1",
+        start: textValue.length,
+        end: textValue.length,
+      });
+      expect(editorElement.dismissedMentionTrigger).toEqual({
+        nodeKey: textKey,
+        lineId: "line-1",
+        startOffset: textValue.length - 1,
+        endOffset: textValue.length,
+        query: "",
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("dismisses the current slash mention trigger when blur closes the menu", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-1",
+        mentionMenu: {
+          isOpen: true,
+          query: "",
+          nodeKey: "node-1",
+          startOffset: 1,
+          endOffset: 2,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          items: [{ id: "character-1", label: "Alex" }],
+          open: true,
+          render: vi.fn(),
+        },
+      };
+      editorElement.isEditorActiveElement = vi.fn(() => false);
+      editorElement.isWithinProgrammaticFocusRestoreWindow = vi.fn(() => false);
+      editorElement.shouldRestoreProgrammaticBodyBlur = vi.fn(() => false);
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.enterBlockMode = vi.fn();
+      editorElement.dispatchEvent = vi.fn();
+
+      editorElement.commitNativeBlur();
+
+      expect(editorElement.refs.mentionMenu.open).toBe(false);
+      expect(editorElement.state.mentionMenu.isOpen).toBe(false);
+      expect(editorElement.dismissedMentionTrigger).toEqual({
+        nodeKey: "node-1",
+        startOffset: 1,
+        endOffset: 2,
+        query: "",
+      });
+      expect(editorElement.enterBlockMode).toHaveBeenCalledWith({
+        focusSurface: false,
+        emitSelectionChange: false,
+        lineId: "line-1",
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("dismisses the slash mention menu on arrow keys without blocking caret movement", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-1",
+        mentionMenu: {
+          isOpen: true,
+          query: "",
+          nodeKey: "node-1",
+          startOffset: 1,
+          endOffset: 2,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          items: [{ id: "character-1", label: "Alex" }],
+          open: true,
+          render: vi.fn(),
+        },
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation =
+        vi.fn();
+      editorElement.updatePendingTextInputFallback = vi.fn();
+      editorElement.handleReferenceArrowNavigation = vi.fn(() => false);
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.isEditorActiveElement = vi.fn(() => true);
+
+      const event = {
+        key: "ArrowDown",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        isComposing: false,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+
+      editorElement.handleNativeKeyDown(event);
+
+      expect(editorElement.refs.mentionMenu.open).toBe(false);
+      expect(editorElement.state.mentionMenu.isOpen).toBe(false);
+      expect(editorElement.dismissedMentionTrigger).toEqual({
+        nodeKey: "node-1",
+        startOffset: 1,
+        endOffset: 2,
+        query: "",
+      });
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(event.stopPropagation).not.toHaveBeenCalled();
+      expect(event.stopImmediatePropagation).not.toHaveBeenCalled();
+      expect(
+        editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation,
+      ).toHaveBeenCalledWith(event);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("does not reopen a dismissed slash mention menu for the same trigger", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lines = [
+        {
+          id: "line-1",
+          actions: {
+            dialogue: {
+              content: [{ text: "/" }],
+            },
+          },
+        },
+      ];
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines,
+        selectedLineId: "line-1",
+        mentionTargets: [{ id: "character-1", label: "Alex" }],
+        mentionMenu: {
+          isOpen: false,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          items: [],
+          open: true,
+          render: vi.fn(),
+        },
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.dismissedMentionTrigger = {
+        nodeKey: "node-1",
+        startOffset: 0,
+        endOffset: 1,
+        query: "",
+      };
+      editorElement.readEditorSnapshot = vi.fn(() => ({
+        lines,
+        selectedLineId: "line-1",
+        activeFormats: {},
+        mentionTrigger: {
+          nodeKey: "node-1",
+          startOffset: 0,
+          endOffset: 1,
+          query: "",
+          source: "lexical",
+        },
+      }));
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.syncFromEditorState({});
+
+      expect(editorElement.state.mentionMenu.isOpen).toBe(false);
+      expect(editorElement.refs.mentionMenu.open).toBe(false);
+      expect(editorElement.dismissedMentionTrigger).toEqual({
+        nodeKey: "node-1",
+        startOffset: 0,
+        endOffset: 1,
+        query: "",
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("does not open the slash mention menu when the caret moves to an existing slash", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lines = [
+        {
+          id: "line-1",
+          actions: {
+            dialogue: {
+              content: [{ text: "/" }],
+            },
+          },
+        },
+      ];
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines,
+        selectedLineId: "line-1",
+        mentionTargets: [{ id: "character-1", label: "Alex" }],
+        mentionMenu: {
+          isOpen: false,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          items: [],
+          open: false,
+          render: vi.fn(),
+        },
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.readEditorSnapshot = vi.fn(() => ({
+        lines,
+        selectedLineId: "line-1",
+        activeFormats: {},
+        mentionTrigger: {
+          nodeKey: "node-1",
+          lineId: "line-1",
+          startOffset: 0,
+          endOffset: 1,
+          query: "",
+          source: "lexical",
+        },
+      }));
+      editorElement.getMentionMenuPositionForTrigger = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.syncFromEditorState({});
+
+      expect(editorElement.state.mentionMenu.isOpen).toBe(false);
+      expect(editorElement.refs.mentionMenu.open).toBe(false);
+      expect(
+        editorElement.getMentionMenuPositionForTrigger,
+      ).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("opens the slash mention menu when slash was just typed", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lines = [
+        {
+          id: "line-1",
+          actions: {
+            dialogue: {
+              content: [{ text: "/" }],
+            },
+          },
+        },
+      ];
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines,
+        selectedLineId: "line-1",
+        mentionTargets: [{ id: "character-1", label: "Alex" }],
+        mentionMenu: {
+          isOpen: false,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          items: [],
+          open: false,
+          render: vi.fn(),
+        },
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.readEditorSnapshot = vi.fn(() => ({
+        lines,
+        selectedLineId: "line-1",
+        activeFormats: {},
+        mentionTrigger: {
+          nodeKey: "node-1",
+          lineId: "line-1",
+          startOffset: 0,
+          endOffset: 1,
+          query: "",
+          source: "lexical",
+        },
+      }));
+      editorElement.getMentionMenuPositionForTrigger = vi.fn(() => ({
+        left: 24,
+        top: 48,
+      }));
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.armMentionMenuOpenFromTypedSlash({
+        source: "test",
+      });
+      editorElement.syncFromEditorState({});
+
+      expect(editorElement.state.mentionMenu).toMatchObject({
+        isOpen: true,
+        query: "",
+        items: [{ id: "character-1", label: "Alex" }],
+        nodeKey: "node-1",
+        lineId: "line-1",
+        startOffset: 0,
+        endOffset: 1,
+        left: 24,
+        top: 48,
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("keeps updating an open slash mention menu while typing the query", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lines = [
+        {
+          id: "line-1",
+          actions: {
+            dialogue: {
+              content: [{ text: "/a" }],
+            },
+          },
+        },
+      ];
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines,
+        selectedLineId: "line-1",
+        mentionTargets: [
+          { id: "character-1", label: "Alex" },
+          { id: "character-2", label: "Blake" },
+        ],
+        mentionMenu: {
+          isOpen: true,
+          query: "",
+          items: [{ id: "character-1", label: "Alex" }],
+          nodeKey: "node-1",
+          lineId: "line-1",
+          startOffset: 0,
+          endOffset: 1,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          items: [],
+          open: true,
+          render: vi.fn(),
+        },
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.readEditorSnapshot = vi.fn(() => ({
+        lines,
+        selectedLineId: "line-1",
+        activeFormats: {},
+        mentionTrigger: {
+          nodeKey: "node-1",
+          lineId: "line-1",
+          startOffset: 0,
+          endOffset: 2,
+          query: "a",
+          source: "lexical",
+        },
+      }));
+      editorElement.getMentionMenuPositionForTrigger = vi.fn(() => ({
+        left: 24,
+        top: 48,
+      }));
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.syncFromEditorState({});
+
+      expect(editorElement.state.mentionMenu).toMatchObject({
+        isOpen: true,
+        query: "a",
+        items: [{ id: "character-1", label: "Alex" }],
+        nodeKey: "node-1",
+        lineId: "line-1",
+        startOffset: 0,
+        endOffset: 2,
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("keeps a dismissed slash mention trigger through a transient no-trigger sync", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lines = [
+        {
+          id: "line-1",
+          actions: {
+            dialogue: {
+              content: [{ text: "/" }],
+            },
+          },
+        },
+      ];
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines,
+        selectedLineId: "line-1",
+        mentionTargets: [{ id: "character-1", label: "Alex" }],
+        mentionMenu: {
+          isOpen: false,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          items: [],
+          open: true,
+          render: vi.fn(),
+        },
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.dismissedMentionTrigger = {
+        nodeKey: "node-1",
+        startOffset: 0,
+        endOffset: 1,
+        query: "",
+      };
+      editorElement.readEditorSnapshot = vi
+        .fn()
+        .mockReturnValueOnce({
+          lines,
+          selectedLineId: "line-1",
+          activeFormats: {},
+          mentionTrigger: undefined,
+        })
+        .mockReturnValueOnce({
+          lines,
+          selectedLineId: "line-1",
+          activeFormats: {},
+          mentionTrigger: {
+            nodeKey: "node-1",
+            startOffset: 0,
+            endOffset: 1,
+            query: "",
+            source: "lexical",
+          },
+        });
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.syncFromEditorState({});
+      editorElement.syncFromEditorState({});
+
+      expect(editorElement.state.mentionMenu.isOpen).toBe(false);
+      expect(editorElement.refs.mentionMenu.open).toBe(false);
+      expect(editorElement.dismissedMentionTrigger).toEqual({
+        nodeKey: "node-1",
+        startOffset: 0,
+        endOffset: 1,
+        query: "",
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("does not reopen another slash trigger in the same text node during close restore", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lines = [
+        {
+          id: "line-1",
+          actions: {
+            dialogue: {
+              content: [{ text: "first / second /" }],
+            },
+          },
+        },
+      ];
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines,
+        selectedLineId: "line-1",
+        mentionTargets: [{ id: "character-1", label: "Alex" }],
+        mentionMenu: {
+          isOpen: true,
+          query: "",
+          items: [{ id: "character-1", label: "Alex" }],
+          nodeKey: "node-1",
+          lineId: "line-1",
+          startOffset: 6,
+          endOffset: 7,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          items: [{ id: "character-1", label: "Alex" }],
+          open: true,
+          render: vi.fn(),
+        },
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.readEditorSnapshot = vi.fn(() => ({
+        lines,
+        selectedLineId: "line-1",
+        activeFormats: {},
+        mentionTrigger: {
+          nodeKey: "node-1",
+          lineId: "line-1",
+          startOffset: 15,
+          endOffset: 16,
+          query: "",
+          source: "lexical",
+        },
+      }));
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.closeMentionMenu({
+        dismissCurrentTrigger: true,
+      });
+      editorElement.syncFromEditorState({});
+
+      expect(editorElement.state.mentionMenu.isOpen).toBe(false);
+      expect(editorElement.refs.mentionMenu.open).toBe(false);
+      expect(editorElement.dismissedMentionTriggerScope).toMatchObject({
+        nodeKey: "node-1",
+        query: "",
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("closes an open slash mention menu immediately when the trigger disappears", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lines = [
+        {
+          id: "line-1",
+          actions: {
+            dialogue: {
+              content: [{ text: "/" }],
+            },
+          },
+        },
+      ];
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines,
+        selectedLineId: "line-1",
+        mentionTargets: [],
+        mentionMenu: {
+          isOpen: true,
+          query: "",
+          items: [{ id: "character-1", label: "Alex" }],
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          open: false,
+        },
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.readEditorSnapshot = vi.fn(() => ({
+        lines,
+        selectedLineId: "line-1",
+        activeFormats: {},
+      }));
+      editorElement.shouldPreserveMentionMenuAfterSelectionLoss = vi.fn(
+        () => false,
+      );
+      editorElement.isEditorActiveElement = vi.fn(() => true);
+      editorElement.syncMentionMenuPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.syncFromEditorState({});
+
+      expect(editorElement.closeMentionMenu).toHaveBeenCalledTimes(1);
+      expect(editorElement.syncMentionMenuPopover).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("keeps a newly opened slash mention menu through a stale no-trigger sync before render", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-slash-mention-pending-render-test",
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let textNodeKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const paragraph = $createParagraphNode();
+          const text = $createTextNode("/");
+
+          paragraph.append(text);
+          root.append(paragraph);
+          textNodeKey = text.getKey();
+        },
+        { discrete: true },
+      );
+
+      const lines = [
+        {
+          id: "line-1",
+          actions: {
+            dialogue: {
+              content: [{ text: "/" }],
+            },
+          },
+        },
+      ];
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines,
+        selectedLineId: "line-1",
+        mentionTargets: [{ id: "character-1", label: "Alex" }],
+        mentionMenu: {
+          isOpen: true,
+          query: "",
+          items: [{ id: "character-1", label: "Alex" }],
+          highlightedIndex: 0,
+          nodeKey: textNodeKey,
+          lineId: "line-1",
+          startOffset: 0,
+          endOffset: 1,
+        },
+      };
+      editorElement.refs = {
+        mentionMenu: {
+          open: false,
+          items: [],
+          render: vi.fn(),
+        },
+      };
+      editorElement.editor = editor;
+      editorElement.isEditorFocused = true;
+      editorElement.readEditorSnapshot = vi.fn(() => ({
+        lines,
+        selectedLineId: "line-1",
+        activeFormats: {},
+      }));
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.syncMentionMenuPopover = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.syncFromEditorState(editor.getEditorState());
+
+      expect(editorElement.closeMentionMenu).not.toHaveBeenCalled();
+      expect(editorElement.syncMentionMenuPopover).toHaveBeenCalledTimes(1);
+      expect(editorElement.scheduleRender).toHaveBeenCalledTimes(1);
+      expect(editorElement.state.mentionMenu.isOpen).toBe(true);
+      expect(editorElement.refs.mentionMenu.open).toBe(false);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("keeps the slash mention menu open when blur moves focus to the menu", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const menu = document.createElement("div");
+
+      editorElement.state = {
+        mode: "text-editor",
+        mentionMenu: {
+          isOpen: true,
+          items: [{ id: "character-1", label: "Alex" }],
+        },
+      };
+      editorElement.refs = {
+        editor: document.createElement("div"),
+        mentionMenu: menu,
+      };
+      editorElement.refs.mentionMenu.open = false;
+      editorElement.refs.mentionMenu.items = [];
+      editorElement.isEditorFocused = true;
+      editorElement.isEditorActiveElement = vi.fn(() => false);
+      editorElement.isWithinProgrammaticFocusRestoreWindow = vi.fn(() => false);
+      editorElement.shouldRestoreProgrammaticBodyBlur = vi.fn(() => false);
+      editorElement.selectionMenuIsOpen = false;
+      editorElement.furiganaDialogIsPending = false;
+      editorElement.hasActiveMentionTrigger = vi.fn(() => false);
+      editorElement.syncMentionMenuPopover = vi.fn();
+      editorElement.commitNativeBlur = vi.fn();
+
+      editorElement.handleNativeBlur({
+        relatedTarget: menu,
+      });
+
+      expect(editorElement.refs.mentionMenu.open).toBe(true);
+      expect(editorElement.syncMentionMenuPopover).toHaveBeenCalledTimes(1);
+      expect(editorElement.hasActiveMentionTrigger).not.toHaveBeenCalled();
+      expect(editorElement.commitNativeBlur).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("keeps native double-click word selection inside non-final line text", async () => {
     const restoreDomGlobals = installDomGlobals();
 
@@ -2238,6 +3820,191 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("does not run a stale async selection restore after the selected line prop is cleared", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const animationFrame = installAnimationFrameQueue();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const editorNode = document.createElement("div");
+
+      editorElement.refs = {
+        editor: editorNode,
+        surface: document.createElement("div"),
+      };
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-1",
+        lines: [{ id: "line-1" }],
+      };
+      Object.defineProperty(editorElement, "dataset", {
+        configurable: true,
+        value: {},
+      });
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.focusRestoreSequenceId = 0;
+      editorElement.isEditorFocused = true;
+      editorElement.lastProgrammaticFocusTarget = {
+        lineId: "line-1",
+        cursorPosition: 2,
+      };
+      editorElement.programmaticFocusRestoreUntil = Number.POSITIVE_INFINITY;
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+      editorElement.focus = vi.fn();
+      editorElement.restoreLineSelection = vi.fn(() => true);
+      editorElement.getNativeLineSelectionContext = vi.fn(() => undefined);
+
+      editorElement.restoreLineSelectionAfterLexicalFocus({
+        lineId: "line-1",
+        cursorPosition: 2,
+      });
+      editorElement.selectedLineId = undefined;
+      animationFrame.callbacks.shift()();
+
+      expect(editorElement.focus).not.toHaveBeenCalled();
+      expect(editorElement.restoreLineSelection).not.toHaveBeenCalled();
+      expect(editorElement.isEditorFocused).toBe(false);
+      expect(editorElement.state.mode).toBe("block");
+      expect(editorElement.lastProgrammaticFocusTarget).toBeUndefined();
+      expect(editorElement.programmaticFocusRestoreUntil).toBe(0);
+    } finally {
+      animationFrame.restore();
+      restoreDomGlobals();
+    }
+  });
+
+  it("treats section editor binding fallback strings as no selected line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.refs = {
+        editor: document.createElement("div"),
+        surface: document.createElement("div"),
+      };
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-1",
+        lines: [{ id: "line-1" }],
+      };
+      Object.defineProperty(editorElement, "dataset", {
+        configurable: true,
+        value: {},
+      });
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.focusRestoreSequenceId = 0;
+      editorElement.isEditorFocused = true;
+      editorElement.lastProgrammaticFocusTarget = {
+        lineId: "line-1",
+        cursorPosition: 2,
+      };
+      editorElement.programmaticFocusRestoreUntil = Number.POSITIVE_INFINITY;
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+
+      editorElement.selectedLineId = "sectionEditorItems[0].selectedLineId";
+
+      expect(editorElement.state.selectedLineId).toBeUndefined();
+      expect(editorElement.isEditorFocused).toBe(false);
+      expect(editorElement.state.mode).toBe("block");
+      expect(editorElement.lastProgrammaticFocusTarget).toBeUndefined();
+      expect(editorElement.programmaticFocusRestoreUntil).toBe(0);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("clears rendered selected styling when section selection becomes inactive", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const editorNode = document.createElement("div");
+      const selectedLine = document.createElement("p");
+      const leftGutter = document.createElement("div");
+      const rightGutter = document.createElement("div");
+      const leftRow = document.createElement("div");
+      const rightRow = document.createElement("div");
+
+      selectedLine.className = "editor-paragraph";
+      selectedLine.dataset.selected = "true";
+      leftRow.className = "gutter-row";
+      leftRow.dataset.selected = "true";
+      rightRow.className = "gutter-row";
+      rightRow.dataset.selected = "true";
+      editorNode.append(selectedLine);
+      leftGutter.append(leftRow);
+      rightGutter.append(rightRow);
+
+      editorElement.refs = {
+        editor: editorNode,
+        surface: document.createElement("div"),
+        leftGutter,
+        rightGutter,
+      };
+      editorElement.state = {
+        mode: "block",
+        selectedLineId: "line-1",
+        selectionActive: true,
+        lines: [{ id: "line-1" }],
+      };
+      Object.defineProperty(editorElement, "dataset", {
+        configurable: true,
+        value: {},
+      });
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.focusRestoreSequenceId = 0;
+      editorElement.isEditorFocused = true;
+      editorElement.lastProgrammaticFocusTarget = {
+        lineId: "line-1",
+        cursorPosition: 2,
+      };
+      editorElement.programmaticFocusRestoreUntil = Number.POSITIVE_INFINITY;
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+
+      editorElement.selectionActive = false;
+
+      expect(editorElement.state.selectionActive).toBe(false);
+      expect(editorElement.isEditorFocused).toBe(false);
+      expect(selectedLine.dataset.selected).toBe("false");
+      expect(leftRow.dataset.selected).toBe("false");
+      expect(rightRow.dataset.selected).toBe("false");
+      expect(editorElement.scheduleRender).toHaveBeenCalledTimes(1);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("restores focus when programmatic text entry drops focus to body", async () => {
     const restoreDomGlobals = installDomGlobals();
     const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
@@ -2344,7 +4111,7 @@ describe("lexical scene document editor line editing", () => {
       expect(stopImmediatePropagation).toHaveBeenCalledTimes(1);
       expect(handleBackspaceDelete).toHaveBeenCalledWith({
         nativeSelection,
-        source: "keydown",
+        nativeLineRangeSelection: undefined,
       });
     } finally {
       restoreDomGlobals();
@@ -2487,6 +4254,115 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("suppresses delayed insertText beforeinput after printable fallback insertion", async () => {
+    vi.useFakeTimers();
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const preventDefault = vi.fn();
+      const stopPropagation = vi.fn();
+      const stopImmediatePropagation = vi.fn();
+
+      editorElement.state = {
+        mode: "text-editor",
+      };
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.isEditorActiveElement = vi.fn(() => true);
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.insertPlainText = vi.fn();
+
+      editorElement.updatePendingTextInputFallback({
+        key: "/",
+        defaultPrevented: false,
+        isComposing: false,
+        ctrlKey: false,
+        metaKey: false,
+        timeStamp: 10,
+      });
+
+      vi.runOnlyPendingTimers();
+
+      editorElement.handleNativeBeforeInput({
+        inputType: "insertText",
+        data: "/",
+        isComposing: false,
+        defaultPrevented: false,
+        timeStamp: 12,
+        preventDefault,
+        stopPropagation,
+        stopImmediatePropagation,
+      });
+
+      expect(editorElement.insertPlainText).toHaveBeenCalledTimes(1);
+      expect(editorElement.insertPlainText).toHaveBeenCalledWith("/");
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+      expect(stopPropagation).toHaveBeenCalledTimes(1);
+      expect(stopImmediatePropagation).toHaveBeenCalledTimes(1);
+      expect(editorElement.lastCommittedTextInputFallback).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps different delayed insertText beforeinput after printable fallback insertion", async () => {
+    vi.useFakeTimers();
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const preventDefault = vi.fn();
+
+      editorElement.state = {
+        mode: "text-editor",
+      };
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.isEditorActiveElement = vi.fn(() => true);
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.insertPlainText = vi.fn();
+
+      editorElement.updatePendingTextInputFallback({
+        key: "a",
+        defaultPrevented: false,
+        isComposing: false,
+        ctrlKey: false,
+        metaKey: false,
+        timeStamp: 10,
+      });
+
+      vi.runOnlyPendingTimers();
+
+      editorElement.handleNativeBeforeInput({
+        inputType: "insertText",
+        data: "b",
+        isComposing: false,
+        defaultPrevented: false,
+        timeStamp: 12,
+        preventDefault,
+      });
+
+      expect(editorElement.insertPlainText).toHaveBeenNthCalledWith(1, "a");
+      expect(editorElement.insertPlainText).toHaveBeenNthCalledWith(2, "b");
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("leaves insertText beforeinput to native handling when no text data is available", async () => {
     const restoreDomGlobals = installDomGlobals();
 
@@ -2588,6 +4464,237 @@ describe("lexical scene document editor line editing", () => {
 
       expect(result).toBe("axb");
     } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("inserts slash from the beforeinput target range instead of a stale Lexical selection", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-native-selection-mention-trigger-test",
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let firstLineKey;
+      let secondLineKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: {
+          isOpen: false,
+        },
+        mode: "text-editor",
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.pendingTextInputFallback = undefined;
+      editorElement.lastCommittedTextInputFallback = undefined;
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const firstLine = $createParagraphNode();
+          const secondLine = $createParagraphNode();
+          const firstText = $createTextNode("first");
+          const secondText = $createTextNode("second");
+
+          firstLine.append(firstText);
+          secondLine.append(secondText);
+          root.append(firstLine, secondLine);
+          firstLineKey = firstLine.getKey();
+          secondLineKey = secondLine.getKey();
+          editorElement.lineMetaByKey.set(firstLineKey, {
+            id: "line-1",
+          });
+          editorElement.lineMetaByKey.set(secondLineKey, {
+            id: "line-2",
+          });
+          editorElement.lineKeyById.set("line-1", firstLineKey);
+          editorElement.lineKeyById.set("line-2", secondLineKey);
+          firstText.select(1, 1);
+        },
+        { discrete: true },
+      );
+
+      const secondLineElement = editor.getElementByKey(secondLineKey);
+      const secondTextNode = secondLineElement.firstChild.firstChild;
+      const range = document.createRange();
+      range.setStart(secondTextNode, 0);
+      range.collapse(true);
+
+      editorElement.handleNativeBeforeInput({
+        inputType: "insertText",
+        data: "/",
+        isComposing: false,
+        defaultPrevented: false,
+        getTargetRanges: () => [range],
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      });
+
+      const snapshot = editorElement.readEditorSnapshot();
+      expect(snapshot.selectedLineId).toBe("line-2");
+      expect(snapshot.mentionTrigger).toMatchObject({
+        query: "",
+        startOffset: 0,
+        endOffset: 1,
+        source: "lexical",
+        lineId: "line-2",
+      });
+      expect(snapshot.lines[1].actions.dialogue.content[0].text).toBe(
+        "/second",
+      );
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("uses the keydown fallback selection when slash beforeinput has no target range", async () => {
+    vi.useFakeTimers();
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-keydown-selection-slash-trigger-test",
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let firstLineKey;
+      let secondLineKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: {
+          isOpen: false,
+        },
+        mode: "text-editor",
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.pendingTextInputFallback = undefined;
+      editorElement.lastCommittedTextInputFallback = undefined;
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation =
+        vi.fn();
+      editorElement.handleReferenceArrowNavigation = vi.fn(() => false);
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.isEditorActiveElement = vi.fn(() => true);
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const firstLine = $createParagraphNode();
+          const secondLine = $createParagraphNode();
+          const firstText = $createTextNode("first");
+          const secondText = $createTextNode("second");
+
+          firstLine.append(firstText);
+          secondLine.append(secondText);
+          root.append(firstLine, secondLine);
+          firstLineKey = firstLine.getKey();
+          secondLineKey = secondLine.getKey();
+          editorElement.lineMetaByKey.set(firstLineKey, {
+            id: "line-1",
+          });
+          editorElement.lineMetaByKey.set(secondLineKey, {
+            id: "line-2",
+          });
+          editorElement.lineKeyById.set("line-1", firstLineKey);
+          editorElement.lineKeyById.set("line-2", secondLineKey);
+          firstText.select(1, 1);
+        },
+        { discrete: true },
+      );
+
+      const secondLineElement = editor.getElementByKey(secondLineKey);
+      const secondTextNode = secondLineElement.firstChild.firstChild;
+      const range = document.createRange();
+      range.setStart(secondTextNode, 0);
+      range.collapse(true);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+
+      editorElement.handleNativeKeyDown({
+        key: "/",
+        code: "Slash",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        shiftKey: false,
+        isComposing: false,
+        defaultPrevented: false,
+        timeStamp: 10,
+      });
+      editorElement.handleNativeBeforeInput({
+        inputType: "insertText",
+        data: "/",
+        isComposing: false,
+        defaultPrevented: false,
+        timeStamp: 12,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      });
+
+      const snapshot = editorElement.readEditorSnapshot();
+      expect(snapshot.selectedLineId).toBe("line-2");
+      expect(snapshot.mentionTrigger).toMatchObject({
+        query: "",
+        startOffset: 0,
+        endOffset: 1,
+        source: "lexical",
+        lineId: "line-2",
+      });
+      expect(snapshot.lines[1].actions.dialogue.content[0].text).toBe(
+        "/second",
+      );
+    } finally {
+      vi.useRealTimers();
       restoreDomGlobals();
     }
   });
@@ -2779,7 +4886,10 @@ describe("lexical scene document editor line editing", () => {
         cursorPosition: 1,
       });
       expect(editorElement.focusLine).not.toHaveBeenCalled();
-      expect(editorElement.restoreLineSelection).not.toHaveBeenCalled();
+      expect(editorElement.restoreLineSelection).toHaveBeenCalledWith({
+        lineId: "line-1",
+        cursorPosition: 1,
+      });
     } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
@@ -2790,6 +4900,1242 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("selects a reference chip on Backspace before removing it", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn(() => 1);
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { $createMentionNode, MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const { getReferenceSelectionInfo } = await import(
+        "../../src/primitives/lexicalSceneDocumentReferences.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-reference-backspace-delete-test",
+        nodes: [MentionNode],
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+      let mentionKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: { isOpen: false },
+        mode: "text-editor",
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+      editorElement.pendingHandledBackspaceKeyDown = undefined;
+      editorElement.pendingTextInputFallback = undefined;
+      editorElement.pendingTextInputFallbackTimerId = undefined;
+      editorElement.selectedReferenceNodeKey = undefined;
+      editorElement.renderFrame = 0;
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.handleReferenceArrowNavigation = vi.fn(() => false);
+      editorElement.scheduleRender = vi.fn();
+      editorElement.focusLine = vi.fn();
+      editorElement.restoreLineSelection = vi.fn();
+      editorElement.isEditorActiveElement = vi.fn(() => true);
+      Object.defineProperty(editorElement, "dataset", {
+        configurable: true,
+        value: {},
+      });
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const mentionNode = $createMentionNode({
+            resourceId: "playerName",
+            label: "Player",
+          });
+
+          line.append(
+            $createTextNode("Hi "),
+            mentionNode,
+            $createTextNode("!"),
+          );
+          root.append(line);
+          lineKey = line.getKey();
+          mentionKey = mentionNode.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+            actions: {
+              dialogue: {
+                content: [
+                  { text: "Hi " },
+                  { reference: { resourceId: "playerName" } },
+                  { text: "!" },
+                ],
+              },
+            },
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+        },
+        { discrete: true },
+      );
+
+      const lineElement = editor.getElementByKey(lineKey);
+      const afterReferenceTextNode = lineElement.childNodes[2];
+      const range = document.createRange();
+      range.setStart(afterReferenceTextNode, 0);
+      range.collapse(true);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+
+      editorElement.handleNativeKeyDown({
+        key: "Backspace",
+        code: "Backspace",
+        isComposing: false,
+        timeStamp: 10,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      });
+
+      const selectedResult = editor.getEditorState().read(() => {
+        const referenceSelection = getReferenceSelectionInfo($getSelection());
+        return {
+          text: $getRoot().getFirstChild().getTextContent(),
+          selectedReferenceKey: referenceSelection?.node.getKey(),
+          isWhole: referenceSelection?.isWhole,
+          isCollapsed: referenceSelection?.isCollapsed,
+        };
+      });
+
+      expect(selectedResult).toEqual({
+        text: "Hi Player!",
+        selectedReferenceKey: mentionKey,
+        isWhole: true,
+        isCollapsed: false,
+      });
+      expect(editorElement.selectedReferenceNodeKey).toBe(mentionKey);
+
+      editorElement.handleNativeKeyDown({
+        key: "Backspace",
+        code: "Backspace",
+        isComposing: false,
+        timeStamp: 20,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      });
+
+      const deletedResult = editor.getEditorState().read(() => {
+        return $getRoot().getFirstChild().getTextContent();
+      });
+
+      expect(deletedResult).toBe("Hi !");
+      expect(
+        editorElement.getLinesSnapshot()[0].actions.dialogue.content,
+      ).toEqual([{ text: "Hi !" }]);
+      expect(editorElement.selectedReferenceNodeKey).toBeUndefined();
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("does not leave native text selected when selecting a reference chip", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { $createMentionNode, MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-reference-native-selection-collapse-test",
+        nodes: [MentionNode],
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let mentionKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: { isOpen: false },
+        mode: "text-editor",
+      };
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const mentionNode = $createMentionNode({
+            resourceId: "playerName",
+            label: "Player",
+          });
+
+          line.append(
+            $createTextNode("Hi "),
+            mentionNode,
+            $createTextNode("!"),
+          );
+          root.append(line);
+          mentionKey = mentionNode.getKey();
+        },
+        { discrete: true },
+      );
+
+      const mentionElement = rootElement.querySelector(".mention-chip");
+      const parentNode = mentionElement.parentNode;
+      const selection = window.getSelection();
+      const staleRange = document.createRange();
+      staleRange.selectNodeContents(parentNode);
+      selection.removeAllRanges();
+      selection.addRange(staleRange);
+
+      editorElement.selectReferenceByNodeKey(mentionKey);
+
+      const mentionOffset = Array.from(parentNode.childNodes).indexOf(
+        mentionElement,
+      );
+      expect(rootElement.dataset.rvnReferenceSelectionActive).toBe("true");
+      expect(mentionElement.dataset.rvnReferenceSelected).toBe("true");
+      expect(selection.isCollapsed).toBe(true);
+      expect(selection.anchorNode).toBe(parentNode);
+      expect(selection.anchorOffset).toBe(mentionOffset + 1);
+      expect(selection.toString()).toBe("");
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("normalizes a collapsed reference-chip selection before Backspace deletes", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn(() => 1);
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { $createMentionNode, MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const { EDITOR_CARET_TEXT } = await import(
+        "../../src/internal/ui/sceneEditorLexical/contentModel.js"
+      );
+      const { getReferenceSelectionInfo } = await import(
+        "../../src/primitives/lexicalSceneDocumentReferences.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-reference-backspace-collapsed-selection-test",
+        nodes: [MentionNode],
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+      let mentionKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: { isOpen: false },
+        mode: "text-editor",
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+      editorElement.selectedReferenceNodeKey = undefined;
+      editorElement.renderFrame = 0;
+      editorElement.scheduleRender = vi.fn();
+      editorElement.focusLine = vi.fn();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const mentionNode = $createMentionNode({
+            resourceId: "playerName",
+            label: "Player",
+          });
+
+          line.append(
+            $createTextNode("Hi "),
+            mentionNode,
+            $createTextNode("!"),
+          );
+          root.append(line);
+          lineKey = line.getKey();
+          mentionKey = mentionNode.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+            actions: {
+              dialogue: {
+                content: [
+                  { text: "Hi " },
+                  { reference: { resourceId: "playerName" } },
+                  { text: "!" },
+                ],
+              },
+            },
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+          mentionNode.select(2, 2);
+        },
+        { discrete: true },
+      );
+
+      const didSelect = editorElement.handleBackspaceDelete({
+        nativeSelection: {
+          lineId: "line-1",
+          start: 5,
+          end: 5,
+        },
+        source: "keydown",
+      });
+
+      const selectedResult = editor.getEditorState().read(() => {
+        const referenceSelection = getReferenceSelectionInfo($getSelection());
+        return {
+          text: $getRoot()
+            .getFirstChild()
+            .getTextContent()
+            .replaceAll(EDITOR_CARET_TEXT, ""),
+          selectedReferenceKey: referenceSelection?.node.getKey(),
+          isWhole: referenceSelection?.isWhole,
+          isCollapsed: referenceSelection?.isCollapsed,
+        };
+      });
+
+      expect(didSelect).toBe(true);
+      expect(selectedResult).toEqual({
+        text: "Hi Player!",
+        selectedReferenceKey: mentionKey,
+        isWhole: true,
+        isCollapsed: false,
+      });
+      expect(editorElement.selectedReferenceNodeKey).toBe(mentionKey);
+
+      const didDelete = editorElement.handleBackspaceDelete({
+        nativeSelection: {
+          lineId: "line-1",
+          start: 5,
+          end: 5,
+        },
+        source: "keydown",
+      });
+
+      expect(didDelete).toBe(true);
+      expect(
+        editorElement.getLinesSnapshot()[0].actions.dialogue.content,
+      ).toEqual([{ text: "Hi !" }]);
+      expect(editorElement.selectedReferenceNodeKey).toBeUndefined();
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("selects a reference chip when a native Backspace range intersects it", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn(() => 1);
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { $createMentionNode, MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const { getReferenceSelectionInfo } = await import(
+        "../../src/primitives/lexicalSceneDocumentReferences.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-reference-backspace-native-range-test",
+        nodes: [MentionNode],
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+      let mentionKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: { isOpen: false },
+        mode: "text-editor",
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+      editorElement.selectedReferenceNodeKey = undefined;
+      editorElement.renderFrame = 0;
+      editorElement.scheduleRender = vi.fn();
+      editorElement.focusLine = vi.fn();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const mentionNode = $createMentionNode({
+            resourceId: "playerName",
+            label: "Player",
+          });
+
+          line.append(
+            $createTextNode("Hi "),
+            mentionNode,
+            $createTextNode("!"),
+          );
+          root.append(line);
+          lineKey = line.getKey();
+          mentionKey = mentionNode.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+            actions: {
+              dialogue: {
+                content: [
+                  { text: "Hi " },
+                  { reference: { resourceId: "playerName" } },
+                  { text: "!" },
+                ],
+              },
+            },
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+        },
+        { discrete: true },
+      );
+
+      const didHandle = editorElement.handleBackspaceDelete({
+        nativeSelection: {
+          lineId: "line-1",
+          start: 3,
+          end: 4,
+        },
+        source: "keydown",
+      });
+
+      const selectedResult = editor.getEditorState().read(() => {
+        const referenceSelection = getReferenceSelectionInfo($getSelection());
+        return {
+          text: $getRoot().getFirstChild().getTextContent(),
+          selectedReferenceKey: referenceSelection?.node.getKey(),
+          isWhole: referenceSelection?.isWhole,
+          isCollapsed: referenceSelection?.isCollapsed,
+        };
+      });
+
+      expect(didHandle).toBe(true);
+      expect(selectedResult).toEqual({
+        text: "Hi Player!",
+        selectedReferenceKey: mentionKey,
+        isWhole: true,
+        isCollapsed: false,
+      });
+      expect(
+        editorElement.getLinesSnapshot()[0].actions.dialogue.content,
+      ).toEqual([
+        { text: "Hi " },
+        { reference: { resourceId: "playerName" } },
+        { text: "!" },
+      ]);
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("selects a final reference chip when native Backspace offset includes the hidden boundary", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn(() => 1);
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { $createMentionNode, MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const { EDITOR_CARET_TEXT } = await import(
+        "../../src/internal/ui/sceneEditorLexical/contentModel.js"
+      );
+      const { getReferenceSelectionInfo } = await import(
+        "../../src/primitives/lexicalSceneDocumentReferences.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-reference-backspace-hidden-boundary-test",
+        nodes: [MentionNode],
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+      let mentionKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: { isOpen: false },
+        mode: "text-editor",
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+      editorElement.selectedReferenceNodeKey = undefined;
+      editorElement.renderFrame = 0;
+      editorElement.scheduleRender = vi.fn();
+      editorElement.focusLine = vi.fn();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const mentionNode = $createMentionNode({
+            resourceId: "ageVariable",
+            label: "age2",
+          });
+
+          line.append(
+            $createTextNode("2  "),
+            mentionNode,
+            $createTextNode(EDITOR_CARET_TEXT),
+          );
+          root.append(line);
+          lineKey = line.getKey();
+          mentionKey = mentionNode.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+            actions: {
+              dialogue: {
+                content: [
+                  { text: "2  " },
+                  { reference: { resourceId: "ageVariable" } },
+                ],
+              },
+            },
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+          line.selectStart();
+        },
+        { discrete: true },
+      );
+
+      const didHandle = editorElement.handleBackspaceDelete({
+        nativeSelection: {
+          lineId: "line-1",
+          start: 8,
+          end: 8,
+        },
+        source: "keydown",
+      });
+
+      const selectedResult = editor.getEditorState().read(() => {
+        const referenceSelection = getReferenceSelectionInfo($getSelection());
+        return {
+          text: $getRoot()
+            .getFirstChild()
+            .getTextContent()
+            .replaceAll(EDITOR_CARET_TEXT, ""),
+          selectedReferenceKey: referenceSelection?.node.getKey(),
+          isWhole: referenceSelection?.isWhole,
+          isCollapsed: referenceSelection?.isCollapsed,
+        };
+      });
+
+      expect(didHandle).toBe(true);
+      expect(selectedResult).toEqual({
+        text: "2  age2",
+        selectedReferenceKey: mentionKey,
+        isWhole: true,
+        isCollapsed: false,
+      });
+      expect(
+        editorElement.getLinesSnapshot()[0].actions.dialogue.content,
+      ).toEqual([
+        { text: "2  " },
+        { reference: { resourceId: "ageVariable" } },
+      ]);
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("finds a final reference chip from native arrow selection offsets", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { $createMentionNode, MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-reference-native-arrow-fallback-test",
+        nodes: [MentionNode],
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+      let mentionKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: { isOpen: false },
+        mode: "text-editor",
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const mentionNode = $createMentionNode({
+            resourceId: "ageVariable",
+            label: "age2",
+          });
+
+          line.append(
+            $createTextNode("2  "),
+            mentionNode,
+            $createTextNode(EDITOR_CARET_TEXT),
+          );
+          root.append(line);
+          lineKey = line.getKey();
+          mentionKey = mentionNode.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+            actions: {
+              dialogue: {
+                content: [
+                  { text: "2  " },
+                  { reference: { resourceId: "ageVariable" } },
+                ],
+              },
+            },
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+        },
+        { discrete: true },
+      );
+
+      const result = editor.getEditorState().read(() => {
+        const backwardFallbackInfo =
+          editorElement.getNativeReferenceArrowFallbackInfo(
+            {
+              lineId: "line-1",
+              start: 7,
+              end: 7,
+            },
+            -1,
+          );
+        const forwardFallbackInfo =
+          editorElement.getNativeReferenceArrowFallbackInfo(
+            {
+              lineId: "line-1",
+              start: 7,
+              end: 7,
+            },
+            1,
+          );
+        return {
+          backward: {
+            nodeKey: backwardFallbackInfo?.node.getKey(),
+            offset: backwardFallbackInfo?.offset,
+            itemStart: backwardFallbackInfo?.itemStart,
+            itemEnd: backwardFallbackInfo?.itemEnd,
+            lineLength: backwardFallbackInfo?.lineLength,
+            shouldMoveAcross: backwardFallbackInfo?.shouldMoveAcross,
+          },
+          forward: {
+            nodeKey: forwardFallbackInfo?.node.getKey(),
+            offset: forwardFallbackInfo?.offset,
+            itemStart: forwardFallbackInfo?.itemStart,
+            itemEnd: forwardFallbackInfo?.itemEnd,
+            lineLength: forwardFallbackInfo?.lineLength,
+            shouldMoveAcross: forwardFallbackInfo?.shouldMoveAcross,
+          },
+        };
+      });
+
+      expect(result.backward).toEqual({
+        nodeKey: mentionKey,
+        offset: 7,
+        itemStart: 3,
+        itemEnd: 7,
+        lineLength: 7,
+        shouldMoveAcross: true,
+      });
+      expect(result.forward).toEqual({
+        nodeKey: undefined,
+        offset: undefined,
+        itemStart: undefined,
+        itemEnd: undefined,
+        lineLength: undefined,
+        shouldMoveAcross: undefined,
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("does not recatch ArrowRight after a final reference chip has already been crossed", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { $createMentionNode, MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-reference-final-arrow-right-end-fallback-test",
+        nodes: [MentionNode],
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: { isOpen: false },
+        mode: "text-editor",
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+      editorElement.selectedReferenceNodeKey = undefined;
+      editorElement.updateReferenceSelectionMarkers = vi.fn();
+      editorElement.getNativeLineSelectionContext = vi.fn(() => ({
+        lineId: "line-1",
+        start: 7,
+        end: 7,
+      }));
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const mentionNode = $createMentionNode({
+            resourceId: "ageVariable",
+            label: "age2",
+          });
+
+          line.append(
+            $createTextNode("2  "),
+            mentionNode,
+            $createTextNode(EDITOR_CARET_TEXT),
+          );
+          root.append(line);
+          lineKey = line.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+            actions: {
+              dialogue: {
+                content: [
+                  { text: "2  " },
+                  { reference: { resourceId: "ageVariable" } },
+                ],
+              },
+            },
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+          $setSelection(null);
+        },
+        { discrete: true },
+      );
+
+      const event = {
+        key: "ArrowRight",
+        code: "ArrowRight",
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+      const didHandle = editorElement.handleReferenceArrowNavigation(event);
+      const selection = editor.getEditorState().read(() => {
+        const currentSelection = $getSelection();
+        return {
+          type: currentSelection?.getType?.(),
+        };
+      });
+
+      expect(didHandle).toBe(false);
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(event.stopPropagation).not.toHaveBeenCalled();
+      expect(editorElement.selectedReferenceNodeKey).toBeUndefined();
+      expect(selection).toEqual({
+        type: undefined,
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("moves right across a final reference chip in one keypress", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { $createMentionNode, MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-reference-final-arrow-right-test",
+        nodes: [MentionNode],
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: { isOpen: false },
+        mode: "text-editor",
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+      editorElement.selectedReferenceNodeKey = undefined;
+      editorElement.updateReferenceSelectionMarkers = vi.fn();
+      editorElement.getNativeLineSelectionContext = vi.fn(() => ({
+        lineId: "line-1",
+        start: 3,
+        end: 3,
+      }));
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const mentionNode = $createMentionNode({
+            resourceId: "ageVariable",
+            label: "age2",
+          });
+
+          line.append(
+            $createTextNode("2  "),
+            mentionNode,
+            $createTextNode(EDITOR_CARET_TEXT),
+          );
+          root.append(line);
+          lineKey = line.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+            actions: {
+              dialogue: {
+                content: [
+                  { text: "2  " },
+                  { reference: { resourceId: "ageVariable" } },
+                ],
+              },
+            },
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+          line.select(1, 1);
+        },
+        { discrete: true },
+      );
+
+      const event = {
+        key: "ArrowRight",
+        code: "ArrowRight",
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+      const didHandle = editorElement.handleReferenceArrowNavigation(event);
+      const selection = editor.getEditorState().read(() => {
+        const currentSelection = $getSelection();
+        return {
+          anchorKey: currentSelection?.anchor?.key,
+          anchorOffset: currentSelection?.anchor?.offset,
+          anchorType: currentSelection?.anchor?.type,
+        };
+      });
+
+      expect(didHandle).toBe(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+      expect(editorElement.selectedReferenceNodeKey).toBeUndefined();
+      expect(selection).toEqual({
+        anchorKey: lineKey,
+        anchorOffset: 3,
+        anchorType: "element",
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("moves right out of a final reference when native selection is inside the chip", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { $createMentionNode, MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-reference-final-arrow-right-dom-fallback-test",
+        nodes: [MentionNode],
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: { isOpen: false },
+        mode: "text-editor",
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+      editorElement.selectedReferenceNodeKey = undefined;
+      editorElement.updateReferenceSelectionMarkers = vi.fn();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const mentionNode = $createMentionNode({
+            resourceId: "ageVariable",
+            label: "age2",
+          });
+
+          line.append(
+            $createTextNode("2  "),
+            mentionNode,
+            $createTextNode(EDITOR_CARET_TEXT),
+          );
+          root.append(line);
+          lineKey = line.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+            actions: {
+              dialogue: {
+                content: [
+                  { text: "2  " },
+                  { reference: { resourceId: "ageVariable" } },
+                ],
+              },
+            },
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+          $setSelection(null);
+        },
+        { discrete: true },
+      );
+
+      const mentionElement = rootElement.querySelector(".mention-chip");
+      const range = document.createRange();
+      range.setStart(
+        mentionElement.firstChild,
+        mentionElement.firstChild.textContent.length,
+      );
+      range.collapse(true);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+
+      const event = {
+        key: "ArrowRight",
+        code: "ArrowRight",
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+      const didHandle = editorElement.handleReferenceArrowNavigation(event);
+      const selection = editor.getEditorState().read(() => {
+        const currentSelection = $getSelection();
+        return {
+          anchorKey: currentSelection?.anchor?.key,
+          anchorOffset: currentSelection?.anchor?.offset,
+          anchorType: currentSelection?.anchor?.type,
+        };
+      });
+
+      expect(didHandle).toBe(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+      expect(editorElement.selectedReferenceNodeKey).toBeUndefined();
+      expect(selection).toEqual({
+        anchorKey: lineKey,
+        anchorOffset: 3,
+        anchorType: "element",
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("uses native arrow fallback when Lexical selection is missing", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { $createMentionNode, MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-reference-native-arrow-no-selection-test",
+        nodes: [MentionNode],
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: { isOpen: false },
+        mode: "text-editor",
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+      editorElement.selectedReferenceNodeKey = undefined;
+      editorElement.updateReferenceSelectionMarkers = vi.fn();
+      editorElement.getNativeLineSelectionContext = vi.fn(() => ({
+        lineId: "line-1",
+        start: 7,
+        end: 7,
+      }));
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+          const mentionNode = $createMentionNode({
+            resourceId: "ageVariable",
+            label: "age2",
+          });
+
+          line.append(
+            $createTextNode("2  "),
+            mentionNode,
+            $createTextNode(EDITOR_CARET_TEXT),
+          );
+          root.append(line);
+          lineKey = line.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+            actions: {
+              dialogue: {
+                content: [
+                  { text: "2  " },
+                  { reference: { resourceId: "ageVariable" } },
+                ],
+              },
+            },
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+        },
+        { discrete: true },
+      );
+
+      const event = {
+        key: "ArrowLeft",
+        code: "ArrowLeft",
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+      const didHandle = editorElement.handleReferenceArrowNavigation(event);
+      const selection = editor.getEditorState().read(() => {
+        const currentSelection = $getSelection();
+        return {
+          anchorKey: currentSelection?.anchor?.key,
+          anchorOffset: currentSelection?.anchor?.offset,
+          anchorType: currentSelection?.anchor?.type,
+        };
+      });
+
+      expect(didHandle).toBe(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+      expect(selection).toEqual({
+        anchorKey: lineKey,
+        anchorOffset: 1,
+        anchorType: "element",
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
   it("deletes selected text from the native DOM range when Lexical selection is missing", async () => {
     const restoreDomGlobals = installDomGlobals();
 
@@ -2982,7 +6328,10 @@ describe("lexical scene document editor line editing", () => {
         skipPageRestore: true,
       });
       expect(editorElement.focusLine).not.toHaveBeenCalled();
-      expect(editorElement.restoreLineSelection).not.toHaveBeenCalled();
+      expect(editorElement.restoreLineSelection).toHaveBeenCalledWith({
+        lineId: "line-1",
+        cursorPosition: 2,
+      });
     } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
@@ -3568,7 +6917,10 @@ describe("lexical scene document editor line editing", () => {
         text: ["previouscurrent"],
       });
       expect(editorElement.focusLine).not.toHaveBeenCalled();
-      expect(editorElement.restoreLineSelection).not.toHaveBeenCalled();
+      expect(editorElement.restoreLineSelection).toHaveBeenCalledWith({
+        lineId: "line-1",
+        cursorPosition: 8,
+      });
     } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
@@ -3866,7 +7218,8 @@ describe("lexical scene document editor line editing", () => {
 
       const textBeforeTargets = editor
         .getEditorState()
-        .read(() => $getRoot().getTextContent());
+        .read(() => $getRoot().getTextContent())
+        .replaceAll(EDITOR_CARET_TEXT, "");
 
       editorElement.mentionTargets = [
         { id: "playerName", label: "Player Name", variableType: "string" },
@@ -3874,7 +7227,8 @@ describe("lexical scene document editor line editing", () => {
 
       const textAfterTargets = editor
         .getEditorState()
-        .read(() => $getRoot().getTextContent());
+        .read(() => $getRoot().getTextContent())
+        .replaceAll(EDITOR_CARET_TEXT, "");
 
       expect(textBeforeTargets).toBe("playerName");
       expect(textAfterTargets).toBe("Player Name");

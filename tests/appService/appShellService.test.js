@@ -79,4 +79,20 @@ describe("appShellService", () => {
     expect(result).toBe(true);
     expect(deps.globalUI.showConfirm).toHaveBeenCalledWith(options);
   });
+
+  it("forwards payload update options to the router", () => {
+    const deps = createDeps();
+    const service = createAppShellService(deps);
+    const payload = {
+      p: "project-1",
+      sectionId: "section-1",
+      lineId: "line-1",
+    };
+
+    service.setPayload(payload, { throttleMs: 250 });
+
+    expect(deps.router.setPayload).toHaveBeenCalledWith(payload, {
+      throttleMs: 250,
+    });
+  });
 });

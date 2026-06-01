@@ -1,10 +1,9 @@
-import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
 import { generateId } from "../../internal/id.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
-import { toFlatItems } from "../../internal/project/tree.js";
 
 const INPUT_FIELDS_SLOT = "input-fields";
+const DEFAULT_FIELD_MAX_LENGTH = 32;
 const EMPTY_COLLECTION = {
   items: {},
   tree: [],
@@ -12,10 +11,6 @@ const EMPTY_COLLECTION = {
 const BOOLEAN_OPTIONS = [
   { value: true, label: "Yes" },
   { value: false, label: "No" },
-];
-const SUBMIT_ACTION_TYPE_OPTIONS = [
-  { value: "nextLine", label: "Continue" },
-  { value: "sectionTransition", label: "Move to Section" },
 ];
 const FORM_TEMPLATE = {
   title: "Input",
@@ -33,46 +28,8 @@ const FORM_TEMPLATE = {
       slot: INPUT_FIELDS_SLOT,
       label: "Fields",
     },
-    {
-      name: "submitActionType",
-      type: "segmented-control",
-      label: "Submit Action",
-      required: true,
-      options: SUBMIT_ACTION_TYPE_OPTIONS,
-    },
-    {
-      $when: `values.submitActionType == 'sectionTransition'`,
-      name: "submitSceneId",
-      type: "select",
-      label: "Scene",
-      options: "${scenes}",
-    },
-    {
-      $when: `values.submitActionType == 'sectionTransition'`,
-      name: "submitSectionId",
-      type: "select",
-      label: "Section",
-      options: "${sections}",
-    },
-    {
-      $when: `values.submitActionType == 'sectionTransition'`,
-      name: "submitTransitionAnimationId",
-      type: "select",
-      label: "Screen",
-      required: false,
-      clearable: true,
-      placeholder: "Animation",
-      options: "${transitionAnimationOptions}",
-    },
   ],
 };
-
-const createDefaultSettingsForm = () => ({
-  submitActionType: "nextLine",
-  submitSceneId: "",
-  submitSectionId: "",
-  submitTransitionAnimationId: "",
-});
 
 const createFormId = () => generateId();
 
@@ -95,10 +52,12 @@ export const resolveSelectedResourceId = ({
   layouts = [],
   resourceId,
 } = {}) => {
-  const resourceOptions = getInputLayoutOptions(layouts);
+  if (!resourceId) {
+    return "";
+  }
 
+  const resourceOptions = getInputLayoutOptions(layouts);
   if (
-    resourceId &&
     resourceOptions.some(
       (resourceOption) => resourceOption.value === resourceId,
     )
@@ -106,7 +65,7 @@ export const resolveSelectedResourceId = ({
     return resourceId;
   }
 
-  return resourceOptions[0]?.value ?? "";
+  return "";
 };
 
 const getInputFieldItemsForResource = ({
@@ -161,9 +120,55 @@ const createFieldConfig = ({ item, existingField } = {}) => ({
   placeholder: existingField?.placeholder ?? item.placeholder ?? "",
   multiline: existingField?.multiline ?? item.multiline ?? false,
   maxLength: normalizeMaxLengthValue(
-    existingField?.maxLength ?? item.maxLength,
+    existingField?.maxLength ?? item.maxLength ?? DEFAULT_FIELD_MAX_LENGTH,
   ),
 });
+
+const createEmptyFieldConfig = () => ({
+  field: "",
+  label: "",
+  variableId: "",
+  required: false,
+  trim: true,
+  placeholder: "",
+  multiline: false,
+  maxLength: DEFAULT_FIELD_MAX_LENGTH,
+});
+
+const copyFieldConfig = (fieldConfig = {}) => ({
+  field: fieldConfig.field ?? "",
+  label: fieldConfig.label ?? fieldConfig.field ?? "",
+  variableId: fieldConfig.variableId ?? "",
+  required: fieldConfig.required === true,
+  trim: fieldConfig.trim !== false,
+  placeholder: fieldConfig.placeholder ?? "",
+  multiline: fieldConfig.multiline === true,
+  maxLength: normalizeMaxLengthValue(fieldConfig.maxLength),
+});
+
+const resetFieldEditor = (state) => {
+  state.mode = "list";
+  state.editingField = "";
+  state.editFieldForm = createEmptyFieldConfig();
+};
+
+const setFieldConfigValue = (fieldConfig, name, value) => {
+  if (!fieldConfig || !name) {
+    return;
+  }
+
+  if (name === "required" || name === "trim" || name === "multiline") {
+    fieldConfig[name] = value === true || value === "true";
+    return;
+  }
+
+  if (name === "maxLength") {
+    fieldConfig[name] = value ?? "";
+    return;
+  }
+
+  fieldConfig[name] = value ?? "";
+};
 
 const createFieldConfigs = ({ inputFieldItems = [], existingFields = {} }) => {
   const sourceItems =
@@ -196,21 +201,6 @@ const applyFieldConfigs = (state, fieldConfigs) => {
   state.fieldOrder = fieldConfigs.fieldOrder;
 };
 
-const createSettingsFormFromSubmitActions = (submitActions = {}) => {
-  const settingsForm = createDefaultSettingsForm();
-  const sectionTransition = submitActions.sectionTransition;
-
-  if (sectionTransition) {
-    settingsForm.submitActionType = "sectionTransition";
-    settingsForm.submitSceneId = sectionTransition.sceneId ?? "";
-    settingsForm.submitSectionId = sectionTransition.sectionId ?? "";
-    settingsForm.submitTransitionAnimationId =
-      sectionTransition.screen?.animations?.resourceId ?? "";
-  }
-
-  return settingsForm;
-};
-
 const createFormExtras = (form = {}) => {
   if (!form || typeof form !== "object" || Array.isArray(form)) {
     return {};
@@ -227,26 +217,7 @@ const createFormExtras = (form = {}) => {
   return structuredClone(extras);
 };
 
-export const buildSubmitActions = (settingsForm = {}) => {
-  if (settingsForm.submitActionType === "sectionTransition") {
-    const sectionTransition = {
-      sceneId: settingsForm.submitSceneId,
-      sectionId: settingsForm.submitSectionId,
-    };
-
-    if (settingsForm.submitTransitionAnimationId) {
-      sectionTransition.screen = {
-        animations: {
-          resourceId: settingsForm.submitTransitionAnimationId,
-        },
-      };
-    }
-
-    return {
-      sectionTransition,
-    };
-  }
-
+export const buildSubmitActions = () => {
   return {
     nextLine: {},
   };
@@ -281,7 +252,6 @@ const createFormFieldsObject = (fieldRows = []) => {
 export const createFormData = ({
   resourceId,
   fieldRows,
-  settingsForm,
   formExtras = {},
 } = {}) => {
   if (!resourceId) {
@@ -297,29 +267,24 @@ export const createFormData = ({
     ...formData,
     resourceId,
     fields: createFormFieldsObject(fieldRows),
-    submitActions: buildSubmitActions(settingsForm),
+    submitActions: buildSubmitActions(),
   };
 };
 
 export const createInitialState = () => ({
+  mode: "list",
   selectedResourceId: "",
   fields: {},
   fieldOrder: [],
-  settingsForm: createDefaultSettingsForm(),
+  editingField: "",
+  editFieldForm: createEmptyFieldConfig(),
   formExtras: {
     id: createFormId(),
   },
-  scenes: EMPTY_COLLECTION,
-  animations: EMPTY_COLLECTION,
   variables: EMPTY_COLLECTION,
 });
 
-export const setRepositoryData = (
-  { state },
-  { scenes, animations, variables } = {},
-) => {
-  state.scenes = scenes ?? EMPTY_COLLECTION;
-  state.animations = animations ?? EMPTY_COLLECTION;
+export const setRepositoryData = ({ state }, { variables } = {}) => {
   state.variables = variables ?? EMPTY_COLLECTION;
 };
 
@@ -341,12 +306,12 @@ export const hydrateForm = ({ state }, { form, layouts, layoutsData } = {}) => {
   const previousFormId = state.formExtras?.id;
 
   state.selectedResourceId = resourceId;
-  state.settingsForm = createSettingsFormFromSubmitActions(form?.submitActions);
   state.formExtras = createFormExtras(form);
   if (!state.formExtras.id) {
     state.formExtras.id = previousFormId ?? createFormId();
   }
   applyFieldConfigs(state, fieldConfigs);
+  resetFieldEditor(state);
 };
 
 export const setSelectedResourceId = (
@@ -365,10 +330,7 @@ export const setSelectedResourceId = (
   });
 
   applyFieldConfigs(state, fieldConfigs);
-};
-
-export const updateSettingsForm = ({ state }, { field, value } = {}) => {
-  state.settingsForm[field] = value;
+  resetFieldEditor(state);
 };
 
 export const updateFieldConfig = ({ state }, { field, name, value } = {}) => {
@@ -376,32 +338,95 @@ export const updateFieldConfig = ({ state }, { field, name, value } = {}) => {
     return;
   }
 
-  if (name === "required" || name === "trim" || name === "multiline") {
-    state.fields[field][name] = value === true || value === "true";
+  setFieldConfigValue(state.fields[field], name, value);
+};
+
+export const startEditingField = ({ state }, { field } = {}) => {
+  if (!field || !state.fields[field]) {
+    resetFieldEditor(state);
     return;
   }
 
-  if (name === "maxLength") {
-    state.fields[field][name] = value ?? "";
+  state.mode = "editField";
+  state.editingField = field;
+  state.editFieldForm = copyFieldConfig(state.fields[field]);
+};
+
+export const updateEditFieldConfig = ({ state }, { name, value } = {}) => {
+  if (state.mode !== "editField" || !state.editingField) {
     return;
   }
 
-  state.fields[field][name] = value ?? "";
+  setFieldConfigValue(state.editFieldForm, name, value);
+};
+
+export const saveEditingField = ({ state }, _payload = {}) => {
+  const field = state.editingField;
+  const fieldConfig = state.fields[field];
+
+  if (!field || !fieldConfig) {
+    resetFieldEditor(state);
+    return;
+  }
+
+  fieldConfig.variableId = state.editFieldForm.variableId ?? "";
+  fieldConfig.required = state.editFieldForm.required === true;
+  fieldConfig.trim = state.editFieldForm.trim === true;
+  fieldConfig.placeholder = state.editFieldForm.placeholder ?? "";
+  fieldConfig.multiline = state.editFieldForm.multiline === true;
+  fieldConfig.maxLength = normalizeMaxLengthValue(
+    state.editFieldForm.maxLength,
+  );
+  resetFieldEditor(state);
+};
+
+export const cancelEditingField = ({ state }, _payload = {}) => {
+  resetFieldEditor(state);
 };
 
 export const selectSelectedResourceId = ({ state }) =>
   state.selectedResourceId ?? "";
 
+export const selectMode = ({ state }) => state.mode ?? "list";
+
+export const selectEditFieldForm = ({ state }) =>
+  state.editFieldForm ?? createEmptyFieldConfig();
+
+export const selectCanSaveEditField = ({ state }) => {
+  return (
+    state.mode === "editField" &&
+    !!state.editingField &&
+    !!state.fields[state.editingField] &&
+    !!state.editFieldForm?.variableId
+  );
+};
+
 export const selectFieldRows = ({ state }) =>
   state.fieldOrder.map((field) => state.fields[field]).filter(Boolean);
 
-export const selectSettingsForm = ({ state }) => state.settingsForm;
+export const selectFieldRowsWithEditingDraft = ({ state }) => {
+  const fieldRows = selectFieldRows({ state });
+
+  if (state.mode !== "editField" || !state.editingField) {
+    return fieldRows;
+  }
+
+  return fieldRows.map((fieldRow) =>
+    fieldRow.field === state.editingField ? state.editFieldForm : fieldRow,
+  );
+};
 
 export const selectFormData = ({ state }) =>
   createFormData({
     resourceId: state.selectedResourceId,
     fieldRows: selectFieldRows({ state }),
-    settingsForm: state.settingsForm,
+    formExtras: state.formExtras,
+  });
+
+export const selectFormDataWithEditingDraft = ({ state }) =>
+  createFormData({
+    resourceId: state.selectedResourceId,
+    fieldRows: selectFieldRowsWithEditingDraft({ state }),
     formExtras: state.formExtras,
   });
 
@@ -415,13 +440,75 @@ export const selectCanSubmit = ({ state }) => {
     return false;
   }
 
-  if (state.settingsForm.submitActionType === "sectionTransition") {
-    return (
-      !!state.settingsForm.submitSceneId && !!state.settingsForm.submitSectionId
-    );
+  return true;
+};
+
+const getFieldRowSummary = (row, variableLabel) => {
+  const summary = [
+    variableLabel,
+    row.required ? "Required" : "Optional",
+    row.trim ? "Trim" : "Keep whitespace",
+    row.multiline ? "Multiline" : "Single line",
+  ];
+
+  if (row.placeholder) {
+    summary.push(`Placeholder: ${row.placeholder}`);
   }
 
-  return true;
+  if (row.maxLength !== "" && row.maxLength !== undefined) {
+    summary.push(`Max: ${row.maxLength}`);
+  }
+
+  return summary.join(" - ");
+};
+
+const createFieldDisplayRows = (fieldRows = [], variableOptions = []) => {
+  const variableLabels = new Map(
+    variableOptions.map((option) => [option.value, option.label]),
+  );
+
+  return fieldRows.map((row) => {
+    const variableLabel =
+      variableLabels.get(row.variableId) ?? "No variable mapped";
+
+    return {
+      ...row,
+      variableLabel,
+      summary: getFieldRowSummary(row, variableLabel),
+    };
+  });
+};
+
+const createFieldVariableOptions = (variablesData = EMPTY_COLLECTION) => {
+  return getVariableOptions(variablesData, {
+    type: "string",
+  }).map((option) => {
+    const variableType = (
+      variablesData.items?.[option.value]?.variableType || "string"
+    ).toLowerCase();
+
+    return {
+      ...option,
+      suffixText: variableType,
+    };
+  });
+};
+
+const createBreadcrumb = (state) => {
+  const breadcrumb = [{ id: "actions", label: "Actions", click: true }];
+
+  if (state.mode === "editField") {
+    breadcrumb.push({ id: "input", label: "Input", click: true });
+    breadcrumb.push({
+      label: state.editFieldForm?.label
+        ? `Edit ${state.editFieldForm.label}`
+        : "Edit Field",
+    });
+    return breadcrumb;
+  }
+
+  breadcrumb.push({ label: "Input" });
+  return breadcrumb;
 };
 
 export const selectViewData = ({ state, props }) => {
@@ -431,53 +518,32 @@ export const selectViewData = ({ state, props }) => {
     layouts,
     resourceId: state.selectedResourceId,
   });
-  const allScenes = toFlatItems(state.scenes).filter(
-    (item) => item.type === "scene",
+  const fieldVariableOptions = createFieldVariableOptions(state.variables);
+  const fieldRows = createFieldDisplayRows(
+    selectFieldRows({ state }),
+    fieldVariableOptions,
   );
-  const scenes = allScenes.map((item) => ({
-    label: item.name,
-    value: item.id,
-  }));
-  const selectedScene = allScenes.find(
-    (scene) => scene.id === state.settingsForm.submitSceneId,
-  );
-  const sections = selectedScene
-    ? toFlatItems(selectedScene.sections).map((item) => ({
-        label: item.name,
-        value: item.id,
-      }))
-    : [];
-  const fieldRows = selectFieldRows({ state });
+  const editFieldForm = selectEditFieldForm({ state });
 
   return {
-    breadcrumb: [
-      { id: "actions", label: "Actions", click: true },
-      { label: "Input" },
-    ],
+    mode: selectMode({ state }),
+    breadcrumb: createBreadcrumb(state),
     form: FORM_TEMPLATE,
-    formKey: `${selectedResourceId}|${state.fieldOrder.join("|")}|${state.settingsForm.submitActionType}|${state.settingsForm.submitSceneId}`,
+    formKey: `${selectedResourceId}|${state.fieldOrder.join("|")}`,
     defaultValues: {
       resourceId: selectedResourceId,
-      ...state.settingsForm,
     },
     context: {
       layoutOptions,
-      scenes,
-      sections,
-      transitionAnimationOptions: getTransitionAnimationOptions(
-        state.animations,
-        state.settingsForm.submitTransitionAnimationId,
-      ),
     },
     inputFieldsSlot: INPUT_FIELDS_SLOT,
     selectedResourceId,
     fieldRows,
     hasFields: fieldRows.length > 0,
-    fieldVariableOptions: getVariableOptions(state.variables, {
-      type: "string",
-      showType: true,
-    }),
+    editFieldForm,
+    fieldVariableOptions,
     booleanOptions: BOOLEAN_OPTIONS,
+    canSaveEditField: selectCanSaveEditField({ state }),
     submitDisabled: !selectCanSubmit({ state }),
   };
 };

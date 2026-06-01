@@ -4,7 +4,7 @@ contextMenuItems:
   - label: Container
     type: item
     createType: container
-  - label: Sprite
+  - label: Image
     type: item
     createType: sprite
   - label: Spritesheet Animation
@@ -24,7 +24,7 @@ contextMenuItems:
     type: item
     createType: input
   - "$when": 'layoutType == "input"'
-    label: Submit Button
+    label: Input Submit Container
     type: item
     createType: form-submit-button
   - label: Fragment
@@ -83,7 +83,7 @@ contextMenuItems:
     type: item
     createType: container-save-load-slot
   - "$when": 'layoutType == "save-load"'
-    label: Sprite (Save Image)
+    label: Image (Save Image)
     type: item
     createType: sprite-save-load-slot-image
   - "$when": 'layoutType == "save-load"'
@@ -110,7 +110,7 @@ emptyContextMenuItems:
   - label: Container
     type: item
     createType: container
-  - label: Sprite
+  - label: Image
     type: item
     createType: sprite
   - label: Spritesheet Animation
@@ -130,7 +130,7 @@ emptyContextMenuItems:
     type: item
     createType: input
   - "$when": 'layoutType == "input"'
-    label: Submit Button
+    label: Input Submit Container
     type: item
     createType: form-submit-button
   - label: Fragment
@@ -149,7 +149,7 @@ emptyContextMenuItems:
     type: item
     createType: container-save-load-slot
   - "$when": 'layoutType == "save-load"'
-    label: Sprite (Save Image)
+    label: Image (Save Image)
     type: item
     createType: sprite-save-load-slot-image
   - "$when": 'layoutType == "save-load"'

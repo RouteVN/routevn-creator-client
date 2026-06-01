@@ -42,7 +42,7 @@ describe("layoutEditorViewData", () => {
   it("builds form submit button create actions as containers with a static form role", () => {
     const [submitItem] = toLayoutEditorContextMenuItems([
       {
-        label: "Submit Button",
+        label: "Input Submit Container",
         type: "item",
         createType: "form-submit-button",
       },
@@ -51,14 +51,14 @@ describe("layoutEditorViewData", () => {
     expect(submitItem.value).toMatchObject({
       action: "new-child-item",
       type: "container",
-      name: "Submit Button",
+      name: "Input Submit Container",
       direction: "absolute",
       gapX: 0,
       gapY: 0,
       formRole: "submit",
-      width: 160,
-      height: 52,
     });
+    expect(submitItem.value).not.toHaveProperty("width");
+    expect(submitItem.value).not.toHaveProperty("height");
   });
 
   it("builds choice single item container create actions", () => {

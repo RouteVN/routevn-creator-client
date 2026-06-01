@@ -111,6 +111,13 @@ Do not add unit tests for temporary diagnostic/debug logs. If debug logs are
 needed to inspect a local issue, keep tests focused on the underlying behavior
 instead of asserting log payloads.
 
+For rich-text editor selection bugs, separate the logical content offset from
+the DOM/Lexical selection position. Validate both the serialized content and
+the rendered caret boundary, especially around atomic chips and invisible
+caret anchors such as zero-length text nodes. Temporary selection logs should
+be removed once the behavior is protected by regression coverage or equivalent
+browser validation.
+
 Run one Puty scenario directly:
 
 ```bash

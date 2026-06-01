@@ -46,6 +46,7 @@ const BACKGROUND_TRANSFORM_RESIZE_TARGET_PREFIX = "selected-border-resize-";
 const MIN_BACKGROUND_TRANSFORM_SCALE = 0.01;
 const BACKGROUND_TRANSFORM_KEYBOARD_NUDGE = 1;
 const BACKGROUND_TRANSFORM_KEYBOARD_LARGE_NUDGE = 10;
+const SCENE_EDITOR_SELECTION_URL_SYNC_THROTTLE_MS = 250;
 
 const toPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -232,7 +233,10 @@ const findPreviousSectionLastLineTarget = (
   return undefined;
 };
 
-const selectEditorTarget = (deps, { sectionId, lineId } = {}) => {
+const selectEditorTarget = (
+  deps,
+  { sectionId, lineId, payloadThrottleMs } = {},
+) => {
   const { appService, store } = deps;
   const nextSectionId = sectionId || findSectionIdForLine(store, lineId);
 
@@ -260,7 +264,11 @@ const selectEditorTarget = (deps, { sectionId, lineId } = {}) => {
       delete nextPayload.lineId;
     }
 
-    appService.setPayload(nextPayload);
+    if (payloadThrottleMs > 0) {
+      appService.setPayload(nextPayload, { throttleMs: payloadThrottleMs });
+    } else {
+      appService.setPayload(nextPayload);
+    }
   }
 
   return nextSectionId;
@@ -1868,11 +1876,14 @@ export const handleSelectedLineChanged = (deps, payload) => {
   const sectionId =
     getSectionIdFromPayload(payload) || findSectionIdForLine(store, lineId);
   const previousLineId = store.selectSelectedLineId();
+  const previousSectionId = store.selectSelectedSectionId?.();
   const isSameSelection =
-    lineId === previousLineId &&
-    sectionId === store.selectSelectedSectionId?.();
+    lineId === previousLineId && sectionId === previousSectionId;
   let adjacentSectionTarget;
-  if (isSameSelection && detail.mode === "block") {
+  const canCrossSectionFromCurrentMode =
+    detail.mode === "block" ||
+    (detail.mode === "text-editor" && detail.isBoundaryNavigation === true);
+  if (isSameSelection && canCrossSectionFromCurrentMode) {
     if (detail.navigationDirection === "down") {
       adjacentSectionTarget = findNextSectionFirstLineTarget(store, {
         sectionId,
@@ -1891,18 +1902,41 @@ export const handleSelectedLineChanged = (deps, payload) => {
   }
 
   const target = adjacentSectionTarget || { sectionId, lineId };
-  selectEditorTarget(deps, target);
+  selectEditorTarget(deps, {
+    sectionId: target.sectionId,
+    lineId: target.lineId,
+    payloadThrottleMs: SCENE_EDITOR_SELECTION_URL_SYNC_THROTTLE_MS,
+  });
 
   render();
 
   if (adjacentSectionTarget) {
     requestAnimationFrame(() => {
+      const currentSectionId = store.selectSelectedSectionId?.();
+      const currentLineId = store.selectSelectedLineId?.();
+      if (
+        currentSectionId !== adjacentSectionTarget.sectionId ||
+        currentLineId !== adjacentSectionTarget.lineId
+      ) {
+        return;
+      }
+
       scrollLinesEditorLineIntoView(
         refs,
         adjacentSectionTarget.lineId,
         adjacentSectionTarget.sectionId,
       );
-      focusLinesEditorContainer(refs, adjacentSectionTarget.sectionId);
+      if (detail.mode === "text-editor") {
+        focusLinesEditorLine(refs, {
+          sectionId: adjacentSectionTarget.sectionId,
+          lineId: adjacentSectionTarget.lineId,
+          cursorPosition: detail.cursorPosition,
+          goalColumn: detail.cursorPosition,
+          direction: detail.navigationDirection,
+        });
+      } else {
+        focusLinesEditorContainer(refs, adjacentSectionTarget.sectionId);
+      }
     });
   }
 
