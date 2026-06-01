@@ -43,6 +43,7 @@ const AVATAR_VALIDATIONS = [
 
 const EMPTY_CHARACTER_FORM_VALUES = {
   name: "",
+  nameVariableId: "",
   description: "",
   shortcut: "",
   tagIds: [],
@@ -99,6 +100,7 @@ const syncCharactersData = ({
       tagsCollection: tagsData,
       itemType: "character",
     }),
+    variablesData: state?.variables ?? { items: {}, tree: [] },
   });
 };
 
@@ -136,6 +138,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   editForm.setValues({
     values: {
       name: characterItem.name ?? "",
+      nameVariableId: characterItem.nameVariableId ?? "",
       description: characterItem.description ?? "",
       shortcut: characterItem.shortcut ?? "",
       tagIds: characterItem.tagIds ?? [],
@@ -401,6 +404,7 @@ export const handleCharacterCreated = async (deps, payload) => {
     name,
     description,
     shortcut,
+    nameVariableId,
     tagIds,
     spriteGroups,
     avatarFileId,
@@ -433,6 +437,10 @@ export const handleCharacterCreated = async (deps, payload) => {
 
   if (avatarFileId) {
     characterData.fileId = avatarFileId;
+  }
+
+  if (nameVariableId) {
+    characterData.nameVariableId = nameVariableId;
   }
 
   if (Array.isArray(spriteGroups) && spriteGroups.length > 0) {
@@ -557,6 +565,7 @@ export const handleDialogFormActionClick = async (deps, payload) => {
         detail: {
           groupId: targetGroupId,
           name,
+          nameVariableId: formData.nameVariableId || "",
           description: formData.description,
           shortcut: formData.shortcut || "",
           tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
@@ -1007,6 +1016,7 @@ export const handleEditFormAction = async (deps, payload) => {
     // Update the character in the repository
     const updateData = {
       name: formData.name,
+      nameVariableId: formData.nameVariableId || "",
       description: formData.description,
       shortcut: formData.shortcut || "",
       tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],

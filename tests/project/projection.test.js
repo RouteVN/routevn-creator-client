@@ -641,6 +641,119 @@ describe("constructProjectData", () => {
     ]);
   });
 
+  it("projects character nameVariableId for route-engine speaker names", () => {
+    const projectData = constructProjectData(
+      createExportRepositoryState({
+        variables: createTreeCollection(
+          {
+            playerName: {
+              id: "playerName",
+              type: "variable",
+              variableType: "string",
+              scope: "context",
+              default: "Ada",
+            },
+          },
+          [{ id: "playerName" }],
+        ),
+        characters: createTreeCollection(
+          {
+            hero: {
+              id: "hero",
+              type: "character",
+              name: "Hero",
+              nameVariableId: "playerName",
+              sprites: createTreeCollection(),
+            },
+          },
+          [{ id: "hero" }],
+        ),
+        layouts: createTreeCollection(
+          {
+            "dialogue-layout": {
+              id: "dialogue-layout",
+              type: "layout",
+              name: "Dialogue Layout",
+              layoutType: "dialogue-adv",
+              elements: createTreeCollection(
+                {
+                  "dialogue-name": {
+                    id: "dialogue-name",
+                    type: "text-ref-character-name",
+                    name: "Speaker Name",
+                    x: 0,
+                    y: 0,
+                    width: 300,
+                    height: 48,
+                  },
+                  "dialogue-text": {
+                    id: "dialogue-text",
+                    type: "text-revealing-ref-dialogue-content",
+                    name: "Dialogue Text",
+                    x: 0,
+                    y: 64,
+                    width: 800,
+                    height: 120,
+                  },
+                },
+                [{ id: "dialogue-name" }, { id: "dialogue-text" }],
+              ),
+            },
+          },
+          [{ id: "dialogue-layout" }],
+        ),
+        scenes: createTreeCollection(
+          {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              name: "Scene 1",
+              sections: createTreeCollection(
+                {
+                  "section-1": {
+                    id: "section-1",
+                    name: "Section 1",
+                    lines: createTreeCollection(
+                      {
+                        "line-1": {
+                          id: "line-1",
+                          actions: {
+                            dialogue: {
+                              ui: {
+                                resourceId: "dialogue-layout",
+                              },
+                              characterId: "hero",
+                              content: [{ text: "Hello" }],
+                            },
+                          },
+                        },
+                      },
+                      [{ id: "line-1" }],
+                    ),
+                  },
+                },
+                [{ id: "section-1" }],
+              ),
+            },
+          },
+          [{ id: "scene-1" }],
+        ),
+      }),
+    );
+
+    expect(projectData.resources.characters.hero.nameVariableId).toBe(
+      "playerName",
+    );
+
+    const renderState = selectRouteEngineRenderState(projectData);
+    const speakerName = findRenderElementById(
+      renderState.elements,
+      "dialogue-name",
+    );
+
+    expect(speakerName.content).toBe("Ada");
+  });
+
   it("projects line screen transitions for route-engine rendering", () => {
     const projectData = constructProjectData(
       createExportRepositoryState({

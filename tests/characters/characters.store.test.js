@@ -37,6 +37,7 @@ describe("characters store sprite group tags", () => {
           id: "character-hero",
           type: "character",
           name: "Hero",
+          nameVariableId: "playerName",
           tagIds: ["character-tag-main"],
           spriteGroups: [
             {
@@ -48,6 +49,23 @@ describe("characters store sprite group tags", () => {
         },
       },
       tree: [{ id: "character-hero" }],
+    };
+    state.variablesData = {
+      items: {
+        playerName: {
+          id: "playerName",
+          type: "variable",
+          variableType: "string",
+          name: "Player Name",
+        },
+        score: {
+          id: "score",
+          type: "variable",
+          variableType: "number",
+          name: "Score",
+        },
+      },
+      tree: [{ id: "playerName" }, { id: "score" }],
     };
     state.selectedItemId = "character-hero";
     state.editItemId = "character-hero";
@@ -74,6 +92,18 @@ describe("characters store sprite group tags", () => {
         value: "character-tag-main",
       },
     ]);
+    expect(viewData.dialogForm.fields[5]).toMatchObject({
+      name: "nameVariableId",
+      type: "select",
+      description:
+        "Set this only if you want the speaker display to come from a variable instead of fixed name.",
+      options: [
+        {
+          label: "Player Name",
+          value: "playerName",
+        },
+      ],
+    });
     expect(viewData.dialogForm.fields[3]).toMatchObject({
       name: "tagIds",
       type: "tag-select",
@@ -81,6 +111,18 @@ describe("characters store sprite group tags", () => {
         {
           label: "Main Cast",
           value: "character-tag-main",
+        },
+      ],
+    });
+    expect(viewData.editForm.fields[6]).toMatchObject({
+      name: "nameVariableId",
+      type: "select",
+      description:
+        "Set this only if you want the speaker display to come from a variable instead of fixed name.",
+      options: [
+        {
+          label: "Player Name",
+          value: "playerName",
         },
       ],
     });
@@ -127,5 +169,11 @@ describe("characters store sprite group tags", () => {
     expect(viewData.spriteGroupDialogForm.actions.buttons[0].label).toBe(
       "Update Group",
     );
+    expect(viewData.editDefaultValues.nameVariableId).toBe("playerName");
+    expect(viewData.detailFields).toContainEqual({
+      type: "text",
+      label: "Name Variable",
+      value: "Player Name",
+    });
   });
 });
