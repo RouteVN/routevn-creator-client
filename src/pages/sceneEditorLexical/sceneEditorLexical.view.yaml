@@ -164,7 +164,7 @@ template:
                                   - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c w=f h=40 ph=sm bgc=bg bwb=xs style="position: sticky; top: 0px; z-index: 5; min-width: 0;"':
                                       - rtgl-text s=sm w=1fg ellipsis=true: ${section.name}
                                       - rtgl-button#sectionMenu${sectionIndex} data-section-id=${section.id} sq v=gh s=sm: ...
-                                  - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectedLineId=${section.selectedLineId} :showLineNumbers=${sceneSettings.showLineNumbers} :textStyles=${textStyles} :mentionTargets=${mentionTargets}: null
+                                  - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectionActive=${section.selectionActive} :selectedLineId=${section.selectedLineId} :showLineNumbers=${sceneSettings.showLineNumbers} :textStyles=${textStyles} :mentionTargets=${mentionTargets}: null
                           - rtgl-view h=30vh: null
           - rtgl-view w=1 h=f bgc=mu: null
           - 'rtgl-view w=1fg d=v h=f style="min-width: 0; min-height: 0;"':

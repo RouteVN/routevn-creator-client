@@ -146,7 +146,15 @@ export const placeCaretAroundReferenceNode = (node, direction) => {
   }
 
   const referenceIndex = node.getIndexWithinParent();
-  const caretIndex = referenceIndex + (direction > 0 ? 1 : 0);
+  let caretIndex = referenceIndex + (direction > 0 ? 1 : 0);
+  const nextSibling = node.getNextSibling();
+  if (
+    direction > 0 &&
+    $isTextNode(nextSibling) &&
+    getLexicalTextLength(nextSibling) === 0
+  ) {
+    caretIndex += 1;
+  }
   parentNode.select(caretIndex, caretIndex);
 };
 
@@ -175,7 +183,7 @@ export const isCollapsedReferenceCaretMovingIntoNode = (
   );
 };
 
-export const getAdjacentReferenceNodeForCollapsedSelection = (
+export const getAdjacentReferenceNodeInfoForCollapsedSelection = (
   selection,
   direction,
 ) => {
@@ -186,6 +194,22 @@ export const getAdjacentReferenceNodeForCollapsedSelection = (
   const point = selection.anchor;
   const node = point.getNode();
   let candidate;
+  let skippedZeroLengthText = false;
+  const skipZeroLengthTextCandidate = (candidateNode) => {
+    let nextCandidate = candidateNode;
+    while (
+      $isTextNode(nextCandidate) &&
+      getLexicalTextLength(nextCandidate) === 0
+    ) {
+      skippedZeroLengthText = true;
+      nextCandidate =
+        direction < 0
+          ? nextCandidate.getPreviousSibling()
+          : nextCandidate.getNextSibling();
+    }
+
+    return nextCandidate;
+  };
 
   if ($isMentionNode(node)) {
     candidate = isCollapsedReferenceCaretMovingIntoNode(
@@ -197,7 +221,9 @@ export const getAdjacentReferenceNodeForCollapsedSelection = (
       : undefined;
   } else if (point.type === "text" && $isTextNode(node)) {
     const textLength = getLexicalTextLength(node);
-    if (direction < 0 && point.offset === 0) {
+    if (textLength === 0) {
+      candidate = skipZeroLengthTextCandidate(node);
+    } else if (direction < 0 && point.offset === 0) {
       candidate = node.getPreviousSibling();
     } else if (direction > 0 && point.offset >= textLength) {
       candidate = node.getNextSibling();
@@ -208,7 +234,23 @@ export const getAdjacentReferenceNodeForCollapsedSelection = (
       childIndex >= 0 && childIndex < node.getChildrenSize()
         ? node.getChildAtIndex(childIndex)
         : undefined;
+    candidate = skipZeroLengthTextCandidate(candidate);
   }
 
-  return $isMentionNode(candidate) ? candidate : undefined;
+  if (!$isMentionNode(candidate)) {
+    return undefined;
+  }
+
+  return {
+    node: candidate,
+    skippedZeroLengthText,
+  };
+};
+
+export const getAdjacentReferenceNodeForCollapsedSelection = (
+  selection,
+  direction,
+) => {
+  return getAdjacentReferenceNodeInfoForCollapsedSelection(selection, direction)
+    ?.node;
 };

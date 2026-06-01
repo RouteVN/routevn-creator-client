@@ -40,6 +40,7 @@ import {
   getContentLength,
   getLineDialogueContent,
   getPlainTextFromContent,
+  mergeAdjacentContentItems,
   normalizeSingleLineText,
   setLineDialogueContent,
   splitContentRange,
@@ -57,7 +58,6 @@ import {
   createNodesFromContent as createLexicalNodesFromContent,
   filterMentionSuggestions,
   getFuriganaFromNode,
-  getMentionMenuPosition,
   getSelectionRange,
   getSelectionOffsets,
   getTextStyleIdFromNode,
@@ -79,7 +79,7 @@ import {
   setSelectionFromRange,
 } from "./lexicalSceneDocumentSelection.js";
 import {
-  getAdjacentReferenceNodeForCollapsedSelection,
+  getAdjacentReferenceNodeInfoForCollapsedSelection,
   getReferenceElementFromContextEvent,
   getReferenceRichTextStateFromNode,
   getReferenceSelectionInfo,
@@ -98,8 +98,104 @@ const MIN_EDITOR_TEXT_WIDTH = 160;
 const BLOCK_ROW_BACKGROUND = "var(--muted)";
 const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
 const TEXT_INPUT_FALLBACK_MAX_AGE_MS = 1000;
+const TEXT_INPUT_FALLBACK_DUPLICATE_MAX_AGE_MS = 250;
+const TYPED_SLASH_MENTION_TRIGGER_WINDOW_MS = 1000;
 const PROGRAMMATIC_FOCUS_BLUR_SUPPRESS_MS = 750;
 const VERTICAL_NAVIGATION_SELECTION_SYNC_FRAMES = 4;
+
+const isSectionEditorSelectedLineIdBindingFallback = (value) => {
+  return /^sectionEditorItems\[\d+\]\.selectedLineId$/.test(
+    String(value ?? ""),
+  );
+};
+
+const isSlashText = (value) => {
+  return String(value ?? "") === "/";
+};
+
+const isArrowKeyEvent = (event) => {
+  const key = String(event?.key ?? "");
+  return (
+    key === "ArrowLeft" ||
+    key === "ArrowRight" ||
+    key === "ArrowUp" ||
+    key === "ArrowDown"
+  );
+};
+
+const areNativeLineSelectionContextsEqual = (first, second) => {
+  if (!first || !second) {
+    return first === second;
+  }
+
+  return (
+    first.lineId === second.lineId &&
+    first.start === second.start &&
+    first.end === second.end
+  );
+};
+
+const doesContentEndWithReference = (content = []) => {
+  const items = mergeAdjacentContentItems(content);
+  return items.at(-1)?.reference !== undefined;
+};
+
+const areRenderedMentionMenuItemsEqual = (
+  currentItems = [],
+  nextItems = [],
+) => {
+  if (currentItems.length !== nextItems.length) {
+    return false;
+  }
+
+  return currentItems.every((currentItem, index) => {
+    const nextItem = nextItems[index];
+    return (
+      currentItem?.id === nextItem?.id &&
+      currentItem?.type === nextItem?.type &&
+      currentItem?.label === nextItem?.label &&
+      currentItem?.suffixText === nextItem?.suffixText
+    );
+  });
+};
+
+const getMentionTriggerFromTextNode = (
+  anchorNode,
+  anchorOffset,
+  { source = "lexical" } = {},
+) => {
+  if (!$isTextNode(anchorNode) || $isMentionNode(anchorNode)) {
+    return undefined;
+  }
+
+  const text = anchorNode.getTextContent();
+  const offset = Math.max(
+    0,
+    Math.min(
+      Number(anchorOffset) || 0,
+      anchorNode.getTextContentSize?.() ?? text.length,
+    ),
+  );
+  const beforeCaret = text.slice(0, offset);
+  const match = beforeCaret.match(/(?:^|\s)\/([a-z0-9._-]*)$/i);
+  if (!match) {
+    return undefined;
+  }
+
+  const query = match[1] ?? "";
+  const startOffset = beforeCaret.lastIndexOf(`/${query}`);
+  if (startOffset === -1) {
+    return undefined;
+  }
+
+  return {
+    nodeKey: anchorNode.getKey(),
+    startOffset,
+    endOffset: offset,
+    query,
+    source,
+  };
+};
 
 const normalizeMentionTarget = (target = {}) => {
   const label = String(target.label ?? "")
@@ -211,6 +307,12 @@ const STYLES = `
 
   .editor[data-rvn-reference-selection-active="true"] {
     caret-color: transparent;
+  }
+
+  .editor[data-rvn-reference-selection-active="true"]::selection,
+  .editor[data-rvn-reference-selection-active="true"] *::selection {
+    background: transparent;
+    color: inherit;
   }
 
   .editor:focus {
@@ -825,6 +927,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       lineDecorations: [],
       textStyles: [],
       selectedLineId: undefined,
+      selectionActive: true,
       showLineNumbers: true,
       mode: "block",
       plainText: "",
@@ -864,16 +967,23 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.pendingParagraphSplitBeforeInput = false;
     this.pendingTextInputFallback = undefined;
     this.pendingTextInputFallbackTimerId = undefined;
+    this.lastCommittedTextInputFallback = undefined;
     this.pendingFocusTarget = undefined;
     this.pendingHandledBackspaceKeyDown = undefined;
     this.programmaticFocusRestoreUntil = 0;
     this.lastProgrammaticFocusTarget = undefined;
+    this.focusRestoreSequenceId = 0;
     this.isPointerDownInsideEditor = false;
     this.pointerDownInsideEditorTimerId = undefined;
     this.pendingPointerFallbackSelection = undefined;
     this.pendingBlockContextMenuSelectedLineId = undefined;
     this.pendingDefaultContextMenuLineId = undefined;
     this.verticalNavigationSelectionSyncId = 0;
+    this.pendingVerticalNavigationSelectionSync = undefined;
+    this.mentionMenuFocusRestoreTimerId = undefined;
+    this.dismissedMentionTrigger = undefined;
+    this.dismissedMentionTriggerScope = undefined;
+    this.pendingTypedSlashMentionTrigger = undefined;
 
     this.editor = createEditor({
       namespace: "routevn-lexical-scene-document-editor",
@@ -946,6 +1056,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.refs.mentionMenu.place = "bs";
     this.refs.mentionMenu.w = "260";
     this.refs.mentionMenu.h = "240";
+    this.refs.mentionMenu.render?.();
+    this.syncMentionMenuPopover();
     this.editor.setRootElement(this.refs.editor);
 
     this.unregister = mergeRegister(
@@ -1003,6 +1115,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           event?.preventDefault?.();
           this.closeMentionMenu({
             shouldRender: true,
+            dismissCurrentTrigger: true,
           });
           return true;
         },
@@ -1187,7 +1300,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.clearDeleteShortcutState();
     this.clearPendingTextInputFallback();
     this.clearPendingHandledBackspaceKeyDown();
+    this.clearMentionMenuFocusRestore();
     this.pendingFocusTarget = undefined;
+    this.pendingVerticalNavigationSelectionSync = undefined;
+    this.verticalNavigationSelectionSyncId += 1;
     this.clearPointerDownInsideEditor();
 
     if (this.didPatchActiveElement) {
@@ -1271,7 +1387,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   set selectedLineId(value) {
     const nextSelectedLineId =
-      typeof value === "string" && value.length > 0 ? value : undefined;
+      typeof value === "string" &&
+      value.length > 0 &&
+      !isSectionEditorSelectedLineIdBindingFallback(value)
+        ? value
+        : undefined;
+    const previousSelectedLineId = this.state.selectedLineId;
+    if (previousSelectedLineId !== nextSelectedLineId) {
+      this.invalidatePendingFocusRestore();
+    }
     this.state.selectedLineId = nextSelectedLineId;
 
     if (!nextSelectedLineId) {
@@ -1297,6 +1421,37 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   get selectedLineId() {
     return this.state.selectedLineId;
+  }
+
+  set selectionActive(value) {
+    const nextSelectionActive = value !== false && value !== "false";
+    if (this.state.selectionActive === nextSelectionActive) {
+      return;
+    }
+
+    this.state.selectionActive = nextSelectionActive;
+    if (!nextSelectionActive) {
+      this.isEditorFocused = false;
+      this.lastProgrammaticFocusTarget = undefined;
+      this.pendingFocusTarget = undefined;
+      this.programmaticFocusRestoreUntil = 0;
+      this.pendingSelectionSnapshot = undefined;
+      this.invalidatePendingFocusRestore();
+      this.applyModeState("block");
+      this.clearRenderedSelectionState();
+      this.hideSelectionPopover();
+      this.closeMentionMenu();
+    }
+
+    if (!this.isConnected || !this.refs.editor) {
+      return;
+    }
+
+    this.scheduleRender();
+  }
+
+  get selectionActive() {
+    return this.state.selectionActive !== false;
   }
 
   set showLineNumbers(value) {
@@ -1354,11 +1509,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const targetPosition =
       typeof cursorPosition === "number"
         ? cursorPosition < 0
-          ? (lineElement.textContent?.length ?? 0)
+          ? this.getLineVisibleTextLength(lineElement)
           : cursorPosition
-        : (lineElement.textContent?.length ?? 0);
+        : this.getLineVisibleTextLength(lineElement);
 
-    const { range } = createCollapsedRangeAtPosition(
+    const { range, actualPosition } = createCollapsedRangeAtPosition(
       lineElement,
       targetPosition,
     );
@@ -1371,8 +1526,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
         applySelectionToLineNode(lineNode, {
           lineId,
-          start: targetPosition,
-          end: targetPosition,
+          start: actualPosition,
+          end: actualPosition,
         });
       },
       { discrete: true },
@@ -1417,25 +1572,69 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   restoreLineSelectionAfterLexicalFocus(payload = {}) {
-    if (typeof this.editor?.focus !== "function") {
+    const focusRestoreSequenceId = this.advanceFocusRestoreSequence();
+    this.markProgrammaticFocusRestore(payload);
+    const restoreSelection = () => {
+      if (!this.isConnected) {
+        return;
+      }
+
+      if (this.focusRestoreSequenceId !== focusRestoreSequenceId) {
+        return;
+      }
+
+      if (
+        this.state &&
+        (this.state.selectedLineId !== payload.lineId ||
+          this.state.mode !== "text-editor" ||
+          this.isEditorFocused !== true)
+      ) {
+        return;
+      }
+
+      const nativeSelection = this.getNativeLineSelectionContext();
+      if (this.shouldSkipAsyncLineSelectionRestore(payload, nativeSelection)) {
+        return;
+      }
+
+      this.markProgrammaticFocusRestore(payload);
+      if (!this.isEditorActiveElement()) {
+        this.focus({ preventScroll: true });
+      }
+      this.restoreLineSelection(payload);
+    };
+
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(restoreSelection);
       return;
     }
 
-    this.markProgrammaticFocusRestore(payload);
-    this.editor.focus(
-      () => {
-        if (!this.isConnected) {
-          return;
-        }
+    queueMicrotask(restoreSelection);
+  }
 
-        this.markProgrammaticFocusRestore(payload);
-        if (!this.isEditorActiveElement()) {
-          this.focus({ preventScroll: true });
-        }
-        this.restoreLineSelection(payload);
-      },
-      { defaultSelection: "rootEnd" },
-    );
+  shouldSkipAsyncLineSelectionRestore(payload = {}, nativeSelection) {
+    if (payload.forceRestore === true) {
+      return false;
+    }
+
+    if (!nativeSelection?.lineId) {
+      return false;
+    }
+
+    if (nativeSelection.lineId !== payload.lineId) {
+      return true;
+    }
+
+    if (
+      nativeSelection.start !== nativeSelection.end ||
+      typeof nativeSelection.start !== "number" ||
+      typeof payload.cursorPosition !== "number" ||
+      payload.cursorPosition < 0
+    ) {
+      return false;
+    }
+
+    return nativeSelection.start !== payload.cursorPosition;
   }
 
   focusContainer() {
@@ -1872,13 +2071,16 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    if (this.state.mentionMenu.isOpen && this.hasActiveMentionTrigger()) {
+    if (this.state.mentionMenu?.isOpen) {
       const relatedTarget = event?.relatedTarget;
       if (this.isMentionMenuFocusTarget(relatedTarget)) {
-        this.keepMentionMenuNonModal({ restoreFocus: true });
+        this.refs.mentionMenu.open = true;
+        this.syncMentionMenuPopover();
         return;
       }
+    }
 
+    if (this.state.mentionMenu?.isOpen && this.hasActiveMentionTrigger()) {
       setTimeout(() => {
         if (!this.isConnected || !this.state.mentionMenu.isOpen) {
           return;
@@ -1889,7 +2091,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         }
 
         if (this.isMentionMenuFocusTarget(document.activeElement)) {
-          this.keepMentionMenuNonModal({ restoreFocus: true });
+          this.syncMentionMenuPopover();
           return;
         }
 
@@ -1922,7 +2124,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.isEditorFocused = false;
     this.hideSelectionPopover();
-    this.closeMentionMenu();
+    this.closeMentionMenu({
+      dismissCurrentTrigger: this.state.mentionMenu?.isOpen === true,
+    });
     this.pendingSelectionSnapshot = undefined;
     this.enterBlockMode({
       focusSurface: false,
@@ -1939,7 +2143,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   getActiveElement() {
     const root = this.refs?.editor?.getRootNode?.();
-    return root?.activeElement || document.activeElement;
+    return (
+      root?.activeElement ||
+      (typeof document === "undefined" ? undefined : document.activeElement)
+    );
   }
 
   isEditorActiveElement() {
@@ -1995,6 +2202,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   isWithinProgrammaticFocusRestoreWindow() {
     return this.getNow() <= this.programmaticFocusRestoreUntil;
+  }
+
+  advanceFocusRestoreSequence() {
+    this.focusRestoreSequenceId = (this.focusRestoreSequenceId ?? 0) + 1;
+    return this.focusRestoreSequenceId;
+  }
+
+  invalidatePendingFocusRestore() {
+    return this.advanceFocusRestoreSequence();
   }
 
   restoreLastProgrammaticFocusTarget() {
@@ -2058,13 +2274,20 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     this.scheduleNativeSelectionLineSyncAfterVerticalNavigation(event);
+    if (this.state?.mentionMenu?.isOpen && isArrowKeyEvent(event)) {
+      this.closeMentionMenu({ dismissCurrentTrigger: true });
+    }
     this.updatePendingTextInputFallback(event);
 
     if (this.handleReferenceArrowNavigation(event)) {
       return;
     }
 
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+    if (
+      event.key !== "ArrowLeft" &&
+      event.key !== "ArrowRight" &&
+      event.key !== "Backspace"
+    ) {
       this.clearSelectedReferenceNodeKey();
     }
 
@@ -2090,9 +2313,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       !event.metaKey &&
       !event.altKey
     ) {
-      if (event.defaultPrevented) {
-        return;
-      }
+      this.invalidatePendingFocusRestore();
 
       const nativeSelection = this.getNativeLineSelectionContext();
       const nativeLineRangeSelection = nativeSelection?.lineId
@@ -2102,13 +2323,29 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         return;
       }
 
+      if (event.defaultPrevented) {
+        const didHandleDefaultPreventedReference =
+          nativeSelection?.lineId || this.selectedReferenceNodeKey
+            ? this.handleBackspaceReferenceDelete({
+                lineId: nativeSelection?.lineId,
+                start: nativeSelection?.start,
+                end: nativeSelection?.end,
+              })
+            : false;
+        if (didHandleDefaultPreventedReference) {
+          event.stopPropagation();
+          event.stopImmediatePropagation?.();
+          this.markHandledBackspaceKeyDown(event);
+        }
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
       const didHandle = this.handleBackspaceDelete({
         nativeSelection,
         nativeLineRangeSelection,
-        source: "keydown",
       });
       if (didHandle) {
         this.markHandledBackspaceKeyDown(event);
@@ -2121,37 +2358,85 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   scheduleNativeSelectionLineSyncAfterVerticalNavigation(event) {
+    const navigationDirection =
+      event.key === "ArrowUp"
+        ? "up"
+        : event.key === "ArrowDown"
+          ? "down"
+          : undefined;
     if (
       this.state?.mode !== "text-editor" ||
       event.isComposing ||
       event.ctrlKey ||
       event.metaKey ||
       event.altKey ||
-      (event.key !== "ArrowUp" && event.key !== "ArrowDown") ||
+      !navigationDirection ||
       typeof requestAnimationFrame !== "function"
     ) {
       return;
     }
 
-    const syncNativeSelectionLine = (framesRemaining) => {
-      const syncId = (this.verticalNavigationSelectionSyncId ?? 0) + 1;
-      this.verticalNavigationSelectionSyncId = syncId;
+    const initialNativeSelection = this.getNativeLineSelectionContext();
+    const pendingSync = this.pendingVerticalNavigationSelectionSync;
+    if (
+      pendingSync?.direction === navigationDirection &&
+      pendingSync.selectedLineId === this.state.selectedLineId &&
+      areNativeLineSelectionContextsEqual(
+        pendingSync.initialNativeSelection,
+        initialNativeSelection,
+      )
+    ) {
+      return;
+    }
 
+    const syncId = (this.verticalNavigationSelectionSyncId ?? 0) + 1;
+    this.verticalNavigationSelectionSyncId = syncId;
+    this.pendingVerticalNavigationSelectionSync = {
+      syncId,
+      direction: navigationDirection,
+      selectedLineId: this.state.selectedLineId,
+      initialNativeSelection,
+    };
+    const clearPendingSync = () => {
+      if (this.pendingVerticalNavigationSelectionSync?.syncId === syncId) {
+        this.pendingVerticalNavigationSelectionSync = undefined;
+      }
+    };
+    const syncNativeSelectionLine = (framesRemaining) => {
       requestAnimationFrame(() => {
         if (this.verticalNavigationSelectionSyncId !== syncId) {
           return;
         }
 
         if (!this.isConnected || this.state?.mode !== "text-editor") {
+          clearPendingSync();
           return;
         }
 
         const nativeSelection = this.getNativeLineSelectionContext();
         const lineId = nativeSelection?.lineId;
         if (!lineId || lineId === this.state.selectedLineId) {
+          const didMoveWithinCurrentLine =
+            lineId &&
+            initialNativeSelection?.lineId === lineId &&
+            (nativeSelection.start !== initialNativeSelection.start ||
+              nativeSelection.end !== initialNativeSelection.end);
+          if (didMoveWithinCurrentLine) {
+            clearPendingSync();
+            return;
+          }
+
           if (framesRemaining > 1) {
             syncNativeSelectionLine(framesRemaining - 1);
+            return;
           }
+
+          this.dispatchTextModeVerticalBoundaryNavigation({
+            lineId,
+            nativeSelection,
+            direction: navigationDirection,
+          });
+          clearPendingSync();
           return;
         }
 
@@ -2162,10 +2447,66 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           isCollapsed: nativeSelection.start === nativeSelection.end,
           mode: "text-editor",
         });
+        clearPendingSync();
       });
     };
 
     syncNativeSelectionLine(VERTICAL_NAVIGATION_SELECTION_SYNC_FRAMES);
+  }
+
+  dispatchTextModeVerticalBoundaryNavigation({
+    lineId,
+    nativeSelection,
+    direction,
+  } = {}) {
+    if (!this.isTextModeVerticalNavigationBoundary(lineId, direction)) {
+      return false;
+    }
+
+    this.dispatchSelectedLineChanged(lineId, {
+      cursorPosition: nativeSelection?.start,
+      isCollapsed: nativeSelection?.start === nativeSelection?.end,
+      mode: "text-editor",
+      navigationDirection: direction,
+      isBoundaryNavigation: true,
+    });
+    return true;
+  }
+
+  isTextModeVerticalNavigationBoundary(lineId, direction) {
+    return this.getTextModeVerticalNavigationBoundaryInfo(lineId, direction)
+      .isBoundary;
+  }
+
+  getTextModeVerticalNavigationBoundaryInfo(lineId, direction) {
+    if (!lineId || (direction !== "up" && direction !== "down")) {
+      return {
+        isBoundary: false,
+        lineIndex: -1,
+        lineCount: 0,
+      };
+    }
+
+    const lines = Array.isArray(this.state?.lines) ? this.state.lines : [];
+    const lineIndex = lines.findIndex((line) => line?.id === lineId);
+    if (lineIndex < 0) {
+      return {
+        isBoundary: false,
+        lineIndex,
+        lineCount: lines.length,
+        firstLineId: lines[0]?.id,
+        lastLineId: lines.at(-1)?.id,
+      };
+    }
+
+    return {
+      isBoundary:
+        direction === "up" ? lineIndex === 0 : lineIndex === lines.length - 1,
+      lineIndex,
+      lineCount: lines.length,
+      firstLineId: lines[0]?.id,
+      lastLineId: lines.at(-1)?.id,
+    };
   }
 
   handleWindowKeyDownCapture(event) {
@@ -2312,10 +2653,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   updatePendingTextInputFallback(event) {
     const text = getPrintableKeyText(event);
     this.clearPendingTextInputFallback();
+    this.lastCommittedTextInputFallback = undefined;
     this.pendingTextInputFallback = text
       ? {
           text,
           timeStamp: getEventTimestamp(event),
+          nativeSelection: this.getNativeLineSelectionContext(),
         }
       : undefined;
 
@@ -2340,8 +2683,48 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         return;
       }
 
-      this.insertPlainText(fallback.text);
+      if (fallback.nativeSelection) {
+        if (isSlashText(fallback.text)) {
+          this.armMentionMenuOpenFromTypedSlash({
+            source: "keydown-fallback",
+          });
+        }
+        this.insertPlainText(fallback.text, {
+          nativeSelection: fallback.nativeSelection,
+        });
+      } else {
+        if (isSlashText(fallback.text)) {
+          this.armMentionMenuOpenFromTypedSlash({
+            source: "keydown-fallback",
+          });
+        }
+        this.insertPlainText(fallback.text);
+      }
+      this.lastCommittedTextInputFallback = fallback;
     }, 0);
+  }
+
+  shouldSkipCommittedTextInputFallback(event) {
+    const fallback = this.lastCommittedTextInputFallback;
+    if (this.pendingTextInputFallback?.text || !fallback?.text) {
+      return false;
+    }
+
+    const eventTimestamp = getEventTimestamp(event);
+    if (eventTimestamp !== undefined && fallback.timeStamp !== undefined) {
+      const elapsed = eventTimestamp - fallback.timeStamp;
+      if (elapsed < 0 || elapsed > TEXT_INPUT_FALLBACK_DUPLICATE_MAX_AGE_MS) {
+        return false;
+      }
+    } else {
+      return false;
+    }
+
+    if (typeof event?.data === "string" && event.data.length > 0) {
+      return event.data === fallback.text;
+    }
+
+    return true;
   }
 
   consumePendingTextInputFallback(event) {
@@ -2362,6 +2745,29 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     return fallback.text;
+  }
+
+  getPendingTextInputFallbackNativeSelection(event, inputText) {
+    const fallback = this.pendingTextInputFallback;
+    if (!fallback?.nativeSelection || !fallback.text) {
+      return undefined;
+    }
+
+    if (inputText && inputText !== fallback.text) {
+      return undefined;
+    }
+
+    const eventTimestamp = getEventTimestamp(event);
+    if (
+      eventTimestamp !== undefined &&
+      fallback.timeStamp !== undefined &&
+      (eventTimestamp < fallback.timeStamp ||
+        eventTimestamp - fallback.timeStamp > TEXT_INPUT_FALLBACK_MAX_AGE_MS)
+    ) {
+      return undefined;
+    }
+
+    return fallback.nativeSelection;
   }
 
   resolveBeforeInputText(event, { allowKeyFallback = true } = {}) {
@@ -3022,6 +3428,162 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
+  getReferenceElementFromNativeRange(nativeRange, direction) {
+    if (
+      !nativeRange?.collapsed ||
+      typeof Node === "undefined" ||
+      typeof Element === "undefined"
+    ) {
+      return undefined;
+    }
+
+    const getMentionElement = (node) => {
+      const element =
+        node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+      if (!(element instanceof Element)) {
+        return undefined;
+      }
+
+      const mentionElement = element.closest?.(".mention-chip");
+      if (mentionElement && this.refs?.editor?.contains?.(mentionElement)) {
+        return mentionElement;
+      }
+
+      return undefined;
+    };
+
+    const directMentionElement = getMentionElement(nativeRange.startContainer);
+    if (directMentionElement) {
+      return directMentionElement;
+    }
+
+    let candidateNode;
+    if (nativeRange.startContainer.nodeType === Node.TEXT_NODE) {
+      const textLength = nativeRange.startContainer.textContent?.length ?? 0;
+      if (direction > 0 && nativeRange.startOffset < textLength) {
+        return undefined;
+      }
+      if (direction < 0 && nativeRange.startOffset > 0) {
+        return undefined;
+      }
+
+      candidateNode =
+        direction > 0
+          ? nativeRange.startContainer.nextSibling
+          : nativeRange.startContainer.previousSibling;
+    } else {
+      candidateNode =
+        direction > 0
+          ? nativeRange.startContainer.childNodes?.[nativeRange.startOffset]
+          : nativeRange.startContainer.childNodes?.[
+              nativeRange.startOffset - 1
+            ];
+    }
+
+    return getMentionElement(candidateNode);
+  }
+
+  getNativeReferenceArrowFallbackInfo(
+    nativeSelection,
+    direction,
+    { nativeRange } = {},
+  ) {
+    if (
+      !nativeSelection?.lineId ||
+      nativeSelection.start !== nativeSelection.end ||
+      typeof nativeSelection.start !== "number"
+    ) {
+      return undefined;
+    }
+
+    const lineKey = this.lineKeyById.get(nativeSelection.lineId);
+    const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
+    if (!lineNode) {
+      return undefined;
+    }
+
+    const content = this.serializeLineContent(lineNode);
+    const lineLength = getContentLength(content);
+    const offset = Math.max(0, Math.min(nativeSelection.start, lineLength));
+    const mentionNodes = this.getMentionNodesInLine(lineNode);
+    const domReferenceNodeKey = this.getReferenceElementFromNativeRange(
+      nativeRange,
+      direction,
+    )?.dataset?.rvnReferenceKey;
+    let consumed = 0;
+    let referenceIndex = 0;
+
+    for (const item of ensureContentArray(content)) {
+      const itemLength = getPlainTextFromContent([item]).length;
+      const itemStart = consumed;
+      const itemEnd = consumed + itemLength;
+      consumed = itemEnd;
+
+      if (!item?.reference) {
+        continue;
+      }
+
+      const mentionNode = mentionNodes[referenceIndex];
+      referenceIndex += 1;
+      if (!$isMentionNode(mentionNode)) {
+        continue;
+      }
+
+      const matchesDomReference = mentionNode.getKey() === domReferenceNodeKey;
+      const isFinalReference = itemEnd === lineLength;
+      const isInsideReference = offset > itemStart && offset < itemEnd;
+      const isAfterReference =
+        direction < 0 && (offset === itemEnd || matchesDomReference);
+      const isBeforeReference =
+        direction > 0 &&
+        (offset === itemStart || isInsideReference || matchesDomReference);
+      if (!isAfterReference && !isBeforeReference) {
+        continue;
+      }
+
+      return {
+        node: mentionNode,
+        lineId: nativeSelection.lineId,
+        offset,
+        itemStart,
+        itemEnd,
+        lineLength,
+        isFinalReference,
+        matchesDomReference,
+        isInsideReference,
+        shouldMoveAcross:
+          isFinalReference &&
+          ((direction < 0 && offset === lineLength) ||
+            (direction > 0 &&
+              (offset === itemStart ||
+                isInsideReference ||
+                matchesDomReference))),
+      };
+    }
+
+    return undefined;
+  }
+
+  isFinalVisibleReferenceNode(node) {
+    if (!$isMentionNode(node)) {
+      return false;
+    }
+
+    const lineNode = node.getParent();
+    if (!lineNode) {
+      return false;
+    }
+
+    const content = this.serializeLineContent(lineNode);
+    const contentItems = mergeAdjacentContentItems(content);
+    if (!contentItems.at(-1)?.reference) {
+      return false;
+    }
+
+    const mentionNodes = this.getMentionNodesInLine(lineNode);
+    return mentionNodes.at(-1)?.getKey() === node.getKey();
+  }
+
   selectReferenceNodeAsElement(node) {
     this.selectedReferenceNodeKey = node.getKey();
     selectReferenceNodeAsElement(node);
@@ -3042,6 +3604,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return false;
     }
 
+    const nativeRange =
+      this.refs?.editor &&
+      typeof window !== "undefined" &&
+      typeof ShadowRoot !== "undefined"
+        ? getSelectionRange(this.refs.editor)
+        : undefined;
+    const nativeSelection = this.getNativeLineSelectionContext(nativeRange);
+
     let didHandle = false;
     let nextSelectedReferenceNodeKey = this.selectedReferenceNodeKey;
     this.editor.update(
@@ -3049,12 +3619,39 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         const selectedReferenceNode = this.selectedReferenceNodeKey
           ? $getNodeByKey(this.selectedReferenceNodeKey)
           : undefined;
+        const handleNativeFallback = () => {
+          const nativeFallbackInfo = this.getNativeReferenceArrowFallbackInfo(
+            nativeSelection,
+            direction,
+            {
+              nativeRange,
+            },
+          );
+          if (!nativeFallbackInfo?.node) {
+            return false;
+          }
+
+          if (nativeFallbackInfo.shouldMoveAcross) {
+            placeCaretAroundReferenceNode(nativeFallbackInfo.node, direction);
+            nextSelectedReferenceNodeKey = undefined;
+            didHandle = true;
+            return true;
+          }
+
+          this.selectReferenceNodeAsElement(nativeFallbackInfo.node);
+          nextSelectedReferenceNodeKey = nativeFallbackInfo.node.getKey();
+          didHandle = true;
+          return true;
+        };
         const selection = $getSelection();
         if (!$isRangeSelection(selection)) {
           if ($isMentionNode(selectedReferenceNode)) {
             placeCaretAroundReferenceNode(selectedReferenceNode, direction);
             nextSelectedReferenceNodeKey = undefined;
             didHandle = true;
+          }
+          if (didHandle || handleNativeFallback()) {
+            return;
           }
           return;
         }
@@ -3091,11 +3688,34 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           return;
         }
 
-        const adjacentReference = getAdjacentReferenceNodeForCollapsedSelection(
-          selection,
-          direction,
-        );
+        const adjacentReferenceInfo =
+          getAdjacentReferenceNodeInfoForCollapsedSelection(
+            selection,
+            direction,
+          );
+        const adjacentReference = adjacentReferenceInfo?.node;
         if (!adjacentReference) {
+          if (handleNativeFallback()) {
+            return;
+          }
+
+          return;
+        }
+
+        if (adjacentReferenceInfo.skippedZeroLengthText && direction < 0) {
+          placeCaretAroundReferenceNode(adjacentReference, direction);
+          nextSelectedReferenceNodeKey = undefined;
+          didHandle = true;
+          return;
+        }
+
+        if (
+          direction > 0 &&
+          this.isFinalVisibleReferenceNode(adjacentReference)
+        ) {
+          placeCaretAroundReferenceNode(adjacentReference, direction);
+          nextSelectedReferenceNodeKey = undefined;
+          didHandle = true;
           return;
         }
 
@@ -3395,6 +4015,53 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.updateReferenceSelectionMarkers();
   }
 
+  getReferenceElementByNodeKey(nodeKey) {
+    if (!nodeKey || !this.refs?.editor) {
+      return undefined;
+    }
+
+    for (const element of this.refs.editor.querySelectorAll(
+      "[data-rvn-reference-key]",
+    )) {
+      if (element.dataset.rvnReferenceKey === nodeKey) {
+        return element;
+      }
+    }
+
+    return undefined;
+  }
+
+  collapseNativeSelectionAfterReference(nodeKey) {
+    const element = this.getReferenceElementByNodeKey(nodeKey);
+    const parentNode = element?.parentNode;
+    if (!parentNode || typeof document === "undefined") {
+      return false;
+    }
+
+    const childIndex = Array.from(parentNode.childNodes).indexOf(element);
+    if (childIndex === -1) {
+      return false;
+    }
+
+    const selectionOffset = Math.min(
+      childIndex + 1,
+      parentNode.childNodes.length,
+    );
+    const currentRange = getSelectionRange(this.refs.editor);
+    if (
+      currentRange?.collapsed &&
+      currentRange.startContainer === parentNode &&
+      currentRange.startOffset === selectionOffset
+    ) {
+      return true;
+    }
+
+    const range = document.createRange();
+    range.setStart(parentNode, selectionOffset);
+    range.collapse(true);
+    return setSelectionFromRange(this.refs.editor, range);
+  }
+
   updateReferenceSelectionMarkers() {
     if (!this.refs.editor) {
       return;
@@ -3420,6 +4087,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       } else {
         delete element.dataset.rvnReferenceSelected;
       }
+    }
+
+    if (selectedKey) {
+      this.collapseNativeSelectionAfterReference(selectedKey);
     }
   }
 
@@ -3614,6 +4285,16 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     if (inputType === "insertText" || inputType === "insertReplacementText") {
+      const fallbackNativeSelection =
+        this.getPendingTextInputFallbackNativeSelection(event, event?.data);
+      if (this.shouldSkipCommittedTextInputFallback(event)) {
+        this.lastCommittedTextInputFallback = undefined;
+        event.preventDefault();
+        event.stopPropagation?.();
+        event.stopImmediatePropagation?.();
+        return;
+      }
+
       const inputText = this.resolveBeforeInputText(event, {
         allowKeyFallback: inputType === "insertText",
       });
@@ -3621,27 +4302,41 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         return;
       }
 
+      this.lastCommittedTextInputFallback = undefined;
       event.preventDefault();
       event.stopPropagation?.();
       event.stopImmediatePropagation?.();
-      this.insertPlainText(inputText);
+      const nativeSelection =
+        this.getInputLineSelectionContext(event) ?? fallbackNativeSelection;
+      if (isSlashText(inputText)) {
+        this.armMentionMenuOpenFromTypedSlash({
+          source: "beforeinput",
+        });
+      }
+      if (nativeSelection) {
+        this.insertPlainText(inputText, { nativeSelection });
+      } else {
+        this.insertPlainText(inputText);
+      }
       return;
     }
 
     if (inputType === "deleteContentBackward") {
+      this.invalidatePendingFocusRestore();
       this.clearPendingTextInputFallback();
       event.preventDefault();
       event.stopPropagation?.();
       event.stopImmediatePropagation?.();
 
-      if (this.consumeHandledBackspaceKeyDown(event)) {
+      const didConsumeHandledKeyDown =
+        this.consumeHandledBackspaceKeyDown(event);
+      if (didConsumeHandledKeyDown) {
         return;
       }
 
-      const nativeSelection = this.getNativeLineSelectionContext();
+      const nativeSelection = this.getInputLineSelectionContext(event);
       const didHandle = this.handleBackspaceDelete({
         nativeSelection,
-        source: "beforeinput",
       });
       if (!didHandle) {
         this.deleteCharacterBackward({ nativeSelection });
@@ -3720,13 +4415,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    if (this.hasActiveMentionTrigger()) {
-      this.refs.mentionMenu.open = true;
-      this.scheduleRender();
-      return;
-    }
+    const activeTriggerState = this.getActiveMentionTriggerState();
+    const triggerState = activeTriggerState ?? { ...this.state.mentionMenu };
 
+    this.dismissMentionTrigger(triggerState);
     this.closeMentionMenu();
+    this.restoreMentionTriggerSelection(triggerState);
   }
 
   applyTextStyleIdToSelection(textStyleId) {
@@ -4437,12 +5131,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         lines.push(this.createPersistableLine(lineMeta, childNode));
       }
 
+      let lexicalSelectedLineId;
       if ($isRangeSelection(selection)) {
         const selectedLineNode = this.getLineNodeFromSelection(selection);
-        selectedLineId =
-          this.lineMetaByKey.get(selectedLineNode?.getKey())?.id ??
-          selectedLineId;
+        lexicalSelectedLineId = this.lineMetaByKey.get(
+          selectedLineNode?.getKey(),
+        )?.id;
       }
+      selectedLineId = lexicalSelectedLineId ?? selectedLineId;
 
       const activeFormats = {
         bold: $isRangeSelection(selection)
@@ -4459,40 +5155,25 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           $getSelectionStyleValueForProperty(selection, "color", "") ===
             ACCENT_FILL,
       };
+      const lexicalMentionTrigger = $isRangeSelection(selection)
+        ? getMentionTriggerFromTextNode(
+            selection.anchor.getNode(),
+            selection.anchor.offset,
+            { source: "lexical" },
+          )
+        : undefined;
+      const mentionTrigger = lexicalMentionTrigger
+        ? {
+            ...lexicalMentionTrigger,
+            lineId: selectedLineId,
+          }
+        : undefined;
 
       return {
         lines,
         selectedLineId,
         activeFormats,
-        mentionTrigger: $isRangeSelection(selection)
-          ? (() => {
-              const anchorNode = selection.anchor.getNode();
-              if (!$isTextNode(anchorNode) || $isMentionNode(anchorNode)) {
-                return undefined;
-              }
-
-              const anchorOffset = selection.anchor.offset;
-              const text = anchorNode.getTextContent();
-              const beforeCaret = text.slice(0, anchorOffset);
-              const match = beforeCaret.match(/(?:^|\s)\/([a-z0-9._-]*)$/i);
-              if (!match) {
-                return undefined;
-              }
-
-              const query = match[1] ?? "";
-              const startOffset = beforeCaret.lastIndexOf(`/${query}`);
-              if (startOffset === -1) {
-                return undefined;
-              }
-
-              return {
-                nodeKey: anchorNode.getKey(),
-                startOffset,
-                endOffset: anchorOffset,
-                query,
-              };
-            })()
-          : undefined,
+        mentionTrigger,
       };
     });
   }
@@ -4548,6 +5229,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const nodes = this.createNodesFromContent(content);
     if (nodes.length > 0) {
       lineNode.append(...nodes);
+      if (doesContentEndWithReference(content)) {
+        lineNode.append($createTextNode(EDITOR_CARET_TEXT));
+      }
       return;
     }
 
@@ -5102,17 +5786,18 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
-  insertPlainText(text) {
+  insertPlainText(text, { nativeSelection } = {}) {
     const nextText = String(text ?? "").replace(/\r\n?/g, "\n");
-    const nativeSelection = this.getNativeLineSelectionContext();
+    const resolvedNativeSelection =
+      nativeSelection ?? this.getNativeLineSelectionContext();
 
     this.editor.update(
       () => {
-        if (nativeSelection?.lineId) {
-          const lineKey = this.lineKeyById.get(nativeSelection.lineId);
+        if (resolvedNativeSelection?.lineId) {
+          const lineKey = this.lineKeyById.get(resolvedNativeSelection.lineId);
           const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
           if (lineNode) {
-            applySelectionToLineNode(lineNode, nativeSelection);
+            applySelectionToLineNode(lineNode, resolvedNativeSelection);
           }
         }
 
@@ -5121,7 +5806,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           return;
         }
 
-        if (nativeSelection?.lineId) {
+        if (resolvedNativeSelection?.lineId) {
           selection = $getSelection();
           if (!$isRangeSelection(selection)) {
             return;
@@ -5209,6 +5894,266 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
+  getLineNodeFromNode(node) {
+    const root = $getRoot();
+    let lineNode = node;
+
+    while (lineNode?.getParent?.() && lineNode.getParent() !== root) {
+      lineNode = lineNode.getParent();
+    }
+
+    if (!lineNode || lineNode === root || lineNode.getParent?.() !== root) {
+      return undefined;
+    }
+
+    return lineNode;
+  }
+
+  getMentionNodesInLine(lineNode) {
+    const mentionNodes = [];
+
+    const visitNode = (node) => {
+      if ($isMentionNode(node)) {
+        mentionNodes.push(node);
+        return;
+      }
+
+      if (!$isElementNode(node)) {
+        return;
+      }
+
+      for (const childNode of node.getChildren()) {
+        visitNode(childNode);
+      }
+    };
+
+    if (lineNode) {
+      visitNode(lineNode);
+    }
+
+    return mentionNodes;
+  }
+
+  getReferenceNodeFromSerializedContentRange(lineNode, start, end = start) {
+    if (!lineNode) {
+      return undefined;
+    }
+
+    const content = this.serializeLineContent(lineNode);
+    const lineLength = getContentLength(content);
+    const rangeStart = Math.min(Math.max(0, Number(start) || 0), lineLength);
+    const rangeEnd = Math.min(
+      Math.max(rangeStart, Number(end) || 0),
+      lineLength,
+    );
+    const isCollapsed = rangeStart === rangeEnd;
+    const mentionNodes = this.getMentionNodesInLine(lineNode);
+    let consumed = 0;
+    let referenceIndex = 0;
+
+    for (const item of ensureContentArray(content)) {
+      const itemLength = getPlainTextFromContent([item]).length;
+      const itemStart = consumed;
+      const itemEnd = consumed + itemLength;
+      consumed = itemEnd;
+
+      if (!item?.reference) {
+        continue;
+      }
+
+      const mentionNode = mentionNodes[referenceIndex];
+      referenceIndex += 1;
+      const isInsideReference =
+        isCollapsed && rangeStart > itemStart && rangeStart <= itemEnd;
+      const intersectsReference =
+        !isCollapsed && rangeStart < itemEnd && rangeEnd > itemStart;
+      if (isInsideReference || intersectsReference) {
+        return mentionNode;
+      }
+    }
+
+    return undefined;
+  }
+
+  getReferenceNodeBeforeLineOffset(lineNode, offset) {
+    return this.getReferenceNodeFromSerializedContentRange(
+      lineNode,
+      offset,
+      offset,
+    );
+  }
+
+  getReferenceNodeIntersectingLineRange(lineNode, start, end = start) {
+    return this.getReferenceNodeFromSerializedContentRange(
+      lineNode,
+      start,
+      end,
+    );
+  }
+
+  removeReferenceNodeFromBackspace(
+    node,
+    fallbackLineId,
+    fallbackCursorPosition,
+  ) {
+    const lineNode = this.getLineNodeFromNode(node);
+    const lineMeta = lineNode
+      ? this.lineMetaByKey.get(lineNode.getKey())
+      : undefined;
+    const lineId = lineMeta?.id ?? fallbackLineId;
+    const offsetResult =
+      lineNode && node?.getKey
+        ? getLexicalOffsetBeforeNode(lineNode, node.getKey())
+        : undefined;
+    const cursorPosition = offsetResult?.found
+      ? offsetResult.offset
+      : Math.max(0, Number(fallbackCursorPosition) || 0);
+    const parentNode = node.getParent();
+    const referenceIndex = node.getIndexWithinParent();
+
+    this.pendingChangeReason = "text";
+    node.remove();
+    if ($isElementNode(parentNode)) {
+      const caretIndex = Math.min(referenceIndex, parentNode.getChildrenSize());
+      parentNode.select(caretIndex, caretIndex);
+    }
+
+    if (this.state && lineId) {
+      this.state.selectedLineId = lineId;
+    }
+    this.selectedReferenceNodeKey = undefined;
+    this.pendingFocusTarget = lineId
+      ? {
+          lineId,
+          cursorPosition,
+        }
+      : undefined;
+
+    return {
+      lineId,
+      cursorPosition,
+    };
+  }
+
+  handleBackspaceReferenceDelete({ lineId, start, end } = {}) {
+    let didHandle = false;
+    let focusTarget;
+
+    this.editor.update(
+      () => {
+        const selection = $getSelection();
+        const referenceSelection = getReferenceSelectionInfo(selection);
+        const selectedReferenceCandidate = this.selectedReferenceNodeKey
+          ? $getNodeByKey(this.selectedReferenceNodeKey)
+          : undefined;
+        let selectedReferenceNode = $isMentionNode(selectedReferenceCandidate)
+          ? selectedReferenceCandidate
+          : undefined;
+        if (selectedReferenceNode) {
+          const selectedReferenceLineNode = this.getLineNodeFromNode(
+            selectedReferenceNode,
+          );
+          const selectedReferenceLineId = selectedReferenceLineNode
+            ? this.lineMetaByKey.get(selectedReferenceLineNode.getKey())?.id
+            : undefined;
+          if (
+            lineId &&
+            selectedReferenceLineId &&
+            selectedReferenceLineId !== lineId
+          ) {
+            selectedReferenceNode = undefined;
+            this.selectedReferenceNodeKey = undefined;
+          }
+        }
+
+        const wholeSelectedReferenceNode =
+          referenceSelection?.isWhole === true
+            ? referenceSelection.node
+            : undefined;
+        const referenceNodeToRemove =
+          selectedReferenceNode ?? wholeSelectedReferenceNode;
+
+        if ($isMentionNode(referenceNodeToRemove)) {
+          const referenceLineNode = this.getLineNodeFromNode(
+            referenceNodeToRemove,
+          );
+          const referenceLineId = referenceLineNode
+            ? this.lineMetaByKey.get(referenceLineNode.getKey())?.id
+            : undefined;
+          if (lineId && referenceLineId && referenceLineId !== lineId) {
+            return;
+          }
+
+          focusTarget = this.removeReferenceNodeFromBackspace(
+            referenceNodeToRemove,
+            lineId,
+            start,
+          );
+          didHandle = true;
+          return;
+        }
+
+        if (referenceSelection?.node) {
+          this.selectReferenceNodeAsElement(referenceSelection.node);
+          didHandle = true;
+          return;
+        }
+
+        if (!lineId || (start === end && start <= 0)) {
+          return;
+        }
+
+        const lineKey = this.lineKeyById.get(lineId);
+        const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
+        const referenceNode =
+          this.getReferenceNodeIntersectingLineRange(lineNode, start, end) ??
+          (start === end
+            ? this.getReferenceNodeBeforeLineOffset(lineNode, start)
+            : undefined);
+        if (!$isMentionNode(referenceNode)) {
+          return;
+        }
+
+        this.selectReferenceNodeAsElement(referenceNode);
+        didHandle = true;
+      },
+      { discrete: true },
+    );
+
+    if (!didHandle) {
+      return false;
+    }
+
+    if (this.state && lineId) {
+      this.state.selectedLineId = lineId;
+    }
+    this.updateReferenceSelectionMarkers();
+    if (typeof requestAnimationFrame === "function") {
+      this.scheduleRender();
+      if (focusTarget?.lineId) {
+        this.scheduleFocusTargetRestore(focusTarget);
+      }
+    }
+
+    return true;
+  }
+
+  getLineContentLength(lineId) {
+    if (!lineId || typeof this.editor?.getEditorState !== "function") {
+      return undefined;
+    }
+
+    return this.editor.getEditorState().read(() => {
+      const lineKey = this.lineKeyById.get(lineId);
+      const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
+      if (!lineNode) {
+        return undefined;
+      }
+
+      return getContentLength(this.serializeLineContent(lineNode));
+    });
+  }
+
   handleBackspaceDelete({
     nativeSelection = this.getNativeLineSelectionContext(),
     nativeLineRangeSelection,
@@ -5221,10 +6166,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     if (!nativeSelection?.lineId) {
       if (resolvedLineRangeSelection?.isMultiLine) {
-        const didDelete = this.deleteNativeLineRangeSelection(
-          resolvedLineRangeSelection,
-        );
-        return didDelete;
+        return this.deleteNativeLineRangeSelection(resolvedLineRangeSelection);
       }
 
       return false;
@@ -5240,25 +6182,53 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return false;
     }
 
-    const start = Math.min(selectionStart, selectionEnd);
-    const end = Math.max(selectionStart, selectionEnd);
+    const lineContentLength = this.getLineContentLength(nativeSelection.lineId);
+    const normalizedSelectionStart =
+      typeof lineContentLength === "number"
+        ? Math.min(Math.max(0, selectionStart), lineContentLength)
+        : selectionStart;
+    const normalizedSelectionEnd =
+      typeof lineContentLength === "number"
+        ? Math.min(Math.max(0, selectionEnd), lineContentLength)
+        : selectionEnd;
+    const start = Math.min(normalizedSelectionStart, normalizedSelectionEnd);
+    const end = Math.max(normalizedSelectionStart, normalizedSelectionEnd);
+
+    if (
+      this.handleBackspaceReferenceDelete({
+        lineId: nativeSelection.lineId,
+        start,
+        end,
+      })
+    ) {
+      return true;
+    }
 
     if (start !== end) {
-      const didDelete = this.deleteNativeLineContentRange({
+      return this.deleteNativeLineContentRange({
         lineId: nativeSelection.lineId,
         start,
         end,
       });
-      return didDelete;
     }
 
     if (start > 0) {
-      const didDelete = this.deleteNativeLineContentRange({
+      const deleteStart = start - 1;
+      if (
+        this.handleBackspaceReferenceDelete({
+          lineId: nativeSelection.lineId,
+          start: deleteStart,
+          end: start,
+        })
+      ) {
+        return true;
+      }
+
+      return this.deleteNativeLineContentRange({
         lineId: nativeSelection.lineId,
-        start: start - 1,
+        start: deleteStart,
         end: start,
       });
-      return didDelete;
     }
 
     const context = this.getLineSelectionContextFromLineSelection({
@@ -5329,10 +6299,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       lineId: focusTarget.lineId,
       cursorPosition: focusTarget.cursorPosition,
     };
+    const focusRestoreSequenceId = this.advanceFocusRestoreSequence();
 
     requestAnimationFrame(() => {
+      if (this.focusRestoreSequenceId !== focusRestoreSequenceId) {
+        return;
+      }
+
       if (this.isEditorActiveElement() && this.state.mode === "text-editor") {
         this.restoreTextEditorFocusState();
+        this.markProgrammaticFocusRestore(lineFocusTarget);
+        this.restoreLineSelection(lineFocusTarget);
         return;
       }
 
@@ -5513,7 +6490,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
-  closeMentionMenu({ shouldRender = false } = {}) {
+  closeMentionMenu({
+    shouldRender = false,
+    dismissCurrentTrigger = false,
+  } = {}) {
+    if (dismissCurrentTrigger) {
+      this.dismissCurrentMentionTrigger();
+    }
+    this.pendingTypedSlashMentionTrigger = undefined;
+    this.clearMentionMenuFocusRestore();
     this.state.mentionMenu = createClosedMentionMenuState();
 
     if (this.refs.mentionMenu) {
@@ -5543,6 +6528,259 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     return this.isMentionMenuFocusTarget(document.activeElement);
+  }
+
+  shouldPreserveMentionMenuUntilFirstRender(editorState) {
+    const menuState = this.state.mentionMenu;
+    if (
+      !menuState?.isOpen ||
+      this.refs.mentionMenu?.open === true ||
+      !this.isEditorFocused ||
+      !menuState.nodeKey
+    ) {
+      return false;
+    }
+
+    try {
+      return editorState.read(() => {
+        const node = $getNodeByKey(menuState.nodeKey);
+        const trigger = getMentionTriggerFromTextNode(
+          node,
+          menuState.endOffset,
+          { source: "pending-menu-render" },
+        );
+
+        return (
+          trigger?.nodeKey === menuState.nodeKey &&
+          trigger.startOffset === menuState.startOffset &&
+          trigger.endOffset === menuState.endOffset &&
+          trigger.query === menuState.query
+        );
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  getMentionTriggerSelectionSnapshot(triggerState = {}) {
+    if (!triggerState.nodeKey || !this.editor) {
+      return undefined;
+    }
+
+    return this.editor.getEditorState().read(() => {
+      const node = $getNodeByKey(triggerState.nodeKey);
+      if (!$isTextNode(node) || $isMentionNode(node)) {
+        return undefined;
+      }
+
+      const root = $getRoot();
+      let lineNode = node;
+      while (lineNode?.getParent?.() && lineNode.getParent() !== root) {
+        lineNode = lineNode.getParent();
+      }
+
+      if (!lineNode || lineNode === root || lineNode.getParent?.() !== root) {
+        return undefined;
+      }
+
+      const lineMeta = this.lineMetaByKey.get(lineNode.getKey());
+      if (!lineMeta) {
+        return undefined;
+      }
+
+      const result = getLexicalOffsetBeforeNode(lineNode, node.getKey());
+      if (!result.found) {
+        return undefined;
+      }
+
+      const nodeLength = getLexicalTextLength(node);
+      const localOffset = Math.max(
+        0,
+        Math.min(Number(triggerState.endOffset) || 0, nodeLength),
+      );
+      const offset = result.offset + localOffset;
+      return {
+        lineId: lineMeta.id,
+        start: offset,
+        end: offset,
+      };
+    });
+  }
+
+  restoreMentionTriggerSelection(triggerState = {}) {
+    const snapshot = this.getMentionTriggerSelectionSnapshot(triggerState);
+    if (snapshot?.lineId) {
+      const focusTarget = {
+        lineId: snapshot.lineId,
+        cursorPosition: snapshot.start,
+        forceRestore: true,
+      };
+      this.state.selectedLineId = snapshot.lineId;
+      this.isEditorFocused = true;
+      this.applyModeState("text-editor");
+      this.markProgrammaticFocusRestore(focusTarget);
+      this.focus({ preventScroll: true });
+      this.restoreLineSelection(snapshot);
+      this.restoreLineSelectionAfterLexicalFocus(focusTarget);
+      this.scheduleRender();
+      return true;
+    }
+
+    if (!triggerState.lineId) {
+      return false;
+    }
+
+    return this.focusLine({
+      lineId: triggerState.lineId,
+      cursorPosition: Number.isFinite(triggerState.endOffset)
+        ? triggerState.endOffset
+        : undefined,
+    });
+  }
+
+  getActiveMentionTriggerState() {
+    try {
+      const mentionTrigger = this.readEditorSnapshot().mentionTrigger;
+      return mentionTrigger
+        ? {
+            ...this.state.mentionMenu,
+            ...mentionTrigger,
+          }
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  getMentionTriggerSignature(trigger = {}) {
+    if (!trigger.nodeKey) {
+      return undefined;
+    }
+
+    const signature = {
+      nodeKey: trigger.nodeKey,
+      startOffset: trigger.startOffset,
+      endOffset: trigger.endOffset,
+      query: trigger.query ?? "",
+    };
+    if (trigger.lineId) {
+      signature.lineId = trigger.lineId;
+    }
+    return signature;
+  }
+
+  dismissMentionTrigger(trigger = {}) {
+    const signature = this.getMentionTriggerSignature(trigger);
+    if (signature) {
+      this.dismissedMentionTrigger = signature;
+      this.dismissedMentionTriggerScope = {
+        nodeKey: signature.nodeKey,
+        query: signature.query,
+        until: this.getNow() + PROGRAMMATIC_FOCUS_BLUR_SUPPRESS_MS,
+      };
+    }
+  }
+
+  dismissCurrentMentionTrigger() {
+    this.dismissMentionTrigger(this.state.mentionMenu);
+  }
+
+  armMentionMenuOpenFromTypedSlash({ source = "input" } = {}) {
+    this.pendingTypedSlashMentionTrigger = {
+      source,
+      until: this.getNow() + TYPED_SLASH_MENTION_TRIGGER_WINDOW_MS,
+    };
+    this.dismissedMentionTrigger = undefined;
+    this.dismissedMentionTriggerScope = undefined;
+  }
+
+  isSameMentionTriggerRoot(left = {}, right = {}) {
+    if (!left.nodeKey || !right.nodeKey) {
+      return false;
+    }
+
+    return (
+      left.nodeKey === right.nodeKey &&
+      left.lineId === right.lineId &&
+      left.startOffset === right.startOffset
+    );
+  }
+
+  isOpenMentionTriggerContinuation(trigger = {}) {
+    return (
+      this.state.mentionMenu?.isOpen === true &&
+      this.isSameMentionTriggerRoot(trigger, this.state.mentionMenu)
+    );
+  }
+
+  consumeTypedSlashMentionTriggerOpen(trigger = {}) {
+    const pendingTrigger = this.pendingTypedSlashMentionTrigger;
+    if (!pendingTrigger) {
+      return undefined;
+    }
+
+    if (this.getNow() > pendingTrigger.until) {
+      this.pendingTypedSlashMentionTrigger = undefined;
+      return undefined;
+    }
+
+    if (trigger.query !== "" || trigger.endOffset !== trigger.startOffset + 1) {
+      return undefined;
+    }
+
+    this.pendingTypedSlashMentionTrigger = undefined;
+    return pendingTrigger.source;
+  }
+
+  getMentionTriggerOpenReason(trigger = {}) {
+    if (this.isOpenMentionTriggerContinuation(trigger)) {
+      return "continuation";
+    }
+
+    const typedSlashSource = this.consumeTypedSlashMentionTriggerOpen(trigger);
+    if (typedSlashSource) {
+      return typedSlashSource;
+    }
+
+    return undefined;
+  }
+
+  isDismissedMentionTrigger(trigger = {}) {
+    const signature = this.getMentionTriggerSignature(trigger);
+    const dismissed = this.dismissedMentionTrigger;
+    const isExactDismissed = Boolean(
+      signature &&
+        dismissed &&
+        signature.nodeKey === dismissed.nodeKey &&
+        signature.lineId === dismissed.lineId &&
+        signature.startOffset === dismissed.startOffset &&
+        signature.endOffset === dismissed.endOffset &&
+        signature.query === dismissed.query,
+    );
+    if (isExactDismissed) {
+      return true;
+    }
+
+    const scope = this.dismissedMentionTriggerScope;
+    if (!signature || !scope) {
+      return false;
+    }
+
+    if (this.getNow() > scope.until) {
+      this.dismissedMentionTriggerScope = undefined;
+      return false;
+    }
+
+    return (
+      signature.nodeKey === scope.nodeKey && signature.query === scope.query
+    );
+  }
+
+  clearMentionMenuFocusRestore() {
+    if (this.mentionMenuFocusRestoreTimerId !== undefined) {
+      clearTimeout(this.mentionMenuFocusRestoreTimerId);
+      this.mentionMenuFocusRestoreTimerId = undefined;
+    }
   }
 
   isMentionMenuFocusTarget(element) {
@@ -5576,26 +6814,49 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
-  keepMentionMenuNonModal({ restoreFocus = false } = {}) {
-    const popover =
-      this.refs.mentionMenu?.shadowRoot?.querySelector?.("rtgl-popover");
-    popover?.setAttribute("no-overlay", "");
-    popover?.shadowRoot
-      ?.querySelector?.("dialog")
-      ?.setAttribute("tabindex", "-1");
+  getMentionMenuPopover() {
+    return this.refs.mentionMenu?.shadowRoot?.querySelector?.("rtgl-popover");
+  }
 
-    if (!restoreFocus) {
-      return;
+  getMentionMenuPositionForTrigger(trigger = {}) {
+    const surfaceRect = this.refs.surface.getBoundingClientRect();
+    const editorRect = this.refs.editor.getBoundingClientRect();
+    const maxLeft = Math.max(12, surfaceRect.width - 292);
+    const lineKey = trigger.lineId
+      ? this.lineKeyById.get(trigger.lineId)
+      : undefined;
+    const lineElement = lineKey
+      ? this.editor.getElementByKey(lineKey)
+      : undefined;
+    const triggerRange =
+      lineElement && Number.isFinite(trigger.endOffset)
+        ? createCollapsedRangeAtPosition(lineElement, trigger.endOffset).range
+        : undefined;
+    const triggerRect =
+      triggerRange?.getBoundingClientRect?.() ??
+      lineElement?.getBoundingClientRect?.() ??
+      editorRect;
+
+    return {
+      left:
+        surfaceRect.left +
+        Math.max(12, Math.min(maxLeft, triggerRect.left - surfaceRect.left)),
+      top:
+        surfaceRect.top +
+        Math.max(18, triggerRect.bottom - surfaceRect.top + 12),
+    };
+  }
+
+  syncMentionMenuPopover() {
+    const popover = this.getMentionMenuPopover();
+    if (popover?.hasAttribute("no-overlay")) {
+      popover.removeAttribute("no-overlay");
     }
 
-    setTimeout(() => {
-      if (!this.isConnected || !this.state.mentionMenu.isOpen) {
-        return;
-      }
-
-      this.keepMentionMenuNonModal();
-      this.focus({ preventScroll: true });
-    }, 0);
+    const dialog = popover?.shadowRoot?.querySelector?.("dialog");
+    if (dialog && dialog.getAttribute("tabindex") !== "-1") {
+      dialog.setAttribute("tabindex", "-1");
+    }
   }
 
   selectMentionByIndex(index) {
@@ -5686,34 +6947,68 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       .join("\n");
 
     if (snapshot.mentionTrigger) {
-      const items = filterMentionSuggestions(
-        snapshot.mentionTrigger.query,
-        this.state.mentionTargets,
+      const openReason = this.getMentionTriggerOpenReason(
+        snapshot.mentionTrigger,
       );
-      this.state.mentionMenu = {
-        isOpen: true,
-        query: snapshot.mentionTrigger.query,
-        items,
-        highlightedIndex: 0,
-        left: 12,
-        top: 18,
-        nodeKey: snapshot.mentionTrigger.nodeKey,
-        startOffset: snapshot.mentionTrigger.startOffset,
-        endOffset: snapshot.mentionTrigger.endOffset,
-      };
 
-      const position = getMentionMenuPosition(
-        this.refs.editor,
-        this.refs.surface,
-      );
-      const surfaceRect = this.refs.surface.getBoundingClientRect();
-      this.state.mentionMenu.left = surfaceRect.left + position.left;
-      this.state.mentionMenu.top = surfaceRect.top + position.top;
-    } else if (this.shouldPreserveMentionMenuAfterSelectionLoss()) {
-      this.refs.mentionMenu.open = true;
-      this.keepMentionMenuNonModal({ restoreFocus: true });
-    } else {
-      this.closeMentionMenu();
+      if (!openReason) {
+        if (
+          this.state.mentionMenu?.isOpen === true &&
+          !this.shouldPreserveMentionMenuAfterSelectionLoss()
+        ) {
+          this.closeMentionMenu({
+            dismissCurrentTrigger: true,
+          });
+        } else if (this.state.mentionMenu?.isOpen === true) {
+          this.refs.mentionMenu.open = true;
+          this.syncMentionMenuPopover();
+        } else {
+          this.closeMentionMenu();
+        }
+      } else if (
+        openReason !== "continuation" &&
+        this.isDismissedMentionTrigger(snapshot.mentionTrigger)
+      ) {
+        this.closeMentionMenu();
+      } else {
+        if (openReason !== "continuation") {
+          this.dismissedMentionTrigger = undefined;
+          this.dismissedMentionTriggerScope = undefined;
+        }
+        const items = filterMentionSuggestions(
+          snapshot.mentionTrigger.query,
+          this.state.mentionTargets,
+        );
+        this.state.mentionMenu = {
+          isOpen: true,
+          query: snapshot.mentionTrigger.query,
+          items,
+          highlightedIndex: 0,
+          left: 12,
+          top: 18,
+          nodeKey: snapshot.mentionTrigger.nodeKey,
+          lineId: snapshot.mentionTrigger.lineId,
+          startOffset: snapshot.mentionTrigger.startOffset,
+          endOffset: snapshot.mentionTrigger.endOffset,
+        };
+
+        const position = this.getMentionMenuPositionForTrigger(
+          snapshot.mentionTrigger,
+        );
+        this.state.mentionMenu.left = position.left;
+        this.state.mentionMenu.top = position.top;
+      }
+    }
+
+    if (!snapshot.mentionTrigger) {
+      if (this.shouldPreserveMentionMenuUntilFirstRender(editorState)) {
+        this.syncMentionMenuPopover();
+      } else if (this.shouldPreserveMentionMenuAfterSelectionLoss()) {
+        this.refs.mentionMenu.open = true;
+        this.syncMentionMenuPopover();
+      } else {
+        this.closeMentionMenu();
+      }
     }
 
     this.scheduleRender();
@@ -5848,6 +7143,26 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.updateReferenceSelectionMarkers();
   }
 
+  clearRenderedSelectionState() {
+    this.refs?.editor
+      ?.querySelectorAll?.('.editor-paragraph[data-selected="true"]')
+      ?.forEach((lineElement) => {
+        lineElement.dataset.selected = "false";
+      });
+
+    this.refs?.leftGutter
+      ?.querySelectorAll?.('.gutter-row[data-selected="true"]')
+      ?.forEach((row) => {
+        row.dataset.selected = "false";
+      });
+
+    this.refs?.rightGutter
+      ?.querySelectorAll?.('.gutter-row[data-selected="true"]')
+      ?.forEach((row) => {
+        row.dataset.selected = "false";
+      });
+  }
+
   renderGutters() {
     const lineDecorationsById = new Map();
 
@@ -5879,7 +7194,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       const lineRect = lineElement.getBoundingClientRect();
       const top = Math.max(0, lineRect.top - surfaceRect.top);
       const height = Math.max(24, lineRect.height);
-      const isSelected = line.id === this.state.selectedLineId;
+      const isSelected =
+        this.state.selectionActive !== false &&
+        line.id === this.state.selectedLineId;
       lineElement.dataset.selected = String(isSelected);
       lineElement.dataset.mode = this.state.mode;
       const leftRow = this.getOrCreateGutterRow(
@@ -6216,7 +7533,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       const prefixRange = document.createRange();
       prefixRange.selectNodeContents(lineElement);
       prefixRange.setEnd(range.startContainer, range.startOffset);
-      return prefixRange.toString().length;
+      return prefixRange.toString().replaceAll(EDITOR_CARET_TEXT, "").length;
     } catch {
       return undefined;
     }
@@ -6257,8 +7574,31 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return undefined;
   }
 
-  getNativeLineSelectionContext() {
-    const range = getSelectionRange(this.refs?.editor);
+  createNativeSelectionRange(rangeLike) {
+    if (!rangeLike?.startContainer || !rangeLike?.endContainer) {
+      return undefined;
+    }
+
+    if (
+      !this.refs?.editor?.contains?.(rangeLike.startContainer) ||
+      !this.refs?.editor?.contains?.(rangeLike.endContainer)
+    ) {
+      return undefined;
+    }
+
+    const range = document.createRange();
+    try {
+      range.setStart(rangeLike.startContainer, rangeLike.startOffset);
+      range.setEnd(rangeLike.endContainer, rangeLike.endOffset);
+    } catch {
+      return undefined;
+    }
+
+    return range;
+  }
+
+  getLineSelectionContextFromRange(rangeLike) {
+    const range = this.createNativeSelectionRange(rangeLike);
     if (!range) {
       return undefined;
     }
@@ -6317,6 +7657,38 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       start: offset,
       end: offset,
     };
+  }
+
+  getNativeLineSelectionContext(rangeLike) {
+    if (
+      !rangeLike &&
+      (!this.refs?.editor ||
+        typeof window === "undefined" ||
+        typeof document === "undefined" ||
+        typeof ShadowRoot === "undefined")
+    ) {
+      return undefined;
+    }
+
+    return this.getLineSelectionContextFromRange(
+      rangeLike ?? getSelectionRange(this.refs?.editor),
+    );
+  }
+
+  getBeforeInputLineSelectionContext(event) {
+    const targetRange = event?.getTargetRanges?.()?.[0];
+    if (!targetRange) {
+      return undefined;
+    }
+
+    return this.getLineSelectionContextFromRange(targetRange);
+  }
+
+  getInputLineSelectionContext(event) {
+    return (
+      this.getBeforeInputLineSelectionContext(event) ??
+      this.getNativeLineSelectionContext()
+    );
   }
 
   getNativeLineRangeSelectionContext() {
@@ -6880,26 +8252,57 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    if (!menuState.isOpen || menuState.items.length === 0) {
+    const mentionItems = menuState.items ?? [];
+    if (!menuState.isOpen || mentionItems.length === 0) {
+      if (menu.open !== true && (menu.items?.length ?? 0) === 0) {
+        return;
+      }
       menu.items = [];
       menu.open = false;
       menu.render?.();
       return;
     }
 
-    menu.items = menuState.items.map((item) => ({
+    const nextItems = mentionItems.map((item) => ({
       id: `mention:${item.id}`,
       type: "item",
       label: item.label,
-      suffixText: item.variableType || "",
+      suffixText: item.variableType ?? "",
     }));
-    menu.x = String(menuState.left);
-    menu.y = String(menuState.top);
-    menu.place = "bs";
-    menu.w = "260";
-    menu.h = "240";
+    const nextX = String(menuState.left);
+    const nextY = String(menuState.top);
+    const nextPlace = "bs";
+    const nextWidth = "260";
+    const nextHeight = "240";
+    const hasPopover = Boolean(this.getMentionMenuPopover());
+    const needsRender =
+      menu.open !== true ||
+      menu.x !== nextX ||
+      menu.y !== nextY ||
+      menu.place !== nextPlace ||
+      menu.w !== nextWidth ||
+      menu.h !== nextHeight ||
+      !areRenderedMentionMenuItemsEqual(menu.items, nextItems) ||
+      !hasPopover;
+
+    if (!needsRender) {
+      this.syncMentionMenuPopover();
+      return;
+    }
+
+    menu.items = nextItems;
+    menu.x = nextX;
+    menu.y = nextY;
+    menu.place = nextPlace;
+    menu.w = nextWidth;
+    menu.h = nextHeight;
+    if (!hasPopover) {
+      menu.open = false;
+      menu.render?.();
+      this.syncMentionMenuPopover();
+    }
     menu.open = true;
     menu.render?.();
-    this.keepMentionMenuNonModal({ restoreFocus: true });
+    this.syncMentionMenuPopover();
   }
 }

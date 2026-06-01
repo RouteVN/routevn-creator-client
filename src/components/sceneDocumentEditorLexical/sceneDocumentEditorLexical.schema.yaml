@@ -14,6 +14,8 @@ propsSchema:
         properties: null
     selectedLineId:
       type: string
+    selectionActive:
+      type: boolean
     showLineNumbers:
       type: boolean
     textStyles:

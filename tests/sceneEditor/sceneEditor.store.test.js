@@ -282,11 +282,13 @@ describe("sceneEditorLexical.store", () => {
 
     expect(viewData.sectionEditorItems).toHaveLength(2);
     expect(viewData.sectionEditorItems[0].selectedLineId).toBe("line-1");
+    expect(viewData.sectionEditorItems[0].selectionActive).toBe(true);
     expect(viewData.sectionEditorItems[0].documentEditorLines).toHaveLength(2);
     expect(viewData.sectionEditorItems[0].documentLineDecorations[0]).toEqual(
       expect.objectContaining({ id: "line-1", lineNumber: 1 }),
     );
-    expect(viewData.sectionEditorItems[1].selectedLineId).toBeUndefined();
+    expect(viewData.sectionEditorItems[1].selectedLineId).toBe("");
+    expect(viewData.sectionEditorItems[1].selectionActive).toBe(false);
     expect(viewData.sectionEditorItems[1].documentEditorLines).toHaveLength(1);
     expect(viewData.sectionEditorItems[1].documentLineDecorations[0]).toEqual(
       expect.objectContaining({ id: "line-3", lineNumber: 1 }),
