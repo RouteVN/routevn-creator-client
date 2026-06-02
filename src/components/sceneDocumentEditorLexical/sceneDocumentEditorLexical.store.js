@@ -6,6 +6,7 @@ export const selectViewData = ({ props }) => ({
   selectedLineId: props.selectedLineId,
   selectionActive: props.selectionActive ?? true,
   showLineNumbers: props.showLineNumbers ?? true,
+  fontSize: props.fontSize ?? "md",
   textStyles: props.textStyles || [],
   mentionTargets: props.mentionTargets || [],
 });

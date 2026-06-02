@@ -102,6 +102,17 @@ const TEXT_INPUT_FALLBACK_DUPLICATE_MAX_AGE_MS = 250;
 const TYPED_SLASH_MENTION_TRIGGER_WINDOW_MS = 1000;
 const PROGRAMMATIC_FOCUS_BLUR_SUPPRESS_MS = 750;
 const VERTICAL_NAVIGATION_SELECTION_SYNC_FRAMES = 4;
+const EDITOR_FONT_SIZE_VALUES = {
+  xs: "13px",
+  sm: "14px",
+  md: "16px",
+  lg: "18px",
+  xl: "20px",
+};
+const DEFAULT_EDITOR_FONT_SIZE = "md";
+
+const normalizeEditorFontSize = (fontSize) =>
+  EDITOR_FONT_SIZE_VALUES[fontSize] ? fontSize : DEFAULT_EDITOR_FONT_SIZE;
 
 const isSectionEditorSelectedLineIdBindingFallback = (value) => {
   return /^sectionEditorItems\[\d+\]\.selectedLineId$/.test(
@@ -270,6 +281,7 @@ const STYLES = `
     --right-gutter-width: ${DEFAULT_RIGHT_GUTTER_WIDTH}px;
     --editor-inline-padding: 0px;
     --editor-top-padding: 0px;
+    --scene-document-editor-font-size: ${EDITOR_FONT_SIZE_VALUES[DEFAULT_EDITOR_FONT_SIZE]};
   }
 
   rvn-lexical-scene-document-editor * {
@@ -295,7 +307,7 @@ const STYLES = `
     background: transparent;
     color: rgba(248, 250, 252, 0.96);
     font-family: inherit;
-    font-size: 16px;
+    font-size: var(--scene-document-editor-font-size);
     font-weight: 400;
     line-height: 1.5;
     padding: 0 0 0 calc(var(--left-gutter-width) + var(--editor-inline-padding));
@@ -929,6 +941,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       selectedLineId: undefined,
       selectionActive: true,
       showLineNumbers: true,
+      fontSize: DEFAULT_EDITOR_FONT_SIZE,
       mode: "block",
       plainText: "",
       mentionTargets: [],
@@ -1464,6 +1477,18 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   get showLineNumbers() {
     return this.state.showLineNumbers;
+  }
+
+  set fontSize(value) {
+    this.state.fontSize = normalizeEditorFontSize(value);
+    if (!this.isConnected || !this.refs.editor) {
+      return;
+    }
+    this.scheduleRender();
+  }
+
+  get fontSize() {
+    return this.state.fontSize;
   }
 
   setMode(mode) {
@@ -7135,6 +7160,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.style.setProperty(
       "--right-gutter-width",
       `${this.rightGutterWidth}px`,
+    );
+    this.style.setProperty(
+      "--scene-document-editor-font-size",
+      EDITOR_FONT_SIZE_VALUES[this.state.fontSize],
     );
     this.refs.placeholder.hidden = this.state.plainText.length > 0;
     this.refs.placeholder.textContent = this.state.placeholder;

@@ -27,6 +27,20 @@ import {
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
+const SCENE_EDITOR_FONT_SIZE_OPTIONS = [
+  { value: "xs", label: "XS" },
+  { value: "sm", label: "SM" },
+  { value: "md", label: "MD" },
+  { value: "lg", label: "LG" },
+  { value: "xl", label: "XL" },
+];
+const DEFAULT_SCENE_EDITOR_FONT_SIZE = "md";
+
+const normalizeSceneEditorFontSize = (fontSize) =>
+  SCENE_EDITOR_FONT_SIZE_OPTIONS.some((option) => option.value === fontSize)
+    ? fontSize
+    : DEFAULT_SCENE_EDITOR_FONT_SIZE;
+
 const appendMissingIds = (orderedIds, allIds) => {
   const seen = new Set();
   const result = [];
@@ -593,12 +607,14 @@ export const createInitialState = () => ({
   },
   sceneSettings: {
     showLineNumbers: true,
+    fontSize: DEFAULT_SCENE_EDITOR_FONT_SIZE,
   },
   sceneSettingsDialog: {
     isOpen: false,
     formKey: 0,
     defaultValues: {
       showLineNumbers: true,
+      fontSize: DEFAULT_SCENE_EDITOR_FONT_SIZE,
       isMuted: false,
     },
   },
@@ -1445,6 +1461,7 @@ export const showSceneSettingsDialog = ({ state }, _payload = {}) => {
   state.sceneSettingsDialog.formKey += 1;
   state.sceneSettingsDialog.defaultValues = {
     showLineNumbers: state.sceneSettings.showLineNumbers,
+    fontSize: normalizeSceneEditorFontSize(state.sceneSettings.fontSize),
     isMuted: state.isMuted,
   };
 };
@@ -1455,10 +1472,13 @@ export const hideSceneSettingsDialog = ({ state }, _payload = {}) => {
 
 export const setSceneSettings = (
   { state },
-  { showLineNumbers, isMuted } = {},
+  { showLineNumbers, isMuted, fontSize } = {},
 ) => {
   state.sceneSettings.showLineNumbers =
     showLineNumbers ?? state.sceneSettings.showLineNumbers;
+  state.sceneSettings.fontSize = normalizeSceneEditorFontSize(
+    fontSize ?? state.sceneSettings.fontSize,
+  );
   state.isMuted = isMuted ?? state.isMuted;
 };
 
@@ -1782,6 +1802,14 @@ export const selectViewData = ({ state }) => {
           { value: false, label: "Hide" },
           { value: true, label: "Show" },
         ],
+      },
+      {
+        name: "fontSize",
+        type: "segmented-control",
+        label: "Font size",
+        required: true,
+        clearable: false,
+        options: SCENE_EDITOR_FONT_SIZE_OPTIONS,
       },
       {
         name: "isMuted",

@@ -42,11 +42,16 @@ const MISSING_PROJECT_RESOLUTION_MESSAGE =
   "Project is missing required resolution settings.";
 const SHOW_LINE_NUMBERS_CONFIG_KEY = "sceneEditor.showLineNumbers";
 const IS_MUTED_CONFIG_KEY = "sceneEditor.isMuted";
+const FONT_SIZE_CONFIG_KEY = "sceneEditor.fontSize";
+const SCENE_EDITOR_FONT_SIZES = new Set(["xs", "sm", "md", "lg", "xl"]);
 const BACKGROUND_TRANSFORM_RESIZE_TARGET_PREFIX = "selected-border-resize-";
 const MIN_BACKGROUND_TRANSFORM_SCALE = 0.01;
 const BACKGROUND_TRANSFORM_KEYBOARD_NUDGE = 1;
 const BACKGROUND_TRANSFORM_KEYBOARD_LARGE_NUDGE = 10;
 const SCENE_EDITOR_SELECTION_URL_SYNC_THROTTLE_MS = 250;
+
+const normalizeSceneEditorFontSize = (fontSize) =>
+  SCENE_EDITOR_FONT_SIZES.has(fontSize) ? fontSize : "md";
 
 const toPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -1411,9 +1416,13 @@ export const handleBeforeMount = (deps) => {
   const showLineNumbers =
     appService.getUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY) ?? true;
   const isMuted = appService.getUserConfig(IS_MUTED_CONFIG_KEY) ?? false;
+  const fontSize = normalizeSceneEditorFontSize(
+    appService.getUserConfig(FONT_SIZE_CONFIG_KEY),
+  );
   store.setSceneSettings({
     showLineNumbers,
     isMuted,
+    fontSize,
   });
 
   const cleanupRuntimeSubscriptions = mountSceneEditorSubscriptions(deps);
@@ -2700,12 +2709,15 @@ export const handleSceneSettingsFormAction = (deps, payload) => {
   const previousIsMuted = store.selectIsMuted();
   const showLineNumbers = detail.values?.showLineNumbers ?? true;
   const isMuted = detail.values?.isMuted ?? false;
+  const fontSize = normalizeSceneEditorFontSize(detail.values?.fontSize);
   store.setSceneSettings({
     showLineNumbers,
     isMuted,
+    fontSize,
   });
   appService.setUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY, showLineNumbers);
   appService.setUserConfig(IS_MUTED_CONFIG_KEY, isMuted);
+  appService.setUserConfig(FONT_SIZE_CONFIG_KEY, fontSize);
   store.hideSceneSettingsDialog();
   render();
 
