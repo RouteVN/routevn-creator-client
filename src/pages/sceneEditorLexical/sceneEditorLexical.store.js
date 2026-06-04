@@ -28,11 +28,11 @@ import {
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
 const SCENE_EDITOR_FONT_SIZE_OPTIONS = [
-  { value: "xs", label: "XS" },
-  { value: "sm", label: "SM" },
-  { value: "md", label: "MD" },
-  { value: "lg", label: "LG" },
-  { value: "xl", label: "XL" },
+  { value: "xs", label: "Extra Small" },
+  { value: "sm", label: "Small" },
+  { value: "md", label: "Medium" },
+  { value: "lg", label: "Large" },
+  { value: "xl", label: "Extra Large" },
 ];
 const DEFAULT_SCENE_EDITOR_FONT_SIZE = "md";
 
@@ -1805,8 +1805,8 @@ export const selectViewData = ({ state }) => {
       },
       {
         name: "fontSize",
-        type: "segmented-control",
-        label: "Font size",
+        type: "select",
+        label: "Text size",
         required: true,
         clearable: false,
         options: SCENE_EDITOR_FONT_SIZE_OPTIONS,
