@@ -14,6 +14,53 @@ import {
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 
 describe("sceneEditorLexical.store", () => {
+  it("presents text size as a select with full labels", () => {
+    const state = createInitialState();
+
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: {
+                  items: {},
+                  tree: [],
+                },
+              },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+    const fontSizeField = viewData.sceneSettingsForm.fields.find(
+      (field) => field.name === "fontSize",
+    );
+
+    expect(fontSizeField).toEqual({
+      name: "fontSize",
+      type: "select",
+      label: "Text size",
+      required: true,
+      clearable: false,
+      options: [
+        { value: "xs", label: "Extra Small" },
+        { value: "sm", label: "Small" },
+        { value: "md", label: "Medium" },
+        { value: "lg", label: "Large" },
+        { value: "xl", label: "Extra Large" },
+      ],
+    });
+  });
+
   it("includes conditional branch section targets in the section graph", () => {
     const state = createInitialState();
 

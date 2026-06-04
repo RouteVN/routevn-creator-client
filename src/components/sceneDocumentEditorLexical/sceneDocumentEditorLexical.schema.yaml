@@ -18,6 +18,8 @@ propsSchema:
       type: boolean
     showLineNumbers:
       type: boolean
+    fontSize:
+      type: string
     textStyles:
       type: array
       items:
