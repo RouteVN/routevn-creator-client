@@ -478,14 +478,7 @@ export const selectViewData = ({ state, props }) => {
       index,
     }),
   );
-  const dialogKey = [
-    state.dialogMode,
-    state.editingItemId || "new",
-    defaultValues.variableType,
-    defaultValues.isEnum ? "enum" : "plain",
-    normalizeVariableEnumValues(defaultValues.enumValues).join("|"),
-    String(defaultValues.default),
-  ].join("-");
+  const dialogKey = state.editingItemId ?? state.targetGroupId ?? "new";
 
   return {
     flatGroups,
