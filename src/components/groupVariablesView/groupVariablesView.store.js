@@ -208,6 +208,10 @@ export const selectDefaultValues = ({ state }) => {
   return state.defaultValues;
 };
 
+export const selectIsEditMode = ({ state }) => {
+  return state.dialogMode === "edit";
+};
+
 export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {
@@ -478,14 +482,7 @@ export const selectViewData = ({ state, props }) => {
       index,
     }),
   );
-  const dialogKey = [
-    state.dialogMode,
-    state.editingItemId || "new",
-    defaultValues.variableType,
-    defaultValues.isEnum ? "enum" : "plain",
-    normalizeVariableEnumValues(defaultValues.enumValues).join("|"),
-    String(defaultValues.default),
-  ].join("-");
+  const dialogKey = state.editingItemId ?? state.targetGroupId ?? "new";
 
   return {
     flatGroups,

@@ -1,4 +1,4 @@
-const ROUTEVN_CREATOR_DOCS_BASE_URL = "https://routevn.com/creator/docs";
+const ROUTEVN_CREATOR_DOCS_BASE_URL = "https://routevn.com/en/creator/docs";
 
 export const ROUTEVN_CREATOR_DOCS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/introduction/`;
 export const ROUTEVN_CREATOR_DOCS_PAGE_INDEX_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/page-index/`;
@@ -71,7 +71,8 @@ const creatorDocsPathBySystemActionMode = {
   setMenuPage: "/line-actions/controls/",
   setMenuEntryPoint: "/line-actions/controls/",
   updateVariable: "/line-actions/update-variable/",
-  conditional: "/line-actions/controls/",
+  input: "/line-actions/input/",
+  conditional: "/line-actions/conditional/",
 };
 
 const normalizeRoutePattern = (routePattern) => {

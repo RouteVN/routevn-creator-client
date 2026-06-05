@@ -26,8 +26,8 @@ const resolveImageAspectRatio = (item) => {
 };
 
 const PREVIEW_FRAME_STYLE = [
-  "width: 92vw",
-  "height: 92vh",
+  "width: min(92vw, calc(92vh * 16 / 9))",
+  "aspect-ratio: 16 / 9",
   "max-width: 92vw",
   "max-height: 92vh",
 ].join("; ");
@@ -74,7 +74,7 @@ const buildMediaItem = (item) => ({
   id: item.id,
   name: item.name,
   cardKind: "image",
-  previewFileId: item.thumbnailFileId ?? item.fileId,
+  previewFileId: item.fileId ?? item.thumbnailFileId,
   previewAspectRatio: resolveImageAspectRatio(item),
   canPreview: false,
 });

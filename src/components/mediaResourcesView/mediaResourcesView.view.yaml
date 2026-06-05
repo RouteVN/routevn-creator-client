@@ -94,6 +94,12 @@ refs:
     eventListeners:
       click:
         handler: handlePreviewActionClick
+styles:
+  ".mediaImageThumbnailTransparencyGrid":
+    background-color: "#f4f4f4"
+    background-image: 'url("data:image/svg+xml,%3Csvg xmlns=''http://www.w3.org/2000/svg'' width=''16'' height=''16'' viewBox=''0 0 16 16''%3E%3Cpath fill=''%23d0d0d0'' d=''M0 0h8v8H0zM8 8h8v8H8z''/%3E%3Cpath fill=''%23f4f4f4'' d=''M8 0h8v8H8zM0 8h8v8H0z''/%3E%3C/svg%3E")'
+    background-repeat: repeat
+    background-size: 16px 16px
 template:
   - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
@@ -145,7 +151,7 @@ template:
                                                   - 'rtgl-view br=md w=${item.imageCardWidth} pos=rel overflow=hidden style="${item.imageCardStyle}"':
                                                       - $if showImageCardPreview:
                                                           - $if item.useFullWidthImageCard:
-                                                              - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                              - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.previewAspectRatio}; overflow: hidden; border-radius: 8px;"':
                                                                   - $if item.isProcessing:
                                                                       - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
                                                                           - rtgl-text s=sm c=mu-fg: Processing...
@@ -154,14 +160,15 @@ template:
                                                                     $else:
                                                                       - rvn-file-image br=md w=f h=f fileId=${item.previewFileId}: null
                                                             $else:
-                                                              - $if item.isProcessing:
-                                                                  - rtgl-view w=f h=${imageHeight} br=md bw=xs bc=bo av=c ah=c:
-                                                                      - rtgl-text s=sm c=mu-fg: Processing...
-                                                                $else:
-                                                                  - $if lazyImageCards && item.shouldLazyLoadPreview:
-                                                                      - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.previewFileId} lazy: null
+                                                              - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; height: ${imageHeight}px; overflow: hidden; border-radius: 8px;"':
+                                                                  - $if item.isProcessing:
+                                                                      - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                          - rtgl-text s=sm c=mu-fg: Processing...
                                                                     $else:
-                                                                      - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.previewFileId}: null
+                                                                      - $if lazyImageCards && item.shouldLazyLoadPreview:
+                                                                          - rvn-file-image br=md w=f h=f fileId=${item.previewFileId} lazy: null
+                                                                        $else:
+                                                                          - rvn-file-image br=md w=f h=f fileId=${item.previewFileId}: null
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=zoomIn wh=22 c=white: null

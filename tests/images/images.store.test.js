@@ -3,6 +3,7 @@ import {
   commitDetailTagIds,
   createInitialState,
   selectAdjacentImageItemId,
+  selectViewData,
   setDetailTagIds,
   setItems,
   setSelectedItemId,
@@ -97,6 +98,31 @@ describe("images store detail tag draft", () => {
 });
 
 describe("images store preview navigation", () => {
+  it("uses the original image file for grid thumbnails so transparency can show", () => {
+    const context = createContext();
+
+    setItems(context, {
+      data: {
+        tree: [{ id: "image-1" }],
+        items: {
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Transparent Image",
+            fileId: "original-file",
+            thumbnailFileId: "opaque-thumbnail-file",
+          },
+        },
+      },
+    });
+
+    const viewData = selectViewData(context);
+
+    expect(viewData.mediaGroups[0].children[0].previewFileId).toBe(
+      "original-file",
+    );
+  });
+
   it("uses the original file for the full preview overlay", () => {
     const context = createContext();
 
@@ -121,6 +147,18 @@ describe("images store preview navigation", () => {
 
     expect(context.state.fullImagePreviewVisible).toBe(true);
     expect(context.state.fullImagePreviewFileId).toBe("original-file");
+  });
+
+  it("uses a 16:9 frame for the full preview overlay", () => {
+    const context = createContext();
+    const viewData = selectViewData(context);
+
+    expect(viewData.fullImagePreviewFrameStyle).toContain(
+      "aspect-ratio: 16 / 9",
+    );
+    expect(viewData.fullImagePreviewFrameStyle).toContain(
+      "width: min(92vw, calc(92vh * 16 / 9))",
+    );
   });
 
   it("jumps adjacent image selection by distance and clamps to visible bounds", () => {
