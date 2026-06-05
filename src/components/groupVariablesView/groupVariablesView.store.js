@@ -208,6 +208,10 @@ export const selectDefaultValues = ({ state }) => {
   return state.defaultValues;
 };
 
+export const selectIsEditMode = ({ state }) => {
+  return state.dialogMode === "edit";
+};
+
 export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
   if (index > -1) {

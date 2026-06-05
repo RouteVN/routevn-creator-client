@@ -147,6 +147,18 @@ const setVariableFormValues = ({ refs, render, store }, values = {}) => {
   render();
 };
 
+const shouldSyncVariableFormValues = ({
+  formValues = {},
+  nextValues = {},
+} = {}) => {
+  const syncFieldNames = ["variableType", "isEnum", "default"];
+  return syncFieldNames.some(
+    (fieldName) =>
+      Object.prototype.hasOwnProperty.call(formValues, fieldName) &&
+      formValues[fieldName] !== nextValues[fieldName],
+  );
+};
+
 const getFormFieldNameFromEvent = (event) => {
   const directFieldName = event?.target?.dataset?.fieldName;
   if (directFieldName) {
@@ -289,21 +301,27 @@ export const handleVariableItemClick = (deps, payload) => {
 };
 
 export const handleDialogFormChange = (deps, payload) => {
-  const { store, render } = deps;
+  const { refs, store, render } = deps;
   const prevValues = store.selectDefaultValues();
   const newValues = payload._event.detail.values;
-  const storeState = store.getState
-    ? store.getState()
-    : store._state || store.state;
-  const isEditMode = storeState?.dialogMode === "edit";
-
-  store.updateFormValues({
-    ...resolveVariableFormValues({
-      prevValues,
-      newValues,
-      isEditMode,
-    }),
+  const isEditMode = store.selectIsEditMode();
+  const nextValues = resolveVariableFormValues({
+    prevValues,
+    newValues,
+    isEditMode,
   });
+
+  store.updateFormValues(nextValues);
+  if (
+    shouldSyncVariableFormValues({
+      formValues: newValues,
+      nextValues,
+    })
+  ) {
+    refs.variableForm?.setValues?.({
+      values: nextValues,
+    });
+  }
   render();
 };
 
