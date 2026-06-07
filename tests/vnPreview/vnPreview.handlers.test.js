@@ -218,14 +218,14 @@ describe("vnPreview.handlers", () => {
     );
   });
 
-  it("lets preview gameplay keys pass through and closes only on Escape", async () => {
+  it("forwards preview Enter from outside the preview and closes only on Escape", async () => {
     const { handleBeforeMount } = await import(
       "../../src/components/vnPreview/vnPreview.handlers.js"
     );
 
     const listeners = {};
     const removeEventListener = vi.fn();
-    const addEventListener = vi.fn((eventName, listener) => {
+    const addEventListener = vi.fn((eventName, listener, _options) => {
       listeners[eventName] = listener;
     });
     vi.stubGlobal("window", {
@@ -240,9 +240,33 @@ describe("vnPreview.handlers", () => {
         }
       },
     );
+    vi.stubGlobal(
+      "KeyboardEvent",
+      class KeyboardEvent {
+        constructor(type, init = {}) {
+          this.type = type;
+          Object.assign(this, init);
+        }
+      },
+    );
+
+    const editorTarget = {
+      name: "editor",
+    };
+    const previewChild = {
+      name: "preview",
+    };
+    const previewSurface = {
+      contains: vi.fn((target) => target === previewChild),
+      dispatchEvent: vi.fn(),
+      focus: vi.fn(),
+    };
 
     const deps = {
       dispatchEvent: vi.fn(),
+      refs: {
+        previewSurface,
+      },
       graphicsService: {
         destroy: vi.fn(),
       },
@@ -256,17 +280,71 @@ describe("vnPreview.handlers", () => {
     const cleanup = handleBeforeMount(deps);
 
     const enterEvent = {
+      type: "keydown",
       key: "Enter",
+      code: "Enter",
+      keyCode: 13,
+      which: 13,
+      target: editorTarget,
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
       stopImmediatePropagation: vi.fn(),
     };
     listeners.keydown(enterEvent);
 
-    expect(enterEvent.preventDefault).not.toHaveBeenCalled();
-    expect(enterEvent.stopPropagation).not.toHaveBeenCalled();
-    expect(enterEvent.stopImmediatePropagation).not.toHaveBeenCalled();
+    expect(enterEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(enterEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(enterEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+    expect(previewSurface.focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(previewSurface.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "keydown",
+        key: "Enter",
+        code: "Enter",
+        keyCode: 13,
+        which: 13,
+      }),
+    );
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
+
+    const previewEnterEvent = {
+      type: "keydown",
+      key: "Enter",
+      target: previewChild,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+    listeners.keydown(previewEnterEvent);
+
+    expect(previewEnterEvent.preventDefault).not.toHaveBeenCalled();
+    expect(previewEnterEvent.stopPropagation).not.toHaveBeenCalled();
+    expect(previewEnterEvent.stopImmediatePropagation).not.toHaveBeenCalled();
+    expect(previewSurface.dispatchEvent).toHaveBeenCalledTimes(1);
+
+    const enterKeyUpEvent = {
+      type: "keyup",
+      key: "Enter",
+      code: "Enter",
+      keyCode: 13,
+      which: 13,
+      target: editorTarget,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+    listeners.keyup(enterKeyUpEvent);
+
+    expect(enterKeyUpEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(enterKeyUpEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(enterKeyUpEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+    expect(previewSurface.dispatchEvent).toHaveBeenCalledTimes(2);
+    expect(previewSurface.dispatchEvent).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        type: "keyup",
+        key: "Enter",
+      }),
+    );
 
     const escapeEvent = {
       key: "Escape",
@@ -292,13 +370,23 @@ describe("vnPreview.handlers", () => {
       expect.any(Function),
       true,
     );
+    expect(addEventListener).toHaveBeenCalledWith(
+      "keyup",
+      expect.any(Function),
+      true,
+    );
     expect(deps.graphicsService.destroy).toHaveBeenCalledTimes(1);
     expect(removeEventListener).toHaveBeenCalledWith(
       "keydown",
       expect.any(Function),
       true,
     );
-    expect(addEventListener).toHaveBeenCalledTimes(1);
-    expect(removeEventListener).toHaveBeenCalledTimes(1);
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "keyup",
+      expect.any(Function),
+      true,
+    );
+    expect(addEventListener).toHaveBeenCalledTimes(2);
+    expect(removeEventListener).toHaveBeenCalledTimes(2);
   });
 });

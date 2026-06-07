@@ -19,6 +19,9 @@ import {
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
 
+const FORWARDED_PREVIEW_KEY_EVENT = "__rvnForwardedPreviewKeyEvent";
+const PREVIEW_FORWARDED_KEYS = new Set(["Enter"]);
+
 const focusPreviewSurface = (refs) => {
   const previewSurface = refs?.previewSurface;
   if (!previewSurface?.focus) {
@@ -39,10 +42,77 @@ const focusPreviewSurface = (refs) => {
   });
 };
 
-const suppressPreviewEscapeEvent = (event) => {
+const suppressPreviewKeyboardEvent = (event) => {
   event.preventDefault?.();
   event.stopPropagation?.();
   event.stopImmediatePropagation?.();
+};
+
+const isPreviewSurfaceEventTarget = (previewSurface, target) => {
+  if (!previewSurface || !target) {
+    return false;
+  }
+
+  if (target === previewSurface) {
+    return true;
+  }
+
+  return typeof previewSurface.contains === "function"
+    ? previewSurface.contains(target)
+    : false;
+};
+
+const shouldForwardPreviewKeyEvent = (event, refs) => {
+  const previewSurface = refs?.previewSurface;
+  if (
+    event?.[FORWARDED_PREVIEW_KEY_EVENT] === true ||
+    event?.defaultPrevented ||
+    !PREVIEW_FORWARDED_KEYS.has(event?.key) ||
+    !previewSurface ||
+    typeof previewSurface.dispatchEvent !== "function" ||
+    typeof KeyboardEvent !== "function"
+  ) {
+    return false;
+  }
+
+  return !isPreviewSurfaceEventTarget(previewSurface, event.target);
+};
+
+const createForwardedPreviewKeyEvent = (event) => {
+  if (typeof KeyboardEvent !== "function") {
+    return undefined;
+  }
+
+  const forwardedEvent = new KeyboardEvent(event.type, {
+    altKey: event.altKey === true,
+    bubbles: true,
+    cancelable: true,
+    code: event.code,
+    composed: true,
+    ctrlKey: event.ctrlKey === true,
+    key: event.key,
+    keyCode: event.keyCode,
+    metaKey: event.metaKey === true,
+    repeat: event.repeat === true,
+    shiftKey: event.shiftKey === true,
+    which: event.which,
+  });
+  Object.defineProperty(forwardedEvent, FORWARDED_PREVIEW_KEY_EVENT, {
+    value: true,
+  });
+  return forwardedEvent;
+};
+
+const forwardPreviewKeyEvent = (event, refs) => {
+  const previewSurface = refs?.previewSurface;
+  const forwardedEvent = createForwardedPreviewKeyEvent(event);
+  if (!previewSurface || !forwardedEvent) {
+    return false;
+  }
+
+  focusPreviewSurface(refs);
+  previewSurface.dispatchEvent(forwardedEvent);
+  return true;
 };
 
 const waitForBrowserPaint = async () => {
@@ -431,17 +501,31 @@ const createBeforeHandleActionsHook = (
 };
 
 export const handleBeforeMount = (deps) => {
-  const { dispatchEvent, store, graphicsService } = deps;
+  const { dispatchEvent, store, graphicsService, refs } = deps;
   function handleKeyDown(event) {
     if (event.key !== "Escape") {
+      if (shouldForwardPreviewKeyEvent(event, refs)) {
+        suppressPreviewKeyboardEvent(event);
+        forwardPreviewKeyEvent(event, refs);
+      }
       return;
     }
 
-    suppressPreviewEscapeEvent(event);
+    suppressPreviewKeyboardEvent(event);
     dispatchEvent(new CustomEvent("close"));
   }
 
+  function handleKeyUp(event) {
+    if (!shouldForwardPreviewKeyEvent(event, refs)) {
+      return;
+    }
+
+    suppressPreviewKeyboardEvent(event);
+    forwardPreviewKeyEvent(event, refs);
+  }
+
   window.addEventListener("keydown", handleKeyDown, true);
+  window.addEventListener("keyup", handleKeyUp, true);
 
   return () => {
     store.setAssetLoading({ isLoading: false });
@@ -449,6 +533,7 @@ export const handleBeforeMount = (deps) => {
     resetAssetLoadCache(store);
     void graphicsService.destroy?.();
     window.removeEventListener("keydown", handleKeyDown, true);
+    window.removeEventListener("keyup", handleKeyUp, true);
   };
 };
 

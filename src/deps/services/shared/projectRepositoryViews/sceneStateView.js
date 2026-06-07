@@ -31,6 +31,9 @@ const getSceneProjectionDebugDetails = (event) => {
   const payloadLineIds = Array.isArray(payload.lineIds)
     ? payload.lineIds.filter((id) => typeof id === "string" && id.length > 0)
     : [];
+  const payloadSectionIds = Array.isArray(payload.sectionIds)
+    ? payload.sectionIds.filter((id) => typeof id === "string" && id.length > 0)
+    : [];
   const payloadLinesLineIds = Array.isArray(payload.lines)
     ? payload.lines
         .map((line) => line?.lineId)
@@ -45,13 +48,14 @@ const getSceneProjectionDebugDetails = (event) => {
       ? payload.sectionId
       : typeof payload.toSectionId === "string"
         ? payload.toSectionId
-        : undefined;
+        : payloadSectionIds[0];
 
   return {
     command,
     payload,
     lineId,
     sectionId,
+    sectionIds: payloadSectionIds,
   };
 };
 
@@ -265,6 +269,11 @@ const isMissingSectionReplayError = (error) =>
     "payload.sectionId must reference an existing section",
   );
 
+const isMissingSectionIdsReplayError = (error) =>
+  String(error?.message || "").includes(
+    "payload.sectionIds must reference existing sections",
+  );
+
 const isMissingLineReplayError = (error) => {
   const message = String(error?.message || "");
   return (
@@ -288,12 +297,22 @@ const shouldSkipObsoleteSceneReplayEvent = ({
   repositoryState,
   error,
 }) => {
-  const { command, lineId, sectionId } = getSceneProjectionDebugDetails(event);
+  const { command, lineId, sectionId, sectionIds } =
+    getSceneProjectionDebugDetails(event);
   if (command?.type?.startsWith("section.")) {
     if (isDuplicateSectionReplayError(error)) {
       return !command?.type?.endsWith(".create")
         ? false
         : Boolean(findSectionLocationInState(repositoryState, sectionId));
+    }
+
+    if (isMissingSectionIdsReplayError(error)) {
+      return (
+        sectionIds.length > 0 &&
+        sectionIds.every(
+          (id) => !findSectionLocationInState(repositoryState, id),
+        )
+      );
     }
 
     if (isMissingSectionReplayError(error)) {
