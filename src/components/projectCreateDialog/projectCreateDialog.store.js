@@ -1,8 +1,15 @@
 import {
   createProjectResolutionFormValues,
   CUSTOM_PROJECT_RESOLUTION_PRESET,
+  DEFAULT_PROJECT_RESOLUTION_PRESET,
   PROJECT_RESOLUTION_OPTIONS,
 } from "../../internal/projectResolution.js";
+
+const CREATE_PROJECT_RESOLUTION_OPTIONS = PROJECT_RESOLUTION_OPTIONS.filter(
+  ({ value }) =>
+    value === DEFAULT_PROJECT_RESOLUTION_PRESET ||
+    value === CUSTOM_PROJECT_RESOLUTION_PRESET,
+);
 
 const createCreateProjectDefaultValues = (values = {}) => {
   const preset =
@@ -62,7 +69,7 @@ const form = {
       description: "Choose the project resolution.",
       required: true,
       clearable: false,
-      options: PROJECT_RESOLUTION_OPTIONS,
+      options: CREATE_PROJECT_RESOLUTION_OPTIONS,
     },
     {
       $when: "values.resolution == 'custom'",
