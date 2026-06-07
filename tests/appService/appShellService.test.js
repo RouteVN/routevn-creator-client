@@ -95,4 +95,21 @@ describe("appShellService", () => {
       throttleMs: 250,
     });
   });
+
+  it("shows a toast when opening an external URL fails", async () => {
+    const deps = createDeps();
+    deps.openUrl.mockRejectedValue(new Error("blocked"));
+    const service = createAppShellService(deps);
+
+    await service.openUrl("https://routevn.com/en/creator/docs/test");
+
+    expect(deps.openUrl).toHaveBeenCalledWith(
+      "https://routevn.com/en/creator/docs/test",
+    );
+    expect(deps.globalUI.showToast).toHaveBeenCalledWith({
+      title: "Error",
+      message: "Failed to open link.",
+      status: "error",
+    });
+  });
 });

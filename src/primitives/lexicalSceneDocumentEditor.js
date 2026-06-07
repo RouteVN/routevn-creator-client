@@ -997,6 +997,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.dismissedMentionTrigger = undefined;
     this.dismissedMentionTriggerScope = undefined;
     this.pendingTypedSlashMentionTrigger = undefined;
+    this.pendingHandledPasteBeforeInput = false;
 
     this.editor = createEditor({
       namespace: "routevn-lexical-scene-document-editor",
@@ -1136,8 +1137,16 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       ),
       this.editor.registerCommand(
         PASTE_COMMAND,
-        () => {
-          return false;
+        (event) => {
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
+          event?.stopImmediatePropagation?.();
+          this.handlePasteEvent(event);
+          this.pendingHandledPasteBeforeInput = true;
+          requestAnimationFrame(() => {
+            this.pendingHandledPasteBeforeInput = false;
+          });
+          return true;
         },
         COMMAND_PRIORITY_HIGH,
       ),
@@ -4256,6 +4265,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   handleNativeBeforeInput(event) {
     this.hideSelectionPopover();
+    const inputType = String(event.inputType ?? "");
 
     if (this.state?.mode === "block") {
       this.clearPendingTextInputFallback();
@@ -4272,12 +4282,37 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.clearSelectedReferenceNodeKey();
 
-    const inputType = String(event.inputType ?? "");
     if (inputType === "historyUndo" || inputType === "historyRedo") {
       this.clearPendingTextInputFallback();
       event.preventDefault();
       event.stopPropagation?.();
       event.stopImmediatePropagation?.();
+      return;
+    }
+
+    if (
+      inputType === "insertFromPaste" ||
+      inputType === "insertFromPasteAsQuotation"
+    ) {
+      this.clearPendingTextInputFallback();
+      event.preventDefault();
+      event.stopPropagation?.();
+      event.stopImmediatePropagation?.();
+
+      if (this.pendingHandledPasteBeforeInput) {
+        this.pendingHandledPasteBeforeInput = false;
+        return;
+      }
+
+      const pastedText =
+        event.dataTransfer?.getData?.("text/plain") ?? event.data ?? "";
+      if (pastedText) {
+        this.handlePasteEvent({
+          clipboardData: {
+            getData: (type) => (type === "text/plain" ? pastedText : ""),
+          },
+        });
+      }
       return;
     }
 

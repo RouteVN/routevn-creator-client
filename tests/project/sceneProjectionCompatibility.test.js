@@ -722,6 +722,54 @@ describe("scene projection compatibility", () => {
     ).toBeUndefined();
   });
 
+  it("skips obsolete plural section delete replay events", async () => {
+    const initialState = createRepositoryState();
+    delete initialState.scenes.items[sceneId].sections.items[targetSectionId];
+    initialState.scenes.items[sceneId].sections.tree = [{ id: sectionId }];
+
+    const projectCreateEvent = createProjectCreateRepositoryEvent({
+      projectId,
+      state: initialState,
+    });
+    const sectionDeleteEvent = createCommandEvent({
+      id: "section-delete-missing",
+      partition: mainScenePartitionFor(sceneId),
+      type: COMMAND_TYPES.SECTION_DELETE,
+      payload: {
+        sectionIds: [targetSectionId],
+      },
+      clientTs: 1,
+    });
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const projection = await loadSceneProjectionState({
+        store: createCheckpointStore(),
+        mainState: createMainProjectionState(initialState),
+        events: [projectCreateEvent, sectionDeleteEvent],
+        createInitialState: () => structuredClone(initialProjectData),
+        reduceEventToState,
+        reduceEventsToState,
+        sceneId,
+      });
+
+      expect(
+        projection.scenes.items[sceneId].sections.items[targetSectionId],
+      ).toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[sceneProjection] skipped obsolete replay event",
+        expect.objectContaining({
+          sceneId,
+          eventId: "section-delete-missing",
+          partition: mainScenePartitionFor(sceneId),
+          error: "payload.sectionIds must reference existing sections",
+        }),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("skips obsolete section and line lifecycle events while preserving newer scene lines", async () => {
     const initialState = createRepositoryState();
     const deletedSectionId = "section-deleted";

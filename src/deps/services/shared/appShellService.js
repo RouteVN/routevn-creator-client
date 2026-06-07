@@ -55,7 +55,7 @@ export const createAppShellService = ({
   subject,
   globalUI,
   filePicker,
-  openUrl,
+  openUrl: openExternalUrl,
   appVersion,
   platform,
   updater,
@@ -103,7 +103,17 @@ export const createAppShellService = ({
       router.back();
     },
 
-    openUrl,
+    async openUrl(url) {
+      try {
+        await openExternalUrl(url);
+      } catch {
+        globalUI.showToast({
+          title: "Error",
+          message: "Failed to open link.",
+          status: "error",
+        });
+      }
+    },
 
     showDialog(options) {
       return globalUI.showConfirm(options);
