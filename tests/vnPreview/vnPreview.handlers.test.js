@@ -241,11 +241,40 @@ describe("vnPreview.handlers", () => {
       },
     );
     vi.stubGlobal(
+      "Event",
+      class Event {
+        constructor(type, init = {}) {
+          this.type = type;
+          Object.assign(this, init);
+        }
+      },
+    );
+    vi.stubGlobal(
       "KeyboardEvent",
       class KeyboardEvent {
         constructor(type, init = {}) {
           this.type = type;
-          Object.assign(this, init);
+          this.altKey = init.altKey;
+          this.bubbles = init.bubbles;
+          this.cancelable = init.cancelable;
+          this.code = init.code;
+          this.composed = init.composed;
+          this.ctrlKey = init.ctrlKey;
+          this.key = init.key;
+          this.metaKey = init.metaKey;
+          this.repeat = init.repeat;
+          this.shiftKey = init.shiftKey;
+          Object.defineProperties(this, {
+            charCode: {
+              value: 0,
+            },
+            keyCode: {
+              value: 0,
+            },
+            which: {
+              value: 0,
+            },
+          });
         }
       },
     );
@@ -301,6 +330,7 @@ describe("vnPreview.handlers", () => {
         type: "keydown",
         key: "Enter",
         code: "Enter",
+        charCode: 13,
         keyCode: 13,
         which: 13,
       }),
@@ -326,6 +356,7 @@ describe("vnPreview.handlers", () => {
       type: "keyup",
       key: "Enter",
       code: "Enter",
+      charCode: 13,
       keyCode: 13,
       which: 13,
       target: editorTarget,
@@ -343,6 +374,9 @@ describe("vnPreview.handlers", () => {
       expect.objectContaining({
         type: "keyup",
         key: "Enter",
+        charCode: 13,
+        keyCode: 13,
+        which: 13,
       }),
     );
 
