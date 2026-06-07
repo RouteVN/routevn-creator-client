@@ -12,6 +12,12 @@ export const PROJECT_RESOLUTION_PRESETS = Object.freeze([
     width: 1920,
     height: 1080,
   },
+  {
+    value: "1080x1920",
+    label: "1080x1920",
+    width: 1080,
+    height: 1920,
+  },
   // {
   //   value: "1280x720",
   //   label: "1280x720",

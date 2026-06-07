@@ -61,6 +61,29 @@ describe("sceneEditorLexical.store", () => {
     });
   });
 
+  it("limits preview canvas width for portrait projects", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          project: {
+            resolution: {
+              width: 1080,
+              height: 1920,
+            },
+          },
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.canvasAspectRatio).toBe("1080 / 1920");
+    expect(viewData.previewCanvasMaxWidth).toBe("min(100%, 28.125vh)");
+  });
+
   it("includes conditional branch section targets in the section graph", () => {
     const state = createInitialState();
 

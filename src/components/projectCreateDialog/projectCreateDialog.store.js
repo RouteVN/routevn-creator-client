@@ -59,8 +59,7 @@ const form = {
       name: "resolution",
       type: "select",
       label: "Resolution",
-      description:
-        "Only 1920x1080 is supported for now, more options coming soon.",
+      description: "Choose the project resolution.",
       required: true,
       clearable: false,
       options: PROJECT_RESOLUTION_OPTIONS,

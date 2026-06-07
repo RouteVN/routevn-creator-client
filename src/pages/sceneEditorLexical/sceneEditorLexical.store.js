@@ -1513,6 +1513,13 @@ const selectCanvasAspectRatioWidthMultiplier = ({ state }) => {
   return Number.isFinite(ratio) && ratio > 0 ? ratio : 16 / 9;
 };
 
+const selectPreviewCanvasMaxWidth = ({ state }) => {
+  const widthMultiplier = selectCanvasAspectRatioWidthMultiplier({ state });
+  const maxWidthVh = Number((widthMultiplier * 50).toFixed(4));
+
+  return `min(100%, ${maxWidthVh}vh)`;
+};
+
 const selectSystemActionsDialogPanelWidth = ({ state }) => {
   return state.backgroundTransformEditor.isOpen === true
     ? "calc(100vw - 64px)"
@@ -1579,6 +1586,7 @@ export const selectViewData = ({ state }) => {
       previewSectionId: state.previewSectionId,
       previewLineId: state.previewLineId,
       canvasAspectRatio: selectCanvasAspectRatio({ state }),
+      previewCanvasMaxWidth: selectPreviewCanvasMaxWidth({ state }),
       systemActionsDialogPanelWidth: selectSystemActionsDialogPanelWidth({
         state,
       }),
@@ -1874,6 +1882,7 @@ export const selectViewData = ({ state }) => {
     previewSectionId: state.previewSectionId,
     previewLineId: state.previewLineId,
     canvasAspectRatio: selectCanvasAspectRatio({ state }),
+    previewCanvasMaxWidth: selectPreviewCanvasMaxWidth({ state }),
     systemActionsDialogPanelWidth: selectSystemActionsDialogPanelWidth({
       state,
     }),
