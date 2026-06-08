@@ -41,6 +41,87 @@ export const createStoryCommandApi = (shared) => {
     return appendMissingIds(orderedFromTree, fallbackIds);
   };
 
+  const collectActionTargetSectionIds = (actions) => {
+    const sectionIds = new Set();
+
+    const scanActionValue = (value, key) => {
+      if (key === "when") {
+        return;
+      }
+
+      if (!value || typeof value !== "object") {
+        return;
+      }
+
+      if (
+        (key === "sectionTransition" || key === "resetStoryAtSection") &&
+        typeof value.sectionId === "string" &&
+        value.sectionId.length > 0
+      ) {
+        sectionIds.add(value.sectionId);
+      }
+
+      if (Array.isArray(value)) {
+        value.forEach((entry) => scanActionValue(entry));
+        return;
+      }
+
+      Object.entries(value).forEach(([entryKey, entryValue]) => {
+        scanActionValue(entryValue, entryKey);
+      });
+    };
+
+    scanActionValue(actions);
+
+    return [...sectionIds];
+  };
+
+  const findSectionReferenceUsage = (state, targetSectionIds = []) => {
+    const targetIds = new Set(
+      targetSectionIds.filter(
+        (sectionId) => typeof sectionId === "string" && sectionId.length > 0,
+      ),
+    );
+
+    if (targetIds.size === 0) {
+      return undefined;
+    }
+
+    const sceneItems = state?.scenes?.items || {};
+
+    for (const [sceneId, scene] of Object.entries(sceneItems)) {
+      const sectionItems = scene?.sections?.items || {};
+
+      for (const [sourceSectionId, section] of Object.entries(sectionItems)) {
+        if (targetIds.has(sourceSectionId)) {
+          continue;
+        }
+
+        const lineItems = section?.lines?.items || {};
+
+        for (const lineId of getOrderedLineIds(section)) {
+          const line = lineItems[lineId];
+          const referencedSectionId = collectActionTargetSectionIds(
+            line?.actions,
+          ).find((sectionId) => targetIds.has(sectionId));
+
+          if (referencedSectionId) {
+            return {
+              sceneId,
+              sceneName: scene?.name,
+              sectionId: sourceSectionId,
+              sectionName: section?.name,
+              lineId,
+              referencedSectionId,
+            };
+          }
+        }
+      }
+    }
+
+    return undefined;
+  };
+
   const findTreeNodeById = (nodes = [], nodeId) => {
     for (const node of nodes || []) {
       if (!node || typeof node !== "object") {
@@ -950,21 +1031,50 @@ export const createStoryCommandApi = (shared) => {
 
     async deleteSectionItem({ sceneId, sectionIds }) {
       const context = await shared.ensureCommandContext();
+      const allSceneIds = Object.entries(context.state?.scenes?.items || {})
+        .filter(([_id, scene]) => scene?.type !== "folder")
+        .map(([id]) => id);
+      const deleteContext =
+        allSceneIds.length > 0 &&
+        typeof context.repository?.getContextState === "function"
+          ? {
+              ...context,
+              state: await context.repository.getContextState({
+                sceneIds: allSceneIds,
+              }),
+            }
+          : context;
       const sceneIdsForPartitions = new Set();
+      const sectionReferenceUsage = findSectionReferenceUsage(
+        deleteContext.state,
+        sectionIds || [],
+      );
+
+      if (sectionReferenceUsage) {
+        return {
+          valid: false,
+          error: {
+            message:
+              "This section can't be deleted because another section references it.",
+            code: "section_referenced",
+            details: sectionReferenceUsage,
+          },
+        };
+      }
 
       if (typeof sceneId === "string" && sceneId.length > 0) {
         sceneIdsForPartitions.add(sceneId);
       }
 
       for (const id of sectionIds || []) {
-        const sectionLocation = findSectionLocation(context.state, id);
+        const sectionLocation = findSectionLocation(deleteContext.state, id);
         if (sectionLocation?.sceneId) {
           sceneIdsForPartitions.add(sectionLocation.sceneId);
         }
       }
 
       return shared.submitCommandWithContext({
-        context,
+        context: deleteContext,
         scope: "story",
         partition: getMainScenePartition(context, [...sceneIdsForPartitions]),
         type: COMMAND_TYPES.SECTION_DELETE,

@@ -2,8 +2,32 @@ import { isVisualTestMode } from "../../internal/visualTestMode.js";
 import { resolveSpritesheetAnimationFps } from "../../internal/spritesheets.js";
 
 const PREVIEW_PADDING_PX = 16;
+const TRANSPARENCY_GRID_CELL_SIZE_PX = 12;
+const TRANSPARENCY_GRID_LIGHT_COLOR = "#eef2f7";
+const TRANSPARENCY_GRID_DARK_COLOR = "#94a3b8";
 
 const isPaused = (value) => value === true || value === "true";
+
+const drawTransparencyGrid = (context, width, height) => {
+  context.fillStyle = TRANSPARENCY_GRID_LIGHT_COLOR;
+  context.fillRect(0, 0, width, height);
+
+  context.fillStyle = TRANSPARENCY_GRID_DARK_COLOR;
+  for (let y = 0; y < height; y += TRANSPARENCY_GRID_CELL_SIZE_PX) {
+    const rowIndex = Math.floor(y / TRANSPARENCY_GRID_CELL_SIZE_PX);
+    for (let x = 0; x < width; x += TRANSPARENCY_GRID_CELL_SIZE_PX) {
+      const columnIndex = Math.floor(x / TRANSPARENCY_GRID_CELL_SIZE_PX);
+      if ((rowIndex + columnIndex) % 2 === 0) {
+        context.fillRect(
+          x,
+          y,
+          TRANSPARENCY_GRID_CELL_SIZE_PX,
+          TRANSPARENCY_GRID_CELL_SIZE_PX,
+        );
+      }
+    }
+  }
+};
 
 const clearCanvas = (canvas) => {
   if (
@@ -31,8 +55,7 @@ const clearCanvas = (canvas) => {
   }
 
   context.clearRect(0, 0, width, height);
-  context.fillStyle = "#000000";
-  context.fillRect(0, 0, width, height);
+  drawTransparencyGrid(context, width, height);
 };
 
 const revokeOwnedImageSrc = (store) => {

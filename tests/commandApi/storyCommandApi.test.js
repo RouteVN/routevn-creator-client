@@ -39,6 +39,105 @@ const createEmptyStoryState = () => ({
 });
 
 describe("story command api", () => {
+  it("rejects deleting a section referenced by another scene projection", async () => {
+    const contextState = {
+      scenes: {
+        items: {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            name: "Scene 1",
+            sections: {
+              items: {
+                "section-1": {
+                  id: "section-1",
+                  name: "Intro",
+                  lines: {
+                    items: {},
+                    tree: [],
+                  },
+                },
+              },
+              tree: [{ id: "section-1" }],
+            },
+          },
+          "scene-2": {
+            id: "scene-2",
+            type: "scene",
+            name: "Scene 2",
+            sections: {
+              items: {
+                "section-2": {
+                  id: "section-2",
+                  name: "Branch",
+                  lines: {
+                    items: {},
+                    tree: [],
+                  },
+                },
+              },
+              tree: [{ id: "section-2" }],
+            },
+          },
+        },
+        tree: [{ id: "scene-1" }, { id: "scene-2" }],
+      },
+    };
+    const fullState = structuredClone(contextState);
+    fullState.scenes.items["scene-2"].sections.items["section-2"].lines = {
+      items: {
+        "line-1": {
+          id: "line-1",
+          actions: {
+            sectionTransition: {
+              sceneId: "scene-1",
+              sectionId: "section-1",
+            },
+          },
+        },
+      },
+      tree: [{ id: "line-1" }],
+    };
+    const context = {
+      projectId: "project-1",
+      state: contextState,
+      repository: {
+        getContextState: vi.fn(async () => fullState),
+      },
+    };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      submitCommandWithContext: vi.fn(async () => ({ valid: true })),
+    };
+    const api = createStoryCommandApi(shared);
+
+    const result = await api.deleteSectionItem({
+      sceneId: "scene-1",
+      sectionIds: ["section-1"],
+    });
+
+    expect(context.repository.getContextState).toHaveBeenCalledWith({
+      sceneIds: ["scene-1", "scene-2"],
+    });
+    expect(result).toEqual({
+      valid: false,
+      error: {
+        message:
+          "This section can't be deleted because another section references it.",
+        code: "section_referenced",
+        details: {
+          sceneId: "scene-2",
+          sceneName: "Scene 2",
+          sectionId: "section-2",
+          sectionName: "Branch",
+          lineId: "line-1",
+          referencedSectionId: "section-1",
+        },
+      },
+    });
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+  });
+
   it("creates a scene with its initial section and line in one ordered batch", async () => {
     const context = {
       projectId: "project-1",
