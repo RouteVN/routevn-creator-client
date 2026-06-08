@@ -3043,7 +3043,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       lineElement,
     );
     const visibleTextLength = this.getLineVisibleTextLength(lineElement);
-    if (pointerOffset !== -1 && pointerOffset < visibleTextLength) {
+    const isResolvedBoundaryClick =
+      typeof pointerOffset === "number" &&
+      pointerOffset >= 0 &&
+      pointerOffset >= visibleTextLength;
+    const isUnresolvedTrailingBoundaryClick =
+      pointerOffset === -1 &&
+      this.isPointerInTrailingLineBoundary(event, lineElement);
+    if (!isResolvedBoundaryClick && !isUnresolvedTrailingBoundaryClick) {
       return false;
     }
 
@@ -7622,6 +7629,46 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     return -1;
+  }
+
+  isPointerInTrailingLineBoundary(event, lineElement) {
+    const clientX = Number(event?.clientX);
+    const clientY = Number(event?.clientY);
+    if (
+      !lineElement ||
+      !Number.isFinite(clientX) ||
+      !Number.isFinite(clientY)
+    ) {
+      return false;
+    }
+
+    const range = document.createRange();
+    try {
+      range.selectNodeContents(lineElement);
+    } catch {
+      return false;
+    }
+
+    const rects = Array.from(range.getClientRects?.() ?? []).filter((rect) => {
+      return rect.width > 0 || rect.height > 0;
+    });
+    const trailingRect = rects.at(-1);
+    if (!trailingRect) {
+      return false;
+    }
+
+    const lineRect = lineElement.getBoundingClientRect?.();
+    if (!lineRect) {
+      return false;
+    }
+
+    const verticalTolerance = 2;
+    return (
+      clientY >= trailingRect.top - verticalTolerance &&
+      clientY <= trailingRect.bottom + verticalTolerance &&
+      clientX >= trailingRect.right &&
+      clientX <= lineRect.right
+    );
   }
 
   getLineVisibleTextLength(lineElement) {
