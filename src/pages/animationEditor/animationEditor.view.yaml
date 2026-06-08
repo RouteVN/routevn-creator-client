@@ -335,7 +335,7 @@ template:
                                                   - 'rtgl-view p=md g=md br=md w=f style="max-width: 100%; box-sizing: border-box;"':
                                                       - $if image.previewFileId:
                                                           - 'rtgl-view w=f br=md style="aspect-ratio: ${image.previewAspectRatio}; overflow: hidden;"':
-                                                              - rvn-file-image br=md w=f h=f fileId=${image.previewFileId}: null
+                                                              - rvn-file-image w=f h=f fileId=${image.previewFileId}: null
                                                         $else:
                                                               - rtgl-view w=f h=90 br=md bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=xs c=mu-fg: No preview
@@ -363,7 +363,7 @@ template:
                                       - 'rtgl-view p=md g=md br=md w=f style="max-width: 100%; box-sizing: border-box;"':
                                           - $if item.image.previewFileId:
                                               - 'rtgl-view w=f br=md style="aspect-ratio: ${item.image.previewAspectRatio}; overflow: hidden;"':
-                                                  - rvn-file-image br=md w=f h=f fileId=${item.image.previewFileId}: null
+                                                  - rvn-file-image w=f h=f fileId=${item.image.previewFileId}: null
                                             $else:
                                               - rtgl-view w=f h=90 br=md bw=xs bc=bo av=c ah=c:
                                                   - rtgl-text s=xs c=mu-fg: No preview

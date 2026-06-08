@@ -212,7 +212,7 @@ template:
                                   - 'rtgl-view#dialogPreviewBackgroundImageButton cur=pointer bw=xs bc=${dialogPreviewBackgroundImage.itemBorderColor} h-bc=${dialogPreviewBackgroundImage.itemHoverBorderColor} br=md w=160 style="max-width: 100%; box-sizing: border-box;"':
                                       - 'rtgl-view p=md g=md br=md w=f style="max-width: 100%; box-sizing: border-box;"':
                                           - 'rtgl-view w=f br=md style="aspect-ratio: ${dialogPreviewBackgroundImage.previewAspectRatio}; overflow: hidden;"':
-                                              - rvn-file-image br=md w=f h=f fileId=${dialogPreviewBackgroundImage.previewFileId}: null
+                                              - rvn-file-image w=f h=f fileId=${dialogPreviewBackgroundImage.previewFileId}: null
                                           - rtgl-text s=xs c=mu-fg ellipsis w=f: ${dialogPreviewBackgroundImage.name}
                                 $else:
                                   - 'rtgl-view#dialogPreviewBackgroundImageButton w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':

@@ -151,24 +151,24 @@ template:
                                                   - 'rtgl-view br=md w=${item.imageCardWidth} pos=rel overflow=hidden style="${item.imageCardStyle}"':
                                                       - $if showImageCardPreview:
                                                           - $if item.useFullWidthImageCard:
-                                                              - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.previewAspectRatio}; overflow: hidden; border-radius: 8px;"':
+                                                              - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                                   - $if item.isProcessing:
-                                                                      - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                      - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
                                                                           - rtgl-text s=sm c=mu-fg: Processing...
                                                                     $elif lazyImageCards && item.shouldLazyLoadPreview:
-                                                                      - rvn-file-image br=md w=f h=f fileId=${item.previewFileId} lazy: null
+                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId} lazy: null
                                                                     $else:
-                                                                      - rvn-file-image br=md w=f h=f fileId=${item.previewFileId}: null
+                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId}: null
                                                             $else:
-                                                              - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; height: ${imageHeight}px; overflow: hidden; border-radius: 8px;"':
+                                                              - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; height: ${imageHeight}px; overflow: hidden;"':
                                                                   - $if item.isProcessing:
-                                                                      - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                      - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
                                                                           - rtgl-text s=sm c=mu-fg: Processing...
                                                                     $else:
                                                                       - $if lazyImageCards && item.shouldLazyLoadPreview:
-                                                                          - rvn-file-image br=md w=f h=f fileId=${item.previewFileId} lazy: null
+                                                                          - rvn-file-image w=f h=f fileId=${item.previewFileId} lazy: null
                                                                         $else:
-                                                                          - rvn-file-image br=md w=f h=f fileId=${item.previewFileId}: null
+                                                                          - rvn-file-image w=f h=f fileId=${item.previewFileId}: null
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=zoomIn wh=22 c=white: null
@@ -177,22 +177,22 @@ template:
                                                 $elif item.cardKind == 'video':
                                                   - 'rtgl-view br=md pos=rel w=${item.mediaCardWidth} overflow=hidden style="${item.mediaCardStyle}"':
                                                       - $if item.useFullWidthMediaPreview:
-                                                          - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                          - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                               - $if item.isProcessing:
-                                                                  - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                  - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
                                                                       - rtgl-text s=sm c=mu-fg: Processing...
                                                                 $elif item.thumbnailFileId:
-                                                                  - rvn-file-image br=md w=f h=f fileId=${item.thumbnailFileId}: null
+                                                                  - rvn-file-image w=f h=f fileId=${item.thumbnailFileId}: null
                                                                 $else:
-                                                                  - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                  - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
                                                                       - rtgl-text s=xs c=mu-fg: No thumbnail
                                                         $elif item.isProcessing:
-                                                          - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                          - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=sm c=mu-fg: Processing...
                                                         $elif item.thumbnailFileId:
-                                                          - rvn-file-image br=md w=f h=${mediaHeight} fileId=${item.thumbnailFileId}: null
+                                                          - rvn-file-image w=f h=${mediaHeight} fileId=${item.thumbnailFileId}: null
                                                         $else:
-                                                          - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                          - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=xs c=mu-fg: No thumbnail
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
@@ -202,22 +202,22 @@ template:
                                                 $elif item.cardKind == 'sound':
                                                   - 'rtgl-view br=md pos=rel w=${item.mediaCardWidth} overflow=hidden style="${item.mediaCardStyle}"':
                                                       - $if item.useFullWidthMediaPreview:
-                                                          - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                          - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                               - $if item.isProcessing:
-                                                                  - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                  - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
                                                                       - rtgl-text s=sm c=mu-fg: Processing...
                                                                 $elif item.waveformDataFileId:
                                                                   - rvn-waveform-visualizer key=${item.waveformDataFileId}-${item.mediaCardWidth}x16x9 waveformDataFileId=${item.waveformDataFileId} w=f h=f: null
                                                                 $else:
-                                                                  - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                  - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
                                                                       - rtgl-text s=xs c=mu-fg: No waveform
                                                         $elif item.isProcessing:
-                                                          - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                          - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=sm c=mu-fg: Processing...
                                                         $elif item.waveformDataFileId:
                                                           - rvn-waveform-visualizer key=${item.waveformDataFileId}-${item.mediaCardWidth}x${mediaHeight} waveformDataFileId=${item.waveformDataFileId} w=f h=${mediaHeight}: null
                                                         $else:
-                                                          - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                          - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=xs c=mu-fg: No waveform
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
@@ -227,14 +227,14 @@ template:
                                                 $elif item.cardKind == 'font':
                                                   - 'rtgl-view w=${item.mediaCardWidth} d=v br=md overflow=hidden style="${item.mediaCardStyle}"':
                                                       - $if item.useFullWidthFontPreview:
-                                                          - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                          - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                               - $if item.isProcessing:
-                                                                  - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                  - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
                                                                       - rtgl-text s=sm c=mu-fg: Processing...
                                                                 $else:
                                                                   - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=60 width=f height=f padding=8 av=c ah=c: null
                                                         $elif item.isProcessing:
-                                                          - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                          - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=sm c=mu-fg: Processing...
                                                         $else:
                                                           - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=60 width=${item.fontPreviewWidth} height=${mediaHeight} av=c ah=c: null

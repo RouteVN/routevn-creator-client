@@ -110,7 +110,7 @@ template:
                                       - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${item.itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
                                           - 'rtgl-view w=f br=md style="overflow: hidden;"':
                                               - $if item.useFullWidthPreview:
-                                                  - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                  - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                       - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=f height=f padding=8 showBorder=false: null
                                                 $else:
                                                   - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=${item.previewWidth} height=96 padding=8 showBorder=false: null
