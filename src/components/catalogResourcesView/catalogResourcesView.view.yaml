@@ -118,16 +118,16 @@ template:
                                           - $if item.cardKind == 'color':
                                               - 'rtgl-view d=v w=f br=md style="overflow: hidden;"':
                                                   - $if item.useFullWidthCatalogPreview:
-                                                      - 'rtgl-view w=f br=sm style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden; background-color: ${item.swatchHex};"': null
+                                                      - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden; background-color: ${item.swatchHex};"': null
                                                     $else:
-                                                      - 'rtgl-view w=f h=120 br=sm style="background-color: ${item.swatchHex};"': null
+                                                      - 'rtgl-view w=f h=120 style="background-color: ${item.swatchHex};"': null
                                                   - rtgl-view w=f p=md:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif item.cardKind == 'layout':
                                               - $if item.cardVariant == 'thumbnail':
                                                   - 'rtgl-view w=${item.layoutPreviewWidth} br=md style="overflow: hidden; max-width: 100%;"':
                                                       - $if item.useFullWidthCatalogPreview:
-                                                          - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                          - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                               - $if item.previewFileId:
                                                                   - rvn-file-image fileId=${item.previewFileId} w=f h=f: null
                                                                 $else:
@@ -163,7 +163,7 @@ template:
                                             $elif item.cardKind == 'transform':
                                               - 'rtgl-view w=f br=md style="overflow: hidden;"':
                                                   - $if item.useFullWidthCatalogPreview:
-                                                      - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                      - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                           - $if item.thumbnailFileId:
                                                               - rvn-file-image fileId=${item.thumbnailFileId} w=f h=f: null
                                                             $else:
