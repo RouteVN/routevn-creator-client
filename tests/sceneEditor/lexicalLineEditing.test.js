@@ -731,6 +731,65 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("can prepare block focus without scrolling the selected line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const editorNode = document.createElement("div");
+      const surfaceNode = document.createElement("div");
+
+      editorElement.refs = {
+        editor: editorNode,
+        surface: surfaceNode,
+      };
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-2",
+        lines: [{ id: "line-1" }, { id: "line-2" }],
+      };
+      Object.defineProperty(editorElement, "dataset", {
+        configurable: true,
+        value: {},
+      });
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.clearPendingTextInputFallback = vi.fn();
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.scrollLineIntoView = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+      editorElement.focus = vi.fn();
+
+      editorElement.focusContainer({ scrollLine: false });
+
+      expect(editorElement.state.mode).toBe("block");
+      expect(editorElement.state.selectedLineId).toBe("line-2");
+      expect(editorElement.scrollLineIntoView).not.toHaveBeenCalled();
+      expect(editorElement.focus).toHaveBeenCalledWith({
+        preventScroll: true,
+      });
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
   it("emits block navigation direction when moving down at the last line", async () => {
     const restoreDomGlobals = installDomGlobals();
 
@@ -2695,6 +2754,7 @@ describe("lexical scene document editor line editing", () => {
         focusSurface: false,
         emitSelectionChange: false,
         lineId: "line-1",
+        scrollLine: false,
       });
     } finally {
       restoreDomGlobals();

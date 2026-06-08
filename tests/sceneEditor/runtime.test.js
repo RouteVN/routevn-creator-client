@@ -4,6 +4,7 @@ import {
   createSceneEditorRenderQueue,
   renderSceneEditorCanvas,
   renderSceneEditorState,
+  resolveSceneEditorEntrySelection,
   updateSceneEditorSectionChanges,
 } from "../../src/internal/ui/sceneEditor/runtime.js";
 
@@ -132,6 +133,68 @@ const createGraphicsService = () => {
 };
 
 describe("renderSceneEditorState", () => {
+  it("resolves scene entry from the target section and ignores stale line payload", () => {
+    const scene = {
+      initialSectionId: "section-2",
+      sections: [
+        {
+          id: "section-1",
+          lines: [{ id: "line-1" }, { id: "line-stale" }],
+        },
+        {
+          id: "section-2",
+          lines: [{ id: "line-2a" }, { id: "line-2b" }],
+        },
+      ],
+    };
+
+    expect(
+      resolveSceneEditorEntrySelection(scene, {
+        sectionId: "section-1",
+        lineId: "line-stale",
+      }),
+    ).toEqual({
+      sectionId: "section-1",
+      lineId: "line-1",
+    });
+  });
+
+  it("resolves scene entry from initial section or falls back to first section", () => {
+    expect(
+      resolveSceneEditorEntrySelection({
+        initialSectionId: "section-2",
+        sections: [
+          {
+            id: "section-1",
+            lines: [{ id: "line-1" }],
+          },
+          {
+            id: "section-2",
+            lines: [{ id: "line-2" }],
+          },
+        ],
+      }),
+    ).toEqual({
+      sectionId: "section-2",
+      lineId: "line-2",
+    });
+
+    expect(
+      resolveSceneEditorEntrySelection({
+        initialSectionId: "missing-section",
+        sections: [
+          {
+            id: "section-1",
+            lines: [{ id: "line-1" }],
+          },
+        ],
+      }),
+    ).toEqual({
+      sectionId: "section-1",
+      lineId: "line-1",
+    });
+  });
+
   it("requests per-line presentationState from section line changes", async () => {
     const changes = { lines: [] };
     const engineSelectSectionLineChanges = vi.fn(() => changes);

@@ -454,36 +454,48 @@ const scrollLinesEditorLineIntoView = (
   linesEditorRef.scrollLineIntoView({ lineId, ...options });
 };
 
-const scheduleFrame = (callback) => {
-  if (typeof requestAnimationFrame === "function") {
-    requestAnimationFrame(callback);
-    return;
-  }
-
-  globalThis.setTimeout?.(callback, 0);
+const getSceneEditorSectionsScrollContainer = (refs) => {
+  return (
+    refs?.sceneEditorSectionsScroll ||
+    getRefElements(refs).find(
+      (element) => element?.id === "sceneEditorSectionsScroll",
+    ) ||
+    refs?.sceneEditorLeftEditor?.querySelector?.("#sceneEditorSectionsScroll")
+  );
 };
 
-const scrollEntrySelectionIntoView = (deps, payload = {}) => {
+const resetSceneEditorSectionsScroll = (refs) => {
+  const scrollContainer = getSceneEditorSectionsScrollContainer(refs);
+  if (!scrollContainer) {
+    return;
+  }
+
+  const previousScrollBehavior = scrollContainer.style?.scrollBehavior;
+  if (scrollContainer.style) {
+    scrollContainer.style.scrollBehavior = "auto";
+  }
+  scrollContainer.scrollTop = 0;
+  scrollContainer.scrollTo?.({
+    top: 0,
+    left: scrollContainer.scrollLeft ?? 0,
+    behavior: "auto",
+  });
+  if (scrollContainer.style) {
+    scrollContainer.style.scrollBehavior = previousScrollBehavior;
+  }
+};
+
+export const scrollEntrySelectionIntoView = (deps) => {
   const { refs, store } = deps;
-  if (!payload.sectionId && !payload.lineId) {
-    return;
-  }
-
   const selectedSectionId = store.selectSelectedSectionId?.();
-  const selectedLineId = store.selectSelectedLineId?.();
-
-  if (payload.lineId && selectedLineId) {
-    scheduleFrame(() => {
-      scrollLinesEditorLineIntoView(refs, selectedLineId, selectedSectionId, {
-        block: "start",
-      });
-    });
+  const scene = store.selectScene?.();
+  const firstSectionId = scene?.sections?.[0]?.id;
+  if (!selectedSectionId || selectedSectionId === firstSectionId) {
+    resetSceneEditorSectionsScroll(refs);
     return;
   }
 
-  if (selectedSectionId) {
-    scrollSceneEditorSectionTabIntoView(deps, selectedSectionId);
-  }
+  scrollSceneEditorSectionTabIntoView(deps, selectedSectionId);
 };
 
 const focusLinesEditorContainer = (refs, sectionId) => {
@@ -1449,14 +1461,13 @@ export const handleBeforeMount = (deps) => {
 
 export const handleAfterMount = async (deps) => {
   try {
-    const entryPayload = deps.appService?.getPayload?.() || {};
     await initializeSceneEditorPage({
       ...deps,
       syncProjectState: syncStoreProjectState,
     });
     reconcileCurrentEditorSession(deps);
     deps.render();
-    scrollEntrySelectionIntoView(deps, entryPayload);
+    scrollEntrySelectionIntoView(deps);
   } catch (error) {
     if (!isMissingProjectResolutionError(error)) {
       throw error;

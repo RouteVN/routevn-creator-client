@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 use std::{fs, path::PathBuf};
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use std::{
     fs::File,
     io::{Read, Seek, SeekFrom, Write},
@@ -11,10 +11,10 @@ use std::{
 };
 
 use tauri::State;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 use url::Url;
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 const MEDIA_MIME_BY_EXTENSION: &[(&str, &str)] = &[
     (".apng", "image/apng"),
     (".png", "image/png"),
@@ -78,10 +78,10 @@ pub fn get_project_media_server_origin(
 }
 
 fn start_project_media_server() -> Option<String> {
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     return None;
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         let listener = TcpListener::bind(("127.0.0.1", 0)).ok()?;
         let address = listener.local_addr().ok()?;
@@ -99,7 +99,7 @@ fn start_project_media_server() -> Option<String> {
     }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     let request = read_request_head(&mut stream)?;
     let mut lines = request.split("\r\n");
@@ -231,7 +231,7 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn read_request_head(stream: &mut TcpStream) -> std::io::Result<String> {
     let mut buffer = [0_u8; 4096];
     let mut request = Vec::new();
@@ -251,7 +251,7 @@ fn read_request_head(stream: &mut TcpStream) -> std::io::Result<String> {
     Ok(String::from_utf8_lossy(&request).into_owned())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn parse_byte_range(header: Option<&str>, file_size: u64) -> Result<Option<(u64, u64)>, ()> {
     let Some(header) = header else {
         return Ok(None);
@@ -287,7 +287,7 @@ fn parse_byte_range(header: Option<&str>, file_size: u64) -> Result<Option<(u64,
     Ok(Some((start, end.min(file_size - 1))))
 }
 
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
 fn resolve_allowed_project_file_path(path: &str) -> Option<PathBuf> {
     let canonical_path = fs::canonicalize(path).ok()?;
     if !canonical_path.is_file() {
@@ -308,7 +308,7 @@ fn resolve_allowed_project_file_path(path: &str) -> Option<PathBuf> {
         .then_some(canonical_path)
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn get_media_mime_from_request_path(path: &str) -> Option<&'static str> {
     let normalized_path = path.to_ascii_lowercase();
 
@@ -317,7 +317,7 @@ fn get_media_mime_from_request_path(path: &str) -> Option<&'static str> {
         .find_map(|(extension, mime)| normalized_path.ends_with(extension).then_some(*mime))
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn write_headers(
     stream: &mut TcpStream,
     status_code: u16,
@@ -348,7 +348,7 @@ fn write_headers(
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn write_simple_response(
     stream: &mut TcpStream,
     status_code: u16,
