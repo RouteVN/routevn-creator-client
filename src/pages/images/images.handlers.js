@@ -100,6 +100,9 @@ const syncImagePageData = ({ store, repositoryState } = {}) => {
       itemType: "image",
     }),
   });
+  store.setProjectResolution({
+    projectResolution: repositoryState?.project?.resolution,
+  });
 };
 
 const {
@@ -242,8 +245,7 @@ const {
   focusKeyboardScope: focusGroupView,
   handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
 } = createFileExplorerKeyboardScopeHandlers({
-  isNavigationBlocked: ({ deps }) =>
-    deps.store.getState().fullImagePreviewVisible,
+  isNavigationBlocked: ({ deps }) => deps.store.selectFullImagePreviewVisible(),
   onEnterKey: ({ deps, selectedItemId }) => {
     openImagePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
   },
@@ -263,7 +265,7 @@ const focusPreviewOverlay = ({ refs } = {}) => {
 const handleZoomShortcutKeyDown = (deps, payload) => {
   const event = payload?._event;
   if (
-    deps.store.getState().fullImagePreviewVisible &&
+    deps.store.selectFullImagePreviewVisible() &&
     isResourceZoomShortcutKeyEvent(event)
   ) {
     event.preventDefault();
@@ -628,11 +630,31 @@ export const handlePreviewNextClick = (deps, payload) => {
   navigateImagePreview(deps, { direction: "next" });
 };
 
+export const handlePreviewFitModeClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const { store, render } = deps;
+  store.setFullImagePreviewDisplayMode({ displayMode: "fit" });
+  render();
+  focusPreviewOverlay(deps);
+};
+
+export const handlePreviewCanvasModeClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const { store, render } = deps;
+  store.setFullImagePreviewDisplayMode({ displayMode: "canvas" });
+  render();
+  focusPreviewOverlay(deps);
+};
+
 export const handlePreviewOverlayKeyDown = (deps, payload) => {
   const { store } = deps;
   const event = payload._event;
 
-  if (!store.getState().fullImagePreviewVisible) {
+  if (!store.selectFullImagePreviewVisible()) {
     return;
   }
 
@@ -644,6 +666,15 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
     event.preventDefault();
     event.stopPropagation();
     closeImagePreview(deps);
+    return;
+  }
+
+  if (event.key === "Tab") {
+    event.preventDefault();
+    event.stopPropagation();
+    store.toggleFullImagePreviewDisplayMode();
+    deps.render();
+    focusPreviewOverlay(deps);
     return;
   }
 

@@ -7,6 +7,11 @@ import {
   matchesTagFilter,
 } from "../../internal/resourceTags.js";
 import {
+  DEFAULT_PROJECT_RESOLUTION,
+  formatProjectResolutionAspectRatio,
+  requireProjectResolution,
+} from "../../internal/projectResolution.js";
+import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
@@ -37,12 +42,65 @@ const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
 const IMAGE_CARD_MAX_WIDTH = 400;
 const IMAGE_CARD_HEIGHT = 225;
-const PREVIEW_FRAME_STYLE = [
-  "width: 92vw",
-  "height: 92vh",
-  "max-width: 92vw",
-  "max-height: 92vh",
-].join("; ");
+const FULL_IMAGE_PREVIEW_DISPLAY_MODE_FIT = "fit";
+const FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS = "canvas";
+
+const createPreviewFrameStyle = (projectResolution) => {
+  const aspectRatio = formatProjectResolutionAspectRatio(projectResolution);
+
+  return [
+    `width: min(92vw, calc(92vh * (${aspectRatio})))`,
+    `aspect-ratio: ${aspectRatio}`,
+    "max-width: 92vw",
+    "max-height: 92vh",
+  ].join("; ");
+};
+
+const resolvePositiveNumber = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0
+    ? numericValue
+    : undefined;
+};
+
+const createPreviewImageWrapperStyle = ({
+  image,
+  displayMode,
+  projectResolution,
+} = {}) => {
+  if (displayMode !== FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS) {
+    return "position: absolute; inset: 0;";
+  }
+
+  const imageWidth = resolvePositiveNumber(image?.width);
+  const imageHeight = resolvePositiveNumber(image?.height);
+  if (!imageWidth || !imageHeight) {
+    return "position: absolute; inset: 0;";
+  }
+
+  const widthPercent = (imageWidth / projectResolution.width) * 100;
+  const heightPercent = (imageHeight / projectResolution.height) * 100;
+
+  return [
+    "position: absolute",
+    "left: 50%",
+    "top: 50%",
+    `width: ${widthPercent}%`,
+    `height: ${heightPercent}%`,
+    "transform: translate(-50%, -50%)",
+  ].join("; ");
+};
+
+const createPreviewModeButtonViewData = ({ displayMode, mode } = {}) => {
+  const selected = displayMode === mode;
+
+  return {
+    backgroundColor: selected ? "ac" : "bg",
+    borderColor: selected ? "ac" : "bo",
+    iconColor: selected ? "white" : "mu-fg",
+    selected,
+  };
+};
 
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
@@ -267,6 +325,8 @@ export const createInitialState = () => ({
   ...createMobileResourcePageState(),
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
+  fullImagePreviewDisplayMode: FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS,
+  projectResolution: DEFAULT_PROJECT_RESOLUTION,
   isEditDialogOpen: false,
   editItemId: undefined,
   editDefaultValues: {
@@ -362,6 +422,13 @@ export const setCharacterName = ({ state }, { characterName } = {}) => {
   state.characterName = characterName;
 };
 
+export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
+  state.projectResolution = requireProjectResolution(
+    projectResolution ?? DEFAULT_PROJECT_RESOLUTION,
+    "Project resolution",
+  );
+};
+
 export const clearCharacterSpritesView = ({ state }) => {
   state.characterName = undefined;
   state.spritesData = EMPTY_TREE;
@@ -375,6 +442,8 @@ export const clearCharacterSpritesView = ({ state }) => {
   state.selectedFolderId = undefined;
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
+  state.fullImagePreviewDisplayMode = FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
+  state.projectResolution = DEFAULT_PROJECT_RESOLUTION;
   state.isEditDialogOpen = false;
   state.editItemId = undefined;
   state.editDefaultValues = {
@@ -576,6 +645,10 @@ export const showFullImagePreview = ({ state }, { itemId } = {}) => {
   const item = state.spritesData.items?.[itemId];
 
   if (item?.type === "image" && item.fileId) {
+    if (!state.fullImagePreviewVisible) {
+      state.fullImagePreviewDisplayMode =
+        FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
+    }
     state.fullImagePreviewVisible = true;
     state.fullImagePreviewFileId = item.fileId;
   }
@@ -584,6 +657,30 @@ export const showFullImagePreview = ({ state }, { itemId } = {}) => {
 export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
+};
+
+export const setFullImagePreviewDisplayMode = (
+  { state },
+  { displayMode } = {},
+) => {
+  if (
+    displayMode !== FULL_IMAGE_PREVIEW_DISPLAY_MODE_FIT &&
+    displayMode !== FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS
+  ) {
+    return;
+  }
+
+  state.fullImagePreviewDisplayMode = displayMode;
+};
+
+export const selectFullImagePreviewVisible = ({ state }) =>
+  state.fullImagePreviewVisible;
+
+export const toggleFullImagePreviewDisplayMode = ({ state }) => {
+  state.fullImagePreviewDisplayMode =
+    state.fullImagePreviewDisplayMode === FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS
+      ? FULL_IMAGE_PREVIEW_DISPLAY_MODE_FIT
+      : FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
 };
 
 export const selectViewData = ({ state }) => {
@@ -642,6 +739,12 @@ export const selectViewData = ({ state }) => {
     .filter((group) => group.shouldDisplay);
 
   const selectedItem = state.spritesData.items?.[state.selectedItemId];
+  const previewImage =
+    selectedItem?.type === "image" ? selectedItem : undefined;
+  const projectResolution = requireProjectResolution(
+    state.projectResolution,
+    "Project resolution",
+  );
   const selectedFolder = state.spritesData.items?.[state.selectedFolderId];
   const selectedDetailId =
     selectedItem?.type === "image" ? selectedItem.id : selectedFolder?.id;
@@ -704,7 +807,21 @@ export const selectViewData = ({ state }) => {
     maxWidth: IMAGE_CARD_MAX_WIDTH,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
-    fullImagePreviewFrameStyle: PREVIEW_FRAME_STYLE,
+    fullImagePreviewFrameStyle: createPreviewFrameStyle(projectResolution),
+    fullImagePreviewImageWrapperStyle: createPreviewImageWrapperStyle({
+      image: previewImage,
+      displayMode: state.fullImagePreviewDisplayMode,
+      projectResolution,
+    }),
+    fullImagePreviewDisplayMode: state.fullImagePreviewDisplayMode,
+    fullImagePreviewFitModeButton: createPreviewModeButtonViewData({
+      displayMode: state.fullImagePreviewDisplayMode,
+      mode: FULL_IMAGE_PREVIEW_DISPLAY_MODE_FIT,
+    }),
+    fullImagePreviewCanvasModeButton: createPreviewModeButtonViewData({
+      displayMode: state.fullImagePreviewDisplayMode,
+      mode: FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS,
+    }),
     fullImagePreviewPreviousVisible: Boolean(previousItemId),
     fullImagePreviewNextVisible: Boolean(nextItemId),
     folderContextMenuItems,

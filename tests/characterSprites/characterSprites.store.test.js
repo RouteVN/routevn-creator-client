@@ -6,8 +6,10 @@ import {
   setActiveTagIds,
   selectAdjacentSpriteItemId,
   selectViewData,
+  setProjectResolution,
   setSelectedItemId,
   showFullImagePreview,
+  toggleFullImagePreviewDisplayMode,
 } from "../../src/pages/characterSprites/characterSprites.store.js";
 
 describe("characterSprites store", () => {
@@ -194,6 +196,8 @@ describe("characterSprites store", () => {
           name: "Hero Smile",
           fileId: "original-file",
           thumbnailFileId: "thumbnail-file",
+          width: 48,
+          height: 48,
         },
         "sprite-3": {
           id: "sprite-3",
@@ -220,9 +224,94 @@ describe("characterSprites store", () => {
     const viewData = selectViewData({ state });
     expect(state.fullImagePreviewVisible).toBe(true);
     expect(state.fullImagePreviewFileId).toBe("original-file");
-    expect(viewData.fullImagePreviewFrameStyle).toContain("width: 92vw");
+    expect(viewData.fullImagePreviewFrameStyle).toContain(
+      "aspect-ratio: 1920 / 1080",
+    );
+    expect(viewData.fullImagePreviewFrameStyle).toContain(
+      "width: min(92vw, calc(92vh * (1920 / 1080)))",
+    );
+    expect(viewData.fullImagePreviewImageWrapperStyle).toContain("width: 2.5%");
+    expect(viewData.fullImagePreviewImageWrapperStyle).toContain(
+      "height: 4.444444444444445%",
+    );
+    expect(viewData.fullImagePreviewCanvasModeButton.selected).toBe(true);
+    expect(viewData.fullImagePreviewFitModeButton.selected).toBe(false);
     expect(viewData.fullImagePreviewPreviousVisible).toBe(true);
     expect(viewData.fullImagePreviewNextVisible).toBe(true);
+  });
+
+  it("uses project resolution for full sprite preview sizing and toggles mode", () => {
+    const state = createInitialState();
+    state.characterName = "Hero";
+    state.spritesData = {
+      tree: [
+        {
+          id: "folder-1",
+          children: [{ id: "sprite-1" }],
+        },
+      ],
+      items: {
+        "folder-1": {
+          id: "folder-1",
+          type: "folder",
+          name: "Main",
+        },
+        "sprite-1": {
+          id: "sprite-1",
+          type: "image",
+          name: "Hero Icon",
+          fileId: "sprite-file",
+          width: 54,
+          height: 96,
+        },
+      },
+    };
+
+    setProjectResolution(
+      { state },
+      {
+        projectResolution: {
+          width: 1080,
+          height: 1920,
+        },
+      },
+    );
+    setSelectedItemId(
+      { state },
+      {
+        itemId: "sprite-1",
+      },
+    );
+    showFullImagePreview(
+      { state },
+      {
+        itemId: "sprite-1",
+      },
+    );
+
+    const canvasViewData = selectViewData({ state });
+    expect(canvasViewData.fullImagePreviewFrameStyle).toContain(
+      "aspect-ratio: 1080 / 1920",
+    );
+    expect(canvasViewData.fullImagePreviewImageWrapperStyle).toContain(
+      "width: 5%",
+    );
+    expect(canvasViewData.fullImagePreviewImageWrapperStyle).toContain(
+      "height: 5%",
+    );
+
+    toggleFullImagePreviewDisplayMode({ state });
+
+    const fitViewData = selectViewData({ state });
+    expect(state.fullImagePreviewDisplayMode).toBe("fit");
+    expect(fitViewData.fullImagePreviewImageWrapperStyle).toBe(
+      "position: absolute; inset: 0;",
+    );
+    expect(fitViewData.fullImagePreviewCanvasModeButton.selected).toBe(false);
+    expect(fitViewData.fullImagePreviewFitModeButton.selected).toBe(true);
+
+    toggleFullImagePreviewDisplayMode({ state });
+    expect(state.fullImagePreviewDisplayMode).toBe("canvas");
   });
 
   it("jumps adjacent sprite selection by distance and clamps to visible bounds", () => {

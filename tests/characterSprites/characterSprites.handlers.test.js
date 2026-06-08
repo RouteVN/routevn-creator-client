@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  handlePreviewCanvasModeClick,
+  handlePreviewFitModeClick,
   handlePreviewNextClick,
   handlePreviewOverlayKeyDown,
   handlePreviewPreviousClick,
@@ -12,9 +14,7 @@ const createPreviewDeps = ({
   previewVisible = true,
 } = {}) => {
   const store = {
-    getState: vi.fn(() => ({
-      fullImagePreviewVisible: previewVisible,
-    })),
+    selectFullImagePreviewVisible: vi.fn(() => previewVisible),
     selectSelectedItemId: vi.fn(() => selectedItemId),
     selectAdjacentSpriteItemId: vi.fn(({ direction }) => {
       return direction === "next" ? "sprite-2" : "sprite-0";
@@ -26,6 +26,8 @@ const createPreviewDeps = ({
     })),
     setSelectedItemId: vi.fn(),
     showFullImagePreview: vi.fn(),
+    setFullImagePreviewDisplayMode: vi.fn(),
+    toggleFullImagePreviewDisplayMode: vi.fn(),
   };
 
   return {
@@ -142,6 +144,62 @@ describe("characterSprites preview handlers", () => {
     expect(deps.store.selectAdjacentSpriteItemId).toHaveBeenCalledTimes(3);
     expect(inputEvent.preventDefault).not.toHaveBeenCalled();
     expect(inputEvent.stopPropagation).not.toHaveBeenCalled();
+  });
+
+  it("switches full sprite preview display modes from the overlay controls", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+    const deps = createPreviewDeps();
+    const canvasEvent = createEvent("click");
+    const fitEvent = createEvent("click");
+
+    handlePreviewCanvasModeClick(deps, {
+      _event: canvasEvent,
+    });
+    handlePreviewFitModeClick(deps, {
+      _event: fitEvent,
+    });
+
+    expect(deps.store.setFullImagePreviewDisplayMode).toHaveBeenNthCalledWith(
+      1,
+      {
+        displayMode: "canvas",
+      },
+    );
+    expect(deps.store.setFullImagePreviewDisplayMode).toHaveBeenNthCalledWith(
+      2,
+      {
+        displayMode: "fit",
+      },
+    );
+    expect(canvasEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(canvasEvent.stopPropagation).toHaveBeenCalledOnce();
+    expect(fitEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(fitEvent.stopPropagation).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledTimes(2);
+    expect(deps.refs.previewOverlay.focus).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses tab to toggle the full sprite preview display mode", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+    const deps = createPreviewDeps();
+    const event = createEvent("Tab");
+
+    handlePreviewOverlayKeyDown(deps, {
+      _event: event,
+    });
+
+    expect(deps.store.toggleFullImagePreviewDisplayMode).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledOnce();
+    expect(deps.refs.previewOverlay.focus).toHaveBeenCalledOnce();
+    expect(deps.store.selectAdjacentSpriteItemId).not.toHaveBeenCalled();
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
   });
 
   it("does not navigate when the preview is hidden", () => {

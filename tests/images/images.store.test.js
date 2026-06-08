@@ -6,9 +6,11 @@ import {
   selectViewData,
   setDetailTagIds,
   setItems,
+  setProjectResolution,
   setSelectedItemId,
   setTagsData,
   showFullImagePreview,
+  toggleFullImagePreviewDisplayMode,
 } from "../../src/pages/images/images.store.js";
 
 const createContext = () => ({
@@ -149,15 +151,68 @@ describe("images store preview navigation", () => {
     expect(context.state.fullImagePreviewFileId).toBe("original-file");
   });
 
-  it("uses a 16:9 frame for the full preview overlay", () => {
+  it("can show the full preview image at project canvas scale", () => {
+    const context = createContext();
+
+    setProjectResolution(context, {
+      projectResolution: {
+        width: 1920,
+        height: 1080,
+      },
+    });
+    setItems(context, {
+      data: {
+        tree: [{ id: "image-1" }],
+        items: {
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Small Icon",
+            fileId: "icon-file",
+            width: 48,
+            height: 48,
+          },
+        },
+      },
+    });
+    setSelectedItemId(context, {
+      itemId: "image-1",
+    });
+    showFullImagePreview(context, {
+      itemId: "image-1",
+    });
+
+    const viewData = selectViewData(context);
+
+    expect(viewData.fullImagePreviewImageWrapperStyle).toContain("width: 2.5%");
+    expect(viewData.fullImagePreviewImageWrapperStyle).toContain(
+      "height: 4.444444444444445%",
+    );
+    expect(viewData.fullImagePreviewCanvasModeButton.selected).toBe(true);
+    expect(viewData.fullImagePreviewFitModeButton.selected).toBe(false);
+  });
+
+  it("toggles the full preview display mode", () => {
+    const context = createContext();
+
+    expect(context.state.fullImagePreviewDisplayMode).toBe("canvas");
+
+    toggleFullImagePreviewDisplayMode(context);
+    expect(context.state.fullImagePreviewDisplayMode).toBe("fit");
+
+    toggleFullImagePreviewDisplayMode(context);
+    expect(context.state.fullImagePreviewDisplayMode).toBe("canvas");
+  });
+
+  it("uses the project resolution frame for the full preview overlay", () => {
     const context = createContext();
     const viewData = selectViewData(context);
 
     expect(viewData.fullImagePreviewFrameStyle).toContain(
-      "aspect-ratio: 16 / 9",
+      "aspect-ratio: 1920 / 1080",
     );
     expect(viewData.fullImagePreviewFrameStyle).toContain(
-      "width: min(92vw, calc(92vh * 16 / 9))",
+      "width: min(92vw, calc(92vh * (1920 / 1080)))",
     );
   });
 

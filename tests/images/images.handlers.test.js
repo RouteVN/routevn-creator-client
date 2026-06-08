@@ -21,6 +21,8 @@ import {
   handleCreateTagDialogClose,
   handleDetailTagAddOptionClick,
   handleDetailTagValueChange,
+  handlePreviewCanvasModeClick,
+  handlePreviewFitModeClick,
   handlePreviewOverlayKeyDown,
   handleItemDelete,
   handleUploadClick,
@@ -116,6 +118,7 @@ describe("images handlers", () => {
         updatePendingUpload: vi.fn(),
         setTagsData: vi.fn(),
         setItems: vi.fn(),
+        setProjectResolution: vi.fn(),
         setSelectedItemId: vi.fn(),
         setSelectedFolderId: vi.fn(),
       },
@@ -220,6 +223,7 @@ describe("images handlers", () => {
         closeCreateTagDialog: vi.fn(),
         setTagsData: vi.fn(),
         setItems: vi.fn(),
+        setProjectResolution: vi.fn(),
         setDetailTagIds: vi.fn(),
         setDetailTagPopoverOpen: vi.fn(),
         selectSelectedItemId: vi.fn(() => "image-1"),
@@ -394,6 +398,7 @@ describe("images handlers", () => {
         commitDetailTagIds: vi.fn(),
         setTagsData: vi.fn(),
         setItems: vi.fn(),
+        setProjectResolution: vi.fn(),
         setSelectedItemId: vi.fn(),
         setSelectedFolderId: vi.fn(),
       },
@@ -437,9 +442,7 @@ describe("images handlers", () => {
       ...overrides,
     });
     const store = {
-      getState: vi.fn(() => ({
-        fullImagePreviewVisible: true,
-      })),
+      selectFullImagePreviewVisible: vi.fn(() => true),
       selectSelectedItemId: vi.fn(() => "image-1"),
       selectAdjacentImageItemId: vi.fn(({ direction }) => {
         return direction === "next" ? "image-2" : "image-0";
@@ -506,6 +509,93 @@ describe("images handlers", () => {
     expect(deps.refs.previewOverlay.focus).toHaveBeenCalledTimes(2);
   });
 
+  it("switches full image preview display modes from the overlay controls", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    const createClickEvent = () => ({
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    });
+    const store = {
+      setFullImagePreviewDisplayMode: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      refs: {
+        previewOverlay: {
+          focus: vi.fn(),
+        },
+      },
+    };
+
+    const canvasEvent = createClickEvent();
+    handlePreviewCanvasModeClick(deps, {
+      _event: canvasEvent,
+    });
+
+    expect(store.setFullImagePreviewDisplayMode).toHaveBeenCalledWith({
+      displayMode: "canvas",
+    });
+    expect(canvasEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(canvasEvent.stopPropagation).toHaveBeenCalledOnce();
+
+    const fitEvent = createClickEvent();
+    handlePreviewFitModeClick(deps, {
+      _event: fitEvent,
+    });
+
+    expect(store.setFullImagePreviewDisplayMode).toHaveBeenCalledWith({
+      displayMode: "fit",
+    });
+    expect(fitEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(fitEvent.stopPropagation).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledTimes(2);
+    expect(deps.refs.previewOverlay.focus).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses tab to toggle the full image preview display mode", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    const event = {
+      key: "Tab",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+    const store = {
+      selectFullImagePreviewVisible: vi.fn(() => true),
+      toggleFullImagePreviewDisplayMode: vi.fn(),
+      selectSelectedItemId: vi.fn(),
+      selectAdjacentImageItemId: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      refs: {
+        previewOverlay: {
+          focus: vi.fn(),
+        },
+      },
+    };
+
+    handlePreviewOverlayKeyDown(deps, {
+      _event: event,
+    });
+
+    expect(store.toggleFullImagePreviewDisplayMode).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledOnce();
+    expect(deps.refs.previewOverlay.focus).toHaveBeenCalledOnce();
+    expect(store.selectAdjacentImageItemId).not.toHaveBeenCalled();
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
+  });
+
   it("uses h, j, k, and l to navigate preview items without handling text entry", () => {
     globalThis.requestAnimationFrame = vi.fn((callback) => {
       callback();
@@ -522,9 +612,7 @@ describe("images handlers", () => {
       ...overrides,
     });
     const store = {
-      getState: vi.fn(() => ({
-        fullImagePreviewVisible: true,
-      })),
+      selectFullImagePreviewVisible: vi.fn(() => true),
       selectSelectedItemId: vi.fn(() => "image-1"),
       selectAdjacentImageItemId: vi.fn(({ direction }) => {
         return direction === "next" ? "image-2" : "image-0";
@@ -612,9 +700,7 @@ describe("images handlers", () => {
       ...overrides,
     });
     const store = {
-      getState: vi.fn(() => ({
-        fullImagePreviewVisible: true,
-      })),
+      selectFullImagePreviewVisible: vi.fn(() => true),
       selectSelectedItemId: vi.fn(() => "image-11"),
       selectAdjacentImageItemId: vi.fn(({ direction }) => {
         return direction === "next" ? "image-21" : "image-1";
@@ -701,9 +787,7 @@ describe("images handlers", () => {
     };
     const deps = {
       store: {
-        getState: vi.fn(() => ({
-          fullImagePreviewVisible: false,
-        })),
+        selectFullImagePreviewVisible: vi.fn(() => false),
         selectSelectedItemId: vi.fn(),
         selectAdjacentImageItemId: vi.fn(),
       },
