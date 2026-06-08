@@ -22,6 +22,25 @@ const arePreviewDataEqual = (left, right) => {
   return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
 };
 
+const selectCanvasAspectRatioWidthMultiplier = ({ state }) => {
+  const projectResolution = requireProjectResolution(
+    state.projectResolution ?? DEFAULT_PROJECT_RESOLUTION,
+    "Project resolution",
+  );
+  const width = Number(projectResolution.width);
+  const height = Number(projectResolution.height);
+  const ratio = width / height;
+
+  return Number.isFinite(ratio) && ratio > 0 ? ratio : 16 / 9;
+};
+
+const selectLayoutEditorCanvasMaxWidth = ({ state }) => {
+  const widthMultiplier = selectCanvasAspectRatioWidthMultiplier({ state });
+  const maxWidthVh = Number((widthMultiplier * 50).toFixed(4));
+
+  return `min(100%, ${maxWidthVh}vh)`;
+};
+
 export const createInitialState = () => {
   return {
     lastUpdateDate: undefined,
@@ -459,6 +478,7 @@ export const selectViewData = ({ state, constants }) => {
     contextMenuItems,
     emptyContextMenuItems,
     layoutState,
+    layoutEditorCanvasMaxWidth: selectLayoutEditorCanvasMaxWidth({ state }),
     previewData: state.previewData,
     initialPreviewData: state.initialPreviewData,
     isPreviewMounted: state.isPreviewMounted,

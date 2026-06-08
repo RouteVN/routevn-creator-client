@@ -52,7 +52,9 @@ template:
                   - rtgl-text: ${layout.name}
               - rtgl-button#saveButton ml=sm: Save Preview
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
-              - rvn-layout-editor-canvas#layoutEditorCanvas :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${selectedItemIsInsideDirectedContainer}: null
+              - 'rtgl-view w=f style="min-width: 0;"':
+                  - 'div style="position: relative; width: ${layoutEditorCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
+                      - 'rvn-layout-editor-canvas#layoutEditorCanvas style="display: block; width: 100%;" :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${selectedItemIsInsideDirectedContainer}': null
               - 'rtgl-view h=1fg w=f sv style="min-height: 0;"':
                   - $if isPreviewMounted:
                       - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState} :initialPreviewData=${initialPreviewData} :charactersData=${charactersData}: null
