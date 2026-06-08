@@ -1588,6 +1588,65 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("selects the trailing word when unresolved pointer geometry is in trailing line space", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lineElement = document.createElement("p");
+      lineElement.textContent = "hello world\u200b";
+
+      editorElement.state = {
+        selectedLineId: "line-0",
+      };
+      editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
+      editorElement.getEditorLineOrder = vi.fn(() => [
+        { lineId: "line-1" },
+        { lineId: "line-2" },
+      ]);
+      editorElement.getLineOffsetFromPointerEvent = vi.fn(() => -1);
+      editorElement.isPointerInTrailingLineBoundary = vi.fn(() => true);
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.setMode = vi.fn();
+      editorElement.focusLine = vi.fn();
+      editorElement.selectLineTextRange = vi.fn(() => true);
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      const event = {
+        detail: 2,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+
+      const didSuppress =
+        editorElement.suppressNativeLineBoundaryDoubleClick(event);
+
+      expect(didSuppress).toBe(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(
+        editorElement.isPointerInTrailingLineBoundary,
+      ).toHaveBeenCalledWith(event, lineElement);
+      expect(editorElement.selectLineTextRange).toHaveBeenCalledWith({
+        lineId: "line-1",
+        lineElement,
+        start: 6,
+        end: 11,
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("selects the full line on third click at a non-final line boundary", async () => {
     const restoreDomGlobals = installDomGlobals();
 
@@ -3529,6 +3588,50 @@ describe("lexical scene document editor line editing", () => {
 
       expect(didSuppress).toBe(false);
       expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(editorElement.focusLine).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("keeps native double-click word selection when pointer offset cannot be resolved inside text", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lineElement = document.createElement("p");
+      lineElement.textContent = "hello world\u200b";
+
+      editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
+      editorElement.getEditorLineOrder = vi.fn(() => [
+        { lineId: "line-1" },
+        { lineId: "line-2" },
+      ]);
+      editorElement.getLineOffsetFromPointerEvent = vi.fn(() => -1);
+      editorElement.isPointerInTrailingLineBoundary = vi.fn(() => false);
+      editorElement.selectLineTextRange = vi.fn();
+      editorElement.focusLine = vi.fn();
+
+      const event = {
+        detail: 2,
+        preventDefault: vi.fn(),
+      };
+
+      const didSuppress =
+        editorElement.suppressNativeLineBoundaryDoubleClick(event);
+
+      expect(didSuppress).toBe(false);
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(
+        editorElement.isPointerInTrailingLineBoundary,
+      ).toHaveBeenCalledWith(event, lineElement);
+      expect(editorElement.selectLineTextRange).not.toHaveBeenCalled();
       expect(editorElement.focusLine).not.toHaveBeenCalled();
     } finally {
       restoreDomGlobals();
