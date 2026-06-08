@@ -1,5 +1,8 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
-import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
+import {
+  buildCharacterSpritePreviewFileIds,
+  isCharacterSpriteResourceItem,
+} from "../../internal/characterSpritePreview.js";
 
 const ANIMATION_MODE_OPTIONS = [
   {
@@ -146,7 +149,7 @@ const buildSpriteGroupBoxViewData = ({
 } = {}) => {
   const spriteItemsById = Object.fromEntries(
     toFlatItems(spritesCollection ?? createEmptyCollection())
-      .filter((item) => item.type === "image")
+      .filter(isCharacterSpriteResourceItem)
       .map((item) => [item.id, item]),
   );
 
@@ -636,7 +639,7 @@ export const selectCurrentSpriteItemById = (
 
   return toFlatItems(
     selectedCharacter?.sprites ?? createEmptyCollection(),
-  ).find((item) => item.id === spriteId && item.type === "image");
+  ).find((item) => item.id === spriteId && isCharacterSpriteResourceItem(item));
 };
 
 export const selectViewData = ({ state, props }) => {
@@ -755,7 +758,7 @@ export const selectViewData = ({ state, props }) => {
       selectedItemId: selectedSpriteId,
       syntheticRootId: UNGROUPED_SPRITE_GROUP_ID,
       itemFilter: (item) =>
-        item.type === "image" &&
+        isCharacterSpriteResourceItem(item) &&
         matchesSpriteGroupTags({
           item,
           tagIds: selectedSpriteGroup?.tags,

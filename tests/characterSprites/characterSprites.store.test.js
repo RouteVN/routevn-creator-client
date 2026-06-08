@@ -3,6 +3,7 @@ import {
   addPendingUploads,
   createInitialState,
   removePendingUploads,
+  openSpritesheetCreateDialog,
   setActiveTagIds,
   selectAdjacentSpriteItemId,
   selectViewData,
@@ -189,6 +190,138 @@ describe("characterSprites store", () => {
         },
       ],
     });
+  });
+
+  it("shows spritesheet items with preview and clip detail data", () => {
+    const state = createInitialState();
+    state.characterName = "Hero";
+    state.spritesData = {
+      tree: [
+        {
+          id: "folder-1",
+          children: [{ id: "sheet-1" }],
+        },
+      ],
+      items: {
+        "folder-1": {
+          id: "folder-1",
+          type: "folder",
+          name: "Main",
+        },
+        "sheet-1": {
+          id: "sheet-1",
+          type: "spritesheet",
+          name: "Hero Sheet",
+          fileId: "sheet-file",
+          jsonData: {
+            frames: {
+              "idle-1": {},
+              "idle-2": {},
+            },
+          },
+          animations: {
+            Idle: {
+              frames: [0, 1],
+              fps: 12,
+              loop: true,
+            },
+          },
+        },
+      },
+    };
+
+    setSelectedItemId(
+      { state },
+      {
+        itemId: "sheet-1",
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.mediaGroups[0].children[0]).toMatchObject({
+      id: "sheet-1",
+      cardKind: "image",
+      previewFileId: "sheet-file",
+    });
+    expect(viewData.selectedItemType).toBe("spritesheet");
+    expect(viewData.detailPreviewFileId).toBe("sheet-file");
+    expect(viewData.detailPreviewAtlas).toBe(
+      state.spritesData.items["sheet-1"].jsonData,
+    );
+    expect(viewData.detailClipOptions).toEqual([
+      expect.objectContaining({
+        name: "Idle",
+        frameCount: 2,
+        fpsLabel: "12",
+      }),
+    ]);
+    expect(
+      viewData.detailFields.map((field) => field.slot).filter(Boolean),
+    ).toContain("spritesheet-preview");
+    expect(
+      viewData.detailFields.map((field) => field.slot).filter(Boolean),
+    ).toContain("spritesheet-animations");
+    expect(viewData.acceptedFileTypes).toContain(".json");
+  });
+
+  it("builds spritesheet create dialog preview data from imports", () => {
+    const state = createInitialState();
+    const importData = {
+      suggestedName: "Hero Sheet",
+      defaultWidth: 64,
+      defaultHeight: 96,
+      jsonData: {
+        frames: {
+          "idle-1": {},
+        },
+      },
+      animations: {
+        Idle: {
+          frames: [0],
+          fps: 24,
+          loop: true,
+        },
+      },
+    };
+
+    openSpritesheetCreateDialog(
+      { state },
+      {
+        parentId: "folder-1",
+        previewUrl: "blob:sheet",
+        importData,
+        sourceFiles: {
+          pngFile: {
+            name: "hero.png",
+          },
+          atlasFile: {
+            name: "hero.json",
+          },
+        },
+        values: {
+          name: "Hero Sheet",
+          description: "",
+          tagIds: [],
+          width: 64,
+          height: 96,
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.isSpritesheetDialogOpen).toBe(true);
+    expect(viewData.spritesheetDialogTitle).toBe("Add Spritesheet");
+    expect(viewData.spritesheetDialogPreviewUrl).toBe("blob:sheet");
+    expect(viewData.spritesheetDialogPreviewAtlas).toBe(importData.jsonData);
+    expect(viewData.spritesheetDialogClipOptions).toEqual([
+      expect.objectContaining({
+        name: "Idle",
+        frameCount: 1,
+      }),
+    ]);
+    expect(viewData.spritesheetDialogAtlasFieldValue).toBe("hero.json");
   });
 
   it("uses the original file and exposes adjacent controls for the full preview overlay", () => {

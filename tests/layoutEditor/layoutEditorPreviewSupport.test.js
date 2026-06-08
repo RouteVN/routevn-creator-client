@@ -36,6 +36,13 @@ describe("layoutEditorPreviewSupport", () => {
                   type: "text",
                   $when: 'variables["score"] == 7',
                 },
+                richText: {
+                  type: "text",
+                  content: [
+                    { text: "Hello " },
+                    { reference: { resourceId: "player-name" } },
+                  ],
+                },
               },
             },
           },
@@ -46,6 +53,7 @@ describe("layoutEditorPreviewSupport", () => {
 
     expect(targets).toContain("runtime.saveLoadPagination");
     expect(targets).toContain("variables.score");
+    expect(targets).toContain('variables["player-name"]');
   });
 
   it("builds the visible save/load preview page from runtime.saveLoadPagination", () => {

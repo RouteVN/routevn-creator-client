@@ -711,6 +711,8 @@ export const handleUploadButtonClick = (deps, payload) => {
       detail: {
         groupId: getDataAttribute(payload._event, "data-group-id"),
         accept: getAcceptAttribute(deps.props.acceptedFileTypes),
+        x: payload._event.clientX,
+        y: payload._event.clientY,
       },
       bubbles: true,
       composed: true,

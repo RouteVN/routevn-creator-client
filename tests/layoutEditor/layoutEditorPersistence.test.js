@@ -110,6 +110,33 @@ describe("layoutEditorPersistence", () => {
     });
   });
 
+  it("strips rich text content from repository command payloads", () => {
+    const result = createLayoutEditorElementPersistPayload({
+      currentItem: {
+        id: "text-1",
+        type: "text",
+        text: "Hello",
+      },
+      updatedItem: {
+        id: "text-1",
+        type: "text",
+        text: 'Hello ${variables["player-name"]}',
+        content: [
+          { text: "Hello " },
+          { reference: { resourceId: "player-name" } },
+        ],
+      },
+    });
+
+    expect(result).toEqual({
+      hasChanges: true,
+      replace: false,
+      data: {
+        text: 'Hello ${variables["player-name"]}',
+      },
+    });
+  });
+
   it("persists through the correct repository method for control elements", async () => {
     const updateControlElement = vi.fn(async () => {});
     const projectService = {

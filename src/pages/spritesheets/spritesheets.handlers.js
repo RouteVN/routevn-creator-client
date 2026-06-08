@@ -34,7 +34,7 @@ import {
   normalizeSizeInput,
   parseSpritesheetAtlasFile,
   parseSpritesheetImport,
-} from "./support/spritesheetAtlas.js";
+} from "../../internal/spritesheetAtlas.js";
 import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
 import { SPRITESHEET_TAG_SCOPE_KEY } from "./spritesheets.store.js";
 

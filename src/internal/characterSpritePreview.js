@@ -5,13 +5,16 @@ const EMPTY_COLLECTION = {
   tree: [],
 };
 
+export const isCharacterSpriteResourceItem = (item) =>
+  item?.type === "image" || item?.type === "spritesheet";
+
 export const buildCharacterSpritePreviewFileIds = ({
   spritesCollection,
   spriteIds,
 } = {}) => {
   const spriteItemsById = Object.fromEntries(
     toFlatItems(spritesCollection ?? EMPTY_COLLECTION)
-      .filter((item) => item.type === "image")
+      .filter(isCharacterSpriteResourceItem)
       .map((item) => [item.id, item]),
   );
 

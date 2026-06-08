@@ -25,6 +25,10 @@ refs:
         handler: handleBlurItemClick
       contextmenu:
         handler: handleBlurItemRightClick
+  textContentItem*:
+    eventListeners:
+      click:
+        handler: handleTextContentItemClick
   groupItem*:
     eventListeners:
       click:
@@ -71,6 +75,14 @@ refs:
     eventListeners:
       close:
         handler: handleSpriteBlurDialogClose
+  textRevealIndicatorDialog:
+    eventListeners:
+      close:
+        handler: handleTextRevealIndicatorDialogClose
+  textContentDialog:
+    eventListeners:
+      close:
+        handler: handleTextContentDialogClose
   conditionalOverrideConditionDialog:
     eventListeners:
       close:
@@ -91,6 +103,18 @@ refs:
     eventListeners:
       form-action:
         handler: handleSpriteBlurFormAction
+  textRevealIndicatorForm:
+    eventListeners:
+      form-action:
+        handler: handleTextRevealIndicatorFormAction
+  textRevealIndicatorImageField:
+    eventListeners:
+      click:
+        handler: handleTextRevealIndicatorImageFieldClick
+  textContentForm:
+    eventListeners:
+      form-action:
+        handler: handleTextContentFormAction
   conditionalOverrideConditionForm:
     eventListeners:
       form-action:
@@ -260,6 +284,9 @@ template:
                     $elif item.type == 'blur-summary':
                       - rtgl-view#blurItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
+                    $elif item.type == 'text-content-summary':
+                      - rtgl-view#textContentItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
+                          - rtgl-text s=sm ellipsis=true w=1fg: ${item.value}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
   - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
@@ -289,6 +316,23 @@ template:
       - $if spriteBlurDialog.open:
           - rtgl-view slot=content g=md:
               - rtgl-form#spriteBlurForm key=${spriteBlurDialog.key} :form=${spriteBlurDialogForm} :defaultValues=${spriteBlurDialogDefaults} w=f: null
+  - rtgl-dialog#textRevealIndicatorDialog ?open=${textRevealIndicatorDialog.open} s=md:
+      - $if textRevealIndicatorDialog.open:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#textRevealIndicatorForm key=${textRevealIndicatorDialog.key} :form=${textRevealIndicatorDialogForm} :defaultValues=${textRevealIndicatorDialogDefaults}:
+                  - rtgl-view slot=text-reveal-indicator-image g=xs:
+                      - rtgl-view#textRevealIndicatorImageField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+                          - $if textRevealIndicatorDialog.imageId:
+                              - rvn-file-image imageId=${textRevealIndicatorDialog.imageId} source="thumbnail" w=220 h=160 br=md: null
+                            $else:
+                              - rtgl-text c=mu-fg ta=c: Select image
+                      - $if textRevealIndicatorDialog.validationErrors.imageId:
+                          - rtgl-text s=sm c=de: ${textRevealIndicatorDialog.validationErrors.imageId}
+  - rtgl-dialog#textContentDialog ?open=${textContentDialog.open} s=sm:
+      - $if textContentDialog.open:
+          - rtgl-view slot=content g=md w=f:
+              - rtgl-form#textContentForm key=${textContentDialog.key} :form=${textContentDialogForm} :defaultValues=${textContentDialogDefaults} w=f:
+                  - 'rvn-lexical-layout-text-editor#textContentEditor slot="text-content-editor" :content=${textContentDialogContent} :mentionTargets=${textContentMentionTargets}': null
   - rtgl-dialog#conditionalOverrideConditionDialog ?open=${conditionalOverrideConditionDialog.open} s=md:
       - $if conditionalOverrideConditionDialog.open:
           - rtgl-view slot=content g=md:

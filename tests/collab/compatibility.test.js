@@ -31,6 +31,40 @@ describe("evaluateRemoteCommandCompatibility", () => {
       "payload.data.enumValues[0] must be a string",
     );
   });
+
+  it("accepts character sprite spritesheet extension commands", () => {
+    const result = evaluateRemoteCommandCompatibility({
+      id: "cmd-1",
+      type: "character.sprite.create",
+      schemaVersion: 1,
+      payload: {
+        characterId: "hero",
+        spriteId: "sheet-1",
+        data: {
+          type: "spritesheet",
+          name: "Hero Sheet",
+          fileId: "sheet-file",
+          jsonData: {
+            frames: {
+              "idle-1": {},
+            },
+          },
+          animations: {
+            Idle: {
+              frames: [0],
+              fps: 12,
+              loop: true,
+            },
+          },
+        },
+        parentId: null,
+        index: 0,
+      },
+    });
+
+    expect(result.status).toBe(REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE);
+    expect(result.reason).toBe("ok");
+  });
 });
 
 describe("createCommittedCommandProjectionTracker", () => {

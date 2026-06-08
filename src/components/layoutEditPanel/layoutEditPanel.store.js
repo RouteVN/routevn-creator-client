@@ -49,6 +49,7 @@ import {
 import {
   ACTION_INTERACTION_TYPES,
   REVEAL_EFFECT_OPTIONS,
+  createTextContentDialogForm,
   getLayoutEditPanelSections,
   getLayoutInteractionActions,
   selectLayoutEditPanelFieldPopoverForm,
@@ -57,9 +58,19 @@ import {
   toSoundOptions,
   toTextStyleOptions,
 } from "./support/layoutEditPanelViewData.js";
+import {
+  createTextRevealIndicatorDialogDefaults,
+  createTextRevealIndicatorForm,
+  isTextRevealIndicatorStateName,
+} from "./support/layoutEditPanelTextRevealIndicator.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
 const POSITION_POPOVER_NAMES = new Set(["x", "y"]);
+const TEXT_CONTENT_MENTION_VARIABLE_TYPES = new Set([
+  "string",
+  "number",
+  "integer",
+]);
 const CHOICE_ITEM_OPTIONS = Array.from({ length: 20 }, (_item, index) => ({
   label: `Choice ${index + 1}`,
   value: index,
@@ -382,6 +393,42 @@ const isAutoContainerSize = (value) => {
   return !Number.isFinite(parsedValue) || parsedValue <= 0;
 };
 
+const getTextContentMentionVariableType = (item = {}) => {
+  if (item.type === "variable") {
+    return String(item.variableType ?? "string").toLowerCase();
+  }
+
+  return String(item.variableType ?? item.type ?? "").toLowerCase();
+};
+
+const buildTextContentMentionTargets = (variablesData = {}) => {
+  const variableItems = variablesData.items || {};
+  const flatItems = toFlatItems(variablesData);
+  const seenIds = new Set(flatItems.map((item) => item.id));
+
+  for (const [id, item] of Object.entries(variableItems)) {
+    if (seenIds.has(id)) {
+      continue;
+    }
+
+    flatItems.push({
+      id,
+      ...item,
+    });
+  }
+
+  return flatItems
+    .filter((item) => {
+      const variableType = getTextContentMentionVariableType(item);
+      return TEXT_CONTENT_MENTION_VARIABLE_TYPES.has(variableType);
+    })
+    .map((item) => ({
+      id: item.id,
+      label: item.name || item.id,
+      variableType: getTextContentMentionVariableType(item),
+    }));
+};
+
 const createDefaultValues = () => ({
   x: 0,
   y: 0,
@@ -400,11 +447,26 @@ const createDefaultValues = () => ({
   actions: {},
 });
 
+const getValueAtPath = (target, path) => {
+  if (!path) {
+    return undefined;
+  }
+
+  return path.split(".").reduce((current, key) => {
+    if (!current || typeof current !== "object") {
+      return undefined;
+    }
+
+    return current[key];
+  }, target);
+};
+
 const resetSelectionUiState = (state) => {
   state.tempSelectedImageId = undefined;
   state.imageSelectorDialog = {
     open: false,
     name: undefined,
+    source: undefined,
   };
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewImageId = undefined;
@@ -440,6 +502,17 @@ const resetSelectionUiState = (state) => {
     key: 0,
   };
   state.spriteBlurDialog = {
+    open: false,
+    key: 0,
+  };
+  state.textRevealIndicatorDialog = {
+    open: false,
+    key: 0,
+    stateName: undefined,
+    imageId: undefined,
+    validationErrors: {},
+  };
+  state.textContentDialog = {
     open: false,
     key: 0,
   };
@@ -517,7 +590,7 @@ export const openPopoverForm = (
     return;
   }
 
-  const value = state.values[name];
+  const value = getValueAtPath(state.values, name);
   const popoverFormValues = {
     value,
   };
@@ -645,6 +718,57 @@ export const closeSpriteBlurDialog = ({ state }, _payload = {}) => {
   state.spriteBlurDialog.open = false;
 };
 
+export const openTextRevealIndicatorDialog = (
+  { state },
+  { stateName } = {},
+) => {
+  if (!isTextRevealIndicatorStateName(stateName)) {
+    return;
+  }
+
+  const defaults = createTextRevealIndicatorDialogDefaults({
+    values: state.values,
+    stateName,
+  });
+
+  state.textRevealIndicatorDialog.open = true;
+  state.textRevealIndicatorDialog.key += 1;
+  state.textRevealIndicatorDialog.stateName = stateName;
+  state.textRevealIndicatorDialog.imageId = defaults.imageId || undefined;
+  state.textRevealIndicatorDialog.validationErrors = {};
+};
+
+export const closeTextRevealIndicatorDialog = ({ state }, _payload = {}) => {
+  state.textRevealIndicatorDialog.open = false;
+  state.textRevealIndicatorDialog.stateName = undefined;
+  state.textRevealIndicatorDialog.imageId = undefined;
+  state.textRevealIndicatorDialog.validationErrors = {};
+};
+
+export const setTextRevealIndicatorDialogImage = (
+  { state },
+  { imageId } = {},
+) => {
+  state.textRevealIndicatorDialog.imageId = imageId;
+  delete state.textRevealIndicatorDialog.validationErrors.imageId;
+};
+
+export const setTextRevealIndicatorDialogValidationErrors = (
+  { state },
+  { errors } = {},
+) => {
+  state.textRevealIndicatorDialog.validationErrors = errors ?? {};
+};
+
+export const openTextContentDialog = ({ state }, _payload = {}) => {
+  state.textContentDialog.open = true;
+  state.textContentDialog.key += 1;
+};
+
+export const closeTextContentDialog = ({ state }, _payload = {}) => {
+  state.textContentDialog.open = false;
+};
+
 export const openConditionalOverrideConditionDialog = (
   { state },
   { editingIndex, selectedVariableType } = {},
@@ -717,19 +841,25 @@ export const selectPopoverForm = ({ state }) => {
   return state.popover;
 };
 
-export const openImageSelectorDialog = ({ state }, { name } = {}) => {
+export const openImageSelectorDialog = (
+  { state },
+  { name, selectedImageId, source = "value" } = {},
+) => {
   state.imageSelectorDialog = {
     open: true,
     name,
+    source,
   };
   state.tempSelectedImageId =
-    typeof name === "string" ? state.values?.[name] : undefined;
+    selectedImageId ??
+    (typeof name === "string" ? getValueAtPath(state.values, name) : undefined);
 };
 
 export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
   state.imageSelectorDialog = {
     open: false,
     name: undefined,
+    source: undefined,
   };
   state.tempSelectedImageId = undefined;
 };
@@ -860,6 +990,14 @@ export const selectSpriteBlurDialog = ({ state }) => {
   return state.spriteBlurDialog;
 };
 
+export const selectTextRevealIndicatorDialog = ({ state }) => {
+  return state.textRevealIndicatorDialog;
+};
+
+export const selectTextContentDialog = ({ state }) => {
+  return state.textContentDialog;
+};
+
 export const selectConditionalOverrideConditionDialog = ({ state }) => {
   return state.conditionalOverrideConditionDialog;
 };
@@ -892,6 +1030,10 @@ export const selectTextStyleOptions = ({ state }) => {
 
 export const selectSoundOptions = ({ state }) => {
   return toSoundOptions(state.soundsData);
+};
+
+export const selectImageItemById = ({ state }, { imageId } = {}) => {
+  return state.imagesData?.items?.[imageId];
 };
 
 export const selectViewData = ({ state, props, constants }) => {
@@ -942,7 +1084,11 @@ export const selectViewData = ({ state, props, constants }) => {
     values: state.values,
     firstTextStyleId,
     hiddenActionModes: HIDDEN_LAYOUT_ACTION_MODES,
+    variablesData: state.variablesData,
   });
+  const textContentMentionTargets = buildTextContentMentionTargets(
+    state.variablesData,
+  );
   const spritesheetSelectionValue = toSpritesheetAnimationSelectionValue(
     values.resourceId,
     values.animationName,
@@ -1050,6 +1196,8 @@ export const selectViewData = ({ state, props, constants }) => {
           getAvailableChildInteractionItems(values).length > 0,
         blurSummary: getSpriteBlurSummary(values.blur),
         canAddSpriteBlur: !hasSpriteBlur,
+        canAddTextRevealIndicator:
+          values.textRevealIndicatorAddItems.length > 0,
         canAddTextStyleVariant:
           !values.hoverTextStyleId || !values.clickTextStyleId,
         canAddSoundVariant: !values.hoverSoundId || !values.clickSoundId,
@@ -1127,6 +1275,14 @@ export const selectViewData = ({ state, props, constants }) => {
       charactersData: props.charactersData,
       currentValue: conditionalOverrideConditionDefaults.characterValue,
     });
+  const textRevealIndicatorDialogDefaults =
+    createTextRevealIndicatorDialogDefaults({
+      values,
+      stateName: state.textRevealIndicatorDialog.stateName,
+    });
+  const textRevealIndicatorDialogForm = createTextRevealIndicatorForm({
+    stateName: state.textRevealIndicatorDialog.stateName,
+  });
 
   return {
     values: state.values,
@@ -1164,6 +1320,14 @@ export const selectViewData = ({ state, props, constants }) => {
     spriteBlurDialogForm: createSpriteBlurForm({
       submitLabel: hasSpriteBlur ? "Save Blur" : "Add Blur",
     }),
+    textRevealIndicatorDialog: state.textRevealIndicatorDialog,
+    textRevealIndicatorDialogDefaults,
+    textRevealIndicatorDialogForm,
+    textContentDialog: state.textContentDialog,
+    textContentDialogDefaults: {},
+    textContentDialogContent: values.content,
+    textContentDialogForm: createTextContentDialogForm(),
+    textContentMentionTargets,
     conditionalOverrideConditionDialog:
       state.conditionalOverrideConditionDialog,
     conditionalOverrideItems,

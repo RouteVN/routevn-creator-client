@@ -1,3 +1,10 @@
+import {
+  findCharacterItemsMissingSprites,
+  logCharacterSpritesDebug,
+  summarizeCharacterSpriteActionItems,
+  summarizeCharacterSpriteRepository,
+} from "../../internal/characterSpriteDebug.js";
+
 const getCharacterIndexFromEvent = (event) => {
   const index = Number.parseInt(event?.currentTarget?.dataset?.index, 10);
   return Number.isInteger(index) ? index : undefined;
@@ -155,7 +162,10 @@ const beginNewCharacterSpriteSelection = (store, characterId) => {
   store.setPendingCharacterIndex({ index: newCharacterIndex });
   store.setSelectedCharacterIndex({ index: newCharacterIndex });
   store.setTempSelectedSpriteIds({
-    spriteIdsByGroupId: {},
+    spriteIdsByGroupId: buildTempSelectedSpriteIdsByGroup({
+      character: currentCharacters[newCharacterIndex],
+      spriteSelectionGroups,
+    }),
   });
   store.setSelectedSpriteGroupId({
     spriteGroupId: spriteSelectionGroups[0]?.id,
@@ -257,12 +267,25 @@ const dispatchTemporaryPresentationStateChange = (deps) => {
     return;
   }
 
+  const presentationState = buildCharacterDataFromState(store, {
+    includeTemporarySprites: true,
+  });
+  const characterItems = presentationState.character?.items ?? [];
+  logCharacterSpritesDebug("commandLineCharacters.temporary.emit", {
+    mode: store.selectMode?.(),
+    selectedCharacterIndex: store.selectSelectedCharacterIndex?.(),
+    selectedSpriteGroupId: store.selectSelectedSpriteGroupId?.(),
+    tempSelectedSpriteIds: store.selectTempSelectedSpriteIds?.(),
+    characterItems: summarizeCharacterSpriteActionItems(characterItems),
+    missingSpriteItems: summarizeCharacterSpriteActionItems(
+      findCharacterItemsMissingSprites(characterItems),
+    ),
+  });
+
   dispatchEvent(
     new CustomEvent("temporary-presentation-state-change", {
       detail: {
-        presentationState: buildCharacterDataFromState(store, {
-          includeTemporarySprites: true,
-        }),
+        presentationState,
       },
     }),
   );
@@ -297,6 +320,16 @@ export const handleAfterMount = async (deps) => {
       characters: characterItems,
     });
   }
+
+  logCharacterSpritesDebug("commandLineCharacters.mount", {
+    incomingCharacterItems: summarizeCharacterSpriteActionItems(
+      characterItems ?? [],
+    ),
+    repositoryCharacters: summarizeCharacterSpriteRepository({
+      charactersCollection: characters,
+      characterIds: (characterItems ?? []).map((item) => item?.id),
+    }),
+  });
 
   render();
 };
@@ -572,6 +605,14 @@ export const handleSpriteGroupTabClick = (deps, payload) => {
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const characterData = buildCharacterDataFromState(store);
+  const characterItems = characterData.character?.items ?? [];
+  logCharacterSpritesDebug("commandLineCharacters.submit", {
+    characterItems: summarizeCharacterSpriteActionItems(characterItems),
+    missingSpriteItems: summarizeCharacterSpriteActionItems(
+      findCharacterItemsMissingSprites(characterItems),
+    ),
+  });
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: characterData,
@@ -712,6 +753,15 @@ export const handleButtonSelectClick = (deps) => {
           };
         })
         .filter(Boolean),
+    });
+
+    logCharacterSpritesDebug("commandLineCharacters.spriteSelect.confirm", {
+      selectedCharacterIndex,
+      spriteSelectionGroups,
+      tempSelectedSpriteIds,
+      selectedCharacters: summarizeCharacterSpriteActionItems(
+        store.selectSelectedCharacters?.(),
+      ),
     });
 
     store.clearPendingCharacterIndex();

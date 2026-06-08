@@ -343,6 +343,95 @@ describe("commandLineCharacters.handlers", () => {
     expect(selectPendingCharacterTransformId({ state })).toBeUndefined();
   });
 
+  it("defaults a new character to an available spritesheet sprite", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "transform-center": {
+              id: "transform-center",
+              type: "transform",
+              name: "Center",
+            },
+          },
+          tree: [{ id: "transform-center" }],
+        },
+      },
+    );
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+              sprites: {
+                items: {
+                  "sprite-walk": {
+                    id: "sprite-walk",
+                    type: "spritesheet",
+                    name: "Walk",
+                    fileId: "file-walk",
+                  },
+                },
+                tree: [{ id: "sprite-walk" }],
+              },
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+
+    handleCharacterItemClick(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              characterId: "character-hero",
+            },
+          },
+        },
+      },
+    );
+
+    expect(selectTempSelectedSpriteIds({ state })).toEqual({
+      base: "sprite-walk",
+    });
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        character: {
+          items: [
+            {
+              id: "character-hero",
+              transformId: "transform-center",
+              sprites: [
+                {
+                  id: "base",
+                  resourceId: "sprite-walk",
+                },
+              ],
+              spriteName: "",
+            },
+          ],
+        },
+      },
+    });
+  });
+
   it("updates and clears per-character animation selection", () => {
     const state = createInitialState();
     const render = vi.fn();

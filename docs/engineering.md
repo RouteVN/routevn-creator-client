@@ -51,8 +51,10 @@ Local-first collaboration:
   selectors for every state slice a handler needs.
 - Do not add browser-global debug toggles such as
   `window.__RVN_DEBUG_BACKGROUND_ACTION__ = true` or other
-  `window.__RVN_DEBUG_*` flags. Temporary diagnostic logs should be explicit,
-  easy to find, and removed when the issue is resolved.
+  `window.__RVN_DEBUG_*` flags. Temporary diagnostic logs must log directly
+  while present; do not require a browser-global flag to enable them. Keep
+  diagnostic logs explicit, easy to find, and remove them when the issue is
+  resolved.
 
 ## ID Generation
 

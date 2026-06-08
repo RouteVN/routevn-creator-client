@@ -18,6 +18,13 @@ import {
   getConditionalOverrideAttributeOptions,
 } from "./support/layoutEditPanelFeatures.js";
 import { createSpriteBlurFromDialogValues } from "./support/layoutEditPanelBlur.js";
+import {
+  createTextRevealIndicatorAddItems,
+  createTextRevealIndicatorVisualFromDialogValues,
+  getImageDimensions,
+  getTextRevealIndicatorStateNameFromItemName,
+  isTextRevealIndicatorItemName,
+} from "./support/layoutEditPanelTextRevealIndicator.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { parseSpritesheetAnimationSelectionValue } from "../../internal/spritesheets.js";
 
@@ -37,6 +44,14 @@ const INTEGER_ONLY_FIELDS = new Set([
   "height",
   "gapX",
   "gapY",
+  "indicator.revealing.width",
+  "indicator.revealing.height",
+  "indicator.revealing.offsetX",
+  "indicator.revealing.offsetY",
+  "indicator.complete.width",
+  "indicator.complete.height",
+  "indicator.complete.offsetX",
+  "indicator.complete.offsetY",
 ]);
 const SIZE_FIELDS = new Set(["width", "height"]);
 const WHEEL_INCREMENT_FIELD_CONFIG = {
@@ -162,6 +177,73 @@ const syncFixedAspectRatioValue = (store, { name, value } = {}) => {
     name: "width",
     value: Math.round(nextValue * aspectRatioLock),
   });
+};
+
+const getCurrentTextRevealIndicatorFormValues = (refs) => {
+  return Object.assign({}, refs.textRevealIndicatorForm?.getValues?.() ?? {});
+};
+
+const createTextRevealIndicatorFormValuesForImage = (
+  { store },
+  { currentValues = {}, imageId } = {},
+) => {
+  const imageItem = store.selectImageItemById({
+    imageId,
+  });
+  const dimensions = getImageDimensions(imageItem);
+  const nextValues = {
+    ...currentValues,
+    imageId,
+  };
+
+  if (dimensions.width !== undefined) {
+    nextValues.width = dimensions.width;
+  }
+  if (dimensions.height !== undefined) {
+    nextValues.height = dimensions.height;
+  }
+
+  return nextValues;
+};
+
+const setTextRevealIndicatorDialogImage = (deps, { imageId } = {}) => {
+  const { refs, store } = deps;
+  const nextValues = createTextRevealIndicatorFormValuesForImage(
+    { store },
+    {
+      currentValues: getCurrentTextRevealIndicatorFormValues(refs),
+      imageId,
+    },
+  );
+
+  store.setTextRevealIndicatorDialogImage({
+    imageId,
+  });
+  refs.textRevealIndicatorForm?.setValues?.({
+    values: nextValues,
+  });
+};
+
+const createNextTextRevealIndicatorValue = (
+  indicator,
+  { stateName, visual } = {},
+) => {
+  const nextIndicator =
+    indicator && typeof indicator === "object" && !Array.isArray(indicator)
+      ? structuredClone(indicator)
+      : {};
+
+  if (visual === undefined) {
+    delete nextIndicator[stateName];
+  } else {
+    nextIndicator[stateName] = visual;
+  }
+
+  if (!nextIndicator.revealing && !nextIndicator.complete) {
+    return undefined;
+  }
+
+  return nextIndicator;
 };
 
 const getMeasuredTextWidth = (metrics = {}) => {
@@ -648,6 +730,12 @@ export const handleBlurItemClick = (deps) => {
   render();
 };
 
+export const handleTextContentItemClick = (deps) => {
+  const { render, store } = deps;
+  store.openTextContentDialog();
+  render();
+};
+
 export const handleBlurItemRightClick = async (deps, payload) => {
   const { appService } = deps;
   const { _event: event } = payload;
@@ -697,6 +785,18 @@ export const handleChildInteractionDialogClose = (deps) => {
 export const handleSpriteBlurDialogClose = (deps) => {
   const { render, store } = deps;
   store.closeSpriteBlurDialog();
+  render();
+};
+
+export const handleTextRevealIndicatorDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeTextRevealIndicatorDialog();
+  render();
+};
+
+export const handleTextContentDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeTextContentDialog();
   render();
 };
 
@@ -1064,6 +1164,28 @@ export const handleSectionActionClick = async (deps, payload) => {
   } else if (id === "blur") {
     store.openSpriteBlurDialog();
     render();
+  } else if (id === "textRevealIndicator") {
+    const items = createTextRevealIndicatorAddItems(
+      store.selectValues().indicator,
+    );
+    if (items.length === 0) {
+      return;
+    }
+
+    const result = await appService.showDropdownMenu({
+      items,
+      x: _event.clientX,
+      y: _event.clientY,
+      place: "bs",
+    });
+    if (!result?.item?.key) {
+      return;
+    }
+
+    store.openTextRevealIndicatorDialog({
+      stateName: result.item.key,
+    });
+    render();
   }
 };
 
@@ -1243,6 +1365,89 @@ export const handleSpriteBlurFormAction = (deps, payload) => {
   applyPanelValueUpdate(deps, {
     name: "blur",
     value: createSpriteBlurFromDialogValues(values),
+  });
+};
+
+export const handleTextRevealIndicatorImageFieldClick = (deps) => {
+  const { render, store } = deps;
+  const dialog = store.selectTextRevealIndicatorDialog();
+
+  if (!dialog.open) {
+    return;
+  }
+
+  store.openImageSelectorDialog({
+    source: "textRevealIndicator",
+    selectedImageId: dialog.imageId,
+  });
+  render();
+};
+
+export const handleTextRevealIndicatorFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail || {};
+  const dialog = store.selectTextRevealIndicatorDialog();
+  const stateName = dialog.stateName;
+  const imageId = dialog.imageId;
+
+  if (detail.actionId === "cancel") {
+    store.closeTextRevealIndicatorDialog();
+    render();
+    return;
+  }
+
+  if (detail.actionId !== "submit" || !stateName) {
+    return;
+  }
+
+  if (!imageId) {
+    store.setTextRevealIndicatorDialogValidationErrors({
+      errors: {
+        imageId: "Image is required.",
+      },
+    });
+    render();
+    return;
+  }
+
+  const visual = createTextRevealIndicatorVisualFromDialogValues({
+    ...detail.values,
+    imageId,
+  });
+  const indicator = createNextTextRevealIndicatorValue(
+    store.selectValues().indicator,
+    {
+      stateName,
+      visual,
+    },
+  );
+
+  store.closeTextRevealIndicatorDialog();
+  applyPanelValueUpdate(deps, {
+    name: "indicator",
+    value: indicator,
+  });
+};
+
+export const handleTextContentFormAction = (deps, payload) => {
+  const { refs, render, store } = deps;
+  const detail = payload._event.detail || {};
+
+  if (detail.actionId === "cancel") {
+    store.closeTextContentDialog();
+    render();
+    return;
+  }
+
+  if (detail.actionId !== "submit") {
+    return;
+  }
+
+  const content = refs.textContentEditor?.getContent?.();
+  store.closeTextContentDialog();
+  applyPanelValueUpdate(deps, {
+    name: "content",
+    value: content,
   });
 };
 
@@ -1539,6 +1744,15 @@ export const handleListBarItemClick = async (deps, payload) => {
   const { render, store } = deps;
   const { _event: event } = payload;
   const { name } = event.currentTarget.dataset;
+
+  if (isTextRevealIndicatorItemName(name)) {
+    store.openTextRevealIndicatorDialog({
+      stateName: getTextRevealIndicatorStateNameFromItemName(name),
+    });
+    render();
+    return;
+  }
+
   store.openImageSelectorDialog({
     name,
   });
@@ -1602,6 +1816,28 @@ export const handleListBarItemRightClick = async (deps, payload) => {
   }
   const { item } = result;
   if (item.key === "remove") {
+    if (isTextRevealIndicatorItemName(name)) {
+      const stateName = getTextRevealIndicatorStateNameFromItemName(name);
+      const indicator = createNextTextRevealIndicatorValue(
+        store.selectValues().indicator,
+        {
+          stateName,
+          visual: undefined,
+        },
+      );
+
+      store.updateValueProperty({
+        name: "indicator",
+        value: indicator,
+      });
+      render();
+      emitPanelUpdate(deps, {
+        name: "indicator",
+        value: indicator,
+      });
+      return;
+    }
+
     store.updateValueProperty({
       name,
       value: undefined,
@@ -1739,9 +1975,19 @@ export const handleImageSelectorCancel = (deps) => {
 };
 
 export const handleImageSelectorSubmit = (deps) => {
-  const { store } = deps;
+  const { render, store } = deps;
   const imageId = store.selectTempSelectedImageId();
-  const { name } = store.selectImageSelectorDialog();
+  const { name, source } = store.selectImageSelectorDialog();
+
+  if (source === "textRevealIndicator") {
+    setTextRevealIndicatorDialogImage(deps, {
+      imageId,
+    });
+    store.closeImageSelectorDialog();
+    render();
+    return;
+  }
+
   applyPanelValueUpdate(deps, {
     name,
     value: imageId,

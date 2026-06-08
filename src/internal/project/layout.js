@@ -14,6 +14,7 @@ import {
   withInteractionPayload,
 } from "./interactionPayload.js";
 import { generateId } from "../id.js";
+import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
 
 const TEXT_NODE_TYPES = new Set([
   "text",
@@ -901,6 +902,82 @@ const getImageFileId = (imageItems, imageId) => {
     : undefined;
 };
 
+const toPositiveFiniteNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : undefined;
+};
+
+const toOptionalFiniteNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+};
+
+const createTextRevealIndicatorVisual = (visual, imageItems) => {
+  const src = getImageFileId(imageItems, visual?.imageId);
+  if (!src) {
+    return undefined;
+  }
+
+  const nextVisual = {
+    kind: "image",
+    src,
+  };
+  const width = toPositiveFiniteNumber(visual?.width);
+  const height = toPositiveFiniteNumber(visual?.height);
+  const offsetX = toOptionalFiniteNumber(visual?.offsetX);
+  const offsetY = toOptionalFiniteNumber(visual?.offsetY);
+
+  if (width !== undefined) {
+    nextVisual.width = width;
+  }
+  if (height !== undefined) {
+    nextVisual.height = height;
+  }
+  if (offsetX !== undefined) {
+    nextVisual.offsetX = offsetX;
+  }
+  if (offsetY !== undefined) {
+    nextVisual.offsetY = offsetY;
+  }
+
+  return nextVisual;
+};
+
+const createTextRevealIndicator = ({ node, imageItems } = {}) => {
+  const source = node?.indicator;
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return undefined;
+  }
+
+  const revealing = createTextRevealIndicatorVisual(
+    source.revealing,
+    imageItems,
+  );
+  const complete = createTextRevealIndicatorVisual(source.complete, imageItems);
+  if (!revealing && !complete) {
+    return undefined;
+  }
+
+  const indicator = {};
+  const offsetX = toOptionalFiniteNumber(source.offsetX);
+  const offsetY = toOptionalFiniteNumber(source.offsetY);
+
+  if (revealing) {
+    indicator.revealing = revealing;
+  }
+  if (complete) {
+    indicator.complete = complete;
+  }
+  if (offsetX !== undefined) {
+    indicator.offsetX = offsetX;
+  }
+  if (offsetY !== undefined) {
+    indicator.offsetY = offsetY;
+  }
+
+  return indicator;
+};
+
 const getSoundFileReference = (soundItems, soundId) => {
   const sound = soundItems?.[soundId];
   const fileId = sound?.fileId;
@@ -1046,7 +1123,7 @@ const buildBaseElement = (node, context = {}) => {
 
 const getTextNodeContent = (node, context = {}) => {
   if (node.content !== undefined) {
-    return node.content;
+    return toRouteGraphicsLayoutTextContent(node.content);
   }
 
   if (
@@ -1147,6 +1224,16 @@ const applyTextNode = ({ element, node, context }) => {
 
   if (renderType === "text-revealing" && node.revealEffect) {
     nextElement.revealEffect = node.revealEffect;
+  }
+
+  if (renderType === "text-revealing") {
+    const indicator = createTextRevealIndicator({
+      node,
+      imageItems: context.imageItems,
+    });
+    if (indicator) {
+      nextElement.indicator = indicator;
+    }
   }
 
   return nextElement;

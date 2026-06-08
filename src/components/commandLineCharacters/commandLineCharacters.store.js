@@ -1,5 +1,8 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
-import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
+import {
+  buildCharacterSpritePreviewFileIds,
+  isCharacterSpriteResourceItem,
+} from "../../internal/characterSpritePreview.js";
 import {
   COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
@@ -119,6 +122,58 @@ const buildSpriteSelectionGroups = (character = {}) => {
   }));
 };
 
+const findFirstSpriteIdForGroup = ({
+  group,
+  spritesCollection,
+  allowUntaggedGroupFallback = false,
+} = {}) => {
+  const hasTags = Array.isArray(group?.tags) && group.tags.length > 0;
+  if (!hasTags && !allowUntaggedGroupFallback) {
+    return undefined;
+  }
+
+  return toFlatItems(spritesCollection ?? createEmptyCollection()).find(
+    (item) =>
+      isCharacterSpriteResourceItem(item) &&
+      matchesSpriteGroupTags({
+        item,
+        tagIds: group?.tags,
+      }),
+  )?.id;
+};
+
+const buildDefaultCharacterSprites = ({ characterData } = {}) => {
+  const spriteSelectionGroups = buildSpriteSelectionGroups(characterData);
+  const sprites = [];
+  let hasUntaggedGroupFallback = false;
+
+  for (const spriteSelectionGroup of spriteSelectionGroups) {
+    const hasTags =
+      Array.isArray(spriteSelectionGroup.tags) &&
+      spriteSelectionGroup.tags.length > 0;
+    const resourceId = findFirstSpriteIdForGroup({
+      group: spriteSelectionGroup,
+      spritesCollection: characterData?.sprites,
+      allowUntaggedGroupFallback: hasTags || !hasUntaggedGroupFallback,
+    });
+
+    if (!resourceId) {
+      continue;
+    }
+
+    sprites.push({
+      id: spriteSelectionGroup.id,
+      resourceId,
+    });
+
+    if (!hasTags) {
+      hasUntaggedGroupFallback = true;
+    }
+  }
+
+  return sprites;
+};
+
 const buildTempSelectedSpriteIdsByGroup = ({
   character,
   spriteSelectionGroups,
@@ -163,7 +218,7 @@ const buildSpriteGroupBoxViewData = ({
 } = {}) => {
   const spriteItemsById = Object.fromEntries(
     toFlatItems(spritesCollection ?? createEmptyCollection())
-      .filter((item) => item.type === "image")
+      .filter(isCharacterSpriteResourceItem)
       .map((item) => [item.id, item]),
   );
 
@@ -399,12 +454,16 @@ const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
 
 export const addCharacter = ({ state }, { id, transformId } = {}) => {
   const defaultTransform = transformId ?? getDefaultTransformId(state);
+  const characterData = getCharacterItemById({
+    state,
+    characterId: id,
+  });
 
   // Store raw character data (same structure as from props)
   state.selectedCharacters.push({
     id: id,
     transformId: defaultTransform,
-    sprites: [],
+    sprites: buildDefaultCharacterSprites({ characterData }),
     spriteName: "",
     animationMode: "none",
   });

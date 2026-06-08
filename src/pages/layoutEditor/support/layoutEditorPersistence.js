@@ -111,6 +111,18 @@ const normalizeLayoutElementInteractions = (item = {}) => {
   return nextItem;
 };
 
+const stripUnsupportedLayoutElementPersistFields = (data) => {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return data;
+  }
+
+  const nextData = {
+    ...data,
+  };
+  delete nextData.content;
+  return nextData;
+};
+
 export const shouldPersistLayoutEditorFieldImmediately = ({
   name,
   itemType,
@@ -159,11 +171,14 @@ export const createLayoutEditorElementPersistPayload = ({
   const shouldReplace =
     replace === true || diff.requiresReplace || diff.hasNestedChanges;
   const { id: _ignoredItemId, ...nextReplaceData } = normalizedUpdatedItem;
+  const data = stripUnsupportedLayoutElementPersistFields(
+    shouldReplace ? nextReplaceData : diff.patch,
+  );
 
   return {
     hasChanges: true,
     replace: shouldReplace,
-    data: shouldReplace ? nextReplaceData : diff.patch,
+    data,
   };
 };
 

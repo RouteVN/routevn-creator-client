@@ -4,6 +4,7 @@ import {
   handleFileExplorerAction,
   handleLayoutEditorCanvasDragUpdate,
   handleLayoutEditorCanvasMetricsChange,
+  handleLayoutEditPanelUpdateHandler,
   handleSaveButtonClick,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { enqueueLayoutEditorPersistence } from "../../src/pages/layoutEditor/support/layoutEditorPersistenceQueue.js";
@@ -280,6 +281,120 @@ describe("layoutEditor.handleSaveButtonClick", () => {
     });
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Layout preview saved.",
+    });
+  });
+});
+
+describe("layoutEditor.handleLayoutEditPanelUpdateHandler", () => {
+  it("persists text reveal indicator visual updates immediately", async () => {
+    const updateLayoutElement = vi.fn(async () => ({ valid: true }));
+    const deps = createLayoutEditorDeps({
+      updateLayoutElement,
+    });
+    const currentElement = {
+      id: "item-1",
+      type: "text-revealing-ref-dialogue-content",
+      name: "Dialogue Text",
+    };
+
+    deps.store.selectSelectedItemId = vi.fn(() => "item-1");
+    deps.store.selectSelectedItemData = vi.fn(() => currentElement);
+    deps.store.selectImages = vi.fn(() => ({
+      items: {
+        "image-indicator": {
+          id: "image-indicator",
+          type: "image",
+          fileId: "file-indicator",
+        },
+      },
+      tree: [{ id: "image-indicator" }],
+    }));
+    deps.projectService.getRepositoryState = vi.fn(() => ({
+      images: {
+        items: {
+          "image-indicator": {
+            id: "image-indicator",
+            type: "image",
+            fileId: "file-indicator",
+          },
+        },
+        tree: [{ id: "image-indicator" }],
+      },
+      layouts: {
+        items: {
+          "layout-1": {
+            elements: {
+              items: {
+                "item-1": {
+                  type: "text-revealing-ref-dialogue-content",
+                  name: "Dialogue Text",
+                },
+              },
+            },
+          },
+        },
+      },
+      controls: { items: {} },
+    }));
+
+    await handleLayoutEditPanelUpdateHandler(deps, {
+      _event: {
+        detail: {
+          name: "indicator",
+          value: {
+            revealing: {
+              imageId: "image-indicator",
+              width: 24,
+              height: 20,
+              offsetX: 12,
+              offsetY: 2,
+            },
+          },
+          formValues: {
+            ...currentElement,
+            indicator: {
+              revealing: {
+                imageId: "image-indicator",
+                width: 24,
+                height: 20,
+                offsetX: 12,
+                offsetY: 2,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(deps.store.updateSelectedItem).toHaveBeenCalledWith({
+      updatedItem: {
+        ...currentElement,
+        indicator: {
+          revealing: {
+            imageId: "image-indicator",
+            width: 24,
+            height: 20,
+            offsetX: 12,
+            offsetY: 2,
+          },
+        },
+      },
+    });
+    expect(updateLayoutElement).toHaveBeenCalledWith({
+      layoutId: "layout-1",
+      elementId: "item-1",
+      data: {
+        indicator: {
+          revealing: {
+            imageId: "image-indicator",
+            width: 24,
+            height: 20,
+            offsetX: 12,
+            offsetY: 2,
+          },
+        },
+      },
+      replace: false,
     });
   });
 });
