@@ -65,7 +65,7 @@ const CREATE_TEMPLATES = {
   }),
   sprite: () => ({
     type: "sprite",
-    name: "Sprite",
+    name: "Image",
     ...BASE_TRANSFORM,
     aspectRatioLock: 1,
     width: 0,
@@ -316,7 +316,7 @@ const CREATE_TEMPLATES = {
     scaleLayoutElementItemForProjectResolution(
       {
         type: "sprite-ref-save-load-slot-image",
-        name: "Sprite (Save Image)",
+        name: "Image (Save Image)",
         ...BASE_TRANSFORM,
         aspectRatioLock: 320 / 180,
         width: 320,

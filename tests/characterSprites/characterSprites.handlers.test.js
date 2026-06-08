@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  handlePreviewCanvasModeClick,
+  handlePreviewFitModeClick,
   handlePreviewNextClick,
   handlePreviewOverlayKeyDown,
   handlePreviewPreviousClick,
@@ -12,9 +14,7 @@ const createPreviewDeps = ({
   previewVisible = true,
 } = {}) => {
   const store = {
-    getState: vi.fn(() => ({
-      fullImagePreviewVisible: previewVisible,
-    })),
+    selectFullImagePreviewVisible: vi.fn(() => previewVisible),
     selectSelectedItemId: vi.fn(() => selectedItemId),
     selectAdjacentSpriteItemId: vi.fn(({ direction }) => {
       return direction === "next" ? "sprite-2" : "sprite-0";
@@ -26,6 +26,7 @@ const createPreviewDeps = ({
     })),
     setSelectedItemId: vi.fn(),
     showFullImagePreview: vi.fn(),
+    setFullImagePreviewDisplayMode: vi.fn(),
   };
 
   return {
@@ -96,7 +97,7 @@ describe("characterSprites preview handlers", () => {
     expect(previousEvent.stopPropagation).toHaveBeenCalledTimes(1);
   });
 
-  it("supports image-preview keyboard parity and ignores text entry targets", () => {
+  it("uses vertical keys to navigate preview items and ignores text entry targets", () => {
     globalThis.requestAnimationFrame = vi.fn((callback) => {
       callback();
       return 1;
@@ -104,10 +105,10 @@ describe("characterSprites preview handlers", () => {
     const deps = createPreviewDeps();
 
     handlePreviewOverlayKeyDown(deps, {
-      _event: createEvent("ArrowRight"),
+      _event: createEvent("ArrowDown"),
     });
     handlePreviewOverlayKeyDown(deps, {
-      _event: createEvent("ArrowLeft"),
+      _event: createEvent("ArrowUp"),
     });
     handlePreviewOverlayKeyDown(deps, {
       _event: createEvent("d", {
@@ -144,6 +145,107 @@ describe("characterSprites preview handlers", () => {
     expect(inputEvent.stopPropagation).not.toHaveBeenCalled();
   });
 
+  it("switches full sprite preview display modes from the overlay controls", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+    const deps = createPreviewDeps();
+    const canvasEvent = createEvent("click");
+    const fitEvent = createEvent("click");
+
+    handlePreviewCanvasModeClick(deps, {
+      _event: canvasEvent,
+    });
+    handlePreviewFitModeClick(deps, {
+      _event: fitEvent,
+    });
+
+    expect(deps.store.setFullImagePreviewDisplayMode).toHaveBeenNthCalledWith(
+      1,
+      {
+        displayMode: "canvas",
+      },
+    );
+    expect(deps.store.setFullImagePreviewDisplayMode).toHaveBeenNthCalledWith(
+      2,
+      {
+        displayMode: "fit",
+      },
+    );
+    expect(canvasEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(canvasEvent.stopPropagation).toHaveBeenCalledOnce();
+    expect(fitEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(fitEvent.stopPropagation).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledTimes(2);
+    expect(deps.refs.previewOverlay.focus).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses horizontal keys to switch full sprite preview display modes", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+    const deps = createPreviewDeps();
+
+    handlePreviewOverlayKeyDown(deps, {
+      _event: createEvent("ArrowLeft"),
+    });
+    handlePreviewOverlayKeyDown(deps, {
+      _event: createEvent("ArrowRight"),
+    });
+    handlePreviewOverlayKeyDown(deps, {
+      _event: createEvent("h"),
+    });
+    handlePreviewOverlayKeyDown(deps, {
+      _event: createEvent("l"),
+    });
+
+    expect(deps.store.setFullImagePreviewDisplayMode).toHaveBeenNthCalledWith(
+      1,
+      {
+        displayMode: "canvas",
+      },
+    );
+    expect(deps.store.setFullImagePreviewDisplayMode).toHaveBeenNthCalledWith(
+      2,
+      {
+        displayMode: "fit",
+      },
+    );
+    expect(deps.store.setFullImagePreviewDisplayMode).toHaveBeenNthCalledWith(
+      3,
+      {
+        displayMode: "canvas",
+      },
+    );
+    expect(deps.store.setFullImagePreviewDisplayMode).toHaveBeenNthCalledWith(
+      4,
+      {
+        displayMode: "fit",
+      },
+    );
+    expect(deps.render).toHaveBeenCalledTimes(4);
+    expect(deps.refs.previewOverlay.focus).toHaveBeenCalledTimes(4);
+    expect(deps.store.selectAdjacentSpriteItemId).not.toHaveBeenCalled();
+  });
+
+  it("does not use tab as a full sprite preview shortcut", () => {
+    const deps = createPreviewDeps();
+    const event = createEvent("Tab");
+
+    handlePreviewOverlayKeyDown(deps, {
+      _event: event,
+    });
+
+    expect(deps.store.setFullImagePreviewDisplayMode).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.refs.previewOverlay.focus).not.toHaveBeenCalled();
+    expect(deps.store.selectAdjacentSpriteItemId).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(event.stopPropagation).not.toHaveBeenCalled();
+  });
+
   it("does not navigate when the preview is hidden", () => {
     const deps = createPreviewDeps({
       previewVisible: false,
@@ -156,6 +258,7 @@ describe("characterSprites preview handlers", () => {
 
     expect(deps.store.selectSelectedItemId).not.toHaveBeenCalled();
     expect(deps.store.selectAdjacentSpriteItemId).not.toHaveBeenCalled();
+    expect(deps.store.setFullImagePreviewDisplayMode).not.toHaveBeenCalled();
     expect(event.preventDefault).not.toHaveBeenCalled();
     expect(event.stopPropagation).not.toHaveBeenCalled();
   });

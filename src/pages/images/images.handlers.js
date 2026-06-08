@@ -100,6 +100,9 @@ const syncImagePageData = ({ store, repositoryState } = {}) => {
       itemType: "image",
     }),
   });
+  store.setProjectResolution({
+    projectResolution: repositoryState?.project?.resolution,
+  });
 };
 
 const {
@@ -242,8 +245,7 @@ const {
   focusKeyboardScope: focusGroupView,
   handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
 } = createFileExplorerKeyboardScopeHandlers({
-  isNavigationBlocked: ({ deps }) =>
-    deps.store.getState().fullImagePreviewVisible,
+  isNavigationBlocked: ({ deps }) => deps.store.selectFullImagePreviewVisible(),
   onEnterKey: ({ deps, selectedItemId }) => {
     openImagePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
   },
@@ -263,7 +265,7 @@ const focusPreviewOverlay = ({ refs } = {}) => {
 const handleZoomShortcutKeyDown = (deps, payload) => {
   const event = payload?._event;
   if (
-    deps.store.getState().fullImagePreviewVisible &&
+    deps.store.selectFullImagePreviewVisible() &&
     isResourceZoomShortcutKeyEvent(event)
   ) {
     event.preventDefault();
@@ -355,11 +357,11 @@ const navigateImagePreview = (deps, { direction, distance, clamp } = {}) => {
 };
 
 const resolvePreviewNavigationDirection = (event) => {
-  if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+  if (event.key === "ArrowDown") {
     return { direction: "next" };
   }
 
-  if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+  if (event.key === "ArrowUp") {
     return { direction: "previous" };
   }
 
@@ -381,12 +383,37 @@ const resolvePreviewNavigationDirection = (event) => {
   }
 
   const key = String(event.key ?? "").toLowerCase();
-  if (key === "j" || key === "l") {
+  if (key === "j") {
     return { direction: "next" };
   }
 
-  if (key === "k" || key === "h") {
+  if (key === "k") {
     return { direction: "previous" };
+  }
+
+  return undefined;
+};
+
+const resolvePreviewDisplayMode = (event) => {
+  if (event.altKey || event.ctrlKey || event.metaKey) {
+    return undefined;
+  }
+
+  if (event.key === "ArrowLeft") {
+    return "canvas";
+  }
+
+  if (event.key === "ArrowRight") {
+    return "fit";
+  }
+
+  const key = String(event.key ?? "").toLowerCase();
+  if (key === "h") {
+    return "canvas";
+  }
+
+  if (key === "l") {
+    return "fit";
   }
 
   return undefined;
@@ -628,11 +655,31 @@ export const handlePreviewNextClick = (deps, payload) => {
   navigateImagePreview(deps, { direction: "next" });
 };
 
+export const handlePreviewFitModeClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const { store, render } = deps;
+  store.setFullImagePreviewDisplayMode({ displayMode: "fit" });
+  render();
+  focusPreviewOverlay(deps);
+};
+
+export const handlePreviewCanvasModeClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const { store, render } = deps;
+  store.setFullImagePreviewDisplayMode({ displayMode: "canvas" });
+  render();
+  focusPreviewOverlay(deps);
+};
+
 export const handlePreviewOverlayKeyDown = (deps, payload) => {
   const { store } = deps;
   const event = payload._event;
 
-  if (!store.getState().fullImagePreviewVisible) {
+  if (!store.selectFullImagePreviewVisible()) {
     return;
   }
 
@@ -644,6 +691,16 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
     event.preventDefault();
     event.stopPropagation();
     closeImagePreview(deps);
+    return;
+  }
+
+  const displayMode = resolvePreviewDisplayMode(event);
+  if (displayMode) {
+    event.preventDefault();
+    event.stopPropagation();
+    store.setFullImagePreviewDisplayMode({ displayMode });
+    deps.render();
+    focusPreviewOverlay(deps);
     return;
   }
 

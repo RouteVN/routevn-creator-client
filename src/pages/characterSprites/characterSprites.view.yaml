@@ -80,6 +80,18 @@ refs:
         handler: handlePreviewNextClick
         preventDefault: true
         stopPropagation: true
+  previewFitModeButton:
+    eventListeners:
+      click:
+        handler: handlePreviewFitModeClick
+        preventDefault: true
+        stopPropagation: true
+  previewCanvasModeButton:
+    eventListeners:
+      click:
+        handler: handlePreviewCanvasModeClick
+        preventDefault: true
+        stopPropagation: true
   editDialog:
     eventListeners:
       close:
@@ -151,8 +163,15 @@ styles:
   ".imagePreviewEdgeNext":
     right: "0"
     background: linear-gradient(to left, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0))
+  ".imagePreviewTransparencyGrid":
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 12px, 12px -12px, -12px 0"
+    background-repeat: repeat
+    background-size: 24px 24px
   ".imagePreviewFrame":
     position: relative
+    box-shadow: 0 0 0 1px var(--border)
     overflow: hidden
     cursor: default
 template:
@@ -218,12 +237,17 @@ template:
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - $when: fullImagePreviewVisible
-    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none;"':
-      - 'rtgl-view w=f h=f pos=fix edge=f style="background-color: rgba(0, 0, 0, 0.9);"': null
+    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none; background-color: rgba(0, 0, 0, 0.9);"':
       - $if fullImagePreviewFileId:
+          - 'rtgl-view pos=fix z=3002 d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="top: 24px; left: 50%; transform: translateX(-50%); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
+              - 'rtgl-view#previewCanvasModeButton role=button aria-label="Show sprite at canvas scale" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="Show sprite at canvas scale" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewCanvasModeButton.borderColor} bgc=${fullImagePreviewCanvasModeButton.backgroundColor} cur=pointer':
+                  - rtgl-svg svg=canvas-scale wh=18 c=${fullImagePreviewCanvasModeButton.iconColor}: null
+              - 'rtgl-view#previewFitModeButton role=button aria-label="Fit sprite to preview" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="Fit sprite to preview" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewFitModeButton.borderColor} bgc=${fullImagePreviewFitModeButton.backgroundColor} cur=pointer':
+                  - rtgl-svg svg=fit-to-frame wh=18 c=${fullImagePreviewFitModeButton.iconColor}: null
           - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-              - 'div#previewImageFrame.imagePreviewFrame style="${fullImagePreviewFrameStyle}"':
-                  - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null
+              - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
+                  - 'div style="${fullImagePreviewImageWrapperStyle}"':
+                      - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null
                   - $if fullImagePreviewPreviousVisible:
                       - div#previewPrevious.imagePreviewEdge.imagePreviewEdgePrevious role=button aria-label="Previous sprite": null
                   - $if fullImagePreviewNextVisible:
