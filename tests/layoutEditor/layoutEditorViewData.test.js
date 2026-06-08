@@ -39,6 +39,22 @@ describe("layoutEditorViewData", () => {
     });
   });
 
+  it("builds image create actions with the image default name", () => {
+    const [imageItem] = toLayoutEditorContextMenuItems([
+      {
+        label: "Image",
+        type: "item",
+        createType: "sprite",
+      },
+    ]);
+
+    expect(imageItem.value).toMatchObject({
+      action: "new-child-item",
+      type: "sprite",
+      name: "Image",
+    });
+  });
+
   it("builds form submit button create actions as containers with a static form role", () => {
     const [submitItem] = toLayoutEditorContextMenuItems([
       {
@@ -93,7 +109,7 @@ describe("layoutEditorViewData", () => {
         createType: "container",
       },
       {
-        label: "Sprite",
+        label: "Image",
         type: "item",
         createType: "sprite",
       },

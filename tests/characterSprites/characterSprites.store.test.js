@@ -164,6 +164,33 @@ describe("characterSprites store", () => {
     ).toEqual(["sprite-2"]);
   });
 
+  it("provides tag labels to the edit form tag selector", () => {
+    const state = createInitialState();
+    state.tagsData = {
+      tree: [{ id: "tag-idle" }],
+      items: {
+        "tag-idle": {
+          id: "tag-idle",
+          type: "tag",
+          name: "Idle",
+        },
+      },
+    };
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.editForm.fields[2]).toMatchObject({
+      name: "tagIds",
+      type: "tag-select",
+      options: [
+        {
+          label: "Idle",
+          value: "tag-idle",
+        },
+      ],
+    });
+  });
+
   it("uses the original file and exposes adjacent controls for the full preview overlay", () => {
     const state = createInitialState();
     state.characterName = "Hero";

@@ -44,11 +44,13 @@ export const createTagField = ({
   label = "Tags",
   placeholder = "Select tags",
   addOptionLabel = "Add tag",
+  options = [],
 } = {}) => ({
   name,
   type: "tag-select",
   label,
   placeholder,
+  options,
   addOption: {
     label: addOptionLabel,
   },

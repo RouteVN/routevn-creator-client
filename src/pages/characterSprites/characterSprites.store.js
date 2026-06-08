@@ -181,7 +181,7 @@ const buildFolderDetailFields = (folder) => {
 
 const getPreviewFileId = (item) => item?.thumbnailFileId ?? item?.fileId;
 
-const createEditForm = () => ({
+const createEditForm = ({ tagOptions } = {}) => ({
   title: "Edit Sprite",
   fields: [
     {
@@ -196,7 +196,9 @@ const createEditForm = () => ({
       label: "Description",
       required: false,
     },
-    createTagField(),
+    createTagField({
+      options: tagOptions ?? [],
+    }),
     {
       type: "slot",
       slot: "image-slot",
@@ -767,6 +769,11 @@ export const selectViewData = ({ state }) => {
         direction: "next",
       })
     : undefined;
+  const tagViewData = buildTagViewData({
+    state,
+    selectedItem,
+    createTagFormDefinition: createTagForm(),
+  });
 
   return {
     flatItems,
@@ -778,11 +785,7 @@ export const selectViewData = ({ state }) => {
     selectedDetailId,
     selectedDetailName,
     selectedItemName: selectedDetailName,
-    ...buildTagViewData({
-      state,
-      selectedItem,
-      createTagFormDefinition: createTagForm(),
-    }),
+    ...tagViewData,
     detailFields,
     ...buildMobileResourcePageViewData({
       state,
@@ -823,7 +826,9 @@ export const selectViewData = ({ state }) => {
     centerItemContextMenuItems,
     title: state.characterName,
     isEditDialogOpen: state.isEditDialogOpen,
-    editForm: createEditForm(),
+    editForm: createEditForm({
+      tagOptions: tagViewData.tagFilterOptions,
+    }),
     editDefaultValues: state.editDefaultValues,
     editPreviewFileId: state.editPreviewFileId,
     isFolderNameDialogOpen: state.isFolderNameDialogOpen,
