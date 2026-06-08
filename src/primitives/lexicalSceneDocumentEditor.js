@@ -1222,7 +1222,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         return;
       }
 
-      this.focusContainer();
+      this.focusContainer({ scrollLine: false });
     });
   }
 
@@ -1671,12 +1671,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return nativeSelection.start !== payload.cursorPosition;
   }
 
-  focusContainer() {
+  focusContainer({ scrollLine = true } = {}) {
     const selectedLineId = this.state.selectedLineId || this.state.lines[0]?.id;
     this.enterBlockMode({
       focusSurface: true,
       lineId: selectedLineId,
       emitSelectionChange: false,
+      scrollLine,
     });
   }
 
@@ -1749,6 +1750,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     focusSurface = true,
     lineId = this.state.selectedLineId || this.state.lines[0]?.id,
     emitSelectionChange = false,
+    scrollLine = true,
   } = {}) {
     this.clearPendingTextInputFallback();
     this.lastProgrammaticFocusTarget = undefined;
@@ -1757,7 +1759,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     if (lineId) {
       this.state.selectedLineId = lineId;
-      this.scrollLineIntoView({ lineId });
+      if (scrollLine) {
+        this.scrollLineIntoView({ lineId });
+      }
     }
 
     this.setMode("block");
@@ -2166,6 +2170,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       focusSurface: false,
       emitSelectionChange: false,
       lineId: this.state.selectedLineId,
+      // Blur can fire while section editors mount. Sync block state without
+      // scrolling, so scene entry stays pinned to the target section start.
+      scrollLine: false,
     });
     this.dispatchEvent(
       new CustomEvent("editor-blur", {

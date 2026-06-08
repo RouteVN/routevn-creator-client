@@ -1008,6 +1008,19 @@ const getSceneSectionIds = (scene) => {
   return sectionIds;
 };
 
+export const resolveSceneEditorEntrySelection = (scene, { sectionId } = {}) => {
+  const sections = Array.isArray(scene?.sections) ? scene.sections : [];
+  const selectedSection =
+    sections.find((section) => section.id === sectionId) ||
+    sections.find((section) => section.id === scene?.initialSectionId) ||
+    sections[0];
+
+  return {
+    sectionId: selectedSection?.id,
+    lineId: selectedSection?.lines?.[0]?.id,
+  };
+};
+
 export const updateSceneEditorSectionChanges = async (deps) => {
   const { store, graphicsService } = deps;
   const selectedSectionId = store.selectSelectedSectionId();
@@ -1051,11 +1064,7 @@ export const initializeSceneEditorPage = async (deps) => {
   } = deps;
   await projectService.ensureRepository();
 
-  const {
-    s,
-    sectionId: payloadSectionId,
-    lineId: payloadLineId,
-  } = appService.getPayload();
+  const { s, sectionId: payloadSectionId } = appService.getPayload();
   const sceneId = s;
 
   await projectService.setActiveSceneId(sceneId);
@@ -1066,19 +1075,13 @@ export const initializeSceneEditorPage = async (deps) => {
 
   const scene = store.selectScene();
   if (scene?.sections?.length > 0) {
-    const selectedSection =
-      scene.sections.find((section) => section.id === payloadSectionId) ||
-      scene.sections[0];
-    store.setSelectedSectionId({ selectedSectionId: selectedSection.id });
-
-    if (selectedSection.lines?.length > 0) {
-      const selectedLine =
-        selectedSection.lines.find((line) => line.id === payloadLineId) ||
-        selectedSection.lines[0];
-      store.setSelectedLineId({ selectedLineId: selectedLine.id });
-    } else {
-      store.setSelectedLineId({ selectedLineId: undefined });
-    }
+    const entrySelection = resolveSceneEditorEntrySelection(scene, {
+      sectionId: payloadSectionId,
+    });
+    store.setSelectedSectionId({
+      selectedSectionId: entrySelection.sectionId,
+    });
+    store.setSelectedLineId({ selectedLineId: entrySelection.lineId });
   }
 
   resetAssetLoadCache("initialize scene editor");

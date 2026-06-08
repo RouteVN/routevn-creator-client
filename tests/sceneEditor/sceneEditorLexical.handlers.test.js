@@ -14,6 +14,7 @@ import {
   handleNewLine,
   handleSectionMoveSceneFormActionClick,
   handleSelectedLineChanged,
+  scrollEntrySelectionIntoView,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 
 const installAnimationFrameQueue = () => {
@@ -37,6 +38,45 @@ const installAnimationFrameQueue = () => {
 };
 
 describe("sceneEditorLexical.handlers transform editor resize", () => {
+  it("resets stale section scroll when entering the first section", () => {
+    const scrollContainer = {
+      id: "sceneEditorSectionsScroll",
+      scrollTop: 420,
+      scrollLeft: 0,
+      style: {
+        scrollBehavior: "smooth",
+      },
+      scrollTo: vi.fn(({ top }) => {
+        scrollContainer.scrollTop = top;
+      }),
+    };
+    const deps = {
+      refs: {
+        sceneEditorSectionsScroll: scrollContainer,
+      },
+      store: {
+        selectSelectedSectionId: vi.fn(() => "section-1"),
+        selectScene: vi.fn(() => ({
+          sections: [
+            {
+              id: "section-1",
+            },
+          ],
+        })),
+      },
+    };
+
+    scrollEntrySelectionIntoView(deps);
+
+    expect(scrollContainer.scrollTop).toBe(0);
+    expect(scrollContainer.scrollTo).toHaveBeenCalledWith({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+    expect(scrollContainer.style.scrollBehavior).toBe("smooth");
+  });
+
   it("keeps x and y fixed while scaling from the anchor", () => {
     const transform = {
       x: 100,

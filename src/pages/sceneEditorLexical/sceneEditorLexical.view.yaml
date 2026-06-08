@@ -158,7 +158,7 @@ template:
                           - rtgl-text: ${sectionsGraph}
                 $else:
                   - 'rtgl-view#sceneEditorLeftEditor d=v w=f h=1fg style="min-width: 0; min-height: 0;"':
-                      - 'rtgl-view w=f ph=sm pb=md sv h=1fg style="min-width: 0; scroll-behavior: smooth; scroll-padding-top: 40px;"':
+                      - 'rtgl-view#sceneEditorSectionsScroll w=f ph=sm pb=md sv h=1fg style="min-width: 0; scroll-behavior: smooth; scroll-padding-top: 40px;"':
                           - $for section, sectionIndex in sectionEditorItems:
                               - 'rtgl-view#sectionBlock${sectionIndex} data-section-block-id=${section.id} data-section-id=${section.id} w=f mb=xl style="min-width: 0; scroll-margin-top: 0;"':
                                   - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c w=f h=40 ph=sm bgc=bg bwb=xs style="position: sticky; top: 0px; z-index: 5; min-width: 0;"':
