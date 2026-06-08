@@ -1943,6 +1943,73 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     }
   });
 
+  it("closes the section dropdown before showing a delete validation alert", async () => {
+    const store = {
+      selectDropdownMenu: vi.fn(() => ({
+        sectionId: "section-1",
+      })),
+      hideDropdownMenu: vi.fn(),
+      selectSceneId: vi.fn(() => "scene-1"),
+      selectSelectedSectionId: vi.fn(() => "section-1"),
+      selectDraftSaveTimerId: vi.fn(() => undefined),
+      selectDraftSectionBySectionId: vi.fn(() => ({
+        sceneId: "scene-1",
+        sectionId: "section-1",
+        dirty: false,
+        lines: [],
+      })),
+      selectPendingDraftSections: vi.fn(() => []),
+      setDraftSavePendingSinceAt: vi.fn(),
+    };
+    const render = vi.fn();
+    const showAlert = vi.fn();
+    const deps = {
+      store,
+      render,
+      refs: {},
+      projectService: {
+        deleteSectionItem: vi.fn(async () => ({
+          valid: false,
+          error: {
+            message:
+              "This section can't be deleted because another section references it.",
+          },
+        })),
+      },
+      subject: {
+        dispatch: vi.fn(),
+      },
+      appService: {
+        showAlert,
+      },
+    };
+
+    await expect(
+      handleDropdownMenuClickItem(deps, {
+        _event: {
+          detail: {
+            item: {
+              value: "delete-section",
+            },
+          },
+        },
+      }),
+    ).rejects.toThrow(
+      "This section can't be deleted because another section references it.",
+    );
+
+    expect(store.hideDropdownMenu).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalled();
+    expect(showAlert).toHaveBeenCalledWith({
+      message:
+        "This section can't be deleted because another section references it.",
+      title: "Error",
+    });
+    expect(render.mock.invocationCallOrder[0]).toBeLessThan(
+      showAlert.mock.invocationCallOrder[0],
+    );
+  });
+
   it("opens section create dialog with below placement from the section menu", async () => {
     const store = {
       selectDropdownMenu: vi.fn(() => ({

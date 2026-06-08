@@ -2539,14 +2539,21 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   }
 
   if (action === "delete-section") {
+    render();
     await flushSceneEditorDrafts(deps, { force: true });
     await runSceneEditorPersistence(
       deps,
       async () => {
-        await projectService.deleteSectionItem({
-          sceneId,
-          sectionIds: [sectionId],
-        });
+        assertSceneEditorCommandResult(
+          await projectService.deleteSectionItem({
+            sceneId,
+            sectionIds: [sectionId],
+          }),
+          {
+            appService,
+            fallbackMessage: "Failed to delete section",
+          },
+        );
       },
       {
         label: "delete-section",
