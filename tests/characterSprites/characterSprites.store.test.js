@@ -6,10 +6,10 @@ import {
   setActiveTagIds,
   selectAdjacentSpriteItemId,
   selectViewData,
+  setFullImagePreviewDisplayMode,
   setProjectResolution,
   setSelectedItemId,
   showFullImagePreview,
-  toggleFullImagePreviewDisplayMode,
 } from "../../src/pages/characterSprites/characterSprites.store.js";
 
 describe("characterSprites store", () => {
@@ -240,7 +240,7 @@ describe("characterSprites store", () => {
     expect(viewData.fullImagePreviewNextVisible).toBe(true);
   });
 
-  it("uses project resolution for full sprite preview sizing and toggles mode", () => {
+  it("uses project resolution for full sprite preview sizing and sets mode", () => {
     const state = createInitialState();
     state.characterName = "Hero";
     state.spritesData = {
@@ -300,7 +300,12 @@ describe("characterSprites store", () => {
       "height: 5%",
     );
 
-    toggleFullImagePreviewDisplayMode({ state });
+    setFullImagePreviewDisplayMode(
+      { state },
+      {
+        displayMode: "fit",
+      },
+    );
 
     const fitViewData = selectViewData({ state });
     expect(state.fullImagePreviewDisplayMode).toBe("fit");
@@ -310,7 +315,12 @@ describe("characterSprites store", () => {
     expect(fitViewData.fullImagePreviewCanvasModeButton.selected).toBe(false);
     expect(fitViewData.fullImagePreviewFitModeButton.selected).toBe(true);
 
-    toggleFullImagePreviewDisplayMode({ state });
+    setFullImagePreviewDisplayMode(
+      { state },
+      {
+        displayMode: "canvas",
+      },
+    );
     expect(state.fullImagePreviewDisplayMode).toBe("canvas");
   });
 

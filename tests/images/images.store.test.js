@@ -4,13 +4,13 @@ import {
   createInitialState,
   selectAdjacentImageItemId,
   selectViewData,
+  setFullImagePreviewDisplayMode,
   setDetailTagIds,
   setItems,
   setProjectResolution,
   setSelectedItemId,
   setTagsData,
   showFullImagePreview,
-  toggleFullImagePreviewDisplayMode,
 } from "../../src/pages/images/images.store.js";
 
 const createContext = () => ({
@@ -192,15 +192,24 @@ describe("images store preview navigation", () => {
     expect(viewData.fullImagePreviewFitModeButton.selected).toBe(false);
   });
 
-  it("toggles the full preview display mode", () => {
+  it("sets the full preview display mode", () => {
     const context = createContext();
 
     expect(context.state.fullImagePreviewDisplayMode).toBe("canvas");
 
-    toggleFullImagePreviewDisplayMode(context);
+    setFullImagePreviewDisplayMode(context, {
+      displayMode: "fit",
+    });
     expect(context.state.fullImagePreviewDisplayMode).toBe("fit");
 
-    toggleFullImagePreviewDisplayMode(context);
+    setFullImagePreviewDisplayMode(context, {
+      displayMode: "canvas",
+    });
+    expect(context.state.fullImagePreviewDisplayMode).toBe("canvas");
+
+    setFullImagePreviewDisplayMode(context, {
+      displayMode: "unknown",
+    });
     expect(context.state.fullImagePreviewDisplayMode).toBe("canvas");
   });
 

@@ -676,13 +676,6 @@ export const setFullImagePreviewDisplayMode = (
 export const selectFullImagePreviewVisible = ({ state }) =>
   state.fullImagePreviewVisible;
 
-export const toggleFullImagePreviewDisplayMode = ({ state }) => {
-  state.fullImagePreviewDisplayMode =
-    state.fullImagePreviewDisplayMode === FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS
-      ? FULL_IMAGE_PREVIEW_DISPLAY_MODE_FIT
-      : FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
-};
-
 export const selectViewData = ({ state }) => {
   const flatItems = applyFolderRequiredRootDragOptions(
     toFlatItems(state.spritesData),

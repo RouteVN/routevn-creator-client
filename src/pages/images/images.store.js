@@ -428,13 +428,6 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
 export const selectFullImagePreviewVisible = ({ state }) =>
   state.fullImagePreviewVisible;
 
-export const toggleFullImagePreviewDisplayMode = ({ state }) => {
-  state.fullImagePreviewDisplayMode =
-    state.fullImagePreviewDisplayMode === FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS
-      ? FULL_IMAGE_PREVIEW_DISPLAY_MODE_FIT
-      : FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
-};
-
 export const selectViewData = (context) => {
   const viewData = selectMediaViewData(context);
   const flatItems = applyFolderRequiredRootDragOptions(viewData.flatItems);

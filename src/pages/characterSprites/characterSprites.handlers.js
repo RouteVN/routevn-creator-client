@@ -225,11 +225,11 @@ const navigateSpritePreview = (deps, { direction, distance, clamp } = {}) => {
 };
 
 const resolvePreviewNavigationDirection = (event) => {
-  if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+  if (event.key === "ArrowDown") {
     return { direction: "next" };
   }
 
-  if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+  if (event.key === "ArrowUp") {
     return { direction: "previous" };
   }
 
@@ -251,12 +251,37 @@ const resolvePreviewNavigationDirection = (event) => {
   }
 
   const key = String(event.key ?? "").toLowerCase();
-  if (key === "j" || key === "l") {
+  if (key === "j") {
     return { direction: "next" };
   }
 
-  if (key === "k" || key === "h") {
+  if (key === "k") {
     return { direction: "previous" };
+  }
+
+  return undefined;
+};
+
+const resolvePreviewDisplayMode = (event) => {
+  if (event.altKey || event.ctrlKey || event.metaKey) {
+    return undefined;
+  }
+
+  if (event.key === "ArrowLeft") {
+    return "canvas";
+  }
+
+  if (event.key === "ArrowRight") {
+    return "fit";
+  }
+
+  const key = String(event.key ?? "").toLowerCase();
+  if (key === "h") {
+    return "canvas";
+  }
+
+  if (key === "l") {
+    return "fit";
   }
 
   return undefined;
@@ -670,10 +695,11 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
     return;
   }
 
-  if (event.key === "Tab") {
+  const displayMode = resolvePreviewDisplayMode(event);
+  if (displayMode) {
     event.preventDefault();
     event.stopPropagation();
-    store.toggleFullImagePreviewDisplayMode();
+    store.setFullImagePreviewDisplayMode({ displayMode });
     deps.render();
     focusPreviewOverlay(deps);
     return;
