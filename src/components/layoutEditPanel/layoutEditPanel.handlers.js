@@ -2064,16 +2064,6 @@ export const handleImageSelectorImageSelected = (deps, payload) => {
   });
 };
 
-export const handleImageSelectorImageDoubleClick = (deps, payload) => {
-  const imageId = payload?._event?.detail?.imageId;
-  if (!imageId) {
-    return;
-  }
-
-  deps.store.showFullImagePreview({ imageId });
-  deps.render();
-};
-
 export const handleImageSelectorFileExplorerClickItem = (deps, payload) => {
   const itemId = payload?._event?.detail?.itemId;
   if (!itemId) {

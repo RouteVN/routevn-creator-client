@@ -240,14 +240,14 @@ template:
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - $when: fullImagePreviewVisible
-    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 10000; cursor: default; outline: none; background-color: rgba(0, 0, 0, 0.9);"':
+    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none; background-color: rgba(0, 0, 0, 0.9);"':
       - $if fullImagePreviewFileId:
           - 'rtgl-view pos=fix z=3002 d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="top: 24px; left: 50%; transform: translateX(-50%); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
               - 'rtgl-view#previewCanvasModeButton role=button aria-label="Show image at canvas scale" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="Show image at canvas scale" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewCanvasModeButton.borderColor} bgc=${fullImagePreviewCanvasModeButton.backgroundColor} cur=pointer':
                   - rtgl-svg svg=canvas-scale wh=18 c=${fullImagePreviewCanvasModeButton.iconColor}: null
               - 'rtgl-view#previewFitModeButton role=button aria-label="Fit image to preview" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="Fit image to preview" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewFitModeButton.borderColor} bgc=${fullImagePreviewFitModeButton.backgroundColor} cur=pointer':
                   - rtgl-svg svg=fit-to-frame wh=18 c=${fullImagePreviewFitModeButton.iconColor}: null
-          - rtgl-view pos=fix edge=f ah=c av=c z=10001:
+          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
               - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
                   - 'div style="${fullImagePreviewImageWrapperStyle}"':
                       - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null

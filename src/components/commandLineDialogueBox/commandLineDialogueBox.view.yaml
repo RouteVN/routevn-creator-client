@@ -159,10 +159,10 @@ template:
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: Select
   - $if fullImagePreviewVisible:
-      - rtgl-view#previewOverlay pos=fix edge=f z=10000 cur=pointer:
+      - rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
           - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
           - $if fullImagePreviewFileId:
-              - rtgl-view pos=fix edge=f ah=c av=c z=10001:
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
                   - $if fullImagePreviewKind == 'spritesheet':
                       - 'rvn-spritesheet-preview key=${fullImagePreviewKey} fileId=${fullImagePreviewFileId} :atlas=${fullImagePreviewAtlas} :animation=${fullImagePreviewAnimation} w=80% h=80% emptyLabel="No preview"': null
                     $else:
