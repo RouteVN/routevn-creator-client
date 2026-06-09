@@ -105,4 +105,81 @@ describe("dialogue layout projection", () => {
       },
     ]);
   });
+
+  it("projects text reveal indicator spritesheet refs for ADV dialogue content", () => {
+    const spritesheetsData = {
+      items: {
+        "sheet-indicator": {
+          id: "sheet-indicator",
+          type: "spritesheet",
+          fileId: "file-sheet",
+          jsonData: {
+            frames: {
+              "blink-0": {
+                frame: {
+                  x: 0,
+                  y: 0,
+                  w: 18,
+                  h: 20,
+                },
+              },
+            },
+          },
+          animations: {
+            blink: {
+              frames: ["blink-0"],
+              fps: 12,
+              loop: true,
+            },
+          },
+        },
+      },
+      tree: [{ id: "sheet-indicator", children: [] }],
+    };
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "dialogue-text",
+          type: "text-revealing-ref-dialogue-content",
+          indicator: {
+            revealing: {
+              kind: "spritesheet",
+              resourceId: "sheet-indicator",
+              animationName: "blink",
+              width: 18,
+              height: 20,
+              offsetX: 16,
+              offsetY: 0,
+            },
+          },
+        },
+      ],
+      {},
+      emptyCollection,
+      emptyCollection,
+      emptyCollection,
+      { layoutId: "layout-1", spritesheetsData },
+    );
+
+    expect(elements[0].indicator).toEqual({
+      revealing: {
+        kind: "spritesheet",
+        src: "file-sheet",
+        atlas: spritesheetsData.items["sheet-indicator"].jsonData,
+        clips: {
+          blink: ["blink-0"],
+        },
+        playback: {
+          autoplay: true,
+          fps: 12,
+          loop: true,
+          clip: "blink",
+        },
+        width: 18,
+        height: 20,
+        offsetX: 16,
+        offsetY: 0,
+      },
+    });
+  });
 });

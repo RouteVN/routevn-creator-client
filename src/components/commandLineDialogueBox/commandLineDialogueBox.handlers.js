@@ -1,5 +1,8 @@
 import { toFlatItems } from "../../internal/project/tree.js";
-import { isCharacterSpriteResourceItem } from "../../internal/characterSpritePreview.js";
+import {
+  buildCharacterSpritePreviewLayer,
+  isCharacterSpriteResourceItem,
+} from "../../internal/characterSpritePreview.js";
 
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
@@ -831,11 +834,18 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
     return;
   }
 
+  const previewLayer = buildCharacterSpritePreviewLayer(sprite);
   store.setTempSelectedSpriteId({
     groupId: store.getState().selectedSpriteGroupId,
     spriteId,
   });
-  store.showFullImagePreview({ fileId: sprite.fileId });
+  store.showFullImagePreview({
+    fileId: previewLayer.fileId,
+    kind: previewLayer.kind,
+    atlas: previewLayer.atlas,
+    animation: previewLayer.animation,
+    previewKey: previewLayer.previewKey,
+  });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

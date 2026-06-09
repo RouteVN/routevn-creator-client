@@ -84,6 +84,69 @@ describe("layoutEditPanel text content", () => {
         label: "Score",
         variableType: "number",
       },
+      {
+        id: "isReady",
+        label: "Is Ready",
+        variableType: "boolean",
+      },
+    ]);
+  });
+
+  it("provides structured summary parts for variable chips in the edit panel", () => {
+    const state = createInitialState();
+
+    setValues(
+      { state },
+      {
+        values: {
+          type: "text",
+          content: [
+            {
+              reference: {
+                resourceId: "skipMode",
+              },
+            },
+            {
+              text: " / 456 ghjk uuu hjkjh",
+            },
+          ],
+        },
+      },
+    );
+    setVariablesData(
+      { state },
+      {
+        variablesData: {
+          items: {
+            skipMode: {
+              type: "variable",
+              name: "Skipping",
+              variableType: "boolean",
+            },
+          },
+          tree: [{ id: "skipMode" }],
+        },
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      props: createProps("text"),
+      constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+    });
+
+    expect(viewData.textContentSummaryParts).toEqual([
+      {
+        key: "reference-skipMode-0",
+        type: "reference",
+        resourceId: "skipMode",
+        label: "Skipping",
+      },
+      {
+        key: "text-1",
+        type: "text",
+        text: " / 456 ghjk uuu hjkjh",
+      },
     ]);
   });
 });

@@ -1,6 +1,8 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  buildCharacterSpritePreviewLayer,
   buildCharacterSpritePreviewFileIds,
+  buildCharacterSpritePreviewLayers,
   isCharacterSpriteResourceItem,
 } from "../../internal/characterSpritePreview.js";
 
@@ -171,11 +173,24 @@ const buildSpriteGroupBoxViewData = ({
   });
 };
 
+const buildSpritePreviewItemViewData = (item = {}) => {
+  const previewLayer = buildCharacterSpritePreviewLayer(item);
+  return {
+    ...item,
+    previewKind: previewLayer?.kind,
+    previewFileId: previewLayer?.fileId,
+    previewAtlas: previewLayer?.atlas,
+    previewAnimation: previewLayer?.animation,
+    previewKey: previewLayer?.previewKey,
+  };
+};
+
 const buildSelectableTreeData = ({
   collection,
   selectedItemId,
   syntheticRootId,
   itemFilter = () => true,
+  itemViewMapper = (item) => item,
   hideEmptyGroups = false,
   searchQuery = "",
 } = {}) => {
@@ -203,7 +218,7 @@ const buildSelectableTreeData = ({
     .map((child) => {
       const isSelected = child.id === selectedItemId;
       return {
-        ...child,
+        ...itemViewMapper(child),
         itemBorderColor: isSelected ? "pr" : "bo",
         itemHoverBorderColor: isSelected ? "pr" : "ac",
       };
@@ -214,7 +229,7 @@ const buildSelectableTreeData = ({
       const children = group.children.filter(filterVisibleItem).map((child) => {
         const isSelected = child.id === selectedItemId;
         return {
-          ...child,
+          ...itemViewMapper(child),
           itemBorderColor: isSelected ? "pr" : "bo",
           itemHoverBorderColor: isSelected ? "pr" : "ac",
         };
@@ -293,7 +308,11 @@ export const createInitialState = () => ({
   clearPage: false,
   searchQuery: "",
   fullImagePreviewVisible: false,
+  fullImagePreviewKind: "image",
   fullImagePreviewFileId: undefined,
+  fullImagePreviewAtlas: undefined,
+  fullImagePreviewAnimation: undefined,
+  fullImagePreviewKey: undefined,
 
   defaultValues: {
     mode: "adv",
@@ -557,18 +576,30 @@ export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
 };
 
-export const showFullImagePreview = ({ state }, { fileId } = {}) => {
+export const showFullImagePreview = (
+  { state },
+  { fileId, kind, atlas, animation, previewKey } = {},
+) => {
   if (!fileId) {
     return;
   }
 
   state.fullImagePreviewVisible = true;
+  state.fullImagePreviewKind = kind === "spritesheet" ? "spritesheet" : "image";
   state.fullImagePreviewFileId = fileId;
+  state.fullImagePreviewAtlas = atlas;
+  state.fullImagePreviewAnimation = animation;
+  state.fullImagePreviewKey =
+    previewKey ?? `${state.fullImagePreviewKind}:${fileId}`;
 };
 
 export const hideFullImagePreview = ({ state }) => {
   state.fullImagePreviewVisible = false;
+  state.fullImagePreviewKind = "image";
   state.fullImagePreviewFileId = undefined;
+  state.fullImagePreviewAtlas = undefined;
+  state.fullImagePreviewAnimation = undefined;
+  state.fullImagePreviewKey = undefined;
 };
 
 export const setSelectedMode = ({ state }, { mode } = {}) => {
@@ -685,12 +716,20 @@ export const selectViewData = ({ state, props }) => {
         state.selectedSpriteIds?.[spriteSelectionGroup.id],
     ),
   });
+  const spritePreviewLayers = buildCharacterSpritePreviewLayers({
+    spritesCollection: selectedSpriteCharacter?.sprites,
+    spriteIds: spriteSelectionGroups.map(
+      (spriteSelectionGroup) =>
+        state.selectedSpriteIds?.[spriteSelectionGroup.id],
+    ),
+  });
   const selectedSpriteCharacterView = selectedSpriteCharacter
     ? {
         ...selectedSpriteCharacter,
         displayName: selectedSpriteCharacter.name || "Unnamed Character",
-        hasSpritePreview: spritePreviewFileIds.length > 0,
+        hasSpritePreview: spritePreviewLayers.length > 0,
         spritePreviewFileIds,
+        spritePreviewLayers,
         spriteGroupBoxes,
         showSpriteGroupBoxes: spriteGroupBoxes.length > 1,
       }
@@ -699,6 +738,7 @@ export const selectViewData = ({ state, props }) => {
         displayName: "No Character",
         hasSpritePreview: false,
         spritePreviewFileIds: [],
+        spritePreviewLayers: [],
         spriteGroupBoxes: [],
         showSpriteGroupBoxes: false,
       };
@@ -763,6 +803,7 @@ export const selectViewData = ({ state, props }) => {
           item,
           tagIds: selectedSpriteGroup?.tags,
         }),
+      itemViewMapper: buildSpritePreviewItemViewData,
       hideEmptyGroups: (selectedSpriteGroup?.tags ?? []).length > 0,
       searchQuery: state.searchQuery,
     });
@@ -918,6 +959,10 @@ export const selectViewData = ({ state, props }) => {
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
     fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewKind: state.fullImagePreviewKind,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    fullImagePreviewAtlas: state.fullImagePreviewAtlas,
+    fullImagePreviewAnimation: state.fullImagePreviewAnimation,
+    fullImagePreviewKey: state.fullImagePreviewKey,
   };
 };

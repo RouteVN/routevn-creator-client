@@ -34,37 +34,48 @@ refs:
     eventListeners:
       click:
         handler: handlePreviewOverlayClick
+styles:
+  ".layoutEditorImageFieldTransparencyGrid":
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
+    background-repeat: repeat
+    background-size: 12px 12px
 template:
   - rtgl-view g=md w=f:
       - rtgl-form#sliderCreateForm key=${formKey} :defaultValues=${defaultValues} :form=${form} w=f:
           - rtgl-view slot=slider-bar-image g=xs:
-              - rtgl-view#sliderCreateImageFieldBar data-field-name=barImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#sliderCreateImageFieldBar data-field-name=barImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if images.barImageId:
-                      - rvn-file-image imageId=${images.barImageId} source="thumbnail" w=280 h=84 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${images.barImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg: Select bar image
               - $if validationErrors.barImageId:
                   - rtgl-text s=sm c=de: ${validationErrors.barImageId}
           - rtgl-view slot=slider-thumb-image g=xs:
-              - rtgl-view#sliderCreateImageFieldThumb data-field-name=thumbImageId w=140 h=140 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#sliderCreateImageFieldThumb data-field-name=thumbImageId w=140 h=140 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if images.thumbImageId:
-                      - rvn-file-image imageId=${images.thumbImageId} source="thumbnail" w=140 h=140 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${images.thumbImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select thumb image
               - $if validationErrors.thumbImageId:
                   - rtgl-text s=sm c=de: ${validationErrors.thumbImageId}
           - rtgl-view slot=slider-hover-bar-image d=h g=sm av=c:
-              - rtgl-view#sliderCreateImageFieldHoverBar data-field-name=hoverBarImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#sliderCreateImageFieldHoverBar data-field-name=hoverBarImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if images.hoverBarImageId:
-                      - rvn-file-image imageId=${images.hoverBarImageId} source="thumbnail" w=280 h=84 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${images.hoverBarImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg: Select hover bar image
               - $if images.hoverBarImageId:
                   - rtgl-button#clearSliderCreateImageHoverBar data-field-name=hoverBarImageId variant=se size=sm: Clear
           - rtgl-view slot=slider-hover-thumb-image d=h g=sm av=c:
-              - rtgl-view#sliderCreateImageFieldHoverThumb data-field-name=hoverThumbImageId w=140 h=140 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#sliderCreateImageFieldHoverThumb data-field-name=hoverThumbImageId w=140 h=140 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if images.hoverThumbImageId:
-                      - rvn-file-image imageId=${images.hoverThumbImageId} source="thumbnail" w=140 h=140 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${images.hoverThumbImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select hover thumb image
               - $if images.hoverThumbImageId:

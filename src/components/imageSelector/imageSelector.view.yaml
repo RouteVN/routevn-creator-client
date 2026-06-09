@@ -6,6 +6,13 @@ refs:
         handler: handleImageItemClick
       dblclick:
         handler: handleImageItemDoubleClick
+styles:
+  ".imageSelectorThumbnailTransparencyGrid":
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
+    background-repeat: repeat
+    background-size: 12px 12px
 template:
   - 'rtgl-view#container h=1fg sv g=lg style="outline: none;"':
       - $for group, i in groups:
@@ -13,9 +20,11 @@ template:
               - rtgl-view d=h av=c g=md:
                   - rtgl-svg svg=folder wh=16: null
                   - rtgl-text: ${group.fullLabel}
-          - rtgl-view d=h w=f wrap g=lg:
+          - rtgl-view d=h w=f wrap g=md:
               - $for item, j in group.children:
-                  - rtgl-view#imageItemRef${i}x${j} data-item-id=${item.id} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm cur=pointer key=${item.id}:
-                      - rtgl-view p=md g=md br=md:
-                          - rvn-file-image w=200 h=120 imageId=${item.id} source="thumbnail": null
-                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
+                  - rtgl-view#imageItemRef${i}x${j} data-item-id=${item.id} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md cur=pointer key=${item.id}:
+                      - 'rtgl-view br=md w=200 pos=rel overflow=hidden style="${item.imageCardStyle}"':
+                          - 'div.imageSelectorThumbnailTransparencyGrid style="display: block; width: 100%; height: 120px; overflow: hidden;"':
+                              - rvn-file-image w=f h=f imageId=${item.id} source="thumbnail": null
+                          - rtgl-view w=f p=md:
+                              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}

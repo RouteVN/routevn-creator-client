@@ -87,29 +87,39 @@ refs:
     eventListeners:
       click:
         handler: handlePreviewOverlayClick
+styles:
+  ".layoutEditorImageFieldTransparencyGrid":
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
+    background-repeat: repeat
+    background-size: 12px 12px
 template:
   - $if previewBackgroundOnlyForm:
       - rtgl-form key=${previewBackgroundOnlyFormKey} w=f :form=${previewBackgroundOnlyForm}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if previewBackgroundImageId:
-                      - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
   - $if showDialogueForm:
       - rtgl-form#dialogueForm key=${dialogueFormKey} w=f :form=${dialogueForm} :defaultValues=${dialogueDefaultValues} :context=${dialogueContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if previewBackgroundImageId:
-                      - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
   - $if showNvlForm:
       - rtgl-form#nvlForm key=${nvlFormKey} w=f :form=${nvlForm} :defaultValues=${nvlDefaultValues} :context=${nvlContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if previewBackgroundImageId:
-                      - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
   - $if layoutType == 'dialogue-adv':
@@ -120,41 +130,46 @@ template:
   - $if showChoiceForm:
       - rtgl-form#choiceForm key=${choiceFormKey} w=f :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if previewBackgroundImageId:
-                      - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
   - $if showHistoryForm:
       - rtgl-form#historyForm key=${historyFormKey} w=f :form=${historyForm} :defaultValues=${historyDefaultValues} :context=${historyContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if previewBackgroundImageId:
-                      - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
   - $if showInputFieldsForm:
       - rtgl-form#inputFieldsForm key=${inputFieldsFormKey} w=f :form=${inputFieldsForm} :defaultValues=${inputFieldsDefaultValues}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if previewBackgroundImageId:
-                      - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
   - $if showPreviewVariablesForm:
       - rtgl-form#previewVariablesForm key=${previewVariablesFormKey} w=f :form=${previewVariablesForm} :defaultValues=${previewVariablesDefaultValues}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if previewBackgroundImageId:
-                      - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
   - $if showSaveLoadForm:
       - rtgl-form#saveLoadForm key=${saveLoadFormKey} w=f :form=${saveLoadForm} :defaultValues=${saveLoadDefaultValues} :context=${saveLoadContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if previewBackgroundImageId:
-                      - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                          - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.x} y=${dropdownMenu.y} ?open=${dropdownMenu.isOpen}: null

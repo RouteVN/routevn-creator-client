@@ -1,6 +1,8 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  buildCharacterSpritePreviewLayer,
   buildCharacterSpritePreviewFileIds,
+  buildCharacterSpritePreviewLayers,
   isCharacterSpriteResourceItem,
 } from "../../internal/characterSpritePreview.js";
 import {
@@ -240,6 +242,18 @@ const buildSpriteGroupBoxViewData = ({
   });
 };
 
+const buildSpritePreviewItemViewData = (item = {}) => {
+  const previewLayer = buildCharacterSpritePreviewLayer(item);
+  return {
+    ...item,
+    previewKind: previewLayer?.kind,
+    previewFileId: previewLayer?.fileId,
+    previewAtlas: previewLayer?.atlas,
+    previewAnimation: previewLayer?.animation,
+    previewKey: previewLayer?.previewKey,
+  };
+};
+
 const matchesSpriteGroupTags = ({ item, tagIds } = {}) => {
   if (!Array.isArray(tagIds) || tagIds.length === 0) {
     return true;
@@ -291,7 +305,11 @@ export const createInitialState = () => ({
   pendingCharacterTransformId: undefined,
   searchQuery: "",
   fullImagePreviewVisible: false,
+  fullImagePreviewKind: "image",
   fullImagePreviewFileId: undefined,
+  fullImagePreviewAtlas: undefined,
+  fullImagePreviewAnimation: undefined,
+  fullImagePreviewKey: undefined,
   customTransformEditorOpen: false,
   dropdownMenu: {
     isOpen: false,
@@ -763,18 +781,30 @@ export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
 };
 
-export const showFullImagePreview = ({ state }, { fileId } = {}) => {
+export const showFullImagePreview = (
+  { state },
+  { fileId, kind, atlas, animation, previewKey } = {},
+) => {
   if (!fileId) {
     return;
   }
 
   state.fullImagePreviewVisible = true;
+  state.fullImagePreviewKind = kind === "spritesheet" ? "spritesheet" : "image";
   state.fullImagePreviewFileId = fileId;
+  state.fullImagePreviewAtlas = atlas;
+  state.fullImagePreviewAnimation = animation;
+  state.fullImagePreviewKey =
+    previewKey ?? `${state.fullImagePreviewKind}:${fileId}`;
 };
 
 export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
+  state.fullImagePreviewKind = "image";
   state.fullImagePreviewFileId = undefined;
+  state.fullImagePreviewAtlas = undefined;
+  state.fullImagePreviewAnimation = undefined;
+  state.fullImagePreviewKey = undefined;
 };
 
 export const setSelectedCharacterIndex = ({ state }, { index } = {}) => {
@@ -918,7 +948,9 @@ export const selectCurrentSpriteItemById = ({ state }, { spriteId } = {}) => {
     return undefined;
   }
 
-  return toFlatItems(character.sprites).find((item) => item.id === spriteId);
+  return toFlatItems(character.sprites).find(
+    (item) => item.id === spriteId && isCharacterSpriteResourceItem(item),
+  );
 };
 
 export const setExistingCharacters = ({ state }, { characters } = {}) => {
@@ -952,6 +984,13 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
           selectedSpriteIdsByGroup?.[spriteSelectionGroup.id],
       ),
     });
+    const spritePreviewLayers = buildCharacterSpritePreviewLayers({
+      spritesCollection: characterData?.sprites,
+      spriteIds: spriteSelectionGroups.map(
+        (spriteSelectionGroup) =>
+          selectedSpriteIdsByGroup?.[spriteSelectionGroup.id],
+      ),
+    });
     const spriteGroupBoxes = buildSpriteGroupBoxViewData({
       spriteSelectionGroups,
       selectedSpriteIdsByGroup,
@@ -972,8 +1011,9 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
         spriteGroupBoxes,
         showSpriteGroupBoxes: spriteSelectionGroups.length > 1,
         spriteId: previewSpriteId,
-        hasSpritePreview: spritePreviewFileIds.length > 0,
+        hasSpritePreview: spritePreviewLayers.length > 0,
         spritePreviewFileIds,
+        spritePreviewLayers,
         spriteFileId: undefined,
         spriteName: char.spriteName || "",
       };
@@ -1001,8 +1041,9 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
       spriteGroupBoxes,
       showSpriteGroupBoxes: spriteSelectionGroups.length > 1,
       spriteId: previewSpriteId,
-      hasSpritePreview: spritePreviewFileIds.length > 0,
+      hasSpritePreview: spritePreviewLayers.length > 0,
       spritePreviewFileIds,
+      spritePreviewLayers,
       spriteFileId,
       spriteName: char.spriteName || "",
     };
@@ -1036,6 +1077,7 @@ export const selectViewData = ({ state, props = {} }) => {
     selectedItemId,
     syntheticRootId,
     itemFilter = () => true,
+    itemViewMapper = (item) => item,
     hideEmptyGroups = false,
   } = {}) => {
     const allItems = toFlatItems(collection);
@@ -1048,7 +1090,7 @@ export const selectViewData = ({ state, props = {} }) => {
       .map((child) => {
         const isSelected = child.id === selectedItemId;
         return {
-          ...child,
+          ...itemViewMapper(child),
           itemBorderColor: isSelected ? "pr" : "bo",
           itemHoverBorderColor: isSelected ? "pr" : "ac",
         };
@@ -1061,7 +1103,7 @@ export const selectViewData = ({ state, props = {} }) => {
           .map((child) => {
             const isSelected = child.id === selectedItemId;
             return {
-              ...child,
+              ...itemViewMapper(child),
               itemBorderColor: isSelected ? "pr" : "bo",
               itemHoverBorderColor: isSelected ? "pr" : "ac",
             };
@@ -1206,10 +1248,12 @@ export const selectViewData = ({ state, props = {} }) => {
         selectedItemId: selectedSpriteId,
         syntheticRootId: UNGROUPED_SPRITE_GROUP_ID,
         itemFilter: (item) =>
+          isCharacterSpriteResourceItem(item) &&
           matchesSpriteGroupTags({
             item,
             tagIds: selectedSpriteGroupTags,
           }),
+        itemViewMapper: buildSpritePreviewItemViewData,
         hideEmptyGroups: selectedSpriteGroupTags.length > 0,
       });
       spriteItems = spriteTreeData.explorerItems;
@@ -1301,7 +1345,11 @@ export const selectViewData = ({ state, props = {} }) => {
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
     fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewKind: state.fullImagePreviewKind,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    fullImagePreviewAtlas: state.fullImagePreviewAtlas,
+    fullImagePreviewAnimation: state.fullImagePreviewAnimation,
+    fullImagePreviewKey: state.fullImagePreviewKey,
     backgroundTransformEditor: createBackgroundTransformEditorViewData({
       state,
       props,

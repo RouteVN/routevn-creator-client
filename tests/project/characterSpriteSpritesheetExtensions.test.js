@@ -52,6 +52,22 @@ const createCharacterCommand = () =>
     },
   });
 
+const createFolderCommand = () =>
+  createCommand({
+    id: "folder-create",
+    type: COMMAND_TYPES.CHARACTER_SPRITE_CREATE,
+    payload: {
+      characterId: "hero",
+      spriteId: "folder-1",
+      data: {
+        type: "folder",
+        name: "Folder",
+      },
+      parentId: null,
+      index: 0,
+    },
+  });
+
 const createSpritesheetCommand = (overrides = {}) =>
   createCommand({
     id: "sheet-create",
@@ -166,6 +182,68 @@ describe("character sprite spritesheet creator-model extension", () => {
     expect(() =>
       assertSupportedProjectState(result.repositoryState),
     ).not.toThrow();
+  });
+
+  it("rejects character spritesheet creation under a folder missing from the tree", () => {
+    const baseResult = applyCommandsToRepositoryState({
+      repositoryState: structuredClone(initialProjectData),
+      projectId: "project-1",
+      commands: [...createBaseCommands(), createFolderCommand()],
+    });
+    expect(baseResult.valid).toBe(true);
+
+    const corruptedState = structuredClone(baseResult.repositoryState);
+    corruptedState.characters.items.hero.sprites.tree = [];
+
+    const result = applyCommandsToRepositoryState({
+      repositoryState: corruptedState,
+      projectId: "project-1",
+      commands: [
+        createSpritesheetCommand({
+          payload: {
+            ...createSpritesheetCommand().payload,
+            parentId: "folder-1",
+          },
+        }),
+      ],
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.error.message).toContain("payload.parentId");
+  });
+
+  it("rejects existing character spritesheet extensions missing from the tree", () => {
+    const baseResult = applyCommandsToRepositoryState({
+      repositoryState: structuredClone(initialProjectData),
+      projectId: "project-1",
+      commands: [...createBaseCommands(), createSpritesheetCommand()],
+    });
+    expect(baseResult.valid).toBe(true);
+
+    const corruptedState = structuredClone(baseResult.repositoryState);
+    corruptedState.characters.items.hero.sprites.tree = [];
+
+    const result = applyCommandsToRepositoryState({
+      repositoryState: corruptedState,
+      projectId: "project-1",
+      commands: [
+        createCommand({
+          id: "tag-create",
+          type: COMMAND_TYPES.TAG_CREATE,
+          payload: {
+            scopeKey: "characters",
+            tagId: "tag-any",
+            data: {
+              type: "tag",
+              name: "Any",
+            },
+          },
+        }),
+      ],
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.error.message).toContain("must exist in sprites.tree");
   });
 
   it("keeps character sprite tree moves working when a spritesheet is present", () => {

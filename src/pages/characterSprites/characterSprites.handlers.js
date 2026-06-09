@@ -25,6 +25,7 @@ import {
   handleResourceZoomShortcutKeyDown,
   isResourceZoomShortcutKeyEvent,
 } from "../../internal/ui/resourcePages/zoomShortcuts.js";
+import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import {
   buildImageResourceDataFromUploadResult,
@@ -76,6 +77,44 @@ const createPendingUploads = ({ files, parentId } = {}) => {
     parentId,
     name: file.name.replace(/\.[^.]+$/, ""),
   }));
+};
+
+const resolveCharacterSpriteUploadTarget = ({
+  appService,
+  store,
+  groupId,
+} = {}) => {
+  const parentId = resolveResourceParentId(groupId);
+  if (!parentId) {
+    return {
+      ok: true,
+      parentId: undefined,
+    };
+  }
+
+  const folder = store.selectFolderById({ folderId: parentId });
+  const folderInTree = store.selectSpriteTreeContainsItem({ itemId: parentId });
+  if (!folder || !folderInTree) {
+    console.error("Character sprite upload target is invalid", {
+      groupId,
+      parentId,
+      folderExists: Boolean(folder),
+      folderInTree,
+    });
+    appService.showAlert({
+      message: "Upload target folder is no longer available.",
+      title: "Error",
+    });
+    return {
+      ok: false,
+      parentId: undefined,
+    };
+  }
+
+  return {
+    ok: true,
+    parentId,
+  };
 };
 
 const createSpriteAbortError = () => {
@@ -553,7 +592,16 @@ const openSpritesheetCreateDialog = ({
   previewUrl,
   sourceFiles,
 } = {}) => {
-  const { refs, render, store } = deps;
+  const { appService, refs, render, store } = deps;
+  const uploadTarget = resolveCharacterSpriteUploadTarget({
+    appService,
+    store,
+    groupId: parentId,
+  });
+  if (!uploadTarget.ok) {
+    return false;
+  }
+
   revokeSpritesheetDialogPreviewUrl(store);
 
   const values = buildSpritesheetDialogValues({
@@ -563,7 +611,7 @@ const openSpritesheetCreateDialog = ({
     },
   });
   store.openSpritesheetCreateDialog({
-    parentId,
+    parentId: uploadTarget.parentId,
     values,
     importData,
     previewUrl,
@@ -571,6 +619,7 @@ const openSpritesheetCreateDialog = ({
   });
   render();
   syncSpritesheetDialogFormValues({ refs, values });
+  return true;
 };
 
 const openSpritesheetEditDialogForItem = ({
@@ -793,6 +842,15 @@ const createImageSpritesFromFiles = async ({
   parentId = undefined,
 } = {}) => {
   const { appService, projectService, store, render } = deps;
+  const uploadTarget = resolveCharacterSpriteUploadTarget({
+    appService,
+    store,
+    groupId: parentId,
+  });
+  if (!uploadTarget.ok) {
+    return;
+  }
+
   const imageFiles = filterImageFilesByExtension({ appService, files });
   if (imageFiles.length === 0) {
     return;
@@ -804,7 +862,10 @@ const createImageSpritesFromFiles = async ({
     return;
   }
 
-  const pendingUploads = createPendingUploads({ files: imageFiles, parentId });
+  const pendingUploads = createPendingUploads({
+    files: imageFiles,
+    parentId: uploadTarget.parentId,
+  });
   const remainingPendingUploadIds = new Set(
     pendingUploads.map((item) => item.id),
   );
@@ -870,7 +931,7 @@ const createImageSpritesFromFiles = async ({
               characterId,
               spriteId,
               fileRecords: uploadResult.fileRecords,
-              parentId,
+              parentId: uploadTarget.parentId,
               position: "last",
               data: buildImageResourceDataFromUploadResult(uploadResult),
             }),
@@ -1315,22 +1376,31 @@ const pickUploadKind = async ({ appService, event } = {}) => {
 };
 
 export const handleUploadClick = async (deps, payload) => {
-  const { appService } = deps;
+  const { appService, store } = deps;
   const { groupId } = payload._event.detail;
   const uploadKind = await pickUploadKind({
     appService,
     event: payload._event,
   });
 
-  if (uploadKind === "spritesheet") {
-    openSpritesheetCreateDialog({
-      deps,
-      parentId: groupId,
-    });
+  if (uploadKind !== "image" && uploadKind !== "spritesheet") {
     return;
   }
 
-  if (uploadKind !== "image") {
+  const uploadTarget = resolveCharacterSpriteUploadTarget({
+    appService,
+    store,
+    groupId,
+  });
+  if (!uploadTarget.ok) {
+    return;
+  }
+
+  if (uploadKind === "spritesheet") {
+    openSpritesheetCreateDialog({
+      deps,
+      parentId: uploadTarget.parentId,
+    });
     return;
   }
 
@@ -1357,16 +1427,25 @@ export const handleUploadClick = async (deps, payload) => {
   await createImageSpritesFromFiles({
     deps,
     files,
-    parentId: groupId,
+    parentId: uploadTarget.parentId,
   });
 };
 
 export const handleFilesDropped = async (deps, payload) => {
-  const { appService } = deps;
+  const { appService, store } = deps;
   const { files, rejectedFiles, targetGroupId } = payload._event.detail;
 
   if ((rejectedFiles?.length ?? 0) > 0) {
     showInvalidImportFormatToast(appService);
+    return;
+  }
+
+  const uploadTarget = resolveCharacterSpriteUploadTarget({
+    appService,
+    store,
+    groupId: targetGroupId,
+  });
+  if (!uploadTarget.ok) {
     return;
   }
 
@@ -1382,23 +1461,27 @@ export const handleFilesDropped = async (deps, payload) => {
       return;
     }
 
-    openSpritesheetCreateDialog({
+    const previewUrl = URL.createObjectURL(importData.pngFile);
+    const dialogOpened = openSpritesheetCreateDialog({
       deps,
       importData,
-      parentId: targetGroupId,
-      previewUrl: URL.createObjectURL(importData.pngFile),
+      parentId: uploadTarget.parentId,
+      previewUrl,
       sourceFiles: {
         pngFile: importData.pngFile,
         atlasFile: importData.atlasFile,
       },
     });
+    if (!dialogOpened) {
+      URL.revokeObjectURL(previewUrl);
+    }
     return;
   }
 
   await createImageSpritesFromFiles({
     deps,
     files,
-    parentId: targetGroupId,
+    parentId: uploadTarget.parentId,
   });
 };
 
@@ -1746,6 +1829,19 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
     return;
   }
 
+  let createParentId;
+  if (dialogMode === "create") {
+    const uploadTarget = resolveCharacterSpriteUploadTarget({
+      appService,
+      store,
+      groupId: dialogParentId,
+    });
+    if (!uploadTarget.ok) {
+      return;
+    }
+    createParentId = uploadTarget.parentId;
+  }
+
   const uploadResult = await uploadSpritesheetSource({
     appService,
     pngFile: dialogSourceFiles?.pngFile,
@@ -1785,7 +1881,7 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
             type: "spritesheet",
             ...spritesheetData,
           },
-          parentId: dialogParentId,
+          parentId: createParentId,
           position: "last",
         }),
     });

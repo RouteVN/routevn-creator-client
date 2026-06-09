@@ -211,6 +211,126 @@ describe("sceneEditor.lineDecorations", () => {
           characterName: "Aki",
           fileId: "file-body",
           spriteFileIds: ["file-body", "file-face"],
+          spritePreviewBr: "none",
+          spritePreviewLayers: [
+            {
+              kind: "image",
+              itemId: "sprite-body",
+              fileId: "file-body",
+              previewKey: "image:sprite-body:file-body",
+            },
+            {
+              kind: "image",
+              itemId: "sprite-face",
+              fileId: "file-face",
+              previewKey: "image:sprite-face:file-face",
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("builds spritesheet sprite previews for line character changes", () => {
+    const lines = [
+      {
+        id: "line-1",
+      },
+    ];
+    const atlas = {
+      frames: {
+        idle0: {
+          frame: { x: 0, y: 0, w: 64, h: 64 },
+        },
+        idle1: {
+          frame: { x: 64, y: 0, w: 64, h: 64 },
+        },
+      },
+    };
+    const animation = {
+      frames: [0, 1],
+      fps: 12,
+      loop: true,
+    };
+    const repositoryState = {
+      characters: {
+        items: {
+          "character-1": {
+            id: "character-1",
+            type: "character",
+            name: "Aki",
+            sprites: {
+              items: {
+                "sprite-idle": {
+                  id: "sprite-idle",
+                  type: "spritesheet",
+                  name: "Idle",
+                  fileId: "file-idle",
+                  jsonData: atlas,
+                  animations: {
+                    idle: animation,
+                  },
+                },
+              },
+              tree: [{ id: "sprite-idle" }],
+            },
+          },
+        },
+        tree: [{ id: "character-1" }],
+      },
+    };
+
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines,
+      repositoryState,
+      sectionLineChanges: {
+        lines: [
+          {
+            id: "line-1",
+            changes: {
+              character: {
+                changeType: "set",
+                data: {
+                  items: [
+                    {
+                      id: "character-1",
+                      sprites: [
+                        {
+                          id: "body",
+                          resourceId: "sprite-idle",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            presentationState: {},
+          },
+        ],
+      },
+    });
+
+    expect(viewModels[0].characterSprites).toEqual({
+      changeType: "set",
+      items: [
+        {
+          characterId: "character-1",
+          characterName: "Aki",
+          fileId: "file-idle",
+          spriteFileIds: ["file-idle"],
+          spritePreviewBr: "none",
+          spritePreviewLayers: [
+            {
+              kind: "spritesheet",
+              itemId: "sprite-idle",
+              fileId: "file-idle",
+              atlas,
+              animation,
+              animationName: "idle",
+              previewKey: "spritesheet:sprite-idle:file-idle:idle:0,1:12",
+            },
+          ],
         },
       ],
     });

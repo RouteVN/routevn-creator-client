@@ -18,3 +18,9 @@ propsSchema:
       type: string
     h:
       type: string
+    br:
+      type: string
+    checkerCellSize:
+      type: string
+    showCheckerboard:
+      type: boolean

@@ -110,7 +110,7 @@ describe("layoutEditorPersistence", () => {
     });
   });
 
-  it("strips rich text content from repository command payloads", () => {
+  it("persists rich text content in repository command payloads", () => {
     const result = createLayoutEditorElementPersistPayload({
       currentItem: {
         id: "text-1",
@@ -120,7 +120,6 @@ describe("layoutEditorPersistence", () => {
       updatedItem: {
         id: "text-1",
         type: "text",
-        text: 'Hello ${variables["player-name"]}',
         content: [
           { text: "Hello " },
           { reference: { resourceId: "player-name" } },
@@ -130,9 +129,13 @@ describe("layoutEditorPersistence", () => {
 
     expect(result).toEqual({
       hasChanges: true,
-      replace: false,
+      replace: true,
       data: {
-        text: 'Hello ${variables["player-name"]}',
+        type: "text",
+        content: [
+          { text: "Hello " },
+          { reference: { resourceId: "player-name" } },
+        ],
       },
     });
   });

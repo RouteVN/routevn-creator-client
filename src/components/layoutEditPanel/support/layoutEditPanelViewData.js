@@ -5,6 +5,7 @@ import { parseRuntimeTemplateValue } from "../../../internal/runtimeFields.js";
 import { getLayoutEditorElementDefinition } from "../../../internal/layoutEditorElementRegistry.js";
 import {
   getLayoutTextSummary,
+  getLayoutTextSummaryParts,
   normalizeLayoutTextContent,
 } from "../../../internal/layoutTextContent.js";
 import { normalizeConditionalOverrideRules } from "./layoutEditPanelFeatures.js";
@@ -226,11 +227,19 @@ export const toInspectorValues = ({
           variablesData,
         })
       : "";
+  const textContentSummaryParts =
+    capabilities.supportsTextEditing === true
+      ? getLayoutTextSummaryParts(values?.content, {
+          fallbackText: values?.text,
+          variablesData,
+        })
+      : [];
 
   return {
     ...values,
     content: textContent,
     textContentSummary,
+    textContentSummaryParts,
     opacity: values?.opacity ?? 1,
     aspectRatioMode: derivedAspectRatioLock !== undefined ? "fixed" : "free",
     aspectRatioLock: derivedAspectRatioLock,

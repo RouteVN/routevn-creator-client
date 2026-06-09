@@ -1162,13 +1162,37 @@ export const createCharacterSpritesFileExplorerHandlers = ({
         return;
       }
 
-      await projectService.moveCharacterSpriteItem({
-        characterId,
-        spriteId: move.itemId,
-        parentId: move.parentId ?? null,
-        position: move.repositoryPosition,
-        positionTargetId: move.repositoryPositionTargetId,
-      });
+      try {
+        const moveResult = await projectService.moveCharacterSpriteItem({
+          characterId,
+          spriteId: move.itemId,
+          parentId: move.parentId ?? null,
+          position: move.repositoryPosition,
+          positionTargetId: move.repositoryPositionTargetId,
+        });
+
+        if (moveResult?.valid === false) {
+          console.error("Failed to move character sprite", moveResult);
+          appService.showAlert({
+            message: getResultErrorMessage(
+              moveResult,
+              "Failed to move character sprite.",
+            ),
+            title: "Error",
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to move character sprite", error);
+        appService.showAlert({
+          message: getResultErrorMessage(
+            error,
+            "Failed to move character sprite.",
+          ),
+          title: "Error",
+        });
+        return;
+      }
 
       await refresh(deps);
     },

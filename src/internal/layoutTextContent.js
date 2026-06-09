@@ -204,6 +204,51 @@ export const getLayoutTextSummary = (
   return displayText || "Empty";
 };
 
+const toSummaryTextPart = (text, index) => {
+  const summaryText = String(text ?? "").replace(/\s+/g, " ");
+  if (!summaryText) {
+    return undefined;
+  }
+
+  return {
+    key: `text-${index}`,
+    type: "text",
+    text: summaryText,
+  };
+};
+
+export const getLayoutTextSummaryParts = (
+  content,
+  { fallbackText, variablesData } = {},
+) => {
+  const parts = normalizeLayoutTextContent(content, { fallbackText })
+    .map((item, index) => {
+      const resourceId = getLayoutTextReferenceResourceId(item);
+      if (resourceId) {
+        return {
+          key: `reference-${resourceId}-${index}`,
+          type: "reference",
+          resourceId,
+          label: getVariableName(variablesData, resourceId),
+        };
+      }
+
+      return toSummaryTextPart(item.text, index);
+    })
+    .filter(Boolean);
+
+  return parts.length > 0
+    ? parts
+    : [
+        {
+          key: "empty",
+          type: "text",
+          text: "Empty",
+          muted: true,
+        },
+      ];
+};
+
 const copyRouteGraphicsMetadata = (targetItem, sourceItem = {}) => {
   const textStyle = cloneTextStyle(sourceItem.textStyle);
   if (textStyle) {
@@ -221,17 +266,15 @@ const copyRouteGraphicsMetadata = (targetItem, sourceItem = {}) => {
   }
 };
 
-export const toLayoutTextLegacyTemplate = (content) => {
-  return normalizeLayoutTextContent(content)
-    .map((item) => {
-      const resourceId = getLayoutTextReferenceResourceId(item);
-      if (!resourceId) {
-        return item.text ?? "";
-      }
+export const toLayoutTextBackwardCompatibleText = (content) => {
+  const normalizedContent = normalizeLayoutTextContent(content);
+  if (
+    normalizedContent.some((item) => getLayoutTextReferenceResourceId(item))
+  ) {
+    return undefined;
+  }
 
-      return `\${${toVariableConditionTarget(resourceId)}}`;
-    })
-    .join("");
+  return normalizedContent.map((item) => item.text ?? "").join("");
 };
 
 export const toRouteGraphicsLayoutTextContent = (content) => {

@@ -4,6 +4,7 @@ import {
   summarizeCharacterSpriteActionItems,
   summarizeCharacterSpriteRepository,
 } from "../../internal/characterSpriteDebug.js";
+import { buildCharacterSpritePreviewLayer } from "../../internal/characterSpritePreview.js";
 
 const getCharacterIndexFromEvent = (event) => {
   const index = Number.parseInt(event?.currentTarget?.dataset?.index, 10);
@@ -720,11 +721,18 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
     return;
   }
 
+  const previewLayer = buildCharacterSpritePreviewLayer(sprite);
   store.setTempSelectedSpriteId({
     groupId: store.selectSelectedSpriteGroupId(),
     spriteId,
   });
-  store.showFullImagePreview({ fileId: sprite.fileId });
+  store.showFullImagePreview({
+    fileId: previewLayer.fileId,
+    kind: previewLayer.kind,
+    atlas: previewLayer.atlas,
+    animation: previewLayer.animation,
+    previewKey: previewLayer.previewKey,
+  });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

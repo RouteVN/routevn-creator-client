@@ -1,0 +1,8 @@
+componentName: rvn-spritesheet-selector
+propsSchema:
+  type: object
+  properties:
+    selectedSpritesheetValue:
+      type: string
+    searchQuery:
+      type: string

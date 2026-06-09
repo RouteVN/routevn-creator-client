@@ -1,35 +1,87 @@
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
-import { resolveSpritesheetAnimationFps } from "../../internal/spritesheets.js";
+import {
+  resolveSpritesheetAnimationFps,
+  resolveSpritesheetFrameName,
+} from "../../internal/spritesheets.js";
 
 const PREVIEW_PADDING_PX = 16;
-const TRANSPARENCY_GRID_CELL_SIZE_PX = 12;
+const DEFAULT_TRANSPARENCY_GRID_CELL_SIZE_PX = 12;
 const TRANSPARENCY_GRID_LIGHT_COLOR = "#eef2f7";
 const TRANSPARENCY_GRID_DARK_COLOR = "#94a3b8";
 
 const isPaused = (value) => value === true || value === "true";
 
-const drawTransparencyGrid = (context, width, height) => {
+const isCheckerboardVisible = (value) => {
+  if (value === undefined) {
+    return true;
+  }
+
+  if (value === false) {
+    return false;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return !(
+      normalized === "false" ||
+      normalized === "0" ||
+      normalized === "no" ||
+      normalized === "off" ||
+      normalized === "none"
+    );
+  }
+
+  return true;
+};
+
+const resolvePreviewPadding = (canvas) => {
+  const minDimension = Math.min(canvas.width, canvas.height);
+  if (minDimension <= 0) {
+    return 0;
+  }
+
+  return Math.min(PREVIEW_PADDING_PX, Math.floor(minDimension / 8));
+};
+
+const resolveTransparencyGridCellSize = (width, height, props = {}) => {
+  const explicitSize = Number(props.checkerCellSize);
+  if (Number.isFinite(explicitSize) && explicitSize > 0) {
+    return Math.round(explicitSize);
+  }
+
+  const minDimension = Math.min(width, height);
+  if (minDimension <= 0) {
+    return DEFAULT_TRANSPARENCY_GRID_CELL_SIZE_PX;
+  }
+
+  return Math.max(
+    4,
+    Math.min(
+      DEFAULT_TRANSPARENCY_GRID_CELL_SIZE_PX,
+      Math.floor(minDimension / 8),
+    ),
+  );
+};
+
+const drawTransparencyGrid = (context, width, height, props = {}) => {
+  const cellSize = resolveTransparencyGridCellSize(width, height, props);
+
   context.fillStyle = TRANSPARENCY_GRID_LIGHT_COLOR;
   context.fillRect(0, 0, width, height);
 
   context.fillStyle = TRANSPARENCY_GRID_DARK_COLOR;
-  for (let y = 0; y < height; y += TRANSPARENCY_GRID_CELL_SIZE_PX) {
-    const rowIndex = Math.floor(y / TRANSPARENCY_GRID_CELL_SIZE_PX);
-    for (let x = 0; x < width; x += TRANSPARENCY_GRID_CELL_SIZE_PX) {
-      const columnIndex = Math.floor(x / TRANSPARENCY_GRID_CELL_SIZE_PX);
+  for (let y = 0; y < height; y += cellSize) {
+    const rowIndex = Math.floor(y / cellSize);
+    for (let x = 0; x < width; x += cellSize) {
+      const columnIndex = Math.floor(x / cellSize);
       if ((rowIndex + columnIndex) % 2 === 0) {
-        context.fillRect(
-          x,
-          y,
-          TRANSPARENCY_GRID_CELL_SIZE_PX,
-          TRANSPARENCY_GRID_CELL_SIZE_PX,
-        );
+        context.fillRect(x, y, cellSize, cellSize);
       }
     }
   }
 };
 
-const clearCanvas = (canvas) => {
+const clearCanvas = (canvas, props = {}) => {
   if (
     typeof HTMLCanvasElement === "undefined" ||
     !(canvas instanceof HTMLCanvasElement)
@@ -55,7 +107,9 @@ const clearCanvas = (canvas) => {
   }
 
   context.clearRect(0, 0, width, height);
-  drawTransparencyGrid(context, width, height);
+  if (isCheckerboardVisible(props.showCheckerboard)) {
+    drawTransparencyGrid(context, width, height, props);
+  }
 };
 
 const revokeOwnedImageSrc = (store) => {
@@ -84,10 +138,14 @@ const resolveFrameData = ({ atlas, animation, frameOffset = 0 } = {}) => {
   }
 
   const animationFrames = animation?.frames;
-  const frameIndex = Array.isArray(animationFrames)
+  const frameRef = Array.isArray(animationFrames)
     ? (animationFrames[frameOffset] ?? animationFrames[0])
     : 0;
-  const frameName = frameNames[frameIndex] ?? frameNames[0];
+  const resolvedFrameName = resolveSpritesheetFrameName(frameNames, frameRef);
+  const frameName =
+    typeof resolvedFrameName === "string" && atlas.frames?.[resolvedFrameName]
+      ? resolvedFrameName
+      : frameNames[0];
 
   return atlas.frames?.[frameName];
 };
@@ -105,7 +163,7 @@ const drawFrame = (deps, { frameOffset = 0 } = {}) => {
     return;
   }
 
-  clearCanvas(canvas);
+  clearCanvas(canvas, props);
 
   if (!sourceImage.complete || sourceImage.naturalWidth <= 0) {
     return;
@@ -130,8 +188,9 @@ const drawFrame = (deps, { frameOffset = 0 } = {}) => {
   const outputHeight =
     sourceSize?.h ?? sourceFrame?.h ?? sourceImage.naturalHeight;
 
-  const availableWidth = Math.max(1, canvas.width - PREVIEW_PADDING_PX * 2);
-  const availableHeight = Math.max(1, canvas.height - PREVIEW_PADDING_PX * 2);
+  const previewPadding = resolvePreviewPadding(canvas);
+  const availableWidth = Math.max(1, canvas.width - previewPadding * 2);
+  const availableHeight = Math.max(1, canvas.height - previewPadding * 2);
   const scale = Math.min(
     availableWidth / Math.max(1, outputWidth),
     availableHeight / Math.max(1, outputHeight),
@@ -230,7 +289,7 @@ const loadImageSource = async (deps) => {
 
   stopAnimation(store);
   revokeOwnedImageSrc(store);
-  clearCanvas(refs.canvas);
+  clearCanvas(refs.canvas, props);
   store.setImageSrc({
     imageSrc: "",
     ownsImageSrc: false,
@@ -287,15 +346,15 @@ const didPausedChange = (oldProps = {}, newProps = {}) => {
 
 export const handleBeforeMount = (deps) => {
   return () => {
-    const { refs, store } = deps;
+    const { props, refs, store } = deps;
     stopAnimation(store);
-    clearCanvas(refs.canvas);
+    clearCanvas(refs.canvas, props);
     revokeOwnedImageSrc(store);
   };
 };
 
 export const handleAfterMount = async (deps) => {
-  clearCanvas(deps.refs.canvas);
+  clearCanvas(deps.refs.canvas, deps.props);
   await loadImageSource(deps);
 };
 
@@ -343,9 +402,9 @@ export const handleSourceImageLoad = (deps) => {
 };
 
 export const handleSourceImageError = (deps) => {
-  const { render, refs, store } = deps;
+  const { props, render, refs, store } = deps;
   stopAnimation(store);
-  clearCanvas(refs.canvas);
+  clearCanvas(refs.canvas, props);
   store.setStatus({ status: "error" });
   render();
 };

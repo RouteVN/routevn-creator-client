@@ -6,12 +6,33 @@ propsSchema:
       type: array
       items:
         type: string
+    layers:
+      type: array
+      items:
+        type: object
+        properties:
+          kind:
+            type: string
+          fileId:
+            type: string
+          atlas:
+            type: object
+          animation:
+            type: object
+          previewKey:
+            type: string
     w:
       type: string
     h:
       type: string
     br:
       type: string
+    spritesheetBr:
+      type: string
+    spritesheetCheckerCellSize:
+      type: string
+    showSpritesheetCheckerboard:
+      type: boolean
     lazy:
       type: boolean
   required: []

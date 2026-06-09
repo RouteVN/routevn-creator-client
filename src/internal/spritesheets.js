@@ -46,6 +46,18 @@ export const resolveSpritesheetAnimationFps = (
   );
 };
 
+export const resolveSpritesheetFrameName = (frameNames = [], frameRef) => {
+  if (typeof frameRef === "string" && frameRef.length > 0) {
+    return frameNames.includes(frameRef) ? frameRef : undefined;
+  }
+
+  if (Number.isInteger(frameRef)) {
+    return frameNames[frameRef];
+  }
+
+  return undefined;
+};
+
 export const normalizeSpritesheetAnimationsFps = (
   animations = {},
   missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,

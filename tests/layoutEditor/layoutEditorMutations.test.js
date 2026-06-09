@@ -30,7 +30,7 @@ describe("layoutEditorMutations", () => {
     });
   });
 
-  it("saves rich text content with a legacy template text fallback", () => {
+  it("saves variable rich text content without a plain text fallback", () => {
     const item = {
       id: "text-1",
       type: "text",
@@ -47,7 +47,24 @@ describe("layoutEditorMutations", () => {
       { text: "Hello " },
       { reference: { resourceId: "player-name" } },
     ]);
-    expect(updatedItem.text).toBe('Hello ${variables["player-name"]}');
+    expect(updatedItem.text).toBeUndefined();
+  });
+
+  it("keeps plain rich text content backward compatible as text", () => {
+    const item = {
+      id: "text-1",
+      type: "text",
+      text: "Hello",
+    };
+
+    const updatedItem = applyLayoutItemFieldChange({
+      item,
+      name: "content",
+      value: [{ text: "Plain text" }],
+    });
+
+    expect(updatedItem.content).toEqual([{ text: "Plain text" }]);
+    expect(updatedItem.text).toBe("Plain text");
   });
 
   it("keeps text edits backward compatible by refreshing content", () => {

@@ -1026,16 +1026,23 @@ const collectClientModelExtensions = (state) => {
         continue;
       }
 
-      const parentId =
-        findTreeParentId({
-          nodes: collection.tree,
-          nodeId: itemId,
-        }) ?? null;
-      const siblings = getTreeSiblings({
-        tree: collection.tree,
-        parentId,
+      const node = findTreeNode({
+        nodes: collection.tree,
+        nodeId: itemId,
       });
-      const index = siblings.findIndex((node) => node?.id === itemId);
+      const parentId = node
+        ? (findTreeParentId({
+            nodes: collection.tree,
+            nodeId: itemId,
+          }) ?? null)
+        : null;
+      const siblings = node
+        ? getTreeSiblings({
+            tree: collection.tree,
+            parentId,
+          })
+        : [];
+      const index = siblings.findIndex((entry) => entry?.id === itemId);
 
       extensions.push({
         characterId,
@@ -1043,6 +1050,7 @@ const collectClientModelExtensions = (state) => {
         item: clone(item),
         parentId,
         index: index >= 0 ? index : undefined,
+        nodeInTree: Boolean(node),
       });
     }
   }
@@ -1119,6 +1127,12 @@ export const validateClientModelStateExtensions = (state) => {
     if (item.id !== undefined && item.id !== itemId) {
       return createInvalidResult(
         `characters.items.${characterId}.sprites.items.${itemId}.id must match item key`,
+      );
+    }
+
+    if (!extension.nodeInTree) {
+      return createInvalidResult(
+        `characters.items.${characterId}.sprites.items.${itemId} must exist in sprites.tree`,
       );
     }
 
@@ -1206,6 +1220,12 @@ const mergeClientModelExtensions = ({
   for (const extension of collectClientModelExtensions(sourceState)) {
     if (skippedCharacterIds.has(extension.characterId)) {
       continue;
+    }
+
+    if (!extension.nodeInTree) {
+      return createInvalidResult(
+        `characters.items.${extension.characterId}.sprites.items.${extension.itemId} must exist in sprites.tree`,
+      );
     }
 
     const character = nextState.characters?.items?.[extension.characterId];
@@ -1402,6 +1422,16 @@ const validateCharacterSpritePlacementAgainstState = ({
         "payload.parentId must reference a folder sprite item",
       );
     }
+
+    const parentNode = findTreeNode({
+      nodes: collection.tree,
+      nodeId: parentId,
+    });
+    if (!parentNode) {
+      return createInvalidResult(
+        "payload.parentId must reference a folder sprite item in the tree",
+      );
+    }
   }
 
   if (payload.positionTargetId !== undefined) {
@@ -1411,11 +1441,16 @@ const validateCharacterSpritePlacementAgainstState = ({
       );
     }
 
-    const targetParentId =
-      findTreeParentId({
-        nodes: collection.tree,
-        nodeId: payload.positionTargetId,
-      }) ?? null;
+    const targetParentId = findTreeParentId({
+      nodes: collection.tree,
+      nodeId: payload.positionTargetId,
+    });
+    if (targetParentId === undefined) {
+      return createInvalidResult(
+        "payload.positionTargetId must reference a sprite item in the tree",
+      );
+    }
+
     if (targetParentId !== parentId) {
       return createInvalidResult(
         "payload.positionTargetId must reference a sibling under payload.parentId",

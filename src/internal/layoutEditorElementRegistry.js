@@ -4,7 +4,7 @@ import {
 } from "./projectResolution.js";
 import {
   normalizeLayoutTextContent,
-  toLayoutTextLegacyTemplate,
+  toLayoutTextBackwardCompatibleText,
 } from "./layoutTextContent.js";
 
 const BASE_TRANSFORM = {
@@ -695,7 +695,14 @@ const TYPE_RULES = {
         nextItem.content = normalizeLayoutTextContent(value, {
           fallbackText: nextItem.text,
         });
-        nextItem.text = toLayoutTextLegacyTemplate(nextItem.content);
+        const backwardCompatibleText = toLayoutTextBackwardCompatibleText(
+          nextItem.content,
+        );
+        if (backwardCompatibleText === undefined) {
+          delete nextItem.text;
+        } else {
+          nextItem.text = backwardCompatibleText;
+        }
         return nextItem;
       }
 
@@ -703,7 +710,7 @@ const TYPE_RULES = {
         nextItem.content = normalizeLayoutTextContent(undefined, {
           fallbackText: value,
         });
-        nextItem.text = toLayoutTextLegacyTemplate(nextItem.content);
+        nextItem.text = toLayoutTextBackwardCompatibleText(nextItem.content);
       }
 
       return nextItem;

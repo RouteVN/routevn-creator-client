@@ -1,3 +1,5 @@
+import { resolveSpritesheetFrameName } from "../../../internal/spritesheets.js";
+
 const DEFAULT_TEXT_REVEAL_INDICATOR_SIZE = 12;
 const DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_X = 16;
 const DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_Y = 0;
@@ -50,11 +52,38 @@ export const getImageDimensions = (imageItem) => {
   };
 };
 
-export const toTextRevealIndicatorVisualValues = (visual, indicator = {}) => {
-  const source = visual && typeof visual === "object" ? visual : {};
+export const getSpritesheetAnimationDimensions = (
+  spritesheetItem,
+  animationName,
+) => {
+  const animation = spritesheetItem?.animations?.[animationName];
+  const frameNames = Object.keys(spritesheetItem?.jsonData?.frames ?? {});
+  const firstFrameRef = animation?.frames?.[0];
+  const firstFrameName =
+    resolveSpritesheetFrameName(frameNames, firstFrameRef) ?? frameNames[0];
+  const firstFrame = spritesheetItem?.jsonData?.frames?.[firstFrameName];
+  const width = Number(firstFrame?.sourceSize?.w ?? firstFrame?.frame?.w);
+  const height = Number(firstFrame?.sourceSize?.h ?? firstFrame?.frame?.h);
 
   return {
+    width: Number.isFinite(width) && width > 0 ? Math.round(width) : undefined,
+    height:
+      Number.isFinite(height) && height > 0 ? Math.round(height) : undefined,
+  };
+};
+
+export const toTextRevealIndicatorVisualValues = (visual, indicator = {}) => {
+  const source = visual && typeof visual === "object" ? visual : {};
+  const kind =
+    source.kind === "spritesheet" || source.resourceId
+      ? "spritesheet"
+      : "image";
+
+  return {
+    kind,
     imageId: source.imageId ?? "",
+    resourceId: source.resourceId ?? "",
+    animationName: source.animationName ?? "",
     width: source.width ?? DEFAULT_TEXT_REVEAL_INDICATOR_SIZE,
     height: source.height ?? DEFAULT_TEXT_REVEAL_INDICATOR_SIZE,
     offsetX:
@@ -85,21 +114,27 @@ export const createTextRevealIndicatorListItems = (indicator) => {
     {
       name: "indicator.revealing",
       label: "Revealing",
+      kind: values.revealing.kind,
       imageId: values.revealing.imageId,
+      resourceId: values.revealing.resourceId,
+      animationName: values.revealing.animationName,
     },
     {
       name: "indicator.complete",
       label: "Complete",
+      kind: values.complete.kind,
       imageId: values.complete.imageId,
+      resourceId: values.complete.resourceId,
+      animationName: values.complete.animationName,
     },
-  ].filter((item) => item.imageId);
+  ].filter((item) => item.imageId || item.resourceId);
 };
 
 export const createTextRevealIndicatorAddItems = (indicator) => {
   const values = toTextRevealIndicatorValues(indicator);
 
   return TEXT_REVEAL_INDICATOR_STATE_ITEMS.filter(
-    (item) => !values[item.key]?.imageId,
+    (item) => !values[item.key]?.imageId && !values[item.key]?.resourceId,
   );
 };
 
@@ -126,7 +161,7 @@ export const createTextRevealIndicatorForm = ({ stateName } = {}) => {
       {
         type: "slot",
         slot: "text-reveal-indicator-image",
-        label: "Image",
+        label: "Visual",
       },
       {
         name: "width",
@@ -178,10 +213,25 @@ export const createTextRevealIndicatorForm = ({ stateName } = {}) => {
 
 export const createTextRevealIndicatorVisualFromDialogValues = (
   values = {},
-) => ({
-  imageId: values.imageId,
-  width: toPositiveInteger(values.width, DEFAULT_TEXT_REVEAL_INDICATOR_SIZE),
-  height: toPositiveInteger(values.height, DEFAULT_TEXT_REVEAL_INDICATOR_SIZE),
-  offsetX: toInteger(values.offsetX, DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_X),
-  offsetY: toInteger(values.offsetY, DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_Y),
-});
+) => {
+  const visual = {
+    width: toPositiveInteger(values.width, DEFAULT_TEXT_REVEAL_INDICATOR_SIZE),
+    height: toPositiveInteger(
+      values.height,
+      DEFAULT_TEXT_REVEAL_INDICATOR_SIZE,
+    ),
+    offsetX: toInteger(values.offsetX, DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_X),
+    offsetY: toInteger(values.offsetY, DEFAULT_TEXT_REVEAL_INDICATOR_OFFSET_Y),
+  };
+
+  if (values.kind === "spritesheet") {
+    visual.kind = "spritesheet";
+    visual.resourceId = values.resourceId;
+    visual.animationName = values.animationName;
+    return visual;
+  }
+
+  visual.kind = "image";
+  visual.imageId = values.imageId;
+  return visual;
+};

@@ -1080,6 +1080,31 @@ export const selectFolderById = ({ state }, { folderId } = {}) => {
   return item?.type === "folder" ? item : undefined;
 };
 
+const spriteTreeContainsItem = ({ nodes, itemId } = {}) => {
+  if (!itemId || !Array.isArray(nodes)) {
+    return false;
+  }
+
+  for (const node of nodes) {
+    if (node?.id === itemId) {
+      return true;
+    }
+
+    if (spriteTreeContainsItem({ nodes: node?.children, itemId })) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+export const selectSpriteTreeContainsItem = ({ state }, { itemId } = {}) => {
+  return spriteTreeContainsItem({
+    nodes: state.spritesData?.tree,
+    itemId,
+  });
+};
+
 export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
