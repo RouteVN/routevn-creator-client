@@ -1,9 +1,3 @@
-import {
-  findCharacterItemsMissingSprites,
-  logCharacterSpritesDebug,
-  summarizeCharacterSpriteActionItems,
-  summarizeCharacterSpriteRepository,
-} from "../../internal/characterSpriteDebug.js";
 import { buildCharacterSpritePreviewLayer } from "../../internal/characterSpritePreview.js";
 
 const getCharacterIndexFromEvent = (event) => {
@@ -271,17 +265,6 @@ const dispatchTemporaryPresentationStateChange = (deps) => {
   const presentationState = buildCharacterDataFromState(store, {
     includeTemporarySprites: true,
   });
-  const characterItems = presentationState.character?.items ?? [];
-  logCharacterSpritesDebug("commandLineCharacters.temporary.emit", {
-    mode: store.selectMode?.(),
-    selectedCharacterIndex: store.selectSelectedCharacterIndex?.(),
-    selectedSpriteGroupId: store.selectSelectedSpriteGroupId?.(),
-    tempSelectedSpriteIds: store.selectTempSelectedSpriteIds?.(),
-    characterItems: summarizeCharacterSpriteActionItems(characterItems),
-    missingSpriteItems: summarizeCharacterSpriteActionItems(
-      findCharacterItemsMissingSprites(characterItems),
-    ),
-  });
 
   dispatchEvent(
     new CustomEvent("temporary-presentation-state-change", {
@@ -321,16 +304,6 @@ export const handleAfterMount = async (deps) => {
       characters: characterItems,
     });
   }
-
-  logCharacterSpritesDebug("commandLineCharacters.mount", {
-    incomingCharacterItems: summarizeCharacterSpriteActionItems(
-      characterItems ?? [],
-    ),
-    repositoryCharacters: summarizeCharacterSpriteRepository({
-      charactersCollection: characters,
-      characterIds: (characterItems ?? []).map((item) => item?.id),
-    }),
-  });
 
   render();
 };
@@ -606,13 +579,6 @@ export const handleSpriteGroupTabClick = (deps, payload) => {
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const characterData = buildCharacterDataFromState(store);
-  const characterItems = characterData.character?.items ?? [];
-  logCharacterSpritesDebug("commandLineCharacters.submit", {
-    characterItems: summarizeCharacterSpriteActionItems(characterItems),
-    missingSpriteItems: summarizeCharacterSpriteActionItems(
-      findCharacterItemsMissingSprites(characterItems),
-    ),
-  });
 
   dispatchEvent(
     new CustomEvent("submit", {
@@ -761,15 +727,6 @@ export const handleButtonSelectClick = (deps) => {
           };
         })
         .filter(Boolean),
-    });
-
-    logCharacterSpritesDebug("commandLineCharacters.spriteSelect.confirm", {
-      selectedCharacterIndex,
-      spriteSelectionGroups,
-      tempSelectedSpriteIds,
-      selectedCharacters: summarizeCharacterSpriteActionItems(
-        store.selectSelectedCharacters?.(),
-      ),
     });
 
     store.clearPendingCharacterIndex();

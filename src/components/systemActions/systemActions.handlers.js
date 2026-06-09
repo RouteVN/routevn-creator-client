@@ -4,11 +4,6 @@ import {
   createBackgroundWithInlineTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 import { getRoutevnCreatorSystemActionDocsUrl } from "../../internal/routevnUrls.js";
-import {
-  findCharacterItemsMissingSprites,
-  logCharacterSpritesDebug,
-  summarizeCharacterSpriteActionItems,
-} from "../../internal/characterSpriteDebug.js";
 
 const toPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -31,16 +26,6 @@ const dispatchTemporaryPresentationStateChange = (
   { dispatchEvent },
   presentationState = {},
 ) => {
-  const characterItems = presentationState?.character?.items ?? [];
-  if (characterItems.length > 0) {
-    logCharacterSpritesDebug("systemActions.temporary.forward", {
-      characterItems: summarizeCharacterSpriteActionItems(characterItems),
-      missingSpriteItems: summarizeCharacterSpriteActionItems(
-        findCharacterItemsMissingSprites(characterItems),
-      ),
-    });
-  }
-
   dispatchEvent(
     new CustomEvent("temporary-presentation-state-change", {
       detail: {
@@ -126,16 +111,6 @@ export const handleTemporaryPresentationStateChange = (deps, payload) => {
   const presentationState = toPlainObject(
     payload?._event?.detail?.presentationState,
   );
-  const characterItems = presentationState?.character?.items ?? [];
-  if (characterItems.length > 0) {
-    logCharacterSpritesDebug("systemActions.temporary.receive", {
-      characterItems: summarizeCharacterSpriteActionItems(characterItems),
-      missingSpriteItems: summarizeCharacterSpriteActionItems(
-        findCharacterItemsMissingSprites(characterItems),
-      ),
-    });
-  }
-
   dispatchTemporaryPresentationStateChange(deps, presentationState);
 };
 

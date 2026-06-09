@@ -30,11 +30,6 @@ import {
   normalizeBackgroundTransformEditorTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 import {
-  findCharacterItemsMissingSprites,
-  logCharacterSpritesDebug,
-  summarizeCharacterSpriteActionItems,
-} from "../../internal/characterSpriteDebug.js";
-import {
   createSceneEditorSectionWithName,
   isSectionsOverviewOpen,
   reconcileSceneEditorSelection,
@@ -2431,16 +2426,6 @@ export const handleTemporaryPresentationStateChange = (deps, payload) => {
   const presentationState = normalizeTemporaryPresentationState(
     payload?._event?.detail,
   );
-  const characterItems = presentationState?.character?.items ?? [];
-  if (characterItems.length > 0) {
-    logCharacterSpritesDebug("sceneEditor.temporary.receive", {
-      characterItems: summarizeCharacterSpriteActionItems(characterItems),
-      missingSpriteItems: summarizeCharacterSpriteActionItems(
-        findCharacterItemsMissingSprites(characterItems),
-      ),
-    });
-  }
-
   store.setTemporaryPresentationState?.({
     presentationState,
   });

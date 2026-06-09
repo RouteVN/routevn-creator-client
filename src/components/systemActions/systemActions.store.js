@@ -7,11 +7,6 @@ import {
   buildCharacterSpritePreviewFileIds,
   buildCharacterSpritePreviewLayers,
 } from "../../internal/characterSpritePreview.js";
-import {
-  logCharacterSpritesDebug,
-  summarizeCharacterSpriteRepository,
-  warnCharacterSpritesDebug,
-} from "../../internal/characterSpriteDebug.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
 
@@ -586,30 +581,6 @@ export const selectActionsData = ({ props, state }) => {
           ? char.sprites.map((sprite) => sprite?.resourceId)
           : [],
       });
-      const spriteIds = Array.isArray(char.sprites)
-        ? char.sprites.map((sprite) => sprite?.resourceId).filter(Boolean)
-        : [];
-
-      logCharacterSpritesDebug("systemActions.preview.character", {
-        characterId: char.id,
-        actionSprites: char.sprites,
-        resolvedSpriteFileIds: spriteFileIds,
-        repositoryCharacter: summarizeCharacterSpriteRepository({
-          charactersCollection: repositoryStateData.characters,
-          characterIds: [char.id],
-        })[0],
-      });
-
-      if (spriteIds.length > 0 && spriteFileIds.length === 0) {
-        warnCharacterSpritesDebug("systemActions.preview.unresolvedSprites", {
-          characterId: char.id,
-          spriteIds,
-          repositoryCharacter: summarizeCharacterSpriteRepository({
-            charactersCollection: repositoryStateData.characters,
-            characterIds: [char.id],
-          })[0],
-        });
-      }
 
       if (spriteFileIds.length === 0 && character?.fileId) {
         spriteFileIds.push(character.fileId);

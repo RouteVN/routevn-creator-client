@@ -35,12 +35,6 @@ import {
   getDebugNow,
   isDebugEnabled,
 } from "../../../deps/services/shared/debugLog.js";
-import {
-  logCharacterSpritesDebug,
-  summarizeCharacterSpriteActionItems,
-  summarizeCharacterSpriteProjectData,
-  warnCharacterSpritesDebug,
-} from "../../characterSpriteDebug.js";
 
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
@@ -867,17 +861,6 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     ? getDebugDurationMs(presentationStateStartedAt)
     : undefined;
   const temporaryPresentationState = selectTemporaryPresentationState(store);
-  const temporaryCharacterItems =
-    temporaryPresentationState?.character?.items ?? [];
-  if (temporaryCharacterItems.length > 0) {
-    logCharacterSpritesDebug("sceneEditor.runtime.temporary.selected", {
-      selection,
-      characterItems: summarizeCharacterSpriteActionItems(
-        temporaryCharacterItems,
-      ),
-    });
-  }
-
   const temporaryPresentationStateStartedAt = perfEnabled ? getDebugNow() : 0;
   let renderProjectData = await prepareTemporaryPresentationProjectData(
     deps,
@@ -890,27 +873,6 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     selection,
     store.selectBackgroundTransformEditor?.(),
   );
-  const characterProjectSummary = summarizeCharacterSpriteProjectData({
-    projectData: renderProjectData,
-    selection,
-  });
-  if (characterProjectSummary.characterActionItems.length > 0) {
-    logCharacterSpritesDebug("sceneEditor.runtime.renderProjectData", {
-      summary: characterProjectSummary,
-    });
-  }
-  const missingSpriteResources = characterProjectSummary.spriteResources.filter(
-    (resource) => !resource.existsInResourcesImages,
-  );
-  if (
-    characterProjectSummary.missingSpriteItems.length > 0 ||
-    missingSpriteResources.length > 0
-  ) {
-    warnCharacterSpritesDebug("sceneEditor.runtime.characterSpritesInvalid", {
-      summary: characterProjectSummary,
-      missingSpriteResources,
-    });
-  }
 
   if (renderProjectData !== projectData) {
     initRouteEngineWithDiagnostics(graphicsService, renderProjectData, {
