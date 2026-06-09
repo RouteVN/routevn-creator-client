@@ -50,21 +50,7 @@ export const handleImageItemClick = (deps, payload) => {
   render();
 };
 
-export const handleImageItemDoubleClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
-  const imageId = payload._event.currentTarget?.dataset?.itemId;
-  if (!imageId) {
-    return;
-  }
-
-  dispatchEvent(
-    new CustomEvent("image-dblclick", {
-      detail: {
-        imageId,
-      },
-    }),
-  );
-};
+export const handleImageItemDoubleClick = () => {};
 
 export const handleScrollToItem = (deps, payload) => {
   const { refs } = deps;

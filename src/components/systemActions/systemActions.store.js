@@ -3,7 +3,10 @@ import {
   getRuntimeActionModes,
   isRuntimeActionMode,
 } from "../../internal/runtimeActions.js";
-import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
+import {
+  buildCharacterSpritePreviewFileIds,
+  buildCharacterSpritePreviewLayers,
+} from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
 
@@ -572,16 +575,29 @@ export const selectActionsData = ({ props, state }) => {
           ? char.sprites.map((sprite) => sprite?.resourceId)
           : [],
       });
+      const spritePreviewLayers = buildCharacterSpritePreviewLayers({
+        spritesCollection: character?.sprites,
+        spriteIds: Array.isArray(char.sprites)
+          ? char.sprites.map((sprite) => sprite?.resourceId)
+          : [],
+      });
 
       if (spriteFileIds.length === 0 && character?.fileId) {
         spriteFileIds.push(character.fileId);
+        spritePreviewLayers.push({
+          kind: "image",
+          fileId: character.fileId,
+          previewKey: `image:${character.id ?? char.id}:${character.fileId}`,
+        });
       }
 
       return {
         ...char,
         name: character?.name || "",
         spriteFileIds,
-        hasSpritePreview: spriteFileIds.length > 0,
+        spritePreviewLayers,
+        spritePreviewBr: "none",
+        hasSpritePreview: spritePreviewLayers.length > 0,
       };
     });
   }

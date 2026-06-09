@@ -520,6 +520,11 @@ const STYLES = `
     max-width: 100%;
   }
 
+  .preview-image-stack rvn-stacked-file-images {
+    display: block;
+    flex-shrink: 0;
+  }
+
   .preview-group-delete-overlay {
     position: absolute;
     inset: 0;
@@ -8063,14 +8068,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
       if (sprites.length > 0) {
         for (const sprite of sprites) {
-          stack.append(
-            this.createMediaThumb({
-              fileId: sprite.fileId,
-              placeholderIcon: "character",
-              size: "sprite",
-              borderRadius: "true",
-            }),
-          );
+          stack.append(this.createCharacterSpritePreview(sprite));
         }
       } else {
         stack.append(
@@ -8280,6 +8278,52 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     return thumb;
+  }
+
+  createCharacterSpritePreview(sprite = {}) {
+    const layers = Array.isArray(sprite.spritePreviewLayers)
+      ? sprite.spritePreviewLayers
+      : [];
+    const fallbackFileIds =
+      layers.length === 0 && Array.isArray(sprite.spriteFileIds)
+        ? sprite.spriteFileIds
+        : [];
+    const previewLayers =
+      layers.length > 0
+        ? layers
+        : fallbackFileIds
+            .filter((fileId) => typeof fileId === "string" && fileId)
+            .map((fileId, index) => ({
+              kind: "image",
+              fileId,
+              previewKey: `line-character-sprite:${index}:${fileId}`,
+            }));
+
+    if (previewLayers.length === 0 && sprite.fileId) {
+      previewLayers.push({
+        kind: "image",
+        fileId: sprite.fileId,
+        previewKey: `line-character-sprite:${sprite.fileId}`,
+      });
+    }
+
+    if (previewLayers.length === 0) {
+      return this.createMediaThumb({
+        placeholderIcon: "character",
+        size: "sprite",
+      });
+    }
+
+    const preview = document.createElement("rvn-stacked-file-images");
+    preview.layers = previewLayers;
+    preview.w = "20";
+    preview.h = "24";
+    preview.br = sprite.spritePreviewBr ?? "none";
+    preview.spritesheetBr = "none";
+    preview.spritesheetCheckerCellSize = "4";
+    preview.showSpritesheetCheckerboard = false;
+
+    return preview;
   }
 
   createColorSwatch({ colorHex, colorName, isDelete = false } = {}) {

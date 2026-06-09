@@ -435,9 +435,9 @@ describe("constructProjectData", () => {
       },
     });
     expect(renderedSubmitButton.click.payload).not.toHaveProperty("_formKey");
-    expect(renderedSubmitButton.click.payload.actions.submitForm).not.toHaveProperty(
-      "formId",
-    );
+    expect(
+      renderedSubmitButton.click.payload.actions.submitForm,
+    ).not.toHaveProperty("formId");
   });
 
   it("aligns dialogue mode to nvl when the selected ui layout is dialogue-nvl", () => {
@@ -1035,6 +1035,180 @@ describe("constructProjectData", () => {
         src: "alice-body-file",
         width: 320,
         height: 640,
+      }),
+    ]);
+  });
+
+  it("projects character-local spritesheet sprites as route-engine spritesheet resources", () => {
+    const atlas = {
+      frames: {
+        idle0: {
+          frame: { x: 0, y: 0, w: 320, h: 640 },
+        },
+        idle1: {
+          frame: { x: 320, y: 0, w: 320, h: 640 },
+        },
+      },
+    };
+    const animation = {
+      frames: [0, 1],
+      fps: 12,
+      loop: true,
+    };
+    const projectData = constructProjectData(
+      createExportRepositoryState({
+        characters: createTreeCollection(
+          {
+            alice: {
+              id: "alice",
+              type: "character",
+              name: "Alice",
+              sprites: createTreeCollection(
+                {
+                  "alice-body-sheet": {
+                    id: "alice-body-sheet",
+                    type: "spritesheet",
+                    name: "Alice Body Sheet",
+                    fileId: "alice-body-sheet-file",
+                    width: 320,
+                    height: 640,
+                    jsonData: atlas,
+                    animations: {
+                      idle: animation,
+                    },
+                  },
+                },
+                [{ id: "alice-body-sheet" }],
+              ),
+            },
+          },
+          [{ id: "alice" }],
+        ),
+        transforms: createTreeCollection(
+          {
+            "dialogue-left": {
+              id: "dialogue-left",
+              type: "transform",
+              x: 240,
+              y: 900,
+              anchorX: 0.5,
+              anchorY: 1,
+              rotation: 0,
+              scaleX: 1,
+              scaleY: 1,
+            },
+          },
+          [{ id: "dialogue-left" }],
+        ),
+        layouts: createTreeCollection(
+          {
+            "dialogue-layout": {
+              id: "dialogue-layout",
+              type: "layout",
+              name: "Dialogue Layout",
+              layoutType: "dialogue-adv",
+              elements: {
+                items: {
+                  "dialogue-text": {
+                    id: "dialogue-text",
+                    type: "text-revealing-ref-dialogue-content",
+                    name: "Dialogue Text",
+                    x: 400,
+                    y: 850,
+                    width: 800,
+                    height: 120,
+                  },
+                },
+                tree: [{ id: "dialogue-text" }],
+              },
+            },
+          },
+          [{ id: "dialogue-layout" }],
+        ),
+        scenes: createTreeCollection(
+          {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              name: "Scene 1",
+              sections: createTreeCollection(
+                {
+                  "section-1": {
+                    id: "section-1",
+                    name: "Section 1",
+                    lines: createTreeCollection(
+                      {
+                        "line-1": {
+                          id: "line-1",
+                          actions: {
+                            dialogue: {
+                              mode: "adv",
+                              ui: {
+                                resourceId: "dialogue-layout",
+                              },
+                              characterId: "alice",
+                              character: {
+                                sprite: {
+                                  transformId: "dialogue-left",
+                                  items: [
+                                    {
+                                      id: "body",
+                                      resourceId: "alice-body-sheet",
+                                    },
+                                  ],
+                                },
+                              },
+                              content: [{ text: "Hello" }],
+                            },
+                          },
+                        },
+                      },
+                      [{ id: "line-1" }],
+                    ),
+                  },
+                },
+                [{ id: "section-1" }],
+              ),
+            },
+          },
+          [{ id: "scene-1" }],
+        ),
+      }),
+    );
+
+    expect(projectData.resources.images["alice-body-sheet"]).toBeUndefined();
+    expect(projectData.resources.spritesheets["alice-body-sheet"]).toEqual(
+      expect.objectContaining({
+        fileId: "alice-body-sheet-file",
+        width: 320,
+        height: 640,
+        jsonData: atlas,
+        animations: {
+          idle: {
+            ...animation,
+            animationSpeed: 0.2,
+          },
+        },
+      }),
+    );
+
+    const renderState = selectRouteEngineRenderState(projectData);
+    const spriteContainer = findRenderElementById(
+      renderState.elements,
+      "dialogue-character-sprite",
+    );
+
+    expect(spriteContainer.children).toEqual([
+      expect.objectContaining({
+        id: "dialogue-character-sprite-body",
+        type: "spritesheet-animation",
+        src: "alice-body-sheet-file",
+        atlas,
+        playback: {
+          frames: [0, 1],
+          animationSpeed: 0.2,
+          loop: true,
+        },
       }),
     ]);
   });

@@ -18,8 +18,19 @@ import {
   getConditionalOverrideAttributeOptions,
 } from "./support/layoutEditPanelFeatures.js";
 import { createSpriteBlurFromDialogValues } from "./support/layoutEditPanelBlur.js";
+import {
+  createTextRevealIndicatorAddItems,
+  createTextRevealIndicatorVisualFromDialogValues,
+  getImageDimensions,
+  getSpritesheetAnimationDimensions,
+  getTextRevealIndicatorStateNameFromItemName,
+  isTextRevealIndicatorItemName,
+} from "./support/layoutEditPanelTextRevealIndicator.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
-import { parseSpritesheetAnimationSelectionValue } from "../../internal/spritesheets.js";
+import {
+  parseSpritesheetAnimationSelectionValue,
+  toSpritesheetAnimationSelectionValue,
+} from "../../internal/spritesheets.js";
 
 const ACTION_INTERACTION_TYPES = [
   "click",
@@ -37,6 +48,14 @@ const INTEGER_ONLY_FIELDS = new Set([
   "height",
   "gapX",
   "gapY",
+  "indicator.revealing.width",
+  "indicator.revealing.height",
+  "indicator.revealing.offsetX",
+  "indicator.revealing.offsetY",
+  "indicator.complete.width",
+  "indicator.complete.height",
+  "indicator.complete.offsetX",
+  "indicator.complete.offsetY",
 ]);
 const SIZE_FIELDS = new Set(["width", "height"]);
 const WHEEL_INCREMENT_FIELD_CONFIG = {
@@ -54,6 +73,12 @@ const WHEEL_INCREMENT_FIELD_CONFIG = {
     max: 1,
   },
 };
+const TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_TARGET =
+  "textRevealIndicatorVisualSource";
+const TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_ITEMS = [
+  { label: "Image", type: "item", value: "image" },
+  { label: "Spritesheet", type: "item", value: "spritesheet" },
+];
 
 const arePlainObjectsShallowEqual = (left = {}, right = {}) => {
   if (left === right) {
@@ -162,6 +187,125 @@ const syncFixedAspectRatioValue = (store, { name, value } = {}) => {
     name: "width",
     value: Math.round(nextValue * aspectRatioLock),
   });
+};
+
+const getCurrentTextRevealIndicatorFormValues = (refs) => {
+  return Object.assign({}, refs.textRevealIndicatorForm?.getValues?.() ?? {});
+};
+
+const createTextRevealIndicatorFormValuesForImage = (
+  { store },
+  { currentValues = {}, imageId } = {},
+) => {
+  const imageItem = store.selectImageItemById({
+    imageId,
+  });
+  const dimensions = getImageDimensions(imageItem);
+  const nextValues = {
+    ...currentValues,
+    imageId,
+  };
+
+  if (dimensions.width !== undefined) {
+    nextValues.width = dimensions.width;
+  }
+  if (dimensions.height !== undefined) {
+    nextValues.height = dimensions.height;
+  }
+
+  return nextValues;
+};
+
+const createTextRevealIndicatorFormValuesForSpritesheet = (
+  { store },
+  { currentValues = {}, resourceId, animationName } = {},
+) => {
+  const spritesheetItem = store.selectSpritesheetItemById({
+    resourceId,
+  });
+  const dimensions = getSpritesheetAnimationDimensions(
+    spritesheetItem,
+    animationName,
+  );
+  const nextValues = {
+    ...currentValues,
+    kind: "spritesheet",
+    resourceId,
+    animationName,
+    imageId: undefined,
+  };
+
+  if (dimensions.width !== undefined) {
+    nextValues.width = dimensions.width;
+  }
+  if (dimensions.height !== undefined) {
+    nextValues.height = dimensions.height;
+  }
+
+  return nextValues;
+};
+
+const setTextRevealIndicatorDialogImage = (deps, { imageId } = {}) => {
+  const { refs, store } = deps;
+  const nextValues = createTextRevealIndicatorFormValuesForImage(
+    { store },
+    {
+      currentValues: getCurrentTextRevealIndicatorFormValues(refs),
+      imageId,
+    },
+  );
+
+  store.setTextRevealIndicatorDialogImage({
+    imageId,
+  });
+  refs.textRevealIndicatorForm?.setValues?.({
+    values: nextValues,
+  });
+};
+
+const setTextRevealIndicatorDialogSpritesheet = (
+  deps,
+  { resourceId, animationName } = {},
+) => {
+  const { refs, store } = deps;
+  const nextValues = createTextRevealIndicatorFormValuesForSpritesheet(
+    { store },
+    {
+      currentValues: getCurrentTextRevealIndicatorFormValues(refs),
+      resourceId,
+      animationName,
+    },
+  );
+
+  store.setTextRevealIndicatorDialogSpritesheet({
+    resourceId,
+    animationName,
+  });
+  refs.textRevealIndicatorForm?.setValues?.({
+    values: nextValues,
+  });
+};
+
+const createNextTextRevealIndicatorValue = (
+  indicator,
+  { stateName, visual } = {},
+) => {
+  const nextIndicator =
+    indicator && typeof indicator === "object" && !Array.isArray(indicator)
+      ? structuredClone(indicator)
+      : {};
+
+  if (visual === undefined) {
+    delete nextIndicator[stateName];
+  } else {
+    nextIndicator[stateName] = visual;
+  }
+
+  if (!nextIndicator.revealing && !nextIndicator.complete) {
+    return undefined;
+  }
+
+  return nextIndicator;
 };
 
 const getMeasuredTextWidth = (metrics = {}) => {
@@ -648,6 +792,19 @@ export const handleBlurItemClick = (deps) => {
   render();
 };
 
+export const handleTextContentItemClick = (deps) => {
+  const { render, store } = deps;
+  console.debug("[rvn layout text dialog] content field clicked", {
+    values: store.selectValues(),
+    dialogBefore: store.selectTextContentDialog(),
+  });
+  store.openTextContentDialog();
+  console.debug("[rvn layout text dialog] content dialog opened", {
+    dialogAfter: store.selectTextContentDialog(),
+  });
+  render();
+};
+
 export const handleBlurItemRightClick = async (deps, payload) => {
   const { appService } = deps;
   const { _event: event } = payload;
@@ -697,6 +854,21 @@ export const handleChildInteractionDialogClose = (deps) => {
 export const handleSpriteBlurDialogClose = (deps) => {
   const { render, store } = deps;
   store.closeSpriteBlurDialog();
+  render();
+};
+
+export const handleTextRevealIndicatorDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeTextRevealIndicatorDialog();
+  render();
+};
+
+export const handleTextContentDialogClose = (deps) => {
+  const { render, store } = deps;
+  console.debug("[rvn layout text dialog] dialog close event", {
+    dialogBefore: store.selectTextContentDialog(),
+  });
+  store.closeTextContentDialog();
   render();
 };
 
@@ -766,6 +938,26 @@ export const handleContextMenuClickItem = (deps, payload) => {
   const targetName = store.selectDropdownMenu().targetName;
 
   store.hideContextMenu();
+
+  if (targetName === TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_TARGET) {
+    const dialog = store.selectTextRevealIndicatorDialog();
+    if (item.value === "image") {
+      store.openImageSelectorDialog({
+        source: "textRevealIndicator",
+        selectedImageId: dialog.imageId,
+      });
+    } else if (item.value === "spritesheet") {
+      store.openSpritesheetSelectorDialog({
+        source: "textRevealIndicator",
+        selectedSpritesheetValue: toSpritesheetAnimationSelectionValue(
+          dialog.resourceId,
+          dialog.animationName,
+        ),
+      });
+    }
+    render();
+    return;
+  }
 
   if (item.value !== "delete" || !targetName) {
     render();
@@ -1064,6 +1256,28 @@ export const handleSectionActionClick = async (deps, payload) => {
   } else if (id === "blur") {
     store.openSpriteBlurDialog();
     render();
+  } else if (id === "textRevealIndicator") {
+    const items = createTextRevealIndicatorAddItems(
+      store.selectValues().indicator,
+    );
+    if (items.length === 0) {
+      return;
+    }
+
+    const result = await appService.showDropdownMenu({
+      items,
+      x: _event.clientX,
+      y: _event.clientY,
+      place: "bs",
+    });
+    if (!result?.item?.key) {
+      return;
+    }
+
+    store.openTextRevealIndicatorDialog({
+      stateName: result.item.key,
+    });
+    render();
   }
 };
 
@@ -1243,6 +1457,114 @@ export const handleSpriteBlurFormAction = (deps, payload) => {
   applyPanelValueUpdate(deps, {
     name: "blur",
     value: createSpriteBlurFromDialogValues(values),
+  });
+};
+
+export const handleTextRevealIndicatorImageFieldClick = (deps, payload) => {
+  const { render, store } = deps;
+  const dialog = store.selectTextRevealIndicatorDialog();
+
+  if (!dialog.open) {
+    return;
+  }
+
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  store.showContextMenu({
+    targetName: TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_TARGET,
+    x: rect.left,
+    y: rect.bottom,
+    items: TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_ITEMS,
+  });
+  render();
+};
+
+export const handleTextRevealIndicatorFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail || {};
+  const dialog = store.selectTextRevealIndicatorDialog();
+  const stateName = dialog.stateName;
+  const kind = dialog.kind === "spritesheet" ? "spritesheet" : "image";
+  const hasVisual =
+    kind === "spritesheet"
+      ? dialog.resourceId && dialog.animationName
+      : dialog.imageId;
+
+  if (detail.actionId === "cancel") {
+    store.closeTextRevealIndicatorDialog();
+    render();
+    return;
+  }
+
+  if (detail.actionId !== "submit" || !stateName) {
+    return;
+  }
+
+  if (!hasVisual) {
+    store.setTextRevealIndicatorDialogValidationErrors({
+      errors: {
+        imageId: "Visual is required.",
+      },
+    });
+    render();
+    return;
+  }
+
+  const visual = createTextRevealIndicatorVisualFromDialogValues({
+    ...detail.values,
+    kind,
+    imageId: dialog.imageId,
+    resourceId: dialog.resourceId,
+    animationName: dialog.animationName,
+  });
+  const indicator = createNextTextRevealIndicatorValue(
+    store.selectValues().indicator,
+    {
+      stateName,
+      visual,
+    },
+  );
+
+  store.closeTextRevealIndicatorDialog();
+  applyPanelValueUpdate(deps, {
+    name: "indicator",
+    value: indicator,
+  });
+};
+
+export const handleTextContentFormAction = (deps, payload) => {
+  const { refs, render, store } = deps;
+  const detail = payload._event.detail || {};
+  const editor =
+    refs.textContentEditor ??
+    payload._event.currentTarget?.querySelector?.(
+      "rvn-lexical-layout-text-editor",
+    );
+  console.debug("[rvn layout text dialog] form action", {
+    actionId: detail.actionId,
+    hasEditorRef: Boolean(refs.textContentEditor),
+    hasEditorFallback: Boolean(editor),
+    editorText: editor?.textContent,
+    editorContent: editor?.getContent?.(),
+  });
+
+  if (detail.actionId === "cancel") {
+    store.closeTextContentDialog();
+    render();
+    return;
+  }
+
+  if (detail.actionId !== "submit") {
+    return;
+  }
+
+  const content = editor?.getContent?.();
+  console.debug("[rvn layout text dialog] submitting content", {
+    content,
+  });
+  store.closeTextContentDialog();
+  applyPanelValueUpdate(deps, {
+    name: "content",
+    value: content,
   });
 };
 
@@ -1539,6 +1861,15 @@ export const handleListBarItemClick = async (deps, payload) => {
   const { render, store } = deps;
   const { _event: event } = payload;
   const { name } = event.currentTarget.dataset;
+
+  if (isTextRevealIndicatorItemName(name)) {
+    store.openTextRevealIndicatorDialog({
+      stateName: getTextRevealIndicatorStateNameFromItemName(name),
+    });
+    render();
+    return;
+  }
+
   store.openImageSelectorDialog({
     name,
   });
@@ -1602,6 +1933,28 @@ export const handleListBarItemRightClick = async (deps, payload) => {
   }
   const { item } = result;
   if (item.key === "remove") {
+    if (isTextRevealIndicatorItemName(name)) {
+      const stateName = getTextRevealIndicatorStateNameFromItemName(name);
+      const indicator = createNextTextRevealIndicatorValue(
+        store.selectValues().indicator,
+        {
+          stateName,
+          visual: undefined,
+        },
+      );
+
+      store.updateValueProperty({
+        name: "indicator",
+        value: indicator,
+      });
+      render();
+      emitPanelUpdate(deps, {
+        name: "indicator",
+        value: indicator,
+      });
+      return;
+    }
+
     store.updateValueProperty({
       name,
       value: undefined,
@@ -1711,16 +2064,6 @@ export const handleImageSelectorImageSelected = (deps, payload) => {
   });
 };
 
-export const handleImageSelectorImageDoubleClick = (deps, payload) => {
-  const imageId = payload?._event?.detail?.imageId;
-  if (!imageId) {
-    return;
-  }
-
-  deps.store.showFullImagePreview({ imageId });
-  deps.render();
-};
-
 export const handleImageSelectorFileExplorerClickItem = (deps, payload) => {
   const itemId = payload?._event?.detail?.itemId;
   if (!itemId) {
@@ -1739,14 +2082,92 @@ export const handleImageSelectorCancel = (deps) => {
 };
 
 export const handleImageSelectorSubmit = (deps) => {
-  const { store } = deps;
+  const { render, store } = deps;
   const imageId = store.selectTempSelectedImageId();
-  const { name } = store.selectImageSelectorDialog();
+  const { name, source } = store.selectImageSelectorDialog();
+
+  if (source === "textRevealIndicator") {
+    setTextRevealIndicatorDialogImage(deps, {
+      imageId,
+    });
+    store.closeImageSelectorDialog();
+    render();
+    return;
+  }
+
   applyPanelValueUpdate(deps, {
     name,
     value: imageId,
     closeImageSelector: true,
   });
+};
+
+// --- Spritesheet Selector ---
+export const handleSpritesheetSelectorAnimationSelected = (deps, payload) => {
+  const { render, store } = deps;
+  const detail = payload?._event?.detail ?? {};
+  const selectedSpritesheetValue =
+    detail.value ??
+    toSpritesheetAnimationSelectionValue(
+      detail.resourceId,
+      detail.animationName,
+    );
+
+  if (!selectedSpritesheetValue) {
+    return;
+  }
+
+  store.setTempSelectedSpritesheetValue({
+    selectedSpritesheetValue,
+  });
+  render();
+};
+
+export const handleSpritesheetSelectorAnimationDoubleClick = (
+  deps,
+  payload,
+) => {
+  handleSpritesheetSelectorAnimationSelected(deps, payload);
+  handleSpritesheetSelectorSubmit(deps);
+};
+
+export const handleSpritesheetSelectorFileExplorerClickItem = (
+  deps,
+  payload,
+) => {
+  const itemId = payload?._event?.detail?.itemId;
+  if (!itemId) {
+    return;
+  }
+
+  deps.refs.spritesheetSelector?.transformedHandlers?.handleScrollToItem?.({
+    itemId,
+  });
+};
+
+export const handleSpritesheetSelectorCancel = (deps) => {
+  const { store, render } = deps;
+  store.closeSpritesheetSelectorDialog();
+  render();
+};
+
+export const handleSpritesheetSelectorSubmit = (deps) => {
+  const { render, store } = deps;
+  const selectedSpritesheetValue = store.selectTempSelectedSpritesheetValue();
+  const { source } = store.selectSpritesheetSelectorDialog();
+  const { resourceId, animationName } = parseSpritesheetAnimationSelectionValue(
+    selectedSpritesheetValue,
+  );
+
+  if (source === "textRevealIndicator" && resourceId && animationName) {
+    setTextRevealIndicatorDialogSpritesheet(deps, {
+      resourceId,
+      animationName,
+    });
+  }
+
+  store.closeSpritesheetSelectorDialog();
+  render();
 };
 
 export const handlePreviewOverlayClick = (deps) => {

@@ -1,4 +1,8 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import {
+  buildCharacterSpritePreviewLayer,
+  isCharacterSpriteResourceItem,
+} from "../../internal/characterSpritePreview.js";
 
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
@@ -192,7 +196,7 @@ const characterHasSpriteItems = ({ character, spriteItems } = {}) => {
 
   const spriteIds = new Set(
     toFlatItems(character?.sprites ?? createEmptyCollection())
-      .filter((item) => item.type === "image")
+      .filter(isCharacterSpriteResourceItem)
       .map((item) => item.id),
   );
   return resourceIds.every((resourceId) => spriteIds.has(resourceId));
@@ -824,17 +828,24 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
   });
   const sprite = toFlatItems(
     character?.sprites ?? createEmptyCollection(),
-  ).find((item) => item.id === spriteId && item.type === "image");
+  ).find((item) => item.id === spriteId && isCharacterSpriteResourceItem(item));
 
   if (!sprite?.fileId) {
     return;
   }
 
+  const previewLayer = buildCharacterSpritePreviewLayer(sprite);
   store.setTempSelectedSpriteId({
     groupId: store.getState().selectedSpriteGroupId,
     spriteId,
   });
-  store.showFullImagePreview({ fileId: sprite.fileId });
+  store.showFullImagePreview({
+    fileId: previewLayer.fileId,
+    kind: previewLayer.kind,
+    atlas: previewLayer.atlas,
+    animation: previewLayer.animation,
+    previewKey: previewLayer.previewKey,
+  });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

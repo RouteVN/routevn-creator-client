@@ -5,7 +5,10 @@ import {
   createRenderableParticleData,
   isBuiltinParticleTextureName,
 } from "../particles.js";
-import { resolveSpritesheetAnimationFps } from "../spritesheets.js";
+import {
+  resolveSpritesheetAnimationFps,
+  resolveSpritesheetFrameName,
+} from "../spritesheets.js";
 import { filterTreeCollection, toHierarchyStructure } from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
@@ -14,6 +17,7 @@ import {
   withInteractionPayload,
 } from "./interactionPayload.js";
 import { generateId } from "../id.js";
+import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
 
 const TEXT_NODE_TYPES = new Set([
   "text",
@@ -901,6 +905,151 @@ const getImageFileId = (imageItems, imageId) => {
     : undefined;
 };
 
+const toPositiveFiniteNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : undefined;
+};
+
+const toOptionalFiniteNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+};
+
+const applyTextRevealIndicatorVisualMetrics = (nextVisual, visual) => {
+  const width = toPositiveFiniteNumber(visual?.width);
+  const height = toPositiveFiniteNumber(visual?.height);
+  const offsetX = toOptionalFiniteNumber(visual?.offsetX);
+  const offsetY = toOptionalFiniteNumber(visual?.offsetY);
+
+  if (width !== undefined) {
+    nextVisual.width = width;
+  }
+  if (height !== undefined) {
+    nextVisual.height = height;
+  }
+  if (offsetX !== undefined) {
+    nextVisual.offsetX = offsetX;
+  }
+  if (offsetY !== undefined) {
+    nextVisual.offsetY = offsetY;
+  }
+
+  return nextVisual;
+};
+
+const createTextRevealIndicatorImageVisual = (visual, imageItems) => {
+  const src = getImageFileId(imageItems, visual?.imageId);
+  if (!src) {
+    return undefined;
+  }
+
+  return applyTextRevealIndicatorVisualMetrics(
+    {
+      kind: "image",
+      src,
+    },
+    visual,
+  );
+};
+
+const createTextRevealIndicatorSpritesheetVisual = (
+  visual,
+  spritesheetItems,
+) => {
+  const spritesheet = spritesheetItems?.[visual?.resourceId];
+  if (
+    spritesheet?.type !== "spritesheet" ||
+    typeof spritesheet.fileId !== "string" ||
+    spritesheet.fileId.length === 0 ||
+    !spritesheet.jsonData
+  ) {
+    return undefined;
+  }
+
+  const clips = toSpritesheetRuntimeClips(spritesheet);
+  const animationName = resolveSpritesheetAnimationName(
+    spritesheet,
+    visual?.animationName,
+  );
+  const selectedAnimation =
+    typeof animationName === "string"
+      ? spritesheet.animations?.[animationName]
+      : undefined;
+  const playback = {
+    autoplay: true,
+    fps: resolveSpritesheetAnimationFps(selectedAnimation),
+    loop: selectedAnimation?.loop ?? true,
+  };
+
+  if (typeof animationName === "string" && animationName.length > 0) {
+    playback.clip = animationName;
+  }
+
+  return applyTextRevealIndicatorVisualMetrics(
+    {
+      kind: "spritesheet",
+      src: `${spritesheet.fileId}`,
+      atlas: structuredClone(spritesheet.jsonData),
+      ...(Object.keys(clips).length > 0 ? { clips } : {}),
+      playback,
+    },
+    visual,
+  );
+};
+
+const createTextRevealIndicatorVisual = (
+  visual,
+  { imageItems, spritesheetItems } = {},
+) => {
+  if (visual?.kind === "spritesheet" || visual?.resourceId) {
+    return createTextRevealIndicatorSpritesheetVisual(visual, spritesheetItems);
+  }
+
+  return createTextRevealIndicatorImageVisual(visual, imageItems);
+};
+
+const createTextRevealIndicator = ({
+  node,
+  imageItems,
+  spritesheetItems,
+} = {}) => {
+  const source = node?.indicator;
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return undefined;
+  }
+
+  const revealing = createTextRevealIndicatorVisual(source.revealing, {
+    imageItems,
+    spritesheetItems,
+  });
+  const complete = createTextRevealIndicatorVisual(source.complete, {
+    imageItems,
+    spritesheetItems,
+  });
+  if (!revealing && !complete) {
+    return undefined;
+  }
+
+  const indicator = {};
+  const offsetX = toOptionalFiniteNumber(source.offsetX);
+  const offsetY = toOptionalFiniteNumber(source.offsetY);
+
+  if (revealing) {
+    indicator.revealing = revealing;
+  }
+  if (complete) {
+    indicator.complete = complete;
+  }
+  if (offsetX !== undefined) {
+    indicator.offsetX = offsetX;
+  }
+  if (offsetY !== undefined) {
+    indicator.offsetY = offsetY;
+  }
+
+  return indicator;
+};
+
 const getSoundFileReference = (soundItems, soundId) => {
   const sound = soundItems?.[soundId];
   const fileId = sound?.fileId;
@@ -960,7 +1109,7 @@ const toSpritesheetRuntimeClips = (spritesheet = {}) => {
     Object.entries(spritesheet.animations ?? {})
       .map(([clipName, animation]) => {
         const frames = (animation?.frames ?? [])
-          .map((frameIndex) => frameNames[frameIndex])
+          .map((frameRef) => resolveSpritesheetFrameName(frameNames, frameRef))
           .filter((frameName) => typeof frameName === "string");
 
         if (
@@ -1046,7 +1195,7 @@ const buildBaseElement = (node, context = {}) => {
 
 const getTextNodeContent = (node, context = {}) => {
   if (node.content !== undefined) {
-    return node.content;
+    return toRouteGraphicsLayoutTextContent(node.content);
   }
 
   if (
@@ -1147,6 +1296,17 @@ const applyTextNode = ({ element, node, context }) => {
 
   if (renderType === "text-revealing" && node.revealEffect) {
     nextElement.revealEffect = node.revealEffect;
+  }
+
+  if (renderType === "text-revealing") {
+    const indicator = createTextRevealIndicator({
+      node,
+      imageItems: context.imageItems,
+      spritesheetItems: context.spritesheetItems,
+    });
+    if (indicator) {
+      nextElement.indicator = indicator;
+    }
   }
 
   return nextElement;

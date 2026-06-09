@@ -1,5 +1,10 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
-import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
+import {
+  buildCharacterSpritePreviewLayer,
+  buildCharacterSpritePreviewFileIds,
+  buildCharacterSpritePreviewLayers,
+  isCharacterSpriteResourceItem,
+} from "../../internal/characterSpritePreview.js";
 import {
   COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
@@ -119,6 +124,58 @@ const buildSpriteSelectionGroups = (character = {}) => {
   }));
 };
 
+const findFirstSpriteIdForGroup = ({
+  group,
+  spritesCollection,
+  allowUntaggedGroupFallback = false,
+} = {}) => {
+  const hasTags = Array.isArray(group?.tags) && group.tags.length > 0;
+  if (!hasTags && !allowUntaggedGroupFallback) {
+    return undefined;
+  }
+
+  return toFlatItems(spritesCollection ?? createEmptyCollection()).find(
+    (item) =>
+      isCharacterSpriteResourceItem(item) &&
+      matchesSpriteGroupTags({
+        item,
+        tagIds: group?.tags,
+      }),
+  )?.id;
+};
+
+const buildDefaultCharacterSprites = ({ characterData } = {}) => {
+  const spriteSelectionGroups = buildSpriteSelectionGroups(characterData);
+  const sprites = [];
+  let hasUntaggedGroupFallback = false;
+
+  for (const spriteSelectionGroup of spriteSelectionGroups) {
+    const hasTags =
+      Array.isArray(spriteSelectionGroup.tags) &&
+      spriteSelectionGroup.tags.length > 0;
+    const resourceId = findFirstSpriteIdForGroup({
+      group: spriteSelectionGroup,
+      spritesCollection: characterData?.sprites,
+      allowUntaggedGroupFallback: hasTags || !hasUntaggedGroupFallback,
+    });
+
+    if (!resourceId) {
+      continue;
+    }
+
+    sprites.push({
+      id: spriteSelectionGroup.id,
+      resourceId,
+    });
+
+    if (!hasTags) {
+      hasUntaggedGroupFallback = true;
+    }
+  }
+
+  return sprites;
+};
+
 const buildTempSelectedSpriteIdsByGroup = ({
   character,
   spriteSelectionGroups,
@@ -163,7 +220,7 @@ const buildSpriteGroupBoxViewData = ({
 } = {}) => {
   const spriteItemsById = Object.fromEntries(
     toFlatItems(spritesCollection ?? createEmptyCollection())
-      .filter((item) => item.type === "image")
+      .filter(isCharacterSpriteResourceItem)
       .map((item) => [item.id, item]),
   );
 
@@ -183,6 +240,18 @@ const buildSpriteGroupBoxViewData = ({
       backgroundColor: selectedSpriteId ? "mu" : "bg",
     };
   });
+};
+
+const buildSpritePreviewItemViewData = (item = {}) => {
+  const previewLayer = buildCharacterSpritePreviewLayer(item);
+  return {
+    ...item,
+    previewKind: previewLayer?.kind,
+    previewFileId: previewLayer?.fileId,
+    previewAtlas: previewLayer?.atlas,
+    previewAnimation: previewLayer?.animation,
+    previewKey: previewLayer?.previewKey,
+  };
 };
 
 const matchesSpriteGroupTags = ({ item, tagIds } = {}) => {
@@ -236,7 +305,11 @@ export const createInitialState = () => ({
   pendingCharacterTransformId: undefined,
   searchQuery: "",
   fullImagePreviewVisible: false,
+  fullImagePreviewKind: "image",
   fullImagePreviewFileId: undefined,
+  fullImagePreviewAtlas: undefined,
+  fullImagePreviewAnimation: undefined,
+  fullImagePreviewKey: undefined,
   customTransformEditorOpen: false,
   dropdownMenu: {
     isOpen: false,
@@ -399,12 +472,16 @@ const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
 
 export const addCharacter = ({ state }, { id, transformId } = {}) => {
   const defaultTransform = transformId ?? getDefaultTransformId(state);
+  const characterData = getCharacterItemById({
+    state,
+    characterId: id,
+  });
 
   // Store raw character data (same structure as from props)
   state.selectedCharacters.push({
     id: id,
     transformId: defaultTransform,
-    sprites: [],
+    sprites: buildDefaultCharacterSprites({ characterData }),
     spriteName: "",
     animationMode: "none",
   });
@@ -704,18 +781,30 @@ export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
 };
 
-export const showFullImagePreview = ({ state }, { fileId } = {}) => {
+export const showFullImagePreview = (
+  { state },
+  { fileId, kind, atlas, animation, previewKey } = {},
+) => {
   if (!fileId) {
     return;
   }
 
   state.fullImagePreviewVisible = true;
+  state.fullImagePreviewKind = kind === "spritesheet" ? "spritesheet" : "image";
   state.fullImagePreviewFileId = fileId;
+  state.fullImagePreviewAtlas = atlas;
+  state.fullImagePreviewAnimation = animation;
+  state.fullImagePreviewKey =
+    previewKey ?? `${state.fullImagePreviewKind}:${fileId}`;
 };
 
 export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
+  state.fullImagePreviewKind = "image";
   state.fullImagePreviewFileId = undefined;
+  state.fullImagePreviewAtlas = undefined;
+  state.fullImagePreviewAnimation = undefined;
+  state.fullImagePreviewKey = undefined;
 };
 
 export const setSelectedCharacterIndex = ({ state }, { index } = {}) => {
@@ -859,7 +948,9 @@ export const selectCurrentSpriteItemById = ({ state }, { spriteId } = {}) => {
     return undefined;
   }
 
-  return toFlatItems(character.sprites).find((item) => item.id === spriteId);
+  return toFlatItems(character.sprites).find(
+    (item) => item.id === spriteId && isCharacterSpriteResourceItem(item),
+  );
 };
 
 export const setExistingCharacters = ({ state }, { characters } = {}) => {
@@ -893,6 +984,13 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
           selectedSpriteIdsByGroup?.[spriteSelectionGroup.id],
       ),
     });
+    const spritePreviewLayers = buildCharacterSpritePreviewLayers({
+      spritesCollection: characterData?.sprites,
+      spriteIds: spriteSelectionGroups.map(
+        (spriteSelectionGroup) =>
+          selectedSpriteIdsByGroup?.[spriteSelectionGroup.id],
+      ),
+    });
     const spriteGroupBoxes = buildSpriteGroupBoxViewData({
       spriteSelectionGroups,
       selectedSpriteIdsByGroup,
@@ -913,8 +1011,9 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
         spriteGroupBoxes,
         showSpriteGroupBoxes: spriteSelectionGroups.length > 1,
         spriteId: previewSpriteId,
-        hasSpritePreview: spritePreviewFileIds.length > 0,
+        hasSpritePreview: spritePreviewLayers.length > 0,
         spritePreviewFileIds,
+        spritePreviewLayers,
         spriteFileId: undefined,
         spriteName: char.spriteName || "",
       };
@@ -942,8 +1041,9 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
       spriteGroupBoxes,
       showSpriteGroupBoxes: spriteSelectionGroups.length > 1,
       spriteId: previewSpriteId,
-      hasSpritePreview: spritePreviewFileIds.length > 0,
+      hasSpritePreview: spritePreviewLayers.length > 0,
       spritePreviewFileIds,
+      spritePreviewLayers,
       spriteFileId,
       spriteName: char.spriteName || "",
     };
@@ -977,6 +1077,7 @@ export const selectViewData = ({ state, props = {} }) => {
     selectedItemId,
     syntheticRootId,
     itemFilter = () => true,
+    itemViewMapper = (item) => item,
     hideEmptyGroups = false,
   } = {}) => {
     const allItems = toFlatItems(collection);
@@ -989,7 +1090,7 @@ export const selectViewData = ({ state, props = {} }) => {
       .map((child) => {
         const isSelected = child.id === selectedItemId;
         return {
-          ...child,
+          ...itemViewMapper(child),
           itemBorderColor: isSelected ? "pr" : "bo",
           itemHoverBorderColor: isSelected ? "pr" : "ac",
         };
@@ -1002,7 +1103,7 @@ export const selectViewData = ({ state, props = {} }) => {
           .map((child) => {
             const isSelected = child.id === selectedItemId;
             return {
-              ...child,
+              ...itemViewMapper(child),
               itemBorderColor: isSelected ? "pr" : "bo",
               itemHoverBorderColor: isSelected ? "pr" : "ac",
             };
@@ -1147,10 +1248,12 @@ export const selectViewData = ({ state, props = {} }) => {
         selectedItemId: selectedSpriteId,
         syntheticRootId: UNGROUPED_SPRITE_GROUP_ID,
         itemFilter: (item) =>
+          isCharacterSpriteResourceItem(item) &&
           matchesSpriteGroupTags({
             item,
             tagIds: selectedSpriteGroupTags,
           }),
+        itemViewMapper: buildSpritePreviewItemViewData,
         hideEmptyGroups: selectedSpriteGroupTags.length > 0,
       });
       spriteItems = spriteTreeData.explorerItems;
@@ -1242,7 +1345,11 @@ export const selectViewData = ({ state, props = {} }) => {
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
     fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewKind: state.fullImagePreviewKind,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    fullImagePreviewAtlas: state.fullImagePreviewAtlas,
+    fullImagePreviewAnimation: state.fullImagePreviewAnimation,
+    fullImagePreviewKey: state.fullImagePreviewKey,
     backgroundTransformEditor: createBackgroundTransformEditorViewData({
       state,
       props,

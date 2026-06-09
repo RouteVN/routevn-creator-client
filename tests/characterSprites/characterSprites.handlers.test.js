@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  handleEditDialogImageClick,
+  handleUploadClick,
   handlePreviewCanvasModeClick,
   handlePreviewFitModeClick,
   handlePreviewNextClick,
@@ -261,5 +263,154 @@ describe("characterSprites preview handlers", () => {
     expect(deps.store.setFullImagePreviewDisplayMode).not.toHaveBeenCalled();
     expect(event.preventDefault).not.toHaveBeenCalled();
     expect(event.stopPropagation).not.toHaveBeenCalled();
+  });
+});
+
+const createUploadDeps = ({
+  files,
+  uploadResults = [],
+  repositorySprites = {},
+} = {}) => {
+  const appService = {
+    showDropdownMenu: vi.fn().mockResolvedValue({
+      item: {
+        key: "image",
+      },
+    }),
+    pickFiles: vi.fn().mockResolvedValue(files),
+    showAlert: vi.fn(),
+    getPayload: vi.fn(() => ({
+      characterId: "character-1",
+    })),
+  };
+  const projectService = {
+    uploadFiles: vi.fn(async ([file]) => [
+      uploadResults.find((result) => result.sourceFile === file) ?? {
+        fileId: `${file.name}-file`,
+        displayName: file.name.replace(/\.[^.]+$/, ""),
+        fileRecords: [],
+      },
+    ]),
+    createCharacterSpriteItem: vi.fn(),
+    getRepositoryState: vi.fn(() => ({
+      characters: {
+        items: {
+          "character-1": {
+            id: "character-1",
+            type: "character",
+            name: "Hero",
+            sprites: {
+              items: repositorySprites,
+              tree: Object.keys(repositorySprites).map((id) => ({ id })),
+            },
+          },
+        },
+      },
+      files: {
+        items: {},
+        tree: [],
+      },
+    })),
+  };
+  const store = {
+    selectCharacterId: vi.fn(() => "character-1"),
+    addPendingUploads: vi.fn(),
+    removePendingUploads: vi.fn(),
+    updatePendingUpload: vi.fn(),
+    setCharacterId: vi.fn(),
+    setCharacterName: vi.fn(),
+    setTagsData: vi.fn(),
+    setItems: vi.fn(),
+    setProjectResolution: vi.fn(),
+    selectSelectedItemId: vi.fn(() => undefined),
+    selectSelectedItem: vi.fn(() => undefined),
+  };
+
+  return {
+    appService,
+    projectService,
+    render: vi.fn(),
+    store,
+  };
+};
+
+describe("characterSprites upload handlers", () => {
+  it("filters unsupported image extensions before uploading a batch", async () => {
+    const validFile = { name: "hero.png" };
+    const invalidFile = { name: "hero.gif" };
+    const deps = createUploadDeps({
+      files: [validFile, invalidFile],
+    });
+
+    await handleUploadClick(deps, {
+      _event: {
+        detail: {
+          groupId: "folder-1",
+          x: 24,
+          y: 32,
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Only JPG/JPEG, PNG, and WEBP images are supported.",
+      title: "Warning",
+    });
+    expect(deps.projectService.uploadFiles).toHaveBeenCalledTimes(1);
+    expect(deps.projectService.uploadFiles).toHaveBeenCalledWith([validFile]);
+    expect(deps.projectService.createCharacterSpriteItem).toHaveBeenCalledTimes(
+      1,
+    );
+  });
+
+  it("does not upload when every selected image has an unsupported extension", async () => {
+    const deps = createUploadDeps({
+      files: [{ name: "hero.gif" }],
+    });
+
+    await handleUploadClick(deps, {
+      _event: {
+        detail: {
+          groupId: "folder-1",
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Only JPG/JPEG, PNG, and WEBP images are supported.",
+      title: "Warning",
+    });
+    expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.createCharacterSpriteItem,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("validates an edit-dialog image replacement before upload", async () => {
+    const appService = {
+      pickFiles: vi.fn().mockResolvedValue({
+        name: "hero.gif",
+      }),
+      showAlert: vi.fn(),
+    };
+    const deps = {
+      appService,
+      projectService: {
+        uploadFiles: vi.fn(),
+      },
+      render: vi.fn(),
+      store: {
+        setEditUpload: vi.fn(),
+      },
+    };
+
+    await handleEditDialogImageClick(deps);
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: "Only JPG/JPEG, PNG, and WEBP images are supported.",
+      title: "Warning",
+    });
+    expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
+    expect(deps.store.setEditUpload).not.toHaveBeenCalled();
   });
 });

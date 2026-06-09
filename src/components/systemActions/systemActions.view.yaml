@@ -96,7 +96,7 @@ template:
                       - rtgl-view d=h g=sm av=c:
                           - $for charData, i in preview.character:
                               - $if charData.hasSpritePreview:
-                                  - rvn-stacked-file-images :fileIds=${charData.spriteFileIds} w=32 h=32 br=f: null
+                                  - rvn-stacked-file-images :layers=${charData.spritePreviewLayers} w=32 h=32 br=${charData.spritePreviewBr} spritesheetBr=none spritesheetCheckerCellSize=4: null
               - $if preview.visual:
                   - rtgl-view#actionItemVisual data-mode=visual g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=image wh=24: null

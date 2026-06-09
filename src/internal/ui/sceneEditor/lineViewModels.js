@@ -1,5 +1,5 @@
 import { toFlatItems } from "../../project/tree.js";
-import { buildCharacterSpritePreviewFileIds } from "../../characterSpritePreview.js";
+import { buildCharacterSpritePreviewLayers } from "../../characterSpritePreview.js";
 import { normalizeLineActions } from "../../project/engineActions.js";
 
 const getSectionLineEntry = (sectionLineChanges, lineId) => {
@@ -143,14 +143,15 @@ const buildCharacterSpritePreview = (changes, characterItems) => {
     items: characterData.items
       .map((characterChange) => {
         const character = characterItems[characterChange.id];
-        const spriteFileIds = buildCharacterSpritePreviewFileIds({
+        const spritePreviewLayers = buildCharacterSpritePreviewLayers({
           spritesCollection: character?.sprites,
           spriteIds: Array.isArray(characterChange.sprites)
             ? characterChange.sprites.map((sprite) => sprite?.resourceId)
             : [],
         });
+        const spriteFileIds = spritePreviewLayers.map((layer) => layer.fileId);
 
-        if (spriteFileIds.length === 0) {
+        if (spritePreviewLayers.length === 0) {
           return undefined;
         }
 
@@ -159,6 +160,8 @@ const buildCharacterSpritePreview = (changes, characterItems) => {
           characterName: character?.name || "Unknown",
           fileId: spriteFileIds[0],
           spriteFileIds,
+          spritePreviewBr: "none",
+          spritePreviewLayers,
         };
       })
       .filter(Boolean),

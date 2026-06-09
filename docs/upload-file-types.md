@@ -118,14 +118,14 @@ same time.
 
 ### Media Resource Pages
 
-| Surface                | Allowed file types                                | Extra validation              | Notes                                                         |
-| ---------------------- | ------------------------------------------------- | ----------------------------- | ------------------------------------------------------------- |
-| Images page            | `.jpg`, `.jpeg`, `.png`, `.webp`                  | explicit invalid-format toast | picker, center drag-drop, edit/replace                        |
-| Spritesheets page      | `.png` + `.json`                                  | explicit pair + format toast  | picker and drag-drop import one PNG sheet plus one atlas JSON |
-| Character sprites page | `.jpg`, `.jpeg`, `.png`, `.webp`                  | none                          | picker, center drag-drop, edit/replace                        |
-| Videos page            | `.mp4`                                            | explicit invalid-format toast | picker, center drag-drop, edit/replace                        |
-| Sounds page            | `.mp3`, `.wav`, `.ogg`                            | explicit invalid-format toast | picker, center drag-drop, edit/replace                        |
-| Fonts page             | `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc`, `.eot` | explicit invalid-format toast | picker, center drag-drop, edit/replace                        |
+| Surface                | Allowed file types                                 | Extra validation              | Notes                                                          |
+| ---------------------- | -------------------------------------------------- | ----------------------------- | -------------------------------------------------------------- |
+| Images page            | `.jpg`, `.jpeg`, `.png`, `.webp`                   | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
+| Spritesheets page      | `.png` + `.json`                                   | explicit pair + format toast  | picker and drag-drop import one PNG sheet plus one atlas JSON  |
+| Character sprites page | `.jpg`, `.jpeg`, `.png`, `.webp`; `.png` + `.json` | explicit pair + format toast  | upload menu supports image or spritesheet; edit/replace images |
+| Videos page            | `.mp4`                                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
+| Sounds page            | `.mp3`, `.wav`, `.ogg`                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
+| Fonts page             | `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc`, `.eot`  | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
 
 ### Dialog / Special Upload Surfaces
 

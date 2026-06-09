@@ -453,6 +453,125 @@ describe("commandLineCharacters.store sprite group filtering", () => {
     ).toEqual(["mu", "mu"]);
   });
 
+  it("exposes spritesheet sprites for selection and current previews", () => {
+    const state = createInitialState();
+
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+              spriteGroups: [
+                {
+                  id: "expression",
+                  name: "Expression",
+                  tags: ["tag-expression"],
+                },
+              ],
+              sprites: {
+                items: {
+                  "folder-expressions": {
+                    id: "folder-expressions",
+                    type: "folder",
+                    name: "Expressions",
+                  },
+                  "sprite-expression-sheet": {
+                    id: "sprite-expression-sheet",
+                    type: "spritesheet",
+                    name: "Expression Sheet",
+                    fileId: "file-expression-sheet",
+                    tagIds: ["tag-expression"],
+                  },
+                  "sprite-body": {
+                    id: "sprite-body",
+                    type: "image",
+                    name: "Body",
+                    fileId: "file-body",
+                  },
+                },
+                tree: [
+                  {
+                    id: "folder-expressions",
+                    children: [
+                      { id: "sprite-expression-sheet" },
+                      { id: "sprite-body" },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            sprites: [
+              {
+                id: "expression",
+                resourceId: "sprite-expression-sheet",
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    let viewData = selectViewData({ state });
+    expect(viewData.defaultValues.characters[0]).toMatchObject({
+      hasSpritePreview: true,
+      spritePreviewFileIds: ["file-expression-sheet"],
+      spritePreviewLayers: [
+        {
+          kind: "spritesheet",
+          itemId: "sprite-expression-sheet",
+          fileId: "file-expression-sheet",
+          previewKey:
+            "spritesheet:sprite-expression-sheet:file-expression-sheet:::",
+        },
+      ],
+    });
+    expect(viewData.defaultValues.characters[0].spriteGroupBoxes).toEqual([
+      {
+        id: "expression",
+        name: "Expression",
+        selectedSpriteId: "sprite-expression-sheet",
+        selectedSpriteName: "Expression Sheet",
+        hasSelection: true,
+        backgroundColor: "mu",
+      },
+    ]);
+
+    setMode({ state }, { mode: "sprite-select" });
+    setSelectedCharacterIndex({ state }, { index: 0 });
+    setSelectedSpriteGroupId({ state }, { spriteGroupId: "expression" });
+
+    viewData = selectViewData({ state });
+    expect(viewData.spriteGroups).toHaveLength(1);
+    expect(viewData.spriteGroups[0].children).toEqual([
+      expect.objectContaining({
+        id: "sprite-expression-sheet",
+        type: "spritesheet",
+        previewKind: "spritesheet",
+        previewFileId: "file-expression-sheet",
+        previewKey:
+          "spritesheet:sprite-expression-sheet:file-expression-sheet:::",
+      }),
+    ]);
+    expect(viewData.spriteItems.map((item) => item.id)).toEqual([
+      "folder-expressions",
+    ]);
+  });
+
   it("filters sprites by the selected sprite group tags", () => {
     const state = createSpriteSelectState();
     setSelectedSpriteGroupId({ state }, { spriteGroupId: "face" });

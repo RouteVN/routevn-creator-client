@@ -187,4 +187,70 @@ describe("lexical scene document editor line previews", () => {
       restoreDomGlobals();
     }
   });
+
+  it("renders character sprite line previews from layered preview data", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorPrototype = LexicalSceneDocumentEditorElement.prototype;
+      const atlas = {
+        frames: {
+          idle0: {
+            frame: { x: 0, y: 0, w: 64, h: 64 },
+          },
+        },
+      };
+      const animation = {
+        frames: [0],
+        fps: 12,
+      };
+      const layers = [
+        {
+          kind: "spritesheet",
+          itemId: "sprite-idle",
+          fileId: "file-idle",
+          atlas,
+          animation,
+          animationName: "idle",
+          previewKey: "spritesheet:sprite-idle:file-idle:idle:0:12",
+        },
+      ];
+
+      const previewItems = editorPrototype.createPreviewItems.call(
+        editorPrototype,
+        {
+          characterSprites: {
+            changeType: "set",
+            items: [
+              {
+                characterId: "character-1",
+                characterName: "Aki",
+                fileId: "file-idle",
+                spriteFileIds: ["file-idle"],
+                spritePreviewBr: "none",
+                spritePreviewLayers: layers,
+              },
+            ],
+          },
+        },
+      );
+
+      const preview = previewItems.querySelector("rvn-stacked-file-images");
+
+      expect(previewItems.querySelector("rvn-file-image")).toBeNull();
+      expect(preview).not.toBeNull();
+      expect(preview.layers).toEqual(layers);
+      expect(preview.w).toBe("20");
+      expect(preview.h).toBe("24");
+      expect(preview.br).toBe("none");
+      expect(preview.spritesheetBr).toBe("none");
+      expect(preview.spritesheetCheckerCellSize).toBe("4");
+      expect(preview.showSpritesheetCheckerboard).toBe(false);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
 });

@@ -1,8 +1,8 @@
-import { getImageDimensions } from "../../../deps/clients/web/fileProcessors.js";
+import { getImageDimensions } from "../deps/clients/web/fileProcessors.js";
 import {
   INITIAL_SPRITESHEET_CLIP_FPS,
   resolveSpritesheetAnimationFps,
-} from "../../../internal/spritesheets.js";
+} from "./spritesheets.js";
 
 const normalizeAtlasFrame = (frame = {}) => {
   if (frame.frame) {

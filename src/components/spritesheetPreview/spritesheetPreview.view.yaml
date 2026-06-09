@@ -17,7 +17,7 @@ styles:
     background-repeat: repeat
     background-size: 24px 24px
 template:
-  - 'rtgl-view.spritesheetPreviewTransparencyGrid w=${w} h=${h} pos=rel bc=bo bw=xs br=md of=hidden data-preview-status="${status}"':
+  - 'rtgl-view.spritesheetPreviewTransparencyGrid w=${w} h=${h} pos=rel bc=bo bw=xs br=${br} of=hidden data-preview-status="${status}" style="${transparencyGridStyle}"':
       - 'canvas#canvas style="width: 100%; height: 100%; display: block;"': null
       - $if imageSrc:
           - 'img#sourceImage src=${imageSrc} style="display: none;"': null

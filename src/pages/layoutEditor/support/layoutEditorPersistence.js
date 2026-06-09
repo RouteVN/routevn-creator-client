@@ -159,11 +159,12 @@ export const createLayoutEditorElementPersistPayload = ({
   const shouldReplace =
     replace === true || diff.requiresReplace || diff.hasNestedChanges;
   const { id: _ignoredItemId, ...nextReplaceData } = normalizedUpdatedItem;
+  const data = shouldReplace ? nextReplaceData : diff.patch;
 
   return {
     hasChanges: true,
     replace: shouldReplace,
-    data: shouldReplace ? nextReplaceData : diff.patch,
+    data,
   };
 };
 

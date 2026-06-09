@@ -14,6 +14,7 @@ import {
   handleDropdownMenuClickItem,
   handleOpacityInput,
   handleSpriteItemClick,
+  handleSpriteItemDoubleClick,
   handleSpriteGroupTabClick,
   handleSubmitClick,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.handlers.js";
@@ -26,6 +27,7 @@ import {
   moveCharacter,
   removeCharacter,
   selectCurrentSpriteSelectionGroups,
+  selectCurrentSpriteItemById,
   selectAddCharacterTransformDropdownItems,
   selectDropdownMenuCharacterIndex,
   selectDropdownMenuType,
@@ -55,6 +57,7 @@ import {
   updateCharacterBlurField,
   updateCharacterOpacity,
   showDropdownMenu,
+  showFullImagePreview,
   showAddCharacterTransformDropdownMenu,
   updateCharacterSprites,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
@@ -75,6 +78,8 @@ const createStoreApi = (state) => ({
     selectAddCharacterTransformDropdownItems({ state }),
   selectCurrentSpriteSelectionGroups: () =>
     selectCurrentSpriteSelectionGroups({ state }),
+  selectCurrentSpriteItemById: (payload) =>
+    selectCurrentSpriteItemById({ state }, payload),
   selectDropdownMenuCharacterIndex: () =>
     selectDropdownMenuCharacterIndex({ state }),
   selectDropdownMenuType: () => selectDropdownMenuType({ state }),
@@ -105,6 +110,7 @@ const createStoreApi = (state) => ({
   showAddCharacterTransformDropdownMenu: (payload) =>
     showAddCharacterTransformDropdownMenu({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
+  showFullImagePreview: (payload) => showFullImagePreview({ state }, payload),
   updateCharacterAnimation: (payload) =>
     updateCharacterAnimation({ state }, payload),
   updateCharacterBlurEnabled: (payload) =>
@@ -341,6 +347,188 @@ describe("commandLineCharacters.handlers", () => {
 
     expect(selectMode({ state })).toBe("current");
     expect(selectPendingCharacterTransformId({ state })).toBeUndefined();
+  });
+
+  it("defaults a new character to an available spritesheet sprite", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "transform-center": {
+              id: "transform-center",
+              type: "transform",
+              name: "Center",
+            },
+          },
+          tree: [{ id: "transform-center" }],
+        },
+      },
+    );
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+              sprites: {
+                items: {
+                  "sprite-walk": {
+                    id: "sprite-walk",
+                    type: "spritesheet",
+                    name: "Walk",
+                    fileId: "file-walk",
+                  },
+                },
+                tree: [{ id: "sprite-walk" }],
+              },
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+
+    handleCharacterItemClick(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              characterId: "character-hero",
+            },
+          },
+        },
+      },
+    );
+
+    expect(selectTempSelectedSpriteIds({ state })).toEqual({
+      base: "sprite-walk",
+    });
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        character: {
+          items: [
+            {
+              id: "character-hero",
+              transformId: "transform-center",
+              sprites: [
+                {
+                  id: "base",
+                  resourceId: "sprite-walk",
+                },
+              ],
+              spriteName: "",
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it("opens spritesheet sprites with spritesheet preview data on double click", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    const atlas = {
+      frames: {
+        "walk-0": {
+          frame: { x: 0, y: 0, w: 64, h: 64 },
+        },
+      },
+    };
+    const animation = {
+      frames: [0],
+      fps: 12,
+      loop: true,
+    };
+
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+              sprites: {
+                items: {
+                  "sprite-walk": {
+                    id: "sprite-walk",
+                    type: "spritesheet",
+                    name: "Walk",
+                    fileId: "file-walk",
+                    jsonData: atlas,
+                    animations: {
+                      Walk: animation,
+                    },
+                  },
+                },
+                tree: [{ id: "sprite-walk" }],
+              },
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            sprites: [
+              {
+                id: "base",
+                resourceId: "sprite-walk",
+              },
+            ],
+          },
+        ],
+      },
+    );
+    setMode({ state }, { mode: "sprite-select" });
+    setSelectedCharacterIndex({ state }, { index: 0 });
+    setSelectedSpriteGroupId({ state }, { spriteGroupId: "base" });
+
+    handleSpriteItemDoubleClick(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              spriteId: "sprite-walk",
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.fullImagePreviewVisible).toBe(true);
+    expect(state.fullImagePreviewKind).toBe("spritesheet");
+    expect(state.fullImagePreviewFileId).toBe("file-walk");
+    expect(state.fullImagePreviewAtlas).toBe(atlas);
+    expect(state.fullImagePreviewAnimation).toBe(animation);
   });
 
   it("updates and clears per-character animation selection", () => {

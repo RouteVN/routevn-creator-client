@@ -2,6 +2,10 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   scaleLayoutElementItemForProjectResolution,
 } from "./projectResolution.js";
+import {
+  normalizeLayoutTextContent,
+  toLayoutTextBackwardCompatibleText,
+} from "./layoutTextContent.js";
 
 const BASE_TRANSFORM = {
   x: 0,
@@ -529,6 +533,7 @@ const DEFAULT_CAPABILITIES = {
   supportsChildInteractionInheritance: false,
   supportsTextEditing: false,
   supportsTextRevealEffect: false,
+  supportsTextRevealIndicator: false,
   supportsInputField: false,
   supportsTextStyles: false,
   supportsSoundSelection: false,
@@ -609,10 +614,12 @@ const ITEM_TYPE_CAPABILITY_OVERRIDES = {
   "text-revealing": {
     supportsTextEditing: true,
     supportsTextRevealEffect: true,
+    supportsTextRevealIndicator: true,
     supportsActions: true,
   },
   "text-revealing-ref-dialogue-content": {
     supportsTextRevealEffect: true,
+    supportsTextRevealIndicator: true,
     supportsTextAlignment: false,
   },
 };
@@ -673,7 +680,42 @@ const TYPE_RULES = {
       return value;
     },
   },
-  text: {},
+  text: {
+    normalizeFieldValue: ({ item, name, value }) => {
+      if (name === "content") {
+        return normalizeLayoutTextContent(value, {
+          fallbackText: item?.text,
+        });
+      }
+
+      return value;
+    },
+    finalizeFieldChange: ({ nextItem, name, value }) => {
+      if (name === "content") {
+        nextItem.content = normalizeLayoutTextContent(value, {
+          fallbackText: nextItem.text,
+        });
+        const backwardCompatibleText = toLayoutTextBackwardCompatibleText(
+          nextItem.content,
+        );
+        if (backwardCompatibleText === undefined) {
+          delete nextItem.text;
+        } else {
+          nextItem.text = backwardCompatibleText;
+        }
+        return nextItem;
+      }
+
+      if (name === "text") {
+        nextItem.content = normalizeLayoutTextContent(undefined, {
+          fallbackText: value,
+        });
+        nextItem.text = toLayoutTextBackwardCompatibleText(nextItem.content);
+      }
+
+      return nextItem;
+    },
+  },
   input: {
     normalizeFieldValue: ({ name, value }) => {
       if (
@@ -760,6 +802,7 @@ const PANEL_FEATURES_BY_TYPE = {
     "text",
     "textStyles",
     "revealEffect",
+    "textRevealIndicator",
     "actions",
   ],
   "text-revealing-ref-dialogue-content": [
@@ -767,6 +810,7 @@ const PANEL_FEATURES_BY_TYPE = {
     "text",
     "textStyles",
     "revealEffect",
+    "textRevealIndicator",
   ],
   "text-ref-character-name": [...DEFAULT_PANEL_FEATURES, "textStyles"],
   "text-ref-choice-item-content": [...DEFAULT_PANEL_FEATURES, "textStyles"],
@@ -830,10 +874,14 @@ const IMMEDIATE_PERSIST_FIELDS_BY_TYPE = {
   text: [...DEFAULT_IMMEDIATE_PERSIST_FIELDS, "conditionalOverrides"],
   "text-revealing": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "indicator",
+    "indicator.",
     "conditionalOverrides",
   ],
   "text-revealing-ref-dialogue-content": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "indicator",
+    "indicator.",
     "conditionalOverrides",
   ],
   "text-ref-character-name": [

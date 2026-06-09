@@ -25,6 +25,10 @@ refs:
         handler: handleBlurItemClick
       contextmenu:
         handler: handleBlurItemRightClick
+  textContentItem*:
+    eventListeners:
+      click:
+        handler: handleTextContentItemClick
   groupItem*:
     eventListeners:
       click:
@@ -71,6 +75,14 @@ refs:
     eventListeners:
       close:
         handler: handleSpriteBlurDialogClose
+  textRevealIndicatorDialog:
+    eventListeners:
+      close:
+        handler: handleTextRevealIndicatorDialogClose
+  textContentDialog:
+    eventListeners:
+      close:
+        handler: handleTextContentDialogClose
   conditionalOverrideConditionDialog:
     eventListeners:
       close:
@@ -91,6 +103,18 @@ refs:
     eventListeners:
       form-action:
         handler: handleSpriteBlurFormAction
+  textRevealIndicatorForm:
+    eventListeners:
+      form-action:
+        handler: handleTextRevealIndicatorFormAction
+  textRevealIndicatorImageField:
+    eventListeners:
+      click:
+        handler: handleTextRevealIndicatorImageFieldClick
+  textContentForm:
+    eventListeners:
+      form-action:
+        handler: handleTextContentFormAction
   conditionalOverrideConditionForm:
     eventListeners:
       form-action:
@@ -147,8 +171,6 @@ refs:
     eventListeners:
       image-selected:
         handler: handleImageSelectorImageSelected
-      image-dblclick:
-        handler: handleImageSelectorImageDoubleClick
   confirmImageSelection:
     eventListeners:
       click:
@@ -157,6 +179,28 @@ refs:
     eventListeners:
       click:
         handler: handleImageSelectorCancel
+  spritesheetSelectorDialog:
+    eventListeners:
+      close:
+        handler: handleSpritesheetSelectorCancel
+  spritesheetSelectorFileExplorer:
+    eventListeners:
+      item-click:
+        handler: handleSpritesheetSelectorFileExplorerClickItem
+  spritesheetSelector:
+    eventListeners:
+      spritesheet-selected:
+        handler: handleSpritesheetSelectorAnimationSelected
+      spritesheet-dblclick:
+        handler: handleSpritesheetSelectorAnimationDoubleClick
+  confirmSpritesheetSelection:
+    eventListeners:
+      click:
+        handler: handleSpritesheetSelectorSubmit
+  cancelSpritesheetSelection:
+    eventListeners:
+      click:
+        handler: handleSpritesheetSelectorCancel
   previewOverlay:
     eventListeners:
       click:
@@ -167,6 +211,38 @@ refs:
         handler: handleListBarItemClick
       contextmenu:
         handler: handleListBarItemRightClick
+styles:
+  ".layoutEditorImageFieldTransparencyGrid":
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
+    background-repeat: repeat
+    background-size: 12px 12px
+  ".layoutEditorTextContentSummaryField":
+    min-height: 32px
+    box-sizing: border-box
+    overflow: hidden
+    cursor: pointer
+  ".layoutEditorTextContentReferenceChip":
+    display: inline-flex
+    align-items: center
+    max-width: 100%
+    min-height: 20px
+    margin-inline: 1px
+    padding: "0 8px"
+    box-sizing: border-box
+    border: "1px solid var(--border)"
+    border-radius: "var(--tag-border-radius, 9999px)"
+    background: "var(--muted)"
+    color: "var(--muted-foreground)"
+    font-size: 0.88em
+    font-weight: 500
+    line-height: 1.35
+    vertical-align: baseline
+    white-space: nowrap
+    cursor: pointer
+    user-select: none
+    "-webkit-user-select": none
 template:
   - $for section, i in config.sections:
       - $if i > 0:
@@ -218,7 +294,10 @@ template:
                           - rtgl-view#listBarItem${i}x${j}x${k} key=${barItem.viewKey} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
                               - rtgl-text s=xs: ${barItem.label}
                               - rtgl-view w=1fg: null
-                              - $if barItem.imageId:
+                              - $if barItem.kind == 'spritesheet' && barItem.resourceId:
+                                  - rtgl-view w=56 h=32 overflow=hidden br=sm:
+                                      - 'rvn-spritesheet-preview key=${barItem.spritesheetPreviewKey} fileId=${barItem.spritesheetFileId} :atlas=${barItem.spritesheetAtlas} :animation=${barItem.spritesheetAnimation} w=f h=f emptyLabel="No preview"': null
+                                $elif barItem.imageId:
                                   - rvn-file-image imageId=${barItem.imageId} source="thumbnail" h=32: null
                                 $else:
                                   - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
@@ -260,6 +339,16 @@ template:
                     $elif item.type == 'blur-summary':
                       - rtgl-view#blurItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
+                    $elif item.type == 'text-content-summary':
+                      - rtgl-view#textContentItem${i}x${j} data-name=${item.name} w=1fg cur=pointer:
+                          - rtgl-view.layoutEditorTextContentSummaryField d=h av=c w=f wrap g=xs pv=xs ph=sm bgc=bg br=md bw=xs bc=bo h-bc=ac:
+                              - $for part, k in textContentSummaryParts:
+                                  - $if part.type == 'reference':
+                                      - 'span.layoutEditorTextContentReferenceChip.mention-chip key=${part.key} title="${part.resourceId}" data-rvn-mention="true" data-rvn-reference-resource-id="${part.resourceId}" data-rvn-mention-label="${part.label}"': ${part.label}
+                                    $elif part.muted:
+                                      - rtgl-text key=${part.key} s=sm c=mu-fg: ${part.text}
+                                    $else:
+                                      - rtgl-text key=${part.key} s=sm: ${part.text}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
   - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
@@ -289,6 +378,27 @@ template:
       - $if spriteBlurDialog.open:
           - rtgl-view slot=content g=md:
               - rtgl-form#spriteBlurForm key=${spriteBlurDialog.key} :form=${spriteBlurDialogForm} :defaultValues=${spriteBlurDialogDefaults} w=f: null
+  - rtgl-dialog#textRevealIndicatorDialog ?open=${textRevealIndicatorDialog.open} s=md:
+      - $if textRevealIndicatorDialog.open:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#textRevealIndicatorForm key=${textRevealIndicatorDialog.key} :form=${textRevealIndicatorDialogForm} :defaultValues=${textRevealIndicatorDialogDefaults}:
+                  - rtgl-view slot=text-reveal-indicator-image g=xs:
+                      - rtgl-view#textRevealIndicatorImageField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+                          - $if textRevealIndicatorDialog.kind == 'spritesheet' && textRevealIndicatorDialog.resourceId:
+                              - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                                  - 'rvn-spritesheet-preview key=${textRevealIndicatorDialogPreviewKey} fileId=${textRevealIndicatorDialogSpritesheetFileId} :atlas=${textRevealIndicatorDialogSpritesheetAtlas} :animation=${textRevealIndicatorDialogSpritesheetAnimation} w=f h=f emptyLabel="No preview"': null
+                            $elif textRevealIndicatorDialog.imageId:
+                              - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                                  - rvn-file-image imageId=${textRevealIndicatorDialog.imageId} source="thumbnail" w=f h=f: null
+                            $else:
+                              - rtgl-text c=mu-fg ta=c: Select visual
+                      - $if textRevealIndicatorDialog.validationErrors.imageId:
+                          - rtgl-text s=sm c=de: ${textRevealIndicatorDialog.validationErrors.imageId}
+  - rtgl-dialog#textContentDialog ?open=${textContentDialog.open} s=sm:
+      - $if textContentDialog.open:
+          - rtgl-view slot=content g=md w=f:
+              - rtgl-form#textContentForm key=${textContentDialog.key} :form=${textContentDialogForm} :defaultValues=${textContentDialogDefaults} w=f:
+                  - 'rvn-lexical-layout-text-editor#textContentEditor slot="text-content-editor" :content=${textContentDialogContent} :mentionTargets=${textContentMentionTargets}': null
   - rtgl-dialog#conditionalOverrideConditionDialog ?open=${conditionalOverrideConditionDialog.open} s=md:
       - $if conditionalOverrideConditionDialog.open:
           - rtgl-view slot=content g=md:
@@ -308,6 +418,17 @@ template:
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#cancelImageSelection variant=se: Cancel
                   - rtgl-button#confirmImageSelection variant=pr: OK
+  - rtgl-dialog#spritesheetSelectorDialog ?open=${spritesheetSelectorDialog.open} s=xl:
+      - $if spritesheetSelectorDialog.open:
+          - rtgl-view slot=content d=v w=f g=md:
+              - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
+                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                      - rvn-base-file-explorer#spritesheetSelectorFileExplorer :items=${spritesheetFolderItems} shrinkable: null
+                  - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
+                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue}: null
+              - rtgl-view d=h g=sm w=f ah=e:
+                  - rtgl-button#cancelSpritesheetSelection variant=se: Cancel
+                  - rtgl-button#confirmSpritesheetSelection variant=pr: OK
   - $when: fullImagePreviewVisible
     rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
       - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null

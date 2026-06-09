@@ -19,6 +19,7 @@ import {
 import { toVariableConditionTarget } from "../layoutConditions.js";
 import { requireProjectResolution } from "../projectResolution.js";
 import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
+import { resolveSpritesheetAnimationFps } from "../spritesheets.js";
 
 const DEFAULT_TIMESTAMP = 0;
 const LAYOUT_ACTION_INTERACTION_KEYS = [
@@ -695,6 +696,28 @@ const pickResourceFields = (item, fields) => {
   }, {});
 };
 
+const normalizeSpritesheetAnimationsForRouteEngine = (animations = {}) => {
+  if (!isObjectRecord(animations)) {
+    return animations;
+  }
+
+  return Object.fromEntries(
+    Object.entries(animations).map(([animationName, animation]) => {
+      if (!isObjectRecord(animation)) {
+        return [animationName, animation];
+      }
+
+      return [
+        animationName,
+        {
+          ...animation,
+          animationSpeed: resolveSpritesheetAnimationFps(animation) / 60,
+        },
+      ];
+    }),
+  );
+};
+
 const constructImageResources = (
   repositoryImages = {},
   repositoryFiles = {},
@@ -752,6 +775,12 @@ const constructSpritesheetResources = (
         "height",
         "animations",
       ]);
+      if (normalizedItem.animations !== undefined) {
+        result[spritesheetId].animations =
+          normalizeSpritesheetAnimationsForRouteEngine(
+            normalizedItem.animations,
+          );
+      }
       return result;
     },
     {},
@@ -927,6 +956,10 @@ const extractCharacterImages = (
           files: repositoryFiles,
         });
 
+        if (normalizedSprite?.type && normalizedSprite.type !== "image") {
+          return;
+        }
+
         if (!normalizedSprite?.fileId) {
           return;
         }
@@ -938,6 +971,53 @@ const extractCharacterImages = (
           "width",
           "height",
         ]);
+      });
+
+      return result;
+    },
+    {},
+  );
+};
+
+const extractCharacterSpritesheets = (
+  repositoryCharacters = {},
+  repositoryFiles = {},
+) => {
+  return Object.entries(repositoryCharacters).reduce(
+    (result, [, character]) => {
+      if (character?.type !== "character" || !character.sprites?.items) {
+        return result;
+      }
+
+      Object.entries(character.sprites.items).forEach(([spriteId, sprite]) => {
+        const normalizedSprite = withResolvedResourceFileMetadata({
+          item: sprite,
+          files: repositoryFiles,
+        });
+
+        if (
+          normalizedSprite?.type !== "spritesheet" ||
+          !normalizedSprite.fileId ||
+          !normalizedSprite.jsonData
+        ) {
+          return;
+        }
+
+        result[spriteId] = pickResourceFields(normalizedSprite, [
+          "fileId",
+          "fileType",
+          "fileSize",
+          "jsonData",
+          "width",
+          "height",
+          "animations",
+        ]);
+        if (normalizedSprite.animations !== undefined) {
+          result[spriteId].animations =
+            normalizeSpritesheetAnimationsForRouteEngine(
+              normalizedSprite.animations,
+            );
+        }
       });
 
       return result;
@@ -1079,6 +1159,10 @@ const constructProjectResources = (repositoryState = {}) => {
     repositoryCharacters,
     repositoryFiles,
   );
+  const characterSpritesheets = extractCharacterSpritesheets(
+    repositoryCharacters,
+    repositoryFiles,
+  );
   const imageResources = constructImageResources(
     repositoryImages,
     repositoryFiles,
@@ -1110,10 +1194,10 @@ const constructProjectResources = (repositoryState = {}) => {
 
   return {
     images: layoutResources.images,
-    spritesheets: constructSpritesheetResources(
-      repositorySpritesheets,
-      repositoryFiles,
-    ),
+    spritesheets: {
+      ...constructSpritesheetResources(repositorySpritesheets, repositoryFiles),
+      ...characterSpritesheets,
+    },
     videos: constructVideoResources(repositoryVideos, repositoryFiles),
     sounds: constructSoundResources(repositorySounds, repositoryFiles),
     particles: constructParticleResources(repositoryParticles, imageResources),

@@ -1,3 +1,5 @@
+import { buildCharacterSpritePreviewLayer } from "../../internal/characterSpritePreview.js";
+
 const getCharacterIndexFromEvent = (event) => {
   const index = Number.parseInt(event?.currentTarget?.dataset?.index, 10);
   return Number.isInteger(index) ? index : undefined;
@@ -155,7 +157,10 @@ const beginNewCharacterSpriteSelection = (store, characterId) => {
   store.setPendingCharacterIndex({ index: newCharacterIndex });
   store.setSelectedCharacterIndex({ index: newCharacterIndex });
   store.setTempSelectedSpriteIds({
-    spriteIdsByGroupId: {},
+    spriteIdsByGroupId: buildTempSelectedSpriteIdsByGroup({
+      character: currentCharacters[newCharacterIndex],
+      spriteSelectionGroups,
+    }),
   });
   store.setSelectedSpriteGroupId({
     spriteGroupId: spriteSelectionGroups[0]?.id,
@@ -257,12 +262,14 @@ const dispatchTemporaryPresentationStateChange = (deps) => {
     return;
   }
 
+  const presentationState = buildCharacterDataFromState(store, {
+    includeTemporarySprites: true,
+  });
+
   dispatchEvent(
     new CustomEvent("temporary-presentation-state-change", {
       detail: {
-        presentationState: buildCharacterDataFromState(store, {
-          includeTemporarySprites: true,
-        }),
+        presentationState,
       },
     }),
   );
@@ -572,6 +579,7 @@ export const handleSpriteGroupTabClick = (deps, payload) => {
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const characterData = buildCharacterDataFromState(store);
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: characterData,
@@ -679,11 +687,18 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
     return;
   }
 
+  const previewLayer = buildCharacterSpritePreviewLayer(sprite);
   store.setTempSelectedSpriteId({
     groupId: store.selectSelectedSpriteGroupId(),
     spriteId,
   });
-  store.showFullImagePreview({ fileId: sprite.fileId });
+  store.showFullImagePreview({
+    fileId: previewLayer.fileId,
+    kind: previewLayer.kind,
+    atlas: previewLayer.atlas,
+    animation: previewLayer.animation,
+    previewKey: previewLayer.previewKey,
+  });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

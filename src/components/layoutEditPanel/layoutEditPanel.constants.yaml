@@ -328,12 +328,9 @@ layoutSections:
   - "$when": "supportsTextEditing"
     label: Text
     items:
-      - type: group
-        fields:
-          - type: clickable-value
-            name: text
-            value: "${values.text}"
-            popoverForm: *textPopoverForm
+      - type: text-content-summary
+        name: content
+        value: "${values.textContentSummary}"
   - "$when": "supportsTextRevealEffect"
     label: Revealing
     items:
@@ -341,6 +338,14 @@ layoutSections:
         label: Effect
         name: revealEffect
         value: "${values.revealEffect}"
+  - "$when": "supportsTextRevealIndicator"
+    id: textRevealIndicator
+    label: Indicator
+    "$if canAddTextRevealIndicator":
+      labelAction: plus
+    items:
+      - type: list-bar
+        items: "${values.textRevealIndicatorItems}"
   - "$when": "supportsTextStyles"
     id: textStyles
     label: Text Styles

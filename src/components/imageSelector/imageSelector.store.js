@@ -2,7 +2,7 @@ import { toFlatGroups } from "../../internal/project/tree.js";
 
 export const createInitialState = () => ({
   selectedImageId: undefined,
-  images: { items: {}, tree: [] }, // Add this - raw repository images data
+  images: { items: {}, tree: [] },
 });
 
 export const selectSelectedImageId = ({ state }) => {
@@ -32,11 +32,10 @@ const matchesSearch = (item, searchQuery) => {
 };
 
 export const selectViewData = ({ state, props = {} }) => {
-  const images = state.images || { items: {}, tree: [] }; // Raw data from state
-  const selectedImageId = state.selectedImageId; // Use state instead of props
+  const images = state.images ?? { items: {}, tree: [] };
+  const selectedImageId = state.selectedImageId;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
 
-  // Process images into groups here, like in commandLineBackground
   const groups = toFlatGroups(images)
     .map((group) => {
       const children = group.children
@@ -45,10 +44,16 @@ export const selectViewData = ({ state, props = {} }) => {
           const isSelected = child.id === selectedImageId;
           const itemBorderColor = isSelected ? "pr" : "bo";
           const itemHoverBorderColor = isSelected ? "pr" : "ac";
+          const selectedImageInsetStyle = isSelected
+            ? " box-shadow: inset 0 0 0 1px var(--color-pr);"
+            : "";
+          const imageCardStyle = `max-width: 100%; box-sizing: border-box;${selectedImageInsetStyle}`;
+
           return {
             ...child,
             itemBorderColor,
             itemHoverBorderColor,
+            imageCardStyle,
           };
         });
 
@@ -62,7 +67,7 @@ export const selectViewData = ({ state, props = {} }) => {
     .filter((group) => group.shouldDisplay);
 
   return {
-    groups: groups, // Processed groups for template
-    selectedImageId: selectedImageId,
+    groups,
+    selectedImageId,
   };
 };

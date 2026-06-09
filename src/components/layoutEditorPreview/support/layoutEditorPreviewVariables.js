@@ -2,7 +2,9 @@ import {
   getRuntimeLayoutConditionItems,
   parseVariableConditionTarget,
   splitLayoutConditionFromWhen,
+  toVariableConditionTarget,
 } from "../../../internal/layoutConditions.js";
+import { getLayoutTextReferenceResourceId } from "../../../internal/layoutTextContent.js";
 import { toRuntimeConditionTarget } from "../../../internal/runtimeFields.js";
 import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 
@@ -126,6 +128,16 @@ export const collectLayoutPreviewTargets = (layoutParams = {}) => {
   const targets = new Set();
 
   visitLayoutItemsWithFragments(layoutParams, ({ item }) => {
+    for (const contentItem of Array.isArray(item?.content)
+      ? item.content
+      : []) {
+      const resourceId = getLayoutTextReferenceResourceId(contentItem);
+      const target = resourceId ? toVariableConditionTarget(resourceId) : "";
+      if (target) {
+        targets.add(target);
+      }
+    }
+
     const visibilityCondition = splitLayoutConditionFromWhen(
       item?.["$when"],
     ).visibilityCondition;

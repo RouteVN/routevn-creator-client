@@ -1,5 +1,8 @@
 template:
-  - 'rtgl-view pos=rel w=${w} h=${h} br=${br} style="overflow: hidden;"':
+  - 'rtgl-view pos=rel w=${w} h=${h} br=${br} style="${containerStyle}"':
       - $for layer, i in fileLayers:
           - rtgl-view pos=abs edge=f:
-              - rvn-file-image fileId=${layer.fileId} w=f h=f br=${br} ?lazy=${lazy} key=${layer.key}: null
+              - $if layer.kind == 'spritesheet':
+                  - 'rvn-spritesheet-preview key=${layer.key} fileId=${layer.fileId} :atlas=${layer.atlas} :animation=${layer.animation} :showCheckerboard=${showSpritesheetCheckerboard} w=f h=f br=${spritesheetBr} checkerCellSize=${spritesheetCheckerCellSize} emptyLabel="No preview"': null
+                $else:
+                  - rvn-file-image fileId=${layer.fileId} w=f h=f br=${imageBr} ?lazy=${lazy} key=${layer.key}: null

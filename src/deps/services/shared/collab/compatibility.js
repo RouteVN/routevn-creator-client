@@ -3,7 +3,11 @@ import {
   COMMAND_EVENT_MODEL,
   isSupportedCommandType,
 } from "../../../../internal/project/commands.js";
-import { commandToCreatorModelCommand } from "../../../../internal/creatorModelAdapter.js";
+import {
+  commandToCreatorModelCommand,
+  isClientModelExtensionCommand,
+  validateClientModelExtensionCommand,
+} from "../../../../internal/creatorModelAdapter.js";
 
 export const REMOTE_COMMAND_COMPATIBILITY = Object.freeze({
   COMPATIBLE: "compatible",
@@ -54,6 +58,29 @@ export const evaluateRemoteCommandCompatibility = (
   }
 
   try {
+    if (isClientModelExtensionCommand(command)) {
+      const extensionResult = validateClientModelExtensionCommand({
+        command,
+      });
+      if (extensionResult?.valid === false) {
+        return {
+          status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
+          reason: "validation_failed",
+          supportedSchemaVersion,
+          remoteSchemaVersion,
+          message: extensionResult.error?.message || "validation failed",
+        };
+      }
+
+      return {
+        status: REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE,
+        reason: "ok",
+        supportedSchemaVersion,
+        remoteSchemaVersion,
+        message: "ok",
+      };
+    }
+
     const creatorModelCommand = commandToCreatorModelCommand({
       command: {
         ...structuredClone(command),

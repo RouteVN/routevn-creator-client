@@ -3,7 +3,17 @@ import { getInteractionActions } from "../../../internal/project/interactionPayl
 import { RUNTIME_ACTION_LABELS } from "../../../internal/runtimeActions.js";
 import { parseRuntimeTemplateValue } from "../../../internal/runtimeFields.js";
 import { getLayoutEditorElementDefinition } from "../../../internal/layoutEditorElementRegistry.js";
+import {
+  getLayoutTextSummary,
+  getLayoutTextSummaryParts,
+  normalizeLayoutTextContent,
+} from "../../../internal/layoutTextContent.js";
 import { normalizeConditionalOverrideRules } from "./layoutEditPanelFeatures.js";
+import {
+  createTextRevealIndicatorAddItems,
+  createTextRevealIndicatorListItems,
+  toTextRevealIndicatorValues,
+} from "./layoutEditPanelTextRevealIndicator.js";
 
 const ACTION_INTERACTION_LABELS = {
   click: "Click",
@@ -65,6 +75,32 @@ export const REVEAL_EFFECT_OPTIONS = [
   { label: "Soft Wipe", value: "softWipe" },
   { label: "None", value: "none" },
 ];
+
+export const createTextContentDialogForm = () => ({
+  title: "Text",
+  fields: [
+    {
+      name: "content",
+      type: "slot",
+      slot: "text-content-editor",
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "cancel",
+        variant: "se",
+        label: "Cancel",
+      },
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Save",
+      },
+    ],
+  },
+});
 
 export const getLayoutInteractionActions = (values, interactionType) => {
   return getInteractionActions(values?.[interactionType]);
@@ -143,6 +179,7 @@ export const toInspectorValues = ({
   values,
   firstTextStyleId,
   hiddenActionModes,
+  variablesData,
 }) => {
   const capabilities =
     getLayoutEditorElementDefinition(values?.type)?.capabilities ?? {};
@@ -167,19 +204,47 @@ export const toInspectorValues = ({
     values?.type === "text-revealing-ref-dialogue-content"
       ? (values?.revealEffect ?? "typewriter")
       : values?.revealEffect;
+  const indicator =
+    capabilities.supportsTextRevealIndicator === true
+      ? toTextRevealIndicatorValues(values?.indicator)
+      : values?.indicator;
   const direction =
     capabilities.supportsDirection === true &&
     values?.direction !== "horizontal" &&
     values?.direction !== "vertical"
       ? "absolute"
       : values?.direction;
+  const textContent =
+    capabilities.supportsTextEditing === true
+      ? normalizeLayoutTextContent(values?.content, {
+          fallbackText: values?.text,
+        })
+      : values?.content;
+  const textContentSummary =
+    capabilities.supportsTextEditing === true
+      ? getLayoutTextSummary(values?.content, {
+          fallbackText: values?.text,
+          variablesData,
+        })
+      : "";
+  const textContentSummaryParts =
+    capabilities.supportsTextEditing === true
+      ? getLayoutTextSummaryParts(values?.content, {
+          fallbackText: values?.text,
+          variablesData,
+        })
+      : [];
 
   return {
     ...values,
+    content: textContent,
+    textContentSummary,
+    textContentSummaryParts,
     opacity: values?.opacity ?? 1,
     aspectRatioMode: derivedAspectRatioLock !== undefined ? "fixed" : "free",
     aspectRatioLock: derivedAspectRatioLock,
     revealEffect,
+    indicator,
     fragmentLayoutId: values?.fragmentLayoutId ?? "",
     paginationMode: values?.paginationMode ?? "continuous",
     paginationSize: values?.paginationSize ?? 3,
@@ -200,6 +265,8 @@ export const toInspectorValues = ({
     conditionalOverrides: normalizeConditionalOverrideRules(
       values?.conditionalOverrides,
     ),
+    textRevealIndicatorAddItems: createTextRevealIndicatorAddItems(indicator),
+    textRevealIndicatorItems: createTextRevealIndicatorListItems(indicator),
     actions: toLayoutActionItems(values, hiddenActionModes),
   };
 };

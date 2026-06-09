@@ -873,6 +873,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     selection,
     store.selectBackgroundTransformEditor?.(),
   );
+
   if (renderProjectData !== projectData) {
     initRouteEngineWithDiagnostics(graphicsService, renderProjectData, {
       enableGlobalKeyboardBindings: false,
