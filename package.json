@@ -41,7 +41,7 @@
     "lexical": "0.22.0",
     "nanoid": "5.1.11",
     "route-engine-js": "1.25.0",
-    "route-graphics": "file:../route-graphics",
+    "route-graphics": "1.23.1",
     "rxjs": "7.8.2",
     "snabbdom": "3.6.3",
     "snabbdom-to-html": "7.1.0",

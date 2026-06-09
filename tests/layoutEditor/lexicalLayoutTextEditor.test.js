@@ -702,4 +702,51 @@ describe("lexical layout text editor", () => {
       dispose();
     }
   });
+
+  it("preserves rich text metadata when returning loaded content", async () => {
+    const { editorElement, rootElement, dispose } =
+      await createTextEditorHarness();
+
+    try {
+      editorElement.state.mentionTargets = [
+        {
+          id: "playerName",
+          label: "Player Name",
+        },
+      ];
+
+      const content = [
+        {
+          text: "Styled ",
+          textStyle: {
+            fontWeight: "bold",
+            fontStyle: "italic",
+            textDecoration: "underline",
+            fill: "#336699",
+          },
+          textStyleId: "style-body",
+          furigana: {
+            text: "styled",
+            textStyleId: "style-ruby",
+          },
+        },
+        {
+          reference: {
+            resourceId: "playerName",
+          },
+          textStyleId: "style-variable",
+          furigana: {
+            text: "name",
+          },
+        },
+      ];
+
+      editorElement.loadContent(content);
+
+      expect(rootElement.textContent).toBe("Styled Player Name");
+      expect(editorElement.getContent()).toEqual(content);
+    } finally {
+      dispose();
+    }
+  });
 });

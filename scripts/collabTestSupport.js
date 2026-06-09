@@ -8,6 +8,7 @@ import {
   applyCommandToRepositoryState,
   initialProjectData,
 } from "../src/deps/services/shared/projectRepository.js";
+import { projectRepositoryStateToDomainState } from "../src/internal/project/projection.js";
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -219,17 +220,70 @@ export const createProjectedSyncHarness = ({
     latencyMs = 5,
   }) => {
     const actor = { userId, clientId };
+    let clientRepositoryState = createInitialProjectState({
+      projectId,
+    });
+    const appliedCommandIds = new Set();
+    const applyClientCommand = (command) => {
+      if (!command?.id || appliedCommandIds.has(command.id)) {
+        return;
+      }
+
+      const applyResult = applyCommandToRepositoryState({
+        repositoryState: clientRepositoryState,
+        command,
+        projectId,
+      });
+      if (!applyResult.valid) {
+        throw new Error(
+          applyResult.error?.message || "client command projection failed",
+        );
+      }
+      appliedCommandIds.add(command.id);
+      clientRepositoryState = applyResult.repositoryState;
+    };
     const transport = createInMemoryServerTransport({
       server,
       connectionId,
       latencyMs,
     });
-    const client = createProjectCollabService({
+    const collabClient = createProjectCollabService({
       projectId,
       token: `user:${userId}:client:${clientId}`,
       actor,
       transport,
+      onCommittedCommand: ({ command }) => {
+        applyClientCommand(command);
+      },
     });
+    const client = {
+      ...collabClient,
+      async submitCommand(command) {
+        const result = await collabClient.submitCommand(command);
+        if (result?.valid !== false) {
+          applyClientCommand(command);
+        }
+        return result;
+      },
+      async submitCommands(commands) {
+        const result = await collabClient.submitCommands(commands);
+        if (result?.valid !== false) {
+          for (const command of commands ?? []) {
+            applyClientCommand(command);
+          }
+        }
+        return result;
+      },
+      getState() {
+        return projectRepositoryStateToDomainState({
+          repositoryState: clientRepositoryState,
+          projectId,
+        });
+      },
+      getRepositoryState() {
+        return structuredClone(clientRepositoryState);
+      },
+    };
     return {
       actor,
       client,

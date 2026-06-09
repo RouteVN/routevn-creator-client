@@ -727,7 +727,15 @@ const getTreeSiblings = ({ tree, parentId }) => {
     nodes: tree,
     nodeId: parentId,
   });
-  return Array.isArray(parentNode?.children) ? parentNode.children : [];
+  if (!parentNode) {
+    return [];
+  }
+
+  if (!Array.isArray(parentNode.children)) {
+    parentNode.children = [];
+  }
+
+  return parentNode.children;
 };
 
 const collectTreeDescendantIds = ({ node, ids = [] }) => {
@@ -1021,36 +1029,53 @@ const collectClientModelExtensions = (state) => {
       continue;
     }
 
-    for (const [itemId, item] of Object.entries(collection.items)) {
-      if (item?.type !== "spritesheet") {
-        continue;
+    const collectedItemIds = new Set();
+    const collectTreeExtensions = ({ nodes, parentId = null }) => {
+      if (!Array.isArray(nodes)) {
+        return;
       }
 
-      const node = findTreeNode({
-        nodes: collection.tree,
-        nodeId: itemId,
-      });
-      const parentId = node
-        ? (findTreeParentId({
-            nodes: collection.tree,
-            nodeId: itemId,
-          }) ?? null)
-        : null;
-      const siblings = node
-        ? getTreeSiblings({
-            tree: collection.tree,
+      nodes.forEach((node, index) => {
+        if (!isPlainObject(node) || !isNonEmptyString(node.id)) {
+          return;
+        }
+
+        const item = collection.items[node.id];
+        if (item?.type === "spritesheet" && !collectedItemIds.has(node.id)) {
+          collectedItemIds.add(node.id);
+          extensions.push({
+            characterId,
+            itemId: node.id,
+            item: clone(item),
             parentId,
-          })
-        : [];
-      const index = siblings.findIndex((entry) => entry?.id === itemId);
+            index,
+            nodeInTree: true,
+          });
+        }
+
+        collectTreeExtensions({
+          nodes: node.children,
+          parentId: node.id,
+        });
+      });
+    };
+
+    collectTreeExtensions({
+      nodes: collection.tree,
+    });
+
+    for (const [itemId, item] of Object.entries(collection.items)) {
+      if (item?.type !== "spritesheet" || collectedItemIds.has(itemId)) {
+        continue;
+      }
 
       extensions.push({
         characterId,
         itemId,
         item: clone(item),
-        parentId,
-        index: index >= 0 ? index : undefined,
-        nodeInTree: Boolean(node),
+        parentId: null,
+        index: undefined,
+        nodeInTree: false,
       });
     }
   }

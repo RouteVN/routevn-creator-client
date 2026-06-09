@@ -68,6 +68,29 @@ const createFolderCommand = () =>
     },
   });
 
+const createImageCommand = ({
+  commandId = "image-create",
+  spriteId = "image-1",
+  fileId = "image-file",
+  index = 0,
+  parentId = null,
+} = {}) =>
+  createCommand({
+    id: commandId,
+    type: COMMAND_TYPES.CHARACTER_SPRITE_CREATE,
+    payload: {
+      characterId: "hero",
+      spriteId,
+      data: {
+        type: "image",
+        name: "Hero Image",
+        fileId,
+      },
+      parentId,
+      index,
+    },
+  });
+
 const createSpritesheetCommand = (overrides = {}) =>
   createCommand({
     id: "sheet-create",
@@ -97,6 +120,26 @@ const createSpritesheetCommand = (overrides = {}) =>
     },
     ...overrides,
   });
+
+const createSpritesheetCommandWithIds = ({
+  commandId,
+  spriteId,
+  fileId,
+  index = 0,
+  parentId = null,
+}) => {
+  const payload = structuredClone(createSpritesheetCommand().payload);
+  payload.spriteId = spriteId;
+  payload.data.fileId = fileId;
+  payload.parentId = parentId;
+  payload.index = index;
+
+  return createCommand({
+    id: commandId,
+    type: COMMAND_TYPES.CHARACTER_SPRITE_CREATE,
+    payload,
+  });
+};
 
 const createBaseCommands = () => [
   createFileCommand({
@@ -179,6 +222,35 @@ describe("character sprite spritesheet creator-model extension", () => {
     });
     expect(sprites.items["sheet-1"].tagIds).toBeUndefined();
     expect(sprites.tree).toEqual([{ id: "sheet-1" }]);
+    expect(() =>
+      assertSupportedProjectState(result.repositoryState),
+    ).not.toThrow();
+  });
+
+  it("inserts character spritesheets into empty folder tree nodes", () => {
+    const result = applyCommandsToRepositoryState({
+      repositoryState: structuredClone(initialProjectData),
+      projectId: "project-1",
+      commands: [
+        ...createBaseCommands(),
+        createFolderCommand(),
+        createSpritesheetCommand({
+          payload: {
+            ...createSpritesheetCommand().payload,
+            parentId: "folder-1",
+            index: 0,
+          },
+        }),
+      ],
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.repositoryState.characters.items.hero.sprites.tree).toEqual([
+      {
+        id: "folder-1",
+        children: [{ id: "sheet-1" }],
+      },
+    ]);
     expect(() =>
       assertSupportedProjectState(result.repositoryState),
     ).not.toThrow();
@@ -297,6 +369,74 @@ describe("character sprite spritesheet creator-model extension", () => {
         (node) => node.id,
       ),
     ).toEqual(["sheet-1", "image-1"]);
+    expect(() =>
+      assertSupportedProjectState(result.repositoryState),
+    ).not.toThrow();
+  });
+
+  it("preserves character spritesheet tree order after unrelated commands", () => {
+    const setupResult = applyCommandsToRepositoryState({
+      repositoryState: structuredClone(initialProjectData),
+      projectId: "project-1",
+      commands: [
+        ...createBaseCommands(),
+        createFileCommand({
+          commandId: "sheet-file-2-create",
+          fileId: "sheet-file-2",
+        }),
+        createFileCommand({
+          commandId: "image-file-create",
+          fileId: "image-file",
+        }),
+        createSpritesheetCommandWithIds({
+          commandId: "sheet-a-create",
+          spriteId: "sheet-a",
+          fileId: "sheet-file",
+          index: 0,
+        }),
+        createImageCommand({
+          index: 1,
+        }),
+        createSpritesheetCommandWithIds({
+          commandId: "sheet-b-create",
+          spriteId: "sheet-b",
+          fileId: "sheet-file-2",
+          index: 0,
+        }),
+      ],
+    });
+    expect(setupResult.valid).toBe(true);
+    expect(
+      setupResult.repositoryState.characters.items.hero.sprites.tree.map(
+        (node) => node.id,
+      ),
+    ).toEqual(["sheet-b", "sheet-a", "image-1"]);
+
+    const result = applyCommandsToRepositoryState({
+      repositoryState: setupResult.repositoryState,
+      projectId: "project-1",
+      commands: [
+        createCommand({
+          id: "characters-tag-create",
+          type: COMMAND_TYPES.TAG_CREATE,
+          payload: {
+            scopeKey: "characters",
+            tagId: "tag-hero",
+            data: {
+              type: "tag",
+              name: "Hero",
+            },
+          },
+        }),
+      ],
+    });
+
+    expect(result.valid).toBe(true);
+    expect(
+      result.repositoryState.characters.items.hero.sprites.tree.map(
+        (node) => node.id,
+      ),
+    ).toEqual(["sheet-b", "sheet-a", "image-1"]);
     expect(() =>
       assertSupportedProjectState(result.repositoryState),
     ).not.toThrow();

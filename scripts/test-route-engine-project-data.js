@@ -622,7 +622,10 @@ const createBaseProjectData = () => ({
 
   const mainState = createMainProjectionState(applied.repositoryState);
   const sceneProjection = await loadSceneProjectionState({
-    store: {},
+    store: {
+      loadMaterializedViewCheckpoint: async () => undefined,
+      saveMaterializedViewCheckpoint: async () => {},
+    },
     mainState,
     events: [projectCreateEvent],
     createInitialState: () => structuredClone(initialProjectData),

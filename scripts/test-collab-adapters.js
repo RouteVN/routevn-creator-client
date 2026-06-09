@@ -55,6 +55,8 @@ const createCommandApiHarness = ({
 
   const repository = {
     getState: () => structuredClone(repositoryState),
+    getContextState: async () => structuredClone(repositoryState),
+    flushMainCheckpoint: async () => {},
     async addEvents(repositoryEvents) {
       const commands = (repositoryEvents || []).map((repositoryEvent) =>
         repositoryEventToCommand(repositoryEvent),
@@ -305,8 +307,6 @@ const createRepositoryEvent = ({
       fileId: "file-1",
       thumbnailFileId: "thumb-1",
       name: "Uploaded Image",
-      fileType: "image/png",
-      fileSize: 123,
       width: 64,
       height: 64,
     },
@@ -335,8 +335,6 @@ const createRepositoryEvent = ({
       fileId: "file-2",
       thumbnailFileId: "thumb-2",
       name: "Uploaded Image 2",
-      fileType: "image/png",
-      fileSize: 234,
       width: 96,
       height: 96,
     },

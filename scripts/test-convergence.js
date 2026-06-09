@@ -148,7 +148,7 @@ try {
         data: {
           type: "layout",
           name: "Layout 1",
-          layoutType: "normal",
+          layoutType: "general",
           elements: { items: {}, tree: [] },
         },
       },

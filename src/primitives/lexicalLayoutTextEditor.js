@@ -486,7 +486,7 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
   getContent() {
     if (this.isConnected && this.refs.editor) {
-      return this.readContentFromDom();
+      return normalizeLayoutTextContent(this.readSnapshot().content);
     }
 
     return normalizeLayoutTextContent(this.state.content);
