@@ -340,7 +340,7 @@ layoutSections:
         value: "${values.revealEffect}"
   - "$when": "supportsTextRevealIndicator"
     id: textRevealIndicator
-    label: Indication
+    label: Indicator
     "$if canAddTextRevealIndicator":
       labelAction: plus
     items:

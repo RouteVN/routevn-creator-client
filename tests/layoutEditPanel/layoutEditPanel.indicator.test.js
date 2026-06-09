@@ -115,7 +115,7 @@ describe("layoutEditPanel text reveal indicators", () => {
     });
   });
 
-  it("renders the indication panel section for text revealing elements", () => {
+  it("renders the indicator panel section for text revealing elements", () => {
     const state = createInitialState();
     setValues(
       { state },
@@ -143,7 +143,7 @@ describe("layoutEditPanel text reveal indicators", () => {
       (section) => section.id === "textRevealIndicator",
     );
 
-    expect(indicatorSection?.label).toBe("Indication");
+    expect(indicatorSection?.label).toBe("Indicator");
     expect(indicatorSection?.labelAction).toBe("plus");
     expect(indicatorSection?.items[0]?.items).toMatchObject([
       {
