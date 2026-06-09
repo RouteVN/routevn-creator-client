@@ -260,10 +260,10 @@ template:
                   - rtgl-button#cancelTransformPreviewImageSelection variant=se: Cancel
                   - rtgl-button#confirmTransformPreviewImageSelection variant=pr: OK
   - $when: fullImagePreviewVisible
-    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: pointer; outline: none;"':
+    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 10000; cursor: pointer; outline: none;"':
       - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
       - $if fullImagePreviewFileId:
-          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+          - rtgl-view pos=fix edge=f ah=c av=c z=10001:
               - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
