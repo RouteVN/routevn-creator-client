@@ -895,10 +895,40 @@ export const createStoryCommandApi = (shared) => {
       });
     },
 
-    async deleteSceneItem({ sceneIds }) {
+    async deleteSceneItem({ sceneIds, voiceIds = [] }) {
       const context = await shared.ensureCommandContext({
         sceneIds: structuredClone(sceneIds || []),
       });
+
+      const normalizedVoiceIds = Array.isArray(voiceIds)
+        ? voiceIds.filter(Boolean)
+        : [];
+      if (normalizedVoiceIds.length > 0) {
+        return shared.submitCommandsWithContext({
+          context,
+          commands: [
+            {
+              scope: "resources",
+              basePartition: shared.resourceTypePartitionFor(
+                context.projectId,
+                "voices",
+              ),
+              type: COMMAND_TYPES.VOICE_DELETE,
+              payload: {
+                voiceIds: structuredClone(normalizedVoiceIds),
+              },
+            },
+            {
+              scope: "story",
+              partition: getMainScenePartition(context, sceneIds),
+              type: COMMAND_TYPES.SCENE_DELETE,
+              payload: {
+                sceneIds: structuredClone(sceneIds || []),
+              },
+            },
+          ],
+        });
+      }
 
       return shared.submitCommandWithContext({
         context,
