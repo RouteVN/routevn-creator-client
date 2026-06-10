@@ -188,6 +188,12 @@ const PRESENTATION_ACTION_SECTIONS = [
       mode: "bgm",
     },
     {
+      id: "30",
+      label: "Voice",
+      icon: "microphone",
+      mode: "voice",
+    },
+    {
       id: "6",
       label: "Sound Effects",
       icon: "audio",

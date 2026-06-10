@@ -478,6 +478,7 @@ export const selectActionsData = ({ props, state }) => {
   const images = repositoryStateData.images?.items || {};
   const videos = repositoryStateData.videos?.items || {};
   const sounds = repositoryStateData.sounds?.items || {};
+  const voices = repositoryStateData.voices?.items || {};
   const animations = repositoryStateData.animations?.items || {};
   const colors = repositoryStateData.colors?.items || {};
   const scenes = repositoryStateData.scenes || {};
@@ -546,6 +547,20 @@ export const selectActionsData = ({ props, state }) => {
   if (presentationState.bgm) {
     actionsObject.bgm = presentationState.bgm;
     preview.bgm = sounds[presentationState.bgm.resourceId];
+  }
+
+  const voiceAction = isPlainObject(actions.voice)
+    ? actions.voice
+    : isPlainObject(presentationState.voice)
+      ? presentationState.voice
+      : undefined;
+  if (voiceAction?.resourceId) {
+    actionsObject.voice = voiceAction;
+    preview.voice = voices[voiceAction.resourceId] ??
+      sounds[voiceAction.resourceId] ?? {
+        id: voiceAction.resourceId,
+        name: voiceAction.resourceId,
+      };
   }
 
   // Sound Effects

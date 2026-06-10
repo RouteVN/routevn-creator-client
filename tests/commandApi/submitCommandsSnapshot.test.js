@@ -215,4 +215,114 @@ describe("commandApi submitCommandsWithContext", () => {
       }),
     );
   });
+
+  it("creates voice resources through the model-backed command path", async () => {
+    const store = createRepositoryStore();
+    const repository = await createProjectRepository({
+      projectId: "project-1",
+      store,
+      events: [],
+      historyLoaded: true,
+    });
+
+    const session = {
+      submitCommands: vi.fn(async (commands) =>
+        commands.map((command) => command.id),
+      ),
+    };
+
+    const shared = createCommandApiShared({
+      idGenerator: (() => {
+        let index = 0;
+        return () => `cmd-${++index}`;
+      })(),
+      now: () => 1,
+      getCurrentProjectId: () => "project-1",
+      getCurrentRepository: async () => repository,
+      getCachedRepository: () => repository,
+      ensureCommandSessionForProject: async () => session,
+      getOrCreateLocalActor: () => ({
+        userId: "user-1",
+        clientId: "client-1",
+      }),
+      storyBasePartitionFor: () => "m",
+      storyScenePartitionFor: () => "m:s:scene-1",
+      scenePartitionFor: () => "s:scene-1",
+      resourceTypePartitionFor: () => "m",
+    });
+
+    const context = {
+      repository,
+      state: repository.getState(),
+      session,
+      actor: {
+        userId: "user-1",
+        clientId: "client-1",
+      },
+      projectId: "project-1",
+    };
+
+    const result = await shared.submitCommandsWithContext({
+      context,
+      commands: [
+        {
+          scope: "story",
+          partition: "m:s:scene-1",
+          type: COMMAND_TYPES.SCENE_CREATE,
+          payload: {
+            sceneId: "scene-1",
+            data: {
+              name: "Scene One",
+            },
+            parentId: null,
+            position: "last",
+          },
+        },
+        {
+          scope: "resources",
+          partition: "m",
+          type: COMMAND_TYPES.FILE_CREATE,
+          payload: {
+            fileId: "file-voice-1",
+            data: {
+              mimeType: "audio/ogg",
+              size: 123,
+              sha256: "hash-voice-1",
+            },
+          },
+        },
+        {
+          scope: "resources",
+          partition: "m",
+          type: COMMAND_TYPES.VOICE_CREATE,
+          payload: {
+            voiceId: "voice-1",
+            data: {
+              type: "voice",
+              name: "Alice Line",
+              description: "",
+              sceneId: "scene-1",
+              fileId: "file-voice-1",
+            },
+            parentId: null,
+            position: "last",
+          },
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      valid: true,
+      commandIds: ["cmd-1", "cmd-2", "cmd-3"],
+    });
+
+    const state = repository.getState();
+    expect(state.voices.items["voice-1"]).toMatchObject({
+      type: "voice",
+      name: "Alice Line",
+      sceneId: "scene-1",
+      fileId: "file-voice-1",
+    });
+    expect(state.voices.tree).toEqual([{ id: "voice-1", children: [] }]);
+  });
 });

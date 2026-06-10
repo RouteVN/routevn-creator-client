@@ -835,6 +835,36 @@ const constructSoundResources = (
   }, {});
 };
 
+const constructVoiceResources = (
+  repositoryVoices = {},
+  repositoryFiles = {},
+) => {
+  return Object.entries(repositoryVoices).reduce((result, [voiceId, item]) => {
+    const normalizedItem = withResolvedResourceFileMetadata({
+      item,
+      files: repositoryFiles,
+    });
+
+    if (
+      normalizedItem?.type !== "voice" ||
+      !normalizedItem.fileId ||
+      !normalizedItem.sceneId
+    ) {
+      return result;
+    }
+
+    if (!result[normalizedItem.sceneId]) {
+      result[normalizedItem.sceneId] = {};
+    }
+
+    result[normalizedItem.sceneId][voiceId] = pickResourceFields(
+      normalizedItem,
+      ["fileId", "fileType"],
+    );
+    return result;
+  }, {});
+};
+
 const constructAnimationResources = (
   repositoryAnimations = {},
   repositoryImages = {},
@@ -1136,6 +1166,7 @@ const constructProjectResources = (repositoryState = {}) => {
   const repositorySpritesheets = repositoryState.spritesheets?.items || {};
   const repositoryVideos = repositoryState.videos?.items || {};
   const repositorySounds = repositoryState.sounds?.items || {};
+  const repositoryVoices = repositoryState.voices?.items || {};
   const repositoryAnimations = repositoryState.animations?.items || {};
   const repositoryCharacters = repositoryState.characters?.items || {};
   const repositoryTransforms = repositoryState.transforms?.items || {};
@@ -1200,6 +1231,7 @@ const constructProjectResources = (repositoryState = {}) => {
     },
     videos: constructVideoResources(repositoryVideos, repositoryFiles),
     sounds: constructSoundResources(repositorySounds, repositoryFiles),
+    voices: constructVoiceResources(repositoryVoices, repositoryFiles),
     particles: constructParticleResources(repositoryParticles, imageResources),
     fonts: layoutResources.fonts,
     colors: layoutResources.colors,
@@ -1582,6 +1614,7 @@ const RESOURCE_KEY_TO_TYPES = {
     "spritesheets",
     "videos",
     "sounds",
+    "voices",
     "particles",
     "animations",
     "transforms",
@@ -1624,6 +1657,7 @@ const COLLECTION_DEFS = {
   spritesheets: { collection: "spritesheets", itemType: "spritesheet" },
   videos: { collection: "videos", itemType: "video" },
   sounds: { collection: "sounds", itemType: "sound" },
+  voices: { collection: "voices", itemType: "voice" },
   particles: { collection: "particles", itemType: "particle" },
   animations: { collection: "animations", itemType: "animation" },
   transforms: { collection: "transforms", itemType: "transform" },
@@ -2192,6 +2226,11 @@ const createExportUsageCollector = (state) => {
       addFileId(soundItems[id]?.fileId);
     }
 
+    const voiceItems = getCollectionItems(state, "voices");
+    for (const id of usage.voices) {
+      addFileId(voiceItems[id]?.fileId);
+    }
+
     const fontItems = getCollectionItems(state, "fonts");
     for (const id of usage.fonts) {
       addFileId(fontItems[id]?.fileId);
@@ -2558,6 +2597,7 @@ export const buildFilteredStateForExport = (
     ),
     videos: filterCollectionItemsByIds(state.videos, usedIds.videos || []),
     sounds: filterCollectionItemsByIds(state.sounds, usedIds.sounds || []),
+    voices: filterCollectionItemsByIds(state.voices, usedIds.voices || []),
     particles: filterCollectionItemsByIds(
       state.particles,
       usedIds.particles || [],

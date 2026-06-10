@@ -28,7 +28,7 @@ describe("dialogue layout projection", () => {
       type: "text-revealing",
       content: "${dialogue.content}",
       initialRevealedCharacters: "${dialogue.initialRevealedCharacters}",
-      speed: "${runtime.dialogueTextSpeed}",
+      speed: "${dialogue.textSpeed}",
       revealEffect: "typewriter",
     });
   });

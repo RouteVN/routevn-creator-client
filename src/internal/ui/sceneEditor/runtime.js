@@ -313,10 +313,14 @@ async function createAssetsFromFileIds(
   projectService,
   resources,
 ) {
-  const { sounds, images, videos = {}, fonts = {} } = resources;
+  const { sounds, images, videos = {}, voices = {}, fonts = {} } = resources;
+  const voiceItems = Object.values(voices || {}).flatMap((sceneVoices) =>
+    Object.values(sceneVoices || {}),
+  );
   const resourceItemsByFileId = new Map(
     [
       ...Object.values(sounds || {}),
+      ...voiceItems,
       ...Object.values(images || {}),
       ...Object.values(videos || {}),
       ...Object.values(fonts || {}),

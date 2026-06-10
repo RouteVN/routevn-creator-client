@@ -32,6 +32,8 @@ import {
   setSpriteTransformId,
   setTempSelectedSpriteId,
   setTempSelectedSpriteIds,
+  setCustomizeTextSpeed,
+  setTextSpeed,
   showFullImagePreview,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.store.js";
 
@@ -137,6 +139,9 @@ const createStore = (state) => ({
   setAppendDialogue: (payload) => setAppendDialogue({ state }, payload),
   setPersistCharacter: (payload) => setPersistCharacter({ state }, payload),
   setClearPage: (payload) => setClearPage({ state }, payload),
+  setCustomizeTextSpeed: (payload) =>
+    setCustomizeTextSpeed({ state }, payload),
+  setTextSpeed: (payload) => setTextSpeed({ state }, payload),
 });
 
 const createFormRefs = () => ({
@@ -251,6 +256,45 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(setValues).toHaveBeenCalledWith({
       values: expect.objectContaining({
         characterId: "character-1",
+      }),
+    });
+  });
+
+  it("hydrates dialogue text speed overrides from props into the form state", () => {
+    const state = createInitialState();
+    const reset = vi.fn();
+    const setValues = vi.fn();
+
+    const deps = {
+      props: {
+        layouts,
+        characters,
+        dialogue: {
+          mode: "adv",
+          ui: {
+            resourceId: "layout-adv",
+          },
+          textSpeed: 42,
+        },
+      },
+      refs: {
+        dialogueForm: {
+          reset,
+          setValues,
+        },
+      },
+      store: createStore(state),
+    };
+
+    handleBeforeMount(deps);
+    handleAfterMount(deps);
+
+    expect(state.customizeTextSpeed).toBe(true);
+    expect(state.textSpeed).toBe(42);
+    expect(setValues).toHaveBeenCalledWith({
+      values: expect.objectContaining({
+        customizeTextSpeed: true,
+        textSpeed: 42,
       }),
     });
   });
@@ -455,6 +499,63 @@ describe("commandLineDialogueBox.handlers", () => {
           characterId: "character-1",
           persistCharacter: false,
           content: [{ text: "Line text" }],
+        },
+      },
+    });
+  });
+
+  it("emits temporary presentation state changes with customized text speed", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const refs = createFormRefs();
+
+    handleFormChange(
+      {
+        props: {
+          layouts,
+          characters,
+          dialogue: {
+            content: [{ text: "Fast line" }],
+          },
+        },
+        refs,
+        render,
+        store: createStore(state),
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              mode: "adv",
+              resourceId: "layout-adv",
+              characterId: "",
+              customCharacterName: false,
+              characterName: "",
+              persistCharacter: false,
+              clearPage: false,
+              customizeTextSpeed: true,
+              textSpeed: 62,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.customizeTextSpeed).toBe(true);
+    expect(state.textSpeed).toBe(62);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        dialogue: {
+          mode: "adv",
+          ui: {
+            resourceId: "layout-adv",
+          },
+          persistCharacter: false,
+          textSpeed: 62,
+          content: [{ text: "Fast line" }],
         },
       },
     });
@@ -905,6 +1006,37 @@ describe("commandLineDialogueBox.handlers", () => {
         },
         append: true,
         persistCharacter: false,
+      },
+    });
+  });
+
+  it("submits dialogue.textSpeed when customized", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+
+    setSelectedMode({ state }, { mode: "adv" });
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setCustomizeTextSpeed({ state }, { customizeTextSpeed: true });
+    setTextSpeed({ state }, { textSpeed: 40 });
+
+    handleSubmitClick({
+      props: {
+        layouts,
+        dialogue: {},
+      },
+      store: createStore(state),
+      dispatchEvent,
+    });
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      dialogue: {
+        mode: "adv",
+        ui: {
+          resourceId: "layout-adv",
+        },
+        persistCharacter: false,
+        textSpeed: 40,
       },
     });
   });

@@ -27,6 +27,7 @@ const createExportRepositoryState = (overrides = {}) => ({
   spritesheets: createTreeCollection(),
   videos: createTreeCollection(),
   sounds: createTreeCollection(),
+  voices: createTreeCollection(),
   particles: createTreeCollection(),
   animations: createTreeCollection(),
   characters: createTreeCollection(),
@@ -639,6 +640,86 @@ describe("constructProjectData", () => {
       { text: ". Score: " },
       { text: 7 },
     ]);
+  });
+
+  it("projects line voice resources grouped by scene for route-engine", () => {
+    const repositoryState = createExportRepositoryState({
+      files: createTreeCollection(
+        {
+          "file-voice-1": {
+            id: "file-voice-1",
+            type: "file",
+            mimeType: "audio/ogg",
+            size: 123,
+          },
+        },
+        [{ id: "file-voice-1" }],
+      ),
+      voices: createTreeCollection(
+        {
+          "voice-1": {
+            id: "voice-1",
+            type: "voice",
+            name: "Line Voice",
+            sceneId: "scene-1",
+            fileId: "file-voice-1",
+          },
+        },
+        [{ id: "voice-1" }],
+      ),
+      scenes: createTreeCollection(
+        {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            name: "Scene 1",
+            sections: createTreeCollection(
+              {
+                "section-1": {
+                  id: "section-1",
+                  name: "Section 1",
+                  lines: createTreeCollection(
+                    {
+                      "line-1": {
+                        id: "line-1",
+                        actions: {
+                          voice: {
+                            resourceId: "voice-1",
+                          },
+                        },
+                      },
+                    },
+                    [{ id: "line-1" }],
+                  ),
+                },
+              },
+              [{ id: "section-1" }],
+            ),
+          },
+        },
+        [{ id: "scene-1" }],
+      ),
+    });
+    const projectData = constructProjectData(repositoryState);
+
+    expect(projectData.resources.voices).toEqual({
+      "scene-1": {
+        "voice-1": {
+          fileId: "file-voice-1",
+          fileType: "audio/ogg",
+        },
+      },
+    });
+
+    const renderState = selectRouteEngineRenderState(projectData);
+    expect(renderState.audio).toContainEqual({
+      id: "voice-scene-1-voice-1",
+      type: "sound",
+      src: "file-voice-1",
+      volume: 50,
+      loop: false,
+      startDelayMs: null,
+    });
   });
 
   it("projects character nameVariableId for route-engine speaker names", () => {

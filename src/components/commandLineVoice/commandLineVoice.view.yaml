@@ -1,0 +1,62 @@
+refs:
+  audioWaveform:
+    eventListeners:
+      click:
+        handler: handleAudioWaveformClick
+      contextmenu:
+        handler: handleAudioWaveformRightClick
+  previewButton:
+    eventListeners:
+      click:
+        handler: handlePreviewClick
+  loopSelect:
+    eventListeners:
+      value-change:
+        handler: handleLoopChange
+  volumeInput:
+    eventListeners:
+      value-input:
+        handler: handleVolumeInput
+  submitButton:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+  breadcumb:
+    eventListeners:
+      item-click:
+        handler: handleBreadcumbClick
+  rvnAudioPlayer:
+    eventListeners:
+      audio-player-close:
+        handler: handleAudioPlayerClose
+template:
+  - rtgl-view w=f h=f p=lg:
+      - rtgl-view d=h g=md: null
+      - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
+      - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+          - rtgl-view d=h w=f g=md av=t:
+              - $if audio:
+                  - rtgl-view#audioWaveform cur=pointer bw=xs bc=${audio.itemBorderColor} h-bc=${audio.itemHoverBorderColor} br=sm:
+                      - rtgl-view p=md g=md br=md:
+                          - $if audio.waveformDataFileId:
+                              - rvn-waveform-visualizer waveformDataFileId=${audio.waveformDataFileId} w=200 h=120: null
+                            $else:
+                              - rtgl-view w=200 h=120 av=c ah=c bgc=mu:
+                                  - rtgl-text s=sm c=mu-fg: No waveform
+                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${audio.name}
+                $else:
+                  - rtgl-view#audioWaveform w=250 h=150 bgc=mu av=c ah=c cur=pointer br=sm:
+                      - rtgl-svg svg=upload wh=24 c=mu-fg: null
+                      - rtgl-text s=md c=mu-fg: Select Voice
+              - rtgl-view w=1fg g=sm:
+                  - $if audio:
+                      - rtgl-button#previewButton sq v=ol pre=play: null
+                  - rtgl-text s=sm c=mu-fg: Loop
+                  - rtgl-segmented-control#loopSelect w=f no-clear :selectedValue=${voice.loop} :options=${loopOptions}: null
+                  - rtgl-text s=sm c=mu-fg: Volume
+                  - rtgl-slider-input#volumeInput min=0 max=100 step=1 w=f value=${voice.volume}: null
+      - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - rtgl-button#submitButton: Submit
+  - $if showAudioPlayer:
+      - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: 0px; right: 0px;"':
+          - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null
