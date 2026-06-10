@@ -280,7 +280,11 @@ describe("commandLineActions.store", () => {
     expect(getSectionModes(items, "Visual")).toEqual(
       expect.arrayContaining(["screen", "background", "character", "visual"]),
     );
-    expect(getSectionModes(items, "Audio")).toEqual(["bgm", "sfx"]);
+    expect(getSectionModes(items, "Audio")).toEqual(["bgm", "voice", "sfx"]);
+    expect(items.find((item) => item.mode === "voice")).toMatchObject({
+      label: "Voice",
+      icon: "microphone",
+    });
     expect(getSectionModes(items, "Navigation")).toEqual(
       expect.arrayContaining([
         "choice",

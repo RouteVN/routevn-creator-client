@@ -12,6 +12,8 @@ import {
   setSpriteAnimationId,
   setSpriteAnimationMode,
   setSpriteTransformId,
+  setCustomizeTextSpeed,
+  setTextSpeed,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.store.js";
 
 const isFieldVisible = ({ field, values }) => {
@@ -216,6 +218,88 @@ describe("commandLineDialogueBox.store", () => {
       type: "segmented-control",
       value: true,
     });
+  });
+
+  it("exposes optional text speed controls with no override by default", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        layouts: [
+          {
+            id: "layout-adv",
+            name: "ADV Layout",
+            layoutType: "dialogue-adv",
+          },
+        ],
+        characters: [],
+      },
+    });
+
+    const customizeTextSpeedField = viewData.form.fields.find(
+      (field) => field.name === "customizeTextSpeed",
+    );
+    const textSpeedField = viewData.form.fields.find(
+      (field) => field.name === "textSpeed",
+    );
+
+    expect(viewData.customizeTextSpeed).toBe(false);
+    expect(viewData.textSpeed).toBe(75);
+    expect(viewData.defaultValues.customizeTextSpeed).toBe(false);
+    expect(viewData.defaultValues.textSpeed).toBe(75);
+    expect(customizeTextSpeedField).toMatchObject({
+      label: "Customize Text Speed",
+      type: "segmented-control",
+      value: false,
+      options: [
+        { value: false, label: "No" },
+        { value: true, label: "Yes" },
+      ],
+    });
+    expect(textSpeedField).toMatchObject({
+      $when: "values.customizeTextSpeed == true",
+      label: "Text Speed",
+      type: "slider-with-input",
+      min: 0,
+      max: 100,
+      step: 1,
+      value: 75,
+    });
+    expect(
+      isFieldVisible({
+        field: textSpeedField,
+        values: {
+          customizeTextSpeed: false,
+          textSpeed: 75,
+        },
+      }),
+    ).toBe(false);
+    expect(
+      isFieldVisible({
+        field: textSpeedField,
+        values: {
+          customizeTextSpeed: true,
+          textSpeed: 75,
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("normalizes text speed values to the supported 0 to 100 range", () => {
+    const state = createInitialState();
+
+    setCustomizeTextSpeed({ state }, { customizeTextSpeed: true });
+    setTextSpeed({ state }, { textSpeed: 150 });
+
+    expect(state.textSpeed).toBe(100);
+    expect(selectViewData({ state, props: { layouts: [], characters: [] } }))
+      .toMatchObject({
+        defaultValues: {
+          customizeTextSpeed: true,
+          textSpeed: 100,
+        },
+      });
   });
 
   it("shows persistCharacter only for selected characters or enabled custom naming", () => {

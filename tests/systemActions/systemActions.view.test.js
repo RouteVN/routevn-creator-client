@@ -27,6 +27,11 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       "rvn-command-line-screen#commandLineScreen :screen=${actions.screen}",
     );
+    expect(systemActionsView).toContain(
+      "rvn-command-line-voice#commandLineVoice :voice=${actions.voice} currentSceneId=${currentSceneId}",
+    );
+    expect(systemActionsView).toContain("rtgl-view#actionItemVoice");
+    expect(systemActionsView).toContain("rtgl-svg svg=microphone wh=24");
     expect(systemActionsView).toContain("rtgl-svg svg=screen wh=24");
     expect(conditionalView).toContain(
       "rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes} :allowedModes=${branchActionAllowedModes}",

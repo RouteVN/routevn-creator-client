@@ -47,6 +47,7 @@ export const initialProjectData = {
   images: createTreeCollection(),
   spritesheets: createTreeCollection(),
   sounds: createTreeCollection(),
+  voices: createTreeCollection(),
   videos: createTreeCollection(),
   animations: createTreeCollection(),
   particles: createTreeCollection(),

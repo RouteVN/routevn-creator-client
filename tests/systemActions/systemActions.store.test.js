@@ -213,6 +213,50 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("preserves and previews voice actions from repository voices", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          voices: {
+            items: {
+              "voice-line-1": {
+                id: "voice-line-1",
+                type: "voice",
+                name: "Aki Line 1",
+                fileId: "file-voice-line-1",
+              },
+            },
+            tree: [{ id: "voice-line-1" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          voice: {
+            resourceId: "voice-line-1",
+            volume: 80,
+          },
+        },
+      },
+    });
+
+    expect(actions.voice).toEqual({
+      resourceId: "voice-line-1",
+      volume: 80,
+    });
+    expect(preview.voice).toMatchObject({
+      id: "voice-line-1",
+      name: "Aki Line 1",
+    });
+  });
+
   it("preserves and previews input form actions", () => {
     const state = createInitialState();
     const inputElements = {

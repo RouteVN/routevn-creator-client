@@ -255,6 +255,51 @@ describe("story command api", () => {
     });
   });
 
+  it("deletes scene-owned voices before deleting the scene in one batch", async () => {
+    const context = {
+      projectId: "project-1",
+      state: createStoryState(),
+    };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      submitCommandsWithContext: vi.fn(async () => ({
+        valid: true,
+        commandIds: ["cmd-voice-delete", "cmd-scene-delete"],
+        eventCount: 2,
+      })),
+      resourceTypePartitionFor: vi.fn(() => "r:voices"),
+      storyScenePartitionFor: vi.fn(() => "m:s:scene-1"),
+    };
+    const api = createStoryCommandApi(shared);
+
+    await api.deleteSceneItem({
+      sceneIds: ["scene-1"],
+      voiceIds: ["voice-1", "voice-2"],
+    });
+
+    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
+      context,
+      commands: [
+        {
+          scope: "resources",
+          basePartition: "r:voices",
+          type: COMMAND_TYPES.VOICE_DELETE,
+          payload: {
+            voiceIds: ["voice-1", "voice-2"],
+          },
+        },
+        {
+          scope: "story",
+          partition: "m:s:scene-1",
+          type: COMMAND_TYPES.SCENE_DELETE,
+          payload: {
+            sceneIds: ["scene-1"],
+          },
+        },
+      ],
+    });
+  });
+
   it("omits replace for default line action updates", async () => {
     const context = {
       projectId: "project-1",

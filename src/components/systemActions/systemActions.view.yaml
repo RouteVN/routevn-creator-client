@@ -50,7 +50,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.screen || preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.form || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.conditional || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
+          - $if preview.screen || preview.background || preview.bgm || preview.voice || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.form || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.conditional || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
               - $if preview.control:
                   - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=control wh=24: null
@@ -86,6 +86,10 @@ template:
                   - rtgl-view#actionItemBgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=music wh=24: null
                       - rtgl-text s=sm: ${preview.bgm.name}
+              - $if preview.voice:
+                  - rtgl-view#actionItemVoice data-mode=voice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=microphone wh=24: null
+                      - rtgl-text s=sm: ${preview.voice.name}
               - $if preview.sfx:
                   - rtgl-view#actionItemSfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=audio wh=24: null
@@ -243,6 +247,8 @@ template:
                   - rvn-command-line-screen#commandLineScreen :screen=${actions.screen}: null
                 $elif mode == "bgm":
                   - rvn-command-line-bgm#commandLineBgm :bgm=${actions.bgm}: null
+                $elif mode == "voice":
+                  - rvn-command-line-voice#commandLineVoice :voice=${actions.voice} currentSceneId=${currentSceneId}: null
                 $elif mode == "sfx":
                   - rvn-command-line-sound-effects#commandLineSoundEffects :sfx=${actions.sfx}: null
                 $elif mode == "character":

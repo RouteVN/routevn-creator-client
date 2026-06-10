@@ -6,6 +6,7 @@ import {
   buildImageResourcePatchFromUploadResult,
   buildSoundResourceDataFromUploadResult,
   buildSoundResourcePatchFromUploadResult,
+  buildVoiceResourceDataFromUploadResult,
   buildVideoResourceDataFromUploadResult,
   buildVideoResourcePatchFromUploadResult,
   importImageFile,
@@ -98,6 +99,32 @@ describe("resource image imports", () => {
       fileId: "file-1",
       waveformDataFileId: "wave-1",
       duration: 12.5,
+    });
+  });
+
+  it("maps upload results to voice resource data with scene ownership", () => {
+    expect(
+      buildVoiceResourceDataFromUploadResult({
+        uploadResult: {
+          fileId: "file-1",
+          displayName: "Alice Line",
+          file: {
+            type: "audio/ogg",
+            size: 123,
+          },
+          waveformDataFileId: "wave-1",
+          duration: 2.5,
+        },
+        sceneId: "scene-1",
+      }),
+    ).toEqual({
+      type: "voice",
+      fileId: "file-1",
+      name: "Alice Line",
+      description: "",
+      sceneId: "scene-1",
+      waveformDataFileId: "wave-1",
+      duration: 2.5,
     });
   });
 

@@ -1,0 +1,17 @@
+componentName: rvn-command-line-voice
+propsSchema:
+  type: object
+  properties:
+    voice:
+      type: object
+      properties:
+        resourceId:
+          type: string
+        loop:
+          type: boolean
+        volume:
+          type: number
+        startDelayMs:
+          type: number
+    currentSceneId:
+      type: string

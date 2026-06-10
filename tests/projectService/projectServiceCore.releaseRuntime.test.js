@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
   importImageFile: vi.fn(),
+  checkProjectResourceUsage: vi.fn(),
+  checkSceneDeleteUsage: vi.fn(),
   repositoryService: {
     getCachedStore: vi.fn(),
     getCachedReference: vi.fn(),
@@ -29,6 +31,7 @@ const mocked = vi.hoisted(() => ({
     stopCollabSession: vi.fn(),
     commandApi: {
       upgradeLayoutSchemaVersion: vi.fn(),
+      deleteSceneItem: vi.fn(),
     },
     addVersionToProject: vi.fn(),
     updateVersionInProject: vi.fn(),
@@ -84,8 +87,8 @@ vi.mock("../../src/deps/services/shared/resourceImports.js", () => ({
 }));
 
 vi.mock("../../src/deps/services/shared/resourceUsage.js", () => ({
-  checkProjectResourceUsage: vi.fn(),
-  checkSceneDeleteUsage: vi.fn(),
+  checkProjectResourceUsage: mocked.checkProjectResourceUsage,
+  checkSceneDeleteUsage: mocked.checkSceneDeleteUsage,
 }));
 
 import { createProjectServiceCore } from "../../src/deps/services/shared/projectServiceCore.js";
@@ -95,10 +98,14 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.importImageFile.mockReset();
     mocked.repositoryService.getEnsuredProjectId.mockReset();
     mocked.repositoryService.ensureRepository.mockReset();
+    mocked.repositoryService.getCachedRepository.mockReset();
     mocked.repositoryService.releaseCurrentRepository.mockReset();
     mocked.repositoryService.releaseRepositoryByProjectId.mockReset();
     mocked.collabService.stopCollabSession.mockReset();
     mocked.collabService.commandApi.upgradeLayoutSchemaVersion.mockReset();
+    mocked.collabService.commandApi.deleteSceneItem.mockReset();
+    mocked.checkProjectResourceUsage.mockReset();
+    mocked.checkSceneDeleteUsage.mockReset();
   });
 
   it("stops the ensured collab session before releasing that project runtime", async () => {
@@ -374,5 +381,104 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       mocked.repositoryService.releaseRepositoryByProjectId.mock
         .invocationCallOrder[0],
     ).toBeLessThan(initializeProject.mock.invocationCallOrder[0]);
+  });
+
+  it("cascades scene-owned voice resources when deleting an unused scene", async () => {
+    const repositoryState = {
+      project: {
+        resolution: {
+          width: 1920,
+          height: 1080,
+        },
+      },
+      story: {},
+      scenes: {
+        items: {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            sections: {
+              items: {},
+              tree: [],
+            },
+          },
+          "scene-2": {
+            id: "scene-2",
+            type: "scene",
+            sections: {
+              items: {},
+              tree: [],
+            },
+          },
+        },
+        tree: [{ id: "scene-1" }, { id: "scene-2" }],
+      },
+      voices: {
+        items: {
+          "voice-scene-1": {
+            id: "voice-scene-1",
+            type: "voice",
+            sceneId: "scene-1",
+          },
+          "voice-scene-2": {
+            id: "voice-scene-2",
+            type: "voice",
+            sceneId: "scene-2",
+          },
+          "voice-folder": {
+            id: "voice-folder",
+            type: "folder",
+            sceneId: "scene-1",
+          },
+        },
+        tree: [
+          { id: "voice-scene-1" },
+          { id: "voice-scene-2" },
+          { id: "voice-folder" },
+        ],
+      },
+    };
+    const repository = {
+      getState: vi.fn(() => repositoryState),
+      loadSceneOverviews: vi.fn(async () => ({})),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.repositoryService.getCachedRepository.mockReturnValue(repository);
+    mocked.checkSceneDeleteUsage.mockReturnValue({
+      isUsed: false,
+    });
+    mocked.collabService.commandApi.deleteSceneItem.mockResolvedValue({
+      valid: true,
+    });
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await expect(
+      projectService.deleteSceneIfUnused({ sceneId: "scene-1" }),
+    ).resolves.toMatchObject({
+      deleted: true,
+    });
+
+    expect(
+      mocked.collabService.commandApi.deleteSceneItem,
+    ).toHaveBeenCalledWith({
+      sceneIds: ["scene-1"],
+      voiceIds: ["voice-scene-1"],
+    });
   });
 });

@@ -30,6 +30,19 @@ export const buildSoundResourcePatchFromUploadResult = (uploadResult = {}) => ({
   duration: uploadResult.duration,
 });
 
+export const buildVoiceResourceDataFromUploadResult = ({
+  uploadResult = {},
+  sceneId,
+} = {}) => ({
+  type: "voice",
+  fileId: uploadResult.fileId,
+  name: uploadResult.displayName,
+  description: "",
+  sceneId,
+  waveformDataFileId: uploadResult.waveformDataFileId,
+  duration: uploadResult.duration,
+});
+
 export const buildVideoResourceDataFromUploadResult = (uploadResult = {}) => ({
   type: "video",
   fileId: uploadResult.fileId,

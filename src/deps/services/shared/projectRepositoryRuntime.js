@@ -123,6 +123,10 @@ const RESOURCE_CREATE_REPLAY_DEFINITIONS = Object.freeze({
     idField: "soundId",
     collectionKey: "sounds",
   },
+  "voice.create": {
+    idField: "voiceId",
+    collectionKey: "voices",
+  },
   "video.create": {
     idField: "videoId",
     collectionKey: "videos",

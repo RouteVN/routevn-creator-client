@@ -6,9 +6,19 @@ import {
 
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
+const DEFAULT_TEXT_SPEED = 75;
 
 const toBoolean = (value) => {
   return value === true || value === "true";
+};
+
+const normalizeTextSpeed = (textSpeed, fallback = DEFAULT_TEXT_SPEED) => {
+  const parsedTextSpeed = Number(textSpeed);
+  if (!Number.isFinite(parsedTextSpeed)) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(parsedTextSpeed)));
 };
 
 const createEmptyCollection = () => ({
@@ -411,6 +421,8 @@ const buildDialogueFromState = (
     appendDialogue,
     persistCharacter,
     clearPage,
+    customizeTextSpeed,
+    textSpeed,
   } = store.getState();
   const selectedSpriteIds = resolveEffectiveSelectedSpriteIds({
     state: store.getState(),
@@ -484,6 +496,9 @@ const buildDialogueFromState = (
   if (effectiveMode === "nvl" && toBoolean(clearPage)) {
     dialogue.clearPage = true;
   }
+  if (toBoolean(customizeTextSpeed)) {
+    dialogue.textSpeed = normalizeTextSpeed(textSpeed);
+  }
   if (
     includeContent &&
     !Object.hasOwn(dialogue, "content") &&
@@ -537,6 +552,7 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
   const spriteAnimationMode =
     getAnimationModeById(props?.animations, spriteAnimationId) ??
     (spriteAnimationId ? "update" : "none");
+  const customizeTextSpeed = dialogue?.textSpeed !== undefined;
   const spriteCharacterId = characterSprite
     ? inferSpriteCharacterId({
         characters: props?.characters,
@@ -597,6 +613,13 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
   store.setClearPage({
     clearPage: dialogue?.clearPage === true,
   });
+  store.setCustomizeTextSpeed({
+    customizeTextSpeed,
+  });
+  store.setTextSpeed({
+    textSpeed: customizeTextSpeed ? dialogue.textSpeed : DEFAULT_TEXT_SPEED,
+    fallback: DEFAULT_TEXT_SPEED,
+  });
 };
 
 const syncDialogueFormValues = (deps) => {
@@ -615,6 +638,8 @@ const syncDialogueFormValues = (deps) => {
     appendDialogue,
     persistCharacter,
     clearPage,
+    customizeTextSpeed,
+    textSpeed,
   } = store.getState();
   const values = {
     mode: selectedMode,
@@ -625,6 +650,8 @@ const syncDialogueFormValues = (deps) => {
     append: appendDialogue,
     persistCharacter,
     clearPage,
+    customizeTextSpeed,
+    textSpeed: normalizeTextSpeed(textSpeed),
   };
 
   refs.dialogueForm.reset();
@@ -658,6 +685,9 @@ export const handleFormChange = (deps, payload) => {
   const selectedMode = formValues.mode === "nvl" ? "nvl" : "adv";
   const modeChanged = selectedMode !== currentState.selectedMode;
   const customCharacterName = toBoolean(formValues.customCharacterName);
+  const customizeTextSpeed = toBoolean(formValues.customizeTextSpeed);
+  const textSpeedVisibilityChanged =
+    customizeTextSpeed !== currentState.customizeTextSpeed;
   const selectedCharacterId = formValues.characterId ?? "";
   const hadDialogueCharacter = hasDialogueCharacter({
     selectedCharacterId: currentState.selectedCharacterId,
@@ -711,10 +741,21 @@ export const handleFormChange = (deps, payload) => {
     persistCharacter,
   });
   store.setClearPage({ clearPage: formValues.clearPage });
+  store.setCustomizeTextSpeed({
+    customizeTextSpeed,
+  });
+  store.setTextSpeed({
+    textSpeed: formValues.textSpeed,
+    fallback: currentState.textSpeed,
+  });
 
   render();
 
-  if (modeChanged || persistCharacterVisibilityChanged) {
+  if (
+    modeChanged ||
+    persistCharacterVisibilityChanged ||
+    textSpeedVisibilityChanged
+  ) {
     syncDialogueFormValues(deps);
   }
 

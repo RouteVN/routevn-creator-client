@@ -1291,7 +1291,7 @@ const applyTextNode = ({ element, node, context }) => {
     node.type === "text-revealing" ||
     node.type === "text-revealing-ref-dialogue-content"
   ) {
-    nextElement.speed = "${runtime.dialogueTextSpeed}";
+    nextElement.speed = "${dialogue.textSpeed}";
   }
 
   if (renderType === "text-revealing" && node.revealEffect) {
@@ -2090,6 +2090,7 @@ const createResourceSelection = () => ({
   spritesheets: new Set(),
   videos: new Set(),
   sounds: new Set(),
+  voices: new Set(),
   particles: new Set(),
   fonts: new Set(),
   colors: new Set(),
@@ -2099,6 +2100,16 @@ const createResourceSelection = () => ({
   transforms: new Set(),
   animations: new Set(),
 });
+
+const hasVoiceResourceId = (voices = {}, resourceId) => {
+  for (const sceneVoices of Object.values(voices || {})) {
+    if (sceneVoices?.[resourceId]) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 const addResourceIdToSelection = (selection, resources, resourceId) => {
   if (typeof resourceId !== "string" || resourceId.length === 0) {
@@ -2116,6 +2127,9 @@ const addResourceIdToSelection = (selection, resources, resourceId) => {
   }
   if (resources.sounds?.[resourceId]) {
     selection.sounds.add(resourceId);
+  }
+  if (hasVoiceResourceId(resources.voices, resourceId)) {
+    selection.voices.add(resourceId);
   }
   if (resources.particles?.[resourceId]) {
     selection.particles.add(resourceId);
@@ -2172,6 +2186,23 @@ const pickByIds = (items = {}, idSet) => {
     }
     return result;
   }, {});
+};
+
+const pickVoiceResourcesByIds = (voices = {}, idSet) => {
+  if (!idSet || idSet.size === 0) {
+    return {};
+  }
+
+  return Object.entries(voices || {}).reduce(
+    (result, [sceneId, sceneVoices]) => {
+      const pickedSceneVoices = pickByIds(sceneVoices, idSet);
+      if (Object.keys(pickedSceneVoices).length > 0) {
+        result[sceneId] = pickedSceneVoices;
+      }
+      return result;
+    },
+    {},
+  );
 };
 
 const collectResourceSelectionFromValue = (projectData, value) => {
@@ -2455,6 +2486,7 @@ export const extractFileIdsForScene = (projectData, sceneId) => {
     spritesheets: pickByIds(resources.spritesheets, selection.spritesheets),
     videos: pickByIds(resources.videos, selection.videos),
     sounds: pickByIds(resources.sounds, selection.sounds),
+    voices: pickVoiceResourcesByIds(resources.voices, selection.voices),
     particles: pickByIds(resources.particles, selection.particles),
     fonts: pickByIds(resources.fonts, selection.fonts),
     colors: pickByIds(resources.colors, selection.colors),
@@ -2480,6 +2512,7 @@ export const extractFileIdsForValue = (projectData, value) => {
     spritesheets: pickByIds(resources.spritesheets, selection.spritesheets),
     videos: pickByIds(resources.videos, selection.videos),
     sounds: pickByIds(resources.sounds, selection.sounds),
+    voices: pickVoiceResourcesByIds(resources.voices, selection.voices),
     particles: pickByIds(resources.particles, selection.particles),
     fonts: pickByIds(resources.fonts, selection.fonts),
     colors: pickByIds(resources.colors, selection.colors),

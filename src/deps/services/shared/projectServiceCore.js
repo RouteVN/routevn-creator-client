@@ -193,14 +193,25 @@ export const createProjectServiceCore = ({
     });
   };
 
+  const selectVoiceIdsOwnedByScene = (sceneId) => {
+    const state = getRepositoryState();
+    return Object.entries(state?.voices?.items || {})
+      .filter(
+        ([, voice]) => voice?.type === "voice" && voice.sceneId === sceneId,
+      )
+      .map(([voiceId]) => voiceId);
+  };
+
   const deleteSceneIfUnused = async ({ sceneId } = {}) => {
     const usage = await checkSceneDeletionUsage({ sceneId });
     if (usage.isUsed) {
       return { deleted: false, usage };
     }
 
+    const voiceIds = selectVoiceIdsOwnedByScene(sceneId);
     const deleteResult = await collabService.commandApi.deleteSceneItem({
       sceneIds: [sceneId],
+      voiceIds,
     });
     if (deleteResult?.valid === false) {
       return { deleted: false, usage, deleteResult };

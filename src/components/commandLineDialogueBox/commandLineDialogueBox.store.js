@@ -21,6 +21,7 @@ const ANIMATION_MODE_OPTIONS = [
   },
 ];
 
+const DEFAULT_TEXT_SPEED = 75;
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
 const UNGROUPED_CHARACTER_GROUP_ID = "__ungrouped_dialogue_characters__";
@@ -80,6 +81,15 @@ const resolveSelectedResourceId = ({ layoutOptions, resourceId } = {}) => {
 
 const toBoolean = (value) => {
   return value === true || value === "true";
+};
+
+const normalizeTextSpeed = (textSpeed, fallback = DEFAULT_TEXT_SPEED) => {
+  const parsedTextSpeed = Number(textSpeed);
+  if (!Number.isFinite(parsedTextSpeed)) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(parsedTextSpeed)));
 };
 
 const resolveSpriteGroupId = (spriteGroup = {}, index = 0) => {
@@ -306,6 +316,8 @@ export const createInitialState = () => ({
   appendDialogue: false,
   persistCharacter: false,
   clearPage: false,
+  customizeTextSpeed: false,
+  textSpeed: DEFAULT_TEXT_SPEED,
   searchQuery: "",
   fullImagePreviewVisible: false,
   fullImagePreviewKind: "image",
@@ -323,6 +335,8 @@ export const createInitialState = () => ({
     append: false,
     persistCharacter: false,
     clearPage: false,
+    customizeTextSpeed: false,
+    textSpeed: DEFAULT_TEXT_SPEED,
   },
 
   form: {
@@ -383,6 +397,29 @@ export const createInitialState = () => ({
         type: "slot",
         slot: "characterSprite",
         label: "Character Sprite",
+      },
+      {
+        name: "customizeTextSpeed",
+        type: "segmented-control",
+        label: "Customize Text Speed",
+        description: "",
+        required: true,
+        clearable: false,
+        options: [
+          { value: false, label: "No" },
+          { value: true, label: "Yes" },
+        ],
+      },
+      {
+        $when: "values.customizeTextSpeed == true",
+        name: "textSpeed",
+        type: "slider-with-input",
+        label: "Text Speed",
+        description: "",
+        required: true,
+        min: 0,
+        max: 100,
+        step: 1,
       },
       {
         $when: 'values.mode == "adv"',
@@ -624,6 +661,24 @@ export const setClearPage = ({ state }, { clearPage } = {}) => {
   const clearPageValue = toBoolean(clearPage);
   state.clearPage = clearPageValue;
   state.defaultValues.clearPage = clearPageValue;
+};
+
+export const setCustomizeTextSpeed = (
+  { state },
+  { customizeTextSpeed } = {},
+) => {
+  const customizeTextSpeedValue = toBoolean(customizeTextSpeed);
+  state.customizeTextSpeed = customizeTextSpeedValue;
+  state.defaultValues.customizeTextSpeed = customizeTextSpeedValue;
+};
+
+export const setTextSpeed = (
+  { state },
+  { textSpeed, fallback = state.textSpeed } = {},
+) => {
+  const nextTextSpeed = normalizeTextSpeed(textSpeed, fallback);
+  state.textSpeed = nextTextSpeed;
+  state.defaultValues.textSpeed = nextTextSpeed;
 };
 
 export const selectMode = ({ state }) => state.mode;
@@ -900,6 +955,18 @@ export const selectViewData = ({ state, props }) => {
         value: state.clearPage,
       };
     }
+    if (field.name === "customizeTextSpeed") {
+      return {
+        ...field,
+        value: state.customizeTextSpeed,
+      };
+    }
+    if (field.name === "textSpeed") {
+      return {
+        ...field,
+        value: normalizeTextSpeed(state.textSpeed),
+      };
+    }
     return field;
   });
 
@@ -912,6 +979,8 @@ export const selectViewData = ({ state, props }) => {
     append: state.appendDialogue,
     persistCharacter: state.persistCharacter,
     clearPage: state.clearPage,
+    customizeTextSpeed: state.customizeTextSpeed,
+    textSpeed: normalizeTextSpeed(state.textSpeed),
   };
   const context = {
     values: defaultValues,
@@ -937,6 +1006,8 @@ export const selectViewData = ({ state, props }) => {
     appendDialogue: state.appendDialogue,
     persistCharacter: state.persistCharacter,
     clearPage: state.clearPage,
+    customizeTextSpeed: state.customizeTextSpeed,
+    textSpeed: normalizeTextSpeed(state.textSpeed),
     submitDisabled: !selectedResourceId,
     breadcrumb,
     form: {
