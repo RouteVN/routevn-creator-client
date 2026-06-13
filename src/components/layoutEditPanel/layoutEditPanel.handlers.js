@@ -794,14 +794,7 @@ export const handleBlurItemClick = (deps) => {
 
 export const handleTextContentItemClick = (deps) => {
   const { render, store } = deps;
-  console.debug("[rvn layout text dialog] content field clicked", {
-    values: store.selectValues(),
-    dialogBefore: store.selectTextContentDialog(),
-  });
   store.openTextContentDialog();
-  console.debug("[rvn layout text dialog] content dialog opened", {
-    dialogAfter: store.selectTextContentDialog(),
-  });
   render();
 };
 
@@ -865,9 +858,6 @@ export const handleTextRevealIndicatorDialogClose = (deps) => {
 
 export const handleTextContentDialogClose = (deps) => {
   const { render, store } = deps;
-  console.debug("[rvn layout text dialog] dialog close event", {
-    dialogBefore: store.selectTextContentDialog(),
-  });
   store.closeTextContentDialog();
   render();
 };
@@ -1539,13 +1529,6 @@ export const handleTextContentFormAction = (deps, payload) => {
     payload._event.currentTarget?.querySelector?.(
       "rvn-lexical-layout-text-editor",
     );
-  console.debug("[rvn layout text dialog] form action", {
-    actionId: detail.actionId,
-    hasEditorRef: Boolean(refs.textContentEditor),
-    hasEditorFallback: Boolean(editor),
-    editorText: editor?.textContent,
-    editorContent: editor?.getContent?.(),
-  });
 
   if (detail.actionId === "cancel") {
     store.closeTextContentDialog();
@@ -1558,9 +1541,6 @@ export const handleTextContentFormAction = (deps, payload) => {
   }
 
   const content = editor?.getContent?.();
-  console.debug("[rvn layout text dialog] submitting content", {
-    content,
-  });
   store.closeTextContentDialog();
   applyPanelValueUpdate(deps, {
     name: "content",

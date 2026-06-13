@@ -1203,18 +1203,6 @@ export const selectViewData = ({ state, props, constants }) => {
   const textContentMentionTargets = buildTextContentMentionTargets(
     state.variablesData,
   );
-  if (state.textContentDialog.open) {
-    console.debug("[rvn layout text dialog] view data", {
-      dialog: state.textContentDialog,
-      valueType: values.type,
-      content: values.content,
-      text: values.text,
-      variableItemCount: Object.keys(state.variablesData?.items ?? {}).length,
-      variableTreeCount: state.variablesData?.tree?.length ?? 0,
-      mentionTargetCount: textContentMentionTargets.length,
-      mentionTargets: textContentMentionTargets,
-    });
-  }
   const spritesheetSelectionValue = toSpritesheetAnimationSelectionValue(
     values.resourceId,
     values.animationName,
