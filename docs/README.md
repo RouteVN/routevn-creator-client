@@ -10,6 +10,7 @@
 6. [Animation Editor Transition Mask Plan](./animation-editor-transition-mask-plan.md)
 7. [Resource Tags Spec](./resource-tags-spec.md)
 8. [Import Packages](./import-packages.md)
+9. [Observability Proposal](./observability.md)
 
 ## Runbooks
 
