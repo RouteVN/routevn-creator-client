@@ -34,6 +34,7 @@ import {
 } from "./lexicalRichTextShared.js";
 import {
   createCollapsedRangeAtPosition,
+  applySelectionToLineNode,
   getLexicalOffsetBeforeNode,
   setSelectionFromRange,
 } from "./lexicalSceneDocumentSelection.js";
@@ -66,13 +67,7 @@ const createClosedMentionMenuState = () => ({
 });
 
 const TYPED_SLASH_MENTION_TRIGGER_WINDOW_MS = 1000;
-const DEBUG_PREFIX = "[rvn layout text editor]";
-
 const isSlashText = (value) => String(value ?? "") === "/";
-
-const logDebug = (message, data = {}) => {
-  console.debug(`${DEBUG_PREFIX} ${message}`, data);
-};
 
 const getMentionTriggerMatchFromBeforeCaret = ({
   beforeCaret,
@@ -292,13 +287,12 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     this.refs.mentionMenu.place = "bs";
     this.refs.mentionMenu.w = "260";
     this.refs.mentionMenu.h = "240";
+    this.refs.editor.addEventListener(
+      "beforeinput",
+      this.handleEditorBeforeInput,
+      true,
+    );
     this.editor.setRootElement(this.refs.editor);
-    logDebug("connected", {
-      content: this.state.content,
-      mentionTargetCount: this.state.mentionTargets.length,
-      mentionTargets: this.state.mentionTargets,
-      hostStyle: this.getAttribute("style"),
-    });
 
     this.unregister = mergeRegister(
       registerRichText(this.editor),
@@ -334,11 +328,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
     this.refs.editor.addEventListener("focus", this.handleEditorFocus);
     this.refs.editor.addEventListener("blur", this.handleEditorBlur);
-    this.refs.editor.addEventListener(
-      "beforeinput",
-      this.handleEditorBeforeInput,
-      true,
-    );
     this.refs.editor.addEventListener("input", this.handleEditorInput);
     this.refs.editor.addEventListener("keydown", this.handleEditorKeyDown);
     this.refs.editor.addEventListener("mousedown", this.handleEditorMouseDown);
@@ -442,12 +431,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
   set content(value) {
     const nextContent = normalizeLayoutTextContent(value);
-    logDebug("content prop received", {
-      isConnected: this.isConnected,
-      changed: !areJsonEqual(this.state.content, nextContent),
-      rawContent: value,
-      normalizedContent: nextContent,
-    });
     if (areJsonEqual(this.state.content, nextContent)) {
       return;
     }
@@ -464,12 +447,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
   set mentionTargets(value) {
     const nextMentionTargets = normalizeMentionTargets(value);
-    logDebug("mentionTargets prop received", {
-      isConnected: this.isConnected,
-      changed: !areJsonEqual(this.state.mentionTargets, nextMentionTargets),
-      targetCount: nextMentionTargets.length,
-      targets: nextMentionTargets,
-    });
     if (areJsonEqual(this.state.mentionTargets, nextMentionTargets)) {
       return;
     }
@@ -920,17 +897,11 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       return;
     }
 
-    const { range, actualPosition } = createCollapsedRangeAtPosition(
+    const { range } = createCollapsedRangeAtPosition(
       this.refs.editor,
       numericTargetOffset,
     );
-    const didSetSelection = setSelectionFromRange(this.refs.editor, range);
-    logDebug("restore caret after reference delete", {
-      targetOffset: numericTargetOffset,
-      actualPosition,
-      didSetSelection,
-      editorText: this.refs.editor?.textContent,
-    });
+    setSelectionFromRange(this.refs.editor, range);
   }
 
   resolveReferenceLabel(resourceId) {
@@ -942,10 +913,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
   loadContent(content) {
     const nextContent = normalizeLayoutTextContent(content);
-    logDebug("load content", {
-      content: nextContent,
-      mentionTargetCount: this.state.mentionTargets.length,
-    });
     this.state.content = nextContent;
     this.isApplyingExternalContent = true;
 
@@ -1116,29 +1083,20 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     return normalizeLayoutTextContent(nextContent);
   }
 
-  syncStateFromDom({ source = "dom" } = {}) {
+  syncStateFromDom() {
     const content = this.readContentFromDom();
     this.state.content = content;
-    logDebug("sync state from dom", {
-      source,
-      content,
-      editorText: this.refs.editor?.textContent,
-    });
     return content;
+  }
+
+  shouldPreserveOpenMentionMenuDuringFocusTransfer() {
+    return this.state.mentionMenu.isOpen === true && !this.isEditorFocused;
   }
 
   syncFromEditorState(editorState) {
     const snapshot = this.readSnapshot(editorState);
     const nextContent = normalizeLayoutTextContent(snapshot.content);
     this.state.content = nextContent;
-    logDebug("editor state update", {
-      isApplyingExternalContent: this.isApplyingExternalContent,
-      plainText: snapshot.plainText,
-      content: nextContent,
-      mentionTrigger: snapshot.mentionTrigger,
-      pendingTypedSlashMentionTrigger: this.pendingTypedSlashMentionTrigger,
-      currentMenu: this.state.mentionMenu,
-    });
 
     if (!this.isApplyingExternalContent) {
       this.dispatchEvent(
@@ -1158,20 +1116,19 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       );
 
       if (!openReason) {
-        logDebug("mention trigger found but not opening", {
-          mentionTrigger: snapshot.mentionTrigger,
-          pendingTypedSlashMentionTrigger: this.pendingTypedSlashMentionTrigger,
-          currentMenu: this.state.mentionMenu,
-        });
+        if (this.shouldPreserveOpenMentionMenuDuringFocusTransfer()) {
+          return;
+        }
+
         this.closeMentionMenu("mention-trigger-without-open-reason");
         return;
       }
 
-      logDebug("mention trigger opening", {
-        openReason,
-        mentionTrigger: snapshot.mentionTrigger,
-      });
       this.openMentionMenuForTrigger(snapshot.mentionTrigger);
+      return;
+    }
+
+    if (this.shouldPreserveOpenMentionMenuDuringFocusTransfer()) {
       return;
     }
 
@@ -1193,11 +1150,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       domEndOffset,
       caretRect,
     };
-    logDebug("typed slash armed", {
-      source,
-      pendingTypedSlashMentionTrigger: this.pendingTypedSlashMentionTrigger,
-      editorText: this.refs.editor?.textContent,
-    });
     this.queueMentionMenuOpenFallback();
   }
 
@@ -1212,25 +1164,13 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
   queueMentionMenuOpenFallback() {
     this.clearMentionMenuOpenFallback();
-    logDebug("queue slash open fallback", {
-      editorText: this.refs.editor?.textContent,
-    });
     this.mentionMenuOpenFallbackTimerId = setTimeout(() => {
       this.mentionMenuOpenFallbackTimerId = undefined;
       if (!this.isConnected || this.isApplyingExternalContent) {
-        logDebug("slash open fallback skipped", {
-          isConnected: this.isConnected,
-          isApplyingExternalContent: this.isApplyingExternalContent,
-        });
         return;
       }
 
-      const didOpen = this.openMentionMenuFromCurrentSelection();
-      logDebug("slash open fallback completed", {
-        didOpen,
-        editorText: this.refs.editor?.textContent,
-        currentMenu: this.state.mentionMenu,
-      });
+      this.openMentionMenuFromCurrentSelection();
     }, 0);
   }
 
@@ -1279,18 +1219,12 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
   openMentionMenuFromCurrentSelection() {
     const snapshot = this.readSnapshot();
+    const snapshotMentionTrigger = snapshot.mentionTrigger;
+    const nativeMentionTrigger = this.getNativeMentionTriggerMatch();
+    const domMentionTrigger = this.getDomTextMentionTriggerMatch();
     const mentionTrigger =
-      snapshot.mentionTrigger ??
-      this.getNativeMentionTriggerMatch() ??
-      this.getDomTextMentionTriggerMatch();
+      snapshotMentionTrigger ?? nativeMentionTrigger ?? domMentionTrigger;
     if (!mentionTrigger) {
-      logDebug("open from current selection found no trigger", {
-        plainText: snapshot.plainText,
-        content: snapshot.content,
-        selection: snapshot.selection,
-        domContent: this.readContentFromDom(),
-        editorText: this.refs.editor?.textContent,
-      });
       return false;
     }
 
@@ -1312,8 +1246,7 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       ),
     );
     const beforeCaret = text.slice(0, endOffset);
-
-    return getMentionTriggerMatchFromBeforeCaret({
+    const match = getMentionTriggerMatchFromBeforeCaret({
       source: "dom",
       beforeCaret,
       caretRect:
@@ -1321,6 +1254,8 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
         this.pendingTypedSlashMentionTrigger?.caretRect ??
         this.getDomTextOffsetRect(endOffset),
     });
+
+    return match;
   }
 
   getNativeMentionTriggerMatch() {
@@ -1333,12 +1268,13 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     beforeCaretRange.selectNodeContents(this.refs.editor);
     beforeCaretRange.setEnd(range.endContainer, range.endOffset);
     const beforeCaret = beforeCaretRange.toString();
-
-    return getMentionTriggerMatchFromBeforeCaret({
+    const match = getMentionTriggerMatchFromBeforeCaret({
       source: "dom",
       beforeCaret,
       caretRect: this.getRangeRect(range),
     });
+
+    return match;
   }
 
   getNativeSelectionTextOffset() {
@@ -1356,18 +1292,102 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     };
   }
 
+  getNativeSelectionTextRange() {
+    const range = getSelectionRange(this.refs.editor);
+    if (!range) {
+      return undefined;
+    }
+
+    const getOffset = (container, offset) => {
+      const beforePointRange = document.createRange();
+      beforePointRange.selectNodeContents(this.refs.editor);
+      beforePointRange.setEnd(container, offset);
+      return beforePointRange.toString().length;
+    };
+    const start = getOffset(range.startContainer, range.startOffset);
+    const end = getOffset(range.endContainer, range.endOffset);
+
+    return {
+      start,
+      end,
+      collapsed: range.collapsed,
+      caretRect: this.getRangeRect(range),
+    };
+  }
+
+  insertPlainText(text, { nativeSelection } = {}) {
+    const nextText = String(text ?? "").replace(/\r\n?/g, "\n");
+    if (!nextText) {
+      return false;
+    }
+
+    let didInsert = false;
+    this.editor.update(
+      () => {
+        const root = $getRoot();
+        if (nativeSelection) {
+          applySelectionToLineNode(root, nativeSelection);
+        }
+
+        let selection = $getSelection();
+        if (!$isRangeSelection(selection)) {
+          root.selectEnd();
+          selection = $getSelection();
+        }
+
+        if (!$isRangeSelection(selection)) {
+          return;
+        }
+
+        selection.insertText(nextText);
+        didInsert = true;
+      },
+      { discrete: true },
+    );
+
+    return didInsert;
+  }
+
+  handleControlledTextInput(event) {
+    if (
+      event.defaultPrevented ||
+      event.isComposing ||
+      (event.inputType !== "insertText" &&
+        event.inputType !== "insertReplacementText")
+    ) {
+      return false;
+    }
+
+    const inputText = String(event.data ?? "");
+    if (!inputText) {
+      return false;
+    }
+
+    const nativeSelection = this.getNativeSelectionTextRange();
+    event.preventDefault();
+    event.stopPropagation?.();
+    event.stopImmediatePropagation?.();
+
+    if (isSlashText(inputText)) {
+      this.armMentionMenuOpenFromTypedSlash({
+        source: "beforeinput",
+        domEndOffset:
+          nativeSelection?.start === undefined
+            ? undefined
+            : nativeSelection.start + inputText.length,
+        caretRect: nativeSelection?.caretRect,
+      });
+    }
+
+    return this.insertPlainText(inputText, { nativeSelection });
+  }
+
   openMentionMenuForTrigger(trigger = {}) {
     const items = filterMentionSuggestions(
       trigger.query,
       this.state.mentionTargets,
     );
     const position = this.getMentionMenuPosition(trigger);
-    logDebug("open mention menu for trigger", {
-      trigger,
-      mentionTargetCount: this.state.mentionTargets.length,
-      items,
-      position,
-    });
 
     this.state.mentionMenu = {
       isOpen: true,
@@ -1484,13 +1504,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     if (dialog && dialog.getAttribute("tabindex") !== "-1") {
       dialog.setAttribute("tabindex", "-1");
     }
-    logDebug("sync mention menu popover", {
-      hasPopover: Boolean(popover),
-      popoverOpen: popover?.hasAttribute("open"),
-      popoverPositioned: popover?.hasAttribute("positioned"),
-      popoverNoOverlay: popover?.hasAttribute("no-overlay"),
-      dialogOpen: dialog?.open,
-    });
   }
 
   renderMentionMenu() {
@@ -1501,9 +1514,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
     const mentionItems = this.state.mentionMenu.items ?? [];
     if (!this.state.mentionMenu.isOpen) {
-      logDebug("render mention menu closed", {
-        menuOpenBefore: menu.open,
-      });
       menu.items = [];
       menu.open = false;
       menu.render?.();
@@ -1530,13 +1540,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
             },
           ];
     const hasPopover = Boolean(this.getMentionMenuPopover());
-    logDebug("render mention menu open", {
-      mentionItems,
-      renderedItems: menu.items,
-      hasPopover,
-      x: this.state.mentionMenu.left,
-      y: this.state.mentionMenu.top,
-    });
     menu.x = String(this.state.mentionMenu.left);
     menu.y = String(this.state.mentionMenu.top);
     menu.place = "bs";
@@ -1550,19 +1553,9 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     menu.open = true;
     menu.render?.();
     this.syncMentionMenuPopover();
-    logDebug("render mention menu complete", {
-      menuOpen: menu.open,
-      menuItems: menu.items,
-    });
   }
 
-  closeMentionMenu(reason = "close") {
-    logDebug("close mention menu", {
-      reason,
-      previousMenu: this.state.mentionMenu,
-      menuOpenBefore: this.refs.mentionMenu?.open,
-      editorText: this.refs.editor?.textContent,
-    });
+  closeMentionMenu(_reason = "close") {
     this.state.mentionMenu = createClosedMentionMenuState();
     if (this.refs.mentionMenu) {
       this.refs.mentionMenu.items = [];
@@ -1573,11 +1566,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
   selectMentionByIndex(index) {
     const mention = this.state.mentionMenu.items[index];
-    logDebug("select mention", {
-      index,
-      mention,
-      currentMenu: this.state.mentionMenu,
-    });
     if (!mention) {
       return;
     }
@@ -1591,9 +1579,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
         triggerState,
         mention,
       );
-      logDebug("select mention from dom trigger", {
-        content,
-      });
       this.loadContent(content);
       this.focusEditor();
       this.clearSelectedReferenceNodeKey();
@@ -1793,15 +1778,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       targetRangeContext?.referenceElement;
     const nativeReferenceNodeKey =
       nativeReferenceElement?.dataset.rvnReferenceKey;
-    logDebug("reference delete requested", {
-      inputType: event.inputType,
-      key: event.key,
-      direction,
-      nativeSelectionTextOffset,
-      nativeReferenceNodeKey,
-      targetRangeContext,
-      editorText: this.refs.editor?.textContent,
-    });
     let didHandle = false;
     let caretRestoreOffset;
     this.editor.update(
@@ -1876,21 +1852,9 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
             direction,
           );
         if (!$isMentionNode(nativeReference)) {
-          logDebug("reference delete found no chip", {
-            direction,
-            nativeReferenceNodeKey,
-            hasAdjacentReference: Boolean(adjacentReference),
-            hasTargetRangeReference: Boolean(targetRangeReference),
-          });
           return;
         }
 
-        logDebug("reference delete selecting chip", {
-          direction,
-          nodeKey: nativeReference.getKey(),
-          resourceId: nativeReference.getReferenceData?.().resourceId,
-          selectedReferenceNodeKey: this.selectedReferenceNodeKey,
-        });
         this.selectReferenceNodeAsElement(nativeReference);
         didHandle = true;
       },
@@ -1898,11 +1862,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     );
 
     if (!didHandle) {
-      logDebug("reference delete not handled", {
-        inputType: event.inputType,
-        key: event.key,
-        direction,
-      });
       return false;
     }
 
@@ -1919,18 +1878,11 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
   handleEditorFocus() {
     this.isEditorFocused = true;
-    logDebug("focus", {
-      editorText: this.refs.editor?.textContent,
-    });
   }
 
   handleEditorBlur() {
     this.isEditorFocused = false;
     this.clearSelectedReferenceNodeKey();
-    logDebug("blur", {
-      editorText: this.refs.editor?.textContent,
-      activeElement: document.activeElement?.tagName,
-    });
   }
 
   handleEditorBeforeInput(event) {
@@ -1948,22 +1900,8 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
         event.inputType === "insertReplacementText") &&
       event.data
     ) {
-      logDebug("beforeinput text", {
-        inputType: event.inputType,
-        data: event.data,
-        isSlash: isSlashText(event.data),
-        editorTextBefore: this.refs.editor?.textContent,
-      });
-      if (isSlashText(event.data)) {
-        const selectionTextOffset = this.getNativeSelectionTextOffset();
-        this.armMentionMenuOpenFromTypedSlash({
-          source: "beforeinput",
-          domEndOffset:
-            selectionTextOffset?.offset === undefined
-              ? undefined
-              : selectionTextOffset.offset + 1,
-          caretRect: selectionTextOffset?.caretRect,
-        });
+      if (this.handleControlledTextInput(event)) {
+        return;
       }
     }
   }
@@ -1982,11 +1920,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
         event.inputType === "insertReplacementText") &&
       isSlashText(event.data)
     ) {
-      logDebug("input slash", {
-        inputType: event.inputType,
-        data: event.data,
-        editorTextAfter: this.refs.editor?.textContent,
-      });
       const selectionTextOffset = this.getNativeSelectionTextOffset();
       this.armMentionMenuOpenFromTypedSlash({
         source: "input",
@@ -1997,11 +1930,7 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
           selectionTextOffset?.caretRect ??
           this.pendingTypedSlashMentionTrigger?.caretRect,
       });
-      const didOpen = this.openMentionMenuFromCurrentSelection();
-      logDebug("input slash open attempted", {
-        didOpen,
-        currentMenu: this.state.mentionMenu,
-      });
+      this.openMentionMenuFromCurrentSelection();
       return;
     }
 
@@ -2034,10 +1963,6 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       !event.metaKey &&
       !event.altKey
     ) {
-      logDebug("keydown slash", {
-        key: event.key,
-        editorTextBefore: this.refs.editor?.textContent,
-      });
       const selectionTextOffset = this.getNativeSelectionTextOffset();
       this.armMentionMenuOpenFromTypedSlash({
         source: "keydown",
