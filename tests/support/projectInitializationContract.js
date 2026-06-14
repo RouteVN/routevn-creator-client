@@ -8,24 +8,32 @@ export const expectInitializedProjectStorageContract = ({
   expectedProjectInfo,
   draftEvents = [],
   committedEvents = [],
+  bootstrapEventLocation = "draft",
   checkpoint,
   storedCreatorVersion,
   storedProjectInfo,
   expectedHistoryStats,
 }) => {
-  expect(committedEvents).toEqual([]);
+  const bootstrapEventExpectation = expect.objectContaining({
+    projectId,
+    type: "project.create",
+    payload: {
+      state: structuredClone(templateState),
+    },
+  });
 
-  expect(draftEvents).toEqual([
-    expect.objectContaining({
-      projectId,
-      type: "project.create",
-      payload: {
-        state: structuredClone(templateState),
-      },
-    }),
-  ]);
-  expect(Number(draftEvents[0]?.clientTs)).toBeGreaterThan(0);
-  expect(Number(draftEvents[0]?.createdAt)).toBeGreaterThan(0);
+  if (bootstrapEventLocation === "committed") {
+    expect(draftEvents).toEqual([]);
+    expect(committedEvents).toEqual([bootstrapEventExpectation]);
+    expect(Number(committedEvents[0]?.committedId)).toBe(1);
+    expect(Number(committedEvents[0]?.clientTs)).toBeGreaterThan(0);
+    expect(Number(committedEvents[0]?.serverTs)).toBeGreaterThan(0);
+  } else {
+    expect(committedEvents).toEqual([]);
+    expect(draftEvents).toEqual([bootstrapEventExpectation]);
+    expect(Number(draftEvents[0]?.clientTs)).toBeGreaterThan(0);
+    expect(Number(draftEvents[0]?.createdAt)).toBeGreaterThan(0);
+  }
 
   expect(checkpoint).toEqual(
     expect.objectContaining({

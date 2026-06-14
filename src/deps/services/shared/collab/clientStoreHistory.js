@@ -176,6 +176,42 @@ const logInvalidLocalDraftDuringProjectLoad = ({
   });
 };
 
+const logMissingProjectBootstrapEvent = ({
+  projectId,
+  events = [],
+  committed = [],
+  drafts = [],
+} = {}) => {
+  if (events.some((event) => event?.type === "project.create")) {
+    return;
+  }
+
+  console.error("Project repository history is missing project.create", {
+    projectId,
+    committedCount: committed.length,
+    draftCount: drafts.length,
+    loadedEventCount: events.length,
+    firstCommittedType: committed[0]?.type,
+    firstDraftType: drafts[0]?.type,
+    firstLoadedType: events[0]?.type,
+  });
+};
+
+const finalizeLoadedRepositoryEvents = ({
+  projectId,
+  events = [],
+  committed = [],
+  drafts = [],
+} = {}) => {
+  logMissingProjectBootstrapEvent({
+    projectId,
+    events,
+    committed,
+    drafts,
+  });
+  return events;
+};
+
 const discardInvalidLocalDraftDuringProjectLoad = async ({
   store,
   failedDraft,
@@ -297,7 +333,12 @@ export const loadRepositoryEventsFromClientStore = async ({
 
   if (drafts.length === 0) {
     reportProgress({ force: true });
-    return events;
+    return finalizeLoadedRepositoryEvents({
+      projectId,
+      events,
+      committed,
+      drafts,
+    });
   }
 
   const draftEvents = drafts.map((draft) => {
@@ -318,7 +359,12 @@ export const loadRepositoryEventsFromClientStore = async ({
 
     if (draftEvents.length === 1) {
       reportProgress({ force: true });
-      return events;
+      return finalizeLoadedRepositoryEvents({
+        projectId,
+        events,
+        committed,
+        drafts,
+      });
     }
 
     let repositoryState = structuredClone(
@@ -383,7 +429,12 @@ export const loadRepositoryEventsFromClientStore = async ({
     }
 
     reportProgress({ force: true });
-    return events;
+    return finalizeLoadedRepositoryEvents({
+      projectId,
+      events,
+      committed,
+      drafts,
+    });
   }
 
   emitRepositoryEventLoadProgress(onProgress, {
@@ -456,7 +507,12 @@ export const loadRepositoryEventsFromClientStore = async ({
   }
 
   reportProgress({ force: true });
-  return events;
+  return finalizeLoadedRepositoryEvents({
+    projectId,
+    events,
+    committed,
+    drafts,
+  });
 };
 
 export const toBootstrappedCommittedEvent = (repositoryEvent, index) => ({
