@@ -65,6 +65,10 @@ const createVariableResourceData = ({
   return data;
 };
 
+const isValidVariableParentFolder = ({ repositoryState, groupId } = {}) => {
+  return repositoryState?.variables?.items?.[groupId]?.type === "folder";
+};
+
 const getVariablesData = ({ repositoryState } = {}) => {
   const tagsData = getTagsCollection(repositoryState, VARIABLE_TAG_SCOPE_KEY);
 
@@ -391,6 +395,20 @@ export const handleVariableCreated = async (deps, payload) => {
     enumValues,
     default: defaultValue,
   } = payload._event.detail;
+
+  if (
+    !isValidVariableParentFolder({
+      repositoryState: projectService.getRepositoryState(),
+      groupId,
+    })
+  ) {
+    appService.showAlert({
+      message: "Select a folder before adding a variable.",
+      title: "Warning",
+    });
+    await refreshVariablesData(deps);
+    return;
+  }
 
   const createAttempt = await runResourcePageMutation({
     appService,

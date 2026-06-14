@@ -2,6 +2,46 @@ const createResourcePartition = ({ shared, context, resourceType }) => {
   return shared.resourceTypePartitionFor(context.projectId, resourceType);
 };
 
+const isNonRootParentId = (parentId) => {
+  return typeof parentId === "string" && parentId.length > 0;
+};
+
+const validateCreateResourceParent = ({
+  context,
+  resourceType,
+  data,
+  parentId,
+} = {}) => {
+  if (resourceType !== "variables") {
+    return { valid: true };
+  }
+
+  const parent = context?.state?.variables?.items?.[parentId];
+  const isFolderParent = parent?.type === "folder";
+
+  if (data?.type === "folder") {
+    return !isNonRootParentId(parentId) || isFolderParent
+      ? { valid: true }
+      : {
+          valid: false,
+          error: {
+            code: "precondition_validation_failed",
+            message: "payload.parentId must reference a folder variable item",
+          },
+        };
+  }
+
+  return isFolderParent
+    ? { valid: true }
+    : {
+        valid: false,
+        error: {
+          code: "precondition_validation_failed",
+          message: "payload.parentId must reference a folder variable item",
+        },
+      };
+};
+
 export const submitCreateResourceCommand = async ({
   shared,
   resourceType,
@@ -16,6 +56,16 @@ export const submitCreateResourceCommand = async ({
   fileRecords = [],
 }) => {
   const context = await shared.ensureCommandContext();
+  const parentValidation = validateCreateResourceParent({
+    context,
+    resourceType,
+    data,
+    parentId,
+  });
+  if (parentValidation?.valid === false) {
+    return parentValidation;
+  }
+
   const nextResourceId = idValue ?? shared.createId();
   const resolvedIndex = shared.resolveResourceIndex({
     state: context.state,

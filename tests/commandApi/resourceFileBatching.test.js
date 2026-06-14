@@ -12,14 +12,15 @@ import { COMMAND_TYPES } from "../../src/internal/project/commands.js";
 const createShared = ({
   ensureFilesResult = { valid: true, createdCount: 0 },
   submitResult = { valid: true, commandIds: [] },
+  state = {
+    files: {
+      items: {},
+    },
+  },
 } = {}) => {
   const context = {
     projectId: "project-1",
-    state: {
-      files: {
-        items: {},
-      },
-    },
+    state,
   };
 
   const shared = {
@@ -159,6 +160,48 @@ describe("resource command file preflight", () => {
       context,
       fileRecords,
     });
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+    expect(shared.submitCommandsWithContext).not.toHaveBeenCalled();
+  });
+
+  it("does not submit variable creation when parent is not a folder", async () => {
+    const { shared } = createShared({
+      state: {
+        files: {
+          items: {},
+        },
+        variables: {
+          items: {
+            "variable-1": {
+              id: "variable-1",
+              type: "variable",
+            },
+          },
+          tree: [{ id: "variable-1" }],
+        },
+      },
+    });
+    const api = createCatalogResourceCommandApi(shared);
+
+    const result = await api.createVariable({
+      variableId: "variable-2",
+      data: {
+        type: "variable",
+        name: "Score",
+      },
+      parentId: "variable-1",
+      position: "last",
+    });
+
+    expect(result).toEqual({
+      valid: false,
+      error: {
+        code: "precondition_validation_failed",
+        message: "payload.parentId must reference a folder variable item",
+      },
+    });
+    expect(shared.createId).not.toHaveBeenCalled();
+    expect(shared.ensureFilesExist).not.toHaveBeenCalled();
     expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
     expect(shared.submitCommandsWithContext).not.toHaveBeenCalled();
   });
