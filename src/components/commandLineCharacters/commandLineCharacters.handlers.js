@@ -58,6 +58,9 @@ const beginAddCharacterSelection = (store) => {
   });
 };
 
+const getTopSpriteSelectionGroupId = (spriteSelectionGroups = []) =>
+  spriteSelectionGroups[spriteSelectionGroups.length - 1]?.id;
+
 const buildTempSelectedSpriteIdsByGroup = ({
   character,
   spriteSelectionGroups,
@@ -112,7 +115,7 @@ const beginExistingCharacterSpriteSelection = (store, index) => {
     }),
   });
   store.setSelectedSpriteGroupId({
-    spriteGroupId: spriteSelectionGroups[0]?.id,
+    spriteGroupId: getTopSpriteSelectionGroupId(spriteSelectionGroups),
   });
   store.setSearchQuery({ value: "" });
   store.setMode({
@@ -133,7 +136,7 @@ const beginExistingCharacterSpriteSelectionAtGroup = (
     (spriteSelectionGroup) => spriteSelectionGroup.id === spriteGroupId,
   )
     ? spriteGroupId
-    : spriteSelectionGroups[0]?.id;
+    : getTopSpriteSelectionGroupId(spriteSelectionGroups);
 
   beginExistingCharacterSpriteSelection(store, index);
   store.setSelectedSpriteGroupId({
@@ -163,7 +166,7 @@ const beginNewCharacterSpriteSelection = (store, characterId) => {
     }),
   });
   store.setSelectedSpriteGroupId({
-    spriteGroupId: spriteSelectionGroups[0]?.id,
+    spriteGroupId: getTopSpriteSelectionGroupId(spriteSelectionGroups),
   });
   store.setSearchQuery({ value: "" });
   store.setMode({

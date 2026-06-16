@@ -124,6 +124,9 @@ const buildSpriteSelectionGroups = (character = {}) => {
   }));
 };
 
+const orderSpriteSelectionGroupsTopFirst = (spriteSelectionGroups = []) =>
+  spriteSelectionGroups.slice().reverse();
+
 const findFirstSpriteIdForGroup = ({
   group,
   spritesCollection,
@@ -224,22 +227,24 @@ const buildSpriteGroupBoxViewData = ({
       .map((item) => [item.id, item]),
   );
 
-  return (spriteSelectionGroups ?? []).map((spriteSelectionGroup) => {
-    const selectedSpriteId =
-      selectedSpriteIdsByGroup?.[spriteSelectionGroup.id];
-    const selectedSprite = selectedSpriteId
-      ? spriteItemsById[selectedSpriteId]
-      : undefined;
+  return orderSpriteSelectionGroupsTopFirst(spriteSelectionGroups).map(
+    (spriteSelectionGroup) => {
+      const selectedSpriteId =
+        selectedSpriteIdsByGroup?.[spriteSelectionGroup.id];
+      const selectedSprite = selectedSpriteId
+        ? spriteItemsById[selectedSpriteId]
+        : undefined;
 
-    return {
-      id: spriteSelectionGroup.id,
-      name: spriteSelectionGroup.name,
-      selectedSpriteId,
-      selectedSpriteName: selectedSprite?.name ?? "No sprite",
-      hasSelection: !!selectedSpriteId,
-      backgroundColor: selectedSpriteId ? "mu" : "bg",
-    };
-  });
+      return {
+        id: spriteSelectionGroup.id,
+        name: spriteSelectionGroup.name,
+        selectedSpriteId,
+        selectedSpriteName: selectedSprite?.name ?? "No sprite",
+        hasSelection: !!selectedSpriteId,
+        backgroundColor: selectedSpriteId ? "mu" : "bg",
+      };
+    },
+  );
 };
 
 const buildSpritePreviewItemViewData = (item = {}) => {
@@ -444,7 +449,7 @@ const resolveSelectedSpriteGroupId = ({
     return state.selectedSpriteGroupId;
   }
 
-  return spriteSelectionGroups?.[0]?.id;
+  return orderSpriteSelectionGroupsTopFirst(spriteSelectionGroups)[0]?.id;
 };
 
 const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
@@ -1216,8 +1221,11 @@ export const selectViewData = ({ state, props = {} }) => {
         state,
         index: state.selectedCharacterIndex,
       });
+    const spriteSelectionTabGroups = orderSpriteSelectionGroupsTopFirst(
+      currentSpriteSelectionGroups,
+    );
 
-    spriteSelectionTabs = currentSpriteSelectionGroups.map(
+    spriteSelectionTabs = spriteSelectionTabGroups.map(
       (spriteSelectionGroup) => ({
         id: spriteSelectionGroup.id,
         label: spriteSelectionGroup.name,

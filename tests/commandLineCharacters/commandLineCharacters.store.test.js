@@ -196,6 +196,25 @@ describe("commandLineCharacters.store sprite group filtering", () => {
     ]);
   });
 
+  it("orders sprite group tabs with the top preview layer first", () => {
+    const state = createSpriteSelectState();
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.spriteSelectionTabs).toEqual([
+      {
+        id: "face",
+        label: "Face",
+      },
+      {
+        id: "body",
+        label: "Body",
+      },
+    ]);
+    expect(viewData.selectedSpriteGroupId).toBe("face");
+    expect(viewData.selectedSpriteGroupName).toBe("Face");
+  });
+
   it("exposes current-mode sprite group boxes for multipart characters", () => {
     const state = createSpriteSelectState();
 
@@ -208,16 +227,16 @@ describe("commandLineCharacters.store sprite group filtering", () => {
     );
     expect(viewData.defaultValues.characters[0].spriteGroupBoxes).toEqual([
       {
-        id: "body",
-        name: "Body",
+        id: "face",
+        name: "Face",
         selectedSpriteId: undefined,
         selectedSpriteName: "No sprite",
         hasSelection: false,
         backgroundColor: "bg",
       },
       {
-        id: "face",
-        name: "Face",
+        id: "body",
+        name: "Body",
         selectedSpriteId: undefined,
         selectedSpriteName: "No sprite",
         hasSelection: false,

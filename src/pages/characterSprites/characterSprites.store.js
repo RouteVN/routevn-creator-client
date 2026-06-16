@@ -112,6 +112,52 @@ const createPreviewModeButtonViewData = ({ displayMode, mode } = {}) => {
   };
 };
 
+const matchesSpriteGroupTags = ({ item, tagIds } = {}) => {
+  if (!Array.isArray(tagIds) || tagIds.length === 0) {
+    return true;
+  }
+
+  const itemTagIds = Array.isArray(item?.tagIds) ? item.tagIds : [];
+  return tagIds.some((tagId) => itemTagIds.includes(tagId));
+};
+
+const normalizeCharacterSpriteGroups = (spriteGroups) => {
+  return (spriteGroups ?? []).map((spriteGroup, index) => ({
+    id: spriteGroup?.id ?? "sprite-group-" + index,
+    name: spriteGroup?.name ?? "",
+    tags: Array.isArray(spriteGroup?.tags) ? [...spriteGroup.tags] : [],
+  }));
+};
+
+const buildSelectedItemSpriteGroups = ({
+  item,
+  spriteGroups,
+  tagsById,
+} = {}) => {
+  if (!item) {
+    return [];
+  }
+
+  return normalizeCharacterSpriteGroups(spriteGroups)
+    .map((spriteGroup, index) => {
+      if (!matchesSpriteGroupTags({ item, tagIds: spriteGroup.tags })) {
+        return undefined;
+      }
+
+      const tagNames = spriteGroup.tags.map(
+        (tagId) => tagsById?.[tagId]?.name ?? tagId,
+      );
+
+      return {
+        id: spriteGroup.id,
+        name: spriteGroup.name.trim() || "Group " + (index + 1),
+        tags: spriteGroup.tags,
+        tagSummary: tagNames.join(", "),
+      };
+    })
+    .filter(Boolean);
+};
+
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
   { label: "Rename", type: "item", value: "rename-item" },
@@ -163,6 +209,11 @@ const buildImageDetailFields = (item) => {
       label: "Tags",
     },
     {
+      type: "slot",
+      slot: "sprite-groups",
+      label: "Sprite Groups",
+    },
+    {
       type: "text",
       label: "File Type",
       value: item.fileType ?? "",
@@ -201,6 +252,11 @@ const buildSpritesheetDetailFields = (item) => {
       type: "slot",
       slot: "sprite-tags",
       label: "Tags",
+    },
+    {
+      type: "slot",
+      slot: "sprite-groups",
+      label: "Sprite Groups",
     },
     {
       type: "text",
@@ -565,6 +621,7 @@ export const createInitialState = () => ({
   selectedFolderId: undefined,
   characterId: undefined,
   characterName: undefined,
+  characterSpriteGroups: [],
   searchQuery: "",
   ...createMobileResourcePageState(),
   fullImagePreviewVisible: false,
@@ -689,6 +746,10 @@ export const setCharacterName = ({ state }, { characterName } = {}) => {
   state.characterName = characterName;
 };
 
+export const setCharacterSpriteGroups = ({ state }, { spriteGroups } = {}) => {
+  state.characterSpriteGroups = normalizeCharacterSpriteGroups(spriteGroups);
+};
+
 export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
   state.projectResolution = requireProjectResolution(
     projectResolution ?? DEFAULT_PROJECT_RESOLUTION,
@@ -698,6 +759,7 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
 
 export const clearCharacterSpritesView = ({ state }) => {
   state.characterName = undefined;
+  state.characterSpriteGroups = [];
   state.spritesData = EMPTY_TREE;
   state.tagsData = createEmptyTagCollection();
   state.activeTagIds = [];
@@ -1290,6 +1352,11 @@ export const selectViewData = ({ state }) => {
     selectedItem,
     createTagFormDefinition: createTagForm(),
   });
+  const selectedItemSpriteGroups = buildSelectedItemSpriteGroups({
+    item: selectedItem,
+    spriteGroups: state.characterSpriteGroups,
+    tagsById: state.tagsData.items ?? {},
+  });
   const detailSelection = buildClipOptions(
     selectedItem?.type === "spritesheet" ? selectedItem.animations : {},
     state.detailSelectedClipName,
@@ -1359,6 +1426,7 @@ export const selectViewData = ({ state }) => {
     selectedDetailName,
     selectedItemName: selectedDetailName,
     ...tagViewData,
+    selectedItemSpriteGroups,
     detailFields,
     ...buildMobileResourcePageViewData({
       state,
@@ -1367,6 +1435,7 @@ export const selectViewData = ({ state }) => {
         "image-file-id",
         "spritesheet-preview",
         "spritesheet-animations",
+        "sprite-groups",
       ],
     }),
     selectedPreviewFileId:

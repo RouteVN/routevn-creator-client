@@ -1264,13 +1264,14 @@ const closeActionTransformEditor = (deps, payload) => {
   store.suppressNextActionsDialogClose?.();
   const editor = store.selectBackgroundTransformEditor?.();
   const actionKey = editor?.actionKey === "character" ? "character" : "visual";
+  const action = selectEditorActionSnapshot(store, editor);
   const nextItem = createActionItemWithInlineTransform(
     editor?.item,
     editor?.transform,
     { preserveTransformId: true },
   );
   const nextAction = replaceActionItem({
-    action: selectEditorActionSnapshot(store, editor),
+    action,
     itemIndex: editor?.itemIndex,
     item: nextItem,
   });
@@ -1280,6 +1281,7 @@ const closeActionTransformEditor = (deps, payload) => {
     itemIndex: editor?.itemIndex,
     item: editor?.item,
     transform: editor?.transform,
+    action,
   });
   store.closeBackgroundTransformEditor?.();
   render();

@@ -5,6 +5,7 @@ import {
   removePendingUploads,
   openSpritesheetCreateDialog,
   setActiveTagIds,
+  setCharacterSpriteGroups,
   selectAdjacentSpriteItemId,
   selectViewData,
   setFullImagePreviewDisplayMode,
@@ -163,6 +164,105 @@ describe("characterSprites store", () => {
     expect(
       searchOnlyViewData.mediaGroups[0].children.map((child) => child.id),
     ).toEqual(["sprite-2"]);
+  });
+
+  it("shows matching sprite groups in character order", () => {
+    const state = createInitialState();
+    state.characterName = "Hero";
+    state.tagsData = {
+      tree: [{ id: "tag-expression" }, { id: "tag-idle" }, { id: "tag-body" }],
+      items: {
+        "tag-expression": {
+          id: "tag-expression",
+          type: "tag",
+          name: "Expression",
+        },
+        "tag-idle": {
+          id: "tag-idle",
+          type: "tag",
+          name: "Idle",
+        },
+        "tag-body": {
+          id: "tag-body",
+          type: "tag",
+          name: "Body",
+        },
+      },
+    };
+    state.spritesData = {
+      tree: [
+        {
+          id: "folder-1",
+          children: [{ id: "sprite-1" }],
+        },
+      ],
+      items: {
+        "folder-1": {
+          id: "folder-1",
+          type: "folder",
+          name: "Main",
+        },
+        "sprite-1": {
+          id: "sprite-1",
+          type: "image",
+          name: "Hero Idle",
+          fileId: "file-1",
+          tagIds: ["tag-expression", "tag-idle"],
+        },
+      },
+    };
+
+    setCharacterSpriteGroups(
+      { state },
+      {
+        spriteGroups: [
+          {
+            id: "expression",
+            name: "Expression",
+            tags: ["tag-expression"],
+          },
+          {
+            id: "idle",
+            name: "Idle",
+            tags: ["tag-idle"],
+          },
+          {
+            id: "body",
+            name: "Body",
+            tags: ["tag-body"],
+          },
+        ],
+      },
+    );
+    setSelectedItemId(
+      { state },
+      {
+        itemId: "sprite-1",
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.selectedItemSpriteGroups).toEqual([
+      {
+        id: "expression",
+        name: "Expression",
+        tags: ["tag-expression"],
+        tagSummary: "Expression",
+      },
+      {
+        id: "idle",
+        name: "Idle",
+        tags: ["tag-idle"],
+        tagSummary: "Idle",
+      },
+    ]);
+    expect(
+      viewData.detailFields.map((field) => field.slot).filter(Boolean),
+    ).toContain("sprite-groups");
+    expect(
+      viewData.mobileDetailFields.map((field) => field.slot).filter(Boolean),
+    ).not.toContain("sprite-groups");
   });
 
   it("provides tag labels to the edit form tag selector", () => {
@@ -388,7 +488,7 @@ describe("characterSprites store", () => {
       "aspect-ratio: 1920 / 1080",
     );
     expect(viewData.fullImagePreviewFrameStyle).toContain(
-      "width: min(92vw, calc(92vh * (1920 / 1080)))",
+      "width: min(88vw, calc((100vh - 120px) * (1920 / 1080)))",
     );
     expect(viewData.fullImagePreviewImageWrapperStyle).toContain("width: 2.5%");
     expect(viewData.fullImagePreviewImageWrapperStyle).toContain(

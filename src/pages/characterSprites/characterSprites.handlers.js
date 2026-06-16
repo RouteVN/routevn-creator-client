@@ -272,6 +272,7 @@ const syncCharacterSpritesData = ({ deps, repositoryState } = {}) => {
 
   store.setCharacterId({ characterId });
   store.setCharacterName({ characterName: character.name });
+  store.setCharacterSpriteGroups({ spriteGroups: character.spriteGroups });
   store.setTagsData({ tagsData });
   store.setItems({ spritesData });
   store.setProjectResolution({

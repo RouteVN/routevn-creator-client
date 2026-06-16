@@ -859,6 +859,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           x: 1400,
           y: 800,
         },
+        action: editorVisualAction,
       });
       expect(open).toHaveBeenCalledWith({
         mode: "visual",

@@ -113,8 +113,12 @@ export const validateSpriteGroupsForSave = ({
 const resolveSpriteGroupTagNames = ({ tagIds, tagsById } = {}) =>
   (tagIds ?? []).map((tagId) => tagsById?.[tagId]?.name ?? tagId);
 
-export const buildSpriteGroupViewData = ({ spriteGroups, tagsById } = {}) => {
-  return normalizeSpriteGroupsForDraft({
+export const buildSpriteGroupViewData = ({
+  spriteGroups,
+  tagsById,
+  displayTopFirst = false,
+} = {}) => {
+  const viewData = normalizeSpriteGroupsForDraft({
     spriteGroups,
   }).map((spriteGroup) => {
     const tagNames = resolveSpriteGroupTagNames({
@@ -130,13 +134,16 @@ export const buildSpriteGroupViewData = ({ spriteGroups, tagsById } = {}) => {
       tagSummary: tagNames.join(", "),
     };
   });
+
+  return displayTopFirst ? viewData.slice().reverse() : viewData;
 };
 
 export const buildDraftSpriteGroupViewData = ({
   spriteGroups,
   tagsById,
+  displayTopFirst = false,
 } = {}) => {
-  return normalizeSpriteGroupsForDraft({
+  const viewData = normalizeSpriteGroupsForDraft({
     spriteGroups,
   }).map((spriteGroup, index) => {
     const tagNames = resolveSpriteGroupTagNames({
@@ -150,7 +157,10 @@ export const buildDraftSpriteGroupViewData = ({
       tags: spriteGroup.tags,
       tagNames,
       tagSummary: tagNames.join(", "),
+      sourceIndex: index,
       label: `Group ${index + 1}`,
     };
   });
+
+  return displayTopFirst ? viewData.slice().reverse() : viewData;
 };

@@ -172,24 +172,24 @@ describe("commandLineVisual.store animation controls", () => {
     });
     expect(viewData.defaultValues.layerOptions).toEqual([
       {
-        value: 10,
-        label: "Behind Background",
-      },
-      {
-        value: 30,
-        label: "Behind Character",
-      },
-      {
-        value: 50,
-        label: "Behind Dialogue",
+        value: 90,
+        label: "Foreground",
       },
       {
         value: 70,
         label: "Behind Choice",
       },
       {
-        value: 90,
-        label: "Foreground",
+        value: 50,
+        label: "Behind Dialogue",
+      },
+      {
+        value: 30,
+        label: "Behind Character",
+      },
+      {
+        value: 10,
+        label: "Behind Background",
       },
     ]);
     expect(viewData.defaultValues.animationOptions).toEqual([
@@ -436,24 +436,24 @@ describe("commandLineVisual.store animation controls", () => {
         label: "Layer",
         options: [
           {
-            value: 10,
-            label: "Behind Background",
-          },
-          {
-            value: 30,
-            label: "Behind Character",
-          },
-          {
-            value: 50,
-            label: "Behind Dialogue",
+            value: 90,
+            label: "Foreground",
           },
           {
             value: 70,
             label: "Behind Choice",
           },
           {
-            value: 90,
-            label: "Foreground",
+            value: 50,
+            label: "Behind Dialogue",
+          },
+          {
+            value: 30,
+            label: "Behind Character",
+          },
+          {
+            value: 10,
+            label: "Behind Background",
           },
         ],
         clearable: false,
