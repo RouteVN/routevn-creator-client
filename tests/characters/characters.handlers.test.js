@@ -147,6 +147,98 @@ describe("characters name variable", () => {
     expect(deps.store.closeEditDialog).toHaveBeenCalledTimes(1);
   });
 
+  it("saves top-first edit sprite groups in render order", async () => {
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      store: {
+        getState: vi.fn(() => ({
+          editItemId: "character-hero",
+          editAvatarFileId: undefined,
+          editAvatarUploadResult: undefined,
+          editSpriteGroups: [
+            {
+              id: "group-face",
+              name: "Face",
+              tags: ["sprite-tag-face"],
+            },
+            {
+              id: "group-body",
+              name: "Body",
+              tags: ["sprite-tag-body"],
+            },
+          ],
+          spriteTagsByCharacterId: {
+            "character-hero": {
+              items: {
+                "sprite-tag-face": {
+                  id: "sprite-tag-face",
+                  type: "tag",
+                  name: "Face",
+                },
+                "sprite-tag-body": {
+                  id: "sprite-tag-body",
+                  type: "tag",
+                  name: "Body",
+                },
+              },
+              tree: [{ id: "sprite-tag-face" }, { id: "sprite-tag-body" }],
+            },
+          },
+        })),
+        setTagsData: vi.fn(),
+        setSpriteTagsByCharacterId: vi.fn(),
+        setItems: vi.fn(),
+        closeEditDialog: vi.fn(),
+      },
+      projectService: {
+        updateCharacter: vi.fn(() => Promise.resolve({ valid: true })),
+        getRepositoryState: vi.fn(() => ({
+          tags: {},
+          characters: { items: {}, tree: [] },
+          variables: { items: {}, tree: [] },
+        })),
+      },
+      refs: {},
+      render: vi.fn(),
+    };
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Hero",
+            nameVariableId: "",
+            description: "",
+            shortcut: "",
+            tagIds: [],
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.updateCharacter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          spriteGroups: [
+            {
+              id: "group-body",
+              name: "Body",
+              tags: ["sprite-tag-body"],
+            },
+            {
+              id: "group-face",
+              name: "Face",
+              tags: ["sprite-tag-face"],
+            },
+          ],
+        }),
+      }),
+    );
+  });
+
   it("sends an empty name variable to clear the character override", async () => {
     const deps = {
       appService: {
@@ -635,7 +727,7 @@ describe("characters sprite group removal guard", () => {
         getState: vi.fn(() => ({
           spriteGroupDropdownMenu: {
             target: "edit",
-            index: 0,
+            index: 1,
           },
         })),
         hideSpriteGroupDropdownMenu: vi.fn(),
@@ -656,8 +748,8 @@ describe("characters sprite group removal guard", () => {
 
     expect(deps.store.moveSpriteGroup).toHaveBeenCalledWith({
       target: "edit",
-      index: 0,
-      offset: 1,
+      index: 1,
+      offset: -1,
     });
   });
 

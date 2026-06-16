@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  openEditDialog,
   openSpriteGroupDialog,
   selectViewData,
   showSpriteGroupDropdownMenu,
@@ -50,19 +51,18 @@ describe("characters store sprite group tags", () => {
       tree: [{ id: "character-hero" }],
     };
     state.selectedItemId = "character-hero";
-    state.editItemId = "character-hero";
-    state.editSpriteGroups = [
+    openEditDialog(
+      { state },
       {
-        id: "group-body",
-        name: "Body",
-        tags: ["sprite-tag-body"],
+        itemId: "character-hero",
+        spriteGroups: state.charactersData.items["character-hero"].spriteGroups,
       },
-      {
-        id: "group-face",
-        name: "Face",
-        tags: ["sprite-tag-face"],
-      },
-    ];
+    );
+
+    expect(state.editSpriteGroups.map((group) => group.id)).toEqual([
+      "group-face",
+      "group-body",
+    ]);
 
     const viewData = selectViewData({ state });
 
@@ -70,27 +70,16 @@ describe("characters store sprite group tags", () => {
       "group-face",
       "group-body",
     ]);
-    expect(
-      viewData.editSpriteGroups.map((group) => ({
-        id: group.id,
-        sourceIndex: group.sourceIndex,
-      })),
-    ).toEqual([
-      {
-        id: "group-face",
-        sourceIndex: 1,
-      },
-      {
-        id: "group-body",
-        sourceIndex: 0,
-      },
+    expect(viewData.editSpriteGroups.map((group) => group.id)).toEqual([
+      "group-face",
+      "group-body",
     ]);
 
     showSpriteGroupDropdownMenu(
       { state },
       {
         target: "edit",
-        index: 1,
+        index: 0,
       },
     );
     expect(state.spriteGroupDropdownMenu.items).toEqual([
@@ -110,7 +99,7 @@ describe("characters store sprite group tags", () => {
       { state },
       {
         target: "edit",
-        index: 0,
+        index: 1,
       },
     );
     expect(state.spriteGroupDropdownMenu.items).toEqual([

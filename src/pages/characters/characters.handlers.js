@@ -27,7 +27,10 @@ import {
   CHARACTER_TAG_SCOPE_KEY,
   SPRITE_GROUPS_CREATE_MESSAGE,
 } from "./characters.store.js";
-import { validateSpriteGroupsForSave } from "./support/spriteGroups.js";
+import {
+  reverseSpriteGroups,
+  validateSpriteGroupsForSave,
+} from "./support/spriteGroups.js";
 import {
   buildSpriteGroupInUseMessage,
   findSpriteGroupUsage,
@@ -444,7 +447,7 @@ export const handleCharacterCreated = async (deps, payload) => {
   }
 
   if (Array.isArray(spriteGroups) && spriteGroups.length > 0) {
-    characterData.spriteGroups = spriteGroups;
+    characterData.spriteGroups = reverseSpriteGroups(spriteGroups);
   }
 
   const createAttempt = await runResourcePageMutation({
@@ -947,7 +950,7 @@ export const handleSpriteGroupDropdownMenuItemClick = (deps, payload) => {
     store.moveSpriteGroup({
       target,
       index,
-      offset: 1,
+      offset: -1,
     });
   }
 
@@ -955,7 +958,7 @@ export const handleSpriteGroupDropdownMenuItemClick = (deps, payload) => {
     store.moveSpriteGroup({
       target,
       index,
-      offset: -1,
+      offset: 1,
     });
   }
 
@@ -1020,7 +1023,7 @@ export const handleEditFormAction = async (deps, payload) => {
       description: formData.description,
       shortcut: formData.shortcut || "",
       tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
-      spriteGroups: spriteGroupValidation.spriteGroups,
+      spriteGroups: reverseSpriteGroups(spriteGroupValidation.spriteGroups),
     };
 
     // Include avatar file ID if it was changed
