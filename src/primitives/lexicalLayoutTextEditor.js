@@ -36,12 +36,14 @@ import {
   createCollapsedRangeAtPosition,
   applySelectionToLineNode,
   getLexicalOffsetBeforeNode,
+  getLexicalTextLength,
   setSelectionFromRange,
 } from "./lexicalSceneDocumentSelection.js";
 import {
   getAdjacentReferenceNodeInfoForCollapsedSelection,
   getReferenceElementFromContextEvent,
   getReferenceSelectionInfo,
+  isCollapsedReferenceCaretMovingIntoNode,
   placeCaretAroundReferenceNode,
   selectReferenceNodeAsElement as selectLexicalReferenceNodeAsElement,
 } from "./lexicalSceneDocumentReferences.js";
@@ -635,6 +637,39 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       { discrete: true },
     );
     this.updateReferenceSelectionMarkers();
+  }
+
+  isFinalVisibleReferenceNode(node) {
+    if (!$isMentionNode(node)) {
+      return false;
+    }
+
+    const rootNode = $getRoot();
+    let lastMentionNode;
+    let hasTrailingText = false;
+
+    const visit = (currentNode) => {
+      if ($isMentionNode(currentNode)) {
+        lastMentionNode = currentNode;
+        hasTrailingText = false;
+        return;
+      }
+
+      if ($isElementNode(currentNode)) {
+        for (const childNode of currentNode.getChildren()) {
+          visit(childNode);
+        }
+        return;
+      }
+
+      const text = String(currentNode.getTextContent?.() ?? "");
+      if (lastMentionNode && text.length > 0) {
+        hasTrailingText = true;
+      }
+    };
+
+    visit(rootNode);
+    return !hasTrailingText && lastMentionNode?.getKey() === node.getKey();
   }
 
   findReferenceElementAtDomEdge(node, direction) {
@@ -1662,19 +1697,58 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
 
     const nativeSelectionTextOffset = this.getNativeSelectionTextOffset();
     let didHandle = false;
+    let caretRestoreOffset;
     let nextSelectedReferenceNodeKey = this.selectedReferenceNodeKey;
     this.editor.update(
       () => {
+        const placeCaretAroundReference = (referenceNode) => {
+          const referenceOffset = getLexicalOffsetBeforeNode(
+            $getRoot(),
+            referenceNode.getKey(),
+          );
+          caretRestoreOffset = referenceOffset.found
+            ? referenceOffset.offset +
+              (direction > 0 ? getLexicalTextLength(referenceNode) : 0)
+            : undefined;
+          placeCaretAroundReferenceNode(referenceNode, direction);
+        };
         const selectedReferenceNode = this.selectedReferenceNodeKey
           ? $getNodeByKey(this.selectedReferenceNodeKey)
           : undefined;
+        const handleNativeFallback = () => {
+          const nativeReference = this.getReferenceNodeAroundContentOffset(
+            $getRoot(),
+            nativeSelectionTextOffset?.offset,
+            direction,
+          );
+          if (!nativeReference) {
+            return false;
+          }
+
+          if (
+            direction > 0 &&
+            this.isFinalVisibleReferenceNode(nativeReference)
+          ) {
+            placeCaretAroundReference(nativeReference);
+            nextSelectedReferenceNodeKey = undefined;
+            didHandle = true;
+            return true;
+          }
+
+          this.selectReferenceNodeAsElement(nativeReference);
+          nextSelectedReferenceNodeKey = nativeReference.getKey();
+          didHandle = true;
+          return true;
+        };
         const selection = $getSelection();
         if (!$isRangeSelection(selection)) {
           if ($isMentionNode(selectedReferenceNode)) {
-            placeCaretAroundReferenceNode(selectedReferenceNode, direction);
+            placeCaretAroundReference(selectedReferenceNode);
             nextSelectedReferenceNodeKey = undefined;
             didHandle = true;
+            return;
           }
+          handleNativeFallback();
           return;
         }
 
@@ -1683,8 +1757,18 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
           const isSelectedReference =
             this.selectedReferenceNodeKey === referenceSelection.node.getKey();
           if (referenceSelection.isWhole || isSelectedReference) {
-            placeCaretAroundReferenceNode(referenceSelection.node, direction);
+            placeCaretAroundReference(referenceSelection.node);
             nextSelectedReferenceNodeKey = undefined;
+          } else if (
+            referenceSelection.isCollapsed &&
+            !isCollapsedReferenceCaretMovingIntoNode(
+              selection,
+              referenceSelection.node,
+              direction,
+            )
+          ) {
+            nextSelectedReferenceNodeKey = undefined;
+            return;
           } else {
             this.selectReferenceNodeAsElement(referenceSelection.node);
             nextSelectedReferenceNodeKey = referenceSelection.node.getKey();
@@ -1694,17 +1778,18 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
         }
 
         if ($isMentionNode(selectedReferenceNode)) {
-          placeCaretAroundReferenceNode(selectedReferenceNode, direction);
+          placeCaretAroundReference(selectedReferenceNode);
           nextSelectedReferenceNodeKey = undefined;
           didHandle = true;
           return;
         }
 
-        const adjacentReference =
+        const adjacentReferenceInfo =
           getAdjacentReferenceNodeInfoForCollapsedSelection(
             selection,
             direction,
-          )?.node;
+          );
+        const adjacentReference = adjacentReferenceInfo?.node;
         const nativeReference =
           adjacentReference ??
           this.getReferenceNodeAroundContentOffset(
@@ -1713,6 +1798,28 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
             direction,
           );
         if (!nativeReference) {
+          return;
+        }
+
+        if (
+          nativeReference === adjacentReference &&
+          adjacentReferenceInfo.skippedZeroLengthText &&
+          direction < 0
+        ) {
+          placeCaretAroundReference(nativeReference);
+          nextSelectedReferenceNodeKey = undefined;
+          didHandle = true;
+          return;
+        }
+
+        if (
+          nativeReference === adjacentReference &&
+          direction > 0 &&
+          this.isFinalVisibleReferenceNode(nativeReference)
+        ) {
+          placeCaretAroundReference(nativeReference);
+          nextSelectedReferenceNodeKey = undefined;
+          didHandle = true;
           return;
         }
 
@@ -1731,6 +1838,7 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     event.stopPropagation();
     this.selectedReferenceNodeKey = nextSelectedReferenceNodeKey;
     this.updateReferenceSelectionMarkers();
+    this.restoreNativeCaretAtContentOffset(caretRestoreOffset);
     return true;
   }
 
