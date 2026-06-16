@@ -6,6 +6,102 @@ const THUMBNAIL_MAX_HEIGHT = 225;
 const THUMBNAIL_FORMAT = "image/jpeg";
 const THUMBNAIL_QUALITY = 0.75;
 
+const findDisplayObjectByLabel = (parent, label) => {
+  if (!parent || !Array.isArray(parent.children)) {
+    return undefined;
+  }
+
+  return parent.children.find((child) => child?.label === label);
+};
+
+const destroyDisplayObject = (displayObject) => {
+  if (!displayObject || displayObject.destroyed) {
+    return;
+  }
+
+  displayObject.stop?.();
+  displayObject.removeFromParent?.();
+  displayObject.destroy?.({ children: true });
+};
+
+const replacePluginDisplay = async (plugin, params = {}) => {
+  const { parent, prevElement, nextElement, signal } = params;
+
+  if (signal?.aborted || parent?.destroyed) {
+    return;
+  }
+
+  destroyDisplayObject(findDisplayObjectByLabel(parent, prevElement?.id));
+
+  if (signal?.aborted || parent?.destroyed || !nextElement) {
+    return;
+  }
+
+  return await plugin.add?.({
+    ...params,
+    element: nextElement,
+  });
+};
+
+const isMissingPlayMethodError = (error) => {
+  return (
+    error instanceof TypeError &&
+    /play is not a function/.test(error.message ?? "")
+  );
+};
+
+export const createSafeSpritesheetAnimationPlugin = (plugin) => {
+  if (!plugin) {
+    return undefined;
+  }
+
+  return {
+    ...plugin,
+    update: async (params = {}) => {
+      const displayObject = findDisplayObjectByLabel(
+        params.parent,
+        params.prevElement?.id,
+      );
+
+      if (displayObject && typeof displayObject.play !== "function") {
+        return await replacePluginDisplay(plugin, params);
+      }
+
+      try {
+        return await plugin.update?.(params);
+      } catch (error) {
+        if (!isMissingPlayMethodError(error)) {
+          throw error;
+        }
+
+        return await replacePluginDisplay(plugin, params);
+      }
+    },
+  };
+};
+
+export const createSafeSpritePlugin = (plugin) => {
+  if (!plugin) {
+    return undefined;
+  }
+
+  return {
+    ...plugin,
+    update: async (params = {}) => {
+      const displayObject = findDisplayObjectByLabel(
+        params.parent,
+        params.prevElement?.id,
+      );
+
+      if (displayObject && typeof displayObject.play === "function") {
+        return await replacePluginDisplay(plugin, params);
+      }
+
+      return await plugin.update?.(params);
+    },
+  };
+};
+
 export const loadGraphicsEnginePlugins = async () => {
   const routeGraphicsModule = await import("route-graphics");
   const spritesheetAnimationPlugin = Object.prototype.hasOwnProperty.call(
@@ -38,13 +134,13 @@ export const loadGraphicsEnginePlugins = async () => {
       textPlugin,
       inputPlugin,
       rectPlugin,
-      spritePlugin,
+      createSafeSpritePlugin(spritePlugin),
       sliderPlugin,
       containerPlugin,
       textRevealingPlugin,
       videoPlugin,
       particlesPlugin,
-      spritesheetAnimationPlugin,
+      createSafeSpritesheetAnimationPlugin(spritesheetAnimationPlugin),
     ].filter(Boolean),
     animations: [tweenPlugin].filter(Boolean),
     audio: [soundPlugin].filter(Boolean),

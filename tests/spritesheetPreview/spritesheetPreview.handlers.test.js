@@ -97,6 +97,93 @@ describe("spritesheetPreview.handlers", () => {
     expect(render).toHaveBeenCalledTimes(1);
   });
 
+  it("renders an already-loaded source image after src is added", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const drawImage = vi.fn();
+    const context = {
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      drawImage,
+    };
+    const originalCanvasElement = globalThis.HTMLCanvasElement;
+    const originalImageElement = globalThis.HTMLImageElement;
+
+    class FakeCanvas {
+      constructor() {
+        this.width = 0;
+        this.height = 0;
+        this.clientWidth = 64;
+        this.clientHeight = 64;
+      }
+
+      getBoundingClientRect() {
+        return {
+          width: 64,
+          height: 64,
+        };
+      }
+
+      getContext(type) {
+        return type === "2d" ? context : undefined;
+      }
+    }
+
+    class FakeImage {
+      constructor() {
+        this.complete = true;
+        this.naturalWidth = 64;
+        this.naturalHeight = 64;
+        this.src = "blob:test-spritesheet";
+      }
+
+      getAttribute(name) {
+        return name === "src" ? this.src : undefined;
+      }
+    }
+
+    const canvas = new FakeCanvas();
+    const sourceImage = new FakeImage();
+
+    globalThis.HTMLCanvasElement = FakeCanvas;
+    globalThis.HTMLImageElement = FakeImage;
+
+    try {
+      await handleOnUpdate(
+        {
+          projectService: {},
+          props: {},
+          refs: {
+            canvas,
+            sourceImage,
+          },
+          render,
+          store: createStoreApi(state),
+        },
+        {
+          oldProps: {},
+          newProps: {
+            paused: true,
+            src: "blob:test-spritesheet",
+          },
+        },
+      );
+    } finally {
+      globalThis.HTMLCanvasElement = originalCanvasElement;
+      globalThis.HTMLImageElement = originalImageElement;
+    }
+
+    expect(selectStatus({ state })).toBe("ready");
+    expect(drawImage).toHaveBeenCalledWith(
+      sourceImage,
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+    );
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
   it("returns to empty when preview source is cleared", async () => {
     const state = createInitialState();
     const render = vi.fn();
@@ -132,6 +219,58 @@ describe("spritesheetPreview.handlers", () => {
 
     expect(selectStatus({ state })).toBe("empty");
     expect(selectImageSrc({ state })).toBe("");
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("restarts animation when the preview key changes", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const requestAnimationFrameSpy = vi.fn(() => 101);
+    const cancelAnimationFrameSpy = vi.fn();
+    const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+
+    setStatus(
+      { state },
+      {
+        status: "ready",
+      },
+    );
+    state.animationFrameId = 42;
+    globalThis.requestAnimationFrame = requestAnimationFrameSpy;
+    globalThis.cancelAnimationFrame = cancelAnimationFrameSpy;
+
+    try {
+      await handleOnUpdate(
+        {
+          projectService: {},
+          refs: {},
+          render,
+          store: createStoreApi(state),
+        },
+        {
+          oldProps: {
+            previewKey: "spritesheet:idle:file-a:idle:0,1:12",
+            animation: {
+              frames: [0, 1],
+            },
+          },
+          newProps: {
+            previewKey: "spritesheet:blink:file-a:idle:0,1:12",
+            animation: {
+              frames: [0, 1],
+            },
+          },
+        },
+      );
+    } finally {
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+      globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+    }
+
+    expect(cancelAnimationFrameSpy).toHaveBeenCalledWith(42);
+    expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(1);
+    expect(state.animationFrameId).toBe(101);
     expect(render).toHaveBeenCalledTimes(1);
   });
 

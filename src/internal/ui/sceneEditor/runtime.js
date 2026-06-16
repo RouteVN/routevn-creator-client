@@ -815,7 +815,11 @@ const prepareTemporaryPresentationProjectData = async (
 
 export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService } = deps;
-  const { skipAnimations = true, skipCanvasPaint = false } = payload;
+  const {
+    preserveAnimationPlayback = false,
+    skipAnimations = true,
+    skipCanvasPaint = false,
+  } = payload;
   const perfEnabled = isDebugEnabled(SCENE_EDITOR_PERF_SCOPE);
   const renderStartedAt = perfEnabled ? getDebugNow() : 0;
   const sceneId = store.selectSceneId();
@@ -954,6 +958,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       graphicsService.render(backgroundTransformCanvasState.renderState);
     } else {
       graphicsService.engineRenderCurrentState({
+        preserveAnimationPlayback,
         skipAudio: isMuted,
         skipAnimations,
       });

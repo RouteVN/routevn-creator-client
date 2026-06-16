@@ -1840,9 +1840,13 @@ export const createGraphicsService = async ({
       if (!engine || !routeGraphics) {
         return;
       }
-      const { skipAudio = false, skipAnimations = false } = options;
+      const {
+        preserveAnimationPlayback = false,
+        skipAudio = false,
+        skipAnimations = false,
+      } = options;
       routeGraphics.setAnimationPlaybackMode?.(
-        skipAnimations ? "manual" : "auto",
+        skipAnimations && !preserveAnimationPlayback ? "manual" : "auto",
       );
       const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
       let renderState = engine.selectRenderState();

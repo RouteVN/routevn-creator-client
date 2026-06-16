@@ -123,6 +123,19 @@ refs:
     eventListeners:
       click:
         handler: handleCharacterItemClick
+styles:
+  ".commandLineCharacterThumbnailTransparencyGrid":
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
+    background-repeat: repeat
+    background-size: 12px 12px
+  ".commandLineCharacterFullPreviewTransparencyGrid":
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 12px, 12px -12px, -12px 0"
+    background-repeat: repeat
+    background-size: 24px 24px
 template:
   - 'rtgl-view w=f h=f p=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
       - $if mode == 'current':
@@ -137,7 +150,8 @@ template:
                                   - 'rtgl-view#characterSpriteBox${i} data-index=${character.characterIndex} cur=pointer bw=xs bc=bo h-bc=ac br=sm style="align-self: flex-start; flex: 0 0 auto;"':
                                       - rtgl-view p=md g=md br=md:
                                           - $if character.hasSpritePreview:
-                                              - rvn-stacked-file-images :layers=${character.spritePreviewLayers} w=200 h=120 br=sm lazy: null
+                                              - 'div.commandLineCharacterThumbnailTransparencyGrid style="display: block; width: 200px; height: 120px; overflow: hidden; border-radius: 4px;"':
+                                                  - rvn-stacked-file-images :layers=${character.spritePreviewLayers} w=f h=f br=sm spritesheetBr=none spritesheetCheckerCellSize=6 showSpritesheetCheckerboard=false lazy: null
                                             $else:
                                               - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
                                                   - rtgl-text s=sm c=mu-fg: No Sprite
@@ -208,7 +222,8 @@ template:
                                   - rtgl-view#characterItem${i}x${j} data-character-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
                                       - rtgl-view p=md g=md br=md:
                                           - $if item.fileId:
-                                              - rvn-file-image fileId=${item.fileId} w=200 h=120: null
+                                              - 'div.commandLineCharacterThumbnailTransparencyGrid style="display: block; width: 200px; height: 120px; overflow: hidden; border-radius: 4px;"':
+                                                  - rvn-file-image fileId=${item.fileId} w=f h=f br=sm: null
                                             $else:
                                               - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
                                                   - rtgl-text s=sm c=mu-fg: No Avatar
@@ -235,9 +250,10 @@ template:
                                   - rtgl-view#spriteItem${i}x${j} data-sprite-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
                                       - rtgl-view p=md g=md br=md:
                                           - $if item.previewKind == 'spritesheet':
-                                              - 'rvn-spritesheet-preview key=${item.previewKey} fileId=${item.previewFileId} :atlas=${item.previewAtlas} :animation=${item.previewAnimation} w=200 h=120 emptyLabel="No preview"': null
+                                              - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.previewFileId} :atlas=${item.previewAtlas} :animation=${item.previewAnimation} w=200 h=120 br=sm checkerCellSize=6 showCheckerboard=true emptyLabel="No preview"': null
                                             $else:
-                                              - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
+                                              - 'div.commandLineCharacterThumbnailTransparencyGrid style="display: block; width: 200px; height: 120px; overflow: hidden; border-radius: 4px;"':
+                                                  - rvn-file-image fileId=${item.previewFileId} w=f h=f br=sm: null
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: Select
@@ -247,9 +263,10 @@ template:
           - $if fullImagePreviewFileId:
               - rtgl-view pos=fix edge=f ah=c av=c z=3001:
                   - $if fullImagePreviewKind == 'spritesheet':
-                      - 'rvn-spritesheet-preview key=${fullImagePreviewKey} fileId=${fullImagePreviewFileId} :atlas=${fullImagePreviewAtlas} :animation=${fullImagePreviewAnimation} w=80% h=80% emptyLabel="No preview"': null
+                      - 'rvn-spritesheet-preview key=${fullImagePreviewKey} previewKey=${fullImagePreviewKey} fileId=${fullImagePreviewFileId} :atlas=${fullImagePreviewAtlas} :animation=${fullImagePreviewAnimation} w=80% h=80% checkerCellSize=12 showCheckerboard=true emptyLabel="No preview"': null
                     $else:
-                      - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
+                      - 'div.commandLineCharacterFullPreviewTransparencyGrid style="display: block; width: 80%; height: 80%; overflow: hidden; border-radius: 6px; box-shadow: 0 0 0 1px var(--accent);"':
+                          - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f br=md: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - $if backgroundTransformEditor.isOpen:
       - 'rtgl-view pos=abs edge=f z=20 bgc=bg d=v style="pointer-events: auto; min-width: 0; min-height: 0;"':
