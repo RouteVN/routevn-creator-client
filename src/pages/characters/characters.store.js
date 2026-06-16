@@ -309,7 +309,7 @@ const getSpriteGroupDraftKey = (target) =>
 const buildSpriteGroupDropdownItems = ({ index, total } = {}) => {
   const items = [];
 
-  if (index > 0) {
+  if (index < total - 1) {
     items.push({
       label: "Move Up",
       type: "item",
@@ -317,7 +317,7 @@ const buildSpriteGroupDropdownItems = ({ index, total } = {}) => {
     });
   }
 
-  if (index < total - 1) {
+  if (index > 0) {
     items.push({
       label: "Move Down",
       type: "item",
@@ -874,6 +874,7 @@ export const selectViewData = ({ state }) => {
   const selectedItemSpriteGroups = buildSpriteGroupViewData({
     spriteGroups: selectedItem?.spriteGroups,
     tagsById: selectedItemSpriteTagsCollection.items ?? {},
+    displayTopFirst: true,
   });
   const nameVariableOptions = createCharacterNameVariableOptions(
     state.variablesData,
@@ -1061,6 +1062,7 @@ export const selectViewData = ({ state }) => {
     dialogSpriteGroups: buildDraftSpriteGroupViewData({
       spriteGroups: state.dialogSpriteGroups,
       tagsById: {},
+      displayTopFirst: true,
     }),
     dialogForm: createCharacterDialogForm({
       tagOptions: tagFilterOptions,
@@ -1087,6 +1089,7 @@ export const selectViewData = ({ state }) => {
     editSpriteGroups: buildDraftSpriteGroupViewData({
       spriteGroups: state.editSpriteGroups,
       tagsById: editSpriteTagsCollection.items ?? {},
+      displayTopFirst: true,
     }),
   };
 };

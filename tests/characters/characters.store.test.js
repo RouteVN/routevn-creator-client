@@ -3,9 +3,130 @@ import {
   createInitialState,
   openSpriteGroupDialog,
   selectViewData,
+  showSpriteGroupDropdownMenu,
 } from "../../src/pages/characters/characters.store.js";
 
 describe("characters store sprite group tags", () => {
+  it("orders sprite groups with the top rendered group first", () => {
+    const state = createInitialState();
+
+    state.spriteTagsByCharacterId = {
+      "character-hero": {
+        items: {
+          "sprite-tag-body": {
+            id: "sprite-tag-body",
+            type: "tag",
+            name: "Body",
+          },
+          "sprite-tag-face": {
+            id: "sprite-tag-face",
+            type: "tag",
+            name: "Face",
+          },
+        },
+        tree: [{ id: "sprite-tag-body" }, { id: "sprite-tag-face" }],
+      },
+    };
+    state.charactersData = {
+      items: {
+        "character-hero": {
+          id: "character-hero",
+          type: "character",
+          name: "Hero",
+          spriteGroups: [
+            {
+              id: "group-body",
+              name: "Body",
+              tags: ["sprite-tag-body"],
+            },
+            {
+              id: "group-face",
+              name: "Face",
+              tags: ["sprite-tag-face"],
+            },
+          ],
+        },
+      },
+      tree: [{ id: "character-hero" }],
+    };
+    state.selectedItemId = "character-hero";
+    state.editItemId = "character-hero";
+    state.editSpriteGroups = [
+      {
+        id: "group-body",
+        name: "Body",
+        tags: ["sprite-tag-body"],
+      },
+      {
+        id: "group-face",
+        name: "Face",
+        tags: ["sprite-tag-face"],
+      },
+    ];
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.selectedItemSpriteGroups.map((group) => group.id)).toEqual([
+      "group-face",
+      "group-body",
+    ]);
+    expect(
+      viewData.editSpriteGroups.map((group) => ({
+        id: group.id,
+        sourceIndex: group.sourceIndex,
+      })),
+    ).toEqual([
+      {
+        id: "group-face",
+        sourceIndex: 1,
+      },
+      {
+        id: "group-body",
+        sourceIndex: 0,
+      },
+    ]);
+
+    showSpriteGroupDropdownMenu(
+      { state },
+      {
+        target: "edit",
+        index: 1,
+      },
+    );
+    expect(state.spriteGroupDropdownMenu.items).toEqual([
+      {
+        label: "Move Down",
+        type: "item",
+        value: "move-down",
+      },
+      {
+        label: "Remove",
+        type: "item",
+        value: "remove",
+      },
+    ]);
+
+    showSpriteGroupDropdownMenu(
+      { state },
+      {
+        target: "edit",
+        index: 0,
+      },
+    );
+    expect(state.spriteGroupDropdownMenu.items).toEqual([
+      {
+        label: "Move Up",
+        type: "item",
+        value: "move-up",
+      },
+      {
+        label: "Remove",
+        type: "item",
+        value: "remove",
+      },
+    ]);
+  });
+
   it("uses character sprite tags for sprite group labels and options", () => {
     const state = createInitialState();
 

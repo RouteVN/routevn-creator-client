@@ -623,6 +623,44 @@ describe("characters sprite group removal guard", () => {
     });
   });
 
+  it("moves sprite groups by visual top-first direction", () => {
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        getRepositoryState: vi.fn(),
+      },
+      store: {
+        getState: vi.fn(() => ({
+          spriteGroupDropdownMenu: {
+            target: "edit",
+            index: 0,
+          },
+        })),
+        hideSpriteGroupDropdownMenu: vi.fn(),
+        moveSpriteGroup: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleSpriteGroupDropdownMenuItemClick(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: "move-up",
+          },
+        },
+      },
+    });
+
+    expect(deps.store.moveSpriteGroup).toHaveBeenCalledWith({
+      target: "edit",
+      index: 0,
+      offset: 1,
+    });
+  });
+
   it("removes an edit sprite group when no story lines use it", () => {
     const deps = {
       appService: {

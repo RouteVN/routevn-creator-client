@@ -233,7 +233,7 @@ template:
                           - rtgl-button.spriteGroupAddButton data-target=edit s=sm v=gh pre=plus: Add Group
                       - $if editSpriteGroups.length > 0:
                           - $for spriteGroup, i in editSpriteGroups:
-                              - rtgl-view.spriteGroupCard data-target=edit data-index=${i} d=v w=f g=xs p=md bw=xs bc=bo h-bc=ac br=md cur=pointer:
+                              - rtgl-view.spriteGroupCard data-target=edit data-index=${spriteGroup.sourceIndex} d=v w=f g=xs p=md bw=xs bc=bo h-bc=ac br=md cur=pointer:
                                   - rtgl-text s=sm: ${spriteGroup.name}
                                   - $if spriteGroup.tagSummary:
                                       - rtgl-text s=xs c=mu-fg: ${spriteGroup.tagSummary}

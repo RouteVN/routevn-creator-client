@@ -947,7 +947,7 @@ export const handleSpriteGroupDropdownMenuItemClick = (deps, payload) => {
     store.moveSpriteGroup({
       target,
       index,
-      offset: -1,
+      offset: 1,
     });
   }
 
@@ -955,7 +955,7 @@ export const handleSpriteGroupDropdownMenuItemClick = (deps, payload) => {
     store.moveSpriteGroup({
       target,
       index,
-      offset: 1,
+      offset: -1,
     });
   }
 
