@@ -6,7 +6,10 @@ import {
   setValues,
   updateValueProperty,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
-import { handleSectionActionClick } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+import {
+  handleOptionSelected,
+  handleSectionActionClick,
+} from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 
 const SOUNDS_DATA = {
   items: {
@@ -45,6 +48,7 @@ const createDeps = ({ soundsData = SOUNDS_DATA } = {}) => {
       selectValues: () => state.values,
       selectSoundOptions: () => selectSoundOptions({ state }),
       updateValueProperty: (payload) => updateValueProperty({ state }, payload),
+      closePopoverForm: vi.fn(),
     },
     appService: {
       showDropdownMenu: vi.fn(),
@@ -81,6 +85,33 @@ describe("layoutEditPanel sound handlers", () => {
     expect(deps.dispatchEvent.mock.calls[0][0].detail).toMatchObject({
       name: "hoverSoundId",
       value: "sound-hover",
+    });
+  });
+
+  it("clears the selected hover sound when None is selected", () => {
+    const deps = createDeps();
+    deps.state.values.hoverSoundId = "sound-hover";
+
+    handleOptionSelected(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            name: "hoverSoundId",
+          },
+        },
+        detail: {
+          item: {
+            value: "",
+          },
+        },
+      },
+    });
+
+    expect(deps.state.values).not.toHaveProperty("hoverSoundId");
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(deps.dispatchEvent.mock.calls[0][0].detail).toMatchObject({
+      name: "hoverSoundId",
+      value: undefined,
     });
   });
 

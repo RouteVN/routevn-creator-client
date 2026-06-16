@@ -170,8 +170,8 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
       skipUnseenText: nextRuntime.skipUnseenText ?? false,
       skipTransitionsAndAnimations:
         nextRuntime.skipTransitionsAndAnimations ?? false,
-      soundVolume: nextRuntime.soundVolume ?? 500,
-      musicVolume: nextRuntime.musicVolume ?? 500,
+      soundVolume: nextRuntime.soundVolume ?? 50,
+      musicVolume: nextRuntime.musicVolume ?? 50,
       muteAll: nextRuntime.muteAll ?? false,
     },
     dialogue: {

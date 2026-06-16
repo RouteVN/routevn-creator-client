@@ -41,6 +41,8 @@ describe("layoutEditorPreview", () => {
       boolVar: true,
     });
     expect(previewData.runtime.dialogueTextSpeed).toBe(50);
+    expect(previewData.runtime.soundVolume).toBe(50);
+    expect(previewData.runtime.musicVolume).toBe(50);
     expect(previewData.dialogue.characterId).toBe("character-1");
     expect(previewData.dialogue.character.name).toBe("Aki");
     expect(previewData.dialogue.content[0].text).toBe("Hello there");

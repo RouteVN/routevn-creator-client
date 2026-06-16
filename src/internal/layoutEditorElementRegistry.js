@@ -550,6 +550,7 @@ const DEFAULT_CAPABILITIES = {
 const FAMILY_CAPABILITIES = {
   container: {
     supportsSize: false,
+    supportsSoundSelection: true,
     supportsAnchor: true,
     supportsDirection: true,
     supportsScroll: true,
@@ -563,6 +564,7 @@ const FAMILY_CAPABILITIES = {
   },
   sprite: {
     supportsAnchor: true,
+    supportsSoundSelection: true,
     supportsSpriteImages: true,
     supportsActions: true,
   },

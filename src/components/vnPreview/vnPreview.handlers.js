@@ -726,6 +726,12 @@ export const handleAfterMount = async (deps) => {
     projectDataWithInitial,
     initialSceneIds,
   );
+  await preloadLayoutAssetsByIds(
+    deps,
+    projectDataWithInitial,
+    Object.keys(projectDataWithInitial?.resources?.layouts || {}),
+  );
+
   await graphicsService.initRouteEngine(runtime.projectData, {
     handleEffects: true,
     onRenderState: ({ systemState }) => {

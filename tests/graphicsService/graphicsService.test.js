@@ -814,6 +814,206 @@ describe("graphicsService", () => {
     });
   });
 
+  it("sanitizes invalid interaction sound volumes before direct renders", async () => {
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    const payload = {
+      id: "render-1",
+      elements: [
+        {
+          id: "button",
+          click: {
+            sound: "click-sfx",
+            soundVolume: Number.NaN,
+          },
+          hover: {
+            sound: "hover-sfx",
+            soundVolume: "75",
+          },
+          rightClick: {
+            sound: "right-click-sfx",
+            soundVolume: 150,
+          },
+          children: [
+            {
+              id: "child-button",
+              click: {
+                sound: "child-click-sfx",
+                soundVolume: "loud",
+              },
+            },
+          ],
+        },
+        {
+          id: "muted-button",
+          click: {
+            sound: "muted-click-sfx",
+            soundVolume: -25,
+          },
+        },
+      ],
+      audio: [],
+      animations: [],
+    };
+
+    service.render(payload);
+
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith({
+      id: "render-1",
+      elements: [
+        {
+          id: "button",
+          click: {
+            sound: "click-sfx",
+          },
+          hover: {
+            sound: "hover-sfx",
+            soundVolume: 75,
+          },
+          rightClick: {
+            sound: "right-click-sfx",
+            soundVolume: 100,
+          },
+          children: [
+            {
+              id: "child-button",
+              click: {
+                sound: "child-click-sfx",
+              },
+            },
+          ],
+        },
+        {
+          id: "muted-button",
+          click: {
+            sound: "muted-click-sfx",
+            soundVolume: 0,
+          },
+        },
+      ],
+      audio: [],
+      animations: [],
+    });
+    expect(Number.isNaN(payload.elements[0].click.soundVolume)).toBe(true);
+    expect(payload.elements[0].hover.soundVolume).toBe("75");
+  });
+
+  it("decodes interaction sound assets from render-state elements", async () => {
+    const decodedAudioKeys = new Set();
+    const hoverBuffer = new ArrayBuffer(8);
+    const clickBuffer = new ArrayBuffer(8);
+    const bufferManager = {
+      has: vi.fn((key) => key === "hover-sfx" || key === "click-sfx"),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({
+        "hover-sfx": {
+          buffer: hoverBuffer,
+          type: "audio/ogg",
+        },
+        "click-sfx": {
+          buffer: clickBuffer,
+          type: "audio/mpeg",
+        },
+      })),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+    audioAssetApi.getAsset = vi.fn((key) =>
+      decodedAudioKeys.has(key) ? { key } : undefined,
+    );
+    audioAssetApi.load = vi.fn(async (key) => {
+      decodedAudioKeys.add(key);
+      return { key };
+    });
+
+    const renderState = {
+      id: "render-1",
+      elements: [
+        {
+          id: "button",
+          hover: {
+            soundSrc: "hover-sfx",
+          },
+          children: [
+            {
+              id: "child-button",
+              click: {
+                sound: "click-sfx",
+              },
+            },
+          ],
+        },
+      ],
+      audio: [],
+      animations: [],
+    };
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => renderState),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    expect(service.collectRenderStateAudioKeys(renderState).sort()).toEqual([
+      "click-sfx",
+      "hover-sfx",
+    ]);
+
+    service.engineRenderCurrentState();
+
+    await vi.waitFor(() => {
+      expect(audioAssetApi.load).toHaveBeenCalledWith("hover-sfx", hoverBuffer);
+      expect(audioAssetApi.load).toHaveBeenCalledWith("click-sfx", clickBuffer);
+    });
+    await vi.waitFor(() => {
+      expect(routeGraphicsInstance.render).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it("keeps engine-driven follow-up renders muted after renderComplete", async () => {
     let effectsHandlerOptions;
     createEffectsHandlerMock.mockImplementation((options) => {
