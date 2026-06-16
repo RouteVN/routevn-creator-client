@@ -347,7 +347,7 @@ template:
   - $when: fullImagePreviewVisible
     'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none; background-color: rgba(0, 0, 0, 0.9);"':
       - $if fullImagePreviewFileId:
-          - 'rtgl-view pos=fix z=3002 d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="top: 24px; left: 50%; transform: translateX(-50%); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
+          - 'rtgl-view pos=fix z=3002 d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="top: 8px; left: 50%; transform: translateX(-50%); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
               - 'rtgl-view#previewCanvasModeButton role=button aria-label="Show sprite at canvas scale" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="Show sprite at canvas scale" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewCanvasModeButton.borderColor} bgc=${fullImagePreviewCanvasModeButton.backgroundColor} cur=pointer':
                   - rtgl-svg svg=canvas-scale wh=18 c=${fullImagePreviewCanvasModeButton.iconColor}: null
               - 'rtgl-view#previewFitModeButton role=button aria-label="Fit sprite to preview" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="Fit sprite to preview" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewFitModeButton.borderColor} bgc=${fullImagePreviewFitModeButton.backgroundColor} cur=pointer':
