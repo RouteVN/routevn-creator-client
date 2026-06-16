@@ -1171,4 +1171,46 @@ describe("graphicsService", () => {
       }),
     );
   });
+
+  it("can preserve playback mode while skipping render-state animations", async () => {
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    service.engineRenderCurrentState({
+      preserveAnimationPlayback: true,
+      skipAnimations: true,
+    });
+
+    expect(routeGraphicsInstance.setAnimationPlaybackMode).toHaveBeenCalledWith(
+      "auto",
+    );
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        animations: [],
+      }),
+    );
+  });
 });

@@ -176,6 +176,14 @@ styles:
     box-shadow: 0 0 0 1px var(--border)
     overflow: hidden
     cursor: default
+  ".imageDetailPreviewFrame":
+    display: block
+    width: 100%
+    aspect-ratio: 16 / 9
+    box-shadow: 0 0 0 1px var(--border)
+    border-radius: 6px
+    overflow: hidden
+    cursor: pointer
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -203,7 +211,8 @@ template:
                                   - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
                                       - $if selectedItemId:
                                           - $if selectedPreviewFileId:
-                                              - rvn-file-image#detailImage slot="image-file-id" fileId=${selectedPreviewFileId} w=f h=160 bw=xs bc=bo br=md cur=pointer: null
+                                              - 'div#detailImage.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
+                                                  - rvn-file-image fileId=${selectedPreviewFileId} w=f h=f: null
                                           - rtgl-tag-select#detailTagSelect slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:

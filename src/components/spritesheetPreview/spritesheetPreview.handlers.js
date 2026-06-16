@@ -284,6 +284,64 @@ const startAnimation = (deps) => {
   store.setAnimationFrameId({ animationFrameId });
 };
 
+const getSourceImageSrc = (sourceImage) => {
+  return (
+    sourceImage?.getAttribute?.("src") ??
+    sourceImage?.currentSrc ??
+    sourceImage?.src ??
+    ""
+  );
+};
+
+const isCurrentSourceImageLoaded = ({ refs, store } = {}) => {
+  const sourceImage = refs?.sourceImage;
+  if (
+    typeof HTMLImageElement === "undefined" ||
+    !(sourceImage instanceof HTMLImageElement) ||
+    !sourceImage.complete ||
+    sourceImage.naturalWidth <= 0
+  ) {
+    return false;
+  }
+
+  const imageSrc = store.selectImageSrc();
+  return imageSrc.length > 0 && getSourceImageSrc(sourceImage) === imageSrc;
+};
+
+const renderReadySourceImage = (deps) => {
+  const { props, render, store } = deps;
+  stopAnimation(store);
+  store.setStatus({ status: "ready" });
+  drawFrame(deps);
+  if (!isPaused(props.paused)) {
+    startAnimation(deps);
+  }
+  render();
+};
+
+const syncReadySourceImage = (deps) => {
+  const { store } = deps;
+  if (store.selectStatus() !== "loading") {
+    return;
+  }
+
+  if (isCurrentSourceImageLoaded(deps)) {
+    renderReadySourceImage(deps);
+  }
+};
+
+const renderImageSourceChange = (deps) => {
+  const { render } = deps;
+  render();
+  syncReadySourceImage(deps);
+
+  if (typeof queueMicrotask === "function") {
+    queueMicrotask(() => {
+      syncReadySourceImage(deps);
+    });
+  }
+};
+
 const loadImageSource = async (deps) => {
   const { projectService, props, refs, render, store } = deps;
 
@@ -301,7 +359,7 @@ const loadImageSource = async (deps) => {
       imageSrc: props.src,
       ownsImageSrc: false,
     });
-    render();
+    renderImageSourceChange(deps);
     return;
   }
 
@@ -320,7 +378,7 @@ const loadImageSource = async (deps) => {
       imageSrc: url ?? "",
       ownsImageSrc: true,
     });
-    render();
+    renderImageSourceChange(deps);
   } catch {
     store.setStatus({ status: "error" });
     render();
@@ -335,6 +393,8 @@ const didSourceChange = (oldProps = {}, newProps = {}) => {
 
 const didFrameRenderingChange = (oldProps = {}, newProps = {}) => {
   return (
+    oldProps?.previewKey !== newProps?.previewKey ||
+    oldProps?.key !== newProps?.key ||
     oldProps?.atlas !== newProps?.atlas ||
     oldProps?.animation !== newProps?.animation
   );
@@ -392,13 +452,7 @@ export const handleOnUpdate = async (deps, payload = {}) => {
 };
 
 export const handleSourceImageLoad = (deps) => {
-  const { props, render, store } = deps;
-  store.setStatus({ status: "ready" });
-  drawFrame(deps);
-  if (!isPaused(props.paused)) {
-    startAnimation(deps);
-  }
-  render();
+  renderReadySourceImage(deps);
 };
 
 export const handleSourceImageError = (deps) => {

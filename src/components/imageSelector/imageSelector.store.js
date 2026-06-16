@@ -54,6 +54,7 @@ export const selectViewData = ({ state, props = {} }) => {
             itemBorderColor,
             itemHoverBorderColor,
             imageCardStyle,
+            previewAspectRatio: "16 / 9",
           };
         });
 

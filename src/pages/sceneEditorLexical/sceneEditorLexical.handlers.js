@@ -63,16 +63,28 @@ const normalizeTemporaryPresentationState = (detail = {}) => {
   return toPlainObject(detail.presentationState);
 };
 
-const requestTemporaryPresentationCanvasRender = (subject) => {
-  subject?.dispatch?.("sceneEditor.renderCanvas", {
+const requestTemporaryPresentationCanvasRender = (
+  subject,
+  { preserveAnimationPlayback = false, skipAnimations = false } = {},
+) => {
+  const renderPayload = {
     skipRender: true,
-    skipAnimations: true,
-  });
+    skipAnimations,
+  };
+
+  if (preserveAnimationPlayback) {
+    renderPayload.preserveAnimationPlayback = true;
+  }
+
+  subject?.dispatch?.("sceneEditor.renderCanvas", renderPayload);
 };
 
 const clearTemporaryPresentationPreview = ({ store, subject }) => {
   store.clearTemporaryPresentationState?.();
-  requestTemporaryPresentationCanvasRender(subject);
+  requestTemporaryPresentationCanvasRender(subject, {
+    preserveAnimationPlayback: true,
+    skipAnimations: true,
+  });
 };
 
 const flattenRefs = (value) => {
@@ -548,13 +560,16 @@ const dispatchLineNavigationRender = (
     return;
   }
 
+  const skipAnimations = !shouldAnimateLineNavigation(store, {
+    previousLineId,
+    nextLineId,
+  });
+
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender,
     syncPresentationState: true,
-    skipAnimations: !shouldAnimateLineNavigation(store, {
-      previousLineId,
-      nextLineId,
-    }),
+    skipAnimations,
+    preserveAnimationPlayback: skipAnimations,
   });
 };
 
@@ -1345,7 +1360,7 @@ export const handleBackgroundTransformEditorCancel = (deps, payload) => {
     });
     render();
     reopenBackgroundCommandLine({ refs, store, background });
-    requestTemporaryPresentationCanvasRender(subject);
+    requestTemporaryPresentationCanvasRender(subject, { skipAnimations: true });
     globalThis.setTimeout?.(() => {
       store.clearSuppressNextActionsDialogClose?.();
       render();
@@ -1367,7 +1382,7 @@ export const handleBackgroundTransformEditorCancel = (deps, payload) => {
     actionKey,
     action,
   });
-  requestTemporaryPresentationCanvasRender(subject);
+  requestTemporaryPresentationCanvasRender(subject, { skipAnimations: true });
   globalThis.setTimeout?.(() => {
     store.clearSuppressNextActionsDialogClose?.();
     render();

@@ -477,12 +477,52 @@ describe("renderSceneEditorState", () => {
     );
 
     expect(engineRenderCurrentState).toHaveBeenNthCalledWith(1, {
+      preserveAnimationPlayback: false,
       skipAudio: false,
       skipAnimations: true,
     });
     expect(engineRenderCurrentState).toHaveBeenNthCalledWith(2, {
+      preserveAnimationPlayback: false,
       skipAudio: false,
       skipAnimations: false,
+    });
+  });
+
+  it("can skip render-state animations while preserving playback", async () => {
+    const projectData = createProjectData();
+    const graphicsService = createGraphicsService();
+    const engineRenderCurrentState = vi.fn();
+    graphicsService.engineRenderCurrentState = engineRenderCurrentState;
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectPreviewRuntimeGlobal: () => ({
+        dialogueTextSpeed: 100,
+      }),
+      selectIsMuted: () => false,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      presentationState: undefined,
+    };
+
+    await renderSceneEditorState(
+      {
+        store,
+        graphicsService,
+      },
+      {
+        preserveAnimationPlayback: true,
+        skipAnimations: true,
+      },
+    );
+
+    expect(engineRenderCurrentState).toHaveBeenCalledWith({
+      preserveAnimationPlayback: true,
+      skipAudio: false,
+      skipAnimations: true,
     });
   });
 

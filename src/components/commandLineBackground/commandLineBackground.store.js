@@ -31,6 +31,7 @@ const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
 ];
 
 const DEFAULT_BACKGROUND_OPACITY = 1;
+const BACKGROUND_RESOURCE_CARD_ASPECT_RATIO = "16 / 9";
 const DEFAULT_BACKGROUND_BLUR = {
   x: 6,
   y: 9,
@@ -522,7 +523,9 @@ const selectResourceById = ({ state }, { resourceId, resourceType } = {}) => {
   return {
     resourceId,
     resourceType,
-    fileId: item.thumbnailFileId || item.fileId,
+    fileId: item.thumbnailFileId ?? item.fileId,
+    previewAspectRatio: BACKGROUND_RESOURCE_CARD_ASPECT_RATIO,
+    resourceCardStyle: "max-width: 100%; box-sizing: border-box;",
     name: item.name,
     itemBorderColor: "bo",
     itemHoverBorderColor: "ac",
@@ -605,6 +608,12 @@ export const selectViewData = ({ state, props = {} }) => {
           const isSelected = child.id === state.tempSelectedResourceId;
           const itemBorderColor = isSelected ? "pr" : "bo";
           const itemHoverBorderColor = isSelected ? "pr" : "ac";
+          const selectedResourceInsetStyle = isSelected
+            ? " box-shadow: inset 0 0 0 1px var(--color-pr);"
+            : "";
+          const resourceCardStyle =
+            "max-width: 100%; box-sizing: border-box;" +
+            selectedResourceInsetStyle;
           const layoutTypeLabels = {
             general: "General",
             "save-load": "Save / Load",
@@ -619,6 +628,9 @@ export const selectViewData = ({ state, props = {} }) => {
             ...child,
             itemBorderColor,
             itemHoverBorderColor,
+            previewFileId: child.thumbnailFileId ?? child.fileId,
+            previewAspectRatio: BACKGROUND_RESOURCE_CARD_ASPECT_RATIO,
+            resourceCardStyle,
             typeInfo: layoutTypeLabels[child.layoutType] ?? child.layoutType,
             layoutTypeDisplay: child.layoutType
               ? layoutTypeLabels[child.layoutType] || child.layoutType

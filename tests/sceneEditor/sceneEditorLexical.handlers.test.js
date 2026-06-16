@@ -14,6 +14,7 @@ import {
   handleNewLine,
   handleSectionMoveSceneFormActionClick,
   handleSelectedLineChanged,
+  handleTemporaryPresentationStateChange,
   scrollEntrySelectionIntoView,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 
@@ -36,6 +37,70 @@ const installAnimationFrameQueue = () => {
     },
   };
 };
+
+describe("sceneEditorLexical.handlers temporary presentation preview", () => {
+  it("renders temporary action previews with animations enabled", () => {
+    const stopPropagation = vi.fn();
+    const store = {
+      setTemporaryPresentationState: vi.fn(),
+    };
+    const subject = {
+      dispatch: vi.fn(),
+    };
+
+    handleTemporaryPresentationStateChange(
+      {
+        store,
+        subject,
+      },
+      {
+        _event: {
+          stopPropagation,
+          detail: {
+            presentationState: {
+              character: {
+                items: [
+                  {
+                    id: "character-hero",
+                    sprites: [
+                      {
+                        id: "face",
+                        resourceId: "sprite-blink",
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    );
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(store.setTemporaryPresentationState).toHaveBeenCalledWith({
+      presentationState: {
+        character: {
+          items: [
+            {
+              id: "character-hero",
+              sprites: [
+                {
+                  id: "face",
+                  resourceId: "sprite-blink",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(subject.dispatch).toHaveBeenCalledWith("sceneEditor.renderCanvas", {
+      skipRender: true,
+      skipAnimations: false,
+    });
+  });
+});
 
 describe("sceneEditorLexical.handlers transform editor resize", () => {
   it("resets stale section scroll when entering the first section", () => {
@@ -938,6 +1003,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     expect(deps.subject.dispatch).toHaveBeenCalledWith(
       "sceneEditor.renderCanvas",
       {
+        preserveAnimationPlayback: true,
         skipRender: true,
         skipAnimations: true,
       },
@@ -988,6 +1054,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     expect(deps.subject.dispatch).toHaveBeenCalledWith(
       "sceneEditor.renderCanvas",
       {
+        preserveAnimationPlayback: true,
         skipRender: true,
         skipAnimations: true,
       },
@@ -1619,6 +1686,8 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       expect(deps.subject.dispatch).toHaveBeenCalledWith(
         "sceneEditor.renderCanvas",
         expect.objectContaining({
+          preserveAnimationPlayback: true,
+          skipAnimations: true,
           skipRender: true,
           syncPresentationState: true,
         }),

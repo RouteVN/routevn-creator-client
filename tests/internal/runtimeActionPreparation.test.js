@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   captureCanvasImage,
   captureCanvasThumbnailImage,
+  createSafeSpritePlugin,
+  createSafeSpritesheetAnimationPlugin,
   preloadRuntimeSaveSlotImages,
   prepareRuntimeInteractionExecution,
   prepareRuntimeInteractionActions,
@@ -36,6 +38,164 @@ class FakeImage {
     });
   }
 }
+
+describe("createSafeSpritePlugin", () => {
+  it("replaces a stale animated display object before sprite update", async () => {
+    const staleDisplay = {
+      label: "sprite-1",
+      play: vi.fn(),
+      stop: vi.fn(),
+      removeFromParent: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const parent = {
+      children: [staleDisplay],
+    };
+    const nextElement = {
+      id: "sprite-1",
+    };
+    const plugin = {
+      type: "sprite",
+      add: vi.fn(async () => "added"),
+      update: vi.fn(async () => "updated"),
+    };
+
+    const wrappedPlugin = createSafeSpritePlugin(plugin);
+    const result = await wrappedPlugin.update({
+      parent,
+      prevElement: { id: "sprite-1" },
+      nextElement,
+      zIndex: 2,
+    });
+
+    expect(result).toBe("added");
+    expect(plugin.update).not.toHaveBeenCalled();
+    expect(staleDisplay.stop).toHaveBeenCalledTimes(1);
+    expect(staleDisplay.removeFromParent).toHaveBeenCalledTimes(1);
+    expect(staleDisplay.destroy).toHaveBeenCalledWith({ children: true });
+    expect(plugin.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        element: nextElement,
+        parent,
+        zIndex: 2,
+      }),
+    );
+  });
+
+  it("delegates sprite updates for normal display objects", async () => {
+    const display = {
+      label: "sprite-1",
+      removeFromParent: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const parent = {
+      children: [display],
+    };
+    const plugin = {
+      type: "sprite",
+      add: vi.fn(async () => "added"),
+      update: vi.fn(async () => "updated"),
+    };
+
+    const wrappedPlugin = createSafeSpritePlugin(plugin);
+    const result = await wrappedPlugin.update({
+      parent,
+      prevElement: { id: "sprite-1" },
+      nextElement: { id: "sprite-1" },
+    });
+
+    expect(result).toBe("updated");
+    expect(plugin.update).toHaveBeenCalledTimes(1);
+    expect(plugin.add).not.toHaveBeenCalled();
+    expect(display.removeFromParent).not.toHaveBeenCalled();
+    expect(display.destroy).not.toHaveBeenCalled();
+  });
+});
+
+describe("createSafeSpritesheetAnimationPlugin", () => {
+  it("replaces a stale non-animated display object before spritesheet update", async () => {
+    const staleDisplay = {
+      label: "sprite-1",
+      stop: vi.fn(),
+      removeFromParent: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const parent = {
+      children: [staleDisplay],
+    };
+    const nextElement = {
+      id: "sprite-1",
+    };
+    const plugin = {
+      type: "spritesheet-animation",
+      add: vi.fn(async () => "added"),
+      update: vi.fn(async () => "updated"),
+    };
+
+    const wrappedPlugin = createSafeSpritesheetAnimationPlugin(plugin);
+    const result = await wrappedPlugin.update({
+      parent,
+      prevElement: { id: "sprite-1" },
+      nextElement,
+      zIndex: 2,
+    });
+
+    expect(result).toBe("added");
+    expect(plugin.update).not.toHaveBeenCalled();
+    expect(staleDisplay.stop).toHaveBeenCalledTimes(1);
+    expect(staleDisplay.removeFromParent).toHaveBeenCalledTimes(1);
+    expect(staleDisplay.destroy).toHaveBeenCalledWith({ children: true });
+    expect(plugin.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        element: nextElement,
+        parent,
+        zIndex: 2,
+      }),
+    );
+  });
+
+  it("falls back to replacement when RouteGraphics throws a missing play method error", async () => {
+    const display = {
+      label: "sprite-1",
+      play: vi.fn(),
+      stop: vi.fn(),
+      removeFromParent: vi.fn(),
+      destroy: vi.fn(),
+    };
+    const parent = {
+      children: [display],
+    };
+    const nextElement = {
+      id: "sprite-1",
+    };
+    const plugin = {
+      type: "spritesheet-animation",
+      add: vi.fn(async () => "added"),
+      update: vi.fn(async () => {
+        throw new TypeError("c.play is not a function");
+      }),
+    };
+
+    const wrappedPlugin = createSafeSpritesheetAnimationPlugin(plugin);
+    const result = await wrappedPlugin.update({
+      parent,
+      prevElement: { id: "sprite-1" },
+      nextElement,
+    });
+
+    expect(result).toBe("added");
+    expect(plugin.update).toHaveBeenCalledTimes(1);
+    expect(display.stop).toHaveBeenCalledTimes(1);
+    expect(display.removeFromParent).toHaveBeenCalledTimes(1);
+    expect(display.destroy).toHaveBeenCalledWith({ children: true });
+    expect(plugin.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        element: nextElement,
+        parent,
+      }),
+    );
+  });
+});
 
 describe("captureCanvasThumbnailImage", () => {
   afterEach(() => {

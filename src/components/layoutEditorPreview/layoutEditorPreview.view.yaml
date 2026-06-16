@@ -98,7 +98,7 @@ template:
   - $if previewBackgroundOnlyForm:
       - rtgl-form key=${previewBackgroundOnlyFormKey} w=f :form=${previewBackgroundOnlyForm}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+              - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
                   - $if previewBackgroundImageId:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
@@ -107,7 +107,7 @@ template:
   - $if showDialogueForm:
       - rtgl-form#dialogueForm key=${dialogueFormKey} w=f :form=${dialogueForm} :defaultValues=${dialogueDefaultValues} :context=${dialogueContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+              - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
                   - $if previewBackgroundImageId:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
@@ -116,7 +116,7 @@ template:
   - $if showNvlForm:
       - rtgl-form#nvlForm key=${nvlFormKey} w=f :form=${nvlForm} :defaultValues=${nvlDefaultValues} :context=${nvlContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+              - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
                   - $if previewBackgroundImageId:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
@@ -130,7 +130,7 @@ template:
   - $if showChoiceForm:
       - rtgl-form#choiceForm key=${choiceFormKey} w=f :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+              - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
                   - $if previewBackgroundImageId:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
@@ -139,7 +139,7 @@ template:
   - $if showHistoryForm:
       - rtgl-form#historyForm key=${historyFormKey} w=f :form=${historyForm} :defaultValues=${historyDefaultValues} :context=${historyContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+              - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
                   - $if previewBackgroundImageId:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
@@ -148,7 +148,7 @@ template:
   - $if showInputFieldsForm:
       - rtgl-form#inputFieldsForm key=${inputFieldsFormKey} w=f :form=${inputFieldsForm} :defaultValues=${inputFieldsDefaultValues}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+              - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
                   - $if previewBackgroundImageId:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
@@ -157,7 +157,7 @@ template:
   - $if showPreviewVariablesForm:
       - rtgl-form#previewVariablesForm key=${previewVariablesFormKey} w=f :form=${previewVariablesForm} :defaultValues=${previewVariablesDefaultValues}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+              - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
                   - $if previewBackgroundImageId:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null
@@ -166,7 +166,7 @@ template:
   - $if showSaveLoadForm:
       - rtgl-form#saveLoadForm key=${saveLoadFormKey} w=f :form=${saveLoadForm} :defaultValues=${saveLoadDefaultValues} :context=${saveLoadContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
-              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+              - 'rtgl-view#previewBackgroundField w=220 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden style="aspect-ratio: 16 / 9;"':
                   - $if previewBackgroundImageId:
                       - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                           - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=f h=f: null

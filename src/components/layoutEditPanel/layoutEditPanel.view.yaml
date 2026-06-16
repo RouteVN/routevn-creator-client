@@ -296,14 +296,14 @@ template:
                               - rtgl-view w=1fg: null
                               - $if barItem.kind == 'spritesheet' && barItem.resourceId:
                                   - rtgl-view w=56 h=32 overflow=hidden br=sm:
-                                      - 'rvn-spritesheet-preview key=${barItem.spritesheetPreviewKey} fileId=${barItem.spritesheetFileId} :atlas=${barItem.spritesheetAtlas} :animation=${barItem.spritesheetAnimation} w=f h=f emptyLabel="No preview"': null
+                                      - 'rvn-spritesheet-preview key=${barItem.spritesheetPreviewKey} previewKey=${barItem.spritesheetPreviewKey} fileId=${barItem.spritesheetFileId} :atlas=${barItem.spritesheetAtlas} :animation=${barItem.spritesheetAnimation} w=f h=f emptyLabel="No preview"': null
                                 $elif barItem.imageId:
                                   - rvn-file-image imageId=${barItem.imageId} source="thumbnail" h=32: null
                                 $else:
                                   - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
                                       - rtgl-text s=xs c=mu: Not set
                     $elif item.type == 'spritesheet-preview':
-                      - 'rvn-spritesheet-preview key=${item.previewKey} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} h=180 emptyLabel="Select a spritesheet animation"': null
+                      - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} h=180 emptyLabel="Select a spritesheet animation"': null
                     $elif item.type == 'popover-input':
                       - rtgl-view#groupItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
@@ -386,7 +386,7 @@ template:
                       - rtgl-view#textRevealIndicatorImageField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                           - $if textRevealIndicatorDialog.kind == 'spritesheet' && textRevealIndicatorDialog.resourceId:
                               - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                                  - 'rvn-spritesheet-preview key=${textRevealIndicatorDialogPreviewKey} fileId=${textRevealIndicatorDialogSpritesheetFileId} :atlas=${textRevealIndicatorDialogSpritesheetAtlas} :animation=${textRevealIndicatorDialogSpritesheetAnimation} w=f h=f emptyLabel="No preview"': null
+                                  - 'rvn-spritesheet-preview key=${textRevealIndicatorDialogPreviewKey} previewKey=${textRevealIndicatorDialogPreviewKey} fileId=${textRevealIndicatorDialogSpritesheetFileId} :atlas=${textRevealIndicatorDialogSpritesheetAtlas} :animation=${textRevealIndicatorDialogSpritesheetAnimation} w=f h=f emptyLabel="No preview"': null
                             $elif textRevealIndicatorDialog.imageId:
                               - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                                   - rvn-file-image imageId=${textRevealIndicatorDialog.imageId} source="thumbnail" w=f h=f: null

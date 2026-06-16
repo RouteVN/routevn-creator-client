@@ -24,7 +24,7 @@ template:
               - $for item, j in group.children:
                   - rtgl-view#imageItemRef${i}x${j} data-item-id=${item.id} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md cur=pointer key=${item.id}:
                       - 'rtgl-view br=md w=200 pos=rel overflow=hidden style="${item.imageCardStyle}"':
-                          - 'div.imageSelectorThumbnailTransparencyGrid style="display: block; width: 100%; height: 120px; overflow: hidden;"':
+                          - 'div.imageSelectorThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                               - rvn-file-image w=f h=f imageId=${item.id} source="thumbnail": null
                           - rtgl-view w=f p=md:
                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
