@@ -36,10 +36,10 @@ const createPreviewFrameStyle = (projectResolution) => {
   const aspectRatio = formatProjectResolutionAspectRatio(projectResolution);
 
   return [
-    `width: min(92vw, calc(92vh * (${aspectRatio})))`,
+    `width: min(88vw, calc((100vh - 120px) * (${aspectRatio})))`,
     `aspect-ratio: ${aspectRatio}`,
-    "max-width: 92vw",
-    "max-height: 92vh",
+    "max-width: 88vw",
+    "max-height: calc(100vh - 120px)",
   ].join("; ");
 };
 
