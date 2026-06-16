@@ -214,6 +214,14 @@ styles:
     box-shadow: 0 0 0 1px var(--border)
     overflow: hidden
     cursor: default
+  ".imageDetailPreviewFrame":
+    display: block
+    width: 100%
+    aspect-ratio: 16 / 9
+    box-shadow: 0 0 0 1px var(--border)
+    border-radius: 6px
+    overflow: hidden
+    cursor: pointer
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -241,10 +249,20 @@ template:
                                       - $if selectedItemId:
                                           - $if selectedItemType == 'image':
                                               - $if selectedPreviewFileId:
-                                                  - rvn-file-image#detailImage slot="image-file-id" fileId=${selectedPreviewFileId} w=f h=160 bw=xs bc=bo br=md cur=pointer: null
+                                                  - 'div#detailImage.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
+                                                      - rvn-file-image fileId=${selectedPreviewFileId} w=f h=f: null
                                           - $if selectedItemType == 'spritesheet':
                                               - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} :paused=${detailPreviewPaused} h=220 emptyLabel="No preview available"': null
                                           - rtgl-tag-select#detailTagSelect slot="sprite-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                          - 'rtgl-view slot="sprite-groups" d=v w=f g=sm':
+                                              - $if selectedItemSpriteGroups.length > 0:
+                                                  - $for spriteGroup, i in selectedItemSpriteGroups:
+                                                      - rtgl-view d=v w=f g=xs p=md bw=xs bc=bo br=md:
+                                                          - rtgl-text s=sm: ${spriteGroup.name}
+                                                          - $if spriteGroup.tagSummary:
+                                                              - rtgl-text s=xs c=mu-fg: ${spriteGroup.tagSummary}
+                                                $else:
+                                                  - rtgl-text s=xs c=mu-fg: No sprite groups
                                           - $if selectedItemType == 'spritesheet':
                                               - 'rtgl-view slot="spritesheet-animations" d=v w=f g=sm':
                                                   - rtgl-text s=sm c=mu-fg: Animations
