@@ -243,6 +243,106 @@ describe("lexical layout text editor", () => {
     }
   });
 
+  it("moves ArrowRight past a final variable chip without reselecting it", async () => {
+    const [
+      { $createMentionNode },
+      { getReferenceSelectionInfo },
+      { editorElement, rootElement, dispose },
+    ] = await Promise.all([
+      import("../../src/primitives/lexicalRichTextShared.js"),
+      import("../../src/primitives/lexicalSceneDocumentReferences.js"),
+      createTextEditorHarness(),
+    ]);
+
+    try {
+      rootElement.focus();
+      editorElement.editor.update(
+        () => {
+          const root = $getRoot();
+          const paragraph = $createParagraphNode();
+          const prefixNode = $createTextNode("Hi ");
+          const mentionNode = $createMentionNode({
+            resourceId: "playerName",
+            label: "Player Name",
+          });
+
+          paragraph.append(prefixNode, mentionNode);
+          root.clear();
+          root.append(paragraph);
+          prefixNode.selectEnd();
+        },
+        { discrete: true },
+      );
+
+      const chipElement = rootElement.querySelector(".mention-chip");
+      const prefixTextNode = chipElement.previousSibling.firstChild;
+      const range = document.createRange();
+      range.setStart(prefixTextNode, prefixTextNode.textContent.length);
+      range.collapse(true);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+
+      const firstArrowRightEvent = {
+        key: "ArrowRight",
+        isComposing: false,
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+      expect(
+        editorElement.handleReferenceArrowNavigation(firstArrowRightEvent),
+      ).toBe(true);
+      expect(firstArrowRightEvent.preventDefault).toHaveBeenCalledTimes(1);
+      expect(rootElement.dataset.rvnReferenceSelectionActive).toBeUndefined();
+      expect(
+        rootElement.querySelector(".mention-chip").dataset,
+      ).not.toHaveProperty("rvnReferenceSelected");
+
+      const caretState = editorElement.editor.getEditorState().read(() => {
+        const selection = $getSelection();
+        const paragraph = $getRoot().getFirstChild();
+        const referenceSelection = getReferenceSelectionInfo(selection);
+        return {
+          anchorKey: selection.anchor.key,
+          anchorOffset: selection.anchor.offset,
+          anchorType: selection.anchor.type,
+          childrenSize: paragraph.getChildrenSize(),
+          isCollapsed: selection.isCollapsed(),
+          paragraphKey: paragraph.getKey(),
+          referenceSelection: Boolean(referenceSelection),
+        };
+      });
+      expect(caretState).toMatchObject({
+        anchorOffset: caretState.childrenSize,
+        anchorType: "element",
+        isCollapsed: true,
+        paragraphKey: caretState.anchorKey,
+        referenceSelection: false,
+      });
+
+      const secondArrowRightEvent = {
+        key: "ArrowRight",
+        isComposing: false,
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+      expect(
+        editorElement.handleReferenceArrowNavigation(secondArrowRightEvent),
+      ).toBe(false);
+      expect(secondArrowRightEvent.preventDefault).not.toHaveBeenCalled();
+      expect(rootElement.dataset.rvnReferenceSelectionActive).toBeUndefined();
+    } finally {
+      dispose();
+    }
+  });
+
   it("selects a variable chip before Backspace removes it", async () => {
     const [
       { $createMentionNode },
