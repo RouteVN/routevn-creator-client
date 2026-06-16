@@ -1141,11 +1141,11 @@ describe("commandLineCharacters.handlers", () => {
       },
     );
 
-    expect(selectSelectedSpriteGroupId({ state })).toBe("body");
+    expect(selectSelectedSpriteGroupId({ state })).toBe("face");
     expect(selectTempSelectedSpriteIds({ state })).toEqual({
       body: "sprite-body",
     });
-    expect(selectTempSelectedSpriteId({ state })).toBe("sprite-body");
+    expect(selectTempSelectedSpriteId({ state })).toBeUndefined();
 
     handleSpriteGroupTabClick(
       {
@@ -1155,14 +1155,14 @@ describe("commandLineCharacters.handlers", () => {
       {
         _event: {
           detail: {
-            id: "face",
+            id: "body",
           },
         },
       },
     );
 
-    expect(selectSelectedSpriteGroupId({ state })).toBe("face");
-    expect(selectTempSelectedSpriteId({ state })).toBeUndefined();
+    expect(selectSelectedSpriteGroupId({ state })).toBe("body");
+    expect(selectTempSelectedSpriteId({ state })).toBe("sprite-body");
   });
 
   it("emits temporary presentation state while picking character sprites", () => {

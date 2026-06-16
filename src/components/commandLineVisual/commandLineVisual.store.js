@@ -35,24 +35,24 @@ const tabs = RESOURCE_TYPES.map(({ type, label }) => ({
 const DEFAULT_VISUAL_LAYER = 50;
 const VISUAL_LAYER_OPTIONS = [
   {
-    value: 10,
-    label: "Behind Background",
-  },
-  {
-    value: 30,
-    label: "Behind Character",
-  },
-  {
-    value: DEFAULT_VISUAL_LAYER,
-    label: "Behind Dialogue",
+    value: 90,
+    label: "Foreground",
   },
   {
     value: 70,
     label: "Behind Choice",
   },
   {
-    value: 90,
-    label: "Foreground",
+    value: DEFAULT_VISUAL_LAYER,
+    label: "Behind Dialogue",
+  },
+  {
+    value: 30,
+    label: "Behind Character",
+  },
+  {
+    value: 10,
+    label: "Behind Background",
   },
 ];
 const VISUAL_LAYER_VALUES = VISUAL_LAYER_OPTIONS.map((option) => option.value);

@@ -124,6 +124,9 @@ const buildSpriteSelectionGroups = (character = {}) => {
   }));
 };
 
+const orderSpriteSelectionGroupsForTabs = (spriteSelectionGroups = []) =>
+  spriteSelectionGroups.slice().reverse();
+
 const findFirstSpriteIdForGroup = ({
   group,
   spritesCollection,
@@ -444,7 +447,7 @@ const resolveSelectedSpriteGroupId = ({
     return state.selectedSpriteGroupId;
   }
 
-  return spriteSelectionGroups?.[0]?.id;
+  return orderSpriteSelectionGroupsForTabs(spriteSelectionGroups)[0]?.id;
 };
 
 const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
@@ -1216,8 +1219,11 @@ export const selectViewData = ({ state, props = {} }) => {
         state,
         index: state.selectedCharacterIndex,
       });
+    const spriteSelectionTabGroups = orderSpriteSelectionGroupsForTabs(
+      currentSpriteSelectionGroups,
+    );
 
-    spriteSelectionTabs = currentSpriteSelectionGroups.map(
+    spriteSelectionTabs = spriteSelectionTabGroups.map(
       (spriteSelectionGroup) => ({
         id: spriteSelectionGroup.id,
         label: spriteSelectionGroup.name,

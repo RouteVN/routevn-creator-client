@@ -14,6 +14,7 @@ import {
   handleCommandLineSubmit,
   handleTemporaryPresentationStateChange,
   handleSetBackgroundCustomTransform,
+  handleSetActionCustomTransform,
   open,
 } from "../../src/components/systemActions/systemActions.handlers.js";
 
@@ -332,6 +333,91 @@ describe("systemActions.handlers", () => {
     });
   });
 
+  it("uses the transform editor action snapshot when applying a visual custom transform", () => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+    const setChildCustomTransform = vi.fn();
+    const transform = {
+      x: 320,
+      y: 180,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      scaleX: 1.4,
+      scaleY: 1.4,
+      rotation: 12,
+      originX: 100,
+      originY: 80,
+    };
+    const staleAction = {
+      items: [
+        {
+          id: "visual-1",
+          resourceId: "image-1",
+          transformId: "center",
+        },
+      ],
+    };
+    const editorAction = {
+      items: [
+        {
+          id: "visual-1",
+          resourceId: "image-1",
+          transformId: "center",
+        },
+        {
+          id: "visual-2",
+          resourceId: "image-2",
+          transformId: "center",
+        },
+      ],
+    };
+
+    updateActions(
+      { state },
+      {
+        visual: staleAction,
+      },
+    );
+
+    handleSetActionCustomTransform(
+      {
+        refs: {
+          commandLineVisual: {
+            transformedHandlers: {
+              handleSetCustomTransform: setChildCustomTransform,
+            },
+          },
+        },
+        store: {
+          selectAction: () => selectAction({ state }),
+        },
+        dispatchEvent: (event) => {
+          dispatchedEvents.push(event);
+        },
+      },
+      {
+        targetType: "visual",
+        itemIndex: 1,
+        item: editorAction.items[1],
+        transform,
+        action: editorAction,
+      },
+    );
+
+    expect(setChildCustomTransform).toHaveBeenCalledWith({
+      index: 1,
+      transform,
+    });
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].detail.presentationState.visual.items).toEqual([
+      editorAction.items[0],
+      {
+        ...editorAction.items[1],
+        ...transform,
+      },
+    ]);
+  });
+
   it("emits close from embedded system action editors", () => {
     const dispatchedEvents = [];
     let stopPropagationCalled = false;
@@ -554,9 +640,7 @@ describe("systemActions.handlers", () => {
       suppressDialogClose: true,
     });
     expect(dispatchedEvents).toHaveLength(1);
-    expect(dispatchedEvents[0].type).toBe(
-      "background-transform-editor-cancel",
-    );
+    expect(dispatchedEvents[0].type).toBe("background-transform-editor-cancel");
   });
 
   it("clears temporary presentation state when the actions dialog closes", () => {

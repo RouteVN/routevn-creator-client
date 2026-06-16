@@ -226,11 +226,13 @@ const resolveActionTransformIndex = (items = [], { itemIndex, item } = {}) => {
 
 export const handleSetActionCustomTransform = (
   deps,
-  { targetType, itemIndex, item, transform } = {},
+  { targetType, itemIndex, item, transform, action: actionSnapshot } = {},
 ) => {
   const { refs, store } = deps;
   const actionKey = targetType === "character" ? "character" : "visual";
-  const action = toPlainObject(store.selectAction()?.[actionKey]);
+  const action = toPlainObject(
+    actionSnapshot ?? store.selectAction()?.[actionKey],
+  );
   const items = Array.isArray(action.items) ? [...action.items] : [];
   const resolvedIndex = resolveActionTransformIndex(items, { itemIndex, item });
   const sourceItem = item ?? items[resolvedIndex];
