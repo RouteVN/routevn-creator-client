@@ -66,6 +66,9 @@ export const normalizeSpriteGroupsForDraft = ({
     }));
 };
 
+export const reverseSpriteGroups = (spriteGroups = []) =>
+  Array.isArray(spriteGroups) ? spriteGroups.slice().reverse() : [];
+
 export const validateSpriteGroupsForSave = ({
   spriteGroups,
   validTagIds,
