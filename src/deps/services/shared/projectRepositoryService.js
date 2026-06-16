@@ -28,6 +28,20 @@ const discardReusableMainCheckpoint = async (store) => {
   });
 };
 
+const summarizeCheckpointValue = (value = {}) => {
+  const counts = {};
+  for (const [key, entry] of Object.entries(value || {})) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      continue;
+    }
+    if (!entry.items || typeof entry.items !== "object") {
+      continue;
+    }
+    counts[key] = Object.keys(entry.items).length;
+  }
+  return counts;
+};
+
 export const createProjectRepositoryService = ({
   router,
   db,
@@ -309,6 +323,16 @@ export const createProjectRepositoryService = ({
           currentHistoryStats,
         )
       ) {
+        console.warn("Discarding stale project repository checkpoint", {
+          cacheKey,
+          checkpointRevision: Math.max(
+            0,
+            Math.floor(Number(checkpoint.lastCommittedId) || 0),
+          ),
+          checkpointHistoryStats,
+          currentHistoryStats,
+          checkpointValueCounts: summarizeCheckpointValue(checkpoint.value),
+        });
         await discardReusableMainCheckpoint(store);
         return undefined;
       }
@@ -322,6 +346,16 @@ export const createProjectRepositoryService = ({
       );
 
       if (checkpointRevision !== currentHistoryLength) {
+        console.warn(
+          "Discarding project repository checkpoint without matching history length",
+          {
+            cacheKey,
+            checkpointRevision,
+            currentHistoryStats,
+            currentHistoryLength,
+            checkpointValueCounts: summarizeCheckpointValue(checkpoint.value),
+          },
+        );
         await discardReusableMainCheckpoint(store);
         return undefined;
       }

@@ -25,6 +25,7 @@ vi.mock("../../src/internal/projectResolution.js", () => ({
 
 import {
   createProjectCreateRepositoryEvent,
+  createProjectRepository,
   initialProjectData,
 } from "../../src/deps/services/shared/projectRepository.js";
 import { loadRepositoryEventsFromClientStore } from "../../src/deps/services/shared/collab/clientStoreHistory.js";
@@ -259,7 +260,9 @@ const createRawClientStoreStub = ({
     },
     async applyCommittedBatch({ events, nextCursor }) {
       state.committed = (events || []).map((event) => structuredClone(event));
-      state.cursor = Number(nextCursor) || 0;
+      if (nextCursor !== undefined) {
+        state.cursor = Number(nextCursor) || 0;
+      }
     },
     async applySubmitResult({ result }) {
       state.submitResults.push(structuredClone(result));
@@ -340,7 +343,7 @@ describe("webRepositoryAdapter", () => {
     db.close();
   });
 
-  it("initializes project history by seeding bootstrap state into local drafts for offline projects", async () => {
+  it("initializes project history by seeding bootstrap state into committed history for offline projects", async () => {
     const projectId = "web-init-project";
     const rawClientStore = createRawClientStoreStub();
 
@@ -365,13 +368,14 @@ describe("webRepositoryAdapter", () => {
       rawClientStore,
     });
 
-    expect(rawClientStore.getState().committed).toEqual([]);
-    expect(rawClientStore.getState().drafts).toEqual([
+    expect(rawClientStore.getState().committed).toEqual([
       expect.objectContaining({
         projectId,
         type: "project.create",
       }),
     ]);
+    expect(rawClientStore.getState().drafts).toEqual([]);
+    expect(rawClientStore.getState().cursor).toBe(0);
 
     const adapter = await createInsiemeWebStoreAdapter(projectId, {
       rawClientStore,
@@ -389,10 +393,10 @@ describe("webRepositoryAdapter", () => {
     ]);
     const historyStats = await adapter.getRepositoryHistoryStats();
     expect(historyStats).toEqual({
-      committedCount: 0,
-      latestCommittedId: 0,
-      draftCount: 1,
-      latestDraftClock: 1,
+      committedCount: 1,
+      latestCommittedId: 1,
+      draftCount: 0,
+      latestDraftClock: 0,
     });
     const checkpoint = await adapter.loadMaterializedViewCheckpoint({
       viewName: "project_repository_main_state",
@@ -414,6 +418,7 @@ describe("webRepositoryAdapter", () => {
       },
       draftEvents: rawClientStore.getState().drafts,
       committedEvents: rawClientStore.getState().committed,
+      bootstrapEventLocation: "committed",
       checkpoint,
       storedCreatorVersion,
       storedProjectInfo,
@@ -425,6 +430,96 @@ describe("webRepositoryAdapter", () => {
         key: "creatorVersion",
       }),
     ).resolves.toBe(21);
+  });
+
+  it("can replay an initialized project from history after checkpoint loss and later local edits", async () => {
+    const projectId = "web-replay-after-checkpoint-loss";
+    const folderId = "variables-folder-1";
+    const variableId = "variable-1";
+    const rawClientStore = createRawClientStoreStub();
+    const templateState = structuredClone(initialProjectData);
+    templateState.variables = {
+      items: {
+        [folderId]: {
+          id: folderId,
+          type: "folder",
+          name: "Default",
+        },
+      },
+      tree: [{ id: folderId }],
+    };
+
+    mocked.getTemplateFiles.mockResolvedValue([]);
+    mocked.loadTemplate.mockResolvedValue(templateState);
+    mocked.resolveProjectResolutionForWrite.mockReturnValue(
+      structuredClone(templateState.project.resolution),
+    );
+    mocked.scaleTemplateProjectStateForResolution.mockImplementation(
+      (templateData) => templateData,
+    );
+
+    await initializeProject({
+      projectId,
+      template: "blank",
+      projectInfo: {
+        id: projectId,
+        name: "Browser Project",
+      },
+      projectResolution: templateState.project.resolution,
+      creatorVersion: 21,
+      rawClientStore,
+    });
+
+    await rawClientStore.insertDraft({
+      id: "draft-variable-create",
+      partition: "m",
+      projectId,
+      type: "variable.create",
+      schemaVersion: COMMAND_EVENT_MODEL.schemaVersion,
+      payload: {
+        variableId,
+        data: {
+          type: "variable",
+          name: "Score",
+          scope: "context",
+          variableType: "number",
+          default: 0,
+          value: 0,
+        },
+        parentId: folderId,
+        index: 0,
+      },
+      clientTs: 2,
+      createdAt: 2,
+    });
+
+    const adapter = await createInsiemeWebStoreAdapter(projectId, {
+      rawClientStore,
+    });
+    await adapter.clearMaterializedViewCheckpoints();
+    const historyStats = await adapter.getRepositoryHistoryStats();
+
+    const repository = await createProjectRepository({
+      projectId,
+      store: adapter,
+      initialRevision:
+        Number(historyStats.committedCount) + Number(historyStats.draftCount),
+      historyStats,
+      loadEvents: () =>
+        loadRepositoryEventsFromClientStore({
+          store: adapter,
+          projectId,
+        }),
+    });
+
+    expect(repository.getState().variables.items[folderId]).toMatchObject({
+      type: "folder",
+      name: "Default",
+    });
+    expect(repository.getState().variables.items[variableId]).toMatchObject({
+      type: "variable",
+      name: "Score",
+    });
   });
 
   it("rejects and discards invalid local drafts during project load", async () => {

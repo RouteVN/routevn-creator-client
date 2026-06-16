@@ -9,7 +9,7 @@ import {
   loadCommittedEventsFromClientStore,
   loadDraftEventsFromClientStore,
   normalizeRepositoryHistoryStats,
-  toBootstrappedDraftEvent,
+  toBootstrappedCommittedEvent,
 } from "../../services/shared/collab/clientStoreHistory.js";
 import {
   createMainProjectionState,
@@ -179,7 +179,14 @@ export const initializeProject = async ({
     state: templateData,
     clientTs: initialClientTs,
   });
-  await rawClientStore.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
+  if (typeof rawClientStore.applyCommittedBatch !== "function") {
+    throw new Error(
+      "rawClientStore.applyCommittedBatch is required for web project initialization",
+    );
+  }
+  await rawClientStore.applyCommittedBatch({
+    events: [toBootstrappedCommittedEvent(initialEvent, 0)],
+  });
   await adapter.saveMaterializedViewCheckpoint({
     viewName: MAIN_VIEW_NAME,
     partition: MAIN_PARTITION,
