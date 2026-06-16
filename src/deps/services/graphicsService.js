@@ -54,6 +54,100 @@ const createNoopRouteEnginePersistence = () => ({
 });
 
 const DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID = "dialogue-character-sprite";
+const INTERACTION_SOUND_KEYS = ["hover", "click", "rightClick"];
+
+const normalizeGraphicsInteractionSoundVolume = (value) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+
+  return Math.min(Math.max(parsed, 0), 100);
+};
+
+const sanitizeGraphicsInteractionSoundVolume = (interaction) => {
+  if (
+    !interaction ||
+    typeof interaction !== "object" ||
+    Array.isArray(interaction) ||
+    !Object.hasOwn(interaction, "soundVolume")
+  ) {
+    return interaction;
+  }
+
+  const nextInteraction = { ...interaction };
+  const nextVolume = normalizeGraphicsInteractionSoundVolume(
+    interaction.soundVolume,
+  );
+
+  if (nextVolume === undefined) {
+    delete nextInteraction.soundVolume;
+  } else {
+    nextInteraction.soundVolume = nextVolume;
+  }
+
+  return nextInteraction;
+};
+
+const sanitizeGraphicsElementSoundVolumes = (elements) => {
+  if (!Array.isArray(elements) || elements.length === 0) {
+    return elements;
+  }
+
+  let didChange = false;
+  const nextElements = elements.map((element) => {
+    if (!element || typeof element !== "object") {
+      return element;
+    }
+
+    let nextElement = element;
+
+    for (const interactionKey of INTERACTION_SOUND_KEYS) {
+      const interaction = element[interactionKey];
+      const nextInteraction =
+        sanitizeGraphicsInteractionSoundVolume(interaction);
+      if (nextInteraction !== interaction) {
+        if (nextElement === element) {
+          nextElement = { ...element };
+        }
+        nextElement[interactionKey] = nextInteraction;
+        didChange = true;
+      }
+    }
+
+    const children = element.children;
+    const nextChildren = sanitizeGraphicsElementSoundVolumes(children);
+    if (nextChildren !== children) {
+      if (nextElement === element) {
+        nextElement = { ...element };
+      }
+      nextElement.children = nextChildren;
+      didChange = true;
+    }
+
+    return nextElement;
+  });
+
+  return didChange ? nextElements : elements;
+};
+
+const sanitizeRenderStateInteractionSoundVolumes = (renderState) => {
+  const elements = renderState?.elements;
+  const nextElements = sanitizeGraphicsElementSoundVolumes(elements);
+
+  if (nextElements === elements) {
+    return renderState;
+  }
+
+  return {
+    ...renderState,
+    elements: nextElements,
+  };
+};
 
 const findRenderElementById = (nodes, elementId) => {
   if (!Array.isArray(nodes)) {
@@ -623,8 +717,35 @@ export const createGraphicsService = async ({
     return keys;
   };
 
+  const collectElementAudioKeys = (elements = [], keys = []) => {
+    for (const element of elements) {
+      if (!element || typeof element !== "object") {
+        continue;
+      }
+
+      for (const interactionKey of INTERACTION_SOUND_KEYS) {
+        const interaction = element[interactionKey];
+        const soundKey = interaction?.soundSrc ?? interaction?.sound;
+        if (typeof soundKey === "string" && soundKey) {
+          keys.push(soundKey);
+        }
+      }
+
+      if (Array.isArray(element.children)) {
+        collectElementAudioKeys(element.children, keys);
+      }
+    }
+
+    return keys;
+  };
+
   const getRenderStateAudioKeys = (renderState) => {
-    return Array.from(new Set(collectAudioKeys(renderState?.audio ?? [])));
+    return Array.from(
+      new Set([
+        ...collectAudioKeys(renderState?.audio ?? []),
+        ...collectElementAudioKeys(renderState?.elements ?? []),
+      ]),
+    );
   };
 
   const getMissingDecodedAudioKeys = (assetKeys = []) => {
@@ -1278,6 +1399,8 @@ export const createGraphicsService = async ({
       renderState: withActiveControlKeyboard(renderState),
       enableGlobalKeyboardBindings,
     });
+    nextRenderState =
+      sanitizeRenderStateInteractionSoundVolumes(nextRenderState);
     const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
 
     if (
@@ -1299,14 +1422,17 @@ export const createGraphicsService = async ({
     if (allowDeferredAudio && !effectiveSkipAudio) {
       const splitAudio = splitRenderableAudio(nextRenderState.audio);
       const { renderableAudio } = splitAudio;
-      missingAudioKeys = splitAudio.missingAudioKeys;
+      missingAudioKeys = getMissingDecodedAudioKeys(requestedAudioKeys);
 
-      if (missingAudioKeys.length > 0) {
+      if (splitAudio.missingAudioKeys.length > 0) {
         nextRenderState = {
           ...nextRenderState,
           audio: renderableAudio,
         };
         retainedAudioKeys = getRenderStateAudioKeys(nextRenderState);
+      }
+
+      if (missingAudioKeys.length > 0) {
         scheduleDeferredAudioRender(missingAudioKeys);
       }
     }
@@ -1708,6 +1834,7 @@ export const createGraphicsService = async ({
     },
 
     ensureAudioAssetsLoaded,
+    collectRenderStateAudioKeys: getRenderStateAudioKeys,
 
     engineRenderCurrentState: (options = {}) => {
       if (!engine || !routeGraphics) {
@@ -1755,7 +1882,9 @@ export const createGraphicsService = async ({
     waitUntilReady,
     attachCanvas,
     render: (payload) => {
-      return routeGraphics?.render(payload);
+      return routeGraphics?.render(
+        sanitizeRenderStateInteractionSoundVolumes(payload),
+      );
     },
     parse: (payload) => routeGraphics?.parse(payload),
     destroy: async () => {

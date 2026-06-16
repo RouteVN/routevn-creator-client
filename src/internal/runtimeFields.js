@@ -42,7 +42,7 @@ const RUNTIME_FIELD_GROUPS = Object.freeze([
         name: "Sound Volume",
         type: "number",
         scope: "device",
-        default: 500,
+        default: 50,
         description: "Controls the effective sound effects volume.",
       },
       {
@@ -50,7 +50,7 @@ const RUNTIME_FIELD_GROUPS = Object.freeze([
         name: "Music Volume",
         type: "number",
         scope: "device",
-        default: 500,
+        default: 50,
         description: "Controls the effective music volume.",
       },
       {

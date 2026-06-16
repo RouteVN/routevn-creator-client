@@ -93,33 +93,48 @@ describe("layoutEditPanel sound section", () => {
     });
   });
 
-  it("does not show a sound section for container items yet", () => {
-    const state = createInitialState();
+  it("shows hover and click sound selectors for sprite and container items", () => {
+    for (const itemType of ["sprite", "container"]) {
+      const state = createInitialState();
+      const values = {
+        type: itemType,
+        hoverSoundId: "sound-hover",
+        clickSoundId: "sound-click",
+      };
 
-    setValues(
-      { state },
-      {
-        values: {
-          type: "container",
-          direction: "absolute",
+      if (itemType === "container") {
+        values.direction = "absolute";
+      } else {
+        values.imageId = "image-1";
+      }
+
+      setValues(
+        { state },
+        {
+          values,
         },
-      },
-    );
-    setSoundsData(
-      { state },
-      {
-        soundsData: SOUNDS_DATA,
-      },
-    );
+      );
+      setSoundsData(
+        { state },
+        {
+          soundsData: SOUNDS_DATA,
+        },
+      );
 
-    const viewData = selectViewData({
-      state,
-      props: createProps("container"),
-      constants: LAYOUT_EDIT_PANEL_CONSTANTS,
-    });
+      const viewData = selectViewData({
+        state,
+        props: createProps(itemType),
+        constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+      });
+      const soundSection = viewData.config.sections.find(
+        (section) => section.id === "sounds",
+      );
 
-    expect(
-      viewData.config.sections.some((section) => section.id === "sounds"),
-    ).toBe(false);
+      expect(soundSection?.label).toBe("Sound");
+      expect(soundSection?.items.map((item) => item.name)).toEqual([
+        "hoverSoundId",
+        "clickSoundId",
+      ]);
+    }
   });
 });

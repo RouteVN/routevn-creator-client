@@ -9,6 +9,7 @@ import {
   throttleTime,
 } from "rxjs";
 import {
+  extractFileIdsFromRenderState,
   extractFileIdsForLayouts,
   extractFileIdsForScenes,
   extractFileIdsForValue,
@@ -916,12 +917,20 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     return;
   }
 
+  await preloadFileReferences(
+    deps,
+    extractFileIdsFromRenderState(currentRenderState),
+    {
+      resources: renderProjectData?.resources,
+      showLoading: false,
+    },
+  );
+
   const activeAudioFileIds =
     payload?.skipAudio || isMuted
       ? []
-      : (currentRenderState.audio || [])
-          .map((audioElement) => audioElement?.src)
-          .filter(Boolean);
+      : (graphicsService.collectRenderStateAudioKeys?.(currentRenderState) ??
+        []);
   const audioLoadStartedAt = perfEnabled ? getDebugNow() : 0;
   await graphicsService.ensureAudioAssetsLoaded(activeAudioFileIds);
   const audioLoadDurationMs = perfEnabled
@@ -1186,6 +1195,12 @@ export const restoreSceneEditorFromPreview = async (deps) => {
     showLoading: false,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
+  await preloadLayoutAssetsByIds(
+    deps,
+    projectData,
+    Object.keys(projectData?.resources?.layouts || {}),
+  );
+
   const onRenderState = createRuntimeCurrentLineRenderStateHandler(deps);
   initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
     enableGlobalKeyboardBindings: false,

@@ -57,6 +57,7 @@ const INTEGER_ONLY_FIELDS = new Set([
   "indicator.complete.offsetX",
   "indicator.complete.offsetY",
 ]);
+const SOUND_ID_FIELDS = new Set(["hoverSoundId", "clickSoundId"]);
 const SIZE_FIELDS = new Set(["width", "height"]);
 const WHEEL_INCREMENT_FIELD_CONFIG = {
   x: { step: 1, fastStep: 10 },
@@ -419,10 +420,17 @@ const applyPanelValueUpdate = (
   { name, value, closePopover = false, closeImageSelector = false } = {},
 ) => {
   const { store, render } = deps;
-  const normalizedValue =
+  let normalizedValue =
     INTEGER_ONLY_FIELDS.has(name) && Number.isFinite(Number(value))
       ? Math.round(Number(value))
       : value;
+
+  if (
+    SOUND_ID_FIELDS.has(name) &&
+    (normalizedValue === "" || normalizedValue === null)
+  ) {
+    normalizedValue = undefined;
+  }
 
   if (name === "sliderRuntimeValueId") {
     const runtimeId =

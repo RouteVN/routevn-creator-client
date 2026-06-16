@@ -67,6 +67,34 @@ describe("layout sound variants", () => {
     ]);
   });
 
+  it("maps sprite hover and click sound ids into route-graphics interaction sounds", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "sprite-1",
+          type: "sprite",
+          imageId: "image-1",
+          x: 0,
+          y: 0,
+          hoverSoundId: "sound-hover",
+          clickSoundId: "sound-click",
+        },
+      ],
+      {},
+      EMPTY_TREE,
+      EMPTY_TREE,
+      EMPTY_TREE,
+      {
+        layoutId: "layout-1",
+        soundsData: SOUNDS_DATA,
+      },
+    );
+
+    expect(elements[0].type).toBe("sprite");
+    expect(elements[0].hover?.soundSrc).toBe("file-hover");
+    expect(elements[0].click?.soundSrc).toBe("file-click");
+  });
+
   it("maps container hover and click sound ids in the render state", () => {
     const { elements } = buildLayoutElements(
       [
