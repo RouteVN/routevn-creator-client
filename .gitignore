@@ -25,3 +25,20 @@ static/bundle/main.js
 # Generated setup file
 src/setup.js
 .DS_Store
+
+/android/routevn/.gradle
+/android/routevn/build
+/android/routevn/app/build
+/android/routevn/app/src/main/assets
+/android/routevn/local.properties
+/android/routevn/.env
+/android/routevn/.idea
+/android/routevn/.kotlin
+/android/routevn/captures
+/android/routevn/app/.cxx
+/android/routevn/app/debug
+/android/routevn/app/release
+/android/routevn/app/keystore
+/android/routevn/**/*.jks
+/android/routevn/**/*.keystore
+/android/routevn/*.iml

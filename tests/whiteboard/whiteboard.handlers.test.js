@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
+  handleContainerTouchEnd,
+  handleContainerTouchMove,
+  handleContainerTouchStart,
   handleContainerWheel,
   handleEnsureItemVisible,
   handleWindowMouseMove,
@@ -119,6 +122,132 @@ const createDeps = ({
   };
 };
 
+const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
+  let isDragging = false;
+  let dragItemId;
+  let dragOffset = { x: 0, y: 0 };
+  let lastDraggedPosition;
+  let containerSize = { width: 600, height: 420 };
+  let touchGesture;
+  const itemElement = {
+    dataset: { itemId: "scene-1" },
+    style: {
+      left: "100px",
+      top: "60px",
+    },
+  };
+  const store = {
+    selectIsPanMode: vi.fn(() => false),
+    selectContainerSize: vi.fn(() => containerSize),
+    setContainerSize: vi.fn(({ width, height }) => {
+      containerSize = { width, height };
+    }),
+    selectPan: vi.fn(() => ({ x: 0, y: 0 })),
+    selectZoomLevel: vi.fn(() => 1),
+    setDragOffset: vi.fn((nextDragOffset) => {
+      dragOffset = nextDragOffset;
+    }),
+    startDragging: vi.fn(({ itemId }) => {
+      isDragging = true;
+      dragItemId = itemId;
+    }),
+    stopDragging: vi.fn(() => {
+      isDragging = false;
+      dragItemId = undefined;
+    }),
+    selectIsDragging: vi.fn(() => isDragging),
+    selectDragItemId: vi.fn(() => dragItemId),
+    selectDragOffset: vi.fn(() => dragOffset),
+    setLastDraggedPosition: vi.fn((position) => {
+      lastDraggedPosition = position;
+    }),
+    selectLastDraggedPosition: vi.fn(() => lastDraggedPosition),
+    clearLastDraggedPosition: vi.fn(() => {
+      lastDraggedPosition = undefined;
+    }),
+    startTouchItemPress: vi.fn((gesture) => {
+      touchGesture = {
+        type: "item-press",
+        ...gesture,
+        hasMoved: false,
+        longPressFired: false,
+      };
+    }),
+    updateTouchItemPress: vi.fn(({ clientX, clientY, moveThreshold }) => {
+      if (touchGesture?.type !== "item-press") {
+        return;
+      }
+
+      const deltaX = clientX - touchGesture.startClientX;
+      const deltaY = clientY - touchGesture.startClientY;
+      touchGesture.hasMoved =
+        touchGesture.hasMoved || Math.hypot(deltaX, deltaY) > moveThreshold;
+    }),
+    markTouchItemLongPressed: vi.fn(() => {
+      if (touchGesture?.type === "item-press") {
+        touchGesture.longPressFired = true;
+        touchGesture.longPressTimeoutId = undefined;
+      }
+    }),
+    clearTouchLongPressTimeoutId: vi.fn(() => {
+      if (touchGesture?.type === "item-press") {
+        touchGesture.longPressTimeoutId = undefined;
+      }
+    }),
+    selectTouchGesture: vi.fn(() => touchGesture),
+    startTouchPan: vi.fn(),
+    updateTouchPan: vi.fn(),
+    stopTouchGesture: vi.fn(() => {
+      touchGesture = undefined;
+    }),
+  };
+  const refs = {
+    container: {
+      contains: vi.fn(() => true),
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        width: 600,
+        height: 420,
+      }),
+      style: {},
+    },
+    canvas: {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+      }),
+      style: {},
+    },
+    itemRef0: itemElement,
+  };
+
+  return {
+    store,
+    refs,
+    props: { selectedItemId },
+    render: vi.fn(),
+    dispatchEvent: vi.fn(),
+    itemElement,
+    target: {
+      closest: vi.fn(() => itemElement),
+    },
+  };
+};
+
+const createTouchEvent = ({ target, clientX, clientY, touches } = {}) => ({
+  target,
+  touches: touches ?? [
+    {
+      clientX,
+      clientY,
+    },
+  ],
+  preventDefault: vi.fn(),
+  stopPropagation: vi.fn(),
+  cancelable: true,
+});
+
 describe("whiteboard minimap drag handlers", () => {
   beforeAll(() => {
     if (typeof globalThis.HTMLElement === "undefined") {
@@ -207,6 +336,147 @@ describe("whiteboard minimap drag handlers", () => {
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
     expect(deps.store.zoomAt).not.toHaveBeenCalled();
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("drags the selected item after a one-finger touch moves", () => {
+    const deps = createTouchDragDeps();
+    const touchStartEvent = createTouchEvent({
+      target: deps.target,
+      clientX: 110,
+      clientY: 80,
+    });
+
+    handleContainerTouchStart(deps, {
+      _event: touchStartEvent,
+    });
+
+    expect(touchStartEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(touchStartEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.store.startTouchItemPress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemId: "scene-1",
+        startClientX: 110,
+        startClientY: 80,
+      }),
+    );
+    expect(deps.store.startDragging).not.toHaveBeenCalled();
+    expect(deps.store.startTouchPan).not.toHaveBeenCalled();
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-selected",
+        detail: {
+          itemId: "scene-1",
+        },
+      }),
+    );
+
+    const touchMoveEvent = createTouchEvent({
+      target: deps.target,
+      clientX: 160,
+      clientY: 120,
+    });
+    handleContainerTouchMove(deps, {
+      _event: touchMoveEvent,
+    });
+
+    expect(deps.store.startDragging).toHaveBeenCalledWith({
+      itemId: "scene-1",
+    });
+    expect(deps.store.updateTouchPan).not.toHaveBeenCalled();
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-position-updating",
+        detail: {
+          itemId: "scene-1",
+          x: 150,
+          y: 100,
+        },
+      }),
+    );
+
+    const touchEndEvent = createTouchEvent({
+      target: deps.target,
+      touches: [],
+    });
+    handleContainerTouchEnd(deps, {
+      _event: touchEndEvent,
+    });
+
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-position-changed",
+        detail: {
+          itemId: "scene-1",
+          x: 150,
+          y: 100,
+        },
+      }),
+    );
+    expect(deps.store.stopDragging).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the item context menu after a stationary long press", () => {
+    vi.useFakeTimers();
+    try {
+      const deps = createTouchDragDeps();
+      const touchStartEvent = createTouchEvent({
+        target: deps.target,
+        clientX: 110,
+        clientY: 80,
+      });
+
+      handleContainerTouchStart(deps, {
+        _event: touchStartEvent,
+      });
+
+      vi.advanceTimersByTime(500);
+
+      expect(deps.store.startDragging).not.toHaveBeenCalled();
+      expect(deps.dispatchEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "item-context-menu",
+          detail: {
+            itemId: "scene-1",
+            x: 110,
+            y: 80,
+          },
+        }),
+      );
+
+      const touchEndEvent = createTouchEvent({
+        target: deps.target,
+        touches: [],
+      });
+      handleContainerTouchEnd(deps, {
+        _event: touchEndEvent,
+      });
+
+      expect(deps.store.stopTouchGesture).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps one-finger pan when touch starts on the background", () => {
+    const deps = createTouchDragDeps({ selectedItemId: "scene-2" });
+    const backgroundTarget = {
+      closest: vi.fn(() => undefined),
+    };
+    const touchStartEvent = createTouchEvent({
+      target: backgroundTarget,
+      clientX: 110,
+      clientY: 80,
+    });
+
+    handleContainerTouchStart(deps, {
+      _event: touchStartEvent,
+    });
+
+    expect(deps.store.startDragging).not.toHaveBeenCalled();
+    expect(deps.store.startTouchPan).toHaveBeenCalledWith({
+      touchX: 110,
+      touchY: 80,
+    });
   });
 
   it("animates ensureItemVisible when smooth behavior is requested", () => {

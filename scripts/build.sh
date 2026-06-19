@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Build script for RouteVN Creator Client
-# Usage: ./scripts/build.sh [web|tauri]
+# Usage: ./scripts/build.sh [web|tauri|android]
 
 set -e
 
@@ -18,6 +18,18 @@ LOCAL_RETTANGOLI_FILE="node_modules/@rettangoli/ui/dist/rettangoli-iife-ui.min.j
 LOCK_FILE="/tmp/routevn-creator-client-build.lock"
 
 echo "Building for ${BUILD_TYPE}..."
+
+sed_in_place() {
+  local expression=$1
+  local file=$2
+
+  if sed --version >/dev/null 2>&1; then
+    sed -i -E "${expression}" "${file}"
+    return
+  fi
+
+  sed -i '' -E "${expression}" "${file}"
+}
 
 # Builds for web/tauri share the same _site output path.
 # Serialize concurrent invocations so parallel scripts don't race on _site.
@@ -72,12 +84,17 @@ rtgl fe build -s "${SETUP_FILE}"
 # Prevent stale browser caches from serving an old /public/main.js bundle.
 BUILD_REV=$(date +%s)
 find _site -type f -name "*.html" -print0 | while IFS= read -r -d '' file; do
-  sed -i -E \
+  sed_in_place \
     "s#<script type=\"module\" src=\"/public/main.js(\\?v=[^\"]*)?\"></script>#<script type=\"module\" src=\"/public/main.js?v=${BUILD_REV}\"></script>#g" \
     "${file}"
-  sed -i -E \
+  sed_in_place \
     "s#<script src=\"/public/@rettangoli/ui@[^/]+/dist/rettangoli-iife-ui.min.js(\\?v=[^\"]*)?\"></script>#<script src=\"/public/@rettangoli/ui@${RETTANGOLI_VERSION}/dist/rettangoli-iife-ui.min.js?v=${BUILD_REV}\"></script>#g" \
     "${file}"
 done
+
+if [ "${BUILD_TYPE}" = "android" ]; then
+  echo "Preparing Android assets..."
+  bun run build:android:assets
+fi
 
 echo "Build completed for ${BUILD_TYPE}"

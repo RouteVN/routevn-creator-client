@@ -19,6 +19,10 @@ refs:
     eventListeners:
       click:
         handler: handleDetailHeaderClick
+  mobileDetailSheet:
+    eventListeners:
+      close:
+        handler: handleMobileDetailSheetClose
   versionForm:
     eventListeners:
       form-action:
@@ -36,10 +40,11 @@ refs:
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
-          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
-              - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-          - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
+          - $if showExplorerPanel:
+              - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+                  - rtgl-view slot="content" w=f h=f:
+                      - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+          - 'rtgl-view w=1fg h=f pl=${contentLeftPadding} style="min-width: 0; min-height: 0;"':
               - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
                   - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
                       - rtgl-view w=f d=h av=c g=md wrap:
@@ -61,18 +66,28 @@ template:
                                               - rtgl-text s=sm c=mu-fg: ${item.description}
                                           - rtgl-text s=xs c=mu-fg: Action ${item.actionIndex} • ${item.formattedCreatedAt}
                               - rtgl-view w=f h=30vh: null
-          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-              - rtgl-view wh=f slot="content":
-                  - $if selectedItemId:
-                      - rtgl-view d=v w=f h=f:
-                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
-                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                              - rtgl-svg svg=edit wh=16: null
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                              - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: Export Web
-                    $else:
-                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                          - rtgl-text s=md c=mu-fg: No selection
+          - $if showDetailPanel:
+              - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+                  - rtgl-view wh=f slot="content":
+                      - $if selectedItemId:
+                          - rtgl-view d=v w=f h=f:
+                              - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                                  - rtgl-svg svg=edit wh=16: null
+                              - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                                  - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: Export Web
+                        $else:
+                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                              - rtgl-text s=md c=mu-fg: No selection
+  - $if showMobileDetailSheet:
+      - rvn-mobile-sheet#mobileDetailSheet ?open=${showMobileDetailSheet}:
+          - rtgl-view slot=content d=v w=f h=f:
+              - rtgl-view#detailHeader h=56 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                  - rtgl-svg svg=edit wh=16: null
+              - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
+                  - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
+                      - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: Export Web
   - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md:
       - rtgl-view slot=content w=f:
           - rtgl-form#versionForm :form=${versionForm} w=f: null

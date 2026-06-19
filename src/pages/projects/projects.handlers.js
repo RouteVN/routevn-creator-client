@@ -174,11 +174,11 @@ const createProjectFromValues = async (deps, values = {}) => {
       return;
     }
 
-    if (!name || (platform !== "web" && !projectPath)) {
+    if (!name || (platform === "tauri" && !projectPath)) {
       let message = "Please fill in all required fields.";
       if (!name) {
         message = "Project Name is required.";
-      } else if (platform !== "web" && !projectPath) {
+      } else if (platform === "tauri" && !projectPath) {
         message = "Project Location is required.";
       }
 
@@ -354,7 +354,7 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
 
 export const handleOpenButtonClick = async (deps) => {
   const { appService, store, render } = deps;
-  if (appService.getPlatform() === "web") {
+  if (appService.getPlatform() !== "tauri") {
     return;
   }
 

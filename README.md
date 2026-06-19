@@ -10,6 +10,9 @@ Browser builds persist project data through IndexedDB-backed stores.
 
 Desktop builds persist project data through Tauri/SQLite-backed stores.
 
+Android builds run the web app inside a native WebView shell and persist project
+data through the web/IndexedDB-backed stores. Tauri is not used for mobile.
+
 ## Frameworks used
 
 - [@rettangoli/fe](https://github.com/yuusoft-org/rettangoli/tree/main/packages/rettangoli-fe) - Is used as the frontend framework
@@ -34,6 +37,8 @@ Folder structure
 - `src/deps/` - Infrastructure and service dependencies injected into pages/components
 - `src/setup.web.js` - Web-specific configuration
 - `src/setup.tauri.js` - Tauri desktop-specific configuration
+- `src/setup.android.js` - Android WebView-specific configuration
+- `android/routevn/` - Native Android WebView shell
 - `src/domain/` - Domain rules, command processing, and state projection
 - `src/collab/` - Collaboration runtime
 - `scripts/` - Build and utility scripts
@@ -202,6 +207,18 @@ The built application will be available in `src-tauri/target/release/` with plat
 - Platform-specific optimizations via separate entry points
 - System tray integration (planned)
 - Auto-updates support (planned)
+
+### Android Application (WebView)
+
+The Android app is a native WebView wrapper around the web build. It bypasses
+Tauri entirely and loads packaged assets through AndroidX `WebViewAssetLoader`.
+
+See [docs/android.md](docs/android.md) for the setup details and version pins.
+
+```shell
+bun run build:android
+bun run android:install
+```
 
 ## Community
 

@@ -1,4 +1,9 @@
 import { formatDate } from "../../internal/dates.js";
+import {
+  buildMobileResourcePageViewData,
+  createMobileResourcePageState,
+  setMobileResourcePageUiConfigState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const findVersionById = (versions, versionId) => {
   if (!versionId) {
@@ -44,6 +49,7 @@ const createVersionForm = ({ isEditing } = {}) => ({
 export const createInitialState = () => ({
   versions: [],
   selectedItemId: undefined,
+  ...createMobileResourcePageState(),
   isVersionDialogOpen: false,
   editingVersionId: undefined,
   dropdownMenu: {
@@ -76,6 +82,13 @@ export const closeDropdownMenu = ({ state }, _payload = {}) => {
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  setMobileResourcePageUiConfigState(state, {
+    uiConfig,
+    clearSearchOnTouch: false,
+  });
 };
 
 export const openVersionDialog = ({ state }, { versionId } = {}) => {
@@ -161,6 +174,10 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedVersion?.name ?? "",
     detailFields,
+    ...buildMobileResourcePageViewData({
+      state,
+      detailFields,
+    }),
     isVersionDialogOpen: state.isVersionDialogOpen,
     versionForm: createVersionForm({ isEditing }),
     dropdownMenu: state.dropdownMenu,

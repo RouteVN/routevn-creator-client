@@ -36,6 +36,7 @@ const SCENE_EDITOR_FONT_SIZE_OPTIONS = [
 ];
 const DEFAULT_SCENE_EDITOR_FONT_SIZE = "md";
 const MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX = 48;
+const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 const MOBILE_PREVIEW_VERTICAL_PADDING_PX = 16;
 const MOBILE_PREVIEW_MIN_HEIGHT_PX = 72;
 
@@ -1614,6 +1615,14 @@ const selectMobileEditorBottomSpacerHeight = ({ state }) => {
   return `${keyboardInset + MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX + scrollRoom}px`;
 };
 
+const selectMobileSceneEditorBottomInset = ({ state }) => {
+  if (!state.isTouchMode || state.mobileKeyboardState?.isVisible) {
+    return "0px";
+  }
+
+  return `calc(${MOBILE_TAB_BAR_HEIGHT_PX}px + env(safe-area-inset-bottom))`;
+};
+
 const selectSystemActionsDialogPanelWidth = ({ state }) => {
   return state.backgroundTransformEditor.isOpen === true
     ? "calc(100vw - 64px)"
@@ -1683,6 +1692,9 @@ export const selectViewData = ({ state }) => {
       previewCanvasMaxWidth: selectPreviewCanvasMaxWidth({ state }),
       mobilePreviewCanvasMaxWidth: selectMobilePreviewCanvasMaxWidth({ state }),
       mobileEditorBottomSpacerHeight: selectMobileEditorBottomSpacerHeight({
+        state,
+      }),
+      mobileSceneEditorBottomInset: selectMobileSceneEditorBottomInset({
         state,
       }),
       systemActionsDialogPanelWidth: selectSystemActionsDialogPanelWidth({
@@ -1984,6 +1996,9 @@ export const selectViewData = ({ state }) => {
     previewCanvasMaxWidth: selectPreviewCanvasMaxWidth({ state }),
     mobilePreviewCanvasMaxWidth: selectMobilePreviewCanvasMaxWidth({ state }),
     mobileEditorBottomSpacerHeight: selectMobileEditorBottomSpacerHeight({
+      state,
+    }),
+    mobileSceneEditorBottomInset: selectMobileSceneEditorBottomInset({
       state,
     }),
     systemActionsDialogPanelWidth: selectSystemActionsDialogPanelWidth({

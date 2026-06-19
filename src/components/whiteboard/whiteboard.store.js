@@ -226,6 +226,72 @@ export const updateTouchPinch = (
     gesture.hasMoved || Math.abs(nextDistance - gesture.startDistance) > 3;
 };
 
+export const startTouchItemPress = (
+  { state },
+  { itemId, startClientX, startClientY, longPressTimeoutId } = {},
+) => {
+  const nextStartClientX = Number(startClientX);
+  const nextStartClientY = Number(startClientY);
+
+  if (
+    !itemId ||
+    !Number.isFinite(nextStartClientX) ||
+    !Number.isFinite(nextStartClientY)
+  ) {
+    return;
+  }
+
+  state.touchGesture = {
+    type: "item-press",
+    itemId,
+    startClientX: nextStartClientX,
+    startClientY: nextStartClientY,
+    longPressTimeoutId,
+    hasMoved: false,
+    longPressFired: false,
+  };
+};
+
+export const updateTouchItemPress = (
+  { state },
+  { clientX, clientY, moveThreshold = 0 } = {},
+) => {
+  const gesture = state.touchGesture;
+  const nextClientX = Number(clientX);
+  const nextClientY = Number(clientY);
+  const threshold = Number(moveThreshold);
+
+  if (
+    gesture?.type !== "item-press" ||
+    !Number.isFinite(nextClientX) ||
+    !Number.isFinite(nextClientY)
+  ) {
+    return;
+  }
+
+  const deltaX = nextClientX - gesture.startClientX;
+  const deltaY = nextClientY - gesture.startClientY;
+  gesture.hasMoved =
+    gesture.hasMoved ||
+    Math.hypot(deltaX, deltaY) >
+      (Number.isFinite(threshold) ? Math.max(0, threshold) : 0);
+};
+
+export const markTouchItemLongPressed = ({ state }, _payload = {}) => {
+  if (state.touchGesture?.type !== "item-press") {
+    return;
+  }
+
+  state.touchGesture.longPressFired = true;
+  state.touchGesture.longPressTimeoutId = undefined;
+};
+
+export const clearTouchLongPressTimeoutId = ({ state }, _payload = {}) => {
+  if (state.touchGesture?.type === "item-press") {
+    state.touchGesture.longPressTimeoutId = undefined;
+  }
+};
+
 export const stopTouchGesture = ({ state }, _payload = {}) => {
   state.touchGesture = undefined;
 };
