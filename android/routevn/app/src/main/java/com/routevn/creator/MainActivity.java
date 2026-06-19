@@ -561,6 +561,17 @@ public class MainActivity extends Activity {
                 return bridgeFailure(error);
             }
         }
+
+        @JavascriptInterface
+        public String deletePickerRequest(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                deletePickerRequestFiles(payload.getString("requestId"));
+                return bridgeSuccess(true);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
     }
 
     private String bridgeSuccess(Object value) throws Exception {
@@ -902,6 +913,31 @@ public class MainActivity extends Activity {
         );
     }
 
+    private void deletePickerRequestFiles(String requestId) throws Exception {
+        deleteRecursively(getPickerRoot(requestId));
+    }
+
+    private void deleteRecursively(File file) throws Exception {
+        if (file == null || !file.exists()) {
+            return;
+        }
+
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteRecursively(child);
+                }
+            }
+        }
+
+        if (!file.delete() && file.exists()) {
+            throw new IllegalStateException(
+                "Failed to delete temporary picker file."
+            );
+        }
+    }
+
     private String readProjectFileMimeType(String projectId, String fileId)
         throws Exception {
         File metadataFile = resolveSafeRelativeFile(
@@ -1122,6 +1158,16 @@ public class MainActivity extends Activity {
             return;
         }
 
+        try {
+            deletePickerRequestFiles(requestId);
+        } catch (Exception error) {
+            sendAndroidFilePickerError(
+                requestId,
+                "Failed to prepare file picker storage."
+            );
+            return;
+        }
+
         pendingAndroidFilePickerRequestId = requestId;
         pendingAndroidFilePickerMultiple = multiple;
 
@@ -1169,12 +1215,27 @@ public class MainActivity extends Activity {
             JSONArray files = new JSONArray();
             JSONArray uris = collectPickedUris(data, multiple);
             for (int index = 0; index < uris.length(); index += 1) {
-                files.put(createPickerFileResult(requestId, Uri.parse(uris.getString(index)), index));
+                files.put(
+                    createPickerFileResult(
+                        requestId,
+                        Uri.parse(uris.getString(index)),
+                        index
+                    )
+                );
             }
 
             result.put("files", files);
             sendAndroidFilePickerResult(result);
         } catch (Exception error) {
+            try {
+                deletePickerRequestFiles(requestId);
+            } catch (Exception cleanupError) {
+                Log.w(
+                    TAG,
+                    "Failed to clean picker files after picker error.",
+                    cleanupError
+                );
+            }
             sendAndroidFilePickerError(
                 requestId,
                 error.getMessage() == null
@@ -1221,6 +1282,8 @@ public class MainActivity extends Activity {
         long size = writePickerFileBytes(requestId, fileId, uri, mimeType);
 
         JSONObject file = new JSONObject();
+        file.put("requestId", requestId);
+        file.put("fileId", fileId);
         file.put("name", displayName);
         file.put("type", mimeType);
         file.put("size", size);

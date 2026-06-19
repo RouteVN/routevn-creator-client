@@ -5,7 +5,7 @@ import { createAndroidFilePicker } from "./deps/clients/android/filePicker.js";
 import AndroidRouter from "./deps/clients/android/router.js";
 
 import { createAppService } from "./deps/services/web/appService.js";
-import { createAndroidProjectServiceWithCollab } from "./deps/services/android/collabBootstrapService.js";
+import { createProjectService } from "./deps/services/android/projectService.js";
 import { createPendingQueueService } from "./deps/services/pendingQueueService.js";
 import { createApiService } from "./deps/services/apiService.js";
 
@@ -88,21 +88,10 @@ window.routeVNNativeBack = () => {
   return didGoBack;
 };
 
-const collabEndpointUrl = readAndroidEnv(
-  "ROUTEVN_COLLAB_ENDPOINT",
-  "wss://api.example.invalid/sync",
-);
-const collabConfig = {
-  endpointUrl: collabEndpointUrl,
-  debugEnabled: false,
-};
-
-const projectService = await createAndroidProjectServiceWithCollab({
+const projectService = createProjectService({
   router,
   filePicker,
-  subject,
   db: appDb,
-  collabConfig,
   creatorVersion,
 });
 

@@ -1,65 +1,15 @@
 import { createProjectService } from "./projectService.js";
-import {
-  createCollabDebugLogger,
-  createCollabConnectionRuntime,
-  resolveCollabDebugEnabled,
-} from "../web/collab/connectionRuntime.js";
-import { createRemoteEventBridge } from "../web/collab/remoteEventBridge.js";
 
 export const createAndroidProjectServiceWithCollab = async ({
   router,
   filePicker,
-  subject,
   db,
-  collabConfig = {},
   creatorVersion,
 }) => {
-  const collabDebugEnabled = resolveCollabDebugEnabled({
-    enabled: collabConfig.debugEnabled,
-  });
-  const collabDebugLog = createCollabDebugLogger({
-    enabled: collabDebugEnabled,
-  });
-
-  const onRemoteEvent = createRemoteEventBridge({
-    subject,
-    collabDebugLog,
-  });
-
-  const projectService = createProjectService({
+  return createProjectService({
     router,
     filePicker,
-    onRemoteEvent,
     db,
     creatorVersion,
   });
-
-  const collabConnectionRuntime = createCollabConnectionRuntime({
-    projectService,
-    router,
-    db,
-    collabDebugLog,
-    endpointUrl: collabConfig.endpointUrl,
-    userId: collabConfig.userId,
-    clientId: collabConfig.clientId,
-    token: collabConfig.token,
-  });
-
-  if (typeof window !== "undefined") {
-    window.routevnCollab = {
-      connect: collabConnectionRuntime.connectCollabDebugSession,
-      disconnect: collabConnectionRuntime.disconnectCollabDebugSession,
-      status: collabConnectionRuntime.getCollabDebugStatus,
-    };
-  }
-
-  Promise.resolve()
-    .then(() => collabConnectionRuntime.bootCollabAutoConnect())
-    .catch((error) => {
-      collabDebugLog("warn", "background collab boot failed", {
-        error: error?.message || "unknown",
-      });
-    });
-
-  return projectService;
 };

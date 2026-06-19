@@ -13,20 +13,12 @@ import {
   createPersistedAndroidProjectStore,
   evictPersistedAndroidProjectStoreCache,
 } from "./collabClientStore.js";
-import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
 import { commandToSyncEvent } from "../shared/collab/mappers.js";
 import {
-  clearProjectionGap,
-  saveProjectionGap,
-} from "../shared/collab/projectionGapState.js";
+  createBundleResult,
+  normalizeExportFileEntries,
+} from "../shared/projectExportService.js";
 import {
-  createCommittedCommandProjectionTracker,
-  createProjectionGap,
-  REMOTE_COMMAND_COMPATIBILITY,
-} from "../shared/collab/compatibility.js";
-import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
-import {
-  applyCommandToRepository,
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
 } from "../shared/projectRepository.js";
@@ -69,6 +61,18 @@ const getByteLength = (value) => {
   if (typeof value.byteLength === "number") return value.byteLength;
   if (typeof value.size === "number") return value.size;
   return 0;
+};
+
+const logExportSizeStats = (stats = {}) => {
+  console.info("[export.bundle.size]", stats);
+};
+
+const isMissingProjectFileError = (error) => {
+  return String(error?.message ?? "").includes("Project file was not found");
+};
+
+const createAndroidRemoteCollabDisabledError = () => {
+  return new Error("Android remote collaboration is disabled.");
 };
 
 const isUnreliableMimeType = (mimeType) => {
@@ -388,6 +392,70 @@ const writeDownloadFile = ({ filename, bytes, mimeType }) => {
   });
 };
 
+const collectDistributionZipAssets = async ({
+  fileEntries,
+  getCurrentReference,
+}) => {
+  const reference = getCurrentReference();
+  const projectId = reference?.repositoryProjectId || reference?.projectId;
+  if (!projectId) {
+    throw new Error("Project reference is required for Android ZIP export.");
+  }
+
+  const assets = {};
+  for (const fileEntry of normalizeExportFileEntries(fileEntries)) {
+    const safeFileId = assertSafeProjectFileId(fileEntry.id);
+    try {
+      const { bytes, mimeType } = readAndroidProjectFile({
+        projectId,
+        fileId: safeFileId,
+      });
+      assets[safeFileId] = {
+        buffer: bytes,
+        mime: fileEntry.mimeType || mimeType || "application/octet-stream",
+      };
+    } catch (error) {
+      if (!isMissingProjectFileError(error)) {
+        throw error;
+      }
+      console.warn(`Skipping missing file during export: ${safeFileId}`);
+    }
+  }
+
+  return assets;
+};
+
+const createDistributionZipBytes = async ({
+  projectData,
+  fileEntries,
+  staticFiles,
+  getCurrentReference,
+  stats = {},
+}) => {
+  const assets = await collectDistributionZipAssets({
+    fileEntries,
+    getCurrentReference,
+  });
+  const { bundle, stats: bundleStats } = await createBundleResult(
+    projectData,
+    assets,
+  );
+  const zip = new JSZip();
+  zip.file("package.bin", bundle);
+  if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
+  if (staticFiles.mainJs) zip.file("main.js", staticFiles.mainJs);
+  const zipBytes = await zip.generateAsync({
+    type: "uint8array",
+    compression: "DEFLATE",
+    compressionOptions: { level: 6 },
+  });
+  const loggedStats = {};
+  Object.assign(loggedStats, bundleStats, stats);
+  loggedStats.zipBytes = getByteLength(zipBytes);
+  logExportSizeStats(loggedStats);
+  return zipBytes;
+};
+
 export const createAndroidProjectServiceAdapters = ({
   collabLog,
   creatorVersion,
@@ -586,7 +654,7 @@ export const createAndroidProjectServiceAdapters = ({
         compression: "DEFLATE",
         compressionOptions: { level: 6 },
       });
-      console.info("[export.bundle.size]", {
+      logExportSizeStats({
         ...stats,
         packageBinBytes: getByteLength(bundle),
         zipBytes: getByteLength(zipBytes),
@@ -598,13 +666,27 @@ export const createAndroidProjectServiceAdapters = ({
       });
     },
 
-    createDistributionZipStreamed: async () => {
-      throw new Error(
-        "Streamed distribution ZIP export is not supported on Android yet.",
-      );
+    createDistributionZipStreamed: async ({
+      projectData,
+      fileEntries,
+      zipName,
+      staticFiles,
+      getCurrentReference,
+    }) => {
+      const zipBytes = await createDistributionZipBytes({
+        projectData,
+        fileEntries,
+        staticFiles,
+        getCurrentReference,
+      });
+      return writeDownloadFile({
+        filename: `${zipName}.zip`,
+        bytes: zipBytes,
+        mimeType: "application/zip",
+      });
     },
 
-    promptDistributionZipPath: async ({ zipName }) => `${zipName}.zip`,
+    promptDistributionZipPath: async () => undefined,
 
     createDistributionZipStreamedToPath: async () => {
       throw new Error(
@@ -617,11 +699,9 @@ export const createAndroidProjectServiceAdapters = ({
     beforeCreateRepository: async () => {},
     afterCreateRepository: async () => {},
 
-    createTransport: ({ endpointUrl }) =>
-      createWebSocketTransport({
-        url: endpointUrl,
-        label: "routevn.collab.android.transport",
-      }),
+    createTransport: () => {
+      throw createAndroidRemoteCollabDisabledError();
+    },
 
     onEnsureLocalSession: () => {},
     onSessionCleared: () => {},
@@ -629,7 +709,6 @@ export const createAndroidProjectServiceAdapters = ({
 
     createSessionForProject: async ({
       projectId,
-      token,
       userId,
       clientId,
       endpointUrl,
@@ -637,89 +716,22 @@ export const createAndroidProjectServiceAdapters = ({
       getRepositoryByProject,
       getStoreByProject,
     }) => {
+      if (mode !== "local" || endpointUrl) {
+        throw createAndroidRemoteCollabDisabledError();
+      }
+
       const repository = await getRepositoryByProject(projectId);
       const state = repository.getState();
       assertSupportedProjectState(state);
       const repositoryStore = await getStoreByProject(projectId);
 
-      if (mode === "local" && !endpointUrl) {
-        const localSession = createLocalOnlyProjectCollabSession({
-          actor: { userId, clientId },
-          clientStore: repositoryStore,
-          logger: (entry) => collabLog("debug", "local-session", entry),
-        });
-        await localSession.start();
-        return localSession;
-      }
-
-      const projectionTracker = createCommittedCommandProjectionTracker();
-      const collabSession = createProjectCollabService({
-        projectId,
-        token,
+      const localSession = createLocalOnlyProjectCollabSession({
         actor: { userId, clientId },
         clientStore: repositoryStore,
-        logger: (entry) => collabLog("debug", "sync-client", entry),
-        onCommittedCommand: async ({
-          command,
-          committedEvent,
-          sourceType,
-          isFromCurrentActor,
-        }) => {
-          const { projectionStatus, projectionGap } =
-            projectionTracker.resolveCommittedCommand({
-              command,
-              committedEvent,
-              sourceType,
-              isFromCurrentActor,
-            });
-
-          if (projectionGap) {
-            await saveProjectionGap(repositoryStore, projectionGap);
-          }
-          if (isFromCurrentActor || projectionStatus !== "applied") return;
-
-          try {
-            await applyCommandToRepository({
-              repository,
-              command,
-              projectId,
-            });
-          } catch (error) {
-            await saveProjectionGap(
-              repositoryStore,
-              createProjectionGap({
-                command,
-                committedEvent,
-                compatibility: {
-                  status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
-                  reason: "creator_model_projection_failed",
-                  message: error?.message || "projection failed",
-                },
-                sourceType,
-              }),
-            );
-            collabLog("warn", "remote command projection failed", {
-              projectId,
-              commandType: command?.type || null,
-              commandId: command?.id || null,
-              error: error?.message || "unknown",
-            });
-            return;
-          }
-          await clearProjectionGap(repositoryStore);
-        },
+        logger: (entry) => collabLog("debug", "local-session", entry),
       });
-
-      await collabSession.start();
-      if (endpointUrl) {
-        await collabSession.setOnlineTransport(
-          createWebSocketTransport({
-            url: endpointUrl,
-            label: "routevn.collab.android.transport",
-          }),
-        );
-      }
-      return collabSession;
+      await localSession.start();
+      return localSession;
     },
   };
 

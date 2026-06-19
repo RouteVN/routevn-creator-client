@@ -176,10 +176,46 @@ const readNativePickedFile = async (descriptor) => {
   return createFileFromBlob({ descriptor, blob });
 };
 
+const resolvePickerRequestId = (descriptor = {}) => {
+  if (typeof descriptor.requestId === "string" && descriptor.requestId) {
+    return descriptor.requestId;
+  }
+
+  const match = String(descriptor.url ?? "").match(
+    /\/android-files\/picker\/([^/]+)\//,
+  );
+  return match?.[1];
+};
+
+const cleanupNativePickedFiles = (descriptors = []) => {
+  const requestIds = new Set();
+  for (const descriptor of descriptors) {
+    const requestId = resolvePickerRequestId(descriptor);
+    if (requestId) {
+      requestIds.add(requestId);
+    }
+  }
+
+  for (const requestId of requestIds) {
+    try {
+      callAndroidBridge("deletePickerRequest", { requestId });
+    } catch (error) {
+      console.warn("[android.filePicker] Failed to clean picker files", {
+        requestId,
+        error: error?.message || "unknown",
+      });
+    }
+  }
+};
+
 const readNativePickedFiles = async (descriptors) => {
   const files = [];
-  for (const descriptor of descriptors) {
-    files.push(await readNativePickedFile(descriptor));
+  try {
+    for (const descriptor of descriptors) {
+      files.push(await readNativePickedFile(descriptor));
+    }
+  } finally {
+    cleanupNativePickedFiles(descriptors);
   }
   return files;
 };
@@ -226,6 +262,12 @@ const openInputFilePicker = async (options = {}) => {
     };
 
     document.body.appendChild(input);
+    try {
+      input.click();
+    } catch (error) {
+      cleanup();
+      reject(error);
+    }
   });
 };
 

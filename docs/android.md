@@ -57,11 +57,13 @@ sdk.dir=/Users/<user>/Android/Sdk
 `window.env`:
 
 - `ROUTEVN_API_ENDPOINT`
-- `ROUTEVN_COLLAB_ENDPOINT`
 
-Committed defaults intentionally use `example.invalid` placeholders. Configure
-real API and collaboration endpoints outside committed source for private local,
-staging, or release builds.
+Committed defaults intentionally use `example.invalid` placeholders. Configure a
+real API endpoint outside committed source for private local, staging, or release
+builds.
+
+Remote collaboration is disabled in Android setup for now. Android still uses
+the project service's local command session and native SQLite-backed storage.
 
 ## Project Layout
 
@@ -139,7 +141,7 @@ Android uses native adapters instead of Tauri mobile APIs.
 - Router: `src/deps/clients/android/router.js`
 - SQLite: `src/deps/clients/android/sqlite.js`
 - File picker: `src/deps/clients/android/filePicker.js`
-- Project/collab services: `src/deps/services/android/`
+- Project services: `src/deps/services/android/`
 
 The native bridge in `MainActivity.java` handles:
 
