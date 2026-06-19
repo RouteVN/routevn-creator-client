@@ -242,8 +242,8 @@ template:
                                                       - rtgl-view w=f p=md:
                                                           - rtgl-text s=xs c=mu-fg ellipsis w=${item.mediaTextWidth}: ${item.name}
                                                 $else:
-                                                  - rtgl-view p=md g=md w=${mediaWidth} d=v br=md:
-                                                      - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
+                                                  - rtgl-view p=md g=md w=${item.mediaCardWidth} d=v br=md:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=${item.mediaTextWidth}: ${item.name}
                                     $else:
                                       - $if canUpload:
                                           - 'rtgl-view#uploadBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 bw=xs br=md ah=c av=c g=md cur=pointer style="grid-column: 1 / -1;"':

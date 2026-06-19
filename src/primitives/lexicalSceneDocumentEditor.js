@@ -146,6 +146,208 @@ const areNativeLineSelectionContextsEqual = (first, second) => {
   );
 };
 
+const MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX = 48;
+
+const getViewportObscuredBottomInset = () => {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return 0;
+  }
+
+  const layoutHeight =
+    window.innerHeight || document.documentElement?.clientHeight || 0;
+  const virtualKeyboardRect =
+    typeof navigator !== "undefined"
+      ? navigator.virtualKeyboard?.boundingRect
+      : undefined;
+  const virtualKeyboardHeight = Number(virtualKeyboardRect?.height) || 0;
+  if (virtualKeyboardHeight > 0) {
+    return Math.min(virtualKeyboardHeight, layoutHeight);
+  }
+
+  const viewport = window.visualViewport;
+  if (!viewport) {
+    return 0;
+  }
+
+  const viewportBottom = Number(viewport.offsetTop) + Number(viewport.height);
+  return Number.isFinite(viewportBottom)
+    ? Math.max(0, layoutHeight - viewportBottom)
+    : 0;
+};
+
+const getParentElementAcrossShadowRoot = (element) => {
+  if (element?.parentElement) {
+    return element.parentElement;
+  }
+
+  const root = element?.getRootNode?.();
+  if (typeof ShadowRoot !== "undefined" && root instanceof ShadowRoot) {
+    return root.host;
+  }
+
+  return undefined;
+};
+
+const isScrollableElement = (element) => {
+  if (
+    !element ||
+    element === document.body ||
+    element === document.documentElement
+  ) {
+    return false;
+  }
+
+  const overflowY = window.getComputedStyle(element).overflowY;
+  const canScrollY =
+    overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay";
+
+  return canScrollY && element.scrollHeight > element.clientHeight + 1;
+};
+
+const getNearestScrollableElement = (element) => {
+  let current = getParentElementAcrossShadowRoot(element);
+
+  while (current) {
+    if (isScrollableElement(current)) {
+      return current;
+    }
+
+    current = getParentElementAcrossShadowRoot(current);
+  }
+
+  return undefined;
+};
+
+const getScrollMarginValue = (element, property) => {
+  const value = Number.parseFloat(window.getComputedStyle(element)[property]);
+  return Number.isFinite(value) ? value : 0;
+};
+
+const scrollElementIntoNearestScrollableView = (
+  element,
+  { behavior = "auto", block = "nearest" } = {},
+) => {
+  if (!element || typeof window === "undefined") {
+    return;
+  }
+
+  const scrollContainer = getNearestScrollableElement(element);
+  if (!scrollContainer) {
+    return;
+  }
+
+  const elementRect = element.getBoundingClientRect();
+  const containerRect = scrollContainer.getBoundingClientRect();
+  const marginTop = getScrollMarginValue(element, "scrollMarginTop");
+  const marginBottom = getScrollMarginValue(element, "scrollMarginBottom");
+  const topDelta = elementRect.top - containerRect.top - marginTop;
+  const bottomDelta = elementRect.bottom - containerRect.bottom + marginBottom;
+  let nextScrollTop = scrollContainer.scrollTop;
+
+  if (block === "start") {
+    nextScrollTop += topDelta;
+  } else if (block === "end") {
+    nextScrollTop += bottomDelta;
+  } else if (block === "center") {
+    nextScrollTop +=
+      elementRect.top -
+      containerRect.top -
+      (containerRect.height - elementRect.height) / 2;
+  } else if (topDelta < 0) {
+    nextScrollTop += topDelta;
+  } else if (bottomDelta > 0) {
+    nextScrollTop += bottomDelta;
+  } else {
+    return;
+  }
+
+  scrollContainer.scrollTo({
+    top: Math.max(0, nextScrollTop),
+    behavior,
+  });
+};
+
+const isUsableClientRect = (rect) => {
+  if (!rect) {
+    return false;
+  }
+
+  const top = Number(rect.top);
+  const right = Number(rect.right);
+  const bottom = Number(rect.bottom);
+  const left = Number(rect.left);
+
+  if (
+    !Number.isFinite(top) ||
+    !Number.isFinite(right) ||
+    !Number.isFinite(bottom) ||
+    !Number.isFinite(left)
+  ) {
+    return false;
+  }
+
+  return (
+    rect.width > 0 ||
+    rect.height > 0 ||
+    top !== 0 ||
+    right !== 0 ||
+    bottom !== 0 ||
+    left !== 0
+  );
+};
+
+const scrollRectIntoNearestScrollableView = (
+  anchorElement,
+  targetRect,
+  {
+    behavior = "auto",
+    block = "nearest",
+    paddingTop = 8,
+    paddingBottom = 80,
+  } = {},
+) => {
+  if (
+    !anchorElement ||
+    !isUsableClientRect(targetRect) ||
+    typeof window === "undefined"
+  ) {
+    return false;
+  }
+
+  const scrollContainer = getNearestScrollableElement(anchorElement);
+  if (!scrollContainer) {
+    return false;
+  }
+
+  const containerRect = scrollContainer.getBoundingClientRect();
+  const topDelta = targetRect.top - containerRect.top - paddingTop;
+  const bottomDelta = targetRect.bottom - containerRect.bottom + paddingBottom;
+  let nextScrollTop = scrollContainer.scrollTop;
+
+  if (block === "start") {
+    nextScrollTop += topDelta;
+  } else if (block === "end") {
+    nextScrollTop += bottomDelta;
+  } else if (block === "center") {
+    nextScrollTop +=
+      targetRect.top -
+      containerRect.top -
+      (containerRect.height - targetRect.height) / 2;
+  } else if (topDelta < 0) {
+    nextScrollTop += topDelta;
+  } else if (bottomDelta > 0) {
+    nextScrollTop += bottomDelta;
+  } else {
+    return true;
+  }
+
+  scrollContainer.scrollTo({
+    top: Math.max(0, nextScrollTop),
+    behavior,
+  });
+  return true;
+};
+
 const doesContentEndWithReference = (content = []) => {
   const items = mergeAdjacentContentItems(content);
   return items.at(-1)?.reference !== undefined;
@@ -1572,10 +1774,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       { discrete: true },
     );
     setSelectionFromRange(this.refs.editor, range);
-    lineElement.scrollIntoView?.({
+    scrollElementIntoNearestScrollableView(lineElement, {
       behavior: "auto",
       block: "nearest",
-      inline: "nearest",
     });
     return true;
   }
@@ -1686,20 +1887,52 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
-  scrollLineIntoView({
-    lineId,
-    behavior = "auto",
-    block = "nearest",
-    inline = "nearest",
-  } = {}) {
+  scrollLineIntoView({ lineId, behavior = "auto", block = "nearest" } = {}) {
     const lineKey = this.lineKeyById.get(lineId);
     const lineElement = lineKey
       ? this.editor.getElementByKey(lineKey)
       : undefined;
-    lineElement?.scrollIntoView({
+    scrollElementIntoNearestScrollableView(lineElement, {
       behavior,
       block,
-      inline,
+    });
+  }
+
+  revealCurrentSelection({ behavior = "auto", direction } = {}) {
+    const range = getSelectionRange(this.refs?.editor);
+    const nativeSelection = this.getNativeLineSelectionContext(range);
+    const lineKey = nativeSelection?.lineId
+      ? this.lineKeyById.get(nativeSelection.lineId)
+      : undefined;
+    const lineElement = lineKey
+      ? this.editor.getElementByKey(lineKey)
+      : undefined;
+    const rangeRect = range?.getBoundingClientRect?.();
+    const lineRect = lineElement?.getBoundingClientRect?.();
+    const targetRect = isUsableClientRect(rangeRect) ? rangeRect : lineRect;
+    const anchorElement = lineElement ?? this.refs?.editor;
+    const lineHeight = Math.max(0, Number(lineRect?.height) || 0);
+    const paddingTop =
+      direction === "up" ? 12 + Math.round(lineHeight * 1.5) : 12;
+    const obscuredBottomInset = getViewportObscuredBottomInset();
+    const keyboardToolbarInset =
+      obscuredBottomInset > 0 ? MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX : 0;
+    const paddingBottom =
+      direction === "down"
+        ? Math.max(
+            112,
+            obscuredBottomInset +
+              keyboardToolbarInset +
+              12 +
+              Math.round(lineHeight * 0.5),
+          )
+        : 112;
+
+    return scrollRectIntoNearestScrollableView(anchorElement, targetRect, {
+      behavior,
+      block: "nearest",
+      paddingTop,
+      paddingBottom,
     });
   }
 
@@ -2468,6 +2701,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
             (nativeSelection.start !== initialNativeSelection.start ||
               nativeSelection.end !== initialNativeSelection.end);
           if (didMoveWithinCurrentLine) {
+            this.revealCurrentSelection({
+              behavior: "auto",
+              direction: navigationDirection,
+            });
             clearPendingSync();
             return;
           }
@@ -2492,6 +2729,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           cursorPosition: nativeSelection.start,
           isCollapsed: nativeSelection.start === nativeSelection.end,
           mode: "text-editor",
+        });
+        this.revealCurrentSelection({
+          behavior: "auto",
+          direction: navigationDirection,
         });
         clearPendingSync();
       });

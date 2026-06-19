@@ -7,6 +7,7 @@ import {
   selectTagFilterPopoverDraftTagIds,
   toggleTagFilterPopoverTagId,
 } from "../../internal/ui/tagFilterPopover.js";
+import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const DEFAULT_EAGER_IMAGE_CARD_COUNT = 8;
@@ -254,7 +255,10 @@ export const selectViewData = ({ state, props }) => {
         : buildAutoFillGridColumns(
             hasImageCards(sourceGroups) ? maxWidth : mediaWidth,
           );
-  const scrollBottomPadding = props.scrollBottomPadding ?? "0px";
+  const scrollBottomPadding = resolveResourceScrollBottomPadding({
+    mobileLayout,
+    scrollBottomPadding: props.scrollBottomPadding,
+  });
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
   const searchQuery = props.searchQuery ?? "";
   const searchInFilterPopover = parseBooleanProp(props.searchInFilterPopover);

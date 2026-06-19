@@ -14,6 +14,7 @@ const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 const HELP_BUTTON_BOTTOM_OFFSET_PX = 24;
 
 const routesWithoutNavbar = ["/projects", "/authenticate"];
+const routesWithoutMobileTabBar = ["/project/scene-editor"];
 
 const mobileTabBarItems = [
   { id: "assets", icon: "image", label: "Assets" },
@@ -36,7 +37,17 @@ export const selectShowSidebar = ({ state }) => {
 };
 
 export const selectShowMobileTabBar = ({ state }) => {
-  return selectShowAppNavigation({ state }) && state.isTouchMode;
+  const currentRoutePattern = selectCurrentRoutePattern({ state });
+  const normalizedPattern = currentRoutePattern?.replace(/\/$/, "");
+  const normalizedRoutesWithoutMobileTabBar = routesWithoutMobileTabBar.map(
+    (route) => route.replace(/\/$/, ""),
+  );
+
+  return (
+    selectShowAppNavigation({ state }) &&
+    state.isTouchMode &&
+    !normalizedRoutesWithoutMobileTabBar.includes(normalizedPattern)
+  );
 };
 
 export const selectCurrentRoutePattern = ({ state }) => {
