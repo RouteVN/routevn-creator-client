@@ -8,6 +8,7 @@ import {
   openAudioPlayer,
   selectSelectedResource,
   selectVoicePayload,
+  selectViewData,
   setRepositoryState,
   setVoiceAudio,
 } from "../../src/components/commandLineVoice/commandLineVoice.store.js";
@@ -110,13 +111,93 @@ describe("commandLineVoice.handlers", () => {
     expect(selectVoicePayload({ state })).toEqual({
       resourceId: createdVoiceId,
       loop: false,
-    });
-    expect(state.playingSound).toEqual({
-      title: "Alice Line",
-      fileId: "file-voice-1",
+      volume: 100,
     });
     expect(render).toHaveBeenCalledTimes(1);
     expect(appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("closes a stale preview player after uploading replacement voice audio", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const uploadResult = {
+      fileId: "file-voice-2",
+      displayName: "Alice Line 2",
+      fileRecords: [{ fileId: "file-voice-2" }],
+    };
+    const file = {
+      name: "alice-line-2.ogg",
+      uploadSucessful: true,
+      uploadSuccessful: true,
+      uploadResult,
+    };
+    let createdVoiceId;
+    const projectService = {
+      ensureRepository: vi.fn(async () => {}),
+      getState: vi.fn(() => ({
+        voices: {
+          items: createdVoiceId
+            ? {
+                [createdVoiceId]: {
+                  id: createdVoiceId,
+                  type: "voice",
+                  name: "Alice Line 2",
+                  sceneId: "scene-1",
+                  fileId: "file-voice-2",
+                },
+              }
+            : {},
+          tree: createdVoiceId ? [{ id: createdVoiceId }] : [],
+        },
+      })),
+      createVoice: vi.fn(async ({ voiceId }) => {
+        createdVoiceId = voiceId;
+        return voiceId;
+      }),
+    };
+    const appService = {
+      pickFiles: vi.fn(async () => file),
+      showAlert: vi.fn(),
+    };
+
+    setVoiceAudio({ state }, { resourceId: "voice-1" });
+    openAudioPlayer(
+      { state },
+      {
+        fileId: "file-voice-1",
+        fileName: "Alice Line 1",
+      },
+    );
+
+    await handleAudioWaveformClick(
+      {
+        appService,
+        projectService,
+        props: {
+          currentSceneId: "scene-1",
+        },
+        store: createStoreDeps(state),
+        render,
+      },
+      {
+        _event: {
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(selectVoicePayload({ state })).toEqual({
+      resourceId: createdVoiceId,
+      loop: false,
+      volume: 100,
+    });
+    expect(selectViewData({ state })).toMatchObject({
+      showAudioPlayer: false,
+      playingSound: {
+        fileId: undefined,
+        title: "",
+      },
+    });
   });
 
   it("submits the selected voice payload", () => {
@@ -147,6 +228,7 @@ describe("commandLineVoice.handlers", () => {
       voice: {
         resourceId: "voice-1",
         loop: false,
+        volume: 100,
       },
     });
   });

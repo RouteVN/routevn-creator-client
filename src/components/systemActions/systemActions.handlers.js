@@ -35,7 +35,7 @@ const dispatchTemporaryPresentationStateChange = (
   );
 };
 
-const syncRepositoryState = async (deps) => {
+const syncRepositoryState = (deps) => {
   const { store, projectService } = deps;
   store.setRepositoryState({
     repositoryState: projectService.getRepositoryState(),
@@ -75,6 +75,7 @@ export const handleBeforeMount = (deps) => {
 export const handleOnUpdate = (deps, changes) => {
   const { render, store } = deps;
   const { newProps } = changes;
+  syncRepositoryState(deps);
   store.updateActions(normalizeActionsObject(newProps.actions));
 
   if (
@@ -305,6 +306,34 @@ export const handleHelpFloatingButtonClick = (deps, payload) => {
   const mode = store.selectMode();
 
   appService.openUrl(getRoutevnCreatorSystemActionDocsUrl(mode));
+};
+
+export const handleVoicePreviewClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  const { appService, store, render } = deps;
+  const voicePreview = store.selectVoicePreview();
+
+  if (!voicePreview?.fileId) {
+    appService.showAlert({
+      message: "Voice preview audio is unavailable.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  store.openAudioPlayer({
+    fileId: voicePreview.fileId,
+    fileName: voicePreview.name,
+  });
+  render();
+};
+
+export const handleAudioPlayerClose = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { store, render } = deps;
+  store.closeAudioPlayer();
+  render();
 };
 
 const isBooleanPropEnabled = (value) => {

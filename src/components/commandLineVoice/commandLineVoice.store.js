@@ -1,4 +1,4 @@
-const DEFAULT_AUDIO_VOLUME = 75;
+const DEFAULT_AUDIO_VOLUME = 100;
 
 const normalizeVolume = (volume) => {
   const parsedVolume = Number(volume);
@@ -13,7 +13,7 @@ const normalizeVolume = (volume) => {
 const normalizeVoice = (voice = {}) => ({
   resourceId: voice?.resourceId,
   loop: voice?.loop ?? false,
-  volume: normalizeVolume(voice?.volume),
+  volume: normalizeVolume(voice?.volume) ?? DEFAULT_AUDIO_VOLUME,
   startDelayMs: voice?.startDelayMs,
 });
 
@@ -44,10 +44,12 @@ export const setVoiceAudio = ({ state }, { resourceId } = {}) => {
   const nextVoice = normalizeVoice(state.voice);
   nextVoice.resourceId = resourceId;
   state.voice = nextVoice;
+  closeAudioPlayer({ state });
 };
 
 export const clearVoiceAudio = ({ state }, _payload = {}) => {
   state.voice.resourceId = undefined;
+  closeAudioPlayer({ state });
 };
 
 export const setLoop = ({ state }, { loop } = {}) => {

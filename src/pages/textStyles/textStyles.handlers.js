@@ -125,8 +125,10 @@ const {
         tagIds,
       },
     }),
-  refreshAfterItemTagUpdate: ({ deps, itemId }) =>
-    refreshTextStylesData(deps, { selectedItemId: itemId }),
+  refreshAfterItemTagUpdate: ({ deps, itemId, itemStillSelected }) =>
+    refreshTextStylesData(deps, {
+      selectedItemId: itemStillSelected ? itemId : undefined,
+    }),
   appendCreatedTagByMode: ({ deps, mode, tagId }) => {
     if (mode !== "form") {
       return;

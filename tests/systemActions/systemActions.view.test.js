@@ -32,6 +32,13 @@ describe("systemActions view", () => {
     );
     expect(systemActionsView).toContain("rtgl-view#actionItemVoice");
     expect(systemActionsView).toContain("rtgl-svg svg=microphone wh=24");
+    expect(systemActionsView).toContain(
+      'rtgl-button#voicePreviewButton sq v=ol pre=play title="Preview voice" aria-label="Preview voice"',
+    );
+    expect(systemActionsView).not.toContain("$if preview.voice.fileId");
+    expect(systemActionsView).toContain(
+      "rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}",
+    );
     expect(systemActionsView).toContain("rtgl-svg svg=screen wh=24");
     expect(conditionalView).toContain(
       "rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes} :allowedModes=${branchActionAllowedModes}",

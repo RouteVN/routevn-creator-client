@@ -240,6 +240,14 @@ const buildInputPreview = (lineActions) => {
   return !!lineActions?.form;
 };
 
+const buildVoicePreview = (lineActions, changes) => {
+  return (
+    !!changes.voice ||
+    !!lineActions?.voice?.resourceId ||
+    lineActions?.voice?.clear === true
+  );
+};
+
 const buildDialogueSpeakerPreview = (characterId, characterLookups) => {
   if (!characterId) {
     return undefined;
@@ -328,6 +336,8 @@ const buildSceneDocumentLineViewModels = ({
       hasConditional: buildConditionalPreview(lineActions),
       hasUpdateVariable: buildUpdateVariablePreview(lineActions),
       hasInput: buildInputPreview(lineActions),
+      hasVoice: buildVoicePreview(lineActions, changes),
+      voiceChangeType: changes.voice?.changeType,
       hasSfx: !!changes.sfx,
       sfxChangeType: changes.sfx?.changeType,
       hasSetNextLineConfig:

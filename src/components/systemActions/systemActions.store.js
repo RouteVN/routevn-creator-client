@@ -29,6 +29,11 @@ export const createInitialState = () => ({
     ],
   },
   repositoryState: {}, // Add this - default to empty object
+  playingSound: {
+    title: "",
+    fileId: undefined,
+  },
+  showAudioPlayer: false,
 });
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
@@ -226,6 +231,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     displayActions,
     actions: actionsObject,
     preview,
+    playingSound: state.playingSound,
+    showAudioPlayer: state.showAudioPlayer,
     repositoryState,
     selectedLineId: props.selectedLineId,
     layouts: choiceLayouts, // Default to choice layouts for backward compatibility
@@ -281,13 +288,28 @@ export const selectAction = ({ state }) => {
   return state.actions || {};
 };
 
+export const selectVoicePreview = ({ state, props }) => {
+  const actionProps = { ...props };
+  actionProps.actions = selectAction({ state });
+  return selectActionsData({
+    props: actionProps,
+    state,
+  }).preview.voice;
+};
+
 export const selectMode = ({ state }) => {
   return state.mode;
 };
 
 export const updateActions = ({ state }, payload = {}) => {
+  const previousVoiceResourceId = state.actions?.voice?.resourceId;
   const nextPayload = payload || {};
+  const nextVoiceResourceId = nextPayload.voice?.resourceId;
   state.actions = { ...nextPayload };
+
+  if (previousVoiceResourceId !== nextVoiceResourceId) {
+    closeAudioPlayer({ state });
+  }
 };
 
 export const showActionsDialog = ({ state }, _payload = {}) => {
@@ -317,6 +339,20 @@ export const setSuppressDialogClose = (
 
 export const selectSuppressDialogClose = ({ state }) => {
   return state.suppressDialogClose === true;
+};
+
+export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
+  state.playingSound.fileId = fileId;
+  state.playingSound.title = fileName;
+  state.showAudioPlayer = true;
+};
+
+export const closeAudioPlayer = ({ state }, _payload = {}) => {
+  state.showAudioPlayer = false;
+  state.playingSound = {
+    title: "",
+    fileId: undefined,
+  };
 };
 
 const resolveDialogueModeLabel = (dialogue, layoutsItems) => {
@@ -479,6 +515,7 @@ export const selectActionsData = ({ props, state }) => {
   const videos = repositoryStateData.videos?.items || {};
   const sounds = repositoryStateData.sounds?.items || {};
   const voices = repositoryStateData.voices?.items || {};
+  const files = repositoryStateData.files?.items || {};
   const animations = repositoryStateData.animations?.items || {};
   const colors = repositoryStateData.colors?.items || {};
   const scenes = repositoryStateData.scenes || {};
@@ -557,7 +594,14 @@ export const selectActionsData = ({ props, state }) => {
   if (voiceAction?.resourceId) {
     actionsObject.voice = voiceAction;
     preview.voice = voices[voiceAction.resourceId] ??
-      sounds[voiceAction.resourceId] ?? {
+      sounds[voiceAction.resourceId] ??
+      (files[voiceAction.resourceId]
+        ? {
+            id: voiceAction.resourceId,
+            name: files[voiceAction.resourceId].name ?? voiceAction.resourceId,
+            fileId: voiceAction.resourceId,
+          }
+        : undefined) ?? {
         id: voiceAction.resourceId,
         name: voiceAction.resourceId,
       };

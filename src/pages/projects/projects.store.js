@@ -16,6 +16,7 @@ export const createInitialState = () => ({
   projects: [],
   cloudProjects: [],
   platform: "tauri",
+  appVersion: "",
 
   profileMenu: {
     isOpen: false,
@@ -130,6 +131,10 @@ export const addCloudProject = ({ state }, { project } = {}) => {
 
 export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform;
+};
+
+export const setAppVersion = ({ state }, { version } = {}) => {
+  state.appVersion = version ?? "";
 };
 
 export const setAuthUser = ({ state }, { user } = {}) => {

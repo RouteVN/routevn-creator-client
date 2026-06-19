@@ -188,6 +188,8 @@ template:
                                                   - rtgl-text s=xs c=mu-fg: Members
                                                   - rtgl-text s=xs c=mu-fg: ${project.memberCount}
                                   - rtgl-view h="33vh": null
+                          - rtgl-view w=f ah=c pb=lg:
+                              - rtgl-text s=xs c=mu-fg: RouteVN Creator ${appVersion}
   - rtgl-dialog#deleteProjectDialog ?open=${deleteDialog.isOpen} s=sm:
       - rtgl-view slot=content g=lg p=lg:
           - rtgl-view d=v g=md:

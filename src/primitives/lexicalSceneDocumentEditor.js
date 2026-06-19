@@ -7406,6 +7406,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       hasControl: Boolean(lineDecoration.hasControl),
       controlChangeType: lineDecoration.controlChangeType,
       bgm: lineDecoration.bgm,
+      hasVoice: Boolean(lineDecoration.hasVoice),
+      voiceChangeType: lineDecoration.voiceChangeType,
       hasSfx: Boolean(lineDecoration.hasSfx),
       sfxChangeType: lineDecoration.sfxChangeType,
       hasChoices: Boolean(lineDecoration.hasChoices),
@@ -8169,6 +8171,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         this.createIconPreview({
           icon: "music",
           isDelete: lineDecoration.bgm.changeType === "delete",
+        }),
+      );
+    }
+
+    if (lineDecoration.hasVoice) {
+      container.append(
+        this.createIconPreview({
+          icon: "microphone",
+          isDelete: lineDecoration.voiceChangeType === "delete",
         }),
       );
     }

@@ -253,7 +253,7 @@ template:
                                                       - rvn-file-image fileId=${selectedPreviewFileId} w=f h=f: null
                                           - $if selectedItemType == 'spritesheet':
                                               - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} :paused=${detailPreviewPaused} h=220 emptyLabel="No preview available"': null
-                                          - rtgl-tag-select#detailTagSelect slot="sprite-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                          - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="sprite-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
                                           - 'rtgl-view slot="sprite-groups" d=v w=f g=sm':
                                               - $if selectedItemSpriteGroups.length > 0:
                                                   - $for spriteGroup, i in selectedItemSpriteGroups:
@@ -295,7 +295,7 @@ template:
                   - rtgl-svg svg=edit wh=16: null
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
-                      - rtgl-tag-select#detailTagSelect slot="sprite-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                      - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="sprite-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:

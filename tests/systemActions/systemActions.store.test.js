@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  closeAudioPlayer,
   createInitialState,
+  openAudioPlayer,
   selectActionsData,
   selectViewData,
   setRepositoryState,
@@ -254,6 +256,115 @@ describe("systemActions.store", () => {
     expect(preview.voice).toMatchObject({
       id: "voice-line-1",
       name: "Aki Line 1",
+    });
+  });
+
+  it("previews legacy voice actions that reference a file id directly", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          files: {
+            items: {
+              "file-voice-line-1": {
+                id: "file-voice-line-1",
+                name: "Aki Line 1.ogg",
+                mimeType: "audio/ogg",
+              },
+            },
+            tree: [{ id: "file-voice-line-1" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          voice: {
+            resourceId: "file-voice-line-1",
+          },
+        },
+      },
+    });
+
+    expect(actions.voice).toEqual({
+      resourceId: "file-voice-line-1",
+    });
+    expect(preview.voice).toMatchObject({
+      id: "file-voice-line-1",
+      name: "Aki Line 1.ogg",
+      fileId: "file-voice-line-1",
+    });
+  });
+
+  it("exposes inline voice preview player state", () => {
+    const state = createInitialState();
+
+    openAudioPlayer(
+      { state },
+      {
+        fileId: "file-voice-line-1",
+        fileName: "Aki Line 1",
+      },
+    );
+
+    expect(selectViewData({ state, props: {} })).toMatchObject({
+      showAudioPlayer: true,
+      playingSound: {
+        fileId: "file-voice-line-1",
+        title: "Aki Line 1",
+      },
+    });
+
+    closeAudioPlayer({ state });
+
+    expect(selectViewData({ state, props: {} })).toMatchObject({
+      showAudioPlayer: false,
+      playingSound: {
+        fileId: undefined,
+        title: "",
+      },
+    });
+  });
+
+  it("closes the inline voice preview player when the voice action changes", () => {
+    const state = createInitialState();
+
+    updateActions(
+      { state },
+      {
+        voice: {
+          resourceId: "voice-line-1",
+        },
+      },
+    );
+    openAudioPlayer(
+      { state },
+      {
+        fileId: "file-voice-line-1",
+        fileName: "Aki Line 1",
+      },
+    );
+
+    updateActions(
+      { state },
+      {
+        background: {
+          resourceId: "bg-classroom",
+        },
+      },
+    );
+
+    expect(selectViewData({ state, props: {} })).toMatchObject({
+      showAudioPlayer: false,
+      playingSound: {
+        fileId: undefined,
+        title: "",
+      },
     });
   });
 
