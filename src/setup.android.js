@@ -90,7 +90,7 @@ window.routeVNNativeBack = () => {
 
 const collabEndpointUrl = readAndroidEnv(
   "ROUTEVN_COLLAB_ENDPOINT",
-  "wss://api.routevn.com/sync",
+  "wss://api.example.invalid/sync",
 );
 const collabConfig = {
   endpointUrl: collabEndpointUrl,
@@ -130,7 +130,10 @@ const appService = createAppService({
 await appService.initUserConfig();
 
 const apiService = createApiService({
-  baseUrl: readAndroidEnv("ROUTEVN_API_ENDPOINT", "https://api.routevn.com"),
+  baseUrl: readAndroidEnv(
+    "ROUTEVN_API_ENDPOINT",
+    "https://api.example.invalid",
+  ),
 });
 
 const graphicsService = await createGraphicsService({ subject });
