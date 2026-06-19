@@ -392,6 +392,14 @@ const writeDownloadFile = ({ filename, bytes, mimeType }) => {
   });
 };
 
+const writeSelectedFile = ({ uri, bytes, mimeType }) => {
+  return callAndroidBridge("writeFileToUri", {
+    uri,
+    mimeType: mimeType || "application/octet-stream",
+    base64: uint8ArrayToBase64(bytes),
+  });
+};
+
 const collectDistributionZipAssets = async ({
   fileEntries,
   getCurrentReference,
@@ -686,12 +694,37 @@ export const createAndroidProjectServiceAdapters = ({
       });
     },
 
-    promptDistributionZipPath: async () => undefined,
+    promptDistributionZipPath: async ({
+      zipName,
+      options = {},
+      filePicker,
+    }) => {
+      return filePicker.saveFilePicker({
+        title: options.title || "Save Distribution ZIP",
+        defaultPath: `${zipName}.zip`,
+        filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+        mimeType: "application/zip",
+      });
+    },
 
-    createDistributionZipStreamedToPath: async () => {
-      throw new Error(
-        "Streamed distribution ZIP export is not supported on Android yet.",
-      );
+    createDistributionZipStreamedToPath: async ({
+      projectData,
+      fileEntries,
+      outputPath,
+      staticFiles,
+      getCurrentReference,
+    }) => {
+      const zipBytes = await createDistributionZipBytes({
+        projectData,
+        fileEntries,
+        staticFiles,
+        getCurrentReference,
+      });
+      return writeSelectedFile({
+        uri: outputPath,
+        bytes: zipBytes,
+        mimeType: "application/zip",
+      });
     },
   };
 

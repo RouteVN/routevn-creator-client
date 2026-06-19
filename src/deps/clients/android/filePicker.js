@@ -2,9 +2,12 @@ import { callAndroidBridge, uint8ArrayToBase64 } from "./bridge.js";
 
 const ANDROID_FILE_PICKER_INPUT_ID = "routevnAndroidFilePickerInput";
 const ANDROID_FILE_PICKER_CALLBACK = "__routeVNAndroidFilePickerResult";
+const ANDROID_SAVE_FILE_PICKER_CALLBACK = "__routeVNAndroidSaveFileResult";
 
 let nextAndroidFilePickerRequestId = 1;
+let nextAndroidSaveFilePickerRequestId = 1;
 const pendingAndroidFilePickers = new Map();
+const pendingAndroidSaveFilePickers = new Map();
 
 const isTruthyFlag = (value) => {
   if (typeof value === "boolean") {
@@ -126,6 +129,20 @@ const createAndroidFilePickerRequestId = () => {
   return requestId;
 };
 
+const createAndroidSaveFilePickerRequestId = () => {
+  const requestId = `save-${nextAndroidSaveFilePickerRequestId}`;
+  nextAndroidSaveFilePickerRequestId += 1;
+  return requestId;
+};
+
+const resolveSaveFilename = (options = {}) => {
+  return options.defaultPath || options.filename || "download";
+};
+
+const resolveSaveMimeType = (options = {}) => {
+  return options.mimeType || "application/octet-stream";
+};
+
 const ensureAndroidFilePickerCallback = () => {
   window[ANDROID_FILE_PICKER_CALLBACK] = (result = {}) => {
     const requestId = result.requestId;
@@ -146,6 +163,26 @@ const ensureAndroidFilePickerCallback = () => {
   };
 };
 
+const ensureAndroidSaveFilePickerCallback = () => {
+  window[ANDROID_SAVE_FILE_PICKER_CALLBACK] = (result = {}) => {
+    const requestId = result.requestId;
+    const pending = pendingAndroidSaveFilePickers.get(requestId);
+    if (!pending) {
+      return;
+    }
+
+    pendingAndroidSaveFilePickers.delete(requestId);
+    if (result.error) {
+      pending.reject(
+        new Error(result.error.message || "Failed to select save location."),
+      );
+      return;
+    }
+
+    pending.resolve(result.uri ?? null);
+  };
+};
+
 const requestNativeAndroidFilePicker = (options = {}) => {
   const requestId = createAndroidFilePickerRequestId();
   ensureAndroidFilePickerCallback();
@@ -161,6 +198,30 @@ const requestNativeAndroidFilePicker = (options = {}) => {
       });
     } catch (error) {
       pendingAndroidFilePickers.delete(requestId);
+      reject(error);
+    }
+  });
+};
+
+const requestNativeAndroidSaveFilePicker = (options = {}) => {
+  if (isVtMode()) {
+    return Promise.resolve(resolveSaveFilename(options));
+  }
+
+  const requestId = createAndroidSaveFilePickerRequestId();
+  ensureAndroidSaveFilePickerCallback();
+
+  return new Promise((resolve, reject) => {
+    pendingAndroidSaveFilePickers.set(requestId, { resolve, reject });
+
+    try {
+      callAndroidBridge("openSaveFilePicker", {
+        requestId,
+        filename: resolveSaveFilename(options),
+        mimeType: resolveSaveMimeType(options),
+      });
+    } catch (error) {
+      pendingAndroidSaveFilePickers.delete(requestId);
       reject(error);
     }
   });
@@ -295,11 +356,18 @@ export const createAndroidFilePicker = () => {
         });
       }
 
-      const filename =
-        blobOrOptions?.defaultPath || blobOrOptions?.filename || "download";
+      const filename = resolveSaveFilename(blobOrOptions);
       const bytes = toUint8Array(blobOrOptions?.bytes);
       if (!bytes) {
-        return null;
+        return requestNativeAndroidSaveFilePicker(blobOrOptions);
+      }
+
+      if (blobOrOptions?.uri) {
+        return callAndroidBridge("writeFileToUri", {
+          uri: blobOrOptions.uri,
+          mimeType: resolveSaveMimeType(blobOrOptions),
+          base64: uint8ArrayToBase64(bytes),
+        });
       }
 
       return callAndroidBridge("writeDownloadFile", {

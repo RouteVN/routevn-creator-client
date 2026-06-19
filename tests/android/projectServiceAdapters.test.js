@@ -37,8 +37,30 @@ describe("android project service adapters", () => {
     vi.restoreAllMocks();
   });
 
-  it("writes streamed ZIP exports through the Android download bridge", async () => {
-    let downloadPayload;
+  it("prompts for distribution ZIP save location with the desktop ZIP name pattern", async () => {
+    const saveFilePicker = vi.fn(async () => "content://exports/export.zip");
+    const { fileAdapter } = createAndroidProjectServiceAdapters({
+      collabLog: vi.fn(),
+      creatorVersion: 1,
+    });
+
+    await expect(
+      fileAdapter.promptDistributionZipPath({
+        zipName: "project_version",
+        filePicker: { saveFilePicker },
+      }),
+    ).resolves.toBe("content://exports/export.zip");
+
+    expect(saveFilePicker).toHaveBeenCalledWith({
+      title: "Save Distribution ZIP",
+      defaultPath: "project_version.zip",
+      filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+      mimeType: "application/zip",
+    });
+  });
+
+  it("writes streamed ZIP exports to the selected Android file URI", async () => {
+    let savedPayload;
     mocked.callAndroidBridge.mockImplementation((method, payload) => {
       if (method === "readProjectFile") {
         expect(payload).toEqual({
@@ -51,9 +73,9 @@ describe("android project service adapters", () => {
         };
       }
 
-      if (method === "writeDownloadFile") {
-        downloadPayload = payload;
-        return "content://downloads/export.zip";
+      if (method === "writeFileToUri") {
+        savedPayload = payload;
+        return "content://exports/export.zip";
       }
 
       throw new Error(`Unexpected bridge method: ${method}`);
@@ -63,11 +85,7 @@ describe("android project service adapters", () => {
       creatorVersion: 1,
     });
 
-    await expect(
-      fileAdapter.promptDistributionZipPath({ zipName: "export" }),
-    ).resolves.toBeUndefined();
-
-    const savedPath = await fileAdapter.createDistributionZipStreamed({
+    const savedPath = await fileAdapter.createDistributionZipStreamedToPath({
       projectData: {
         projectData: {
           story: {
@@ -76,7 +94,7 @@ describe("android project service adapters", () => {
         },
       },
       fileEntries: [{ fileId: "file-1", mimeType: "image/png" }],
-      zipName: "export",
+      outputPath: "content://exports/export.zip",
       staticFiles: {
         indexHtml: "<!doctype html>",
         mainJs: "console.log('routevn');",
@@ -86,11 +104,11 @@ describe("android project service adapters", () => {
       }),
     });
 
-    expect(savedPath).toBe("content://downloads/export.zip");
-    expect(downloadPayload.filename).toBe("export.zip");
-    expect(downloadPayload.mimeType).toBe("application/zip");
+    expect(savedPath).toBe("content://exports/export.zip");
+    expect(savedPayload.uri).toBe("content://exports/export.zip");
+    expect(savedPayload.mimeType).toBe("application/zip");
 
-    const zipBytes = Buffer.from(downloadPayload.base64, "base64");
+    const zipBytes = Buffer.from(savedPayload.base64, "base64");
     const zip = await JSZip.loadAsync(zipBytes);
     expect(await zip.file("index.html").async("string")).toBe(
       "<!doctype html>",

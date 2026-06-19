@@ -125,4 +125,59 @@ describe("android file picker", () => {
     ]);
     expect(deletedRequests).toEqual(["picker-1"]);
   });
+
+  it("opens the native save picker when no bytes are supplied", async () => {
+    let savePayload;
+    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+      if (method === "openSaveFilePicker") {
+        savePayload = payload;
+        Promise.resolve().then(() => {
+          window.__routeVNAndroidSaveFileResult({
+            requestId: payload.requestId,
+            uri: "content://exports/project_version.zip",
+          });
+        });
+        return true;
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+
+    const selectedUri = await createAndroidFilePicker().saveFilePicker({
+      defaultPath: "project_version.zip",
+      mimeType: "application/zip",
+    });
+
+    expect(selectedUri).toBe("content://exports/project_version.zip");
+    expect(savePayload).toEqual({
+      requestId: "save-1",
+      filename: "project_version.zip",
+      mimeType: "application/zip",
+    });
+  });
+
+  it("writes supplied bytes to a selected Android save URI", async () => {
+    let writePayload;
+    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+      if (method === "writeFileToUri") {
+        writePayload = payload;
+        return payload.uri;
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+
+    const selectedUri = await createAndroidFilePicker().saveFilePicker({
+      uri: "content://exports/project_version.zip",
+      bytes: Uint8Array.from([1, 2, 3]),
+      mimeType: "application/zip",
+    });
+
+    expect(selectedUri).toBe("content://exports/project_version.zip");
+    expect(writePayload).toEqual({
+      uri: "content://exports/project_version.zip",
+      mimeType: "application/zip",
+      base64: "AQID",
+    });
+  });
 });

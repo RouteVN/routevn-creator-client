@@ -57,6 +57,7 @@ public class MainActivity extends Activity {
     private static final String APP_URL = "https://" + APP_ASSET_HOST + "/web/index.html";
     private static final int FILE_CHOOSER_REQUEST_CODE = 3711;
     private static final int ANDROID_FILE_PICKER_REQUEST_CODE = 3712;
+    private static final int ANDROID_SAVE_FILE_PICKER_REQUEST_CODE = 3713;
 
     private WebView webView;
     private WebViewAssetLoader assetLoader;
@@ -65,6 +66,7 @@ public class MainActivity extends Activity {
     private Object backInvokedCallback;
     private String pendingAndroidFilePickerRequestId;
     private boolean pendingAndroidFilePickerMultiple = false;
+    private String pendingAndroidSaveFilePickerRequestId;
     private final Map<String, SQLiteDatabase> sqliteDatabases = new HashMap<>();
 
     @Override
@@ -266,6 +268,11 @@ public class MainActivity extends Activity {
 
         if (requestCode == ANDROID_FILE_PICKER_REQUEST_CODE) {
             handleAndroidFilePickerActivityResult(resultCode, data);
+            return;
+        }
+
+        if (requestCode == ANDROID_SAVE_FILE_PICKER_REQUEST_CODE) {
+            handleAndroidSaveFilePickerActivityResult(resultCode, data);
             return;
         }
 
@@ -546,6 +553,20 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public String writeFileToUri(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                String uri = writeFileToUriBytes(
+                    payload.getString("uri"),
+                    payload.getString("base64")
+                );
+                return bridgeSuccess(uri);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
         public String openFilePicker(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -555,6 +576,26 @@ public class MainActivity extends Activity {
 
                 runOnUiThread(() ->
                     launchAndroidFilePicker(requestId, multiple, accept)
+                );
+                return bridgeSuccess(true);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
+        public String openSaveFilePicker(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                String requestId = safePathSegment(payload.getString("requestId"));
+                String filename = payload.optString("filename", "download");
+                String mimeType = payload.optString(
+                    "mimeType",
+                    "application/octet-stream"
+                );
+
+                runOnUiThread(() ->
+                    launchAndroidSaveFilePicker(requestId, filename, mimeType)
                 );
                 return bridgeSuccess(true);
             } catch (Exception error) {
@@ -897,6 +938,30 @@ public class MainActivity extends Activity {
         File outputFile = resolveSafeRelativeFile(downloadsRoot, safeFilename);
         writeBytes(outputFile, bytes);
         return Uri.fromFile(outputFile).toString();
+    }
+
+    private String writeFileToUriBytes(
+        String uriString,
+        String base64
+    ) throws Exception {
+        String normalizedUri = uriString == null ? "" : uriString.trim();
+        if (normalizedUri.isEmpty()) {
+            throw new IllegalArgumentException("Save location is required.");
+        }
+
+        Uri uri = Uri.parse(normalizedUri);
+        byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+
+        try (
+            OutputStream output = getContentResolver().openOutputStream(uri, "wt")
+        ) {
+            if (output == null) {
+                throw new IllegalStateException("Failed to open save location.");
+            }
+            output.write(bytes);
+        }
+
+        return uri.toString();
     }
 
     private File getProjectRoot(String projectId) throws Exception {
@@ -1250,6 +1315,75 @@ public class MainActivity extends Activity {
         pendingAndroidFilePickerMultiple = false;
     }
 
+    private void launchAndroidSaveFilePicker(
+        String requestId,
+        String filename,
+        String mimeType
+    ) {
+        if (pendingAndroidSaveFilePickerRequestId != null) {
+            sendAndroidSaveFilePickerError(
+                requestId,
+                "Another save dialog is already open."
+            );
+            return;
+        }
+
+        pendingAndroidSaveFilePickerRequestId = requestId;
+
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        intent.setType(normalizeMimeType(mimeType));
+        intent.putExtra(Intent.EXTRA_TITLE, sanitizeDownloadFilename(filename));
+
+        try {
+            startActivityForResult(intent, ANDROID_SAVE_FILE_PICKER_REQUEST_CODE);
+        } catch (ActivityNotFoundException error) {
+            clearPendingAndroidSaveFilePicker();
+            sendAndroidSaveFilePickerError(
+                requestId,
+                "No save location picker is available."
+            );
+        }
+    }
+
+    private void handleAndroidSaveFilePickerActivityResult(
+        int resultCode,
+        Intent data
+    ) {
+        String requestId = pendingAndroidSaveFilePickerRequestId;
+        clearPendingAndroidSaveFilePicker();
+
+        if (requestId == null) {
+            return;
+        }
+
+        try {
+            JSONObject result = new JSONObject();
+            result.put("requestId", requestId);
+
+            if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+                result.put("uri", JSONObject.NULL);
+                sendAndroidSaveFilePickerResult(result);
+                return;
+            }
+
+            result.put("uri", data.getData().toString());
+            sendAndroidSaveFilePickerResult(result);
+        } catch (Exception error) {
+            sendAndroidSaveFilePickerError(
+                requestId,
+                error.getMessage() == null
+                    ? "Failed to select save location."
+                    : error.getMessage()
+            );
+        }
+    }
+
+    private void clearPendingAndroidSaveFilePicker() {
+        pendingAndroidSaveFilePickerRequestId = null;
+    }
+
     private JSONArray collectPickedUris(Intent data, boolean multiple)
         throws Exception {
         JSONArray uris = new JSONArray();
@@ -1471,6 +1605,32 @@ public class MainActivity extends Activity {
 
         webView.evaluateJavascript(
             "(function(result){if(window.__routeVNAndroidFilePickerResult){window.__routeVNAndroidFilePickerResult(result);}})(" +
+            result.toString() +
+            ");",
+            null
+        );
+    }
+
+    private void sendAndroidSaveFilePickerError(String requestId, String message) {
+        try {
+            JSONObject result = new JSONObject();
+            JSONObject error = new JSONObject();
+            result.put("requestId", requestId);
+            error.put("message", message);
+            result.put("error", error);
+            sendAndroidSaveFilePickerResult(result);
+        } catch (Exception ignored) {
+            // Nothing useful to report if JSON construction fails.
+        }
+    }
+
+    private void sendAndroidSaveFilePickerResult(JSONObject result) {
+        if (webView == null) {
+            return;
+        }
+
+        webView.evaluateJavascript(
+            "(function(result){if(window.__routeVNAndroidSaveFileResult){window.__routeVNAndroidSaveFileResult(result);}})(" +
             result.toString() +
             ");",
             null
