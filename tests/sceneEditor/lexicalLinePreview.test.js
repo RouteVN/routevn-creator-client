@@ -149,6 +149,46 @@ describe("lexical scene document editor line previews", () => {
     }
   });
 
+  it("renders voice action markers in right-gutter preview items", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const previewHost = {
+        createIconPreview({ icon }) {
+          const item = document.createElement("div");
+          item.className = "preview-item";
+          const iconElement = document.createElement("rtgl-svg");
+          iconElement.setAttribute("svg", icon);
+          item.append(iconElement);
+          return item;
+        },
+      };
+
+      const signature = JSON.parse(
+        LexicalSceneDocumentEditorElement.prototype.buildRightGutterSignature({
+          hasVoice: true,
+        }),
+      );
+      const previewItems =
+        LexicalSceneDocumentEditorElement.prototype.createPreviewItems.call(
+          previewHost,
+          { hasVoice: true },
+        );
+
+      expect(signature.hasVoice).toBe(true);
+      expect(
+        Array.from(previewItems.querySelectorAll("rtgl-svg")).map((icon) =>
+          icon.getAttribute("svg"),
+        ),
+      ).toEqual(["microphone"]);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("renders deleted dialogue previews as dialogue icons with a centered x mark", async () => {
     const restoreDomGlobals = installDomGlobals();
 

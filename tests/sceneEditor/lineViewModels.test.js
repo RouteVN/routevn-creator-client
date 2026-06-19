@@ -444,6 +444,34 @@ describe("sceneEditor.lineDecorations", () => {
     expect(viewModels[1].hasInput).toBe(false);
   });
 
+  it("marks voice actions for inline action previews", () => {
+    const lines = [
+      {
+        id: "line-1",
+        actions: {
+          voice: {
+            resourceId: "voice-line-1",
+          },
+        },
+      },
+      {
+        id: "line-2",
+        actions: {},
+      },
+    ];
+
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines,
+      repositoryState: createRepositoryState(),
+      sectionLineChanges: {
+        lines: [],
+      },
+    });
+
+    expect(viewModels[0].hasVoice).toBe(true);
+    expect(viewModels[1].hasVoice).toBe(false);
+  });
+
   it("marks screen actions for inline action previews without duplicating section transitions", () => {
     const lines = [
       {
