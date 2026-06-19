@@ -32,6 +32,13 @@ export const createInitialState = () => ({
     items: [],
   },
 
+  appVersionMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    items: [],
+  },
+
   profileDialog: {
     isOpen: false,
     formKey: 0,
@@ -226,6 +233,26 @@ export const closeMobileActionMenu = ({ state }, _payload = {}) => {
 
 export const selectIsMobileActionMenuOpen = ({ state }) => {
   return Boolean(state.mobileActionMenu?.isOpen);
+};
+
+export const openAppVersionMenu = ({ state }, { x, y } = {}) => {
+  state.appVersionMenu.isOpen = true;
+  state.appVersionMenu.x = x;
+  state.appVersionMenu.y = y;
+  state.appVersionMenu.items = [
+    { label: "Check for update", type: "item", value: "check-update" },
+  ];
+};
+
+export const closeAppVersionMenu = ({ state }, _payload = {}) => {
+  state.appVersionMenu.isOpen = false;
+  state.appVersionMenu.x = 0;
+  state.appVersionMenu.y = 0;
+  state.appVersionMenu.items = [];
+};
+
+export const selectIsAppVersionMenuOpen = ({ state }) => {
+  return Boolean(state.appVersionMenu?.isOpen);
 };
 
 export const selectIsProfileDialogOpen = ({ state }) => {
