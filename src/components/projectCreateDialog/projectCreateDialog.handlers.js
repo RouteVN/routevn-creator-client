@@ -209,7 +209,7 @@ export const handleValidate = (deps) => {
   Object.assign(errors, formValidation.errors);
   const customErrors = {};
 
-  if (store.selectPlatform() !== "web" && !store.selectProjectPath()) {
+  if (store.selectPlatform() === "tauri" && !store.selectProjectPath()) {
     customErrors.projectPath = "Project location is required.";
     errors.projectPath = customErrors.projectPath;
   }

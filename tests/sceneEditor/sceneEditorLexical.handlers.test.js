@@ -16,6 +16,7 @@ import {
   handleSelectedLineChanged,
   handleTemporaryPresentationStateChange,
   scrollEntrySelectionIntoView,
+  syncSceneEditorRoutePayload,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 
 const installAnimationFrameQueue = () => {
@@ -37,6 +38,132 @@ const installAnimationFrameQueue = () => {
     },
   };
 };
+
+describe("sceneEditorLexical.handlers route payload sync", () => {
+  it("switches scene state when the mounted editor receives a new scene route payload", async () => {
+    const scenes = {
+      "scene-1": {
+        id: "scene-1",
+        sections: [
+          {
+            id: "old-section",
+            lines: [{ id: "old-line", actions: {} }],
+          },
+        ],
+      },
+      "scene-2": {
+        id: "scene-2",
+        sections: [
+          {
+            id: "new-section",
+            lines: [{ id: "new-line", actions: {} }],
+          },
+        ],
+      },
+    };
+    let sceneId = "scene-1";
+    let selectedSectionId = "old-section";
+    let selectedLineId = "old-line";
+    let draftSection;
+    const store = {
+      selectSceneId: vi.fn(() => sceneId),
+      setSceneId: vi.fn(({ sceneId: nextSceneId }) => {
+        sceneId = nextSceneId;
+      }),
+      selectScene: vi.fn(() => scenes[sceneId]),
+      selectCommittedScene: vi.fn(() => scenes[sceneId]),
+      selectSelectedSectionId: vi.fn(() => selectedSectionId),
+      setSelectedSectionId: vi.fn(({ selectedSectionId: nextSectionId }) => {
+        selectedSectionId = nextSectionId;
+      }),
+      selectSelectedLineId: vi.fn(() => selectedLineId),
+      setSelectedLineId: vi.fn(({ selectedLineId: nextLineId }) => {
+        selectedLineId = nextLineId;
+      }),
+      selectDraftSaveTimerId: vi.fn(() => undefined),
+      clearDraftSaveTimer: vi.fn(),
+      selectDraftSection: vi.fn(() => draftSection),
+      selectDraftSectionBySectionId: vi.fn(() => undefined),
+      selectPendingDraftSections: vi.fn(() => []),
+      setDraftSection: vi.fn(({ draftSection: nextDraftSection }) => {
+        draftSection = nextDraftSection;
+      }),
+      clearDraftSection: vi.fn(),
+      setDraftSavePendingSinceAt: vi.fn(),
+      selectRepositoryRevision: vi.fn(() => 7),
+      setRepositoryState: vi.fn(),
+      setDomainState: vi.fn(),
+      setRepositoryRevision: vi.fn(),
+      setSectionLineChangesBySectionId: vi.fn(),
+      setScenePageLoading: vi.fn(),
+      hidePreviewScene: vi.fn(),
+      closeSectionsOverviewPanel: vi.fn(),
+      hideDropdownMenu: vi.fn(),
+      hidePopover: vi.fn(),
+      hideSectionCreateDialog: vi.fn(),
+      hideSectionMoveSceneDialog: vi.fn(),
+      hideSceneSettingsDialog: vi.fn(),
+      closeBackgroundTransformEditor: vi.fn(),
+      clearTemporaryPresentationState: vi.fn(),
+      clearActionTargetLineId: vi.fn(),
+    };
+    const projectService = {
+      setActiveSceneId: vi.fn(),
+      getRepositoryState: vi.fn(() => ({ scenes: { items: scenes } })),
+      getDomainState: vi.fn(() => ({ scenes })),
+      getRepositoryRevision: vi.fn(() => 7),
+    };
+    const appService = {
+      getPayload: vi.fn(() => ({
+        p: "project-1",
+        s: "scene-2",
+        lineId: "old-line",
+      })),
+      setPayload: vi.fn(),
+    };
+    const deps = {
+      store,
+      projectService,
+      appService,
+      graphicsService: {
+        engineSelectSectionLineChanges: vi.fn(() => ({})),
+      },
+      refs: {
+        sceneEditorSectionsScroll: {
+          scrollTop: 20,
+          scrollLeft: 0,
+          style: { scrollBehavior: "smooth" },
+          scrollTo: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    await syncSceneEditorRoutePayload(deps, {
+      s: "scene-2",
+    });
+
+    expect(projectService.setActiveSceneId).toHaveBeenCalledWith("scene-2");
+    expect(sceneId).toBe("scene-2");
+    expect(selectedSectionId).toBe("new-section");
+    expect(selectedLineId).toBe("new-line");
+    expect(appService.setPayload).toHaveBeenCalledWith({
+      p: "project-1",
+      s: "scene-2",
+      sectionId: "new-section",
+      lineId: "new-line",
+    });
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      {
+        skipAnimations: true,
+      },
+    );
+  });
+});
 
 describe("sceneEditorLexical.handlers temporary presentation preview", () => {
   it("renders temporary action previews with animations enabled", () => {

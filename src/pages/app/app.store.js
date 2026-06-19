@@ -14,7 +14,7 @@ const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 const HELP_BUTTON_BOTTOM_OFFSET_PX = 24;
 
 const routesWithoutNavbar = ["/projects", "/authenticate"];
-const routesWithoutMobileTabBar = ["/project/scene-editor"];
+const routesWithoutMobileTabBar = [];
 
 const mobileTabBarItems = [
   { id: "assets", icon: "image", label: "Assets" },

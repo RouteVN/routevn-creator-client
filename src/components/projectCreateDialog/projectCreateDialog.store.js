@@ -113,7 +113,12 @@ export const createInitialState = () => ({
 });
 
 export const syncFromProps = ({ state }, { props } = {}) => {
-  state.platform = props?.platform === "web" ? "web" : "tauri";
+  state.platform =
+    props?.platform === "tauri"
+      ? "tauri"
+      : props?.platform === "android"
+        ? "android"
+        : "web";
   state.formKey += 1;
   state.defaultValues = createCreateProjectDefaultValues(props?.defaultValues);
   state.validationErrors = {};

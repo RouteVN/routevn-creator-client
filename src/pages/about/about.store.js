@@ -55,6 +55,7 @@ export const selectViewData = ({ state }) => {
     contentPadding: state.isTouchMode ? "0" : "lg",
     contentBodyPadding: state.isTouchMode ? "lg" : "0",
     contentBodyMarginTop: state.isTouchMode ? "0" : "lg",
+    communityItemsDirection: state.isTouchMode ? "v" : "h",
   };
 };
 

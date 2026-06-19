@@ -1,0 +1,675 @@
+import JSZip from "jszip";
+import {
+  loadTemplate,
+  getTemplateFiles,
+} from "../../clients/web/templateLoader.js";
+import {
+  base64ToUint8Array,
+  callAndroidBridge,
+  uint8ArrayToBase64,
+} from "../../clients/android/bridge.js";
+import { assertSafeAndroidStorageSegment } from "../../clients/android/storagePaths.js";
+import {
+  createPersistedAndroidProjectStore,
+  evictPersistedAndroidProjectStoreCache,
+} from "./collabClientStore.js";
+import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
+import { commandToSyncEvent } from "../shared/collab/mappers.js";
+import {
+  clearProjectionGap,
+  saveProjectionGap,
+} from "../shared/collab/projectionGapState.js";
+import {
+  createCommittedCommandProjectionTracker,
+  createProjectionGap,
+  REMOTE_COMMAND_COMPATIBILITY,
+} from "../shared/collab/compatibility.js";
+import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
+import {
+  applyCommandToRepository,
+  assertSupportedProjectState,
+  createProjectCreateRepositoryEvent,
+} from "../shared/projectRepository.js";
+import {
+  resolveProjectResolutionForWrite,
+  scaleTemplateProjectStateForResolution,
+} from "../../../internal/projectResolution.js";
+import {
+  createMainProjectionState,
+  MAIN_PARTITION,
+  MAIN_VIEW_NAME,
+  MAIN_VIEW_VERSION,
+} from "../shared/projectRepositoryViews/shared.js";
+import { toBootstrappedDraftEvent } from "../shared/collab/clientStoreHistory.js";
+import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
+
+const PROJECT_INFO_KEY = "projectInfo";
+const CREATOR_VERSION_KEY = "creatorVersion";
+
+const normalizeProjectInfo = (projectInfo = {}) => ({
+  id: projectInfo.id ?? "",
+  namespace: projectInfo.namespace ?? "",
+  name: projectInfo.name ?? "",
+  description: projectInfo.description ?? "",
+  iconFileId: projectInfo.iconFileId ?? null,
+});
+
+const getByteLength = (value) => {
+  if (!value) return 0;
+  if (typeof value.byteLength === "number") return value.byteLength;
+  if (typeof value.size === "number") return value.size;
+  return 0;
+};
+
+const isUnreliableMimeType = (mimeType) => {
+  const normalizedMimeType = String(mimeType ?? "")
+    .trim()
+    .toLowerCase();
+  return (
+    !normalizedMimeType ||
+    normalizedMimeType === "text/plain" ||
+    normalizedMimeType === "application/octet-stream"
+  );
+};
+
+const detectMimeTypeFromBytes = (bytes) => {
+  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  if (
+    data.length >= 8 &&
+    data[0] === 0x89 &&
+    data[1] === 0x50 &&
+    data[2] === 0x4e &&
+    data[3] === 0x47 &&
+    data[4] === 0x0d &&
+    data[5] === 0x0a &&
+    data[6] === 0x1a &&
+    data[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+
+  if (data.length >= 3 && data[0] === 0xff && data[1] === 0xd8) {
+    return "image/jpeg";
+  }
+
+  if (
+    data.length >= 12 &&
+    data[0] === 0x52 &&
+    data[1] === 0x49 &&
+    data[2] === 0x46 &&
+    data[3] === 0x46 &&
+    data[8] === 0x57 &&
+    data[9] === 0x45 &&
+    data[10] === 0x42 &&
+    data[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+
+  if (
+    data.length >= 4 &&
+    data[0] === 0x00 &&
+    data[1] === 0x01 &&
+    data[2] === 0x00 &&
+    data[3] === 0x00
+  ) {
+    return "font/ttf";
+  }
+
+  if (
+    data.length >= 4 &&
+    data[0] === 0x4f &&
+    data[1] === 0x54 &&
+    data[2] === 0x54 &&
+    data[3] === 0x4f
+  ) {
+    return "font/otf";
+  }
+
+  if (
+    data.length >= 4 &&
+    data[0] === 0x77 &&
+    data[1] === 0x4f &&
+    data[2] === 0x46 &&
+    data[3] === 0x46
+  ) {
+    return "font/woff";
+  }
+
+  if (
+    data.length >= 4 &&
+    data[0] === 0x77 &&
+    data[1] === 0x4f &&
+    data[2] === 0x46 &&
+    data[3] === 0x32
+  ) {
+    return "font/woff2";
+  }
+
+  return undefined;
+};
+
+const resolveProjectFileMimeType = ({ mimeType, bytes } = {}) => {
+  if (!isUnreliableMimeType(mimeType)) {
+    return mimeType;
+  }
+
+  return detectMimeTypeFromBytes(bytes) ?? "application/octet-stream";
+};
+
+const normalizeLocalDraftCreatedAt = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : Date.now();
+};
+
+const toLocalDraftEvent = (command) => {
+  const syncEvent = commandToSyncEvent(command);
+  return {
+    id: command?.id,
+    partition: syncEvent?.partition ?? command?.partition,
+    projectId: syncEvent?.projectId ?? command?.projectId,
+    ...syncEvent,
+    createdAt: normalizeLocalDraftCreatedAt(
+      syncEvent?.createdAt ?? command?.clientTs ?? command?.meta?.clientTs,
+    ),
+  };
+};
+
+const createLocalSubmitError = (error) => ({
+  code: error?.code || "submit_failed",
+  message: error?.message || "Failed to persist local draft",
+});
+
+const createLocalOnlyProjectCollabSession = ({
+  actor,
+  clientStore,
+  logger = () => {},
+}) => {
+  let lastError;
+  let status = "idle";
+
+  const submitDrafts = async (commands = []) => {
+    const normalizedCommands = Array.isArray(commands)
+      ? commands.filter(Boolean)
+      : [];
+    if (normalizedCommands.length === 0) {
+      return { valid: true, commandIds: [] };
+    }
+
+    try {
+      const draftEvents = normalizedCommands.map(toLocalDraftEvent);
+      if (draftEvents.length === 1) {
+        await clientStore.insertDraft(draftEvents[0]);
+      } else {
+        await clientStore.insertDrafts(draftEvents);
+      }
+      status = "ready";
+      lastError = undefined;
+      return {
+        valid: true,
+        commandIds: normalizedCommands.map((command) => command.id),
+      };
+    } catch (error) {
+      const normalizedError = createLocalSubmitError(error);
+      lastError = structuredClone(normalizedError);
+      logger({ event: "local_submit_failed", error: normalizedError });
+      return { valid: false, error: normalizedError };
+    }
+  };
+
+  return {
+    async start() {
+      status = "ready";
+      logger({ event: "local_session_started" });
+    },
+
+    async stop() {
+      status = "stopped";
+      logger({ event: "local_session_stopped" });
+    },
+
+    async submitCommand(command) {
+      const submitResult = await submitDrafts([command]);
+      if (submitResult?.valid === false) {
+        return submitResult;
+      }
+      return { valid: true, commandId: command.id };
+    },
+
+    async submitCommands(commands) {
+      return submitDrafts(commands);
+    },
+
+    async submitEvent(input) {
+      await clientStore.insertDraft({
+        ...structuredClone(input),
+        createdAt: normalizeLocalDraftCreatedAt(
+          input?.createdAt ?? input?.clientTs ?? input?.meta?.clientTs,
+        ),
+      });
+      status = "ready";
+    },
+
+    async syncNow() {},
+    async flushDrafts() {},
+
+    getStatus() {
+      return { phase: status, transportState: "offline" };
+    },
+
+    getLastError() {
+      return lastError ? structuredClone(lastError) : undefined;
+    },
+
+    clearLastError() {
+      lastError = undefined;
+    },
+
+    getActor() {
+      return structuredClone(actor);
+    },
+
+    async setOnlineTransport() {
+      logger({ event: "local_transport_attach_ignored" });
+    },
+  };
+};
+
+const ensureAndroidProjectStorage = (projectId) => {
+  callAndroidBridge("ensureProjectStorage", {
+    projectId: assertSafeAndroidStorageSegment(projectId, {
+      label: "Android project id",
+    }),
+  });
+};
+
+const writeAndroidProjectFile = ({ projectId, fileId, bytes, mimeType }) => {
+  const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
+    label: "Android project id",
+  });
+  callAndroidBridge("writeProjectFile", {
+    projectId: safeProjectId,
+    fileId,
+    mimeType: resolveProjectFileMimeType({ mimeType, bytes }),
+    base64: uint8ArrayToBase64(bytes),
+  });
+};
+
+const readAndroidProjectFile = ({ projectId, fileId }) => {
+  const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
+    label: "Android project id",
+  });
+  const result = callAndroidBridge("readProjectFile", {
+    projectId: safeProjectId,
+    fileId,
+  });
+  return {
+    bytes: base64ToUint8Array(result?.base64 || ""),
+    mimeType: result?.mimeType || "application/octet-stream",
+  };
+};
+
+const getAndroidProjectFileUrl = ({ projectId, fileId }) =>
+  `https://appassets.androidplatform.net/android-files/projects/${assertSafeAndroidStorageSegment(projectId, { label: "Android project id" })}/files/${encodeURIComponent(fileId)}`;
+
+const copyTemplateFiles = async ({ templateId, projectId, templateData }) => {
+  const templateFilesPath = `/templates/${templateId}/files/`;
+  const filesToCopy = await getTemplateFiles(templateId);
+
+  for (const fileName of filesToCopy) {
+    try {
+      const sourcePath = templateFilesPath + fileName;
+      const response = await fetch(sourcePath + "?raw");
+      if (response.ok) {
+        const blob = await response.blob();
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        const templateMimeType =
+          templateData?.files?.items?.[fileName]?.mimeType;
+        writeAndroidProjectFile({
+          projectId,
+          fileId: assertSafeProjectFileId(fileName),
+          bytes,
+          mimeType: templateMimeType ?? blob.type,
+        });
+      }
+    } catch (error) {
+      console.error(`Failed to copy template file ${fileName}:`, error);
+    }
+  }
+};
+
+const writeDownloadFile = ({ filename, bytes, mimeType }) => {
+  return callAndroidBridge("writeDownloadFile", {
+    filename,
+    mimeType: mimeType || "application/octet-stream",
+    base64: uint8ArrayToBase64(bytes),
+  });
+};
+
+export const createAndroidProjectServiceAdapters = ({
+  collabLog,
+  creatorVersion,
+}) => {
+  const storageAdapter = {
+    resolveProjectReferenceByProjectId: async ({ projectId }) => ({
+      projectId,
+      cacheKey: projectId,
+      repositoryProjectId: projectId,
+    }),
+
+    readCreatorVersionByReference: async ({ reference }) => {
+      const store = await createPersistedAndroidProjectStore({
+        projectId: reference.repositoryProjectId || reference.projectId,
+      });
+      const creatorVersionValue = await store.app.get(CREATOR_VERSION_KEY);
+      return Number.isFinite(creatorVersionValue) ? creatorVersionValue : 0;
+    },
+
+    readProjectInfoByReference: async ({ reference }) => {
+      const store = await createPersistedAndroidProjectStore({
+        projectId: reference.repositoryProjectId || reference.projectId,
+      });
+      return normalizeProjectInfo(await store.app.get(PROJECT_INFO_KEY));
+    },
+
+    createStore: async ({ reference }) => {
+      return createPersistedAndroidProjectStore({
+        projectId: reference.repositoryProjectId || reference.projectId,
+      });
+    },
+
+    evictStoreByReference: async ({ reference }) => {
+      await evictPersistedAndroidProjectStoreCache({
+        projectId: reference?.repositoryProjectId || reference?.projectId,
+      });
+    },
+
+    initializeProject: async ({
+      projectId,
+      template,
+      projectInfo,
+      projectResolution,
+    }) => {
+      if (!projectId) {
+        throw new Error(
+          "projectId is required for Android project initialization",
+        );
+      }
+
+      const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
+        label: "Android project id",
+      });
+
+      if (!template) {
+        throw new Error("Template is required for project initialization");
+      }
+
+      ensureAndroidProjectStorage(safeProjectId);
+
+      const loadedTemplateData = await loadTemplate(template);
+      const resolvedProjectResolution = resolveProjectResolutionForWrite({
+        projectResolution,
+        fallbackResolution: loadedTemplateData.project?.resolution,
+      });
+      const templateData = scaleTemplateProjectStateForResolution(
+        loadedTemplateData,
+        resolvedProjectResolution,
+      );
+      await copyTemplateFiles({
+        templateId: template,
+        projectId: safeProjectId,
+        templateData,
+      });
+
+      assertSupportedProjectState(templateData);
+
+      const store = await createPersistedAndroidProjectStore({
+        projectId: safeProjectId,
+      });
+      const initialClientTs = Date.now();
+      const initialEvent = createProjectCreateRepositoryEvent({
+        projectId: safeProjectId,
+        state: templateData,
+        clientTs: initialClientTs,
+      });
+
+      await store.clearEvents();
+      await store.clearMaterializedViewCheckpoints();
+      await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
+      await store.saveMaterializedViewCheckpoint({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+        viewVersion: MAIN_VIEW_VERSION,
+        lastCommittedId: 1,
+        value: createMainProjectionState(templateData),
+        updatedAt: Date.now(),
+      });
+
+      await store.app.set(CREATOR_VERSION_KEY, creatorVersion);
+      await store.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));
+    },
+  };
+
+  const fileAdapter = {
+    continueOnUploadError: false,
+
+    storeFile: async ({
+      file,
+      bytes,
+      projectId,
+      idGenerator,
+      getCurrentReference,
+    }) => {
+      const reference = projectId
+        ? { projectId, repositoryProjectId: projectId, cacheKey: projectId }
+        : getCurrentReference();
+      const resolvedProjectId =
+        reference?.repositoryProjectId || reference?.projectId;
+      const fileId = idGenerator();
+      const safeFileId = assertSafeProjectFileId(fileId);
+      const arrayBuffer = bytes ?? (await file.arrayBuffer());
+      const fileBytes = new Uint8Array(arrayBuffer);
+
+      ensureAndroidProjectStorage(resolvedProjectId);
+      writeAndroidProjectFile({
+        projectId: resolvedProjectId,
+        fileId: safeFileId,
+        bytes: fileBytes,
+        mimeType: file.type,
+      });
+
+      return {
+        fileId: safeFileId,
+        downloadUrl: getAndroidProjectFileUrl({
+          projectId: resolvedProjectId,
+          fileId: safeFileId,
+        }),
+      };
+    },
+
+    getFileContent: async ({ fileId, getCurrentReference }) => {
+      const reference = getCurrentReference();
+      const projectId = reference?.repositoryProjectId || reference?.projectId;
+      const safeFileId = assertSafeProjectFileId(fileId);
+      return {
+        url: getAndroidProjectFileUrl({ projectId, fileId: safeFileId }),
+      };
+    },
+
+    getFileByProjectId: async ({ projectId, fileId }) => {
+      const safeFileId = assertSafeProjectFileId(fileId);
+      const { bytes, mimeType } = readAndroidProjectFile({
+        projectId,
+        fileId: safeFileId,
+      });
+      return new Blob([bytes], { type: mimeType });
+    },
+
+    downloadBundle: async ({ bundle, filename }) => {
+      const bytes =
+        bundle instanceof Uint8Array ? bundle : new Uint8Array(bundle);
+      return writeDownloadFile({
+        filename,
+        bytes,
+        mimeType: "application/octet-stream",
+      });
+    },
+
+    createDistributionZip: async ({
+      bundle,
+      zipName,
+      staticFiles,
+      stats = {},
+    }) => {
+      const zip = new JSZip();
+      zip.file("package.bin", bundle);
+      if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
+      if (staticFiles.mainJs) zip.file("main.js", staticFiles.mainJs);
+      const zipBytes = await zip.generateAsync({
+        type: "uint8array",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 },
+      });
+      console.info("[export.bundle.size]", {
+        ...stats,
+        packageBinBytes: getByteLength(bundle),
+        zipBytes: getByteLength(zipBytes),
+      });
+      return writeDownloadFile({
+        filename: `${zipName}.zip`,
+        bytes: zipBytes,
+        mimeType: "application/zip",
+      });
+    },
+
+    createDistributionZipStreamed: async () => {
+      throw new Error(
+        "Streamed distribution ZIP export is not supported on Android yet.",
+      );
+    },
+
+    promptDistributionZipPath: async ({ zipName }) => `${zipName}.zip`,
+
+    createDistributionZipStreamedToPath: async () => {
+      throw new Error(
+        "Streamed distribution ZIP export is not supported on Android yet.",
+      );
+    },
+  };
+
+  const collabAdapter = {
+    beforeCreateRepository: async () => {},
+    afterCreateRepository: async () => {},
+
+    createTransport: ({ endpointUrl }) =>
+      createWebSocketTransport({
+        url: endpointUrl,
+        label: "routevn.collab.android.transport",
+      }),
+
+    onEnsureLocalSession: () => {},
+    onSessionCleared: () => {},
+    onSessionTransportUpdated: () => {},
+
+    createSessionForProject: async ({
+      projectId,
+      token,
+      userId,
+      clientId,
+      endpointUrl,
+      mode,
+      getRepositoryByProject,
+      getStoreByProject,
+    }) => {
+      const repository = await getRepositoryByProject(projectId);
+      const state = repository.getState();
+      assertSupportedProjectState(state);
+      const repositoryStore = await getStoreByProject(projectId);
+
+      if (mode === "local" && !endpointUrl) {
+        const localSession = createLocalOnlyProjectCollabSession({
+          actor: { userId, clientId },
+          clientStore: repositoryStore,
+          logger: (entry) => collabLog("debug", "local-session", entry),
+        });
+        await localSession.start();
+        return localSession;
+      }
+
+      const projectionTracker = createCommittedCommandProjectionTracker();
+      const collabSession = createProjectCollabService({
+        projectId,
+        token,
+        actor: { userId, clientId },
+        clientStore: repositoryStore,
+        logger: (entry) => collabLog("debug", "sync-client", entry),
+        onCommittedCommand: async ({
+          command,
+          committedEvent,
+          sourceType,
+          isFromCurrentActor,
+        }) => {
+          const { projectionStatus, projectionGap } =
+            projectionTracker.resolveCommittedCommand({
+              command,
+              committedEvent,
+              sourceType,
+              isFromCurrentActor,
+            });
+
+          if (projectionGap) {
+            await saveProjectionGap(repositoryStore, projectionGap);
+          }
+          if (isFromCurrentActor || projectionStatus !== "applied") return;
+
+          try {
+            await applyCommandToRepository({
+              repository,
+              command,
+              projectId,
+            });
+          } catch (error) {
+            await saveProjectionGap(
+              repositoryStore,
+              createProjectionGap({
+                command,
+                committedEvent,
+                compatibility: {
+                  status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
+                  reason: "creator_model_projection_failed",
+                  message: error?.message || "projection failed",
+                },
+                sourceType,
+              }),
+            );
+            collabLog("warn", "remote command projection failed", {
+              projectId,
+              commandType: command?.type || null,
+              commandId: command?.id || null,
+              error: error?.message || "unknown",
+            });
+            return;
+          }
+          await clearProjectionGap(repositoryStore);
+        },
+      });
+
+      await collabSession.start();
+      if (endpointUrl) {
+        await collabSession.setOnlineTransport(
+          createWebSocketTransport({
+            url: endpointUrl,
+            label: "routevn.collab.android.transport",
+          }),
+        );
+      }
+      return collabSession;
+    },
+  };
+
+  return {
+    storageAdapter,
+    fileAdapter,
+    collabAdapter,
+  };
+};

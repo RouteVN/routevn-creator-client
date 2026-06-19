@@ -21,6 +21,7 @@ import {
   mountSceneEditorSubscriptions,
   renderSceneEditorState,
   resetSceneEditorRuntime,
+  resolveSceneEditorEntrySelection,
   restoreSceneEditorFromPreview,
   updateSceneEditorSectionChanges,
 } from "../../internal/ui/sceneEditor/runtime.js";
@@ -658,6 +659,108 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   subject.dispatch("sceneEditor.renderCanvas", {
     skipAnimations: true,
   });
+};
+
+const normalizeRoutePath = (path) => String(path || "").replace(/\/+$/, "");
+
+const getSceneEditorRoutePayload = (eventPayload = {}) => {
+  if (normalizeRoutePath(eventPayload.path) !== "/project/scene-editor") {
+    return undefined;
+  }
+
+  return eventPayload.payload || {};
+};
+
+export const syncSceneEditorRoutePayload = async (
+  deps,
+  routePayload = {},
+  { shouldContinue } = {},
+) => {
+  const { store, projectService, appService, render, subject } = deps;
+  const canContinue = () => !shouldContinue || shouldContinue();
+  const nextSceneId = routePayload.s || routePayload.sceneId;
+
+  if (!nextSceneId || nextSceneId === store.selectSceneId?.()) {
+    return;
+  }
+
+  store.setScenePageLoading({ isLoading: true });
+  store.hidePreviewScene?.();
+  store.closeSectionsOverviewPanel?.();
+  store.hideDropdownMenu?.();
+  store.hidePopover?.();
+  store.hideSectionCreateDialog?.();
+  store.hideSectionMoveSceneDialog?.();
+  store.hideSceneSettingsDialog?.();
+  store.closeBackgroundTransformEditor?.();
+  store.clearTemporaryPresentationState?.();
+  store.clearActionTargetLineId?.();
+  render();
+
+  try {
+    await flushSceneEditorDrafts(deps, { force: true });
+    if (!canContinue()) {
+      return;
+    }
+
+    await projectService.setActiveSceneId(nextSceneId);
+    if (!canContinue()) {
+      return;
+    }
+
+    syncStoreProjectState(store, projectService);
+    store.setSceneId({ sceneId: nextSceneId });
+
+    const scene = store.selectScene();
+    if (!scene) {
+      throw new Error("Scene not found");
+    }
+
+    const entrySelection = resolveSceneEditorEntrySelection(scene, {
+      sectionId: routePayload.sectionId,
+    });
+    store.setSelectedSectionId({
+      selectedSectionId: entrySelection.sectionId,
+    });
+    store.setSelectedLineId({ selectedLineId: entrySelection.lineId });
+
+    const nextPayload = {
+      ...appService.getPayload(),
+      ...routePayload,
+      s: nextSceneId,
+    };
+    delete nextPayload.sceneId;
+    if (entrySelection.sectionId) {
+      nextPayload.sectionId = entrySelection.sectionId;
+    } else {
+      delete nextPayload.sectionId;
+    }
+    if (entrySelection.lineId) {
+      nextPayload.lineId = entrySelection.lineId;
+    } else {
+      delete nextPayload.lineId;
+    }
+    appService.setPayload?.(nextPayload);
+
+    reconcileCurrentEditorSession(deps);
+    await updateSceneEditorSectionChanges(deps);
+    if (!canContinue()) {
+      return;
+    }
+
+    store.setScenePageLoading({ isLoading: false });
+    render();
+    scrollEntrySelectionIntoView(deps);
+    subject.dispatch("sceneEditor.renderCanvas", {
+      skipAnimations: true,
+    });
+  } catch (error) {
+    if (canContinue()) {
+      store.setScenePageLoading({ isLoading: false });
+      render();
+    }
+    throw error;
+  }
 };
 
 const BACKGROUND_TRANSFORM_EDITOR_RENDER_PAYLOAD = {
@@ -1440,7 +1543,8 @@ export const handleActionTransformEditorDone = (deps, payload) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { projectService, appService, store, uiConfig } = deps;
+  const { projectService, appService, store, uiConfig, subject } = deps;
+  let routeSyncSequence = 0;
   store.setScenePageLoading({ isLoading: true });
   store.setUiConfig({ uiConfig });
   const showLineNumbers =
@@ -1466,9 +1570,31 @@ export const handleBeforeMount = (deps) => {
       void syncSceneEditorProjectPayload(deps, payload).catch(() => {});
     },
   });
+  const routeSubscription = subject
+    .pipe(
+      filter(
+        ({ action }) => action === "redirect" || action === "app.route.request",
+      ),
+      filter(({ payload }) => !!getSceneEditorRoutePayload(payload)),
+      tap(({ payload }) => {
+        const routePayload = getSceneEditorRoutePayload(payload);
+        const routeSyncId = ++routeSyncSequence;
+        void syncSceneEditorRoutePayload(deps, routePayload, {
+          shouldContinue: () => routeSyncId === routeSyncSequence,
+        }).catch((error) => {
+          console.error("[sceneEditor] Failed to switch scene", error);
+          appService?.showToast?.({
+            message: "Failed to switch scene",
+            status: "error",
+          });
+        });
+      }),
+    )
+    .subscribe();
 
   return async () => {
     projectSubscription.unsubscribe();
+    routeSubscription.unsubscribe();
     cleanupRuntimeSubscriptions();
     cleanupBackgroundTransformEditorSubscriptions();
     await flushSceneEditorDrafts(deps, { force: true });

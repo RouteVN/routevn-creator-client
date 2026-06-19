@@ -25,7 +25,18 @@ import { IMAGE_TAG_SCOPE_KEY } from "./images.store.js";
 
 const MAX_PARALLEL_UPLOADS = 1;
 const IMAGE_FILE_PATTERN = /\.(jpg|jpeg|png|webp)$/i;
-const IMAGE_FILE_ACCEPT = ".jpg,.jpeg,.png,.webp";
+const IMAGE_FILE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const IMAGE_FILE_ACCEPT = [
+  ...IMAGE_FILE_MIME_TYPES,
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+].join(",");
 const INVALID_IMAGE_FORMAT_MESSAGE =
   "Only JPG/JPEG, PNG, and WEBP images are supported.";
 
@@ -37,9 +48,12 @@ const showInvalidFormatToast = (appService) => {
 };
 
 const validateImageFiles = ({ appService, files } = {}) => {
-  const invalidFiles = Array.from(files ?? []).filter(
-    (file) => !file.name.match(IMAGE_FILE_PATTERN),
-  );
+  const invalidFiles = Array.from(files ?? []).filter((file) => {
+    return (
+      !IMAGE_FILE_MIME_TYPES.has(file?.type) &&
+      !file?.name?.match(IMAGE_FILE_PATTERN)
+    );
+  });
 
   if (invalidFiles.length === 0) {
     return true;

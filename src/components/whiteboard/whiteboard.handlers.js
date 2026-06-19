@@ -171,6 +171,18 @@ const getPrimaryTouchPoint = (event, element) => {
   return getTouchPointWithinElement(event?.touches?.[0], element);
 };
 
+const getTouchClientPoint = (event) => {
+  const touch = event?.touches?.[0];
+  if (!touch) {
+    return undefined;
+  }
+
+  return {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+  };
+};
+
 const getTouchPairMetrics = (event, element) => {
   const firstPoint = getTouchPointWithinElement(event?.touches?.[0], element);
   const secondPoint = getTouchPointWithinElement(event?.touches?.[1], element);
@@ -220,6 +232,207 @@ const isSpaceKey = (event) => {
 
 const isPrimaryMouseButton = (event) => {
   return event?.button === 0 && !event?.ctrlKey;
+};
+
+const getItemIdFromElement = (element) => {
+  return element?.dataset?.itemId || "";
+};
+
+const getItemElementFromEventTarget = (event, container) => {
+  const path =
+    typeof event?.composedPath === "function" ? event.composedPath() : [];
+  const pathItemElement = path.find((candidate) => candidate?.dataset?.itemId);
+
+  if (
+    pathItemElement &&
+    (typeof container?.contains !== "function" ||
+      container.contains(pathItemElement))
+  ) {
+    return pathItemElement;
+  }
+
+  const target = event?.target;
+  const targetElement =
+    typeof target?.closest === "function" ? target : target?.parentElement;
+  const itemElement = targetElement?.closest?.("[data-item-id]");
+
+  if (!itemElement) {
+    return undefined;
+  }
+
+  if (
+    typeof container?.contains === "function" &&
+    !container.contains(itemElement)
+  ) {
+    return undefined;
+  }
+
+  return itemElement;
+};
+
+const getCanvasPointerPosition = (
+  { store, refs } = {},
+  { clientX, clientY } = {},
+) => {
+  const canvas = refs?.canvas;
+  const nextClientX = Number(clientX);
+  const nextClientY = Number(clientY);
+
+  if (
+    !canvas ||
+    !Number.isFinite(nextClientX) ||
+    !Number.isFinite(nextClientY)
+  ) {
+    return undefined;
+  }
+
+  const canvasRect = canvas.getBoundingClientRect();
+  const zoomLevel = store.selectZoomLevel();
+  const pan = store.selectPan();
+
+  return {
+    x: (nextClientX - canvasRect.left - pan.x) / zoomLevel,
+    y: (nextClientY - canvasRect.top - pan.y) / zoomLevel,
+  };
+};
+
+const parseItemStylePosition = (position) => {
+  const numericPosition = parseInt(position ?? "", 10);
+  return Number.isFinite(numericPosition) ? numericPosition : 0;
+};
+
+const startItemDrag = (
+  deps,
+  { itemElement, itemId, clientX, clientY } = {},
+) => {
+  const { store, dispatchEvent } = deps;
+  if (!itemElement || !itemId) {
+    return false;
+  }
+
+  const pointerPosition = getCanvasPointerPosition(deps, {
+    clientX,
+    clientY,
+  });
+  if (!pointerPosition) {
+    return false;
+  }
+
+  const itemX = parseItemStylePosition(itemElement.style.left);
+  const itemY = parseItemStylePosition(itemElement.style.top);
+
+  store.setDragOffset({
+    x: pointerPosition.x - itemX,
+    y: pointerPosition.y - itemY,
+  });
+
+  store.startDragging({ itemId });
+  store.setLastDraggedPosition({
+    itemId,
+    x: itemX,
+    y: itemY,
+  });
+
+  dispatchEvent(
+    new CustomEvent("item-selected", {
+      detail: { itemId },
+    }),
+  );
+
+  return true;
+};
+
+const updateItemDrag = (deps, { clientX, clientY } = {}) => {
+  const { store, refs, dispatchEvent } = deps;
+  const pointerPosition = getCanvasPointerPosition(deps, {
+    clientX,
+    clientY,
+  });
+  if (!pointerPosition) {
+    return false;
+  }
+
+  const dragItemId = store.selectDragItemId();
+  const zoomLevel = store.selectZoomLevel();
+  const dragOffset = store.selectDragOffset();
+  const newX = pointerPosition.x - dragOffset.x;
+  const newY = pointerPosition.y - dragOffset.y;
+
+  const container = refs.container;
+  const containerRect = container.getBoundingClientRect();
+  const panState = store.selectPan();
+
+  const viewportLeft = -panState.x / zoomLevel;
+  const viewportTop = -panState.y / zoomLevel;
+  const viewportRight = viewportLeft + containerRect.width / zoomLevel;
+  const viewportBottom = viewportTop + containerRect.height / zoomLevel;
+
+  const itemWidth = SCENE_BOX_WIDTH;
+  const itemHeight = SCENE_BOX_HEIGHT;
+
+  const maxX = viewportRight - itemWidth;
+  const maxY = viewportBottom - itemHeight;
+
+  const constrainedX = Math.max(viewportLeft, Math.min(newX, maxX));
+  const constrainedY = Math.max(viewportTop, Math.min(newY, maxY));
+
+  const snappedX = Math.round(constrainedX / 5) * 5;
+  const snappedY = Math.round(constrainedY / 5) * 5;
+  store.setLastDraggedPosition({
+    itemId: dragItemId,
+    x: snappedX,
+    y: snappedY,
+  });
+
+  dispatchEvent(
+    new CustomEvent("item-position-updating", {
+      detail: {
+        itemId: dragItemId,
+        x: snappedX,
+        y: snappedY,
+      },
+    }),
+  );
+
+  return true;
+};
+
+const finishItemDrag = (deps) => {
+  const { store, refs, dispatchEvent } = deps;
+  const dragItemId = store.selectDragItemId();
+  const itemElement = Object.values(refs || {}).find(
+    (candidate) => candidate?.dataset?.itemId === dragItemId,
+  );
+
+  const lastDraggedPosition = store.selectLastDraggedPosition();
+  let finalX = lastDraggedPosition?.x;
+  let finalY = lastDraggedPosition?.y;
+
+  if (!Number.isFinite(finalX) || !Number.isFinite(finalY)) {
+    finalX = parseInt(itemElement?.style?.left || "", 10);
+    finalY = parseInt(itemElement?.style?.top || "", 10);
+  }
+
+  if (Number.isFinite(finalX) && Number.isFinite(finalY)) {
+    dispatchEvent(
+      new CustomEvent("item-position-changed", {
+        detail: {
+          itemId: dragItemId,
+          x: finalX,
+          y: finalY,
+        },
+      }),
+    );
+  } else {
+    console.error("[whiteboard] failed to resolve final dragged position", {
+      itemId: dragItemId,
+      finalX,
+      finalY,
+    });
+  }
+
+  store.stopDragging();
+  store.clearLastDraggedPosition();
 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -434,6 +647,21 @@ export const handleContainerTouchStart = (deps, payload) => {
     return;
   }
 
+  const itemElement = getItemElementFromEventTarget(event, refs.container);
+  const itemId = getItemIdFromElement(itemElement);
+  if (itemId && !store.selectIsPanMode()) {
+    const touchClientPoint = getTouchClientPoint(event);
+    preventTouchDefault(event);
+    event.stopPropagation();
+    startItemDrag(deps, {
+      itemElement,
+      itemId,
+      clientX: touchClientPoint?.clientX,
+      clientY: touchClientPoint?.clientY,
+    });
+    return;
+  }
+
   store.startTouchPan({
     touchX: point.x,
     touchY: point.y,
@@ -452,6 +680,15 @@ export const handleContainerTouchMove = (deps, payload) => {
   preventTouchDefault(event);
   event.stopPropagation();
   syncContainerSize(deps);
+
+  if (store.selectIsDragging()) {
+    const touchClientPoint = getTouchClientPoint(event);
+    updateItemDrag(deps, {
+      clientX: touchClientPoint?.clientX,
+      clientY: touchClientPoint?.clientY,
+    });
+    return;
+  }
 
   if (touchCount >= 2) {
     const metrics = getTouchPairMetrics(event, refs.container);
@@ -496,6 +733,16 @@ export const handleContainerTouchEnd = (deps, payload) => {
   const touchCount = event?.touches?.length ?? 0;
   const gesture = store.selectTouchGesture();
 
+  if (store.selectIsDragging()) {
+    preventTouchDefault(event);
+    event.stopPropagation();
+
+    if (touchCount === 0) {
+      finishItemDrag(deps);
+    }
+    return;
+  }
+
   if (gesture?.hasMoved || gesture?.type === "pinch") {
     preventTouchDefault(event);
   }
@@ -524,6 +771,10 @@ export const handleContainerTouchEnd = (deps, payload) => {
 
 export const handleContainerTouchCancel = (deps, payload) => {
   preventTouchDefault(payload?._event);
+  if (deps.store.selectIsDragging()) {
+    deps.store.stopDragging();
+    deps.store.clearLastDraggedPosition();
+  }
   deps.store.stopTouchGesture();
 };
 
@@ -621,7 +872,7 @@ export const handleMinimapViewportMouseDown = (deps, payload) => {
 };
 
 export const handleItemMouseDown = (deps, payload) => {
-  const { store, refs } = deps;
+  const { store } = deps;
   const { _event: event } = payload;
 
   if (!isPrimaryMouseButton(event)) {
@@ -640,39 +891,12 @@ export const handleItemMouseDown = (deps, payload) => {
   const itemId =
     event.currentTarget?.dataset?.itemId ||
     event.currentTarget?.id?.replace("item", "");
-  const itemElement = event.currentTarget;
-  const canvas = refs.canvas;
-  const canvasRect = canvas.getBoundingClientRect();
-  const zoomLevel = store.selectZoomLevel();
-  const pan = store.selectPan();
-
-  // Calculate the mouse position relative to the canvas coordinate space
-  const mouseInCanvasX = (event.clientX - canvasRect.left - pan.x) / zoomLevel;
-  const mouseInCanvasY = (event.clientY - canvasRect.top - pan.y) / zoomLevel;
-
-  // Get the item's current position in canvas coordinates
-  const itemX = parseInt(itemElement.style.left, 10) || 0;
-  const itemY = parseInt(itemElement.style.top, 10) || 0;
-
-  // Calculate drag offset relative to item's top-left corner
-  store.setDragOffset({
-    x: mouseInCanvasX - itemX,
-    y: mouseInCanvasY - itemY,
-  });
-
-  store.startDragging({ itemId });
-  store.setLastDraggedPosition({
+  startItemDrag(deps, {
+    itemElement: event.currentTarget,
     itemId,
-    x: itemX,
-    y: itemY,
+    clientX: event.clientX,
+    clientY: event.clientY,
   });
-
-  // Dispatch selection event
-  deps.dispatchEvent(
-    new CustomEvent("item-selected", {
-      detail: { itemId },
-    }),
-  );
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
@@ -780,71 +1004,17 @@ export const handleWindowMouseMove = (deps, payload) => {
 
     syncPanPresentation(deps);
   } else if (store.selectIsDragging()) {
-    // Handle item dragging
-    const canvas = refs.canvas;
-    const canvasRect = canvas.getBoundingClientRect();
-    const dragItemId = store.selectDragItemId();
-    const pan = store.selectPan();
-    const zoomLevel = store.selectZoomLevel();
-    const dragOffset = store.selectDragOffset();
-
-    // Calculate current mouse position in canvas coordinate space
-    const mouseInCanvasX =
-      (payload._event.clientX - canvasRect.left - pan.x) / zoomLevel;
-    const mouseInCanvasY =
-      (payload._event.clientY - canvasRect.top - pan.y) / zoomLevel;
-
-    // Calculate new item position by subtracting the drag offset
-    const newX = mouseInCanvasX - dragOffset.x;
-    const newY = mouseInCanvasY - dragOffset.y;
-
-    // Get the container's visible area
-    const container = refs.container;
-    const containerRect = container.getBoundingClientRect();
-    const panState = store.selectPan();
-
-    // Calculate visible area in canvas coordinates based on actual container size
-    const viewportLeft = -panState.x / zoomLevel;
-    const viewportTop = -panState.y / zoomLevel;
-    const viewportRight = viewportLeft + containerRect.width / zoomLevel;
-    const viewportBottom = viewportTop + containerRect.height / zoomLevel;
-
-    // Item dimensions
-    const itemWidth = SCENE_BOX_WIDTH;
-    const itemHeight = SCENE_BOX_HEIGHT;
-
-    // Keep item fully within viewport bounds (no edge overlap)
-    const maxX = viewportRight - itemWidth;
-    const maxY = viewportBottom - itemHeight;
-
-    const constrainedX = Math.max(viewportLeft, Math.min(newX, maxX));
-    const constrainedY = Math.max(viewportTop, Math.min(newY, maxY));
-
-    const snappedX = Math.round(constrainedX / 5) * 5;
-    const snappedY = Math.round(constrainedY / 5) * 5;
-    store.setLastDraggedPosition({
-      itemId: dragItemId,
-      x: snappedX,
-      y: snappedY,
+    updateItemDrag(deps, {
+      clientX: payload._event.clientX,
+      clientY: payload._event.clientY,
     });
-
-    // Dispatch real-time position update to parent (scenes page)
-    dispatchEvent(
-      new CustomEvent("item-position-updating", {
-        detail: {
-          itemId: dragItemId,
-          x: snappedX,
-          y: snappedY,
-        },
-      }),
-    );
   } else if (syncContainerSize(deps)) {
     renderWithCursorSync(deps);
   }
 };
 
 export const handleWindowMouseUp = (deps) => {
-  const { store, refs, dispatchEvent } = deps;
+  const { store, dispatchEvent } = deps;
 
   if (store.selectIsDraggingMinimapViewport()) {
     store.stopMinimapViewportDragging();
@@ -857,41 +1027,7 @@ export const handleWindowMouseUp = (deps) => {
     store.stopPanning();
     renderWithCursorSync(deps);
   } else if (store.selectIsDragging()) {
-    const dragItemId = store.selectDragItemId();
-    const itemElement = Object.values(refs || {}).find(
-      (candidate) => candidate?.dataset?.itemId === dragItemId,
-    );
-
-    const lastDraggedPosition = store.selectLastDraggedPosition();
-    let finalX = lastDraggedPosition?.x;
-    let finalY = lastDraggedPosition?.y;
-
-    if (!Number.isFinite(finalX) || !Number.isFinite(finalY)) {
-      finalX = parseInt(itemElement?.style?.left || "", 10);
-      finalY = parseInt(itemElement?.style?.top || "", 10);
-    }
-
-    if (Number.isFinite(finalX) && Number.isFinite(finalY)) {
-      // Dispatch the final position to update persistent data.
-      dispatchEvent(
-        new CustomEvent("item-position-changed", {
-          detail: {
-            itemId: dragItemId,
-            x: finalX,
-            y: finalY,
-          },
-        }),
-      );
-    } else {
-      console.error("[whiteboard] failed to resolve final dragged position", {
-        itemId: dragItemId,
-        finalX,
-        finalY,
-      });
-    }
-
-    store.stopDragging();
-    store.clearLastDraggedPosition();
+    finishItemDrag(deps);
   }
 
   syncCursorStyles(deps);
@@ -952,6 +1088,12 @@ export const handleWindowBlur = (deps) => {
 
   if (store.selectTouchGesture()) {
     store.stopTouchGesture();
+    didChange = true;
+  }
+
+  if (store.selectIsDragging()) {
+    store.stopDragging();
+    store.clearLastDraggedPosition();
     didChange = true;
   }
 
