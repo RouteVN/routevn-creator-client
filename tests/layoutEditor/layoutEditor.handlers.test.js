@@ -456,6 +456,19 @@ describe("layoutEditor.handleFileExplorerAction", () => {
       parentId: "parent-1",
       position: "first",
     });
+    const createdElementId = createLayoutElement.mock.calls[0][0].elementId;
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: createdElementId,
+    });
+    expect(deps.store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+      itemId: createdElementId,
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: createdElementId,
+    });
+    expect(deps.render.mock.invocationCallOrder[0]).toBeLessThan(
+      deps.refs.fileExplorer.selectItem.mock.invocationCallOrder[0],
+    );
   });
 });
 

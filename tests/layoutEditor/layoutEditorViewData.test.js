@@ -18,6 +18,8 @@ describe("layoutEditorViewData", () => {
       action: "new-child-item",
       type: "container",
       direction: "absolute",
+      anchorX: 0,
+      anchorY: 0,
     });
   });
 
@@ -52,6 +54,26 @@ describe("layoutEditorViewData", () => {
       action: "new-child-item",
       type: "sprite",
       name: "Image",
+      anchorX: 0,
+      anchorY: 0,
+    });
+  });
+
+  it("builds rect create actions with top-left anchor coordinates", () => {
+    const [rectItem] = toLayoutEditorContextMenuItems([
+      {
+        label: "Rect",
+        type: "item",
+        createType: "rect",
+      },
+    ]);
+
+    expect(rectItem.value).toMatchObject({
+      action: "new-child-item",
+      type: "rect",
+      name: "Rect",
+      anchorX: 0,
+      anchorY: 0,
     });
   });
 
