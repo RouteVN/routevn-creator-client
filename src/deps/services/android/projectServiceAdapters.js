@@ -45,6 +45,16 @@ import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
+const PROJECT_FILE_EXTENSION_BY_MIME_TYPE = {
+  "image/gif": "gif",
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/svg+xml": "svg",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
+};
 
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
@@ -309,8 +319,40 @@ const readAndroidProjectFile = ({ projectId, fileId }) => {
   };
 };
 
-const getAndroidProjectFileUrl = ({ projectId, fileId }) =>
-  `https://appassets.androidplatform.net/android-files/projects/${assertSafeAndroidStorageSegment(projectId, { label: "Android project id" })}/files/${encodeURIComponent(fileId)}`;
+const readAndroidProjectFileMetadata = ({ projectId, fileId }) => {
+  const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
+    label: "Android project id",
+  });
+  const safeFileId = assertSafeProjectFileId(fileId);
+  const result = callAndroidBridge("readProjectFileMetadata", {
+    projectId: safeProjectId,
+    fileId: safeFileId,
+  });
+  return {
+    mimeType: result?.mimeType || "application/octet-stream",
+    size: result?.size ?? 0,
+  };
+};
+
+const getProjectFileExtension = (mimeType) => {
+  const normalizedMimeType = String(mimeType ?? "")
+    .trim()
+    .toLowerCase();
+  return PROJECT_FILE_EXTENSION_BY_MIME_TYPE[normalizedMimeType];
+};
+
+const getAndroidProjectFileUrl = ({ projectId, fileId, mimeType }) => {
+  const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
+    label: "Android project id",
+  });
+  const safeFileId = assertSafeProjectFileId(fileId);
+  const extension = getProjectFileExtension(mimeType);
+  if (extension) {
+    return `https://appassets.androidplatform.net/android-files/projects/${safeProjectId}/typed-files/${safeFileId}/asset.${extension}`;
+  }
+
+  return `https://appassets.androidplatform.net/android-files/projects/${safeProjectId}/files/${safeFileId}`;
+};
 
 const copyTemplateFiles = async ({ templateId, projectId, templateData }) => {
   const templateFilesPath = `/templates/${templateId}/files/`;
@@ -469,13 +511,17 @@ export const createAndroidProjectServiceAdapters = ({
       const safeFileId = assertSafeProjectFileId(fileId);
       const arrayBuffer = bytes ?? (await file.arrayBuffer());
       const fileBytes = new Uint8Array(arrayBuffer);
+      const mimeType = resolveProjectFileMimeType({
+        mimeType: file.type,
+        bytes: fileBytes,
+      });
 
       ensureAndroidProjectStorage(resolvedProjectId);
       writeAndroidProjectFile({
         projectId: resolvedProjectId,
         fileId: safeFileId,
         bytes: fileBytes,
-        mimeType: file.type,
+        mimeType,
       });
 
       return {
@@ -483,6 +529,7 @@ export const createAndroidProjectServiceAdapters = ({
         downloadUrl: getAndroidProjectFileUrl({
           projectId: resolvedProjectId,
           fileId: safeFileId,
+          mimeType,
         }),
       };
     },
@@ -491,8 +538,17 @@ export const createAndroidProjectServiceAdapters = ({
       const reference = getCurrentReference();
       const projectId = reference?.repositoryProjectId || reference?.projectId;
       const safeFileId = assertSafeProjectFileId(fileId);
+      const { mimeType } = readAndroidProjectFileMetadata({
+        projectId,
+        fileId: safeFileId,
+      });
       return {
-        url: getAndroidProjectFileUrl({ projectId, fileId: safeFileId }),
+        url: getAndroidProjectFileUrl({
+          projectId,
+          fileId: safeFileId,
+          mimeType,
+        }),
+        type: mimeType,
       };
     },
 

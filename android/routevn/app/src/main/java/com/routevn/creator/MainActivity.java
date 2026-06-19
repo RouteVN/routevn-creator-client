@@ -222,7 +222,7 @@ public class MainActivity extends Activity {
     }
 
     private void handleBackPressed() {
-        if (!canGoBackInWebApp || webView == null) {
+        if (webView == null) {
             finish();
             return;
         }
@@ -390,7 +390,7 @@ public class MainActivity extends Activity {
         public WebResourceResponse handle(String path) {
             try {
                 String normalizedPath = normalizeInternalStoragePath(path);
-                File file = resolveSafeRelativeFile(getFilesDir(), normalizedPath);
+                File file = resolveInternalStorageFileForPath(normalizedPath);
                 if (!file.isFile()) {
                     return null;
                 }
@@ -507,6 +507,20 @@ public class MainActivity extends Activity {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
                 JSONObject result = readProjectFileBytes(
+                    payload.getString("projectId"),
+                    payload.getString("fileId")
+                );
+                return bridgeSuccess(result);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
+        public String readProjectFileMetadata(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                JSONObject result = readProjectFileMetadataRecord(
                     payload.getString("projectId"),
                     payload.getString("fileId")
                 );
@@ -806,7 +820,29 @@ public class MainActivity extends Activity {
 
         JSONObject result = new JSONObject();
         result.put("base64", Base64.encodeToString(readBytes(file), Base64.NO_WRAP));
-        result.put("mimeType", readProjectFileMimeType(safeProjectId, safeFileId));
+        result.put(
+            "mimeType",
+            resolveProjectFileMimeType(safeProjectId, safeFileId, file)
+        );
+        return result;
+    }
+
+    private JSONObject readProjectFileMetadataRecord(String projectId, String fileId)
+        throws Exception {
+        String safeProjectId = safePathSegment(projectId);
+        String safeFileId = safePathSegment(fileId);
+        File projectRoot = getProjectRoot(safeProjectId);
+        File file = resolveSafeRelativeFile(new File(projectRoot, "files"), safeFileId);
+        if (!file.isFile()) {
+            throw new IllegalArgumentException("Project file was not found.");
+        }
+
+        JSONObject result = new JSONObject();
+        result.put(
+            "mimeType",
+            resolveProjectFileMimeType(safeProjectId, safeFileId, file)
+        );
+        result.put("size", file.length());
         return result;
     }
 
@@ -880,6 +916,22 @@ public class MainActivity extends Activity {
         );
     }
 
+    private String resolveProjectFileMimeType(
+        String projectId,
+        String fileId,
+        File file
+    ) throws Exception {
+        String mimeType = readProjectFileMimeType(projectId, fileId);
+        if (isUnreliableMimeType(mimeType)) {
+            String sniffedMimeType = detectMimeTypeFromFile(file);
+            if (sniffedMimeType != null) {
+                return sniffedMimeType;
+            }
+        }
+
+        return normalizeMimeType(mimeType);
+    }
+
     private String readPickerFileMimeType(String requestId, String fileId)
         throws Exception {
         File metadataFile = resolveSafeRelativeFile(
@@ -906,6 +958,10 @@ public class MainActivity extends Activity {
         ) {
             mimeType = readProjectFileMimeType(parts[1], parts[3]);
         } else if (
+            isTypedProjectFilePath(parts)
+        ) {
+            mimeType = readProjectFileMimeType(parts[1], parts[3]);
+        } else if (
             parts.length == 4 &&
             "picker".equals(parts[0]) &&
             "files".equals(parts[2])
@@ -923,6 +979,28 @@ public class MainActivity extends Activity {
         }
 
         return normalizeMimeType(mimeType);
+    }
+
+    private File resolveInternalStorageFileForPath(String normalizedPath)
+        throws Exception {
+        String[] parts = normalizeInternalStoragePath(normalizedPath).split("/");
+        if (isTypedProjectFilePath(parts)) {
+            String safeProjectId = safePathSegment(parts[1]);
+            String safeFileId = safePathSegment(parts[3]);
+            File projectRoot = getProjectRoot(safeProjectId);
+            return resolveSafeRelativeFile(new File(projectRoot, "files"), safeFileId);
+        }
+
+        return resolveSafeRelativeFile(getFilesDir(), normalizedPath);
+    }
+
+    private boolean isTypedProjectFilePath(String[] parts) {
+        return (
+            parts.length == 5 &&
+            "projects".equals(parts[0]) &&
+            "typed-files".equals(parts[2]) &&
+            parts[4].startsWith("asset.")
+        );
     }
 
     private boolean isUnreliableMimeType(String mimeType) {

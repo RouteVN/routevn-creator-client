@@ -63,6 +63,19 @@ const notifyAndroidBackState = () => {
 
 router.setOnStackChange(notifyAndroidBackState);
 window.routeVNNativeBack = () => {
+  const backRequest = {
+    handled: false,
+    handle() {
+      this.handled = true;
+    },
+  };
+
+  subject.dispatch("app.nativeBack", backRequest);
+  if (backRequest.handled) {
+    notifyAndroidBackState();
+    return true;
+  }
+
   const didGoBack = router.back();
   if (didGoBack) {
     subject.dispatch("app.route.request", {

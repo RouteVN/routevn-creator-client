@@ -1,3 +1,4 @@
+import { filter, tap } from "rxjs";
 import { constructProjectData } from "../../internal/project/projection.js";
 import {
   extractFileIdsForLayouts,
@@ -580,7 +581,7 @@ const createBeforeHandleActionsHook = (
 };
 
 export const handleBeforeMount = (deps) => {
-  const { dispatchEvent, store, graphicsService, refs } = deps;
+  const { dispatchEvent, store, graphicsService, refs, subject } = deps;
   function handleKeyDown(event) {
     if (event.key !== "Escape") {
       if (
@@ -606,6 +607,16 @@ export const handleBeforeMount = (deps) => {
     }
   }
 
+  const nativeBackSubscription = subject
+    ?.pipe(
+      filter(({ action }) => action === "app.nativeBack"),
+      tap(({ payload }) => {
+        payload?.handle?.();
+        dispatchEvent(new CustomEvent("close"));
+      }),
+    )
+    .subscribe();
+
   window.addEventListener("keydown", handleKeyDown, true);
   window.addEventListener("keyup", handleKeyUp, true);
 
@@ -614,6 +625,7 @@ export const handleBeforeMount = (deps) => {
     store.setPreviewReady({ isPreviewReady: false });
     resetAssetLoadCache(store);
     void graphicsService.destroy?.();
+    nativeBackSubscription?.unsubscribe();
     window.removeEventListener("keydown", handleKeyDown, true);
     window.removeEventListener("keyup", handleKeyUp, true);
   };
