@@ -6,6 +6,8 @@ import {
 
 const DEFAULT_ENSURE_VISIBLE_PAN_DURATION_MS = 160;
 const MAX_ENSURE_VISIBLE_PAN_DURATION_MS = 320;
+const TOUCH_ITEM_DRAG_THRESHOLD_PX = 6;
+const TOUCH_ITEM_LONG_PRESS_MS = 500;
 
 const syncContainerSize = ({ store, refs } = {}) => {
   const container = refs?.container;
@@ -238,6 +240,16 @@ const getItemIdFromElement = (element) => {
   return element?.dataset?.itemId || "";
 };
 
+const getItemElementByIdFromRefs = (refs, itemId) => {
+  if (!itemId) {
+    return undefined;
+  }
+
+  return Object.values(refs || {}).find(
+    (candidate) => candidate?.dataset?.itemId === itemId,
+  );
+};
+
 const getItemElementFromEventTarget = (event, container) => {
   const path =
     typeof event?.composedPath === "function" ? event.composedPath() : [];
@@ -268,6 +280,39 @@ const getItemElementFromEventTarget = (event, container) => {
   }
 
   return itemElement;
+};
+
+const dispatchItemSelected = ({ dispatchEvent } = {}, { itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("item-selected", {
+      detail: { itemId },
+    }),
+  );
+};
+
+const dispatchItemContextMenu = (
+  { dispatchEvent } = {},
+  { itemId, clientX, clientY } = {},
+) => {
+  if (!itemId) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("item-context-menu", {
+      detail: {
+        itemId,
+        x: clientX,
+        y: clientY,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 const getCanvasPointerPosition = (
@@ -303,7 +348,13 @@ const parseItemStylePosition = (position) => {
 
 const startItemDrag = (
   deps,
-  { itemElement, itemId, clientX, clientY } = {},
+  {
+    itemElement,
+    itemId,
+    clientX,
+    clientY,
+    shouldDispatchSelection = true,
+  } = {},
 ) => {
   const { store, dispatchEvent } = deps;
   if (!itemElement || !itemId) {
@@ -333,13 +384,99 @@ const startItemDrag = (
     y: itemY,
   });
 
-  dispatchEvent(
-    new CustomEvent("item-selected", {
-      detail: { itemId },
-    }),
-  );
+  if (shouldDispatchSelection) {
+    dispatchItemSelected({ dispatchEvent }, { itemId });
+  }
 
   return true;
+};
+
+const clearTouchLongPressTimeout = ({ store } = {}) => {
+  const gesture = store?.selectTouchGesture?.();
+  const timeoutId = gesture?.longPressTimeoutId;
+  if (
+    timeoutId !== undefined &&
+    typeof globalThis.clearTimeout === "function"
+  ) {
+    globalThis.clearTimeout(timeoutId);
+  }
+  store?.clearTouchLongPressTimeoutId?.();
+};
+
+const stopTouchGesture = (deps) => {
+  clearTouchLongPressTimeout(deps);
+  deps.store.stopTouchGesture();
+};
+
+const startTouchItemPress = (
+  deps,
+  { itemElement, itemId, clientX, clientY } = {},
+) => {
+  const { store, dispatchEvent } = deps;
+  if (!itemElement || !itemId) {
+    return false;
+  }
+
+  const timeoutId =
+    typeof globalThis.setTimeout === "function"
+      ? globalThis.setTimeout(() => {
+          const gesture = store.selectTouchGesture();
+          if (
+            gesture?.type !== "item-press" ||
+            gesture.itemId !== itemId ||
+            gesture.hasMoved ||
+            gesture.longPressFired
+          ) {
+            return;
+          }
+
+          store.markTouchItemLongPressed();
+          dispatchItemContextMenu(
+            { dispatchEvent },
+            {
+              itemId,
+              clientX,
+              clientY,
+            },
+          );
+        }, TOUCH_ITEM_LONG_PRESS_MS)
+      : undefined;
+
+  store.startTouchItemPress({
+    itemId,
+    startClientX: clientX,
+    startClientY: clientY,
+    longPressTimeoutId: timeoutId,
+  });
+  dispatchItemSelected({ dispatchEvent }, { itemId });
+  return true;
+};
+
+const startItemDragFromTouchPress = (deps, { clientX, clientY } = {}) => {
+  const { store, refs } = deps;
+  const gesture = store.selectTouchGesture();
+  if (gesture?.type !== "item-press" || gesture.longPressFired) {
+    return false;
+  }
+
+  const itemElement = getItemElementByIdFromRefs(refs, gesture.itemId);
+  clearTouchLongPressTimeout(deps);
+  const didStartDrag = startItemDrag(deps, {
+    itemElement,
+    itemId: gesture.itemId,
+    clientX: gesture.startClientX,
+    clientY: gesture.startClientY,
+    shouldDispatchSelection: false,
+  });
+
+  if (didStartDrag) {
+    store.stopTouchGesture();
+    updateItemDrag(deps, { clientX, clientY });
+    return true;
+  }
+
+  store.stopTouchGesture();
+  return false;
 };
 
 const updateItemDrag = (deps, { clientX, clientY } = {}) => {
@@ -630,6 +767,7 @@ export const handleContainerTouchStart = (deps, payload) => {
   syncContainerSize(deps);
 
   if (touchCount >= 2) {
+    clearTouchLongPressTimeout(deps);
     preventTouchDefault(event);
     event.stopPropagation();
 
@@ -653,7 +791,7 @@ export const handleContainerTouchStart = (deps, payload) => {
     const touchClientPoint = getTouchClientPoint(event);
     preventTouchDefault(event);
     event.stopPropagation();
-    startItemDrag(deps, {
+    startTouchItemPress(deps, {
       itemElement,
       itemId,
       clientX: touchClientPoint?.clientX,
@@ -687,6 +825,41 @@ export const handleContainerTouchMove = (deps, payload) => {
       clientX: touchClientPoint?.clientX,
       clientY: touchClientPoint?.clientY,
     });
+    return;
+  }
+
+  const gesture = store.selectTouchGesture();
+  if (gesture?.type === "item-press") {
+    preventTouchDefault(event);
+    event.stopPropagation();
+
+    if (gesture.longPressFired) {
+      return;
+    }
+
+    const touchClientPoint = getTouchClientPoint(event);
+    if (!touchClientPoint) {
+      return;
+    }
+
+    if (touchCount >= 2) {
+      clearTouchLongPressTimeout(deps);
+      const metrics = getTouchPairMetrics(event, refs.container);
+      if (metrics) {
+        store.startTouchPinch(metrics);
+      }
+      return;
+    }
+
+    store.updateTouchItemPress({
+      clientX: touchClientPoint.clientX,
+      clientY: touchClientPoint.clientY,
+      moveThreshold: TOUCH_ITEM_DRAG_THRESHOLD_PX,
+    });
+
+    if (store.selectTouchGesture()?.hasMoved) {
+      startItemDragFromTouchPress(deps, touchClientPoint);
+    }
     return;
   }
 
@@ -743,6 +916,16 @@ export const handleContainerTouchEnd = (deps, payload) => {
     return;
   }
 
+  if (gesture?.type === "item-press") {
+    preventTouchDefault(event);
+    event.stopPropagation();
+
+    if (touchCount === 0) {
+      stopTouchGesture(deps);
+    }
+    return;
+  }
+
   if (gesture?.hasMoved || gesture?.type === "pinch") {
     preventTouchDefault(event);
   }
@@ -766,7 +949,7 @@ export const handleContainerTouchEnd = (deps, payload) => {
     return;
   }
 
-  store.stopTouchGesture();
+  stopTouchGesture(deps);
 };
 
 export const handleContainerTouchCancel = (deps, payload) => {
@@ -775,7 +958,7 @@ export const handleContainerTouchCancel = (deps, payload) => {
     deps.store.stopDragging();
     deps.store.clearLastDraggedPosition();
   }
-  deps.store.stopTouchGesture();
+  stopTouchGesture(deps);
 };
 
 export const handleContainerGestureEvent = (_deps, payload) => {
@@ -1087,6 +1270,7 @@ export const handleWindowBlur = (deps) => {
   }
 
   if (store.selectTouchGesture()) {
+    clearTouchLongPressTimeout(deps);
     store.stopTouchGesture();
     didChange = true;
   }

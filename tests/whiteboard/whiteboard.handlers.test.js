@@ -128,6 +128,7 @@ const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
   let dragOffset = { x: 0, y: 0 };
   let lastDraggedPosition;
   let containerSize = { width: 600, height: 420 };
+  let touchGesture;
   const itemElement = {
     dataset: { itemId: "scene-1" },
     style: {
@@ -164,10 +165,41 @@ const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
     clearLastDraggedPosition: vi.fn(() => {
       lastDraggedPosition = undefined;
     }),
-    selectTouchGesture: vi.fn(() => undefined),
+    startTouchItemPress: vi.fn((gesture) => {
+      touchGesture = {
+        type: "item-press",
+        ...gesture,
+        hasMoved: false,
+        longPressFired: false,
+      };
+    }),
+    updateTouchItemPress: vi.fn(({ clientX, clientY, moveThreshold }) => {
+      if (touchGesture?.type !== "item-press") {
+        return;
+      }
+
+      const deltaX = clientX - touchGesture.startClientX;
+      const deltaY = clientY - touchGesture.startClientY;
+      touchGesture.hasMoved =
+        touchGesture.hasMoved || Math.hypot(deltaX, deltaY) > moveThreshold;
+    }),
+    markTouchItemLongPressed: vi.fn(() => {
+      if (touchGesture?.type === "item-press") {
+        touchGesture.longPressFired = true;
+        touchGesture.longPressTimeoutId = undefined;
+      }
+    }),
+    clearTouchLongPressTimeoutId: vi.fn(() => {
+      if (touchGesture?.type === "item-press") {
+        touchGesture.longPressTimeoutId = undefined;
+      }
+    }),
+    selectTouchGesture: vi.fn(() => touchGesture),
     startTouchPan: vi.fn(),
     updateTouchPan: vi.fn(),
-    stopTouchGesture: vi.fn(),
+    stopTouchGesture: vi.fn(() => {
+      touchGesture = undefined;
+    }),
   };
   const refs = {
     container: {
@@ -306,7 +338,7 @@ describe("whiteboard minimap drag handlers", () => {
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
   });
 
-  it("drags the selected item from a one-finger touch instead of panning", () => {
+  it("drags the selected item after a one-finger touch moves", () => {
     const deps = createTouchDragDeps();
     const touchStartEvent = createTouchEvent({
       target: deps.target,
@@ -320,10 +352,23 @@ describe("whiteboard minimap drag handlers", () => {
 
     expect(touchStartEvent.preventDefault).toHaveBeenCalledTimes(1);
     expect(touchStartEvent.stopPropagation).toHaveBeenCalledTimes(1);
-    expect(deps.store.startDragging).toHaveBeenCalledWith({
-      itemId: "scene-1",
-    });
+    expect(deps.store.startTouchItemPress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemId: "scene-1",
+        startClientX: 110,
+        startClientY: 80,
+      }),
+    );
+    expect(deps.store.startDragging).not.toHaveBeenCalled();
     expect(deps.store.startTouchPan).not.toHaveBeenCalled();
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-selected",
+        detail: {
+          itemId: "scene-1",
+        },
+      }),
+    );
 
     const touchMoveEvent = createTouchEvent({
       target: deps.target,
@@ -334,6 +379,9 @@ describe("whiteboard minimap drag handlers", () => {
       _event: touchMoveEvent,
     });
 
+    expect(deps.store.startDragging).toHaveBeenCalledWith({
+      itemId: "scene-1",
+    });
     expect(deps.store.updateTouchPan).not.toHaveBeenCalled();
     expect(deps.dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -365,6 +413,48 @@ describe("whiteboard minimap drag handlers", () => {
       }),
     );
     expect(deps.store.stopDragging).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the item context menu after a stationary long press", () => {
+    vi.useFakeTimers();
+    try {
+      const deps = createTouchDragDeps();
+      const touchStartEvent = createTouchEvent({
+        target: deps.target,
+        clientX: 110,
+        clientY: 80,
+      });
+
+      handleContainerTouchStart(deps, {
+        _event: touchStartEvent,
+      });
+
+      vi.advanceTimersByTime(500);
+
+      expect(deps.store.startDragging).not.toHaveBeenCalled();
+      expect(deps.dispatchEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "item-context-menu",
+          detail: {
+            itemId: "scene-1",
+            x: 110,
+            y: 80,
+          },
+        }),
+      );
+
+      const touchEndEvent = createTouchEvent({
+        target: deps.target,
+        touches: [],
+      });
+      handleContainerTouchEnd(deps, {
+        _event: touchEndEvent,
+      });
+
+      expect(deps.store.stopTouchGesture).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps one-finger pan when touch starts on the background", () => {
