@@ -16,6 +16,7 @@ import {
   handleGetBackgroundTransformPreviewCanvasRoot,
   handleAudioPlayerClose,
   handleEmbeddedCloseClick,
+  handleOnUpdate,
   handleCommandLineSubmit,
   handleTemporaryPresentationStateChange,
   handleVoicePreviewClick,
@@ -889,5 +890,89 @@ describe("systemActions.handlers", () => {
       title: "",
     });
     expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("warns when a voice action has no previewable audio file", () => {
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const showAlert = vi.fn();
+    const render = vi.fn();
+
+    handleVoicePreviewClick(
+      {
+        appService: {
+          showAlert,
+        },
+        store: {
+          selectVoicePreview: () => ({
+            id: "voice-line-1",
+            name: "Aki Line 1",
+          }),
+          openAudioPlayer: vi.fn(),
+        },
+        render,
+      },
+      {
+        _event: {
+          preventDefault,
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(showAlert).toHaveBeenCalledWith({
+      message: "Voice preview audio is unavailable.",
+      title: "Warning",
+    });
+    expect(render).not.toHaveBeenCalled();
+  });
+
+  it("refreshes repository resources when system action props update", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+
+    handleOnUpdate(
+      {
+        projectService: {
+          getRepositoryState: () => ({
+            voices: {
+              items: {
+                "voice-line-1": {
+                  id: "voice-line-1",
+                  type: "voice",
+                  name: "Aki Line 1",
+                  fileId: "file-voice-line-1",
+                },
+              },
+              tree: [{ id: "voice-line-1" }],
+            },
+          }),
+        },
+        store: {
+          setRepositoryState: (payload) =>
+            setRepositoryState({ state }, payload),
+          updateActions: (payload) => updateActions({ state }, payload),
+        },
+        render,
+      },
+      {
+        newProps: {
+          actions: {
+            voice: {
+              resourceId: "voice-line-1",
+            },
+          },
+        },
+      },
+    );
+
+    expect(selectVoicePreview({ state, props: {} })).toMatchObject({
+      id: "voice-line-1",
+      name: "Aki Line 1",
+      fileId: "file-voice-line-1",
+    });
+    expect(render).toHaveBeenCalledTimes(1);
   });
 });

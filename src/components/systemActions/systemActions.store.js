@@ -515,6 +515,7 @@ export const selectActionsData = ({ props, state }) => {
   const videos = repositoryStateData.videos?.items || {};
   const sounds = repositoryStateData.sounds?.items || {};
   const voices = repositoryStateData.voices?.items || {};
+  const files = repositoryStateData.files?.items || {};
   const animations = repositoryStateData.animations?.items || {};
   const colors = repositoryStateData.colors?.items || {};
   const scenes = repositoryStateData.scenes || {};
@@ -593,7 +594,14 @@ export const selectActionsData = ({ props, state }) => {
   if (voiceAction?.resourceId) {
     actionsObject.voice = voiceAction;
     preview.voice = voices[voiceAction.resourceId] ??
-      sounds[voiceAction.resourceId] ?? {
+      sounds[voiceAction.resourceId] ??
+      (files[voiceAction.resourceId]
+        ? {
+            id: voiceAction.resourceId,
+            name: files[voiceAction.resourceId].name ?? voiceAction.resourceId,
+            fileId: voiceAction.resourceId,
+          }
+        : undefined) ?? {
         id: voiceAction.resourceId,
         name: voiceAction.resourceId,
       };

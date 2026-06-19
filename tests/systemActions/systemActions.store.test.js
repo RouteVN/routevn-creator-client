@@ -259,6 +259,48 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("previews legacy voice actions that reference a file id directly", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          files: {
+            items: {
+              "file-voice-line-1": {
+                id: "file-voice-line-1",
+                name: "Aki Line 1.ogg",
+                mimeType: "audio/ogg",
+              },
+            },
+            tree: [{ id: "file-voice-line-1" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          voice: {
+            resourceId: "file-voice-line-1",
+          },
+        },
+      },
+    });
+
+    expect(actions.voice).toEqual({
+      resourceId: "file-voice-line-1",
+    });
+    expect(preview.voice).toMatchObject({
+      id: "file-voice-line-1",
+      name: "Aki Line 1.ogg",
+      fileId: "file-voice-line-1",
+    });
+  });
+
   it("exposes inline voice preview player state", () => {
     const state = createInitialState();
 

@@ -98,8 +98,7 @@ template:
                   - rtgl-view#actionItemVoice data-mode=voice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=microphone wh=24: null
                       - rtgl-text s=sm w=1fg ellipsis=true: ${preview.voice.name}
-                      - $if preview.voice.fileId:
-                          - rtgl-button#voicePreviewButton sq v=gh pre=play: null
+                      - 'rtgl-button#voicePreviewButton sq v=ol pre=play title="Preview voice" aria-label="Preview voice"': null
               - $if preview.sfx:
                   - rtgl-view#actionItemSfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=audio wh=24: null
