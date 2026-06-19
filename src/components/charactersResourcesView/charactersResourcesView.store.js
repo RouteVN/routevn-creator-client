@@ -7,6 +7,7 @@ import {
   selectTagFilterPopoverDraftTagIds,
   toggleTagFilterPopoverTagId,
 } from "../../internal/ui/tagFilterPopover.js";
+import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 export const createInitialState = () => ({
   collapsedIds: [],
@@ -88,6 +89,10 @@ export const selectViewData = ({ state, props }) => {
   const hasActiveSearch = searchQuery.trim().length > 0;
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
+  const scrollBottomPadding = resolveResourceScrollBottomPadding({
+    mobileLayout,
+    scrollBottomPadding: props.scrollBottomPadding,
+  });
   const tagFilterPopoverViewData = buildTagFilterPopoverViewData({
     state,
     props,
@@ -145,6 +150,7 @@ export const selectViewData = ({ state, props }) => {
           : `No characters found matching "${searchQuery}"`),
     addText: props.addText ?? "Add Character",
     mobileLayout,
+    scrollBottomPadding,
     dropdownMenu: state.dropdownMenu,
   };
 };

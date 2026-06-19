@@ -1440,8 +1440,9 @@ export const handleActionTransformEditorDone = (deps, payload) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { projectService, appService, store } = deps;
+  const { projectService, appService, store, uiConfig } = deps;
   store.setScenePageLoading({ isLoading: true });
+  store.setUiConfig({ uiConfig });
   const showLineNumbers =
     appService.getUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY) ?? true;
   const isMuted = appService.getUserConfig(IS_MUTED_CONFIG_KEY) ?? false;
@@ -2078,6 +2079,39 @@ export const handleAddActionsButtonClick = (deps) => {
   refs.systemActions?.transformedHandlers?.open?.({
     mode: "actions",
   });
+  render();
+};
+
+export const handleMobileKeyboardToolbarActionClick = (deps, payload) => {
+  const actionId = payload?._event?.detail?.actionId;
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  if (actionId === "actions" || actionId === "add-actions") {
+    handleAddActionsButtonClick(deps);
+    return;
+  }
+
+  if (actionId === "preview") {
+    handlePreviewClick(deps, payload);
+    return;
+  }
+
+  if (actionId === "sections-overview") {
+    handleSectionsOverviewClick(deps, payload);
+    return;
+  }
+
+  if (actionId === "scene-settings") {
+    handleSceneSettingsClick(deps);
+  }
+};
+
+export const handleMobileKeyboardStateChange = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload?._event?.detail || {};
+
+  store.setMobileKeyboardState(detail);
   render();
 };
 

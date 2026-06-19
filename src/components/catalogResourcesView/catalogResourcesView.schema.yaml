@@ -76,6 +76,9 @@ propsSchema:
     mobileLayout:
       type: boolean
       description: Whether cards should use the touch/mobile full-width layout
+    scrollBottomPadding:
+      type: string
+      description: Extra bottom padding inside the scroll container
     itemContextMenuItems:
       type: array
       description: Context menu items for catalog cards

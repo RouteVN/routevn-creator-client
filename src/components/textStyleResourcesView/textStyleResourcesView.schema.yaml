@@ -61,6 +61,9 @@ propsSchema:
     mobileLayout:
       type: boolean
       description: Whether cards should use the touch/mobile full-width layout
+    scrollBottomPadding:
+      type: string
+      description: Extra bottom padding inside the scroll container
     addText:
       type: string
       description: Text to display in add affordances

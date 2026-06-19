@@ -17,6 +17,7 @@ import {
   selectTagFilterPopoverDraftTagIds,
   toggleTagFilterPopoverTagId,
 } from "../../internal/ui/tagFilterPopover.js";
+import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const DEFAULT_FORM_VALUES = {
   name: "",
@@ -373,6 +374,10 @@ export const selectViewData = ({ state, props }) => {
     props,
   });
   const mobileLayout = parseBooleanProp(props.mobileLayout);
+  const scrollBottomPadding = resolveResourceScrollBottomPadding({
+    mobileLayout,
+    scrollBottomPadding: props.scrollBottomPadding,
+  });
 
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
@@ -505,6 +510,7 @@ export const selectViewData = ({ state, props }) => {
     showFilterPopoverSearch: searchInFilterPopover,
     showMenuButton: parseBooleanProp(props.showMenuButton),
     mobileLayout,
+    scrollBottomPadding,
     hasActiveTagFilter,
     tagFilterButtonBackgroundColor: hasActiveFilter ? "ac" : "bg",
     tagFilterButtonBorderColor: hasActiveFilter ? "ac" : "bo",

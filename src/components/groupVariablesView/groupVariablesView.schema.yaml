@@ -38,6 +38,9 @@ propsSchema:
     mobileLayout:
       type: boolean
       description: Whether to use the mobile layout
+    scrollBottomPadding:
+      type: string
+      description: Extra bottom padding inside the scroll container
     readonly:
       type: boolean
       description: Whether the view should disable add/edit/delete affordances

@@ -1,6 +1,19 @@
 export const isTouchUiConfig = (uiConfig) =>
   uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 
+export const MOBILE_RESOURCE_SCROLL_BOTTOM_PADDING =
+  "calc(96px + env(safe-area-inset-bottom))";
+
+export const resolveResourceScrollBottomPadding = ({
+  mobileLayout,
+  scrollBottomPadding,
+} = {}) => {
+  return (
+    scrollBottomPadding ??
+    (mobileLayout ? MOBILE_RESOURCE_SCROLL_BOTTOM_PADDING : "0px")
+  );
+};
+
 export const createMobileResourcePageState = () => ({
   isTouchMode: false,
   isMobileFileExplorerOpen: false,

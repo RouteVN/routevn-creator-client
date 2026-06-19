@@ -82,12 +82,6 @@ const releaseItems = [
     path: "/project/releases/versions",
     icon: "rocket",
   },
-  {
-    id: "web-server",
-    label: "Web Server",
-    path: "/project/releases/web-server",
-    icon: "website",
-  },
 ];
 
 const settingsItems = [

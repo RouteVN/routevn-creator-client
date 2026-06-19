@@ -7,6 +7,7 @@ import {
   selectTagFilterPopoverDraftTagIds,
   toggleTagFilterPopoverTagId,
 } from "../../internal/ui/tagFilterPopover.js";
+import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const DEFAULT_ITEMS_PER_ROW = 6;
 const MIN_ITEMS_PER_ROW = 1;
@@ -139,9 +140,15 @@ export const selectViewData = ({ state, props }) => {
   const mobileLayout = parseBooleanProp(props.mobileLayout);
   const useColumnZoomControl = !mobileLayout && isColumnZoomControlMode(props);
   const itemsPerRow = mobileLayout ? 1 : clampItemsPerRow(state.itemsPerRow);
-  const cardGridColumns = useColumnZoomControl
-    ? `${itemsPerRow}`
-    : buildAutoFillGridColumns(DEFAULT_CARD_WIDTH);
+  const cardGridColumns = mobileLayout
+    ? "1"
+    : useColumnZoomControl
+      ? `${itemsPerRow}`
+      : buildAutoFillGridColumns(DEFAULT_CARD_WIDTH);
+  const scrollBottomPadding = resolveResourceScrollBottomPadding({
+    mobileLayout,
+    scrollBottomPadding: props.scrollBottomPadding,
+  });
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
   const searchQuery = props.searchQuery ?? "";
   const searchInFilterPopover = parseBooleanProp(props.searchInFilterPopover);
@@ -224,5 +231,6 @@ export const selectViewData = ({ state, props }) => {
     addText: props.addText ?? "Add Text Style",
     dropdownMenu: state.dropdownMenu,
     mobileLayout,
+    scrollBottomPadding,
   };
 };

@@ -35,6 +35,9 @@ const SCENE_EDITOR_FONT_SIZE_OPTIONS = [
   { value: "xl", label: "Extra Large" },
 ];
 const DEFAULT_SCENE_EDITOR_FONT_SIZE = "md";
+const MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX = 48;
+const MOBILE_PREVIEW_VERTICAL_PADDING_PX = 16;
+const MOBILE_PREVIEW_MIN_HEIGHT_PX = 72;
 
 const normalizeSceneEditorFontSize = (fontSize) =>
   SCENE_EDITOR_FONT_SIZE_OPTIONS.some((option) => option.value === fontSize)
@@ -563,6 +566,16 @@ const buildProjectDataSourceState = (state) => {
 };
 
 export const createInitialState = () => ({
+  isTouchMode: false,
+  mobileKeyboardState: {
+    isVisible: false,
+    bottom: 0,
+    keyboardInset: 0,
+    visualOffsetTop: 0,
+    pageTop: 0,
+    visualHeight: 0,
+    layoutHeight: 0,
+  },
   sceneId: undefined,
   selectedLineId: undefined,
   sectionsGraphView: false,
@@ -665,6 +678,44 @@ export const createInitialState = () => ({
 
 export const setSceneId = ({ state }, { sceneId } = {}) => {
   state.sceneId = sceneId;
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
+export const setMobileKeyboardState = (
+  { state },
+  {
+    isVisible,
+    bottom,
+    keyboardInset,
+    visualOffsetTop,
+    pageTop,
+    visualHeight,
+    layoutHeight,
+  } = {},
+) => {
+  state.mobileKeyboardState.isVisible = isVisible === true;
+  state.mobileKeyboardState.bottom = Number.isFinite(bottom)
+    ? Math.max(0, Math.round(bottom))
+    : 0;
+  state.mobileKeyboardState.keyboardInset = Number.isFinite(keyboardInset)
+    ? Math.max(0, Math.round(keyboardInset))
+    : 0;
+  state.mobileKeyboardState.visualOffsetTop = Number.isFinite(visualOffsetTop)
+    ? Math.max(0, Math.round(visualOffsetTop))
+    : 0;
+  state.mobileKeyboardState.pageTop = Number.isFinite(pageTop)
+    ? Math.max(0, Math.round(pageTop))
+    : 0;
+  state.mobileKeyboardState.visualHeight = Number.isFinite(visualHeight)
+    ? Math.max(0, Math.round(visualHeight))
+    : 0;
+  state.mobileKeyboardState.layoutHeight = Number.isFinite(layoutHeight)
+    ? Math.max(0, Math.round(layoutHeight))
+    : 0;
 };
 
 export const setRepositoryState = ({ state }, { repository } = {}) => {
@@ -1520,6 +1571,49 @@ const selectPreviewCanvasMaxWidth = ({ state }) => {
   return `min(100%, ${maxWidthVh}vh)`;
 };
 
+const selectMobilePreviewCanvasMaxWidth = ({ state }) => {
+  const defaultMaxWidth = selectPreviewCanvasMaxWidth({ state });
+  if (!state.isTouchMode || !state.mobileKeyboardState?.isVisible) {
+    return defaultMaxWidth;
+  }
+
+  const visualHeight = Number(state.mobileKeyboardState.visualHeight);
+  if (!Number.isFinite(visualHeight) || visualHeight <= 0) {
+    return defaultMaxWidth;
+  }
+
+  const widthMultiplier = selectCanvasAspectRatioWidthMultiplier({ state });
+  const reservedHeight =
+    MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX + MOBILE_PREVIEW_VERTICAL_PADDING_PX;
+  const availableCanvasHeight = Math.max(
+    MOBILE_PREVIEW_MIN_HEIGHT_PX,
+    visualHeight - reservedHeight,
+  );
+  const maxWidthPx = Number(
+    (availableCanvasHeight * widthMultiplier).toFixed(4),
+  );
+
+  return `min(100%, ${maxWidthPx}px)`;
+};
+
+const selectMobileEditorBottomSpacerHeight = ({ state }) => {
+  if (!state.isTouchMode || !state.mobileKeyboardState?.isVisible) {
+    return "30vh";
+  }
+
+  const keyboardInset = Math.max(
+    0,
+    Number(state.mobileKeyboardState.keyboardInset) || 0,
+  );
+  const visualHeight = Math.max(
+    0,
+    Number(state.mobileKeyboardState.visualHeight) || 0,
+  );
+  const scrollRoom = Math.max(260, Math.round(visualHeight * 0.9));
+
+  return `${keyboardInset + MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX + scrollRoom}px`;
+};
+
 const selectSystemActionsDialogPanelWidth = ({ state }) => {
   return state.backgroundTransformEditor.isOpen === true
     ? "calc(100vw - 64px)"
@@ -1587,6 +1681,10 @@ export const selectViewData = ({ state }) => {
       previewLineId: state.previewLineId,
       canvasAspectRatio: selectCanvasAspectRatio({ state }),
       previewCanvasMaxWidth: selectPreviewCanvasMaxWidth({ state }),
+      mobilePreviewCanvasMaxWidth: selectMobilePreviewCanvasMaxWidth({ state }),
+      mobileEditorBottomSpacerHeight: selectMobileEditorBottomSpacerHeight({
+        state,
+      }),
       systemActionsDialogPanelWidth: selectSystemActionsDialogPanelWidth({
         state,
       }),
@@ -1605,6 +1703,7 @@ export const selectViewData = ({ state }) => {
       backgroundTransformEditor: selectBackgroundTransformEditorViewData({
         state,
       }),
+      isTouchMode: state.isTouchMode,
     };
   }
 
@@ -1883,6 +1982,10 @@ export const selectViewData = ({ state }) => {
     previewLineId: state.previewLineId,
     canvasAspectRatio: selectCanvasAspectRatio({ state }),
     previewCanvasMaxWidth: selectPreviewCanvasMaxWidth({ state }),
+    mobilePreviewCanvasMaxWidth: selectMobilePreviewCanvasMaxWidth({ state }),
+    mobileEditorBottomSpacerHeight: selectMobileEditorBottomSpacerHeight({
+      state,
+    }),
     systemActionsDialogPanelWidth: selectSystemActionsDialogPanelWidth({
       state,
     }),
@@ -1902,6 +2005,7 @@ export const selectViewData = ({ state }) => {
     backgroundTransformEditor: selectBackgroundTransformEditorViewData({
       state,
     }),
+    isTouchMode: state.isTouchMode,
   };
 };
 
