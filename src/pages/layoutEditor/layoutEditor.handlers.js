@@ -602,7 +602,13 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
   }
   render();
   if (payload.selectedItemId) {
-    refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
+    scheduleAfterNextPaint(() => {
+      if (store.selectSelectedItemId() !== payload.selectedItemId) {
+        return;
+      }
+
+      refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
+    });
   }
 };
 
