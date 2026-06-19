@@ -9,7 +9,7 @@ import {
 } from "../../src/components/commandLineVoice/commandLineVoice.store.js";
 
 describe("commandLineVoice.store", () => {
-  it("keeps voice volume optional until the user changes it", () => {
+  it("defaults missing voice volume to 100 and allows changes", () => {
     const state = createInitialState();
 
     setRepositoryState(
@@ -38,10 +38,11 @@ describe("commandLineVoice.store", () => {
       },
     );
 
-    expect(selectViewData({ state }).voice.volume).toBe(75);
+    expect(selectViewData({ state }).voice.volume).toBe(100);
     expect(selectVoicePayload({ state })).toEqual({
       resourceId: "voice-1",
       loop: false,
+      volume: 100,
     });
 
     setVolume({ state }, { volume: 80 });

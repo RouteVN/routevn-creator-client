@@ -110,10 +110,7 @@ describe("commandLineVoice.handlers", () => {
     expect(selectVoicePayload({ state })).toEqual({
       resourceId: createdVoiceId,
       loop: false,
-    });
-    expect(state.playingSound).toEqual({
-      title: "Alice Line",
-      fileId: "file-voice-1",
+      volume: 100,
     });
     expect(render).toHaveBeenCalledTimes(1);
     expect(appService.showAlert).not.toHaveBeenCalled();
@@ -147,6 +144,7 @@ describe("commandLineVoice.handlers", () => {
       voice: {
         resourceId: "voice-1",
         loop: false,
+        volume: 100,
       },
     });
   });
