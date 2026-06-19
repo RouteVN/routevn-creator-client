@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleBeforeMount,
   handleDownloadZipClick,
+  handleMobileDetailSheetClose,
   handleVersionFormAction,
 } from "../../src/pages/versions/versions.handlers.js";
 import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
@@ -59,6 +61,27 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
   };
 };
 
+describe("versions lifecycle", () => {
+  it("syncs touch UI config before mount", () => {
+    const setUiConfig = vi.fn();
+    const deps = {
+      store: {
+        setUiConfig,
+      },
+      uiConfig: {
+        id: "touch",
+        inputMode: "touch",
+      },
+    };
+
+    handleBeforeMount(deps);
+
+    expect(setUiConfig).toHaveBeenCalledWith({
+      uiConfig: deps.uiConfig,
+    });
+  });
+});
+
 describe("versions.handleVersionFormAction", () => {
   it("uses repository revision to create a version without loading full history", async () => {
     const repository = {
@@ -94,6 +117,25 @@ describe("versions.handleVersionFormAction", () => {
       }),
     );
     expect(deps.store.closeVersionDialog).toHaveBeenCalled();
+  });
+});
+
+describe("versions.handleMobileDetailSheetClose", () => {
+  it("clears the selected version when the mobile detail sheet closes", () => {
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "version-1"),
+        setSelectedItemId: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleMobileDetailSheetClose(deps);
+
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -208,7 +250,9 @@ describe("versions.handleDownloadZipClick", () => {
       },
     });
 
-    expect(deps.projectService.createDistributionZipStreamed).toHaveBeenCalled();
+    expect(
+      deps.projectService.createDistributionZipStreamed,
+    ).toHaveBeenCalled();
     expect(
       deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
     ).toEqual([{ fileId: "file-1", mimeType: "image/png" }]);
@@ -326,7 +370,9 @@ describe("versions.handleDownloadZipClick", () => {
       },
     });
 
-    expect(deps.projectService.createDistributionZipStreamed).toHaveBeenCalled();
+    expect(
+      deps.projectService.createDistributionZipStreamed,
+    ).toHaveBeenCalled();
     expect(
       deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
     ).toEqual([{ fileId: "file-font-1" }]);

@@ -95,6 +95,11 @@ const formatReplayFailureMessage = ({ replay } = {}) => {
   return `History replay failed at event ${failedEventOffset}/${targetEventCount || "?"} (${failedType}). Check the app console for details.`;
 };
 
+export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+};
+
 export const handleAfterMount = async (deps) => {
   await refreshVersionsData(deps);
 };
@@ -113,6 +118,17 @@ export const handleVersionItemClick = (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId: versionId });
+  render();
+};
+
+export const handleMobileDetailSheetClose = (deps) => {
+  const { store, render } = deps;
+
+  if (!store.selectSelectedItemId()) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId: undefined });
   render();
 };
 
