@@ -44,10 +44,12 @@ export const setVoiceAudio = ({ state }, { resourceId } = {}) => {
   const nextVoice = normalizeVoice(state.voice);
   nextVoice.resourceId = resourceId;
   state.voice = nextVoice;
+  closeAudioPlayer({ state });
 };
 
 export const clearVoiceAudio = ({ state }, _payload = {}) => {
   state.voice.resourceId = undefined;
+  closeAudioPlayer({ state });
 };
 
 export const setLoop = ({ state }, { loop } = {}) => {
