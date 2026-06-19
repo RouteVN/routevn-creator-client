@@ -261,8 +261,10 @@ export const createCatalogPageHandlers = ({
     ? createResourcePageTagHandlers({
         resolveScopeKey: resolveTagScopeKey,
         updateItemTagIds: tagging.updateItemTagIds,
-        refreshAfterItemTagUpdate: ({ deps, itemId }) =>
-          refreshData(deps, { selectedItemId: itemId }),
+        refreshAfterItemTagUpdate: ({ deps, itemId, itemStillSelected }) =>
+          refreshData(deps, {
+            selectedItemId: itemStillSelected ? itemId : undefined,
+          }),
         appendCreatedTagByMode: tagging.appendCreatedTagByMode,
         getSelectedItemId: tagging.getSelectedItemId,
         getSelectedItemTagIds: tagging.getSelectedItemTagIds,

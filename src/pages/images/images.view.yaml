@@ -213,7 +213,7 @@ template:
                                           - $if selectedPreviewFileId:
                                               - 'div#detailImage.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
                                                   - rvn-file-image fileId=${selectedPreviewFileId} w=f h=f: null
-                                          - rtgl-tag-select#detailTagSelect slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                          - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                                   - rtgl-text s=md c=mu-fg: No selection
@@ -233,7 +233,7 @@ template:
                   - rtgl-svg svg=edit wh=16: null
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
-                      - rtgl-tag-select#detailTagSelect slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                      - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:

@@ -165,7 +165,7 @@ describe("images handlers", () => {
     });
   });
 
-  it("creates and assigns a new tag from the detail-panel flow", async () => {
+  it("creates a new tag from the detail-panel flow and keeps the draft open", async () => {
     const deps = {
       appService: {
         showAlert: vi.fn(),
@@ -426,6 +426,88 @@ describe("images handlers", () => {
     });
     expect(deps.store.commitDetailTagIds).toHaveBeenCalledWith({
       tagIds: ["tag-1", "tag-2"],
+    });
+  });
+
+  it("does not reselect the previous item when a detail tag update finishes after selection changes", async () => {
+    let selectedItemId = "image-1";
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        updateImage: vi.fn(async () => {
+          selectedItemId = "image-2";
+          return { valid: true };
+        }),
+        getRepositoryState: vi.fn(() => ({
+          files: { items: {}, tree: [] },
+          images: {
+            tree: [],
+            items: {
+              "image-1": {
+                id: "image-1",
+                type: "image",
+                name: "Hero",
+                tagIds: ["tag-1", "tag-2"],
+              },
+              "image-2": {
+                id: "image-2",
+                type: "image",
+                name: "Villain",
+                tagIds: [],
+              },
+            },
+          },
+          tags: {
+            images: {
+              tree: [{ id: "tag-1" }, { id: "tag-2" }],
+              items: {
+                "tag-1": { id: "tag-1", type: "tag", name: "Old" },
+                "tag-2": { id: "tag-2", type: "tag", name: "New" },
+              },
+            },
+          },
+        })),
+        subscribeProjectState: vi.fn(() => () => {}),
+      },
+      store: {
+        selectSelectedItemId: vi.fn(() => selectedItemId),
+        commitDetailTagIds: vi.fn(),
+        setTagsData: vi.fn(),
+        setItems: vi.fn(),
+        setProjectResolution: vi.fn(),
+        setSelectedItemId: vi.fn(),
+        setSelectedFolderId: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    await handleDetailTagValueChange(deps, {
+      _event: {
+        detail: {
+          value: ["tag-1", "tag-2"],
+        },
+      },
+    });
+
+    expect(deps.projectService.updateImage).toHaveBeenCalledWith({
+      imageId: "image-1",
+      data: {
+        tagIds: ["tag-1", "tag-2"],
+      },
+    });
+    expect(deps.store.commitDetailTagIds).not.toHaveBeenCalled();
+    expect(deps.store.setSelectedItemId).not.toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(deps.refs.fileExplorer.selectItem).not.toHaveBeenCalledWith({
+      itemId: "image-1",
     });
   });
 

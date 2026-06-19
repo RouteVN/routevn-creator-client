@@ -401,6 +401,10 @@ export const createResourcePageTagHandlers = ({
       });
       render();
       runAfterNextFrame(() => {
+        if (resolvedItemId !== getSelectedItemId({ deps })) {
+          return;
+        }
+
         store.openCreateTagDialog({
           mode,
           itemId: resolvedItemId,
@@ -509,11 +513,16 @@ export const createResourcePageTagHandlers = ({
       return;
     }
 
-    store.commitDetailTagIds({ tagIds });
+    const itemStillSelected = itemId === getSelectedItemId({ deps });
+    if (itemStillSelected) {
+      store.commitDetailTagIds({ tagIds });
+    }
+
     if (typeof refreshAfterItemTagUpdate === "function") {
       await refreshAfterItemTagUpdate({
         deps,
         itemId,
+        itemStillSelected,
         tagIds,
       });
       return;
@@ -611,7 +620,7 @@ export const createResourcePageTagHandlers = ({
       });
     }
 
-    if (mode === "item" && itemId) {
+    if (mode === "item" && itemId && itemId === getSelectedItemId({ deps })) {
       store.setDetailTagIds({
         tagIds: buildUniqueTagIds(draftTagIds, [tagId]),
       });

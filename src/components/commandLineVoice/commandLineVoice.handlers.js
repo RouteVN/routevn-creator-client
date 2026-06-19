@@ -118,10 +118,6 @@ export const handleAudioWaveformClick = async (deps, payload) => {
   store.setVoiceAudio({
     resourceId: voiceId,
   });
-  store.openAudioPlayer({
-    fileId: uploadResult.fileId,
-    fileName: uploadResult.displayName,
-  });
   render();
 };
 

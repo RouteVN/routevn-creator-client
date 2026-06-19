@@ -1101,8 +1101,10 @@ const {
         tagIds,
       },
     }),
-  refreshAfterItemTagUpdate: ({ deps, itemId }) =>
-    refreshParticleData(deps, { selectedItemId: itemId }),
+  refreshAfterItemTagUpdate: ({ deps, itemId, itemStillSelected }) =>
+    refreshParticleData(deps, {
+      selectedItemId: itemStillSelected ? itemId : undefined,
+    }),
   getSelectedItemTagIds: ({ deps }) =>
     deps.store.selectSelectedParticle()?.tagIds ?? [],
   appendCreatedTagByMode: ({ deps, mode, tagId }) => {

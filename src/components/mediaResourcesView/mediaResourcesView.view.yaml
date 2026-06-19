@@ -151,25 +151,25 @@ template:
                                               - $if item.cardKind == 'image':
                                                   - 'rtgl-view br=md w=${item.imageCardWidth} pos=rel overflow=hidden style="${item.imageCardStyle}"':
                                                       - $if showImageCardPreview:
-                                                          - $if item.useFullWidthImageCard:
+                                                          - $if item.isProcessing:
+                                                              - $if item.useFullWidthImageCard:
+                                                                  - 'rtgl-view w=f bw=xs bc=bo bgc=mu av=c ah=c style="aspect-ratio: ${item.previewAspectRatio};"':
+                                                                      - rtgl-text s=sm c=fg: Processing...
+                                                                $else:
+                                                                  - rtgl-view w=f h=${imageHeight} bw=xs bc=bo bgc=mu av=c ah=c:
+                                                                      - rtgl-text s=sm c=fg: Processing...
+                                                            $elif item.useFullWidthImageCard:
                                                               - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
-                                                                  - $if item.isProcessing:
-                                                                      - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
-                                                                          - rtgl-text s=sm c=mu-fg: Processing...
-                                                                    $elif lazyImageCards && item.shouldLazyLoadPreview:
+                                                                  - $if lazyImageCards && item.shouldLazyLoadPreview:
                                                                       - rvn-file-image w=f h=f fileId=${item.previewFileId} lazy: null
                                                                     $else:
                                                                       - rvn-file-image w=f h=f fileId=${item.previewFileId}: null
                                                             $else:
                                                               - 'div.mediaImageThumbnailTransparencyGrid style="display: block; width: 100%; height: ${imageHeight}px; overflow: hidden;"':
-                                                                  - $if item.isProcessing:
-                                                                      - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
-                                                                          - rtgl-text s=sm c=mu-fg: Processing...
+                                                                  - $if lazyImageCards && item.shouldLazyLoadPreview:
+                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId} lazy: null
                                                                     $else:
-                                                                      - $if lazyImageCards && item.shouldLazyLoadPreview:
-                                                                          - rvn-file-image w=f h=f fileId=${item.previewFileId} lazy: null
-                                                                        $else:
-                                                                          - rvn-file-image w=f h=f fileId=${item.previewFileId}: null
+                                                                      - rvn-file-image w=f h=f fileId=${item.previewFileId}: null
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=zoomIn wh=22 c=white: null

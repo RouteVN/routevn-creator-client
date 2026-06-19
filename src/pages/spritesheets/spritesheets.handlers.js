@@ -990,8 +990,10 @@ const {
         tagIds,
       },
     }),
-  refreshAfterItemTagUpdate: ({ deps, itemId }) =>
-    refreshSpritesheetData(deps, { selectedItemId: itemId }),
+  refreshAfterItemTagUpdate: ({ deps, itemId, itemStillSelected }) =>
+    refreshSpritesheetData(deps, {
+      selectedItemId: itemStillSelected ? itemId : undefined,
+    }),
   appendCreatedTagByMode: ({ deps, mode, tagId }) => {
     if (mode !== "form") {
       return;
