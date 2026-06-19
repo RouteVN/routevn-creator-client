@@ -176,10 +176,7 @@ export const toSoundOptions = (soundsData = {}) => {
 };
 
 const toAnchorValue = (values = {}) => {
-  if (
-    Number.isFinite(values.anchor?.x) &&
-    Number.isFinite(values.anchor?.y)
-  ) {
+  if (Number.isFinite(values.anchor?.x) && Number.isFinite(values.anchor?.y)) {
     return values.anchor;
   }
 
