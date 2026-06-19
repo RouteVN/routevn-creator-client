@@ -65,6 +65,7 @@ export const handleAfterMount = async (deps) => {
   const platform = appService.getPlatform();
   const showCloudProjects = store.selectShowCloudProjects();
   store.setPlatform({ platform: platform });
+  store.setAppVersion({ version: appService.getAppVersion() });
   const authUser = getPersistedAuthenticatedUser(appService);
   const cloudSession = getAuthenticatedSession(appService);
   store.setAuthUser({ user: authUser });
