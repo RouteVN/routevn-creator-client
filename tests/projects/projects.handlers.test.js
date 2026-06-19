@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleAppVersionClick,
+  handleAppVersionMenuClickItem,
+  handleAppVersionMenuClose,
   handleCreateButtonClick,
   handleCreateDialogSubmit,
   handleDeleteDialogConfirm,
@@ -51,6 +54,9 @@ const createDeps = ({
         },
       ]),
       openDropdownMenu: vi.fn(),
+      openAppVersionMenu: vi.fn(),
+      closeAppVersionMenu: vi.fn(),
+      selectIsAppVersionMenuOpen: vi.fn(() => true),
       openCreateDialog: vi.fn(),
       closeCreateDialog: vi.fn(),
       selectIsCreateDialogOpen: vi.fn(() => true),
@@ -59,6 +65,9 @@ const createDeps = ({
       selectDeleteDialogProjectPath: vi.fn(() => ""),
       closeDeleteDialog: vi.fn(),
       removeProject: vi.fn(),
+    },
+    updaterService: {
+      checkForUpdates: vi.fn(async () => {}),
     },
     render: vi.fn(),
     refs: {
@@ -276,6 +285,57 @@ describe("projects create dialog", () => {
       },
     });
     expect(deps.store.closeCreateDialog).toHaveBeenCalled();
+  });
+});
+
+describe("projects app version menu", () => {
+  it("opens the app version dropdown from the footer label", () => {
+    const deps = createDeps();
+
+    handleAppVersionClick(deps, {
+      _event: {
+        currentTarget: {
+          getBoundingClientRect: () => ({
+            left: 100,
+            width: 80,
+            top: 700,
+          }),
+        },
+      },
+    });
+
+    expect(deps.store.openAppVersionMenu).toHaveBeenCalledWith({
+      x: 140,
+      y: 700,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the app version dropdown", () => {
+    const deps = createDeps();
+
+    handleAppVersionMenuClose(deps);
+
+    expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("checks for updates from the app version dropdown", async () => {
+    const deps = createDeps();
+
+    await handleAppVersionMenuClickItem(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: "check-update",
+          },
+        },
+      },
+    });
+
+    expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.updaterService.checkForUpdates).toHaveBeenCalledWith(false);
   });
 });
 

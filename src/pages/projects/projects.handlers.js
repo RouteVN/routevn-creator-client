@@ -418,6 +418,39 @@ export const handleMobileActionMenuClickItem = (deps, payload) => {
   render();
 };
 
+export const handleAppVersionClick = (deps, payload) => {
+  const { store, render } = deps;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+
+  store.openAppVersionMenu({
+    x: rect.left + rect.width / 2,
+    y: rect.top,
+  });
+  render();
+};
+
+export const handleAppVersionMenuClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsAppVersionMenuOpen()) {
+    return;
+  }
+  store.closeAppVersionMenu();
+  render();
+};
+
+export const handleAppVersionMenuClickItem = async (deps, payload) => {
+  const { store, render, updaterService } = deps;
+  const detail = payload._event.detail;
+  const item = detail.item || detail;
+
+  store.closeAppVersionMenu();
+  render();
+
+  if (item.value === "check-update") {
+    await updaterService.checkForUpdates(false);
+  }
+};
+
 export const handleLoginButtonClick = (deps) => {
   const { appService } = deps;
   appService.navigate("/authenticate");

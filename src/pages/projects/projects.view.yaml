@@ -19,6 +19,16 @@ refs:
         handler: handleMobileActionMenuClose
       item-click:
         handler: handleMobileActionMenuClickItem
+  appVersionButton:
+    eventListeners:
+      click:
+        handler: handleAppVersionClick
+  appVersionDropdownMenu:
+    eventListeners:
+      close:
+        handler: handleAppVersionMenuClose
+      item-click:
+        handler: handleAppVersionMenuClickItem
   cloudCreateButton:
     eventListeners:
       click:
@@ -188,8 +198,10 @@ template:
                                                   - rtgl-text s=xs c=mu-fg: Members
                                                   - rtgl-text s=xs c=mu-fg: ${project.memberCount}
                                   - rtgl-view h="33vh": null
-                          - rtgl-view w=f ah=c pb=lg:
-                              - rtgl-text s=xs c=mu-fg: RouteVN Creator ${appVersion}
+          - 'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom);"':
+              - 'rtgl-view sm-w=f w=640 ph=lg pv=lg ah=c':
+                  - rtgl-view#appVersionButton d=h av=c ah=c ph=md pv=sm br=sm h-bgc=mu cur=pointer:
+                      - rtgl-text s=xs c=mu-fg: RouteVN Creator ${appVersion}
   - rtgl-dialog#deleteProjectDialog ?open=${deleteDialog.isOpen} s=sm:
       - rtgl-view slot=content g=lg p=lg:
           - rtgl-view d=v g=md:
@@ -212,6 +224,7 @@ template:
           - rtgl-form#addMemberForm key=${addMemberDialog.formKey} :form=${addMemberForm} :defaultValues=${addMemberDialog.defaultValues} w=f: null
   - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=${dropdownMenu.items}: null
   - rtgl-dropdown-menu#mobileActionMenu ?open=${mobileActionMenu.isOpen} x=${mobileActionMenu.x} y=${mobileActionMenu.y} place=be :items=${mobileActionMenu.items}: null
+  - rtgl-dropdown-menu#appVersionDropdownMenu ?open=${appVersionMenu.isOpen} x=${appVersionMenu.x} y=${appVersionMenu.y} place=t :items=${appVersionMenu.items}: null
   - rtgl-dropdown-menu#profileDropdownMenu ?open=${profileMenu.isOpen} x=${profileMenu.x} y=${profileMenu.y} :items=${profileMenu.items}: null
   - rtgl-dialog#editProfileDialog ?open=${profileDialog.isOpen} s=f:
       - rtgl-view slot=content w=f h=f p=xl:
