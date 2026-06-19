@@ -29,6 +29,11 @@ export const createInitialState = () => ({
     ],
   },
   repositoryState: {}, // Add this - default to empty object
+  playingSound: {
+    title: "",
+    fileId: undefined,
+  },
+  showAudioPlayer: false,
 });
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
@@ -226,6 +231,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     displayActions,
     actions: actionsObject,
     preview,
+    playingSound: state.playingSound,
+    showAudioPlayer: state.showAudioPlayer,
     repositoryState,
     selectedLineId: props.selectedLineId,
     layouts: choiceLayouts, // Default to choice layouts for backward compatibility
@@ -281,13 +288,28 @@ export const selectAction = ({ state }) => {
   return state.actions || {};
 };
 
+export const selectVoicePreview = ({ state, props }) => {
+  const actionProps = { ...props };
+  actionProps.actions = selectAction({ state });
+  return selectActionsData({
+    props: actionProps,
+    state,
+  }).preview.voice;
+};
+
 export const selectMode = ({ state }) => {
   return state.mode;
 };
 
 export const updateActions = ({ state }, payload = {}) => {
+  const previousVoiceResourceId = state.actions?.voice?.resourceId;
   const nextPayload = payload || {};
+  const nextVoiceResourceId = nextPayload.voice?.resourceId;
   state.actions = { ...nextPayload };
+
+  if (previousVoiceResourceId !== nextVoiceResourceId) {
+    closeAudioPlayer({ state });
+  }
 };
 
 export const showActionsDialog = ({ state }, _payload = {}) => {
@@ -317,6 +339,20 @@ export const setSuppressDialogClose = (
 
 export const selectSuppressDialogClose = ({ state }) => {
   return state.suppressDialogClose === true;
+};
+
+export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
+  state.playingSound.fileId = fileId;
+  state.playingSound.title = fileName;
+  state.showAudioPlayer = true;
+};
+
+export const closeAudioPlayer = ({ state }, _payload = {}) => {
+  state.showAudioPlayer = false;
+  state.playingSound = {
+    title: "",
+    fileId: undefined,
+  };
 };
 
 const resolveDialogueModeLabel = (dialogue, layoutsItems) => {

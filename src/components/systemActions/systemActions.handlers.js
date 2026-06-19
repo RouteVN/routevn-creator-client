@@ -307,6 +307,30 @@ export const handleHelpFloatingButtonClick = (deps, payload) => {
   appService.openUrl(getRoutevnCreatorSystemActionDocsUrl(mode));
 };
 
+export const handleVoicePreviewClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  const { store, render } = deps;
+  const voicePreview = store.selectVoicePreview();
+
+  if (!voicePreview?.fileId) {
+    return;
+  }
+
+  store.openAudioPlayer({
+    fileId: voicePreview.fileId,
+    fileName: voicePreview.name,
+  });
+  render();
+};
+
+export const handleAudioPlayerClose = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { store, render } = deps;
+  store.closeAudioPlayer();
+  render();
+};
+
 const isBooleanPropEnabled = (value) => {
   return value === true || value === "true";
 };

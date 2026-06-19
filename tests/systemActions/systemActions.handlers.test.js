@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  closeAudioPlayer,
   createInitialState,
+  openAudioPlayer,
+  selectVoicePreview,
   selectAction,
+  setRepositoryState,
   updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
 import {
@@ -10,9 +14,11 @@ import {
   handleBackgroundTransformCustomize,
   handleBackgroundTransformEditorDone,
   handleGetBackgroundTransformPreviewCanvasRoot,
+  handleAudioPlayerClose,
   handleEmbeddedCloseClick,
   handleCommandLineSubmit,
   handleTemporaryPresentationStateChange,
+  handleVoicePreviewClick,
   handleSetBackgroundCustomTransform,
   handleSetActionCustomTransform,
   open,
@@ -802,5 +808,86 @@ describe("systemActions.handlers", () => {
       }),
     ).toBe(canvasRoot);
     expect(getCanvasRoot).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens and closes the inline voice preview player", () => {
+    const state = createInitialState();
+    const props = {
+      actions: {
+        voice: {
+          resourceId: "voice-line-1",
+        },
+      },
+    };
+    const render = vi.fn();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    updateActions({ state }, props.actions);
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          voices: {
+            items: {
+              "voice-line-1": {
+                id: "voice-line-1",
+                type: "voice",
+                name: "Aki Line 1",
+                fileId: "file-voice-line-1",
+              },
+            },
+            tree: [{ id: "voice-line-1" }],
+          },
+        },
+      },
+    );
+
+    handleVoicePreviewClick(
+      {
+        store: {
+          selectVoicePreview: () => selectVoicePreview({ state, props }),
+          openAudioPlayer: (payload) => openAudioPlayer({ state }, payload),
+        },
+        render,
+      },
+      {
+        _event: {
+          preventDefault,
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(state.showAudioPlayer).toBe(true);
+    expect(state.playingSound).toEqual({
+      fileId: "file-voice-line-1",
+      title: "Aki Line 1",
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+
+    handleAudioPlayerClose(
+      {
+        store: {
+          closeAudioPlayer: () => closeAudioPlayer({ state }),
+        },
+        render,
+      },
+      {
+        _event: {
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(stopPropagation).toHaveBeenCalledTimes(2);
+    expect(state.showAudioPlayer).toBe(false);
+    expect(state.playingSound).toEqual({
+      fileId: undefined,
+      title: "",
+    });
+    expect(render).toHaveBeenCalledTimes(2);
   });
 });

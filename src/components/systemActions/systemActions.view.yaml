@@ -29,6 +29,14 @@ refs:
     eventListeners:
       click:
         handler: handleHelpFloatingButtonClick
+  voicePreviewButton:
+    eventListeners:
+      click:
+        handler: handleVoicePreviewClick
+  rvnAudioPlayer:
+    eventListeners:
+      audio-player-close:
+        handler: handleAudioPlayerClose
   actionsDialog:
     eventListeners:
       close-request:
@@ -89,7 +97,9 @@ template:
               - $if preview.voice:
                   - rtgl-view#actionItemVoice data-mode=voice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=microphone wh=24: null
-                      - rtgl-text s=sm: ${preview.voice.name}
+                      - rtgl-text s=sm w=1fg ellipsis=true: ${preview.voice.name}
+                      - $if preview.voice.fileId:
+                          - rtgl-button#voicePreviewButton sq v=gh pre=play: null
               - $if preview.sfx:
                   - rtgl-view#actionItemSfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=audio wh=24: null
@@ -224,6 +234,9 @@ template:
                       - rtgl-view d=v:
                           - rtgl-text s=sm: 'Conditional: ${preview.conditional.summary}'
                           - rtgl-text s=xs c=mu-fg: ${preview.conditional.actionsSummary}
+              - $if showAudioPlayer:
+                  - rtgl-view h=72 w=f:
+                      - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null
           - rtgl-button#addActionButton v=ol w=f: +
           - $if showEmbeddedClose:
               - rtgl-view d=h av=c ah=e w=f g=lg:
