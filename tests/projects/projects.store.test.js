@@ -4,6 +4,7 @@ import {
   closeAppVersionMenu,
   createInitialState,
   openAppVersionMenu,
+  setPlatform,
 } from "../../src/pages/projects/projects.store.js";
 
 describe("projects.store addProject", () => {
@@ -64,6 +65,20 @@ describe("projects.store addProject", () => {
     });
 
     closeAppVersionMenu({ state });
+
+    expect(state.appVersionMenu).toEqual({
+      isOpen: false,
+      x: 0,
+      y: 0,
+      items: [],
+    });
+  });
+
+  it("does not open the app version update menu on web", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "web" });
+
+    openAppVersionMenu({ state }, { x: 120, y: 320 });
 
     expect(state.appVersionMenu).toEqual({
       isOpen: false,

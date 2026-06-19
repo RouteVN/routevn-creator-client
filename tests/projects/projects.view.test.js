@@ -21,6 +21,7 @@ describe("projects view", () => {
     expect(scrollContainerIndex).toBeGreaterThan(-1);
     expect(footerContainerIndex).toBeGreaterThan(scrollContainerIndex);
     expect(projectsView).toContain("rtgl-view sm-w=f w=640 ph=lg pv=lg ah=c");
+    expect(projectsView).toContain("$if platform != 'web'");
     expect(projectsView).toContain("rtgl-view#appVersionButton");
     expect(projectsView).toContain(
       "rtgl-dropdown-menu#appVersionDropdownMenu ?open=${appVersionMenu.isOpen} x=${appVersionMenu.x} y=${appVersionMenu.y} place=t :items=${appVersionMenu.items}",
