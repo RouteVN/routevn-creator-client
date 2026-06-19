@@ -401,8 +401,10 @@ describe("layoutEditor.handleLayoutEditPanelUpdateHandler", () => {
 
 describe("layoutEditor.handleFileExplorerAction", () => {
   it("creates image elements at the top of the selected parent", async () => {
+    vi.useFakeTimers();
     const createLayoutElement = vi.fn(async () => ({ valid: true }));
     const deps = createLayoutEditorDeps();
+    let selectedItemId;
     deps.appService.showComponentDialog = vi.fn(async () => ({
       actionId: "create",
       values: {
@@ -425,37 +427,61 @@ describe("layoutEditor.handleFileExplorerAction", () => {
       },
       tree: [{ id: "image-1" }],
     }));
-    deps.store.setSelectedItemId = vi.fn();
+    deps.store.selectSelectedItemId = vi.fn(() => selectedItemId);
+    deps.store.setSelectedItemId = vi.fn(({ itemId } = {}) => {
+      selectedItemId = itemId;
+    });
     deps.store.setDetailPanelSelectedItemId = vi.fn();
     deps.refs.fileExplorer = {
       selectItem: vi.fn(),
     };
 
-    await handleFileExplorerAction(deps, {
-      _event: {
-        detail: {
-          itemId: "parent-1",
-          item: {
-            value: {
-              action: "new-child-item",
-              type: "sprite",
+    try {
+      await handleFileExplorerAction(deps, {
+        _event: {
+          detail: {
+            itemId: "parent-1",
+            item: {
+              value: {
+                action: "new-child-item",
+                type: "sprite",
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    expect(createLayoutElement).toHaveBeenCalledWith({
-      layoutId: "layout-1",
-      elementId: expect.any(String),
-      data: expect.objectContaining({
-        type: "sprite",
-        name: "Hero Image",
-        imageId: "image-1",
-      }),
-      parentId: "parent-1",
-      position: "first",
-    });
+      expect(createLayoutElement).toHaveBeenCalledWith({
+        layoutId: "layout-1",
+        elementId: expect.any(String),
+        data: expect.objectContaining({
+          type: "sprite",
+          name: "Hero Image",
+          imageId: "image-1",
+        }),
+        parentId: "parent-1",
+        position: "first",
+      });
+      const createdElementId = createLayoutElement.mock.calls[0][0].elementId;
+      expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+        itemId: createdElementId,
+      });
+      expect(deps.store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+        itemId: createdElementId,
+      });
+      expect(deps.refs.fileExplorer.selectItem).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(32);
+
+      expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+        itemId: createdElementId,
+      });
+      expect(deps.render.mock.invocationCallOrder[0]).toBeLessThan(
+        deps.refs.fileExplorer.selectItem.mock.invocationCallOrder[0],
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

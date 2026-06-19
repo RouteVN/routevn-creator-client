@@ -363,8 +363,7 @@ const CREATE_TEMPLATES = {
   rect: () => ({
     type: "rect",
     name: "Rect",
-    x: 0,
-    y: 0,
+    ...BASE_TRANSFORM,
     width: 100,
     height: 100,
   }),

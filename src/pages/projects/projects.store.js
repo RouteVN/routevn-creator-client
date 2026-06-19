@@ -236,6 +236,14 @@ export const selectIsMobileActionMenuOpen = ({ state }) => {
 };
 
 export const openAppVersionMenu = ({ state }, { x, y } = {}) => {
+  if (state.platform === "web") {
+    state.appVersionMenu.isOpen = false;
+    state.appVersionMenu.x = 0;
+    state.appVersionMenu.y = 0;
+    state.appVersionMenu.items = [];
+    return;
+  }
+
   state.appVersionMenu.isOpen = true;
   state.appVersionMenu.x = x;
   state.appVersionMenu.y = y;

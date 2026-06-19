@@ -599,9 +599,17 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
   if (payload.selectedItemId) {
     store.setSelectedItemId({ itemId: payload.selectedItemId });
     store.setDetailPanelSelectedItemId({ itemId: payload.selectedItemId });
-    refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
   }
   render();
+  if (payload.selectedItemId) {
+    scheduleAfterNextPaint(() => {
+      if (store.selectSelectedItemId() !== payload.selectedItemId) {
+        return;
+      }
+
+      refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
+    });
+  }
 };
 
 const {

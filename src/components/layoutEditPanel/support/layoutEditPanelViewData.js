@@ -175,6 +175,17 @@ export const toSoundOptions = (soundsData = {}) => {
     }));
 };
 
+const toAnchorValue = (values = {}) => {
+  if (Number.isFinite(values.anchor?.x) && Number.isFinite(values.anchor?.y)) {
+    return values.anchor;
+  }
+
+  return {
+    x: Number.isFinite(values.anchorX) ? values.anchorX : 0,
+    y: Number.isFinite(values.anchorY) ? values.anchorY : 0,
+  };
+};
+
 export const toInspectorValues = ({
   values,
   firstTextStyleId,
@@ -241,6 +252,7 @@ export const toInspectorValues = ({
     textContentSummary,
     textContentSummaryParts,
     opacity: values?.opacity ?? 1,
+    anchor: toAnchorValue(values),
     aspectRatioMode: derivedAspectRatioLock !== undefined ? "fixed" : "free",
     aspectRatioLock: derivedAspectRatioLock,
     revealEffect,

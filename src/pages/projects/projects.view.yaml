@@ -200,8 +200,12 @@ template:
                                   - rtgl-view h="33vh": null
           - 'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom);"':
               - 'rtgl-view sm-w=f w=640 ph=lg pv=lg ah=c':
-                  - rtgl-view#appVersionButton d=h av=c ah=c ph=md pv=sm br=sm h-bgc=mu cur=pointer:
-                      - rtgl-text s=xs c=mu-fg: RouteVN Creator ${appVersion}
+                  - $if platform != 'web':
+                      - rtgl-view#appVersionButton d=h av=c ah=c ph=md pv=sm br=sm h-bgc=mu cur=pointer:
+                          - rtgl-text s=xs c=mu-fg: RouteVN Creator ${appVersion}
+                    $else:
+                      - rtgl-view d=h av=c ah=c ph=md pv=sm:
+                          - rtgl-text s=xs c=mu-fg: RouteVN Creator ${appVersion}
   - rtgl-dialog#deleteProjectDialog ?open=${deleteDialog.isOpen} s=sm:
       - rtgl-view slot=content g=lg p=lg:
           - rtgl-view d=v g=md:

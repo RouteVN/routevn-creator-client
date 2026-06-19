@@ -13,9 +13,10 @@ import {
 
 const createDeps = ({
   ensureProjectCompatibleById = vi.fn(async () => {}),
+  platform = "tauri",
 } = {}) => {
   const appService = {
-    getPlatform: vi.fn(() => "tauri"),
+    getPlatform: vi.fn(() => platform),
     openFolderPicker: vi.fn(),
     openExistingProject: vi.fn(),
     loadAllProjects: vi.fn(async () => []),
@@ -311,6 +312,25 @@ describe("projects app version menu", () => {
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
+  it("does not open the app version dropdown on web", () => {
+    const deps = createDeps({ platform: "web" });
+
+    handleAppVersionClick(deps, {
+      _event: {
+        currentTarget: {
+          getBoundingClientRect: () => ({
+            left: 100,
+            width: 80,
+            top: 700,
+          }),
+        },
+      },
+    });
+
+    expect(deps.store.openAppVersionMenu).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+  });
+
   it("closes the app version dropdown", () => {
     const deps = createDeps();
 
@@ -336,6 +356,24 @@ describe("projects app version menu", () => {
     expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
     expect(deps.render).toHaveBeenCalledTimes(1);
     expect(deps.updaterService.checkForUpdates).toHaveBeenCalledWith(false);
+  });
+
+  it("does not check for updates from a stale web menu event", async () => {
+    const deps = createDeps({ platform: "web" });
+
+    await handleAppVersionMenuClickItem(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: "check-update",
+          },
+        },
+      },
+    });
+
+    expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.updaterService.checkForUpdates).not.toHaveBeenCalled();
   });
 });
 
