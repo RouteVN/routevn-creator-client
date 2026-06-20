@@ -43,3 +43,5 @@ src/setup.js
 /android/routevn/**/*.jks
 /android/routevn/**/*.keystore
 /android/routevn/*.iml
+/*.jks
+/*.keystore
