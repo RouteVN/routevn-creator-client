@@ -1,6 +1,9 @@
 export const UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE =
   "Unsupported project store format. This RouteVN Creator build only supports the current project storage layout and will not repair older local stores automatically.";
 
+const LATEST_CREATOR_VERSION_HINT =
+  "Make sure you're using the latest version of RouteVN Creator.";
+
 export const isIncompatibleProjectOpenError = (error) => {
   if (
     error?.code === "project_projection_gap_incompatible" ||
@@ -31,7 +34,7 @@ export const getIncompatibleProjectOpenMessage = (error) => {
 };
 
 const isMissingProjectResolutionError = (error) => {
-  const message = String(error?.message || "").toLowerCase();
+  const message = String(error?.message ?? "").toLowerCase();
   return (
     message.includes("project resolution is required") &&
     message.includes("width") &&
@@ -40,10 +43,24 @@ const isMissingProjectResolutionError = (error) => {
 };
 
 const isProjectDatabaseOpenError = (error) => {
-  const message = String(error?.message || "").toLowerCase();
+  const message = String(error?.message ?? "").toLowerCase();
   return (
     message.includes("unable to open database file") ||
     message.includes("(code: 14)")
+  );
+};
+
+const isProjectDataStructureValidationError = (error) => {
+  const code = String(error?.code ?? "");
+  if (code.includes("validation_failed")) {
+    return true;
+  }
+
+  const message = String(error?.message ?? "").toLowerCase();
+  return (
+    message.includes("validation failed") ||
+    message.includes("failed validation") ||
+    message.includes("data structure")
   );
 };
 
@@ -53,7 +70,11 @@ export const getProjectOpenErrorMessage = (error) => {
   }
 
   if (isMissingProjectResolutionError(error)) {
-    return "Project is missing required resolution settings.";
+    return `Project is missing required resolution settings. ${LATEST_CREATOR_VERSION_HINT}`;
+  }
+
+  if (isProjectDataStructureValidationError(error)) {
+    return `Project data structure failed validation. ${LATEST_CREATOR_VERSION_HINT}`;
   }
 
   if (isProjectDatabaseOpenError(error)) {

@@ -212,7 +212,28 @@ describe("projects.handleProjectsClick", () => {
     await handleProjectsClick(deps, createPayload());
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "Project is missing required resolution settings.",
+      message:
+        "Project is missing required resolution settings. Make sure you're using the latest version of RouteVN Creator.",
+    });
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
+  });
+
+  it("suggests updating RouteVN Creator for project data validation errors", async () => {
+    const deps = createDeps({
+      ensureProjectCompatibleById: vi.fn(async () => {
+        const error = new Error(
+          "payload.sectionId must reference an existing section",
+        );
+        error.code = "validation_failed";
+        throw error;
+      }),
+    });
+
+    await handleProjectsClick(deps, createPayload());
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "Project data structure failed validation. Make sure you're using the latest version of RouteVN Creator.",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
