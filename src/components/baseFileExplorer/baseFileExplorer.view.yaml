@@ -45,11 +45,11 @@ styles:
 template:
   - 'rtgl-view#root w=f h=f d=v sv style="min-width: 0; overflow-x: hidden;"':
       - 'rtgl-view w=f h=1fg d=v g=sm pos=rel style="min-height: 0;"':
-          - rtgl-view w=f h=f:
-              - $if items.length == 0 && !noEmptyMessage:
-                  - rtgl-view#emptyMessage w=f h=f d=f av=c ah=c p=xl cur=pointer:
-                      - rtgl-text s=sm c=mu-fg ta=c: No items.
-                $else:
+          - $if items.length == 0 && !noEmptyMessage:
+              - rtgl-view#emptyMessage w=f h=1fg d=f av=c ah=c p=xl cur=pointer:
+                  - rtgl-text s=sm c=mu-fg ta=c: No items.
+            $else:
+              - rtgl-view w=f:
                   - $for item, i in items:
                       - 'rtgl-view#itemRef${i} data-item-id=${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px; min-width: 0; box-sizing: border-box;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
                           - $if shrinkable && item.hasChildren:
@@ -65,7 +65,7 @@ template:
                               - $if item.trailingSvg:
                                   - rtgl-view d=h av=c ah=c w=14 h=14 min-w=14:
                                       - rtgl-svg svg=${item.trailingSvg} wh=12 c=mu-fg: null
-          - 'div#container style="width: 100%; height: ${bottomEmptySpaceHeight}; min-height: ${bottomEmptySpaceHeight}; flex: 0 0 ${bottomEmptySpaceHeight};"': null
+                  - 'div#container style="width: 100%; height: ${bottomEmptySpaceHeight}; min-height: ${bottomEmptySpaceHeight}; flex: 0 0 ${bottomEmptySpaceHeight}; pointer-events: none;"': null
           - $if targetDragIndex != -2 && targetDropPosition != 'inside':
               - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"': null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

@@ -5,6 +5,28 @@ export const createInitialState = () => ({
   duration: 0,
 });
 
+const parseBooleanProp = (value, fallback = false) => {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (value === true || value === "") {
+    return true;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+};
+
 export const setLoading = ({ state }, { isLoading } = {}) => {
   state.isLoading = isLoading;
 };
@@ -52,6 +74,7 @@ export const selectDuration = ({ state }) => state.duration;
 export const selectViewData = ({ state, props }) => ({
   isPlaying: state.isPlaying,
   title: props.title,
+  mobileLayout: parseBooleanProp(props.mobileLayout),
   isLoading: state.isLoading,
   currentTime: state.currentTime,
   duration: state.duration,

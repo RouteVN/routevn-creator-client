@@ -6,6 +6,9 @@ import {
   selectMobileDeleteDialogItemId,
   selectViewData,
   setItems,
+  setUiConfig,
+  updateAudioPlayerLeft,
+  updateAudioPlayerRight,
 } from "../../src/pages/sounds/sounds.store.js";
 
 const createContext = () => ({
@@ -13,6 +16,20 @@ const createContext = () => ({
 });
 
 describe("sounds store mobile delete dialog", () => {
+  it("adds desktop-only bottom scroll room for the media grid", () => {
+    const context = createContext();
+
+    expect(selectViewData(context).gridScrollBottomPadding).toBe("32vh");
+
+    setUiConfig(context, {
+      uiConfig: {
+        id: "touch",
+      },
+    });
+
+    expect(selectViewData(context).gridScrollBottomPadding).toBeUndefined();
+  });
+
   it("tracks the selected sound for delete confirmation", () => {
     const context = createContext();
 
@@ -46,5 +63,26 @@ describe("sounds store mobile delete dialog", () => {
 
     expect(selectMobileDeleteDialogItemId(context)).toBeUndefined();
     expect(selectViewData(context).mobileDeleteDialogOpen).toBe(false);
+  });
+});
+
+describe("sounds store audio player layout", () => {
+  it("uses desktop panel offsets outside touch mode and full width in touch mode", () => {
+    const context = createContext();
+
+    updateAudioPlayerLeft(context, { width: 300 });
+    updateAudioPlayerRight(context, { width: 270 });
+
+    expect(selectViewData(context).audioPlayerLeft).toBe(364);
+    expect(selectViewData(context).audioPlayerRight).toBe(270);
+
+    setUiConfig(context, {
+      uiConfig: {
+        id: "touch",
+      },
+    });
+
+    expect(selectViewData(context).audioPlayerLeft).toBe(0);
+    expect(selectViewData(context).audioPlayerRight).toBe(0);
   });
 });

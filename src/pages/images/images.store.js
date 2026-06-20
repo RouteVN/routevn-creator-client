@@ -17,6 +17,7 @@ const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
 const IMAGE_CARD_MAX_WIDTH = 400;
 const IMAGE_CARD_HEIGHT = 225;
+const MEDIA_GRID_SCROLL_BOTTOM_PADDING = "32vh";
 const FULL_IMAGE_PREVIEW_DISPLAY_MODE_FIT = "fit";
 const FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS = "canvas";
 export const IMAGE_TAG_SCOPE_KEY = "images";
@@ -500,6 +501,9 @@ export const selectViewData = (context) => {
   return {
     ...viewData,
     flatItems,
+    gridScrollBottomPadding: viewData.isTouchMode
+      ? undefined
+      : MEDIA_GRID_SCROLL_BOTTOM_PADDING,
     startCollapsedFileExplorer: shouldStartCollapsedFileExplorer({
       flatItems,
       threshold: AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD,

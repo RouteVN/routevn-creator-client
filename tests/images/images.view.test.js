@@ -53,6 +53,44 @@ describe("images view", () => {
     expect(mobileExplorerBranch).toContain("bottom-empty-space-height=80vh");
   });
 
+  it("constrains the desktop file explorer to the remaining left-panel height", () => {
+    const imagesView = readFileSync(
+      new URL("../../src/pages/images/images.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    const desktopExplorerStart = imagesView.indexOf("$if showExplorerPanel");
+    const contentPanelStart = imagesView.indexOf(
+      "div#fileExplorerKeyboardScope",
+      desktopExplorerStart,
+    );
+    const desktopExplorerBranch = imagesView.slice(
+      desktopExplorerStart,
+      contentPanelStart,
+    );
+
+    expect(desktopExplorerBranch).toContain(
+      'rtgl-view slot="content" w=f h=f d=v style="min-height: 0;"',
+    );
+    expect(desktopExplorerBranch).toContain(
+      'rtgl-view w=f h=1fg style="min-height: 0;"',
+    );
+    expect(desktopExplorerBranch).toContain(
+      "rvn-base-file-explorer#fileExplorer",
+    );
+  });
+
+  it("passes bottom scroll room to the media grid", () => {
+    const imagesView = readFileSync(
+      new URL("../../src/pages/images/images.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(imagesView).toContain(
+      ":scrollBottomPadding=${gridScrollBottomPadding}",
+    );
+  });
+
   it("registers touch handlers on the full image preview overlay", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),
