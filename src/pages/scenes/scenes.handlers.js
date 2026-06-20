@@ -5,6 +5,7 @@ import {
 } from "../../internal/ui/collabRefresh.js";
 import { createScenesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
+import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
   SCENE_BOX_HEIGHT,
@@ -663,6 +664,9 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   setSelectedScene({ store, appService, sceneId: itemId });
+  if (store.selectIsMobileFileExplorerOpen?.()) {
+    store.closeMobileFileExplorer?.();
+  }
   render();
   refs.whiteboard?.ensureItemVisible?.({
     itemId,
@@ -755,14 +759,15 @@ export const handleWhiteboardItemSelected = (deps, payload) => {
 };
 
 export const handleWhiteboardItemDoubleClick = (deps, payload) => {
-  const { appService } = deps;
-  const { itemId } = payload._event.detail;
+  const { store, appService } = deps;
+  const itemId = resolveDetailItemId(payload?._event?.detail);
 
   if (!itemId) {
     console.error("ERROR: itemId is missing in double-click event");
     return;
   }
 
+  setSelectedScene({ store, appService, sceneId: itemId });
   navigateToSceneEditor({ appService, sceneId: itemId });
 };
 
@@ -916,6 +921,11 @@ export const handleSceneFormAction = async (deps, payload) => {
         },
       });
       dismissMapAddHint({ store, appService });
+      recordRecentSceneVisit({
+        appService,
+        projectId: getCurrentProjectId(appService),
+        sceneId: newSceneId,
+      });
 
       await refreshScenesData(deps);
       render();
@@ -1000,6 +1010,30 @@ export const handleDetailPreviewClick = (deps, payload) => {
 
   store.showPreviewSceneId({ sceneId: selectedItemId });
   render();
+};
+
+export const handleMobileFileExplorerOpen = (deps) => {
+  const { store, render, refs } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedFolderId = store.selectSelectedFolderId();
+  const selectedExplorerItemId = selectedItemId ?? selectedFolderId;
+
+  store.openMobileFileExplorer();
+  render();
+
+  if (selectedExplorerItemId) {
+    requestAnimationFrame(() => {
+      refs.fileexplorer?.selectItem?.({ itemId: selectedExplorerItemId });
+    });
+  }
+};
+
+export const handleMobileFileExplorerClose = (deps) => {
+  const { store, render } = deps;
+
+  store.closeMobileFileExplorer();
+  render();
+  focusFileExplorerKeyboardScope(deps);
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {

@@ -23,6 +23,10 @@ import {
   closeMobileResourceFileExplorerState,
   createMobileResourcePageState,
   openMobileResourceFileExplorerState,
+  selectIsMobileFileExplorerOpenState,
+  selectIsTouchModeState,
+  selectSuppressMobileDetailSheetState,
+  setMobileResourceDetailSheetSuppressedState,
   setMobileResourcePageUiConfigState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
@@ -470,8 +474,15 @@ export const setItems = ({ state }, { data } = {}) => {
   syncDetailTagIds(state, { preserveDirty: true });
 };
 
-export const setSelectedItemId = ({ state }, { itemId } = {}) => {
+export const setSelectedItemId = (
+  { state },
+  { itemId, suppressMobileDetailSheet = false } = {},
+) => {
   state.selectedItemId = itemId;
+  setMobileResourceDetailSheetSuppressedState(state, {
+    itemId,
+    suppressMobileDetailSheet,
+  });
   if (itemId !== undefined) {
     state.selectedFolderId = undefined;
   }
@@ -480,10 +491,21 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   syncDetailTagIds(state);
 };
 
+export const selectIsTouchMode = selectIsTouchModeState;
+
+export const selectIsMobileFileExplorerOpen =
+  selectIsMobileFileExplorerOpenState;
+
+export const selectSuppressMobileDetailSheet =
+  selectSuppressMobileDetailSheetState;
+
 export const setSelectedFolderId = ({ state }, { folderId } = {}) => {
   state.selectedFolderId = folderId;
   if (folderId !== undefined) {
     state.selectedItemId = undefined;
+    setMobileResourceDetailSheetSuppressedState(state, {
+      itemId: undefined,
+    });
     state.detailSelectedClipName = undefined;
     state.isDetailTagSelectOpen = false;
     syncDetailTagIds(state);

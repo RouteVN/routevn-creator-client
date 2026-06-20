@@ -47,6 +47,30 @@ refs:
     eventListeners:
       close:
         handler: handleMobileDetailSheetClose
+  mobileDetailPlayButton:
+    eventListeners:
+      click:
+        handler: handleMobileDetailPlayClick
+        preventDefault: true
+        stopPropagation: true
+  mobileDetailDeleteButton:
+    eventListeners:
+      click:
+        handler: handleMobileDetailDeleteClick
+        preventDefault: true
+        stopPropagation: true
+  mobileDeleteDialog:
+    eventListeners:
+      close:
+        handler: handleMobileDeleteDialogClose
+  mobileDeleteCancelButton:
+    eventListeners:
+      click:
+        handler: handleMobileDeleteDialogCancel
+  mobileDeleteConfirmButton:
+    eventListeners:
+      click:
+        handler: handleMobileDeleteDialogConfirm
   fileExplorerKeyboardScope:
     eventListeners:
       click:
@@ -131,7 +155,7 @@ template:
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
-                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-search=false search-in-filter-popover show-tag-filter :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupSoundsView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
                       - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupSoundsView.itemsPerRow" search-in-filter-popover show-tag-filter :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
@@ -169,9 +193,20 @@ template:
               - rtgl-view#detailHeader h=56 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
+              - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
+                  - rtgl-button#mobileDetailPlayButton w=1fg v=se pre=play: Play
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: Delete
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect slot="sound-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+  - rtgl-dialog#mobileDeleteDialog ?open=${mobileDeleteDialogOpen} s=sm:
+      - rtgl-view slot=content g=lg p=lg:
+          - rtgl-view d=v g=md:
+              - rtgl-text s=lg: ${mobileDeleteDialogTitle}
+              - rtgl-text c=mu-fg: ${mobileDeleteDialogMessage}
+          - rtgl-view d=h g=sm w=f ah=e:
+              - rtgl-button#mobileDeleteCancelButton v=se: Cancel
+              - rtgl-button#mobileDeleteConfirmButton v=pr: ${mobileDeleteDialogConfirmLabel}
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
@@ -186,5 +221,5 @@ template:
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - $if showAudioPlayer:
-      - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
+      - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: 0px; right: 0px;"':
           - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null

@@ -39,6 +39,8 @@ const IMAGE_FILE_ACCEPT = [
 ].join(",");
 const INVALID_IMAGE_FORMAT_MESSAGE =
   "Only JPG/JPEG, PNG, and WEBP images are supported.";
+const FULL_IMAGE_PREVIEW_SWIPE_MIN_DISTANCE_PX = 48;
+const FULL_IMAGE_PREVIEW_SWIPE_MAX_VERTICAL_RATIO = 0.75;
 
 const showInvalidFormatToast = (appService) => {
   appService.showAlert({
@@ -255,6 +257,68 @@ export const handleMobileDetailSheetClose = (deps) => {
   focusGroupView(deps);
 };
 
+export const handleMobileDetailPreviewClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const selectedItemId = deps.store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
+  openImagePreviewById({
+    deps,
+    itemId: selectedItemId,
+    syncExplorer: true,
+    suppressMobileDetailSheet: true,
+  });
+};
+
+export const handleMobileDetailDeleteClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const { store, render } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
+  store.openMobileDeleteDialog({ itemId: selectedItemId });
+  render();
+};
+
+export const handleMobileDeleteDialogClose = (deps) => {
+  const { store, render } = deps;
+
+  store.closeMobileDeleteDialog();
+  render();
+};
+
+export const handleMobileDeleteDialogCancel = (deps) => {
+  handleMobileDeleteDialogClose(deps);
+};
+
+export const handleMobileDeleteDialogConfirm = async (deps) => {
+  const { store, render } = deps;
+  const itemId = store.selectMobileDeleteDialogItemId();
+
+  store.closeMobileDeleteDialog();
+  render();
+
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDelete(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
 const {
   focusKeyboardScope: focusGroupView,
   handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
@@ -316,14 +380,23 @@ export const handleCenterGroupCollapseChange = (deps, payload) => {
   });
 };
 
-const openImagePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
+const openImagePreviewById = ({
+  deps,
+  itemId,
+  syncExplorer = false,
+  suppressMobileDetailSheet = false,
+} = {}) => {
   const { refs, store, render } = deps;
   const item = store.selectImageItemById({ itemId });
   if (!itemId || !item) {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  const selectionPayload = { itemId };
+  if (suppressMobileDetailSheet) {
+    selectionPayload.suppressMobileDetailSheet = true;
+  }
+  store.setSelectedItemId(selectionPayload);
 
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
@@ -366,7 +439,55 @@ const navigateImagePreview = (deps, { direction, distance, clamp } = {}) => {
     return false;
   }
 
-  openImagePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
+  openImagePreviewById({
+    deps,
+    itemId: nextItemId,
+    syncExplorer: true,
+    suppressMobileDetailSheet: true,
+  });
+  return true;
+};
+
+const getTouchPoint = (event, source = "changed") => {
+  if (source === "touches") {
+    return event?.touches?.[0] ?? event?.changedTouches?.[0];
+  }
+
+  return event?.changedTouches?.[0] ?? event?.touches?.[0];
+};
+
+const resolvePreviewSwipeNavigation = ({ startPoint, endPoint } = {}) => {
+  if (!startPoint || !endPoint) {
+    return undefined;
+  }
+
+  const horizontalDistance = endPoint.x - startPoint.x;
+  const verticalDistance = endPoint.y - startPoint.y;
+  const absoluteHorizontalDistance = Math.abs(horizontalDistance);
+  const absoluteVerticalDistance = Math.abs(verticalDistance);
+
+  if (
+    absoluteHorizontalDistance < FULL_IMAGE_PREVIEW_SWIPE_MIN_DISTANCE_PX ||
+    absoluteVerticalDistance >
+      absoluteHorizontalDistance * FULL_IMAGE_PREVIEW_SWIPE_MAX_VERTICAL_RATIO
+  ) {
+    return undefined;
+  }
+
+  return horizontalDistance < 0
+    ? { direction: "next" }
+    : { direction: "previous" };
+};
+
+const consumeSuppressedPreviewClick = (deps, payload) => {
+  const { store } = deps;
+  if (!store.selectFullImagePreviewSuppressNextClick?.()) {
+    return false;
+  }
+
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  store.clearFullImagePreviewSuppressNextClick?.();
   return true;
 };
 
@@ -443,8 +564,13 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
 };
 
 export const handleImageItemDoubleClick = (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  openImagePreviewById({ deps, itemId, syncExplorer: true });
+  const { itemId, source } = payload._event.detail;
+  openImagePreviewById({
+    deps,
+    itemId,
+    syncExplorer: true,
+    suppressMobileDetailSheet: source === "mobile-context-menu",
+  });
 };
 
 export const handleImageItemClick = (deps, payload) => {
@@ -644,17 +770,84 @@ export const handleFormExtraEvent = async (deps) => {
 };
 
 export const handleImageItemPreview = (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  openImagePreviewById({ deps, itemId, syncExplorer: true });
+  const { itemId, source } = payload._event.detail;
+  openImagePreviewById({
+    deps,
+    itemId,
+    syncExplorer: true,
+    suppressMobileDetailSheet: source === "mobile-context-menu",
+  });
 };
 
-export const handlePreviewOverlayClick = (deps) => {
+export const handlePreviewOverlayClick = (deps, payload) => {
+  if (consumeSuppressedPreviewClick(deps, payload)) {
+    return;
+  }
+
   closeImagePreview(deps);
 };
 
 export const handlePreviewImageFrameClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
+  if (consumeSuppressedPreviewClick(deps, payload)) {
+    return;
+  }
+
   closeImagePreview(deps);
+};
+
+export const handlePreviewOverlayTouchStart = (deps, payload) => {
+  const { store } = deps;
+  if (!store.selectFullImagePreviewVisible()) {
+    store.clearFullImagePreviewTouchStartPoint?.();
+    return;
+  }
+
+  const touchPoint = getTouchPoint(payload?._event, "touches");
+  if (!touchPoint) {
+    store.clearFullImagePreviewTouchStartPoint?.();
+    return;
+  }
+
+  store.clearFullImagePreviewSuppressNextClick?.();
+  store.setFullImagePreviewTouchStartPoint?.({
+    x: touchPoint.clientX,
+    y: touchPoint.clientY,
+  });
+};
+
+export const handlePreviewOverlayTouchEnd = (deps, payload) => {
+  const { store } = deps;
+  const startPoint = store.selectFullImagePreviewTouchStartPoint?.();
+  store.clearFullImagePreviewTouchStartPoint?.();
+
+  if (!store.selectFullImagePreviewVisible() || !startPoint) {
+    return;
+  }
+
+  const touchPoint = getTouchPoint(payload?._event, "changed");
+  const navigation = resolvePreviewSwipeNavigation({
+    startPoint,
+    endPoint: touchPoint
+      ? {
+          x: touchPoint.clientX,
+          y: touchPoint.clientY,
+        }
+      : undefined,
+  });
+  if (!navigation?.direction) {
+    return;
+  }
+
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  navigateImagePreview(deps, navigation);
+  store.suppressNextFullImagePreviewClick?.();
+};
+
+export const handlePreviewOverlayTouchCancel = (deps) => {
+  const { store } = deps;
+  store.clearFullImagePreviewTouchStartPoint?.();
 };
 
 export const handlePreviewPreviousClick = (deps, payload) => {
@@ -833,7 +1026,7 @@ export const handleEditFormAction = async (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, render } = deps;
+  const { projectService, appService, render, store } = deps;
   const { itemId } = payload._event.detail;
   const result = await projectService.deleteImageIfUnused({
     imageId: itemId,
@@ -848,6 +1041,10 @@ export const handleItemDelete = async (deps, payload) => {
     });
     render();
     return;
+  }
+
+  if (store?.selectSelectedItemId?.() === itemId) {
+    store.setSelectedItemId({ itemId: undefined });
   }
 
   await handleDataChanged(deps);

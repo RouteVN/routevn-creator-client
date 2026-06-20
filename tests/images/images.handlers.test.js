@@ -21,9 +21,18 @@ import {
   handleCreateTagDialogClose,
   handleDetailTagAddOptionClick,
   handleDetailTagValueChange,
+  handleFileExplorerSelectionChanged,
+  handleImageItemPreview,
+  handleMobileDeleteDialogCancel,
+  handleMobileDeleteDialogConfirm,
+  handleMobileDetailDeleteClick,
+  handleMobileDetailPreviewClick,
   handlePreviewCanvasModeClick,
   handlePreviewFitModeClick,
+  handlePreviewOverlayClick,
   handlePreviewOverlayKeyDown,
+  handlePreviewOverlayTouchEnd,
+  handlePreviewOverlayTouchStart,
   handleItemDelete,
   handleUploadClick,
 } from "../../src/pages/images/images.handlers.js";
@@ -38,6 +47,258 @@ describe("images handlers", () => {
 
   afterEach(() => {
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
+  it("jumps from the mobile file explorer without opening the detail sheet", () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const state = {
+      isTouchMode: true,
+      isMobileFileExplorerOpen: true,
+    };
+    const deps = {
+      store: {
+        getState: vi.fn(() => state),
+        selectIsTouchMode: vi.fn(() => state.isTouchMode),
+        selectIsMobileFileExplorerOpen: vi.fn(
+          () => state.isMobileFileExplorerOpen,
+        ),
+        setSelectedFolderId: vi.fn(),
+        setSelectedItemId: vi.fn(),
+        closeMobileFileExplorer: vi.fn(() => {
+          state.isMobileFileExplorerOpen = false;
+        }),
+      },
+      refs: {
+        groupview: {
+          scrollItemIntoView: vi.fn(),
+        },
+        fileExplorerKeyboardScope: {
+          focus: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleFileExplorerSelectionChanged(deps, {
+      _event: {
+        detail: {
+          itemId: "image-1",
+          isFolder: false,
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-1",
+      suppressMobileDetailSheet: true,
+    });
+    expect(deps.store.closeMobileFileExplorer).toHaveBeenCalledTimes(1);
+    expect(deps.refs.groupview.scrollItemIntoView).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens mobile long-press previews without opening the detail sheet", () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const deps = {
+      store: {
+        selectImageItemById: vi.fn(({ itemId }) => ({
+          id: itemId,
+          type: "image",
+          fileId: "image-file-1",
+        })),
+        setSelectedItemId: vi.fn(),
+        showFullImagePreview: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+        groupview: {
+          scrollItemIntoView: vi.fn(),
+        },
+        previewOverlay: {
+          focus: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleImageItemPreview(deps, {
+      _event: {
+        detail: {
+          itemId: "image-1",
+          source: "mobile-context-menu",
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-1",
+      suppressMobileDetailSheet: true,
+    });
+    expect(deps.store.showFullImagePreview).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(deps.refs.groupview.scrollItemIntoView).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+  });
+
+  it("opens selected mobile detail images in preview without reopening the detail sheet", () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "image-1"),
+        selectImageItemById: vi.fn(({ itemId }) => ({
+          id: itemId,
+          type: "image",
+          fileId: "image-file-1",
+        })),
+        setSelectedItemId: vi.fn(),
+        showFullImagePreview: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+        groupview: {
+          scrollItemIntoView: vi.fn(),
+        },
+        previewOverlay: {
+          focus: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleMobileDetailPreviewClick(deps, {
+      _event: {
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-1",
+      suppressMobileDetailSheet: true,
+    });
+    expect(deps.store.showFullImagePreview).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+  });
+
+  it("opens a confirmation dialog for selected mobile detail image deletes", () => {
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "image-1"),
+        openMobileDeleteDialog: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleMobileDetailDeleteClick(deps, {
+      _event: {
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.store.openMobileDeleteDialog).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels selected mobile detail image deletes without deleting", () => {
+    const deps = {
+      projectService: {
+        deleteImageIfUnused: vi.fn(),
+      },
+      store: {
+        closeMobileDeleteDialog: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleMobileDeleteDialogCancel(deps);
+
+    expect(deps.store.closeMobileDeleteDialog).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.projectService.deleteImageIfUnused).not.toHaveBeenCalled();
+  });
+
+  it("deletes confirmed mobile detail images and clears the selection", async () => {
+    const repositoryState = {
+      images: {
+        tree: [],
+        items: {},
+      },
+      files: {
+        tree: [],
+        items: {},
+      },
+      project: {
+        resolution: {
+          width: 1920,
+          height: 1080,
+        },
+      },
+      tags: {},
+    };
+    let selectedItemId = "image-1";
+    const deps = {
+      projectService: {
+        deleteImageIfUnused: vi.fn(async () => ({
+          deleted: true,
+        })),
+        getRepositoryState: vi.fn(() => repositoryState),
+      },
+      appService: {
+        showAlert: vi.fn(),
+      },
+      store: {
+        selectMobileDeleteDialogItemId: vi.fn(() => "image-1"),
+        closeMobileDeleteDialog: vi.fn(),
+        selectSelectedItemId: vi.fn(() => selectedItemId),
+        setSelectedItemId: vi.fn(({ itemId }) => {
+          selectedItemId = itemId;
+        }),
+        setTagsData: vi.fn(),
+        setItems: vi.fn(),
+        setProjectResolution: vi.fn(),
+      },
+      render: vi.fn(),
+      refs: {},
+    };
+
+    await handleMobileDeleteDialogConfirm(deps);
+
+    expect(deps.store.closeMobileDeleteDialog).toHaveBeenCalledTimes(1);
+    expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledWith({
+      imageId: "image-1",
+      checkTargets: ["scenes", "layouts"],
+    });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(selectedItemId).toBeUndefined();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
 
   it("shows a failure alert when deleteImageIfUnused fails without usage", async () => {
@@ -813,6 +1074,7 @@ describe("images handlers", () => {
     });
     expect(store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: "image-21",
+      suppressMobileDetailSheet: true,
     });
     expect(downEvent.preventDefault).toHaveBeenCalledTimes(1);
 
@@ -831,6 +1093,7 @@ describe("images handlers", () => {
     });
     expect(store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: "image-1",
+      suppressMobileDetailSheet: true,
     });
     expect(upEvent.preventDefault).toHaveBeenCalledTimes(1);
 
@@ -846,6 +1109,210 @@ describe("images handlers", () => {
 
     expect(store.selectAdjacentImageItemId).toHaveBeenCalledTimes(2);
     expect(inputEvent.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("uses horizontal preview swipes to navigate images", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    let touchStartPoint;
+    let suppressNextClick = false;
+    const createTouchEvent = ({ x, y, changed = false }) => {
+      const touch = { clientX: x, clientY: y };
+      return {
+        touches: changed ? [] : [touch],
+        changedTouches: changed ? [touch] : [],
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+    };
+    const store = {
+      selectFullImagePreviewVisible: vi.fn(() => true),
+      setFullImagePreviewTouchStartPoint: vi.fn((point) => {
+        touchStartPoint = point;
+      }),
+      clearFullImagePreviewTouchStartPoint: vi.fn(() => {
+        touchStartPoint = undefined;
+      }),
+      selectFullImagePreviewTouchStartPoint: vi.fn(() => touchStartPoint),
+      clearFullImagePreviewSuppressNextClick: vi.fn(() => {
+        suppressNextClick = false;
+      }),
+      suppressNextFullImagePreviewClick: vi.fn(() => {
+        suppressNextClick = true;
+      }),
+      selectSelectedItemId: vi.fn(() => "image-1"),
+      selectAdjacentImageItemId: vi.fn(({ direction }) => {
+        return direction === "next" ? "image-2" : "image-0";
+      }),
+      selectImageItemById: vi.fn(({ itemId }) => ({
+        id: itemId,
+        type: "image",
+        fileId: `${itemId}-file`,
+      })),
+      setSelectedItemId: vi.fn(),
+      showFullImagePreview: vi.fn(() => {
+        suppressNextClick = false;
+      }),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+        groupview: {
+          scrollItemIntoView: vi.fn(),
+        },
+        previewOverlay: {
+          focus: vi.fn(),
+        },
+      },
+    };
+
+    handlePreviewOverlayTouchStart(deps, {
+      _event: createTouchEvent({ x: 220, y: 120 }),
+    });
+    const leftSwipeEndEvent = createTouchEvent({
+      x: 80,
+      y: 132,
+      changed: true,
+    });
+    handlePreviewOverlayTouchEnd(deps, {
+      _event: leftSwipeEndEvent,
+    });
+
+    handlePreviewOverlayTouchStart(deps, {
+      _event: createTouchEvent({ x: 80, y: 120 }),
+    });
+    const rightSwipeEndEvent = createTouchEvent({
+      x: 220,
+      y: 112,
+      changed: true,
+    });
+    handlePreviewOverlayTouchEnd(deps, {
+      _event: rightSwipeEndEvent,
+    });
+
+    expect(store.selectAdjacentImageItemId).toHaveBeenNthCalledWith(1, {
+      itemId: "image-1",
+      direction: "next",
+    });
+    expect(store.selectAdjacentImageItemId).toHaveBeenNthCalledWith(2, {
+      itemId: "image-1",
+      direction: "previous",
+    });
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-2",
+      suppressMobileDetailSheet: true,
+    });
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-0",
+      suppressMobileDetailSheet: true,
+    });
+    expect(store.suppressNextFullImagePreviewClick).toHaveBeenCalledTimes(2);
+    expect(suppressNextClick).toBe(true);
+    expect(leftSwipeEndEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(leftSwipeEndEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(rightSwipeEndEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(rightSwipeEndEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.refs.previewOverlay.focus).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores short and vertical preview swipes", () => {
+    let touchStartPoint;
+    const createTouchEvent = ({ x, y, changed = false }) => {
+      const touch = { clientX: x, clientY: y };
+      return {
+        touches: changed ? [] : [touch],
+        changedTouches: changed ? [touch] : [],
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+    };
+    const store = {
+      selectFullImagePreviewVisible: vi.fn(() => true),
+      setFullImagePreviewTouchStartPoint: vi.fn((point) => {
+        touchStartPoint = point;
+      }),
+      clearFullImagePreviewTouchStartPoint: vi.fn(() => {
+        touchStartPoint = undefined;
+      }),
+      selectFullImagePreviewTouchStartPoint: vi.fn(() => touchStartPoint),
+      clearFullImagePreviewSuppressNextClick: vi.fn(),
+      suppressNextFullImagePreviewClick: vi.fn(),
+      selectSelectedItemId: vi.fn(() => "image-1"),
+      selectAdjacentImageItemId: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      refs: {},
+    };
+
+    handlePreviewOverlayTouchStart(deps, {
+      _event: createTouchEvent({ x: 120, y: 120 }),
+    });
+    const shortSwipeEndEvent = createTouchEvent({
+      x: 150,
+      y: 124,
+      changed: true,
+    });
+    handlePreviewOverlayTouchEnd(deps, {
+      _event: shortSwipeEndEvent,
+    });
+
+    handlePreviewOverlayTouchStart(deps, {
+      _event: createTouchEvent({ x: 120, y: 120 }),
+    });
+    const verticalSwipeEndEvent = createTouchEvent({
+      x: 190,
+      y: 220,
+      changed: true,
+    });
+    handlePreviewOverlayTouchEnd(deps, {
+      _event: verticalSwipeEndEvent,
+    });
+
+    expect(store.selectAdjacentImageItemId).not.toHaveBeenCalled();
+    expect(store.suppressNextFullImagePreviewClick).not.toHaveBeenCalled();
+    expect(shortSwipeEndEvent.preventDefault).not.toHaveBeenCalled();
+    expect(verticalSwipeEndEvent.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("consumes the suppressed click after touch preview navigation", () => {
+    const event = {
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+    const deps = {
+      store: {
+        selectFullImagePreviewSuppressNextClick: vi.fn(() => true),
+        clearFullImagePreviewSuppressNextClick: vi.fn(),
+        hideFullImagePreview: vi.fn(),
+      },
+      render: vi.fn(),
+      refs: {
+        fileExplorerKeyboardScope: {
+          focus: vi.fn(),
+        },
+      },
+    };
+
+    handlePreviewOverlayClick(deps, {
+      _event: event,
+    });
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(
+      deps.store.clearFullImagePreviewSuppressNextClick,
+    ).toHaveBeenCalled();
+    expect(deps.store.hideFullImagePreview).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
   });
 
   it("ignores preview display mode shortcuts when preview is not visible", () => {

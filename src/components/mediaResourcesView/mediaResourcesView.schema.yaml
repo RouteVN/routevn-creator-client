@@ -100,7 +100,7 @@ propsSchema:
       description: Whether image cards should fill the available row width and use image aspect ratios
     mobileLayout:
       type: boolean
-      description: Whether cards should use the touch/mobile full-width layout and ignore zoom
+      description: Whether cards should use the touch/mobile layout; column zoom controls still drive grid columns when enabled
     itemContextMenuItems:
       type: array
       description: Context menu items for media cards

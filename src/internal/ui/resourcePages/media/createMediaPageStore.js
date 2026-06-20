@@ -22,6 +22,10 @@ import {
   closeMobileResourceFileExplorerState,
   createMobileResourcePageState,
   openMobileResourceFileExplorerState,
+  selectIsMobileFileExplorerOpenState,
+  selectIsTouchModeState,
+  selectSuppressMobileDetailSheetState,
+  setMobileResourceDetailSheetSuppressedState,
   setMobileResourcePageUiConfigState,
 } from "../mobileResourcePage.js";
 
@@ -237,8 +241,15 @@ export const createMediaPageStore = ({
     }
   };
 
-  const setSelectedItemId = ({ state }, { itemId } = {}) => {
+  const setSelectedItemId = (
+    { state },
+    { itemId, suppressMobileDetailSheet = false } = {},
+  ) => {
     state.selectedItemId = itemId;
+    setMobileResourceDetailSheetSuppressedState(state, {
+      itemId,
+      suppressMobileDetailSheet,
+    });
     if (itemId) {
       state.selectedFolderId = undefined;
     }
@@ -254,6 +265,9 @@ export const createMediaPageStore = ({
   const setSelectedFolderId = ({ state }, { folderId } = {}) => {
     state.selectedFolderId = folderId;
     state.selectedItemId = undefined;
+    setMobileResourceDetailSheetSuppressedState(state, {
+      itemId: undefined,
+    });
     if (taggingEnabled) {
       state.isDetailTagSelectOpen = false;
       syncDetailTagIds({
@@ -328,6 +342,12 @@ export const createMediaPageStore = ({
   const selectFolderById = ({ state }, { folderId } = {}) => {
     return selectDataFolder(state, folderId);
   };
+
+  const selectIsTouchMode = selectIsTouchModeState;
+
+  const selectIsMobileFileExplorerOpen = selectIsMobileFileExplorerOpenState;
+
+  const selectSuppressMobileDetailSheet = selectSuppressMobileDetailSheetState;
 
   const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
 
@@ -573,6 +593,9 @@ export const createMediaPageStore = ({
     selectSelectedItemId,
     selectFolderById,
     selectSelectedFolderId,
+    selectIsTouchMode,
+    selectIsMobileFileExplorerOpen,
+    selectSuppressMobileDetailSheet,
     setSearchQuery,
     setTagsData,
     setActiveTagIds,

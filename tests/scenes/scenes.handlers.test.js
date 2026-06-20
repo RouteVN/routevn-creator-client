@@ -2,8 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   handleAfterMount,
   handleFileExplorerSelectionChanged,
+  handleMobileFileExplorerClose,
+  handleMobileFileExplorerOpen,
   handleSceneFormAction,
   handleWhiteboardItemDelete,
+  handleWhiteboardItemDoubleClick,
   handleWhiteboardPanChanged,
   handleWhiteboardZoomChanged,
 } from "../../src/pages/scenes/scenes.handlers.js";
@@ -86,6 +89,10 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       hideMapAddHint: vi.fn(),
       setSelectedItemId: vi.fn(),
       selectSelectedItemId: vi.fn(() => undefined),
+      selectSelectedFolderId: vi.fn(() => undefined),
+      openMobileFileExplorer: vi.fn(),
+      closeMobileFileExplorer: vi.fn(),
+      selectIsMobileFileExplorerOpen: vi.fn(() => false),
       resetSceneForm: vi.fn(),
       addWhiteboardItem: vi.fn(),
       selectSceneWhiteboardPosition: vi.fn(() => ({
@@ -251,6 +258,71 @@ describe("scenes.handlers config keys", () => {
     expect(deps.render).toHaveBeenCalled();
   });
 
+  it("closes the mobile file explorer after selecting a scene", () => {
+    const deps = createDeps();
+    deps.store.selectIsMobileFileExplorerOpen.mockReturnValue(true);
+
+    handleFileExplorerSelectionChanged(deps, {
+      _event: {
+        detail: {
+          itemId: "scene-1",
+        },
+      },
+    });
+
+    expect(deps.store.closeMobileFileExplorer).toHaveBeenCalledTimes(1);
+    expect(deps.refs.whiteboard.ensureItemVisible).toHaveBeenCalledWith({
+      itemId: "scene-1",
+      behavior: "smooth",
+      durationMs: 160,
+    });
+  });
+
+  it("opens and closes the mobile file explorer", () => {
+    const deps = createDeps();
+    deps.store.selectSelectedItemId.mockReturnValue("scene-1");
+
+    handleMobileFileExplorerOpen(deps);
+
+    expect(deps.store.openMobileFileExplorer).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.refs.fileexplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "scene-1",
+    });
+
+    handleMobileFileExplorerClose(deps);
+
+    expect(deps.store.closeMobileFileExplorer).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens the scene editor from a whiteboard item double click", () => {
+    const deps = createDeps();
+
+    handleWhiteboardItemDoubleClick(deps, {
+      _event: {
+        detail: {
+          itemId: "scene-1",
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "scene-1",
+    });
+    expect(deps.appService.setUserConfig).toHaveBeenCalledWith(
+      "scenesMap.selectedSceneIdByProject.project-1",
+      "scene-1",
+    );
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project/scene-editor",
+      {
+        p: "project-1",
+        s: "scene-1",
+      },
+    );
+  });
+
   it("blocks whiteboard scene delete when another scene points to it", async () => {
     const deps = createDeps();
     deps.projectService.deleteSceneIfUnused.mockResolvedValue({
@@ -279,7 +351,13 @@ describe("scenes.handlers config keys", () => {
   });
 
   it("creates scene, first section, and first line as one project command batch", async () => {
-    const deps = createDeps();
+    const deps = createDeps({
+      userConfig: {
+        "sceneEditor.recentSceneIdsByProject": {
+          "project-1": ["scene-1"],
+        },
+      },
+    });
 
     await handleSceneFormAction(deps, {
       _event: {
@@ -336,6 +414,15 @@ describe("scenes.handlers config keys", () => {
         y: 0,
       },
     });
+    const createdSceneId =
+      deps.projectService.createSceneWithInitialContent.mock.calls[0][0]
+        .sceneId;
+    expect(deps.appService.setUserConfig).toHaveBeenCalledWith(
+      "sceneEditor.recentSceneIdsByProject",
+      {
+        "project-1": [createdSceneId, "scene-1"],
+      },
+    );
   });
 
   it("shows an error when scene creation is rejected", async () => {
@@ -366,5 +453,9 @@ describe("scenes.handlers config keys", () => {
       message: "cannot create scene",
     });
     expect(deps.store.addWhiteboardItem).not.toHaveBeenCalled();
+    expect(deps.appService.setUserConfig).not.toHaveBeenCalledWith(
+      "sceneEditor.recentSceneIdsByProject",
+      expect.anything(),
+    );
   });
 });

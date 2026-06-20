@@ -325,6 +325,16 @@ const {
     );
     viewData.fullImagePreviewPreviousVisible = Boolean(previousItemId);
     viewData.fullImagePreviewNextVisible = Boolean(nextItemId);
+    const deleteDialogItem = state.mobileDeleteDialogItemId
+      ? state.data?.items?.[state.mobileDeleteDialogItemId]
+      : undefined;
+    const deleteDialogItemName = deleteDialogItem?.name
+      ? `"${deleteDialogItem.name}"`
+      : "this image";
+    viewData.mobileDeleteDialogOpen = state.mobileDeleteDialogOpen;
+    viewData.mobileDeleteDialogTitle = "Delete Image";
+    viewData.mobileDeleteDialogMessage = `Delete ${deleteDialogItemName}? This cannot be undone.`;
+    viewData.mobileDeleteDialogConfirmLabel = "Delete";
 
     return viewData;
   },
@@ -335,6 +345,10 @@ export const createInitialState = () => ({
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
   fullImagePreviewDisplayMode: FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS,
+  fullImagePreviewTouchStartPoint: undefined,
+  fullImagePreviewSuppressNextClick: false,
+  mobileDeleteDialogOpen: false,
+  mobileDeleteDialogItemId: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
 });
 
@@ -397,11 +411,39 @@ export const showFullImagePreview = ({ state }, { itemId } = {}) => {
   }
   state.fullImagePreviewVisible = true;
   state.fullImagePreviewFileId = item.fileId;
+  state.fullImagePreviewTouchStartPoint = undefined;
+  state.fullImagePreviewSuppressNextClick = false;
 };
 
 export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
+  state.fullImagePreviewTouchStartPoint = undefined;
+  state.fullImagePreviewSuppressNextClick = false;
+};
+
+export const setFullImagePreviewTouchStartPoint = (
+  { state },
+  { x, y } = {},
+) => {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    state.fullImagePreviewTouchStartPoint = undefined;
+    return;
+  }
+
+  state.fullImagePreviewTouchStartPoint = { x, y };
+};
+
+export const clearFullImagePreviewTouchStartPoint = ({ state }) => {
+  state.fullImagePreviewTouchStartPoint = undefined;
+};
+
+export const suppressNextFullImagePreviewClick = ({ state }) => {
+  state.fullImagePreviewSuppressNextClick = true;
+};
+
+export const clearFullImagePreviewSuppressNextClick = ({ state }) => {
+  state.fullImagePreviewSuppressNextClick = false;
 };
 
 export const setFullImagePreviewDisplayMode = (
@@ -418,6 +460,23 @@ export const setFullImagePreviewDisplayMode = (
   state.fullImagePreviewDisplayMode = displayMode;
 };
 
+export const openMobileDeleteDialog = ({ state }, { itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  state.mobileDeleteDialogOpen = true;
+  state.mobileDeleteDialogItemId = itemId;
+};
+
+export const closeMobileDeleteDialog = ({ state }) => {
+  state.mobileDeleteDialogOpen = false;
+  state.mobileDeleteDialogItemId = undefined;
+};
+
+export const selectMobileDeleteDialogItemId = ({ state }) =>
+  state.mobileDeleteDialogItemId;
+
 export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
   state.projectResolution = requireProjectResolution(
     projectResolution ?? DEFAULT_PROJECT_RESOLUTION,
@@ -427,6 +486,12 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
 
 export const selectFullImagePreviewVisible = ({ state }) =>
   state.fullImagePreviewVisible;
+
+export const selectFullImagePreviewTouchStartPoint = ({ state }) =>
+  state.fullImagePreviewTouchStartPoint;
+
+export const selectFullImagePreviewSuppressNextClick = ({ state }) =>
+  state.fullImagePreviewSuppressNextClick;
 
 export const selectViewData = (context) => {
   const viewData = selectMediaViewData(context);

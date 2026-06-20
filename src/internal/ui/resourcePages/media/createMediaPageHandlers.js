@@ -4,6 +4,10 @@ import { createProjectStateStream } from "../../../../deps/services/shared/proje
 import { syncMediaPageData } from "./mediaPageShared.js";
 import { tap } from "rxjs";
 import { createResourcePageTagHandlers } from "../tags.js";
+import {
+  closeMobileResourceFileExplorerAfterSelection,
+  shouldSuppressMobileDetailSheetForFileExplorerSelection,
+} from "../mobileResourcePage.js";
 import { handleResourceZoomShortcutKeyDown } from "../zoomShortcuts.js";
 
 export const createMediaPageHandlers = ({
@@ -224,11 +228,14 @@ export const createMediaPageHandlers = ({
     }
 
     store.setSelectedFolderId({ folderId: undefined });
-    store.setSelectedItemId({ itemId });
-    const state = store.getState();
-    if (state.isTouchMode && state.isMobileFileExplorerOpen) {
-      store.closeMobileFileExplorer?.();
+    const suppressMobileDetailSheet =
+      shouldSuppressMobileDetailSheetForFileExplorerSelection(deps);
+    const selectionPayload = { itemId };
+    if (suppressMobileDetailSheet) {
+      selectionPayload.suppressMobileDetailSheet = true;
     }
+    store.setSelectedItemId(selectionPayload);
+    closeMobileResourceFileExplorerAfterSelection(deps);
     render();
     refs.groupview?.scrollItemIntoView?.({ itemId });
     focusKeyboardScope(deps);

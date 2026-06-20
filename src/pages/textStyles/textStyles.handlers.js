@@ -21,6 +21,7 @@ import {
   handleMobileResourceDetailSheetClose,
   handleMobileResourceFileExplorerClose,
   handleMobileResourceFileExplorerOpen,
+  shouldSuppressMobileDetailSheetForFileExplorerSelection,
   syncMobileResourcePageUiConfig,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
@@ -186,7 +187,11 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   store.setSelectedFolderId({ folderId: undefined });
-  store.setSelectedItemId({ itemId });
+  const selectionPayload = { itemId };
+  if (shouldSuppressMobileDetailSheetForFileExplorerSelection(deps)) {
+    selectionPayload.suppressMobileDetailSheet = true;
+  }
+  store.setSelectedItemId(selectionPayload);
   closeMobileResourceFileExplorerAfterSelection(deps);
   render();
   focusFileExplorerKeyboardScope(deps);
@@ -418,6 +423,42 @@ export const handleTextStyleItemDoubleClick = (deps, payload) => {
   }
 
   openEditDialogWithValues({ deps, itemId });
+};
+
+export const handleMobileDetailDuplicateClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDuplicate(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
+export const handleMobileDetailDeleteClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDelete(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
 };
 
 export const handleDetailHeaderClick = (deps) => {

@@ -3,6 +3,11 @@ import { createFileExplorerKeyboardScopeHandlers } from "../../fileExplorerKeybo
 import { createProjectStateStream } from "../../../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 import { createResourcePageTagHandlers } from "../tags.js";
+import {
+  closeMobileResourceFileExplorerAfterSelection,
+  shouldRevealSuppressedMobileDetailSheet,
+  shouldSuppressMobileDetailSheetForFileExplorerSelection,
+} from "../mobileResourcePage.js";
 import { handleResourceZoomShortcutKeyDown } from "../zoomShortcuts.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
@@ -113,17 +118,20 @@ export const createCatalogPageHandlers = ({
       return;
     }
 
-    if (store.selectSelectedItemId() === itemId) {
+    const suppressMobileDetailSheet =
+      shouldSuppressMobileDetailSheetForFileExplorerSelection(deps);
+    if (store.selectSelectedItemId() === itemId && !suppressMobileDetailSheet) {
       focusKeyboardScope(deps);
       return;
     }
 
     store.setSelectedFolderId?.({ folderId: undefined });
-    store.setSelectedItemId({ itemId });
-    const state = store.getState();
-    if (state.isTouchMode && state.isMobileFileExplorerOpen) {
-      store.closeMobileFileExplorer?.();
+    const selectionPayload = { itemId };
+    if (suppressMobileDetailSheet) {
+      selectionPayload.suppressMobileDetailSheet = true;
     }
+    store.setSelectedItemId(selectionPayload);
+    closeMobileResourceFileExplorerAfterSelection(deps);
     render();
     focusKeyboardScope(deps);
   };
@@ -152,6 +160,10 @@ export const createCatalogPageHandlers = ({
     }
 
     if (store.selectSelectedItemId() === itemId) {
+      if (shouldRevealSuppressedMobileDetailSheet(deps)) {
+        store.setSelectedItemId({ itemId });
+        render();
+      }
       return;
     }
 

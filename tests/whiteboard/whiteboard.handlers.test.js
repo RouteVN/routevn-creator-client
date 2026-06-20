@@ -5,6 +5,8 @@ import {
   handleContainerTouchStart,
   handleContainerWheel,
   handleEnsureItemVisible,
+  handleItemMouseDown,
+  handleMinimapViewportMouseDown,
   handleWindowMouseMove,
   handleWindowMouseUp,
 } from "../../src/components/whiteboard/whiteboard.handlers.js";
@@ -38,6 +40,7 @@ const createDeps = ({
   items = [],
   containerWidth = 100,
   containerHeight = 80,
+  minimapHeightScale,
 } = {}) => {
   const minimapItemRefs = createMinimapItemRefs();
   let currentPan = pan;
@@ -53,6 +56,8 @@ const createDeps = ({
     selectIsPanning: vi.fn(() => false),
     selectPan: vi.fn(() => currentPan),
     selectZoomLevel: vi.fn(() => zoomLevel),
+    selectMouseItemPress: vi.fn(() => undefined),
+    clearMouseItemPress: vi.fn(),
     selectMinimapData: vi.fn(() => ({
       items: [
         { id: "scene-1", x: 12, y: 10 },
@@ -67,6 +72,7 @@ const createDeps = ({
         height: 40,
       },
     })),
+    startMinimapViewportDragging: vi.fn(),
     updatePanFromMinimapViewportDragging: vi.fn(),
     stopMinimapViewportDragging: vi.fn(),
     setPan: vi.fn(({ panX, panY }) => {
@@ -114,6 +120,7 @@ const createDeps = ({
     refs,
     props: {
       items,
+      minimapHeightScale,
     },
     render: vi.fn(),
     dispatchEvent: vi.fn(),
@@ -129,6 +136,8 @@ const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
   let lastDraggedPosition;
   let containerSize = { width: 600, height: 420 };
   let touchGesture;
+  let lastTouchTap;
+  let mouseItemPress;
   const itemElement = {
     dataset: { itemId: "scene-1" },
     style: {
@@ -139,11 +148,13 @@ const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
   const store = {
     selectIsPanMode: vi.fn(() => false),
     selectContainerSize: vi.fn(() => containerSize),
+    selectIsDraggingMinimapViewport: vi.fn(() => false),
     setContainerSize: vi.fn(({ width, height }) => {
       containerSize = { width, height };
     }),
     selectPan: vi.fn(() => ({ x: 0, y: 0 })),
     selectZoomLevel: vi.fn(() => 1),
+    selectIsPanning: vi.fn(() => false),
     setDragOffset: vi.fn((nextDragOffset) => {
       dragOffset = nextDragOffset;
     }),
@@ -165,6 +176,27 @@ const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
     clearLastDraggedPosition: vi.fn(() => {
       lastDraggedPosition = undefined;
     }),
+    startMouseItemPress: vi.fn((press) => {
+      mouseItemPress = {
+        type: "item-press",
+        ...press,
+        hasMoved: false,
+      };
+    }),
+    updateMouseItemPress: vi.fn(({ clientX, clientY, moveThreshold }) => {
+      if (mouseItemPress?.type !== "item-press") {
+        return;
+      }
+
+      const deltaX = clientX - mouseItemPress.startClientX;
+      const deltaY = clientY - mouseItemPress.startClientY;
+      mouseItemPress.hasMoved =
+        mouseItemPress.hasMoved || Math.hypot(deltaX, deltaY) > moveThreshold;
+    }),
+    clearMouseItemPress: vi.fn(() => {
+      mouseItemPress = undefined;
+    }),
+    selectMouseItemPress: vi.fn(() => mouseItemPress),
     startTouchItemPress: vi.fn((gesture) => {
       touchGesture = {
         type: "item-press",
@@ -195,6 +227,13 @@ const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
       }
     }),
     selectTouchGesture: vi.fn(() => touchGesture),
+    setLastTouchTap: vi.fn((tap) => {
+      lastTouchTap = tap;
+    }),
+    clearLastTouchTap: vi.fn(() => {
+      lastTouchTap = undefined;
+    }),
+    selectLastTouchTap: vi.fn(() => lastTouchTap),
     startTouchPan: vi.fn(),
     updateTouchPan: vi.fn(),
     stopTouchGesture: vi.fn(() => {
@@ -235,7 +274,13 @@ const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
   };
 };
 
-const createTouchEvent = ({ target, clientX, clientY, touches } = {}) => ({
+const createTouchEvent = ({
+  target,
+  clientX,
+  clientY,
+  touches,
+  timeStamp,
+} = {}) => ({
   target,
   touches: touches ?? [
     {
@@ -243,9 +288,25 @@ const createTouchEvent = ({ target, clientX, clientY, touches } = {}) => ({
       clientY,
     },
   ],
+  timeStamp,
   preventDefault: vi.fn(),
   stopPropagation: vi.fn(),
   cancelable: true,
+});
+
+const createMouseEvent = ({
+  currentTarget,
+  clientX,
+  clientY,
+  button = 0,
+} = {}) => ({
+  currentTarget,
+  clientX,
+  clientY,
+  button,
+  ctrlKey: false,
+  preventDefault: vi.fn(),
+  stopPropagation: vi.fn(),
 });
 
 describe("whiteboard minimap drag handlers", () => {
@@ -279,7 +340,7 @@ describe("whiteboard minimap drag handlers", () => {
   });
 
   it("does not dispatch pan persistence while minimap drag is moving", () => {
-    const deps = createDeps();
+    const deps = createDeps({ minimapHeightScale: 2 / 3 });
 
     handleWindowMouseMove(deps, {
       _event: {
@@ -304,6 +365,35 @@ describe("whiteboard minimap drag handlers", () => {
     expect(deps.minimapItemRefs[0].style.top).toBe("10px");
     expect(deps.minimapItemRefs[0].firstElementChild.style.width).toBe("18px");
     expect(deps.minimapItemRefs[0].firstElementChild.style.height).toBe("9px");
+    expect(deps.store.selectMinimapData).toHaveBeenCalledWith({
+      items: [],
+      heightScale: 2 / 3,
+    });
+  });
+
+  it("uses compact minimap geometry when starting viewport drag", () => {
+    const deps = createDeps({ minimapHeightScale: 2 / 3 });
+
+    handleMinimapViewportMouseDown(deps, {
+      _event: createMouseEvent({
+        clientX: 150,
+        clientY: 230,
+      }),
+    });
+
+    expect(deps.store.selectMinimapData).toHaveBeenCalledWith({
+      items: [],
+      heightScale: 2 / 3,
+    });
+    expect(deps.store.startMinimapViewportDragging).toHaveBeenCalledWith({
+      mouseX: 50,
+      mouseY: 30,
+      minimapData: expect.objectContaining({
+        viewport: expect.objectContaining({
+          visible: true,
+        }),
+      }),
+    });
   });
 
   it("dispatches one pan-changed event when minimap drag ends", () => {
@@ -457,6 +547,64 @@ describe("whiteboard minimap drag handlers", () => {
     }
   });
 
+  it("opens the item after a stationary touch double tap", () => {
+    const deps = createTouchDragDeps();
+
+    handleContainerTouchStart(deps, {
+      _event: createTouchEvent({
+        target: deps.target,
+        clientX: 110,
+        clientY: 80,
+        timeStamp: 1000,
+      }),
+    });
+    handleContainerTouchEnd(deps, {
+      _event: createTouchEvent({
+        target: deps.target,
+        touches: [],
+        timeStamp: 1080,
+      }),
+    });
+
+    expect(
+      deps.dispatchEvent.mock.calls
+        .map(([event]) => event)
+        .filter((event) => event.type === "item-double-click"),
+    ).toHaveLength(0);
+    expect(deps.store.setLastTouchTap).toHaveBeenCalledWith({
+      itemId: "scene-1",
+      clientX: 110,
+      clientY: 80,
+      timestamp: 1080,
+    });
+
+    handleContainerTouchStart(deps, {
+      _event: createTouchEvent({
+        target: deps.target,
+        clientX: 116,
+        clientY: 84,
+        timeStamp: 1210,
+      }),
+    });
+    handleContainerTouchEnd(deps, {
+      _event: createTouchEvent({
+        target: deps.target,
+        touches: [],
+        timeStamp: 1240,
+      }),
+    });
+
+    const doubleClickEvents = deps.dispatchEvent.mock.calls
+      .map(([event]) => event)
+      .filter((event) => event.type === "item-double-click");
+
+    expect(doubleClickEvents).toHaveLength(1);
+    expect(doubleClickEvents[0].detail).toEqual({
+      itemId: "scene-1",
+    });
+    expect(deps.store.clearLastTouchTap).toHaveBeenCalled();
+  });
+
   it("keeps one-finger pan when touch starts on the background", () => {
     const deps = createTouchDragDeps({ selectedItemId: "scene-2" });
     const backgroundTarget = {
@@ -477,6 +625,94 @@ describe("whiteboard minimap drag handlers", () => {
       touchX: 110,
       touchY: 80,
     });
+  });
+
+  it("does not start an item drag from a stationary mouse press", () => {
+    const deps = createTouchDragDeps();
+    const mouseDownEvent = createMouseEvent({
+      currentTarget: deps.itemElement,
+      clientX: 110,
+      clientY: 80,
+    });
+
+    handleItemMouseDown(deps, {
+      _event: mouseDownEvent,
+    });
+
+    expect(mouseDownEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.store.startMouseItemPress).toHaveBeenCalledWith({
+      itemId: "scene-1",
+      startClientX: 110,
+      startClientY: 80,
+    });
+    expect(deps.store.startDragging).not.toHaveBeenCalled();
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-selected",
+        detail: {
+          itemId: "scene-1",
+        },
+      }),
+    );
+
+    handleWindowMouseUp(deps);
+
+    expect(deps.store.clearMouseItemPress).toHaveBeenCalled();
+    expect(deps.store.startDragging).not.toHaveBeenCalled();
+    expect(deps.dispatchEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-position-changed",
+      }),
+    );
+  });
+
+  it("starts an item drag after a mouse press moves past the threshold", () => {
+    const deps = createTouchDragDeps();
+    const mouseDownEvent = createMouseEvent({
+      currentTarget: deps.itemElement,
+      clientX: 110,
+      clientY: 80,
+    });
+
+    handleItemMouseDown(deps, {
+      _event: mouseDownEvent,
+    });
+
+    handleWindowMouseMove(deps, {
+      _event: {
+        clientX: 160,
+        clientY: 120,
+      },
+    });
+
+    expect(deps.store.startDragging).toHaveBeenCalledWith({
+      itemId: "scene-1",
+    });
+    expect(deps.store.clearMouseItemPress).toHaveBeenCalled();
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-position-updating",
+        detail: {
+          itemId: "scene-1",
+          x: 150,
+          y: 100,
+        },
+      }),
+    );
+
+    handleWindowMouseUp(deps);
+
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-position-changed",
+        detail: {
+          itemId: "scene-1",
+          x: 150,
+          y: 100,
+        },
+      }),
+    );
+    expect(deps.store.stopDragging).toHaveBeenCalledTimes(1);
   });
 
   it("animates ensureItemVisible when smooth behavior is requested", () => {

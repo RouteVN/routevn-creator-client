@@ -39,6 +39,12 @@ body::-webkit-scrollbar {
   scrollbar-color: var(--input) transparent;
 }
 
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.08);
+}
+
 body {
   -ms-overflow-style: none;
   scrollbar-width: none;

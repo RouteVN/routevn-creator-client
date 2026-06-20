@@ -65,7 +65,7 @@ template:
                               - $if item.trailingSvg:
                                   - rtgl-view d=h av=c ah=c w=14 h=14 min-w=14:
                                       - rtgl-svg svg=${item.trailingSvg} wh=12 c=mu-fg: null
-          - rtgl-view#container w=f h=1fg min-h=64: null
+          - 'div#container style="width: 100%; height: ${bottomEmptySpaceHeight}; min-height: ${bottomEmptySpaceHeight}; flex: 0 0 ${bottomEmptySpaceHeight};"': null
           - $if targetDragIndex != -2 && targetDropPosition != 'inside':
               - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"': null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

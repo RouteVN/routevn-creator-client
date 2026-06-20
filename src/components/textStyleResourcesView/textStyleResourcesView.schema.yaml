@@ -60,7 +60,7 @@ propsSchema:
       description: Whether to show a menu icon in the header
     mobileLayout:
       type: boolean
-      description: Whether cards should use the touch/mobile full-width layout
+      description: Whether cards should use the touch/mobile layout; column zoom controls still drive grid columns when enabled
     scrollBottomPadding:
       type: string
       description: Extra bottom padding inside the scroll container

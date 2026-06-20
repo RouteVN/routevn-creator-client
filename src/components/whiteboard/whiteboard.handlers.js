@@ -6,8 +6,11 @@ import {
 
 const DEFAULT_ENSURE_VISIBLE_PAN_DURATION_MS = 160;
 const MAX_ENSURE_VISIBLE_PAN_DURATION_MS = 320;
+const MOUSE_ITEM_DRAG_THRESHOLD_PX = 3;
 const TOUCH_ITEM_DRAG_THRESHOLD_PX = 6;
 const TOUCH_ITEM_LONG_PRESS_MS = 500;
+const TOUCH_DOUBLE_TAP_MS = 320;
+const TOUCH_DOUBLE_TAP_DISTANCE_PX = 28;
 
 const syncContainerSize = ({ store, refs } = {}) => {
   const container = refs?.container;
@@ -102,6 +105,7 @@ const syncPanPresentation = ({ store, refs, props } = {}) => {
   if (refs?.minimapViewport && typeof store.selectMinimapData === "function") {
     const minimapData = store.selectMinimapData({
       items: props?.items || [],
+      heightScale: props?.minimapHeightScale,
     });
     const viewport = minimapData?.viewport;
     const minimapItemRefs =
@@ -294,6 +298,20 @@ const dispatchItemSelected = ({ dispatchEvent } = {}, { itemId } = {}) => {
   );
 };
 
+const dispatchItemDoubleClick = ({ dispatchEvent } = {}, { itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("item-double-click", {
+      detail: { itemId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 const dispatchItemContextMenu = (
   { dispatchEvent } = {},
   { itemId, clientX, clientY } = {},
@@ -408,6 +426,59 @@ const stopTouchGesture = (deps) => {
   deps.store.stopTouchGesture();
 };
 
+const resolveEventTimestamp = (event) => {
+  const timestamp = Number(event?.timeStamp);
+  return Number.isFinite(timestamp) ? timestamp : Date.now();
+};
+
+const isTouchDoubleTap = (
+  previousTap,
+  { itemId, clientX, clientY, timestamp } = {},
+) => {
+  if (!previousTap || previousTap.itemId !== itemId) {
+    return false;
+  }
+
+  const elapsedMs = timestamp - previousTap.timestamp;
+  const distance = Math.hypot(
+    clientX - previousTap.clientX,
+    clientY - previousTap.clientY,
+  );
+
+  return (
+    elapsedMs >= 0 &&
+    elapsedMs <= TOUCH_DOUBLE_TAP_MS &&
+    distance <= TOUCH_DOUBLE_TAP_DISTANCE_PX
+  );
+};
+
+const completeTouchItemTap = (deps, { gesture, event } = {}) => {
+  const { store, dispatchEvent } = deps;
+  if (
+    gesture?.type !== "item-press" ||
+    gesture.hasMoved ||
+    gesture.longPressFired
+  ) {
+    store.clearLastTouchTap();
+    return;
+  }
+
+  const tap = {
+    itemId: gesture.itemId,
+    clientX: gesture.startClientX,
+    clientY: gesture.startClientY,
+    timestamp: resolveEventTimestamp(event),
+  };
+
+  if (isTouchDoubleTap(store.selectLastTouchTap(), tap)) {
+    store.clearLastTouchTap();
+    dispatchItemDoubleClick({ dispatchEvent }, { itemId: gesture.itemId });
+    return;
+  }
+
+  store.setLastTouchTap(tap);
+};
+
 const startTouchItemPress = (
   deps,
   { itemElement, itemId, clientX, clientY } = {},
@@ -431,6 +502,7 @@ const startTouchItemPress = (
           }
 
           store.markTouchItemLongPressed();
+          store.clearLastTouchTap();
           dispatchItemContextMenu(
             { dispatchEvent },
             {
@@ -461,6 +533,7 @@ const startItemDragFromTouchPress = (deps, { clientX, clientY } = {}) => {
 
   const itemElement = getItemElementByIdFromRefs(refs, gesture.itemId);
   clearTouchLongPressTimeout(deps);
+  store.clearLastTouchTap();
   const didStartDrag = startItemDrag(deps, {
     itemElement,
     itemId: gesture.itemId,
@@ -476,6 +549,32 @@ const startItemDragFromTouchPress = (deps, { clientX, clientY } = {}) => {
   }
 
   store.stopTouchGesture();
+  return false;
+};
+
+const startItemDragFromMousePress = (deps, { clientX, clientY } = {}) => {
+  const { store, refs } = deps;
+  const press = store.selectMouseItemPress();
+  if (press?.type !== "item-press") {
+    return false;
+  }
+
+  const itemElement = getItemElementByIdFromRefs(refs, press.itemId);
+  store.clearMouseItemPress();
+
+  const didStartDrag = startItemDrag(deps, {
+    itemElement,
+    itemId: press.itemId,
+    clientX: press.startClientX,
+    clientY: press.startClientY,
+    shouldDispatchSelection: false,
+  });
+
+  if (didStartDrag) {
+    updateItemDrag(deps, { clientX, clientY });
+    return true;
+  }
+
   return false;
 };
 
@@ -768,6 +867,7 @@ export const handleContainerTouchStart = (deps, payload) => {
 
   if (touchCount >= 2) {
     clearTouchLongPressTimeout(deps);
+    store.clearLastTouchTap();
     preventTouchDefault(event);
     event.stopPropagation();
 
@@ -800,6 +900,7 @@ export const handleContainerTouchStart = (deps, payload) => {
     return;
   }
 
+  store.clearLastTouchTap();
   store.startTouchPan({
     touchX: point.x,
     touchY: point.y,
@@ -921,6 +1022,7 @@ export const handleContainerTouchEnd = (deps, payload) => {
     event.stopPropagation();
 
     if (touchCount === 0) {
+      completeTouchItemTap(deps, { gesture, event });
       stopTouchGesture(deps);
     }
     return;
@@ -954,6 +1056,7 @@ export const handleContainerTouchEnd = (deps, payload) => {
 
 export const handleContainerTouchCancel = (deps, payload) => {
   preventTouchDefault(payload?._event);
+  deps.store.clearLastTouchTap();
   if (deps.store.selectIsDragging()) {
     deps.store.stopDragging();
     deps.store.clearLastDraggedPosition();
@@ -1033,6 +1136,7 @@ export const handleMinimapViewportMouseDown = (deps, payload) => {
 
   const minimapData = store.selectMinimapData({
     items: deps.props?.items || [],
+    heightScale: deps.props?.minimapHeightScale,
   });
   if (!minimapData?.viewport?.visible) {
     return;
@@ -1055,7 +1159,7 @@ export const handleMinimapViewportMouseDown = (deps, payload) => {
 };
 
 export const handleItemMouseDown = (deps, payload) => {
-  const { store } = deps;
+  const { store, dispatchEvent } = deps;
   const { _event: event } = payload;
 
   if (!isPrimaryMouseButton(event)) {
@@ -1074,35 +1178,29 @@ export const handleItemMouseDown = (deps, payload) => {
   const itemId =
     event.currentTarget?.dataset?.itemId ||
     event.currentTarget?.id?.replace("item", "");
-  startItemDrag(deps, {
-    itemElement: event.currentTarget,
+
+  store.startMouseItemPress({
     itemId,
-    clientX: event.clientX,
-    clientY: event.clientY,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
   });
+  dispatchItemSelected({ dispatchEvent }, { itemId });
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
   payload._event.stopPropagation();
 
-  const itemId =
-    payload._event.currentTarget?.dataset?.itemId ||
-    payload._event.currentTarget?.id?.replace("item", "") ||
-    "";
+  const itemElement =
+    getItemElementFromEventTarget(payload._event, deps.refs?.container) ??
+    payload._event.currentTarget;
+  const itemId = getItemIdFromElement(itemElement);
 
   if (!itemId) {
     console.error("ERROR: No itemId found for double-click");
     return;
   }
 
-  // Dispatch double-click event
-  deps.dispatchEvent(
-    new CustomEvent("item-double-click", {
-      detail: { itemId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  dispatchItemDoubleClick(deps, { itemId });
 };
 
 export const handleItemContextMenu = (deps, payload) => {
@@ -1191,6 +1289,19 @@ export const handleWindowMouseMove = (deps, payload) => {
       clientX: payload._event.clientX,
       clientY: payload._event.clientY,
     });
+  } else if (store.selectMouseItemPress()?.type === "item-press") {
+    store.updateMouseItemPress({
+      clientX: payload._event.clientX,
+      clientY: payload._event.clientY,
+      moveThreshold: MOUSE_ITEM_DRAG_THRESHOLD_PX,
+    });
+
+    if (store.selectMouseItemPress()?.hasMoved) {
+      startItemDragFromMousePress(deps, {
+        clientX: payload._event.clientX,
+        clientY: payload._event.clientY,
+      });
+    }
   } else if (syncContainerSize(deps)) {
     renderWithCursorSync(deps);
   }
@@ -1211,6 +1322,8 @@ export const handleWindowMouseUp = (deps) => {
     renderWithCursorSync(deps);
   } else if (store.selectIsDragging()) {
     finishItemDrag(deps);
+  } else if (store.selectMouseItemPress()?.type === "item-press") {
+    store.clearMouseItemPress();
   }
 
   syncCursorStyles(deps);

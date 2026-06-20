@@ -148,15 +148,28 @@ const resourceParentMapping = {
 
 export const createInitialState = () => ({
   scenesData: { tree: [], items: {} },
+  recentSceneIds: [],
 });
 
 export const setScenesData = ({ state }, { scenesData } = {}) => {
   state.scenesData = scenesData ?? { tree: [], items: {} };
 };
 
+export const setRecentSceneIds = ({ state }, { sceneIds } = {}) => {
+  state.recentSceneIds = Array.isArray(sceneIds)
+    ? sceneIds.filter(Boolean)
+    : [];
+};
+
 const buildSceneMapSections = (state) => {
-  const sceneItems = toFlatItems(state.scenesData)
-    .filter((item) => item.type === "scene")
+  const sceneItemsById = new Map(
+    toFlatItems(state.scenesData)
+      .filter((item) => item.type === "scene")
+      .map((item) => [item.id, item]),
+  );
+  const recentSceneItems = state.recentSceneIds
+    .map((sceneId) => sceneItemsById.get(sceneId))
+    .filter(Boolean)
     .map((item) => ({
       id: `scene:${item.id}`,
       label: item.name ?? "Scene",
@@ -166,10 +179,10 @@ const buildSceneMapSections = (state) => {
       icon: "scene",
     }));
 
-  return [
+  const sections = [
     {
       id: "scene-map",
-      label: "Scenes",
+      label: "Scene Map",
       items: [
         {
           id: "scene-map",
@@ -178,10 +191,19 @@ const buildSceneMapSections = (state) => {
           clearPayloadKeys: ["s", "sceneId", "sectionId"],
           icon: "script",
         },
-        ...sceneItems,
       ],
     },
   ];
+
+  if (recentSceneItems.length > 0) {
+    sections.push({
+      id: "recently-visited",
+      label: "Recently Visited",
+      items: recentSceneItems,
+    });
+  }
+
+  return sections;
 };
 
 const getSectionsByVariant = (state) => ({

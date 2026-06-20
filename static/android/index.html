@@ -16,6 +16,15 @@
     <script src="/public/rtgl-icons.js"></script>
     <script src="/public/@rettangoli/ui@1.7.6/dist/rettangoli-iife-ui.min.js"></script>
     <script type="module" src="/public/main.js"></script>
+    <script>
+      window.addEventListener("load", () => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            window.RouteVNAndroid?.markSplashReady?.();
+          });
+        });
+      });
+    </script>
   </head>
   <body class="dark">
     <rvn-app></rvn-app>

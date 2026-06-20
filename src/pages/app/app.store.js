@@ -12,6 +12,8 @@ export const createInitialState = () => ({
 const SIDEBAR_WIDTH_PX = 64;
 const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 const HELP_BUTTON_BOTTOM_OFFSET_PX = 24;
+const MOBILE_TAB_BAR_ACTIVE_COLOR = "white";
+const MOBILE_TAB_BAR_INACTIVE_COLOR = "mu-fg";
 
 const routesWithoutNavbar = ["/projects", "/authenticate"];
 const routesWithoutMobileTabBar = [];
@@ -22,6 +24,17 @@ const mobileTabBarItems = [
   { id: "release", icon: "rocket", label: "Release" },
   { id: "settings", icon: "settings", label: "Settings" },
 ];
+
+const mobileTabIdByRoutePattern = {
+  "/project/scenes": "scene-map",
+  "/project/scene-editor": "scene-map",
+  "/project/releases": "release",
+  "/project/releases/versions": "release",
+  "/project/releases/web-server": "release",
+  "/project": "settings",
+  "/project/about": "settings",
+  "/project/user": "settings",
+};
 
 const selectShowAppNavigation = ({ state }) => {
   const currentRoutePattern = selectCurrentRoutePattern({ state });
@@ -107,6 +120,40 @@ export const selectCurrentRoutePattern = ({ state }) => {
     matchPaths(currentRoute, pattern),
   );
   return routePattern;
+};
+
+const selectRouteMobileTabId = ({ state }) => {
+  const currentRoutePattern = selectCurrentRoutePattern({ state });
+  if (!currentRoutePattern) {
+    return undefined;
+  }
+
+  return mobileTabIdByRoutePattern[currentRoutePattern] ?? "assets";
+};
+
+const selectActiveMobileTabId = ({ state }) => {
+  if (state.isMobileSheetOpen && state.mobileSheetVariant) {
+    return state.mobileSheetVariant;
+  }
+
+  return selectRouteMobileTabId({ state });
+};
+
+const selectMobileTabBarItems = ({ state }) => {
+  const activeMobileTabId = selectActiveMobileTabId({ state });
+  return mobileTabBarItems.map((item) => {
+    const color =
+      item.id === activeMobileTabId
+        ? MOBILE_TAB_BAR_ACTIVE_COLOR
+        : MOBILE_TAB_BAR_INACTIVE_COLOR;
+
+    return {
+      id: item.id,
+      icon: item.icon,
+      label: item.label,
+      color,
+    };
+  });
 };
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
@@ -204,7 +251,7 @@ export const selectViewData = ({ state }) => {
     currentRoutePattern: selectCurrentRoutePattern({ state }),
     showSidebar,
     showMobileTabBar,
-    mobileTabBarItems,
+    mobileTabBarItems: selectMobileTabBarItems({ state }),
     mobileSheetVariant: state.mobileSheetVariant ?? "assets",
     appShellDirection: showMobileTabBar ? "v" : "h",
     contentWidth: showSidebar ? `calc(100vw - ${SIDEBAR_WIDTH_PX}px)` : "100vw",

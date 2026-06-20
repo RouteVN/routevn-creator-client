@@ -12,32 +12,75 @@ import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePa
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const DEFAULT_EAGER_IMAGE_CARD_COUNT = 8;
 const DEFAULT_ITEMS_PER_ROW = 6;
+const DEFAULT_MOBILE_ITEMS_PER_ROW = 2;
 const MIN_ITEMS_PER_ROW = 1;
 const MAX_ITEMS_PER_ROW = 12;
+const MAX_MOBILE_ITEMS_PER_ROW = 6;
 const DEFAULT_ZOOM_POPOVER_POSITION = Object.freeze({
   x: 0,
   y: 0,
 });
 
-const clampItemsPerRow = (value) => {
+const parseBooleanProp = (value, fallback = false) => {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (value === true || value === "") {
+    return true;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+};
+
+const isColumnZoomControlMode = (props) => props?.zoomControlMode === "columns";
+
+const isMobileColumnZoomControl = (props) =>
+  parseBooleanProp(props?.mobileLayout) && isColumnZoomControlMode(props);
+
+const getDefaultItemsPerRow = (props) =>
+  isMobileColumnZoomControl(props)
+    ? DEFAULT_MOBILE_ITEMS_PER_ROW
+    : DEFAULT_ITEMS_PER_ROW;
+
+const getMaxItemsPerRow = (props) =>
+  isMobileColumnZoomControl(props)
+    ? MAX_MOBILE_ITEMS_PER_ROW
+    : MAX_ITEMS_PER_ROW;
+
+const clampItemsPerRow = (value, props) => {
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue)) {
-    return DEFAULT_ITEMS_PER_ROW;
+    return getDefaultItemsPerRow(props);
   }
 
   return Math.min(
-    MAX_ITEMS_PER_ROW,
+    getMaxItemsPerRow(props),
     Math.max(MIN_ITEMS_PER_ROW, Math.round(numericValue)),
   );
 };
 
-const toColumnZoomControlValue = (itemsPerRow) => {
-  return MIN_ITEMS_PER_ROW + MAX_ITEMS_PER_ROW - clampItemsPerRow(itemsPerRow);
+const toColumnZoomControlValue = (itemsPerRow, props) => {
+  return (
+    MIN_ITEMS_PER_ROW +
+    getMaxItemsPerRow(props) -
+    clampItemsPerRow(itemsPerRow, props)
+  );
 };
 
 export const createInitialState = ({ props } = {}) => ({
   zoomLevel: 1,
-  itemsPerRow: clampItemsPerRow(props?.defaultItemsPerRow),
+  itemsPerRow: clampItemsPerRow(props?.defaultItemsPerRow, props),
   collapsedIds: [],
   ...createTagFilterPopoverState(),
   zoomPopover: {
@@ -65,8 +108,8 @@ export const setZoomLevel = ({ state }, { zoomLevel } = {}) => {
 
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
-export const setItemsPerRow = ({ state }, { itemsPerRow } = {}) => {
-  state.itemsPerRow = clampItemsPerRow(itemsPerRow);
+export const setItemsPerRow = ({ state, props }, { itemsPerRow } = {}) => {
+  state.itemsPerRow = clampItemsPerRow(itemsPerRow, props);
 };
 
 export const selectItemsPerRow = ({ state }) => state.itemsPerRow;
@@ -191,33 +234,9 @@ export {
   toggleTagFilterPopoverTagId,
 };
 
-const parseBooleanProp = (value, fallback = false) => {
-  if (value === undefined || value === null) {
-    return fallback;
-  }
-
-  if (value === true || value === "") {
-    return true;
-  }
-
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === "true" || normalized === "1") {
-      return true;
-    }
-    if (normalized === "false" || normalized === "0") {
-      return false;
-    }
-  }
-
-  return Boolean(value);
-};
-
 const resolveDefaultBorderColor = () => {
   return "bo";
 };
-
-const isColumnZoomControlMode = (props) => props.zoomControlMode === "columns";
 
 const hasImageCards = (groups = []) => {
   return groups.some((group) =>
@@ -237,9 +256,17 @@ export const selectViewData = ({ state, props }) => {
   const baseMediaHeight = 150;
   const fullWidthImageCards = parseBooleanProp(props.fullWidthImageCards);
   const mobileLayout = parseBooleanProp(props.mobileLayout);
-  const useColumnZoomControl = !mobileLayout && isColumnZoomControlMode(props);
+  const useColumnZoomControl = isColumnZoomControlMode(props);
+  const showZoomControls = parseBooleanProp(props.showZoomControls);
+  const shouldShowZoomControls =
+    showZoomControls && (!mobileLayout || useColumnZoomControl);
+  const columnZoomControlMax = getMaxItemsPerRow(props);
   const imageCardAspectRatio = props.imageCardAspectRatio ?? undefined;
-  const itemsPerRow = mobileLayout ? 1 : clampItemsPerRow(state.itemsPerRow);
+  const itemsPerRow = useColumnZoomControl
+    ? clampItemsPerRow(state.itemsPerRow, props)
+    : mobileLayout
+      ? 1
+      : clampItemsPerRow(state.itemsPerRow, props);
   const effectiveZoomLevel =
     mobileLayout || useColumnZoomControl ? 1 : state.zoomLevel;
   const imageHeight = Math.round(baseHeight * effectiveZoomLevel);
@@ -248,7 +275,7 @@ export const selectViewData = ({ state, props }) => {
   const mediaHeight = Math.round(baseMediaHeight * effectiveZoomLevel);
   const sourceGroups = props.groups ?? [];
   const cardGridColumns =
-    mobileLayout || fullWidthImageCards
+    (mobileLayout && !useColumnZoomControl) || fullWidthImageCards
       ? "1"
       : useColumnZoomControl
         ? `${itemsPerRow}`
@@ -419,20 +446,14 @@ export const selectViewData = ({ state, props }) => {
     cardGridColumns,
     zoomLevel: state.zoomLevel,
     zoomControlValue: useColumnZoomControl
-      ? toColumnZoomControlValue(itemsPerRow)
+      ? toColumnZoomControlValue(itemsPerRow, props)
       : state.zoomLevel,
     zoomControlMin: useColumnZoomControl ? MIN_ITEMS_PER_ROW : 0.5,
-    zoomControlMax: useColumnZoomControl ? MAX_ITEMS_PER_ROW : 2,
+    zoomControlMax: useColumnZoomControl ? columnZoomControlMax : 2,
     zoomControlStep: useColumnZoomControl ? 1 : 0.1,
-    showZoomControls: !mobileLayout && parseBooleanProp(props.showZoomControls),
-    showInlineZoomControls:
-      !mobileLayout &&
-      parseBooleanProp(props.showZoomControls) &&
-      !zoomInPopover,
-    showZoomPopoverButton:
-      !mobileLayout &&
-      parseBooleanProp(props.showZoomControls) &&
-      zoomInPopover,
+    showZoomControls: shouldShowZoomControls,
+    showInlineZoomControls: shouldShowZoomControls && !zoomInPopover,
+    showZoomPopoverButton: shouldShowZoomControls && zoomInPopover,
     zoomPopover: state.zoomPopover,
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,

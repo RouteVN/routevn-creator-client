@@ -22,6 +22,10 @@ import {
   closeMobileResourceFileExplorerState,
   createMobileResourcePageState,
   openMobileResourceFileExplorerState,
+  selectIsMobileFileExplorerOpenState,
+  selectIsTouchModeState,
+  selectSuppressMobileDetailSheetState,
+  setMobileResourceDetailSheetSuppressedState,
   setMobileResourcePageUiConfigState,
 } from "../mobileResourcePage.js";
 
@@ -169,8 +173,15 @@ export const createCatalogPageStore = ({
     }
   };
 
-  const setSelectedItemId = ({ state }, { itemId } = {}) => {
+  const setSelectedItemId = (
+    { state },
+    { itemId, suppressMobileDetailSheet = false } = {},
+  ) => {
     state.selectedItemId = itemId;
+    setMobileResourceDetailSheetSuppressedState(state, {
+      itemId,
+      suppressMobileDetailSheet,
+    });
     if (itemId !== undefined) {
       state.selectedFolderId = undefined;
     }
@@ -195,8 +206,19 @@ export const createCatalogPageStore = ({
     return selectDataFolder(state, folderId);
   };
 
+  const selectIsTouchMode = selectIsTouchModeState;
+
+  const selectIsMobileFileExplorerOpen = selectIsMobileFileExplorerOpenState;
+
+  const selectSuppressMobileDetailSheet = selectSuppressMobileDetailSheetState;
+
   const setSelectedFolderId = ({ state }, { folderId } = {}) => {
     state.selectedFolderId = folderId;
+    if (folderId !== undefined) {
+      setMobileResourceDetailSheetSuppressedState(state, {
+        itemId: undefined,
+      });
+    }
     if (folderId !== undefined) {
       state.selectedItemId = undefined;
       if (taggingEnabled) {
@@ -432,6 +454,9 @@ export const createCatalogPageStore = ({
     selectFolderById,
     selectSelectedItemId,
     selectSelectedFolderId,
+    selectIsTouchMode,
+    selectIsMobileFileExplorerOpen,
+    selectSuppressMobileDetailSheet,
     setSearchQuery,
     setTagsData,
     setActiveTagIds,

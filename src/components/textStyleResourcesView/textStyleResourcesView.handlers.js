@@ -6,8 +6,11 @@ import {
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
 
+const DEFAULT_ITEMS_PER_ROW = 6;
+const DEFAULT_MOBILE_ITEMS_PER_ROW = 2;
 const MIN_ITEMS_PER_ROW = 1;
 const MAX_ITEMS_PER_ROW = 12;
+const MAX_MOBILE_ITEMS_PER_ROW = 6;
 
 const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
@@ -53,11 +56,39 @@ const parseBooleanProp = (value, fallback = false) => {
 
 const isColumnZoomControlMode = (props) => props?.zoomControlMode === "columns";
 
+const isMobileColumnZoomControl = (props) =>
+  parseBooleanProp(props?.mobileLayout) && isColumnZoomControlMode(props);
+
+const getMaxItemsPerRow = (props) =>
+  isMobileColumnZoomControl(props)
+    ? MAX_MOBILE_ITEMS_PER_ROW
+    : MAX_ITEMS_PER_ROW;
+
+const getDefaultItemsPerRow = (props) =>
+  isMobileColumnZoomControl(props)
+    ? DEFAULT_MOBILE_ITEMS_PER_ROW
+    : DEFAULT_ITEMS_PER_ROW;
+
+const clampItemsPerRow = (value, props) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return getDefaultItemsPerRow(props);
+  }
+
+  return Math.min(
+    getMaxItemsPerRow(props),
+    Math.max(MIN_ITEMS_PER_ROW, Math.round(numericValue)),
+  );
+};
+
 const canUseZoomControls = (props) =>
   isColumnZoomControlMode(props) && parseBooleanProp(props?.showZoomControls);
 
-const toItemsPerRowFromColumnZoomControlValue = (value) => {
-  return MIN_ITEMS_PER_ROW + MAX_ITEMS_PER_ROW - Math.round(value);
+const toItemsPerRowFromColumnZoomControlValue = (value, props) => {
+  return clampItemsPerRow(
+    MIN_ITEMS_PER_ROW + getMaxItemsPerRow(props) - Math.round(value),
+    props,
+  );
 };
 
 const getItemsPerRowConfigKey = (props) =>
@@ -78,7 +109,7 @@ const syncPersistedItemsPerRow = ({ appService, props, store } = {}) => {
     return;
   }
 
-  store.setItemsPerRow({ itemsPerRow });
+  store.setItemsPerRow({ itemsPerRow: clampItemsPerRow(itemsPerRow, props) });
 };
 
 const persistItemsPerRow = ({ appService, props, store } = {}) => {
@@ -87,7 +118,10 @@ const persistItemsPerRow = ({ appService, props, store } = {}) => {
     return;
   }
 
-  appService.setUserConfig(configKey, store.selectItemsPerRow());
+  appService.setUserConfig(
+    configKey,
+    clampItemsPerRow(store.selectItemsPerRow(), props),
+  );
 };
 
 export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
@@ -201,7 +235,11 @@ export const handleItemClick = (deps, payload) => {
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, props } = deps;
+  if (parseBooleanProp(props.mobileLayout)) {
+    return;
+  }
+
   const itemId = getDataAttribute(payload._event, "data-item-id");
   if (!itemId) {
     return;
@@ -232,11 +270,25 @@ export const handleAddButtonClick = (deps, payload) => {
 };
 
 export const handleItemContextMenu = (deps, payload) => {
-  const { store, render } = deps;
+  const { dispatchEvent, props, store, render } = deps;
   payload._event.preventDefault();
 
   const itemId = getDataAttribute(payload._event, "data-item-id");
   if (!itemId) {
+    return;
+  }
+
+  if (parseBooleanProp(props.mobileLayout)) {
+    dispatchEvent(
+      new CustomEvent("item-dblclick", {
+        detail: {
+          itemId,
+          source: "mobile-context-menu",
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
     return;
   }
 
@@ -259,7 +311,7 @@ export const handleZoomChange = (deps, payload) => {
   );
 
   store.setItemsPerRow({
-    itemsPerRow: toItemsPerRowFromColumnZoomControlValue(nextValue),
+    itemsPerRow: toItemsPerRowFromColumnZoomControlValue(nextValue, props),
   });
   persistItemsPerRow(deps);
   render();
@@ -272,7 +324,9 @@ export const handleZoomIn = (deps) => {
     return false;
   }
 
-  store.setItemsPerRow({ itemsPerRow: store.selectItemsPerRow() - 1 });
+  store.setItemsPerRow({
+    itemsPerRow: clampItemsPerRow(store.selectItemsPerRow() - 1, props),
+  });
   persistItemsPerRow(deps);
   render();
   return true;
@@ -284,7 +338,9 @@ export const handleZoomOut = (deps) => {
     return false;
   }
 
-  store.setItemsPerRow({ itemsPerRow: store.selectItemsPerRow() + 1 });
+  store.setItemsPerRow({
+    itemsPerRow: clampItemsPerRow(store.selectItemsPerRow() + 1, props),
+  });
   persistItemsPerRow(deps);
   render();
   return true;

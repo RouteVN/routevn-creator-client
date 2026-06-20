@@ -123,7 +123,11 @@ export const handleItemClick = (deps, payload) => {
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, props } = deps;
+  if (parseBooleanProp(props.mobileLayout)) {
+    return;
+  }
+
   const itemId = getDataAttribute(payload._event, "data-item-id");
   if (!itemId) {
     return;
@@ -172,11 +176,25 @@ export const handleSpritesButtonClick = (deps, payload) => {
 };
 
 export const handleItemContextMenu = (deps, payload) => {
-  const { store, render } = deps;
+  const { dispatchEvent, props, store, render } = deps;
   payload._event.preventDefault();
 
   const itemId = getDataAttribute(payload._event, "data-item-id");
   if (!itemId) {
+    return;
+  }
+
+  if (parseBooleanProp(props.mobileLayout)) {
+    dispatchEvent(
+      new CustomEvent("item-dblclick", {
+        detail: {
+          itemId,
+          source: "mobile-context-menu",
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
     return;
   }
 

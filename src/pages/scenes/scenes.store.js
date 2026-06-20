@@ -62,11 +62,24 @@ export const createInitialState = () => ({
   },
   sceneOverviewRequestId: 0,
   isTouchMode: false,
+  isMobileFileExplorerOpen: false,
 });
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
+export const openMobileFileExplorer = ({ state }, _payload = {}) => {
+  state.isMobileFileExplorerOpen = true;
+};
+
+export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
+  state.isMobileFileExplorerOpen = false;
+};
+
+export const selectIsMobileFileExplorerOpen = ({ state }) => {
+  return Boolean(state.isMobileFileExplorerOpen);
 };
 
 export const setItems = ({ state }, { scenesData } = {}) => {
@@ -481,5 +494,10 @@ export const selectViewData = ({ state }) => {
     isTouchMode: state.isTouchMode,
     showExplorerPanel: !state.isTouchMode,
     showDetailPanel: !state.isTouchMode,
+    showMobileScenesControls: state.isTouchMode,
+    showMobileFileExplorer: state.isTouchMode && state.isMobileFileExplorerOpen,
+    showWhiteboardMinimapInTouchMode: state.isTouchMode,
+    whiteboardMinimapPlacement: state.isTouchMode ? "top-right" : "bottom-left",
+    whiteboardMinimapHeightScale: state.isTouchMode ? 2 / 3 : 1,
   };
 };

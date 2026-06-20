@@ -1,8 +1,30 @@
+import {
+  getRecentSceneIds,
+  recordRecentSceneVisit,
+} from "../../internal/ui/recentScenes.js";
+
+const resolveProjectId = (appService) => {
+  return (
+    appService?.getCurrentProjectId?.() || appService?.getPayload?.()?.p || ""
+  );
+};
+
+const refreshRecentSceneIds = ({ appService, store } = {}) => {
+  store.setRecentSceneIds?.({
+    sceneIds: getRecentSceneIds({
+      appService,
+      projectId: resolveProjectId(appService),
+    }),
+  });
+};
+
 export const handleBeforeMount = (deps) => {
-  const { projectService, store, render } = deps;
+  const { appService, projectService, store, render } = deps;
+  refreshRecentSceneIds({ appService, store });
   const cleanup = projectService.subscribeProjectState(
     ({ repositoryState } = {}) => {
       store.setScenesData({ scenesData: repositoryState?.scenes });
+      refreshRecentSceneIds({ appService, store });
       render();
     },
   );
@@ -28,6 +50,16 @@ export const handleItemClick = (deps, payload = {}) => {
   }
   for (const key of item.clearPayloadKeys ?? []) {
     delete nextPayload[key];
+  }
+
+  if (item.payload?.s) {
+    store.setRecentSceneIds?.({
+      sceneIds: recordRecentSceneVisit({
+        appService,
+        projectId: nextPayload.p ?? resolveProjectId(appService),
+        sceneId: item.payload.s,
+      }),
+    });
   }
 
   subject.dispatch("redirect", {

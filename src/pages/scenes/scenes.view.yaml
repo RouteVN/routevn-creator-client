@@ -83,6 +83,14 @@ refs:
     eventListeners:
       click:
         handler: handleDetailPreviewClick
+  mobileFileExplorerOpenButton:
+    eventListeners:
+      click:
+        handler: handleMobileFileExplorerOpen
+  mobileFileExplorerClose:
+    eventListeners:
+      click:
+        handler: handleMobileFileExplorerClose
   fileExplorerKeyboardScope:
     eventListeners:
       click:
@@ -105,7 +113,7 @@ template:
                       - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
-                  - rvn-whiteboard#whiteboard :items=${whiteboardItems} :cursor=${whiteboardCursor} :selectedItemId=${selectedItemId} :isTouchMode=${isTouchMode}: null
+                  - rvn-whiteboard#whiteboard :items=${whiteboardItems} :cursor=${whiteboardCursor} :selectedItemId=${selectedItemId} :isTouchMode=${isTouchMode} :showMinimapInTouchMode=${showWhiteboardMinimapInTouchMode} :minimapPlacement=${whiteboardMinimapPlacement} :minimapHeightScale=${whiteboardMinimapHeightScale}: null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":
@@ -155,6 +163,17 @@ template:
               - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f: null
       - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
       - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
+      - $if showMobileScenesControls:
+          - 'rtgl-view pos=abs z=200 style="left: 16px; top: 20px;"':
+              - rtgl-button#mobileFileExplorerOpenButton sq pre=hamburger v=se title="Scenes": null
+      - $if showMobileFileExplorer:
+          - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
+              - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
+                  - rtgl-text w=1fg s=md: Scenes
+                  - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
+                      - rtgl-svg svg=x wh=20 c=mu-fg: null
+              - 'rtgl-view w=f h=1fg style="min-height: 0;"':
+                  - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
       - $if showMapAddHint:
           - 'rtgl-view pos=abs z=150 style="left: 50%; bottom: 24px; transform: translateX(-50%);"':
               - rtgl-view d=h av=c g=sm bgc=mu bc=bo bw=xs br=sm pv=md ph=md:

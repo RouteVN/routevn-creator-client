@@ -13,6 +13,7 @@ import {
   isIncompatibleProjectOpenError,
 } from "../../internal/projectOpenErrors.js";
 import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
+import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
 
@@ -139,6 +140,14 @@ const createRouteTransitionRunner = (deps) => {
     }
 
     const currentProjectId = appService.getCurrentProjectId();
+    if (canonicalPath === "/project/scene-editor") {
+      recordRecentSceneVisit({
+        appService,
+        projectId: nextPayload?.p ?? currentProjectId,
+        sceneId: nextPayload?.s ?? nextPayload?.sceneId,
+      });
+    }
+
     const needsRepository = routeNeedsRepository(
       canonicalPath,
       currentProjectId,
