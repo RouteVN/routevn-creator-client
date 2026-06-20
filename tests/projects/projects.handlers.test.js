@@ -116,7 +116,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Incompatible Project",
       message:
-        "You're trying to open an incompatible project with version 1 using RouteVN Creator project format 2. For assistance, please reach out to RouteVN staff for support.",
+        "You're trying to open an incompatible project with version 1 using RouteVN Creator project format 2. For assistance, please reach out to RouteVN staff for support. Make sure you're using the latest version of RouteVN Creator.",
       status: "error",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
@@ -136,7 +136,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Incompatible Project",
       message:
-        "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project.",
+        "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project. Make sure you're using the latest version of RouteVN Creator.",
       status: "error",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
@@ -178,7 +178,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Incompatible Project",
       message:
-        "Unsupported project store format. This RouteVN Creator build only supports the current project storage layout and will not repair older local stores automatically.",
+        "Unsupported project store format. This RouteVN Creator build only supports the current project storage layout and will not repair older local stores automatically. Make sure you're using the latest version of RouteVN Creator.",
       status: "error",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();

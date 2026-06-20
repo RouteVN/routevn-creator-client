@@ -4,6 +4,23 @@ export const UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE =
 const LATEST_CREATOR_VERSION_HINT =
   "Make sure you're using the latest version of RouteVN Creator.";
 
+const hasLatestCreatorVersionHint = (message) => {
+  const normalizedMessage = message.toLowerCase();
+  return (
+    normalizedMessage.includes("latest version of routevn creator") ||
+    normalizedMessage.includes("update routevn creator")
+  );
+};
+
+const withLatestCreatorVersionHint = (message) => {
+  const detail = message.trim();
+  if (hasLatestCreatorVersionHint(detail)) {
+    return detail;
+  }
+
+  return `${detail} ${LATEST_CREATOR_VERSION_HINT}`;
+};
+
 export const isIncompatibleProjectOpenError = (error) => {
   if (
     error?.code === "project_projection_gap_incompatible" ||
@@ -22,15 +39,20 @@ export const isIncompatibleProjectOpenError = (error) => {
 
 export const getIncompatibleProjectOpenMessage = (error) => {
   if (error?.code === "project_store_format_unsupported") {
-    return UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE;
+    return withLatestCreatorVersionHint(
+      UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE,
+    );
   }
 
-  const message = error?.message ?? "";
+  const message =
+    typeof error?.message === "string" ? error.message.trim() : "";
   if (message.includes("requires reset for schema version")) {
-    return "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project.";
+    return withLatestCreatorVersionHint(
+      "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project.",
+    );
   }
 
-  return message;
+  return withLatestCreatorVersionHint(message || "Incompatible project.");
 };
 
 const isMissingProjectResolutionError = (error) => {
@@ -70,11 +92,15 @@ export const getProjectOpenErrorMessage = (error) => {
   }
 
   if (isMissingProjectResolutionError(error)) {
-    return `Project is missing required resolution settings. ${LATEST_CREATOR_VERSION_HINT}`;
+    return withLatestCreatorVersionHint(
+      "Project is missing required resolution settings.",
+    );
   }
 
   if (isProjectDataStructureValidationError(error)) {
-    return `Project data structure failed validation. ${LATEST_CREATOR_VERSION_HINT}`;
+    return withLatestCreatorVersionHint(
+      "Project data structure failed validation.",
+    );
   }
 
   if (isProjectDatabaseOpenError(error)) {
