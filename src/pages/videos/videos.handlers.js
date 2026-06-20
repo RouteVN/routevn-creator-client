@@ -377,6 +377,42 @@ export const handleVideoItemPreview = async (deps, payload) => {
   await openVideoPreviewById({ deps, itemId });
 };
 
+export const handleMobileDetailPreviewClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleVideoItemDoubleClick(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
+export const handleMobileDetailDeleteClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDelete(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
 export const handleUploadClick = async (deps, payload) => {
   const { appService } = deps;
   const { groupId } = payload._event.detail;

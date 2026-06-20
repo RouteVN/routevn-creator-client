@@ -58,4 +58,51 @@ describe("mediaResourcesView.store", () => {
       }),
     );
   });
+
+  it("allows column zoom controls to drive mobile image grid columns", () => {
+    const props = {
+      mobileLayout: true,
+      showZoomControls: true,
+      zoomInPopover: true,
+      zoomControlMode: "columns",
+      groups: [
+        {
+          id: "folder-1",
+          children: [{ id: "image-1", cardKind: "image" }],
+        },
+      ],
+    };
+    const state = createInitialState({ props });
+    const viewData = selectViewData({
+      state,
+      props,
+    });
+
+    expect(viewData.showZoomPopoverButton).toBe(true);
+    expect(viewData.itemsPerRow).toBe(2);
+    expect(viewData.cardGridColumns).toBe("2");
+    expect(viewData.zoomControlMax).toBe(6);
+    expect(viewData.groups[0].children[0]).toEqual(
+      expect.objectContaining({
+        itemContainerStyle: "width: 100%; box-sizing: border-box;",
+        imageCardWidth: "f",
+      }),
+    );
+  });
+
+  it("clamps mobile column zoom controls to six columns", () => {
+    const props = {
+      mobileLayout: true,
+      showZoomControls: true,
+      zoomControlMode: "columns",
+      defaultItemsPerRow: 9,
+    };
+    const state = createInitialState({ props });
+    const viewData = selectViewData({ state, props });
+
+    expect(state.itemsPerRow).toBe(6);
+    expect(viewData.itemsPerRow).toBe(6);
+    expect(viewData.cardGridColumns).toBe("6");
+    expect(viewData.zoomControlMax).toBe(6);
+  });
 });

@@ -324,6 +324,12 @@ const createUploadDeps = ({
     setProjectResolution: vi.fn(),
     selectSelectedItemId: vi.fn(() => undefined),
     selectSelectedItem: vi.fn(() => undefined),
+    selectFolderById: vi.fn(({ folderId }) => ({
+      id: folderId,
+      type: "folder",
+      name: "Folder",
+    })),
+    selectSpriteTreeContainsItem: vi.fn(() => true),
   };
 
   return {

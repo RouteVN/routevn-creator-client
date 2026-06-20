@@ -139,7 +139,7 @@ describe("createLayoutTemplate", () => {
     expect(deps.store.closeAddDialog).toHaveBeenCalled();
   });
 
-  it("prints the selected layout data after selecting a layout", () => {
+  it("selects a layout without logging", () => {
     const layoutData = {
       id: "layout-1",
       type: "layout",
@@ -178,19 +178,13 @@ describe("createLayoutTemplate", () => {
       expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
         itemId: "layout-1",
       });
-      expect(consoleLog).toHaveBeenCalledWith(
-        "[layouts] selected layout data",
-        {
-          selectedItemId: "layout-1",
-          layoutData,
-        },
-      );
+      expect(consoleLog).not.toHaveBeenCalled();
     } finally {
       consoleLog.mockRestore();
     }
   });
 
-  it("prints layout data when the selected layout is clicked again", () => {
+  it("ignores a repeated layout click without logging", () => {
     const layoutData = {
       id: "layout-1",
       type: "layout",
@@ -224,13 +218,7 @@ describe("createLayoutTemplate", () => {
       });
 
       expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
-      expect(consoleLog).toHaveBeenCalledWith(
-        "[layouts] selected layout data",
-        {
-          selectedItemId: "layout-1",
-          layoutData,
-        },
-      );
+      expect(consoleLog).not.toHaveBeenCalled();
     } finally {
       consoleLog.mockRestore();
     }

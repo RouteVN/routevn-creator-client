@@ -1,18 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  openMobileSheet,
   selectViewData,
   setRepositoryLoading,
   setRepositoryLoadingPhase,
   setRepositoryLoadingProgress,
 } from "../../src/pages/app/app.store.js";
 
+const selectMobileTab = ({ state, tabId }) => {
+  return selectViewData({ state }).mobileTabBarItems.find(
+    (item) => item.id === tabId,
+  );
+};
+
 describe("app.store repository loading progress", () => {
-  it("does not resolve the hidden variables route", () => {
+  it("resolves the variables resource route", () => {
     const state = createInitialState();
     state.currentRoute = "/project/variables";
 
-    expect(selectViewData({ state }).currentRoutePattern).toBeUndefined();
+    expect(selectViewData({ state }).currentRoutePattern).toBe(
+      "/project/variables",
+    );
   });
 
   it("does not resolve the hidden appearance route", () => {
@@ -112,5 +121,49 @@ describe("app.store repository loading progress", () => {
       repositoryLoadingProgressPercent: 100,
       repositoryLoadingStatusText: "Loading project... 100%",
     });
+  });
+});
+
+describe("app.store mobile tab active state", () => {
+  it("highlights the assets tab on resource routes", () => {
+    const state = createInitialState();
+    state.currentRoute = "/project/images";
+
+    expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("white");
+    expect(selectMobileTab({ state, tabId: "scene-map" }).color).toBe("mu-fg");
+  });
+
+  it("highlights the scene map tab on scene routes", () => {
+    const state = createInitialState();
+    state.currentRoute = "/project/scene-editor";
+
+    expect(selectMobileTab({ state, tabId: "scene-map" }).color).toBe("white");
+    expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
+  });
+
+  it("highlights the release tab on release routes", () => {
+    const state = createInitialState();
+    state.currentRoute = "/project/releases/versions";
+
+    expect(selectMobileTab({ state, tabId: "release" }).color).toBe("white");
+    expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
+  });
+
+  it("highlights the settings tab on settings routes", () => {
+    const state = createInitialState();
+    state.currentRoute = "/project/about";
+
+    expect(selectMobileTab({ state, tabId: "settings" }).color).toBe("white");
+    expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
+  });
+
+  it("highlights the open mobile sheet tab over the current route", () => {
+    const state = createInitialState();
+    state.currentRoute = "/project/images";
+
+    openMobileSheet({ state }, { variant: "release" });
+
+    expect(selectMobileTab({ state, tabId: "release" }).color).toBe("white");
+    expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
   });
 });

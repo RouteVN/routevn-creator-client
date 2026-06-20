@@ -10,28 +10,71 @@ import {
 import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const DEFAULT_ITEMS_PER_ROW = 6;
+const DEFAULT_MOBILE_ITEMS_PER_ROW = 2;
 const MIN_ITEMS_PER_ROW = 1;
 const MAX_ITEMS_PER_ROW = 12;
+const MAX_MOBILE_ITEMS_PER_ROW = 6;
 const DEFAULT_CARD_WIDTH = 360;
 const DEFAULT_ZOOM_POPOVER_POSITION = Object.freeze({
   x: 0,
   y: 0,
 });
 
-const clampItemsPerRow = (value) => {
+const parseBooleanProp = (value, fallback = false) => {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (value === true || value === "") {
+    return true;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+};
+
+const isColumnZoomControlMode = (props) => props?.zoomControlMode === "columns";
+
+const isMobileColumnZoomControl = (props) =>
+  parseBooleanProp(props?.mobileLayout) && isColumnZoomControlMode(props);
+
+const getDefaultItemsPerRow = (props) =>
+  isMobileColumnZoomControl(props)
+    ? DEFAULT_MOBILE_ITEMS_PER_ROW
+    : DEFAULT_ITEMS_PER_ROW;
+
+const getMaxItemsPerRow = (props) =>
+  isMobileColumnZoomControl(props)
+    ? MAX_MOBILE_ITEMS_PER_ROW
+    : MAX_ITEMS_PER_ROW;
+
+const clampItemsPerRow = (value, props) => {
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue)) {
-    return DEFAULT_ITEMS_PER_ROW;
+    return getDefaultItemsPerRow(props);
   }
 
   return Math.min(
-    MAX_ITEMS_PER_ROW,
+    getMaxItemsPerRow(props),
     Math.max(MIN_ITEMS_PER_ROW, Math.round(numericValue)),
   );
 };
 
-const toColumnZoomControlValue = (itemsPerRow) => {
-  return MIN_ITEMS_PER_ROW + MAX_ITEMS_PER_ROW - clampItemsPerRow(itemsPerRow);
+const toColumnZoomControlValue = (itemsPerRow, props) => {
+  return (
+    MIN_ITEMS_PER_ROW +
+    getMaxItemsPerRow(props) -
+    clampItemsPerRow(itemsPerRow, props)
+  );
 };
 
 const buildAutoFillGridColumns = (cardWidth) => {
@@ -40,7 +83,7 @@ const buildAutoFillGridColumns = (cardWidth) => {
 };
 
 export const createInitialState = ({ props } = {}) => ({
-  itemsPerRow: clampItemsPerRow(props?.defaultItemsPerRow),
+  itemsPerRow: clampItemsPerRow(props?.defaultItemsPerRow, props),
   collapsedIds: [],
   ...createTagFilterPopoverState(),
   zoomPopover: {
@@ -56,8 +99,8 @@ export const createInitialState = ({ props } = {}) => ({
   },
 });
 
-export const setItemsPerRow = ({ state }, { itemsPerRow } = {}) => {
-  state.itemsPerRow = clampItemsPerRow(itemsPerRow);
+export const setItemsPerRow = ({ state, props }, { itemsPerRow } = {}) => {
+  state.itemsPerRow = clampItemsPerRow(itemsPerRow, props);
 };
 
 export const selectItemsPerRow = ({ state }) => state.itemsPerRow;
@@ -112,39 +155,21 @@ export {
   toggleTagFilterPopoverTagId,
 };
 
-const parseBooleanProp = (value, fallback = false) => {
-  if (value === undefined || value === null) {
-    return fallback;
-  }
-
-  if (value === true || value === "") {
-    return true;
-  }
-
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === "true" || normalized === "1") {
-      return true;
-    }
-    if (normalized === "false" || normalized === "0") {
-      return false;
-    }
-  }
-
-  return Boolean(value);
-};
-
-const isColumnZoomControlMode = (props) => props.zoomControlMode === "columns";
-
 export const selectViewData = ({ state, props }) => {
   const mobileLayout = parseBooleanProp(props.mobileLayout);
-  const useColumnZoomControl = !mobileLayout && isColumnZoomControlMode(props);
-  const itemsPerRow = mobileLayout ? 1 : clampItemsPerRow(state.itemsPerRow);
-  const cardGridColumns = mobileLayout
-    ? "1"
-    : useColumnZoomControl
-      ? `${itemsPerRow}`
-      : buildAutoFillGridColumns(DEFAULT_CARD_WIDTH);
+  const useColumnZoomControl = isColumnZoomControlMode(props);
+  const columnZoomControlMax = getMaxItemsPerRow(props);
+  const itemsPerRow = useColumnZoomControl
+    ? clampItemsPerRow(state.itemsPerRow, props)
+    : mobileLayout
+      ? 1
+      : clampItemsPerRow(state.itemsPerRow, props);
+  const cardGridColumns =
+    mobileLayout && !useColumnZoomControl
+      ? "1"
+      : useColumnZoomControl
+        ? `${itemsPerRow}`
+        : buildAutoFillGridColumns(DEFAULT_CARD_WIDTH);
   const scrollBottomPadding = resolveResourceScrollBottomPadding({
     mobileLayout,
     scrollBottomPadding: props.scrollBottomPadding,
@@ -210,9 +235,9 @@ export const selectViewData = ({ state, props }) => {
     tagFilterButtonIconColor: hasActiveFilter ? "white" : "mu-fg",
     itemsPerRow,
     cardGridColumns,
-    zoomControlValue: toColumnZoomControlValue(itemsPerRow),
+    zoomControlValue: toColumnZoomControlValue(itemsPerRow, props),
     zoomControlMin: MIN_ITEMS_PER_ROW,
-    zoomControlMax: MAX_ITEMS_PER_ROW,
+    zoomControlMax: columnZoomControlMax,
     zoomControlStep: 1,
     showZoomControls:
       useColumnZoomControl && parseBooleanProp(props.showZoomControls),

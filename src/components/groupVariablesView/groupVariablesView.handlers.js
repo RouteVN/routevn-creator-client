@@ -496,7 +496,10 @@ export const handleRowClick = (deps, payload) => {
 };
 
 export const handleRowDoubleClick = (deps, payload) => {
-  if (deps.props.readonly === true) {
+  if (
+    deps.props.readonly === true ||
+    parseBooleanProp(deps.props.mobileLayout)
+  ) {
     return;
   }
 
@@ -518,7 +521,6 @@ export const handleRowContextMenu = (deps, payload) => {
     return;
   }
 
-  const { store, render } = deps;
   payload._event.preventDefault();
   payload._event.stopPropagation();
 
@@ -526,6 +528,13 @@ export const handleRowContextMenu = (deps, payload) => {
   if (!itemId) {
     return;
   }
+
+  if (parseBooleanProp(deps.props.mobileLayout)) {
+    openEditDialogForItem({ deps, itemId });
+    return;
+  }
+
+  const { store, render } = deps;
   const x = payload._event.clientX;
   const y = payload._event.clientY;
 

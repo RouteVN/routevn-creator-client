@@ -81,9 +81,9 @@ template:
           - 'rtgl-view w=f bgc=bg style="border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); flex-shrink: 0;"':
               - rtgl-view w=f h=64 d=h av=c:
                   - $for item, i in mobileTabBarItems:
-                      - rtgl-view#mobileTabItem${i} data-tab-id=${item.id} w=1fg h=f d=v ah=c av=c g=xs cur=pointer:
-                          - rtgl-svg wh=22 svg=${item.icon} c=mu-fg: null
-                          - rtgl-text s=xs c=mu-fg: ${item.label}
+                      - 'rtgl-view#mobileTabItem${i} data-tab-id=${item.id} w=1fg h=f d=v ah=c av=c g=xs cur=pointer style="-webkit-tap-highlight-color: transparent;"':
+                          - rtgl-svg wh=22 svg=${item.icon} c=${item.color}: null
+                          - rtgl-text s=xs c=${item.color}: ${item.label}
   - $if isMobileSheetOpen:
       - rvn-mobile-sheet#mobileSheet ?open=${isMobileSheetOpen}:
           - rvn-mobile-sidebar slot=content variant=${mobileSheetVariant} w=f h=f: []

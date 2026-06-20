@@ -14,6 +14,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.OpenableColumns;
 import android.provider.MediaStore;
 import android.util.Base64;
@@ -37,6 +39,7 @@ import android.widget.Toast;
 import android.widget.FrameLayout;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
+import androidx.core.splashscreen.SplashScreen;
 import androidx.webkit.WebViewAssetLoader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -58,8 +61,14 @@ public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 3711;
     private static final int ANDROID_FILE_PICKER_REQUEST_CODE = 3712;
     private static final int ANDROID_SAVE_FILE_PICKER_REQUEST_CODE = 3713;
+    private static final long SPLASH_MIN_VISIBLE_MS = 1400L;
+    private static final long SPLASH_MAX_VISIBLE_MS = 5000L;
 
     private WebView webView;
+    private long splashStartedAt;
+    private boolean splashDismissRequested = false;
+    private boolean splashReady = false;
+    private boolean systemInsetsApplied = false;
     private WebViewAssetLoader assetLoader;
     private ValueCallback<Uri[]> fileChooserCallback;
     private boolean canGoBackInWebApp = false;
@@ -67,10 +76,19 @@ public class MainActivity extends Activity {
     private String pendingAndroidFilePickerRequestId;
     private boolean pendingAndroidFilePickerMultiple = false;
     private String pendingAndroidSaveFilePickerRequestId;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Runnable finishSplashRunnable = this::finishSplash;
     private final Map<String, SQLiteDatabase> sqliteDatabases = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        configureSplashState();
+        SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
+        splashScreen.setKeepOnScreenCondition(() -> !splashReady);
+        splashScreen.setOnExitAnimationListener(splashScreenView ->
+            splashScreenView.remove()
+        );
+
         super.onCreate(savedInstanceState);
 
         configureWindow();
@@ -102,6 +120,13 @@ public class MainActivity extends Activity {
         Window window = getWindow();
         window.setStatusBarColor(Color.BLACK);
         window.setNavigationBarColor(Color.BLACK);
+    }
+
+    private void configureSplashState() {
+        splashStartedAt = System.currentTimeMillis();
+        splashDismissRequested = false;
+        splashReady = false;
+        systemInsetsApplied = false;
     }
 
     private void configureWebView() {
@@ -138,6 +163,35 @@ public class MainActivity extends Activity {
         rootView.addView(webView);
         applySystemBarInsets(rootView);
         setContentView(rootView);
+        rootView.requestApplyInsets();
+        mainHandler.postDelayed(finishSplashRunnable, SPLASH_MAX_VISIBLE_MS);
+    }
+
+    private void requestSplashDismiss() {
+        if (splashDismissRequested) {
+            return;
+        }
+
+        splashDismissRequested = true;
+        scheduleSplashFinishIfReady();
+    }
+
+    private void scheduleSplashFinishIfReady() {
+        if (!splashDismissRequested || !systemInsetsApplied) {
+            return;
+        }
+
+        long elapsedMs = System.currentTimeMillis() - splashStartedAt;
+        long remainingMs = Math.max(0L, SPLASH_MIN_VISIBLE_MS - elapsedMs);
+        mainHandler.removeCallbacks(finishSplashRunnable);
+        mainHandler.postDelayed(finishSplashRunnable, remainingMs);
+    }
+
+    private void finishSplash() {
+        splashReady = true;
+        if (webView != null) {
+            webView.invalidate();
+        }
     }
 
     private void configureWebSettings(WebSettings settings) {
@@ -175,6 +229,8 @@ public class MainActivity extends Activity {
                     systemBars.right,
                     systemBars.bottom
                 );
+                systemInsetsApplied = true;
+                scheduleSplashFinishIfReady();
                 return insets;
             }
 
@@ -184,6 +240,8 @@ public class MainActivity extends Activity {
                 insets.getSystemWindowInsetRight(),
                 insets.getSystemWindowInsetBottom()
             );
+            systemInsetsApplied = true;
+            scheduleSplashFinishIfReady();
             return insets;
         });
     }
@@ -257,6 +315,7 @@ public class MainActivity extends Activity {
             webView.destroy();
             webView = null;
         }
+        mainHandler.removeCallbacks(finishSplashRunnable);
 
         super.onDestroy();
     }
@@ -423,6 +482,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void openExternalUrl(String url) {
             runOnUiThread(() -> openExternalUri(Uri.parse(url)));
+        }
+
+        @JavascriptInterface
+        public void markSplashReady() {
+            runOnUiThread(MainActivity.this::requestSplashDismiss);
         }
 
         @JavascriptInterface

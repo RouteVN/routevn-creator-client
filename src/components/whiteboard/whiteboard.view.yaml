@@ -71,7 +71,7 @@ template:
                           - polygon points="0 0, 10 5, 0 10" fill="${arrow.strokeColor}": null
                   - path d="${arrow.path}" stroke="${arrow.strokeColor}" stroke-width=${arrow.strokeWidth} fill="none" z-index="1000" marker-end="url(#arrowheadRef)": null
       - $if showMinimap:
-          - 'rtgl-view#minimapContainer pos=abs z=100 ah=c p=md bgc=mu w=${minimapData.minimap.width} h=${minimapData.minimap.height} style="left: 20px; bottom: 20px; overflow: hidden;"':
+          - 'rtgl-view#minimapContainer pos=abs z=100 ah=c p=md bgc=mu w=${minimapData.minimap.width} h=${minimapData.minimap.height} style="${minimapContainerStyle}"':
               - $for item in minimapData.items:
                   - 'rtgl-view data-minimap-item="true" d=h pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
                       - rtgl-view w=${minimapData.scaledItem.width} h=${minimapData.scaledItem.height} bgc=ac: null

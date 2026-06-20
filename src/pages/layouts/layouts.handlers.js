@@ -206,6 +206,60 @@ export const handleLayoutItemDoubleClick = (deps, payload) => {
   openLayoutEditorWithItem({ deps, itemId });
 };
 
+export const handleMobileDetailOpenClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  handleLayoutItemDoubleClick(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
+export const handleMobileDetailDuplicateClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDuplicate(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
+export const handleMobileDetailDeleteClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDelete(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
 export const handleAddLayoutClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;

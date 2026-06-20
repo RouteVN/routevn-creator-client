@@ -44,13 +44,37 @@ const getNextZoomLevel = (currentZoom, direction) => {
 
 const clampZoomLevel = (zoomLevel) => Math.min(2, Math.max(0.2, zoomLevel));
 
+const parseBooleanProp = (value, fallback = false) => {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  return value === true || value === "true";
+};
+
+const resolveMinimapContainerStyle = (placement) => {
+  const baseStyle = "overflow: hidden;";
+  if (placement === "top-right") {
+    return ["right: 20px", "top: 20px", baseStyle].join("; ");
+  }
+
+  return ["left: 20px", "bottom: 20px", baseStyle].join("; ");
+};
+
+const resolveMinimapHeightScale = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 1;
+};
+
 export const createInitialState = () => ({
   isDragging: false,
   dragItemId: null,
   dragOffset: { x: 0, y: 0 },
   lastDraggedPosition: undefined,
+  mouseItemPress: undefined,
   hoveredItemId: undefined,
   touchGesture: undefined,
+  lastTouchTap: undefined,
   isDraggingMinimapViewport: false,
   minimapViewportDrag: undefined,
   // Pan state
@@ -101,6 +125,59 @@ export const clearLastDraggedPosition = ({ state }, _payload = {}) => {
 
 export const selectLastDraggedPosition = ({ state }) => {
   return state.lastDraggedPosition;
+};
+
+export const startMouseItemPress = (
+  { state },
+  { itemId, startClientX, startClientY } = {},
+) => {
+  const nextStartClientX = Number(startClientX);
+  const nextStartClientY = Number(startClientY);
+
+  if (
+    !itemId ||
+    !Number.isFinite(nextStartClientX) ||
+    !Number.isFinite(nextStartClientY)
+  ) {
+    return;
+  }
+
+  state.mouseItemPress = {
+    type: "item-press",
+    itemId,
+    startClientX: nextStartClientX,
+    startClientY: nextStartClientY,
+    hasMoved: false,
+  };
+};
+
+export const updateMouseItemPress = (
+  { state },
+  { clientX, clientY, moveThreshold = 0 } = {},
+) => {
+  const press = state.mouseItemPress;
+  const nextClientX = Number(clientX);
+  const nextClientY = Number(clientY);
+
+  if (
+    press?.type !== "item-press" ||
+    !Number.isFinite(nextClientX) ||
+    !Number.isFinite(nextClientY)
+  ) {
+    return;
+  }
+
+  const deltaX = nextClientX - press.startClientX;
+  const deltaY = nextClientY - press.startClientY;
+  press.hasMoved = press.hasMoved || Math.hypot(deltaX, deltaY) > moveThreshold;
+};
+
+export const clearMouseItemPress = ({ state }, _payload = {}) => {
+  state.mouseItemPress = undefined;
+};
+
+export const selectMouseItemPress = ({ state }) => {
+  return state.mouseItemPress;
 };
 
 // Pan functions
@@ -297,6 +374,37 @@ export const stopTouchGesture = ({ state }, _payload = {}) => {
 };
 
 export const selectTouchGesture = ({ state }) => state.touchGesture;
+
+export const setLastTouchTap = (
+  { state },
+  { itemId, clientX, clientY, timestamp } = {},
+) => {
+  const nextClientX = Number(clientX);
+  const nextClientY = Number(clientY);
+  const nextTimestamp = Number(timestamp);
+
+  if (
+    !itemId ||
+    !Number.isFinite(nextClientX) ||
+    !Number.isFinite(nextClientY) ||
+    !Number.isFinite(nextTimestamp)
+  ) {
+    return;
+  }
+
+  state.lastTouchTap = {
+    itemId,
+    clientX: nextClientX,
+    clientY: nextClientY,
+    timestamp: nextTimestamp,
+  };
+};
+
+export const clearLastTouchTap = ({ state }, _payload = {}) => {
+  state.lastTouchTap = undefined;
+};
+
+export const selectLastTouchTap = ({ state }) => state.lastTouchTap;
 
 export const startMinimapViewportDragging = (
   { state },
@@ -506,7 +614,13 @@ const getVisibleViewportAxis = (start, end, limit) => {
   };
 };
 
-const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
+const generateMinimapData = (
+  items,
+  pan,
+  zoomLevel,
+  containerSize,
+  { heightScale = 1 } = {},
+) => {
   if (!items || items.length === 0) {
     return {
       items: [],
@@ -523,7 +637,7 @@ const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
   const itemWidth = SCENE_BOX_WIDTH;
   const itemHeight = SCENE_BOX_HEIGHT;
   const minimapWidth = 200;
-  const minimapHeight = 150;
+  const minimapHeight = Math.round(150 * heightScale);
   const padding = 30;
   const viewportLeft = -pan.x / zoomLevel;
   const viewportTop = -pan.y / zoomLevel;
@@ -614,12 +728,18 @@ const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
   };
 };
 
-export const selectMinimapData = ({ state }, { items = [] } = {}) => {
+export const selectMinimapData = (
+  { state },
+  { items = [], heightScale = 1 } = {},
+) => {
   return generateMinimapData(
     items,
     { x: state.panX, y: state.panY },
     state.zoomLevel,
     state.containerSize,
+    {
+      heightScale: resolveMinimapHeightScale(heightScale),
+    },
   );
 };
 
@@ -685,16 +805,28 @@ export const selectViewData = ({ state, props }) => {
     }
   });
 
+  const showTouchMinimap =
+    isTouchMode &&
+    parseBooleanProp(props.showMinimapInTouchMode) &&
+    items.length > 0;
+  const showDesktopMinimap = !isTouchMode && items.length > 1;
+  const minimapPlacement = props.minimapPlacement ?? "bottom-left";
+  const minimapHeightScale = resolveMinimapHeightScale(
+    props.minimapHeightScale,
+  );
+
   return {
     items,
-    showMinimap: !isTouchMode && items.length > 1,
+    showMinimap: showTouchMinimap || showDesktopMinimap,
     showControls: !isTouchMode,
     minimapData: selectMinimapData(
       { state },
       {
         items,
+        heightScale: minimapHeightScale,
       },
     ),
+    minimapContainerStyle: resolveMinimapContainerStyle(minimapPlacement),
     arrowsList,
     selectedItemId: props.selectedItemId,
     isPanMode: state.isPinnedPanMode || state.isKeyboardPanMode,

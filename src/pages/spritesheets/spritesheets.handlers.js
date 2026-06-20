@@ -14,6 +14,7 @@ import {
   handleMobileResourceDetailSheetClose,
   handleMobileResourceFileExplorerClose,
   handleMobileResourceFileExplorerOpen,
+  shouldSuppressMobileDetailSheetForFileExplorerSelection,
   syncMobileResourcePageUiConfig,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
@@ -534,7 +535,11 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  const selectionPayload = { itemId };
+  if (shouldSuppressMobileDetailSheetForFileExplorerSelection(deps)) {
+    selectionPayload.suppressMobileDetailSheet = true;
+  }
+  store.setSelectedItemId(selectionPayload);
   closeMobileResourceFileExplorerAfterSelection(deps);
   render();
   refs.groupview?.scrollItemIntoView?.({ itemId });
@@ -568,6 +573,42 @@ export const handleSpritesheetItemDoubleClick = (deps, payload) => {
     deps,
     itemId,
     syncExplorer: true,
+  });
+};
+
+export const handleMobileDetailPreviewClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  handleSpritesheetItemDoubleClick(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
+export const handleMobileDetailDeleteClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDelete(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
   });
 };
 

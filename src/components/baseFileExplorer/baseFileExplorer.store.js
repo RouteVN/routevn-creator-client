@@ -11,6 +11,13 @@ const getBooleanAttr = (attrs, camelName, kebabName) => {
   return true;
 };
 
+const getStringAttr = (attrs, camelName, kebabName, fallback) => {
+  const compactName = kebabName.replaceAll("-", "");
+  return (
+    attrs?.[camelName] ?? attrs?.[kebabName] ?? attrs?.[compactName] ?? fallback
+  );
+};
+
 export const createInitialState = () => ({
   isDragging: false,
   selectedItemId: undefined,
@@ -397,6 +404,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     hasRenameTarget,
     form: renameForm,
     attrs,
+    bottomEmptySpaceHeight: getStringAttr(
+      attrs,
+      "bottomEmptySpaceHeight",
+      "bottom-empty-space-height",
+      "64px",
+    ),
     noEmptyMessage: getBooleanAttr(attrs, "noEmptyMessage", "no-empty-message"),
     shrinkable: getBooleanAttr(attrs, "shrinkable", "shrinkable"),
   };

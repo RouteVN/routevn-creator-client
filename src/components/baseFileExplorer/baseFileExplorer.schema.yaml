@@ -56,6 +56,9 @@ propsSchema:
     no-empty-message:
       type: boolean
       description: Whether to show the empty message when there are no items
+    bottom-empty-space-height:
+      type: string
+      description: Minimum empty area kept after the last item for scrolling and empty-space context menus
 methods:
   type: object
   properties:

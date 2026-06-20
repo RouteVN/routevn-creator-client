@@ -14,6 +14,7 @@ import {
   handleMobileResourceDetailSheetClose,
   handleMobileResourceFileExplorerClose,
   handleMobileResourceFileExplorerOpen,
+  shouldSuppressMobileDetailSheetForFileExplorerSelection,
   syncMobileResourcePageUiConfig,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { VARIABLE_TAG_SCOPE_KEY } from "./variables.store.js";
@@ -275,7 +276,11 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   store.setSelectedFolderId({ folderId: undefined });
-  store.setSelectedItemId({ itemId });
+  const selectionPayload = { itemId };
+  if (shouldSuppressMobileDetailSheetForFileExplorerSelection(deps)) {
+    selectionPayload.suppressMobileDetailSheet = true;
+  }
+  store.setSelectedItemId(selectionPayload);
   closeMobileResourceFileExplorerAfterSelection(deps);
   render();
   focusFileExplorerKeyboardScope(deps);
@@ -323,6 +328,24 @@ export const handleDetailHeaderClick = (deps) => {
   }
 
   openVariableEditDialog({ deps, itemId });
+};
+
+export const handleMobileDetailDeleteClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleVariableDelete(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
 };
 
 export const handleFolderNameDialogClose = (deps) => {

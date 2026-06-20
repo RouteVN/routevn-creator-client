@@ -18,6 +18,7 @@ static/bundle/main.js
 /src-tauri/*.bak
 .env
 /.rettangoli/
+/.artifacts/
 /project.db
 /project.db-shm
 /project.db-wal

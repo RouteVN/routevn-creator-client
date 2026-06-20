@@ -21,6 +21,12 @@ propsSchema:
       type: string
     isTouchMode:
       type: boolean
+    showMinimapInTouchMode:
+      type: boolean
+    minimapPlacement:
+      type: string
+    minimapHeightScale:
+      type: number
 methods:
   properties:
     ensureItemVisible:

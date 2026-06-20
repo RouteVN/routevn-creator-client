@@ -1,5 +1,4 @@
 import { generateId } from "../../internal/id.js";
-import { filter, tap } from "rxjs";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import {
   getMediaPageData,
@@ -143,21 +142,6 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
   });
 };
 
-const handlePanelResize = (deps, payload) => {
-  const { store, render } = deps;
-  const { panelType, width } = payload;
-
-  if (panelType === "file-explorer") {
-    store.updateAudioPlayerLeft({ width });
-    render();
-  }
-
-  if (panelType === "detail-panel") {
-    store.updateAudioPlayerRight({ width });
-    render();
-  }
-};
-
 const syncSoundPageData = ({ store, repositoryState } = {}) => {
   const tagsData = getTagsCollection(repositoryState, SOUND_TAG_SCOPE_KEY);
   const mediaData = getMediaPageData({
@@ -206,18 +190,6 @@ const {
 } = createMediaPageHandlers({
   resourceType: "sounds",
   syncData: syncSoundPageData,
-  subscriptions: (deps) => {
-    const { subject } = deps;
-
-    return [
-      subject.pipe(
-        filter(({ action }) => action === "panel-resize"),
-        tap(({ payload }) => {
-          handlePanelResize(deps, payload);
-        }),
-      ),
-    ];
-  },
   selectItemById: (store, { itemId }) => store.selectSoundItemById({ itemId }),
   getEditValues: (item) => ({
     name: item?.name ?? "",
@@ -249,19 +221,7 @@ const {
 });
 
 export const handleBeforeMount = (deps) => {
-  const { appService, store } = deps;
-  const cleanup = handleMediaBeforeMount(deps);
-
-  const defaultLeft = parseInt(
-    appService.getUserConfig("resizablePanel.fileExplorerWidth"),
-  );
-  const defaultRight = parseInt(
-    appService.getUserConfig("resizablePanel.detailPanelWidth"),
-  );
-  store.updateAudioPlayerLeft({ width: defaultLeft });
-  store.updateAudioPlayerRight({ width: defaultRight });
-
-  return cleanup;
+  return handleMediaBeforeMount(deps);
 };
 
 export {
@@ -316,7 +276,12 @@ export const handleCenterGroupCollapseChange = (deps, payload) => {
   });
 };
 
-const openSoundPreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
+const openSoundPreviewById = ({
+  deps,
+  itemId,
+  syncExplorer = false,
+  suppressMobileDetailSheet = false,
+} = {}) => {
   const { refs, store, render } = deps;
   if (!itemId) {
     return;
@@ -327,7 +292,10 @@ const openSoundPreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({
+    itemId,
+    suppressMobileDetailSheet,
+  });
 
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
@@ -350,8 +318,13 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
 };
 
 export const handleSoundItemDoubleClick = (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  openSoundPreviewById({ deps, itemId, syncExplorer: true });
+  const { itemId, source } = payload._event.detail;
+  openSoundPreviewById({
+    deps,
+    itemId,
+    syncExplorer: true,
+    suppressMobileDetailSheet: source === "mobile-context-menu",
+  });
 };
 
 export const handleDetailHeaderClick = (deps) => {
@@ -374,8 +347,75 @@ export const handleEditFormAddOptionClick = (deps) => {
 };
 
 export const handleSoundItemPreview = (deps, payload) => {
-  const { itemId } = payload._event.detail;
-  openSoundPreviewById({ deps, itemId });
+  const { itemId, source } = payload._event.detail;
+  openSoundPreviewById({
+    deps,
+    itemId,
+    syncExplorer: true,
+    suppressMobileDetailSheet: source === "mobile-context-menu",
+  });
+};
+
+export const handleMobileDetailPlayClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const selectedItemId = deps.store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
+  openSoundPreviewById({
+    deps,
+    itemId: selectedItemId,
+    syncExplorer: true,
+    suppressMobileDetailSheet: true,
+  });
+};
+
+export const handleMobileDetailDeleteClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const { store, render } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
+  store.openMobileDeleteDialog({ itemId: selectedItemId });
+  render();
+};
+
+export const handleMobileDeleteDialogClose = (deps) => {
+  const { store, render } = deps;
+
+  store.closeMobileDeleteDialog();
+  render();
+};
+
+export const handleMobileDeleteDialogCancel = (deps) => {
+  handleMobileDeleteDialogClose(deps);
+};
+
+export const handleMobileDeleteDialogConfirm = async (deps) => {
+  const { store, render } = deps;
+  const itemId = store.selectMobileDeleteDialogItemId();
+
+  store.closeMobileDeleteDialog();
+  render();
+
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDelete(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
 };
 
 export const handleUploadClick = async (deps, payload) => {
@@ -591,7 +631,7 @@ export const handleAudioPlayerClose = (deps) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService, appService, render } = deps;
+  const { projectService, appService, render, store } = deps;
   const { itemId } = payload._event.detail;
 
   const result = await projectService.deleteSoundIfUnused({
@@ -607,6 +647,10 @@ export const handleItemDelete = async (deps, payload) => {
     });
     render();
     return;
+  }
+
+  if (store?.selectSelectedItemId?.() === itemId) {
+    store.setSelectedItemId({ itemId: undefined });
   }
 
   await handleDataChanged(deps);

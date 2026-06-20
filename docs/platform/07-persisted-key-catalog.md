@@ -42,6 +42,23 @@ Current keys:
     - `groupImagesView.zoomLevel`
       - purpose: grouped image/media zoom preference
       - scope: global
+    - resource grid column-count preferences
+      - purpose: grouped resource grid column-count preference
+      - scope: global
+      - keys:
+        - `groupAnimationsView.itemsPerRow`
+        - `groupCharacterSpritesView.itemsPerRow`
+        - `groupColorsView.itemsPerRow`
+        - `groupControlsView.itemsPerRow`
+        - `groupFontsView.itemsPerRow`
+        - `groupImagesView.itemsPerRow`
+        - `groupLayoutsView.itemsPerRow`
+        - `groupParticlesView.itemsPerRow`
+        - `groupSoundsView.itemsPerRow`
+        - `groupSpritesheetsView.itemsPerRow`
+        - `groupTextStylesView.itemsPerRow`
+        - `groupTransformsView.itemsPerRow`
+        - `groupVideosView.itemsPerRow`
     - `scenesMap.viewportByProject.<projectId>.zoomLevel`
       - purpose: stored scenes-map zoom for one project
       - scope: per project
@@ -56,6 +73,9 @@ Current keys:
       - scope: global
     - `scenesMap.selectedSceneIdByProject.<projectId>`
       - purpose: restores the last selected scene for one project
+      - scope: per project
+    - `sceneEditor.recentSceneIdsByProject.<projectId>`
+      - purpose: stores the recently opened scene ids used by mobile scene map navigation
       - scope: per project
     - `sceneEditor.showLineNumbers`
       - purpose: scene-editor line-number toggle

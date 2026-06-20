@@ -1,16 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
+  clearFullImagePreviewSuppressNextClick,
+  clearFullImagePreviewTouchStartPoint,
+  closeMobileDeleteDialog,
   commitDetailTagIds,
   createInitialState,
+  hideFullImagePreview,
+  openMobileDeleteDialog,
   selectAdjacentImageItemId,
+  selectFullImagePreviewSuppressNextClick,
+  selectFullImagePreviewTouchStartPoint,
+  selectMobileDeleteDialogItemId,
   selectViewData,
   setFullImagePreviewDisplayMode,
+  setFullImagePreviewTouchStartPoint,
   setDetailTagIds,
   setItems,
   setProjectResolution,
   setSelectedItemId,
   setTagsData,
+  setUiConfig,
   showFullImagePreview,
+  suppressNextFullImagePreviewClick,
 } from "../../src/pages/images/images.store.js";
 
 const createContext = () => ({
@@ -18,6 +29,41 @@ const createContext = () => ({
 });
 
 describe("images store detail tag draft", () => {
+  it("suppresses the mobile detail sheet for file explorer item jumps", () => {
+    const context = createContext();
+
+    setUiConfig(context, {
+      uiConfig: {
+        id: "touch",
+      },
+    });
+    setItems(context, {
+      data: {
+        tree: [{ id: "image-1" }],
+        items: {
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Hero",
+          },
+        },
+      },
+    });
+
+    setSelectedItemId(context, {
+      itemId: "image-1",
+      suppressMobileDetailSheet: true,
+    });
+
+    expect(selectViewData(context).showMobileDetailSheet).toBe(false);
+
+    setSelectedItemId(context, {
+      itemId: "image-1",
+    });
+
+    expect(selectViewData(context).showMobileDetailSheet).toBe(true);
+  });
+
   it("preserves a local detail tag draft across tag-only data refreshes", () => {
     const context = createContext();
 
@@ -96,6 +142,43 @@ describe("images store detail tag draft", () => {
 
     expect(context.state.detailTagIds).toEqual(["tag-1"]);
     expect(context.state.detailTagIdsDirty).toBe(false);
+  });
+});
+
+describe("images store mobile delete dialog", () => {
+  it("tracks the selected image for delete confirmation", () => {
+    const context = createContext();
+
+    setItems(context, {
+      data: {
+        tree: [{ id: "image-1" }],
+        items: {
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Hero",
+          },
+        },
+      },
+    });
+
+    openMobileDeleteDialog(context, {
+      itemId: "image-1",
+    });
+
+    const viewData = selectViewData(context);
+    expect(viewData.mobileDeleteDialogOpen).toBe(true);
+    expect(viewData.mobileDeleteDialogTitle).toBe("Delete Image");
+    expect(viewData.mobileDeleteDialogMessage).toBe(
+      'Delete "Hero"? This cannot be undone.',
+    );
+    expect(viewData.mobileDeleteDialogConfirmLabel).toBe("Delete");
+    expect(selectMobileDeleteDialogItemId(context)).toBe("image-1");
+
+    closeMobileDeleteDialog(context);
+
+    expect(selectMobileDeleteDialogItemId(context)).toBeUndefined();
+    expect(selectViewData(context).mobileDeleteDialogOpen).toBe(false);
   });
 });
 
@@ -213,6 +296,38 @@ describe("images store preview navigation", () => {
     expect(context.state.fullImagePreviewDisplayMode).toBe("canvas");
   });
 
+  it("tracks and clears full preview touch interaction state", () => {
+    const context = createContext();
+
+    setFullImagePreviewTouchStartPoint(context, {
+      x: 24,
+      y: 32,
+    });
+    suppressNextFullImagePreviewClick(context);
+
+    expect(selectFullImagePreviewTouchStartPoint(context)).toEqual({
+      x: 24,
+      y: 32,
+    });
+    expect(selectFullImagePreviewSuppressNextClick(context)).toBe(true);
+
+    clearFullImagePreviewTouchStartPoint(context);
+    clearFullImagePreviewSuppressNextClick(context);
+
+    expect(selectFullImagePreviewTouchStartPoint(context)).toBeUndefined();
+    expect(selectFullImagePreviewSuppressNextClick(context)).toBe(false);
+
+    setFullImagePreviewTouchStartPoint(context, {
+      x: 24,
+      y: 32,
+    });
+    suppressNextFullImagePreviewClick(context);
+    hideFullImagePreview(context);
+
+    expect(selectFullImagePreviewTouchStartPoint(context)).toBeUndefined();
+    expect(selectFullImagePreviewSuppressNextClick(context)).toBe(false);
+  });
+
   it("uses the project resolution frame for the full preview overlay", () => {
     const context = createContext();
     const viewData = selectViewData(context);
@@ -221,7 +336,7 @@ describe("images store preview navigation", () => {
       "aspect-ratio: 1920 / 1080",
     );
     expect(viewData.fullImagePreviewFrameStyle).toContain(
-      "width: min(92vw, calc(92vh * (1920 / 1080)))",
+      "width: min(88vw, calc((100vh - 120px) * (1920 / 1080)))",
     );
   });
 

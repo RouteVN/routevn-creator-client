@@ -876,6 +876,60 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
   });
 };
 
+export const handleMobileDetailPreviewClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleTransformItemDoubleClick(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
+export const handleMobileDetailDuplicateClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDuplicate(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
+export const handleMobileDetailDeleteClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDelete(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
 export const handleTransformItemEdit = async (deps, payload) => {
   const { itemId } = payload._event.detail;
   if (!itemId) {

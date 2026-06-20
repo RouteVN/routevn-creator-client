@@ -47,6 +47,30 @@ refs:
     eventListeners:
       close:
         handler: handleMobileDetailSheetClose
+  mobileDetailPreviewButton:
+    eventListeners:
+      click:
+        handler: handleMobileDetailPreviewClick
+        preventDefault: true
+        stopPropagation: true
+  mobileDetailDeleteButton:
+    eventListeners:
+      click:
+        handler: handleMobileDetailDeleteClick
+        preventDefault: true
+        stopPropagation: true
+  mobileDeleteDialog:
+    eventListeners:
+      close:
+        handler: handleMobileDeleteDialogClose
+  mobileDeleteCancelButton:
+    eventListeners:
+      click:
+        handler: handleMobileDeleteDialogCancel
+  mobileDeleteConfirmButton:
+    eventListeners:
+      click:
+        handler: handleMobileDeleteDialogConfirm
   fileExplorerKeyboardScope:
     eventListeners:
       click:
@@ -65,6 +89,12 @@ refs:
         handler: handlePreviewOverlayClick
       keydown:
         handler: handlePreviewOverlayKeyDown
+      touchstart:
+        handler: handlePreviewOverlayTouchStart
+      touchend:
+        handler: handlePreviewOverlayTouchEnd
+      touchcancel:
+        handler: handlePreviewOverlayTouchCancel
   previewImageFrame:
     eventListeners:
       click:
@@ -191,12 +221,12 @@ template:
               - rvn-resizable-panel#fileExplorerPanel w=300 min-w=200 max-w=500 resize-side="right":
                   - rtgl-view slot="content" w=f h=f:
                       - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-                      - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag start-collapsed=${startCollapsedFileExplorer} :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+                      - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag bottom-empty-space-height=32vh start-collapsed=${startCollapsedFileExplorer} :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f pl=${contentLeftPadding} style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
-                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-search=false search-in-filter-popover show-tag-filter progressive-render lazy-image-cards image-card-aspect-ratio="16 / 9" :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupImagesView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render lazy-image-cards image-card-aspect-ratio="16 / 9" :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
                       - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupImagesView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render lazy-image-cards image-card-aspect-ratio="16 / 9" :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
@@ -224,16 +254,27 @@ template:
               - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
                   - rtgl-svg svg=x wh=20 c=mu-fg: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
-              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag start-collapsed=${startCollapsedFileExplorer} :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag bottom-empty-space-height=80vh start-collapsed=${startCollapsedFileExplorer} :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
   - $if showMobileDetailSheet:
       - rvn-mobile-sheet#mobileDetailSheet ?open=${showMobileDetailSheet}:
           - rtgl-view slot=content d=v w=f h=f:
               - rtgl-view#detailHeader h=56 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
+              - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
+                  - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: Preview
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: Delete
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+  - rtgl-dialog#mobileDeleteDialog ?open=${mobileDeleteDialogOpen} s=sm:
+      - rtgl-view slot=content g=lg p=lg:
+          - rtgl-view d=v g=md:
+              - rtgl-text s=lg: ${mobileDeleteDialogTitle}
+              - rtgl-text c=mu-fg: ${mobileDeleteDialogMessage}
+          - rtgl-view d=h g=sm w=f ah=e:
+              - rtgl-button#mobileDeleteCancelButton v=se: Cancel
+              - rtgl-button#mobileDeleteConfirmButton v=pr: ${mobileDeleteDialogConfirmLabel}
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:

@@ -154,6 +154,42 @@ export const handleColorItemDoubleClick = (deps, payload) => {
   render();
 };
 
+export const handleMobileDetailPreviewClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  handleColorItemDoubleClick(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
+export const handleMobileDetailDeleteClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDelete(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
 export const handleAddColorClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;

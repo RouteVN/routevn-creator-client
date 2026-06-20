@@ -154,12 +154,21 @@ const {
   },
   hiddenMobileDetailSlots: ["sound-waveform"],
   extendViewData: ({ state, baseViewData }) => {
+    const deleteDialogItem = state.mobileDeleteDialogItemId
+      ? state.data?.items?.[state.mobileDeleteDialogItemId]
+      : undefined;
+    const deleteDialogItemName = deleteDialogItem?.name
+      ? `"${deleteDialogItem.name}"`
+      : "this sound";
+
     return {
       ...baseViewData,
       playingSound: state.playingSound,
       showAudioPlayer: state.showAudioPlayer,
-      audioPlayerLeft: state.audioPlayerLeft,
-      audioPlayerRight: state.audioPlayerRight,
+      mobileDeleteDialogOpen: state.mobileDeleteDialogOpen,
+      mobileDeleteDialogTitle: "Delete Sound",
+      mobileDeleteDialogMessage: `Delete ${deleteDialogItemName}? This cannot be undone.`,
+      mobileDeleteDialogConfirmLabel: "Delete",
     };
   },
 });
@@ -171,8 +180,8 @@ export const createInitialState = () => ({
     fileId: undefined,
   },
   showAudioPlayer: false,
-  audioPlayerLeft: 0,
-  audioPlayerRight: 0,
+  mobileDeleteDialogOpen: false,
+  mobileDeleteDialogItemId: undefined,
 });
 
 export {
@@ -220,20 +229,22 @@ export const closeAudioPlayer = ({ state }, _payload = {}) => {
   };
 };
 
-const resolveAudioPlayerWidth = (input = {}) => {
-  const widthValue = input?.payload?.width ?? input?.width;
-  const parsedWidth =
-    typeof widthValue === "number" ? widthValue : Number(widthValue);
-  return Number.isFinite(parsedWidth) ? parsedWidth : 0;
+export const openMobileDeleteDialog = ({ state }, { itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  state.mobileDeleteDialogOpen = true;
+  state.mobileDeleteDialogItemId = itemId;
 };
 
-export const updateAudioPlayerLeft = ({ state }, payload = {}) => {
-  state.audioPlayerLeft = resolveAudioPlayerWidth(payload) + 64;
+export const closeMobileDeleteDialog = ({ state }) => {
+  state.mobileDeleteDialogOpen = false;
+  state.mobileDeleteDialogItemId = undefined;
 };
 
-export const updateAudioPlayerRight = ({ state }, payload = {}) => {
-  state.audioPlayerRight = resolveAudioPlayerWidth(payload);
-};
+export const selectMobileDeleteDialogItemId = ({ state }) =>
+  state.mobileDeleteDialogItemId;
 
 export const selectViewData = (context) => {
   const viewData = selectMediaViewData(context);

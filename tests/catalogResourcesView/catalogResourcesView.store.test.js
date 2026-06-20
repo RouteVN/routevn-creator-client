@@ -43,4 +43,47 @@ describe("catalogResourcesView.store", () => {
       }),
     ]);
   });
+
+  it("uses a two-column mobile default with a six-column maximum", () => {
+    const props = {
+      mobileLayout: true,
+      showZoomControls: true,
+      zoomControlMode: "columns",
+      groups: [
+        {
+          id: "folder-1",
+          children: [{ id: "color-1", cardKind: "color" }],
+        },
+      ],
+    };
+    const state = createInitialState({ props });
+    const viewData = selectViewData({ state, props });
+
+    expect(viewData.showZoomControls).toBe(true);
+    expect(viewData.itemsPerRow).toBe(2);
+    expect(viewData.cardGridColumns).toBe("2");
+    expect(viewData.zoomControlMax).toBe(6);
+    expect(viewData.groups[0].children[0]).toEqual(
+      expect.objectContaining({
+        itemContainerStyle: "width: 100%; box-sizing: border-box;",
+        itemWidth: "f",
+      }),
+    );
+  });
+
+  it("clamps saved mobile catalog columns to six", () => {
+    const props = {
+      mobileLayout: true,
+      showZoomControls: true,
+      zoomControlMode: "columns",
+      defaultItemsPerRow: 12,
+    };
+    const state = createInitialState({ props });
+    const viewData = selectViewData({ state, props });
+
+    expect(state.itemsPerRow).toBe(6);
+    expect(viewData.itemsPerRow).toBe(6);
+    expect(viewData.cardGridColumns).toBe("6");
+    expect(viewData.zoomControlMax).toBe(6);
+  });
 });

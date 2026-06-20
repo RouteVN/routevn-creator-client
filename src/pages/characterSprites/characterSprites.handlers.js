@@ -10,6 +10,7 @@ import {
   handleMobileResourceDetailSheetClose,
   handleMobileResourceFileExplorerClose,
   handleMobileResourceFileExplorerOpen,
+  shouldSuppressMobileDetailSheetForFileExplorerSelection,
   syncMobileResourcePageUiConfig,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
@@ -296,7 +297,12 @@ const refreshCharacterSpritesData = async (deps) => {
   render();
 };
 
-const selectSprite = ({ deps, itemId, syncExplorer = false } = {}) => {
+const selectSprite = ({
+  deps,
+  itemId,
+  syncExplorer = false,
+  suppressMobileDetailSheet = false,
+} = {}) => {
   const { refs, render, store } = deps;
   const item = store.selectSpriteItemById({ itemId });
 
@@ -304,7 +310,7 @@ const selectSprite = ({ deps, itemId, syncExplorer = false } = {}) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
+  store.setSelectedItemId({ itemId, suppressMobileDetailSheet });
 
   if (syncExplorer) {
     refs.fileExplorer?.selectItem?.({ itemId });
@@ -1074,10 +1080,14 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
     return;
   }
 
-  selectSprite({
+  const selectionPayload = {
     deps,
     itemId,
-  });
+  };
+  if (shouldSuppressMobileDetailSheetForFileExplorerSelection(deps)) {
+    selectionPayload.suppressMobileDetailSheet = true;
+  }
+  selectSprite(selectionPayload);
   closeMobileResourceFileExplorerAfterSelection(deps);
   refs.groupview?.scrollItemIntoView?.({ itemId });
   focusGroupView(deps);
@@ -1154,6 +1164,42 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
   }
 
   openSpritePreviewById({ deps, itemId, syncExplorer: true });
+};
+
+export const handleMobileDetailPreviewClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  handleSpriteItemDoubleClick(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
+};
+
+export const handleMobileDetailDeleteClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  await handleItemDelete(deps, {
+    _event: {
+      detail: {
+        itemId,
+      },
+    },
+  });
 };
 
 export const handleSpriteItemPreview = (deps, payload) => {

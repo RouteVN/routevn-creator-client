@@ -3,6 +3,7 @@ import {
   createInitialState,
   selectIsDraggingMinimapViewport,
   selectMinimapData,
+  selectViewData,
   setContainerSize,
   setInitialZoomAndPan,
   startMinimapViewportDragging,
@@ -143,5 +144,39 @@ describe("whiteboard minimap viewport drag", () => {
     stopMinimapViewportDragging({ state });
 
     expect(selectIsDraggingMinimapViewport({ state })).toBe(false);
+  });
+
+  it("can show the minimap in touch mode at the top right", () => {
+    const state = createInitialState();
+    const items = createItems();
+
+    setContainerSize({ state }, { width: 480, height: 320 });
+
+    const defaultTouchViewData = selectViewData({
+      state,
+      props: {
+        items,
+        isTouchMode: true,
+      },
+    });
+
+    expect(defaultTouchViewData.showMinimap).toBe(false);
+
+    const forcedTouchViewData = selectViewData({
+      state,
+      props: {
+        items,
+        isTouchMode: true,
+        showMinimapInTouchMode: true,
+        minimapPlacement: "top-right",
+        minimapHeightScale: 2 / 3,
+      },
+    });
+
+    expect(forcedTouchViewData.showMinimap).toBe(true);
+    expect(forcedTouchViewData.showControls).toBe(false);
+    expect(forcedTouchViewData.minimapData.minimap.height).toBe(100);
+    expect(forcedTouchViewData.minimapContainerStyle).toContain("right: 20px");
+    expect(forcedTouchViewData.minimapContainerStyle).toContain("top: 20px");
   });
 });
