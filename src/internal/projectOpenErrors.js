@@ -18,7 +18,7 @@ const withLatestCreatorVersionHint = (message) => {
     return detail;
   }
 
-  const separator = /[.!?]$/.test(detail) ? " " : ". ";
+  const separator = /[.!?]$/.test(detail) ? "\n" : ".\n";
   return `${detail}${separator}${LATEST_CREATOR_VERSION_HINT}`;
 };
 
