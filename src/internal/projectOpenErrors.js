@@ -1,6 +1,27 @@
 export const UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE =
   "Unsupported project store format. This RouteVN Creator build only supports the current project storage layout and will not repair older local stores automatically.";
 
+const LATEST_CREATOR_VERSION_HINT =
+  "Make sure you're using the latest version of RouteVN Creator.";
+
+const hasLatestCreatorVersionHint = (message) => {
+  const normalizedMessage = message.toLowerCase();
+  return (
+    normalizedMessage.includes("latest version of routevn creator") ||
+    normalizedMessage.includes("update routevn creator")
+  );
+};
+
+const withLatestCreatorVersionHint = (message) => {
+  const detail = message.trim();
+  if (hasLatestCreatorVersionHint(detail)) {
+    return detail;
+  }
+
+  const separator = /[.!?]$/.test(detail) ? "\n" : ".\n";
+  return `${detail}${separator}${LATEST_CREATOR_VERSION_HINT}`;
+};
+
 export const isIncompatibleProjectOpenError = (error) => {
   if (
     error?.code === "project_projection_gap_incompatible" ||
@@ -19,19 +40,24 @@ export const isIncompatibleProjectOpenError = (error) => {
 
 export const getIncompatibleProjectOpenMessage = (error) => {
   if (error?.code === "project_store_format_unsupported") {
-    return UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE;
+    return withLatestCreatorVersionHint(
+      UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE,
+    );
   }
 
-  const message = error?.message ?? "";
+  const message =
+    typeof error?.message === "string" ? error.message.trim() : "";
   if (message.includes("requires reset for schema version")) {
-    return "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project.";
+    return withLatestCreatorVersionHint(
+      "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project.",
+    );
   }
 
-  return message;
+  return withLatestCreatorVersionHint(message || "Incompatible project.");
 };
 
 const isMissingProjectResolutionError = (error) => {
-  const message = String(error?.message || "").toLowerCase();
+  const message = String(error?.message ?? "").toLowerCase();
   return (
     message.includes("project resolution is required") &&
     message.includes("width") &&
@@ -40,10 +66,24 @@ const isMissingProjectResolutionError = (error) => {
 };
 
 const isProjectDatabaseOpenError = (error) => {
-  const message = String(error?.message || "").toLowerCase();
+  const message = String(error?.message ?? "").toLowerCase();
   return (
     message.includes("unable to open database file") ||
     message.includes("(code: 14)")
+  );
+};
+
+const isProjectDataStructureValidationError = (error) => {
+  const code = String(error?.code ?? "");
+  if (code.includes("validation_failed")) {
+    return true;
+  }
+
+  const message = String(error?.message ?? "").toLowerCase();
+  return (
+    message.includes("validation failed") ||
+    message.includes("failed validation") ||
+    message.includes("data structure")
   );
 };
 
@@ -53,7 +93,15 @@ export const getProjectOpenErrorMessage = (error) => {
   }
 
   if (isMissingProjectResolutionError(error)) {
-    return "Project is missing required resolution settings.";
+    return withLatestCreatorVersionHint(
+      "Project is missing required resolution settings.",
+    );
+  }
+
+  if (isProjectDataStructureValidationError(error)) {
+    return withLatestCreatorVersionHint(
+      "Project data structure failed validation.",
+    );
   }
 
   if (isProjectDatabaseOpenError(error)) {
@@ -62,12 +110,14 @@ export const getProjectOpenErrorMessage = (error) => {
 
   const detail = typeof error?.message === "string" ? error.message.trim() : "";
   if (!detail || detail === "Failed to open project.") {
-    return "Failed to open project. An unexpected error occurred while preparing the project.";
+    return withLatestCreatorVersionHint(
+      "Failed to open project. An unexpected error occurred while preparing the project.",
+    );
   }
 
   if (detail.toLowerCase().startsWith("failed to open project")) {
-    return detail;
+    return withLatestCreatorVersionHint(detail);
   }
 
-  return `Failed to open project. ${detail}`;
+  return withLatestCreatorVersionHint(`Failed to open project. ${detail}`);
 };
