@@ -18,7 +18,8 @@ const withLatestCreatorVersionHint = (message) => {
     return detail;
   }
 
-  return `${detail} ${LATEST_CREATOR_VERSION_HINT}`;
+  const separator = /[.!?]$/.test(detail) ? " " : ". ";
+  return `${detail}${separator}${LATEST_CREATOR_VERSION_HINT}`;
 };
 
 export const isIncompatibleProjectOpenError = (error) => {
@@ -82,9 +83,7 @@ const isProjectDataStructureValidationError = (error) => {
   return (
     message.includes("validation failed") ||
     message.includes("failed validation") ||
-    message.includes("data structure") ||
-    message.includes("must reference an existing") ||
-    message.includes("must reference existing")
+    message.includes("data structure")
   );
 };
 
@@ -111,12 +110,14 @@ export const getProjectOpenErrorMessage = (error) => {
 
   const detail = typeof error?.message === "string" ? error.message.trim() : "";
   if (!detail || detail === "Failed to open project.") {
-    return "Failed to open project. An unexpected error occurred while preparing the project.";
+    return withLatestCreatorVersionHint(
+      "Failed to open project. An unexpected error occurred while preparing the project.",
+    );
   }
 
   if (detail.toLowerCase().startsWith("failed to open project")) {
-    return detail;
+    return withLatestCreatorVersionHint(detail);
   }
 
-  return `Failed to open project. ${detail}`;
+  return withLatestCreatorVersionHint(`Failed to open project. ${detail}`);
 };

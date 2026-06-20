@@ -195,7 +195,7 @@ describe("projects.handleProjectsClick", () => {
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message:
-        "Failed to open project. An unexpected error occurred while preparing the project.",
+        "Failed to open project. An unexpected error occurred while preparing the project. Make sure you're using the latest version of RouteVN Creator.",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
@@ -238,7 +238,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 
-  it("suggests updating RouteVN Creator for model reference validation errors", async () => {
+  it("suggests updating RouteVN Creator for generic model reference errors", async () => {
     const deps = createDeps({
       ensureProjectCompatibleById: vi.fn(async () => {
         throw new Error(
@@ -251,7 +251,7 @@ describe("projects.handleProjectsClick", () => {
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message:
-        "Project data structure failed validation. Make sure you're using the latest version of RouteVN Creator.",
+        "Failed to open project. character.spriteGroups[0].tags[0] must reference an existing tag in scope 'characterSprites:g2PMeSgDVtoZ'. Make sure you're using the latest version of RouteVN Creator.",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
