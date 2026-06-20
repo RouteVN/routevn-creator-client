@@ -238,6 +238,24 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 
+  it("suggests updating RouteVN Creator for model reference validation errors", async () => {
+    const deps = createDeps({
+      ensureProjectCompatibleById: vi.fn(async () => {
+        throw new Error(
+          "character.spriteGroups[0].tags[0] must reference an existing tag in scope 'characterSprites:g2PMeSgDVtoZ'",
+        );
+      }),
+    });
+
+    await handleProjectsClick(deps, createPayload());
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "Project data structure failed validation. Make sure you're using the latest version of RouteVN Creator.",
+    });
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
+  });
+
   it("shows a clearer message for missing project database file errors", async () => {
     const deps = createDeps({
       ensureProjectCompatibleById: vi.fn(async () => {

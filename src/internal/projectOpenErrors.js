@@ -82,7 +82,9 @@ const isProjectDataStructureValidationError = (error) => {
   return (
     message.includes("validation failed") ||
     message.includes("failed validation") ||
-    message.includes("data structure")
+    message.includes("data structure") ||
+    message.includes("must reference an existing") ||
+    message.includes("must reference existing")
   );
 };
 
