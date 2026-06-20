@@ -60,14 +60,26 @@ describe("sounds view", () => {
     expect(soundsView).toContain("mobileDeleteDialogMessage");
   });
 
-  it("pins the bottom audio player to the full viewport width", () => {
+  it("sizes the bottom audio player from view data offsets", () => {
     const soundsView = readFileSync(
       new URL("../../src/pages/sounds/sounds.view.yaml", import.meta.url),
       "utf8",
     );
 
-    expect(soundsView).toContain('style="left: 0px; right: 0px;"');
-    expect(soundsView).not.toContain("audioPlayerLeft");
-    expect(soundsView).not.toContain("audioPlayerRight");
+    expect(soundsView).toContain(
+      'style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"',
+    );
+    expect(soundsView).toContain(":mobileLayout=${mobileLayout}");
+  });
+
+  it("passes bottom scroll room to the media grid", () => {
+    const soundsView = readFileSync(
+      new URL("../../src/pages/sounds/sounds.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(soundsView).toContain(
+      ":scrollBottomPadding=${gridScrollBottomPadding}",
+    );
   });
 });

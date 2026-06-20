@@ -13,3 +13,7 @@ propsSchema:
       type: boolean
       description: Whether to start playing automatically
       default: false
+    mobileLayout:
+      type: boolean
+      description: Whether to use compact mobile playback controls
+      default: false

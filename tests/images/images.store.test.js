@@ -29,6 +29,20 @@ const createContext = () => ({
 });
 
 describe("images store detail tag draft", () => {
+  it("adds desktop-only bottom scroll room for the media grid", () => {
+    const context = createContext();
+
+    expect(selectViewData(context).gridScrollBottomPadding).toBe("32vh");
+
+    setUiConfig(context, {
+      uiConfig: {
+        id: "touch",
+      },
+    });
+
+    expect(selectViewData(context).gridScrollBottomPadding).toBeUndefined();
+  });
+
   it("suppresses the mobile detail sheet for file explorer item jumps", () => {
     const context = createContext();
 

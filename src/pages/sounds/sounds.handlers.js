@@ -1,4 +1,5 @@
 import { generateId } from "../../internal/id.js";
+import { filter, tap } from "rxjs";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import {
   getMediaPageData,
@@ -142,6 +143,21 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
   });
 };
 
+const handlePanelResize = (deps, payload) => {
+  const { store, render } = deps;
+  const { panelType, width } = payload;
+
+  if (panelType === "file-explorer") {
+    store.updateAudioPlayerLeft({ width });
+    render();
+  }
+
+  if (panelType === "detail-panel") {
+    store.updateAudioPlayerRight({ width });
+    render();
+  }
+};
+
 const syncSoundPageData = ({ store, repositoryState } = {}) => {
   const tagsData = getTagsCollection(repositoryState, SOUND_TAG_SCOPE_KEY);
   const mediaData = getMediaPageData({
@@ -190,6 +206,18 @@ const {
 } = createMediaPageHandlers({
   resourceType: "sounds",
   syncData: syncSoundPageData,
+  subscriptions: (deps) => {
+    const { subject } = deps;
+
+    return [
+      subject.pipe(
+        filter(({ action }) => action === "panel-resize"),
+        tap(({ payload }) => {
+          handlePanelResize(deps, payload);
+        }),
+      ),
+    ];
+  },
   selectItemById: (store, { itemId }) => store.selectSoundItemById({ itemId }),
   getEditValues: (item) => ({
     name: item?.name ?? "",
@@ -221,7 +249,21 @@ const {
 });
 
 export const handleBeforeMount = (deps) => {
-  return handleMediaBeforeMount(deps);
+  const { appService, store } = deps;
+  const cleanup = handleMediaBeforeMount(deps);
+
+  const defaultLeft = Number.parseInt(
+    appService.getUserConfig("resizablePanel.fileExplorerWidth"),
+    10,
+  );
+  const defaultRight = Number.parseInt(
+    appService.getUserConfig("resizablePanel.detailPanelWidth"),
+    10,
+  );
+  store.updateAudioPlayerLeft({ width: defaultLeft });
+  store.updateAudioPlayerRight({ width: defaultRight });
+
+  return cleanup;
 };
 
 export {

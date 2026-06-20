@@ -5,6 +5,7 @@ import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 
 const SOUND_TAG_SCOPE_KEY = "sounds";
+const MEDIA_GRID_SCROLL_BOTTOM_PADDING = "32vh";
 
 const formatDuration = (duration) => {
   if (duration === undefined || duration === null) {
@@ -165,6 +166,8 @@ const {
       ...baseViewData,
       playingSound: state.playingSound,
       showAudioPlayer: state.showAudioPlayer,
+      audioPlayerLeft: state.isTouchMode ? 0 : state.audioPlayerLeft,
+      audioPlayerRight: state.isTouchMode ? 0 : state.audioPlayerRight,
       mobileDeleteDialogOpen: state.mobileDeleteDialogOpen,
       mobileDeleteDialogTitle: "Delete Sound",
       mobileDeleteDialogMessage: `Delete ${deleteDialogItemName}? This cannot be undone.`,
@@ -180,6 +183,8 @@ export const createInitialState = () => ({
     fileId: undefined,
   },
   showAudioPlayer: false,
+  audioPlayerLeft: 0,
+  audioPlayerRight: 0,
   mobileDeleteDialogOpen: false,
   mobileDeleteDialogItemId: undefined,
 });
@@ -229,6 +234,21 @@ export const closeAudioPlayer = ({ state }, _payload = {}) => {
   };
 };
 
+const resolveAudioPlayerWidth = (input = {}) => {
+  const widthValue = input?.payload?.width ?? input?.width;
+  const parsedWidth =
+    typeof widthValue === "number" ? widthValue : Number(widthValue);
+  return Number.isFinite(parsedWidth) ? parsedWidth : 0;
+};
+
+export const updateAudioPlayerLeft = ({ state }, payload = {}) => {
+  state.audioPlayerLeft = resolveAudioPlayerWidth(payload) + 64;
+};
+
+export const updateAudioPlayerRight = ({ state }, payload = {}) => {
+  state.audioPlayerRight = resolveAudioPlayerWidth(payload);
+};
+
 export const openMobileDeleteDialog = ({ state }, { itemId } = {}) => {
   if (!itemId) {
     return;
@@ -252,6 +272,9 @@ export const selectViewData = (context) => {
   return {
     ...viewData,
     flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
+    gridScrollBottomPadding: viewData.isTouchMode
+      ? undefined
+      : MEDIA_GRID_SCROLL_BOTTOM_PADDING,
   };
 };
 
