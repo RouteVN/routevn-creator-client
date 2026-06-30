@@ -1,7 +1,8 @@
 export const handleBeforeMount = (deps) => {
-  const { appService, store, uiConfig } = deps;
+  const { appService, store, uiConfig, updatesEnabled } = deps;
 
   store.setUiConfig({ uiConfig });
+  store.setUpdatesEnabled({ updatesEnabled });
   const appVersion = appService.getAppVersion();
   if (appVersion) {
     store.setAppVersion({ version: appVersion });
@@ -15,7 +16,10 @@ export const handleDataChanged = () => {
 };
 
 export const handleCheckForUpdates = async (deps) => {
-  const { updaterService } = deps;
+  const { updaterService, updatesEnabled } = deps;
+  if (!updatesEnabled || !updaterService) {
+    return;
+  }
 
   // Check for updates with UI feedback
   await updaterService.checkForUpdates(false);

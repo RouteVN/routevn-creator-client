@@ -419,8 +419,8 @@ export const handleMobileActionMenuClickItem = (deps, payload) => {
 };
 
 export const handleAppVersionClick = (deps, payload) => {
-  const { appService, store, render } = deps;
-  if (appService.getPlatform() === "web") {
+  const { appService, store, render, updatesEnabled } = deps;
+  if (appService.getPlatform() === "web" || !updatesEnabled) {
     return;
   }
 
@@ -443,14 +443,19 @@ export const handleAppVersionMenuClose = (deps) => {
 };
 
 export const handleAppVersionMenuClickItem = async (deps, payload) => {
-  const { appService, store, render, updaterService } = deps;
+  const { appService, store, render, updaterService, updatesEnabled } = deps;
   const detail = payload._event.detail;
   const item = detail.item || detail;
 
   store.closeAppVersionMenu();
   render();
 
-  if (item.value === "check-update" && appService.getPlatform() !== "web") {
+  if (
+    item.value === "check-update" &&
+    appService.getPlatform() !== "web" &&
+    updatesEnabled &&
+    updaterService
+  ) {
     await updaterService.checkForUpdates(false);
   }
 };

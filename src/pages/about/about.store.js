@@ -39,6 +39,7 @@ export const createInitialState = () => ({
   flatItems: [],
   appVersion: "",
   platform: "tauri",
+  updatesEnabled: false,
   isTouchMode: false,
 });
 
@@ -69,6 +70,10 @@ export const setAppVersion = ({ state }, { version } = {}) => {
 
 export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform;
+};
+
+export const setUpdatesEnabled = ({ state }, { updatesEnabled } = {}) => {
+  state.updatesEnabled = Boolean(updatesEnabled);
 };
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {

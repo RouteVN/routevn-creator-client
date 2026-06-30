@@ -32,7 +32,7 @@ template:
                       - rtgl-view av=c g=sm:
                           - rtgl-text s=sm: RouteVN Creator ${appVersion}
                       - rtgl-view d=h g=md:
-                          - $if platform == 'tauri':
+                          - $if platform == 'tauri' && updatesEnabled:
                               - rtgl-button#checkUpdateButton v=se: Check for Updates
                   - rtgl-view g=md:
                       - rtgl-text s=h4: Community
