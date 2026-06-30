@@ -1,6 +1,12 @@
 {
   "bundle": {
-    "createUpdaterArtifacts": false
+    "createUpdaterArtifacts": false,
+    "windows": {
+      "webviewInstallMode": {
+        "type": "fixedRuntime",
+        "path": "steam-runtime/webview2"
+      }
+    }
   },
   "plugins": {
     "updater": {

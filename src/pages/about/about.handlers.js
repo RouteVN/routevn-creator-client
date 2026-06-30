@@ -1,8 +1,10 @@
+import { resolveUpdatesEnabled } from "../../internal/updates.js";
+
 export const handleBeforeMount = (deps) => {
-  const { appService, store, uiConfig, updatesEnabled } = deps;
+  const { appService, store, uiConfig } = deps;
 
   store.setUiConfig({ uiConfig });
-  store.setUpdatesEnabled({ updatesEnabled });
+  store.setUpdatesEnabled({ updatesEnabled: resolveUpdatesEnabled(deps) });
   const appVersion = appService.getAppVersion();
   if (appVersion) {
     store.setAppVersion({ version: appVersion });
@@ -16,8 +18,8 @@ export const handleDataChanged = () => {
 };
 
 export const handleCheckForUpdates = async (deps) => {
-  const { updaterService, updatesEnabled } = deps;
-  if (!updatesEnabled || !updaterService) {
+  const { updaterService } = deps;
+  if (!resolveUpdatesEnabled(deps) || !updaterService) {
     return;
   }
 

@@ -50,10 +50,12 @@ Do not commit:
 - `steam_appid.txt`
 - Steamworks SDK files
 - Steam API runtime libraries copied from the SDK
+- Microsoft WebView2 fixed runtime files
 
-Recommended future `.gitignore` entries:
+Ignored local/generated entries:
 
 ```gitignore
+src-tauri/steam-runtime/
 _steam/
 steam/*.local.vdf
 steam/config.vdf
@@ -152,9 +154,11 @@ Preferred implementation:
 1. Keep using `src/setup.tauri.js`.
 2. Read the build distribution from `import.meta.env.VITE_ROUTEVN_DISTRIBUTION`.
 3. Pass `distribution` and `updatesEnabled` through page and component deps.
-4. Skip automatic update checks when updates are disabled.
-5. Hide manual update UI in Steam builds.
-6. Set Tauri updater artifacts off in the Steam Tauri config.
+4. Import the Tauri updater client statically, but instantiate it only when
+   updates are enabled.
+5. Skip automatic update checks when updates are disabled.
+6. Hide manual update UI in Steam builds.
+7. Set Tauri updater artifacts off in the Steam Tauri config.
 
 Distribution setup shape:
 
@@ -372,10 +376,53 @@ machine.
 SteamPipe should upload the launchable installed payload, not the public
 installer artifact.
 
+### Windows WebView2 Runtime
+
+Do not upload the raw Windows `app.exe` by itself. The direct-download NSIS
+installer handles WebView2 prerequisites, but Steam launch options start the
+staged executable directly.
+
+The Windows Steam flavor uses Tauri's `fixedRuntime` WebView2 mode:
+
+```json
+{
+  "bundle": {
+    "windows": {
+      "webviewInstallMode": {
+        "type": "fixedRuntime",
+        "path": "steam-runtime/webview2"
+      }
+    }
+  }
+}
+```
+
+Local setup:
+
+1. Download the Microsoft Edge WebView2 Fixed Version Runtime.
+2. Extract the runtime locally to `src-tauri/steam-runtime/webview2/`.
+3. Confirm `src-tauri/steam-runtime/webview2/msedgewebview2.exe` exists.
+
+`src-tauri/steam-runtime/` is ignored and must not be committed. The Windows
+Steam build script fails before compiling if the runtime is missing.
+
+The build copies the fixed runtime to:
+
+```text
+src-tauri/target/x86_64-pc-windows-msvc/release/steam-runtime/webview2/
+```
+
+Stage both of these into the Windows depot content root:
+
+- `src-tauri/target/x86_64-pc-windows-msvc/release/app.exe`
+- `src-tauri/target/x86_64-pc-windows-msvc/release/steam-runtime/webview2/**`
+
 Windows:
 
 - Build a Steam-specific Windows Tauri release.
-- Stage the launchable `.exe` payload into `_steam/windows/`.
+- Stage the launchable `.exe` payload and fixed WebView2 runtime into
+  `_steam/windows/`.
+- Do not stage `app.exe` without `steam-runtime/webview2/`.
 - Exclude `.pdb` files.
 - Configure Steam launch options to run the staged executable.
 - Validate on a clean Windows machine or VM.
@@ -432,6 +479,8 @@ Before uploading:
 - Tauri updater artifacts are not generated for the Steam build.
 - Automatic update checks do not run at startup.
 - Manual update UI is hidden or disabled.
+- Windows depot content includes `steam-runtime/webview2/msedgewebview2.exe`
+  when shipping Windows.
 - No `steam_appid.txt` exists in the staged depot.
 - No Steamworks SDK files exist in the staged depot.
 - No `.pdb` files exist in the staged depot unless intentionally uploading

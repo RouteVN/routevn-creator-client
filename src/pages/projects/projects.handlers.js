@@ -13,6 +13,7 @@ import {
   CUSTOM_PROJECT_RESOLUTION_PRESET,
   resolveProjectResolution,
 } from "../../internal/projectResolution.js";
+import { resolveUpdatesEnabled } from "../../internal/updates.js";
 
 const mapCloudProject = (project) => {
   const projectId = project?.id;
@@ -419,8 +420,8 @@ export const handleMobileActionMenuClickItem = (deps, payload) => {
 };
 
 export const handleAppVersionClick = (deps, payload) => {
-  const { appService, store, render, updatesEnabled } = deps;
-  if (appService.getPlatform() === "web" || !updatesEnabled) {
+  const { appService, store, render } = deps;
+  if (appService.getPlatform() === "web" || !resolveUpdatesEnabled(deps)) {
     return;
   }
 
@@ -443,7 +444,7 @@ export const handleAppVersionMenuClose = (deps) => {
 };
 
 export const handleAppVersionMenuClickItem = async (deps, payload) => {
-  const { appService, store, render, updaterService, updatesEnabled } = deps;
+  const { appService, store, render, updaterService } = deps;
   const detail = payload._event.detail;
   const item = detail.item || detail;
 
@@ -453,7 +454,7 @@ export const handleAppVersionMenuClickItem = async (deps, payload) => {
   if (
     item.value === "check-update" &&
     appService.getPlatform() !== "web" &&
-    updatesEnabled &&
+    resolveUpdatesEnabled(deps) &&
     updaterService
   ) {
     await updaterService.checkForUpdates(false);

@@ -7,6 +7,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 // Infra - Tauri
 import { createDb } from "./deps/clients/tauri/db";
 import { createTauriFilePicker } from "./deps/clients/tauri/filePicker";
+import createUpdater from "./deps/clients/tauri/updater";
 import { setupCloseListener } from "./deps/clients/tauri/windowClose";
 
 // Services
@@ -45,7 +46,7 @@ const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
 
 // Create updater
 const updater = updatesEnabled
-  ? (await import("./deps/clients/tauri/updater")).default({
+  ? createUpdater({
       globalUI,
       keyValueStore: appDb,
     })

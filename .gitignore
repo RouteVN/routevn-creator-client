@@ -16,9 +16,15 @@ static/bundle/main.js
 /test-versions
 /test-update-server
 /src-tauri/*.bak
+/src-tauri/steam-runtime/
 .env
 /.rettangoli/
 /.artifacts/
+/_steam/
+/steam/*.local.vdf
+/steam/config.vdf
+/steamcmd/
+/steam_appid.txt
 /project.db
 /project.db-shm
 /project.db-wal
