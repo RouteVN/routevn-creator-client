@@ -18,6 +18,7 @@
 1. [Collab Server Bootstrap](./runbooks/collab-server-bootstrap.md)
 2. [macOS Signing And Notarization](./runbooks/macos-signing-and-notarization.md)
 3. [Project Database Audit](./runbooks/project-database-audit.md)
+4. [Steam Release](./runbooks/steam-release.md)
 
 ## Platform Spec
 

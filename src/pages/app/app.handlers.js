@@ -13,6 +13,7 @@ import {
   isIncompatibleProjectOpenError,
 } from "../../internal/projectOpenErrors.js";
 import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
+import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
@@ -301,9 +302,11 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = (deps) => {
+  const { updaterService } = deps;
+
   // Start checking for updates on app startup (Tauri only)
-  if (deps.updaterService) {
-    deps.updaterService.startAutomaticChecks();
+  if (resolveUpdatesEnabled(deps) && updaterService) {
+    updaterService.startAutomaticChecks();
   }
 };
 

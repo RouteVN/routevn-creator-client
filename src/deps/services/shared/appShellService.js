@@ -58,6 +58,8 @@ export const createAppShellService = ({
   openUrl: openExternalUrl,
   appVersion,
   platform,
+  distribution = "direct",
+  updatesEnabled = false,
   updater,
   audioService,
 }) => {
@@ -174,6 +176,14 @@ export const createAppShellService = ({
 
     getPlatform() {
       return platform;
+    },
+
+    getDistribution() {
+      return distribution;
+    },
+
+    areUpdatesEnabled() {
+      return Boolean(updatesEnabled);
     },
 
     checkForUpdates(silent) {

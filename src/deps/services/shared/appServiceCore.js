@@ -15,6 +15,8 @@ export const createAppServiceCore = ({
   openUrl,
   appVersion,
   platform,
+  distribution,
+  updatesEnabled,
   updater,
   audioService,
   projectService,
@@ -47,6 +49,8 @@ export const createAppServiceCore = ({
     openUrl,
     appVersion,
     platform,
+    distribution,
+    updatesEnabled,
     updater,
     audioService,
   });

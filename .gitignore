@@ -19,6 +19,11 @@ static/bundle/main.js
 .env
 /.rettangoli/
 /.artifacts/
+/_steam/
+/steam/*.local.vdf
+/steam/config.vdf
+/steamcmd/
+/steam_appid.txt
 /project.db
 /project.db-shm
 /project.db-wal

@@ -1,0 +1,11 @@
+{
+  "bundle": {
+    "createUpdaterArtifacts": false
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [],
+      "dangerousInsecureTransportProtocol": false
+    }
+  }
+}

@@ -25,6 +25,10 @@ import { registerPrimitives } from "./primitives/registerPrimitives";
 
 registerPrimitives();
 
+const rawDistribution = import.meta.env?.VITE_ROUTEVN_DISTRIBUTION;
+const distribution = rawDistribution === "steam" ? "steam" : "direct";
+const updatesEnabled = distribution !== "steam";
+
 // Initialize app database
 const appDb = createDb({ path: "sqlite:app.db" });
 await appDb.init();
@@ -41,7 +45,12 @@ const appVersion = await getVersion();
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
 
 // Create updater
-const updater = createUpdater({ globalUI, keyValueStore: appDb });
+const updater = updatesEnabled
+  ? createUpdater({
+      globalUI,
+      keyValueStore: appDb,
+    })
+  : undefined;
 
 // Create subject for inter-component communication
 const subject = new Subject();
@@ -63,6 +72,8 @@ const appService = createAppService({
   openUrl,
   appVersion,
   platform: "tauri",
+  distribution,
+  updatesEnabled,
   updater,
   audioService,
   projectService,
@@ -87,6 +98,8 @@ const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 setupCloseListener({ globalUI });
 
 const componentDependencies = {
+  distribution,
+  updatesEnabled,
   subject,
   graphicsService,
   appService,
@@ -96,6 +109,8 @@ const componentDependencies = {
 };
 
 const pageDependencies = {
+  distribution,
+  updatesEnabled,
   subject,
   graphicsService,
   appService,
