@@ -374,6 +374,14 @@ machine.
 SteamPipe should upload the launchable installed payload, not the public
 installer artifact.
 
+Artifact policy:
+
+- Direct-download Windows releases publish the NSIS installer produced by the
+  normal Tauri build.
+- Steam Windows releases upload a staged launchable executable payload. Do not
+  use the NSIS installer as the Steam launch target.
+- Steamworks launch options should point at the staged executable.
+
 ### Windows WebView2 Runtime
 
 The Windows Steam build uses `--no-bundle`, so Steam launches the raw Tauri
