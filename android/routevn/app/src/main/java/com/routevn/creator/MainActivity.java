@@ -1170,29 +1170,49 @@ public class MainActivity extends Activity {
 
             if (!alreadyImported) {
                 closeDatabase(projectDbPath);
-                deleteRecursively(targetDbDirectory);
-                deleteRecursively(projectRoot);
+                try {
+                    deleteRecursively(targetDbDirectory);
+                    deleteRecursively(projectRoot);
 
-                copyFile(tempDbFile, targetDbFile);
-                File tempWalFile = new File(importWorkDir, "project.db-wal");
-                if (tempWalFile.isFile()) {
-                    copyFile(tempWalFile, new File(targetDbDirectory, "project.db-wal"));
-                }
-                File tempShmFile = new File(importWorkDir, "project.db-shm");
-                if (tempShmFile.isFile()) {
-                    copyFile(tempShmFile, new File(targetDbDirectory, "project.db-shm"));
-                }
-                File tempJournalFile = new File(importWorkDir, "project.db-journal");
-                if (tempJournalFile.isFile()) {
-                    copyFile(
-                        tempJournalFile,
-                        new File(targetDbDirectory, "project.db-journal")
+                    copyFile(tempDbFile, targetDbFile);
+                    File tempWalFile = new File(importWorkDir, "project.db-wal");
+                    if (tempWalFile.isFile()) {
+                        copyFile(
+                            tempWalFile,
+                            new File(targetDbDirectory, "project.db-wal")
+                        );
+                    }
+                    File tempShmFile = new File(importWorkDir, "project.db-shm");
+                    if (tempShmFile.isFile()) {
+                        copyFile(
+                            tempShmFile,
+                            new File(targetDbDirectory, "project.db-shm")
+                        );
+                    }
+                    File tempJournalFile = new File(
+                        importWorkDir,
+                        "project.db-journal"
                     );
-                }
+                    if (tempJournalFile.isFile()) {
+                        copyFile(
+                            tempJournalFile,
+                            new File(targetDbDirectory, "project.db-journal")
+                        );
+                    }
 
-                copyDocumentDirectoryContents(filesUri, targetFilesRoot);
-                if (metadataUri != null) {
-                    copyDocumentDirectoryContents(metadataUri, targetMetadataRoot);
+                    copyDocumentDirectoryContents(filesUri, targetFilesRoot);
+                    if (metadataUri != null) {
+                        copyDocumentDirectoryContents(metadataUri, targetMetadataRoot);
+                    }
+                } catch (Exception importError) {
+                    try {
+                        closeDatabase(projectDbPath);
+                        deleteRecursively(targetDbDirectory);
+                        deleteRecursively(projectRoot);
+                    } catch (Exception cleanupError) {
+                        importError.addSuppressed(cleanupError);
+                    }
+                    throw importError;
                 }
             }
 
