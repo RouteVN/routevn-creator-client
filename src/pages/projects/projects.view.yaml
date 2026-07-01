@@ -139,7 +139,7 @@ template:
                             $else:
                               - rtgl-view d=h g=sm:
                                   - rtgl-button#createButton data-testid=create-project-button: ${createButtonText}
-                                  - $if platform == 'tauri':
+                                  - $if platform == 'tauri' || platform == 'android':
                                       - rtgl-button#openButton variant=se: ${openButtonText}
                           - $if showProjectAccountActions:
                               - $if isLoggedIn:
@@ -166,9 +166,10 @@ template:
                                           - rtgl-image wh=56 src="/public/project_logo_placeholder.png" bw=xs bc=bo of=con br=md: null
                                       - rtgl-view w=1fg:
                                           - rtgl-text ellipsis w=f: ${project.name}
-                                          - rtgl-view d=h g=sm av=c mt=xs:
-                                              - rtgl-svg wh=14 svg=folder c=mu-fg: null
-                                              - rtgl-text s=xs c=mu-fg: ${project.projectPath}
+                                          - $if platform != 'android' && project.projectPath:
+                                              - rtgl-view d=h g=sm av=c mt=xs:
+                                                  - rtgl-svg wh=14 svg=folder c=mu-fg: null
+                                                  - rtgl-text s=xs c=mu-fg: ${project.projectPath}
                               - rtgl-view h="33vh": null
                           - $if showCloudProjects:
                               - rtgl-view w=f d=v g=md:

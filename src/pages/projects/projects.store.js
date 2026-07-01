@@ -210,6 +210,8 @@ export const selectIsProfileMenuOpen = ({ state }) => {
 };
 
 export const openMobileActionMenu = ({ state }, { x, y } = {}) => {
+  const canImportProjects =
+    state.platform === "tauri" || state.platform === "android";
   state.mobileActionMenu.isOpen = true;
   state.mobileActionMenu.x = x;
   state.mobileActionMenu.y = y;
@@ -219,7 +221,7 @@ export const openMobileActionMenu = ({ state }, { x, y } = {}) => {
       label: "Import Project",
       type: "item",
       value: "import-project",
-      disabled: true,
+      disabled: !canImportProjects,
     },
   ];
 };
