@@ -1293,7 +1293,7 @@ public class MainActivity extends Activity {
     private String resolveProjectExportFolderName(JSONObject projectInfo) {
         String title = sanitizeExportFolderTitle(projectInfo.optString("name", ""));
         String timestamp = new SimpleDateFormat(
-            "yyyyMMdd-HHmmss-SSS",
+            "yyyyMMdd-HHmmss",
             Locale.US
         ).format(new Date());
         return title + "-" + timestamp;
