@@ -5,6 +5,10 @@ refs:
         handler: handleHelpFloatingButtonClick
   mobileTabItem*:
     eventListeners:
+      pointerdown:
+        handler: handleMobileTabPointerDown
+      pointerup:
+        handler: handleMobileTabPointerUp
       click:
         handler: handleMobileTabClick
   mobileSheet:

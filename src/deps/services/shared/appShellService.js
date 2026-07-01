@@ -1,4 +1,8 @@
 import { loadFont } from "./fontLoader.js";
+import {
+  createNavigationTiming,
+  markNavigationTiming,
+} from "../../../internal/navigationTiming.js";
 
 const createNoopUpdater = () => ({
   checkForUpdates: async () => null,
@@ -73,8 +77,17 @@ export const createAppShellService = ({
   };
 
   return {
-    navigate(path, payload) {
-      subject.dispatch("redirect", { path, payload });
+    navigate(path, payload, options = {}) {
+      const timing =
+        options.timing ??
+        createNavigationTiming({
+          platform,
+          source: "appService.navigate",
+          path,
+          payload,
+        });
+      markNavigationTiming(timing, "appService.navigate.dispatch");
+      subject.dispatch("redirect", { path, payload, timing });
     },
 
     redirect(path, payload) {

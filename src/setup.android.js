@@ -154,6 +154,37 @@ const deps = {
   pages: pageDependencies,
 };
 
+const installAndroidDebugHooks = () => {
+  let isDebugBuild = false;
+  try {
+    isDebugBuild = window.RouteVNAndroid?.isDebugBuild?.() === true;
+  } catch {
+    isDebugBuild = false;
+  }
+
+  if (!isDebugBuild) {
+    return;
+  }
+
+  window.__RVN_DEBUG_APP__ = {
+    listProjects: () => appService.loadAllProjects(),
+    async openProject(projectId) {
+      const projects = await appService.loadAllProjects();
+      const project = projects.find((entry) => entry?.id === projectId);
+      if (project) {
+        appService.setCurrentProjectEntry(project);
+      }
+      await projectService.ensureProjectCompatibleById(projectId);
+      appService.navigate("/project", { p: projectId });
+    },
+    navigate: (path, payload) => {
+      appService.navigate(path, payload);
+    },
+    getPayload: () => appService.getPayload(),
+  };
+};
+
+installAndroidDebugHooks();
 notifyAndroidBackState();
 
 export { deps };

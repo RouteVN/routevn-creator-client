@@ -40,6 +40,8 @@ export const createProjectServiceCore = ({
     getCurrentStore: repositoryService.getCachedStore,
     getCurrentReference: repositoryService.getCachedReference,
     getStoreByProject: repositoryService.getStoreByProject,
+    resolveFileMetadata: (fileId) =>
+      repositoryService.getCachedRepository().getFileRecord(fileId),
   });
 
   const collabService = createProjectCollabCore({

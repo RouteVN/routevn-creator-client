@@ -73,6 +73,7 @@ export const createProjectAssetService = ({
   getCurrentStore,
   getCurrentReference,
   getStoreByProject,
+  resolveFileMetadata,
 }) => {
   const shouldSkipImageThumbnail = (options = {}) =>
     options?.skipImageThumbnail === true;
@@ -137,12 +138,20 @@ export const createProjectAssetService = ({
   };
 
   const getFileContent = async (fileId) => {
-    return fileAdapter.getFileContent({
+    const payload = {
       fileId,
       getCurrentStore,
       getCurrentReference,
       getStoreByProject,
-    });
+    };
+    if (
+      fileAdapter.requiresFileMetadata === true &&
+      typeof resolveFileMetadata === "function"
+    ) {
+      payload.fileMetadata = resolveFileMetadata(fileId);
+    }
+
+    return fileAdapter.getFileContent(payload);
   };
 
   const processFile = async (file, options = {}) => {

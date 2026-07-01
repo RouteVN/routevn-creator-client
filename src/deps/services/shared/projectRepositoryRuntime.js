@@ -890,6 +890,13 @@ export const createProjectRepositoryRuntime = async ({
       activeSceneState,
     });
 
+  const getFileRecord = (fileId) => {
+    const fileRecord = currentMainState?.files?.items?.[fileId];
+    return fileRecord && typeof fileRecord === "object"
+      ? structuredClone(fileRecord)
+      : undefined;
+  };
+
   const notifyStateListeners = () => {
     const repositoryState = structuredClone(getCurrentComposedState());
     const revision = currentRevision;
@@ -1143,6 +1150,8 @@ export const createProjectRepositoryRuntime = async ({
         reduceEventsToState,
       });
     },
+
+    getFileRecord,
 
     getRevision(untilEventIndex) {
       if (untilEventIndex === undefined || untilEventIndex === null) {

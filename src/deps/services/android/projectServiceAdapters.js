@@ -9,6 +9,7 @@ import {
   uint8ArrayToBase64,
 } from "../../clients/android/bridge.js";
 import { assertSafeAndroidStorageSegment } from "../../clients/android/storagePaths.js";
+import { getAndroidProjectFileUrl } from "./projectFileUrls.js";
 import {
   createPersistedAndroidProjectStore,
   evictPersistedAndroidProjectStoreCache,
@@ -37,16 +38,6 @@ import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
-const PROJECT_FILE_EXTENSION_BY_MIME_TYPE = {
-  "image/gif": "gif",
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/svg+xml": "svg",
-  "image/webp": "webp",
-  "video/mp4": "mp4",
-  "video/quicktime": "mov",
-  "video/webm": "webm",
-};
 
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
@@ -338,24 +329,54 @@ const readAndroidProjectFileMetadata = ({ projectId, fileId }) => {
   };
 };
 
-const getProjectFileExtension = (mimeType) => {
-  const normalizedMimeType = String(mimeType ?? "")
-    .trim()
-    .toLowerCase();
-  return PROJECT_FILE_EXTENSION_BY_MIME_TYPE[normalizedMimeType];
+const getAndroidProjectFileUrlCacheKey = ({
+  projectId,
+  fileId,
+  mimeType,
+  sha256,
+}) => {
+  return [
+    assertSafeAndroidStorageSegment(projectId, {
+      label: "Android project id",
+    }),
+    assertSafeProjectFileId(fileId),
+    mimeType ?? "",
+    sha256 ?? "",
+  ].join(":");
 };
 
-const getAndroidProjectFileUrl = ({ projectId, fileId, mimeType }) => {
-  const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
-    label: "Android project id",
-  });
-  const safeFileId = assertSafeProjectFileId(fileId);
-  const extension = getProjectFileExtension(mimeType);
-  if (extension) {
-    return `https://appassets.androidplatform.net/android-files/projects/${safeProjectId}/typed-files/${safeFileId}/asset.${extension}`;
+const resolveKnownFileMetadata = (fileMetadata) => {
+  if (!fileMetadata || typeof fileMetadata !== "object") {
+    return undefined;
   }
 
-  return `https://appassets.androidplatform.net/android-files/projects/${safeProjectId}/files/${safeFileId}`;
+  const mimeType =
+    typeof fileMetadata.mimeType === "string" && fileMetadata.mimeType
+      ? fileMetadata.mimeType
+      : undefined;
+  if (!mimeType) {
+    return undefined;
+  }
+
+  return {
+    mimeType,
+    size: Number.isFinite(fileMetadata.size) ? fileMetadata.size : undefined,
+    sha256:
+      typeof fileMetadata.sha256 === "string" && fileMetadata.sha256
+        ? fileMetadata.sha256
+        : undefined,
+  };
+};
+
+const resolveAndroidProjectFileMetadata = ({
+  projectId,
+  fileId,
+  fileMetadata,
+}) => {
+  return (
+    resolveKnownFileMetadata(fileMetadata) ??
+    readAndroidProjectFileMetadata({ projectId, fileId })
+  );
 };
 
 const copyTemplateFiles = async ({ templateId, projectId, templateData }) => {
@@ -468,6 +489,8 @@ export const createAndroidProjectServiceAdapters = ({
   collabLog,
   creatorVersion,
 }) => {
+  const projectFileUrlByCacheKey = new Map();
+
   const storageAdapter = {
     resolveProjectReferenceByProjectId: async ({ projectId }) => ({
       projectId,
@@ -570,6 +593,7 @@ export const createAndroidProjectServiceAdapters = ({
 
   const fileAdapter = {
     continueOnUploadError: false,
+    requiresFileMetadata: true,
 
     storeFile: async ({
       file,
@@ -610,21 +634,35 @@ export const createAndroidProjectServiceAdapters = ({
       };
     },
 
-    getFileContent: async ({ fileId, getCurrentReference }) => {
+    getFileContent: async ({ fileId, fileMetadata, getCurrentReference }) => {
       const reference = getCurrentReference();
       const projectId = reference?.repositoryProjectId || reference?.projectId;
       const safeFileId = assertSafeProjectFileId(fileId);
-      const { mimeType } = readAndroidProjectFileMetadata({
+      const metadata = resolveAndroidProjectFileMetadata({
         projectId,
         fileId: safeFileId,
+        fileMetadata,
       });
-      return {
-        url: getAndroidProjectFileUrl({
+      const cacheKey = getAndroidProjectFileUrlCacheKey({
+        projectId,
+        fileId: safeFileId,
+        mimeType: metadata.mimeType,
+        sha256: metadata.sha256,
+      });
+      let url = projectFileUrlByCacheKey.get(cacheKey);
+      if (!url) {
+        url = getAndroidProjectFileUrl({
           projectId,
           fileId: safeFileId,
-          mimeType,
-        }),
-        type: mimeType,
+          mimeType: metadata.mimeType,
+        });
+        projectFileUrlByCacheKey.set(cacheKey, url);
+      }
+
+      return {
+        url,
+        type: metadata.mimeType,
+        size: metadata.size,
       };
     },
 
