@@ -460,7 +460,8 @@ export const createMediaPageStore = ({
   const selectViewData = ({ state, i18n }) => {
     const copy = resolveCopy(i18n);
     const resolvedTitle = copy.title ?? title;
-    const resolvedPreviewMenuLabel = copy.previewMenuLabel ?? previewMenuLabel;
+    const resolvedPreviewMenuLabel =
+      copy.previewMenuLabel ?? copy.previewMenuItem ?? previewMenuLabel;
     const resolvedCenterItemContextMenuItems =
       centerItemContextMenuItems ??
       createMediaCenterItemContextMenuItems(resolvedPreviewMenuLabel, copy);
