@@ -83,11 +83,18 @@ template:
                           - rtgl-view w=1fg: null
                           - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=plus: ${addText}
                       - $if !group.isCollapsed:
-                          - 'rtgl-view w=f d=v ph=sm pt=md pb=sm mb=lg g=md style="min-width: 0;"':
+                          - 'rtgl-view w=f d=v ph=sm pt=md pb=sm mb=lg g=md style="min-width: 0; min-height: ${group.progressiveContentMinHeight}px;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
-                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=f cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=lg d=h g=xl wrap p=lg:
-                                          - $if item.fileId:
+                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.domItemId} w=f cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=lg d=h g=xl wrap p=lg:
+                                          - $if item.isPlaceholder:
+                                              - rtgl-view w=96 h=96 bgc=mu bc=bo bw=xs br=f: null
+                                              - rtgl-view w=1fg g=md:
+                                                  - rtgl-view w=50% h=24 bgc=mu br=sm: null
+                                                  - rtgl-view w=75% h=16 bgc=mu br=sm: null
+                                              - rtgl-view h=f av=c:
+                                                  - rtgl-view w=72 h=32 bgc=mu br=md: null
+                                            $elif item.fileId:
                                               - rvn-file-image w=96 h=96 bw=xs bc=bo br=f fileId=${item.fileId}: null
                                             $else:
                                               - rtgl-view w=96 h=96 av=c ah=c bgc=bg bc=bo bw=xs br=f:

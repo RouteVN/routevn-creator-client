@@ -5,6 +5,7 @@ import {
   openAddDialog,
   openEditDialog,
   selectViewData,
+  setProgressiveRenderedItemCount,
 } from "../../src/components/groupVariablesView/groupVariablesView.store.js";
 
 describe("groupVariablesView.store", () => {
@@ -49,5 +50,34 @@ describe("groupVariablesView.store", () => {
     expect(firstKey).toBe("group-1");
     expect(closedKey).toBe("new");
     expect(secondKey).toBe("group-1");
+  });
+
+  it("reserves variable placeholders before progressive hydration", () => {
+    const state = createInitialState();
+    const props = {
+      progressiveRender: true,
+      flatGroups: [
+        {
+          id: "folder-1",
+          children: [
+            { id: "variable-1", name: "Variable 1" },
+            { id: "variable-2", name: "Variable 2" },
+          ],
+        },
+      ],
+    };
+
+    setProgressiveRenderedItemCount({ state }, { itemCount: 0 });
+    const viewData = selectViewData({ state, props });
+
+    expect(viewData.flatGroups[0].children).toEqual([
+      expect.objectContaining({
+        isPlaceholder: true,
+        domItemId: "",
+        cursor: "default",
+      }),
+      expect.objectContaining({ isPlaceholder: true }),
+    ]);
+    expect(viewData.flatGroups[0].hasChildren).toBe(true);
   });
 });

@@ -121,7 +121,7 @@ template:
                           - $if !readonly:
                               - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm w=1fg pre=plus: Add
                       - $if !group.isCollapsed:
-                          - rtgl-view w=f mb=md p=sm:
+                          - 'rtgl-view w=f mb=md p=sm style="min-height: ${group.progressiveContentMinHeight}px;"':
                               - $if group.hasChildren:
                                   - rtgl-view w=f:
                                       - rtgl-view d=h w=f pv=sm bwb=xs g=md:
@@ -134,8 +134,18 @@ template:
                                           - rtgl-view w=1fg:
                                               - rtgl-text c=mu-fg s=sm: Default
                                       - $for item, j in group.children:
-                                          - $if item.isSelected:
-                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f h=36 av=c bwb=xs cur=pointer g=md bgc=mu h-bgc=mu br=sm:
+                                          - $if item.isPlaceholder:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.domItemId} d=h w=f h=36 av=c bwb=xs cur=${item.cursor} g=md:
+                                                  - rtgl-view w=2fg av=c:
+                                                      - rtgl-view w=55% h=12 bgc=mu br=sm: null
+                                                  - rtgl-view w=1fg av=c:
+                                                      - rtgl-view w=45% h=12 bgc=mu br=sm: null
+                                                  - rtgl-view w=1fg av=c:
+                                                      - rtgl-view w=50% h=12 bgc=mu br=sm: null
+                                                  - rtgl-view w=1fg av=c:
+                                                      - rtgl-view w=60% h=12 bgc=mu br=sm: null
+                                            $elif item.isSelected:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.domItemId} d=h w=f h=36 av=c bwb=xs cur=${item.cursor} g=md bgc=mu h-bgc=mu br=sm:
                                                   - rtgl-view w=2fg d=h av=c g=sm:
                                                       - rtgl-text s=sm: ${item.name}
                                                       - $if item.isEnum:
@@ -147,7 +157,7 @@ template:
                                                   - rtgl-view w=1fg av=c:
                                                       - rtgl-text s=sm: ${item.default}
                                             $else:
-                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f h=36 av=c bwb=xs cur=pointer g=md h-bgc=mu:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.domItemId} d=h w=f h=36 av=c bwb=xs cur=${item.cursor} g=md h-bgc=mu:
                                                   - rtgl-view w=2fg d=h av=c g=sm:
                                                       - rtgl-text s=sm: ${item.name}
                                                       - $if item.isEnum:

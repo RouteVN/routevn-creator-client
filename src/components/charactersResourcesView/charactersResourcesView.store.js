@@ -1,4 +1,9 @@
 import {
+  buildProgressivePlaceholderChildren,
+  calculateListReservedHeight,
+  DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT,
+} from "../../internal/ui/resourcePages/progressivePlaceholders.js";
+import {
   buildTagFilterPopoverViewData,
   clearTagFilterPopoverTagIds,
   closeTagFilterPopover,
@@ -9,9 +14,18 @@ import {
 } from "../../internal/ui/tagFilterPopover.js";
 import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
+const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
+const PROGRESSIVE_PLACEHOLDER_ITEM_COUNT =
+  DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT;
+const CHARACTER_ROW_RESERVED_HEIGHT = 144;
+
 export const createInitialState = () => ({
   collapsedIds: [],
   ...createTagFilterPopoverState(),
+  progressiveRenderedItemCount: DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
+  progressiveRenderSignature: "",
+  progressiveFrameId: undefined,
+  syncRenderFrameId: undefined,
   dropdownMenu: {
     isOpen: false,
     x: 0,
@@ -81,6 +95,55 @@ const parseBooleanProp = (value, fallback = false) => {
   return Boolean(value);
 };
 
+const parseNonNegativeIntegerProp = (value, fallback) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return fallback;
+  }
+
+  return Math.round(numericValue);
+};
+
+export const setProgressiveRenderedItemCount = (
+  { state },
+  { itemCount } = {},
+) => {
+  state.progressiveRenderedItemCount = itemCount ?? 0;
+};
+
+export const selectProgressiveRenderedItemCount = ({ state }) =>
+  state.progressiveRenderedItemCount;
+
+export const setProgressiveRenderSignature = (
+  { state },
+  { signature } = {},
+) => {
+  state.progressiveRenderSignature = signature ?? "";
+};
+
+export const selectProgressiveRenderSignature = ({ state }) =>
+  state.progressiveRenderSignature;
+
+export const setProgressiveFrameId = ({ state }, { frameId } = {}) => {
+  state.progressiveFrameId = frameId;
+};
+
+export const clearProgressiveFrameId = ({ state }) => {
+  state.progressiveFrameId = undefined;
+};
+
+export const selectProgressiveFrameId = ({ state }) => state.progressiveFrameId;
+
+export const setSyncRenderFrameId = ({ state }, { frameId } = {}) => {
+  state.syncRenderFrameId = frameId;
+};
+
+export const clearSyncRenderFrameId = ({ state }) => {
+  state.syncRenderFrameId = undefined;
+};
+
+export const selectSyncRenderFrameId = ({ state }) => state.syncRenderFrameId;
+
 export const selectViewData = ({ state, props }) => {
   const mobileLayout = parseBooleanProp(props.mobileLayout);
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
@@ -97,21 +160,52 @@ export const selectViewData = ({ state, props }) => {
     state,
     props,
   });
+  const progressiveRenderEnabled = parseBooleanProp(props.progressiveRender);
+  let remainingProgressiveItemCount = progressiveRenderEnabled
+    ? state.progressiveRenderedItemCount
+    : Number.POSITIVE_INFINITY;
   const groups = (props.groups ?? []).map((group) => {
     const isCollapsed = state.collapsedIds.includes(group.id);
     const children = isCollapsed ? [] : (group.children ?? []);
+    const progressiveChildren = buildProgressivePlaceholderChildren({
+      children,
+      remainingProgressiveItemCount,
+      groupId: group.id,
+      placeholderItemCount: PROGRESSIVE_PLACEHOLDER_ITEM_COUNT,
+      createPlaceholder: ({ item, absoluteIndex, groupId }) => ({
+        id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
+        sourceItemId: item.id,
+        isPlaceholder: true,
+        isInteractive: false,
+      }),
+    });
+
+    remainingProgressiveItemCount =
+      progressiveChildren.remainingProgressiveItemCount;
 
     return {
       ...group,
       isCollapsed,
+      hasChildren: children.length > 0,
       headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
-      children: children.map((item) => {
+      progressiveContentMinHeight: progressiveRenderEnabled
+        ? calculateListReservedHeight({
+            itemCount: children.length,
+            itemHeight: CHARACTER_ROW_RESERVED_HEIGHT,
+            rowGap: 16,
+            verticalPadding: 24,
+          })
+        : 0,
+      children: progressiveChildren.children.map((item) => {
         const isSelected = item.id === props.selectedItemId;
+        const isPlaceholder = item.isPlaceholder === true;
 
         return {
           ...item,
+          domItemId: isPlaceholder ? "" : item.id,
+          cursor: isPlaceholder ? "default" : "pointer",
           itemBorderColor: isSelected ? "pr" : "bo",
-          itemHoverBorderColor: isSelected ? "pr" : "ac",
+          itemHoverBorderColor: isPlaceholder ? "bo" : isSelected ? "pr" : "ac",
         };
       }),
     };
@@ -141,6 +235,11 @@ export const selectViewData = ({ state, props }) => {
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,
     showMenuButton: parseBooleanProp(props.showMenuButton),
+    progressiveRender: progressiveRenderEnabled,
+    progressiveInitialItemCount: parseNonNegativeIntegerProp(
+      props.progressiveInitialItemCount,
+      DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
+    ),
     emptyMessage:
       props.emptyMessage ??
       (hasActiveSearch

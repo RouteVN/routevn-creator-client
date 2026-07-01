@@ -104,18 +104,27 @@ template:
                           - rtgl-view w=1fg: null
                           - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=plus: ${addText}
                       - $if !group.isCollapsed:
-                          - 'rtgl-grid w=f ph=sm pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0;"':
+                          - 'rtgl-grid w=f ph=sm pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0; min-height: ${group.progressiveContentMinHeight}px; align-content: start; align-items: start;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
-                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${item.itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
+                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.domItemId} w=${item.itemWidth} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
                                           - 'rtgl-view w=f br=md style="overflow: hidden;"':
-                                              - $if item.useFullWidthPreview:
+                                              - $if item.isPlaceholder:
+                                                  - $if item.useFullWidthPreview:
+                                                      - 'rtgl-view w=f bgc=mu style="aspect-ratio: ${item.previewAspectRatio};"': null
+                                                    $else:
+                                                      - rtgl-view w=f h=${item.placeholderPreviewHeight} bgc=mu: null
+                                                  - rtgl-view w=f p=md:
+                                                      - rtgl-view w=${item.placeholderTextWidth} h=12 bgc=mu br=sm: null
+                                                $elif item.useFullWidthPreview:
                                                   - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                       - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=f height=f padding=8 showBorder=false: null
+                                                  - rtgl-view w=f p=md:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                 $else:
                                                   - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=${item.previewWidth} height=96 padding=8 showBorder=false: null
-                                              - rtgl-view w=f p=md:
-                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                                  - rtgl-view w=f p=md:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                 $else:
                                   - 'rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer style="grid-column: 1 / -1;"':
                                       - rtgl-svg svg=plus wh=24 c=pr: null

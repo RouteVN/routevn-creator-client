@@ -12,6 +12,9 @@ import {
 
 const PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const PROGRESSIVE_BATCH_ITEM_COUNT = 24;
+const PROGRESSIVE_HYDRATION_DELAY_FRAME_COUNT = 1;
+const SOUND_WAVEFORM_BATCH_ITEM_COUNT = 4;
+const SOUND_WAVEFORM_DELAY_FRAME_COUNT = 8;
 const SCROLL_STICKY_TOP_GAP_PX = 12;
 const MIN_ZOOM_LEVEL = 0.5;
 const MAX_ZOOM_LEVEL = 2;
@@ -175,6 +178,33 @@ const isProgressiveRenderEnabled = (props) => {
   return parseBooleanProp(props?.progressiveRender);
 };
 
+const parseNonNegativeIntegerProp = (value, fallback) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return fallback;
+  }
+
+  return Math.round(numericValue);
+};
+
+const getProgressiveInitialItemCount = (props) => {
+  return parseNonNegativeIntegerProp(
+    props?.progressiveInitialItemCount,
+    PROGRESSIVE_INITIAL_ITEM_COUNT,
+  );
+};
+
+const getProgressiveHydrationDelayFrameCount = (props) => {
+  return parseNonNegativeIntegerProp(
+    props?.progressiveHydrationDelayFrameCount,
+    PROGRESSIVE_HYDRATION_DELAY_FRAME_COUNT,
+  );
+};
+
+const isLazySoundWaveformsEnabled = (props) => {
+  return parseBooleanProp(props?.lazySoundWaveforms);
+};
+
 const getProgressiveRenderSignature = (groups = []) => {
   return JSON.stringify(
     groups.map((group) => [
@@ -188,6 +218,26 @@ const countProgressiveItems = (groups = []) => {
   return groups.reduce((sum, group) => sum + (group?.children?.length ?? 0), 0);
 };
 
+const getSoundWaveformItemIds = (groups = []) => {
+  const itemIds = [];
+  for (const group of groups) {
+    for (const item of group?.children ?? []) {
+      if (item?.cardKind === "sound" && item?.waveformDataFileId) {
+        itemIds.push(item.id ?? "");
+      }
+    }
+  }
+  return itemIds;
+};
+
+const getSoundWaveformRenderSignature = (groups = []) => {
+  return JSON.stringify(getSoundWaveformItemIds(groups));
+};
+
+const countSoundWaveformItems = (groups = []) => {
+  return getSoundWaveformItemIds(groups).length;
+};
+
 const cancelProgressiveRenderFrame = (store) => {
   const frameId = store.selectProgressiveFrameId();
   if (frameId === undefined) {
@@ -196,6 +246,32 @@ const cancelProgressiveRenderFrame = (store) => {
 
   cancelAnimationFrame(frameId);
   store.clearProgressiveFrameId();
+};
+
+const canManageSoundWaveformHydration = (store) => {
+  return (
+    typeof store.selectSoundWaveformFrameId === "function" &&
+    typeof store.clearSoundWaveformFrameId === "function" &&
+    typeof store.setSoundWaveformFrameId === "function" &&
+    typeof store.selectSoundWaveformRenderedItemCount === "function" &&
+    typeof store.setSoundWaveformRenderedItemCount === "function" &&
+    typeof store.selectSoundWaveformRenderSignature === "function" &&
+    typeof store.setSoundWaveformRenderSignature === "function"
+  );
+};
+
+const cancelSoundWaveformRenderFrame = (store) => {
+  if (!canManageSoundWaveformHydration(store)) {
+    return;
+  }
+
+  const frameId = store.selectSoundWaveformFrameId();
+  if (frameId === undefined) {
+    return;
+  }
+
+  cancelAnimationFrame(frameId);
+  store.clearSoundWaveformFrameId();
 };
 
 const cancelScheduledSyncRender = (store) => {
@@ -247,7 +323,7 @@ const scheduleProgressiveRender = (deps) => {
     return;
   }
 
-  const frameId = requestAnimationFrame(() => {
+  const renderNextBatch = () => {
     store.clearProgressiveFrameId();
 
     const nextTotalItemCount = countProgressiveItems(deps.props.groups);
@@ -264,9 +340,82 @@ const scheduleProgressiveRender = (deps) => {
     if (nextRenderedItemCount < nextTotalItemCount) {
       scheduleProgressiveRender(deps);
     }
-  });
+  };
 
-  store.setProgressiveFrameId({ frameId });
+  const scheduleAfterFrames = (remainingFrameCount) => {
+    const frameId = requestAnimationFrame(() => {
+      if (remainingFrameCount <= 1) {
+        renderNextBatch();
+        return;
+      }
+
+      scheduleAfterFrames(remainingFrameCount - 1);
+    });
+
+    store.setProgressiveFrameId({ frameId });
+  };
+
+  scheduleAfterFrames(getProgressiveHydrationDelayFrameCount(props));
+};
+
+const scheduleSoundWaveformHydration = (deps) => {
+  const { props, store, render } = deps;
+  if (
+    !isLazySoundWaveformsEnabled(props) ||
+    !canManageSoundWaveformHydration(store)
+  ) {
+    return;
+  }
+
+  if (store.selectSoundWaveformFrameId() !== undefined) {
+    return;
+  }
+
+  const totalItemCount = countSoundWaveformItems(props.groups);
+  if (store.selectSoundWaveformRenderedItemCount() >= totalItemCount) {
+    return;
+  }
+
+  const hydrateNextBatch = () => {
+    store.clearSoundWaveformFrameId();
+
+    const nextTotalItemCount = countSoundWaveformItems(deps.props.groups);
+    const nextRenderedItemCount = Math.min(
+      nextTotalItemCount,
+      store.selectSoundWaveformRenderedItemCount() +
+        SOUND_WAVEFORM_BATCH_ITEM_COUNT,
+    );
+
+    store.setSoundWaveformRenderedItemCount({
+      itemCount: nextRenderedItemCount,
+    });
+    render();
+
+    if (nextRenderedItemCount < nextTotalItemCount) {
+      scheduleSoundWaveformHydration(deps);
+    }
+  };
+
+  if (typeof globalThis.requestAnimationFrame !== "function") {
+    store.setSoundWaveformRenderedItemCount({ itemCount: totalItemCount });
+    render();
+    return;
+  }
+
+  const scheduleAfterFrames = (remainingFrameCount) => {
+    const frameId = requestAnimationFrame(() => {
+      if (remainingFrameCount <= 1) {
+        hydrateNextBatch();
+        return;
+      }
+
+      scheduleAfterFrames(remainingFrameCount - 1);
+    });
+
+    store.setSoundWaveformFrameId({ frameId });
+  };
+
+  scheduleAfterFrames(SOUND_WAVEFORM_DELAY_FRAME_COUNT);
 };
 
 const syncProgressiveRenderState = (deps) => {
@@ -295,18 +444,60 @@ const syncProgressiveRenderState = (deps) => {
 
   cancelProgressiveRenderFrame(store);
   store.setProgressiveRenderSignature({ signature: nextSignature });
+  const progressiveInitialItemCount = getProgressiveInitialItemCount(props);
   const nextRenderedItemCount = currentSignature
     ? Math.min(
         totalItemCount,
-        Math.max(currentRenderedItemCount, PROGRESSIVE_INITIAL_ITEM_COUNT),
+        Math.max(currentRenderedItemCount, progressiveInitialItemCount),
       )
-    : Math.min(totalItemCount, PROGRESSIVE_INITIAL_ITEM_COUNT);
+    : Math.min(totalItemCount, progressiveInitialItemCount);
   store.setProgressiveRenderedItemCount({
     itemCount: nextRenderedItemCount,
   });
 
   if (nextRenderedItemCount < totalItemCount) {
     scheduleProgressiveRender(deps);
+  }
+
+  return true;
+};
+
+const syncSoundWaveformHydrationState = (deps) => {
+  const { props, store } = deps;
+  if (!canManageSoundWaveformHydration(store)) {
+    return false;
+  }
+
+  const groups = props.groups ?? [];
+  const totalItemCount = countSoundWaveformItems(groups);
+  const lazySoundWaveformsEnabled = isLazySoundWaveformsEnabled(props);
+
+  if (!lazySoundWaveformsEnabled) {
+    const didChange =
+      store.selectSoundWaveformRenderSignature() !== "" ||
+      store.selectSoundWaveformRenderedItemCount() !== totalItemCount;
+    cancelSoundWaveformRenderFrame(store);
+    store.setSoundWaveformRenderSignature({ signature: "" });
+    store.setSoundWaveformRenderedItemCount({ itemCount: totalItemCount });
+    return didChange;
+  }
+
+  const nextSignature = getSoundWaveformRenderSignature(groups);
+  const currentSignature = store.selectSoundWaveformRenderSignature();
+
+  if (nextSignature === currentSignature) {
+    if (store.selectSoundWaveformRenderedItemCount() < totalItemCount) {
+      scheduleSoundWaveformHydration(deps);
+    }
+    return false;
+  }
+
+  cancelSoundWaveformRenderFrame(store);
+  store.setSoundWaveformRenderSignature({ signature: nextSignature });
+  store.setSoundWaveformRenderedItemCount({ itemCount: 0 });
+
+  if (totalItemCount > 0) {
+    scheduleSoundWaveformHydration(deps);
   }
 
   return true;
@@ -432,16 +623,20 @@ const scrollRenderedItemIntoView = ({
 export const handleBeforeMount = (deps) => {
   syncPersistedItemsPerRow(deps);
   syncProgressiveRenderState(deps);
+  syncSoundWaveformHydrationState(deps);
 
   return () => {
     cancelProgressiveRenderFrame(deps.store);
+    cancelSoundWaveformRenderFrame(deps.store);
     cancelScheduledSyncRender(deps.store);
   };
 };
 
 export const handleOnUpdate = (deps) => {
-  const didChange = syncProgressiveRenderState(deps);
-  if (didChange) {
+  const didProgressiveRenderChange = syncProgressiveRenderState(deps);
+  const didSoundWaveformHydrationChange = syncSoundWaveformHydrationState(deps);
+
+  if (didProgressiveRenderChange || didSoundWaveformHydrationChange) {
     scheduleSyncRender(deps);
   }
 };

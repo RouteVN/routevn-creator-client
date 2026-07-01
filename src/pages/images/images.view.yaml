@@ -227,9 +227,9 @@ template:
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
-                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupImagesView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render lazy-image-cards image-card-aspect-ratio="16 / 9" :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems} :scrollBottomPadding=${gridScrollBottomPadding}': null
+                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupImagesView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-initial-item-count=0 progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems} :scrollBottomPadding=${gridScrollBottomPadding}': null
                     $else:
-                      - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupImagesView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render lazy-image-cards image-card-aspect-ratio="16 / 9" :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems} :scrollBottomPadding=${gridScrollBottomPadding}': null
+                      - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupImagesView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render progressive-initial-item-count=0 progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems} :scrollBottomPadding=${gridScrollBottomPadding}': null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":
@@ -268,28 +268,32 @@ template:
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
-  - rtgl-dialog#mobileDeleteDialog ?open=${mobileDeleteDialogOpen} s=sm:
-      - rtgl-view slot=content g=lg p=lg:
-          - rtgl-view d=v g=md:
-              - rtgl-text s=lg: ${mobileDeleteDialogTitle}
-              - rtgl-text c=mu-fg: ${mobileDeleteDialogMessage}
-          - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#mobileDeleteCancelButton v=se: Cancel
-              - rtgl-button#mobileDeleteConfirmButton v=pr: ${mobileDeleteDialogConfirmLabel}
-  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
-              - $if editPreviewFileId:
-                  - rtgl-view slot=image-slot av=c ah=c:
-                      - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
-                $else:
-                  - rtgl-view slot=image-slot av=c ah=c:
-                      - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                          - rtgl-text c=mu-fg s=sm: Click to Upload
-  - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
-      - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
-      - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
+  - $if mobileDeleteDialogOpen:
+      - rtgl-dialog#mobileDeleteDialog ?open=${mobileDeleteDialogOpen} s=sm:
+          - rtgl-view slot=content g=lg p=lg:
+              - rtgl-view d=v g=md:
+                  - rtgl-text s=lg: ${mobileDeleteDialogTitle}
+                  - rtgl-text c=mu-fg: ${mobileDeleteDialogMessage}
+              - rtgl-view d=h g=sm w=f ah=e:
+                  - rtgl-button#mobileDeleteCancelButton v=se: Cancel
+                  - rtgl-button#mobileDeleteConfirmButton v=pr: ${mobileDeleteDialogConfirmLabel}
+  - $if isEditDialogOpen:
+      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
+                  - $if editPreviewFileId:
+                      - rtgl-view slot=image-slot av=c ah=c:
+                          - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
+                    $else:
+                      - rtgl-view slot=image-slot av=c ah=c:
+                          - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                              - rtgl-text c=mu-fg s=sm: Click to Upload
+  - $if isFolderNameDialogOpen:
+      - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
+          - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
+  - $if isCreateTagDialogOpen:
+      - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
+          - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - $when: fullImagePreviewVisible
     'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none; background-color: rgba(0, 0, 0, 0.9);"':
       - $if fullImagePreviewFileId:

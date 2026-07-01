@@ -144,11 +144,19 @@ template:
                               - rtgl-button#uploadBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=${uploadIcon}: ${uploadText}
                       - rtgl-view w=f pos=rel:
                           - $if !group.isCollapsed:
-                              - 'rtgl-grid w=f ph=sm pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0;"':
+                              - 'rtgl-grid w=f ph=sm pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0; min-height: ${group.progressiveContentMinHeight}px; align-content: start; align-items: start;"':
                                   - $if group.hasChildren:
                                       - $for item, itemIndex in group.children:
                                           - rtgl-view#itemRef${gIndex}x${itemIndex} key=${item.id} data-item-id=${item.domItemId} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
-                                              - $if item.cardKind == 'image':
+                                              - $if item.isPlaceholder:
+                                                  - 'rtgl-view br=md w=${item.placeholderCardWidth} overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                                                      - $if item.useFullWidthPlaceholder:
+                                                          - 'rtgl-view w=f bgc=mu style="aspect-ratio: ${item.previewAspectRatio};"': null
+                                                        $else:
+                                                          - rtgl-view w=f h=${item.placeholderPreviewHeight} bgc=mu: null
+                                                      - rtgl-view w=f p=md:
+                                                          - rtgl-view w=${item.placeholderTextWidth} h=12 bgc=mu br=sm: null
+                                                $elif item.cardKind == 'image':
                                                   - 'rtgl-view br=md w=${item.imageCardWidth} pos=rel overflow=hidden style="${item.imageCardStyle}"':
                                                       - $if showImageCardPreview:
                                                           - $if item.isProcessing:
@@ -207,16 +215,20 @@ template:
                                                               - $if item.isProcessing:
                                                                   - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
                                                                       - rtgl-text s=sm c=mu-fg: Processing...
-                                                                $elif item.waveformDataFileId:
+                                                                $elif item.shouldRenderWaveform:
                                                                   - rvn-waveform-visualizer key=${item.waveformDataFileId}-${item.mediaCardWidth}x16x9 waveformDataFileId=${item.waveformDataFileId} w=f h=f: null
+                                                                $elif item.waveformDataFileId:
+                                                                  - rtgl-view w=f h=f bw=xs bc=bo bgc=mu: null
                                                                 $else:
                                                                   - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
                                                                       - rtgl-text s=xs c=mu-fg: No waveform
                                                         $elif item.isProcessing:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=sm c=mu-fg: Processing...
-                                                        $elif item.waveformDataFileId:
+                                                        $elif item.shouldRenderWaveform:
                                                           - rvn-waveform-visualizer key=${item.waveformDataFileId}-${item.mediaCardWidth}x${mediaHeight} waveformDataFileId=${item.waveformDataFileId} w=f h=${mediaHeight}: null
+                                                        $elif item.waveformDataFileId:
+                                                          - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo bgc=mu: null
                                                         $else:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=xs c=mu-fg: No waveform

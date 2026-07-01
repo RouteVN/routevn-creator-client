@@ -126,7 +126,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   if (!itemId) return;
 
   const { store, render, refs } = deps;
-  const { editForm, fileExplorer } = refs;
+  const { fileExplorer } = refs;
   const characterItem = getCharacterItemById({ store, itemId });
   if (!characterItem) return;
 
@@ -138,8 +138,8 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   });
   render();
 
-  editForm.reset();
-  editForm.setValues({
+  refs.editForm?.reset?.();
+  refs.editForm?.setValues?.({
     values: {
       name: characterItem.name ?? "",
       nameVariableId: characterItem.nameVariableId ?? "",
@@ -152,7 +152,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
 
 const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
   const { refs, render, store } = deps;
-  const { fileExplorer, folderNameForm } = refs;
+  const { fileExplorer } = refs;
   const folder = getCharacterFolderById({ store, folderId });
   if (!folder) {
     return;
@@ -170,8 +170,8 @@ const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
     defaultValues: values,
   });
   render();
-  folderNameForm?.reset?.();
-  folderNameForm?.setValues?.({ values });
+  refs.folderNameForm?.reset?.();
+  refs.folderNameForm?.setValues?.({ values });
 };
 
 const openAvatarCropDialog = ({ deps, target, file } = {}) => {
