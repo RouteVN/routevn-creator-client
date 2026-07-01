@@ -1,8 +1,59 @@
 import { createProjectServiceCore } from "../shared/projectServiceCore.js";
 import { createAndroidProjectServiceAdapters } from "./projectServiceAdapters.js";
+import { callAndroidBridge } from "../../clients/android/bridge.js";
 import { generateId } from "../../../internal/id.js";
 
 const ENABLE_VERBOSE_COLLAB_LOGS = false;
+const ANDROID_PROJECT_EXPORT_CALLBACK = "__routeVNAndroidProjectExportResult";
+
+let nextAndroidProjectExportRequestId = 1;
+const pendingAndroidProjectExports = new Map();
+
+const createAndroidProjectExportRequestId = () => {
+  const requestId = `export-${nextAndroidProjectExportRequestId}`;
+  nextAndroidProjectExportRequestId += 1;
+  return requestId;
+};
+
+const ensureAndroidProjectExportCallback = () => {
+  window[ANDROID_PROJECT_EXPORT_CALLBACK] = (result = {}) => {
+    const requestId = result.requestId;
+    const pending = pendingAndroidProjectExports.get(requestId);
+    if (!pending) {
+      return;
+    }
+
+    pendingAndroidProjectExports.delete(requestId);
+    if (result.error) {
+      pending.reject(
+        new Error(result.error.message || "Failed to export project."),
+      );
+      return;
+    }
+
+    pending.resolve(result.export ?? null);
+  };
+};
+
+const requestNativeAndroidProjectExport = ({ projectId, destinationUri }) => {
+  const requestId = createAndroidProjectExportRequestId();
+  ensureAndroidProjectExportCallback();
+
+  return new Promise((resolve, reject) => {
+    pendingAndroidProjectExports.set(requestId, { resolve, reject });
+
+    try {
+      callAndroidBridge("exportProjectFolder", {
+        requestId,
+        projectId,
+        destinationUri,
+      });
+    } catch (error) {
+      pendingAndroidProjectExports.delete(requestId);
+      reject(error);
+    }
+  });
+};
 
 export const createProjectService = ({
   router,
@@ -27,7 +78,7 @@ export const createProjectService = ({
   const { storageAdapter, fileAdapter, collabAdapter } =
     createAndroidProjectServiceAdapters({ collabLog, creatorVersion });
 
-  return createProjectServiceCore({
+  const projectService = createProjectServiceCore({
     router,
     db,
     filePicker,
@@ -39,4 +90,29 @@ export const createProjectService = ({
     fileAdapter,
     collabAdapter,
   });
+
+  return {
+    ...projectService,
+
+    async exportProjectFolder({ projectId, destinationUri } = {}) {
+      const targetProjectId = projectId || projectService.getEnsuredProjectId();
+      if (!targetProjectId) {
+        throw new Error("No project selected.");
+      }
+
+      await projectService.releaseProjectRuntime(targetProjectId);
+      try {
+        return await requestNativeAndroidProjectExport({
+          projectId: targetProjectId,
+          destinationUri,
+        });
+      } finally {
+        try {
+          await projectService.ensureRepository();
+        } catch {
+          // The page can recover on the next project operation.
+        }
+      }
+    },
+  };
 };

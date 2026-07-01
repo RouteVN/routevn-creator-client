@@ -156,6 +156,42 @@ describe("android file picker", () => {
     });
   });
 
+  it("opens the native folder picker with writable access when requested", async () => {
+    let folderPayload;
+    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+      if (method === "openFolderPicker") {
+        folderPayload = payload;
+        Promise.resolve().then(() => {
+          window.__routeVNAndroidFolderPickerResult({
+            requestId: payload.requestId,
+            folder: {
+              uri: "content://exports",
+              name: "Exports",
+            },
+          });
+        });
+        return true;
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+
+    const folder = await createAndroidFilePicker().openFolderPicker({
+      title: "Select Export Folder",
+      writable: true,
+    });
+
+    expect(folder).toEqual({
+      uri: "content://exports",
+      name: "Exports",
+    });
+    expect(folderPayload).toEqual({
+      requestId: "folder-1",
+      title: "Select Export Folder",
+      writable: true,
+    });
+  });
+
   it("writes supplied bytes to a selected Android save URI", async () => {
     let writePayload;
     mocked.callAndroidBridge.mockImplementation((method, payload) => {

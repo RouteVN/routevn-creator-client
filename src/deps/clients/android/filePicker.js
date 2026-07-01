@@ -3,11 +3,14 @@ import { callAndroidBridge, uint8ArrayToBase64 } from "./bridge.js";
 const ANDROID_FILE_PICKER_INPUT_ID = "routevnAndroidFilePickerInput";
 const ANDROID_FILE_PICKER_CALLBACK = "__routeVNAndroidFilePickerResult";
 const ANDROID_SAVE_FILE_PICKER_CALLBACK = "__routeVNAndroidSaveFileResult";
+const ANDROID_FOLDER_PICKER_CALLBACK = "__routeVNAndroidFolderPickerResult";
 
 let nextAndroidFilePickerRequestId = 1;
 let nextAndroidSaveFilePickerRequestId = 1;
+let nextAndroidFolderPickerRequestId = 1;
 const pendingAndroidFilePickers = new Map();
 const pendingAndroidSaveFilePickers = new Map();
+const pendingAndroidFolderPickers = new Map();
 
 const isTruthyFlag = (value) => {
   if (typeof value === "boolean") {
@@ -135,6 +138,12 @@ const createAndroidSaveFilePickerRequestId = () => {
   return requestId;
 };
 
+const createAndroidFolderPickerRequestId = () => {
+  const requestId = `folder-${nextAndroidFolderPickerRequestId}`;
+  nextAndroidFolderPickerRequestId += 1;
+  return requestId;
+};
+
 const resolveSaveFilename = (options = {}) => {
   return options.defaultPath || options.filename || "download";
 };
@@ -183,6 +192,26 @@ const ensureAndroidSaveFilePickerCallback = () => {
   };
 };
 
+const ensureAndroidFolderPickerCallback = () => {
+  window[ANDROID_FOLDER_PICKER_CALLBACK] = (result = {}) => {
+    const requestId = result.requestId;
+    const pending = pendingAndroidFolderPickers.get(requestId);
+    if (!pending) {
+      return;
+    }
+
+    pendingAndroidFolderPickers.delete(requestId);
+    if (result.error) {
+      pending.reject(
+        new Error(result.error.message || "Failed to select folder."),
+      );
+      return;
+    }
+
+    pending.resolve(result.folder ?? null);
+  };
+};
+
 const requestNativeAndroidFilePicker = (options = {}) => {
   const requestId = createAndroidFilePickerRequestId();
   ensureAndroidFilePickerCallback();
@@ -198,6 +227,30 @@ const requestNativeAndroidFilePicker = (options = {}) => {
       });
     } catch (error) {
       pendingAndroidFilePickers.delete(requestId);
+      reject(error);
+    }
+  });
+};
+
+const requestNativeAndroidFolderPicker = (options = {}) => {
+  if (isVtMode()) {
+    return Promise.resolve(null);
+  }
+
+  const requestId = createAndroidFolderPickerRequestId();
+  ensureAndroidFolderPickerCallback();
+
+  return new Promise((resolve, reject) => {
+    pendingAndroidFolderPickers.set(requestId, { resolve, reject });
+
+    try {
+      callAndroidBridge("openFolderPicker", {
+        requestId,
+        title: options.title || "Select Folder",
+        writable: options.writable === true,
+      });
+    } catch (error) {
+      pendingAndroidFolderPickers.delete(requestId);
       reject(error);
     }
   });
@@ -334,8 +387,8 @@ const openInputFilePicker = async (options = {}) => {
 
 export const createAndroidFilePicker = () => {
   return {
-    async openFolderPicker() {
-      return null;
+    async openFolderPicker(options = {}) {
+      return requestNativeAndroidFolderPicker(options);
     },
 
     async openFilePicker(options = {}) {

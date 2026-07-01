@@ -135,6 +135,10 @@ export const evictPersistedAndroidProjectStoreCache = async ({
 
   const cachedStorePromise = storePromisesByProjectId.get(projectId);
   storePromisesByProjectId.delete(projectId);
+  if (!cachedStorePromise) {
+    return;
+  }
+
   const cachedStore = await cachedStorePromise.catch(() => undefined);
   await cachedStore?.close?.();
 };

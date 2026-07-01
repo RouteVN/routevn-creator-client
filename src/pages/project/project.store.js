@@ -3,7 +3,16 @@ import {
   formatProjectResolution,
 } from "../../internal/projectResolution.js";
 
+const PROJECT_ACTION_MENU_ITEMS = [
+  {
+    label: "Export project",
+    type: "item",
+    value: "export",
+  },
+];
+
 export const createInitialState = () => ({
+  platform: "web",
   project: {
     name: "",
     description: "",
@@ -11,6 +20,13 @@ export const createInitialState = () => ({
     resolution: DEFAULT_PROJECT_RESOLUTION,
     source: "local",
   },
+  projectActionMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    items: [],
+  },
+  isProjectExportLoading: false,
   isEditDialogOpen: false,
   isEditIconCropDialogOpen: false,
   editDefaultValues: {
@@ -21,6 +37,10 @@ export const createInitialState = () => ({
   editIconCropFile: undefined,
 });
 
+export const setPlatform = ({ state }, { platform } = {}) => {
+  state.platform = platform ?? "web";
+};
+
 export const setCurrentProject = ({ state }, { project } = {}) => {
   state.project = {
     name: project?.name ?? "",
@@ -29,6 +49,29 @@ export const setCurrentProject = ({ state }, { project } = {}) => {
     resolution: project?.resolution ?? DEFAULT_PROJECT_RESOLUTION,
     source: project?.source === "cloud" ? "cloud" : "local",
   };
+};
+
+export const openProjectActionMenu = ({ state }, { x, y } = {}) => {
+  state.projectActionMenu.isOpen = true;
+  state.projectActionMenu.x = x ?? 0;
+  state.projectActionMenu.y = y ?? 0;
+  state.projectActionMenu.items = PROJECT_ACTION_MENU_ITEMS.map((item) => ({
+    ...item,
+  }));
+};
+
+export const closeProjectActionMenu = ({ state }) => {
+  state.projectActionMenu.isOpen = false;
+  state.projectActionMenu.x = 0;
+  state.projectActionMenu.y = 0;
+  state.projectActionMenu.items = [];
+};
+
+export const selectIsProjectActionMenuOpen = ({ state }) =>
+  state.projectActionMenu.isOpen;
+
+export const setProjectExportLoading = ({ state }, { isLoading } = {}) => {
+  state.isProjectExportLoading = !!isLoading;
 };
 
 export const openEditDialog = ({ state }, _payload = {}) => {
@@ -100,6 +143,11 @@ export const selectViewData = ({ state, constants }) => {
     editIconFileId: state.editIconFileId,
     editIconCropFile: state.editIconCropFile,
     editForm: constants.editProjectForm,
+    isProjectExportLoading: state.isProjectExportLoading,
+    projectExportLoadingStatusText: "Exporting project...",
     projectSource: state.project.source,
+    projectActionMenu: state.projectActionMenu,
+    showAndroidProjectActions:
+      state.platform === "android" && state.project.source === "local",
   };
 };
