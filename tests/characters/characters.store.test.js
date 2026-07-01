@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   createInitialState,
   openEditDialog,
@@ -64,7 +65,7 @@ describe("characters store sprite group tags", () => {
       "group-body",
     ]);
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.selectedItemSpriteGroups.map((group) => group.id)).toEqual([
       "group-face",
@@ -80,16 +81,28 @@ describe("characters store sprite group tags", () => {
       {
         target: "edit",
         index: 0,
+        items: [
+          {
+            label: EN_I18N.resourcePages.moveDownMenuItem,
+            type: "item",
+            value: "move-down",
+          },
+          {
+            label: EN_I18N.resourcePages.removeMenuItem,
+            type: "item",
+            value: "remove",
+          },
+        ],
       },
     );
     expect(state.spriteGroupDropdownMenu.items).toEqual([
       {
-        label: "Move Down",
+        label: EN_I18N.resourcePages.moveDownMenuItem,
         type: "item",
         value: "move-down",
       },
       {
-        label: "Remove",
+        label: EN_I18N.resourcePages.removeMenuItem,
         type: "item",
         value: "remove",
       },
@@ -100,16 +113,28 @@ describe("characters store sprite group tags", () => {
       {
         target: "edit",
         index: 1,
+        items: [
+          {
+            label: EN_I18N.resourcePages.moveUpMenuItem,
+            type: "item",
+            value: "move-up",
+          },
+          {
+            label: EN_I18N.resourcePages.removeMenuItem,
+            type: "item",
+            value: "remove",
+          },
+        ],
       },
     );
     expect(state.spriteGroupDropdownMenu.items).toEqual([
       {
-        label: "Move Up",
+        label: EN_I18N.resourcePages.moveUpMenuItem,
         type: "item",
         value: "move-up",
       },
       {
-        label: "Remove",
+        label: EN_I18N.resourcePages.removeMenuItem,
         type: "item",
         value: "remove",
       },
@@ -194,7 +219,7 @@ describe("characters store sprite group tags", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.tagFilterOptions).toEqual([
       {

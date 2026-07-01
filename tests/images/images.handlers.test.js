@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 
 const { generateIdMock, processPendingUploadsMock } = vi.hoisted(() => ({
   generateIdMock: vi.fn(() => "image-123"),
@@ -56,6 +57,7 @@ describe("images handlers", () => {
       isMobileFileExplorerOpen: true,
     };
     const deps = {
+      i18n: EN_I18N,
       store: {
         getState: vi.fn(() => state),
         selectIsTouchMode: vi.fn(() => state.isTouchMode),
@@ -102,6 +104,7 @@ describe("images handlers", () => {
   it("opens mobile long-press previews without opening the detail sheet", () => {
     globalThis.requestAnimationFrame = (callback) => callback();
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectImageItemById: vi.fn(({ itemId }) => ({
           id: itemId,
@@ -154,6 +157,7 @@ describe("images handlers", () => {
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectSelectedItemId: vi.fn(() => "image-1"),
         selectImageItemById: vi.fn(({ itemId }) => ({
@@ -203,6 +207,7 @@ describe("images handlers", () => {
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectSelectedItemId: vi.fn(() => "image-1"),
         openMobileDeleteDialog: vi.fn(),
@@ -227,6 +232,7 @@ describe("images handlers", () => {
 
   it("cancels selected mobile detail image deletes without deleting", () => {
     const deps = {
+      i18n: EN_I18N,
       projectService: {
         deleteImageIfUnused: vi.fn(),
       },
@@ -263,6 +269,7 @@ describe("images handlers", () => {
     };
     let selectedItemId = "image-1";
     const deps = {
+      i18n: EN_I18N,
       projectService: {
         deleteImageIfUnused: vi.fn(async () => ({
           deleted: true,
@@ -303,6 +310,7 @@ describe("images handlers", () => {
 
   it("shows a failure alert when deleteImageIfUnused fails without usage", async () => {
     const deps = {
+      i18n: EN_I18N,
       projectService: {
         deleteImageIfUnused: vi.fn(async () => ({
           deleted: false,
@@ -352,6 +360,7 @@ describe("images handlers", () => {
     );
 
     const deps = {
+      i18n: EN_I18N,
       appService: {
         pickFiles: vi.fn(async () => [file]),
         showAlert: vi.fn(),
@@ -428,6 +437,7 @@ describe("images handlers", () => {
 
   it("creates a new tag from the detail-panel flow and keeps the draft open", async () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -552,6 +562,7 @@ describe("images handlers", () => {
 
   it("closes the detail tag popover before opening the create tag dialog", () => {
     const deps = {
+      i18n: EN_I18N,
       store: {
         getState: vi.fn(() => ({
           detailTagIds: ["image-tag-1"],
@@ -586,6 +597,7 @@ describe("images handlers", () => {
 
   it("reopens the detail tag popover when the create tag dialog closes", () => {
     const deps = {
+      i18n: EN_I18N,
       store: {
         getState: vi.fn(() => ({
           createTagContext: {
@@ -616,6 +628,7 @@ describe("images handlers", () => {
 
   it("updates image tags directly from the detail-panel tag selector", async () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -693,6 +706,7 @@ describe("images handlers", () => {
   it("does not reselect the previous item when a detail tag update finishes after selection changes", async () => {
     let selectedItemId = "image-1";
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -790,6 +804,7 @@ describe("images handlers", () => {
       selectAdjacentImageItemId: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       refs: {
@@ -845,6 +860,7 @@ describe("images handlers", () => {
       setFullImagePreviewDisplayMode: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       refs: {
@@ -897,6 +913,7 @@ describe("images handlers", () => {
       selectAdjacentImageItemId: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       refs: {
@@ -949,6 +966,7 @@ describe("images handlers", () => {
       setFullImagePreviewDisplayMode: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       refs: {
@@ -1044,6 +1062,7 @@ describe("images handlers", () => {
       showFullImagePreview: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       refs: {
@@ -1158,6 +1177,7 @@ describe("images handlers", () => {
       }),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       refs: {
@@ -1248,6 +1268,7 @@ describe("images handlers", () => {
       selectAdjacentImageItemId: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       refs: {},
@@ -1289,6 +1310,7 @@ describe("images handlers", () => {
       stopPropagation: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectFullImagePreviewSuppressNextClick: vi.fn(() => true),
         clearFullImagePreviewSuppressNextClick: vi.fn(),
@@ -1322,6 +1344,7 @@ describe("images handlers", () => {
       stopPropagation: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectFullImagePreviewVisible: vi.fn(() => false),
         setFullImagePreviewDisplayMode: vi.fn(),

@@ -26,7 +26,16 @@ export const createMediaPageHandlers = ({
   }),
   getEditPreviewFileId = () => undefined,
   tagging,
+  copy,
 }) => {
+  const resolveCopy = (deps) => {
+    if (typeof copy === "function") {
+      return copy(deps);
+    }
+
+    return copy ?? {};
+  };
+
   const waitForExpectedMediaState = async (
     deps,
     { selectedItemId, deletedItemId } = {},
@@ -254,6 +263,7 @@ export const createMediaPageHandlers = ({
     createResourceFileExplorerHandlers({
       resourceType,
       refresh: refreshData,
+      copy: resolveCopy,
     });
   const {
     focusKeyboardScope,
@@ -333,6 +343,7 @@ export const createMediaPageHandlers = ({
 
   const handleFolderNameFormAction = async (deps, payload) => {
     const { appService, store, render } = deps;
+    const resolvedCopy = resolveCopy(deps);
     const { actionId, values } = payload._event.detail;
     if (actionId !== "submit") {
       return;
@@ -343,8 +354,8 @@ export const createMediaPageHandlers = ({
 
     if (!name) {
       appService.showAlert({
-        message: "Folder name is required.",
-        title: "Warning",
+        message: resolvedCopy.folderNameRequired ?? "Folder name is required.",
+        title: resolvedCopy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -401,6 +412,7 @@ export const createMediaPageHandlers = ({
         getSelectedItemTagIds: tagging.getSelectedItemTagIds,
         createTagFallbackMessage: tagging.createTagFallbackMessage,
         updateItemTagFallbackMessage: tagging.updateItemTagFallbackMessage,
+        copy: resolveCopy,
       })
     : {};
 

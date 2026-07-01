@@ -21,21 +21,21 @@ import {
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import { SOUND_TAG_SCOPE_KEY } from "./sounds.store.js";
+import { selectSoundsPageCopy } from "./support/soundsPageCopy.js";
 
-const UNSUPPORTED_FORMAT_TITLE = "Unsupported Format";
-const UNSUPPORTED_FORMAT_MESSAGE =
-  "The audio file format is not supported. Please use MP3, WAV, or OGG (Windows only) files.";
 const SOUND_FILE_PATTERN = /\.(mp3|wav|ogg)$/i;
 const SOUND_FILE_ACCEPT = ".mp3,.wav,.ogg";
 
-const showUnsupportedFormatToast = (
-  appService,
-  message = UNSUPPORTED_FORMAT_MESSAGE,
-) => {
-  appService.showAlert({ message: message, title: UNSUPPORTED_FORMAT_TITLE });
+const selectCopy = (deps = {}) => selectSoundsPageCopy(deps.i18n);
+
+const showUnsupportedFormatToast = (appService, copy, message) => {
+  appService.showAlert({
+    message: message ?? copy.unsupportedFormatMessage,
+    title: copy.unsupportedFormatTitle,
+  });
 };
 
-const validateSoundFiles = ({ appService, files } = {}) => {
+const validateSoundFiles = ({ appService, files, copy } = {}) => {
   const invalidFiles = Array.from(files ?? []).filter(
     (file) => !file.name.match(SOUND_FILE_PATTERN),
   );
@@ -44,11 +44,15 @@ const validateSoundFiles = ({ appService, files } = {}) => {
     return true;
   }
 
-  showUnsupportedFormatToast(appService);
+  showUnsupportedFormatToast(appService, copy);
   return false;
 };
 
-const pickAndUploadSound = async ({ appService, projectService } = {}) => {
+const pickAndUploadSound = async ({
+  appService,
+  projectService,
+  copy,
+} = {}) => {
   let file;
 
   try {
@@ -64,7 +68,7 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
     return { cancelled: true };
   }
 
-  if (!validateSoundFiles({ appService, files: [file] })) {
+  if (!validateSoundFiles({ appService, files: [file], copy })) {
     return { errorType: "validation-failed" };
   }
 
@@ -85,6 +89,7 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
 
 const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
 
   await processPendingUploads({
     deps,
@@ -110,7 +115,7 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
 
       const createAttempt = await runResourcePageMutation({
         appService,
-        fallbackMessage: "Failed to create sound.",
+        fallbackMessage: copy.failedCreateSound,
         action: () =>
           projectService.createSound({
             soundId,
@@ -131,13 +136,14 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
     onUploadError: ({ error }) => {
       showUnsupportedFormatToast(
         appService,
-        getResourcePageErrorMessage(error, UNSUPPORTED_FORMAT_MESSAGE),
+        copy,
+        getResourcePageErrorMessage(error, copy.unsupportedFormatMessage),
       );
     },
     onNoSuccessfulUploads: () => {
       appService.showAlert({
-        message: "Failed to upload sound.",
-        title: "Error",
+        message: copy.failedUploadSound,
+        title: copy.errorTitle,
       });
     },
   });
@@ -225,6 +231,7 @@ const {
     tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.waveformDataFileId,
+  copy: ({ i18n }) => selectSoundsPageCopy(i18n),
   tagging: {
     scopeKey: SOUND_TAG_SCOPE_KEY,
     updateItemTagIds: ({ deps, itemId, tagIds }) =>
@@ -234,7 +241,8 @@ const {
           tagIds,
         },
       }),
-    updateItemTagFallbackMessage: "Failed to update sound tags.",
+    updateItemTagFallbackMessage: ({ deps }) =>
+      selectCopy(deps).failedUpdateTags,
     appendCreatedTagByMode: ({ deps, mode, tagId }) => {
       if (mode !== "edit-form") {
         return;
@@ -462,6 +470,7 @@ export const handleMobileDeleteDialogConfirm = async (deps) => {
 
 export const handleUploadClick = async (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const { groupId } = payload._event.detail;
   let files;
 
@@ -474,7 +483,7 @@ export const handleUploadClick = async (deps, payload) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select files.",
+      fallbackMessage: copy.failedSelectFiles,
     });
     return;
   }
@@ -483,7 +492,7 @@ export const handleUploadClick = async (deps, payload) => {
     return;
   }
 
-  if (!validateSoundFiles({ appService, files })) {
+  if (!validateSoundFiles({ appService, files, copy })) {
     return;
   }
 
@@ -496,10 +505,11 @@ export const handleUploadClick = async (deps, payload) => {
 
 export const handleFilesDropped = async (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const { files, rejectedFiles, targetGroupId } = payload._event.detail;
 
   if ((!files || files.length === 0) && (rejectedFiles?.length ?? 0) > 0) {
-    showUnsupportedFormatToast(appService);
+    showUnsupportedFormatToast(appService, copy);
     return;
   }
 
@@ -512,23 +522,25 @@ export const handleFilesDropped = async (deps, payload) => {
 
 export const handleFilesDropRejected = (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const rejectedFiles = payload._event.detail?.rejectedFiles ?? [];
 
   if (rejectedFiles.length === 0) {
     return;
   }
 
-  showUnsupportedFormatToast(appService);
+  showUnsupportedFormatToast(appService, copy);
 };
 
 export const handleFormExtraEvent = async (deps) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
     return;
   }
 
-  const result = await pickAndUploadSound({ appService, projectService });
+  const result = await pickAndUploadSound({ appService, projectService, copy });
   if (result.cancelled) {
     return;
   }
@@ -537,7 +549,7 @@ export const handleFormExtraEvent = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: result.error,
-      fallbackMessage: "Failed to select file.",
+      fallbackMessage: copy.failedSelectFile,
     });
     return;
   }
@@ -549,7 +561,8 @@ export const handleFormExtraEvent = async (deps) => {
   if (result.errorType === "upload-failed") {
     showUnsupportedFormatToast(
       appService,
-      getResourcePageErrorMessage(result.error, UNSUPPORTED_FORMAT_MESSAGE),
+      copy,
+      getResourcePageErrorMessage(result.error, copy.unsupportedFormatMessage),
     );
     return;
   }
@@ -557,7 +570,7 @@ export const handleFormExtraEvent = async (deps) => {
   const { uploadResult } = result;
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update sound.",
+    fallbackMessage: copy.failedUpdateSound,
     action: () =>
       projectService.updateSound({
         soundId: selectedItem.id,
@@ -581,8 +594,9 @@ export const handleEditDialogClose = (deps) => {
 
 export const handleEditDialogSoundClick = async (deps) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
 
-  const result = await pickAndUploadSound({ appService, projectService });
+  const result = await pickAndUploadSound({ appService, projectService, copy });
   if (result.cancelled) {
     return;
   }
@@ -591,7 +605,7 @@ export const handleEditDialogSoundClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: result.error,
-      fallbackMessage: "Failed to select file.",
+      fallbackMessage: copy.failedSelectFile,
     });
     return;
   }
@@ -603,7 +617,8 @@ export const handleEditDialogSoundClick = async (deps) => {
   if (result.errorType === "upload-failed") {
     showUnsupportedFormatToast(
       appService,
-      getResourcePageErrorMessage(result.error, UNSUPPORTED_FORMAT_MESSAGE),
+      copy,
+      getResourcePageErrorMessage(result.error, copy.unsupportedFormatMessage),
     );
     return;
   }
@@ -617,6 +632,7 @@ export const handleEditDialogSoundClick = async (deps) => {
 
 export const handleEditFormAction = async (deps, payload) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -625,8 +641,8 @@ export const handleEditFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Sound name is required.",
-      title: "Warning",
+      message: copy.nameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -644,7 +660,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update sound.",
+    fallbackMessage: copy.failedUpdateSound,
     action: () =>
       projectService.updateSound({
         soundId: editItemId,
@@ -674,6 +690,7 @@ export const handleAudioPlayerClose = (deps) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render, store } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
 
   const result = await projectService.deleteSoundIfUnused({
@@ -684,8 +701,8 @@ export const handleItemDelete = async (deps, payload) => {
   if (!result.deleted) {
     appService.showAlert({
       message: result.usage?.isUsed
-        ? "Cannot delete resource, it is currently in use."
-        : "Failed to delete resource.",
+        ? copy.cannotDeleteResourceInUse
+        : copy.failedDeleteResource,
     });
     render();
     return;

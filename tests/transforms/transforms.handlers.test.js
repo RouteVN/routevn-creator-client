@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   handleImportFormActionClick,
   handleImportTransformClick,
@@ -88,6 +89,7 @@ describe("transforms.handlers", () => {
 
     await handleImportFormActionClick(
       {
+        i18n: EN_I18N,
         appService,
         projectService,
         refs,
@@ -152,6 +154,7 @@ describe("transforms.handlers", () => {
 
     await handleImportFormActionClick(
       {
+        i18n: EN_I18N,
         appService,
         projectService,
         render: vi.fn(),
@@ -185,6 +188,7 @@ describe("transforms.handlers", () => {
 
     await handleImportFormActionClick(
       {
+        i18n: EN_I18N,
         appService,
         projectService: {},
         refs: {},
@@ -205,7 +209,7 @@ describe("transforms.handlers", () => {
     );
 
     expect(appService.showAlert).toHaveBeenCalledWith({
-      message: "Enter a valid http(s) URL.",
+      message: EN_I18N.transformsPage.invalidImportUrl,
       title: "Error",
     });
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -229,6 +233,7 @@ describe("transforms.handlers", () => {
 
     await handleImportFormActionClick(
       {
+        i18n: EN_I18N,
         appService,
         projectService: {},
         refs: {},
@@ -310,6 +315,7 @@ describe("transforms.handlers", () => {
 
     await handleImportFormActionClick(
       {
+        i18n: EN_I18N,
         appService,
         projectService: {},
         refs: {},
@@ -388,6 +394,7 @@ describe("transforms.handlers", () => {
 
     await handleImportFormActionClick(
       {
+        i18n: EN_I18N,
         appService,
         projectService: {},
         refs: {},
@@ -505,6 +512,7 @@ describe("transforms.handlers", () => {
 
     await handleImportFormActionClick(
       {
+        i18n: EN_I18N,
         appService,
         projectService,
         refs: {},
@@ -649,6 +657,7 @@ describe("transforms.handlers", () => {
 
     await handleImportFormActionClick(
       {
+        i18n: EN_I18N,
         appService,
         projectService,
         refs: {},
@@ -705,6 +714,7 @@ describe("transforms.handlers", () => {
 
     handleTransformPreviewImageContextMenu(
       {
+        i18n: EN_I18N,
         render,
         store,
       },
@@ -729,6 +739,13 @@ describe("transforms.handlers", () => {
       target: "preview-target",
       x: 64,
       y: 96,
+      items: [
+        {
+          label: EN_I18N.resourcePages.removeMenuItem,
+          type: "item",
+          value: "remove",
+        },
+      ],
     });
     expect(render).toHaveBeenCalled();
   });
