@@ -26,6 +26,7 @@ export const createInitialState = () => ({
     y: 0,
     items: [],
   },
+  isProjectExportLoading: false,
   isEditDialogOpen: false,
   isEditIconCropDialogOpen: false,
   editDefaultValues: {
@@ -68,6 +69,10 @@ export const closeProjectActionMenu = ({ state }) => {
 
 export const selectIsProjectActionMenuOpen = ({ state }) =>
   state.projectActionMenu.isOpen;
+
+export const setProjectExportLoading = ({ state }, { isLoading } = {}) => {
+  state.isProjectExportLoading = !!isLoading;
+};
 
 export const openEditDialog = ({ state }, _payload = {}) => {
   state.isEditDialogOpen = true;
@@ -138,6 +143,8 @@ export const selectViewData = ({ state, constants }) => {
     editIconFileId: state.editIconFileId,
     editIconCropFile: state.editIconCropFile,
     editForm: constants.editProjectForm,
+    isProjectExportLoading: state.isProjectExportLoading,
+    projectExportLoadingStatusText: "Exporting project...",
     projectSource: state.project.source,
     projectActionMenu: state.projectActionMenu,
     showAndroidProjectActions:

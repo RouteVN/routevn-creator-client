@@ -54,7 +54,7 @@ const resolveFolderUri = (folder) => {
 };
 
 const exportCurrentAndroidProject = async (deps) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, store, render } = deps;
   const currentProject = appService.getCurrentProjectEntry();
   const projectId = currentProject?.id ?? "";
 
@@ -92,17 +92,25 @@ const exportCurrentAndroidProject = async (deps) => {
     return;
   }
 
+  store.setProjectExportLoading({ isLoading: true });
+  render();
+
   try {
     const result = await projectService.exportProjectFolder({
       projectId,
       destinationUri,
     });
-    appService.showToast({
+    store.setProjectExportLoading({ isLoading: false });
+    render();
+    await appService.showAlert({
       message: `Project exported to "${result.name}".`,
+      title: "Export Complete",
     });
   } catch (error) {
     const message = String(error?.message ?? "").trim();
-    appService.showAlert({
+    store.setProjectExportLoading({ isLoading: false });
+    render();
+    await appService.showAlert({
       message: message || "Failed to export project.",
       title: "Error",
     });

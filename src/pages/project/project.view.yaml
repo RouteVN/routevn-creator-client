@@ -73,3 +73,6 @@ template:
                       - rtgl-text c=mu-fg ta=c: Click to upload
   - rtgl-dropdown-menu#projectActionMenu :items=${projectActionMenu.items} x=${projectActionMenu.x} y=${projectActionMenu.y} ?open=${projectActionMenu.isOpen}: null
   - rvn-square-image-crop-dialog#editIconCropDialog :open=${isEditIconCropDialogOpen} :file=${editIconCropFile}: null
+  - $if isProjectExportLoading:
+      - 'rtgl-view pos=fix edge=f z=2050 bgc=bg d=v ah=c av=c g=sm style="min-width: 0; min-height: 0; pointer-events: auto;"':
+          - rtgl-text s=sm c=mu-fg: ${projectExportLoadingStatusText}
