@@ -139,7 +139,7 @@ template:
                             $else:
                               - rtgl-view d=h g=sm:
                                   - rtgl-button#createButton data-testid=create-project-button: ${createButtonText}
-                                  - $if platform == 'tauri':
+                                  - $if platform == 'tauri' || platform == 'android':
                                       - rtgl-button#openButton variant=se: ${openButtonText}
                           - $if showProjectAccountActions:
                               - $if isLoggedIn:

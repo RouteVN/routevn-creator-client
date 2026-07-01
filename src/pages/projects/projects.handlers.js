@@ -354,7 +354,8 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
 
 export const handleOpenButtonClick = async (deps) => {
   const { appService, store, render } = deps;
-  if (appService.getPlatform() !== "tauri") {
+  const platform = appService.getPlatform();
+  if (platform !== "tauri" && platform !== "android") {
     return;
   }
 
@@ -404,7 +405,7 @@ export const handleMobileActionMenuClose = (deps) => {
   render();
 };
 
-export const handleMobileActionMenuClickItem = (deps, payload) => {
+export const handleMobileActionMenuClickItem = async (deps, payload) => {
   const { store, render } = deps;
   const detail = payload._event.detail;
   const item = detail.item || detail;
@@ -413,6 +414,12 @@ export const handleMobileActionMenuClickItem = (deps, payload) => {
 
   if (item.value === "create-project") {
     store.openCreateDialog();
+  }
+
+  if (item.value === "import-project") {
+    render();
+    await handleOpenButtonClick(deps);
+    return;
   }
 
   render();

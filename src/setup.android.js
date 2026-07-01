@@ -4,7 +4,7 @@ import { createDb } from "./deps/clients/android/db.js";
 import { createAndroidFilePicker } from "./deps/clients/android/filePicker.js";
 import AndroidRouter from "./deps/clients/android/router.js";
 
-import { createAppService } from "./deps/services/web/appService.js";
+import { createAppService } from "./deps/services/android/appService.js";
 import { createProjectService } from "./deps/services/android/projectService.js";
 import { createPendingQueueService } from "./deps/services/pendingQueueService.js";
 import { createApiService } from "./deps/services/apiService.js";
