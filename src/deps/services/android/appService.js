@@ -3,8 +3,24 @@ import { callAndroidBridge } from "../../clients/android/bridge.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 
-const createAndroidProjectPath = (projectId) => {
-  return projectId ? `Android app storage/projects/${projectId}` : "";
+const ANDROID_PROJECT_ROOT_LABEL = "Android app storage/projects";
+
+const normalizeAndroidProjectFolderName = (name) => {
+  const folderName = String(name ?? "")
+    .trim()
+    .replace(/[\\/:*?"<>|\r\n\t]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!folderName) {
+    throw new Error("Project Name is required.");
+  }
+
+  return folderName.length > 120 ? folderName.slice(0, 120).trim() : folderName;
+};
+
+const createAndroidProjectPath = (folderName) => {
+  return folderName ? `${ANDROID_PROJECT_ROOT_LABEL}/${folderName}` : "";
 };
 
 const normalizeFolderSelection = (selection) => {
@@ -22,9 +38,41 @@ const normalizeFolderSelection = (selection) => {
 };
 
 export const createAppService = (params) => {
+  const appDb = params.db;
+
+  const ensureAndroidProjectPathAvailable = async ({
+    projectPath,
+    projectId,
+  }) => {
+    const entries = (await appDb.get("projectEntries")) || [];
+    if (!Array.isArray(entries)) {
+      return;
+    }
+
+    const duplicateEntry = entries.find((entry) => {
+      return (
+        entry?.projectPath === projectPath &&
+        (!projectId || entry?.id !== projectId)
+      );
+    });
+    if (duplicateEntry) {
+      throw new Error(
+        "A project folder with this name already exists. Change the project title and try again.",
+      );
+    }
+  };
+
   const platformAdapter = {
     isDuplicateProjectEntry: ({ entries, entry }) => {
-      return entries.some((project) => project.id === entry.id);
+      return entries.some((project) => {
+        if (project.id === entry.id) {
+          return true;
+        }
+
+        return Boolean(
+          entry.projectPath && project.projectPath === entry.projectPath,
+        );
+      });
     },
 
     mapProjectEntryToProject: (entry) => ({
@@ -80,13 +128,15 @@ export const createAppService = (params) => {
         throw new Error("Imported project is missing an id.");
       }
 
-      const projectPath =
-        importedProject.sourceUri ?? createAndroidProjectPath(projectId);
       const importedName = importedProject.name?.trim?.() ?? "";
       let projectName = "Untitled Project";
       if (importedName) {
         projectName = importedName;
       }
+      const projectFolderName = normalizeAndroidProjectFolderName(projectName);
+      const projectPath = createAndroidProjectPath(projectFolderName);
+      await ensureAndroidProjectPathAvailable({ projectPath, projectId });
+
       const projectEntry = {
         id: projectId,
         projectPath,
@@ -126,6 +176,10 @@ export const createAppService = (params) => {
     }) => {
       const projectId = generateId();
       const namespace = generateId();
+      const projectFolderName = normalizeAndroidProjectFolderName(name);
+      const projectPath = createAndroidProjectPath(projectFolderName);
+      await ensureAndroidProjectPathAvailable({ projectPath });
+
       let iconFileId = null;
       if (iconFile) {
         const storedIcon = await projectService.storeFileForProject({
@@ -137,7 +191,7 @@ export const createAppService = (params) => {
 
       const projectEntry = {
         id: projectId,
-        projectPath: createAndroidProjectPath(projectId),
+        projectPath,
         name,
         description,
         iconFileId,
