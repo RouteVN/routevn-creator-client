@@ -751,12 +751,7 @@ export const selectViewData = ({ state, props }) => {
       props.selectedItemId === item.id || state.hoveredItemId === item.id
         ? "fg"
         : "ac",
-    borderWidth:
-      props.selectedItemId === item.id
-        ? "sm"
-        : state.hoveredItemId === item.id
-          ? "xs"
-          : "sm",
+    borderWidth: "sm",
   }));
 
   const containerCursor = normalizeCursorValue(props.cursor);

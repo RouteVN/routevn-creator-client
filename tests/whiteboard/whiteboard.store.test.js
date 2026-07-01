@@ -5,6 +5,7 @@ import {
   selectMinimapData,
   selectViewData,
   setContainerSize,
+  setHoveredItemId,
   setInitialZoomAndPan,
   startMinimapViewportDragging,
   stopMinimapViewportDragging,
@@ -178,5 +179,40 @@ describe("whiteboard minimap viewport drag", () => {
     expect(forcedTouchViewData.minimapData.minimap.height).toBe(100);
     expect(forcedTouchViewData.minimapContainerStyle).toContain("right: 20px");
     expect(forcedTouchViewData.minimapContainerStyle).toContain("top: 20px");
+  });
+});
+
+describe("whiteboard.store", () => {
+  it("keeps scene node border width stable across hover and selection", () => {
+    const state = createInitialState();
+    const props = {
+      items: [
+        {
+          id: "scene-1",
+          name: "A scene title that may wrap",
+          x: 0,
+          y: 0,
+        },
+      ],
+    };
+
+    const normalItem = selectViewData({ state, props }).items[0];
+
+    setHoveredItemId({ state }, { itemId: "scene-1" });
+    const hoveredItem = selectViewData({ state, props }).items[0];
+
+    const selectedItem = selectViewData({
+      state,
+      props: {
+        ...props,
+        selectedItemId: "scene-1",
+      },
+    }).items[0];
+
+    expect(normalItem.borderWidth).toBe("sm");
+    expect(hoveredItem.borderWidth).toBe(normalItem.borderWidth);
+    expect(selectedItem.borderWidth).toBe(normalItem.borderWidth);
+    expect(hoveredItem.borderColor).toBe("fg");
+    expect(selectedItem.borderColor).toBe("fg");
   });
 });
