@@ -62,8 +62,8 @@ template:
                           - rtgl-text s=sm: Start
                       - rtgl-view w=${startLineWidth} h=${startLineHeight} bgc=ac: null
               - 'rtgl-view#itemRef${itemIndex} data-item-id=${item.id} w=${sceneBoxWidth} h=${sceneBoxHeight} d=h ah=e av=c pos=abs cur=${itemCursor} style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
-                  - rtgl-view cur=${itemCursor} w=${sceneBoxWidth} h=f av=c ah=c p=md bgc=mu bw=${item.borderWidth} bc=${item.borderColor} br=md:
-                      - rtgl-text s=sm: ${item.name}
+                  - 'rtgl-view cur=${itemCursor} w=f h=f av=c ah=c p=md bgc=mu bw=${item.borderWidth} bc=${item.borderColor} br=md style="box-sizing: border-box; min-width: 0; overflow: hidden;"':
+                      - 'rtgl-text s=sm w=f style="min-width: 0; max-width: 100%; text-align: center; overflow-wrap: anywhere;"': ${item.name}
           - $for arrow in arrowsList:
               - svg data-arrow-id="${arrow.id}" style="${arrow.style}" width="${arrow.svgWidth}" height="${arrow.svgHeight}":
                   - defs:
