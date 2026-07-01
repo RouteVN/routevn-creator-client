@@ -108,6 +108,7 @@ const createDeps = (state) => ({
   appService: {
     showDropdownMenu: vi.fn(),
   },
+  props: createProps(),
   refs: {
     textRevealIndicatorForm: {
       getValues: vi.fn(),
@@ -289,6 +290,7 @@ describe("layoutEditPanel text reveal indicators", () => {
               imageId: "image-complete",
             },
           },
+          revealSoundId: "sound-reveal",
         },
       },
     );
@@ -425,7 +427,10 @@ describe("layoutEditPanel text reveal indicators", () => {
 
     expect(deps.appService.showDropdownMenu).toHaveBeenCalledWith(
       expect.objectContaining({
-        items: [{ type: "item", label: "Complete", key: "complete" }],
+        items: [
+          { type: "item", label: "Complete", key: "complete" },
+          { type: "item", label: "Sound", key: "revealSoundId" },
+        ],
       }),
     );
     expect(state.textRevealIndicatorDialog).toMatchObject({
@@ -466,6 +471,7 @@ describe("layoutEditPanel text reveal indicators", () => {
               imageId: "image-complete",
             },
           },
+          revealSoundId: "sound-reveal",
         },
       },
     );

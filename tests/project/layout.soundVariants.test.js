@@ -22,8 +22,15 @@ const SOUNDS_DATA = {
       fileId: "file-click",
       fileType: "audio/mpeg",
     },
+    "sound-reveal": {
+      id: "sound-reveal",
+      type: "sound",
+      name: "Reveal Sound",
+      fileId: "file-reveal",
+      fileType: "audio/wav",
+    },
   },
-  tree: [{ id: "sound-hover" }, { id: "sound-click" }],
+  tree: [{ id: "sound-hover" }, { id: "sound-click" }, { id: "sound-reveal" }],
 };
 
 describe("layout sound variants", () => {
@@ -120,5 +127,37 @@ describe("layout sound variants", () => {
 
     expect(elements[0].hover?.soundSrc).toBe("file-hover");
     expect(elements[0].click?.soundSrc).toBe("file-click");
+  });
+
+  it("maps text reveal sound ids into route-graphics revealSound config", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "text-reveal-1",
+          type: "text-revealing",
+          text: "Hello",
+          x: 0,
+          y: 0,
+          revealSoundId: "sound-reveal",
+        },
+      ],
+      {},
+      EMPTY_TREE,
+      EMPTY_TREE,
+      EMPTY_TREE,
+      {
+        layoutId: "layout-1",
+        soundsData: SOUNDS_DATA,
+      },
+    );
+
+    expect(elements[0].revealSound).toEqual({
+      src: "file-reveal",
+      fileType: "audio/wav",
+    });
+    expect(extractFileIdsFromRenderState(elements)).toContainEqual({
+      url: "file-reveal",
+      type: "audio/wav",
+    });
   });
 });

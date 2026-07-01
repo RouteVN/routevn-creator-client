@@ -919,8 +919,11 @@ describe("graphicsService", () => {
     const decodedAudioKeys = new Set();
     const hoverBuffer = new ArrayBuffer(8);
     const clickBuffer = new ArrayBuffer(8);
+    const revealBuffer = new ArrayBuffer(8);
     const bufferManager = {
-      has: vi.fn((key) => key === "hover-sfx" || key === "click-sfx"),
+      has: vi.fn((key) =>
+        ["hover-sfx", "click-sfx", "reveal-sfx"].includes(key),
+      ),
       load: vi.fn(async () => {}),
       getBufferMap: vi.fn(() => ({
         "hover-sfx": {
@@ -930,6 +933,10 @@ describe("graphicsService", () => {
         "click-sfx": {
           buffer: clickBuffer,
           type: "audio/mpeg",
+        },
+        "reveal-sfx": {
+          buffer: revealBuffer,
+          type: "audio/wav",
         },
       })),
       clear: vi.fn(),
@@ -948,6 +955,9 @@ describe("graphicsService", () => {
       elements: [
         {
           id: "button",
+          revealSound: {
+            src: "reveal-sfx",
+          },
           hover: {
             soundSrc: "hover-sfx",
           },
@@ -1001,6 +1011,7 @@ describe("graphicsService", () => {
     expect(service.collectRenderStateAudioKeys(renderState).sort()).toEqual([
       "click-sfx",
       "hover-sfx",
+      "reveal-sfx",
     ]);
 
     service.engineRenderCurrentState();
@@ -1008,6 +1019,10 @@ describe("graphicsService", () => {
     await vi.waitFor(() => {
       expect(audioAssetApi.load).toHaveBeenCalledWith("hover-sfx", hoverBuffer);
       expect(audioAssetApi.load).toHaveBeenCalledWith("click-sfx", clickBuffer);
+      expect(audioAssetApi.load).toHaveBeenCalledWith(
+        "reveal-sfx",
+        revealBuffer,
+      );
     });
     await vi.waitFor(() => {
       expect(routeGraphicsInstance.render).toHaveBeenCalledTimes(2);

@@ -731,6 +731,11 @@ export const createGraphicsService = async ({
         }
       }
 
+      const revealSoundKey = element.revealSound?.src;
+      if (typeof revealSoundKey === "string" && revealSoundKey) {
+        keys.push(revealSoundKey);
+      }
+
       if (Array.isArray(element.children)) {
         collectElementAudioKeys(element.children, keys);
       }

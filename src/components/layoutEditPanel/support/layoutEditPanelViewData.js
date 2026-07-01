@@ -274,11 +274,17 @@ export const toInspectorValues = ({
     clickTextStyleId: values?.clickTextStyleId ?? "",
     hoverSoundId: values?.hoverSoundId ?? "",
     clickSoundId: values?.clickSoundId ?? "",
+    revealSoundId: values?.revealSoundId ?? "",
     conditionalOverrides: normalizeConditionalOverrideRules(
       values?.conditionalOverrides,
     ),
-    textRevealIndicatorAddItems: createTextRevealIndicatorAddItems(indicator),
-    textRevealIndicatorItems: createTextRevealIndicatorListItems(indicator),
+    textRevealIndicatorAddItems: createTextRevealIndicatorAddItems(indicator, {
+      revealSoundId: values?.revealSoundId,
+      supportsTextRevealSound: capabilities.supportsTextRevealSound === true,
+    }),
+    textRevealIndicatorItems: createTextRevealIndicatorListItems(indicator, {
+      revealSoundId: values?.revealSoundId,
+    }),
     actions: toLayoutActionItems(values, hiddenActionModes),
   };
 };

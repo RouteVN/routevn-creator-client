@@ -1,14 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
+  closeSoundSelectorDialog,
+  openSoundSelectorDialog,
+  selectSoundSelectorDialog,
   selectSoundOptions,
+  selectTempSelectedSoundId,
   setSoundsData,
+  setTempSelectedSoundId,
   setValues,
   updateValueProperty,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import {
   handleOptionSelected,
   handleSectionActionClick,
+  handleSoundSelectorSubmit,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 
 const SOUNDS_DATA = {
@@ -23,14 +29,14 @@ const SOUNDS_DATA = {
   tree: [{ id: "sound-hover" }],
 };
 
-const createDeps = ({ soundsData = SOUNDS_DATA } = {}) => {
+const createDeps = ({ soundsData = SOUNDS_DATA, itemType = "text" } = {}) => {
   const state = createInitialState();
 
   setValues(
     { state },
     {
       values: {
-        type: "text",
+        type: itemType,
         text: "Hello",
       },
     },
@@ -47,6 +53,14 @@ const createDeps = ({ soundsData = SOUNDS_DATA } = {}) => {
     store: {
       selectValues: () => state.values,
       selectSoundOptions: () => selectSoundOptions({ state }),
+      selectSoundSelectorDialog: () => selectSoundSelectorDialog({ state }),
+      selectTempSelectedSoundId: () => selectTempSelectedSoundId({ state }),
+      setTempSelectedSoundId: (payload) =>
+        setTempSelectedSoundId({ state }, payload),
+      openSoundSelectorDialog: (payload) =>
+        openSoundSelectorDialog({ state }, payload),
+      closeSoundSelectorDialog: (payload) =>
+        closeSoundSelectorDialog({ state }, payload),
       updateValueProperty: (payload) => updateValueProperty({ state }, payload),
       closePopoverForm: vi.fn(),
     },
@@ -55,18 +69,20 @@ const createDeps = ({ soundsData = SOUNDS_DATA } = {}) => {
       showAlert: vi.fn(),
     },
     refs: {},
-    props: {},
+    props: {
+      itemType,
+    },
     render: vi.fn(),
     dispatchEvent: vi.fn(),
   };
 };
 
 describe("layoutEditPanel sound handlers", () => {
-  it("applies the selected hover sound variant", async () => {
+  it("opens the sound selector for the selected hover sound variant", async () => {
     const deps = createDeps();
-    deps.appService.showDropdownMenu
-      .mockResolvedValueOnce({ item: { key: "hoverSoundId" } })
-      .mockResolvedValueOnce({ item: { key: "sound-hover" } });
+    deps.appService.showDropdownMenu.mockResolvedValueOnce({
+      item: { key: "hoverSoundId" },
+    });
 
     await handleSectionActionClick(deps, {
       _event: {
@@ -80,7 +96,64 @@ describe("layoutEditPanel sound handlers", () => {
       },
     });
 
+    expect(deps.state.soundSelectorDialog).toMatchObject({
+      open: true,
+      name: "hoverSoundId",
+    });
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+    expect(deps.appService.showDropdownMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the sound selector for the selected text reveal sound variant", async () => {
+    const deps = createDeps({
+      itemType: "text-revealing",
+    });
+    deps.appService.showDropdownMenu.mockResolvedValueOnce({
+      item: { key: "revealSoundId" },
+    });
+
+    await handleSectionActionClick(deps, {
+      _event: {
+        clientX: 10,
+        clientY: 20,
+        currentTarget: {
+          dataset: {
+            id: "textRevealIndicator",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showDropdownMenu).toHaveBeenCalledWith({
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          label: "Sound",
+          key: "revealSoundId",
+        }),
+      ]),
+      x: 10,
+      y: 20,
+      place: "bs",
+    });
+    expect(deps.state.soundSelectorDialog).toMatchObject({
+      open: true,
+      name: "revealSoundId",
+    });
+  });
+
+  it("applies the submitted hover sound selection", () => {
+    const deps = createDeps();
+    deps.store.openSoundSelectorDialog({
+      name: "hoverSoundId",
+    });
+    deps.store.setTempSelectedSoundId({
+      soundId: "sound-hover",
+    });
+
+    handleSoundSelectorSubmit(deps);
+
     expect(deps.state.values.hoverSoundId).toBe("sound-hover");
+    expect(deps.state.soundSelectorDialog.open).toBe(false);
     expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
     expect(deps.dispatchEvent.mock.calls[0][0].detail).toMatchObject({
       name: "hoverSoundId",

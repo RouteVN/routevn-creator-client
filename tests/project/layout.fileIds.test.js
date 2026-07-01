@@ -86,6 +86,67 @@ describe("layout file id extraction", () => {
     ]);
   });
 
+  it("includes text reveal sound files when extracting scene layout assets", () => {
+    const projectData = createProjectData();
+    projectData.resources.sounds = {
+      "sound-reveal": {
+        id: "sound-reveal",
+        type: "sound",
+        fileId: "file-reveal",
+        fileType: "audio/ogg",
+      },
+    };
+    projectData.resources.layouts = {
+      "layout-main": {
+        id: "layout-main",
+        type: "layout",
+        elements: {
+          items: {
+            "text-reveal": {
+              id: "text-reveal",
+              type: "text-revealing",
+              revealSoundId: "sound-reveal",
+            },
+          },
+          tree: [{ id: "text-reveal", children: [] }],
+        },
+      },
+    };
+    projectData.story = {
+      scenes: {
+        "scene-1": {
+          id: "scene-1",
+          sections: {
+            "section-1": {
+              id: "section-1",
+              lines: [
+                {
+                  id: "line-1",
+                  actions: {
+                    dialogue: {
+                      ui: {
+                        resourceId: "layout-main",
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    };
+
+    const fileReferences = extractFileIdsForScenes(projectData, ["scene-1"]);
+
+    expect(fileReferences).toEqual([
+      {
+        url: "file-reveal",
+        type: "audio/ogg",
+      },
+    ]);
+  });
+
   it("includes character action item ids when extracting temporary presentation assets", () => {
     const fileReferences = extractFileIdsForValue(createProjectData(), {
       character: {

@@ -57,7 +57,11 @@ const INTEGER_ONLY_FIELDS = new Set([
   "indicator.complete.offsetX",
   "indicator.complete.offsetY",
 ]);
-const SOUND_ID_FIELDS = new Set(["hoverSoundId", "clickSoundId"]);
+const SOUND_ID_FIELDS = new Set([
+  "hoverSoundId",
+  "clickSoundId",
+  "revealSoundId",
+]);
 const SIZE_FIELDS = new Set(["width", "height"]);
 const WHEEL_INCREMENT_FIELD_CONFIG = {
   x: { step: 1, fastStep: 10 },
@@ -417,7 +421,13 @@ const applySizeModeUpdate = (deps, { name, value } = {}) => {
 
 const applyPanelValueUpdate = (
   deps,
-  { name, value, closePopover = false, closeImageSelector = false } = {},
+  {
+    name,
+    value,
+    closePopover = false,
+    closeImageSelector = false,
+    closeSoundSelector = false,
+  } = {},
 ) => {
   const { store, render } = deps;
   let normalizedValue =
@@ -556,6 +566,10 @@ const applyPanelValueUpdate = (
 
   if (closeImageSelector) {
     store.closeImageSelectorDialog();
+  }
+
+  if (closeSoundSelector) {
+    store.closeSoundSelectorDialog();
   }
 
   render();
@@ -1174,7 +1188,6 @@ export const handleSectionActionClick = async (deps, payload) => {
         key: "clickSoundId",
       });
     }
-
     if (variantItems.length === 0) {
       return;
     }
@@ -1189,12 +1202,7 @@ export const handleSectionActionClick = async (deps, payload) => {
       return;
     }
 
-    const soundItems = store.selectSoundOptions().map((option) => ({
-      type: "item",
-      label: option.label,
-      key: option.value,
-    }));
-    if (soundItems.length === 0) {
+    if (store.selectSoundOptions().length === 0) {
       appService.showAlert({
         message: "No sounds available. Create a sound resource first.",
         title: "Warning",
@@ -1202,20 +1210,10 @@ export const handleSectionActionClick = async (deps, payload) => {
       return;
     }
 
-    const soundResult = await appService.showDropdownMenu({
-      items: soundItems,
-      x: _event.clientX,
-      y: _event.clientY,
-      place: "bs",
-    });
-    if (!soundResult?.item?.key) {
-      return;
-    }
-
-    applyPanelValueUpdate(deps, {
+    store.openSoundSelectorDialog({
       name: variantResult.item.key,
-      value: soundResult.item.key,
     });
+    render();
   } else if (id === "conditionalOverrides") {
     store.openConditionalOverrideConditionDialog({
       editingIndex: undefined,
@@ -1255,9 +1253,13 @@ export const handleSectionActionClick = async (deps, payload) => {
     store.openSpriteBlurDialog();
     render();
   } else if (id === "textRevealIndicator") {
-    const items = createTextRevealIndicatorAddItems(
-      store.selectValues().indicator,
-    );
+    const currentValues = store.selectValues();
+    const capabilities =
+      getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {};
+    const items = createTextRevealIndicatorAddItems(currentValues.indicator, {
+      revealSoundId: currentValues.revealSoundId,
+      supportsTextRevealSound: capabilities.supportsTextRevealSound === true,
+    });
     if (items.length === 0) {
       return;
     }
@@ -1269,6 +1271,22 @@ export const handleSectionActionClick = async (deps, payload) => {
       place: "bs",
     });
     if (!result?.item?.key) {
+      return;
+    }
+
+    if (result.item.key === "revealSoundId") {
+      if (store.selectSoundOptions().length === 0) {
+        appService.showAlert({
+          message: "No sounds available. Create a sound resource first.",
+          title: "Warning",
+        });
+        return;
+      }
+
+      store.openSoundSelectorDialog({
+        name: "revealSoundId",
+      });
+      render();
       return;
     }
 
@@ -1858,6 +1876,14 @@ export const handleListBarItemClick = async (deps, payload) => {
     return;
   }
 
+  if (SOUND_ID_FIELDS.has(name)) {
+    store.openSoundSelectorDialog({
+      name,
+    });
+    render();
+    return;
+  }
+
   store.openImageSelectorDialog({
     name,
   });
@@ -2087,6 +2113,44 @@ export const handleImageSelectorSubmit = (deps) => {
     name,
     value: imageId,
     closeImageSelector: true,
+  });
+};
+
+// --- Sound Selector ---
+export const handleSoundSelectorSoundSelected = (deps, payload) => {
+  const { store } = deps;
+  const { _event } = payload;
+  store.setTempSelectedSoundId({
+    soundId: _event.detail.soundId,
+  });
+};
+
+export const handleSoundSelectorFileExplorerClickItem = (deps, payload) => {
+  const itemId = payload?._event?.detail?.itemId;
+  if (!itemId) {
+    return;
+  }
+
+  deps.refs.soundSelector?.transformedHandlers?.handleScrollToItem?.({
+    itemId,
+  });
+};
+
+export const handleSoundSelectorCancel = (deps) => {
+  const { store, render } = deps;
+  store.closeSoundSelectorDialog();
+  render();
+};
+
+export const handleSoundSelectorSubmit = (deps) => {
+  const { store } = deps;
+  const soundId = store.selectTempSelectedSoundId();
+  const { name } = store.selectSoundSelectorDialog();
+
+  applyPanelValueUpdate(deps, {
+    name,
+    value: soundId,
+    closeSoundSelector: true,
   });
 };
 

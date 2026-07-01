@@ -26,6 +26,7 @@ const SOUNDS_DATA = {
       type: "sound",
       name: "Hover Sound",
       fileId: "file-hover",
+      waveformDataFileId: "waveform-hover",
     },
     "sound-click": {
       id: "sound-click",
@@ -48,7 +49,7 @@ const createProps = (itemType = "text") => ({
 });
 
 describe("layoutEditPanel sound section", () => {
-  it("shows hover and click sound selectors for text items", () => {
+  it("shows hover and click sound picker rows for text items", () => {
     const state = createInitialState();
 
     setValues(
@@ -79,21 +80,66 @@ describe("layoutEditPanel sound section", () => {
     );
 
     expect(soundSection?.label).toBe("Sound");
-    expect(soundSection?.items.map((item) => item.name)).toEqual([
+    expect(soundSection?.items[0]?.type).toBe("list-bar");
+    expect(soundSection?.items[0]?.items.map((item) => item.name)).toEqual([
       "hoverSoundId",
       "clickSoundId",
     ]);
-    expect(soundSection?.items[0]?.options).toContainEqual({
-      label: "Hover Sound",
-      value: "sound-hover",
+    expect(soundSection?.items[0]?.items[0]).toMatchObject({
+      label: "Hover",
+      soundId: "sound-hover",
+      soundName: "Hover Sound",
+      waveformDataFileId: "waveform-hover",
     });
-    expect(soundSection?.items[1]?.options).toContainEqual({
-      label: "Click Sound",
-      value: "sound-click",
+    expect(soundSection?.items[0]?.items[1]).toMatchObject({
+      label: "Click",
+      soundId: "sound-click",
+      soundName: "Click Sound",
     });
   });
 
-  it("shows hover and click sound selectors for sprite and container items", () => {
+  it("shows the reveal sound picker row in the indicator section for text-revealing items", () => {
+    const state = createInitialState();
+
+    setValues(
+      { state },
+      {
+        values: {
+          type: "text-revealing",
+          text: "hello",
+          revealSoundId: "sound-hover",
+        },
+      },
+    );
+    setSoundsData(
+      { state },
+      {
+        soundsData: SOUNDS_DATA,
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      props: createProps("text-revealing"),
+      constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+    });
+    const indicatorSection = viewData.config.sections.find(
+      (section) => section.id === "textRevealIndicator",
+    );
+
+    expect(indicatorSection?.labelAction).toBe("plus");
+    expect(indicatorSection?.items[0]?.items.map((item) => item.name)).toEqual([
+      "revealSoundId",
+    ]);
+    expect(indicatorSection?.items[0]?.items[0]).toMatchObject({
+      label: "Sound",
+      soundId: "sound-hover",
+      soundName: "Hover Sound",
+      waveformDataFileId: "waveform-hover",
+    });
+  });
+
+  it("shows hover and click sound picker rows for sprite and container items", () => {
     for (const itemType of ["sprite", "container"]) {
       const state = createInitialState();
       const values = {
@@ -131,7 +177,8 @@ describe("layoutEditPanel sound section", () => {
       );
 
       expect(soundSection?.label).toBe("Sound");
-      expect(soundSection?.items.map((item) => item.name)).toEqual([
+      expect(soundSection?.items[0]?.type).toBe("list-bar");
+      expect(soundSection?.items[0]?.items.map((item) => item.name)).toEqual([
         "hoverSoundId",
         "clickSoundId",
       ]);

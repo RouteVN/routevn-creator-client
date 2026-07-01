@@ -1067,6 +1067,18 @@ const getSoundFileReference = (soundItems, soundId) => {
   };
 };
 
+const getRevealSoundReference = (soundItems, soundId) => {
+  const soundReference = getSoundFileReference(soundItems, soundId);
+  if (!soundReference) {
+    return undefined;
+  }
+
+  return {
+    src: soundReference.soundSrc,
+    fileType: soundReference.soundFileType ?? "audio/*",
+  };
+};
+
 const applyInteractionSoundVariants = ({ element, node, soundItems }) => {
   const hoverSound = getSoundFileReference(soundItems, node.hoverSoundId);
   const clickSound = getSoundFileReference(soundItems, node.clickSoundId);
@@ -1306,6 +1318,14 @@ const applyTextNode = ({ element, node, context }) => {
     });
     if (indicator) {
       nextElement.indicator = indicator;
+    }
+
+    const revealSound = getRevealSoundReference(
+      context.soundItems,
+      node.revealSoundId,
+    );
+    if (revealSound) {
+      nextElement.revealSound = revealSound;
     }
   }
 
@@ -2077,6 +2097,7 @@ const RESOURCE_REFERENCE_KEYS = new Set([
   "imageId",
   "hoverSoundId",
   "clickSoundId",
+  "revealSoundId",
   "hoverImageId",
   "clickImageId",
   "thumbImageId",

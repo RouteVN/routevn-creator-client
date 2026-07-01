@@ -12,7 +12,7 @@
         "@rettangoli/fe": "1.1.3",
         "@rettangoli/ui": "1.7.6",
         "@rettangoli/vt": "1.0.5",
-        "@routevn/creator-model": "1.8.1",
+        "@routevn/creator-model": "1.9.0",
         "@tauri-apps/api": "2.11.0",
         "@tauri-apps/plugin-dialog": "2.4.2",
         "@tauri-apps/plugin-fs": "2.5.1",
@@ -30,7 +30,7 @@
         "lexical": "0.22.0",
         "nanoid": "5.1.11",
         "route-engine-js": "1.26.1",
-        "route-graphics": "1.23.6",
+        "route-graphics": "1.24.0",
         "rxjs": "7.8.2",
         "snabbdom": "3.6.3",
         "snabbdom-to-html": "7.1.0",
@@ -312,7 +312,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.60.4", "", { "os": "win32", "cpu": "x64" }, "sha512-QVTUovf40zgTqlFVrKA1uXMVvU2QWEFWfAH8Wdc48IxLvrJMQVMBRjuQyUpzZCDkakImib9eVazbWlC6ksWtJw=="],
 
-    "@routevn/creator-model": ["@routevn/creator-model@1.8.1", "", {}, "sha512-tgZMkHiSDEupf3Kgk7zspjcFEqfCJ+ef/vofwxhxvwBYkmvTBngzPKL92Oy61hCdyg9z/7z2Tf9wYN4XOlT98Q=="],
+    "@routevn/creator-model": ["@routevn/creator-model@1.9.0", "", {}, "sha512-nhqVHaRqrVhlHlQkOOu8J/bj3bfm+MX/uzESQdXxfWg/7kERPtco5kKNb+EDcEzecMDG7EatYCHgjtANQXouNg=="],
 
     "@shikijs/core": ["@shikijs/core@3.23.0", "", { "dependencies": { "@shikijs/types": "3.23.0", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4", "hast-util-to-html": "^9.0.5" } }, "sha512-NSWQz0riNb67xthdm5br6lAkvpDJRTgB36fxlo37ZzM2yq0PQFFzbd8psqC2XMPgCzo1fW6cVi18+ArJ44wqgA=="],
 
@@ -732,7 +732,7 @@
 
     "route-engine-js": ["route-engine-js@1.26.1", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.1", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-azxqZKV8jxh+6WBm8tiLuW2hCNTjzKsS/a3EBJ5yuzToC+fIVyXz0KaQaGbXFBZu4Ha778d5dQlpwR2ZsZaUuA=="],
 
-    "route-graphics": ["route-graphics@1.23.6", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "pixi.js": "^8.7.1", "playwright": "^1.44.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-25vRko5C1lZpBJeTwGnnm4yYYUPWo6NCZ9Td45xSrquJMVawDr2kD5sleM9XoTs1cAXidWb3MMO4w45dFM2Mww=="],
+    "route-graphics": ["route-graphics@1.24.0", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "pixi.js": "^8.7.1", "playwright": "^1.44.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-ORzH454Rl7La1n9EmZyvptJ0n3o23FjgChemhJ7HFd2FzrhpHhK0OSwqaipnP4Wlu9qY2THX2AAnERYTmOiiJg=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 

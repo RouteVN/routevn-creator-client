@@ -464,11 +464,16 @@ const getValueAtPath = (target, path) => {
 
 const resetSelectionUiState = (state) => {
   state.tempSelectedImageId = undefined;
+  state.tempSelectedSoundId = undefined;
   state.tempSelectedSpritesheetValue = undefined;
   state.imageSelectorDialog = {
     open: false,
     name: undefined,
     source: undefined,
+  };
+  state.soundSelectorDialog = {
+    open: false,
+    name: undefined,
   };
   state.spritesheetSelectorDialog = {
     open: false,
@@ -894,6 +899,27 @@ export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
   state.tempSelectedImageId = undefined;
 };
 
+export const openSoundSelectorDialog = (
+  { state },
+  { name, selectedSoundId } = {},
+) => {
+  state.soundSelectorDialog = {
+    open: true,
+    name,
+  };
+  state.tempSelectedSoundId =
+    selectedSoundId ??
+    (typeof name === "string" ? getValueAtPath(state.values, name) : undefined);
+};
+
+export const closeSoundSelectorDialog = ({ state }, _payload = {}) => {
+  state.soundSelectorDialog = {
+    open: false,
+    name: undefined,
+  };
+  state.tempSelectedSoundId = undefined;
+};
+
 export const openSpritesheetSelectorDialog = (
   { state },
   { selectedSpritesheetValue, source = "value" } = {},
@@ -1011,6 +1037,10 @@ export const setTempSelectedImageId = ({ state }, { imageId } = {}) => {
   state.tempSelectedImageId = imageId;
 };
 
+export const setTempSelectedSoundId = ({ state }, { soundId } = {}) => {
+  state.tempSelectedSoundId = soundId;
+};
+
 export const setTempSelectedSpritesheetValue = (
   { state },
   { selectedSpritesheetValue } = {},
@@ -1022,12 +1052,20 @@ export const selectImageSelectorDialog = ({ state }) => {
   return state.imageSelectorDialog;
 };
 
+export const selectSoundSelectorDialog = ({ state }) => {
+  return state.soundSelectorDialog;
+};
+
 export const selectSpritesheetSelectorDialog = ({ state }) => {
   return state.spritesheetSelectorDialog;
 };
 
 export const selectTempSelectedImageId = ({ state }) => {
   return state.tempSelectedImageId;
+};
+
+export const selectTempSelectedSoundId = ({ state }) => {
+  return state.tempSelectedSoundId;
 };
 
 export const selectTempSelectedSpritesheetValue = ({ state }) => {
@@ -1143,6 +1181,42 @@ const hydrateTextRevealIndicatorItem = (item, spritesheetsData) => {
   };
 };
 
+const hydrateSoundListBarItem = (item = {}, soundsData = {}) => {
+  if (!item.soundId) {
+    return item;
+  }
+
+  const soundItem = soundsData?.items?.[item.soundId];
+  return {
+    ...item,
+    soundName: soundItem?.name ?? item.soundId,
+    soundFileId: soundItem?.fileId,
+    waveformDataFileId: soundItem?.waveformDataFileId,
+  };
+};
+
+const hydrateSoundListBarItems = (sections = [], soundsData = {}) => {
+  return sections.map((section) => {
+    const nextSection = {
+      ...section,
+      items: (section.items ?? []).map((item) => {
+        if (item.type !== "list-bar" || !Array.isArray(item.items)) {
+          return item;
+        }
+
+        return {
+          ...item,
+          items: item.items.map((barItem) =>
+            hydrateSoundListBarItem(barItem, soundsData),
+          ),
+        };
+      }),
+    };
+
+    return nextSection;
+  });
+};
+
 export const selectViewData = ({ state, props, constants }) => {
   const textStyleItems = toTextStyleOptions(state.textStylesData);
   const soundItems = toSoundOptions(state.soundsData);
@@ -1153,6 +1227,10 @@ export const selectViewData = ({ state, props, constants }) => {
   const particleSelectionItems = toParticleSelectionItems(state.particlesData);
   const imageFlatItems = toFlatItems(state.imagesData);
   const imageFolderItems = imageFlatItems.filter(
+    (item) => item.type === "folder",
+  );
+  const soundFlatItems = toFlatItems(state.soundsData);
+  const soundFolderItems = soundFlatItems.filter(
     (item) => item.type === "folder",
   );
   const spritesheetFlatItems = toFlatItems(state.spritesheetsData);
@@ -1263,71 +1341,75 @@ export const selectViewData = ({ state, props, constants }) => {
   const showAspectRatioMode =
     capabilities.supportsHeight === true && !showsDirectedContainerSizeMode;
   const hasSpriteBlur = isSpriteBlurValue(values.blur);
-  const sections = annotatePanelSections(
-    parseAndRender(
-      getLayoutEditPanelSections({
-        constants,
-        resourceType: props.resourceType,
-      }),
-      {
-        itemType: props.itemType,
-        layoutType: props.layoutType,
-        resourceType: props.resourceType,
-        isInsideDirectedContainer: props.isInsideDirectedContainer === true,
-        textStyleItems,
-        textStyleItemsWithNone,
-        soundItems,
-        soundItemsWithNone,
-        spritesheetSelectionItems,
-        particleSelectionItems,
-        sliderValueOptions,
-        spritesheetSelectionValue,
-        selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
-        selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,
-        selectedSpritesheetAnimation: selectedSpritesheetPreview.animation,
-        selectedSpritesheetPreviewKey:
-          spritesheetSelectionValue ??
-          `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}:${selectedSpritesheetPreview.animation?.fps ?? ""}`,
-        fragmentLayoutOptions,
-        values,
-        showLayoutSizeSection,
-        supportsWidthMode,
-        widthMode,
-        supportsHeightMode,
-        heightMode,
-        showWidthField,
-        showHeightField,
-        showAspectRatioMode,
-        paginationSummary: getSaveLoadPaginationSummary({
-          values,
-          variablesData: state.variablesData,
+  const sections = hydrateSoundListBarItems(
+    annotatePanelSections(
+      parseAndRender(
+        getLayoutEditPanelSections({
+          constants,
+          resourceType: props.resourceType,
         }),
-        childInteractionSummary: getChildInteractionSummary(values),
-        childInteractionItems: getChildInteractionItems(values),
-        choiceItemOptions: CHOICE_ITEM_OPTIONS,
-        hasChildInteractionInheritance: hasChildInteractionInheritance(values),
-        canAddChildInteractionInheritance:
-          getAvailableChildInteractionItems(values).length > 0,
-        blurSummary: getSpriteBlurSummary(values.blur),
-        canAddSpriteBlur: !hasSpriteBlur,
-        canAddTextRevealIndicator:
-          values.textRevealIndicatorAddItems.length > 0,
-        canAddTextStyleVariant:
-          !values.hoverTextStyleId || !values.clickTextStyleId,
-        canAddSoundVariant: !values.hoverSoundId || !values.clickSoundId,
-        conditionalOverrideItems,
-        visibilityConditionSummary: getVisibilityConditionSummary(
-          currentVisibilityCondition,
-          state.variablesData,
-          visibilityConditionOptions,
-        ),
-        hasVisibilityCondition: !!currentVisibilityCondition?.target,
-        canAddSpriteImageVariant:
-          !values.imageId || !values.hoverImageId || !values.clickImageId,
-        showsGapField: showsDirectedContainerSizeMode,
-        ...capabilities,
-      },
+        {
+          itemType: props.itemType,
+          layoutType: props.layoutType,
+          resourceType: props.resourceType,
+          isInsideDirectedContainer: props.isInsideDirectedContainer === true,
+          textStyleItems,
+          textStyleItemsWithNone,
+          soundItems,
+          soundItemsWithNone,
+          spritesheetSelectionItems,
+          particleSelectionItems,
+          sliderValueOptions,
+          spritesheetSelectionValue,
+          selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
+          selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,
+          selectedSpritesheetAnimation: selectedSpritesheetPreview.animation,
+          selectedSpritesheetPreviewKey:
+            spritesheetSelectionValue ??
+            `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}:${selectedSpritesheetPreview.animation?.fps ?? ""}`,
+          fragmentLayoutOptions,
+          values,
+          showLayoutSizeSection,
+          supportsWidthMode,
+          widthMode,
+          supportsHeightMode,
+          heightMode,
+          showWidthField,
+          showHeightField,
+          showAspectRatioMode,
+          paginationSummary: getSaveLoadPaginationSummary({
+            values,
+            variablesData: state.variablesData,
+          }),
+          childInteractionSummary: getChildInteractionSummary(values),
+          childInteractionItems: getChildInteractionItems(values),
+          choiceItemOptions: CHOICE_ITEM_OPTIONS,
+          hasChildInteractionInheritance:
+            hasChildInteractionInheritance(values),
+          canAddChildInteractionInheritance:
+            getAvailableChildInteractionItems(values).length > 0,
+          blurSummary: getSpriteBlurSummary(values.blur),
+          canAddSpriteBlur: !hasSpriteBlur,
+          canAddTextRevealIndicator:
+            values.textRevealIndicatorAddItems.length > 0,
+          canAddTextStyleVariant:
+            !values.hoverTextStyleId || !values.clickTextStyleId,
+          canAddSoundVariant: !values.hoverSoundId || !values.clickSoundId,
+          conditionalOverrideItems,
+          visibilityConditionSummary: getVisibilityConditionSummary(
+            currentVisibilityCondition,
+            state.variablesData,
+            visibilityConditionOptions,
+          ),
+          hasVisibilityCondition: !!currentVisibilityCondition?.target,
+          canAddSpriteImageVariant:
+            !values.imageId || !values.hoverImageId || !values.clickImageId,
+          showsGapField: showsDirectedContainerSizeMode,
+          ...capabilities,
+        },
+      ),
     ),
+    state.soundsData,
   );
   const visibilityConditionDialogDefaults =
     createVisibilityConditionDialogDefaults(
@@ -1496,6 +1578,9 @@ export const selectViewData = ({ state, props, constants }) => {
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,
     imageFolderItems,
+    soundSelectorDialog: state.soundSelectorDialog,
+    tempSelectedSoundId: state.tempSelectedSoundId,
+    soundFolderItems,
     spritesheetSelectorDialog: state.spritesheetSelectorDialog,
     tempSelectedSpritesheetValue: state.tempSelectedSpritesheetValue,
     spritesheetFolderItems,
