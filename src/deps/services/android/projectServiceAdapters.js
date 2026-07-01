@@ -593,6 +593,7 @@ export const createAndroidProjectServiceAdapters = ({
 
   const fileAdapter = {
     continueOnUploadError: false,
+    requiresFileMetadata: true,
 
     storeFile: async ({
       file,

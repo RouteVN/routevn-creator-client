@@ -73,7 +73,7 @@ export const createProjectAssetService = ({
   getCurrentStore,
   getCurrentReference,
   getStoreByProject,
-  getCurrentRepositoryState,
+  resolveFileMetadata,
 }) => {
   const shouldSkipImageThumbnail = (options = {}) =>
     options?.skipImageThumbnail === true;
@@ -137,26 +137,21 @@ export const createProjectAssetService = ({
     };
   };
 
-  const resolveFileMetadata = (fileId) => {
-    try {
-      const repositoryState = getCurrentRepositoryState?.();
-      const fileRecord = repositoryState?.files?.items?.[fileId];
-      return fileRecord && typeof fileRecord === "object"
-        ? fileRecord
-        : undefined;
-    } catch {
-      return undefined;
-    }
-  };
-
   const getFileContent = async (fileId) => {
-    return fileAdapter.getFileContent({
+    const payload = {
       fileId,
-      fileMetadata: resolveFileMetadata(fileId),
       getCurrentStore,
       getCurrentReference,
       getStoreByProject,
-    });
+    };
+    if (
+      fileAdapter.requiresFileMetadata === true &&
+      typeof resolveFileMetadata === "function"
+    ) {
+      payload.fileMetadata = resolveFileMetadata(fileId);
+    }
+
+    return fileAdapter.getFileContent(payload);
   };
 
   const processFile = async (file, options = {}) => {
