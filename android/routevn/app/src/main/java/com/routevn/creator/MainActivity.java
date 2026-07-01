@@ -1255,7 +1255,7 @@ public class MainActivity extends Activity {
             projectDbFile,
             exportRootUri,
             "project.db",
-            "application/vnd.sqlite3"
+            "application/octet-stream"
         );
 
         Uri filesUri = createChildDirectory(exportRootUri, "files");
