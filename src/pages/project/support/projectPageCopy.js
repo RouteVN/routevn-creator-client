@@ -28,7 +28,7 @@ export const PROJECT_PAGE_COPY = Object.freeze({
 
 export const selectProjectPageCopy = (i18n = {}) => ({
   ...PROJECT_PAGE_COPY,
-  ...(i18n.projectPage ?? {}),
+  ...i18n.projectPage,
 });
 
 export const formatProjectPageCopy = (template, replacements = {}) => {

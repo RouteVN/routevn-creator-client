@@ -94,7 +94,7 @@ export const PROJECTS_PAGE_COPY = Object.freeze({
 
 export const selectProjectsPageCopy = (i18n = {}) => ({
   ...PROJECTS_PAGE_COPY,
-  ...(i18n.projectsPage ?? {}),
+  ...i18n.projectsPage,
 });
 
 export const hasProjectsPageI18n = (i18n = {}) => {
