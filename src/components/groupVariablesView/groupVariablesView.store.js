@@ -426,15 +426,22 @@ export const selectViewData = ({ state, props }) => {
       return true;
     }
 
-    const scope = (item.scope || "").toLowerCase();
-    const variableType = (item.variableType || "").toLowerCase();
-    const defaultValue = String(item.default ?? "").toLowerCase();
+    const scope = item.scope || "context";
+    const variableType = item.variableType || "string";
+    const defaultValue =
+      typeof item.default === "boolean"
+        ? getBooleanLabel(item.default, copy)
+        : String(item.default ?? "");
+    const searchTerms = [
+      scope,
+      getScopeLabel(scope, copy),
+      variableType,
+      getVariableTypeLabel(variableType, copy),
+      String(item.default ?? ""),
+      defaultValue,
+    ];
 
-    return (
-      scope.includes(searchQuery) ||
-      variableType.includes(searchQuery) ||
-      defaultValue.includes(searchQuery)
-    );
+    return searchTerms.some((term) => term.toLowerCase().includes(searchQuery));
   };
 
   // Apply collapsed state and search filtering to flatGroups
