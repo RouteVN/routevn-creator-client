@@ -2,6 +2,10 @@ import {
   getRecentSceneIds,
   recordRecentSceneVisit,
 } from "../../internal/ui/recentScenes.js";
+import {
+  createNavigationTiming,
+  logNavigationInteractionTiming,
+} from "../../internal/navigationTiming.js";
 
 const resolveProjectId = (appService) => {
   return (
@@ -62,8 +66,37 @@ export const handleItemClick = (deps, payload = {}) => {
     });
   }
 
+  const timing = createNavigationTiming({
+    appService,
+    source: "mobile-sidebar.item.click",
+    path: item.path,
+    payload: nextPayload,
+    event: payload._event,
+    data: { itemId },
+  });
   subject.dispatch("redirect", {
     path: item.path,
     payload: nextPayload,
+    timing,
+  });
+};
+
+export const handleItemPointerDown = (deps, payload = {}) => {
+  const { appService } = deps;
+  logNavigationInteractionTiming({
+    appService,
+    source: "mobile-sidebar.item.pointerdown",
+    event: payload._event,
+    data: { itemId: payload._event.currentTarget.dataset.itemId },
+  });
+};
+
+export const handleItemPointerUp = (deps, payload = {}) => {
+  const { appService } = deps;
+  logNavigationInteractionTiming({
+    appService,
+    source: "mobile-sidebar.item.pointerup",
+    event: payload._event,
+    data: { itemId: payload._event.currentTarget.dataset.itemId },
   });
 };

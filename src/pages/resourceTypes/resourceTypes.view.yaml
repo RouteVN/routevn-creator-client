@@ -1,6 +1,10 @@
 refs:
   item*:
     eventListeners:
+      pointerdown:
+        handler: handleItemPointerDown
+      pointerup:
+        handler: handleItemPointerUp
       click:
         handler: handleItemClick
 template:

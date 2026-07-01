@@ -1,5 +1,6 @@
 import { createAppServiceCore } from "../shared/appServiceCore.js";
 import { callAndroidBridge } from "../../clients/android/bridge.js";
+import { getAndroidProjectFileUrl } from "./projectFileUrls.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 
@@ -82,22 +83,14 @@ export const createAppService = (params) => {
 
     mapProjectEntryToProject: () => ({}),
 
-    loadProjectIcon: async ({ entry, projectService }) => {
-      if (!entry?.iconFileId) return null;
+    loadProjectIcon: async ({ entry }) => {
+      if (!entry?.id || !entry?.iconFileId) return null;
 
       try {
-        const blob = await projectService.getFileByProjectId(
-          entry.id,
-          entry.iconFileId,
-        );
-        if (!blob) {
-          return null;
-        }
-        const url = URL.createObjectURL(blob);
-        return {
-          url,
-          cleanup: () => URL.revokeObjectURL(url),
-        };
+        return getAndroidProjectFileUrl({
+          projectId: entry.id,
+          fileId: entry.iconFileId,
+        });
       } catch (error) {
         console.error("Failed to load project icon:", error);
         return null;
@@ -214,7 +207,9 @@ export const createAppService = (params) => {
           entry: projectEntry,
           projectService,
         });
-        if (iconResult?.url) {
+        if (typeof iconResult === "string") {
+          fullProject.iconUrl = iconResult;
+        } else if (iconResult?.url) {
           fullProject.iconUrl = iconResult.url;
         }
       }

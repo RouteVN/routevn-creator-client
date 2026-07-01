@@ -1,4 +1,8 @@
 import { base64ToUint8Array, callAndroidBridge } from "./bridge.js";
+import {
+  getNavigationTimingNow,
+  logAndroidBridgeTiming,
+} from "../../../internal/navigationTiming.js";
 
 const isByteNumber = (value) =>
   typeof value === "number" &&
@@ -86,12 +90,29 @@ export const createAndroidSqliteConnection = ({ dbPath }) => {
     },
 
     async select(sql, args = []) {
-      const rows = callAndroidBridge("sqliteQuery", {
-        dbPath,
-        sql,
-        args: normalizeArgs(args),
-      });
-      return normalizeSqlResultRows(rows);
+      const startedAt = getNavigationTimingNow();
+      let ok = false;
+      let resultSize;
+      try {
+        const rows = callAndroidBridge("sqliteQuery", {
+          dbPath,
+          sql,
+          args: normalizeArgs(args),
+        });
+        const normalizedRows = normalizeSqlResultRows(rows);
+        resultSize = Array.isArray(normalizedRows)
+          ? normalizedRows.length
+          : undefined;
+        ok = true;
+        return normalizedRows;
+      } finally {
+        logAndroidBridgeTiming({
+          method: "sqlite.select.total",
+          durationMs: getNavigationTimingNow() - startedAt,
+          resultSize,
+          ok,
+        });
+      }
     },
 
     async execute(sql, args = []) {

@@ -1,4 +1,8 @@
 import { filter, tap } from "rxjs";
+import {
+  createNavigationTiming,
+  markNavigationTiming,
+} from "../../internal/navigationTiming.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -29,18 +33,34 @@ export const handleAfterMount = async (deps) => {
 export const handleItemClick = async (deps, payload) => {
   const { subject, appService } = deps;
   const currentPayload = appService.getPayload();
+  const path = payload._event.detail.item.id;
+  const timing = createNavigationTiming({
+    appService,
+    source: "sidebar.item-click",
+    path,
+    payload: currentPayload,
+    event: payload._event,
+  });
   subject.dispatch("redirect", {
-    path: payload._event.detail.item.id,
+    path,
     payload: currentPayload, // Pass through current payload (including projectId)
+    timing,
   });
 };
 
 export const handleHeaderClick = (deps) => {
   const { subject, appService } = deps;
   const currentPayload = appService.getPayload();
+  const timing = createNavigationTiming({
+    appService,
+    source: "sidebar.header-click",
+    path: "/project",
+    payload: currentPayload,
+  });
   subject.dispatch("redirect", {
     path: "/project",
     payload: currentPayload, // Pass through current payload (including projectId)
+    timing,
   });
 };
 
@@ -61,9 +81,11 @@ const subscriptions = (deps) => {
     ),
     subject.pipe(
       filter(({ action }) => action === "redirect"),
-      tap(() => {
+      tap(({ payload }) => {
         // Small delay to ensure route has changed
+        markNavigationTiming(payload?.timing, "sidebar.redirect.render.start");
         render();
+        markNavigationTiming(payload?.timing, "sidebar.redirect.render.end");
       }),
     ),
   ];

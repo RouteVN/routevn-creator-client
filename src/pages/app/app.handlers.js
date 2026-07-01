@@ -12,6 +12,13 @@ import {
   getProjectOpenErrorMessage,
   isIncompatibleProjectOpenError,
 } from "../../internal/projectOpenErrors.js";
+import {
+  createNavigationTiming,
+  finishNavigationTiming,
+  logNavigationInteractionTiming,
+  markNavigationPaintTiming,
+  markNavigationTiming,
+} from "../../internal/navigationTiming.js";
 import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
@@ -125,19 +132,46 @@ const mountSubscriptions = (deps) => {
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
 };
 
+const renderWithNavigationTiming = ({ render, timing, event }) => {
+  markNavigationTiming(timing, `${event}.render.start`);
+  render();
+  markNavigationTiming(timing, `${event}.render.end`);
+  markNavigationPaintTiming(timing, `${event}.paint`);
+};
+
 const createRouteTransitionRunner = (deps) => {
   let transitionToken = 0;
 
-  return async ({ path, payload, shouldUpdateHistory = false } = {}) => {
+  return async ({
+    path,
+    payload,
+    shouldUpdateHistory = false,
+    timing,
+  } = {}) => {
     const { appService, projectService, store, render } = deps;
     const currentTransitionToken = ++transitionToken;
     const nextPayload = normalizePayload(payload);
     const canonicalPath = getCanonicalRoutePath(path);
+    const routeTiming =
+      timing ??
+      createNavigationTiming({
+        appService,
+        source: "route.transition",
+        path: canonicalPath,
+        payload: nextPayload,
+      });
+    markNavigationTiming(routeTiming, "route.transition.start", {
+      shouldUpdateHistory,
+      requestedPath: path,
+      canonicalPath,
+    });
 
     if (shouldUpdateHistory) {
       appService.redirect(canonicalPath, nextPayload);
+      markNavigationTiming(routeTiming, "route.history.redirected");
     } else if (canonicalPath !== path) {
       appService.replace(canonicalPath, nextPayload);
+      markNavigationTiming(routeTiming, "route.history.replaced");
     }
 
     const currentProjectId = appService.getCurrentProjectId();
@@ -158,6 +192,13 @@ const createRouteTransitionRunner = (deps) => {
     const shouldReleaseEnsuredRepository =
       !!ensuredProjectId &&
       (!needsRepository || ensuredProjectId !== currentProjectId);
+    markNavigationTiming(routeTiming, "route.state.resolved", {
+      currentProjectId,
+      ensuredProjectId,
+      needsRepository,
+      isAlreadyEnsured,
+      shouldReleaseEnsuredRepository,
+    });
     store.setCurrentRoute({ route: canonicalPath });
     store.closeMobileSheet();
     store.setRepositoryLoading({
@@ -168,10 +209,20 @@ const createRouteTransitionRunner = (deps) => {
         phase: "Refreshing project entry...",
       });
     }
-    render();
+    renderWithNavigationTiming({
+      render,
+      timing: routeTiming,
+      event: "route.initial",
+    });
 
     if (shouldReleaseEnsuredRepository) {
+      markNavigationTiming(routeTiming, "repository.release.start", {
+        ensuredProjectId,
+      });
       await projectService.releaseProjectRuntime(ensuredProjectId);
+      markNavigationTiming(routeTiming, "repository.release.end", {
+        ensuredProjectId,
+      });
     }
 
     if (!needsRepository) {
@@ -180,13 +231,24 @@ const createRouteTransitionRunner = (deps) => {
       }
 
       void appService.refreshCurrentProjectEntry();
+      markNavigationTiming(routeTiming, "project-entry.refresh.detached");
       store.setRepositoryLoading({ isLoading: false });
-      render();
+      renderWithNavigationTiming({
+        render,
+        timing: routeTiming,
+        event: "route.non-project-final",
+      });
+      finishNavigationTiming(routeTiming, "route.transition.complete", {
+        needsRepository,
+      });
       return;
     }
 
     try {
+      markNavigationTiming(routeTiming, "project-entry.refresh.start");
       await appService.refreshCurrentProjectEntry();
+      markNavigationTiming(routeTiming, "project-entry.refresh.end");
+      markNavigationTiming(routeTiming, "repository.ensure.start");
       await projectService.ensureRepository({
         onLoadStage: ({ label } = {}) => {
           if (currentTransitionToken !== transitionToken) {
@@ -201,7 +263,11 @@ const createRouteTransitionRunner = (deps) => {
               current: 0,
               total: 0,
             });
-            render();
+            renderWithNavigationTiming({
+              render,
+              timing: routeTiming,
+              event: "repository.load-stage",
+            });
           }
         },
         onEventLoadProgress: ({ current, total, label } = {}) => {
@@ -219,7 +285,11 @@ const createRouteTransitionRunner = (deps) => {
             current,
             total,
           });
-          render();
+          renderWithNavigationTiming({
+            render,
+            timing: routeTiming,
+            event: "repository.event-progress",
+          });
         },
         onHydrationProgress: ({ current, total } = {}) => {
           if (currentTransitionToken !== transitionToken) {
@@ -234,21 +304,36 @@ const createRouteTransitionRunner = (deps) => {
             current,
             total,
           });
-          render();
+          renderWithNavigationTiming({
+            render,
+            timing: routeTiming,
+            event: "repository.hydration-progress",
+          });
         },
       });
+      markNavigationTiming(routeTiming, "repository.ensure.end");
 
       if (currentTransitionToken !== transitionToken) {
         return;
       }
 
       store.setRepositoryLoading({ isLoading: false });
-      render();
+      renderWithNavigationTiming({
+        render,
+        timing: routeTiming,
+        event: "route.project-final",
+      });
+      finishNavigationTiming(routeTiming, "route.transition.complete", {
+        needsRepository,
+      });
     } catch (error) {
       if (currentTransitionToken !== transitionToken) {
         return;
       }
 
+      markNavigationTiming(routeTiming, "route.transition.error", {
+        message: error?.message,
+      });
       store.setRepositoryLoading({ isLoading: false });
       if (isIncompatibleProjectOpenError(error)) {
         await appService.showAlert({
@@ -261,7 +346,15 @@ const createRouteTransitionRunner = (deps) => {
       }
       appService.redirect("/projects");
       store.setCurrentRoute({ route: "/projects" });
-      render();
+      renderWithNavigationTiming({
+        render,
+        timing: routeTiming,
+        event: "route.error-final",
+      });
+      finishNavigationTiming(routeTiming, "route.transition.complete", {
+        needsRepository,
+        error: true,
+      });
     }
   };
 };
@@ -347,8 +440,14 @@ export const handleHelpFloatingButtonClick = (deps) => {
 };
 
 export const handleMobileTabClick = (deps, payload = {}) => {
-  const { store, render } = deps;
+  const { appService, store, render } = deps;
   const tabId = payload._event.currentTarget.dataset.tabId;
+  logNavigationInteractionTiming({
+    appService,
+    source: "app.mobile-tab.click",
+    event: payload._event,
+    data: { tabId },
+  });
 
   if (
     tabId === "assets" ||
@@ -356,9 +455,41 @@ export const handleMobileTabClick = (deps, payload = {}) => {
     tabId === "release" ||
     tabId === "settings"
   ) {
+    const timing = createNavigationTiming({
+      appService,
+      source: "app.mobile-tab.open-sheet",
+      path: `mobile-sheet:${tabId}`,
+      event: payload._event,
+      data: { tabId },
+    });
     store.openMobileSheet({ variant: tabId });
-    render();
+    renderWithNavigationTiming({
+      render,
+      timing,
+      event: "mobile-sheet.open",
+    });
+    finishNavigationTiming(timing, "mobile-sheet.open.complete");
   }
+};
+
+export const handleMobileTabPointerDown = (deps, payload = {}) => {
+  const { appService } = deps;
+  logNavigationInteractionTiming({
+    appService,
+    source: "app.mobile-tab.pointerdown",
+    event: payload._event,
+    data: { tabId: payload._event.currentTarget.dataset.tabId },
+  });
+};
+
+export const handleMobileTabPointerUp = (deps, payload = {}) => {
+  const { appService } = deps;
+  logNavigationInteractionTiming({
+    appService,
+    source: "app.mobile-tab.pointerup",
+    event: payload._event,
+    data: { tabId: payload._event.currentTarget.dataset.tabId },
+  });
 };
 
 export const handleMobileSheetClose = (deps) => {
@@ -392,13 +523,30 @@ const subscriptions = (deps) => {
         const nextPayload = shouldUpdateHistory
           ? payload.payload
           : payload?.payload;
+        const timing =
+          payload?.timing ??
+          createNavigationTiming({
+            appService,
+            source: `subject.${action}`,
+            path,
+            payload: nextPayload,
+          });
+        markNavigationTiming(timing, "route.subscription.received", {
+          action,
+          shouldUpdateHistory:
+            shouldUpdateHistory || !!payload?.shouldUpdateHistory,
+        });
 
         runRouteTransition({
           path,
           payload: nextPayload,
           shouldUpdateHistory:
             shouldUpdateHistory || !!payload?.shouldUpdateHistory,
+          timing,
         }).catch((error) => {
+          markNavigationTiming(timing, "route.subscription.error", {
+            message: error?.message,
+          });
           console.error("Failed to navigate:", error);
         });
       }),

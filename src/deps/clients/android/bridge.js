@@ -1,3 +1,8 @@
+import {
+  getNavigationTimingNow,
+  logAndroidBridgeTiming,
+} from "../../../internal/navigationTiming.js";
+
 const getAndroidBridge = () => {
   const bridge = window.RouteVNAndroid;
   if (!bridge) {
@@ -6,31 +11,60 @@ const getAndroidBridge = () => {
   return bridge;
 };
 
+const getBridgeResultSize = (value) => {
+  if (Array.isArray(value) || typeof value === "string") {
+    return value.length;
+  }
+
+  if (value && typeof value === "object") {
+    return Object.keys(value).length;
+  }
+
+  return undefined;
+};
+
 export const callAndroidBridge = (method, payload = {}) => {
+  const startedAt = getNavigationTimingNow();
   const bridge = getAndroidBridge();
   const fn = bridge[method];
   if (typeof fn !== "function") {
     throw new Error(`Android bridge method is not available: ${method}`);
   }
 
-  const rawResult = fn.call(bridge, JSON.stringify(payload));
-  let result;
+  let ok = false;
+  let errorCode;
+  let resultSize;
   try {
-    result = JSON.parse(rawResult);
-  } catch {
-    throw new Error(`Android bridge returned invalid JSON for ${method}.`);
-  }
+    const rawResult = fn.call(bridge, JSON.stringify(payload));
+    let result;
+    try {
+      result = JSON.parse(rawResult);
+    } catch {
+      throw new Error(`Android bridge returned invalid JSON for ${method}.`);
+    }
 
-  if (!result?.ok) {
-    const error = new Error(
-      result?.error?.message || `Android bridge call failed: ${method}`,
-    );
-    error.code = result?.error?.code;
-    error.details = result?.error?.details;
-    throw error;
-  }
+    ok = !!result?.ok;
+    if (!ok) {
+      const error = new Error(
+        result?.error?.message || `Android bridge call failed: ${method}`,
+      );
+      error.code = result?.error?.code;
+      error.details = result?.error?.details;
+      errorCode = error.code;
+      throw error;
+    }
 
-  return result.value;
+    resultSize = getBridgeResultSize(result.value);
+    return result.value;
+  } finally {
+    logAndroidBridgeTiming({
+      method,
+      durationMs: getNavigationTimingNow() - startedAt,
+      resultSize,
+      ok,
+      errorCode,
+    });
+  }
 };
 
 export const uint8ArrayToBase64 = (bytes) => {

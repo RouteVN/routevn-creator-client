@@ -486,6 +486,11 @@ public class MainActivity extends Activity {
 
     private final class AndroidBridge {
         @JavascriptInterface
+        public boolean isDebugBuild() {
+            return BuildConfig.DEBUG;
+        }
+
+        @JavascriptInterface
         public void updateBackState(boolean canGoBack) {
             canGoBackInWebApp = canGoBack;
         }
