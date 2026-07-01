@@ -100,7 +100,7 @@ steps:
     value: -1
   - action: screenshot
   - action: select
-    selector: "#detailView > div"
+    selector: "#detailImage"
     steps:
       - action: click
   - action: wait
@@ -182,7 +182,15 @@ steps:
     ms: 600
   - action: screenshot
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
       - action: write
@@ -191,11 +199,19 @@ steps:
     ms: 350
   - action: screenshot
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
   - action: wait
     ms: 250
+  - action: select
+    selector: "#tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover"
+    state: hidden
+    timeoutMs: 5000
   - action: waitFor
     selector: "#uploadBtnHeaderRef0"
     state: visible
@@ -217,13 +233,29 @@ steps:
   - action: wait
     ms: 1000
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
       - action: write
         value: spritesheet
   - action: wait
     ms: 400
+  - action: select
+    selector: "#tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover"
+    state: hidden
+    timeoutMs: 5000
   - action: waitFor
     selector: "#groupview #itemRef0x0[data-item-id]:not([data-item-id=''])"
     state: visible
@@ -287,7 +319,15 @@ steps:
     ms: 500
   - action: screenshot
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
       - action: write
@@ -296,11 +336,19 @@ steps:
     ms: 350
   - action: screenshot
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
   - action: wait
     ms: 250
+  - action: select
+    selector: "#tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover"
+    state: hidden
+    timeoutMs: 5000
   - action: setViewport
     width: 1440
     height: 560
