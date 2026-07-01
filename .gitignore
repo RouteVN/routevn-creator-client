@@ -16,7 +16,6 @@ static/bundle/main.js
 /test-versions
 /test-update-server
 /src-tauri/*.bak
-/src-tauri/steam-runtime/
 .env
 /.rettangoli/
 /.artifacts/
