@@ -3,58 +3,75 @@ import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerD
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { isFragmentLayout } from "../../internal/project/layout.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+import { selectLayoutsPageCopy } from "./support/layoutsPageCopy.js";
 
 export const LAYOUT_TAG_SCOPE_KEY = "layouts";
 
-const fragmentField = {
+const createFragmentField = (copy = {}) => ({
   name: "isFragment",
   type: "segmented-control",
-  label: "Can Be Used As Fragment",
+  label: copy.canBeUsedAsFragmentLabel ?? "Can Be Used As Fragment",
   clearable: false,
   options: [
-    { value: false, label: "No" },
-    { value: true, label: "Yes" },
+    { value: false, label: copy.noLabel ?? "No" },
+    { value: true, label: copy.yesLabel ?? "Yes" },
   ],
-};
+});
 
-const layoutDescriptionField = {
+const createLayoutDescriptionField = (copy = {}) => ({
   name: "description",
   type: "input-textarea",
-  label: "Description",
-};
+  label: copy.descriptionLabel ?? "Description",
+});
 
-const layoutForm = {
-  title: "Add Layout",
+const createLayoutTypeOptions = (copy = {}) => [
+  { value: "general", label: copy.layoutTypeGeneral ?? "General" },
+  { value: "input", label: copy.layoutTypeInput ?? "Input" },
+  { value: "save-load", label: copy.layoutTypeSaveLoad ?? "Save / Load" },
+  {
+    value: "confirmDialog",
+    label: copy.layoutTypeConfirmDialog ?? "Confirm Dialog",
+  },
+  { value: "history", label: copy.layoutTypeHistory ?? "History" },
+  {
+    value: "dialogue-adv",
+    label: copy.layoutTypeDialogueAdv ?? "Dialogue ADV",
+  },
+  {
+    value: "dialogue-nvl",
+    label: copy.layoutTypeDialogueNvl ?? "Dialogue NVL",
+  },
+  { value: "choice", label: copy.layoutTypeChoice ?? "Choice" },
+];
+
+const createLayoutForm = (copy = {}) => ({
+  title: copy.addTitle ?? "Add Layout",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Layout Name",
+      label: copy.layoutNameLabel ?? "Layout Name",
       required: true,
     },
     {
       name: "layoutType",
       type: "select",
-      label: "Layout Type",
+      label: copy.layoutTypeLabel ?? "Layout Type",
       required: true,
-      options: [
-        { value: "general", label: "General" },
-        { value: "input", label: "Input" },
-        { value: "save-load", label: "Save / Load" },
-        { value: "confirmDialog", label: "Confirm Dialog" },
-        { value: "history", label: "History" },
-        { value: "dialogue-adv", label: "Dialogue ADV" },
-        { value: "dialogue-nvl", label: "Dialogue NVL" },
-        { value: "choice", label: "Choice" },
-      ],
+      options: createLayoutTypeOptions(copy),
       tooltip: {
         content:
+          copy.layoutTypeTooltip ??
           "General is the flexible layout type for backgrounds, menus, and other all-purpose screens. Input is used for form input layouts. Save / Load is used for save-slot based save and load screens. Confirm Dialog is used for compact confirmation prompts with OK and Cancel areas. History is used for dialogue history overlays. Dialogue ADV is used for ADV mode text dialogue layout. Dialogue NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
       },
     },
-    layoutDescriptionField,
-    createTagField(),
-    fragmentField,
+    createLayoutDescriptionField(copy),
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
+    createFragmentField(copy),
   ],
   actions: {
     layout: "",
@@ -62,24 +79,28 @@ const layoutForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Add Layout",
+        label: copy.addButton ?? "Add Layout",
       },
     ],
   },
-};
+});
 
-const editLayoutForm = {
-  title: "Edit Layout",
+const createEditLayoutForm = (copy = {}) => ({
+  title: copy.editTitle ?? "Edit Layout",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Layout Name",
+      label: copy.layoutNameLabel ?? "Layout Name",
       required: true,
     },
-    layoutDescriptionField,
-    createTagField(),
-    fragmentField,
+    createLayoutDescriptionField(copy),
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
+    createFragmentField(copy),
   ],
   actions: {
     layout: "",
@@ -87,40 +108,61 @@ const editLayoutForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Save",
+        label: copy.saveButton ?? "Save",
       },
     ],
   },
-};
+});
 
-const layoutExplorerItemContextMenuItems = [
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Duplicate", type: "item", value: "duplicate-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createLayoutExplorerItemContextMenuItems = (copy = {}) => [
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.duplicateMenuItem ?? "Duplicate",
+    type: "item",
+    value: "duplicate-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const layoutCenterItemContextMenuItems = [
-  { label: "Duplicate", type: "item", value: "duplicate-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createLayoutCenterItemContextMenuItems = (copy = {}) => [
+  {
+    label: copy.duplicateMenuItem ?? "Duplicate",
+    type: "item",
+    value: "duplicate-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const layoutTypeLabels = {
-  general: "General",
-  input: "Input",
-  "save-load": "Save / Load",
-  confirmDialog: "Confirm Dialog",
-  history: "History",
-  "dialogue-adv": "Dialogue ADV",
-  "dialogue-nvl": "Dialogue NVL",
-  choice: "Choice",
-};
+const createLayoutTypeLabels = (copy = {}) => ({
+  general: copy.layoutTypeGeneral ?? "General",
+  input: copy.layoutTypeInput ?? "Input",
+  "save-load": copy.layoutTypeSaveLoad ?? "Save / Load",
+  confirmDialog: copy.layoutTypeConfirmDialog ?? "Confirm Dialog",
+  history: copy.layoutTypeHistory ?? "History",
+  "dialogue-adv": copy.layoutTypeDialogueAdv ?? "Dialogue ADV",
+  "dialogue-nvl": copy.layoutTypeDialogueNvl ?? "Dialogue NVL",
+  choice: copy.layoutTypeChoice ?? "Choice",
+});
 
-const buildDetailFields = (item) => {
+const buildDetailFields = (item, { copy = {} } = {}) => {
   if (!item || item.type !== "layout") {
     return [];
   }
 
   const layoutType = item.layoutType;
+  const layoutTypeLabels = createLayoutTypeLabels(copy);
   const fields = [
     {
       type: "slot",
@@ -128,18 +170,20 @@ const buildDetailFields = (item) => {
     },
     {
       type: "text",
-      label: "Layout Type",
+      label: copy.layoutTypeLabel ?? "Layout Type",
       value: layoutTypeLabels[layoutType] ?? layoutType ?? "",
     },
     {
       type: "text",
-      label: "Fragment",
-      value: isFragmentLayout(item) ? "Yes" : "No",
+      label: copy.fragmentLabel ?? "Fragment",
+      value: isFragmentLayout(item)
+        ? (copy.yesLabel ?? "Yes")
+        : (copy.noLabel ?? "No"),
     },
     {
       type: "slot",
       slot: "layout-tags",
-      label: "Tags",
+      label: copy.tagsLabel ?? "Tags",
     },
   ];
 
@@ -153,8 +197,9 @@ const buildDetailFields = (item) => {
   return fields;
 };
 
-const buildCatalogItem = (item) => {
+const buildCatalogItem = (item, { copy = {} } = {}) => {
   const layoutType = item.layoutType;
+  const layoutTypeLabels = createLayoutTypeLabels(copy);
   const typeInfo = layoutTypeLabels[layoutType] ?? layoutType ?? "";
 
   return {
@@ -199,7 +244,7 @@ const {
   selectedResourceId: "layouts",
   resourceCategory: "userInterface",
   addText: "Add",
-  centerItemContextMenuItems: layoutCenterItemContextMenuItems,
+  copy: selectLayoutsPageCopy,
   matchesSearch: matchesTagAwareSearch,
   buildDetailFields,
   buildCatalogItem,
@@ -207,11 +252,13 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
-  extendViewData: ({ state, baseViewData }) => ({
+  extendViewData: ({ state, baseViewData, copy }) => ({
     ...baseViewData,
-    itemContextMenuItems: layoutExplorerItemContextMenuItems,
+    itemContextMenuItems: createLayoutExplorerItemContextMenuItems(copy),
+    centerItemContextMenuItems: createLayoutCenterItemContextMenuItems(copy),
+    openLayoutEditorButton: copy.openLayoutEditorButton ?? "Open Layout Editor",
     isAddDialogOpen: state.isAddDialogOpen,
-    layoutForm,
+    layoutForm: createLayoutForm(copy),
     layoutFormDefaults: {
       name: "",
       layoutType: "general",
@@ -299,12 +346,13 @@ export const closeEditDialog = ({ state }, _payload = {}) => {
 export const selectViewData = (context) => {
   const viewData = selectCatalogViewData(context);
   const flatItems = applyFolderRequiredRootDragOptions(viewData.flatItems);
+  const copy = selectLayoutsPageCopy(context.i18n);
 
   return {
     ...viewData,
     isEditDialogOpen: context.state.isEditDialogOpen,
     editDefaultValues: context.state.editDefaultValues,
-    editForm: editLayoutForm,
+    editForm: createEditLayoutForm(copy),
     flatItems,
   };
 };

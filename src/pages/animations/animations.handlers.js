@@ -13,6 +13,7 @@ import {
 import { toFlatItems } from "../../internal/project/tree.js";
 import { createAnimationEditorPayload } from "../../internal/animationEditorRoute.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -25,8 +26,11 @@ import {
   renderSelectedAnimationPreview,
   stopAnimationPreviewPlayback,
 } from "./support/animationPreviewRuntime.js";
+import { selectAnimationsPageCopy } from "./support/animationsPageCopy.js";
 
 const DEFAULT_IMPORTED_ANIMATION_NAME = "Imported Animation";
+
+const selectCopy = (deps = {}) => selectAnimationsPageCopy(deps.i18n);
 
 const clonePlainData = (value) => {
   return isPlainObject(value) ? structuredClone(value) : {};
@@ -142,18 +146,28 @@ const getImportItemLabel = (item, fallback) => {
   return item?.name ?? item?.id ?? fallback;
 };
 
-const getAnimationItemValidationMessage = (item) => {
+const getAnimationItemValidationMessage = (item, copy = {}) => {
   if (!isPlainObject(item) || item.type !== "animation") {
-    return "No animation found to import.";
+    return copy.noAnimationFoundToImport ?? "No animation found to import.";
   }
 
-  const label = getImportItemLabel(item, "Imported animation");
+  const label = getImportItemLabel(
+    item,
+    copy.importedAnimationFallback ?? "Imported animation",
+  );
   if (item.name !== undefined && typeof item.name !== "string") {
-    return `Animation "${label}" name must be text.`;
+    return formatI18nCopy(
+      copy.animationNameMustBeText ?? 'Animation "{label}" name must be text.',
+      { label },
+    );
   }
 
   if (item.description !== undefined && typeof item.description !== "string") {
-    return `Animation "${label}" description must be text.`;
+    return formatI18nCopy(
+      copy.animationDescriptionMustBeText ??
+        'Animation "{label}" description must be text.',
+      { label },
+    );
   }
 
   if (
@@ -161,15 +175,27 @@ const getAnimationItemValidationMessage = (item) => {
     (!Array.isArray(item.tagIds) ||
       item.tagIds.some((tagId) => typeof tagId !== "string"))
   ) {
-    return `Animation "${label}" tags must be text ids.`;
+    return formatI18nCopy(
+      copy.animationTagsMustBeTextIds ??
+        'Animation "{label}" tags must be text ids.',
+      { label },
+    );
   }
 
   if (!isPlainObject(item.animation)) {
-    return `Animation "${label}" is missing animation data.`;
+    return formatI18nCopy(
+      copy.animationDataMissing ??
+        'Animation "{label}" is missing animation data.',
+      { label },
+    );
   }
 
   if (!["update", "transition"].includes(item.animation.type)) {
-    return `Animation "${label}" has an unsupported animation type.`;
+    return formatI18nCopy(
+      copy.unsupportedAnimationType ??
+        'Animation "{label}" has an unsupported animation type.',
+      { label },
+    );
   }
 
   return undefined;
@@ -178,6 +204,7 @@ const getAnimationItemValidationMessage = (item) => {
 const getAnimationImageDependencyValidationMessage = ({
   importInput,
   animationItems,
+  copy = {},
 } = {}) => {
   const imageIds = collectAnimationImageIds(animationItems);
   if (imageIds.size === 0) {
@@ -188,10 +215,19 @@ const getAnimationImageDependencyValidationMessage = ({
   for (const imageId of imageIds) {
     const imageItem = imageItemsById[imageId];
     if (!isPlainObject(imageItem) || imageItem.type !== "image") {
-      return `Image dependency "${imageId}" is missing from the package.`;
+      return formatI18nCopy(
+        copy.imageDependencyMissing ??
+          'Image dependency "{imageId}" is missing from the package.',
+        { imageId },
+      );
     }
 
-    const label = `Image dependency "${getImportItemLabel(imageItem, imageId)}"`;
+    const label = formatI18nCopy(
+      copy.imageDependencyLabel ?? 'Image dependency "{label}"',
+      {
+        label: getImportItemLabel(imageItem, imageId),
+      },
+    );
     try {
       validateImportFileDescriptor({
         importInput,
@@ -201,7 +237,11 @@ const getAnimationImageDependencyValidationMessage = ({
     } catch (error) {
       return getImportErrorMessage(
         error,
-        `${label} has invalid file metadata.`,
+        formatI18nCopy(
+          copy.imageDependencyInvalidFileMetadata ??
+            "{label} has invalid file metadata.",
+          { label },
+        ),
       );
     }
   }
@@ -212,19 +252,23 @@ const getAnimationImageDependencyValidationMessage = ({
 const getAnimationImportValidationMessage = ({
   importInput,
   animationItems,
+  copy = {},
 } = {}) => {
   try {
     validateImportPackageObject(importInput);
   } catch (error) {
-    return getImportErrorMessage(error, "Import package is invalid.");
+    return getImportErrorMessage(
+      error,
+      copy.importPackageInvalid ?? "Import package is invalid.",
+    );
   }
 
   if (animationItems.length === 0) {
-    return "No animation found to import.";
+    return copy.noAnimationFoundToImport ?? "No animation found to import.";
   }
 
   for (const item of animationItems) {
-    const itemMessage = getAnimationItemValidationMessage(item);
+    const itemMessage = getAnimationItemValidationMessage(item, copy);
     if (itemMessage) {
       return itemMessage;
     }
@@ -233,6 +277,7 @@ const getAnimationImportValidationMessage = ({
   return getAnimationImageDependencyValidationMessage({
     importInput,
     animationItems,
+    copy,
   });
 };
 
@@ -241,6 +286,7 @@ const importImageDependencies = async ({
   projectService,
   imageParentId,
   animationItems,
+  copy = {},
 } = {}) => {
   const imageIdMap = new Map();
   const imageIds = collectAnimationImageIds(animationItems);
@@ -250,7 +296,12 @@ const importImageDependencies = async ({
     const fileDescriptor = validateImportFileDescriptor({
       importInput,
       fileId: imageItem.fileId,
-      label: `Image dependency "${imageItem.name ?? imageItem.id}"`,
+      label: formatI18nCopy(
+        copy.imageDependencyLabel ?? 'Image dependency "{label}"',
+        {
+          label: imageItem.name ?? imageItem.id,
+        },
+      ),
     });
 
     const file = await downloadImportFile(fileDescriptor);
@@ -316,12 +367,16 @@ const removeImportedResourceMetadata = (data) => {
   delete data.children;
 };
 
-const normalizeImportedAnimationData = (item, { imageIdMap } = {}) => {
+const normalizeImportedAnimationData = (
+  item,
+  { imageIdMap, copy = {} } = {},
+) => {
   const data = clonePlainData(item);
   removeImportedResourceMetadata(data);
 
   data.type = "animation";
-  data.name = data.name ?? DEFAULT_IMPORTED_ANIMATION_NAME;
+  data.name =
+    data.name ?? copy.importedAnimationName ?? DEFAULT_IMPORTED_ANIMATION_NAME;
   data.description = data.description ?? "";
   data.tagIds = Array.isArray(data.tagIds) ? data.tagIds : [];
 
@@ -342,15 +397,27 @@ const normalizeImportedAnimationData = (item, { imageIdMap } = {}) => {
   return data;
 };
 
-const resolveAnimationImportInput = async ({ appService, values } = {}) => {
+const resolveAnimationImportInput = async ({
+  appService,
+  values,
+  copy = {},
+} = {}) => {
   const url = `${values?.url ?? ""}`.trim();
   if (!url) {
-    showImportError(appService, "Import URL is required.");
+    showImportError(
+      appService,
+      copy.importUrlRequired ?? "Import URL is required.",
+      copy,
+    );
     return;
   }
 
   if (!isValidHttpUrl(url)) {
-    showImportError(appService, "Enter a valid http(s) URL.");
+    showImportError(
+      appService,
+      copy.invalidImportUrl ?? "Enter a valid http(s) URL.",
+      copy,
+    );
     return;
   }
 
@@ -361,17 +428,18 @@ const resolveAnimationImportInput = async ({ appService, values } = {}) => {
       appService,
       isImportPackageValidationError(error)
         ? error.message
-        : "Package could not be loaded.",
+        : (copy.packageLoadFailed ?? "Package could not be loaded."),
+      copy,
     );
     return;
   }
 };
 
-const showImportError = (appService, message) => {
+const showImportError = (appService, message, copy = {}) => {
   if (typeof appService?.showAlert === "function") {
     appService.showAlert({
       message,
-      title: "Error",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -379,9 +447,12 @@ const showImportError = (appService, message) => {
   appService?.showToast?.({ message });
 };
 
-const showImportSuccess = (appService, count) => {
+const showImportSuccess = (appService, count, copy = {}) => {
   appService?.showToast?.({
-    message: count === 1 ? "Animation imported." : "Animations imported.",
+    message:
+      count === 1
+        ? (copy.animationImported ?? "Animation imported.")
+        : (copy.animationsImported ?? "Animations imported."),
   });
 };
 
@@ -394,8 +465,8 @@ const getImportErrorMessage = (error, fallback) => {
   return error?.error?.message ?? error?.message ?? fallback;
 };
 
-const getImportValidationMessage = () => {
-  return "Import URL is required.";
+const getImportValidationMessage = (copy = {}) => {
+  return copy.importUrlRequired ?? "Import URL is required.";
 };
 
 const navigateToAnimationEditor = ({
@@ -467,6 +538,7 @@ const {
   handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "animations",
+  copy: ({ i18n }) => selectAnimationsPageCopy(i18n),
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(
       repositoryState,
@@ -493,6 +565,7 @@ const {
   createExplorerHandlers: ({ refresh }) =>
     createResourceFileExplorerHandlers({
       resourceType: "animations",
+      copy: ({ i18n }) => selectAnimationsPageCopy(i18n),
       refresh: async (deps, options) => {
         await refresh(deps, options);
         normalizeSelectedAnimation(deps);
@@ -511,7 +584,8 @@ const {
           tagIds,
         },
       }),
-    updateItemTagFallbackMessage: "Failed to update animation tags.",
+    updateItemTagFallbackMessage: ({ deps }) =>
+      selectCopy(deps).failedUpdateTags ?? "Failed to update animation tags.",
     appendCreatedTagByMode: ({ deps, mode, tagId }) => {
       if (mode === "add-form") {
         appendTagIdToForm({
@@ -724,6 +798,7 @@ export const handleImportDialogClose = (deps) => {
 
 export const handleImportFormActionClick = async (deps, payload) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values, valid } = payload._event.detail;
 
   if (actionId === "cancel") {
@@ -740,13 +815,14 @@ export const handleImportFormActionClick = async (deps, payload) => {
 
   if (actionId === "continue") {
     if (valid === false) {
-      showImportError(appService, getImportValidationMessage());
+      showImportError(appService, getImportValidationMessage(copy), copy);
       return;
     }
 
     const importInput = await resolveAnimationImportInput({
       appService,
       values,
+      copy,
     });
     if (!importInput) {
       return;
@@ -756,9 +832,10 @@ export const handleImportFormActionClick = async (deps, payload) => {
     const validationMessage = getAnimationImportValidationMessage({
       importInput,
       animationItems: importItems,
+      copy,
     });
     if (validationMessage) {
-      showImportError(appService, validationMessage);
+      showImportError(appService, validationMessage, copy);
       return;
     }
 
@@ -776,7 +853,11 @@ export const handleImportFormActionClick = async (deps, payload) => {
   }
 
   if (valid === false) {
-    showImportError(appService, "Choose destination folders.");
+    showImportError(
+      appService,
+      copy.chooseDestinationFolders ?? "Choose destination folders.",
+      copy,
+    );
     return;
   }
 
@@ -785,7 +866,9 @@ export const handleImportFormActionClick = async (deps, payload) => {
   if (!importInput) {
     showImportError(
       appService,
-      "Import package is missing. Click Back and continue again.",
+      copy.importPackageMissingBack ??
+        "Import package is missing. Click Back and continue again.",
+      copy,
     );
     return;
   }
@@ -794,9 +877,10 @@ export const handleImportFormActionClick = async (deps, payload) => {
   const validationMessage = getAnimationImportValidationMessage({
     importInput,
     animationItems: importItems,
+    copy,
   });
   if (validationMessage) {
-    showImportError(appService, validationMessage);
+    showImportError(appService, validationMessage, copy);
     return;
   }
 
@@ -810,11 +894,17 @@ export const handleImportFormActionClick = async (deps, payload) => {
       projectService,
       imageParentId,
       animationItems: importItems,
+      copy,
     });
   } catch (error) {
     showImportError(
       appService,
-      getImportErrorMessage(error, "Image dependencies could not be imported."),
+      getImportErrorMessage(
+        error,
+        copy.imageDependenciesImportFailed ??
+          "Image dependencies could not be imported.",
+      ),
+      copy,
     );
     return;
   }
@@ -828,12 +918,14 @@ export const handleImportFormActionClick = async (deps, payload) => {
     const animationId = generateId();
     const importAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to import animation.",
+      fallbackMessage:
+        copy.failedImportAnimation ?? "Failed to import animation.",
       action: () =>
         projectService.createAnimation({
           animationId,
           data: normalizeImportedAnimationData(item, {
             imageIdMap,
+            copy,
           }),
           parentId: targetGroupId,
           position: "last",
@@ -849,7 +941,7 @@ export const handleImportFormActionClick = async (deps, payload) => {
 
   store.closeImportDialog();
   clearImportVisibilityFilters(store);
-  showImportSuccess(appService, importedAnimationIds.length);
+  showImportSuccess(appService, importedAnimationIds.length, copy);
   await handleDataChanged(deps, {
     selectedItemId: importedAnimationIds[0],
   });
@@ -966,6 +1058,7 @@ export const handleEditDialogClose = (deps) => {
 
 export const handleEditFormAction = async (deps, payload) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -974,8 +1067,8 @@ export const handleEditFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Please enter an animation name.",
-      title: "Warning",
+      message: copy.nameRequired ?? "Please enter an animation name.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -987,7 +1080,8 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update animation.",
+    fallbackMessage:
+      copy.failedUpdateAnimation ?? "Failed to update animation.",
     action: () =>
       projectService.updateAnimation({
         animationId: editItemId,
@@ -1015,6 +1109,7 @@ export const handleAddDialogClose = (deps) => {
 
 export const handleAddFormAction = async (deps, payload) => {
   const { appService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -1023,8 +1118,8 @@ export const handleAddFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Please enter an animation name.",
-      title: "Warning",
+      message: copy.nameRequired ?? "Please enter an animation name.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -1036,7 +1131,8 @@ export const handleAddFormAction = async (deps, payload) => {
 
   const createAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to create animation.",
+    fallbackMessage:
+      copy.failedCreateAnimation ?? "Failed to create animation.",
     action: () =>
       projectService.createAnimation({
         animationId,
@@ -1066,6 +1162,7 @@ export const handleAddFormAction = async (deps, payload) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   if (!itemId) {
     return;
@@ -1078,7 +1175,9 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (usage.isUsed) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message:
+        copy.cannotDeleteResourceInUse ??
+        "Cannot delete resource, it is currently in use.",
     });
     return;
   }
@@ -1092,6 +1191,7 @@ export const handleItemDelete = async (deps, payload) => {
 
 export const handleItemDuplicate = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   if (!itemId) {
     return;
@@ -1099,7 +1199,8 @@ export const handleItemDuplicate = async (deps, payload) => {
 
   const duplicateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to duplicate animation.",
+    fallbackMessage:
+      copy.failedDuplicateAnimation ?? "Failed to duplicate animation.",
     action: () =>
       projectService.duplicateAnimation({
         animationId: itemId,

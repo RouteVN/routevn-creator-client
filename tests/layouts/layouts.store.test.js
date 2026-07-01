@@ -4,12 +4,13 @@ import {
   selectViewData,
   setItems,
 } from "../../src/pages/layouts/layouts.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("layouts.store", () => {
   it("uses a select for layout type selection", () => {
     const state = createInitialState();
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const layoutTypeField = viewData.layoutForm.fields.find(
       (field) => field.name === "layoutType",
     );
@@ -24,7 +25,7 @@ describe("layouts.store", () => {
   it("uses segmented controls for fragment selection in create and edit forms", () => {
     const state = createInitialState();
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const createFragmentField = viewData.layoutForm.fields.find(
       (field) => field.name === "isFragment",
     );
@@ -84,7 +85,7 @@ describe("layouts.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const item = viewData.catalogGroups[0].children[0];
 
     expect(item.typeInfo).toBe("Save / Load");

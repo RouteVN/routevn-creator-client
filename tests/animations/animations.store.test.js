@@ -9,6 +9,7 @@ import {
   setItems,
   setSelectedItemId,
 } from "../../src/pages/animations/animations.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("animations.store", () => {
   it("exposes the selected animation preview metadata for the detail panel", () => {
@@ -39,7 +40,7 @@ describe("animations.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData).not.toHaveProperty("selectedAnimationPreviewFileId");
     expect(viewData.selectedAnimationPreviewAspectRatio).toBe("1920 / 1080");
@@ -52,14 +53,16 @@ describe("animations.store", () => {
       },
     );
 
-    expect(selectViewData({ state }).animationPreviewOpacity).toBe(1);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).animationPreviewOpacity,
+    ).toBe(1);
   });
 
   it("configures the import form for URL packages", () => {
     const state = createInitialState();
     openImportDialog({ state });
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const form = viewData.importForm;
     const urlField = form.fields.find((field) => field.name === "url");
     const continueButton = form.actions.buttons.find(
@@ -124,7 +127,7 @@ describe("animations.store", () => {
       },
     );
 
-    const form = selectViewData({ state }).importForm;
+    const form = selectViewData({ state, i18n: EN_I18N }).importForm;
     const animationFolderField = form.fields.find(
       (field) => field.name === "animationFolderId",
     );
