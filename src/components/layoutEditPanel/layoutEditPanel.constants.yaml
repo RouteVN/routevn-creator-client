@@ -375,18 +375,16 @@ layoutSections:
     "$if canAddSoundVariant":
       labelAction: plus
     items:
-      - "$when": "values.hoverSoundId"
-        type: select
-        label: Hover
-        name: hoverSoundId
-        value: "${values.hoverSoundId}"
-        options: "${soundItemsWithNone}"
-      - "$when": "values.clickSoundId"
-        type: select
-        label: Click
-        name: clickSoundId
-        value: "${values.clickSoundId}"
-        options: "${soundItemsWithNone}"
+      - type: list-bar
+        items:
+          - "$when": "values.hoverSoundId"
+            name: hoverSoundId
+            label: Hover
+            soundId: "${values.hoverSoundId}"
+          - "$when": "values.clickSoundId"
+            name: clickSoundId
+            label: Click
+            soundId: "${values.clickSoundId}"
   - "$when": "supportsTextAlignment"
     label: Text Alignment
     items:

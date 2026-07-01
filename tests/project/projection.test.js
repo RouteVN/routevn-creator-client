@@ -1558,6 +1558,86 @@ describe("constructProjectData", () => {
     );
   });
 
+  it("keeps sound resources referenced by text reveal sound", () => {
+    const repositoryState = createExportRepositoryState({
+      sounds: createTreeCollection(
+        {
+          "sound-reveal": {
+            id: "sound-reveal",
+            type: "sound",
+            name: "Reveal Sound",
+            fileId: "file-reveal",
+            fileType: "audio/wav",
+          },
+        },
+        [{ id: "sound-reveal" }],
+      ),
+      layouts: createTreeCollection(
+        {
+          "layout-main": {
+            id: "layout-main",
+            type: "layout",
+            name: "Main Layout",
+            layoutType: "dialogue-adv",
+            elements: createTreeCollection(
+              {
+                "text-reveal": {
+                  id: "text-reveal",
+                  type: "text-revealing",
+                  text: "Hello",
+                  x: 0,
+                  y: 0,
+                  revealSoundId: "sound-reveal",
+                },
+              },
+              [{ id: "text-reveal" }],
+            ),
+          },
+        },
+        [{ id: "layout-main" }],
+      ),
+      scenes: createTreeCollection(
+        {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            name: "Scene 1",
+            sections: createTreeCollection(
+              {
+                "section-1": {
+                  id: "section-1",
+                  name: "Section 1",
+                  lines: createTreeCollection(
+                    {
+                      "line-1": {
+                        id: "line-1",
+                        actions: {
+                          dialogue: {
+                            ui: {
+                              resourceId: "layout-main",
+                            },
+                          },
+                        },
+                      },
+                    },
+                    [{ id: "line-1" }],
+                  ),
+                },
+              },
+              [{ id: "section-1" }],
+            ),
+          },
+        },
+        [{ id: "scene-1" }],
+      ),
+    });
+
+    const usage = collectUsedResourcesForExport(repositoryState);
+
+    expect(usage.usedIds.sounds).toEqual(["sound-reveal"]);
+    expect(usage.fileIds).toContain("file-reveal");
+  });
+
   it("drops unreachable scenes and their image assets from export reachability", () => {
     const repositoryState = createExportRepositoryState({
       images: createTreeCollection(

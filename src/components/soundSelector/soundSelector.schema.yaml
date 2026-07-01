@@ -1,0 +1,8 @@
+componentName: rvn-sound-selector
+propsSchema:
+  type: object
+  properties:
+    selectedSoundId:
+      type: string
+    searchQuery:
+      type: string

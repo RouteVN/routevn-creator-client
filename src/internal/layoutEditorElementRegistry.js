@@ -533,6 +533,7 @@ const DEFAULT_CAPABILITIES = {
   supportsTextEditing: false,
   supportsTextRevealEffect: false,
   supportsTextRevealIndicator: false,
+  supportsTextRevealSound: false,
   supportsInputField: false,
   supportsTextStyles: false,
   supportsSoundSelection: false,
@@ -616,11 +617,13 @@ const ITEM_TYPE_CAPABILITY_OVERRIDES = {
     supportsTextEditing: true,
     supportsTextRevealEffect: true,
     supportsTextRevealIndicator: true,
+    supportsTextRevealSound: true,
     supportsActions: true,
   },
   "text-revealing-ref-dialogue-content": {
     supportsTextRevealEffect: true,
     supportsTextRevealIndicator: true,
+    supportsTextRevealSound: true,
     supportsTextAlignment: false,
   },
 };
