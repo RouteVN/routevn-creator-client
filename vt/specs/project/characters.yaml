@@ -139,7 +139,15 @@ steps:
     state: hidden
     timeoutMs: 10000
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
       - action: write
@@ -148,7 +156,7 @@ steps:
     ms: 350
   - action: screenshot
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
       - action: write

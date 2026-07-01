@@ -126,7 +126,15 @@ steps:
     state: hidden
     timeoutMs: 10000
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
       - action: write
@@ -135,7 +143,7 @@ steps:
     ms: 350
   - action: screenshot
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
       - action: write
@@ -144,11 +152,19 @@ steps:
     ms: 350
   - action: screenshot
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
   - action: wait
     ms: 250
+  - action: select
+    selector: "#tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover"
+    state: hidden
+    timeoutMs: 5000
   - action: select
     selector: "#addVariableButtonRef0"
     steps:
@@ -203,13 +219,29 @@ steps:
     state: hidden
     timeoutMs: 10000
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
       - action: write
         value: score
   - action: wait
     ms: 350
+  - action: select
+    selector: "#tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover"
+    state: hidden
+    timeoutMs: 5000
   - action: waitFor
     selector: "#rowRef0x0"
     state: visible
@@ -244,11 +276,27 @@ steps:
     state: hidden
     timeoutMs: 10000
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
   - action: wait
     ms: 250
+  - action: select
+    selector: "#tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover"
+    state: hidden
+    timeoutMs: 5000
   - action: select
     selector: "#addVariableButtonRef0"
     steps:
@@ -311,13 +359,29 @@ steps:
     state: hidden
     timeoutMs: 10000
   - action: select
-    selector: "#searchInput"
+    selector: "#tagFilterButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#tagFilterPopover rtgl-input#searchInput"
     steps:
       - action: clear
       - action: write
         value: hasKey
   - action: wait
     ms: 350
+  - action: select
+    selector: "#tagFilterApply"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#tagFilterPopover"
+    state: hidden
+    timeoutMs: 5000
   - action: waitFor
     selector: "#rowRef0x0"
     state: visible
