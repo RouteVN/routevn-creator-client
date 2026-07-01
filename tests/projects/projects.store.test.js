@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 import {
   addProject,
@@ -8,6 +10,9 @@ import {
   selectViewData,
   setPlatform,
 } from "../../src/pages/projects/projects.store.js";
+
+const EN_I18N_URL = new URL("../../src/i18n/en.yaml", import.meta.url);
+const EN_I18N = yaml.load(readFileSync(EN_I18N_URL, "utf8"));
 
 describe("projects.store addProject", () => {
   it("replaces an existing project with the same id instead of appending a duplicate", () => {
@@ -50,25 +55,26 @@ describe("projects.store addProject", () => {
 
   it("opens the app version menu with a check update action", () => {
     const state = createInitialState();
+    const items = [
+      {
+        label: EN_I18N.projectsPage.checkUpdateMenuItem,
+        type: "item",
+        value: "check-update",
+      },
+      {
+        label: EN_I18N.projectsPage.languageMenuItem,
+        type: "item",
+        value: "language",
+      },
+    ];
 
-    openAppVersionMenu({ state }, { x: 120, y: 320 });
+    openAppVersionMenu({ state }, { x: 120, y: 320, items });
 
     expect(state.appVersionMenu).toEqual({
       isOpen: true,
       x: 120,
       y: 320,
-      items: [
-        {
-          label: "Check for update",
-          type: "item",
-          value: "check-update",
-        },
-        {
-          label: "Language",
-          type: "item",
-          value: "language",
-        },
-      ],
+      items,
     });
 
     closeAppVersionMenu({ state });
@@ -99,7 +105,7 @@ describe("projects.store addProject", () => {
     const state = createInitialState();
 
     openLanguageDialog({ state }, { locale: "ja" });
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(state.languageDialog).toEqual({
       isOpen: true,

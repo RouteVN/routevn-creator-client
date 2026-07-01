@@ -15,9 +15,7 @@ import {
 } from "../../internal/projectResolution.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import {
-  PROJECTS_PAGE_COPY,
   formatProjectsPageCopy,
-  hasProjectsPageI18n,
   selectProjectsPageCopy,
 } from "./support/projectsPageCopy.js";
 
@@ -60,7 +58,7 @@ const activateProjectsLocale = async ({
   return activeLocale;
 };
 
-const mapCloudProject = (project, copy = PROJECTS_PAGE_COPY) => {
+const mapCloudProject = (project, copy) => {
   const projectId = project?.id;
   const name = project?.name ?? copy.untitledProject;
   const role = project?.role ?? "member";
@@ -454,15 +452,12 @@ export const handleMobileCreateMenuButtonClick = (deps, payload) => {
   const { appService, store, render, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
   const rect = payload._event.currentTarget.getBoundingClientRect();
+  const platform = appService.getPlatform();
+  const canImportProjects = platform === "tauri" || platform === "android";
   const menuPayload = {
     x: rect.right,
     y: rect.bottom,
-  };
-
-  if (hasProjectsPageI18n(i18n)) {
-    const platform = appService.getPlatform();
-    const canImportProjects = platform === "tauri" || platform === "android";
-    menuPayload.items = [
+    items: [
       {
         label: copy.createProjectMenuItem,
         type: "item",
@@ -474,8 +469,8 @@ export const handleMobileCreateMenuButtonClick = (deps, payload) => {
         value: "import-project",
         disabled: !canImportProjects,
       },
-    ];
-  }
+    ],
+  };
 
   store.openMobileActionMenu(menuPayload);
   render();
@@ -521,10 +516,7 @@ export const handleAppVersionClick = (deps, payload) => {
   const menuPayload = {
     x: rect.left + rect.width / 2,
     y: rect.top,
-  };
-
-  if (hasProjectsPageI18n(i18n)) {
-    menuPayload.items = [
+    items: [
       {
         label: copy.checkUpdateMenuItem,
         type: "item",
@@ -535,8 +527,8 @@ export const handleAppVersionClick = (deps, payload) => {
         type: "item",
         value: "language",
       },
-    ];
-  }
+    ],
+  };
 
   store.openAppVersionMenu(menuPayload);
   render();
@@ -630,10 +622,7 @@ export const handleAvatarButtonClick = (deps, payload) => {
   const menuPayload = {
     x: payload._event.clientX,
     y: payload._event.clientY,
-  };
-
-  if (hasProjectsPageI18n(i18n)) {
-    menuPayload.items = [
+    items: [
       {
         label: copy.editProfileMenuItem,
         type: "item",
@@ -641,8 +630,8 @@ export const handleAvatarButtonClick = (deps, payload) => {
       },
       { label: copy.settingsMenuItem, type: "item", value: "settings" },
       { label: copy.logoutMenuItem, type: "item", value: "logout" },
-    ];
-  }
+    ],
+  };
 
   store.openProfileMenu(menuPayload);
   render();
@@ -819,12 +808,8 @@ export const handleProjectContextMenu = (deps, payload) => {
       y: payload._event.clientY,
       scope: "local",
       projectPath,
+      items: [{ label: copy.removeButton, type: "item", value: "delete" }],
     };
-    if (hasProjectsPageI18n(i18n)) {
-      menuPayload.items = [
-        { label: copy.removeButton, type: "item", value: "delete" },
-      ];
-    }
 
     store.openDropdownMenu(menuPayload);
     render();
@@ -837,12 +822,8 @@ export const handleProjectContextMenu = (deps, payload) => {
     scope: "local",
     projectId: projectId,
     projectPath,
+    items: [{ label: copy.removeButton, type: "item", value: "delete" }],
   };
-  if (hasProjectsPageI18n(i18n)) {
-    menuPayload.items = [
-      { label: copy.removeButton, type: "item", value: "delete" },
-    ];
-  }
 
   store.openDropdownMenu(menuPayload);
   render();

@@ -2,10 +2,7 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolution,
 } from "../../internal/projectResolution.js";
-import {
-  PROJECT_PAGE_COPY,
-  selectProjectPageCopy,
-} from "./support/projectPageCopy.js";
+import { selectProjectPageCopy } from "./support/projectPageCopy.js";
 
 export const createInitialState = () => ({
   platform: "web",
@@ -51,13 +48,7 @@ export const openProjectActionMenu = ({ state }, { x, y, items } = {}) => {
   state.projectActionMenu.isOpen = true;
   state.projectActionMenu.x = x ?? 0;
   state.projectActionMenu.y = y ?? 0;
-  state.projectActionMenu.items = items ?? [
-    {
-      label: PROJECT_PAGE_COPY.exportProject,
-      type: "item",
-      value: "export",
-    },
-  ];
+  state.projectActionMenu.items = items ?? [];
 };
 
 export const closeProjectActionMenu = ({ state }) => {

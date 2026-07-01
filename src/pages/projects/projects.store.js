@@ -1,18 +1,17 @@
 import {
-  PROJECTS_PAGE_COPY,
   formatProjectsPageCopy,
   selectProjectsPageCopy,
 } from "./support/projectsPageCopy.js";
 
 export const createInitialState = () => ({
   isTouchMode: false,
-  localTitle: "Projects",
-  cloudTitle: "Cloud Projects",
+  localTitle: "",
+  cloudTitle: "",
   showCloudProjects: false,
-  loginButtonText: "Login",
-  createButtonText: "Create",
-  createCloudButtonText: "Create Cloud Project",
-  openButtonText: "Import",
+  loginButtonText: "",
+  createButtonText: "",
+  createCloudButtonText: "",
+  openButtonText: "",
   isLoggedIn: false,
   userEmail: "",
   userName: "",
@@ -196,23 +195,7 @@ export const openProfileMenu = ({ state }, { x, y, items } = {}) => {
   state.profileMenu.isOpen = true;
   state.profileMenu.x = x;
   state.profileMenu.y = y;
-  state.profileMenu.items = items ?? [
-    {
-      label: PROJECTS_PAGE_COPY.editProfileMenuItem,
-      type: "item",
-      value: "edit-profile",
-    },
-    {
-      label: PROJECTS_PAGE_COPY.settingsMenuItem,
-      type: "item",
-      value: "settings",
-    },
-    {
-      label: PROJECTS_PAGE_COPY.logoutMenuItem,
-      type: "item",
-      value: "logout",
-    },
-  ];
+  state.profileMenu.items = items ?? [];
 };
 
 export const closeProfileMenu = ({ state }, _payload = {}) => {
@@ -241,24 +224,10 @@ export const selectIsProfileMenuOpen = ({ state }) => {
 };
 
 export const openMobileActionMenu = ({ state }, { x, y, items } = {}) => {
-  const canImportProjects =
-    state.platform === "tauri" || state.platform === "android";
   state.mobileActionMenu.isOpen = true;
   state.mobileActionMenu.x = x;
   state.mobileActionMenu.y = y;
-  state.mobileActionMenu.items = items ?? [
-    {
-      label: PROJECTS_PAGE_COPY.createProjectMenuItem,
-      type: "item",
-      value: "create-project",
-    },
-    {
-      label: PROJECTS_PAGE_COPY.importProjectMenuItem,
-      type: "item",
-      value: "import-project",
-      disabled: !canImportProjects,
-    },
-  ];
+  state.mobileActionMenu.items = items ?? [];
 };
 
 export const closeMobileActionMenu = ({ state }, _payload = {}) => {
@@ -284,18 +253,7 @@ export const openAppVersionMenu = ({ state }, { x, y, items } = {}) => {
   state.appVersionMenu.isOpen = true;
   state.appVersionMenu.x = x;
   state.appVersionMenu.y = y;
-  state.appVersionMenu.items = items ?? [
-    {
-      label: PROJECTS_PAGE_COPY.checkUpdateMenuItem,
-      type: "item",
-      value: "check-update",
-    },
-    {
-      label: PROJECTS_PAGE_COPY.languageMenuItem,
-      type: "item",
-      value: "language",
-    },
-  ];
+  state.appVersionMenu.items = items ?? [];
 };
 
 export const closeAppVersionMenu = ({ state }, _payload = {}) => {
@@ -400,15 +358,7 @@ export const openDropdownMenu = (
   state.dropdownMenu.targetScope = scope;
   state.dropdownMenu.targetProjectId = projectId;
   state.dropdownMenu.targetProjectPath = projectPath ?? "";
-  state.dropdownMenu.items = Array.isArray(items)
-    ? items
-    : [
-        {
-          label: PROJECTS_PAGE_COPY.removeButton,
-          type: "item",
-          value: "delete",
-        },
-      ];
+  state.dropdownMenu.items = Array.isArray(items) ? items : [];
 };
 
 export const closeDropdownMenu = ({ state }, _payload = {}) => {
