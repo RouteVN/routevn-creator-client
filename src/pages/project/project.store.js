@@ -5,7 +5,7 @@ import {
 
 const PROJECT_ACTION_MENU_ITEMS = [
   {
-    label: "Export",
+    label: "Export project",
     type: "item",
     value: "export",
   },
