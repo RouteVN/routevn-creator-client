@@ -101,11 +101,9 @@ const exportCurrentAndroidProject = async (deps) => {
       message: `Project exported to "${result.name}".`,
     });
   } catch (error) {
-    const message = String(error?.message ?? "");
+    const message = String(error?.message ?? "").trim();
     appService.showAlert({
-      message: message.includes("already exists")
-        ? message
-        : "Failed to export project.",
+      message: message || "Failed to export project.",
       title: "Error",
     });
   }

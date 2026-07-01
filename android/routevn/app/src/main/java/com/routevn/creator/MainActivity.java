@@ -50,7 +50,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -715,11 +718,32 @@ public class MainActivity extends Activity {
         public String exportProjectFolder(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
-                JSONObject result = exportProjectFolderToTreeUri(
-                    payload.getString("projectId"),
-                    payload.getString("destinationUri")
-                );
-                return bridgeSuccess(result);
+                String requestId = safePathSegment(payload.getString("requestId"));
+                String projectId = payload.getString("projectId");
+                String destinationUri = payload.getString("destinationUri");
+
+                Thread exportThread = new Thread(() -> {
+                    try {
+                        JSONObject exportResult = exportProjectFolderToTreeUri(
+                            projectId,
+                            destinationUri
+                        );
+                        JSONObject result = new JSONObject();
+                        result.put("requestId", requestId);
+                        result.put("export", exportResult);
+                        sendAndroidProjectExportResult(result);
+                    } catch (Exception error) {
+                        sendAndroidProjectExportError(
+                            requestId,
+                            error.getMessage() == null
+                                ? "Failed to export project."
+                                : error.getMessage(),
+                            error
+                        );
+                    }
+                });
+                exportThread.start();
+                return bridgeSuccess(true);
             } catch (Exception error) {
                 return bridgeFailure(error);
             }
@@ -745,6 +769,7 @@ public class MainActivity extends Activity {
     }
 
     private String bridgeFailure(Exception error) {
+        Log.e(TAG, "Android bridge call failed.", error);
         try {
             JSONObject result = new JSONObject();
             JSONObject errorBody = new JSONObject();
@@ -1219,18 +1244,14 @@ public class MainActivity extends Activity {
         if (!safeProjectId.equals(projectInfoId)) {
             throw new IllegalArgumentException("Project storage id does not match.");
         }
+        String exportFolderName = resolveProjectExportFolderName(projectInfo);
 
         Uri treeUri = Uri.parse(normalizedUri);
         Uri destinationRootUri = getTreeRootDocumentUri(treeUri);
-        if (findChildDocument(destinationRootUri, safeProjectId, true) != null) {
-            throw new IllegalStateException(
-                "A folder named " + safeProjectId + " already exists."
-            );
-        }
 
         Uri exportRootUri = createChildDirectory(
             destinationRootUri,
-            safeProjectId
+            exportFolderName
         );
         copyFileToDocumentDirectory(
             projectDbFile,
@@ -1267,8 +1288,17 @@ public class MainActivity extends Activity {
 
         JSONObject result = new JSONObject();
         result.put("uri", exportRootUri.toString());
-        result.put("name", safeProjectId);
+        result.put("name", exportFolderName);
         return result;
+    }
+
+    private String resolveProjectExportFolderName(JSONObject projectInfo) {
+        String title = sanitizeExportFolderTitle(projectInfo.optString("name", ""));
+        String timestamp = new SimpleDateFormat(
+            "yyyyMMdd-HHmmss-SSS",
+            Locale.US
+        ).format(new Date());
+        return title + "-" + timestamp;
     }
 
     private String getProjectDatabasePath(String projectId) {
@@ -2258,6 +2288,25 @@ public class MainActivity extends Activity {
         return resolvedFilename.replaceAll("[\\\\/]+", "-");
     }
 
+    private String sanitizeExportFolderTitle(String title) {
+        String resolvedTitle = title == null ? "" : title.trim();
+        if (resolvedTitle.isEmpty()) {
+            resolvedTitle = "RouteVN Project";
+        }
+
+        resolvedTitle = resolvedTitle.replaceAll("[\\\\/:*?\"<>|\\r\\n\\t]+", " ");
+        resolvedTitle = resolvedTitle.replaceAll("\\s+", " ").trim();
+        resolvedTitle = resolvedTitle.replaceAll("^\\.+", "");
+        resolvedTitle = resolvedTitle.replaceAll("\\.+$", "").trim();
+        if (resolvedTitle.isEmpty()) {
+            resolvedTitle = "RouteVN Project";
+        }
+        if (resolvedTitle.length() > 80) {
+            resolvedTitle = resolvedTitle.substring(0, 80).trim();
+        }
+        return resolvedTitle;
+    }
+
     private JSONObject createPickerFileResult(
         String requestId,
         Uri uri,
@@ -2514,6 +2563,42 @@ public class MainActivity extends Activity {
             ");",
             null
         );
+    }
+
+    private void sendAndroidProjectExportError(
+        String requestId,
+        String message,
+        Exception error
+    ) {
+        Log.e(TAG, "Failed to export Android project.", error);
+        try {
+            JSONObject result = new JSONObject();
+            JSONObject errorBody = new JSONObject();
+            result.put("requestId", requestId);
+            errorBody.put("message", message);
+            result.put("error", errorBody);
+            sendAndroidProjectExportResult(result);
+        } catch (Exception ignored) {
+            // Nothing useful to report if JSON construction fails.
+        }
+    }
+
+    private void sendAndroidProjectExportResult(JSONObject result) {
+        if (webView == null) {
+            return;
+        }
+
+        mainHandler.post(() -> {
+            if (webView == null) {
+                return;
+            }
+            webView.evaluateJavascript(
+                "(function(result){if(window.__routeVNAndroidProjectExportResult){window.__routeVNAndroidProjectExportResult(result);}})(" +
+                result.toString() +
+                ");",
+                null
+            );
+        });
     }
 
     private File resolveSafeRelativeFile(File root, String relativePath)
