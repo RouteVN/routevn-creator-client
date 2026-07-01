@@ -27,24 +27,30 @@ import {
   setMobileResourcePageUiConfigState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+import { selectTextStylesPageCopy } from "./support/textStylesPageCopy.js";
 
 export const TEXT_STYLE_TAG_SCOPE_KEY = "textStyles";
 
-const createTagDialogForm = createTagForm();
+const createTagDialogForm = (copy = {}) =>
+  createTagForm({
+    title: copy.createTagTitle,
+    submitLabel: copy.createTagButton,
+    nameLabel: copy.tagNameLabel,
+  });
 
-const folderNameForm = {
-  title: "Edit Folder",
+const createFolderNameForm = (copy = {}) => ({
+  title: copy.editFolderTitle ?? "Edit Folder",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel ?? "Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
       required: false,
     },
   ],
@@ -54,44 +60,48 @@ const folderNameForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Save",
+        label: copy.saveButton ?? "Save",
         validate: true,
       },
     ],
   },
-};
+});
 
 // Helper function to create add color form
-const createAddColorForm = (colorFolderOptions) => ({
-  title: "Add New Color",
-  description: "Create a new color for text styles",
+const createAddColorForm = (colorFolderOptions, copy = {}) => ({
+  title: copy.addNewColorTitle ?? "Add New Color",
+  description:
+    copy.addNewColorDescription ?? "Create a new color for text styles",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Color Name",
-      description: "Enter the color name",
+      label: copy.colorNameLabel ?? "Color Name",
+      description: copy.enterColorNameDescription ?? "Enter the color name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
-      description: "Optional description for this color",
+      label: copy.descriptionLabel ?? "Description",
+      description:
+        copy.optionalColorDescription ?? "Optional description for this color",
       required: false,
     },
     {
       name: "hex",
       type: "color-picker",
-      label: "Hex Value",
-      description: "Choose or enter a hex color value",
+      label: copy.hexValueLabel ?? "Hex Value",
+      description:
+        copy.chooseHexDescription ?? "Choose or enter a hex color value",
       required: true,
     },
     {
       name: "folderId",
       type: "select",
-      label: "Folder",
-      description: "Choose where to save the color",
+      label: copy.folderLabel ?? "Folder",
+      description:
+        copy.chooseColorFolderDescription ?? "Choose where to save the color",
       options: colorFolderOptions,
       required: true,
     },
@@ -102,37 +112,41 @@ const createAddColorForm = (colorFolderOptions) => ({
       {
         id: "submit",
         variant: "pr",
-        label: "Add Color",
+        label: copy.addColorButton ?? "Add Color",
       },
     ],
   },
 });
 
 // Helper function to create add font form
-const createAddFontForm = (fontFolderOptions) => ({
-  title: "Add New Font",
-  description: "Upload a new font for text styles",
+const createAddFontForm = (fontFolderOptions, copy = {}) => ({
+  title: copy.addNewFontTitle ?? "Add New Font",
+  description:
+    copy.addNewFontDescription ?? "Upload a new font for text styles",
   fields: [
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
-      description: "Optional description for this font",
+      label: copy.descriptionLabel ?? "Description",
+      description:
+        copy.optionalFontDescription ?? "Optional description for this font",
       required: false,
     },
     {
       name: "folderId",
       type: "select",
-      label: "Folder",
-      description: "Choose where to save the font",
+      label: copy.folderLabel ?? "Folder",
+      description:
+        copy.chooseFontFolderDescription ?? "Choose where to save the font",
       options: fontFolderOptions,
       required: true,
     },
     {
       slot: "font-upload",
       type: "slot",
-      label: "Font File",
-      description: "Click or drag and drop a font file here",
+      label: copy.fontFileLabel ?? "Font File",
+      description:
+        copy.fontFileDescription ?? "Click or drag and drop a font file here",
       required: true,
     },
   ],
@@ -142,7 +156,7 @@ const createAddFontForm = (fontFolderOptions) => ({
       {
         id: "submit",
         variant: "pr",
-        label: "Add Font",
+        label: copy.addFontButton ?? "Add Font",
       },
     ],
   },
@@ -155,6 +169,63 @@ const getPreviewTextValue = ({ previewText, name } = {}) => {
 
   return name ?? "";
 };
+
+const createFolderContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-item",
+  },
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
+];
+
+const createItemContextMenuItems = (copy = {}) => [
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.duplicateMenuItem ?? "Duplicate",
+    type: "item",
+    value: "duplicate-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
+];
+
+const createCenterItemContextMenuItems = (copy = {}) => [
+  {
+    label: copy.duplicateMenuItem ?? "Duplicate",
+    type: "item",
+    value: "duplicate-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
+];
+
+const createEmptyContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-item",
+  },
+];
 
 export const createInitialState = () => ({
   textStylesData: { tree: [], items: {} },
@@ -564,7 +635,8 @@ export const selectSelectedFontData = ({ state }) => ({
   uploadResult: state.selectedFontUploadResult,
 });
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectTextStylesPageCopy(i18n);
   const flatItems = applyFolderRequiredRootDragOptions(
     toFlatItems(state.textStylesData),
   );
@@ -696,45 +768,45 @@ export const selectViewData = ({ state }) => {
       {
         type: "slot",
         slot: "text-style-tags",
-        label: "Tags",
+        label: copy.tagsLabel ?? "Tags",
       },
       {
         type: "text",
-        label: "Color",
+        label: copy.colorLabel ?? "Color",
         value: selectedItem.colorId ? getColorName(selectedItem.colorId) : "",
       },
       {
         type: "text",
-        label: "Outline Color",
+        label: copy.outlineColorLabel ?? "Outline Color",
         value: selectedItem.strokeColorId
           ? getColorName(selectedItem.strokeColorId)
           : "",
       },
       {
         type: "text",
-        label: "Outline Thickness",
+        label: copy.outlineThicknessLabel ?? "Outline Thickness",
         value: String(
           selectedItem.strokeColorId ? (selectedItem.strokeWidth ?? 0) : 0,
         ),
       },
       {
         type: "text",
-        label: "Font",
+        label: copy.fontLabel ?? "Font",
         value: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
       },
       {
         type: "text",
-        label: "Font Size",
+        label: copy.fontSizeLabel ?? "Font Size",
         value: String(selectedItem.fontSize ?? ""),
       },
       {
         type: "text",
-        label: "Line Height",
+        label: copy.lineHeightLabel ?? "Line Height",
         value: String(selectedItem.lineHeight ?? ""),
       },
       {
         type: "text",
-        label: "Font Weight",
+        label: copy.fontWeightLabel ?? "Font Weight",
         value: String(selectedItem.fontWeight ?? ""),
       },
     ];
@@ -742,8 +814,8 @@ export const selectViewData = ({ state }) => {
     detailFields = [
       {
         type: "text",
-        label: "Type",
-        value: "folder",
+        label: copy.typeLabel ?? "Type",
+        value: copy.folderTypeValue ?? "folder",
       },
       {
         type: "description",
@@ -774,7 +846,7 @@ export const selectViewData = ({ state }) => {
 
   // Generate folder options for add color dialog
   const colorFolderOptions = [
-    { value: "_root", label: "Root Folder" },
+    { value: "_root", label: copy.rootFolderLabel ?? "Root Folder" },
     ...toFlatItems(state.colorsData)
       .filter((item) => item.type === "folder")
       .map((folder) => ({
@@ -785,7 +857,7 @@ export const selectViewData = ({ state }) => {
 
   // Generate folder options for add font dialog
   const fontFolderOptions = [
-    { value: "_root", label: "Root Folder" },
+    { value: "_root", label: copy.rootFolderLabel ?? "Root Folder" },
     ...toFlatItems(state.fontsData)
       .filter((item) => item.type === "folder")
       .map((folder) => ({
@@ -805,43 +877,50 @@ export const selectViewData = ({ state }) => {
 
   // Generate dynamic dialog form with dropdown options
   const dialogForm = {
-    title: state.editMode ? "Edit Text Style" : "Add Text Style",
+    title: state.editMode
+      ? (copy.editTextStyleTitle ?? "Edit Text Style")
+      : (copy.addTextStyleTitle ?? "Add Text Style"),
     fields: [
       {
         name: "name",
         type: "input-text",
-        label: "Name",
+        label: copy.nameLabel ?? "Name",
         required: true,
       },
       {
         name: "description",
         type: "input-textarea",
-        label: "Description",
+        label: copy.descriptionLabel ?? "Description",
         required: false,
       },
-      createTagField(),
+      createTagField({
+        label: copy.tagsLabel,
+        placeholder: copy.selectTagsPlaceholder,
+        addOptionLabel: copy.addTagOption,
+      }),
       {
         name: "fontColor",
         type: "select",
-        label: "Color",
-        placeholder: "Choose a color",
+        label: copy.colorLabel ?? "Color",
+        placeholder: copy.chooseColorPlaceholder ?? "Choose a color",
         options: colorOptions,
-        addOption: { label: "Add new color" },
+        addOption: { label: copy.addNewColorOption ?? "Add new color" },
         required: true,
       },
       {
         name: "strokeColor",
         type: "select",
-        label: "Outline Color",
-        placeholder: "Choose an outline color",
+        label: copy.outlineColorLabel ?? "Outline Color",
+        placeholder:
+          copy.chooseOutlineColorPlaceholder ?? "Choose an outline color",
         options: colorOptions,
-        addOption: { label: "Add new color" },
+        addOption: { label: copy.addNewColorOption ?? "Add new color" },
         required: false,
       },
       {
         name: "strokeWidth",
         type: "slider-with-input",
-        label: "Outline Thickness",
+        label: copy.outlineThicknessLabel ?? "Outline Thickness",
         min: 0,
         max: 12,
         step: 0.5,
@@ -851,16 +930,16 @@ export const selectViewData = ({ state }) => {
       {
         name: "fontStyle",
         type: "select",
-        label: "Font Style",
-        placeholder: "Choose a font",
+        label: copy.fontStyleLabel ?? "Font Style",
+        placeholder: copy.chooseFontPlaceholder ?? "Choose a font",
         options: fontOptions,
-        addOption: { label: "Add new font" },
+        addOption: { label: copy.addNewFontOption ?? "Add new font" },
         required: true,
       },
       {
         name: "fontSize",
         type: "slider-with-input",
-        label: "Font Size",
+        label: copy.fontSizeLabel ?? "Font Size",
         min: 8,
         max: 72,
         step: 1,
@@ -870,7 +949,7 @@ export const selectViewData = ({ state }) => {
       {
         name: "lineHeight",
         type: "slider-with-input",
-        label: "Line Height",
+        label: copy.lineHeightLabel ?? "Line Height",
         min: 0.8,
         max: 3.0,
         step: 0.1,
@@ -879,18 +958,24 @@ export const selectViewData = ({ state }) => {
       {
         name: "fontWeight",
         type: "select",
-        label: "Font Weight",
-        placeholder: "Choose font weight",
+        label: copy.fontWeightLabel ?? "Font Weight",
+        placeholder: copy.chooseFontWeightPlaceholder ?? "Choose font weight",
         options: [
-          { label: "100 - Thin", value: "100" },
-          { label: "200 - Extra Light", value: "200" },
-          { label: "300 - Light", value: "300" },
-          { label: "400 - Normal", value: "400" },
-          { label: "500 - Medium", value: "500" },
-          { label: "600 - Semi Bold", value: "600" },
-          { label: "700 - Bold", value: "700" },
-          { label: "800 - Extra Bold", value: "800" },
-          { label: "900 - Black", value: "900" },
+          { label: copy.weight100Thin ?? "100 - Thin", value: "100" },
+          {
+            label: copy.weight200ExtraLight ?? "200 - Extra Light",
+            value: "200",
+          },
+          { label: copy.weight300Light ?? "300 - Light", value: "300" },
+          { label: copy.weight400Normal ?? "400 - Normal", value: "400" },
+          { label: copy.weight500Medium ?? "500 - Medium", value: "500" },
+          { label: copy.weight600SemiBold ?? "600 - Semi Bold", value: "600" },
+          { label: copy.weight700Bold ?? "700 - Bold", value: "700" },
+          {
+            label: copy.weight800ExtraBold ?? "800 - Extra Bold",
+            value: "800",
+          },
+          { label: copy.weight900Black ?? "900 - Black", value: "900" },
         ],
         required: true,
       },
@@ -901,7 +986,9 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          label: state.editMode ? "Update Text Style" : "Add Text Style",
+          label: state.editMode
+            ? (copy.updateTextStyleButton ?? "Update Text Style")
+            : (copy.addTextStyleButton ?? "Add Text Style"),
         },
       ],
     },
@@ -926,10 +1013,10 @@ export const selectViewData = ({ state }) => {
       : state.defaultValues;
 
   // Add color dialog form
-  const addColorForm = createAddColorForm(colorFolderOptions);
+  const addColorForm = createAddColorForm(colorFolderOptions, copy);
 
   // Add font dialog form
-  const addFontForm = createAddFontForm(fontFolderOptions);
+  const addFontForm = createAddFontForm(fontFolderOptions, copy);
 
   // Get preview values based on current form values
   const getPreviewColor = () => {
@@ -987,17 +1074,25 @@ export const selectViewData = ({ state }) => {
       : 0,
     detailPreviewFontFamily: detailPreviewFontData.fontFamily,
     detailPreviewFontFileId: detailPreviewFontData.fileId,
-    title: "Text Styles",
-    addText: "Add",
-    folderContextMenuItems: state.folderContextMenuItems,
-    itemContextMenuItems: state.itemContextMenuItems,
-    centerItemContextMenuItems: state.centerItemContextMenuItems,
-    emptyContextMenuItems: state.emptyContextMenuItems,
+    title: copy.title ?? "Text Styles",
+    addText: copy.addText ?? "Add",
+    addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
+    deleteButton: copy.deleteButton ?? "Delete",
+    duplicateButton: copy.duplicateButton ?? "Duplicate",
+    filesLabel: copy.filesLabel ?? "Files",
+    noSelectionLabel: copy.noSelectionLabel ?? "No selection",
+    previewLabel: copy.previewLabel ?? "Preview",
+    previewTextLabel: copy.previewTextLabel ?? "Preview Text",
+    fontSelectedLabel: copy.fontSelectedLabel ?? "Font selected:",
+    folderContextMenuItems: createFolderContextMenuItems(copy),
+    itemContextMenuItems: createItemContextMenuItems(copy),
+    centerItemContextMenuItems: createCenterItemContextMenuItems(copy),
+    emptyContextMenuItems: createEmptyContextMenuItems(copy),
     colorsData: state.colorsData,
     fontsData: state.fontsData,
     isFolderNameDialogOpen: state.isFolderNameDialogOpen,
     folderNameDialogItemId: state.folderNameDialogItemId,
-    folderNameForm,
+    folderNameForm: createFolderNameForm(copy),
     folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
 
     // Dialog-related data
@@ -1008,8 +1103,9 @@ export const selectViewData = ({ state }) => {
     ...buildTagViewData({
       state,
       selectedItem,
-      createTagFormDefinition: createTagDialogForm,
-      tagFilterPlaceholder: "Filter tags",
+      createTagFormDefinition: createTagDialogForm(copy),
+      tagFilterPlaceholder: copy.tagFilterPlaceholder,
+      detailTagAddOptionLabel: copy.addTagOption,
     }),
 
     // Add color dialog data
@@ -1024,7 +1120,9 @@ export const selectViewData = ({ state }) => {
     selectedFontFile: state.selectedFontFile,
     hasSelectedFont: state.hasSelectedFont,
     selectedFontFileName: state.selectedFontFileName,
-    dragDropText: state.dragDropText,
+    dragDropText: state.hasSelectedFont
+      ? (copy.dragDropReplace ?? "Replace font file")
+      : (copy.dragDropClick ?? "Click or drag font file here"),
     fontFileTypes: [".ttf", ".otf", ".woff", ".woff2"],
 
     // Preview values for dialog

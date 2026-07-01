@@ -12,6 +12,7 @@ import {
   toAnimationDisplayItem,
 } from "../../internal/animationDisplay.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+import { selectAnimationsPageCopy } from "./support/animationsPageCopy.js";
 
 export const ANIMATION_TAG_SCOPE_KEY = "animations";
 
@@ -20,22 +21,32 @@ const EMPTY_TREE = {
   tree: [],
 };
 
-const editForm = {
-  title: "Edit Animation",
+const getAnimationTypeLabel = (animationType, copy = {}) => {
+  return animationType === "transition"
+    ? (copy.transitionType ?? "Transition")
+    : (copy.updateType ?? "Update");
+};
+
+const createEditForm = (copy = {}) => ({
+  title: copy.editTitle ?? "Edit Animation",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel ?? "Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
       required: false,
     },
-    createTagField(),
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
   ],
   actions: {
     layout: "",
@@ -43,41 +54,45 @@ const editForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Update Animation",
+        label: copy.updateButton ?? "Update Animation",
       },
     ],
   },
-};
+});
 
-const addForm = {
-  title: "Add Animation",
+const createAddForm = (copy = {}) => ({
+  title: copy.addTitle ?? "Add Animation",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel ?? "Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
       required: false,
     },
-    createTagField(),
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
     {
       name: "dialogType",
       type: "segmented-control",
-      label: "Type",
+      label: copy.typeLabel ?? "Type",
       noClear: true,
       required: true,
       options: [
         {
-          label: "Update",
+          label: copy.updateType ?? "Update",
           value: "update",
         },
         {
-          label: "Transition",
+          label: copy.transitionType ?? "Transition",
           value: "transition",
         },
       ],
@@ -89,11 +104,11 @@ const addForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Continue",
+        label: copy.continueButton ?? "Continue",
       },
     ],
   },
-};
+});
 
 const IMPORT_FOLDER_ROOT_VALUE = "_root";
 const IMPORT_DIALOG_SOURCE_STEP = "source";
@@ -107,15 +122,15 @@ const createImportFolderOptions = (collection) =>
       label: folder.fullLabel || folder.name || folder.id,
     }));
 
-const createAnimationImportSourceForm = () => ({
-  title: "Import Animation",
+const createAnimationImportSourceForm = (copy = {}) => ({
+  title: copy.importTitle ?? "Import Animation",
   fields: [
     {
       name: "url",
       type: "input-text",
-      label: "URL",
+      label: copy.urlLabel ?? "URL",
       required: {
-        message: "Import URL is required.",
+        message: copy.importUrlRequired ?? "Import URL is required.",
       },
     },
   ],
@@ -125,7 +140,7 @@ const createAnimationImportSourceForm = () => ({
       {
         id: "continue",
         variant: "pr",
-        label: "Continue",
+        label: copy.continueButton ?? "Continue",
         validate: true,
       },
     ],
@@ -136,12 +151,13 @@ const createAnimationImportDestinationForm = ({
   animationFolderOptions = [],
   imageFolderOptions = [],
   includeImages = false,
+  copy = {},
 } = {}) => {
   const fields = [
     {
       name: "animationFolderId",
       type: "select",
-      label: "Animation Folder",
+      label: copy.animationFolderLabel ?? "Animation Folder",
       clearable: false,
       required: true,
       options: animationFolderOptions,
@@ -152,7 +168,7 @@ const createAnimationImportDestinationForm = ({
     fields.push({
       name: "imageFolderId",
       type: "select",
-      label: "Image Folder",
+      label: copy.imageFolderLabel ?? "Image Folder",
       clearable: false,
       required: true,
       options: imageFolderOptions,
@@ -160,7 +176,7 @@ const createAnimationImportDestinationForm = ({
   }
 
   return {
-    title: "Choose Folders",
+    title: copy.chooseFoldersTitle ?? "Choose Folders",
     fields,
     actions: {
       layout: "",
@@ -168,12 +184,12 @@ const createAnimationImportDestinationForm = ({
         {
           id: "back",
           variant: "se",
-          label: "Back",
+          label: copy.backButton ?? "Back",
         },
         {
           id: "import",
           variant: "pr",
-          label: "Import Animation",
+          label: copy.importButton ?? "Import Animation",
           validate: true,
         },
       ],
@@ -197,28 +213,53 @@ const createImportDestinationDefaultValues = ({
   imageFolderId: resolveImportFolderValue(imageFolderId),
 });
 
-const createImportDestinationFormForState = (state) =>
+const createImportDestinationFormForState = (state, copy = {}) =>
   createAnimationImportDestinationForm({
     animationFolderOptions: createImportFolderOptions(state.data),
     imageFolderOptions: createImportFolderOptions(state.imagesData),
     includeImages: state.importDialogIncludeImages,
+    copy,
   });
 
-const animationExplorerItemContextMenuItems = [
-  { label: "Edit", type: "item", value: "edit-item" },
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Duplicate", type: "item", value: "duplicate-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createAnimationExplorerItemContextMenuItems = (copy = {}) => [
+  { label: copy.editMenuItem ?? "Edit", type: "item", value: "edit-item" },
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.duplicateMenuItem ?? "Duplicate",
+    type: "item",
+    value: "duplicate-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const animationCenterItemContextMenuItems = [
-  { label: "Edit", type: "item", value: "edit-item" },
-  { label: "Duplicate", type: "item", value: "duplicate-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createAnimationCenterItemContextMenuItems = (copy = {}) => [
+  { label: copy.editMenuItem ?? "Edit", type: "item", value: "edit-item" },
+  {
+    label: copy.duplicateMenuItem ?? "Duplicate",
+    type: "item",
+    value: "duplicate-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const buildCatalogItem = (item) => {
-  return toAnimationDisplayItem(item);
+const buildCatalogItem = (item, { copy = {} } = {}) => {
+  const displayItem = toAnimationDisplayItem(item);
+  return {
+    ...displayItem,
+    animationTypeLabel: getAnimationTypeLabel(displayItem.animationType, copy),
+  };
 };
 
 const matchesSearch = matchesTagAwareSearch;
@@ -254,25 +295,31 @@ const {
   selectedResourceId: "animations",
   resourceCategory: "animatedAssets",
   addText: "Add",
-  centerItemContextMenuItems: animationCenterItemContextMenuItems,
+  copy: selectAnimationsPageCopy,
   buildCatalogItem,
   matchesSearch,
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
-  extendViewData: ({ state, selectedItem, baseViewData }) => {
+  extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
     const selectedAnimationItem = selectedItem
       ? toAnimationDisplayItem(selectedItem)
       : undefined;
 
     return {
       ...baseViewData,
+      itemContextMenuItems: createAnimationExplorerItemContextMenuItems(copy),
+      centerItemContextMenuItems:
+        createAnimationCenterItemContextMenuItems(copy),
       isAddDialogOpen: state.isAddDialogOpen,
       isImportDialogOpen: state.isImportDialogOpen,
-      importForm: state.importForm,
+      importForm:
+        state.importDialogStep === IMPORT_DIALOG_DESTINATION_STEP
+          ? createImportDestinationFormForState(state, copy)
+          : createAnimationImportSourceForm(copy),
       importDialogDefaultValues: state.importDialogDefaultValues,
       importDialogKey: `${state.isImportDialogOpen}-${state.importDialogStep}`,
-      addForm,
+      addForm: createAddForm(copy),
       addFormDefaults: {
         name: "",
         description: "",
@@ -280,11 +327,16 @@ const {
         dialogType: "update",
       },
       isEditDialogOpen: state.isEditDialogOpen,
-      editForm,
+      editForm: createEditForm(copy),
       editDefaultValues: state.editDefaultValues,
-      itemContextMenuItems: animationExplorerItemContextMenuItems,
-      selectedAnimationTypeLabel:
-        selectedAnimationItem?.animationTypeLabel ?? "",
+      selectedAnimationTypeLabel: selectedAnimationItem?.animationType
+        ? getAnimationTypeLabel(selectedAnimationItem.animationType, copy)
+        : "",
+      descriptionLabel: copy.descriptionLabel ?? "Description",
+      importButton: copy.importMenuButton ?? copy.importButton ?? "Import",
+      tagsLabel: copy.tagsLabel ?? "Tags",
+      typeLabel: copy.typeLabel ?? "Type",
+      durationLabel: copy.durationLabel ?? "Duration",
       selectedAnimationPreviewAspectRatio: formatProjectResolutionAspectRatio(
         state.projectResolution,
       ),

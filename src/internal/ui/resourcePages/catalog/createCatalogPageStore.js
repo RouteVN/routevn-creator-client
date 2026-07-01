@@ -391,7 +391,9 @@ export const createCatalogPageStore = ({
 
         return {
           ...group,
-          children: filteredChildren.map(buildCatalogItem),
+          children: filteredChildren.map((item) =>
+            buildCatalogItem(item, { copy }),
+          ),
           hasChildren: filteredChildren.length > 0,
           shouldDisplay: shouldShowGroup,
         };
@@ -455,6 +457,14 @@ export const createCatalogPageStore = ({
       title: resolvedTitle,
       addText: copy.addText ?? addText,
       emptyMessage: copy.emptyMessage ?? emptyMessage,
+      addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
+      deleteButton: copy.deleteButton ?? "Delete",
+      duplicateButton: copy.duplicateButton ?? "Duplicate",
+      filesLabel: copy.filesLabel ?? "Files",
+      importButton: copy.importButton ?? "Import",
+      noSelectionLabel: copy.noSelectionLabel ?? "No selection",
+      openButton: copy.openButton ?? "Open",
+      previewButton: copy.previewMenuItem ?? "Preview",
       folderContextMenuItems: createFolderContextMenuItems(copy),
       itemContextMenuItems: createItemContextMenuItems(copy),
       emptyContextMenuItems: createEmptyContextMenuItems(copy),
