@@ -1230,15 +1230,13 @@ public class MainActivity extends Activity {
         }
 
         File projectDbFile = getProjectDatabaseFile(safeProjectId);
-        File projectDbDirectory = projectDbFile.getParentFile();
         File projectRoot = getProjectRoot(safeProjectId);
         File projectFilesRoot = new File(projectRoot, "files");
-        File projectMetadataRoot = new File(projectRoot, "file-metadata");
         if (!projectDbFile.isFile() || !projectFilesRoot.isDirectory()) {
             throw new IllegalArgumentException("Project storage was not found.");
         }
 
-        closeDatabase(getProjectDatabasePath(safeProjectId));
+        checkpointProjectDatabaseForExport(safeProjectId);
         JSONObject projectInfo = readProjectInfoFromDatabaseFile(projectDbFile);
         String projectInfoId = safePathSegment(projectInfo.optString("id", ""));
         if (!safeProjectId.equals(projectInfoId)) {
@@ -1259,37 +1257,37 @@ public class MainActivity extends Activity {
             "project.db",
             "application/vnd.sqlite3"
         );
-        copyOptionalFileToDocumentDirectory(
-            new File(projectDbDirectory, "project.db-wal"),
-            exportRootUri,
-            "application/octet-stream"
-        );
-        copyOptionalFileToDocumentDirectory(
-            new File(projectDbDirectory, "project.db-shm"),
-            exportRootUri,
-            "application/octet-stream"
-        );
-        copyOptionalFileToDocumentDirectory(
-            new File(projectDbDirectory, "project.db-journal"),
-            exportRootUri,
-            "application/octet-stream"
-        );
 
         Uri filesUri = createChildDirectory(exportRootUri, "files");
         copyFileDirectoryContentsToDocumentDirectory(projectFilesRoot, filesUri);
-
-        if (projectMetadataRoot.isDirectory()) {
-            Uri metadataUri = createChildDirectory(exportRootUri, "file-metadata");
-            copyFileDirectoryContentsToDocumentDirectory(
-                projectMetadataRoot,
-                metadataUri
-            );
-        }
 
         JSONObject result = new JSONObject();
         result.put("uri", exportRootUri.toString());
         result.put("name", exportFolderName);
         return result;
+    }
+
+    private void checkpointProjectDatabaseForExport(String projectId)
+        throws Exception {
+        String projectDbPath = getProjectDatabasePath(projectId);
+        closeDatabase(projectDbPath);
+
+        File projectDbFile = getProjectDatabaseFile(projectId);
+        SQLiteDatabase database = SQLiteDatabase.openDatabase(
+            projectDbFile.getAbsolutePath(),
+            null,
+            SQLiteDatabase.OPEN_READWRITE
+        );
+        try (
+            Cursor ignored = database.rawQuery(
+                "PRAGMA wal_checkpoint(TRUNCATE)",
+                null
+            )
+        ) {
+            // Materialize pending WAL frames into project.db before copying it.
+        } finally {
+            database.close();
+        }
     }
 
     private String resolveProjectExportFolderName(JSONObject projectInfo) {
@@ -2096,23 +2094,6 @@ public class MainActivity extends Activity {
                 );
             }
         }
-    }
-
-    private void copyOptionalFileToDocumentDirectory(
-        File sourceFile,
-        Uri outputDirectoryUri,
-        String mimeType
-    ) throws Exception {
-        if (!sourceFile.isFile()) {
-            return;
-        }
-
-        copyFileToDocumentDirectory(
-            sourceFile,
-            outputDirectoryUri,
-            sanitizeExportFilename(sourceFile.getName()),
-            mimeType
-        );
     }
 
     private void copyFileToDocumentDirectory(
