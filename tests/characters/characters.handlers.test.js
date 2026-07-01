@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   handleAddCharacterClick,
   handleCloseDialog,
@@ -89,6 +90,7 @@ describe("characters add dialog form reset", () => {
 describe("characters name variable", () => {
   it("sends the selected name variable when editing a character", async () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -149,6 +151,7 @@ describe("characters name variable", () => {
 
   it("saves top-first edit sprite groups in render order", async () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -241,6 +244,7 @@ describe("characters name variable", () => {
 
   it("sends an empty name variable to clear the character override", async () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -297,6 +301,7 @@ describe("characters name variable", () => {
 describe("characters sprite group tag scope", () => {
   it("blocks sprite groups during character creation", async () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -335,6 +340,7 @@ describe("characters sprite group tag scope", () => {
 
   it("does not accept character tag ids in edit sprite groups", async () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -405,6 +411,7 @@ describe("characters sprite group tag scope", () => {
 describe("characters sprite group dialog", () => {
   it("opens the sprite group dialog when adding an edit sprite group", () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -435,6 +442,7 @@ describe("characters sprite group dialog", () => {
 
   it("opens the sprite group dialog for an existing edit sprite group", () => {
     const deps = {
+      i18n: EN_I18N,
       store: {
         hideSpriteGroupDropdownMenu: vi.fn(),
         openSpriteGroupDialog: vi.fn(),
@@ -463,6 +471,7 @@ describe("characters sprite group dialog", () => {
 
   it("adds a sprite group from the sprite group dialog form", () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -513,6 +522,7 @@ describe("characters sprite group dialog", () => {
 
   it("updates a sprite group from the sprite group dialog form", () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -574,6 +584,7 @@ describe("characters sprite group dialog", () => {
 
   it("requires sprite group tags in the sprite group dialog form", () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -625,6 +636,7 @@ describe("characters sprite group dialog", () => {
 describe("characters sprite group removal guard", () => {
   it("blocks removing an edit sprite group when story lines still use it", () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -717,6 +729,7 @@ describe("characters sprite group removal guard", () => {
 
   it("moves sprite groups by visual top-first direction", () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -755,6 +768,7 @@ describe("characters sprite group removal guard", () => {
 
   it("removes an edit sprite group when no story lines use it", () => {
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },

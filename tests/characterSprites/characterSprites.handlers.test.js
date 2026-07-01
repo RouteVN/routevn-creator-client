@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   handleEditDialogImageClick,
   handleUploadClick,
@@ -333,6 +334,7 @@ const createUploadDeps = ({
   };
 
   return {
+    i18n: EN_I18N,
     appService,
     projectService,
     render: vi.fn(),
@@ -359,8 +361,8 @@ describe("characterSprites upload handlers", () => {
     });
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "Only JPG/JPEG, PNG, and WEBP images are supported.",
-      title: "Warning",
+      message: EN_I18N.characterSpritesPage.invalidImageFormatMessage,
+      title: EN_I18N.resourcePages.warningTitle,
     });
     expect(deps.projectService.uploadFiles).toHaveBeenCalledTimes(1);
     expect(deps.projectService.uploadFiles).toHaveBeenCalledWith([validFile]);
@@ -383,8 +385,8 @@ describe("characterSprites upload handlers", () => {
     });
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "Only JPG/JPEG, PNG, and WEBP images are supported.",
-      title: "Warning",
+      message: EN_I18N.characterSpritesPage.invalidImageFormatMessage,
+      title: EN_I18N.resourcePages.warningTitle,
     });
     expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
     expect(
@@ -400,6 +402,7 @@ describe("characterSprites upload handlers", () => {
       showAlert: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       appService,
       projectService: {
         uploadFiles: vi.fn(),

@@ -23,7 +23,16 @@ export const createCatalogPageHandlers = ({
       refresh,
     }),
   tagging,
+  copy,
 }) => {
+  const resolveCopy = (deps) => {
+    if (typeof copy === "function") {
+      return copy(deps);
+    }
+
+    return copy ?? {};
+  };
+
   const refreshData = async (deps, { selectedItemId } = {}) => {
     const { store, render, projectService, refs } = deps;
     const repositoryState = projectService.getRepositoryState();
@@ -137,7 +146,7 @@ export const createCatalogPageHandlers = ({
   };
 
   const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-    createExplorerHandlers({ refresh: refreshData });
+    createExplorerHandlers({ refresh: refreshData, copy: resolveCopy });
   const {
     focusKeyboardScope,
     handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
@@ -215,6 +224,7 @@ export const createCatalogPageHandlers = ({
 
   const handleFolderNameFormAction = async (deps, payload) => {
     const { appService, store, render } = deps;
+    const resolvedCopy = resolveCopy(deps);
     const { actionId, values } = payload._event.detail;
     if (actionId !== "submit") {
       return;
@@ -224,8 +234,8 @@ export const createCatalogPageHandlers = ({
     const description = values?.description?.trim() ?? "";
     if (!name) {
       appService.showAlert({
-        message: "Folder name is required.",
-        title: "Warning",
+        message: resolvedCopy.folderNameRequired ?? "Folder name is required.",
+        title: resolvedCopy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -282,6 +292,7 @@ export const createCatalogPageHandlers = ({
         getSelectedItemTagIds: tagging.getSelectedItemTagIds,
         createTagFallbackMessage: tagging.createTagFallbackMessage,
         updateItemTagFallbackMessage: tagging.updateItemTagFallbackMessage,
+        copy: resolveCopy,
       })
     : {};
 

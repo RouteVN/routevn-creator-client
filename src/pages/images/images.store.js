@@ -12,6 +12,7 @@ import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { selectImagesPageCopy } from "./support/imagesPageCopy.js";
 
 const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
@@ -90,7 +91,7 @@ const createPreviewModeButtonViewData = ({ displayMode, mode } = {}) => {
   };
 };
 
-const buildDetailFields = (item) => {
+const buildDetailFields = (item, { copy } = {}) => {
   if (!item) {
     return [];
   }
@@ -108,21 +109,21 @@ const buildDetailFields = (item) => {
     {
       type: "slot",
       slot: "image-tags",
-      label: "Tags",
+      label: copy.tagsLabel,
     },
     {
       type: "text",
-      label: "File Type",
+      label: copy.fileTypeLabel,
       value: item.fileType ?? "",
     },
     {
       type: "text",
-      label: "File Size",
+      label: copy.fileSizeLabel,
       value: formatFileSize(item.fileSize),
     },
     {
       type: "text",
-      label: "Dimensions",
+      label: copy.dimensionsLabel,
       value: item.width && item.height ? `${item.width} × ${item.height}` : "",
     },
   ];
@@ -191,26 +192,30 @@ const resolveAdjacentImageItemId = ({
   return imageIds[nextIndex];
 };
 
-const createEditForm = () => ({
-  title: "Edit Image",
+const createEditForm = ({ copy } = {}) => ({
+  title: copy.editTitle,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel,
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel,
       required: false,
     },
-    createTagField(),
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
     {
       type: "slot",
       slot: "image-slot",
-      label: "Image",
+      label: copy.imageLabel,
     },
   ],
   actions: {
@@ -219,7 +224,7 @@ const createEditForm = () => ({
       {
         id: "submit",
         variant: "pr",
-        label: "Update Image",
+        label: copy.updateButton,
       },
     ],
   },
@@ -258,9 +263,9 @@ const {
 } = createMediaPageStore({
   itemType: "image",
   resourceType: "images",
-  title: "Images",
+  title: "",
   selectedResourceId: "images",
-  uploadText: "Upload",
+  uploadText: "",
   acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
   imageHeight: IMAGE_CARD_HEIGHT,
   maxWidth: IMAGE_CARD_MAX_WIDTH,
@@ -270,17 +275,18 @@ const {
   buildMediaItem,
   buildPendingMediaItem,
   createEditForm,
+  copy: selectImagesPageCopy,
   getSelectedPreviewFileId: (item) => item?.thumbnailFileId ?? item?.fileId,
   tagging: {
-    tagFilterPlaceholder: "Filter tags",
+    tagFilterPlaceholder: "",
   },
   hiddenMobileDetailSlots: ["image-file-id"],
-  extendViewData: ({ state, baseViewData }) => {
+  extendViewData: ({ state, baseViewData, copy }) => {
     const selectedItemId = state.selectedItemId;
     const previewImage = state.data?.items?.[selectedItemId];
     const projectResolution = requireProjectResolution(
       state.projectResolution,
-      "Project resolution",
+      copy.projectResolutionLabel,
     );
     const visibleImageIds = selectVisibleImageIds({
       mediaGroups: baseViewData.mediaGroups,
@@ -331,11 +337,14 @@ const {
       : undefined;
     const deleteDialogItemName = deleteDialogItem?.name
       ? `"${deleteDialogItem.name}"`
-      : "this image";
+      : copy.deleteTargetFallback;
     viewData.mobileDeleteDialogOpen = state.mobileDeleteDialogOpen;
-    viewData.mobileDeleteDialogTitle = "Delete Image";
-    viewData.mobileDeleteDialogMessage = `Delete ${deleteDialogItemName}? This cannot be undone.`;
-    viewData.mobileDeleteDialogConfirmLabel = "Delete";
+    viewData.mobileDeleteDialogTitle = copy.deleteTitle;
+    viewData.mobileDeleteDialogMessage = copy.deleteMessage.replace(
+      "{itemName}",
+      deleteDialogItemName,
+    );
+    viewData.mobileDeleteDialogConfirmLabel = copy.deleteButton;
 
     return viewData;
   },

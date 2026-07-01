@@ -17,13 +17,14 @@ export const CREATE_TAG_DEFAULT_VALUES = Object.freeze({
 export const createTagForm = ({
   title = "Create Tag",
   submitLabel = "Create Tag",
+  nameLabel = "Tag Name",
 } = {}) => ({
   title,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Tag Name",
+      label: nameLabel,
       required: true,
     },
   ],
@@ -362,7 +363,16 @@ export const createResourcePageTagHandlers = ({
   appendCreatedTagByMode,
   createTagFallbackMessage = "Failed to create tag.",
   updateItemTagFallbackMessage = "Failed to update tags.",
+  copy,
 } = {}) => {
+  const resolveCopy = (deps) => {
+    if (typeof copy === "function") {
+      return copy(deps);
+    }
+
+    return copy ?? {};
+  };
+
   const reopenDetailTagPopover = ({ deps, itemId } = {}) => {
     if (!itemId || itemId !== getSelectedItemId({ deps })) {
       return;
@@ -559,6 +569,7 @@ export const createResourcePageTagHandlers = ({
 
   const handleCreateTagFormAction = async (deps, payload) => {
     const { appService, projectService, render, store } = deps;
+    const resolvedCopy = resolveCopy(deps);
     const { actionId, values } = payload._event.detail;
     if (actionId !== "submit") {
       return;
@@ -567,8 +578,8 @@ export const createResourcePageTagHandlers = ({
     const name = values?.name?.trim();
     if (!name) {
       appService.showAlert({
-        message: "Tag name is required.",
-        title: "Warning",
+        message: resolvedCopy.tagNameRequired ?? "Tag name is required.",
+        title: resolvedCopy.warningTitle ?? "Warning",
       });
       return;
     }

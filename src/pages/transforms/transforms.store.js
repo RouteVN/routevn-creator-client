@@ -8,15 +8,16 @@ import {
 } from "../../internal/projectResolution.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { toFlatItems } from "../../internal/project/tree.js";
+import { selectTransformsPageCopy } from "./support/transformsPageCopy.js";
 
 const TRANSFORM_TAG_SCOPE_KEY = "transforms";
 const TRANSFORM_PREVIEW_IMAGE_SLOT_CONFIGS = Object.freeze([
   {
-    label: "BG Image",
+    labelKey: "backgroundImageLabel",
     target: "preview-background",
   },
   {
-    label: "Target Image",
+    labelKey: "targetImageLabel",
     target: "preview-target",
   },
 ]);
@@ -29,35 +30,40 @@ const createEmptyImageCollection = () => ({
 const createTransformForm = ({
   editMode = false,
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
+  copy,
 } = {}) => {
   const resolvedProjectResolution = requireProjectResolution(
     projectResolution,
-    "Project resolution",
+    copy.projectResolutionLabel,
   );
 
   return {
-    title: editMode ? "Edit Transform" : "Add Transform",
+    title: editMode ? copy.editTransformTitle : copy.addTransformTitle,
     fields: [
       {
         name: "name",
         type: "input-text",
-        label: "Name",
+        label: copy.nameLabel,
         required: true,
       },
       {
         name: "description",
         type: "input-textarea",
-        label: "Description",
+        label: copy.descriptionLabel,
         required: false,
       },
-      createTagField(),
+      createTagField({
+        label: copy.tagsLabel,
+        placeholder: copy.selectTagsPlaceholder,
+        addOptionLabel: copy.addTagOption,
+      }),
       {
         name: "x",
         type: "slider-with-input",
         min: 0,
         max: resolvedProjectResolution.width,
         step: 1,
-        label: "Position X",
+        label: copy.positionXLabel,
         required: true,
       },
       {
@@ -66,7 +72,7 @@ const createTransformForm = ({
         min: 0,
         max: resolvedProjectResolution.height,
         step: 1,
-        label: "Position Y",
+        label: copy.positionYLabel,
         required: true,
       },
       {
@@ -75,7 +81,7 @@ const createTransformForm = ({
         min: 0.1,
         max: 3,
         step: 0.1,
-        label: "Scale X",
+        label: copy.scaleXLabel,
         required: true,
       },
       {
@@ -84,50 +90,58 @@ const createTransformForm = ({
         min: 0.1,
         max: 3,
         step: 0.1,
-        label: "Scale Y",
+        label: copy.scaleYLabel,
         required: true,
       },
       {
         name: "anchor",
         type: "select",
-        label: "Anchor",
-        placeholder: "Choose an anchor",
+        label: copy.anchorLabel,
+        placeholder: copy.chooseAnchorPlaceholder,
         options: [
-          { id: "tl", label: "Top Left", value: { anchorX: 0, anchorY: 0 } },
+          {
+            id: "tl",
+            label: copy.anchorTopLeft,
+            value: { anchorX: 0, anchorY: 0 },
+          },
           {
             id: "tc",
-            label: "Top Center",
+            label: copy.anchorTopCenter,
             value: { anchorX: 0.5, anchorY: 0 },
           },
-          { id: "tr", label: "Top Right", value: { anchorX: 1, anchorY: 0 } },
+          {
+            id: "tr",
+            label: copy.anchorTopRight,
+            value: { anchorX: 1, anchorY: 0 },
+          },
           {
             id: "cl",
-            label: "Center Left",
+            label: copy.anchorCenterLeft,
             value: { anchorX: 0, anchorY: 0.5 },
           },
           {
             id: "cc",
-            label: "Center Center",
+            label: copy.anchorCenterCenter,
             value: { anchorX: 0.5, anchorY: 0.5 },
           },
           {
             id: "cr",
-            label: "Center Right",
+            label: copy.anchorCenterRight,
             value: { anchorX: 1, anchorY: 0.5 },
           },
           {
             id: "bl",
-            label: "Bottom Left",
+            label: copy.anchorBottomLeft,
             value: { anchorX: 0, anchorY: 1 },
           },
           {
             id: "bc",
-            label: "Bottom Center",
+            label: copy.anchorBottomCenter,
             value: { anchorX: 0.5, anchorY: 1 },
           },
           {
             id: "br",
-            label: "Bottom Right",
+            label: copy.anchorBottomRight,
             value: { anchorX: 1, anchorY: 1 },
           },
         ],
@@ -140,7 +154,9 @@ const createTransformForm = ({
         {
           id: "submit",
           variant: "pr",
-          label: editMode ? "Update Transform" : "Add Transform",
+          label: editMode
+            ? copy.updateTransformButton
+            : copy.addTransformButton,
         },
       ],
     },
@@ -159,15 +175,15 @@ const createImportFolderOptions = (collection) =>
       label: folder.fullLabel || folder.name || folder.id,
     }));
 
-const createTransformImportSourceForm = () => ({
-  title: "Import Transform",
+const createTransformImportSourceForm = (copy) => ({
+  title: copy.importTransformTitle,
   fields: [
     {
       name: "url",
       type: "input-text",
-      label: "URL",
+      label: copy.urlLabel,
       required: {
-        message: "Import URL is required.",
+        message: copy.importUrlRequired,
       },
     },
   ],
@@ -177,7 +193,7 @@ const createTransformImportSourceForm = () => ({
       {
         id: "continue",
         variant: "pr",
-        label: "Continue",
+        label: copy.continueButton,
         validate: true,
       },
     ],
@@ -188,12 +204,13 @@ const createTransformImportDestinationForm = ({
   transformFolderOptions = [],
   imageFolderOptions = [],
   includeImages = false,
+  copy,
 } = {}) => {
   const fields = [
     {
       name: "transformFolderId",
       type: "select",
-      label: "Transform Folder",
+      label: copy.transformFolderLabel,
       clearable: false,
       required: true,
       options: transformFolderOptions,
@@ -204,7 +221,7 @@ const createTransformImportDestinationForm = ({
     fields.push({
       name: "imageFolderId",
       type: "select",
-      label: "Image Folder",
+      label: copy.imageFolderLabel,
       clearable: false,
       required: true,
       options: imageFolderOptions,
@@ -212,7 +229,7 @@ const createTransformImportDestinationForm = ({
   }
 
   return {
-    title: "Choose Folders",
+    title: copy.chooseFoldersTitle,
     fields,
     actions: {
       layout: "",
@@ -220,12 +237,12 @@ const createTransformImportDestinationForm = ({
         {
           id: "back",
           variant: "se",
-          label: "Back",
+          label: copy.backButton,
         },
         {
           id: "import",
           variant: "pr",
-          label: "Import Transform",
+          label: copy.importTransformButton,
           validate: true,
         },
       ],
@@ -251,11 +268,12 @@ const createImportDestinationDefaultValues = ({
   imageFolderId: resolveImportFolderValue(imageFolderId),
 });
 
-const createImportDestinationFormForState = (state) =>
+const createImportDestinationFormForState = (state, copy) =>
   createTransformImportDestinationForm({
     transformFolderOptions: createImportFolderOptions(state.data),
     imageFolderOptions: createImportFolderOptions(state.imagesData),
     includeImages: state.importDialogIncludeImages,
+    copy,
   });
 
 const createDialogDefaultValues = (item) => ({
@@ -350,9 +368,9 @@ const setPreviewImageIdInState = (state, target, imageId) => {
   }
 };
 
-const buildPreviewPanel = (state) => ({
+const buildPreviewPanel = (state, copy) => ({
   items: TRANSFORM_PREVIEW_IMAGE_SLOT_CONFIGS.map((slot) => ({
-    label: slot.label,
+    label: copy[slot.labelKey],
     target: slot.target,
     image: buildPreviewImageCard(
       state,
@@ -361,7 +379,7 @@ const buildPreviewPanel = (state) => ({
   })),
 });
 
-const buildDetailFields = (item) => {
+const buildDetailFields = (item, { copy } = {}) => {
   if (!item) {
     return [];
   }
@@ -379,36 +397,36 @@ const buildDetailFields = (item) => {
     {
       type: "slot",
       slot: "transform-tags",
-      label: "Tags",
+      label: copy.tagsLabel,
     },
     {
       type: "text",
-      label: "Position X",
+      label: copy.positionXLabel,
       value: String(item.x ?? 0),
     },
     {
       type: "text",
-      label: "Position Y",
+      label: copy.positionYLabel,
       value: String(item.y ?? 0),
     },
     {
       type: "text",
-      label: "Scale X",
+      label: copy.scaleXLabel,
       value: String(item.scaleX ?? 1),
     },
     {
       type: "text",
-      label: "Scale Y",
+      label: copy.scaleYLabel,
       value: String(item.scaleY ?? 1),
     },
     {
       type: "text",
-      label: "Anchor X",
+      label: copy.anchorXLabel,
       value: String(item.anchorX ?? 0),
     },
     {
       type: "text",
-      label: "Anchor Y",
+      label: copy.anchorYLabel,
       value: String(item.anchorY ?? 0),
     },
   ];
@@ -421,10 +439,10 @@ const buildCatalogItem = (item) => ({
 
 const matchesSearch = matchesTagAwareSearch;
 
-const transformCenterItemContextMenuItems = [
-  { label: "Edit", type: "item", value: "edit-item" },
-  { label: "Duplicate", type: "item", value: "duplicate-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createTransformCenterItemContextMenuItems = (copy) => [
+  { label: copy.editMenuItem, type: "item", value: "edit-item" },
+  { label: copy.duplicateMenuItem, type: "item", value: "duplicate-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
 ];
 
 const {
@@ -454,42 +472,52 @@ const {
 } = createCatalogPageStore({
   itemType: "transform",
   resourceType: "transforms",
-  title: "Transforms",
+  title: "",
   selectedResourceId: "transforms",
   resourceCategory: "assets",
-  addText: "Add",
-  centerItemContextMenuItems: transformCenterItemContextMenuItems,
-  emptyMessage: "No transforms found",
+  addText: "",
+  centerItemContextMenuItems: [],
+  emptyMessage: "",
   matchesSearch,
   buildDetailFields,
   buildCatalogItem,
+  copy: selectTransformsPageCopy,
   hiddenMobileDetailSlots: ["transform-preview"],
   tagging: {
-    tagFilterPlaceholder: "Filter tags",
+    tagFilterPlaceholder: "",
   },
-  extendViewData: ({ state, selectedItem, baseViewData }) => {
+  extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
     return {
       ...baseViewData,
+      centerItemContextMenuItems:
+        createTransformCenterItemContextMenuItems(copy),
       isDialogOpen: state.isDialogOpen,
       isImportDialogOpen: state.isImportDialogOpen,
-      importForm: state.importForm,
+      importForm:
+        state.importDialogStep === IMPORT_DIALOG_DESTINATION_STEP
+          ? createImportDestinationFormForState(state, copy)
+          : createTransformImportSourceForm(copy),
       importDialogDefaultValues: state.importDialogDefaultValues,
       importDialogKey: `${state.isImportDialogOpen}-${state.importDialogStep}`,
       isPreviewOnlyDialog: state.dialogMode === "preview",
-      transformForm: state.transformForm,
+      transformForm: createTransformForm({
+        editMode: state.editMode,
+        projectResolution: state.projectResolution,
+        copy,
+      }),
       dialogDefaultValues: state.dialogDefaultValues,
       dialogPreviewItem: state.dialogItemData,
       dialogPreviewThumbnailFileId: state.dialogItemData?.thumbnailFileId,
       dialogPreviewFileId:
         state.dialogItemData?.previewFileId ??
         state.dialogItemData?.thumbnailFileId,
-      previewPanel: buildPreviewPanel(state),
+      previewPanel: buildPreviewPanel(state, copy),
       imageSelectorDialog: {
         ...state.imageSelectorDialog,
         title:
           state.imageSelectorDialog.target === "preview-background"
-            ? "Select Background"
-            : "Select Target Image",
+            ? copy.selectBackgroundTitle
+            : copy.selectTargetImageTitle,
       },
       canvasAspectRatio: formatProjectResolutionAspectRatio(
         state.projectResolution,
@@ -510,7 +538,6 @@ export const createInitialState = () => ({
   importDialogIncludeImages: false,
   importDialogPendingInput: undefined,
   importDialogSourceValues: createImportSourceDefaultValues(),
-  importForm: createTransformImportSourceForm(),
   importDialogDefaultValues: createImportSourceDefaultValues(),
   dialogMode: "form",
   targetGroupId: undefined,
@@ -528,7 +555,6 @@ export const createInitialState = () => ({
   fullImagePreviewVisible: false,
   fullImagePreviewImageId: undefined,
   fullImagePreviewFileId: undefined,
-  transformForm: createTransformForm(),
 });
 
 export {
@@ -579,11 +605,6 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
     projectResolution,
     "Project resolution",
   );
-
-  state.transformForm = createTransformForm({
-    editMode: state.editMode,
-    projectResolution: state.projectResolution,
-  });
 };
 
 const setDialogState = (state, options = {}) => {
@@ -616,10 +637,6 @@ const setDialogState = (state, options = {}) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewImageId = undefined;
   state.fullImagePreviewFileId = undefined;
-  state.transformForm = createTransformForm({
-    editMode,
-    projectResolution: state.projectResolution,
-  });
 };
 
 export const openTransformFormDialog = ({ state }, options = {}) => {
@@ -654,9 +671,6 @@ export const closeTransformFormDialog = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewImageId = undefined;
   state.fullImagePreviewFileId = undefined;
-  state.transformForm = createTransformForm({
-    projectResolution: state.projectResolution,
-  });
 };
 
 export const openImportDialog = ({ state }, { targetGroupId } = {}) => {
@@ -669,7 +683,6 @@ export const openImportDialog = ({ state }, { targetGroupId } = {}) => {
   state.importDialogPendingInput = undefined;
   state.importDialogSourceValues = createImportSourceDefaultValues();
   state.importDialogDefaultValues = createImportSourceDefaultValues();
-  state.importForm = createTransformImportSourceForm();
 };
 
 export const openImportDestinationStep = (
@@ -685,7 +698,6 @@ export const openImportDestinationStep = (
     transformFolderId: state.importDialogTargetGroupId,
     imageFolderId: state.importDialogImageFolderId,
   });
-  state.importForm = createImportDestinationFormForState(state);
 };
 
 export const openImportSourceStep = ({ state }, _payload = {}) => {
@@ -693,7 +705,6 @@ export const openImportSourceStep = ({ state }, _payload = {}) => {
   state.importDialogPendingInput = undefined;
   state.importDialogIncludeImages = false;
   state.importDialogDefaultValues = state.importDialogSourceValues;
-  state.importForm = createTransformImportSourceForm();
 };
 
 export const closeImportDialog = ({ state }, _payload = {}) => {
@@ -705,7 +716,6 @@ export const closeImportDialog = ({ state }, _payload = {}) => {
   state.importDialogPendingInput = undefined;
   state.importDialogSourceValues = createImportSourceDefaultValues();
   state.importDialogDefaultValues = createImportSourceDefaultValues();
-  state.importForm = createTransformImportSourceForm();
 };
 
 export const setImportDestinationValues = ({ state }, { values } = {}) => {
@@ -795,7 +805,10 @@ export const openPreviewImageSelectorDialog = ({ state }, { target } = {}) => {
   state.imageSelectorDialog.originalImageId = imageId;
 };
 
-export const openPreviewImageMenu = ({ state }, { target, x, y } = {}) => {
+export const openPreviewImageMenu = (
+  { state },
+  { target, x, y, items } = {},
+) => {
   const slotConfig = getPreviewSlotConfig(target);
   const imageId = selectPreviewImageIdFromState(state, target);
   state.previewImageMenu = createPreviewImageMenu();
@@ -808,9 +821,7 @@ export const openPreviewImageMenu = ({ state }, { target, x, y } = {}) => {
   state.previewImageMenu.x = x;
   state.previewImageMenu.y = y;
   state.previewImageMenu.target = target;
-  state.previewImageMenu.items = [
-    { label: "Remove", type: "item", value: "remove" },
-  ];
+  state.previewImageMenu.items = items ?? [];
 };
 
 export const closePreviewImageMenu = ({ state }, _payload = {}) => {

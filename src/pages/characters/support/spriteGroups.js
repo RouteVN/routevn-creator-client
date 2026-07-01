@@ -72,6 +72,7 @@ export const reverseSpriteGroups = (spriteGroups = []) =>
 export const validateSpriteGroupsForSave = ({
   spriteGroups,
   validTagIds,
+  copy,
 } = {}) => {
   const normalizedSpriteGroups = normalizeSpriteGroupsForDraft({
     spriteGroups,
@@ -86,7 +87,10 @@ export const validateSpriteGroupsForSave = ({
     if (seenIds.has(spriteGroup.id)) {
       return {
         valid: false,
-        message: `Sprite group ${index + 1} has a duplicate id.`,
+        message: copy.spriteGroupDuplicateId.replace(
+          "{index}",
+          String(index + 1),
+        ),
       };
     }
 
@@ -95,14 +99,20 @@ export const validateSpriteGroupsForSave = ({
     if (!spriteGroup.name) {
       return {
         valid: false,
-        message: `Sprite group ${index + 1} must have a name.`,
+        message: copy.spriteGroupNameRequiredAtIndex.replace(
+          "{index}",
+          String(index + 1),
+        ),
       };
     }
 
     if (spriteGroup.tags.length === 0) {
       return {
         valid: false,
-        message: `Sprite group ${index + 1} must have at least one tag.`,
+        message: copy.spriteGroupTagRequiredAtIndex.replace(
+          "{index}",
+          String(index + 1),
+        ),
       };
     }
   }
@@ -144,6 +154,7 @@ export const buildSpriteGroupViewData = ({
 export const buildDraftSpriteGroupViewData = ({
   spriteGroups,
   tagsById,
+  copy,
   displayTopFirst = false,
 } = {}) => {
   const viewData = normalizeSpriteGroupsForDraft({
@@ -161,7 +172,7 @@ export const buildDraftSpriteGroupViewData = ({
       tagNames,
       tagSummary: tagNames.join(", "),
       sourceIndex: index,
-      label: `Group ${index + 1}`,
+      label: copy.spriteGroupLabel.replace("{index}", String(index + 1)),
     };
   });
 

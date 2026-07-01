@@ -47,6 +47,7 @@ import {
   setTagsDataState,
   syncDetailTagIds,
 } from "../../internal/ui/resourcePages/tags.js";
+import { selectCharacterSpritesPageCopy } from "./support/characterSpritesPageCopy.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
@@ -137,6 +138,7 @@ const buildSelectedItemSpriteGroups = ({
   item,
   spriteGroups,
   tagsById,
+  copy,
 } = {}) => {
   if (!item) {
     return [];
@@ -154,7 +156,9 @@ const buildSelectedItemSpriteGroups = ({
 
       return {
         id: spriteGroup.id,
-        name: spriteGroup.name.trim() || "Group " + (index + 1),
+        name:
+          spriteGroup.name.trim() ||
+          copy.groupNameFallback.replace("{index}", String(index + 1)),
         tags: spriteGroup.tags,
         tagSummary: tagNames.join(", "),
       };
@@ -162,25 +166,29 @@ const buildSelectedItemSpriteGroups = ({
     .filter(Boolean);
 };
 
-const folderContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-child-folder" },
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createFolderContextMenuItems = (copy) => [
+  {
+    label: copy.newFolderMenuItem,
+    type: "item",
+    value: "new-child-folder",
+  },
+  { label: copy.renameMenuItem, type: "item", value: "rename-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
 ];
 
-const itemContextMenuItems = [
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createItemContextMenuItems = (copy) => [
+  { label: copy.renameMenuItem, type: "item", value: "rename-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
 ];
 
-const emptyContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-item" },
+const createEmptyContextMenuItems = (copy) => [
+  { label: copy.newFolderMenuItem, type: "item", value: "new-item" },
 ];
 
-const centerItemContextMenuItems = [
-  { label: "Edit", type: "item", value: "edit-item" },
-  { label: "Preview", type: "item", value: "preview-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createCenterItemContextMenuItems = (copy) => [
+  { label: copy.editMenuItem, type: "item", value: "edit-item" },
+  { label: copy.previewMenuItem, type: "item", value: "preview-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
 ];
 
 const resolveSheetWidth = (item) =>
@@ -192,7 +200,7 @@ const resolveSheetHeight = (item) =>
 const resolveFrameCount = (item) =>
   item?.frameCount ?? Object.keys(item?.jsonData?.frames ?? {}).length ?? 0;
 
-const buildImageDetailFields = (item) => {
+const buildImageDetailFields = (item, copy) => {
   if (!item) {
     return [];
   }
@@ -210,32 +218,32 @@ const buildImageDetailFields = (item) => {
     {
       type: "slot",
       slot: "sprite-tags",
-      label: "Tags",
+      label: copy.tagsLabel,
     },
     {
       type: "slot",
       slot: "sprite-groups",
-      label: "Sprite Groups",
+      label: copy.spriteGroupsLabel,
     },
     {
       type: "text",
-      label: "File Type",
+      label: copy.fileTypeLabel,
       value: item.fileType ?? "",
     },
     {
       type: "text",
-      label: "File Size",
+      label: copy.fileSizeLabel,
       value: formatFileSize(item.fileSize),
     },
     {
       type: "text",
-      label: "Dimensions",
+      label: copy.dimensionsLabel,
       value: item.width && item.height ? `${item.width} × ${item.height}` : "",
     },
   ];
 };
 
-const buildSpritesheetDetailFields = (item) => {
+const buildSpritesheetDetailFields = (item, copy) => {
   if (!item) {
     return [];
   }
@@ -255,31 +263,31 @@ const buildSpritesheetDetailFields = (item) => {
     {
       type: "slot",
       slot: "sprite-tags",
-      label: "Tags",
+      label: copy.tagsLabel,
     },
     {
       type: "slot",
       slot: "sprite-groups",
-      label: "Sprite Groups",
+      label: copy.spriteGroupsLabel,
     },
     {
       type: "text",
-      label: "File Type",
+      label: copy.fileTypeLabel,
       value: item.fileType ?? "",
     },
     {
       type: "text",
-      label: "File Size",
+      label: copy.fileSizeLabel,
       value: formatFileSize(item.fileSize),
     },
     {
       type: "text",
-      label: "Default Size",
+      label: copy.defaultSizeLabel,
       value: item.width && item.height ? `${item.width} × ${item.height}` : "",
     },
     {
       type: "text",
-      label: "Sheet Size",
+      label: copy.sheetSizeLabel,
       value:
         resolveSheetWidth(item) && resolveSheetHeight(item)
           ? `${resolveSheetWidth(item)} × ${resolveSheetHeight(item)}`
@@ -287,12 +295,12 @@ const buildSpritesheetDetailFields = (item) => {
     },
     {
       type: "text",
-      label: "Frames",
+      label: copy.framesLabel,
       value: String(resolveFrameCount(item) || ""),
     },
     {
       type: "text",
-      label: "Animations",
+      label: copy.animationsLabel,
       value: String(animationCount || ""),
     },
     {
@@ -303,7 +311,7 @@ const buildSpritesheetDetailFields = (item) => {
   ];
 };
 
-const buildFolderDetailFields = (folder) => {
+const buildFolderDetailFields = (folder, copy) => {
   if (!folder) {
     return [];
   }
@@ -311,8 +319,8 @@ const buildFolderDetailFields = (folder) => {
   return [
     {
       type: "text",
-      label: "Type",
-      value: "folder",
+      label: copy.typeLabel,
+      value: copy.folderTypeValue,
     },
     {
       type: "description",
@@ -323,28 +331,31 @@ const buildFolderDetailFields = (folder) => {
 
 const getPreviewFileId = (item) => item?.thumbnailFileId ?? item?.fileId;
 
-const createEditForm = ({ tagOptions } = {}) => ({
-  title: "Edit Sprite",
+const createEditForm = ({ tagOptions, copy } = {}) => ({
+  title: copy.editSpriteTitle,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel,
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel,
       required: false,
     },
     createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
       options: tagOptions ?? [],
     }),
     {
       type: "slot",
       slot: "image-slot",
-      label: "Image",
+      label: copy.imageLabel,
     },
   ],
   actions: {
@@ -353,57 +364,57 @@ const createEditForm = ({ tagOptions } = {}) => ({
       {
         id: "submit",
         variant: "pr",
-        label: "Update Sprite",
+        label: copy.updateSpriteButton,
       },
     ],
   },
 });
 
-const spritesheetDialogForm = {
-  title: "Spritesheet",
+const createSpritesheetDialogForm = (copy) => ({
+  title: copy.spritesheetTitle,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel,
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel,
       required: false,
     },
     {
       type: "slot",
       slot: "spritesheet-image-source",
-      label: "Image",
+      label: copy.imageLabel,
     },
     {
       type: "slot",
       slot: "spritesheet-atlas-source",
-      label: "Spritesheet JSON",
+      label: copy.spritesheetJsonLabel,
     },
     {
       name: "tagIds",
       type: "tag-select",
-      label: "Tags",
-      placeholder: "Select tags",
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
       addOption: {
-        label: "Add tag",
+        label: copy.addTagOption,
       },
       required: false,
     },
     {
       name: "width",
       type: "input-number",
-      label: "Default Width",
+      label: copy.defaultWidthLabel,
       required: false,
     },
     {
       name: "height",
       type: "input-number",
-      label: "Default Height",
+      label: copy.defaultHeightLabel,
       required: false,
     },
   ],
@@ -413,36 +424,39 @@ const spritesheetDialogForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Save",
+        label: copy.saveButton,
       },
     ],
   },
-};
-
-const buildSpritesheetDialogForm = (submitLabel) => ({
-  ...spritesheetDialogForm,
-  actions: {
-    ...spritesheetDialogForm.actions,
-    buttons: spritesheetDialogForm.actions.buttons.map((button) => ({
-      ...button,
-      label: button.id === "submit" ? submitLabel : button.label,
-    })),
-  },
 });
 
-const folderNameForm = {
-  title: "Edit Folder",
+const buildSpritesheetDialogForm = (copy, submitLabel) => {
+  const spritesheetDialogForm = createSpritesheetDialogForm(copy);
+  return {
+    ...spritesheetDialogForm,
+    actions: {
+      ...spritesheetDialogForm.actions,
+      buttons: spritesheetDialogForm.actions.buttons.map((button) => ({
+        ...button,
+        label: button.id === "submit" ? submitLabel : button.label,
+      })),
+    },
+  };
+};
+
+const createFolderNameForm = (copy) => ({
+  title: copy.editFolderTitle,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel,
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel,
       required: false,
     },
   ],
@@ -452,15 +466,15 @@ const folderNameForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Save",
+        label: copy.saveButton,
         validate: true,
       },
     ],
   },
-};
+});
 
-const clipFpsForm = {
-  title: "Clip FPS",
+const createClipFpsForm = (copy) => ({
+  title: copy.clipFpsTitle,
   fields: [
     {
       name: "fps",
@@ -477,19 +491,22 @@ const clipFpsForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Update FPS",
+        label: copy.updateFpsButton,
       },
     ],
   },
-};
-
-const buildClipFpsForm = (clipName) => ({
-  ...clipFpsForm,
-  title:
-    typeof clipName === "string" && clipName.length > 0
-      ? `Clip FPS: ${clipName}`
-      : clipFpsForm.title,
 });
+
+const buildClipFpsForm = (copy, clipName) => {
+  const clipFpsForm = createClipFpsForm(copy);
+  return {
+    ...clipFpsForm,
+    title:
+      typeof clipName === "string" && clipName.length > 0
+        ? copy.clipFpsTitleWithName.replace("{clipName}", clipName)
+        : clipFpsForm.title,
+  };
+};
 
 const matchesSearch = (item, searchQuery) => {
   if (!searchQuery) {
@@ -524,6 +541,7 @@ const buildClipOptions = (
   animations = {},
   selectedClipName,
   missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
+  copy = {},
 ) => {
   const clipOptions = Object.entries(animations ?? {}).map(
     ([name, animation]) => {
@@ -548,7 +566,7 @@ const buildClipOptions = (
     clipOptions: clipOptions.map((clip) => ({
       ...clip,
       isSelected: clip.name === fallbackSelectedClipName,
-      loopLabel: clip.loop ? "Loop" : "Once",
+      loopLabel: clip.loop ? copy.loopLabel : copy.onceLabel,
       borderColor: clip.name === fallbackSelectedClipName ? "ac" : "bo",
       backgroundColor: clip.name === fallbackSelectedClipName ? "mu" : "bg",
     })),
@@ -1232,12 +1250,23 @@ export const selectAdjacentSpriteItemId = (
   { state },
   { itemId, direction, distance = 1, clamp = false } = {},
 ) => {
-  const viewData = selectViewData({ state });
+  const searchQuery = state.searchQuery.toLowerCase().trim();
+  const activeTagIds = state.activeTagIds ?? [];
+  const visibleSpriteIds = toFlatGroups(state.spritesData).flatMap((group) =>
+    (group.children ?? [])
+      .filter((item) => matchesSearch(item, searchQuery))
+      .filter((item) =>
+        matchesTagFilter({
+          item,
+          activeTagIds,
+        }),
+      )
+      .filter((item) => item?.type === "image")
+      .map((item) => item.id),
+  );
+
   return resolveAdjacentSpriteItemId({
-    visibleSpriteIds: selectVisibleSpriteIds({
-      mediaGroups: viewData.mediaGroups,
-      items: state.spritesData?.items,
-    }),
+    visibleSpriteIds,
     itemId,
     direction,
     distance,
@@ -1280,7 +1309,8 @@ export const setFullImagePreviewDisplayMode = (
 export const selectFullImagePreviewVisible = ({ state }) =>
   state.fullImagePreviewVisible;
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectCharacterSpritesPageCopy(i18n);
   const flatItems = applyFolderRequiredRootDragOptions(
     toFlatItems(state.spritesData),
   );
@@ -1340,17 +1370,17 @@ export const selectViewData = ({ state }) => {
     selectedItem?.type === "image" ? selectedItem : undefined;
   const projectResolution = requireProjectResolution(
     state.projectResolution,
-    "Project resolution",
+    copy.projectResolutionLabel,
   );
   const selectedFolder = state.spritesData.items?.[state.selectedFolderId];
   const selectedDetailId = selectedItem ? selectedItem.id : selectedFolder?.id;
   const selectedDetailName = selectedItem?.name ?? selectedFolder?.name ?? "";
   const detailFields =
     selectedItem?.type === "image"
-      ? buildImageDetailFields(selectedItem)
+      ? buildImageDetailFields(selectedItem, copy)
       : selectedItem?.type === "spritesheet"
-        ? buildSpritesheetDetailFields(selectedItem)
-        : buildFolderDetailFields(selectedFolder);
+        ? buildSpritesheetDetailFields(selectedItem, copy)
+        : buildFolderDetailFields(selectedFolder, copy);
   const visibleSpriteIds = selectVisibleSpriteIds({
     mediaGroups,
     items: state.spritesData?.items,
@@ -1372,17 +1402,25 @@ export const selectViewData = ({ state }) => {
   const tagViewData = buildTagViewData({
     state,
     selectedItem,
-    createTagFormDefinition: createTagForm(),
+    createTagFormDefinition: createTagForm({
+      title: copy.createTagTitle,
+      submitLabel: copy.createTagButton,
+      nameLabel: copy.tagNameLabel,
+    }),
+    tagFilterPlaceholder: copy.tagFilterPlaceholder,
+    detailTagAddOptionLabel: copy.addTagOption,
   });
   const selectedItemSpriteGroups = buildSelectedItemSpriteGroups({
     item: selectedItem,
     spriteGroups: state.characterSpriteGroups,
     tagsById: state.tagsData.items ?? {},
+    copy,
   });
   const detailSelection = buildClipOptions(
     selectedItem?.type === "spritesheet" ? selectedItem.animations : {},
     state.detailSelectedClipName,
     INITIAL_SPRITESHEET_CLIP_FPS,
+    copy,
   );
   const detailSelectedClipName = detailSelection.selectedClipName;
   const detailPreviewAnimation =
@@ -1403,6 +1441,7 @@ export const selectViewData = ({ state }) => {
     spritesheetDialogAnimations,
     state.spritesheetDialogSelectedClipName,
     INITIAL_SPRITESHEET_CLIP_FPS,
+    copy,
   );
   const spritesheetDialogSelectedClipName =
     spritesheetDialogSelection.selectedClipName;
@@ -1475,7 +1514,7 @@ export const selectViewData = ({ state }) => {
     detailPreviewKey,
     detailPreviewPaused: state.isSpritesheetDialogOpen,
     searchQuery: state.searchQuery,
-    uploadText: "Upload",
+    uploadText: copy.uploadButton,
     acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp", ".json"],
     imageHeight: IMAGE_CARD_HEIGHT,
     maxWidth: IMAGE_CARD_MAX_WIDTH,
@@ -1498,14 +1537,15 @@ export const selectViewData = ({ state }) => {
     }),
     fullImagePreviewPreviousVisible: Boolean(previousItemId),
     fullImagePreviewNextVisible: Boolean(nextItemId),
-    folderContextMenuItems,
-    itemContextMenuItems,
-    emptyContextMenuItems,
-    centerItemContextMenuItems,
+    folderContextMenuItems: createFolderContextMenuItems(copy),
+    itemContextMenuItems: createItemContextMenuItems(copy),
+    emptyContextMenuItems: createEmptyContextMenuItems(copy),
+    centerItemContextMenuItems: createCenterItemContextMenuItems(copy),
     title: state.characterName,
     isEditDialogOpen: state.isEditDialogOpen,
     editForm: createEditForm({
       tagOptions: tagViewData.tagFilterOptions,
+      copy,
     }),
     editDefaultValues: state.editDefaultValues,
     editPreviewFileId: state.editPreviewFileId,
@@ -1514,14 +1554,15 @@ export const selectViewData = ({ state }) => {
     spritesheetDialogMode: state.spritesheetDialogMode,
     spritesheetDialogTitle:
       state.spritesheetDialogMode === "create"
-        ? "Add Spritesheet"
+        ? copy.addSpritesheetTitle
         : state.spritesheetDialogMode === "edit"
-          ? "Edit Spritesheet"
+          ? copy.editSpritesheetTitle
           : "",
     spritesheetDialogForm: buildSpritesheetDialogForm(
+      copy,
       state.spritesheetDialogMode === "create"
-        ? "Add Spritesheet"
-        : "Update Spritesheet",
+        ? copy.addSpritesheetButton
+        : copy.updateSpritesheetButton,
     ),
     spritesheetDialogFormKey: `${state.spritesheetDialogMode}-${state.spritesheetDialogItemId ?? "new"}-${state.spritesheetDialogRevision}`,
     spritesheetDialogValues: state.spritesheetDialogValues,
@@ -1534,18 +1575,18 @@ export const selectViewData = ({ state }) => {
     spritesheetDialogImageSourceFileId,
     spritesheetDialogClipOptions: spritesheetDialogSelection.clipOptions,
     spritesheetDialogSelectedClipName,
-    spritesheetDialogAtlasSourceLabel: "Upload",
+    spritesheetDialogAtlasSourceLabel: copy.uploadButton,
     spritesheetDialogAtlasFieldValue,
     spritesheetDialogAtlasFieldPlaceholder: spritesheetDialogHasAtlasSource
-      ? "Current spritesheet JSON"
-      : "No JSON selected",
+      ? copy.currentSpritesheetJson
+      : copy.noJsonSelected,
     isClipFpsDialogOpen: state.isClipFpsDialogOpen,
     clipFpsDialogValues: state.clipFpsDialogValues,
     clipFpsDialogKey: `${state.clipFpsDialogClipName ?? "none"}-${state.clipFpsDialogRevision}`,
-    clipFpsForm: buildClipFpsForm(state.clipFpsDialogClipName),
+    clipFpsForm: buildClipFpsForm(copy, state.clipFpsDialogClipName),
     isFolderNameDialogOpen: state.isFolderNameDialogOpen,
     folderNameDialogItemId: state.folderNameDialogItemId,
-    folderNameForm,
+    folderNameForm: createFolderNameForm(copy),
     folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
     startCollapsedFileExplorer: shouldStartCollapsedFileExplorer({
       flatItems,

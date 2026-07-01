@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   handleDataChanged,
   handleItemDelete,
@@ -35,6 +36,7 @@ describe("sounds handlers", () => {
       },
     };
     const deps = {
+      i18n: EN_I18N,
       projectService: {
         getState: () => repositoryState,
       },
@@ -73,6 +75,7 @@ describe("sounds handlers", () => {
 
   it("plays mobile long-press previews without opening the detail sheet", () => {
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectSoundItemById: vi.fn(({ itemId }) => ({
           id: itemId,
@@ -118,6 +121,7 @@ describe("sounds handlers", () => {
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectSelectedItemId: vi.fn(() => "sound-1"),
         selectSoundItemById: vi.fn(({ itemId }) => ({
@@ -163,6 +167,7 @@ describe("sounds handlers", () => {
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectSelectedItemId: vi.fn(() => "sound-1"),
         openMobileDeleteDialog: vi.fn(),
@@ -187,6 +192,7 @@ describe("sounds handlers", () => {
 
   it("cancels selected mobile detail sound deletes without deleting", () => {
     const deps = {
+      i18n: EN_I18N,
       projectService: {
         deleteSoundIfUnused: vi.fn(),
       },
@@ -217,6 +223,7 @@ describe("sounds handlers", () => {
     };
     let selectedItemId = "sound-1";
     const deps = {
+      i18n: EN_I18N,
       projectService: {
         deleteSoundIfUnused: vi.fn(async () => ({
           deleted: true,
@@ -256,6 +263,7 @@ describe("sounds handlers", () => {
 
   it("shows a failure alert when deleteSoundIfUnused fails without usage", async () => {
     const deps = {
+      i18n: EN_I18N,
       projectService: {
         deleteSoundIfUnused: vi.fn(async () => ({
           deleted: false,

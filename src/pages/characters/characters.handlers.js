@@ -25,8 +25,8 @@ import {
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import {
+  buildSpriteGroupDropdownItems,
   CHARACTER_TAG_SCOPE_KEY,
-  SPRITE_GROUPS_CREATE_MESSAGE,
 } from "./characters.store.js";
 import {
   reverseSpriteGroups,
@@ -36,6 +36,7 @@ import {
   buildSpriteGroupInUseMessage,
   findSpriteGroupUsage,
 } from "./support/spriteGroupUsage.js";
+import { selectCharactersPageCopy } from "./support/charactersPageCopy.js";
 
 const AVATAR_VALIDATIONS = [
   {
@@ -52,6 +53,8 @@ const EMPTY_CHARACTER_FORM_VALUES = {
   shortcut: "",
   tagIds: [],
 };
+
+const selectCopy = (deps = {}) => selectCharactersPageCopy(deps.i18n);
 
 const resolveCharacterSpriteTagScopeKey = (characterId) =>
   `${CHARACTER_SPRITE_TAG_SCOPE_PREFIX}${characterId}`;
@@ -192,7 +195,7 @@ const resetAddCharacterForm = ({ refs } = {}) => {
   });
 };
 
-const uploadAvatarFile = async ({ deps, file, target } = {}) => {
+const uploadAvatarFile = async ({ deps, file, target, copy } = {}) => {
   const { appService, projectService, store } = deps;
   let uploadResults;
   try {
@@ -207,8 +210,8 @@ const uploadAvatarFile = async ({ deps, file, target } = {}) => {
   if (!result?.fileId) {
     showResourcePageError({
       appService,
-      errorOrResult: "Failed to upload avatar image.",
-      fallbackMessage: "Failed to upload avatar image.",
+      errorOrResult: copy.failedUploadAvatarImage,
+      fallbackMessage: copy.failedUploadAvatarImage,
     });
     return false;
   }
@@ -278,6 +281,7 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   createResourceFileExplorerHandlers({
     resourceType: "characters",
     refresh: refreshCharactersData,
+    copy: ({ i18n }) => selectCharactersPageCopy(i18n),
   });
 const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
@@ -404,6 +408,7 @@ export const handleFolderNameDialogClose = (deps) => {
 
 export const handleFolderNameFormAction = async (deps, payload) => {
   const { appService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -413,8 +418,8 @@ export const handleFolderNameFormAction = async (deps, payload) => {
   const description = values?.description?.trim() ?? "";
   if (!name) {
     appService.showAlert({
-      message: "Folder name is required.",
-      title: "Warning",
+      message: copy.folderNameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -442,6 +447,7 @@ export const handleFolderNameFormAction = async (deps, payload) => {
 
 export const handleCharacterCreated = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const detail = payload._event.detail;
   const {
     groupId,
@@ -473,7 +479,7 @@ export const handleCharacterCreated = async (deps, payload) => {
         [defaultSpritesFolderId]: {
           id: defaultSpritesFolderId,
           type: "folder",
-          name: "Default Sprites",
+          name: copy.defaultSpritesFolderName,
         },
       },
     },
@@ -493,7 +499,7 @@ export const handleCharacterCreated = async (deps, payload) => {
 
   const createAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to create character.",
+    fallbackMessage: copy.failedCreateCharacter,
     action: () =>
       projectService.createCharacter({
         characterId,
@@ -578,6 +584,7 @@ export const handleCloseDialog = (deps) => {
 
 export const handleDialogFormActionClick = async (deps, payload) => {
   const { appService, store, render } = deps;
+  const copy = selectCopy(deps);
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
@@ -585,16 +592,16 @@ export const handleDialogFormActionClick = async (deps, payload) => {
     const name = formData.name?.trim();
     if (!name) {
       appService.showAlert({
-        message: "Character name is required.",
-        title: "Warning",
+        message: copy.characterNameRequired,
+        title: copy.warningTitle,
       });
       return;
     }
 
     if ((store.getState().dialogSpriteGroups ?? []).length > 0) {
       appService.showAlert({
-        message: SPRITE_GROUPS_CREATE_MESSAGE,
-        title: "Warning",
+        message: copy.spriteGroupsCreateMessage,
+        title: copy.warningTitle,
       });
       return;
     }
@@ -653,6 +660,7 @@ const {
   handleCreateTagFormAction,
 } = createResourcePageTagHandlers({
   resolveScopeKey: () => CHARACTER_TAG_SCOPE_KEY,
+  copy: ({ i18n }) => selectCharactersPageCopy(i18n),
   updateItemTagIds: ({ deps, itemId, tagIds }) =>
     deps.projectService.updateCharacter({
       characterId: itemId,
@@ -684,7 +692,8 @@ const {
       tagId,
     });
   },
-  updateItemTagFallbackMessage: "Failed to update character tags.",
+  updateItemTagFallbackMessage: ({ deps }) =>
+    selectCopy(deps).failedUpdateCharacterTags,
 });
 
 export {
@@ -700,6 +709,7 @@ export {
 
 export const handleDialogAvatarClick = async (deps) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
 
   try {
     const file = await appService.pickFiles({
@@ -719,13 +729,14 @@ export const handleDialogAvatarClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to upload avatar image.",
+      fallbackMessage: copy.failedUploadAvatarImage,
     });
   }
 };
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
 
   const state = projectService.getState();
@@ -748,7 +759,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (isUsed) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message: copy.cannotDeleteResourceInUse,
     });
     render();
     return;
@@ -772,6 +783,7 @@ export const handleEditDialogClose = (deps) => {
 
 export const handleEditDialogAvatarClick = async (deps) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
 
   try {
     const file = await appService.pickFiles({
@@ -791,7 +803,7 @@ export const handleEditDialogAvatarClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to upload avatar image.",
+      fallbackMessage: copy.failedUploadAvatarImage,
     });
   }
 };
@@ -804,14 +816,15 @@ export const handleAvatarCropDialogClose = (deps) => {
 
 export const handleAvatarCropDialogConfirm = async (deps) => {
   const { appService, refs, render, store } = deps;
+  const copy = selectCopy(deps);
   const target = store.selectAvatarCropTarget();
 
   try {
     const croppedFile = await refs.avatarCropDialog?.getCroppedFile?.();
     if (!croppedFile) {
       appService.showAlert({
-        message: "Avatar crop is not ready yet.",
-        title: "Warning",
+        message: copy.avatarCropNotReady,
+        title: copy.warningTitle,
       });
       return;
     }
@@ -820,6 +833,7 @@ export const handleAvatarCropDialogConfirm = async (deps) => {
       deps,
       file: croppedFile,
       target,
+      copy,
     });
     if (!didUpload) {
       return;
@@ -831,18 +845,19 @@ export const handleAvatarCropDialogConfirm = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to crop avatar image.",
+      fallbackMessage: copy.failedCropAvatarImage,
     });
   }
 };
 
 export const handleSpriteGroupAddClick = (deps, payload) => {
   const { appService, store, render } = deps;
+  const copy = selectCopy(deps);
   const target = readSpriteGroupTarget(payload);
   if (target === "add") {
     appService.showAlert({
-      message: SPRITE_GROUPS_CREATE_MESSAGE,
-      title: "Warning",
+      message: copy.spriteGroupsCreateMessage,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -877,6 +892,7 @@ export const handleSpriteGroupCardClick = (deps, payload) => {
 
 export const handleSpriteGroupFormAction = (deps, payload) => {
   const { appService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -888,8 +904,8 @@ export const handleSpriteGroupFormAction = (deps, payload) => {
   const isEditing = Number.isInteger(index);
   if (target === "add") {
     appService.showAlert({
-      message: SPRITE_GROUPS_CREATE_MESSAGE,
-      title: "Warning",
+      message: copy.spriteGroupsCreateMessage,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -897,8 +913,8 @@ export const handleSpriteGroupFormAction = (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Sprite group name is required.",
-      title: "Warning",
+      message: copy.spriteGroupNameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -920,12 +936,13 @@ export const handleSpriteGroupFormAction = (deps, payload) => {
       target,
       itemId: state.editItemId,
     }),
+    copy,
   });
 
   if (!validation.valid) {
     appService.showAlert({
       message: validation.message,
-      title: "Warning",
+      title: copy.warningTitle,
     });
     return;
   }
@@ -951,6 +968,7 @@ export const handleSpriteGroupFormAction = (deps, payload) => {
 
 export const handleSpriteGroupContextMenu = (deps, payload) => {
   const { store, render } = deps;
+  const copy = selectCopy(deps);
   payload._event.preventDefault();
 
   const index = readSpriteGroupIndex(payload);
@@ -963,6 +981,16 @@ export const handleSpriteGroupContextMenu = (deps, payload) => {
     index,
     x: payload._event.clientX,
     y: payload._event.clientY,
+    items: buildSpriteGroupDropdownItems({
+      index,
+      total:
+        store.getState()[
+          readSpriteGroupTarget(payload) === "edit"
+            ? "editSpriteGroups"
+            : "dialogSpriteGroups"
+        ]?.length ?? 0,
+      copy,
+    }),
   });
   render();
 };
@@ -975,6 +1003,7 @@ export const handleSpriteGroupDropdownMenuClose = (deps) => {
 
 export const handleSpriteGroupDropdownMenuItemClick = (deps, payload) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
   const detail = payload._event.detail;
   const item = detail.item || detail;
   const state = store.getState();
@@ -1017,8 +1046,9 @@ export const handleSpriteGroupDropdownMenuItemClick = (deps, payload) => {
           message: buildSpriteGroupInUseMessage({
             spriteGroupName: spriteGroup?.name,
             usage,
+            copy,
           }),
-          title: "Warning",
+          title: copy.warningTitle,
         });
         render();
         return;
@@ -1036,6 +1066,7 @@ export const handleSpriteGroupDropdownMenuItemClick = (deps, payload) => {
 
 export const handleEditFormAction = async (deps, payload) => {
   const { appService, store, render, projectService } = deps;
+  const copy = selectCopy(deps);
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.values;
@@ -1048,11 +1079,12 @@ export const handleEditFormAction = async (deps, payload) => {
         target: "edit",
         itemId: editItemId,
       }),
+      copy,
     });
     if (!spriteGroupValidation.valid) {
       appService.showAlert({
         message: spriteGroupValidation.message,
-        title: "Warning",
+        title: copy.warningTitle,
       });
       return;
     }
@@ -1074,7 +1106,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
     const updateAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to update character.",
+      fallbackMessage: copy.failedUpdateCharacter,
       action: () =>
         projectService.updateCharacter({
           characterId: editItemId,

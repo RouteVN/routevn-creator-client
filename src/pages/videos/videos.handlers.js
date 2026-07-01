@@ -20,9 +20,9 @@ import {
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import { VIDEO_TAG_SCOPE_KEY } from "./videos.store.js";
+import { selectVideosPageCopy } from "./support/videosPageCopy.js";
 
 const VIDEO_FILE_PATTERN = /\.(mp4)$/i;
-const INVALID_VIDEO_FORMAT_MESSAGE = "Only MP4 videos are supported.";
 const VT_VIDEO_PREVIEW_TIME_S = 0.75;
 
 const isVideoElement = (value) => value?.tagName === "VIDEO";
@@ -40,27 +40,33 @@ const isNearVideoTime = (videoElement, targetTime) => {
   return Math.abs(Number(videoElement?.currentTime) - targetTime) <= 0.05;
 };
 
-const showInvalidFormatToast = (appService) => {
+const selectCopy = (deps = {}) => selectVideosPageCopy(deps.i18n);
+
+const showInvalidFormatToast = (appService, copy) => {
   appService.showAlert({
-    message: INVALID_VIDEO_FORMAT_MESSAGE,
-    title: "Warning",
+    message: copy.invalidFormatMessage,
+    title: copy.warningTitle,
   });
 };
 
-const validateVideoFiles = ({ appService, files } = {}) => {
+const validateVideoFiles = ({ appService, files, copy } = {}) => {
   const invalidFiles = Array.from(files ?? []).filter(
     (file) => !file.name.match(VIDEO_FILE_PATTERN),
   );
 
   if (invalidFiles.length > 0) {
-    showInvalidFormatToast(appService);
+    showInvalidFormatToast(appService, copy);
     return false;
   }
 
   return true;
 };
 
-const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
+const pickAndUploadVideo = async ({
+  appService,
+  projectService,
+  copy,
+} = {}) => {
   let file;
 
   try {
@@ -76,7 +82,7 @@ const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
     return { cancelled: true };
   }
 
-  if (!validateVideoFiles({ appService, files: [file] })) {
+  if (!validateVideoFiles({ appService, files: [file], copy })) {
     return { errorType: "validation-failed" };
   }
 
@@ -97,8 +103,9 @@ const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
 
 const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
 
-  if (!validateVideoFiles({ appService, files })) {
+  if (!validateVideoFiles({ appService, files, copy })) {
     return;
   }
 
@@ -126,7 +133,7 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
 
       const createAttempt = await runResourcePageMutation({
         appService,
-        fallbackMessage: "Failed to create video.",
+        fallbackMessage: copy.failedCreateVideo,
         action: () =>
           projectService.createVideo({
             videoId,
@@ -148,13 +155,13 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
       showResourcePageError({
         appService,
         errorOrResult: error,
-        fallbackMessage: "Failed to upload video.",
+        fallbackMessage: copy.failedUploadVideo,
       });
     },
     onNoSuccessfulUploads: () => {
       appService.showAlert({
-        message: "Failed to upload video.",
-        title: "Error",
+        message: copy.failedUploadVideo,
+        title: copy.errorTitle,
       });
     },
   });
@@ -239,6 +246,7 @@ const {
     tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId,
+  copy: ({ i18n }) => selectVideosPageCopy(i18n),
   tagging: {
     scopeKey: VIDEO_TAG_SCOPE_KEY,
     updateItemTagIds: ({ deps, itemId, tagIds }) =>
@@ -248,7 +256,8 @@ const {
           tagIds,
         },
       }),
-    updateItemTagFallbackMessage: "Failed to update video tags.",
+    updateItemTagFallbackMessage: ({ deps }) =>
+      selectCopy(deps).failedUpdateTags,
     appendCreatedTagByMode: ({ deps, mode, tagId }) => {
       if (mode !== "edit-form") {
         return;
@@ -415,6 +424,7 @@ export const handleMobileDetailDeleteClick = async (deps, payload) => {
 
 export const handleUploadClick = async (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const { groupId } = payload._event.detail;
   let files;
 
@@ -427,7 +437,7 @@ export const handleUploadClick = async (deps, payload) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select files.",
+      fallbackMessage: copy.failedSelectFiles,
     });
     return;
   }
@@ -445,10 +455,11 @@ export const handleUploadClick = async (deps, payload) => {
 
 export const handleFilesDropped = async (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const { files, rejectedFiles, targetGroupId } = payload._event.detail;
 
   if ((!files || files.length === 0) && (rejectedFiles?.length ?? 0) > 0) {
-    showInvalidFormatToast(appService);
+    showInvalidFormatToast(appService, copy);
     return;
   }
 
@@ -461,23 +472,25 @@ export const handleFilesDropped = async (deps, payload) => {
 
 export const handleFilesDropRejected = (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const rejectedFiles = payload._event.detail?.rejectedFiles ?? [];
 
   if (rejectedFiles.length === 0) {
     return;
   }
 
-  showInvalidFormatToast(appService);
+  showInvalidFormatToast(appService, copy);
 };
 
 export const handleFormExtraEvent = async (deps) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
     return;
   }
 
-  const result = await pickAndUploadVideo({ appService, projectService });
+  const result = await pickAndUploadVideo({ appService, projectService, copy });
   if (result.cancelled) {
     return;
   }
@@ -486,7 +499,7 @@ export const handleFormExtraEvent = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: result.error,
-      fallbackMessage: "Failed to select file.",
+      fallbackMessage: copy.failedSelectFile,
     });
     return;
   }
@@ -499,7 +512,7 @@ export const handleFormExtraEvent = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: result.error,
-      fallbackMessage: "Failed to upload video.",
+      fallbackMessage: copy.failedUploadVideo,
     });
     return;
   }
@@ -507,7 +520,7 @@ export const handleFormExtraEvent = async (deps) => {
   const { uploadResult } = result;
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update video.",
+    fallbackMessage: copy.failedUpdateVideo,
     action: () =>
       projectService.updateVideo({
         videoId: selectedItem.id,
@@ -537,8 +550,9 @@ export const handleEditDialogClose = (deps) => {
 
 export const handleEditDialogVideoClick = async (deps) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
 
-  const result = await pickAndUploadVideo({ appService, projectService });
+  const result = await pickAndUploadVideo({ appService, projectService, copy });
   if (result.cancelled) {
     return;
   }
@@ -547,7 +561,7 @@ export const handleEditDialogVideoClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: result.error,
-      fallbackMessage: "Failed to select file.",
+      fallbackMessage: copy.failedSelectFile,
     });
     return;
   }
@@ -560,7 +574,7 @@ export const handleEditDialogVideoClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: result.error,
-      fallbackMessage: "Failed to upload video.",
+      fallbackMessage: copy.failedUploadVideo,
     });
     return;
   }
@@ -574,6 +588,7 @@ export const handleEditDialogVideoClick = async (deps) => {
 
 export const handleEditFormAction = async (deps, payload) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -582,8 +597,8 @@ export const handleEditFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Video name is required.",
-      title: "Warning",
+      message: copy.nameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -601,7 +616,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update video.",
+    fallbackMessage: copy.failedUpdateVideo,
     action: () =>
       projectService.updateVideo({
         videoId: editItemId,
@@ -625,6 +640,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
 
   const result = await projectService.deleteVideoIfUnused({
@@ -635,8 +651,8 @@ export const handleItemDelete = async (deps, payload) => {
   if (!result.deleted) {
     appService.showAlert({
       message: result.usage?.isUsed
-        ? "Cannot delete resource, it is currently in use."
-        : "Failed to delete resource.",
+        ? copy.cannotDeleteResourceInUse
+        : copy.failedDeleteResource,
     });
     render();
     return;

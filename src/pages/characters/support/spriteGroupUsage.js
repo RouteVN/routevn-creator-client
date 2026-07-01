@@ -67,24 +67,34 @@ export const findSpriteGroupUsage = ({
 export const buildSpriteGroupInUseMessage = ({
   spriteGroupName,
   usage,
+  copy,
 } = {}) => {
   const groupLabel =
     typeof spriteGroupName === "string" && spriteGroupName.length > 0
-      ? `Sprite group "${spriteGroupName}"`
-      : "This sprite group";
+      ? copy.spriteGroupInUseLabelWithName.replace(
+          "{spriteGroupName}",
+          spriteGroupName,
+        )
+      : copy.spriteGroupInUseLabelFallback;
   const locationParts = [];
 
   if (usage?.sceneName) {
-    locationParts.push(`scene "${usage.sceneName}"`);
+    locationParts.push(
+      copy.spriteGroupInUseScene.replace("{sceneName}", usage.sceneName),
+    );
   }
 
   if (usage?.sectionName) {
-    locationParts.push(`section "${usage.sectionName}"`);
+    locationParts.push(
+      copy.spriteGroupInUseSection.replace("{sectionName}", usage.sectionName),
+    );
   }
 
   if (locationParts.length === 0) {
-    return `${groupLabel} is used in story lines and can't be removed. Remove it from those lines first.`;
+    return copy.spriteGroupInUseMessage.replace("{groupLabel}", groupLabel);
   }
 
-  return `${groupLabel} is used in ${locationParts.join(", ")} and can't be removed. Remove it from those lines first.`;
+  return copy.spriteGroupInUseMessageWithLocation
+    .replace("{groupLabel}", groupLabel)
+    .replace("{location}", locationParts.join(", "));
 };
