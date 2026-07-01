@@ -10,6 +10,14 @@ fe:
   dirs: ["src/components", "src/pages"] # directories that contain components
   setup: "src/setup.web.js" # path to setup file
   outfile: "_site/public/main.js" # output this is separate from rettangoli file
+  i18n:
+    dir: "src/i18n"
+    defaultLocale: "en"
+    fallbackLocale: "en"
+    locales:
+      - "en"
+      - "ja"
+      - "zh-hans"
   #  watchPort: 3001
 
 # all visual testing configuration

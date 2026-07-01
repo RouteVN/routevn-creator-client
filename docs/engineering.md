@@ -33,6 +33,23 @@ Local-first collaboration:
 
 - `insieme`
 
+## Localization
+
+Frontend locale catalogs live in `src/i18n/*.yaml`. Keep every locale aligned
+with the default English catalog because the Rettangoli i18n build validates
+that all locales contain the same keys.
+
+For Japanese localization, follow the RouteVN website Japanese style guide:
+`https://github.com/RouteVN/routevn-website/blob/main/internal/japanese-translation-style.md`.
+Use it as the terminology and tone reference for RouteVN Japanese UI and docs
+copy.
+
+For Simplified Chinese localization, follow the RouteVN website Simplified
+Chinese style guide:
+`https://github.com/RouteVN/routevn-website/blob/main/internal/simplified-chinese-translation-style.md`.
+Use it as the terminology and tone reference for RouteVN `zh-hans` UI and docs
+copy.
+
 ## Code Style
 
 - Prefer direct values and `??` defaults over verbose string guards like

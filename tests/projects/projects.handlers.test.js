@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import yaml from "js-yaml";
 import { describe, expect, it, vi } from "vitest";
 import {
   handleAppVersionClick,
@@ -6,10 +8,15 @@ import {
   handleCreateButtonClick,
   handleCreateDialogSubmit,
   handleDeleteDialogConfirm,
+  handleLanguageDialogClose,
+  handleLanguageFormAction,
   handleOpenButtonClick,
   handleProjectContextMenu,
   handleProjectsClick,
 } from "../../src/pages/projects/projects.handlers.js";
+
+const EN_I18N_URL = new URL("../../src/i18n/en.yaml", import.meta.url);
+const EN_I18N = yaml.load(readFileSync(EN_I18N_URL, "utf8"));
 
 const createDeps = ({
   ensureProjectCompatibleById = vi.fn(async () => {}),
@@ -28,6 +35,8 @@ const createDeps = ({
     showAlert: vi.fn(),
     showToast: vi.fn(),
     setCurrentProjectEntry: vi.fn(),
+    getUserConfig: vi.fn(),
+    setUserConfig: vi.fn(),
     navigate: vi.fn(),
   };
 
@@ -58,6 +67,10 @@ const createDeps = ({
       openAppVersionMenu: vi.fn(),
       closeAppVersionMenu: vi.fn(),
       selectIsAppVersionMenuOpen: vi.fn(() => true),
+      openLanguageDialog: vi.fn(),
+      closeLanguageDialog: vi.fn(),
+      selectIsLanguageDialogOpen: vi.fn(() => true),
+      setCurrentLocale: vi.fn(),
       openCreateDialog: vi.fn(),
       closeCreateDialog: vi.fn(),
       selectIsCreateDialogOpen: vi.fn(() => true),
@@ -69,6 +82,12 @@ const createDeps = ({
     },
     updaterService: {
       checkForUpdates: vi.fn(async () => {}),
+    },
+    i18n: EN_I18N,
+    locale: {
+      available: vi.fn(() => ["en", "ja", "zh-hans"]),
+      current: vi.fn(() => "en"),
+      set: vi.fn(async () => {}),
     },
     render: vi.fn(),
     refs: {
@@ -281,6 +300,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.setCurrentProjectEntry).toHaveBeenCalledWith({
       id: "project-1",
       name: "Project One",
+      projectPath: "/projects/project-one",
     });
     expect(deps.appService.navigate).toHaveBeenCalledWith("/project", {
       p: "project-1",
@@ -347,6 +367,18 @@ describe("projects app version menu", () => {
     expect(deps.store.openAppVersionMenu).toHaveBeenCalledWith({
       x: 140,
       y: 700,
+      items: [
+        {
+          label: EN_I18N.projectsPage.checkUpdateMenuItem,
+          type: "item",
+          value: "check-update",
+        },
+        {
+          label: EN_I18N.projectsPage.languageMenuItem,
+          type: "item",
+          value: "language",
+        },
+      ],
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
@@ -415,6 +447,64 @@ describe("projects app version menu", () => {
     expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
     expect(deps.render).toHaveBeenCalledTimes(1);
     expect(deps.updaterService.checkForUpdates).toHaveBeenCalledWith(false);
+  });
+
+  it("opens the language dialog from the app version dropdown", async () => {
+    const deps = createDeps();
+    deps.appService.getUserConfig.mockReturnValue("ja");
+
+    await handleAppVersionMenuClickItem(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: "language",
+          },
+        },
+      },
+    });
+
+    expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
+    expect(deps.store.openLanguageDialog).toHaveBeenCalledWith({
+      locale: "ja",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.updaterService.checkForUpdates).not.toHaveBeenCalled();
+  });
+
+  it("closes the language dialog", () => {
+    const deps = createDeps();
+
+    handleLanguageDialogClose(deps);
+
+    expect(deps.store.closeLanguageDialog).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves the selected language", async () => {
+    const deps = createDeps();
+    deps.locale.current.mockReturnValue("zh-hans");
+
+    await handleLanguageFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "save-language",
+          values: {
+            locale: "zh-hans",
+          },
+        },
+      },
+    });
+
+    expect(deps.locale.set).toHaveBeenCalledWith("zh-hans");
+    expect(deps.store.setCurrentLocale).toHaveBeenCalledWith({
+      locale: "zh-hans",
+    });
+    expect(deps.appService.setUserConfig).toHaveBeenCalledWith(
+      "app.locale",
+      "zh-hans",
+    );
+    expect(deps.store.closeLanguageDialog).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
   it("does not check for updates from a stale web menu event", async () => {
@@ -564,6 +654,13 @@ describe("projects.handleProjectContextMenu", () => {
       y: 20,
       scope: "local",
       projectPath: "/projects/project-one",
+      items: [
+        {
+          label: EN_I18N.projectsPage.removeButton,
+          type: "item",
+          value: "delete",
+        },
+      ],
     });
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
@@ -591,6 +688,13 @@ describe("projects.handleProjectContextMenu", () => {
       scope: "local",
       projectId: "project-1",
       projectPath: "/projects/project-one",
+      items: [
+        {
+          label: EN_I18N.projectsPage.removeButton,
+          type: "item",
+          value: "delete",
+        },
+      ],
     });
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
