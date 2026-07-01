@@ -14,11 +14,62 @@ import {
   resolveProjectResolution,
 } from "../../internal/projectResolution.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
+import {
+  PROJECTS_PAGE_COPY,
+  formatProjectsPageCopy,
+  hasProjectsPageI18n,
+  selectProjectsPageCopy,
+} from "./support/projectsPageCopy.js";
 
-const mapCloudProject = (project) => {
+const APP_LOCALE_CONFIG_KEY = "app.locale";
+const DEFAULT_PROJECTS_LOCALE = "en";
+
+const getAvailableLocales = (localeService) => {
+  return localeService?.available?.() ?? ["en", "ja", "zh-hans"];
+};
+
+const resolveProjectsLocale = ({ appService, localeService } = {}) => {
+  const availableLocales = getAvailableLocales(localeService);
+  const storedLocale = appService?.getUserConfig?.(APP_LOCALE_CONFIG_KEY);
+  const currentLocale = localeService?.current?.();
+  const locale = storedLocale ?? currentLocale ?? DEFAULT_PROJECTS_LOCALE;
+
+  return availableLocales.includes(locale) ? locale : DEFAULT_PROJECTS_LOCALE;
+};
+
+const activateProjectsLocale = async ({
+  appService,
+  localeService,
+  store,
+  locale,
+  persist = true,
+} = {}) => {
+  const availableLocales = getAvailableLocales(localeService);
+  const nextLocale = availableLocales.includes(locale)
+    ? locale
+    : DEFAULT_PROJECTS_LOCALE;
+
+  await localeService?.set?.(nextLocale);
+  const activeLocale = localeService?.current?.() ?? nextLocale;
+
+  store.setCurrentLocale({ locale: activeLocale });
+  if (persist) {
+    appService?.setUserConfig?.(APP_LOCALE_CONFIG_KEY, activeLocale);
+  }
+
+  return activeLocale;
+};
+
+const mapCloudProject = (project, copy = PROJECTS_PAGE_COPY) => {
   const projectId = project?.id;
-  const name = project?.name ?? "Untitled";
+  const name = project?.name ?? copy.untitledProject;
   const role = project?.role ?? "member";
+  const roleLabel =
+    role === "owner"
+      ? copy.roleOwner
+      : role === "member"
+        ? copy.roleMember
+        : role;
   const description = project?.data?.description ?? "";
   const memberCount = Array.isArray(project?.members)
     ? project.members.length
@@ -29,7 +80,7 @@ const mapCloudProject = (project) => {
   return {
     id: projectId,
     name,
-    role,
+    role: roleLabel,
     description,
     memberCount,
     updated,
@@ -42,6 +93,7 @@ const loadCloudProjects = async ({
   apiService,
   store,
   authToken,
+  copy,
 }) => {
   const profile = await apiService.getProfile({ authToken });
   const profileUser = profile?.user;
@@ -56,13 +108,21 @@ const loadCloudProjects = async ({
   store.setAuthUser({ user: mappedUser });
 
   const mappedCloudProjects = Array.isArray(profileUser.projects)
-    ? profileUser.projects.map(mapCloudProject)
+    ? profileUser.projects.map((project) => mapCloudProject(project, copy))
     : [];
   store.setCloudProjects({ projects: mappedCloudProjects });
 };
 
 export const handleAfterMount = async (deps) => {
-  const { appService, apiService, store, render } = deps;
+  const { appService, apiService, store, render, locale } = deps;
+  await activateProjectsLocale({
+    appService,
+    localeService: locale,
+    store,
+    locale: resolveProjectsLocale({ appService, localeService: locale }),
+    persist: false,
+  });
+  const copy = selectProjectsPageCopy(deps.i18n);
   const platform = appService.getPlatform();
   const showCloudProjects = store.selectShowCloudProjects();
   store.setPlatform({ platform: platform });
@@ -80,9 +140,10 @@ export const handleAfterMount = async (deps) => {
           apiService,
           store,
           authToken: cloudSession.authToken,
+          copy,
         }).catch(() => {
           appService.showAlert({
-            message: "Failed to load cloud projects. Please try again later.",
+            message: copy.failedLoadCloudProjects,
           });
         })
       : Promise.resolve();
@@ -116,27 +177,27 @@ const getProjectIndexFromEvent = (event) => {
 };
 
 const navigateToProjectRoute = async (
-  { appService, projectService, store },
+  { appService, projectService, store, i18n },
   { projectId, path } = {},
 ) => {
+  const copy = selectProjectsPageCopy(i18n);
   if (!projectId) {
     appService.showAlert({
-      message:
-        "This project entry is invalid. Remove it from the list and import the project again.",
+      message: copy.invalidProjectEntryImportAgain,
     });
     return;
   }
 
   const project = store
-    .getState()
-    .projects.find((entry) => entry?.id === projectId);
+    .selectProjects()
+    .find((entry) => entry?.id === projectId);
 
   try {
     await projectService.ensureProjectCompatibleById(projectId);
   } catch (error) {
     if (isIncompatibleProjectOpenError(error)) {
       await appService.showAlert({
-        title: "Incompatible Project",
+        title: copy.incompatibleProjectTitle,
         message: getIncompatibleProjectOpenMessage(error),
         status: "error",
       });
@@ -157,7 +218,8 @@ const navigateToProjectRoute = async (
 };
 
 const createProjectFromValues = async (deps, values = {}) => {
-  const { appService, render, store } = deps;
+  const { appService, render, store, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const platform = appService.getPlatform();
 
   try {
@@ -176,11 +238,11 @@ const createProjectFromValues = async (deps, values = {}) => {
     }
 
     if (!name || (platform === "tauri" && !projectPath)) {
-      let message = "Please fill in all required fields.";
+      let message = copy.fillRequiredFields;
       if (!name) {
-        message = "Project Name is required.";
+        message = copy.projectNameRequiredAlert;
       } else if (platform === "tauri" && !projectPath) {
-        message = "Project Location is required.";
+        message = copy.projectLocationRequiredAlert;
       }
 
       appService.showAlert({ message: message });
@@ -196,22 +258,22 @@ const createProjectFromValues = async (deps, values = {}) => {
     if (!projectResolution) {
       if (resolution === CUSTOM_PROJECT_RESOLUTION_PRESET) {
         if (!resolutionWidth) {
-          appService.showAlert({ message: "Resolution Width is required." });
+          appService.showAlert({ message: copy.resolutionWidthRequired });
           return;
         }
 
         if (!resolutionHeight) {
-          appService.showAlert({ message: "Resolution Height is required." });
+          appService.showAlert({ message: copy.resolutionHeightRequired });
           return;
         }
 
         appService.showAlert({
-          message: "Resolution Width and Height must be positive integers.",
+          message: copy.resolutionInvalidDimensions,
         });
         return;
       }
 
-      appService.showAlert({ message: "Project Resolution is invalid." });
+      appService.showAlert({ message: copy.projectResolutionInvalid });
       return;
     }
 
@@ -229,9 +291,7 @@ const createProjectFromValues = async (deps, values = {}) => {
     render();
   } catch (error) {
     appService.showAlert({
-      message:
-        error?.message ||
-        "Failed to create project. Please check the selected folder and try again.",
+      message: error?.message || copy.failedCreateProject,
     });
   }
 };
@@ -258,7 +318,8 @@ export const handleCreateDialogCancel = (deps) => {
 };
 
 export const handleCreateDialogSubmit = async (deps) => {
-  const { appService, refs } = deps;
+  const { appService, refs, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const dialogBody = refs.projectCreateDialogBody;
 
   if (
@@ -266,7 +327,7 @@ export const handleCreateDialogSubmit = async (deps) => {
     typeof dialogBody.validate !== "function" ||
     typeof dialogBody.getValues !== "function"
   ) {
-    appService.showAlert({ message: "Create project dialog is not ready." });
+    appService.showAlert({ message: copy.createProjectDialogNotReady });
     return;
   }
 
@@ -280,11 +341,12 @@ export const handleCreateDialogSubmit = async (deps) => {
 };
 
 export const handleCloudCreateButtonClick = (deps) => {
-  const { appService, store, render } = deps;
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const cloudSession = getAuthenticatedSession(appService);
   if (!cloudSession) {
     appService.showAlert({
-      message: "Please login to create a cloud project.",
+      message: copy.loginToCreateCloudProject,
     });
     return;
   }
@@ -303,7 +365,8 @@ export const handleCloudCreateDialogClose = (deps) => {
 };
 
 export const handleCloudCreateFormAction = async (deps, payload) => {
-  const { appService, apiService, store, render } = deps;
+  const { appService, apiService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const detail = payload?._event?.detail || {};
   const actionId = detail.actionId;
 
@@ -320,7 +383,7 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
   const cloudSession = getAuthenticatedSession(appService);
   if (!cloudSession) {
     appService.showAlert({
-      message: "Please login to create a cloud project.",
+      message: copy.loginToCreateCloudProject,
     });
     return;
   }
@@ -328,7 +391,7 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
   const name = detail?.values?.name?.trim?.() || "";
   const description = detail?.values?.description?.trim?.() || "";
   if (!name) {
-    appService.showAlert({ message: "Project Name is required." });
+    appService.showAlert({ message: copy.projectNameRequiredAlert });
     return;
   }
 
@@ -338,7 +401,7 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
       name,
       description,
     });
-    const project = mapCloudProject(result?.project);
+    const project = mapCloudProject(result?.project, copy);
     if (!project.id) {
       throw new Error("Project was created but response is invalid.");
     }
@@ -348,13 +411,14 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
     render();
   } catch {
     appService.showAlert({
-      message: "Failed to create cloud project. Please try again.",
+      message: copy.failedCreateCloudProject,
     });
   }
 };
 
 export const handleOpenButtonClick = async (deps) => {
-  const { appService, store, render } = deps;
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const platform = appService.getPlatform();
   if (platform !== "tauri" && platform !== "android") {
     return;
@@ -362,7 +426,7 @@ export const handleOpenButtonClick = async (deps) => {
 
   try {
     const selectedPath = await appService.openFolderPicker({
-      title: "Select Existing Project Folder",
+      title: copy.selectExistingProjectFolderTitle,
     });
 
     if (!selectedPath) {
@@ -375,25 +439,45 @@ export const handleOpenButtonClick = async (deps) => {
     render();
 
     appService.showToast({
-      message: `Project "${importedProject.name}" imported.`,
+      message: formatProjectsPageCopy(copy.importedProjectMessage, {
+        projectName: importedProject.name,
+      }),
     });
   } catch (error) {
     appService.showAlert({
-      message:
-        error?.message ||
-        "Failed to import project. Please select a valid project folder.",
+      message: error?.message || copy.failedImportProject,
     });
   }
 };
 
 export const handleMobileCreateMenuButtonClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const rect = payload._event.currentTarget.getBoundingClientRect();
-
-  store.openMobileActionMenu({
+  const menuPayload = {
     x: rect.right,
     y: rect.bottom,
-  });
+  };
+
+  if (hasProjectsPageI18n(i18n)) {
+    const platform = appService.getPlatform();
+    const canImportProjects = platform === "tauri" || platform === "android";
+    menuPayload.items = [
+      {
+        label: copy.createProjectMenuItem,
+        type: "item",
+        value: "create-project",
+      },
+      {
+        label: copy.importProjectMenuItem,
+        type: "item",
+        value: "import-project",
+        disabled: !canImportProjects,
+      },
+    ];
+  }
+
+  store.openMobileActionMenu(menuPayload);
   render();
 };
 
@@ -427,17 +511,34 @@ export const handleMobileActionMenuClickItem = async (deps, payload) => {
 };
 
 export const handleAppVersionClick = (deps, payload) => {
-  const { appService, store, render } = deps;
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   if (appService.getPlatform() === "web" || !resolveUpdatesEnabled(deps)) {
     return;
   }
 
   const rect = payload._event.currentTarget.getBoundingClientRect();
-
-  store.openAppVersionMenu({
+  const menuPayload = {
     x: rect.left + rect.width / 2,
     y: rect.top,
-  });
+  };
+
+  if (hasProjectsPageI18n(i18n)) {
+    menuPayload.items = [
+      {
+        label: copy.checkUpdateMenuItem,
+        type: "item",
+        value: "check-update",
+      },
+      {
+        label: copy.languageMenuItem,
+        type: "item",
+        value: "language",
+      },
+    ];
+  }
+
+  store.openAppVersionMenu(menuPayload);
   render();
 };
 
@@ -451,11 +552,20 @@ export const handleAppVersionMenuClose = (deps) => {
 };
 
 export const handleAppVersionMenuClickItem = async (deps, payload) => {
-  const { appService, store, render, updaterService } = deps;
+  const { appService, store, render, updaterService, locale } = deps;
   const detail = payload._event.detail;
   const item = detail.item || detail;
 
   store.closeAppVersionMenu();
+
+  if (item.value === "language") {
+    store.openLanguageDialog({
+      locale: resolveProjectsLocale({ appService, localeService: locale }),
+    });
+    render();
+    return;
+  }
+
   render();
 
   if (
@@ -468,17 +578,73 @@ export const handleAppVersionMenuClickItem = async (deps, payload) => {
   }
 };
 
+export const handleLanguageDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsLanguageDialogOpen()) {
+    return;
+  }
+  store.closeLanguageDialog();
+  render();
+};
+
+export const handleLanguageFormAction = async (deps, payload) => {
+  const { appService, store, render, i18n, locale } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+  const detail = payload?._event?.detail || {};
+  const actionId = detail.actionId;
+
+  if (actionId === "cancel") {
+    store.closeLanguageDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "save-language") {
+    return;
+  }
+
+  const selectedLocale = detail?.values?.locale ?? DEFAULT_PROJECTS_LOCALE;
+
+  try {
+    await activateProjectsLocale({
+      appService,
+      localeService: locale,
+      store,
+      locale: selectedLocale,
+    });
+    store.closeLanguageDialog();
+    render();
+  } catch {
+    appService.showAlert({ message: copy.failedChangeLanguage });
+  }
+};
+
 export const handleLoginButtonClick = (deps) => {
   const { appService } = deps;
   appService.navigate("/authenticate");
 };
 
 export const handleAvatarButtonClick = (deps, payload) => {
-  const { store, render } = deps;
-  store.openProfileMenu({
+  const { store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+  const menuPayload = {
     x: payload._event.clientX,
     y: payload._event.clientY,
-  });
+  };
+
+  if (hasProjectsPageI18n(i18n)) {
+    menuPayload.items = [
+      {
+        label: copy.editProfileMenuItem,
+        type: "item",
+        value: "edit-profile",
+      },
+      { label: copy.settingsMenuItem, type: "item", value: "settings" },
+      { label: copy.logoutMenuItem, type: "item", value: "logout" },
+    ];
+  }
+
+  store.openProfileMenu(menuPayload);
   render();
 };
 
@@ -510,7 +676,8 @@ export const handleSettingsDialogClose = (deps) => {
 };
 
 export const handleProfileFormAction = (deps, payload) => {
-  const { store, render, appService } = deps;
+  const { store, render, appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const detail = payload?._event?.detail || {};
   const actionId = detail.actionId;
 
@@ -527,7 +694,7 @@ export const handleProfileFormAction = (deps, payload) => {
   const existingUser = appService.getUserConfig("auth.user") || {};
   const email = existingUser?.email?.trim?.() || "";
   if (!email) {
-    appService.showAlert({ message: "You are not logged in." });
+    appService.showAlert({ message: copy.notLoggedIn });
     return;
   }
 
@@ -545,7 +712,8 @@ export const handleProfileFormAction = (deps, payload) => {
 };
 
 export const handleSettingsFormAction = (deps, payload) => {
-  const { store, render, appService } = deps;
+  const { store, render, appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const detail = payload?._event?.detail || {};
   const actionId = detail.actionId;
 
@@ -561,7 +729,7 @@ export const handleSettingsFormAction = (deps, payload) => {
 
   const email = detail?.values?.email?.trim?.() || "";
   if (!email) {
-    appService.showAlert({ message: "Email is required." });
+    appService.showAlert({ message: copy.emailRequiredAlert });
     return;
   }
 
@@ -578,7 +746,8 @@ export const handleSettingsFormAction = (deps, payload) => {
 };
 
 export const handleProfileDropdownClickItem = async (deps, payload) => {
-  const { store, render, appService } = deps;
+  const { store, render, appService, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const detail = payload._event.detail;
   const item = detail.item || detail;
 
@@ -599,10 +768,10 @@ export const handleProfileDropdownClickItem = async (deps, payload) => {
 
   if (item.value === "logout") {
     const confirmed = await appService.showDialog({
-      title: "Logout",
-      message: "Are you sure you want to logout?",
-      confirmText: "Logout",
-      cancelText: "Cancel",
+      title: copy.logoutTitle,
+      message: copy.logoutMessage,
+      confirmText: copy.logoutConfirm,
+      cancelText: copy.cancelButton,
     });
 
     if (!confirmed) {
@@ -625,7 +794,8 @@ export const handleProjectsClick = async (deps, payload) => {
 };
 
 export const handleProjectContextMenu = (deps, payload) => {
-  const { appService, store, render } = deps;
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   payload._event.preventDefault();
 
   const projectId = getProjectIdFromEvent(payload._event);
@@ -639,41 +809,54 @@ export const handleProjectContextMenu = (deps, payload) => {
   if (!projectId) {
     if (!projectPath) {
       appService.showAlert({
-        message:
-          "This project entry is invalid. Refresh the projects page and try again.",
+        message: copy.invalidProjectEntryRefresh,
       });
       return;
     }
 
-    store.openDropdownMenu({
+    const menuPayload = {
       x: payload._event.clientX,
       y: payload._event.clientY,
       scope: "local",
       projectPath,
-    });
+    };
+    if (hasProjectsPageI18n(i18n)) {
+      menuPayload.items = [
+        { label: copy.removeButton, type: "item", value: "delete" },
+      ];
+    }
+
+    store.openDropdownMenu(menuPayload);
     render();
     return;
   }
 
-  store.openDropdownMenu({
+  const menuPayload = {
     x: payload._event.clientX,
     y: payload._event.clientY,
     scope: "local",
     projectId: projectId,
     projectPath,
-  });
+  };
+  if (hasProjectsPageI18n(i18n)) {
+    menuPayload.items = [
+      { label: copy.removeButton, type: "item", value: "delete" },
+    ];
+  }
+
+  store.openDropdownMenu(menuPayload);
   render();
 };
 
 export const handleCloudProjectContextMenu = (deps, payload) => {
-  const { appService, store, render } = deps;
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   payload._event.preventDefault();
 
   const projectId = getProjectIdFromEvent(payload._event);
   if (!projectId) {
     appService.showAlert({
-      message:
-        "This project entry is invalid. Refresh the projects page and try again.",
+      message: copy.invalidProjectEntryRefresh,
     });
     return;
   }
@@ -689,7 +872,9 @@ export const handleCloudProjectContextMenu = (deps, payload) => {
     y: payload._event.clientY,
     scope: "cloud",
     projectId,
-    items: [{ label: "Add Member", type: "item", value: "add-member" }],
+    items: [
+      { label: copy.addMemberMenuItem, type: "item", value: "add-member" },
+    ],
   });
   render();
 };
@@ -731,7 +916,8 @@ export const handleAddMemberDialogClose = (deps) => {
 };
 
 export const handleAddMemberFormAction = async (deps, payload) => {
-  const { appService, apiService, store, render } = deps;
+  const { appService, apiService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const detail = payload?._event?.detail || {};
   const actionId = detail.actionId;
 
@@ -747,19 +933,19 @@ export const handleAddMemberFormAction = async (deps, payload) => {
 
   const cloudSession = getAuthenticatedSession(appService);
   if (!cloudSession) {
-    appService.showAlert({ message: "Please login to add a member." });
+    appService.showAlert({ message: copy.loginToAddMember });
     return;
   }
 
   const projectId = store.selectAddMemberDialogProjectId();
   if (!projectId) {
-    appService.showAlert({ message: "Cloud project is missing." });
+    appService.showAlert({ message: copy.cloudProjectMissing });
     return;
   }
 
   const email = detail?.values?.email?.trim?.() || "";
   if (!email) {
-    appService.showAlert({ message: "Email is required." });
+    appService.showAlert({ message: copy.emailRequiredAlert });
     return;
   }
 
@@ -776,17 +962,17 @@ export const handleAddMemberFormAction = async (deps, payload) => {
     const cannotAddOwner = Number(result?.summary?.cannotAddOwner || 0);
 
     if (added > 0) {
-      appService.showAlert({ message: "Member added." });
+      appService.showAlert({ message: copy.memberAdded });
     } else if (alreadyMember > 0) {
-      appService.showAlert({ message: "User is already a member." });
+      appService.showAlert({ message: copy.alreadyMember });
     } else if (userNotFound > 0) {
-      appService.showAlert({ message: "User not found." });
+      appService.showAlert({ message: copy.userNotFound });
     } else if (cannotAddOwner > 0) {
       appService.showAlert({
-        message: "Project owner cannot be added as a member.",
+        message: copy.cannotAddOwner,
       });
     } else {
-      appService.showAlert({ message: "No member was added." });
+      appService.showAlert({ message: copy.noMemberAdded });
     }
 
     await loadCloudProjects({
@@ -794,18 +980,20 @@ export const handleAddMemberFormAction = async (deps, payload) => {
       apiService,
       store,
       authToken: cloudSession.authToken,
+      copy,
     });
     store.closeAddMemberDialog();
     render();
   } catch {
     appService.showAlert({
-      message: "Failed to add member. Please try again.",
+      message: copy.failedAddMember,
     });
   }
 };
 
 export const handleDeleteDialogConfirm = async (deps) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
   const projectId = store.selectDeleteDialogProjectId();
   const projectPath = store.selectDeleteDialogProjectPath();
   if (!projectId && !projectPath) {
@@ -828,7 +1016,7 @@ export const handleDeleteDialogConfirm = async (deps) => {
     }
   } catch {
     appService.showAlert({
-      message: "Failed to remove project. Please try again.",
+      message: copy.failedRemoveProject,
     });
   } finally {
     store.closeDeleteDialog();

@@ -28,6 +28,10 @@ describe("projects view", () => {
     );
     expect(projectsView).toContain("handler: handleAppVersionClick");
     expect(projectsView).toContain("handler: handleAppVersionMenuClickItem");
+    expect(projectsView).toContain("handler: handleLanguageDialogClose");
+    expect(projectsView).toContain("handler: handleLanguageFormAction");
+    expect(projectsView).toContain("rtgl-dialog#languageDialog");
+    expect(projectsView).toContain("rtgl-form#languageForm");
     expect(footerTextIndex).toBeGreaterThan(footerContainerIndex);
     expect(projectsView).not.toContain("rtgl-view w=f ah=c pb=lg");
   });

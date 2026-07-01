@@ -6,6 +6,8 @@ import {
   handleCreateButtonClick,
   handleCreateDialogSubmit,
   handleDeleteDialogConfirm,
+  handleLanguageDialogClose,
+  handleLanguageFormAction,
   handleOpenButtonClick,
   handleProjectContextMenu,
   handleProjectsClick,
@@ -28,6 +30,8 @@ const createDeps = ({
     showAlert: vi.fn(),
     showToast: vi.fn(),
     setCurrentProjectEntry: vi.fn(),
+    getUserConfig: vi.fn(),
+    setUserConfig: vi.fn(),
     navigate: vi.fn(),
   };
 
@@ -58,6 +62,10 @@ const createDeps = ({
       openAppVersionMenu: vi.fn(),
       closeAppVersionMenu: vi.fn(),
       selectIsAppVersionMenuOpen: vi.fn(() => true),
+      openLanguageDialog: vi.fn(),
+      closeLanguageDialog: vi.fn(),
+      selectIsLanguageDialogOpen: vi.fn(() => true),
+      setCurrentLocale: vi.fn(),
       openCreateDialog: vi.fn(),
       closeCreateDialog: vi.fn(),
       selectIsCreateDialogOpen: vi.fn(() => true),
@@ -69,6 +77,11 @@ const createDeps = ({
     },
     updaterService: {
       checkForUpdates: vi.fn(async () => {}),
+    },
+    locale: {
+      available: vi.fn(() => ["en", "ja", "zh-hans"]),
+      current: vi.fn(() => "en"),
+      set: vi.fn(async () => {}),
     },
     render: vi.fn(),
     refs: {
@@ -281,6 +294,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.setCurrentProjectEntry).toHaveBeenCalledWith({
       id: "project-1",
       name: "Project One",
+      projectPath: "/projects/project-one",
     });
     expect(deps.appService.navigate).toHaveBeenCalledWith("/project", {
       p: "project-1",
@@ -415,6 +429,64 @@ describe("projects app version menu", () => {
     expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
     expect(deps.render).toHaveBeenCalledTimes(1);
     expect(deps.updaterService.checkForUpdates).toHaveBeenCalledWith(false);
+  });
+
+  it("opens the language dialog from the app version dropdown", async () => {
+    const deps = createDeps();
+    deps.appService.getUserConfig.mockReturnValue("ja");
+
+    await handleAppVersionMenuClickItem(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: "language",
+          },
+        },
+      },
+    });
+
+    expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
+    expect(deps.store.openLanguageDialog).toHaveBeenCalledWith({
+      locale: "ja",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.updaterService.checkForUpdates).not.toHaveBeenCalled();
+  });
+
+  it("closes the language dialog", () => {
+    const deps = createDeps();
+
+    handleLanguageDialogClose(deps);
+
+    expect(deps.store.closeLanguageDialog).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves the selected language", async () => {
+    const deps = createDeps();
+    deps.locale.current.mockReturnValue("zh-hans");
+
+    await handleLanguageFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "save-language",
+          values: {
+            locale: "zh-hans",
+          },
+        },
+      },
+    });
+
+    expect(deps.locale.set).toHaveBeenCalledWith("zh-hans");
+    expect(deps.store.setCurrentLocale).toHaveBeenCalledWith({
+      locale: "zh-hans",
+    });
+    expect(deps.appService.setUserConfig).toHaveBeenCalledWith(
+      "app.locale",
+      "zh-hans",
+    );
+    expect(deps.store.closeLanguageDialog).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
   it("does not check for updates from a stale web menu event", async () => {

@@ -1,3 +1,9 @@
+import {
+  PROJECTS_PAGE_COPY,
+  formatProjectsPageCopy,
+  selectProjectsPageCopy,
+} from "./support/projectsPageCopy.js";
+
 export const createInitialState = () => ({
   isTouchMode: false,
   localTitle: "Projects",
@@ -17,6 +23,7 @@ export const createInitialState = () => ({
   cloudProjects: [],
   platform: "tauri",
   appVersion: "",
+  currentLocale: "en",
 
   profileMenu: {
     isOpen: false,
@@ -37,6 +44,14 @@ export const createInitialState = () => ({
     x: 0,
     y: 0,
     items: [],
+  },
+
+  languageDialog: {
+    isOpen: false,
+    formKey: 0,
+    defaultValues: {
+      locale: "en",
+    },
   },
 
   profileDialog: {
@@ -144,6 +159,10 @@ export const setAppVersion = ({ state }, { version } = {}) => {
   state.appVersion = version ?? "";
 };
 
+export const setCurrentLocale = ({ state }, { locale } = {}) => {
+  state.currentLocale = locale ?? "en";
+};
+
 export const setAuthUser = ({ state }, { user } = {}) => {
   const name = user?.name?.trim?.() || "";
   const email = user?.email?.trim?.() || "";
@@ -173,14 +192,26 @@ export const removeProject = ({ state }, { projectId, projectPath } = {}) => {
   });
 };
 
-export const openProfileMenu = ({ state }, { x, y } = {}) => {
+export const openProfileMenu = ({ state }, { x, y, items } = {}) => {
   state.profileMenu.isOpen = true;
   state.profileMenu.x = x;
   state.profileMenu.y = y;
-  state.profileMenu.items = [
-    { label: "Edit profile", type: "item", value: "edit-profile" },
-    { label: "Settings", type: "item", value: "settings" },
-    { label: "Logout", type: "item", value: "logout" },
+  state.profileMenu.items = items ?? [
+    {
+      label: PROJECTS_PAGE_COPY.editProfileMenuItem,
+      type: "item",
+      value: "edit-profile",
+    },
+    {
+      label: PROJECTS_PAGE_COPY.settingsMenuItem,
+      type: "item",
+      value: "settings",
+    },
+    {
+      label: PROJECTS_PAGE_COPY.logoutMenuItem,
+      type: "item",
+      value: "logout",
+    },
   ];
 };
 
@@ -209,16 +240,20 @@ export const selectIsProfileMenuOpen = ({ state }) => {
   return Boolean(state.profileMenu?.isOpen);
 };
 
-export const openMobileActionMenu = ({ state }, { x, y } = {}) => {
+export const openMobileActionMenu = ({ state }, { x, y, items } = {}) => {
   const canImportProjects =
     state.platform === "tauri" || state.platform === "android";
   state.mobileActionMenu.isOpen = true;
   state.mobileActionMenu.x = x;
   state.mobileActionMenu.y = y;
-  state.mobileActionMenu.items = [
-    { label: "Create Project", type: "item", value: "create-project" },
+  state.mobileActionMenu.items = items ?? [
     {
-      label: "Import Project",
+      label: PROJECTS_PAGE_COPY.createProjectMenuItem,
+      type: "item",
+      value: "create-project",
+    },
+    {
+      label: PROJECTS_PAGE_COPY.importProjectMenuItem,
       type: "item",
       value: "import-project",
       disabled: !canImportProjects,
@@ -237,7 +272,7 @@ export const selectIsMobileActionMenuOpen = ({ state }) => {
   return Boolean(state.mobileActionMenu?.isOpen);
 };
 
-export const openAppVersionMenu = ({ state }, { x, y } = {}) => {
+export const openAppVersionMenu = ({ state }, { x, y, items } = {}) => {
   if (state.platform === "web") {
     state.appVersionMenu.isOpen = false;
     state.appVersionMenu.x = 0;
@@ -249,8 +284,17 @@ export const openAppVersionMenu = ({ state }, { x, y } = {}) => {
   state.appVersionMenu.isOpen = true;
   state.appVersionMenu.x = x;
   state.appVersionMenu.y = y;
-  state.appVersionMenu.items = [
-    { label: "Check for update", type: "item", value: "check-update" },
+  state.appVersionMenu.items = items ?? [
+    {
+      label: PROJECTS_PAGE_COPY.checkUpdateMenuItem,
+      type: "item",
+      value: "check-update",
+    },
+    {
+      label: PROJECTS_PAGE_COPY.languageMenuItem,
+      type: "item",
+      value: "language",
+    },
   ];
 };
 
@@ -263,6 +307,22 @@ export const closeAppVersionMenu = ({ state }, _payload = {}) => {
 
 export const selectIsAppVersionMenuOpen = ({ state }) => {
   return Boolean(state.appVersionMenu?.isOpen);
+};
+
+export const openLanguageDialog = ({ state }, { locale } = {}) => {
+  state.languageDialog.isOpen = true;
+  state.languageDialog.formKey += 1;
+  state.languageDialog.defaultValues = {
+    locale: locale ?? state.currentLocale ?? "en",
+  };
+};
+
+export const closeLanguageDialog = ({ state }, _payload = {}) => {
+  state.languageDialog.isOpen = false;
+};
+
+export const selectIsLanguageDialogOpen = ({ state }) => {
+  return Boolean(state.languageDialog?.isOpen);
 };
 
 export const selectIsProfileDialogOpen = ({ state }) => {
@@ -342,7 +402,13 @@ export const openDropdownMenu = (
   state.dropdownMenu.targetProjectPath = projectPath ?? "";
   state.dropdownMenu.items = Array.isArray(items)
     ? items
-    : [{ label: "Remove", type: "item", value: "delete" }];
+    : [
+        {
+          label: PROJECTS_PAGE_COPY.removeButton,
+          type: "item",
+          value: "delete",
+        },
+      ];
 };
 
 export const closeDropdownMenu = ({ state }, _payload = {}) => {
@@ -425,30 +491,32 @@ export const selectIsAddMemberDialogOpen = ({ state }) => {
   return Boolean(state.addMemberDialog?.isOpen);
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectProjectsPageCopy(i18n);
   const deleteDialogProjectName = state.deleteDialog.projectName
     ? `"${state.deleteDialog.projectName}"`
-    : "this project";
-  const profileDisplayName = state.userName || state.userEmail || "User";
+    : copy.removeProjectTargetFallback;
+  const profileDisplayName =
+    state.userName || state.userEmail || copy.profileDefaultName;
   const avatarImageSrc =
     state.userAvatar || "/public/project_logo_placeholder.png";
   const profileDialogForm = {
-    title: "Edit Profile",
+    title: copy.editProfileTitle,
     fields: [
       {
         name: "displayName",
         type: "input-text",
-        label: "Display Name",
+        label: copy.displayNameLabel,
       },
       {
         name: "displayColor",
         type: "color-picker",
-        label: "Display Color",
+        label: copy.displayColorLabel,
       },
       {
         name: "avatar",
         type: "input-text",
-        label: "Avatar",
+        label: copy.avatarLabel,
       },
     ],
     actions: {
@@ -456,12 +524,12 @@ export const selectViewData = ({ state }) => {
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton,
         },
         {
           id: "save",
           variant: "pr",
-          label: "Save",
+          label: copy.saveButton,
           type: "submit",
           validate: true,
         },
@@ -469,17 +537,17 @@ export const selectViewData = ({ state }) => {
     },
   };
   const settingsDialogForm = {
-    title: "Settings",
+    title: copy.settingsTitle,
     fields: [
       {
         name: "email",
         type: "input-text",
-        label: "Email",
+        label: copy.emailLabel,
         required: true,
         validations: [
           {
             rule: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-            message: "Please enter a valid email address",
+            message: copy.validEmailMessage,
           },
         ],
       },
@@ -489,12 +557,12 @@ export const selectViewData = ({ state }) => {
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton,
         },
         {
           id: "save",
           variant: "pr",
-          label: "Save",
+          label: copy.saveButton,
           type: "submit",
           validate: true,
         },
@@ -502,25 +570,25 @@ export const selectViewData = ({ state }) => {
     },
   };
   const cloudCreateForm = {
-    title: "Create Cloud Project",
+    title: copy.createCloudProjectTitle,
     fields: [
       {
         name: "name",
         type: "input-text",
-        label: "Project Name",
+        label: copy.projectNameLabel,
         required: true,
         validations: [
           {
             rule: /^.+$/,
-            message: "Project name is required",
+            message: copy.projectNameRequiredMessage,
           },
         ],
       },
       {
         name: "description",
         type: "input-text",
-        label: "Description",
-        description: "Optional",
+        label: copy.descriptionLabel,
+        description: copy.optionalLabel,
       },
     ],
     actions: {
@@ -528,12 +596,12 @@ export const selectViewData = ({ state }) => {
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton,
         },
         {
           id: "create-cloud",
           variant: "pr",
-          label: "Create Project",
+          label: copy.createProjectMenuItem,
           type: "submit",
           validate: true,
         },
@@ -541,20 +609,22 @@ export const selectViewData = ({ state }) => {
     },
   };
   const addMemberDialogTitle = state.addMemberDialog.projectName
-    ? `Add Member - ${state.addMemberDialog.projectName}`
-    : "Add Member";
+    ? formatProjectsPageCopy(copy.addMemberTitleWithProject, {
+        projectName: state.addMemberDialog.projectName,
+      })
+    : copy.addMemberTitle;
   const addMemberForm = {
     title: addMemberDialogTitle,
     fields: [
       {
         name: "email",
         type: "input-text",
-        label: "Email",
+        label: copy.emailLabel,
         required: true,
         validations: [
           {
             rule: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-            message: "Please enter a valid email address",
+            message: copy.validEmailMessage,
           },
         ],
       },
@@ -564,12 +634,53 @@ export const selectViewData = ({ state }) => {
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton,
         },
         {
           id: "submit-add-member",
           variant: "pr",
-          label: "Submit",
+          label: copy.submitButton,
+          type: "submit",
+          validate: true,
+        },
+      ],
+    },
+  };
+  const languageForm = {
+    title: copy.languageTitle,
+    fields: [
+      {
+        name: "locale",
+        type: "select",
+        label: copy.languageLabel,
+        required: true,
+        options: [
+          {
+            value: "en",
+            label: "English",
+          },
+          {
+            value: "ja",
+            label: "日本語",
+          },
+          {
+            value: "zh-hans",
+            label: "简体中文",
+          },
+        ],
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: copy.cancelButton,
+        },
+        {
+          id: "save-language",
+          variant: "pr",
+          label: copy.saveButton,
           type: "submit",
           validate: true,
         },
@@ -587,34 +698,41 @@ export const selectViewData = ({ state }) => {
 
   return {
     ...state,
+    localTitle: copy.title,
+    cloudTitle: copy.cloudTitle,
+    loginButtonText: copy.loginButton,
+    createButtonText: copy.createButton,
+    createCloudButtonText: copy.createCloudButton,
+    openButtonText: copy.importButton,
     profileDisplayName,
     avatarImageSrc,
     showMobileProjectActions: Boolean(state.isTouchMode),
     showProjectAccountActions: Boolean(
       state.showCloudProjects && !state.isTouchMode,
     ),
-    deleteDialogTitle: "Remove Project",
-    deleteDialogMessage: `Are you sure you want to remove ${deleteDialogProjectName} from the list? The project folder will still remain on disk. Delete the folder yourself if you want to permanently remove the project files.`,
-    deleteDialogConfirmLabel: "Remove",
+    deleteDialogTitle: copy.removeProjectTitle,
+    deleteDialogMessage: formatProjectsPageCopy(copy.removeProjectMessage, {
+      projectName: deleteDialogProjectName,
+    }),
+    deleteDialogConfirmLabel: copy.removeButton,
     hasLocalProjects,
-    localEmptyMessage: hasLocalProjects ? "" : "No local projects yet",
-    localEmptySubMessage: hasLocalProjects
-      ? ""
-      : "Create or open a local project to get started",
+    localEmptyMessage: hasLocalProjects ? "" : copy.localEmptyTitle,
+    localEmptySubMessage: hasLocalProjects ? "" : copy.localEmptyDescription,
     hasCloudProjects,
     showCloudLoginHint,
     cloudEmptyMessage: showCloudLoginHint
-      ? "Login to see your cloud projects"
+      ? copy.cloudLoginTitle
       : hasCloudProjects
         ? ""
-        : "No cloud projects yet",
+        : copy.cloudEmptyTitle,
     cloudEmptySubMessage: showCloudLoginHint
-      ? "Authenticate to load projects from your RouteVN account."
+      ? copy.cloudLoginDescription
       : hasCloudProjects
         ? ""
-        : "Create your first cloud project.",
+        : copy.cloudEmptyDescription,
     cloudCreateForm,
     addMemberForm,
+    languageForm,
     profileDialogForm,
     settingsDialogForm,
   };

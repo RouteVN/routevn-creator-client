@@ -3,7 +3,9 @@ import {
   addProject,
   closeAppVersionMenu,
   createInitialState,
+  openLanguageDialog,
   openAppVersionMenu,
+  selectViewData,
   setPlatform,
 } from "../../src/pages/projects/projects.store.js";
 
@@ -61,6 +63,11 @@ describe("projects.store addProject", () => {
           type: "item",
           value: "check-update",
         },
+        {
+          label: "Language",
+          type: "item",
+          value: "language",
+        },
       ],
     });
 
@@ -85,6 +92,46 @@ describe("projects.store addProject", () => {
       x: 0,
       y: 0,
       items: [],
+    });
+  });
+
+  it("builds the language dialog form with en, ja, and zh-hans options", () => {
+    const state = createInitialState();
+
+    openLanguageDialog({ state }, { locale: "ja" });
+    const viewData = selectViewData({ state });
+
+    expect(state.languageDialog).toEqual({
+      isOpen: true,
+      formKey: 1,
+      defaultValues: {
+        locale: "ja",
+      },
+    });
+    expect(viewData.languageForm).toMatchObject({
+      title: "Language",
+      fields: [
+        {
+          name: "locale",
+          type: "select",
+          label: "Language",
+          required: true,
+          options: [
+            {
+              value: "en",
+              label: "English",
+            },
+            {
+              value: "ja",
+              label: "日本語",
+            },
+            {
+              value: "zh-hans",
+              label: "简体中文",
+            },
+          ],
+        },
+      ],
     });
   });
 });

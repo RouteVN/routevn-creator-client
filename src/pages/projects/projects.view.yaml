@@ -29,6 +29,14 @@ refs:
         handler: handleAppVersionMenuClose
       item-click:
         handler: handleAppVersionMenuClickItem
+  languageDialog:
+    eventListeners:
+      close:
+        handler: handleLanguageDialogClose
+  languageForm:
+    eventListeners:
+      form-action:
+        handler: handleLanguageFormAction
   cloudCreateButton:
     eventListeners:
       click:
@@ -167,9 +175,9 @@ template:
                                       - rtgl-view w=1fg:
                                           - rtgl-text ellipsis w=f: ${project.name}
                                           - $if platform != 'android' && project.projectPath:
-                                              - rtgl-view d=h g=sm av=c mt=xs:
+                                              - 'rtgl-view d=h g=sm av=c mt=xs w=f style="min-width: 0;"':
                                                   - rtgl-svg wh=14 svg=folder c=mu-fg: null
-                                                  - rtgl-text s=xs c=mu-fg: ${project.projectPath}
+                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${project.projectPath}
                               - rtgl-view h="33vh": null
                           - $if showCloudProjects:
                               - rtgl-view w=f d=v g=md:
@@ -178,7 +186,7 @@ template:
                                       - rtgl-view w=1fg: null
                                       - $if isLoggedIn:
                                           - rtgl-button#cloudCreateButton variant=pr: ${createCloudButtonText}
-                                  - rtgl-text s=sm c=mu-fg mb=xl: Cloud projects are the projects stored in your RouteVN account.
+                                  - rtgl-text s=sm c=mu-fg mb=xl: ${i18n.projectsPage.cloudDescription}
                                   - rtgl-view w=f g=md:
                                       - $if cloudEmptyMessage:
                                           - rtgl-view w=f h=120 ah=c av=c:
@@ -196,7 +204,7 @@ template:
                                               - $if project.description:
                                                   - rtgl-text s=sm c=mu-fg mt=xs ellipsis w=f: ${project.description}
                                               - rtgl-view d=h g=sm av=c mt=xs:
-                                                  - rtgl-text s=xs c=mu-fg: Members
+                                                  - rtgl-text s=xs c=mu-fg: ${i18n.projectsPage.membersLabel}
                                                   - rtgl-text s=xs c=mu-fg: ${project.memberCount}
                                   - rtgl-view h="33vh": null
           - 'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom);"':
@@ -213,14 +221,14 @@ template:
               - rtgl-text s=lg: ${deleteDialogTitle}
               - rtgl-text c=mu-fg: ${deleteDialogMessage}
           - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#deleteCancelButton v=se: Cancel
+              - rtgl-button#deleteCancelButton v=se: ${i18n.projectsPage.cancelButton}
               - rtgl-button#deleteConfirmButton v=pr: ${deleteDialogConfirmLabel}
   - rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md:
       - rtgl-view slot=content w=f p=lg g=lg:
           - rvn-project-create-dialog#projectCreateDialogBody key=${createDialog.formKey} :platform=${platform} :defaultValues=${createDialog.defaultValues}: null
           - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#createProjectCancelButton v=se: Cancel
-              - rtgl-button#createProjectSubmitButton data-action-id=submit v=pr: Submit
+              - rtgl-button#createProjectCancelButton v=se: ${i18n.projectsPage.cancelButton}
+              - rtgl-button#createProjectSubmitButton data-action-id=submit v=pr: ${i18n.projectsPage.submitButton}
   - rtgl-dialog#cloudCreateProjectDialog ?open=${cloudCreateDialog.isOpen} s=md:
       - rtgl-view slot=content w=f p=lg:
           - rtgl-form#cloudCreateForm key=${cloudCreateDialog.formKey} :form=${cloudCreateForm} :defaultValues=${cloudCreateDialog.defaultValues} w=f: null
@@ -231,6 +239,9 @@ template:
   - rtgl-dropdown-menu#mobileActionMenu ?open=${mobileActionMenu.isOpen} x=${mobileActionMenu.x} y=${mobileActionMenu.y} place=be :items=${mobileActionMenu.items}: null
   - rtgl-dropdown-menu#appVersionDropdownMenu ?open=${appVersionMenu.isOpen} x=${appVersionMenu.x} y=${appVersionMenu.y} place=t :items=${appVersionMenu.items}: null
   - rtgl-dropdown-menu#profileDropdownMenu ?open=${profileMenu.isOpen} x=${profileMenu.x} y=${profileMenu.y} :items=${profileMenu.items}: null
+  - rtgl-dialog#languageDialog ?open=${languageDialog.isOpen} s=sm:
+      - rtgl-view slot=content w=f p=lg:
+          - rtgl-form#languageForm key=${languageDialog.formKey} :form=${languageForm} :defaultValues=${languageDialog.defaultValues} w=f: null
   - rtgl-dialog#editProfileDialog ?open=${profileDialog.isOpen} s=f:
       - rtgl-view slot=content w=f h=f p=xl:
           - rtgl-view w=f h=f ah=c av=s:
