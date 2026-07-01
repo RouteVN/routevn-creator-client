@@ -220,6 +220,12 @@ bun run build:android
 bun run android:install
 ```
 
+For frontend-only Android iteration after one debug install:
+
+```shell
+bun run android:dev
+```
+
 ## Community
 
 Join us on [Discord](https://discord.gg/8J9dyZSu9C) to ask questions, report bugs, and stay up to date.

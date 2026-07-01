@@ -59,6 +59,8 @@ public class MainActivity extends Activity {
     private static final String TAG = "RouteVNAndroid";
     private static final String APP_ASSET_HOST = "appassets.androidplatform.net";
     private static final String APP_URL = "https://" + APP_ASSET_HOST + "/web/index.html";
+    private static final String DEV_SERVER_URL_EXTRA = "routevnDevServerUrl";
+    private static final String DEV_RELOAD_TOKEN_EXTRA = "routevnDevReloadToken";
     private static final int FILE_CHOOSER_REQUEST_CODE = 3711;
     private static final int ANDROID_FILE_PICKER_REQUEST_CODE = 3712;
     private static final int ANDROID_SAVE_FILE_PICKER_REQUEST_CODE = 3713;
@@ -75,6 +77,9 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> fileChooserCallback;
     private boolean canGoBackInWebApp = false;
     private Object backInvokedCallback;
+    private RouteVNInternalFilePathHandler internalFilePathHandler;
+    private String currentAppUrl = APP_URL;
+    private String currentDevReloadToken;
     private String pendingAndroidFilePickerRequestId;
     private boolean pendingAndroidFilePickerMultiple = false;
     private String pendingAndroidSaveFilePickerRequestId;
@@ -99,6 +104,39 @@ public class MainActivity extends Activity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerBackInvokedCallback();
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+
+        String nextAppUrl = resolveAppUrl(intent);
+        String nextReloadToken = resolveDevReloadToken(intent);
+        if (webView == null) {
+            currentAppUrl = nextAppUrl;
+            currentDevReloadToken = nextReloadToken;
+            return;
+        }
+
+        if (!nextAppUrl.equals(currentAppUrl)) {
+            currentAppUrl = nextAppUrl;
+            currentDevReloadToken = nextReloadToken;
+            webView.loadUrl(currentAppUrl);
+            return;
+        }
+
+        if (!isAllowedDebugAppUrl(currentAppUrl)) {
+            return;
+        }
+
+        if (
+            nextReloadToken == null ||
+            !nextReloadToken.equals(currentDevReloadToken)
+        ) {
+            currentDevReloadToken = nextReloadToken;
+            webView.reload();
         }
     }
 
@@ -134,13 +172,16 @@ public class MainActivity extends Activity {
 
     private void configureWebView() {
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
+        currentAppUrl = resolveAppUrl(getIntent());
+        currentDevReloadToken = resolveDevReloadToken(getIntent());
+        internalFilePathHandler = new RouteVNInternalFilePathHandler();
 
         assetLoader =
             new WebViewAssetLoader.Builder()
                 .setDomain(APP_ASSET_HOST)
                 .addPathHandler(
                     "/android-files/",
-                    new RouteVNInternalFilePathHandler()
+                    internalFilePathHandler
                 )
                 .addPathHandler("/", new WebViewAssetLoader.AssetsPathHandler(this))
                 .build();
@@ -159,7 +200,7 @@ public class MainActivity extends Activity {
 
         webView.setWebViewClient(new RouteVNWebViewClient());
         webView.setWebChromeClient(new RouteVNWebChromeClient());
-        webView.loadUrl(APP_URL);
+        webView.loadUrl(currentAppUrl);
 
         FrameLayout rootView = new FrameLayout(this);
         rootView.setBackgroundColor(Color.BLACK);
@@ -263,6 +304,80 @@ public class MainActivity extends Activity {
         );
     }
 
+    private boolean isInternalAppUrl(Uri uri) {
+        return isAppAssetUrl(uri) || isAllowedDebugAppUri(uri);
+    }
+
+    private String resolveAppUrl(Intent intent) {
+        // Production invariant: release builds always load packaged assets.
+        if (!BuildConfig.DEBUG || intent == null) {
+            return APP_URL;
+        }
+
+        String devServerUrl = intent.getStringExtra(DEV_SERVER_URL_EXTRA);
+        if (devServerUrl == null || devServerUrl.trim().isEmpty()) {
+            return APP_URL;
+        }
+
+        if (!isAllowedDebugAppUrl(devServerUrl)) {
+            Log.w(TAG, "Ignoring unsupported Android dev server URL: " + devServerUrl);
+            return APP_URL;
+        }
+
+        Log.i(TAG, "Using Android dev server URL: " + devServerUrl);
+        return devServerUrl;
+    }
+
+    private String resolveDevReloadToken(Intent intent) {
+        if (!BuildConfig.DEBUG || intent == null) {
+            return null;
+        }
+
+        return intent.getStringExtra(DEV_RELOAD_TOKEN_EXTRA);
+    }
+
+    private boolean isAllowedDebugAppUrl(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            return isAllowedDebugAppUri(Uri.parse(url));
+        } catch (Exception error) {
+            return false;
+        }
+    }
+
+    private boolean isAllowedDebugAppUri(Uri uri) {
+        if (!BuildConfig.DEBUG || uri == null) {
+            return false;
+        }
+
+        String scheme = uri.getScheme();
+        if (!"http".equals(scheme) && !"https".equals(scheme)) {
+            return false;
+        }
+
+        String host = uri.getHost();
+        return (
+            ("127.0.0.1".equals(host) || "localhost".equals(host)) &&
+            uri.getPort() > 0
+        );
+    }
+
+    private WebResourceResponse interceptAndroidFilesRequest(Uri uri) {
+        if (!isInternalAppUrl(uri) || internalFilePathHandler == null) {
+            return null;
+        }
+
+        String path = uri.getPath();
+        if (path == null || !path.startsWith("/android-files/")) {
+            return null;
+        }
+
+        return internalFilePathHandler.handle(path);
+    }
+
     private boolean openExternalUri(Uri uri) {
         if (uri == null) {
             return false;
@@ -358,19 +473,34 @@ public class MainActivity extends Activity {
             WebView view,
             WebResourceRequest request
         ) {
+            WebResourceResponse internalFileResponse = interceptAndroidFilesRequest(
+                request.getUrl()
+            );
+            if (internalFileResponse != null) {
+                return internalFileResponse;
+            }
+
             return assetLoader.shouldInterceptRequest(request.getUrl());
         }
 
         @Override
         @SuppressWarnings("deprecation")
         public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
-            return assetLoader.shouldInterceptRequest(Uri.parse(url));
+            Uri uri = Uri.parse(url);
+            WebResourceResponse internalFileResponse = interceptAndroidFilesRequest(
+                uri
+            );
+            if (internalFileResponse != null) {
+                return internalFileResponse;
+            }
+
+            return assetLoader.shouldInterceptRequest(uri);
         }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             Uri uri = request.getUrl();
-            if (isAppAssetUrl(uri)) {
+            if (isInternalAppUrl(uri)) {
                 return false;
             }
 
@@ -381,7 +511,7 @@ public class MainActivity extends Activity {
         @SuppressWarnings("deprecation")
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             Uri uri = Uri.parse(url);
-            if (isAppAssetUrl(uri)) {
+            if (isInternalAppUrl(uri)) {
                 return false;
             }
 

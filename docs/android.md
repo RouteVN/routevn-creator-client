@@ -111,6 +111,70 @@ Or use the combined script:
 bun run android:install
 ```
 
+## Fast WebView Development
+
+For frontend-only Android iteration, install the debug APK once:
+
+```bash
+bun run android:install
+```
+
+Then keep the fast WebView dev runner open:
+
+```bash
+bun run android:dev
+```
+
+The dev runner:
+
+- builds the Android web bundle once
+- serves `_site` from `http://127.0.0.1:3003/web/index.html`
+- runs `adb reverse tcp:3003 tcp:3003`
+- watches frontend source files under `src/`
+- rebuilds with `rtgl fe build -s src/setup.android.js`
+- reloads the existing Android WebView after successful rebuilds
+
+This avoids reinstalling the APK for routine Android frontend source iteration.
+Reinstall the debug APK only when native Android code, manifest, Gradle config,
+or packaged native resources change.
+
+Stop the dev runner with `Ctrl-C`. It removes its `adb reverse` port mapping on
+shutdown.
+
+Use a specific device or port when needed:
+
+```bash
+ANDROID_SERIAL=<adb-serial> bun run android:dev
+ROUTEVN_ANDROID_DEV_PORT=3004 bun run android:dev
+```
+
+Skip the initial web build if `_site` is already current:
+
+```bash
+ROUTEVN_ANDROID_DEV_SKIP_BUILD=1 bun run android:dev
+```
+
+### Production Safety
+
+The fast WebView runner must never affect production builds.
+
+The native shell enforces this contract:
+
+- release builds ignore the `routevnDevServerUrl` launch extra completely
+- dev-server URLs are only honored when `BuildConfig.DEBUG` is `true`
+- accepted dev-server hosts are limited to `localhost` or `127.0.0.1`
+- accepted dev-server URLs must include an explicit port
+- release builds keep `android:usesCleartextTraffic="false"`
+- release builds keep loading packaged assets from:
+
+```text
+https://appassets.androidplatform.net/web/index.html
+```
+
+Do not add a release build type, product flavor, or manifest override that
+enables cleartext traffic or bypasses the `BuildConfig.DEBUG` gate for the dev
+server URL.
+
 Build a release app bundle:
 
 ```bash
