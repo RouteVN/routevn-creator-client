@@ -7,14 +7,17 @@ import { createScenesFileExplorerHandlers } from "../../internal/ui/fileExplorer
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 import { toFlatItems } from "../../internal/project/tree.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   SCENE_BOX_HEIGHT,
   SCENE_BOX_VIEWPORT_PADDING,
   SCENE_BOX_WIDTH,
 } from "../../internal/whiteboard/constants.js";
+import { selectScenesPageCopy } from "./support/scenesPageCopy.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
+const selectCopy = (deps = {}) => selectScenesPageCopy(deps.i18n);
 const DEFAULT_SCENES_MAP_VIEWPORT = {
   zoomLevel: 1,
   panX: -80,
@@ -611,6 +614,7 @@ const {
   handleFileExplorerTargetChanged,
 } = createScenesFileExplorerHandlers({
   refresh: refreshScenesData,
+  copy: selectCopy,
 });
 const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
@@ -812,6 +816,7 @@ export const handleSceneFormClose = (deps) => {
 
 export const handleSceneFormAction = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
+  const copy = selectCopy(deps);
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
@@ -892,7 +897,11 @@ export const handleSceneFormAction = async (deps, payload) => {
           parentId: formData.folderId || null,
           position: "last",
           data: {
-            name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
+            name:
+              formData.name ||
+              formatI18nCopy(copy.sceneFallback ?? "Scene {time}", {
+                time: new Date().toLocaleTimeString(),
+              }),
             position: {
               x: sceneWhiteboardPosition.x,
               y: sceneWhiteboardPosition.y,
@@ -900,7 +909,9 @@ export const handleSceneFormAction = async (deps, payload) => {
           },
           sectionId,
           sectionData: {
-            name: "Section 1",
+            name: formatI18nCopy(copy.sectionFallback ?? "Section {index}", {
+              index: 1,
+            }),
           },
           lineId: stepId,
           lineData: {
@@ -931,7 +942,10 @@ export const handleSceneFormAction = async (deps, payload) => {
       render();
     } catch (error) {
       appService.showAlert({
-        message: getProjectErrorMessage(error, "Failed to create scene."),
+        message: getProjectErrorMessage(
+          error,
+          copy.failedCreateScene ?? "Failed to create scene.",
+        ),
       });
       await refreshScenesData(deps);
       render();
@@ -941,6 +955,7 @@ export const handleSceneFormAction = async (deps, payload) => {
 
 export const handleWhiteboardItemDelete = async (deps, payload) => {
   const { store, projectService, appService } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
 
   const deleteResult = await projectService.deleteSceneIfUnused({
@@ -949,8 +964,9 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   if (!deleteResult.deleted) {
     appService.showAlert({
       message: deleteResult.usage?.isUsed
-        ? "Cannot delete resource, it is currently in use."
-        : "Failed to delete resource.",
+        ? (copy.cannotDeleteResourceInUse ??
+          "Cannot delete resource, it is currently in use.")
+        : (copy.failedDeleteResource ?? "Failed to delete resource."),
     });
     return;
   }
@@ -1038,6 +1054,7 @@ export const handleMobileFileExplorerClose = (deps) => {
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
+  const copy = selectCopy(deps);
   const detail = payload._event.detail;
   const itemId = store.selectDropdownMenuItemId();
 
@@ -1078,8 +1095,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     if (!deleteResult.deleted) {
       appService.showAlert({
         message: deleteResult.usage?.isUsed
-          ? "Cannot delete resource, it is currently in use."
-          : "Failed to delete resource.",
+          ? (copy.cannotDeleteResourceInUse ??
+            "Cannot delete resource, it is currently in use.")
+          : (copy.failedDeleteResource ?? "Failed to delete resource."),
       });
       return;
     }
@@ -1101,6 +1119,7 @@ export const handleEditDialogClose = (deps) => {
 
 export const handleEditFormAction = async (deps, payload) => {
   const { store, render, appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -1113,9 +1132,9 @@ export const handleEditFormAction = async (deps, payload) => {
     appService.showAlert({
       message:
         editItemType === "folder"
-          ? "Folder name is required."
-          : "Scene name is required.",
-      title: "Warning",
+          ? (copy.folderNameRequired ?? "Folder name is required.")
+          : (copy.sceneNameRequired ?? "Scene name is required."),
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -1140,10 +1159,10 @@ export const handleEditFormAction = async (deps, payload) => {
       message: getProjectErrorMessage(
         updateResult,
         editItemType === "folder"
-          ? "Failed to update folder."
-          : "Failed to update scene.",
+          ? (copy.failedUpdateFolder ?? "Failed to update folder.")
+          : (copy.failedUpdateScene ?? "Failed to update scene."),
       ),
-      title: "Error",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -1161,12 +1180,13 @@ export const handleSectionsListToggle = (deps) => {
 
 export const handleDeadEndWarningMouseEnter = (deps, payload) => {
   const { store, render } = deps;
+  const copy = selectCopy(deps);
   const rect = payload._event.currentTarget.getBoundingClientRect();
 
   store.showDeadEndTooltip({
     x: rect.left + rect.width / 2,
     y: rect.top - 8,
-    content: DEAD_END_TOOLTIP_CONTENT,
+    content: copy.deadEndTooltipContent ?? DEAD_END_TOOLTIP_CONTENT,
   });
   render();
 };

@@ -687,13 +687,23 @@ export const createLayoutsFileExplorerHandlers = ({
 
 export const createControlsFileExplorerHandlers = ({
   refresh = noopRefresh,
+  copy,
 }) => {
+  const resolveCopy = (deps) => {
+    if (typeof copy === "function") {
+      return copy(deps);
+    }
+
+    return copy ?? {};
+  };
+
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
       await projectService.ensureRepository();
 
       const state = projectService.getState();
+      const resolvedCopy = resolveCopy(deps);
       const menuItem = resolveMenuItem(detail);
       const action = menuItem?.value;
       const itemId = detail.itemId;
@@ -703,7 +713,7 @@ export const createControlsFileExplorerHandlers = ({
       if (action === "new-item") {
         await projectService.createControlItem({
           controlId: generateId(),
-          name: "New Folder",
+          name: resolvedCopy.newFolderName ?? "New Folder",
           parentId: null,
           position: "last",
           data: {
@@ -717,7 +727,7 @@ export const createControlsFileExplorerHandlers = ({
 
         await projectService.createControlItem({
           controlId: generateId(),
-          name: "New Folder",
+          name: resolvedCopy.newFolderName ?? "New Folder",
           parentId: itemId,
           position: "last",
           data: {
@@ -757,7 +767,9 @@ export const createControlsFileExplorerHandlers = ({
 
         if (usage.isUsed) {
           appService.showAlert({
-            message: "Cannot delete resource, it is currently in use.",
+            message:
+              resolvedCopy.cannotDeleteResourceInUse ??
+              "Cannot delete resource, it is currently in use.",
           });
           return;
         }
@@ -966,12 +978,24 @@ export const createLayoutElementsFileExplorerHandlers = ({
   });
 };
 
-export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
+export const createScenesFileExplorerHandlers = ({
+  refresh = noopRefresh,
+  copy,
+}) => {
+  const resolveCopy = (deps) => {
+    if (typeof copy === "function") {
+      return copy(deps);
+    }
+
+    return copy ?? {};
+  };
+
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
       await projectService.ensureRepository();
 
+      const resolvedCopy = resolveCopy(deps);
       const menuItem = resolveMenuItem(detail);
       const action = menuItem?.value;
       const itemId = detail.itemId;
@@ -982,7 +1006,7 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
           parentId: null,
           position: "last",
           data: {
-            name: "New Folder",
+            name: resolvedCopy.newFolderName ?? "New Folder",
             type: "folder",
           },
         });
@@ -990,7 +1014,7 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
           appService.showAlert({
             message: getResultErrorMessage(
               createResult,
-              "Failed to create folder.",
+              resolvedCopy.failedCreateFolder ?? "Failed to create folder.",
             ),
           });
           return;
@@ -1005,7 +1029,7 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
           parentId: itemId,
           position: "last",
           data: {
-            name: "New Folder",
+            name: resolvedCopy.newFolderName ?? "New Folder",
             type: "folder",
           },
         });
@@ -1013,7 +1037,7 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
           appService.showAlert({
             message: getResultErrorMessage(
               createResult,
-              "Failed to create folder.",
+              resolvedCopy.failedCreateFolder ?? "Failed to create folder.",
             ),
           });
           return;
@@ -1048,8 +1072,10 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
         if (!deleteResult.deleted) {
           appService.showAlert({
             message: deleteResult.usage?.isUsed
-              ? "Cannot delete resource, it is currently in use."
-              : "Failed to delete resource.",
+              ? (resolvedCopy.cannotDeleteResourceInUse ??
+                "Cannot delete resource, it is currently in use.")
+              : (resolvedCopy.failedDeleteResource ??
+                "Failed to delete resource."),
           });
           return;
         }
@@ -1081,10 +1107,12 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
 
 export const createVariablesFileExplorerHandlers = ({
   refresh = noopRefresh,
+  copy,
 }) => {
   return createResourceFileExplorerHandlers({
     resourceType: "variables",
     refresh,
+    copy,
   });
 };
 

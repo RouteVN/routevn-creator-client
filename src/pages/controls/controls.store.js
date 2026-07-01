@@ -7,25 +7,32 @@ import {
   BASE_LAYOUT_KEYBOARD_LABELS,
   BASE_LAYOUT_KEYBOARD_OPTIONS,
 } from "../../internal/project/layout.js";
+import { selectControlsPageCopy } from "./support/controlsPageCopy.js";
 
 export const CONTROL_TAG_SCOPE_KEY = "controls";
 
-const createControlForm = ({ editMode = false } = {}) => ({
-  title: editMode ? "Edit Control" : "Add Control",
+const createControlForm = ({ editMode = false, copy = {} } = {}) => ({
+  title: editMode
+    ? (copy.editControlTitle ?? "Edit Control")
+    : (copy.addControlTitle ?? "Add Control"),
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Control Name",
+      label: copy.controlNameLabel ?? "Control Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
       required: false,
     },
-    createTagField(),
+    createTagField({
+      label: copy.tagsLabel ?? "Tags",
+      placeholder: copy.selectTagsPlaceholder ?? "Select tags",
+      addOptionLabel: copy.addTagOption ?? "Add tag",
+    }),
   ],
   actions: {
     layout: "",
@@ -33,30 +40,81 @@ const createControlForm = ({ editMode = false } = {}) => ({
       {
         id: "submit",
         variant: "pr",
-        label: editMode ? "Update Control" : "Add Control",
+        label: editMode
+          ? (copy.updateControlButton ?? "Update Control")
+          : (copy.addControlButton ?? "Add Control"),
       },
     ],
   },
 });
 
-const SYSTEM_ACTION_LABELS = {
-  nextLine: "Next Line",
-  sectionTransition: "Transition",
-  resetStoryAtSection: "Reset Story At Section",
-  toggleAutoMode: "Toggle Auto Mode",
-  toggleSkipMode: "Toggle Skip Mode",
-  startSkipMode: "Start Skip Mode",
-  stopSkipMode: "Stop Skip Mode",
-  toggleDialogueUI: "Toggle Dialogue Box Visibility",
-  pushOverlay: "Push Overlay",
-  popOverlay: "Pop Overlay",
-  updateVariable: "Update Variable",
-  ...RUNTIME_ACTION_LABELS,
+const createSystemActionLabels = (copy = {}) => ({
+  nextLine: copy.actionNextLine ?? "Next Line",
+  sectionTransition: copy.actionSectionTransition ?? "Transition",
+  resetStoryAtSection:
+    copy.actionResetStoryAtSection ?? "Reset Story At Section",
+  toggleAutoMode: copy.actionToggleAutoMode ?? "Toggle Auto Mode",
+  toggleSkipMode: copy.actionToggleSkipMode ?? "Toggle Skip Mode",
+  startSkipMode: copy.actionStartSkipMode ?? "Start Skip Mode",
+  stopSkipMode: copy.actionStopSkipMode ?? "Stop Skip Mode",
+  toggleDialogueUI:
+    copy.actionToggleDialogueUI ?? "Toggle Dialogue Box Visibility",
+  pushOverlay: copy.actionPushOverlay ?? "Push Overlay",
+  popOverlay: copy.actionPopOverlay ?? "Pop Overlay",
+  updateVariable: copy.actionUpdateVariable ?? "Update Variable",
+  setDialogueTextSpeed:
+    copy.actionSetDialogueTextSpeed ??
+    RUNTIME_ACTION_LABELS.setDialogueTextSpeed,
+  setAutoForwardDelay:
+    copy.actionSetAutoForwardDelay ?? RUNTIME_ACTION_LABELS.setAutoForwardDelay,
+  setSkipUnseenText:
+    copy.actionSetSkipUnseenText ?? RUNTIME_ACTION_LABELS.setSkipUnseenText,
+  setSkipTransitionsAndAnimations:
+    copy.actionSetSkipTransitionsAndAnimations ??
+    RUNTIME_ACTION_LABELS.setSkipTransitionsAndAnimations,
+  setSoundVolume:
+    copy.actionSetSoundVolume ?? RUNTIME_ACTION_LABELS.setSoundVolume,
+  setMusicVolume:
+    copy.actionSetMusicVolume ?? RUNTIME_ACTION_LABELS.setMusicVolume,
+  setMuteAll: copy.actionSetMuteAll ?? RUNTIME_ACTION_LABELS.setMuteAll,
+  setSaveLoadPagination:
+    copy.actionSetSaveLoadPagination ??
+    RUNTIME_ACTION_LABELS.setSaveLoadPagination,
+  incrementSaveLoadPagination:
+    copy.actionIncrementSaveLoadPagination ??
+    RUNTIME_ACTION_LABELS.incrementSaveLoadPagination,
+  decrementSaveLoadPagination:
+    copy.actionDecrementSaveLoadPagination ??
+    RUNTIME_ACTION_LABELS.decrementSaveLoadPagination,
+  setMenuPage: copy.actionSetMenuPage ?? RUNTIME_ACTION_LABELS.setMenuPage,
+  setMenuEntryPoint:
+    copy.actionSetMenuEntryPoint ?? RUNTIME_ACTION_LABELS.setMenuEntryPoint,
+});
+
+const KEYBOARD_LABELS = {
+  enter: "keyboardEnter",
+  space: "keyboardSpace",
+  esc: "keyboardEscape",
+  ctrl: "keyboardCtrl",
+  left: "keyboardLeftArrow",
+  right: "keyboardRightArrow",
+  up: "keyboardUpArrow",
+  down: "keyboardDownArrow",
 };
 
-const toKeyboardItems = (keyboardValue = {}) => {
+const getKeyboardLabel = (key, copy = {}) => {
+  const copyKey = KEYBOARD_LABELS[key];
+  return (
+    (copyKey ? copy[copyKey] : undefined) ??
+    BASE_LAYOUT_KEYBOARD_LABELS[key] ??
+    key
+  );
+};
+
+const toKeyboardItems = (keyboardValue = {}, { copy = {} } = {}) => {
   const keyboard =
     keyboardValue && typeof keyboardValue === "object" ? keyboardValue : {};
+  const systemActionLabels = createSystemActionLabels(copy);
 
   return Object.entries(keyboard)
     .map(([key, interaction]) => {
@@ -64,12 +122,13 @@ const toKeyboardItems = (keyboardValue = {}) => {
       const actionIds = Object.keys(actions);
       const actionLabel =
         actionIds
-          .map((actionId) => SYSTEM_ACTION_LABELS[actionId] ?? actionId)
-          .join(", ") || "No action";
+          .map((actionId) => systemActionLabels[actionId] ?? actionId)
+          .join(", ") ||
+        (copy.noActionLabel ?? "No action");
 
       return {
         key,
-        keyLabel: BASE_LAYOUT_KEYBOARD_LABELS[key] ?? key,
+        keyLabel: getKeyboardLabel(key, copy),
         actionLabel,
       };
     })
@@ -94,7 +153,7 @@ const toKeyboardItems = (keyboardValue = {}) => {
     });
 };
 
-const buildDetailFields = (item) => {
+const buildDetailFields = (item, { copy = {} } = {}) => {
   if (!item) {
     return [];
   }
@@ -107,7 +166,7 @@ const buildDetailFields = (item) => {
     {
       type: "slot",
       slot: "control-tags",
-      label: "Tags",
+      label: copy.tagsLabel ?? "Tags",
     },
     {
       type: "slot",
@@ -156,6 +215,7 @@ const {
   selectedResourceId: "controls",
   resourceCategory: "systemConfig",
   addText: "Add",
+  copy: selectControlsPageCopy,
   matchesSearch,
   buildDetailFields,
   buildCatalogItem,
@@ -163,20 +223,25 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
-  extendViewData: ({ state, selectedItem, baseViewData }) => ({
+  extendViewData: ({ state, selectedItem, baseViewData, copy }) => ({
     ...baseViewData,
     isDialogOpen: state.isDialogOpen,
     dialogForm: createControlForm({
       editMode: Boolean(state.editItemId),
+      copy,
     }),
     dialogDefaultValues: state.dialogDefaultValues,
-    keydownKeyboardItems: toKeyboardItems(selectedItem?.keyboard),
-    keyupKeyboardItems: toKeyboardItems(selectedItem?.keyup),
+    keydownKeyboardItems: toKeyboardItems(selectedItem?.keyboard, { copy }),
+    keyupKeyboardItems: toKeyboardItems(selectedItem?.keyup, { copy }),
     keyboardEditorKey: state.keyboardEditorKey,
     keyboardEditorPhase: state.keyboardEditorPhase,
     keyboardEditorActions: state.keyboardEditorActions,
-    keydownKeyboardEmptyMessage: "No keydown actions added yet",
-    keyupKeyboardEmptyMessage: "No keyup actions added yet",
+    keydownKeyboardLabel: copy.keydownKeyboardLabel ?? "Keydown",
+    keyupKeyboardLabel: copy.keyupKeyboardLabel ?? "Keyup",
+    keydownKeyboardEmptyMessage:
+      copy.keydownKeyboardEmptyMessage ?? "No keydown actions added yet",
+    keyupKeyboardEmptyMessage:
+      copy.keyupKeyboardEmptyMessage ?? "No keyup actions added yet",
   }),
 });
 

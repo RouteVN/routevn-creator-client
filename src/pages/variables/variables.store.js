@@ -27,40 +27,63 @@ import {
   setMobileResourceDetailSheetSuppressedState,
   setMobileResourcePageUiConfigState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { selectVariablesPageCopy } from "./support/variablesPageCopy.js";
 
-const folderContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-item" },
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createFolderContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-item",
+  },
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const itemContextMenuItems = [
-  { label: "Edit", type: "item", value: "edit-item" },
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createItemContextMenuItems = (copy = {}) => [
+  { label: copy.editMenuItem ?? "Edit", type: "item", value: "edit-item" },
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const emptyContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-item" },
+const createEmptyContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-item",
+  },
 ];
 
 export const VARIABLE_TAG_SCOPE_KEY = "variables";
 
-const createTagFormDefinition = createTagForm();
-
-const folderNameForm = {
-  title: "Edit Folder",
+const createFolderNameForm = (copy = {}) => ({
+  title: copy.editFolderTitle ?? "Edit Folder",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel ?? "Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
       required: false,
     },
   ],
@@ -70,11 +93,37 @@ const folderNameForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Save",
+        label: copy.saveButton ?? "Save",
         validate: true,
       },
     ],
   },
+});
+
+const getScopeLabel = (scope, copy = {}) => {
+  if (scope === "device") {
+    return copy.scopeDeviceLabel ?? "Device";
+  }
+  if (scope === "account") {
+    return copy.scopeAccountLabel ?? "Account";
+  }
+  return copy.scopeContextLabel ?? "Context";
+};
+
+const getVariableTypeLabel = (variableType, copy = {}) => {
+  if (variableType === "number") {
+    return copy.variableTypeNumberLabel ?? "Number";
+  }
+  if (variableType === "boolean") {
+    return copy.variableTypeBooleanLabel ?? "Boolean";
+  }
+  return copy.variableTypeStringLabel ?? "String";
+};
+
+const getBooleanLabel = (value, copy = {}) => {
+  return value
+    ? (copy.booleanTrueLabel ?? "True")
+    : (copy.booleanFalseLabel ?? "False");
 };
 
 const selectVariableItem = (state, itemId) => {
@@ -95,9 +144,9 @@ export const createInitialState = () => ({
   },
   ...createTagState(),
   ...createMobileResourcePageState(),
-  folderContextMenuItems,
-  itemContextMenuItems,
-  emptyContextMenuItems,
+  folderContextMenuItems: createFolderContextMenuItems(),
+  itemContextMenuItems: createItemContextMenuItems(),
+  emptyContextMenuItems: createEmptyContextMenuItems(),
 });
 
 export const setItems = ({ state }, { variablesData } = {}) => {
@@ -260,7 +309,8 @@ export const selectFolderById = ({ state }, { folderId } = {}) => {
   return item?.type === "folder" ? item : undefined;
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectVariablesPageCopy(i18n);
   const flatItems = toFlatItems(state.variablesData);
   const flatGroups = toFlatGroups(state.variablesData);
 
@@ -276,7 +326,7 @@ export const selectViewData = ({ state }) => {
 
   let selectedVariableDefault = "";
   if (typeof selectedItem?.default === "boolean") {
-    selectedVariableDefault = selectedItem.default ? "true" : "false";
+    selectedVariableDefault = getBooleanLabel(selectedItem.default, copy);
   } else if (selectedItem?.default !== undefined) {
     selectedVariableDefault = String(selectedItem.default);
   }
@@ -296,17 +346,17 @@ export const selectViewData = ({ state }) => {
       {
         type: "slot",
         slot: "variable-tags",
-        label: "Tags",
+        label: copy.tagsLabel ?? "Tags",
       },
       {
         type: "text",
-        label: "Scope",
-        value: selectedItem.scope ?? "",
+        label: copy.scopeLabel ?? "Scope",
+        value: getScopeLabel(selectedItem.scope, copy),
       },
       {
         type: "text",
-        label: "Type",
-        value: selectedItem.variableType ?? "",
+        label: copy.typeLabel ?? "Type",
+        value: getVariableTypeLabel(selectedItem.variableType, copy),
       },
     );
 
@@ -314,12 +364,12 @@ export const selectViewData = ({ state }) => {
       detailFields.push(
         {
           type: "text",
-          label: "Enum",
-          value: "Yes",
+          label: copy.enumLabel ?? "Enum",
+          value: copy.yesLabel ?? "Yes",
         },
         {
           type: "text",
-          label: "Values",
+          label: copy.valuesLabel ?? "Values",
           value: selectedEnumValues.join(", "),
         },
       );
@@ -327,15 +377,15 @@ export const selectViewData = ({ state }) => {
 
     detailFields.push({
       type: "text",
-      label: "Default",
+      label: copy.defaultLabel ?? "Default",
       value: selectedVariableDefault,
     });
   } else if (selectedFolder?.type === "folder") {
     detailFields.push(
       {
         type: "text",
-        label: "Type",
-        value: "folder",
+        label: copy.typeLabel ?? "Type",
+        value: copy.folderTypeValue ?? "folder",
       },
       {
         type: "description",
@@ -347,7 +397,7 @@ export const selectViewData = ({ state }) => {
   return {
     flatItems,
     flatGroups,
-    title: "Variables",
+    title: copy.title ?? "Variables",
     resourceCategory: "systemConfig",
     selectedResourceId: "variables",
     selectedItemId: state.selectedItemId,
@@ -363,15 +413,25 @@ export const selectViewData = ({ state }) => {
     ...buildTagViewData({
       state,
       selectedItem,
-      createTagFormDefinition,
-      tagFilterPlaceholder: "Filter tags",
+      createTagFormDefinition: createTagForm({
+        title: copy.createTagTitle,
+        submitLabel: copy.createTagButton,
+        nameLabel: copy.tagNameLabel,
+      }),
+      tagFilterPlaceholder: copy.tagFilterPlaceholder ?? "Filter tags",
+      detailTagAddOptionLabel: copy.addTagOption ?? "Add tag",
     }),
-    folderContextMenuItems: state.folderContextMenuItems,
-    itemContextMenuItems: state.itemContextMenuItems,
-    emptyContextMenuItems: state.emptyContextMenuItems,
+    folderContextMenuItems: createFolderContextMenuItems(copy),
+    itemContextMenuItems: createItemContextMenuItems(copy),
+    emptyContextMenuItems: createEmptyContextMenuItems(copy),
     isFolderNameDialogOpen: state.isFolderNameDialogOpen,
     folderNameDialogItemId: state.folderNameDialogItemId,
-    folderNameForm,
+    folderNameForm: createFolderNameForm(copy),
     folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
+    addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
+    deleteButton: copy.deleteButton ?? "Delete",
+    filesLabel: copy.filesLabel ?? "Files",
+    groupVariablesCopy: copy,
+    noSelectionLabel: copy.noSelectionLabel ?? "No selection",
   };
 };

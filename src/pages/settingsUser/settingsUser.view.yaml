@@ -11,7 +11,7 @@ template:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
           - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
               - rtgl-view w=f h=f p=lg:
-                  - rtgl-text s=h2: User Settings
+                  - rtgl-text s=h2: ${title}
                   - rtgl-view g=lg mt=lg:
-                      - rtgl-text s=md: User settings content will go here
-                      - rtgl-text s=sm c=mu-fg: This is a placeholder for the user settings interface
+                      - rtgl-text s=md: ${placeholderMessage}
+                      - rtgl-text s=sm c=mu-fg: ${placeholderNote}

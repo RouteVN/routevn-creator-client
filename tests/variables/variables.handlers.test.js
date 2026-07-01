@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleVariableCreated } from "../../src/pages/variables/variables.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const createRepositoryState = () => ({
   tags: {},
@@ -29,6 +30,7 @@ const createDeps = ({ repositoryState = createRepositoryState() } = {}) => ({
   appService: {
     showAlert: vi.fn(),
   },
+  i18n: EN_I18N,
   projectService: {
     createVariable: vi.fn(),
     getRepositoryState: vi.fn(() => repositoryState),

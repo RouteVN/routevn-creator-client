@@ -18,9 +18,11 @@ import {
   syncMobileResourcePageUiConfig,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { VARIABLE_TAG_SCOPE_KEY } from "./variables.store.js";
+import { selectVariablesPageCopy } from "./support/variablesPageCopy.js";
 import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };
+const selectCopy = (deps = {}) => selectVariablesPageCopy(deps.i18n);
 
 const normalizeOptionalTagIds = (tagIds) => {
   if (!Array.isArray(tagIds) || tagIds.length === 0) {
@@ -143,6 +145,7 @@ const {
   handleFileExplorerTargetChanged,
 } = createVariablesFileExplorerHandlers({
   refresh: refreshVariablesData,
+  copy: selectCopy,
 });
 const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
@@ -180,7 +183,9 @@ const {
 
     deps.refs.groupview?.appendTagIdToForm?.({ tagId });
   },
-  updateItemTagFallbackMessage: "Failed to update variable tags.",
+  updateItemTagFallbackMessage: ({ deps }) =>
+    selectCopy(deps).failedUpdateTags ?? "Failed to update variable tags.",
+  copy: selectCopy,
 });
 
 const openVariableEditDialog = ({ deps, itemId } = {}) => {
@@ -356,6 +361,7 @@ export const handleFolderNameDialogClose = (deps) => {
 
 export const handleFolderNameFormAction = async (deps, payload) => {
   const { appService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -365,8 +371,8 @@ export const handleFolderNameFormAction = async (deps, payload) => {
   const description = values?.description?.trim() ?? "";
   if (!name) {
     appService.showAlert({
-      message: "Folder name is required.",
-      title: "Warning",
+      message: copy.folderNameRequired ?? "Folder name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -407,6 +413,7 @@ export const handleVariableFormAddOptionClick = (deps, payload) => {
 
 export const handleVariableCreated = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const {
     groupId,
     name,
@@ -426,8 +433,10 @@ export const handleVariableCreated = async (deps, payload) => {
     })
   ) {
     appService.showAlert({
-      message: "Select a folder before adding a variable.",
-      title: "Warning",
+      message:
+        copy.selectFolderBeforeAddingVariable ??
+        "Select a folder before adding a variable.",
+      title: copy.warningTitle ?? "Warning",
     });
     await refreshVariablesData(deps);
     return;
@@ -435,7 +444,8 @@ export const handleVariableCreated = async (deps, payload) => {
 
   const createAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to create variable.",
+    fallbackMessage: copy.failedCreateVariable ?? "Failed to create variable.",
+    title: copy.errorTitle ?? "Error",
     action: () =>
       projectService.createVariable({
         variableId: generateId(),
@@ -463,6 +473,7 @@ export const handleVariableCreated = async (deps, payload) => {
 
 export const handleVariableUpdated = async (deps, payload) => {
   const { appService, store, projectService } = deps;
+  const copy = selectCopy(deps);
   const {
     itemId,
     name,
@@ -501,7 +512,8 @@ export const handleVariableUpdated = async (deps, payload) => {
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update variable.",
+    fallbackMessage: copy.failedUpdateVariable ?? "Failed to update variable.",
+    title: copy.errorTitle ?? "Error",
     action: () =>
       projectService.updateVariable({
         variableId: itemId,
