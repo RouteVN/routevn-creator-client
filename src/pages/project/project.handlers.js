@@ -10,6 +10,7 @@ const ICON_VALIDATIONS = [
 
 export const handleBeforeMount = (deps) => {
   const { appService, store } = deps;
+  store.setPlatform({ platform: appService.getPlatform() });
   store.setCurrentProject({
     project: {
       source: appService.getCurrentProjectEntry()?.source,
@@ -34,6 +35,112 @@ export const handleAfterMount = async (deps) => {
     },
   });
   render();
+};
+
+const getActionMenuPosition = (event) => {
+  const rect = event.currentTarget?.getBoundingClientRect?.();
+  return {
+    x: event.clientX || rect?.right || 0,
+    y: rect?.bottom || event.clientY || 0,
+  };
+};
+
+const resolveFolderUri = (folder) => {
+  if (typeof folder === "string") {
+    return folder;
+  }
+
+  return folder?.uri ?? "";
+};
+
+const exportCurrentAndroidProject = async (deps) => {
+  const { appService, projectService } = deps;
+  const currentProject = appService.getCurrentProjectEntry();
+  const projectId = currentProject?.id ?? "";
+
+  if (
+    appService.getPlatform() !== "android" ||
+    currentProject?.source !== "local"
+  ) {
+    return;
+  }
+
+  if (!projectId) {
+    appService.showAlert({
+      message: "No local project is currently open.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  let folder;
+  try {
+    folder = await appService.openFolderPicker({
+      title: "Select Export Folder",
+      writable: true,
+    });
+  } catch {
+    appService.showAlert({
+      message: "Failed to select an export folder.",
+      title: "Error",
+    });
+    return;
+  }
+
+  const destinationUri = resolveFolderUri(folder);
+  if (!destinationUri) {
+    return;
+  }
+
+  try {
+    const result = await projectService.exportProjectFolder({
+      projectId,
+      destinationUri,
+    });
+    appService.showToast({
+      message: `Project exported to "${result.name}".`,
+    });
+  } catch (error) {
+    const message = String(error?.message ?? "");
+    appService.showAlert({
+      message: message.includes("already exists")
+        ? message
+        : "Failed to export project.",
+      title: "Error",
+    });
+  }
+};
+
+export const handleProjectActionsClick = (deps, payload) => {
+  const { store, render } = deps;
+  const event = payload._event;
+  event.preventDefault();
+  event.stopPropagation();
+
+  store.openProjectActionMenu(getActionMenuPosition(event));
+  render();
+};
+
+export const handleProjectActionMenuClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsProjectActionMenuOpen()) {
+    return;
+  }
+
+  store.closeProjectActionMenu();
+  render();
+};
+
+export const handleProjectActionMenuClickItem = async (deps, payload) => {
+  const { store, render } = deps;
+  const item = payload._event.detail.item || payload._event.detail;
+
+  store.closeProjectActionMenu();
+  render();
+
+  if (item?.value === "export") {
+    await exportCurrentAndroidProject(deps);
+  }
 };
 
 export const handleEditButtonClick = (deps) => {

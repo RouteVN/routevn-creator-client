@@ -3,13 +3,28 @@ import {
   formatProjectResolution,
 } from "../../internal/projectResolution.js";
 
+const PROJECT_ACTION_MENU_ITEMS = [
+  {
+    label: "Export",
+    type: "item",
+    value: "export",
+  },
+];
+
 export const createInitialState = () => ({
+  platform: "web",
   project: {
     name: "",
     description: "",
     iconFileId: undefined,
     resolution: DEFAULT_PROJECT_RESOLUTION,
     source: "local",
+  },
+  projectActionMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    items: [],
   },
   isEditDialogOpen: false,
   isEditIconCropDialogOpen: false,
@@ -21,6 +36,10 @@ export const createInitialState = () => ({
   editIconCropFile: undefined,
 });
 
+export const setPlatform = ({ state }, { platform } = {}) => {
+  state.platform = platform ?? "web";
+};
+
 export const setCurrentProject = ({ state }, { project } = {}) => {
   state.project = {
     name: project?.name ?? "",
@@ -30,6 +49,25 @@ export const setCurrentProject = ({ state }, { project } = {}) => {
     source: project?.source === "cloud" ? "cloud" : "local",
   };
 };
+
+export const openProjectActionMenu = ({ state }, { x, y } = {}) => {
+  state.projectActionMenu.isOpen = true;
+  state.projectActionMenu.x = x ?? 0;
+  state.projectActionMenu.y = y ?? 0;
+  state.projectActionMenu.items = PROJECT_ACTION_MENU_ITEMS.map((item) => ({
+    ...item,
+  }));
+};
+
+export const closeProjectActionMenu = ({ state }) => {
+  state.projectActionMenu.isOpen = false;
+  state.projectActionMenu.x = 0;
+  state.projectActionMenu.y = 0;
+  state.projectActionMenu.items = [];
+};
+
+export const selectIsProjectActionMenuOpen = ({ state }) =>
+  state.projectActionMenu.isOpen;
 
 export const openEditDialog = ({ state }, _payload = {}) => {
   state.isEditDialogOpen = true;
@@ -101,5 +139,8 @@ export const selectViewData = ({ state, constants }) => {
     editIconCropFile: state.editIconCropFile,
     editForm: constants.editProjectForm,
     projectSource: state.project.source,
+    projectActionMenu: state.projectActionMenu,
+    showAndroidProjectActions:
+      state.platform === "android" && state.project.source === "local",
   };
 };

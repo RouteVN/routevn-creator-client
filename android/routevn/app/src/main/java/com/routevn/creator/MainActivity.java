@@ -689,8 +689,9 @@ public class MainActivity extends Activity {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
                 String requestId = safePathSegment(payload.getString("requestId"));
+                boolean writable = payload.optBoolean("writable", false);
 
-                runOnUiThread(() -> launchAndroidFolderPicker(requestId));
+                runOnUiThread(() -> launchAndroidFolderPicker(requestId, writable));
                 return bridgeSuccess(true);
             } catch (Exception error) {
                 return bridgeFailure(error);
@@ -703,6 +704,20 @@ public class MainActivity extends Activity {
                 JSONObject payload = new JSONObject(payloadJson);
                 JSONObject result = importProjectFolderFromTreeUri(
                     payload.getString("uri")
+                );
+                return bridgeSuccess(result);
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
+        public String exportProjectFolder(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                JSONObject result = exportProjectFolderToTreeUri(
+                    payload.getString("projectId"),
+                    payload.getString("destinationUri")
                 );
                 return bridgeSuccess(result);
             } catch (Exception error) {
@@ -1175,6 +1190,85 @@ public class MainActivity extends Activity {
         } finally {
             deleteRecursively(importWorkDir);
         }
+    }
+
+    private JSONObject exportProjectFolderToTreeUri(
+        String projectId,
+        String destinationUriString
+    ) throws Exception {
+        String safeProjectId = safePathSegment(projectId);
+        String normalizedUri = destinationUriString == null
+            ? ""
+            : destinationUriString.trim();
+        if (normalizedUri.isEmpty()) {
+            throw new IllegalArgumentException("Export destination is required.");
+        }
+
+        File projectDbFile = getProjectDatabaseFile(safeProjectId);
+        File projectDbDirectory = projectDbFile.getParentFile();
+        File projectRoot = getProjectRoot(safeProjectId);
+        File projectFilesRoot = new File(projectRoot, "files");
+        File projectMetadataRoot = new File(projectRoot, "file-metadata");
+        if (!projectDbFile.isFile() || !projectFilesRoot.isDirectory()) {
+            throw new IllegalArgumentException("Project storage was not found.");
+        }
+
+        closeDatabase(getProjectDatabasePath(safeProjectId));
+        JSONObject projectInfo = readProjectInfoFromDatabaseFile(projectDbFile);
+        String projectInfoId = safePathSegment(projectInfo.optString("id", ""));
+        if (!safeProjectId.equals(projectInfoId)) {
+            throw new IllegalArgumentException("Project storage id does not match.");
+        }
+
+        Uri treeUri = Uri.parse(normalizedUri);
+        Uri destinationRootUri = getTreeRootDocumentUri(treeUri);
+        if (findChildDocument(destinationRootUri, safeProjectId, true) != null) {
+            throw new IllegalStateException(
+                "A folder named " + safeProjectId + " already exists."
+            );
+        }
+
+        Uri exportRootUri = createChildDirectory(
+            destinationRootUri,
+            safeProjectId
+        );
+        copyFileToDocumentDirectory(
+            projectDbFile,
+            exportRootUri,
+            "project.db",
+            "application/vnd.sqlite3"
+        );
+        copyOptionalFileToDocumentDirectory(
+            new File(projectDbDirectory, "project.db-wal"),
+            exportRootUri,
+            "application/octet-stream"
+        );
+        copyOptionalFileToDocumentDirectory(
+            new File(projectDbDirectory, "project.db-shm"),
+            exportRootUri,
+            "application/octet-stream"
+        );
+        copyOptionalFileToDocumentDirectory(
+            new File(projectDbDirectory, "project.db-journal"),
+            exportRootUri,
+            "application/octet-stream"
+        );
+
+        Uri filesUri = createChildDirectory(exportRootUri, "files");
+        copyFileDirectoryContentsToDocumentDirectory(projectFilesRoot, filesUri);
+
+        if (projectMetadataRoot.isDirectory()) {
+            Uri metadataUri = createChildDirectory(exportRootUri, "file-metadata");
+            copyFileDirectoryContentsToDocumentDirectory(
+                projectMetadataRoot,
+                metadataUri
+            );
+        }
+
+        JSONObject result = new JSONObject();
+        result.put("uri", exportRootUri.toString());
+        result.put("name", safeProjectId);
+        return result;
     }
 
     private String getProjectDatabasePath(String projectId) {
@@ -1676,7 +1770,7 @@ public class MainActivity extends Activity {
         pendingAndroidSaveFilePickerRequestId = null;
     }
 
-    private void launchAndroidFolderPicker(String requestId) {
+    private void launchAndroidFolderPicker(String requestId, boolean writable) {
         if (pendingAndroidFolderPickerRequestId != null) {
             sendAndroidFolderPickerError(
                 requestId,
@@ -1689,6 +1783,9 @@ public class MainActivity extends Activity {
 
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        if (writable) {
+            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        }
         intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         intent.addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
 
@@ -1725,7 +1822,7 @@ public class MainActivity extends Activity {
             }
 
             Uri treeUri = data.getData();
-            persistTreeReadPermission(treeUri, data.getFlags());
+            persistTreePermission(treeUri, data.getFlags());
             Uri rootDocumentUri = getTreeRootDocumentUri(treeUri);
             JSONObject folder = new JSONObject();
             folder.put("uri", treeUri.toString());
@@ -1749,20 +1846,23 @@ public class MainActivity extends Activity {
         pendingAndroidFolderPickerRequestId = null;
     }
 
-    private void persistTreeReadPermission(Uri treeUri, int flags) {
+    private void persistTreePermission(Uri treeUri, int flags) {
         if (treeUri == null) {
             return;
         }
 
-        int readFlag = Intent.FLAG_GRANT_READ_URI_PERMISSION;
-        if ((flags & readFlag) == 0) {
+        int persistableFlags =
+            flags &
+            (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        if (persistableFlags == 0) {
             return;
         }
 
         try {
-            getContentResolver().takePersistableUriPermission(treeUri, readFlag);
+            getContentResolver()
+                .takePersistableUriPermission(treeUri, persistableFlags);
         } catch (Exception error) {
-            Log.w(TAG, "Failed to persist folder read permission.", error);
+            Log.w(TAG, "Failed to persist folder permission.", error);
         }
     }
 
@@ -1863,6 +1963,55 @@ public class MainActivity extends Activity {
         return childUri;
     }
 
+    private Uri createChildDirectory(Uri parentDocumentUri, String directoryName)
+        throws Exception {
+        if (
+            findChildDocument(parentDocumentUri, directoryName, true) != null ||
+            findChildDocument(parentDocumentUri, directoryName, false) != null
+        ) {
+            throw new IllegalStateException(
+                "A file or folder named " + directoryName + " already exists."
+            );
+        }
+
+        Uri childUri = DocumentsContract.createDocument(
+            getContentResolver(),
+            parentDocumentUri,
+            DocumentsContract.Document.MIME_TYPE_DIR,
+            directoryName
+        );
+        if (childUri == null) {
+            throw new IllegalStateException("Failed to create export folder.");
+        }
+        return childUri;
+    }
+
+    private Uri createChildFile(
+        Uri parentDocumentUri,
+        String filename,
+        String mimeType
+    ) throws Exception {
+        if (
+            findChildDocument(parentDocumentUri, filename, false) != null ||
+            findChildDocument(parentDocumentUri, filename, true) != null
+        ) {
+            throw new IllegalStateException(
+                "A file named " + filename + " already exists."
+            );
+        }
+
+        Uri childUri = DocumentsContract.createDocument(
+            getContentResolver(),
+            parentDocumentUri,
+            normalizeMimeType(mimeType),
+            filename
+        );
+        if (childUri == null) {
+            throw new IllegalStateException("Failed to create export file.");
+        }
+        return childUri;
+    }
+
     private String resolveDocumentDisplayName(Uri documentUri, String fallback) {
         String[] projection = new String[] {
             DocumentsContract.Document.COLUMN_DISPLAY_NAME,
@@ -1883,6 +2032,80 @@ public class MainActivity extends Activity {
         }
 
         return fallback;
+    }
+
+    private void copyFileDirectoryContentsToDocumentDirectory(
+        File sourceDirectory,
+        Uri outputDirectoryUri
+    ) throws Exception {
+        File[] children = sourceDirectory.listFiles();
+        if (children == null) {
+            return;
+        }
+
+        for (File child : children) {
+            String childName = sanitizeExportFilename(child.getName());
+            if (child.isDirectory()) {
+                Uri childDirectoryUri = createChildDirectory(
+                    outputDirectoryUri,
+                    childName
+                );
+                copyFileDirectoryContentsToDocumentDirectory(
+                    child,
+                    childDirectoryUri
+                );
+                continue;
+            }
+
+            if (child.isFile()) {
+                copyFileToDocumentDirectory(
+                    child,
+                    outputDirectoryUri,
+                    childName,
+                    URLConnection.guessContentTypeFromName(childName)
+                );
+            }
+        }
+    }
+
+    private void copyOptionalFileToDocumentDirectory(
+        File sourceFile,
+        Uri outputDirectoryUri,
+        String mimeType
+    ) throws Exception {
+        if (!sourceFile.isFile()) {
+            return;
+        }
+
+        copyFileToDocumentDirectory(
+            sourceFile,
+            outputDirectoryUri,
+            sanitizeExportFilename(sourceFile.getName()),
+            mimeType
+        );
+    }
+
+    private void copyFileToDocumentDirectory(
+        File sourceFile,
+        Uri outputDirectoryUri,
+        String filename,
+        String mimeType
+    ) throws Exception {
+        Uri outputFileUri = createChildFile(
+            outputDirectoryUri,
+            sanitizeExportFilename(filename),
+            mimeType
+        );
+        try (
+            FileInputStream input = new FileInputStream(sourceFile);
+            OutputStream output = getContentResolver()
+                .openOutputStream(outputFileUri, "wt")
+        ) {
+            if (output == null) {
+                throw new IllegalStateException("Failed to open export file.");
+            }
+            writeOutputStream(output, input);
+        }
     }
 
     private void copyDocumentDirectoryContents(Uri directoryUri, File outputDirectory)
@@ -2020,6 +2243,14 @@ public class MainActivity extends Activity {
     }
 
     private String sanitizeImportedFilename(String filename) {
+        String resolvedFilename = filename == null ? "" : filename.trim();
+        if (resolvedFilename.isEmpty()) {
+            resolvedFilename = "file";
+        }
+        return resolvedFilename.replaceAll("[\\\\/]+", "-");
+    }
+
+    private String sanitizeExportFilename(String filename) {
         String resolvedFilename = filename == null ? "" : filename.trim();
         if (resolvedFilename.isEmpty()) {
             resolvedFilename = "file";
@@ -2343,14 +2574,19 @@ public class MainActivity extends Activity {
             throw new IllegalStateException("Failed to create output directory.");
         }
 
-        long totalBytes = 0;
         try (FileOutputStream output = new FileOutputStream(file)) {
-            byte[] buffer = new byte[8192];
-            int read;
-            while ((read = input.read(buffer)) != -1) {
-                output.write(buffer, 0, read);
-                totalBytes += read;
-            }
+            return writeOutputStream(output, input);
+        }
+    }
+
+    private long writeOutputStream(OutputStream output, InputStream input)
+        throws Exception {
+        long totalBytes = 0;
+        byte[] buffer = new byte[8192];
+        int read;
+        while ((read = input.read(buffer)) != -1) {
+            output.write(buffer, 0, read);
+            totalBytes += read;
         }
         return totalBytes;
     }

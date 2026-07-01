@@ -15,6 +15,16 @@ refs:
     eventListeners:
       click:
         handler: handleBackToProjects
+  projectActionsButton:
+    eventListeners:
+      click:
+        handler: handleProjectActionsClick
+  projectActionMenu:
+    eventListeners:
+      close:
+        handler: handleProjectActionMenuClose
+      item-click:
+        handler: handleProjectActionMenuClickItem
   editDialog:
     eventListeners:
       close:
@@ -39,6 +49,9 @@ template:
           - rtgl-button#backButton pre=chevronLeft v=gh: Back to Projects
           - $if projectSource == 'cloud':
               - rtgl-text s=xs c=mu-fg: Cloud Project
+          - rtgl-view w=1fg: null
+          - $if showAndroidProjectActions:
+              - rtgl-button#projectActionsButton sq v=gh pre=ellipsis: null
   - rtgl-view w=f h=f ph=lg pt=md:
       - rtgl-view w=f h=f d=v:
           - rvn-detail-view#detailView w=f h=1fg :fields=${detailFields}:
@@ -58,4 +71,5 @@ template:
                 $else:
                   - rtgl-view#editDialogIcon slot=project-icon-edit w=120 h=120 ah=c av=c bw=xs bc=bo br=md cur=pointer:
                       - rtgl-text c=mu-fg ta=c: Click to upload
+  - rtgl-dropdown-menu#projectActionMenu :items=${projectActionMenu.items} x=${projectActionMenu.x} y=${projectActionMenu.y} ?open=${projectActionMenu.isOpen}: null
   - rvn-square-image-crop-dialog#editIconCropDialog :open=${isEditIconCropDialogOpen} :file=${editIconCropFile}: null

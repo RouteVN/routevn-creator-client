@@ -1,5 +1,6 @@
 import { createProjectServiceCore } from "../shared/projectServiceCore.js";
 import { createAndroidProjectServiceAdapters } from "./projectServiceAdapters.js";
+import { callAndroidBridge } from "../../clients/android/bridge.js";
 import { generateId } from "../../../internal/id.js";
 
 const ENABLE_VERBOSE_COLLAB_LOGS = false;
@@ -27,7 +28,7 @@ export const createProjectService = ({
   const { storageAdapter, fileAdapter, collabAdapter } =
     createAndroidProjectServiceAdapters({ collabLog, creatorVersion });
 
-  return createProjectServiceCore({
+  const projectService = createProjectServiceCore({
     router,
     db,
     filePicker,
@@ -39,4 +40,25 @@ export const createProjectService = ({
     fileAdapter,
     collabAdapter,
   });
+
+  return {
+    ...projectService,
+
+    async exportProjectFolder({ projectId, destinationUri } = {}) {
+      const targetProjectId = projectId || projectService.getEnsuredProjectId();
+      if (!targetProjectId) {
+        throw new Error("No project selected.");
+      }
+
+      await projectService.releaseProjectRuntime(targetProjectId);
+      try {
+        return callAndroidBridge("exportProjectFolder", {
+          projectId: targetProjectId,
+          destinationUri,
+        });
+      } finally {
+        await projectService.ensureRepository().catch(() => {});
+      }
+    },
+  };
 };

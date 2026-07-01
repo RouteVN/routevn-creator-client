@@ -247,6 +247,7 @@ const requestNativeAndroidFolderPicker = (options = {}) => {
       callAndroidBridge("openFolderPicker", {
         requestId,
         title: options.title || "Select Folder",
+        writable: options.writable === true,
       });
     } catch (error) {
       pendingAndroidFolderPickers.delete(requestId);
