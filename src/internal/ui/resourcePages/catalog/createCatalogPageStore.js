@@ -31,8 +31,12 @@ import {
 
 const EMPTY_TREE = { tree: [], items: {} };
 
-const defaultCenterItemContextMenuItems = [
-  { label: "Delete", type: "item", value: "delete-item" },
+const createDefaultCenterItemContextMenuItems = (copy = {}) => [
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
 const createFolderContextMenuItems = (copy = {}) => [
@@ -123,7 +127,7 @@ export const createCatalogPageStore = ({
   addText = "Add",
   searchPlaceholder = "Search...",
   emptyMessage,
-  centerItemContextMenuItems = defaultCenterItemContextMenuItems,
+  centerItemContextMenuItems = createDefaultCenterItemContextMenuItems,
   matchesSearch = defaultMatchesSearch,
   buildDetailFields = () => [],
   buildCatalogItem = (item) => item,
@@ -441,6 +445,11 @@ export const createCatalogPageStore = ({
         })
       : undefined;
 
+    const resolvedCenterItemContextMenuItems =
+      typeof centerItemContextMenuItems === "function"
+        ? centerItemContextMenuItems(copy)
+        : centerItemContextMenuItems;
+
     const baseViewData = {
       flatItems,
       catalogGroups,
@@ -468,7 +477,7 @@ export const createCatalogPageStore = ({
       folderContextMenuItems: createFolderContextMenuItems(copy),
       itemContextMenuItems: createItemContextMenuItems(copy),
       emptyContextMenuItems: createEmptyContextMenuItems(copy),
-      centerItemContextMenuItems,
+      centerItemContextMenuItems: resolvedCenterItemContextMenuItems,
       isFolderNameDialogOpen: state.isFolderNameDialogOpen,
       folderNameDialogItemId: state.folderNameDialogItemId,
       folderNameForm: createFolderNameForm(copy),

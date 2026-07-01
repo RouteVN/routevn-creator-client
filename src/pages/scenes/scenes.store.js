@@ -1,28 +1,77 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { selectScenesPageCopy } from "./support/scenesPageCopy.js";
 
-const CONTEXT_MENU_ITEMS = [
-  { label: "Open", type: "item", value: "open-item" },
-  { label: "Preview", type: "item", value: "preview-item" },
-  { label: "Edit", type: "item", value: "edit-item" },
-  { label: "Set Initial Scene", type: "item", value: "set-initial" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createContextMenuItems = (copy = {}) => [
+  { label: copy.openMenuItem ?? "Open", type: "item", value: "open-item" },
+  {
+    label: copy.previewMenuItem ?? "Preview",
+    type: "item",
+    value: "preview-item",
+  },
+  { label: copy.editMenuItem ?? "Edit", type: "item", value: "edit-item" },
+  {
+    label: copy.setInitialSceneMenuItem ?? "Set Initial Scene",
+    type: "item",
+    value: "set-initial",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const fileExplorerFolderContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-child-folder" },
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createFileExplorerFolderContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-child-folder",
+  },
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const fileExplorerItemContextMenuItems = [
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createFileExplorerItemContextMenuItems = (copy = {}) => [
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const fileExplorerEmptyContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-item" },
+const createFileExplorerEmptyContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-item",
+  },
 ];
+
+const localizeDropdownMenuItems = (items = [], copy = {}) => {
+  const localizedItems = createContextMenuItems(copy);
+  return items.map((item) => {
+    const localizedItem = localizedItems.find(
+      (candidate) => candidate.value === item.value,
+    );
+
+    return localizedItem ? { ...item, label: localizedItem.label } : item;
+  });
+};
 
 export const createInitialState = () => ({
   scenesData: { tree: [], items: {} },
@@ -266,7 +315,7 @@ export const showDropdownMenu = ({ state }, { position, itemId } = {}) => {
     isOpen: true,
     position,
     itemId,
-    items: CONTEXT_MENU_ITEMS,
+    items: createContextMenuItems(),
   };
 };
 
@@ -303,7 +352,8 @@ export const selectSceneWhiteboardPosition = ({ state }) => {
   return state.sceneWhiteboardPosition;
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectScenesPageCopy(i18n);
   const flatItems = applyFolderRequiredRootDragOptions(
     toFlatItems(state.scenesData),
   );
@@ -338,7 +388,11 @@ export const selectViewData = ({ state }) => {
     selectedSceneSections = Array.isArray(selectedSceneOverview?.sections)
       ? selectedSceneOverview.sections.map((section, index) => ({
           id: section.sectionId || section.id,
-          name: section.name || `Section ${index + 1}`,
+          name:
+            section.name ||
+            formatI18nCopy(copy.sectionFallback ?? "Section {index}", {
+              index: index + 1,
+            }),
           isDeadEnd: section.isDeadEnd === true,
         }))
       : toFlatItems(
@@ -348,7 +402,11 @@ export const selectViewData = ({ state }) => {
           },
         ).map((section, index) => ({
           id: section.id,
-          name: section.name || `Section ${index + 1}`,
+          name:
+            section.name ||
+            formatI18nCopy(copy.sectionFallback ?? "Section {index}", {
+              index: index + 1,
+            }),
           isDeadEnd: false,
         }));
   } else if (selectedFolder) {
@@ -357,8 +415,8 @@ export const selectViewData = ({ state }) => {
     detailFields = [
       {
         type: "text",
-        label: "Type",
-        value: "folder",
+        label: copy.typeLabel ?? "Type",
+        value: copy.folderTypeValue ?? "folder",
       },
       {
         type: "description",
@@ -388,8 +446,8 @@ export const selectViewData = ({ state }) => {
     {
       name: "name",
       type: "input-text",
-      label: "Scene Name",
-      description: "Enter the scene name",
+      label: copy.sceneNameLabel ?? "Scene Name",
+      description: copy.sceneNameDescription ?? "Enter the scene name",
       required: true,
     },
   ];
@@ -398,7 +456,7 @@ export const selectViewData = ({ state }) => {
     sceneFormFieldsList.push({
       name: "folderId",
       type: "select",
-      label: "Folder",
+      label: copy.folderLabel ?? "Folder",
       clearable: false,
       options: folderOptions.map((option) => ({
         value: option.id,
@@ -409,7 +467,7 @@ export const selectViewData = ({ state }) => {
   }
 
   const sceneFormFields = {
-    title: "Create Scene",
+    title: copy.createSceneTitle ?? "Create Scene",
     fields: sceneFormFieldsList,
     actions: {
       layout: "",
@@ -417,7 +475,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          label: "Create",
+          label: copy.createButton ?? "Create",
         },
       ],
     },
@@ -425,22 +483,25 @@ export const selectViewData = ({ state }) => {
 
   const editItemType = state.editItemType ?? "scene";
   const editForm = {
-    title: editItemType === "folder" ? "Edit Folder" : "Edit Scene",
+    title:
+      editItemType === "folder"
+        ? (copy.editFolderTitle ?? "Edit Folder")
+        : (copy.editSceneTitle ?? "Edit Scene"),
     description:
       editItemType === "folder"
-        ? "Update folder details"
-        : "Update scene details",
+        ? (copy.updateFolderDescription ?? "Update folder details")
+        : (copy.updateSceneDescription ?? "Update scene details"),
     fields: [
       {
         name: "name",
         type: "input-text",
-        label: "Name",
+        label: copy.nameLabel ?? "Name",
         required: true,
       },
       {
         name: "description",
         type: "input-textarea",
-        label: "Description",
+        label: copy.descriptionLabel ?? "Description",
       },
     ],
     actions: {
@@ -449,7 +510,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          label: "Save",
+          label: copy.saveButton ?? "Save",
         },
       ],
     },
@@ -479,7 +540,10 @@ export const selectViewData = ({ state }) => {
     editForm,
     folderOptions,
     whiteboardCursor: state.isWaitingForTransform ? "crosshair" : undefined,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: {
+      ...state.dropdownMenu,
+      items: localizeDropdownMenuItems(state.dropdownMenu.items, copy),
+    },
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,
     showMapAddHint: state.showMapAddHint,
@@ -488,9 +552,9 @@ export const selectViewData = ({ state }) => {
     selectedItemName,
     detailFields,
     deadEndTooltip: state.deadEndTooltip,
-    folderContextMenuItems: fileExplorerFolderContextMenuItems,
-    itemContextMenuItems: fileExplorerItemContextMenuItems,
-    emptyContextMenuItems: fileExplorerEmptyContextMenuItems,
+    folderContextMenuItems: createFileExplorerFolderContextMenuItems(copy),
+    itemContextMenuItems: createFileExplorerItemContextMenuItems(copy),
+    emptyContextMenuItems: createFileExplorerEmptyContextMenuItems(copy),
     isTouchMode: state.isTouchMode,
     showExplorerPanel: !state.isTouchMode,
     showDetailPanel: !state.isTouchMode,
@@ -499,5 +563,11 @@ export const selectViewData = ({ state }) => {
     showWhiteboardMinimapInTouchMode: state.isTouchMode,
     whiteboardMinimapPlacement: state.isTouchMode ? "top-right" : "bottom-left",
     whiteboardMinimapHeightScale: state.isTouchMode ? 2 / 3 : 1,
+    title: copy.title ?? "Scenes",
+    previewButton: copy.previewMenuItem ?? "Preview",
+    sectionsLabel: copy.sectionsLabel ?? "Sections",
+    noSectionsLabel: copy.noSectionsLabel ?? "No sections",
+    noSelectionLabel: copy.noSelectionLabel ?? "No selection",
+    mapAddHint: copy.mapAddHint ?? "Right click in the map to add a scene",
   };
 };

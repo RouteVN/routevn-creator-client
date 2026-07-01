@@ -4,6 +4,7 @@ import {
   selectViewData,
   setItems,
 } from "../../src/pages/variables/variables.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("variables.store", () => {
   it("keeps variable resource type separate from value type", () => {
@@ -37,7 +38,7 @@ describe("variables.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const folder = viewData.flatItems.find((item) => item.id === "folder1");
     const variable = viewData.flatItems.find((item) => item.id === "score");
 

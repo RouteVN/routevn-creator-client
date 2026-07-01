@@ -7,6 +7,7 @@ import {
   selectViewData,
   setUiConfig,
 } from "../../src/pages/scenes/scenes.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("scenes.store mobile layout", () => {
   it("shows the mobile explorer controls and top-right minimap settings in touch mode", () => {
@@ -23,7 +24,7 @@ describe("scenes.store mobile layout", () => {
 
     openMobileFileExplorer({ state });
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(selectIsMobileFileExplorerOpen({ state })).toBe(true);
     expect(viewData.showExplorerPanel).toBe(false);
@@ -37,13 +38,15 @@ describe("scenes.store mobile layout", () => {
     closeMobileFileExplorer({ state });
 
     expect(selectIsMobileFileExplorerOpen({ state })).toBe(false);
-    expect(selectViewData({ state }).showMobileFileExplorer).toBe(false);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).showMobileFileExplorer,
+    ).toBe(false);
   });
 
   it("keeps desktop panels and bottom-left minimap settings outside touch mode", () => {
     const state = createInitialState();
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.showExplorerPanel).toBe(true);
     expect(viewData.showDetailPanel).toBe(true);

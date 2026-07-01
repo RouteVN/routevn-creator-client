@@ -109,7 +109,7 @@ template:
           - $if showExplorerPanel:
               - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
                   - rtgl-view slot="content" w=f h=f:
-                      - rtgl-text ml=lg s=sm c=mu-fg mv=md: Scenes
+                      - rtgl-text ml=lg s=sm c=mu-fg mv=md: ${title}
                       - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
@@ -127,14 +127,14 @@ template:
                                       - $if selectedDetailType == "scene":
                                           - rtgl-view d=h w=f av=c ph=md pt=md:
                                               - rtgl-view w=1fg: null
-                                              - rtgl-button#detailPreviewButton s=sm v=se: Preview
+                                              - rtgl-button#detailPreviewButton s=sm v=se: ${previewButton}
                                           - $if selectedItemDescription:
                                               - rtgl-view w=f ph=md pt=md:
                                                   - rtgl-text c=mu-fg: ${selectedItemDescription}
                                           - rtgl-view h=1 w=f bgc=mu mv=md: null
                                           - rtgl-view d=v w=f g=md ph=md pb=md:
                                               - rtgl-view#sectionsListToggle d=h w=f av=c cur=pointer:
-                                                  - rtgl-text s=sm: Sections
+                                                  - rtgl-text s=sm: ${sectionsLabel}
                                                   - rtgl-view w=1fg: null
                                                   - $if sectionsListOpen:
                                                       - rtgl-svg svg=folderArrowDown wh=16 c=mu-fg: null
@@ -143,7 +143,7 @@ template:
                                               - $if sectionsListOpen:
                                                   - $if selectedSceneSections.length == 0:
                                                       - rtgl-view d=h av=c ph=md bw=xs bc=mu bgc=bg br=sm h=36 w=f:
-                                                          - rtgl-text s=sm c=mu-fg: No sections
+                                                          - rtgl-text s=sm c=mu-fg: ${noSectionsLabel}
                                                     $else:
                                                       - rtgl-view d=v w=f g=sm:
                                                           - $for section, sectionIndex in selectedSceneSections:
@@ -155,7 +155,7 @@ template:
                                           - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}: null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                                  - rtgl-text s=md c=mu-fg: No selection
+                                  - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
       - rtgl-popover#sceneFormPopover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
           - rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=${sceneFormData} :form=${sceneFormFields} w=320: null
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
@@ -165,11 +165,11 @@ template:
       - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
       - $if showMobileScenesControls:
           - 'rtgl-view pos=abs z=200 style="left: 16px; top: 20px;"':
-              - rtgl-button#mobileFileExplorerOpenButton sq pre=hamburger v=se title="Scenes": null
+              - rtgl-button#mobileFileExplorerOpenButton sq pre=hamburger v=se title="${title}": null
       - $if showMobileFileExplorer:
           - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
               - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
-                  - rtgl-text w=1fg s=md: Scenes
+                  - rtgl-text w=1fg s=md: ${title}
                   - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
                       - rtgl-svg svg=x wh=20 c=mu-fg: null
               - 'rtgl-view w=f h=1fg style="min-height: 0;"':
@@ -177,7 +177,7 @@ template:
       - $if showMapAddHint:
           - 'rtgl-view pos=abs z=150 style="left: 50%; bottom: 24px; transform: translateX(-50%);"':
               - rtgl-view d=h av=c g=sm bgc=mu bc=bo bw=xs br=sm pv=md ph=md:
-                  - rtgl-text c=fg s=sm mh=xl: Right click in the map to add a scene
+                  - rtgl-text c=fg s=sm mh=xl: ${mapAddHint}
                   - rtgl-view#mapAddHintClose d=h av=c ah=c w=20 h=20 cur=pointer:
                       - rtgl-svg svg=x wh=14 c=mu-fg: null
   - $if previewVisible:
