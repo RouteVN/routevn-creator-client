@@ -232,7 +232,7 @@ describe("scenes.handlers config keys", () => {
         },
       ],
     });
-    expect(deps.render).toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledTimes(1);
 
     resolveOverviews({});
     await Promise.resolve();
