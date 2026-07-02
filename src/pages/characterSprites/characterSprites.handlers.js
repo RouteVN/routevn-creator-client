@@ -19,6 +19,10 @@ import {
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
+  resolveImagePreviewDisplayMode as resolvePreviewDisplayMode,
+  resolveImagePreviewNavigationDirection as resolvePreviewNavigationDirection,
+} from "../../internal/ui/resourcePages/imagePreviewOverlay.js";
+import {
   createFileExplorerKeyboardScopeHandlers,
   isTextEntryKeyEvent,
 } from "../../internal/ui/fileExplorerKeyboardScope.js";
@@ -377,69 +381,6 @@ const navigateSpritePreview = (deps, { direction, distance, clamp } = {}) => {
 
   openSpritePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
   return true;
-};
-
-const resolvePreviewNavigationDirection = (event) => {
-  if (event.key === "ArrowDown") {
-    return { direction: "next" };
-  }
-
-  if (event.key === "ArrowUp") {
-    return { direction: "previous" };
-  }
-
-  if (event.altKey || event.metaKey) {
-    return undefined;
-  }
-
-  if (event.ctrlKey) {
-    const key = String(event.key ?? "").toLowerCase();
-    if (key === "d") {
-      return { direction: "next", distance: 10, clamp: true };
-    }
-
-    if (key === "u") {
-      return { direction: "previous", distance: 10, clamp: true };
-    }
-
-    return undefined;
-  }
-
-  const key = String(event.key ?? "").toLowerCase();
-  if (key === "j") {
-    return { direction: "next" };
-  }
-
-  if (key === "k") {
-    return { direction: "previous" };
-  }
-
-  return undefined;
-};
-
-const resolvePreviewDisplayMode = (event) => {
-  if (event.altKey || event.ctrlKey || event.metaKey) {
-    return undefined;
-  }
-
-  if (event.key === "ArrowLeft") {
-    return "canvas";
-  }
-
-  if (event.key === "ArrowRight") {
-    return "fit";
-  }
-
-  const key = String(event.key ?? "").toLowerCase();
-  if (key === "h") {
-    return "canvas";
-  }
-
-  if (key === "l") {
-    return "fit";
-  }
-
-  return undefined;
 };
 
 const openEditDialogForSprite = ({

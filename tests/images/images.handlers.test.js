@@ -473,6 +473,21 @@ describe("images handlers", () => {
         subscribeProjectState: vi.fn(() => () => {}),
       },
       store: {
+        selectCreateTagContext: vi.fn(() => ({
+          mode: "item",
+          itemId: "image-1",
+          draftTagIds: [],
+        })),
+        selectTagsData: vi.fn(() => ({
+          tree: [{ id: "image-tag-1" }],
+          items: {
+            "image-tag-1": {
+              id: "image-tag-1",
+              type: "tag",
+              name: "Background",
+            },
+          },
+        })),
         getState: vi.fn(() => ({
           createTagContext: {
             mode: "item",
@@ -564,6 +579,7 @@ describe("images handlers", () => {
     const deps = {
       i18n: EN_I18N,
       store: {
+        selectDetailTagIds: vi.fn(() => ["image-tag-1"]),
         getState: vi.fn(() => ({
           detailTagIds: ["image-tag-1"],
         })),
@@ -599,6 +615,11 @@ describe("images handlers", () => {
     const deps = {
       i18n: EN_I18N,
       store: {
+        selectCreateTagContext: vi.fn(() => ({
+          mode: "item",
+          itemId: "image-1",
+          draftTagIds: ["image-tag-1"],
+        })),
         getState: vi.fn(() => ({
           createTagContext: {
             mode: "item",
