@@ -180,7 +180,7 @@ const {
   buildDetailFields: buildParticleDetailFields,
   buildCatalogItem: buildParticleCatalogItem,
   hiddenMobileDetailSlots: ["particle-preview"],
-  extendViewData: ({ state, selectedItem, baseViewData }) => {
+  extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
     const activeTagIds = state.activeTagIds ?? [];
     const selectedTextureImageItem = resolveParticleTextureImageItem(
       selectedItem?.modules?.appearance?.texture,

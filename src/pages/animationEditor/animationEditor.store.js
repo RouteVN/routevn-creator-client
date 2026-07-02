@@ -620,8 +620,6 @@ const createAnimationResetState = ({
   };
 };
 
-const EASING_OPTIONS = Object.freeze(createEasingOptions());
-
 const TWEEN_MODE_OPTIONS = Object.freeze([
   {
     label: "Keyframes",
@@ -727,18 +725,18 @@ const createAutoTweenFields = (copy = {}) => {
 const createEditAutoTweenForm = (copy = {}) => {
   return localizeForm(
     {
-    title: "Edit Auto Tween",
-    fields: createAutoTweenFields(copy),
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: "Update Auto Tween",
-        },
-      ],
-    },
+      title: "Edit Auto Tween",
+      fields: createAutoTweenFields(copy),
+      actions: {
+        layout: "",
+        buttons: [
+          {
+            id: "submit",
+            variant: "pr",
+            label: "Update Auto Tween",
+          },
+        ],
+      },
     },
     copy,
   );
@@ -808,18 +806,18 @@ const createAddKeyframeForm = (
 
   return localizeForm(
     {
-    title: "Add Keyframe",
-    fields,
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: "Add Keyframe",
-        },
-      ],
-    },
+      title: "Add Keyframe",
+      fields,
+      actions: {
+        layout: "",
+        buttons: [
+          {
+            id: "submit",
+            variant: "pr",
+            label: "Add Keyframe",
+          },
+        ],
+      },
     },
     copy,
   );
@@ -831,20 +829,23 @@ const createUpdateKeyframeForm = (
   options = {},
   copy = {},
 ) => {
-  return localizeForm({
-    ...createAddKeyframeForm(property, propertyFieldConfig, options, copy),
-    title: "Edit Keyframe",
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: "Update Keyframe",
-        },
-      ],
+  return localizeForm(
+    {
+      ...createAddKeyframeForm(property, propertyFieldConfig, options, copy),
+      title: "Edit Keyframe",
+      actions: {
+        layout: "",
+        buttons: [
+          {
+            id: "submit",
+            variant: "pr",
+            label: "Update Keyframe",
+          },
+        ],
+      },
     },
-  }, copy);
+    copy,
+  );
 };
 
 const createAddPropertyForm = (
@@ -945,18 +946,18 @@ const createAddPropertyForm = (
 
   return localizeForm(
     {
-    title: "Add animation property",
-    fields,
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: "Add Property",
-        },
-      ],
-    },
+      title: "Add animation property",
+      fields,
+      actions: {
+        layout: "",
+        buttons: [
+          {
+            id: "submit",
+            variant: "pr",
+            label: "Add Property",
+          },
+        ],
+      },
     },
     copy,
   );
@@ -2478,7 +2479,8 @@ const buildTransitionMaskPanelDataForMask = (
     ),
     singleImage,
     imageItems: imageItems.filter((item) => item?.imageId),
-    imageLabel: singleImage?.name ?? copy.noImageSelectedLabel ?? "No image selected",
+    imageLabel:
+      singleImage?.name ?? copy.noImageSelectedLabel ?? "No image selected",
     sequenceItems,
     compositeItems,
   };
@@ -2813,7 +2815,6 @@ export const selectViewData = ({ state, i18n }) => {
     saveButton: copy.saveButton ?? "Save",
     selectImageLabel: copy.selectImageLabel ?? "Select image",
     softnessLabel: copy.softnessLabel ?? "Softness",
-    tweenPropertiesTitle:
-      copy.tweenPropertiesTitle ?? "Tween Properties",
+    tweenPropertiesTitle: copy.tweenPropertiesTitle ?? "Tween Properties",
   };
 };

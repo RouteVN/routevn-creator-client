@@ -316,16 +316,19 @@ export const selectViewData = ({ state, props, i18n }) => {
       : (selectedAnimationId ?? "new-screen");
 
   return {
-    breadcrumb: localizeCommandLineBreadcrumb([
-      {
-        id: "actions",
-        label: "Actions",
-        click: true,
-      },
-      {
-        label: "Screen",
-      },
-    ], copy),
+    breadcrumb: localizeCommandLineBreadcrumb(
+      [
+        {
+          id: "actions",
+          label: "Actions",
+          click: true,
+        },
+        {
+          label: "Screen",
+        },
+      ],
+      copy,
+    ),
     form: localizeCommandLineForm(form, copy),
     formKey,
     defaultValues: {

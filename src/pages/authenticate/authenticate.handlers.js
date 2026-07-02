@@ -13,7 +13,9 @@ const getErrorMessage = (error, copy = {}) => {
     return copy.validEmailAlert ?? "Please enter a valid email.";
   }
   return (
-    error?.message || copy.failedRequestOtp || "Failed to request OTP. Please try again."
+    error?.message ||
+    copy.failedRequestOtp ||
+    "Failed to request OTP. Please try again."
   );
 };
 
@@ -32,7 +34,9 @@ const getAuthenticateErrorMessage = (error, copy = {}) => {
     return copy.otpExpired ?? "OTP expired. Please request a new OTP.";
   }
   return (
-    error?.message || copy.failedVerifyOtp || "Failed to verify OTP. Please try again."
+    error?.message ||
+    copy.failedVerifyOtp ||
+    "Failed to verify OTP. Please try again."
   );
 };
 
@@ -59,7 +63,11 @@ const getRegisterErrorMessage = (error, copy = {}) => {
       "Registration session expired. Please login again."
     );
   }
-  return error?.message || copy.failedRegister || "Failed to register. Please try again.";
+  return (
+    error?.message ||
+    copy.failedRegister ||
+    "Failed to register. Please try again."
+  );
 };
 
 const shouldReissueRegisterCode = (error) => {

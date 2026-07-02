@@ -854,7 +854,9 @@ export const handleBlurItemRightClick = async (deps, payload) => {
   event.preventDefault();
 
   const result = await appService.showDropdownMenu({
-    items: [{ type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" }],
+    items: [
+      { type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" },
+    ],
     x: event.clientX,
     y: event.clientY,
     place: "bs",
@@ -1266,13 +1268,14 @@ export const handleSectionActionClick = async (deps, payload) => {
   } else if (id === "visibilityCondition") {
     handleVisibilityConditionItemClick(deps);
   } else if (id === "childInteraction") {
-    const items = getAvailableChildInteractionItems(store.selectValues(), copy).map(
-      (item) => ({
-        type: "item",
-        label: item.label,
-        key: item.name,
-      }),
-    );
+    const items = getAvailableChildInteractionItems(
+      store.selectValues(),
+      copy,
+    ).map((item) => ({
+      type: "item",
+      label: item.label,
+      key: item.name,
+    }));
 
     if (items.length === 0) {
       return;
@@ -1990,7 +1993,9 @@ export const handleListBarItemRightClick = async (deps, payload) => {
   }
 
   const result = await appService.showDropdownMenu({
-    items: [{ type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" }],
+    items: [
+      { type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" },
+    ],
     x: event.clientX,
     y: event.clientY,
     place: "bs",
@@ -2084,7 +2089,9 @@ export const handleListItemRightClick = async (deps, payload) => {
   const { id, interaction } = event.currentTarget.dataset;
   const interactionKey = getInteractionPropertyName(interaction);
   const result = await appService.showDropdownMenu({
-    items: [{ type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" }],
+    items: [
+      { type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" },
+    ],
     x: event.clientX,
     y: event.clientY,
     place: "bs",

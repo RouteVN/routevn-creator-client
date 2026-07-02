@@ -336,8 +336,7 @@ export const createSceneEditorDraftPersistence = ({
               const copy = selectSceneEditorCopy(deps.i18n);
               deps.appService?.showAlert({
                 message:
-                  copy.failedSaveSceneChanges ??
-                  "Failed to save scene changes",
+                  copy.failedSaveSceneChanges ?? "Failed to save scene changes",
                 title: copy.errorTitle ?? "Error",
               });
             }

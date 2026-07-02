@@ -2686,12 +2686,11 @@ const moveSceneEditorSectionWithinScene = async (
           position: direction === "up" ? "before" : "after",
           positionTargetId: targetSection.id,
         }),
-          {
-            appService,
-            errorTitle: copy.errorTitle ?? "Error",
-            fallbackMessage:
-              copy.failedMoveSection ?? "Failed to move section",
-          },
+        {
+          appService,
+          errorTitle: copy.errorTitle ?? "Error",
+          fallbackMessage: copy.failedMoveSection ?? "Failed to move section",
+        },
       );
     },
     {
@@ -2995,8 +2994,7 @@ export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
   if (!sectionId || !sceneId || !targetSceneId) {
     appService?.showAlert({
       message:
-        copy.selectSceneToMoveSection ??
-        "Select a scene to move this section.",
+        copy.selectSceneToMoveSection ?? "Select a scene to move this section.",
       title: copy.errorTitle ?? "Error",
     });
     return;

@@ -102,16 +102,19 @@ export const selectViewData = ({ state, props, i18n }) => {
   }
 
   return {
-    breadcrumb: localizeCommandLineBreadcrumb([
-      {
-        id: "actions",
-        label: "Actions",
-        click: true,
-      },
-      {
-        label: "Reset Story At Section",
-      },
-    ], copy),
+    breadcrumb: localizeCommandLineBreadcrumb(
+      [
+        {
+          id: "actions",
+          label: "Actions",
+          click: true,
+        },
+        {
+          label: "Reset Story At Section",
+        },
+      ],
+      copy,
+    ),
     form: localizeCommandLineForm(form, copy),
     defaultValues: state.formValues,
     context: {

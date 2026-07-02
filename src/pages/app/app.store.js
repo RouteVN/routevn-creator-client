@@ -248,8 +248,7 @@ export const selectViewData = ({ state, i18n }) => {
     });
   const hasRepositoryLoadingProgress =
     state.repositoryLoadingTotal > 0 && state.isRepositoryLoading;
-  const repositoryLoadingBaseText =
-    copy.loadingProject ?? "Loading project...";
+  const repositoryLoadingBaseText = copy.loadingProject ?? "Loading project...";
 
   return {
     ...state,

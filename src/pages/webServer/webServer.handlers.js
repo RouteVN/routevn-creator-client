@@ -137,8 +137,7 @@ const loadRunningServers = async (deps) => {
     console.error("Failed to load static web servers", { error });
     appService.showToast({
       title: copy.errorTitle ?? "Error",
-      message:
-        copy.failedLoadServers ?? "Failed to load running web servers.",
+      message: copy.failedLoadServers ?? "Failed to load running web servers.",
       status: "error",
     });
   }
@@ -266,8 +265,7 @@ export const handleStartServerClick = async (deps, payload) => {
 
   if (server.status !== "stopped" && server.serverId) {
     appService.showToast({
-      message:
-        copy.serverAlreadyRunning ?? "Web server is already running.",
+      message: copy.serverAlreadyRunning ?? "Web server is already running.",
     });
     return;
   }

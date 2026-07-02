@@ -879,8 +879,7 @@ export const handleDialogFormAction = async (deps, payload) => {
 
   if (dialogMode === "create" && !dialogSourceFiles?.atlasFile) {
     appService.showAlert({
-      message:
-        copy.spritesheetJsonRequired ?? "Spritesheet JSON is required.",
+      message: copy.spritesheetJsonRequired ?? "Spritesheet JSON is required.",
       title: copy.warningTitle ?? "Warning",
     });
     return;

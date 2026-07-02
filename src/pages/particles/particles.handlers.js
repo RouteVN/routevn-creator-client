@@ -929,7 +929,8 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   ) {
     appService.showAlert({
       message:
-        copy.selectValidTextureImage ?? "Select a valid particle texture image.",
+        copy.selectValidTextureImage ??
+        "Select a valid particle texture image.",
       title: copy.warningTitle ?? "Warning",
     });
     return;
@@ -968,7 +969,8 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   if (editMode && editItemId) {
     const updateAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: copy.failedUpdateParticle ?? "Failed to update particle.",
+      fallbackMessage:
+        copy.failedUpdateParticle ?? "Failed to update particle.",
       title: copy.errorTitle ?? "Error",
       action: () =>
         projectService.updateParticle({

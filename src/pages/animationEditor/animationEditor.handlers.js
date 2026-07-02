@@ -432,7 +432,8 @@ const createAnimationPersistSnapshot = ({ copy, store } = {}) => {
     editMode: store.selectEditMode(),
     editItemId: store.selectEditItemId(),
     targetGroupId: store.selectTargetGroupId(),
-    name: store.selectAnimationName().trim() || getDefaultNewAnimationName(copy),
+    name:
+      store.selectAnimationName().trim() || getDefaultNewAnimationName(copy),
     description: store.selectAnimationDescription(),
     animationData,
   };
@@ -729,8 +730,7 @@ export const handleSavePreviewClick = async (deps) => {
     const updateAttempt = await runResourcePageMutation({
       appService,
       fallbackMessage:
-        copy.failedSaveAnimationPreview ??
-        "Failed to save animation preview.",
+        copy.failedSaveAnimationPreview ?? "Failed to save animation preview.",
       action: () =>
         projectService.updateAnimation({
           animationId,
@@ -754,8 +754,7 @@ export const handleSavePreviewClick = async (deps) => {
   } catch {
     appService.showAlert({
       message:
-        copy.failedSaveAnimationPreview ??
-        "Failed to save animation preview.",
+        copy.failedSaveAnimationPreview ?? "Failed to save animation preview.",
       title: copy.errorTitle ?? "Error",
     });
   }

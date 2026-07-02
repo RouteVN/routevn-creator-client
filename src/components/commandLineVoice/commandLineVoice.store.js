@@ -136,7 +136,10 @@ export const selectViewData = ({ state, i18n }) => {
 
   return {
     audio,
-    breadcrumb: localizeCommandLineBreadcrumb(selectBreadcrumb({ state }), copy),
+    breadcrumb: localizeCommandLineBreadcrumb(
+      selectBreadcrumb({ state }),
+      copy,
+    ),
     loopOptions: localizeCommandLineOptions(LOOP_OPTIONS, copy),
     voice: {
       ...state.voice,

@@ -191,7 +191,10 @@ export const createTextRevealIndicatorDialogDefaults = ({
   );
 };
 
-export const createTextRevealIndicatorForm = ({ stateName, copy = {} } = {}) => {
+export const createTextRevealIndicatorForm = ({
+  stateName,
+  copy = {},
+} = {}) => {
   const stateLabel = getTextRevealIndicatorStateLabel(stateName, copy);
 
   return {

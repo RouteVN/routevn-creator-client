@@ -1,6 +1,5 @@
 import {
   DEFAULT_PARTICLE_PRESET_ID,
-  PARTICLE_PRESET_OPTIONS,
   createParticlePresetOptions,
   createParticlePreset,
 } from "./particlePresets.js";
@@ -695,7 +694,8 @@ const createParticleFieldsByTab = ({
         type: "input-number",
         label: copy.lineX2Label ?? "Line X2",
         description:
-          copy.lineX2Description ?? "Horizontal end position for line emitters.",
+          copy.lineX2Description ??
+          "Horizontal end position for line emitters.",
         step: 1,
         required: false,
         $when: "sourceKind == 'line'",

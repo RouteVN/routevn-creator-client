@@ -68,13 +68,29 @@ const createFolderContextMenuItems = (copy = {}) => [
     type: "item",
     value: "new-child-folder",
   },
-  { label: copy.renameMenuItem ?? "Rename", type: "item", value: "rename-item" },
-  { label: copy.deleteMenuItem ?? "Delete", type: "item", value: "delete-item" },
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
 const createItemContextMenuItems = (copy = {}) => [
-  { label: copy.renameMenuItem ?? "Rename", type: "item", value: "rename-item" },
-  { label: copy.deleteMenuItem ?? "Delete", type: "item", value: "delete-item" },
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
 const createEmptyContextMenuItems = (copy = {}) => [
@@ -87,7 +103,11 @@ const createEmptyContextMenuItems = (copy = {}) => [
 
 const createCenterItemContextMenuItems = (copy = {}) => [
   { label: copy.editMenuItem ?? "Edit", type: "item", value: "edit-item" },
-  { label: copy.deleteMenuItem ?? "Delete", type: "item", value: "delete-item" },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
 const createDialogForm = (copy = {}, submitLabel = copy.saveButton) => ({

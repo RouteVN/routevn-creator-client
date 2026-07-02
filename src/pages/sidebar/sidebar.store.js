@@ -107,9 +107,8 @@ export const selectViewData = ({ state, i18n }) => {
     const categoryMappings = [
       {
         items: assetItems,
-        sidebarPath: state.items.find(
-          (item) => item.id === SIDEBAR_ITEM_ASSETS,
-        )?.path,
+        sidebarPath: state.items.find((item) => item.id === SIDEBAR_ITEM_ASSETS)
+          ?.path,
       },
       {
         items: animatedAssetItems,
@@ -125,9 +124,8 @@ export const selectViewData = ({ state, i18n }) => {
       },
       {
         items: systemConfigItems,
-        sidebarPath: state.items.find(
-          (item) => item.id === SIDEBAR_ITEM_SYSTEM,
-        )?.path,
+        sidebarPath: state.items.find((item) => item.id === SIDEBAR_ITEM_SYSTEM)
+          ?.path,
       },
     ];
 

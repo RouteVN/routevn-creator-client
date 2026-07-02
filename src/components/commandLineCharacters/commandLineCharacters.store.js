@@ -1319,7 +1319,8 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     });
     breadcrumb.push({
       id: "character-select",
-      label: selectedCharacterName || localizeCommandLineText("Character", copy),
+      label:
+        selectedCharacterName || localizeCommandLineText("Character", copy),
       click: true,
     });
     breadcrumb.push({
@@ -1340,10 +1341,12 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         char.transformId ||
         (transformOptions.length > 0 ? transformOptions[0].value : undefined),
       customTransform: hasInlineTransform(char),
-      customTransformDetails: createCustomTransformDetails(char).map((item) => ({
-        ...item,
-        label: localizeCommandLineText(item.label, copy),
-      })),
+      customTransformDetails: createCustomTransformDetails(char).map(
+        (item) => ({
+          ...item,
+          label: localizeCommandLineText(item.label, copy),
+        }),
+      ),
       animationId: char.animations?.resourceId,
       opacity: char.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
       blurEnabled: Boolean(char.blur),

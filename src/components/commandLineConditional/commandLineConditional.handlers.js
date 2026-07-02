@@ -439,10 +439,7 @@ export const handleSubmitClick = (deps, payload) => {
 
   if (branches.length === 0) {
     appService.showAlert({
-      message: localizeCommandLineText(
-        "Please add at least one branch.",
-        copy,
-      ),
+      message: localizeCommandLineText("Please add at least one branch.", copy),
       title: localizeCommandLineText("Warning", copy),
     });
     return;

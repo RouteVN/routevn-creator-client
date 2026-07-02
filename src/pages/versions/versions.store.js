@@ -72,10 +72,7 @@ export const createInitialState = () => ({
   },
 });
 
-export const openDropdownMenu = (
-  { state, i18n },
-  { x, y, versionId } = {},
-) => {
+export const openDropdownMenu = ({ state, i18n }, { x, y, versionId } = {}) => {
   const copy = selectVersionsPageCopy(i18n);
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;

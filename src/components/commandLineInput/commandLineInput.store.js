@@ -492,11 +492,7 @@ const getFieldRowSummary = (row, variableLabel, copy) => {
   return summary.join(" - ");
 };
 
-const createFieldDisplayRows = (
-  fieldRows = [],
-  variableOptions = [],
-  copy,
-) => {
+const createFieldDisplayRows = (fieldRows = [], variableOptions = [], copy) => {
   const variableLabels = new Map(
     variableOptions.map((option) => [option.value, option.label]),
   );
@@ -514,10 +510,7 @@ const createFieldDisplayRows = (
   });
 };
 
-const createFieldVariableOptions = (
-  variablesData = EMPTY_COLLECTION,
-  copy,
-) => {
+const createFieldVariableOptions = (variablesData = EMPTY_COLLECTION, copy) => {
   return getVariableOptions(variablesData, {
     type: "string",
   }).map((option) => {
@@ -597,10 +590,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     booleanOptions: localizeCommandLineOptions(BOOLEAN_OPTIONS, copy),
     canSaveEditField: selectCanSaveEditField({ state }),
     submitDisabled: !selectCanSubmit({ state }),
-    noInputFieldsLabel: localizeCommandLineText(
-      "No input fields found.",
-      copy,
-    ),
+    noInputFieldsLabel: localizeCommandLineText("No input fields found.", copy),
     submitButtonLabel: localizeCommandLineText("Submit", copy),
     variableLabel: localizeCommandLineText("Variable", copy),
     chooseStringVariablePlaceholder: localizeCommandLineText(

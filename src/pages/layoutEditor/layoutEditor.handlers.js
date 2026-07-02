@@ -110,7 +110,11 @@ const runLayoutEditorPersistence = (deps, task) => {
   });
 };
 
-const getLayoutEditorOwnerConfig = (resourceType, projectService, copy = {}) => {
+const getLayoutEditorOwnerConfig = (
+  resourceType,
+  projectService,
+  copy = {},
+) => {
   const isControls = resourceType === "controls";
   return {
     ownerPayloadKey: isControls ? "controlId" : "layoutId",
@@ -306,7 +310,8 @@ const createFragmentCreateForm = (fragmentLayoutOptions = [], copy = {}) => {
 
 const createSpritesheetCreateForm = (selectionItems = [], copy = {}) => {
   return {
-    title: copy.createSpritesheetAnimationTitle ?? "Create Spritesheet Animation",
+    title:
+      copy.createSpritesheetAnimationTitle ?? "Create Spritesheet Animation",
     description:
       copy.createSpritesheetAnimationDescription ??
       "Choose which imported spritesheet animation to insert into the layout",
@@ -528,8 +533,7 @@ export const handleSaveButtonClick = async (deps) => {
     if (updateResult?.valid === false) {
       appService.showAlert({
         message: formatI18nCopy(
-          copy.failedSaveOwnerPreview ??
-            "Failed to save {ownerLabel} preview.",
+          copy.failedSaveOwnerPreview ?? "Failed to save {ownerLabel} preview.",
           { ownerLabel: ownerLabel.toLowerCase() },
         ),
         title: copy.errorTitle ?? "Error",
@@ -669,7 +673,7 @@ const showSliderCreateDialog = async (
     props: {
       direction: sliderAction.direction,
       defaultValues: {
-        name: sliderAction.name ?? (copy.sliderDefaultName ?? "Slider"),
+        name: sliderAction.name ?? copy.sliderDefaultName ?? "Slider",
       },
     },
     actions: {
@@ -707,7 +711,7 @@ const showSpriteCreateDialog = async (
     size: "md",
     props: {
       defaultValues: {
-        name: spriteAction.name ?? (copy.imageDefaultName ?? "Image"),
+        name: spriteAction.name ?? copy.imageDefaultName ?? "Image",
       },
     },
     actions: {
@@ -887,7 +891,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       !isFragmentLayout(fragmentLayout)
     ) {
       appService.showAlert({
-        message: copy.selectedFragmentInvalid ?? "Selected fragment is invalid.",
+        message:
+          copy.selectedFragmentInvalid ?? "Selected fragment is invalid.",
         title: copy.errorTitle ?? "Error",
       });
       return;
@@ -911,7 +916,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
         ...getLayoutEditorCreateDefinition("fragment-ref", {
           projectResolution: store.selectProjectResolution(),
         }).template,
-        name: fragmentLayout.name ?? (copy.fragmentDefaultName ?? "Fragment"),
+        name: fragmentLayout.name ?? copy.fragmentDefaultName ?? "Fragment",
         fragmentLayoutId,
       },
       parentId,
@@ -956,7 +961,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       defaultValues: {
         name:
           spritesheetAction.name ??
-          (copy.spritesheetAnimationDefaultName ?? "Spritesheet Animation"),
+          copy.spritesheetAnimationDefaultName ??
+          "Spritesheet Animation",
         spritesheetSelection:
           getFirstSpritesheetAnimationSelectionValue(spritesheetsData),
       },
@@ -1081,7 +1087,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const dialogResult = await appService.showFormDialog({
       form: createParticleCreateForm(selectionItems, copy),
       defaultValues: {
-        name: particleAction.name ?? (copy.particleDefaultName ?? "Particle"),
+        name: particleAction.name ?? copy.particleDefaultName ?? "Particle",
         particleId: getFirstParticleSelectionValue(particlesData),
       },
     });

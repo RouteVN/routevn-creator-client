@@ -64,9 +64,6 @@ export const selectViewData = ({ state, i18n }) => {
       values: defaultValues,
     },
     formKey: `${state.mode}-${valueSource}`,
-    submitLabel: localizeCommandLineText(
-      submitButton?.label ?? "Submit",
-      copy,
-    ),
+    submitLabel: localizeCommandLineText(submitButton?.label ?? "Submit", copy),
   };
 };

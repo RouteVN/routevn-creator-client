@@ -589,7 +589,8 @@ export const createMediaPageStore = ({
       loadingLabel: copy.loadingLabel ?? "Loading...",
       noSelectionLabel: copy.noSelectionLabel ?? "No selection",
       openButton: copy.openButton ?? "Open",
-      previewButton: resolvedPreviewMenuLabel ?? copy.previewMenuItem ?? "Preview",
+      previewButton:
+        resolvedPreviewMenuLabel ?? copy.previewMenuItem ?? "Preview",
       folderContextMenuItems: createFolderContextMenuItems(copy),
       itemContextMenuItems: createItemContextMenuItems(copy),
       emptyContextMenuItems: createEmptyContextMenuItems(copy),

@@ -221,19 +221,22 @@ export const getConditionalOverrideSummary = (
   getVisibilityConditionSummary,
   copy = {},
 ) => {
-  return getVisibilityConditionSummary(rule?.when, variablesData, options, copy);
+  return getVisibilityConditionSummary(
+    rule?.when,
+    variablesData,
+    options,
+    copy,
+  );
 };
 
-export const getConditionalOverrideAttributeLabel = (
-  fieldName,
-  copy = {},
-) => {
+export const getConditionalOverrideAttributeLabel = (fieldName, copy = {}) => {
   const copyKey = CONDITIONAL_OVERRIDE_ATTRIBUTE_LABEL_KEYS[fieldName];
   return (
     (copyKey ? copy[copyKey] : undefined) ??
     CONDITIONAL_OVERRIDE_ATTRIBUTE_OPTIONS.find(
       (item) => item.value === fieldName,
-    )?.label ?? fieldName
+    )?.label ??
+    fieldName
   );
 };
 

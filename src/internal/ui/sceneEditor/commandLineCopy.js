@@ -55,11 +55,8 @@ export const localizeCommandLineText = (value, copy = {}) => {
   return copy[copyKey] ?? copy[value] ?? value;
 };
 
-export const formatCommandLineCopy = (
-  template,
-  replacements = {},
-  copy = {},
-) => formatI18nCopy(localizeCommandLineText(template, copy), replacements);
+export const formatCommandLineCopy = (template, replacements = {}, copy = {}) =>
+  formatI18nCopy(localizeCommandLineText(template, copy), replacements);
 
 export const localizeCommandLineOptions = (options = [], copy = {}) => {
   return options.map((option) => ({

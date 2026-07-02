@@ -180,10 +180,7 @@ export const handleSubmitClick = (deps, payload) => {
 
   if (!resourceId) {
     appService.showAlert({
-      message: localizeCommandLineText(
-        "Please select an input layout.",
-        copy,
-      ),
+      message: localizeCommandLineText("Please select an input layout.", copy),
       title: localizeCommandLineText("Warning", copy),
     });
     return;

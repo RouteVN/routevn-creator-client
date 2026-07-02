@@ -385,7 +385,8 @@ export const handleDownloadZipClick = async (deps, payload) => {
 
     appService.showAlert({
       message: formatI18nCopy(
-        copy.zipExportCompletedMessage ?? "ZIP export completed.\nSaved to: {path}",
+        copy.zipExportCompletedMessage ??
+          "ZIP export completed.\nSaved to: {path}",
         { path: savedPath },
       ),
       title: copy.exportCompletedTitle ?? "Export completed",

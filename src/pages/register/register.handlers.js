@@ -41,7 +41,9 @@ export const handleFormAction = (deps, payload) => {
     "";
 
   if (!email) {
-    appService.showAlert({ message: copy.emailRequired ?? "Email is required." });
+    appService.showAlert({
+      message: copy.emailRequired ?? "Email is required.",
+    });
     return;
   }
 
