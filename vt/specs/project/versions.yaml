@@ -57,7 +57,7 @@ steps:
   - action: wait
     ms: 500
   - action: select
-    selector: "#sidebar [data-item-id='/project/releases/versions']"
+    selector: "#sidebar [data-item-id='release']"
     steps:
       - action: click
   - action: waitFor
