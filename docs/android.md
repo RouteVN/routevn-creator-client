@@ -216,6 +216,84 @@ Useful symptoms:
 - Silent upload failure should be debugged through the Android file picker
   bridge and user-facing upload toasts.
 
+## Lessons Learned
+
+Android WebView bugs should be validated on a real Android WebView whenever the
+behavior is user-visible. Desktop browser and Tauri checks are useful, but they
+can miss Android-specific parser, layout, asset, and bridge behavior.
+
+### Build And Blank Screens
+
+- After JS, YAML view, or setup changes, reinstall with `bun run
+  android:install`. A native reinstall without rebuilding Android web assets can
+  leave the device running stale JavaScript.
+- Android builds must use the local frontend build path from `scripts/build.sh`
+  / `scripts/build-fe.js`, not a globally installed `rtgl` CLI. The local build
+  preserves the repo's `rettangoli.config.yaml` options, including `i18n`.
+- If the app shell loads but the page is blank, check `adb logcat` first. Recent
+  blank screens were caused by frontend render errors such as missing i18n
+  catalogs or Rettangoli parser failures, not native Activity failures.
+- The Android build log should show `Building frontend bundle with
+  src/setup.android.js` and include the configured `i18n` block. If it does not,
+  the APK may not match the web bundle contract expected by the app.
+
+### WebView Validation
+
+- Use WebView DevTools through `adb forward` to inspect the actual Android DOM,
+  scroll geometry, and console state.
+- Prefer measuring layout facts over eyeballing: `clientHeight`,
+  `scrollHeight`, `scrollTop`, item rects, and spacer rects reveal whether a
+  view has real scroll range or only visual-looking space.
+- For mobile resource pages, validate the user path through the bottom tab and
+  action sheet. Direct route navigation can miss action-sheet timing and mounted
+  mobile layout state.
+
+### Performance
+
+- Keep navigation timing logs at concrete boundaries while investigating:
+  interaction start, action-sheet render, route subscription, initial render,
+  repository ensure, final render, and paint `requestAnimationFrame`s.
+- Do not assume a slow page is slow because it has many visible cards. On
+  Android we saw small pages still feel slow, which showed that route/render
+  orchestration and synchronous bridge work also needed measurement.
+- Synchronous Android bridge calls are more expensive than equivalent in-memory
+  web/Tauri paths. Avoid repeated per-item bridge or metadata calls during page
+  render. Cache or batch file metadata when possible, and keep bridge work out of
+  the first render when the UI can safely hydrate later.
+- Progressive rendering should still reserve stable item space. Rendering
+  nothing first can feel faster in code but causes visible drift and worse
+  perceived performance on Android.
+
+### Resource Page Layout
+
+- Bottom scroll affordance should be a single trailing spacer at the end of the
+  scroll content, not per-folder `min-height` and not extra blank space below
+  every grid group.
+- `padding-bottom` on a custom scroll element is less reliable for Android
+  WebView scroll range than an explicit trailing child inside the scroll
+  content.
+- For resource trailing spacers, use Rettangoli's `h` attribute and quote
+  dynamic values:
+
+  ```yaml
+  - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
+  ```
+
+  An unquoted value such as `h=${scrollBottomPadding}` can expand to
+  `h=calc(96px + env(safe-area-inset-bottom))`, which the Rettangoli selector
+  parser treats as invalid separate tokens.
+- A `style="height: ${scrollBottomPadding};"` spacer can collapse in some
+  nested resource scroll layouts. The `h` attribute path matches established
+  app spacer usage and produced a real measured `96px` spacer on Android.
+- Avoid passing optional dynamic padding props as `undefined` through a view
+  binding when the mobile branch should use the component default. Prefer
+  omitting the prop in the mobile branch and passing a static desktop value such
+  as `scroll-bottom-padding=32vh` in the desktop branch.
+- Normalize optional component props defensively when they can cross a view
+  binding boundary. In practice, omitted values may arrive as `"undefined"` in
+  some generated paths, so shared resolvers should treat that as absent when the
+  prop is optional.
+
 ## Generated Files
 
 Do not commit local Android outputs. The root `.gitignore` covers:
