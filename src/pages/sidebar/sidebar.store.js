@@ -101,37 +101,39 @@ export const selectViewData = ({ state, i18n }) => {
 
     // Check for exact match first
     const exactMatch = state.items.find((item) => item.path === currentPath);
-    if (exactMatch) return exactMatch.path;
+    if (exactMatch) return exactMatch.id;
 
     // Build category mappings from imported definitions
     const categoryMappings = [
       {
         items: assetItems,
-        sidebarPath: state.items.find((item) => item.id === SIDEBAR_ITEM_ASSETS)
-          ?.path,
+        sidebarItem: state.items.find(
+          (item) => item.id === SIDEBAR_ITEM_ASSETS,
+        ),
       },
       {
         items: animatedAssetItems,
-        sidebarPath: state.items.find(
+        sidebarItem: state.items.find(
           (item) => item.id === SIDEBAR_ITEM_ANIMATED_ASSETS,
-        )?.path,
+        ),
       },
       {
         items: userInterfaceItems,
-        sidebarPath: state.items.find(
+        sidebarItem: state.items.find(
           (item) => item.id === SIDEBAR_ITEM_USER_INTERFACE,
-        )?.path,
+        ),
       },
       {
         items: systemConfigItems,
-        sidebarPath: state.items.find((item) => item.id === SIDEBAR_ITEM_SYSTEM)
-          ?.path,
+        sidebarItem: state.items.find(
+          (item) => item.id === SIDEBAR_ITEM_SYSTEM,
+        ),
       },
     ];
 
     // Check which category the current path belongs to
-    for (const { items, sidebarPath } of categoryMappings) {
-      if (!sidebarPath) continue;
+    for (const { items, sidebarItem } of categoryMappings) {
+      if (!sidebarItem) continue;
 
       // Check if current path matches any item in this category
       const matchFound = items.some((item) => {
@@ -157,7 +159,7 @@ export const selectViewData = ({ state, i18n }) => {
         return false;
       });
 
-      if (matchFound) return sidebarPath;
+      if (matchFound) return sidebarItem.id;
     }
 
     // For scenes - match any route starting with /project/scene
@@ -165,7 +167,7 @@ export const selectViewData = ({ state, i18n }) => {
       const scenesItem = state.items.find(
         (item) => item.id === SIDEBAR_ITEM_SCENES,
       );
-      if (scenesItem) return scenesItem.path;
+      if (scenesItem) return scenesItem.id;
     }
 
     // For settings
@@ -173,7 +175,7 @@ export const selectViewData = ({ state, i18n }) => {
       const settingsItem = state.items.find(
         (item) => item.id === SIDEBAR_ITEM_SETTINGS,
       );
-      if (settingsItem) return settingsItem.path;
+      if (settingsItem) return settingsItem.id;
     }
 
     if (
@@ -183,7 +185,7 @@ export const selectViewData = ({ state, i18n }) => {
       const releaseItem = state.items.find(
         (item) => item.id === SIDEBAR_ITEM_RELEASE,
       );
-      if (releaseItem) return releaseItem.path;
+      if (releaseItem) return releaseItem.id;
     }
 
     return null;
