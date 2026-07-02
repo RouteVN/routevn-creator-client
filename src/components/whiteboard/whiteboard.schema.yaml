@@ -23,6 +23,8 @@ propsSchema:
       type: boolean
     showMinimapInTouchMode:
       type: boolean
+    showArrows:
+      type: boolean
     minimapPlacement:
       type: string
     minimapHeightScale:
