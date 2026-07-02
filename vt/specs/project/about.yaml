@@ -57,7 +57,7 @@ steps:
   - action: wait
     ms: 500
   - action: select
-    selector: "#sidebar [data-item-id='/project/about']"
+    selector: "#sidebar [data-item-id='settings']"
     steps:
       - action: click
   - action: waitFor

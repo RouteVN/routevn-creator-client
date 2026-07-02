@@ -57,7 +57,7 @@ steps:
   - action: wait
     ms: 500
   - action: select
-    selector: "#sidebar [data-item-id='/project/controls']"
+    selector: "#sidebar [data-item-id='system']"
     steps:
       - action: click
   - action: waitFor
