@@ -28,6 +28,8 @@ static/bundle/main.js
 /project.db
 /project.db-shm
 /project.db-wal
+/crates/routevn-exporter/Cargo.lock
+/crates/*/target
 
 # Generated setup file
 src/setup.js
@@ -37,6 +39,7 @@ src/setup.js
 /android/routevn/build
 /android/routevn/app/build
 /android/routevn/app/src/main/assets
+/android/routevn/app/src/main/jniLibs
 /android/routevn/local.properties
 /android/routevn/.env
 /android/routevn/.idea

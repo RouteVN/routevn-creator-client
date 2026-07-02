@@ -426,7 +426,7 @@ const collectDistributionZipAssets = async ({
   getCurrentReference,
 }) => {
   const reference = getCurrentReference();
-  const projectId = reference?.repositoryProjectId || reference?.projectId;
+  const projectId = reference?.repositoryProjectId ?? reference?.projectId;
   if (!projectId) {
     throw new Error("Project reference is required for Android ZIP export.");
   }
@@ -483,6 +483,50 @@ const createDistributionZipBytes = async ({
   loggedStats.zipBytes = getByteLength(zipBytes);
   logExportSizeStats(loggedStats);
   return zipBytes;
+};
+
+const createNativeDistributionZipStreamedToPath = async ({
+  projectData,
+  fileEntries,
+  outputPath,
+  staticFiles,
+  getCurrentReference,
+}) => {
+  const reference = getCurrentReference();
+  const projectId = reference?.repositoryProjectId || reference?.projectId;
+  const safeProjectId = assertSafeAndroidStorageSegment(projectId, {
+    label: "Android project id",
+  });
+  const payload = {
+    projectId: safeProjectId,
+    uri: outputPath,
+    fileEntries: normalizeExportFileEntries(fileEntries).map((fileEntry) => {
+      const entry = {
+        id: assertSafeProjectFileId(fileEntry.id),
+      };
+      if (fileEntry.mimeType) {
+        entry.mimeType = fileEntry.mimeType;
+      }
+      return entry;
+    }),
+    instructionsJson: JSON.stringify(projectData),
+    usePartFile: true,
+  };
+
+  if (staticFiles.indexHtml) {
+    payload.indexHtml = staticFiles.indexHtml;
+  }
+  if (staticFiles.mainJs) {
+    payload.mainJs = staticFiles.mainJs;
+  }
+
+  const result = callAndroidBridge(
+    "createDistributionZipStreamedToUri",
+    payload,
+  );
+  logExportSizeStats(result?.stats ?? result);
+
+  return result?.uri ?? outputPath;
 };
 
 export const createAndroidProjectServiceAdapters = ({
@@ -752,6 +796,21 @@ export const createAndroidProjectServiceAdapters = ({
       staticFiles,
       getCurrentReference,
     }) => {
+      try {
+        return await createNativeDistributionZipStreamedToPath({
+          projectData,
+          fileEntries,
+          outputPath,
+          staticFiles,
+          getCurrentReference,
+        });
+      } catch (error) {
+        console.warn(
+          "Native Android ZIP export failed; falling back to JavaScript ZIP.",
+          error,
+        );
+      }
+
       const zipBytes = await createDistributionZipBytes({
         projectData,
         fileEntries,
