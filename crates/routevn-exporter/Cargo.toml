@@ -1,0 +1,12 @@
+[package]
+name = "routevn-exporter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+image = { version = "0.25.8", default-features = false, features = ["jpeg", "png", "webp"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+sprite_dicing = "0.1.4"
+zip = { version = "0.6.6", default-features = false, features = ["deflate"] }

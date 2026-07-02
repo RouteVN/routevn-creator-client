@@ -20,7 +20,6 @@ tauri-build = { version = "=2.6.2", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-sha2 = "0.10"
 log = "0.4"
 tauri = { version = "=2.11.2", features = ["protocol-asset"] }
 tauri-plugin-log = "=2.7.1"
@@ -32,7 +31,5 @@ tauri-plugin-process = "=2.3.1"
 tauri-plugin-opener = "=2.5.4"
 tauri-plugin-persisted-scope = { version = "=2.3.4", features = ["protocol-asset"] }
 url = "2"
-zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 urlencoding = "2.1"
-image = { version = "0.25.8", default-features = false, features = ["jpeg", "png", "webp"] }
-sprite_dicing = "0.1.4"
+routevn-exporter = { path = "../crates/routevn-exporter" }

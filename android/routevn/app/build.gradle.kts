@@ -13,6 +13,12 @@ val hasReleaseSigningConfig =
     !releaseKeystorePath.isNullOrBlank() &&
         !releaseKeystorePassword.isNullOrBlank() &&
         !releaseKeyAlias.isNullOrBlank()
+val repoRoot = rootProject.projectDir.resolve("../..").canonicalFile
+
+val buildAndroidRust by tasks.registering(Exec::class) {
+    workingDir = repoRoot
+    commandLine("bash", "scripts/build-android-rust.sh")
+}
 
 android {
     namespace = "com.routevn.creator"
@@ -67,6 +73,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+tasks.matching {
+    it.name == "mergeDebugJniLibFolders" ||
+        it.name == "mergeReleaseJniLibFolders"
+}.configureEach {
+    dependsOn(buildAndroidRust)
 }
 
 dependencies {
