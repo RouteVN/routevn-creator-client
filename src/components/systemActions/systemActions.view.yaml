@@ -19,6 +19,8 @@ refs:
         handler: handleCommandLineSubmit
   addActionButton:
     eventListeners:
+      mousedown:
+        handler: handleActionControlMouseDown
       click:
         handler: handleAddActionButtonClicked
   embeddedCloseButton:
@@ -45,6 +47,8 @@ refs:
         handler: handleActionsDialogClose
   actionItem*:
     eventListeners:
+      mousedown:
+        handler: handleActionControlMouseDown
       click:
         handler: handleActionItemClick
       contextmenu:

@@ -3,6 +3,7 @@ import { EN_I18N } from "../support/i18n.js";
 import {
   handleImportFormActionClick,
   handleImportTransformClick,
+  handleMobileDetailEditClick,
   handleTransformPreviewImageContextMenu,
   handleTransformPreviewImageMenuItemClick,
   handleTransformPreviewImageSelected,
@@ -24,6 +25,56 @@ describe("transforms.handlers", () => {
     handleImportTransformClick({ render, store });
 
     expect(store.openImportDialog).toHaveBeenCalledWith();
+    expect(render).toHaveBeenCalled();
+  });
+
+  it("opens the selected transform from the mobile detail edit action", async () => {
+    const render = vi.fn();
+    const transform = {
+      id: "transform-1",
+      type: "transform",
+      name: "Center",
+      x: 960,
+      y: 540,
+      scaleX: 1,
+      scaleY: 1,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      rotation: 0,
+    };
+    const store = {
+      openTransformFormDialog: vi.fn(),
+      selectProjectResolution: vi.fn(() => ({
+        width: 1920,
+        height: 1080,
+      })),
+      selectSelectedItemId: vi.fn(() => "transform-1"),
+      selectTransformItemById: vi.fn(() => transform),
+    };
+    const event = {
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    await handleMobileDetailEditClick(
+      {
+        refs: {},
+        render,
+        store,
+      },
+      {
+        _event: event,
+      },
+    );
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(store.openTransformFormDialog).toHaveBeenCalledWith({
+      editMode: true,
+      itemId: "transform-1",
+      itemData: transform,
+      targetGroupId: undefined,
+    });
     expect(render).toHaveBeenCalled();
   });
 

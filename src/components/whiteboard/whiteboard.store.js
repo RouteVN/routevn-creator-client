@@ -74,6 +74,7 @@ export const createInitialState = () => ({
   mouseItemPress: undefined,
   hoveredItemId: undefined,
   touchGesture: undefined,
+  trackpadPinchGesture: undefined,
   lastTouchTap: undefined,
   isDraggingMinimapViewport: false,
   minimapViewportDrag: undefined,
@@ -374,6 +375,54 @@ export const stopTouchGesture = ({ state }, _payload = {}) => {
 };
 
 export const selectTouchGesture = ({ state }) => state.touchGesture;
+
+export const startTrackpadPinch = ({ state }, { centerX, centerY } = {}) => {
+  const startCenterX = Number(centerX);
+  const startCenterY = Number(centerY);
+
+  if (!Number.isFinite(startCenterX) || !Number.isFinite(startCenterY)) {
+    return;
+  }
+
+  state.trackpadPinchGesture = {
+    startZoomLevel: state.zoomLevel,
+    anchorCanvasX: (startCenterX - state.panX) / state.zoomLevel,
+    anchorCanvasY: (startCenterY - state.panY) / state.zoomLevel,
+  };
+};
+
+export const updateTrackpadPinch = (
+  { state },
+  { centerX, centerY, scale } = {},
+) => {
+  const gesture = state.trackpadPinchGesture;
+  const nextCenterX = Number(centerX);
+  const nextCenterY = Number(centerY);
+  const nextScale = Number(scale);
+
+  if (
+    !gesture ||
+    !Number.isFinite(nextCenterX) ||
+    !Number.isFinite(nextCenterY) ||
+    !Number.isFinite(nextScale) ||
+    nextScale <= 0
+  ) {
+    return;
+  }
+
+  const nextZoomLevel = clampZoomLevel(gesture.startZoomLevel * nextScale);
+
+  state.zoomLevel = nextZoomLevel;
+  state.panX = nextCenterX - gesture.anchorCanvasX * nextZoomLevel;
+  state.panY = nextCenterY - gesture.anchorCanvasY * nextZoomLevel;
+};
+
+export const stopTrackpadPinch = ({ state }, _payload = {}) => {
+  state.trackpadPinchGesture = undefined;
+};
+
+export const selectTrackpadPinchGesture = ({ state }) =>
+  state.trackpadPinchGesture;
 
 export const setLastTouchTap = (
   { state },

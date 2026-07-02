@@ -517,6 +517,7 @@ const {
       noPreviewLabel: copy.noPreviewLabel,
       noPreviewImageLabel: copy.noPreviewImageLabel,
       previewLabel: copy.previewLabel,
+      editButton: copy.editMenuItem ?? "Edit",
       selectImageLabel: copy.selectImageLabel,
       updateToSetPreviewLabel: copy.updateToSetPreviewLabel,
       imageSelectorDialog: {

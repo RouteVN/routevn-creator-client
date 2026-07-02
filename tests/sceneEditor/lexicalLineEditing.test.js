@@ -1039,6 +1039,7 @@ describe("lexical scene document editor line editing", () => {
         },
       };
       editorElement.hideSelectionPopover = vi.fn();
+      editorElement.lineKeyById = new Map();
       editorElement.updatePendingTextInputFallback = vi.fn();
       editorElement.handleReferenceArrowNavigation = vi.fn(() => false);
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
@@ -1082,6 +1083,119 @@ describe("lexical scene document editor line editing", () => {
       } else {
         globalThis.requestAnimationFrame = previousRequestAnimationFrame;
       }
+      restoreDomGlobals();
+    }
+  });
+
+  it("emits section-boundary ArrowDown before native caret movement on the last line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-2",
+        lines: [{ id: "line-1" }, { id: "line-2" }],
+        hasNextSectionLine: true,
+        mentionMenu: {
+          isOpen: false,
+        },
+      };
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation =
+        vi.fn();
+      editorElement.getNativeLineSelectionContext = vi.fn(() => ({
+        lineId: "line-2",
+        start: 6,
+        end: 6,
+      }));
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      const event = {
+        key: "ArrowDown",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        shiftKey: false,
+        isComposing: false,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+
+      editorElement.handleNativeKeyDown(event);
+
+      expect(event.preventDefault).toHaveBeenCalledOnce();
+      expect(event.stopPropagation).toHaveBeenCalledOnce();
+      expect(event.stopImmediatePropagation).toHaveBeenCalledOnce();
+      expect(
+        editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation,
+      ).not.toHaveBeenCalled();
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-2",
+        {
+          cursorPosition: 6,
+          isCollapsed: true,
+          mode: "text-editor",
+          navigationDirection: "down",
+          isBoundaryNavigation: true,
+        },
+      );
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("keeps final-section ArrowDown on the native text navigation path", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-2",
+        lines: [{ id: "line-1" }, { id: "line-2" }],
+        hasNextSectionLine: false,
+        mentionMenu: {
+          isOpen: false,
+        },
+      };
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation =
+        vi.fn();
+      editorElement.updatePendingTextInputFallback = vi.fn();
+      editorElement.handleReferenceArrowNavigation = vi.fn(() => false);
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+
+      const event = {
+        key: "ArrowDown",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        shiftKey: false,
+        isComposing: false,
+        preventDefault: vi.fn(),
+      };
+
+      editorElement.handleNativeKeyDown(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(
+        editorElement.scheduleNativeSelectionLineSyncAfterVerticalNavigation,
+      ).toHaveBeenCalledWith(event);
+    } finally {
       restoreDomGlobals();
     }
   });

@@ -15,6 +15,7 @@ import {
   handlePreviewClick,
   handleSectionMoveSceneFormActionClick,
   handleSelectedLineChanged,
+  handleSystemActionsDialogOpen,
   handleTemporaryPresentationStateChange,
   scrollEntrySelectionIntoView,
   syncSceneEditorRoutePayload,
@@ -471,6 +472,31 @@ describe("sceneEditorLexical.handlers transform editor resize", () => {
 });
 
 describe("sceneEditorLexical.handlers actions dialog", () => {
+  it("stores the system action dialog target line before the dialog opens", () => {
+    let actionTargetLineId;
+
+    handleSystemActionsDialogOpen(
+      {
+        store: {
+          selectSelectedLineId: vi.fn(() => "fallback-line"),
+          setActionTargetLineId: vi.fn(({ lineId }) => {
+            actionTargetLineId = lineId;
+          }),
+        },
+      },
+      {
+        _event: {
+          detail: {
+            selectedLineId: "line-2",
+            mode: "actions",
+          },
+        },
+      },
+    );
+
+    expect(actionTargetLineId).toBe("line-2");
+  });
+
   it("opens the background transform editor from the predefined transform when stale inline fields are present", () => {
     const openBackgroundTransformEditor = vi.fn();
     const open = vi.fn();
