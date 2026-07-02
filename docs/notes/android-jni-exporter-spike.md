@@ -105,6 +105,10 @@ responsible for Android `content://` / SAF writes.
   four ABIs.
 - Confirmed the Android Rust build resolves the NDK from the same configured
   SDK locations used by Gradle before falling back to the default home SDK path.
+- Committed the JNI crate lockfile as lockfile version `3` and pinned the
+  shared exporter image stack to Rust-1.77-compatible versions so
+  `cargo +1.77.2 check --manifest-path crates/routevn-exporter-jni/Cargo.toml --locked`
+  passes.
 - Confirmed `./gradlew :app:compileDebugJavaWithJavac` passes.
 - Reinstalled the Android debug APK on the attached device and confirmed the
   debug startup smoke can run the real exporter through JNI with generated PNG
