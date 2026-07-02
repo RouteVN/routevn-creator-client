@@ -162,6 +162,7 @@ describe("whiteboard minimap viewport drag", () => {
     });
 
     expect(defaultTouchViewData.showMinimap).toBe(false);
+    expect(defaultTouchViewData.minimapData).toBeUndefined();
 
     const forcedTouchViewData = selectViewData({
       state,

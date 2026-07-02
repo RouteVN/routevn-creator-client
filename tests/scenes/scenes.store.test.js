@@ -5,6 +5,7 @@ import {
   openMobileFileExplorer,
   selectIsMobileFileExplorerOpen,
   selectViewData,
+  setTouchMinimapReady,
   setUiConfig,
 } from "../../src/pages/scenes/scenes.store.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -31,9 +32,16 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.showDetailPanel).toBe(false);
     expect(viewData.showMobileScenesControls).toBe(true);
     expect(viewData.showMobileFileExplorer).toBe(true);
-    expect(viewData.showWhiteboardMinimapInTouchMode).toBe(true);
+    expect(viewData.showWhiteboardMinimapInTouchMode).toBe(false);
     expect(viewData.whiteboardMinimapPlacement).toBe("top-right");
     expect(viewData.whiteboardMinimapHeightScale).toBe(2 / 3);
+
+    setTouchMinimapReady({ state }, { isReady: true });
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N })
+        .showWhiteboardMinimapInTouchMode,
+    ).toBe(true);
 
     closeMobileFileExplorer({ state });
 

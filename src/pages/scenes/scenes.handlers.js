@@ -23,6 +23,7 @@ const DEFAULT_SCENES_MAP_VIEWPORT = {
   panX: -80,
   panY: -40,
 };
+const TOUCH_MINIMAP_HYDRATION_FRAME_COUNT = 4;
 
 const getProjectErrorMessage = (result, fallbackMessage) => {
   return (
@@ -394,7 +395,73 @@ const openSceneForm = ({
   sceneForm.setValues({ values: sceneFormValues });
 };
 
-const syncScenesState = ({ store, render, projectService } = {}) => {
+const cancelTouchMinimapHydrationFrame = (store) => {
+  const frameId = store.selectTouchMinimapFrameId?.();
+  if (frameId === undefined) {
+    return;
+  }
+
+  globalThis.cancelAnimationFrame?.(frameId);
+  store.clearTouchMinimapFrameId?.();
+};
+
+const scheduleTouchMinimapHydration = ({ store, render } = {}) => {
+  if (
+    !store.selectIsTouchMode?.() ||
+    store.selectIsTouchMinimapReady?.() ||
+    store.selectTouchMinimapFrameId?.() !== undefined
+  ) {
+    return;
+  }
+
+  if (typeof globalThis.requestAnimationFrame !== "function") {
+    store.setTouchMinimapReady?.({ isReady: true });
+    render?.();
+    return;
+  }
+
+  const scheduleAfterFrames = (remainingFrameCount) => {
+    const frameId = globalThis.requestAnimationFrame(() => {
+      store.clearTouchMinimapFrameId?.();
+
+      if (remainingFrameCount <= 1) {
+        store.setTouchMinimapReady?.({ isReady: true });
+        render?.();
+        return;
+      }
+
+      scheduleAfterFrames(remainingFrameCount - 1);
+    });
+
+    store.setTouchMinimapFrameId?.({ frameId });
+  };
+
+  scheduleAfterFrames(TOUCH_MINIMAP_HYDRATION_FRAME_COUNT);
+};
+
+const selectFileExplorerItemAfterRender = ({ refs, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const selectItem = () => {
+    refs.fileexplorer?.selectItem?.({ itemId });
+  };
+
+  if (typeof globalThis.requestAnimationFrame !== "function") {
+    selectItem();
+    return;
+  }
+
+  globalThis.requestAnimationFrame(selectItem);
+};
+
+const syncScenesState = ({
+  store,
+  render,
+  projectService,
+  shouldRender = true,
+} = {}) => {
   const baseSnapshot = buildScenesStateSnapshot({
     store,
     projectService,
@@ -411,7 +478,9 @@ const syncScenesState = ({ store, render, projectService } = {}) => {
 
   const requestId = store.selectSceneOverviewRequestId() + 1;
   store.setSceneOverviewRequestId({ requestId });
-  render?.();
+  if (shouldRender) {
+    render?.();
+  }
 
   return {
     ...baseSnapshot,
@@ -522,6 +591,7 @@ export const handleBeforeMount = (deps) => {
 
   return () => {
     subscription.unsubscribe();
+    cancelTouchMinimapHydrationFrame(store);
   };
 };
 
@@ -532,6 +602,7 @@ export const handleAfterMount = async (deps) => {
     store,
     render,
     projectService,
+    shouldRender: false,
   });
   const sceneItems = initialSnapshot?.sceneItems ?? [];
 
@@ -551,8 +622,6 @@ export const handleAfterMount = async (deps) => {
       appService,
       sceneId: persistedSelectedSceneId,
     });
-    const { fileexplorer } = refs;
-    fileexplorer?.selectItem({ itemId: persistedSelectedSceneId });
   }
 
   const initialViewport = resolveInitialWhiteboardViewport({
@@ -578,6 +647,13 @@ export const handleAfterMount = async (deps) => {
   }
 
   render();
+  if (persistedSelectedSceneId && !store.selectIsTouchMode?.()) {
+    selectFileExplorerItemAfterRender({
+      refs,
+      itemId: persistedSelectedSceneId,
+    });
+  }
+  scheduleTouchMinimapHydration({ store, render });
   focusFileExplorerKeyboardScope(deps);
   void refreshSceneOverviews({
     store,

@@ -774,6 +774,7 @@ export const selectViewData = ({ state, props }) => {
   };
 
   const arrowsList = [];
+  const itemById = new Map(items.map((item) => [item.id, item]));
   const startBadgeSize = Math.round(SCENE_BOX_HEIGHT * (5 / 9));
   const startLineWidth = Math.round(SCENE_BOX_WIDTH / 6);
   const startLineHeight = Math.max(2, Math.round(SCENE_BOX_HEIGHT / 45));
@@ -782,7 +783,7 @@ export const selectViewData = ({ state, props }) => {
   items.forEach((sourceItem) => {
     if (sourceItem.transitions && sourceItem.transitions.length > 0) {
       sourceItem.transitions.forEach((targetSceneId) => {
-        const targetItem = items.find((item) => item.id === targetSceneId);
+        const targetItem = itemById.get(targetSceneId);
         if (targetItem && targetItem.id !== sourceItem.id) {
           const arrowData = drawArrowBetweenScenes(sourceItem, targetItem);
           // Add unique identifier for DOM reference
@@ -809,18 +810,21 @@ export const selectViewData = ({ state, props }) => {
   const minimapHeightScale = resolveMinimapHeightScale(
     props.minimapHeightScale,
   );
+  const showMinimap = showTouchMinimap || showDesktopMinimap;
 
   return {
     items,
-    showMinimap: showTouchMinimap || showDesktopMinimap,
+    showMinimap,
     showControls: !isTouchMode,
-    minimapData: selectMinimapData(
-      { state },
-      {
-        items,
-        heightScale: minimapHeightScale,
-      },
-    ),
+    minimapData: showMinimap
+      ? selectMinimapData(
+          { state },
+          {
+            items,
+            heightScale: minimapHeightScale,
+          },
+        )
+      : undefined,
     minimapContainerStyle: resolveMinimapContainerStyle(minimapPlacement),
     arrowsList,
     selectedItemId: props.selectedItemId,
