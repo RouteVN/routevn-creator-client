@@ -1,8 +1,4 @@
-import {
-  buildProgressivePlaceholderChildren,
-  calculateListReservedHeight,
-  DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT,
-} from "../../internal/ui/resourcePages/progressivePlaceholders.js";
+import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
   clearTagFilterPopoverTagIds,
@@ -15,9 +11,6 @@ import {
 import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
-const PROGRESSIVE_PLACEHOLDER_ITEM_COUNT =
-  DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT;
-const CHARACTER_ROW_RESERVED_HEIGHT = 144;
 
 export const createInitialState = () => ({
   collapsedIds: [],
@@ -171,7 +164,7 @@ export const selectViewData = ({ state, props }) => {
       children,
       remainingProgressiveItemCount,
       groupId: group.id,
-      placeholderItemCount: PROGRESSIVE_PLACEHOLDER_ITEM_COUNT,
+      placeholderItemCount: children.length,
       createPlaceholder: ({ item, absoluteIndex, groupId }) => ({
         id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
         sourceItemId: item.id,
@@ -188,14 +181,7 @@ export const selectViewData = ({ state, props }) => {
       isCollapsed,
       hasChildren: children.length > 0,
       headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
-      progressiveContentMinHeight: progressiveRenderEnabled
-        ? calculateListReservedHeight({
-            itemCount: children.length,
-            itemHeight: CHARACTER_ROW_RESERVED_HEIGHT,
-            rowGap: 16,
-            verticalPadding: 24,
-          })
-        : 0,
+      progressiveContentMinHeight: 0,
       children: progressiveChildren.children.map((item) => {
         const isSelected = item.id === props.selectedItemId;
         const isPlaceholder = item.isPlaceholder === true;

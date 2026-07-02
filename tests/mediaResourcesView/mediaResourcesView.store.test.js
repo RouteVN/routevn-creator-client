@@ -139,7 +139,7 @@ describe("mediaResourcesView.store", () => {
     ]);
   });
 
-  it("caps initial placeholders for large progressive groups", () => {
+  it("renders placeholders for all deferred cards without blank reservation", () => {
     const props = {
       progressiveRender: true,
       progressiveInitialItemCount: 0,
@@ -156,11 +156,11 @@ describe("mediaResourcesView.store", () => {
     const state = createInitialState({ props });
     const viewData = selectViewData({ state, props });
 
-    expect(viewData.groups[0].children).toHaveLength(12);
+    expect(viewData.groups[0].children).toHaveLength(40);
     expect(
       viewData.groups[0].children.every((item) => item.isPlaceholder === true),
     ).toBe(true);
-    expect(viewData.groups[0].progressiveContentMinHeight).toBeGreaterThan(0);
+    expect(viewData.groups[0].progressiveContentMinHeight).toBe(0);
   });
 
   it("renders sound waveforms immediately by default", () => {

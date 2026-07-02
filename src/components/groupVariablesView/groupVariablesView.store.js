@@ -8,11 +8,7 @@ import {
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
-import {
-  buildProgressivePlaceholderChildren,
-  calculateListReservedHeight,
-  DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT,
-} from "../../internal/ui/resourcePages/progressivePlaceholders.js";
+import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
   clearTagFilterPopoverTagIds,
@@ -39,10 +35,6 @@ const DEFAULT_ENUM_VALUE_FORM_VALUES = {
   value: "",
 };
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
-const PROGRESSIVE_PLACEHOLDER_ITEM_COUNT =
-  DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT;
-const VARIABLE_HEADER_RESERVED_HEIGHT = 37;
-const VARIABLE_ROW_RESERVED_HEIGHT = 36;
 
 const getScopeLabel = (scope, copy = {}) => {
   if (scope === "device") {
@@ -534,7 +526,7 @@ export const selectViewData = ({ state, props }) => {
         children,
         remainingProgressiveItemCount,
         groupId: group.id,
-        placeholderItemCount: PROGRESSIVE_PLACEHOLDER_ITEM_COUNT,
+        placeholderItemCount: children.length,
         createPlaceholder: ({ item, absoluteIndex, groupId }) => ({
           id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
           sourceItemId: item.id,
@@ -584,14 +576,7 @@ export const selectViewData = ({ state, props }) => {
           group.id === props.selectedFolderId ? "mu" : "bg",
         children: viewChildren,
         hasChildren: filteredChildren.length > 0,
-        progressiveContentMinHeight: progressiveRenderEnabled
-          ? calculateListReservedHeight({
-              itemCount: children.length,
-              itemHeight: VARIABLE_ROW_RESERVED_HEIGHT,
-              headerHeight: VARIABLE_HEADER_RESERVED_HEIGHT,
-              verticalPadding: 16,
-            })
-          : 0,
+        progressiveContentMinHeight: 0,
         shouldDisplay: shouldShowGroup,
       };
     })

@@ -1,8 +1,4 @@
-import {
-  buildProgressivePlaceholderChildren,
-  calculateGridReservedHeight,
-  DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT,
-} from "../../internal/ui/resourcePages/progressivePlaceholders.js";
+import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
   clearTagFilterPopoverTagIds,
@@ -17,8 +13,6 @@ import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePa
 const DEFAULT_ITEMS_PER_ROW = 6;
 const DEFAULT_MOBILE_ITEMS_PER_ROW = 2;
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
-const PROGRESSIVE_PLACEHOLDER_ITEM_COUNT =
-  DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT;
 const MIN_ITEMS_PER_ROW = 1;
 const MAX_ITEMS_PER_ROW = 12;
 const MAX_MOBILE_ITEMS_PER_ROW = 6;
@@ -242,13 +236,6 @@ export const selectViewData = ({ state, props }) => {
         : hasFixedItemsPerRow
           ? `${fixedColumnCount}`
           : buildAutoFillGridColumns(DEFAULT_CARD_WIDTH);
-  const estimatedColumnCount = useColumnZoomControl
-    ? itemsPerRow
-    : hasFixedItemsPerRow
-      ? fixedColumnCount
-      : mobileLayout
-        ? 1
-        : DEFAULT_ITEMS_PER_ROW;
   const scrollBottomPadding = resolveResourceScrollBottomPadding({
     mobileLayout,
     scrollBottomPadding: props.scrollBottomPadding,
@@ -280,7 +267,7 @@ export const selectViewData = ({ state, props }) => {
       children,
       remainingProgressiveItemCount,
       groupId: group.id,
-      placeholderItemCount: PROGRESSIVE_PLACEHOLDER_ITEM_COUNT,
+      placeholderItemCount: children.length,
       createPlaceholder: ({ item, absoluteIndex, groupId }) => ({
         id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
         sourceItemId: item.id,
@@ -298,13 +285,7 @@ export const selectViewData = ({ state, props }) => {
       isCollapsed,
       hasChildren: children.length > 0,
       headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
-      progressiveContentMinHeight: progressiveRenderEnabled
-        ? calculateGridReservedHeight({
-            itemCount: children.length,
-            columnCount: estimatedColumnCount,
-            itemHeight: 176,
-          })
-        : 0,
+      progressiveContentMinHeight: 0,
       children: progressiveChildren.children.map((item) => {
         const isSelected = item.id === props.selectedItemId;
         const isPlaceholder = item.isPlaceholder === true;

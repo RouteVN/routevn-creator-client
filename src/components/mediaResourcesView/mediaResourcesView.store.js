@@ -1,8 +1,4 @@
-import {
-  buildProgressivePlaceholderChildren,
-  calculateGridReservedHeight,
-  DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT,
-} from "../../internal/ui/resourcePages/progressivePlaceholders.js";
+import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
   clearTagFilterPopoverTagIds,
@@ -16,8 +12,6 @@ import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePa
 
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const DEFAULT_EAGER_IMAGE_CARD_COUNT = 8;
-const PROGRESSIVE_PLACEHOLDER_ITEM_COUNT =
-  DEFAULT_PROGRESSIVE_PLACEHOLDER_ITEM_COUNT;
 const DEFAULT_ITEMS_PER_ROW = 6;
 const DEFAULT_MOBILE_ITEMS_PER_ROW = 2;
 const MIN_ITEMS_PER_ROW = 1;
@@ -327,13 +321,6 @@ export const selectViewData = ({ state, props }) => {
   const mediaWidth = Math.round(baseMediaWidth * effectiveZoomLevel);
   const mediaHeight = Math.round(baseMediaHeight * effectiveZoomLevel);
   const sourceGroups = props.groups ?? [];
-  const estimatedColumnCount =
-    (mobileLayout && !useColumnZoomControl) || fullWidthImageCards
-      ? 1
-      : useColumnZoomControl
-        ? itemsPerRow
-        : DEFAULT_ITEMS_PER_ROW;
-  const mediaCardReservedHeight = Math.max(imageHeight, mediaHeight) + 48;
   const cardGridColumns =
     (mobileLayout && !useColumnZoomControl) || fullWidthImageCards
       ? "1"
@@ -381,7 +368,7 @@ export const selectViewData = ({ state, props }) => {
       children,
       remainingProgressiveItemCount,
       groupId: group.id,
-      placeholderItemCount: PROGRESSIVE_PLACEHOLDER_ITEM_COUNT,
+      placeholderItemCount: children.length,
       createPlaceholder: ({ item, absoluteIndex, groupId }) => ({
         id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
         domItemId: "",
@@ -401,13 +388,7 @@ export const selectViewData = ({ state, props }) => {
       isCollapsed,
       hasChildren: children.length > 0,
       headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
-      progressiveContentMinHeight: progressiveRenderEnabled
-        ? calculateGridReservedHeight({
-            itemCount: children.length,
-            columnCount: estimatedColumnCount,
-            itemHeight: mediaCardReservedHeight,
-          })
-        : 0,
+      progressiveContentMinHeight: 0,
       children: progressiveChildren.children.map((item) => {
         const isSelected = item.id === props.selectedItemId;
         const defaultBorderColor = resolveDefaultBorderColor();
