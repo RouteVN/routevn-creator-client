@@ -28,7 +28,7 @@ static/bundle/main.js
 /project.db
 /project.db-shm
 /project.db-wal
-/crates/*/Cargo.lock
+/crates/routevn-exporter/Cargo.lock
 /crates/*/target
 
 # Generated setup file

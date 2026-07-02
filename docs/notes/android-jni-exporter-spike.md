@@ -99,6 +99,12 @@ responsible for Android `content://` / SAF writes.
 - Confirmed `cargo check --manifest-path src-tauri/Cargo.toml` still passes.
 - Confirmed `bash scripts/build-android-rust.sh` builds the Android
   `arm64-v8a` `.so`.
+- Updated `scripts/build-android-rust.sh` to build all standard Android ABIs
+  by default: `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64`.
+- Confirmed the full default Android Rust build produces JNI libraries for all
+  four ABIs.
+- Confirmed the Android Rust build resolves the NDK from the same configured
+  SDK locations used by Gradle before falling back to the default home SDK path.
 - Confirmed `./gradlew :app:compileDebugJavaWithJavac` passes.
 - Reinstalled the Android debug APK on the attached device and confirmed the
   debug startup smoke can run the real exporter through JNI with generated PNG

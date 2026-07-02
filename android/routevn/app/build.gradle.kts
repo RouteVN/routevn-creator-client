@@ -14,9 +14,11 @@ val hasReleaseSigningConfig =
         !releaseKeystorePassword.isNullOrBlank() &&
         !releaseKeyAlias.isNullOrBlank()
 val repoRoot = rootProject.projectDir.resolve("../..").canonicalFile
+val androidNdkVersion = "29.0.14206865"
 
 val buildAndroidRust by tasks.registering(Exec::class) {
     workingDir = repoRoot
+    environment("ANDROID_NDK_VERSION", androidNdkVersion)
     commandLine("bash", "scripts/build-android-rust.sh")
 }
 
@@ -24,7 +26,7 @@ android {
     namespace = "com.routevn.creator"
     compileSdk = 37
     buildToolsVersion = "37.0.0"
-    ndkVersion = "29.0.14206865"
+    ndkVersion = androidNdkVersion
 
     defaultConfig {
         applicationId = "com.routevn.creator"
