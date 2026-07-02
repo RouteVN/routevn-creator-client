@@ -11,13 +11,24 @@ load_env() {
   fi
 }
 
+get_target_dir() {
+  if [ -n "${CARGO_TARGET_DIR:-}" ]; then
+    echo "${CARGO_TARGET_DIR%/}"
+    return
+  fi
+
+  echo "src-tauri/target"
+}
+
 write_appimage_checksum() {
-  local bundle_dir="src-tauri/target/release/bundle/appimage"
+  local bundle_dir
   local appimage
   local appimage_path
   local appimage_file
   local checksum_file
   local appimages=()
+
+  bundle_dir="$(get_target_dir)/release/bundle/appimage"
 
   while IFS= read -r -d '' appimage; do
     appimages+=("${appimage}")

@@ -1,0 +1,5 @@
+*
+!docker/
+!docker/appimage/
+!docker/appimage/build-in-container.sh
+!docker/appimage/ubuntu-22.04.Dockerfile
