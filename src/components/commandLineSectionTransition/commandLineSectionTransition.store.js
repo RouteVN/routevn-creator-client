@@ -92,7 +92,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       click: true,
     },
     {
-      label: "Transition",
+      label: "Section Transition",
     },
   ];
 

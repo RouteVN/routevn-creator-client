@@ -2,7 +2,7 @@ export const createInitialState = () => ({
   items: [
     {
       id: "10",
-      label: "Transition",
+      label: "Section Transition",
       icon: "transition",
       mode: "sectionTransition",
     },

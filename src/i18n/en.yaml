@@ -1265,7 +1265,7 @@ controlsPage:
   actionPopOverlay: "Pop Overlay"
   actionPushOverlay: "Push Overlay"
   actionResetStoryAtSection: "Reset Story At Section"
-  actionSectionTransition: "Transition"
+  actionSectionTransition: "Section Transition"
   actionSetAutoForwardDelay: "Set Auto Forward Delay"
   actionSetDialogueTextSpeed: "Set Dialogue Text Speed"
   actionSetMenuEntryPoint: "Set Menu Entry Point"
