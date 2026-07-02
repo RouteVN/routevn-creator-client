@@ -85,6 +85,10 @@ export function focusContainer() {
   getEditor(this)?.focusContainer?.();
 }
 
+export function blurEditor(payload = {}) {
+  getEditor(this)?.blurEditor?.(payload);
+}
+
 export function scrollLineIntoView(payload = {}) {
   getEditor(this)?.scrollLineIntoView?.(payload);
 }

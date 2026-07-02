@@ -67,6 +67,7 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       ":suppressClose=${suppressDialogClose}",
     );
+    expect(systemActionsView).toContain("overflow-x: hidden");
     expect(sceneEditorLexicalView).toContain(
       "dialog-variant=scene-editor-left",
     );
@@ -79,5 +80,21 @@ describe("systemActions view", () => {
     expect(sceneEditorLexicalView).toContain(
       'dialog-panel-width="${systemActionsDialogPanelWidth}"',
     );
+  });
+
+  it("lets the dialog surface activate mobile-safe dialog sizing", () => {
+    const dialogSurfaceView = readFileSync(
+      new URL(
+        "../../src/components/systemActionsDialogSurface/systemActionsDialogSurface.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(dialogSurfaceView).toContain(
+      "rtgl-dialog#dialog ?open=${open} s=${dialogSize}",
+    );
+    expect(dialogSurfaceView).toContain("overflow-x: hidden");
+    expect(dialogSurfaceView).toContain("touch-action: pan-y");
   });
 });

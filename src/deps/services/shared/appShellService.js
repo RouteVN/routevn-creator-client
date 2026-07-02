@@ -54,6 +54,12 @@ const isInputFocused = (root = document) => {
   return false;
 };
 
+const hideVirtualKeyboard = (root = document) => {
+  const resolvedWindow =
+    root?.defaultView || (typeof window === "undefined" ? undefined : window);
+  resolvedWindow?.navigator?.virtualKeyboard?.hide?.();
+};
+
 export const createAppShellService = ({
   router,
   subject,
@@ -194,6 +200,7 @@ export const createAppShellService = ({
       if (active?.blur) {
         active.blur();
       }
+      hideVirtualKeyboard(root);
     },
 
     applyTheme(theme) {
