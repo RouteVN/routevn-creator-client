@@ -4,6 +4,7 @@ import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerD
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+import { selectFontsPageCopy } from "./support/fontsPageCopy.js";
 
 export const FONT_TAG_SCOPE_KEY = "fonts";
 
@@ -22,7 +23,7 @@ const getDetailFileTypeLabel = ({ item, selectedFontInfo } = {}) => {
   });
 };
 
-const buildDetailFields = ({ item, selectedFontInfo } = {}) => {
+const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
   if (!item) {
     return [];
   }
@@ -37,11 +38,11 @@ const buildDetailFields = ({ item, selectedFontInfo } = {}) => {
     {
       type: "slot",
       slot: "font-tags",
-      label: "Tags",
+      label: copy.tagsLabel ?? "Tags",
     },
     {
       type: "text",
-      label: "File Type",
+      label: copy.fileTypeLabel ?? "File Type",
       value: getDetailFileTypeLabel({
         item,
         selectedFontInfo: activeFontInfo,
@@ -49,7 +50,7 @@ const buildDetailFields = ({ item, selectedFontInfo } = {}) => {
     },
     {
       type: "text",
-      label: "File Size",
+      label: copy.fileSizeLabel ?? "File Size",
       value: item.fileSize ? formatFileSize(item.fileSize) : "",
     },
   ];
@@ -57,31 +58,31 @@ const buildDetailFields = ({ item, selectedFontInfo } = {}) => {
   if (activeFontInfo) {
     detailFields.push({
       type: "section",
-      label: "Metadata",
+      label: copy.metadataLabel ?? "Metadata",
       fields: [
         {
           type: "text",
-          label: "Weight",
+          label: copy.weightLabel ?? "Weight",
           value: activeFontInfo.weightClass ?? "",
         },
         {
           type: "text",
-          label: "Variable Font",
+          label: copy.variableFontLabel ?? "Variable Font",
           value: activeFontInfo.isVariableFont ?? "",
         },
         {
           type: "text",
-          label: "Supports Italics",
+          label: copy.supportsItalicsLabel ?? "Supports Italics",
           value: activeFontInfo.supportsItalics ?? "",
         },
         {
           type: "text",
-          label: "Glyph Count",
+          label: copy.glyphCountLabel ?? "Glyph Count",
           value: String(activeFontInfo.glyphCount ?? ""),
         },
         {
           type: "text",
-          label: "Supported Scripts",
+          label: copy.supportedScriptsLabel ?? "Supported Scripts",
           value: activeFontInfo.languageSupport ?? "",
         },
       ],
@@ -90,7 +91,7 @@ const buildDetailFields = ({ item, selectedFontInfo } = {}) => {
     if (activeFontInfo.previewNote) {
       detailFields.push({
         type: "text",
-        label: "Preview Note",
+        label: copy.previewNoteLabel ?? "Preview Note",
         value: activeFontInfo.previewNote,
       });
     }
@@ -98,7 +99,7 @@ const buildDetailFields = ({ item, selectedFontInfo } = {}) => {
     if (activeFontInfo.error) {
       detailFields.push({
         type: "text",
-        label: "Metadata Error",
+        label: copy.metadataErrorLabel ?? "Metadata Error",
         value: activeFontInfo.error,
       });
     }
@@ -125,26 +126,30 @@ const buildPendingMediaItem = (item) => ({
   canPreview: false,
 });
 
-const createEditForm = () => ({
-  title: "Edit Font",
+const createEditForm = ({ copy = {} } = {}) => ({
+  title: copy.editTitle ?? "Edit Font",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel ?? "Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
       required: false,
     },
-    createTagField(),
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
     {
       type: "slot",
       slot: "font-slot",
-      label: "Font",
+      label: copy.fontLabel ?? "Font",
     },
   ],
   actions: {
@@ -153,7 +158,7 @@ const createEditForm = () => ({
       {
         id: "submit",
         variant: "pr",
-        label: "Update Font",
+        label: copy.updateButton ?? "Update Font",
       },
     ],
   },
@@ -196,13 +201,14 @@ const {
   selectedResourceId: "fonts",
   resourceCategory: "userInterface",
   uploadText: "Upload",
+  copy: selectFontsPageCopy,
   acceptedFileTypes: [".ttf", ".otf", ".woff", ".woff2", ".ttc", ".eot"],
   centerItemContextMenuItems: [
     { label: "Edit", type: "item", value: "edit-item" },
     { label: "Delete", type: "item", value: "delete-item" },
   ],
   matchesSearch: matchesTagAwareSearch,
-  buildDetailFields: (item) => buildDetailFields({ item }),
+  buildDetailFields: (item, { copy }) => buildDetailFields({ item, copy }),
   buildMediaItem,
   buildPendingMediaItem,
   createEditForm,
@@ -210,7 +216,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
-  extendViewData: ({ state, selectedItem, baseViewData }) => {
+  extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
     const selectedFontInfo = selectedItem
       ? state.fontInfoById[selectedItem.id]
       : undefined;
@@ -226,9 +232,22 @@ const {
       isModalOpen: state.isModalOpen,
       selectedFontInfo,
       modalFontInfo,
+      centerItemContextMenuItems: [
+        {
+          label: copy.editMenuItem ?? "Edit",
+          type: "item",
+          value: "edit-item",
+        },
+        {
+          label: copy.deleteMenuItem ?? "Delete",
+          type: "item",
+          value: "delete-item",
+        },
+      ],
       detailFields: buildDetailFields({
         item: selectedItem,
         selectedFontInfo,
+        copy,
       }),
       editPreviewFontFamily:
         state.editUploadResult?.fontName ?? editItem?.fontFamily ?? "",
@@ -239,6 +258,7 @@ const {
       },
       modalPreviewRows: modalFontInfo?.previewRows ?? [],
       modalGlyphList: modalFontInfo?.glyphs ?? [],
+      clickToUploadLabel: copy.clickToUploadLabel ?? "Click to Upload",
     };
   },
 });

@@ -49,6 +49,7 @@ import {
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
+import { selectCharacterSpritesPageCopy } from "./support/characterSpritesPageCopy.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const IMAGE_FILE_PATTERN = /\.(jpg|jpeg|png|webp)$/i;
@@ -60,12 +61,8 @@ const JSON_FILE_PATTERN = /\.json$/i;
 const MAX_PARALLEL_UPLOADS = 1;
 const CREATE_SPRITE_ABORT_ERROR = "create-sprite-abort";
 const CHARACTER_SPRITE_TAG_SCOPE_PREFIX = "characterSprites:";
-const INVALID_IMAGE_FORMAT_MESSAGE =
-  "Only JPG/JPEG, PNG, and WEBP images are supported.";
-const INVALID_IMPORT_FORMAT_MESSAGE =
-  "Only image sprites, PNG spritesheets, and spritesheet JSON files are supported.";
-const INVALID_IMPORT_PAIR_MESSAGE =
-  "Spritesheet import requires exactly one PNG image and one spritesheet JSON file.";
+
+const selectCopy = (deps = {}) => selectCharacterSpritesPageCopy(deps.i18n);
 
 const createPendingUploads = ({ files, parentId } = {}) => {
   if (!parentId) {
@@ -82,6 +79,7 @@ const createPendingUploads = ({ files, parentId } = {}) => {
 
 const resolveCharacterSpriteUploadTarget = ({
   appService,
+  copy,
   store,
   groupId,
 } = {}) => {
@@ -103,8 +101,8 @@ const resolveCharacterSpriteUploadTarget = ({
       folderInTree,
     });
     appService.showAlert({
-      message: "Upload target folder is no longer available.",
-      title: "Error",
+      message: copy.uploadTargetMissing,
+      title: copy.errorTitle,
     });
     return {
       ok: false,
@@ -133,41 +131,41 @@ const getCharacterIdFromPayload = ({ appService }) => {
 const resolveCharacterSpriteTagScopeKey = (characterId) =>
   `${CHARACTER_SPRITE_TAG_SCOPE_PREFIX}${characterId}`;
 
-const showInvalidImportFormatToast = (appService) => {
+const showInvalidImportFormatToast = (appService, copy) => {
   appService.showAlert({
-    message: INVALID_IMPORT_FORMAT_MESSAGE,
-    title: "Warning",
+    message: copy.invalidImportFormatMessage,
+    title: copy.warningTitle,
   });
 };
 
-const showInvalidImportPairToast = (appService) => {
+const showInvalidImportPairToast = (appService, copy) => {
   appService.showAlert({
-    message: INVALID_IMPORT_PAIR_MESSAGE,
-    title: "Warning",
+    message: copy.invalidImportPairMessage,
+    title: copy.warningTitle,
   });
 };
 
-const showInvalidImageFormatToast = (appService) => {
+const showInvalidImageFormatToast = (appService, copy) => {
   appService.showAlert({
-    message: INVALID_IMAGE_FORMAT_MESSAGE,
-    title: "Warning",
+    message: copy.invalidImageFormatMessage,
+    title: copy.warningTitle,
   });
 };
 
-const filterImageFilesByExtension = ({ appService, files } = {}) => {
+const filterImageFilesByExtension = ({ appService, copy, files } = {}) => {
   const normalizedFiles = Array.from(files ?? []).filter(Boolean);
   const imageFiles = normalizedFiles.filter((file) =>
     IMAGE_FILE_PATTERN.test(file?.name ?? ""),
   );
 
   if (imageFiles.length !== normalizedFiles.length) {
-    showInvalidImageFormatToast(appService);
+    showInvalidImageFormatToast(appService, copy);
   }
 
   return imageFiles;
 };
 
-const validateImageFileExtension = ({ appService, file } = {}) => {
+const validateImageFileExtension = ({ appService, copy, file } = {}) => {
   if (!file) {
     return false;
   }
@@ -176,15 +174,15 @@ const validateImageFileExtension = ({ appService, file } = {}) => {
     return true;
   }
 
-  showInvalidImageFormatToast(appService);
+  showInvalidImageFormatToast(appService, copy);
   return false;
 };
 
 const uploadImageFile = async ({
   appService,
+  copy,
   file,
   projectService,
-  fallbackMessage,
 } = {}) => {
   try {
     const uploadResults = await projectService.uploadFiles([file]);
@@ -193,7 +191,7 @@ const uploadImageFile = async ({
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage,
+      fallbackMessage: copy.failedUploadSprite,
     });
     return null;
   }
@@ -233,6 +231,7 @@ const focusPreviewOverlay = ({ refs } = {}) => {
 
 const syncCharacterSpritesData = ({ deps, repositoryState } = {}) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const characterId =
     store.selectCharacterId() ?? getCharacterIdFromPayload(deps);
   const state =
@@ -241,13 +240,19 @@ const syncCharacterSpritesData = ({ deps, repositoryState } = {}) => {
     projectService.getState();
 
   if (!characterId) {
-    appService.showAlert({ message: "Character is missing.", title: "Error" });
+    appService.showAlert({
+      message: copy.characterMissing,
+      title: copy.errorTitle,
+    });
     return false;
   }
 
   const character = state?.characters?.items?.[characterId];
   if (!character) {
-    appService.showAlert({ message: "Character not found.", title: "Error" });
+    appService.showAlert({
+      message: copy.characterNotFound,
+      title: copy.errorTitle,
+    });
     return false;
   }
 
@@ -529,10 +534,10 @@ const resolveImportPair = (files = []) => {
   };
 };
 
-const parseImportSelection = async ({ appService, files } = {}) => {
+const parseImportSelection = async ({ appService, copy, files } = {}) => {
   const importPair = resolveImportPair(files);
   if (!importPair) {
-    showInvalidImportPairToast(appService);
+    showInvalidImportPairToast(appService, copy);
     return undefined;
   }
 
@@ -547,7 +552,7 @@ const parseImportSelection = async ({ appService, files } = {}) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to import spritesheet JSON.",
+      fallbackMessage: copy.failedImportSpritesheetJson,
     });
     return undefined;
   }
@@ -600,8 +605,10 @@ const openSpritesheetCreateDialog = ({
   sourceFiles,
 } = {}) => {
   const { appService, refs, render, store } = deps;
+  const copy = selectCopy(deps);
   const uploadTarget = resolveCharacterSpriteUploadTarget({
     appService,
+    copy,
     store,
     groupId: parentId,
   });
@@ -700,6 +707,7 @@ const applySpritesheetDialogSourceFiles = async ({
   nextAtlasFile,
 } = {}) => {
   const { appService, refs, render, store } = deps;
+  const copy = selectCopy(deps);
   const currentSourceFiles = store.selectSpritesheetDialogSourceFiles();
   const sourceFiles = {
     pngFile:
@@ -729,7 +737,7 @@ const applySpritesheetDialogSourceFiles = async ({
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to read spritesheet source files.",
+      fallbackMessage: copy.failedReadSpritesheetSourceFiles,
     });
     return;
   }
@@ -823,6 +831,7 @@ const buildSpritesheetPayload = ({
 
 const uploadSpritesheetSource = async ({
   appService,
+  copy,
   pngFile,
   projectService,
 } = {}) => {
@@ -837,7 +846,7 @@ const uploadSpritesheetSource = async ({
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to upload spritesheet image.",
+      fallbackMessage: copy.failedUploadSpritesheetImage,
     });
     return null;
   }
@@ -849,8 +858,10 @@ const createImageSpritesFromFiles = async ({
   parentId = undefined,
 } = {}) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
   const uploadTarget = resolveCharacterSpriteUploadTarget({
     appService,
+    copy,
     store,
     groupId: parentId,
   });
@@ -858,14 +869,17 @@ const createImageSpritesFromFiles = async ({
     return;
   }
 
-  const imageFiles = filterImageFilesByExtension({ appService, files });
+  const imageFiles = filterImageFilesByExtension({ appService, copy, files });
   if (imageFiles.length === 0) {
     return;
   }
 
   const characterId = store.selectCharacterId();
   if (!characterId) {
-    appService.showAlert({ message: "Character is missing.", title: "Error" });
+    appService.showAlert({
+      message: copy.characterMissing,
+      title: copy.errorTitle,
+    });
     return;
   }
 
@@ -932,7 +946,7 @@ const createImageSpritesFromFiles = async ({
 
         const createAttempt = await runResourcePageMutation({
           appService,
-          fallbackMessage: "Failed to create sprite.",
+          fallbackMessage: copy.failedCreateSprite,
           action: () =>
             projectService.createCharacterSpriteItem({
               characterId,
@@ -968,15 +982,15 @@ const createImageSpritesFromFiles = async ({
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to upload sprites.",
+      fallbackMessage: copy.failedUploadSprites,
     });
     return;
   }
 
   if (successfulUploadCount === 0) {
     appService.showAlert({
-      message: "Failed to upload sprites.",
-      title: "Error",
+      message: copy.failedUploadSprites,
+      title: copy.errorTitle,
     });
     return;
   }
@@ -1057,6 +1071,7 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
     getCharacterId: (deps) =>
       deps.store.selectCharacterId() ?? getCharacterIdFromPayload(deps),
     refresh: refreshCharacterSpritesData,
+    copy: ({ i18n }) => selectCharacterSpritesPageCopy(i18n),
   });
 
 export { handleFileExplorerAction, handleFileExplorerTargetChanged };
@@ -1372,6 +1387,7 @@ export const handleFolderNameDialogClose = (deps) => {
 
 export const handleFolderNameFormAction = async (deps, payload) => {
   const { appService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -1381,8 +1397,8 @@ export const handleFolderNameFormAction = async (deps, payload) => {
   const description = values?.description?.trim() ?? "";
   if (!name) {
     appService.showAlert({
-      message: "Folder name is required.",
-      title: "Warning",
+      message: copy.folderNameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -1408,11 +1424,11 @@ export const handleFolderNameFormAction = async (deps, payload) => {
   render();
 };
 
-const pickUploadKind = async ({ appService, event } = {}) => {
+const pickUploadKind = async ({ appService, copy, event } = {}) => {
   const result = await appService.showDropdownMenu({
     items: [
-      { type: "item", key: "image", label: "Image" },
-      { type: "item", key: "spritesheet", label: "Spritesheet" },
+      { type: "item", key: "image", label: copy.imageUploadKind },
+      { type: "item", key: "spritesheet", label: copy.spritesheetUploadKind },
     ],
     x: event?.detail?.x ?? event?.clientX ?? 0,
     y: event?.detail?.y ?? event?.clientY ?? 0,
@@ -1424,9 +1440,11 @@ const pickUploadKind = async ({ appService, event } = {}) => {
 
 export const handleUploadClick = async (deps, payload) => {
   const { appService, store } = deps;
+  const copy = selectCopy(deps);
   const { groupId } = payload._event.detail;
   const uploadKind = await pickUploadKind({
     appService,
+    copy,
     event: payload._event,
   });
 
@@ -1436,6 +1454,7 @@ export const handleUploadClick = async (deps, payload) => {
 
   const uploadTarget = resolveCharacterSpriteUploadTarget({
     appService,
+    copy,
     store,
     groupId,
   });
@@ -1462,7 +1481,7 @@ export const handleUploadClick = async (deps, payload) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select files.",
+      fallbackMessage: copy.failedSelectFiles,
     });
     return;
   }
@@ -1480,15 +1499,17 @@ export const handleUploadClick = async (deps, payload) => {
 
 export const handleFilesDropped = async (deps, payload) => {
   const { appService, store } = deps;
+  const copy = selectCopy(deps);
   const { files, rejectedFiles, targetGroupId } = payload._event.detail;
 
   if ((rejectedFiles?.length ?? 0) > 0) {
-    showInvalidImportFormatToast(appService);
+    showInvalidImportFormatToast(appService, copy);
     return;
   }
 
   const uploadTarget = resolveCharacterSpriteUploadTarget({
     appService,
+    copy,
     store,
     groupId: targetGroupId,
   });
@@ -1502,6 +1523,7 @@ export const handleFilesDropped = async (deps, payload) => {
   if (hasJsonFile) {
     const importData = await parseImportSelection({
       appService,
+      copy,
       files,
     });
     if (!importData) {
@@ -1534,15 +1556,17 @@ export const handleFilesDropped = async (deps, payload) => {
 
 export const handleFilesDropRejected = (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   if ((payload._event.detail?.rejectedFiles?.length ?? 0) === 0) {
     return;
   }
 
-  showInvalidImportFormatToast(appService);
+  showInvalidImportFormatToast(appService, copy);
 };
 
 export const handleFormExtraEvent = async (deps) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const selectedItem = store.selectSelectedItem();
 
   if (selectedItem?.type !== "image") {
@@ -1560,7 +1584,7 @@ export const handleFormExtraEvent = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select file.",
+      fallbackMessage: copy.failedSelectFile,
     });
     return;
   }
@@ -1569,15 +1593,15 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  if (!validateImageFileExtension({ appService, file })) {
+  if (!validateImageFileExtension({ appService, copy, file })) {
     return;
   }
 
   const uploadResult = await uploadImageFile({
     appService,
+    copy,
     file,
     projectService,
-    fallbackMessage: "Failed to upload sprite.",
   });
 
   if (uploadResult === null) {
@@ -1586,21 +1610,24 @@ export const handleFormExtraEvent = async (deps) => {
 
   if (!uploadResult) {
     appService.showAlert({
-      message: "Failed to upload sprite.",
-      title: "Error",
+      message: copy.failedUploadSprite,
+      title: copy.errorTitle,
     });
     return;
   }
 
   const characterId = store.selectCharacterId();
   if (!characterId) {
-    appService.showAlert({ message: "Character is missing.", title: "Error" });
+    appService.showAlert({
+      message: copy.characterMissing,
+      title: copy.errorTitle,
+    });
     return;
   }
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update sprite.",
+    fallbackMessage: copy.failedUpdateSprite,
     action: () =>
       projectService.updateCharacterSpriteItem({
         characterId,
@@ -1633,6 +1660,7 @@ export const handleEditFormAddOptionClick = (deps) => {
 
 export const handleEditDialogImageClick = async (deps) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
   let file;
 
   try {
@@ -1644,7 +1672,7 @@ export const handleEditDialogImageClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select file.",
+      fallbackMessage: copy.failedSelectFile,
     });
     return;
   }
@@ -1653,15 +1681,15 @@ export const handleEditDialogImageClick = async (deps) => {
     return;
   }
 
-  if (!validateImageFileExtension({ appService, file })) {
+  if (!validateImageFileExtension({ appService, copy, file })) {
     return;
   }
 
   const uploadResult = await uploadImageFile({
     appService,
+    copy,
     file,
     projectService,
-    fallbackMessage: "Failed to upload sprite.",
   });
 
   if (uploadResult === null) {
@@ -1670,8 +1698,8 @@ export const handleEditDialogImageClick = async (deps) => {
 
   if (!uploadResult) {
     appService.showAlert({
-      message: "Failed to upload sprite.",
-      title: "Error",
+      message: copy.failedUploadSprite,
+      title: copy.errorTitle,
     });
     return;
   }
@@ -1685,6 +1713,7 @@ export const handleEditDialogImageClick = async (deps) => {
 
 export const handleEditFormAction = async (deps, payload) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
 
   if (actionId !== "submit") {
@@ -1694,8 +1723,8 @@ export const handleEditFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Sprite name is required.",
-      title: "Warning",
+      message: copy.spriteNameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -1722,7 +1751,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update sprite.",
+    fallbackMessage: copy.failedUpdateSprite,
     action: () =>
       projectService.updateCharacterSpriteItem({
         characterId: store.selectCharacterId(),
@@ -1749,6 +1778,7 @@ export const handleSpritesheetDialogClose = (deps) => {
 
 export const handleSpritesheetDialogImageSourceClick = async (deps) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   let file;
 
   try {
@@ -1760,7 +1790,7 @@ export const handleSpritesheetDialogImageSourceClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select image.",
+      fallbackMessage: copy.failedSelectImage,
     });
     return;
   }
@@ -1777,6 +1807,7 @@ export const handleSpritesheetDialogImageSourceClick = async (deps) => {
 
 export const handleSpritesheetDialogAtlasSourceClick = async (deps) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   let file;
 
   try {
@@ -1788,7 +1819,7 @@ export const handleSpritesheetDialogAtlasSourceClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select JSON file.",
+      fallbackMessage: copy.failedSelectJsonFile,
     });
     return;
   }
@@ -1830,6 +1861,7 @@ export const handleSpritesheetDialogFormAddOptionClick = (deps) => {
 
 export const handleSpritesheetDialogFormAction = async (deps, payload) => {
   const { appService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -1838,15 +1870,18 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Spritesheet name is required.",
-      title: "Warning",
+      message: copy.spritesheetNameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
 
   const characterId = store.selectCharacterId();
   if (!characterId) {
-    appService.showAlert({ message: "Character is missing.", title: "Error" });
+    appService.showAlert({
+      message: copy.characterMissing,
+      title: copy.errorTitle,
+    });
     return;
   }
 
@@ -1862,16 +1897,16 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
 
   if (dialogMode === "create" && !dialogSourceFiles?.pngFile) {
     appService.showAlert({
-      message: "Spritesheet image is required.",
-      title: "Warning",
+      message: copy.spritesheetImageRequired,
+      title: copy.warningTitle,
     });
     return;
   }
 
   if (dialogMode === "create" && !dialogSourceFiles?.atlasFile) {
     appService.showAlert({
-      message: "Spritesheet JSON is required.",
-      title: "Warning",
+      message: copy.spritesheetJsonRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -1880,6 +1915,7 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
   if (dialogMode === "create") {
     const uploadTarget = resolveCharacterSpriteUploadTarget({
       appService,
+      copy,
       store,
       groupId: dialogParentId,
     });
@@ -1891,6 +1927,7 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
 
   const uploadResult = await uploadSpritesheetSource({
     appService,
+    copy,
     pngFile: dialogSourceFiles?.pngFile,
     projectService,
   });
@@ -1900,8 +1937,8 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
 
   if (dialogMode === "create" && !uploadResult) {
     appService.showAlert({
-      message: "Failed to upload spritesheet image.",
-      title: "Error",
+      message: copy.failedUploadSpritesheetImage,
+      title: copy.errorTitle,
     });
     return;
   }
@@ -1918,7 +1955,7 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
     const spriteId = generateId();
     const createAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to create spritesheet.",
+      fallbackMessage: copy.failedCreateSpritesheet,
       action: () =>
         projectService.createCharacterSpriteItem({
           characterId,
@@ -1946,13 +1983,16 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
   }
 
   if (!dialogItemId || existingItem?.type !== "spritesheet") {
-    appService.showAlert({ message: "Spritesheet not found.", title: "Error" });
+    appService.showAlert({
+      message: copy.spritesheetNotFound,
+      title: copy.errorTitle,
+    });
     return;
   }
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update spritesheet.",
+    fallbackMessage: copy.failedUpdateSpritesheet,
     action: () =>
       projectService.updateCharacterSpriteItem({
         characterId,
@@ -2022,11 +2062,12 @@ export const handleClipFpsFormAction = (deps, payload) => {
   }
 
   const { appService, render, store } = deps;
+  const copy = selectCopy(deps);
   const fps = normalizeSpritesheetFps(values?.fps);
   if (fps === undefined) {
     appService.showAlert({
-      message: "Clip FPS must be greater than 0.",
-      title: "Warning",
+      message: copy.clipFpsRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -2047,6 +2088,7 @@ export const handleSearchInput = (deps, payload) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   const characterId = store.selectCharacterId();
 
@@ -2061,7 +2103,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (usage.isUsed) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message: copy.cannotDeleteResourceInUse,
     });
     return;
   }
@@ -2075,9 +2117,9 @@ export const handleItemDelete = async (deps, payload) => {
     appService.showAlert({
       message: getResourcePageErrorMessage(
         deleteResult,
-        "Failed to delete sprite.",
+        copy.failedDeleteSprite,
       ),
-      title: "Error",
+      title: copy.errorTitle,
     });
     return;
   }
@@ -2102,6 +2144,7 @@ const {
 } = createResourcePageTagHandlers({
   resolveScopeKey: ({ deps }) =>
     resolveCharacterSpriteTagScopeKey(deps.store.selectCharacterId()),
+  copy: ({ i18n }) => selectCharacterSpritesPageCopy(i18n),
   updateItemTagIds: ({ deps, itemId, tagIds }) =>
     deps.projectService.updateCharacterSpriteItem({
       characterId: deps.store.selectCharacterId(),
@@ -2130,7 +2173,8 @@ const {
       });
     }
   },
-  updateItemTagFallbackMessage: "Failed to update sprite tags.",
+  updateItemTagFallbackMessage: ({ deps }) =>
+    selectCopy(deps).failedUpdateSpriteTags,
 });
 
 export {

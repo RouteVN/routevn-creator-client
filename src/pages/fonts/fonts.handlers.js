@@ -21,33 +21,37 @@ import {
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { FONT_TAG_SCOPE_KEY } from "./fonts.store.js";
+import { selectFontsPageCopy } from "./support/fontsPageCopy.js";
 
 const FONT_FILE_PATTERN = /\.(ttf|otf|woff|woff2|ttc|eot)$/i;
 const FONT_FILE_ACCEPT = ".ttf,.otf,.woff,.woff2,.ttc,.eot";
 const MAX_PARALLEL_UPLOADS = 1;
 
-const showInvalidFormatToast = (appService) => {
+const selectCopy = (deps = {}) => selectFontsPageCopy(deps.i18n);
+
+const showInvalidFormatToast = (appService, copy = {}) => {
   appService.showAlert({
     message:
+      copy.invalidFormatMessage ??
       "Invalid file format. Please upload a font file (.ttf, .otf, .woff, .woff2, .ttc, or .eot)",
-    title: "Warning",
+    title: copy.warningTitle ?? "Warning",
   });
 };
 
-const validateFontFiles = ({ appService, files } = {}) => {
+const validateFontFiles = ({ appService, files, copy } = {}) => {
   const invalidFiles = Array.from(files ?? []).filter(
     (file) => !file.name.match(FONT_FILE_PATTERN),
   );
 
   if (invalidFiles.length > 0) {
-    showInvalidFormatToast(appService);
+    showInvalidFormatToast(appService, copy);
     return false;
   }
 
   return true;
 };
 
-const pickAndUploadFont = async ({ appService, projectService } = {}) => {
+const pickAndUploadFont = async ({ appService, projectService, copy } = {}) => {
   let file;
 
   try {
@@ -63,7 +67,7 @@ const pickAndUploadFont = async ({ appService, projectService } = {}) => {
     return { cancelled: true };
   }
 
-  if (!validateFontFiles({ appService, files: [file] })) {
+  if (!validateFontFiles({ appService, files: [file], copy })) {
     return { errorType: "validation-failed" };
   }
 
@@ -83,8 +87,9 @@ const pickAndUploadFont = async ({ appService, projectService } = {}) => {
 };
 
 const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
+  const copy = selectCopy(deps);
   const { appService, projectService, store } = deps;
-  if (!validateFontFiles({ appService, files })) {
+  if (!validateFontFiles({ appService, files, copy })) {
     return;
   }
 
@@ -113,7 +118,7 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
 
       const createAttempt = await runResourcePageMutation({
         appService,
-        fallbackMessage: "Failed to create font.",
+        fallbackMessage: copy.failedCreateFont ?? "Failed to create font.",
         action: () =>
           projectService.createFont({
             fontId,
@@ -138,13 +143,13 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
       showResourcePageError({
         appService,
         errorOrResult: error,
-        fallbackMessage: "Failed to upload font.",
+        fallbackMessage: copy.failedUploadFont ?? "Failed to upload font.",
       });
     },
     onNoSuccessfulUploads: () => {
       appService.showAlert({
-        message: "Failed to upload font.",
-        title: "Error",
+        message: copy.failedUploadFont ?? "Failed to upload font.",
+        title: copy.errorTitle ?? "Error",
       });
     },
   });
@@ -223,6 +228,7 @@ const {
   handleCreateTagFormAction,
 } = createMediaPageHandlers({
   resourceType: "fonts",
+  copy: ({ i18n }) => selectFontsPageCopy(i18n),
   syncData: syncFontPageData,
   selectItemById: (store, { itemId }) => store.selectFontItemById({ itemId }),
   getEditValues: (item) => ({
@@ -240,7 +246,8 @@ const {
           tagIds,
         },
       }),
-    updateItemTagFallbackMessage: "Failed to update font tags.",
+    updateItemTagFallbackMessage: ({ deps }) =>
+      selectCopy(deps).failedUpdateTags ?? "Failed to update font tags.",
     appendCreatedTagByMode: ({ deps, mode, tagId }) => {
       if (mode !== "edit-form") {
         return;
@@ -308,6 +315,7 @@ export const handleFontItemClick = async (deps, payload) => {
 
 export const handleUploadClick = async (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const { groupId } = payload._event.detail;
   let files;
 
@@ -320,7 +328,7 @@ export const handleUploadClick = async (deps, payload) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select files.",
+      fallbackMessage: copy.failedSelectFiles ?? "Failed to select files.",
     });
     return;
   }
@@ -373,8 +381,9 @@ export const handleEditDialogClose = (deps) => {
 
 export const handleEditDialogFontClick = async (deps) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
 
-  const result = await pickAndUploadFont({ appService, projectService });
+  const result = await pickAndUploadFont({ appService, projectService, copy });
   if (result.cancelled) {
     return;
   }
@@ -383,7 +392,7 @@ export const handleEditDialogFontClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: result.error,
-      fallbackMessage: "Failed to select file.",
+      fallbackMessage: copy.failedSelectFile ?? "Failed to select file.",
     });
     return;
   }
@@ -396,7 +405,7 @@ export const handleEditDialogFontClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: result.error,
-      fallbackMessage: "Failed to upload font.",
+      fallbackMessage: copy.failedUploadFont ?? "Failed to upload font.",
     });
     return;
   }
@@ -410,6 +419,7 @@ export const handleEditDialogFontClick = async (deps) => {
 
 export const handleEditFormAction = async (deps, payload) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -418,8 +428,8 @@ export const handleEditFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Font name is required.",
-      title: "Warning",
+      message: copy.nameRequired ?? "Font name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -441,7 +451,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update font.",
+    fallbackMessage: copy.failedUpdateFont ?? "Failed to update font.",
     action: () =>
       projectService.updateFont({
         fontId: editItemId,
@@ -525,6 +535,7 @@ export const handleCloseModal = (deps) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
 
   const usage = recursivelyCheckResource({
@@ -535,7 +546,9 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (usage.isUsed) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message:
+        copy.cannotDeleteResourceInUse ??
+        "Cannot delete resource, it is currently in use.",
     });
     render();
     return;

@@ -18,6 +18,25 @@ import {
   scaleLayoutElementsForProjectResolution,
 } from "../../internal/projectResolution.js";
 import { CONTROL_TAG_SCOPE_KEY } from "./controls.store.js";
+import { selectControlsPageCopy } from "./support/controlsPageCopy.js";
+
+const selectCopy = (deps = {}) => selectControlsPageCopy(deps.i18n);
+
+const KEYBOARD_LABELS = {
+  enter: "keyboardEnter",
+  space: "keyboardSpace",
+  esc: "keyboardEscape",
+  ctrl: "keyboardCtrl",
+  left: "keyboardLeftArrow",
+  right: "keyboardRightArrow",
+  up: "keyboardUpArrow",
+  down: "keyboardDownArrow",
+};
+
+const localizeKeyboardOption = (item, copy = {}) => ({
+  ...item,
+  label: copy[KEYBOARD_LABELS[item.value]] ?? item.label,
+});
 
 const {
   handleBeforeMount,
@@ -47,6 +66,7 @@ const {
   handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "controls",
+  copy: selectCopy,
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(repositoryState, CONTROL_TAG_SCOPE_KEY);
 
@@ -61,9 +81,10 @@ const {
       tagsData: getTagsCollection(repositoryState, CONTROL_TAG_SCOPE_KEY),
     });
   },
-  createExplorerHandlers: ({ refresh }) =>
+  createExplorerHandlers: ({ refresh, copy }) =>
     createControlsFileExplorerHandlers({
       refresh,
+      copy,
     }),
   tagging: {
     scopeKey: CONTROL_TAG_SCOPE_KEY,
@@ -74,7 +95,8 @@ const {
           tagIds,
         },
       }),
-    updateItemTagFallbackMessage: "Failed to update control tags.",
+    updateItemTagFallbackMessage: ({ deps }) =>
+      selectCopy(deps).failedUpdateTags ?? "Failed to update control tags.",
     appendCreatedTagByMode: ({ deps, mode, tagId }) => {
       if (mode !== "form") {
         return;
@@ -157,6 +179,7 @@ const updateControlKeyboard = async ({
   appService,
   projectService,
   store,
+  copy = {},
   phase = "keydown",
   key,
   interaction,
@@ -185,7 +208,9 @@ const updateControlKeyboard = async ({
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update keyboard action.",
+    fallbackMessage:
+      copy.failedUpdateKeyboardAction ?? "Failed to update keyboard action.",
+    title: copy.errorTitle ?? "Error",
     action: () =>
       projectService.updateControlItem({
         controlId: control.id,
@@ -316,7 +341,7 @@ export const handleControlFormAddOptionClick = (deps) => {
   });
 };
 
-export const createControlTemplate = (projectResolution) => {
+export const createControlTemplate = (projectResolution, copy = {}) => {
   const spriteId = generateId();
 
   return scaleLayoutElementsForProjectResolution(
@@ -325,7 +350,7 @@ export const createControlTemplate = (projectResolution) => {
         [spriteId]: {
           id: spriteId,
           type: "sprite",
-          name: "Control Sprite",
+          name: copy.controlSpriteName ?? "Control Sprite",
           anchorX: 0,
           anchorY: 0,
           click: {
@@ -356,6 +381,7 @@ export const createControlTemplate = (projectResolution) => {
 
 export const handleControlFormActionClick = async (deps, payload) => {
   const { store, projectService, appService } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -364,8 +390,8 @@ export const handleControlFormActionClick = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Please enter a control name",
-      title: "Warning",
+      message: copy.nameRequired ?? "Please enter a control name",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -377,7 +403,8 @@ export const handleControlFormActionClick = async (deps, payload) => {
   if (editItemId) {
     const updateAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to update control.",
+      fallbackMessage: copy.failedUpdateControl ?? "Failed to update control.",
+      title: copy.errorTitle ?? "Error",
       action: () =>
         projectService.updateControlItem({
           controlId: editItemId,
@@ -395,12 +422,13 @@ export const handleControlFormActionClick = async (deps, payload) => {
   } else {
     const projectResolution = requireProjectResolution(
       projectService.getRepositoryState().project?.resolution,
-      "Project resolution",
+      copy.projectResolutionLabel ?? "Project resolution",
     );
 
     const createAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to create control.",
+      fallbackMessage: copy.failedCreateControl ?? "Failed to create control.",
+      title: copy.errorTitle ?? "Error",
       action: () =>
         projectService.createControlItem({
           controlId: generateId(),
@@ -409,7 +437,7 @@ export const handleControlFormActionClick = async (deps, payload) => {
             description,
             tagIds,
           },
-          elements: createControlTemplate(projectResolution),
+          elements: createControlTemplate(projectResolution, copy),
           parentId: store.getState().targetGroupId,
           position: "last",
         }),
@@ -426,6 +454,7 @@ export const handleControlFormActionClick = async (deps, payload) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
 
   const usage = await projectService.checkResourceUsage({
@@ -435,7 +464,9 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (usage.isUsed) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message:
+        copy.cannotDeleteResourceInUse ??
+        "Cannot delete resource, it is currently in use.",
     });
     render();
     return;
@@ -447,6 +478,7 @@ export const handleItemDelete = async (deps, payload) => {
 
 export const handleKeyboardAddClick = async (deps, payload) => {
   const { appService, refs, render, store } = deps;
+  const copy = selectCopy(deps);
   const control = getSelectedControl(store);
   if (!control) {
     return;
@@ -456,16 +488,21 @@ export const handleKeyboardAddClick = async (deps, payload) => {
   const assignedKeys = new Set(Object.keys(getKeyboardMap(control, phase)));
   const availableItems = BASE_LAYOUT_KEYBOARD_OPTIONS.filter(
     (item) => !assignedKeys.has(item.value),
-  ).map((item) => ({
-    type: "item",
-    key: item.value,
-    label: item.label,
-  }));
+  ).map((item) => {
+    const localizedItem = localizeKeyboardOption(item, copy);
+    return {
+      type: "item",
+      key: localizedItem.value,
+      label: localizedItem.label,
+    };
+  });
 
   if (availableItems.length === 0) {
     appService.showAlert({
-      message: "All available keyboard keys are already assigned",
-      title: "Warning",
+      message:
+        copy.allKeyboardKeysAssigned ??
+        "All available keyboard keys are already assigned",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -520,6 +557,7 @@ export const handleKeyboardItemClick = (deps, payload) => {
 
 export const handleKeyboardItemRightClick = async (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const event = payload._event;
   event.preventDefault();
 
@@ -530,7 +568,9 @@ export const handleKeyboardItemRightClick = async (deps, payload) => {
   const phase = getKeyboardPhaseFromEvent(event);
 
   const result = await appService.showDropdownMenu({
-    items: [{ type: "item", key: "remove", label: "Delete" }],
+    items: [
+      { type: "item", key: "remove", label: copy.deleteMenuItem ?? "Delete" },
+    ],
     x: event.clientX,
     y: event.clientY,
     place: "bs",
@@ -543,6 +583,7 @@ export const handleKeyboardItemRightClick = async (deps, payload) => {
     appService,
     projectService: deps.projectService,
     store: deps.store,
+    copy,
     phase,
     key,
     interaction: undefined,
@@ -556,6 +597,7 @@ export const handleKeyboardItemRightClick = async (deps, payload) => {
 
 export const handleKeyboardActionsChange = async (deps, payload) => {
   const { appService, render, store } = deps;
+  const copy = selectCopy(deps);
   const key = store.selectKeyboardEditorKey();
   if (!key) {
     return;
@@ -573,6 +615,7 @@ export const handleKeyboardActionsChange = async (deps, payload) => {
     appService,
     projectService: deps.projectService,
     store,
+    copy,
     phase,
     key,
     interaction,

@@ -1,4 +1,8 @@
 import { requireProjectResolution } from "../../internal/projectResolution.js";
+import {
+  formatProjectPageCopy,
+  selectProjectPageCopy,
+} from "./support/projectPageCopy.js";
 
 const ICON_VALIDATIONS = [
   {
@@ -19,13 +23,14 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store, render, i18n } = deps;
+  const copy = selectProjectPageCopy(i18n);
   await projectService.ensureRepository();
   const projectInfo = await projectService.getCurrentProjectInfo();
   const repositoryState = projectService.getRepositoryState();
   const projectResolution = requireProjectResolution(
     repositoryState?.project?.resolution,
-    "Project resolution",
+    copy.projectResolutionLabel,
   );
   store.setCurrentProject({
     project: {
@@ -54,7 +59,8 @@ const resolveFolderUri = (folder) => {
 };
 
 const exportCurrentAndroidProject = async (deps) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store, render, i18n } = deps;
+  const copy = selectProjectPageCopy(i18n);
   const currentProject = appService.getCurrentProjectEntry();
   const projectId = currentProject?.id ?? "";
 
@@ -67,8 +73,8 @@ const exportCurrentAndroidProject = async (deps) => {
 
   if (!projectId) {
     appService.showAlert({
-      message: "No local project is currently open.",
-      title: "Warning",
+      message: copy.noLocalProjectOpen,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -76,13 +82,13 @@ const exportCurrentAndroidProject = async (deps) => {
   let folder;
   try {
     folder = await appService.openFolderPicker({
-      title: "Select Export Folder",
+      title: copy.selectExportFolderTitle,
       writable: true,
     });
   } catch {
     appService.showAlert({
-      message: "Failed to select an export folder.",
-      title: "Error",
+      message: copy.failedSelectExportFolder,
+      title: copy.errorTitle,
     });
     return;
   }
@@ -103,27 +109,33 @@ const exportCurrentAndroidProject = async (deps) => {
     store.setProjectExportLoading({ isLoading: false });
     render();
     await appService.showAlert({
-      message: `Project exported to "${result.name}".`,
-      title: "Export Complete",
+      message: formatProjectPageCopy(copy.exportedProjectMessage, {
+        projectName: result.name,
+      }),
+      title: copy.exportCompleteTitle,
     });
   } catch (error) {
     const message = String(error?.message ?? "").trim();
     store.setProjectExportLoading({ isLoading: false });
     render();
     await appService.showAlert({
-      message: message || "Failed to export project.",
-      title: "Error",
+      message: message || copy.failedExportProject,
+      title: copy.errorTitle,
     });
   }
 };
 
 export const handleProjectActionsClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, i18n } = deps;
+  const copy = selectProjectPageCopy(i18n);
   const event = payload._event;
   event.preventDefault();
   event.stopPropagation();
 
-  store.openProjectActionMenu(getActionMenuPosition(event));
+  store.openProjectActionMenu({
+    ...getActionMenuPosition(event),
+    items: [{ label: copy.exportProject, type: "item", value: "export" }],
+  });
   render();
 };
 
@@ -155,7 +167,7 @@ export const handleEditButtonClick = (deps) => {
   render();
 
   const { editForm } = refs;
-  const { editDefaultValues } = store.getState();
+  const editDefaultValues = store.selectEditDefaultValues();
   editForm.reset();
   editForm.setValues({ values: editDefaultValues });
 };
@@ -167,7 +179,8 @@ export const handleEditDialogClose = (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { appService, projectService, store, render, subject } = deps;
+  const { appService, projectService, store, render, subject, i18n } = deps;
+  const copy = selectProjectPageCopy(i18n);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -176,8 +189,8 @@ export const handleEditFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Project name is required.",
-      title: "Warning",
+      message: copy.projectNameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -192,14 +205,14 @@ export const handleEditFormAction = async (deps, payload) => {
   const patch = {
     name,
     description: values?.description ?? "",
-    iconFileId: store.getState().editIconFileId,
+    iconFileId: store.selectEditIconFileId(),
   };
 
   const nextProjectInfo = await projectService.updateCurrentProjectInfo(patch);
 
   store.setCurrentProject({
     project: {
-      ...store.getState().project,
+      ...store.selectCurrentProject(),
       ...nextProjectInfo,
     },
   });
@@ -209,7 +222,8 @@ export const handleEditFormAction = async (deps, payload) => {
 };
 
 export const handleEditDialogIconClick = async (deps) => {
-  const { appService, render, store } = deps;
+  const { appService, render, store, i18n } = deps;
+  const copy = selectProjectPageCopy(i18n);
   let file;
 
   try {
@@ -220,8 +234,8 @@ export const handleEditDialogIconClick = async (deps) => {
     });
   } catch {
     appService.showAlert({
-      message: "Failed to select project icon.",
-      title: "Error",
+      message: copy.failedSelectProjectIcon,
+      title: copy.errorTitle,
     });
     return;
   }
@@ -236,7 +250,7 @@ export const handleEditDialogIconClick = async (deps) => {
 
 export const handleEditIconCropDialogClose = (deps) => {
   const { render, store } = deps;
-  if (!store.getState().isEditIconCropDialogOpen) {
+  if (!store.selectIsEditIconCropDialogOpen()) {
     return;
   }
 
@@ -245,18 +259,19 @@ export const handleEditIconCropDialogClose = (deps) => {
 };
 
 export const handleEditIconCropDialogConfirm = async (deps) => {
-  const { appService, projectService, refs, render, store } = deps;
+  const { appService, projectService, refs, render, store, i18n } = deps;
+  const copy = selectProjectPageCopy(i18n);
 
   let croppedFile;
   try {
     croppedFile = await refs.editIconCropDialog?.getCroppedFile?.();
     if (!croppedFile) {
-      throw new Error("Project icon crop is not ready.");
+      throw new Error(copy.projectIconCropNotReady);
     }
   } catch {
     appService.showAlert({
-      message: "Failed to crop project icon.",
-      title: "Error",
+      message: copy.failedCropProjectIcon,
+      title: copy.errorTitle,
     });
     return;
   }
@@ -273,8 +288,8 @@ export const handleEditIconCropDialogConfirm = async (deps) => {
 
   if (!uploadResult?.fileId) {
     appService.showAlert({
-      message: "Failed to upload project icon.",
-      title: "Error",
+      message: copy.failedUploadProjectIcon,
+      title: copy.errorTitle,
     });
     return;
   }

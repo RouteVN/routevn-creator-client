@@ -25,20 +25,22 @@ import {
   reverseSpriteGroups,
 } from "./support/spriteGroups.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { selectCharactersPageCopy } from "./support/charactersPageCopy.js";
 
-const folderContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-child-folder" },
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createFolderContextMenuItems = (copy) => [
+  { label: copy.newFolderMenuItem, type: "item", value: "new-child-folder" },
+  { label: copy.renameMenuItem, type: "item", value: "rename-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
 ];
 
-const itemContextMenuItems = [
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createItemContextMenuItems = (copy) => [
+  { label: copy.renameMenuItem, type: "item", value: "rename-item" },
+  { label: copy.deleteMenuItem, type: "item", value: "delete-item" },
 ];
 
-const emptyContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-item" },
+const createEmptyContextMenuItems = (copy) => [
+  { label: copy.newFolderMenuItem, type: "item", value: "new-item" },
 ];
 
 const CHARACTER_SHORTCUT_OPTIONS = [
@@ -54,8 +56,6 @@ const CHARACTER_SHORTCUT_OPTIONS = [
 ];
 
 const CHARACTER_TAG_SCOPE_KEY = "characters";
-const SPRITE_GROUPS_CREATE_MESSAGE =
-  "Create the character first, then add groups.";
 const CREATE_TAG_DEFAULT_VALUES = Object.freeze({
   name: "",
 });
@@ -63,13 +63,13 @@ const SPRITE_GROUP_DIALOG_DEFAULT_VALUES = Object.freeze({
   name: "",
   tags: [],
 });
-const createTagForm = {
-  title: "Create Tag",
+const createTagForm = (copy) => ({
+  title: copy.createTagTitle,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Tag Name",
+      label: copy.tagNameLabel,
       required: true,
     },
   ],
@@ -79,25 +79,25 @@ const createTagForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Create Tag",
+        label: copy.createTagButton,
       },
     ],
   },
-};
+});
 
-const folderNameForm = {
-  title: "Edit Folder",
+const createFolderNameForm = (copy) => ({
+  title: copy.editFolderTitle,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel,
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel,
       required: false,
     },
   ],
@@ -107,20 +107,20 @@ const folderNameForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Save",
+        label: copy.saveButton,
         validate: true,
       },
     ],
   },
-};
-const createCharacterTagField = ({ tagOptions } = {}) => ({
+});
+const createCharacterTagField = ({ tagOptions, copy } = {}) => ({
   name: "tagIds",
   type: "tag-select",
-  label: "Tags",
-  placeholder: "Select tags",
+  label: copy.tagsLabel,
+  placeholder: copy.selectTagsPlaceholder,
   options: tagOptions ?? [],
   addOption: {
-    label: "Add tag",
+    label: copy.addTagOption,
   },
   required: false,
 });
@@ -130,58 +130,61 @@ const createCharacterNameVariableOptions = (variablesData = {}) =>
     type: "string",
   });
 
-const createCharacterNameVariableField = ({ nameVariableOptions } = {}) => ({
+const createCharacterNameVariableField = ({
+  nameVariableOptions,
+  copy,
+} = {}) => ({
   name: "nameVariableId",
   type: "select",
-  label: "Name Variable",
-  description:
-    "Set this only if you want the speaker display to come from a variable instead of fixed name.",
+  label: copy.nameVariableLabel,
+  description: copy.nameVariableDescription,
   clearable: true,
-  placeholder: "Name variable",
+  placeholder: copy.nameVariablePlaceholder,
   options:
     nameVariableOptions ?? createCharacterNameVariableOptions({ items: {} }),
   required: false,
 });
 
-const SPRITE_GROUP_FIELD = {
+const createSpriteGroupField = (copy) => ({
   type: "slot",
   slot: "sprite-groups-slot",
-  label: "Sprite Groups",
-};
+  label: copy.spriteGroupsLabel,
+});
 
 const createCharacterDialogForm = ({
   tagOptions,
   nameVariableOptions,
+  copy,
 } = {}) => ({
-  title: "Add Character",
+  title: copy.addCharacterTitle,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel,
       required: true,
     },
     {
       name: "description",
       type: "input-text",
-      label: "Description",
+      label: copy.descriptionLabel,
       required: false,
     },
     {
       name: "shortcut",
       type: "select",
-      label: "Shortcut",
-      description: "Used for keyboard shortcut in scene editor",
+      label: copy.shortcutLabel,
+      description: copy.shortcutDescription,
       options: CHARACTER_SHORTCUT_OPTIONS,
       required: false,
     },
-    createCharacterTagField({ tagOptions }),
+    createCharacterTagField({ tagOptions, copy }),
     {
       type: "slot",
       slot: "avatar-slot",
-      label: "Avatar",
+      label: copy.avatarLabel,
     },
-    createCharacterNameVariableField({ nameVariableOptions }),
+    createCharacterNameVariableField({ nameVariableOptions, copy }),
   ],
   actions: {
     layout: "",
@@ -189,7 +192,7 @@ const createCharacterDialogForm = ({
       {
         id: "submit",
         variant: "pr",
-        label: "Add Character",
+        label: copy.addCharacterButton,
       },
     ],
   },
@@ -198,39 +201,40 @@ const createCharacterDialogForm = ({
 const createEditCharacterDialogForm = ({
   tagOptions,
   nameVariableOptions,
+  copy,
 } = {}) => ({
-  title: "Edit Character",
-  description: "Edit the character details",
+  title: copy.editCharacterTitle,
+  description: copy.editCharacterDescription,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
-      description: "Enter the character name",
+      label: copy.nameLabel,
+      description: copy.characterNameDescription,
       required: true,
     },
     {
       name: "description",
       type: "input-text",
-      label: "Description",
-      description: "Enter the character description",
+      label: copy.descriptionLabel,
+      description: copy.characterDescriptionDescription,
       required: false,
     },
     {
       name: "shortcut",
       type: "select",
-      label: "Shortcut",
+      label: copy.shortcutLabel,
       options: CHARACTER_SHORTCUT_OPTIONS,
       required: false,
     },
-    createCharacterTagField({ tagOptions }),
+    createCharacterTagField({ tagOptions, copy }),
     {
       type: "slot",
       slot: "avatar-slot",
-      label: "Avatar",
+      label: copy.avatarLabel,
     },
-    SPRITE_GROUP_FIELD,
-    createCharacterNameVariableField({ nameVariableOptions }),
+    createSpriteGroupField(copy),
+    createCharacterNameVariableField({ nameVariableOptions, copy }),
   ],
   actions: {
     layout: "",
@@ -238,26 +242,26 @@ const createEditCharacterDialogForm = ({
       {
         id: "submit",
         variant: "pr",
-        label: "Update Character",
+        label: copy.updateCharacterButton,
       },
     ],
   },
 });
 
-const createSpriteGroupDialogForm = ({ tagOptions, isEditing } = {}) => ({
-  title: isEditing ? "Edit Sprite Group" : "Add Sprite Group",
+const createSpriteGroupDialogForm = ({ tagOptions, isEditing, copy } = {}) => ({
+  title: isEditing ? copy.editSpriteGroupTitle : copy.addSpriteGroupTitle,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel,
       required: true,
     },
     {
       name: "tags",
       type: "tag-select",
-      label: "Tags",
-      placeholder: "Select tags",
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
       options: tagOptions ?? [],
       required: true,
     },
@@ -268,7 +272,7 @@ const createSpriteGroupDialogForm = ({ tagOptions, isEditing } = {}) => ({
       {
         id: "submit",
         variant: "pr",
-        label: isEditing ? "Update Group" : "Add Group",
+        label: isEditing ? copy.updateGroupButton : copy.addGroupButton,
       },
     ],
   },
@@ -314,12 +318,12 @@ const normalizeSavedSpriteGroupsForDraft = (payload = {}) =>
 const getSpriteGroupDraftKey = (target) =>
   target === "edit" ? "editSpriteGroups" : "dialogSpriteGroups";
 
-const buildSpriteGroupDropdownItems = ({ index, total } = {}) => {
+export const buildSpriteGroupDropdownItems = ({ index, total, copy } = {}) => {
   const items = [];
 
   if (index > 0) {
     items.push({
-      label: "Move Up",
+      label: copy.moveUpMenuItem,
       type: "item",
       value: "move-up",
     });
@@ -327,14 +331,14 @@ const buildSpriteGroupDropdownItems = ({ index, total } = {}) => {
 
   if (index < total - 1) {
     items.push({
-      label: "Move Down",
+      label: copy.moveDownMenuItem,
       type: "item",
       value: "move-down",
     });
   }
 
   items.push({
-    label: "Remove",
+    label: copy.removeMenuItem,
     type: "item",
     value: "remove",
   });
@@ -399,7 +403,6 @@ export const createInitialState = () => ({
   spriteGroupDialogDefaultValues: {
     ...SPRITE_GROUP_DIALOG_DEFAULT_VALUES,
   },
-  dialogForm: createCharacterDialogForm(),
   // Edit dialog state
   isEditDialogOpen: false,
   editItemId: null,
@@ -730,7 +733,7 @@ export const moveSpriteGroup = ({ state }, { target, index, offset } = {}) => {
 
 export const showSpriteGroupDropdownMenu = (
   { state },
-  { target, index, x, y } = {},
+  { target, index, x, y, items } = {},
 ) => {
   const spriteGroups = state[getSpriteGroupDraftKey(target)];
   if (index < 0 || index >= spriteGroups.length) {
@@ -743,10 +746,7 @@ export const showSpriteGroupDropdownMenu = (
     y: y ?? 0,
     target,
     index,
-    items: buildSpriteGroupDropdownItems({
-      index,
-      total: spriteGroups.length,
-    }),
+    items: items ?? [],
   };
 };
 
@@ -873,7 +873,8 @@ export const selectFolderById = ({ state }, { folderId } = {}) => {
   return item?.type === "folder" ? item : undefined;
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectCharactersPageCopy(i18n);
   const flatItems = applyFolderRequiredRootDragOptions(
     toFlatItems(state.charactersData),
   );
@@ -915,7 +916,7 @@ export const selectViewData = ({ state }) => {
       return variable.name ?? variableId;
     }
 
-    return `Missing variable (${variableId})`;
+    return formatI18nCopy(copy.missingVariableLabel, { variableId });
   };
 
   let detailFields = [];
@@ -934,33 +935,33 @@ export const selectViewData = ({ state }) => {
     if (selectedItem.nameVariableId) {
       detailFields.push({
         type: "text",
-        label: "Name Variable",
+        label: copy.nameVariableLabel,
         value: getNameVariableLabel(selectedItem.nameVariableId),
       });
     }
     detailFields.push(
       {
         type: "text",
-        label: "Shortcut",
+        label: copy.shortcutLabel,
         value: selectedItem.shortcut ?? "",
       },
       {
         type: "slot",
         slot: "character-tags",
-        label: "Tags",
+        label: copy.tagsLabel,
       },
       {
         type: "slot",
         slot: "character-sprite-groups",
-        label: "Sprite Groups",
+        label: copy.spriteGroupsLabel,
       },
     );
   } else if (selectedFolder?.type === "folder") {
     detailFields = [
       {
         type: "text",
-        label: "Type",
-        value: "folder",
+        label: copy.typeLabel,
+        value: copy.folderTypeValue,
       },
       {
         type: "description",
@@ -1030,6 +1031,7 @@ export const selectViewData = ({ state }) => {
   const editForm = createEditCharacterDialogForm({
     tagOptions: tagFilterOptions,
     nameVariableOptions,
+    copy,
   });
 
   if (editItem) {
@@ -1050,7 +1052,7 @@ export const selectViewData = ({ state }) => {
       detailFields,
       hiddenMobileDetailSlots: ["avatar", "character-sprite-groups"],
     }),
-    addText: "Add",
+    addText: copy.addText,
     resourceCategory: "assets",
     selectedResourceId: "characters",
     selectedItemId: state.selectedItemId,
@@ -1067,31 +1069,32 @@ export const selectViewData = ({ state }) => {
     searchQuery: state.searchQuery,
     tagFilterOptions,
     editSpriteGroupTagOptions,
-    editSpriteGroupsMessage:
-      "No character sprite tags yet. Add sprite tags on the Character Sprites page first.",
+    editSpriteGroupsMessage: copy.editSpriteGroupsMessage,
     selectedTagFilterValues: activeTagIds,
-    tagFilterPlaceholder: "Filter tags",
+    tagFilterPlaceholder: copy.tagFilterPlaceholder,
     detailTagAddOption: {
-      label: "Add tag",
+      label: copy.addTagOption,
     },
     resourceType: "characters",
-    title: "Characters",
-    folderContextMenuItems,
-    itemContextMenuItems,
-    emptyContextMenuItems,
+    title: copy.title,
+    folderContextMenuItems: createFolderContextMenuItems(copy),
+    itemContextMenuItems: createItemContextMenuItems(copy),
+    emptyContextMenuItems: createEmptyContextMenuItems(copy),
     isFolderNameDialogOpen: state.isFolderNameDialogOpen,
     folderNameDialogItemId: state.folderNameDialogItemId,
-    folderNameForm,
+    folderNameForm: createFolderNameForm(copy),
     folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
     isDialogOpen: state.isDialogOpen,
     dialogDefaultValues: state.dialogDefaultValues,
     dialogSpriteGroups: buildDraftSpriteGroupViewData({
       spriteGroups: state.dialogSpriteGroups,
       tagsById: {},
+      copy,
     }),
     dialogForm: createCharacterDialogForm({
       tagOptions: tagFilterOptions,
       nameVariableOptions,
+      copy,
     }),
     spriteGroupDropdownMenu: state.spriteGroupDropdownMenu,
     isSpriteGroupDialogOpen: state.isSpriteGroupDialogOpen,
@@ -1099,10 +1102,11 @@ export const selectViewData = ({ state }) => {
     spriteGroupDialogForm: createSpriteGroupDialogForm({
       tagOptions: editSpriteGroupTagOptions,
       isEditing: Number.isInteger(state.spriteGroupDialogIndex),
+      copy,
     }),
     isCreateTagDialogOpen: state.isCreateTagDialogOpen,
     createTagDefaultValues: state.createTagDefaultValues,
-    createTagForm,
+    createTagForm: createTagForm(copy),
     avatarFileId: state.avatarFileId,
     isAvatarCropDialogOpen: state.isAvatarCropDialogOpen,
     avatarCropFile: state.avatarCropFile,
@@ -1114,8 +1118,9 @@ export const selectViewData = ({ state }) => {
     editSpriteGroups: buildDraftSpriteGroupViewData({
       spriteGroups: state.editSpriteGroups,
       tagsById: editSpriteTagsCollection.items ?? {},
+      copy,
     }),
   };
 };
 
-export { CHARACTER_TAG_SCOPE_KEY, SPRITE_GROUPS_CREATE_MESSAGE };
+export { CHARACTER_TAG_SCOPE_KEY };

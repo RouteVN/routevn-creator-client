@@ -1,3 +1,6 @@
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { selectAboutPageCopy } from "./support/aboutPageCopy.js";
+
 const social = [
   {
     id: "website",
@@ -48,7 +51,9 @@ export const selectSocial = (_, payload) => {
   return social.find((s) => s.id === id);
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectAboutPageCopy(i18n);
+
   return {
     ...state,
     social,
@@ -57,6 +62,17 @@ export const selectViewData = ({ state }) => {
     contentBodyPadding: state.isTouchMode ? "lg" : "0",
     contentBodyMarginTop: state.isTouchMode ? "0" : "lg",
     communityItemsDirection: state.isTouchMode ? "v" : "h",
+    title: copy.title ?? "About",
+    versionInformationTitle:
+      copy.versionInformationTitle ?? "Version Information",
+    appVersionText: formatI18nCopy(
+      copy.appVersionText ?? "RouteVN Creator {appVersion}",
+      {
+        appVersion: state.appVersion,
+      },
+    ),
+    checkForUpdatesButton: copy.checkForUpdatesButton ?? "Check for Updates",
+    communityTitle: copy.communityTitle ?? "Community",
   };
 };
 

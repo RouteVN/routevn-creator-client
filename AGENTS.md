@@ -69,6 +69,18 @@ Read the links from the following files to familiarize with the code before star
 If you need deeper or broader Rettangoli framework reference material, use
 `https://rettangoli.dev/llms.txt` as the framework reference index.
 
+## Localization
+
+- Rettangoli stores/selectors receive `i18n` in their context, and handlers
+  receive `deps.i18n`.
+- Do not thread catalog strings through child component props such as `copy` or
+  `labels` only to make localization available.
+- Components that own localized UI text should read from `i18n` in their own
+  store/handlers. If a copy selector is shared across modules, put it in
+  `src/internal/ui/` instead of importing from a page support folder.
+- Use copy-like props only when a reusable component is intentionally
+  parameterized by caller-provided labels or product-specific wording.
+
 ## JavaScript Style
 
 - Prefer direct property access or nullish coalescing (`??`) for defaults.

@@ -101,7 +101,7 @@ template:
               - $if navTitle:
                   - rtgl-text: ${navTitle}
           - $if showSearch:
-              - rtgl-input#searchInput s=sm placeholder="Search variables..." value=${searchQuery} h=1fg: null
+              - rtgl-input#searchInput s=sm placeholder="${searchPlaceholder}" value=${searchQuery} h=1fg: null
           - $if showTagFilter:
               - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
                   - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
@@ -119,20 +119,20 @@ template:
                               - rtgl-text: ${group.fullLabel}
                           - rtgl-view w=1fg: null
                           - $if !readonly:
-                              - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm w=1fg pre=plus: Add
+                              - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm w=1fg pre=plus: ${addButton}
                       - $if !group.isCollapsed:
                           - 'rtgl-view w=f mb=md p=sm style="min-height: ${group.progressiveContentMinHeight}px;"':
                               - $if group.hasChildren:
                                   - rtgl-view w=f:
                                       - rtgl-view d=h w=f pv=sm bwb=xs g=md:
                                           - rtgl-view w=2fg:
-                                              - rtgl-text c=mu-fg s=sm: Name
+                                              - rtgl-text c=mu-fg s=sm: ${nameLabel}
                                           - rtgl-view w=1fg:
-                                              - rtgl-text c=mu-fg s=sm: Scope
+                                              - rtgl-text c=mu-fg s=sm: ${scopeLabel}
                                           - rtgl-view w=1fg:
-                                              - rtgl-text c=mu-fg s=sm: Type
+                                              - rtgl-text c=mu-fg s=sm: ${typeLabel}
                                           - rtgl-view w=1fg:
-                                              - rtgl-text c=mu-fg s=sm: Default
+                                              - rtgl-text c=mu-fg s=sm: ${defaultLabel}
                                       - $for item, j in group.children:
                                           - $if item.isPlaceholder:
                                               - rtgl-view#rowRef${i}x${j} data-item-id=${item.domItemId} d=h w=f h=36 av=c bwb=xs cur=${item.cursor} g=md:
@@ -149,7 +149,7 @@ template:
                                                   - rtgl-view w=2fg d=h av=c g=sm:
                                                       - rtgl-text s=sm: ${item.name}
                                                       - $if item.isEnum:
-                                                          - rtgl-tag v=mu s=sm: Enum
+                                                          - rtgl-tag v=mu s=sm: ${enumLabel}
                                                   - rtgl-view w=1fg av=c:
                                                       - rtgl-text s=sm: ${item.scope}
                                                   - rtgl-view w=1fg av=c:
@@ -161,7 +161,7 @@ template:
                                                   - rtgl-view w=2fg d=h av=c g=sm:
                                                       - rtgl-text s=sm: ${item.name}
                                                       - $if item.isEnum:
-                                                          - rtgl-tag v=mu s=sm: Enum
+                                                          - rtgl-tag v=mu s=sm: ${enumLabel}
                                                   - rtgl-view w=1fg av=c:
                                                       - rtgl-text s=sm: ${item.scope}
                                                   - rtgl-view w=1fg av=c:
@@ -171,17 +171,17 @@ template:
                                 $else:
                                   - $if readonly:
                                       - rtgl-view w=f h=150 av=c ah=c:
-                                          - rtgl-text c=mu-fg: No variables in this group
+                                          - rtgl-text c=mu-fg: ${noVariablesInGroupMessage}
                                     $else:
                                       - rtgl-view#addVariableEmptyRef${i} data-group-id=${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
                                           - rtgl-svg svg=plus wh=24: null
-                                          - rtgl-text: Add Variable
+                                          - rtgl-text: ${addVariableButton}
             $elif searchQuery || selectedTagFilterValues.length > 0:
               - rtgl-view w=f h=400 av=c ah=c:
-                  - rtgl-text s=lg c=mu-fg: No variables found
+                  - rtgl-text s=lg c=mu-fg: ${noVariablesFoundMessage}
             $else:
               - rtgl-view w=f h=f av=c ah=c:
-                  - rtgl-text s=lg c=mu-fg: No data
+                  - rtgl-text s=lg c=mu-fg: ${noDataMessage}
                   - rtgl-view h=64: null
           - $if flatGroups.length > 0:
               - rtgl-view h=33vh: null
@@ -196,19 +196,19 @@ template:
                                   - rtgl-view#enumValueItemRef${i} data-index=${option.index} d=h av=c g=xs ph=md pv=xs bw=xs bc=bo br=md bgc=bg h-bgc=mu cur=context-menu:
                                       - rtgl-text s=sm: ${option.label}
                         $else:
-                          - rtgl-text s=sm c=mu-fg: No values yet
+                          - rtgl-text s=sm c=mu-fg: ${noValuesYetMessage}
                       - rtgl-view d=h w=f:
-                          - rtgl-button#enumAddValueButton s=sm v=se pre=plus: Add Value
+                          - rtgl-button#enumAddValueButton s=sm v=se pre=plus: ${addValueButton}
       - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
       - rtgl-popover#enumValuePopover ?open=${enumValuePopover.isOpen} x=${enumValuePopover.x} y=${enumValuePopover.y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
           - rtgl-form#enumValueForm key=${enumValuePopover.key} :defaultValues=${enumValueDefaultValues} :form=${enumValueForm} w=f: null
       - rtgl-dropdown-menu#enumValueMenu :items=${enumValueMenu.items} ?open=${enumValueMenu.isOpen} x=${enumValueMenu.x} y=${enumValueMenu.y}: null
   - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
       - $if showFilterPopoverSearch:
-          - rtgl-text s=md: Filter
-          - rtgl-input#searchInput s=sm placeholder="Search variables..." value=${searchQuery} w=f: null
+          - rtgl-text s=md: ${filterLabel}
+          - rtgl-input#searchInput s=sm placeholder="${searchPlaceholder}" value=${searchQuery} w=f: null
       - $if !tagFilterPopover.hasOptions:
-          - rtgl-text s=sm c=mu-fg: No tags available
+          - rtgl-text s=sm c=mu-fg: ${noTagsAvailableMessage}
       - $if tagFilterPopover.hasOptions:
           - rtgl-view d=h wrap g=sm w=f:
               - $for option, i in tagFilterPopover.options:
@@ -217,5 +217,5 @@ template:
                           ${option.label}
       - rtgl-view d=h av=c g=sm w=f pt=sm:
           - rtgl-view w=1fg: null
-          - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: Clear
-          - rtgl-button#tagFilterApply v=pr s=sm: Save
+          - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: ${clearButton}
+          - rtgl-button#tagFilterApply v=pr s=sm: ${saveButton}

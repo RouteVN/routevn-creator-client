@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   applyPreviewImageSelectorSelection,
   closePreviewImageSelectorDialog,
@@ -51,7 +52,9 @@ describe("transforms.store", () => {
       },
     );
 
-    expect(selectViewData({ state }).previewPanel.items[0]).toMatchObject({
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).previewPanel.items[0],
+    ).toMatchObject({
       target: "preview-background",
       image: expect.objectContaining({
         previewFileId: "thumb-bg",
@@ -60,7 +63,9 @@ describe("transforms.store", () => {
 
     closePreviewImageSelectorDialog({ state });
 
-    expect(selectViewData({ state }).previewPanel.items[0]).toMatchObject({
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).previewPanel.items[0],
+    ).toMatchObject({
       target: "preview-background",
       image: undefined,
     });
@@ -85,7 +90,9 @@ describe("transforms.store", () => {
 
     commitPreviewImageSelectorSelection({ state });
 
-    expect(selectViewData({ state }).previewPanel.items[0]).toMatchObject({
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).previewPanel.items[0],
+    ).toMatchObject({
       target: "preview-background",
       image: expect.objectContaining({
         previewFileId: "thumb-bg",
@@ -117,15 +124,30 @@ describe("transforms.store", () => {
         target: "preview-background",
         x: 120,
         y: 240,
+        items: [
+          {
+            label: EN_I18N.resourcePages.removeMenuItem,
+            type: "item",
+            value: "remove",
+          },
+        ],
       },
     );
 
     expect(selectPreviewImageMenuTarget({ state })).toBe("preview-background");
-    expect(selectViewData({ state }).previewImageMenu).toMatchObject({
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).previewImageMenu,
+    ).toMatchObject({
       isOpen: true,
       x: 120,
       y: 240,
-      items: [{ label: "Remove", type: "item", value: "remove" }],
+      items: [
+        {
+          label: EN_I18N.resourcePages.removeMenuItem,
+          type: "item",
+          value: "remove",
+        },
+      ],
     });
 
     clearPreviewImage(
@@ -137,11 +159,15 @@ describe("transforms.store", () => {
     closePreviewImageMenu({ state });
 
     expect(selectDialogPreviewData({ state })).toBeUndefined();
-    expect(selectViewData({ state }).previewPanel.items[0]).toMatchObject({
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).previewPanel.items[0],
+    ).toMatchObject({
       target: "preview-background",
       image: undefined,
     });
-    expect(selectViewData({ state }).previewImageMenu).toMatchObject({
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).previewImageMenu,
+    ).toMatchObject({
       isOpen: false,
       items: [],
     });
@@ -177,20 +203,22 @@ describe("transforms.store", () => {
         imageId: "image-bg",
       },
     });
-    expect(selectViewData({ state }).previewPanel.items).toEqual([
-      expect.objectContaining({
-        target: "preview-background",
-        image: expect.objectContaining({
-          previewFileId: "thumb-bg",
+    expect(selectViewData({ state, i18n: EN_I18N }).previewPanel.items).toEqual(
+      [
+        expect.objectContaining({
+          target: "preview-background",
+          image: expect.objectContaining({
+            previewFileId: "thumb-bg",
+          }),
         }),
-      }),
-      expect.objectContaining({
-        target: "preview-target",
-        image: expect.objectContaining({
-          previewFileId: "thumb-bg",
+        expect.objectContaining({
+          target: "preview-target",
+          image: expect.objectContaining({
+            previewFileId: "thumb-bg",
+          }),
         }),
-      }),
-    ]);
+      ],
+    );
   });
 
   it("resolves double-click preview images to thumbnail file ids", () => {
@@ -204,7 +232,7 @@ describe("transforms.store", () => {
       },
     );
 
-    expect(selectViewData({ state })).toMatchObject({
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       fullImagePreviewVisible: true,
       fullImagePreviewImageId: "image-bg",
       fullImagePreviewFileId: "thumb-bg",
@@ -220,7 +248,7 @@ describe("transforms.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const form = viewData.importForm;
     const urlField = form.fields.find((field) => field.name === "url");
     const sourceField = form.fields.find(
@@ -283,7 +311,7 @@ describe("transforms.store", () => {
       },
     );
 
-    const form = selectViewData({ state }).importForm;
+    const form = selectViewData({ state, i18n: EN_I18N }).importForm;
     const transformFolderField = form.fields.find(
       (field) => field.name === "transformFolderId",
     );
@@ -323,7 +351,7 @@ describe("transforms.store", () => {
       },
     );
 
-    expect(selectViewData({ state })).toMatchObject({
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       isDialogOpen: true,
       isPreviewOnlyDialog: true,
       dialogPreviewFileId: "preview-transform",

@@ -2,14 +2,7 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolution,
 } from "../../internal/projectResolution.js";
-
-const PROJECT_ACTION_MENU_ITEMS = [
-  {
-    label: "Export project",
-    type: "item",
-    value: "export",
-  },
-];
+import { selectProjectPageCopy } from "./support/projectPageCopy.js";
 
 export const createInitialState = () => ({
   platform: "web",
@@ -51,13 +44,11 @@ export const setCurrentProject = ({ state }, { project } = {}) => {
   };
 };
 
-export const openProjectActionMenu = ({ state }, { x, y } = {}) => {
+export const openProjectActionMenu = ({ state }, { x, y, items } = {}) => {
   state.projectActionMenu.isOpen = true;
   state.projectActionMenu.x = x ?? 0;
   state.projectActionMenu.y = y ?? 0;
-  state.projectActionMenu.items = PROJECT_ACTION_MENU_ITEMS.map((item) => ({
-    ...item,
-  }));
+  state.projectActionMenu.items = items ?? [];
 };
 
 export const closeProjectActionMenu = ({ state }) => {
@@ -108,7 +99,24 @@ export const closeEditIconCropDialog = ({ state }) => {
   state.editIconCropFile = undefined;
 };
 
-export const selectViewData = ({ state, constants }) => {
+export const selectEditDefaultValues = ({ state }) => {
+  return state.editDefaultValues;
+};
+
+export const selectEditIconFileId = ({ state }) => {
+  return state.editIconFileId;
+};
+
+export const selectCurrentProject = ({ state }) => {
+  return state.project;
+};
+
+export const selectIsEditIconCropDialogOpen = ({ state }) => {
+  return Boolean(state.isEditIconCropDialogOpen);
+};
+
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectProjectPageCopy(i18n);
   const detailFields = [
     {
       type: "slot",
@@ -127,10 +135,42 @@ export const selectViewData = ({ state, constants }) => {
     },
     {
       type: "text",
-      label: "Resolution",
+      label: copy.resolutionLabel,
       value: formatProjectResolution(state.project.resolution),
     },
   ];
+  const editForm = {
+    title: copy.editProjectTitle,
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: copy.projectNameLabel,
+        required: true,
+      },
+      {
+        name: "description",
+        type: "input-textarea",
+        label: copy.descriptionLabel,
+        required: false,
+      },
+      {
+        type: "slot",
+        slot: "project-icon-edit",
+        label: copy.projectIconLabel,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: copy.saveChangesButton,
+        },
+      ],
+    },
+  };
 
   return {
     detailFields,
@@ -142,9 +182,9 @@ export const selectViewData = ({ state, constants }) => {
     editDefaultValues: state.editDefaultValues,
     editIconFileId: state.editIconFileId,
     editIconCropFile: state.editIconCropFile,
-    editForm: constants.editProjectForm,
+    editForm,
     isProjectExportLoading: state.isProjectExportLoading,
-    projectExportLoadingStatusText: "Exporting project...",
+    projectExportLoadingStatusText: copy.exportingProject,
     projectSource: state.project.source,
     projectActionMenu: state.projectActionMenu,
     showAndroidProjectActions:

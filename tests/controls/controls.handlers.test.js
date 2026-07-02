@@ -3,6 +3,7 @@ import {
   createControlTemplate,
   handleKeyboardActionsChange,
 } from "../../src/pages/controls/controls.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("createControlTemplate", () => {
   const projectResolution = {
@@ -31,6 +32,7 @@ describe("handleKeyboardActionsChange", () => {
       appService: {
         showAlert: vi.fn(),
       },
+      i18n: EN_I18N,
       projectService: {
         updateControlItem,
         getRepositoryState: () => ({
@@ -95,6 +97,7 @@ describe("handleKeyboardActionsChange", () => {
       appService: {
         showAlert: vi.fn(),
       },
+      i18n: EN_I18N,
       projectService: {
         updateControlItem,
         getRepositoryState: () => ({

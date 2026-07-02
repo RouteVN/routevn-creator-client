@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   addPendingUploads,
   createInitialState,
@@ -55,7 +56,7 @@ describe("characterSprites store", () => {
       },
     );
 
-    const viewDataWhilePending = selectViewData({ state });
+    const viewDataWhilePending = selectViewData({ state, i18n: EN_I18N });
     expect(
       viewDataWhilePending.mediaGroups[0].children.map((child) => child.id),
     ).toEqual(["pending-sprite-1"]);
@@ -67,7 +68,7 @@ describe("characterSprites store", () => {
       },
     );
 
-    const viewDataAfterPending = selectViewData({ state });
+    const viewDataAfterPending = selectViewData({ state, i18n: EN_I18N });
     expect(
       viewDataAfterPending.mediaGroups[0].children.map((child) => child.id),
     ).toEqual(["sprite-1"]);
@@ -130,7 +131,7 @@ describe("characterSprites store", () => {
       },
     );
 
-    const filteredViewData = selectViewData({ state });
+    const filteredViewData = selectViewData({ state, i18n: EN_I18N });
     expect(
       filteredViewData.mediaGroups[0].children.map((child) => child.id),
     ).toEqual(["sprite-1"]);
@@ -142,13 +143,13 @@ describe("characterSprites store", () => {
       },
     );
 
-    const orFilteredViewData = selectViewData({ state });
+    const orFilteredViewData = selectViewData({ state, i18n: EN_I18N });
     expect(
       orFilteredViewData.mediaGroups[0].children.map((child) => child.id),
     ).toEqual(["sprite-1", "sprite-2"]);
 
     state.searchQuery = "attack";
-    const searchViewData = selectViewData({ state });
+    const searchViewData = selectViewData({ state, i18n: EN_I18N });
     expect(
       searchViewData.mediaGroups[0].children.map((child) => child.id),
     ).toEqual(["sprite-2"]);
@@ -160,7 +161,7 @@ describe("characterSprites store", () => {
       },
     );
 
-    const searchOnlyViewData = selectViewData({ state });
+    const searchOnlyViewData = selectViewData({ state, i18n: EN_I18N });
     expect(
       searchOnlyViewData.mediaGroups[0].children.map((child) => child.id),
     ).toEqual(["sprite-2"]);
@@ -241,7 +242,7 @@ describe("characterSprites store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.selectedItemSpriteGroups).toEqual([
       {
@@ -278,7 +279,7 @@ describe("characterSprites store", () => {
       },
     };
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.editForm.fields[2]).toMatchObject({
       name: "tagIds",
@@ -337,7 +338,7 @@ describe("characterSprites store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.mediaGroups[0].children[0]).toMatchObject({
       id: "sheet-1",
@@ -409,7 +410,7 @@ describe("characterSprites store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.isSpritesheetDialogOpen).toBe(true);
     expect(viewData.spritesheetDialogTitle).toBe("Add Spritesheet");
@@ -481,7 +482,7 @@ describe("characterSprites store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     expect(state.fullImagePreviewVisible).toBe(true);
     expect(state.fullImagePreviewFileId).toBe("original-file");
     expect(viewData.fullImagePreviewFrameStyle).toContain(
@@ -549,7 +550,7 @@ describe("characterSprites store", () => {
       },
     );
 
-    const canvasViewData = selectViewData({ state });
+    const canvasViewData = selectViewData({ state, i18n: EN_I18N });
     expect(canvasViewData.fullImagePreviewFrameStyle).toContain(
       "aspect-ratio: 1080 / 1920",
     );
@@ -567,7 +568,7 @@ describe("characterSprites store", () => {
       },
     );
 
-    const fitViewData = selectViewData({ state });
+    const fitViewData = selectViewData({ state, i18n: EN_I18N });
     expect(state.fullImagePreviewDisplayMode).toBe("fit");
     expect(fitViewData.fullImagePreviewImageWrapperStyle).toBe(
       "position: absolute; inset: 0;",

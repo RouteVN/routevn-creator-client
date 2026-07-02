@@ -22,6 +22,7 @@ import {
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import { IMAGE_TAG_SCOPE_KEY } from "./images.store.js";
+import { selectImagesPageCopy } from "./support/imagesPageCopy.js";
 
 const MAX_PARALLEL_UPLOADS = 1;
 const IMAGE_FILE_PATTERN = /\.(jpg|jpeg|png|webp)$/i;
@@ -37,19 +38,19 @@ const IMAGE_FILE_ACCEPT = [
   ".png",
   ".webp",
 ].join(",");
-const INVALID_IMAGE_FORMAT_MESSAGE =
-  "Only JPG/JPEG, PNG, and WEBP images are supported.";
 const FULL_IMAGE_PREVIEW_SWIPE_MIN_DISTANCE_PX = 48;
 const FULL_IMAGE_PREVIEW_SWIPE_MAX_VERTICAL_RATIO = 0.75;
 
-const showInvalidFormatToast = (appService) => {
+const selectCopy = (deps = {}) => selectImagesPageCopy(deps.i18n);
+
+const showInvalidFormatToast = (appService, copy) => {
   appService.showAlert({
-    message: INVALID_IMAGE_FORMAT_MESSAGE,
-    title: "Warning",
+    message: copy.invalidFormatMessage,
+    title: copy.warningTitle,
   });
 };
 
-const validateImageFiles = ({ appService, files } = {}) => {
+const validateImageFiles = ({ appService, files, copy } = {}) => {
   const invalidFiles = Array.from(files ?? []).filter((file) => {
     return (
       !IMAGE_FILE_MIME_TYPES.has(file?.type) &&
@@ -61,11 +62,15 @@ const validateImageFiles = ({ appService, files } = {}) => {
     return true;
   }
 
-  showInvalidFormatToast(appService);
+  showInvalidFormatToast(appService, copy);
   return false;
 };
 
-const pickAndUploadImage = async ({ appService, projectService } = {}) => {
+const pickAndUploadImage = async ({
+  appService,
+  projectService,
+  copy,
+} = {}) => {
   let file;
 
   try {
@@ -81,7 +86,7 @@ const pickAndUploadImage = async ({ appService, projectService } = {}) => {
     return { cancelled: true };
   }
 
-  if (!validateImageFiles({ appService, files: [file] })) {
+  if (!validateImageFiles({ appService, files: [file], copy })) {
     return { errorType: "validation-failed" };
   }
 
@@ -155,6 +160,7 @@ const {
     tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId ?? item?.fileId,
+  copy: ({ i18n }) => selectImagesPageCopy(i18n),
   tagging: {
     scopeKey: IMAGE_TAG_SCOPE_KEY,
     updateItemTagIds: ({ deps, itemId, tagIds }) =>
@@ -164,7 +170,8 @@ const {
           tagIds,
         },
       }),
-    updateItemTagFallbackMessage: "Failed to update image tags.",
+    updateItemTagFallbackMessage: ({ deps }) =>
+      selectCopy(deps).failedUpdateTags,
     appendCreatedTagByMode: ({ deps, mode, tagId }) => {
       if (mode !== "edit-form") {
         return;
@@ -599,8 +606,9 @@ export const handleEditFormAddOptionClick = (deps) => {
 
 const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
 
-  if (!validateImageFiles({ appService, files })) {
+  if (!validateImageFiles({ appService, files, copy })) {
     return;
   }
 
@@ -622,7 +630,7 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
 
       const createAttempt = await runResourcePageMutation({
         appService,
-        fallbackMessage: "Failed to create image.",
+        fallbackMessage: copy.failedCreateImage,
         action: () =>
           projectService.importImageFile({
             file,
@@ -642,7 +650,7 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
       showResourcePageError({
         appService,
         errorOrResult: error,
-        fallbackMessage: "Failed to upload images.",
+        fallbackMessage: copy.failedUploadImages,
       });
     },
     onNoSuccessfulUploads: ({ fileCount }) => {
@@ -650,8 +658,8 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
         fileCount,
       });
       appService.showAlert({
-        message: "Failed to upload images.",
-        title: "Error",
+        message: copy.failedUploadImages,
+        title: copy.errorTitle,
       });
     },
   });
@@ -659,6 +667,7 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
 
 export const handleUploadClick = async (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const { groupId } = payload._event.detail;
   let files;
 
@@ -671,7 +680,7 @@ export const handleUploadClick = async (deps, payload) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select files.",
+      fallbackMessage: copy.failedSelectFiles,
     });
     return;
   }
@@ -680,7 +689,7 @@ export const handleUploadClick = async (deps, payload) => {
     return;
   }
 
-  if (!validateImageFiles({ appService, files })) {
+  if (!validateImageFiles({ appService, files, copy })) {
     return;
   }
 
@@ -693,10 +702,11 @@ export const handleUploadClick = async (deps, payload) => {
 
 export const handleFilesDropped = async (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const { files, rejectedFiles, targetGroupId } = payload._event.detail;
 
   if ((!files || files.length === 0) && (rejectedFiles?.length ?? 0) > 0) {
-    showInvalidFormatToast(appService);
+    showInvalidFormatToast(appService, copy);
     return;
   }
 
@@ -709,23 +719,25 @@ export const handleFilesDropped = async (deps, payload) => {
 
 export const handleFilesDropRejected = (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const rejectedFiles = payload._event.detail?.rejectedFiles ?? [];
 
   if (rejectedFiles.length === 0) {
     return;
   }
 
-  showInvalidFormatToast(appService);
+  showInvalidFormatToast(appService, copy);
 };
 
 export const handleFormExtraEvent = async (deps) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
     return;
   }
 
-  const result = await pickAndUploadImage({ appService, projectService });
+  const result = await pickAndUploadImage({ appService, projectService, copy });
   if (result.cancelled) {
     return;
   }
@@ -734,7 +746,7 @@ export const handleFormExtraEvent = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: result.error,
-      fallbackMessage: "Failed to select file.",
+      fallbackMessage: copy.failedSelectFile,
     });
     return;
   }
@@ -745,8 +757,8 @@ export const handleFormExtraEvent = async (deps) => {
 
   if (result.errorType === "upload-failed") {
     appService.showAlert({
-      message: "Failed to upload image.",
-      title: "Error",
+      message: copy.failedUploadImage,
+      title: copy.errorTitle,
     });
     return;
   }
@@ -754,7 +766,7 @@ export const handleFormExtraEvent = async (deps) => {
   const { uploadResult } = result;
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update image.",
+    fallbackMessage: copy.failedUpdateImage,
     action: () =>
       projectService.updateImage({
         imageId: selectedItem.id,
@@ -938,8 +950,9 @@ export const handleEditDialogClose = (deps) => {
 
 export const handleEditDialogImageClick = async (deps) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
 
-  const result = await pickAndUploadImage({ appService, projectService });
+  const result = await pickAndUploadImage({ appService, projectService, copy });
   if (result.cancelled) {
     return;
   }
@@ -948,7 +961,7 @@ export const handleEditDialogImageClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: result.error,
-      fallbackMessage: "Failed to select file.",
+      fallbackMessage: copy.failedSelectFile,
     });
     return;
   }
@@ -959,8 +972,8 @@ export const handleEditDialogImageClick = async (deps) => {
 
   if (result.errorType === "upload-failed") {
     appService.showAlert({
-      message: "Failed to upload image.",
-      title: "Error",
+      message: copy.failedUploadImage,
+      title: copy.errorTitle,
     });
     return;
   }
@@ -975,6 +988,7 @@ export const handleEditDialogImageClick = async (deps) => {
 
 export const handleEditFormAction = async (deps, payload) => {
   const { appService, projectService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -983,8 +997,8 @@ export const handleEditFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Image name is required.",
-      title: "Warning",
+      message: copy.nameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -1003,7 +1017,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update image.",
+    fallbackMessage: copy.failedUpdateImage,
     action: () =>
       projectService.updateImage({
         imageId: editItemId,
@@ -1027,6 +1041,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render, store } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   const result = await projectService.deleteImageIfUnused({
     imageId: itemId,
@@ -1036,8 +1051,8 @@ export const handleItemDelete = async (deps, payload) => {
   if (!result.deleted) {
     appService.showAlert({
       message: result.usage?.isUsed
-        ? "Cannot delete resource, it is currently in use."
-        : "Failed to delete resource.",
+        ? copy.cannotDeleteResourceInUse
+        : copy.failedDeleteResource,
     });
     render();
     return;

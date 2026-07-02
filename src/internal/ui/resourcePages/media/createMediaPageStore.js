@@ -31,23 +31,49 @@ import {
 
 const EMPTY_TREE = { tree: [], items: {} };
 
-const folderContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-child-folder" },
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createFolderContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-child-folder",
+  },
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const itemContextMenuItems = [
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createItemContextMenuItems = (copy = {}) => [
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const emptyContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-item" },
+const createEmptyContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-item",
+  },
 ];
 
-const createCenterItemContextMenuItems = (previewMenuLabel) => {
-  const items = [{ label: "Edit", type: "item", value: "edit-item" }];
+const createMediaCenterItemContextMenuItems = (previewMenuLabel, copy = {}) => {
+  const items = [
+    { label: copy.editMenuItem ?? "Edit", type: "item", value: "edit-item" },
+  ];
 
   if (previewMenuLabel) {
     items.push({
@@ -57,9 +83,42 @@ const createCenterItemContextMenuItems = (previewMenuLabel) => {
     });
   }
 
-  items.push({ label: "Delete", type: "item", value: "delete-item" });
+  items.push({
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  });
   return items;
 };
+
+const createFolderNameForm = (copy = {}) => ({
+  title: copy.editFolderTitle ?? "Edit Folder",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: copy.nameLabel ?? "Name",
+      required: true,
+    },
+    {
+      name: "description",
+      type: "input-textarea",
+      label: copy.descriptionLabel ?? "Description",
+      required: false,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: copy.saveButton ?? "Save",
+        validate: true,
+      },
+    ],
+  },
+});
 
 const defaultMatchesSearch = (item, searchQuery) => {
   if (!searchQuery) {
@@ -95,12 +154,17 @@ export const createMediaPageStore = ({
   hiddenMobileDetailSlots = [],
   extendViewData,
   tagging,
+  copy: copySelector,
 }) => {
+  const resolveCopy = (i18n) => {
+    if (typeof copySelector === "function") {
+      return copySelector(i18n);
+    }
+
+    return copySelector ?? {};
+  };
   const taggingEnabled = !!tagging;
   const createEmptyTagsCollection = tagging?.createEmptyTagsCollection;
-  const createTagFormDefinition =
-    tagging?.createTagForm ?? createDefaultTagForm();
-  const editForm = createEditForm();
   const createEmptyEditDefaultValues = () => ({
     name: "",
     description: "",
@@ -109,37 +173,6 @@ export const createMediaPageStore = ({
     name: "",
     description: "",
   });
-  const folderNameForm = {
-    title: "Edit Folder",
-    fields: [
-      {
-        name: "name",
-        type: "input-text",
-        label: "Name",
-        required: true,
-      },
-      {
-        name: "description",
-        type: "input-textarea",
-        label: "Description",
-        required: false,
-      },
-    ],
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: "Save",
-          validate: true,
-        },
-      ],
-    },
-  };
-  const resolvedCenterItemContextMenuItems =
-    centerItemContextMenuItems ??
-    createCenterItemContextMenuItems(previewMenuLabel);
   const selectDataItem = (state, itemId) => {
     const item = state.data?.items?.[itemId];
     return item?.type === itemType ? item : undefined;
@@ -424,12 +457,28 @@ export const createMediaPageStore = ({
     });
   };
 
-  const selectViewData = ({ state }) => {
+  const selectViewData = ({ state, i18n }) => {
+    const copy = resolveCopy(i18n);
+    const resolvedTitle = copy.title ?? title;
+    const resolvedPreviewMenuLabel =
+      copy.previewMenuLabel ?? copy.previewMenuItem ?? previewMenuLabel;
+    const resolvedCenterItemContextMenuItems =
+      centerItemContextMenuItems ??
+      createMediaCenterItemContextMenuItems(resolvedPreviewMenuLabel, copy);
+    const createTagFormDefinition =
+      typeof tagging?.createTagForm === "function"
+        ? tagging.createTagForm({ copy })
+        : (tagging?.createTagForm ??
+          createDefaultTagForm({
+            title: copy.createTagTitle,
+            submitLabel: copy.createTagButton,
+            nameLabel: copy.tagNameLabel,
+          }));
     const flatItems = toFlatItems(state.data);
     const rawFlatGroups = prependRootItemsGroup({
       data: state.data,
       groups: toFlatGroups(state.data),
-      label: title,
+      label: resolvedTitle,
     });
     const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
     const pendingByGroupId = new Map();
@@ -492,8 +541,18 @@ export const createMediaPageStore = ({
         })
       : unfilteredMediaGroups;
     const detailFields = selectedItem
-      ? buildDetailFields(selectedItem)
-      : buildFolderDetailFields(selectedFolder);
+      ? buildDetailFields(selectedItem, { copy })
+      : buildFolderDetailFields(selectedFolder).map((field) => {
+          if (field.label === "Type") {
+            return {
+              ...field,
+              label: copy.typeLabel ?? field.label,
+              value: copy.folderTypeValue ?? field.value,
+            };
+          }
+
+          return field;
+        });
     const mobileViewData = buildMobileResourcePageViewData({
       state,
       detailFields,
@@ -511,36 +570,46 @@ export const createMediaPageStore = ({
       selectedDetailName,
       selectedItemName: selectedDetailName,
       searchQuery: state.searchQuery,
-      searchPlaceholder,
+      searchPlaceholder: copy.searchPlaceholder ?? searchPlaceholder,
       resourceType,
-      title,
-      uploadText,
+      title: resolvedTitle,
+      uploadText: copy.uploadButton ?? uploadText,
       acceptedFileTypes,
       imageHeight,
       maxWidth,
       showZoomControls,
       selectedPreviewFileId: getSelectedPreviewFileId(selectedItem),
       detailFields,
-      folderContextMenuItems,
-      itemContextMenuItems,
-      emptyContextMenuItems,
+      addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
+      deleteButton: copy.deleteButton ?? "Delete",
+      duplicateButton: copy.duplicateButton ?? "Duplicate",
+      filesLabel: copy.filesLabel ?? "Files",
+      loadingLabel: copy.loadingLabel ?? "Loading...",
+      noSelectionLabel: copy.noSelectionLabel ?? "No selection",
+      openButton: copy.openButton ?? "Open",
+      previewButton: copy.previewMenuItem ?? "Preview",
+      folderContextMenuItems: createFolderContextMenuItems(copy),
+      itemContextMenuItems: createItemContextMenuItems(copy),
+      emptyContextMenuItems: createEmptyContextMenuItems(copy),
       centerItemContextMenuItems: resolvedCenterItemContextMenuItems,
       isEditDialogOpen: state.isEditDialogOpen,
       editItemId: state.editItemId,
-      editForm,
+      editForm: createEditForm({ copy }),
       editDefaultValues: state.editDefaultValues,
       editPreviewFileId: state.editPreviewFileId,
       isFolderNameDialogOpen: state.isFolderNameDialogOpen,
       folderNameDialogItemId: state.folderNameDialogItemId,
-      folderNameForm,
+      folderNameForm: createFolderNameForm(copy),
       folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
       ...(taggingEnabled
         ? buildTagViewData({
             state,
             selectedItem,
             createTagFormDefinition,
-            tagFilterPlaceholder: tagging?.tagFilterPlaceholder,
-            detailTagAddOptionLabel: tagging?.detailTagAddOptionLabel,
+            tagFilterPlaceholder:
+              copy.tagFilterPlaceholder ?? tagging?.tagFilterPlaceholder,
+            detailTagAddOptionLabel:
+              copy.addTagOption ?? tagging?.detailTagAddOptionLabel,
           })
         : {}),
     };
@@ -556,6 +625,7 @@ export const createMediaPageStore = ({
       selectedItem,
       mediaGroups,
       baseViewData,
+      copy,
     });
 
     if (extendedViewData.detailFields !== baseViewData.detailFields) {

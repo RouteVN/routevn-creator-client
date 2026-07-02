@@ -8,6 +8,9 @@ import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catal
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { COLOR_TAG_SCOPE_KEY } from "./colors.store.js";
+import { selectColorsPageCopy } from "./support/colorsPageCopy.js";
+
+const selectCopy = (deps = {}) => selectColorsPageCopy(deps.i18n);
 
 const syncEditFormValues = ({ deps, values } = {}) => {
   const { editForm } = deps.refs;
@@ -70,6 +73,7 @@ const {
   handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "colors",
+  copy: ({ i18n }) => selectColorsPageCopy(i18n),
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(repositoryState, COLOR_TAG_SCOPE_KEY);
 
@@ -93,7 +97,8 @@ const {
           tagIds,
         },
       }),
-    updateItemTagFallbackMessage: "Failed to update color tags.",
+    updateItemTagFallbackMessage: ({ deps }) =>
+      selectCopy(deps).failedUpdateTags ?? "Failed to update color tags.",
     appendCreatedTagByMode: ({ deps, mode, tagId }) => {
       if (mode === "add-form") {
         appendTagIdToForm({
@@ -240,6 +245,7 @@ export const handleEditFormAddOptionClick = (deps) => {
 
 export const handleEditFormAction = async (deps, payload) => {
   const { store, projectService, appService, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -248,8 +254,8 @@ export const handleEditFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Color name is required.",
-      title: "Warning",
+      message: copy.nameRequired ?? "Color name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -263,7 +269,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update color.",
+    fallbackMessage: copy.failedUpdateColor ?? "Failed to update color.",
     action: () =>
       projectService.updateColor({
         colorId: editItemId,
@@ -296,6 +302,7 @@ export const handleAddDialogClose = (deps) => {
 
 export const handleAddFormAction = async (deps, payload) => {
   const { store, projectService, appService } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -304,15 +311,15 @@ export const handleAddFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Color name cannot be empty.",
-      title: "Warning",
+      message: copy.nameRequired ?? "Color name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
 
   const createAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to create color.",
+    fallbackMessage: copy.failedCreateColor ?? "Failed to create color.",
     action: () =>
       projectService.createColor({
         colorId: generateId(),
@@ -337,6 +344,7 @@ export const handleAddFormAction = async (deps, payload) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
 
   const usage = recursivelyCheckResource({
@@ -347,7 +355,9 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (usage.isUsed) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message:
+        copy.cannotDeleteResourceInUse ??
+        "Cannot delete resource, it is currently in use.",
     });
     render();
     return;

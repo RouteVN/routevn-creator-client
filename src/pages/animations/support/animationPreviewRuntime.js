@@ -2,6 +2,7 @@ import { createAnimationResourcePreviewStates } from "../../../internal/animatio
 import { generateId } from "../../../internal/id.js";
 import { requireProjectResolution } from "../../../internal/projectResolution.js";
 import { resolveResourceFileType } from "../../../internal/resourceFileMetadata.js";
+import { selectAnimationsPageCopy } from "./animationsPageCopy.js";
 
 const ANIMATION_PREVIEW_LOOP_PAUSE_MS = 1000;
 
@@ -464,8 +465,11 @@ export const renderSelectedAnimationPreview = async (
     });
   } catch (error) {
     console.error("[animations] Failed to render animation preview", error);
+    const copy = selectAnimationsPageCopy(deps.i18n);
     appService?.showToast?.({
-      message: "Failed to render animation preview.",
+      message:
+        copy.failedRenderAnimationPreview ??
+        "Failed to render animation preview.",
     });
   }
 };

@@ -15,9 +15,9 @@ template:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
           - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
               - 'rtgl-view w=f h=f p=lg sv style="min-width: 0;"':
-                  - rtgl-text s=h2: Appearance
+                  - rtgl-text s=h2: ${title}
                   - rtgl-view g=sm mt=lg:
-                      - rtgl-text s=h4: Themes
+                      - rtgl-text s=h4: ${themesTitle}
                   - rtgl-view d=h g=lg wrap mt=lg:
                       - $for item, i in themes:
                           - 'rtgl-view#themeCard${i} data-theme=${item.id} d=v g=md w=320 p=md bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} bgc=bg br=md cur=pointer':

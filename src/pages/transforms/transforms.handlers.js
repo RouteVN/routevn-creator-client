@@ -23,11 +23,12 @@ import {
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import { TRANSFORM_TAG_SCOPE_KEY } from "./transforms.store.js";
+import { selectTransformsPageCopy } from "./support/transformsPageCopy.js";
 
 const MARKER_SIZE = 30;
 const BG_COLOR = "#4a4a4a";
 const FALLBACK_TARGET_SIZE = 200;
-const DEFAULT_IMPORTED_TRANSFORM_NAME = "Imported Transform";
+const selectCopy = (deps = {}) => selectTransformsPageCopy(deps.i18n);
 
 const createEmptyPreviewState = () => ({
   elements: [],
@@ -247,10 +248,13 @@ const rewritePreviewImageRefs = (preview, imageIdMap = new Map()) => {
   return Object.keys(nextPreview).length > 0 ? nextPreview : undefined;
 };
 
-const normalizeImportedTransformData = (item = {}, { imageIdMap } = {}) => {
+const normalizeImportedTransformData = (
+  item = {},
+  { imageIdMap, copy } = {},
+) => {
   const anchor = isPlainObject(item.anchor) ? item.anchor : {};
   const transformData = {
-    name: `${item.name ?? ""}`.trim() || DEFAULT_IMPORTED_TRANSFORM_NAME,
+    name: `${item.name ?? ""}`.trim() || copy.importedTransformName,
     description: item.description ?? "",
     x: Math.round(toFiniteNumber(item.x, 0)),
     y: Math.round(toFiniteNumber(item.y, 0)),
@@ -375,18 +379,18 @@ const getImportItemLabel = (item, fallback) => {
   return item?.name ?? item?.id ?? fallback;
 };
 
-const getTransformItemValidationMessage = (item) => {
+const getTransformItemValidationMessage = (item, copy) => {
   if (!isPlainObject(item) || item.type !== "transform") {
-    return "No transform found to import.";
+    return copy.noTransformFoundToImport;
   }
 
-  const label = getImportItemLabel(item, "Imported transform");
+  const label = getImportItemLabel(item, copy.importedTransformName);
   if (item.name !== undefined && typeof item.name !== "string") {
-    return `Transform "${label}" name must be text.`;
+    return copy.transformNameMustBeText.replace("{label}", label);
   }
 
   if (item.description !== undefined && typeof item.description !== "string") {
-    return `Transform "${label}" description must be text.`;
+    return copy.transformDescriptionMustBeText.replace("{label}", label);
   }
 
   if (
@@ -394,7 +398,7 @@ const getTransformItemValidationMessage = (item) => {
     (!Array.isArray(item.tagIds) ||
       item.tagIds.some((tagId) => typeof tagId !== "string"))
   ) {
-    return `Transform "${label}" tags must be text ids.`;
+    return copy.transformTagsMustBeTextIds.replace("{label}", label);
   }
 
   const numberFields = [
@@ -408,12 +412,14 @@ const getTransformItemValidationMessage = (item) => {
   ];
   for (const [field, fieldLabel] of numberFields) {
     if (item[field] !== undefined && !Number.isFinite(Number(item[field]))) {
-      return `Transform "${label}" ${fieldLabel} must be a number.`;
+      return copy.transformFieldMustBeNumber
+        .replace("{label}", label)
+        .replace("{fieldLabel}", fieldLabel);
     }
   }
 
   if (item.preview !== undefined && !isPlainObject(item.preview)) {
-    return `Transform "${label}" preview must be an object.`;
+    return copy.transformPreviewMustBeObject.replace("{label}", label);
   }
 
   return undefined;
@@ -422,6 +428,7 @@ const getTransformItemValidationMessage = (item) => {
 const getTransformImageDependencyValidationMessage = ({
   importInput,
   transformItem,
+  copy,
 } = {}) => {
   const imageItemsById = getImportImageItemsById(importInput);
   const previewImageIds = collectTransformPreviewImageIds(
@@ -431,10 +438,13 @@ const getTransformImageDependencyValidationMessage = ({
   for (const imageId of previewImageIds) {
     const imageItem = imageItemsById[imageId];
     if (!isPlainObject(imageItem) || imageItem.type !== "image") {
-      return `Image dependency "${imageId}" is missing from the package.`;
+      return copy.imageDependencyMissing.replace("{imageId}", imageId);
     }
 
-    const label = `Image dependency "${getImportItemLabel(imageItem, imageItem.id)}"`;
+    const label = copy.imageDependencyLabel.replace(
+      "{label}",
+      getImportItemLabel(imageItem, imageItem.id),
+    );
     try {
       validateImportFileDescriptor({
         importInput,
@@ -444,7 +454,7 @@ const getTransformImageDependencyValidationMessage = ({
     } catch (error) {
       return getImportErrorMessage(
         error,
-        `${label} has invalid file metadata.`,
+        copy.imageDependencyInvalidFileMetadata.replace("{label}", label),
       );
     }
   }
@@ -455,14 +465,15 @@ const getTransformImageDependencyValidationMessage = ({
 const getTransformImportValidationMessage = ({
   importInput,
   transformItem,
+  copy,
 }) => {
   try {
     validateImportPackageObject(importInput);
   } catch (error) {
-    return getImportErrorMessage(error, "Import package is invalid.");
+    return getImportErrorMessage(error, copy.importPackageInvalid);
   }
 
-  const itemMessage = getTransformItemValidationMessage(transformItem);
+  const itemMessage = getTransformItemValidationMessage(transformItem, copy);
   if (itemMessage) {
     return itemMessage;
   }
@@ -470,6 +481,7 @@ const getTransformImportValidationMessage = ({
   return getTransformImageDependencyValidationMessage({
     importInput,
     transformItem,
+    copy,
   });
 };
 
@@ -478,6 +490,7 @@ const importImageDependencies = async ({
   projectService,
   imageParentId,
   transformItem,
+  copy,
 } = {}) => {
   const imageIdMap = new Map();
   const imageItems = getImportImageItems(
@@ -489,7 +502,10 @@ const importImageDependencies = async ({
     const fileDescriptor = validateImportFileDescriptor({
       importInput,
       fileId: imageItem.fileId,
-      label: `Image dependency "${imageItem.name ?? imageItem.id}"`,
+      label: copy.imageDependencyLabel.replace(
+        "{label}",
+        imageItem.name ?? imageItem.id,
+      ),
     });
 
     const file = await downloadImportFile(fileDescriptor);
@@ -510,15 +526,19 @@ const importImageDependencies = async ({
   return imageIdMap;
 };
 
-const resolveTransformImportInput = async ({ appService, values } = {}) => {
+const resolveTransformImportInput = async ({
+  appService,
+  values,
+  copy,
+} = {}) => {
   const url = `${values?.url ?? ""}`.trim();
   if (!url) {
-    showImportError(appService, "Import URL is required.");
+    showImportError(appService, copy.importUrlRequired, copy);
     return;
   }
 
   if (!isValidHttpUrl(url)) {
-    showImportError(appService, "Enter a valid http(s) URL.");
+    showImportError(appService, copy.invalidImportUrl, copy);
     return;
   }
 
@@ -529,17 +549,18 @@ const resolveTransformImportInput = async ({ appService, values } = {}) => {
       appService,
       isImportPackageValidationError(error)
         ? error.message
-        : "Package could not be loaded.",
+        : copy.packageLoadFailed,
+      copy,
     );
     return;
   }
 };
 
-const showImportError = (appService, message) => {
+const showImportError = (appService, message, copy) => {
   if (typeof appService?.showAlert === "function") {
     appService.showAlert({
       message,
-      title: "Error",
+      title: copy.errorTitle,
     });
     return;
   }
@@ -547,9 +568,9 @@ const showImportError = (appService, message) => {
   appService?.showToast?.({ message });
 };
 
-const showImportSuccess = (appService) => {
+const showImportSuccess = (appService, copy) => {
   appService?.showToast?.({
-    message: "Transform imported.",
+    message: copy.transformImported,
   });
 };
 
@@ -562,8 +583,8 @@ const getImportErrorMessage = (error, fallback) => {
   return error?.error?.message ?? error?.message ?? fallback;
 };
 
-const getImportValidationMessage = () => {
-  return "Import URL is required.";
+const getImportValidationMessage = (copy) => {
+  return copy.importUrlRequired;
 };
 
 const loadTransformPreviewAssets = async ({
@@ -632,11 +653,12 @@ const renderTransformPreview = async ({ deps, values } = {}) => {
 
 const captureTransformPreviewFiles = async ({ deps, values } = {}) => {
   const { appService, graphicsService, projectService, refs } = deps;
+  const copy = selectCopy(deps);
 
   if (!graphicsService || !refs.canvas) {
     appService.showAlert({
-      message: "Failed to capture transform thumbnail.",
-      title: "Error",
+      message: copy.failedCaptureThumbnail,
+      title: copy.errorTitle,
     });
     return;
   }
@@ -651,8 +673,8 @@ const captureTransformPreviewFiles = async ({ deps, values } = {}) => {
     const previewImage = await captureCanvasImage(graphicsService, refs.canvas);
     if (!previewImage) {
       appService.showAlert({
-        message: "Failed to capture transform preview.",
-        title: "Error",
+        message: copy.failedCapturePreview,
+        title: copy.errorTitle,
       });
       return;
     }
@@ -663,8 +685,8 @@ const captureTransformPreviewFiles = async ({ deps, values } = {}) => {
     );
     if (!thumbnailImage) {
       appService.showAlert({
-        message: "Failed to capture transform thumbnail.",
-        title: "Error",
+        message: copy.failedCaptureThumbnail,
+        title: copy.errorTitle,
       });
       return;
     }
@@ -689,8 +711,8 @@ const captureTransformPreviewFiles = async ({ deps, values } = {}) => {
   } catch (error) {
     console.error("[transforms] Failed to capture transform preview", error);
     appService.showAlert({
-      message: "Failed to save transform thumbnail.",
-      title: "Error",
+      message: copy.failedSaveThumbnail,
+      title: copy.errorTitle,
     });
   }
 };
@@ -774,6 +796,7 @@ const {
   handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "transforms",
+  copy: ({ i18n }) => selectTransformsPageCopy(i18n),
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(
       repositoryState,
@@ -806,7 +829,8 @@ const {
           tagIds,
         },
       }),
-    updateItemTagFallbackMessage: "Failed to update transform tags.",
+    updateItemTagFallbackMessage: ({ deps }) =>
+      selectCopy(deps).failedUpdateTags,
     appendCreatedTagByMode: ({ deps, mode, tagId }) => {
       if (mode !== "form") {
         return;
@@ -997,6 +1021,7 @@ export const handleImportDialogClose = (deps) => {
 
 export const handleImportFormActionClick = async (deps, payload) => {
   const { appService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values, valid } = payload._event.detail;
 
   if (actionId === "cancel") {
@@ -1013,13 +1038,14 @@ export const handleImportFormActionClick = async (deps, payload) => {
 
   if (actionId === "continue") {
     if (valid === false) {
-      showImportError(appService, getImportValidationMessage(values));
+      showImportError(appService, getImportValidationMessage(copy), copy);
       return;
     }
 
     const importInput = await resolveTransformImportInput({
       appService,
       values,
+      copy,
     });
     if (!importInput) {
       return;
@@ -1029,9 +1055,10 @@ export const handleImportFormActionClick = async (deps, payload) => {
     const validationMessage = getTransformImportValidationMessage({
       importInput,
       transformItem: importItem,
+      copy,
     });
     if (validationMessage) {
-      showImportError(appService, validationMessage);
+      showImportError(appService, validationMessage, copy);
       return;
     }
 
@@ -1049,17 +1076,14 @@ export const handleImportFormActionClick = async (deps, payload) => {
   }
 
   if (valid === false) {
-    showImportError(appService, "Choose destination folders.");
+    showImportError(appService, copy.chooseDestinationFolders, copy);
     return;
   }
 
   store.setImportDestinationValues?.({ values });
   const importInput = store.selectImportDialogPendingInput?.();
   if (!importInput) {
-    showImportError(
-      appService,
-      "Import package is missing. Click Back and continue again.",
-    );
+    showImportError(appService, copy.importPackageMissing, copy);
     return;
   }
 
@@ -1067,9 +1091,10 @@ export const handleImportFormActionClick = async (deps, payload) => {
   const validationMessage = getTransformImportValidationMessage({
     importInput,
     transformItem: importItem,
+    copy,
   });
   if (validationMessage) {
-    showImportError(appService, validationMessage);
+    showImportError(appService, validationMessage, copy);
     return;
   }
 
@@ -1083,17 +1108,20 @@ export const handleImportFormActionClick = async (deps, payload) => {
       projectService,
       imageParentId,
       transformItem: importItem,
+      copy,
     });
   } catch (error) {
     showImportError(
       appService,
-      error?.message ?? "Image dependencies could not be imported.",
+      error?.message ?? copy.imageDependenciesImportFailed,
+      copy,
     );
     return;
   }
 
   const transformData = normalizeImportedTransformData(importItem, {
     imageIdMap,
+    copy,
   });
   const transformId = generateId();
   const targetGroupId = normalizeImportParentId(
@@ -1101,7 +1129,7 @@ export const handleImportFormActionClick = async (deps, payload) => {
   );
   const importAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to import transform.",
+    fallbackMessage: copy.failedImportTransform,
     action: () =>
       projectService.createTransform({
         transformId,
@@ -1120,7 +1148,7 @@ export const handleImportFormActionClick = async (deps, payload) => {
 
   store.closeImportDialog();
   clearImportVisibilityFilters(store);
-  showImportSuccess(appService);
+  showImportSuccess(appService, copy);
   await handleDataChanged(deps, {
     selectedItemId: transformId,
   });
@@ -1142,6 +1170,7 @@ export const handleTransformDialogClose = (deps) => {
 
 export const handleTransformFormActionClick = async (deps, payload) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -1150,8 +1179,8 @@ export const handleTransformFormActionClick = async (deps, payload) => {
   const transformData = createTransformPayload(values);
   if (!transformData.name) {
     appService.showAlert({
-      message: "Transform name is required.",
-      title: "Warning",
+      message: copy.nameRequired,
+      title: copy.warningTitle,
     });
     return;
   }
@@ -1178,7 +1207,7 @@ export const handleTransformFormActionClick = async (deps, payload) => {
   if (editMode && editItemId) {
     const updateAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to update transform.",
+      fallbackMessage: copy.failedUpdateTransform,
       action: () =>
         projectService.updateTransform({
           transformId: editItemId,
@@ -1193,7 +1222,7 @@ export const handleTransformFormActionClick = async (deps, payload) => {
   } else {
     const createAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to create transform.",
+      fallbackMessage: copy.failedCreateTransform,
       action: () =>
         projectService.createTransform({
           transformId: generateId(),
@@ -1248,6 +1277,7 @@ export const handleTransformPreviewImageClick = (deps, payload) => {
 
 export const handleTransformPreviewImageContextMenu = (deps, payload) => {
   const { render, store } = deps;
+  const copy = selectCopy(deps);
   const event = payload._event;
   const target = event.currentTarget?.dataset?.target;
 
@@ -1257,6 +1287,7 @@ export const handleTransformPreviewImageContextMenu = (deps, payload) => {
     target,
     x: event.clientX,
     y: event.clientY,
+    items: [{ label: copy.removeMenuItem, type: "item", value: "remove" }],
   });
   render();
 };
@@ -1344,6 +1375,7 @@ export const handleTransformPreviewImagePreviewOverlayClick = (deps) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   if (!itemId) {
     return;
@@ -1356,7 +1388,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (usage.isUsed) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message: copy.cannotDeleteResourceInUse,
     });
     return;
   }
@@ -1370,6 +1402,7 @@ export const handleItemDelete = async (deps, payload) => {
 
 export const handleItemDuplicate = async (deps, payload) => {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   if (!itemId) {
     return;
@@ -1397,7 +1430,7 @@ export const handleItemDuplicate = async (deps, payload) => {
 
   const createAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to duplicate transform.",
+    fallbackMessage: copy.failedDuplicateTransform,
     action: () =>
       projectService.createTransform({
         transformId: duplicateTransformId,

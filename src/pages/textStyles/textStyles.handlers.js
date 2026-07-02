@@ -31,6 +31,9 @@ import {
 } from "../../internal/resourceTags.js";
 import { tap } from "rxjs";
 import { TEXT_STYLE_TAG_SCOPE_KEY } from "./textStyles.store.js";
+import { selectTextStylesPageCopy } from "./support/textStylesPageCopy.js";
+
+const selectCopy = (deps = {}) => selectTextStylesPageCopy(deps.i18n);
 
 // Helper function to sync repository state to store
 const syncRepositoryToStore = ({
@@ -100,6 +103,7 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   createResourceFileExplorerHandlers({
     resourceType: "textStyles",
     refresh: refreshTextStylesData,
+    copy: selectCopy,
   });
 const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
@@ -140,8 +144,11 @@ const {
       tagId,
     });
   },
-  createTagFallbackMessage: "Failed to create tag.",
-  updateItemTagFallbackMessage: "Failed to update text style tags.",
+  createTagFallbackMessage: ({ deps }) =>
+    selectCopy(deps).failedCreateTag ?? "Failed to create tag.",
+  updateItemTagFallbackMessage: ({ deps }) =>
+    selectCopy(deps).failedUpdateTags ?? "Failed to update text style tags.",
+  copy: selectCopy,
 });
 
 export {
@@ -300,6 +307,7 @@ const buildTextStyleData = ({
 
 const handleTextStyleCreated = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const {
     groupId,
     name,
@@ -317,7 +325,8 @@ const handleTextStyleCreated = async (deps, payload) => {
 
   const createAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to create text style.",
+    fallbackMessage:
+      copy.failedCreateTextStyle ?? "Failed to create text style.",
     action: () =>
       projectService.createTextStyle({
         textStyleId: generateId(),
@@ -353,6 +362,7 @@ const handleTextStyleCreated = async (deps, payload) => {
 
 const handleTextStyleUpdated = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const {
     itemId,
     name,
@@ -370,7 +380,8 @@ const handleTextStyleUpdated = async (deps, payload) => {
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update text style.",
+    fallbackMessage:
+      copy.failedUpdateTextStyle ?? "Failed to update text style.",
     action: () =>
       projectService.updateTextStyle({
         textStyleId: itemId,
@@ -483,6 +494,7 @@ export const handleFolderNameDialogClose = (deps) => {
 
 export const handleFolderNameFormAction = async (deps, payload) => {
   const { appService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -492,8 +504,8 @@ export const handleFolderNameFormAction = async (deps, payload) => {
   const description = values?.description?.trim() ?? "";
   if (!name) {
     appService.showAlert({
-      message: "Folder name is required.",
-      title: "Warning",
+      message: copy.folderNameRequired ?? "Folder name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -567,6 +579,7 @@ export const handleCloseDialog = (deps) => {
 
 export const handleFormActionClick = async (deps, payload) => {
   const { store, render, appService } = deps;
+  const copy = selectCopy(deps);
 
   // Check which button was clicked
   const actionId = payload._event.detail.actionId;
@@ -614,8 +627,9 @@ export const handleFormActionClick = async (deps, payload) => {
       !formData.fontWeight
     ) {
       appService.showAlert({
-        message: "Please fill in all required fields",
-        title: "Warning",
+        message:
+          copy.fillRequiredFields ?? "Please fill in all required fields",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -623,8 +637,10 @@ export const handleFormActionClick = async (deps, payload) => {
     // Validate font size is a number
     if (isNaN(formData.fontSize) || parseInt(formData.fontSize) <= 0) {
       appService.showAlert({
-        message: "Please enter a valid font size (positive number)",
-        title: "Warning",
+        message:
+          copy.fontSizeInvalid ??
+          "Please enter a valid font size (positive number)",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -632,8 +648,10 @@ export const handleFormActionClick = async (deps, payload) => {
     const strokeWidth = Number(formData.strokeWidth ?? 0);
     if (Number.isNaN(strokeWidth) || strokeWidth < 0) {
       appService.showAlert({
-        message: "Please enter a valid outline thickness (0 or greater)",
-        title: "Warning",
+        message:
+          copy.outlineThicknessInvalid ??
+          "Please enter a valid outline thickness (0 or greater)",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -703,6 +721,7 @@ export const handleAddColorDialogClose = (deps) => {
 
 export const handleAddColorFormAction = async (deps, payload) => {
   const { appService, store, render, projectService } = deps;
+  const copy = selectCopy(deps);
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.values;
@@ -711,7 +730,7 @@ export const handleAddColorFormAction = async (deps, payload) => {
     // Create the color in the repository
     const createAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to create color.",
+      fallbackMessage: copy.failedCreateColor ?? "Failed to create color.",
       action: () =>
         projectService.createColor({
           colorId: newColorId,
@@ -751,6 +770,7 @@ export const handleAddFontDialogClose = (deps) => {
 
 export const handleFontFileSelected = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
+  const copy = selectCopy(deps);
   const { files } = payload._event.detail;
 
   if (files && files.length > 0) {
@@ -765,8 +785,10 @@ export const handleFontFileSelected = async (deps, payload) => {
       if (uploadResults.length === 0) {
         showResourcePageError({
           appService,
-          errorOrResult: "Failed to upload font file.",
-          fallbackMessage: "Failed to upload font file.",
+          errorOrResult:
+            copy.failedUploadFontFile ?? "Failed to upload font file.",
+          fallbackMessage:
+            copy.failedUploadFontFile ?? "Failed to upload font file.",
         });
         return;
       }
@@ -782,7 +804,8 @@ export const handleFontFileSelected = async (deps, payload) => {
       showResourcePageError({
         appService,
         errorOrResult: error,
-        fallbackMessage: "Failed to upload font file.",
+        fallbackMessage:
+          copy.failedUploadFontFile ?? "Failed to upload font file.",
       });
     }
   }
@@ -790,6 +813,7 @@ export const handleFontFileSelected = async (deps, payload) => {
 
 export const handleAddFontFormAction = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
+  const copy = selectCopy(deps);
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.values;
@@ -798,8 +822,8 @@ export const handleAddFontFormAction = async (deps, payload) => {
     // Check if a font file was selected and uploaded
     if (!fontData || !fontData.uploadResult) {
       appService.showAlert({
-        message: "Please select a font file",
-        title: "Warning",
+        message: copy.selectFontFile ?? "Please select a font file",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -810,7 +834,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
     // Create the font in the repository using the already uploaded file
     const createAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to create font.",
+      fallbackMessage: copy.failedCreateFont ?? "Failed to create font.",
       action: () =>
         projectService.createFont({
           fontId: newFontId,
@@ -848,6 +872,7 @@ export const handleSearchInput = (deps, payload) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
 
   const state = projectService.getState();
@@ -855,7 +880,10 @@ export const handleItemDelete = async (deps, payload) => {
   const textStyleCount = getTextStyleCount(state.textStyles);
   const removalCount = getTextStyleRemovalCount(state.textStyles, itemId);
   if (textStyleCount - removalCount < 1) {
-    appService.showAlert({ message: "At least one text style must remain." });
+    appService.showAlert({
+      message:
+        copy.minimumTextStyleRequired ?? "At least one text style must remain.",
+    });
     render();
     return;
   }
@@ -868,7 +896,9 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (usage.isUsed) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message:
+        copy.cannotDeleteResourceInUse ??
+        "Cannot delete resource, it is currently in use.",
     });
     render();
     return;
@@ -884,6 +914,7 @@ export const handleItemDelete = async (deps, payload) => {
 
 export const handleItemDuplicate = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   if (!itemId) {
     return;
@@ -891,7 +922,8 @@ export const handleItemDuplicate = async (deps, payload) => {
 
   const duplicateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to duplicate text style.",
+    fallbackMessage:
+      copy.failedDuplicateTextStyle ?? "Failed to duplicate text style.",
     action: () =>
       projectService.duplicateTextStyle({
         textStyleId: itemId,

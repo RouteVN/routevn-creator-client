@@ -33,6 +33,31 @@ Local-first collaboration:
 
 - `insieme`
 
+## Localization
+
+Frontend locale catalogs live in `src/i18n/*.yaml`. Keep every locale aligned
+with the default English catalog because the Rettangoli i18n build validates
+that all locales contain the same keys.
+
+Rettangoli passes `i18n` into store selectors and handler deps. Do not pass
+page-level `copy` objects through component props only to localize a child
+component. Components that render or compute their own copy should read from
+`i18n` directly in their store/handlers, or use a shared selector from
+`src/internal/ui/` when multiple modules need the same namespaced copy. Use
+copy-like props only when the caller is intentionally customizing generic
+reusable component text.
+
+For Japanese localization, follow the RouteVN website Japanese style guide:
+`https://github.com/RouteVN/routevn-website/blob/main/internal/japanese-translation-style.md`.
+Use it as the terminology and tone reference for RouteVN Japanese UI and docs
+copy.
+
+For Simplified Chinese localization, follow the RouteVN website Simplified
+Chinese style guide:
+`https://github.com/RouteVN/routevn-website/blob/main/internal/simplified-chinese-translation-style.md`.
+Use it as the terminology and tone reference for RouteVN `zh-hans` UI and docs
+copy.
+
 ## Code Style
 
 - Prefer direct values and `??` defaults over verbose string guards like

@@ -31,24 +31,81 @@ import {
 
 const EMPTY_TREE = { tree: [], items: {} };
 
-const folderContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-child-folder" },
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createDefaultCenterItemContextMenuItems = (copy = {}) => [
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const itemContextMenuItems = [
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createFolderContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-child-folder",
+  },
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const emptyContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-item" },
+const createItemContextMenuItems = (copy = {}) => [
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const defaultCenterItemContextMenuItems = [
-  { label: "Delete", type: "item", value: "delete-item" },
+const createEmptyContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-item",
+  },
 ];
+
+const createFolderNameForm = (copy = {}) => ({
+  title: copy.editFolderTitle ?? "Edit Folder",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: copy.nameLabel ?? "Name",
+      required: true,
+    },
+    {
+      name: "description",
+      type: "input-textarea",
+      label: copy.descriptionLabel ?? "Description",
+      required: false,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: copy.saveButton ?? "Save",
+        validate: true,
+      },
+    ],
+  },
+});
 
 const defaultMatchesSearch = (item, searchQuery) => {
   if (!searchQuery) {
@@ -70,50 +127,28 @@ export const createCatalogPageStore = ({
   addText = "Add",
   searchPlaceholder = "Search...",
   emptyMessage,
-  centerItemContextMenuItems = defaultCenterItemContextMenuItems,
+  centerItemContextMenuItems = createDefaultCenterItemContextMenuItems,
   matchesSearch = defaultMatchesSearch,
   buildDetailFields = () => [],
   buildCatalogItem = (item) => item,
   hiddenMobileDetailSlots = [],
   extendViewData,
   tagging,
+  copy: copySelector,
 }) => {
+  const resolveCopy = (i18n) => {
+    if (typeof copySelector === "function") {
+      return copySelector(i18n);
+    }
+
+    return copySelector ?? {};
+  };
   const taggingEnabled = !!tagging;
   const createEmptyTagsCollection = tagging?.createEmptyTagsCollection;
-  const createTagFormDefinition =
-    tagging?.createTagForm ?? createDefaultTagForm();
   const createEmptyFolderNameDefaultValues = () => ({
     name: "",
     description: "",
   });
-  const folderNameForm = {
-    title: "Edit Folder",
-    fields: [
-      {
-        name: "name",
-        type: "input-text",
-        label: "Name",
-        required: true,
-      },
-      {
-        name: "description",
-        type: "input-textarea",
-        label: "Description",
-        required: false,
-      },
-    ],
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: "Save",
-          validate: true,
-        },
-      ],
-    },
-  };
   const selectDataItem = (state, itemId) => {
     const item = state.data?.items?.[itemId];
     return item?.type === itemType ? item : undefined;
@@ -327,12 +362,23 @@ export const createCatalogPageStore = ({
     state.folderNameDialogDefaultValues = createEmptyFolderNameDefaultValues();
   };
 
-  const selectViewData = ({ state }) => {
+  const selectViewData = ({ state, i18n }) => {
+    const copy = resolveCopy(i18n);
+    const resolvedTitle = copy.title ?? title;
+    const createTagFormDefinition =
+      typeof tagging?.createTagForm === "function"
+        ? tagging.createTagForm({ copy })
+        : (tagging?.createTagForm ??
+          createDefaultTagForm({
+            title: copy.createTagTitle,
+            submitLabel: copy.createTagButton,
+            nameLabel: copy.tagNameLabel,
+          }));
     const flatItems = toFlatItems(state.data);
     const rawFlatGroups = prependRootItemsGroup({
       data: state.data,
       groups: toFlatGroups(state.data),
-      label: title,
+      label: resolvedTitle,
     });
     const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
 
@@ -349,7 +395,9 @@ export const createCatalogPageStore = ({
 
         return {
           ...group,
-          children: filteredChildren.map(buildCatalogItem),
+          children: filteredChildren.map((item) =>
+            buildCatalogItem(item, { copy }),
+          ),
           hasChildren: filteredChildren.length > 0,
           shouldDisplay: shouldShowGroup,
         };
@@ -368,8 +416,18 @@ export const createCatalogPageStore = ({
         })
       : unfilteredCatalogGroups;
     const detailFields = selectedItem
-      ? buildDetailFields(selectedItem)
-      : buildFolderDetailFields(selectedFolder);
+      ? buildDetailFields(selectedItem, { copy })
+      : buildFolderDetailFields(selectedFolder).map((field) => {
+          if (field.label === "Type") {
+            return {
+              ...field,
+              label: copy.typeLabel ?? field.label,
+              value: copy.folderTypeValue ?? field.value,
+            };
+          }
+
+          return field;
+        });
     const mobileViewData = buildMobileResourcePageViewData({
       state,
       detailFields,
@@ -380,10 +438,17 @@ export const createCatalogPageStore = ({
           state,
           selectedItem,
           createTagFormDefinition,
-          tagFilterPlaceholder: tagging?.tagFilterPlaceholder,
-          detailTagAddOptionLabel: tagging?.detailTagAddOptionLabel,
+          tagFilterPlaceholder:
+            copy.tagFilterPlaceholder ?? tagging?.tagFilterPlaceholder,
+          detailTagAddOptionLabel:
+            copy.addTagOption ?? tagging?.detailTagAddOptionLabel,
         })
       : undefined;
+
+    const resolvedCenterItemContextMenuItems =
+      typeof centerItemContextMenuItems === "function"
+        ? centerItemContextMenuItems(copy)
+        : centerItemContextMenuItems;
 
     const baseViewData = {
       flatItems,
@@ -397,17 +462,25 @@ export const createCatalogPageStore = ({
       selectedItemName: selectedDetailName,
       detailFields,
       searchQuery: state.searchQuery,
-      searchPlaceholder,
-      title,
-      addText,
-      emptyMessage,
-      folderContextMenuItems,
-      itemContextMenuItems,
-      emptyContextMenuItems,
-      centerItemContextMenuItems,
+      searchPlaceholder: copy.searchPlaceholder ?? searchPlaceholder,
+      title: resolvedTitle,
+      addText: copy.addText ?? addText,
+      emptyMessage: copy.emptyMessage ?? emptyMessage,
+      addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
+      deleteButton: copy.deleteButton ?? "Delete",
+      duplicateButton: copy.duplicateButton ?? "Duplicate",
+      filesLabel: copy.filesLabel ?? "Files",
+      importButton: copy.importButton ?? "Import",
+      noSelectionLabel: copy.noSelectionLabel ?? "No selection",
+      openButton: copy.openButton ?? "Open",
+      previewButton: copy.previewMenuItem ?? "Preview",
+      folderContextMenuItems: createFolderContextMenuItems(copy),
+      itemContextMenuItems: createItemContextMenuItems(copy),
+      emptyContextMenuItems: createEmptyContextMenuItems(copy),
+      centerItemContextMenuItems: resolvedCenterItemContextMenuItems,
       isFolderNameDialogOpen: state.isFolderNameDialogOpen,
       folderNameDialogItemId: state.folderNameDialogItemId,
-      folderNameForm,
+      folderNameForm: createFolderNameForm(copy),
       folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
     };
     Object.assign(baseViewData, mobileViewData);
@@ -425,6 +498,7 @@ export const createCatalogPageStore = ({
       selectedItem,
       catalogGroups,
       baseViewData,
+      copy,
     });
 
     if (extendedViewData.detailFields !== baseViewData.detailFields) {

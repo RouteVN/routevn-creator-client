@@ -77,6 +77,7 @@ export const systemConfigItems = [
     id: "variables",
     name: "Variables",
     path: "/project/variables",
+    hidden: true,
   },
 ];
 
@@ -142,6 +143,8 @@ const resourceCategoryNames = {
 
 export const createInitialState = () => ({});
 
+const getResourceTypesCopy = (i18n = {}) => i18n.resourceTypes ?? {};
+
 const EMPTY_CATEGORY = Object.freeze({
   label: "",
   resources: [],
@@ -156,8 +159,9 @@ export const selectResourceItem = ({ props }, id) => {
   return categoryConfig.resources.find((item) => item.id === id);
 };
 
-export const selectViewData = ({ props }) => {
+export const selectViewData = ({ props, i18n }) => {
   const { resourceCategory, selectedResourceId } = props;
+  const copy = getResourceTypesCopy(i18n);
   const categoryConfig = getCategoryConfig(resourceCategory);
 
   // Get the actual resource ID to highlight (use parent mapping if exists)
@@ -172,14 +176,14 @@ export const selectViewData = ({ props }) => {
     const isSelected = actualSelectedId === item.id;
     return {
       id: item.id,
-      name: item.name,
+      name: copy[item.id] ?? item.name,
       path: item.path,
       bgc: isSelected ? "mu" : "bg",
     };
   });
 
   return {
-    label: categoryConfig.label,
+    label: copy[`${resourceCategory}Label`] ?? categoryConfig.label,
     items,
   };
 };

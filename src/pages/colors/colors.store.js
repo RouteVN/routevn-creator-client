@@ -2,6 +2,7 @@ import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+import { selectColorsPageCopy } from "./support/colorsPageCopy.js";
 
 export const COLOR_TAG_SCOPE_KEY = "colors";
 
@@ -21,26 +22,30 @@ const hexToRgb = (hex) => {
   return `rgb(${r}, ${g}, ${b})`;
 };
 
-const editForm = {
-  title: "Edit Color",
+const createEditForm = (copy = {}) => ({
+  title: copy.editTitle ?? "Edit Color",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel ?? "Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
       required: false,
     },
-    createTagField(),
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
     {
       name: "hex",
       type: "color-picker",
-      label: "Color",
+      label: copy.colorLabel ?? "Color",
       required: true,
     },
   ],
@@ -50,32 +55,36 @@ const editForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Update Color",
+        label: copy.updateButton ?? "Update Color",
       },
     ],
   },
-};
+});
 
-const addForm = {
-  title: "Add Color",
+const createAddForm = (copy = {}) => ({
+  title: copy.addTitle ?? "Add Color",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Color Name",
+      label: copy.colorNameLabel ?? "Color Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
       required: false,
     },
-    createTagField(),
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
     {
       name: "hex",
       type: "color-picker",
-      label: "Color",
+      label: copy.colorLabel ?? "Color",
       required: true,
     },
   ],
@@ -85,13 +94,13 @@ const addForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Add Color",
+        label: copy.addButton ?? "Add Color",
       },
     ],
   },
-};
+});
 
-const buildDetailFields = (item) => {
+const buildDetailFields = (item, { copy = {} } = {}) => {
   if (!item) {
     return [];
   }
@@ -109,16 +118,16 @@ const buildDetailFields = (item) => {
     {
       type: "slot",
       slot: "color-tags",
-      label: "Tags",
+      label: copy.tagsLabel ?? "Tags",
     },
     {
       type: "text",
-      label: "Hex Value",
+      label: copy.hexValueLabel ?? "Hex Value",
       value: item.hex ?? "",
     },
     {
       type: "text",
-      label: "RGB Value",
+      label: copy.rgbValueLabel ?? "RGB Value",
       value: hexToRgb(item.hex ?? ""),
     },
   ];
@@ -180,6 +189,7 @@ const {
   selectedResourceId: "colors",
   resourceCategory: "userInterface",
   addText: "Add",
+  copy: selectColorsPageCopy,
   matchesSearch,
   buildDetailFields,
   buildCatalogItem,
@@ -187,7 +197,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
-  extendViewData: ({ state, selectedItem, baseViewData }) => {
+  extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
     const editItem = selectColorDataItem(state, state.editItemId);
 
     return {
@@ -200,12 +210,12 @@ const {
         description: editItem?.description ?? "",
         tagIds: editItem?.tagIds ?? [],
       },
-      editForm,
+      editForm: createEditForm(copy),
       isPreviewDialogOpen: state.isPreviewDialogOpen,
       previewColorHex: selectedItem?.hex ?? "",
       isAddDialogOpen: state.isAddDialogOpen,
       addDefaultValues: state.addDefaultValues,
-      addForm,
+      addForm: createAddForm(copy),
     };
   },
 });

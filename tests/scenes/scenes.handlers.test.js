@@ -10,6 +10,7 @@ import {
   handleWhiteboardPanChanged,
   handleWhiteboardZoomChanged,
 } from "../../src/pages/scenes/scenes.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const originalWindow = globalThis.window;
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
@@ -26,6 +27,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       navigate: vi.fn(),
       showAlert: vi.fn(),
     },
+    i18n: EN_I18N,
     projectService: {
       ensureRepository: vi.fn(async () => {}),
       deleteSceneIfUnused: vi.fn(async () => ({

@@ -3,6 +3,7 @@ import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerD
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+import { selectVideosPageCopy } from "./support/videosPageCopy.js";
 
 const VIDEO_TAG_SCOPE_KEY = "videos";
 
@@ -14,9 +15,9 @@ const formatDimensions = (item) => {
   return `${item.width} × ${item.height}`;
 };
 
-const formatDuration = (duration) => {
+const formatDuration = (duration, copy) => {
   if (!Number.isFinite(duration) || duration < 0) {
-    return "Unknown";
+    return copy.unknownValue;
   }
 
   const totalSeconds = Math.floor(duration);
@@ -33,7 +34,7 @@ const formatDuration = (duration) => {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
-const buildDetailFields = (item) => {
+const buildDetailFields = (item, { copy } = {}) => {
   if (!item) {
     return [];
   }
@@ -51,27 +52,27 @@ const buildDetailFields = (item) => {
     {
       type: "slot",
       slot: "video-tags",
-      label: "Tags",
+      label: copy.tagsLabel,
     },
     {
       type: "text",
-      label: "File Type",
+      label: copy.fileTypeLabel,
       value: item.fileType ?? "",
     },
     {
       type: "text",
-      label: "File Size",
+      label: copy.fileSizeLabel,
       value: formatFileSize(item.fileSize),
     },
     {
       type: "text",
-      label: "Dimensions",
+      label: copy.dimensionsLabel,
       value: formatDimensions(item),
     },
     {
       type: "text",
-      label: "Duration",
-      value: formatDuration(item.duration),
+      label: copy.durationLabel,
+      value: formatDuration(item.duration, copy),
     },
   ];
 };
@@ -93,26 +94,30 @@ const buildPendingMediaItem = (item) => ({
   canPreview: false,
 });
 
-const createEditForm = () => ({
-  title: "Edit Video",
+const createEditForm = ({ copy } = {}) => ({
+  title: copy.editTitle,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel,
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel,
       required: false,
     },
-    createTagField(),
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
     {
       type: "slot",
       slot: "video-slot",
-      label: "Video",
+      label: copy.videoLabel,
     },
   ],
   actions: {
@@ -121,7 +126,7 @@ const createEditForm = () => ({
       {
         id: "submit",
         variant: "pr",
-        label: "Update Video",
+        label: copy.updateButton,
       },
     ],
   },
@@ -160,18 +165,19 @@ const {
 } = createMediaPageStore({
   itemType: "video",
   resourceType: "videos",
-  title: "Videos",
+  title: "",
   selectedResourceId: "videos",
-  uploadText: "Upload",
+  uploadText: "",
   acceptedFileTypes: [".mp4"],
   matchesSearch: matchesTagAwareSearch,
   buildDetailFields,
   buildMediaItem,
   buildPendingMediaItem,
   createEditForm,
+  copy: selectVideosPageCopy,
   getSelectedPreviewFileId: (item) => item?.thumbnailFileId,
   tagging: {
-    tagFilterPlaceholder: "Filter tags",
+    tagFilterPlaceholder: "",
   },
   hiddenMobileDetailSlots: ["video-thumbnail-file-id"],
   extendViewData: ({ state, baseViewData }) => {

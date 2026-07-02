@@ -3,13 +3,14 @@ import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerD
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+import { selectSoundsPageCopy } from "./support/soundsPageCopy.js";
 
 const SOUND_TAG_SCOPE_KEY = "sounds";
 const MEDIA_GRID_SCROLL_BOTTOM_PADDING = "32vh";
 
-const formatDuration = (duration) => {
+const formatDuration = (duration, copy) => {
   if (duration === undefined || duration === null) {
-    return "Unknown";
+    return copy.unknownValue;
   }
 
   return `${Math.floor(duration / 60).toString()}:${Math.floor(duration % 60)
@@ -17,7 +18,7 @@ const formatDuration = (duration) => {
     .padStart(2, "0")}`;
 };
 
-const buildDetailFields = (item) => {
+const buildDetailFields = (item, { copy } = {}) => {
   if (!item) {
     return [];
   }
@@ -35,22 +36,22 @@ const buildDetailFields = (item) => {
     {
       type: "slot",
       slot: "sound-tags",
-      label: "Tags",
+      label: copy.tagsLabel,
     },
     {
       type: "text",
-      label: "File Type",
+      label: copy.fileTypeLabel,
       value: item.fileType ?? "",
     },
     {
       type: "text",
-      label: "File Size",
+      label: copy.fileSizeLabel,
       value: formatFileSize(item.fileSize),
     },
     {
       type: "text",
-      label: "Duration",
-      value: formatDuration(item.duration),
+      label: copy.durationLabel,
+      value: formatDuration(item.duration, copy),
     },
   ];
 };
@@ -72,26 +73,30 @@ const buildPendingMediaItem = (item) => ({
   canPreview: false,
 });
 
-const createEditForm = () => ({
-  title: "Edit Sound",
+const createEditForm = ({ copy } = {}) => ({
+  title: copy.editTitle,
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel,
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel,
       required: false,
     },
-    createTagField(),
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
     {
       type: "slot",
       slot: "sound-slot",
-      label: "Sound",
+      label: copy.soundLabel,
     },
   ],
   actions: {
@@ -100,7 +105,7 @@ const createEditForm = () => ({
       {
         id: "submit",
         variant: "pr",
-        label: "Update Sound",
+        label: copy.updateButton,
       },
     ],
   },
@@ -139,28 +144,29 @@ const {
 } = createMediaPageStore({
   itemType: "sound",
   resourceType: "sounds",
-  title: "Sounds",
+  title: "",
   selectedResourceId: "sounds",
-  uploadText: "Upload",
+  uploadText: "",
   acceptedFileTypes: [".mp3", ".wav", ".ogg"],
-  previewMenuLabel: "Play",
+  previewMenuLabel: "",
   matchesSearch: matchesTagAwareSearch,
   buildDetailFields,
   buildMediaItem,
   buildPendingMediaItem,
   createEditForm,
+  copy: selectSoundsPageCopy,
   getSelectedPreviewFileId: (item) => item?.waveformDataFileId,
   tagging: {
-    tagFilterPlaceholder: "Filter tags",
+    tagFilterPlaceholder: "",
   },
   hiddenMobileDetailSlots: ["sound-waveform"],
-  extendViewData: ({ state, baseViewData }) => {
+  extendViewData: ({ state, baseViewData, copy }) => {
     const deleteDialogItem = state.mobileDeleteDialogItemId
       ? state.data?.items?.[state.mobileDeleteDialogItemId]
       : undefined;
     const deleteDialogItemName = deleteDialogItem?.name
       ? `"${deleteDialogItem.name}"`
-      : "this sound";
+      : copy.deleteTargetFallback;
 
     return {
       ...baseViewData,
@@ -169,9 +175,12 @@ const {
       audioPlayerLeft: state.isTouchMode ? 0 : state.audioPlayerLeft,
       audioPlayerRight: state.isTouchMode ? 0 : state.audioPlayerRight,
       mobileDeleteDialogOpen: state.mobileDeleteDialogOpen,
-      mobileDeleteDialogTitle: "Delete Sound",
-      mobileDeleteDialogMessage: `Delete ${deleteDialogItemName}? This cannot be undone.`,
-      mobileDeleteDialogConfirmLabel: "Delete",
+      mobileDeleteDialogTitle: copy.deleteTitle,
+      mobileDeleteDialogMessage: copy.deleteMessage.replace(
+        "{itemName}",
+        deleteDialogItemName,
+      ),
+      mobileDeleteDialogConfirmLabel: copy.deleteButton,
     };
   },
 });

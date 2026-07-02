@@ -9,11 +9,15 @@ import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catal
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createLayoutsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   getTagsCollection,
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import { LAYOUT_TAG_SCOPE_KEY } from "./layouts.store.js";
+import { selectLayoutsPageCopy } from "./support/layoutsPageCopy.js";
+
+const selectCopy = (deps = {}) => selectLayoutsPageCopy(deps.i18n);
 
 const syncEditFormValues = ({ deps, values } = {}) => {
   const { editForm } = deps.refs;
@@ -111,6 +115,7 @@ const {
   handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "layouts",
+  copy: ({ i18n }) => selectLayoutsPageCopy(i18n),
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(repositoryState, LAYOUT_TAG_SCOPE_KEY);
 
@@ -138,7 +143,8 @@ const {
           tagIds,
         },
       }),
-    updateItemTagFallbackMessage: "Failed to update layout tags.",
+    updateItemTagFallbackMessage: ({ deps }) =>
+      selectCopy(deps).failedUpdateTags ?? "Failed to update layout tags.",
     appendCreatedTagByMode: ({ deps, mode, tagId }) => {
       if (mode === "add-form") {
         appendTagIdToForm({
@@ -1044,6 +1050,22 @@ const protectedLayoutTypeLabels = {
   choice: "Choice",
 };
 
+const getProtectedLayoutTypeLabel = (layoutType, copy = {}) => {
+  if (layoutType === "dialogue-adv") {
+    return copy.layoutTypeDialogueAdv ?? protectedLayoutTypeLabels[layoutType];
+  }
+
+  if (layoutType === "dialogue-nvl") {
+    return copy.layoutTypeDialogueNvl ?? protectedLayoutTypeLabels[layoutType];
+  }
+
+  if (layoutType === "choice") {
+    return copy.layoutTypeChoice ?? protectedLayoutTypeLabels[layoutType];
+  }
+
+  return protectedLayoutTypeLabels[layoutType] ?? layoutType ?? "";
+};
+
 const canDeleteLayoutItem = (layouts, itemId) => {
   const items = Object.values(layouts?.items || {});
   const item = layouts?.items?.[itemId];
@@ -1062,6 +1084,7 @@ const canDeleteLayoutItem = (layouts, itemId) => {
 
 export const handleLayoutFormActionClick = async (deps, payload) => {
   const { store, projectService, appService } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -1070,8 +1093,8 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Please enter a layout name",
-      title: "Warning",
+      message: copy.nameRequired ?? "Please enter a layout name",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -1079,8 +1102,8 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
   const layoutType = values?.layoutType;
   if (!layoutType) {
     appService.showAlert({
-      message: "Please select a layout type",
-      title: "Warning",
+      message: copy.layoutTypeRequired ?? "Please select a layout type",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -1089,7 +1112,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
 
   const createAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to create layout.",
+    fallbackMessage: copy.failedCreateLayout ?? "Failed to create layout.",
     action: () =>
       projectService.createLayoutItem({
         layoutId: generateId(),
@@ -1117,6 +1140,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
 
 export const handleEditFormActionClick = async (deps, payload) => {
   const { store, projectService, appService, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -1125,8 +1149,8 @@ export const handleEditFormActionClick = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Please enter a layout name",
-      title: "Warning",
+      message: copy.nameRequired ?? "Please enter a layout name",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -1140,7 +1164,7 @@ export const handleEditFormActionClick = async (deps, payload) => {
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update layout.",
+    fallbackMessage: copy.failedUpdateLayout ?? "Failed to update layout.",
     action: () =>
       projectService.updateLayoutItem({
         layoutId: editItemId,
@@ -1172,6 +1196,7 @@ export const handleOpenLayoutEditorClick = (deps, payload) => {
 
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   const state = projectService.getState();
   const layoutType = state.layouts?.items?.[itemId]?.layoutType;
@@ -1183,15 +1208,24 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (usage.isUsed) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message:
+        copy.cannotDeleteResourceInUse ??
+        "Cannot delete resource, it is currently in use.",
     });
     render();
     return;
   }
 
   if (!canDeleteLayoutItem(state.layouts, itemId)) {
+    const layoutTypeLabel = getProtectedLayoutTypeLabel(layoutType, copy);
     appService.showAlert({
-      message: `Cannot delete the last ${protectedLayoutTypeLabels[layoutType]} layout. At least one ${protectedLayoutTypeLabels[layoutType]} layout must remain.`,
+      message: formatI18nCopy(
+        copy.protectedLayoutDeleteMessage ??
+          "Cannot delete the last {layoutType} layout. At least one {layoutType} layout must remain.",
+        {
+          layoutType: layoutTypeLabel,
+        },
+      ),
     });
     render();
     return;
@@ -1203,6 +1237,7 @@ export const handleItemDelete = async (deps, payload) => {
 
 export const handleItemDuplicate = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   if (!itemId) {
     return;
@@ -1210,7 +1245,8 @@ export const handleItemDuplicate = async (deps, payload) => {
 
   const duplicateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to duplicate layout.",
+    fallbackMessage:
+      copy.failedDuplicateLayout ?? "Failed to duplicate layout.",
     action: () =>
       projectService.duplicateLayoutItem({
         layoutId: itemId,
