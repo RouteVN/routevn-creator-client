@@ -79,7 +79,7 @@ cp -f static/public/rtgl-icons.js _site/public/rtgl-icons.js
 
 # Build frontend bundle
 echo "Building frontend bundle with ${SETUP_FILE}..."
-rtgl fe build -s "${SETUP_FILE}"
+node scripts/build-fe.js "${SETUP_FILE}"
 
 # Prevent stale browser caches from serving an old /public/main.js bundle.
 BUILD_REV=$(date +%s)
