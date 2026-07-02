@@ -16,8 +16,14 @@ RETTANGOLI_DIR="static/public/@rettangoli/ui@${RETTANGOLI_VERSION}/dist"
 RETTANGOLI_FILE="${RETTANGOLI_DIR}/rettangoli-iife-ui.min.js"
 LOCAL_RETTANGOLI_FILE="node_modules/@rettangoli/ui/dist/rettangoli-iife-ui.min.js"
 LOCK_FILE="/tmp/routevn-creator-client-build.lock"
+RTGL_BIN="node_modules/.bin/rtgl"
 
 echo "Building for ${BUILD_TYPE}..."
+
+if [ ! -x "${RTGL_BIN}" ]; then
+  echo "Error: local rtgl CLI is missing. Run bun install before building."
+  exit 1
+fi
 
 sed_in_place() {
   local expression=$1
@@ -73,13 +79,13 @@ cp -rf static/* _site/
 
 # Build UI components
 echo "Building UI components..."
-rtgl ui build-svg
+"${RTGL_BIN}" ui build-svg
 mkdir -p _site/public
 cp -f static/public/rtgl-icons.js _site/public/rtgl-icons.js
 
 # Build frontend bundle
 echo "Building frontend bundle with ${SETUP_FILE}..."
-rtgl fe build -s "${SETUP_FILE}"
+"${RTGL_BIN}" fe build -s "${SETUP_FILE}"
 
 # Prevent stale browser caches from serving an old /public/main.js bundle.
 BUILD_REV=$(date +%s)

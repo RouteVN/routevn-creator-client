@@ -6,7 +6,6 @@ import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { selectSoundsPageCopy } from "./support/soundsPageCopy.js";
 
 const SOUND_TAG_SCOPE_KEY = "sounds";
-const MEDIA_GRID_SCROLL_BOTTOM_PADDING = "32vh";
 
 const formatDuration = (duration, copy) => {
   if (duration === undefined || duration === null) {
@@ -281,9 +280,6 @@ export const selectViewData = (context) => {
   return {
     ...viewData,
     flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
-    gridScrollBottomPadding: viewData.isTouchMode
-      ? undefined
-      : MEDIA_GRID_SCROLL_BOTTOM_PADDING,
   };
 };
 

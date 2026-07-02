@@ -89,7 +89,7 @@ template:
               - $if showTagFilter:
                   - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
                       - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
-      - 'rtgl-view h=1fg w=f sv style="min-width: 0; padding-bottom: ${scrollBottomPadding}; box-sizing: border-box;"':
+      - 'rtgl-view h=1fg w=f sv style="min-width: 0; box-sizing: border-box;"':
           - $if groups.length > 0:
               - $for group, gIndex in groups:
                   - rtgl-view w=f ph=md pos=rel:
@@ -104,18 +104,27 @@ template:
                           - rtgl-view w=1fg: null
                           - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=plus: ${addText}
                       - $if !group.isCollapsed:
-                          - 'rtgl-grid w=f ph=sm pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0;"':
+                          - 'rtgl-grid w=f ph=sm pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0; min-height: ${group.progressiveContentMinHeight}px; align-content: start; align-items: start;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
-                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${item.itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
+                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.domItemId} w=${item.itemWidth} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
                                           - 'rtgl-view w=f br=md style="overflow: hidden;"':
-                                              - $if item.useFullWidthPreview:
+                                              - $if item.isPlaceholder:
+                                                  - $if item.useFullWidthPreview:
+                                                      - 'rtgl-view w=f bgc=mu style="aspect-ratio: ${item.previewAspectRatio};"': null
+                                                    $else:
+                                                      - rtgl-view w=f h=${item.placeholderPreviewHeight} bgc=mu: null
+                                                  - rtgl-view w=f p=md:
+                                                      - rtgl-view w=${item.placeholderTextWidth} h=12 bgc=mu br=sm: null
+                                                $elif item.useFullWidthPreview:
                                                   - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                       - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=f height=f padding=8 showBorder=false: null
+                                                  - rtgl-view w=f p=md:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                 $else:
                                                   - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=${item.previewWidth} height=96 padding=8 showBorder=false: null
-                                              - rtgl-view w=f p=md:
-                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                                  - rtgl-view w=f p=md:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                 $else:
                                   - 'rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer style="grid-column: 1 / -1;"':
                                       - rtgl-svg svg=plus wh=24 c=pr: null
@@ -126,6 +135,8 @@ template:
             $else:
               - rtgl-view w=f h=f av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No data
+          - $if groups.length > 0:
+              - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
       - $if showFilterPopoverSearch:
           - rtgl-text s=md: Filter

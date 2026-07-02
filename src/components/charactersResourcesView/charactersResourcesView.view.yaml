@@ -68,7 +68,7 @@ template:
               - $if showTagFilter:
                   - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
                       - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
-      - 'rtgl-view h=1fg w=f sv style="min-width: 0; padding-bottom: ${scrollBottomPadding}; box-sizing: border-box;"':
+      - 'rtgl-view h=1fg w=f sv style="min-width: 0; box-sizing: border-box;"':
           - $if groups.length > 0:
               - $for group, gIndex in groups:
                   - rtgl-view w=f ph=md pos=rel:
@@ -83,11 +83,18 @@ template:
                           - rtgl-view w=1fg: null
                           - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=plus: ${addText}
                       - $if !group.isCollapsed:
-                          - 'rtgl-view w=f d=v ph=sm pt=md pb=sm mb=lg g=md style="min-width: 0;"':
+                          - 'rtgl-view w=f d=v ph=sm pt=md pb=sm mb=lg g=md style="min-width: 0; min-height: ${group.progressiveContentMinHeight}px;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
-                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=f cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=lg d=h g=xl wrap p=lg:
-                                          - $if item.fileId:
+                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.domItemId} w=f cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=lg d=h g=xl wrap p=lg:
+                                          - $if item.isPlaceholder:
+                                              - rtgl-view w=96 h=96 bgc=mu bc=bo bw=xs br=f: null
+                                              - rtgl-view w=1fg g=md:
+                                                  - rtgl-view w=50% h=24 bgc=mu br=sm: null
+                                                  - rtgl-view w=75% h=16 bgc=mu br=sm: null
+                                              - rtgl-view h=f av=c:
+                                                  - rtgl-view w=72 h=32 bgc=mu br=md: null
+                                            $elif item.fileId:
                                               - rvn-file-image w=96 h=96 bw=xs bc=bo br=f fileId=${item.fileId}: null
                                             $else:
                                               - rtgl-view w=96 h=96 av=c ah=c bgc=bg bc=bo bw=xs br=f:
@@ -108,6 +115,8 @@ template:
             $else:
               - rtgl-view w=f h=f av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No data
+          - $if groups.length > 0:
+              - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
       - $if showFilterPopoverSearch:
           - rtgl-text s=md: Filter

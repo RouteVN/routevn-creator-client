@@ -26,23 +26,19 @@ import {
 
 const createContext = () => ({
   state: createInitialState(),
+  i18n: {
+    resourcePages: {},
+    imagesPage: {
+      title: "Images",
+      deleteButton: "Delete",
+      deleteMessage: "Delete {itemName}? This cannot be undone.",
+      deleteTargetFallback: "this image",
+      deleteTitle: "Delete Image",
+    },
+  },
 });
 
 describe("images store detail tag draft", () => {
-  it("adds desktop-only bottom scroll room for the media grid", () => {
-    const context = createContext();
-
-    expect(selectViewData(context).gridScrollBottomPadding).toBe("32vh");
-
-    setUiConfig(context, {
-      uiConfig: {
-        id: "touch",
-      },
-    });
-
-    expect(selectViewData(context).gridScrollBottomPadding).toBeUndefined();
-  });
-
   it("suppresses the mobile detail sheet for file explorer item jumps", () => {
     const context = createContext();
 

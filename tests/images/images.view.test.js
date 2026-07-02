@@ -86,7 +86,8 @@ describe("images view", () => {
       "utf8",
     );
 
-    expect(imagesView).toContain(
+    expect(imagesView).toContain("scroll-bottom-padding=32vh");
+    expect(imagesView).not.toContain(
       ":scrollBottomPadding=${gridScrollBottomPadding}",
     );
   });
