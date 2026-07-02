@@ -91,4 +91,55 @@ describe("layouts.store", () => {
     expect(item.typeInfo).toBe("Save / Load");
     expect(item.typeInfoSvg).toBe("fragment");
   });
+
+  it("marks catalog groups that contain child folders", () => {
+    const state = createInitialState();
+
+    setItems(
+      { state },
+      {
+        data: {
+          items: {
+            parentFolder: {
+              id: "parentFolder",
+              type: "folder",
+              name: "Parent",
+            },
+            childFolder: {
+              id: "childFolder",
+              type: "folder",
+              name: "Child",
+            },
+          },
+          tree: [
+            {
+              id: "parentFolder",
+              children: [{ id: "childFolder" }],
+            },
+          ],
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    const parentGroup = viewData.catalogGroups.find(
+      (group) => group.id === "parentFolder",
+    );
+    const childGroup = viewData.catalogGroups.find(
+      (group) => group.id === "childFolder",
+    );
+
+    expect(parentGroup).toEqual(
+      expect.objectContaining({
+        hasChildren: false,
+        hasChildFolders: true,
+      }),
+    );
+    expect(childGroup).toEqual(
+      expect.objectContaining({
+        hasChildren: false,
+        hasChildFolders: false,
+      }),
+    );
+  });
 });

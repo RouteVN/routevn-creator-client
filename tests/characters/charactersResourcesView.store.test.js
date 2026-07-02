@@ -45,4 +45,38 @@ describe("charactersResourcesView.store", () => {
       "character-5",
     ]);
   });
+
+  it("does not show the empty add card for groups with child folders", () => {
+    const state = createInitialState();
+    const props = {
+      groups: [
+        {
+          id: "parent-folder",
+          children: [],
+          hasChildFolders: true,
+        },
+        {
+          id: "empty-folder",
+          children: [],
+        },
+      ],
+    };
+
+    const viewData = selectViewData({ state, props });
+
+    expect(viewData.groups[0]).toEqual(
+      expect.objectContaining({
+        hasChildren: false,
+        hasChildFolders: true,
+        showEmptyAdd: false,
+      }),
+    );
+    expect(viewData.groups[1]).toEqual(
+      expect.objectContaining({
+        hasChildren: false,
+        hasChildFolders: false,
+        showEmptyAdd: true,
+      }),
+    );
+  });
 });

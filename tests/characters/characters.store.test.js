@@ -5,10 +5,62 @@ import {
   openEditDialog,
   openSpriteGroupDialog,
   selectViewData,
+  setItems,
   showSpriteGroupDropdownMenu,
 } from "../../src/pages/characters/characters.store.js";
 
 describe("characters store sprite group tags", () => {
+  it("marks groups that contain child folders", () => {
+    const state = createInitialState();
+
+    setItems(
+      { state },
+      {
+        charactersData: {
+          items: {
+            parentFolder: {
+              id: "parentFolder",
+              type: "folder",
+              name: "Parent",
+            },
+            childFolder: {
+              id: "childFolder",
+              type: "folder",
+              name: "Child",
+            },
+          },
+          tree: [
+            {
+              id: "parentFolder",
+              children: [{ id: "childFolder" }],
+            },
+          ],
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    const parentGroup = viewData.flatGroups.find(
+      (group) => group.id === "parentFolder",
+    );
+    const childGroup = viewData.flatGroups.find(
+      (group) => group.id === "childFolder",
+    );
+
+    expect(parentGroup).toEqual(
+      expect.objectContaining({
+        hasChildren: false,
+        hasChildFolders: true,
+      }),
+    );
+    expect(childGroup).toEqual(
+      expect.objectContaining({
+        hasChildren: false,
+        hasChildFolders: false,
+      }),
+    );
+  });
+
   it("orders sprite groups with the top rendered group first", () => {
     const state = createInitialState();
 

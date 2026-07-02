@@ -5,12 +5,16 @@ import {
   setSearchQuery,
 } from "../../src/components/groupVariablesView/groupVariablesView.store.js";
 
-const createProps = () => ({
-  copy: {
+const TEST_I18N = {
+  resourcePages: {},
+  variablesPage: {
     booleanTrueLabel: "はい",
     scopeContextLabel: "コンテキスト",
     variableTypeBooleanLabel: "真偽値",
   },
+};
+
+const createProps = () => ({
   flatGroups: [
     {
       id: "folder-1",
@@ -34,7 +38,11 @@ describe("groupVariablesView.store", () => {
 
     setSearchQuery({ state }, { query: "真偽値" });
 
-    const viewData = selectViewData({ state, props: createProps() });
+    const viewData = selectViewData({
+      state,
+      props: createProps(),
+      i18n: TEST_I18N,
+    });
 
     expect(viewData.flatGroups).toHaveLength(1);
     expect(viewData.flatGroups[0].children).toMatchObject([
@@ -50,7 +58,11 @@ describe("groupVariablesView.store", () => {
 
     setSearchQuery({ state }, { query: "はい" });
 
-    const viewData = selectViewData({ state, props: createProps() });
+    const viewData = selectViewData({
+      state,
+      props: createProps(),
+      i18n: TEST_I18N,
+    });
 
     expect(viewData.flatGroups).toHaveLength(1);
     expect(viewData.flatGroups[0].children).toMatchObject([
@@ -59,5 +71,41 @@ describe("groupVariablesView.store", () => {
         default: "はい",
       },
     ]);
+  });
+
+  it("does not show the empty add row for groups with child folders", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: {
+        flatGroups: [
+          {
+            id: "parent-folder",
+            children: [],
+            hasChildFolders: true,
+          },
+          {
+            id: "empty-folder",
+            children: [],
+          },
+        ],
+      },
+      i18n: TEST_I18N,
+    });
+
+    expect(viewData.flatGroups[0]).toEqual(
+      expect.objectContaining({
+        hasChildren: false,
+        hasChildFolders: true,
+        showEmptyAdd: false,
+      }),
+    );
+    expect(viewData.flatGroups[1]).toEqual(
+      expect.objectContaining({
+        hasChildren: false,
+        hasChildFolders: false,
+        showEmptyAdd: true,
+      }),
+    );
   });
 });

@@ -263,6 +263,8 @@ export const selectViewData = ({ state, props }) => {
     const isCollapsed =
       state.collapsedIds.includes(group.id) && !hasSelectedItem;
     const children = isCollapsed ? [] : groupChildren;
+    const hasVisibleChildren = children.length > 0;
+    const hasChildFolders = Boolean(group.hasChildFolders);
     const progressiveChildren = buildProgressivePlaceholderChildren({
       children,
       remainingProgressiveItemCount,
@@ -283,7 +285,9 @@ export const selectViewData = ({ state, props }) => {
     return {
       ...group,
       isCollapsed,
-      hasChildren: children.length > 0,
+      hasChildren: hasVisibleChildren,
+      hasChildFolders,
+      showEmptyAdd: !hasVisibleChildren && !hasChildFolders,
       headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
       progressiveContentMinHeight: 0,
       children: progressiveChildren.children.map((item) => {

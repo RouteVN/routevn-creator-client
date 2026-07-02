@@ -2,7 +2,10 @@ import {
   toFlatGroups,
   toFlatItems,
 } from "../../../../internal/project/tree.js";
-import { prependRootItemsGroup } from "../rootGroups.js";
+import {
+  createFolderChildFolderIdSet,
+  prependRootItemsGroup,
+} from "../rootGroups.js";
 import {
   buildTagViewData,
   closeCreateTagDialogState,
@@ -486,6 +489,7 @@ export const createMediaPageStore = ({
             nameLabel: copy.tagNameLabel,
           }));
     const flatItems = toFlatItems(state.data);
+    const folderIdsWithChildFolders = createFolderChildFolderIdSet(flatItems);
     const rawFlatGroups = prependRootItemsGroup({
       data: state.data,
       groups: toFlatGroups(state.data),
@@ -533,6 +537,7 @@ export const createMediaPageStore = ({
         return {
           ...group,
           children: [...filteredChildren, ...filteredPendingChildren],
+          hasChildFolders: folderIdsWithChildFolders.has(group.id),
           hasChildren:
             filteredChildren.length > 0 || filteredPendingChildren.length > 0,
           shouldDisplay: shouldShowGroup,

@@ -193,6 +193,50 @@ describe("images store mobile delete dialog", () => {
 });
 
 describe("images store preview navigation", () => {
+  it("marks media groups that contain child folders", () => {
+    const context = createContext();
+
+    setItems(context, {
+      data: {
+        tree: [
+          {
+            id: "parent-folder",
+            children: [{ id: "child-folder" }],
+          },
+        ],
+        items: {
+          "parent-folder": {
+            id: "parent-folder",
+            type: "folder",
+            name: "Parent",
+          },
+          "child-folder": {
+            id: "child-folder",
+            type: "folder",
+            name: "Child",
+          },
+        },
+      },
+    });
+
+    const viewData = selectViewData(context);
+
+    expect(viewData.mediaGroups[0]).toEqual(
+      expect.objectContaining({
+        id: "parent-folder",
+        hasChildren: false,
+        hasChildFolders: true,
+      }),
+    );
+    expect(viewData.mediaGroups[1]).toEqual(
+      expect.objectContaining({
+        id: "child-folder",
+        hasChildren: false,
+        hasChildFolders: false,
+      }),
+    );
+  });
+
   it("uses the original image file for grid thumbnails so transparency can show", () => {
     const context = createContext();
 

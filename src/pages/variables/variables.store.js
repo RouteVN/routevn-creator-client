@@ -1,4 +1,5 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { createFolderChildFolderIdSet } from "../../internal/ui/resourcePages/rootGroups.js";
 import {
   isVariableEnumEnabled,
   normalizeVariableEnumValues,
@@ -333,7 +334,12 @@ export const selectFolderById = ({ state }, { folderId } = {}) => {
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectVariablesPageCopy(i18n);
   const flatItems = toFlatItems(state.variablesData);
-  const flatGroups = toFlatGroups(state.variablesData);
+  const folderIdsWithChildFolders = createFolderChildFolderIdSet(flatItems);
+  const flatGroups = toFlatGroups(state.variablesData).map((group) => ({
+    ...group,
+    hasChildFolders: folderIdsWithChildFolders.has(group.id),
+    hasChildren: (group.children ?? []).length > 0,
+  }));
 
   // Get selected item details
   const selectedItem = state.selectedItemId

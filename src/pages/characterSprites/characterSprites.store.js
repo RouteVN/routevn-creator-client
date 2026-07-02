@@ -23,6 +23,7 @@ import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { createFolderChildFolderIdSet } from "../../internal/ui/resourcePages/rootGroups.js";
 import {
   buildMobileResourcePageViewData,
   closeMobileResourceFileExplorerState,
@@ -1342,6 +1343,7 @@ export const selectViewData = ({ state, i18n }) => {
     toFlatItems(state.spritesData),
   );
   const rawFlatGroups = toFlatGroups(state.spritesData);
+  const folderIdsWithChildFolders = createFolderChildFolderIdSet(flatItems);
   const searchQuery = state.searchQuery.toLowerCase().trim();
   const activeTagIds = state.activeTagIds ?? [];
   const pendingByGroupId = new Map();
@@ -1386,6 +1388,7 @@ export const selectViewData = ({ state, i18n }) => {
       return {
         ...group,
         children: [...children, ...pendingChildren],
+        hasChildFolders: folderIdsWithChildFolders.has(group.id),
         hasChildren: children.length > 0 || pendingChildren.length > 0,
         shouldDisplay,
       };
