@@ -81,6 +81,7 @@
     "tauri:dev:win": "CARGO_BUILD_JOBS=2 tauri dev --runner ../scripts/tauri-wsl-windows-runner.sh --target x86_64-pc-windows-msvc",
     "tauri:build": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json",
     "tauri:build:appimage": "./scripts/tauri-build-appimage.sh",
+    "tauri:build:appimage:docker": "./scripts/tauri-build-appimage-docker.sh",
     "tauri:build:win": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --runner cargo-xwin --target x86_64-pc-windows-msvc",
     "tauri:build:win:steam": "./scripts/tauri-build-win-steam.sh",
     "tauri:build:mac": "./scripts/tauri-build-mac.sh",
