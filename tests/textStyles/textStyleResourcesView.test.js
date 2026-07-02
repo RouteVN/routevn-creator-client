@@ -8,6 +8,7 @@ import {
   createInitialState,
   selectViewData,
   showContextMenu,
+  setProgressiveRenderedItemCount,
 } from "../../src/components/textStyleResourcesView/textStyleResourcesView.store.js";
 
 describe("textStyleResourcesView", () => {
@@ -202,5 +203,32 @@ describe("textStyleResourcesView", () => {
     expect(viewData.itemsPerRow).toBe(6);
     expect(viewData.cardGridColumns).toBe("6");
     expect(viewData.zoomControlMax).toBe(6);
+  });
+
+  it("reserves text style placeholders before progressive hydration", () => {
+    const state = createInitialState();
+    const props = {
+      progressiveRender: true,
+      groups: [
+        {
+          id: "folder-1",
+          hasChildren: true,
+          children: [{ id: "text-style-1" }, { id: "text-style-2" }],
+        },
+      ],
+    };
+
+    setProgressiveRenderedItemCount({ state }, { itemCount: 0 });
+    const viewData = selectViewData({ state, props });
+
+    expect(viewData.groups[0].children).toEqual([
+      expect.objectContaining({
+        isPlaceholder: true,
+        domItemId: "",
+        cursor: "default",
+      }),
+      expect.objectContaining({ isPlaceholder: true }),
+    ]);
+    expect(viewData.groups[0].hasChildren).toBe(true);
   });
 });

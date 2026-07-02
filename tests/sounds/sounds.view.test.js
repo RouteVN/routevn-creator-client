@@ -78,7 +78,8 @@ describe("sounds view", () => {
       "utf8",
     );
 
-    expect(soundsView).toContain(
+    expect(soundsView).toContain("scroll-bottom-padding=32vh");
+    expect(soundsView).not.toContain(
       ":scrollBottomPadding=${gridScrollBottomPadding}",
     );
   });

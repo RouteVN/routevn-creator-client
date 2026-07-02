@@ -15,6 +15,6 @@ template:
                   - rtgl-view h=32 w=f av=c ph=xs:
                       - rtgl-text s=xs c=mu-fg: ${section.label}
                   - $for item, itemIndex in section.items:
-                      - rtgl-view#mobileSidebarItem${sectionIndex}x${itemIndex} data-item-id=${item.id} w=f h=48 d=h av=c g=sm ph=md br=lg bgc=${item.bgc} h-bgc=mu cur=pointer:
+                      - 'rtgl-view#mobileSidebarItem${sectionIndex}x${itemIndex} data-item-id=${item.id} w=f h=48 d=h av=c g=sm ph=md br=lg bgc=${item.bgc} h-bgc=mu cur=pointer style="touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;"':
                           - rtgl-svg wh=20 svg=${item.icon} c=fg: null
                           - rtgl-text s=sm: ${item.label}

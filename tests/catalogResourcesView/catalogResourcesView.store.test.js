@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectViewData,
+  setProgressiveRenderedItemCount,
   toggleGroupCollapse,
 } from "../../src/components/catalogResourcesView/catalogResourcesView.store.js";
 
@@ -85,5 +86,35 @@ describe("catalogResourcesView.store", () => {
     expect(viewData.itemsPerRow).toBe(6);
     expect(viewData.cardGridColumns).toBe("6");
     expect(viewData.zoomControlMax).toBe(6);
+  });
+
+  it("reserves catalog placeholders before progressive hydration", () => {
+    const state = createInitialState();
+    const props = {
+      progressiveRender: true,
+      groups: [
+        {
+          id: "folder-1",
+          hasChildren: true,
+          children: [
+            { id: "color-1", cardKind: "color" },
+            { id: "color-2", cardKind: "color" },
+          ],
+        },
+      ],
+    };
+
+    setProgressiveRenderedItemCount({ state }, { itemCount: 0 });
+    const viewData = selectViewData({ state, props });
+
+    expect(viewData.groups[0].children).toEqual([
+      expect.objectContaining({
+        isPlaceholder: true,
+        domItemId: "",
+        cursor: "default",
+      }),
+      expect.objectContaining({ isPlaceholder: true }),
+    ]);
+    expect(viewData.groups[0].hasChildren).toBe(true);
   });
 });

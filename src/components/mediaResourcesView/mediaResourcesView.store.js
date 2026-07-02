@@ -1,3 +1,4 @@
+import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
   clearTagFilterPopoverTagIds,
@@ -41,6 +42,15 @@ const parseBooleanProp = (value, fallback = false) => {
   }
 
   return Boolean(value);
+};
+
+const parseNonNegativeIntegerProp = (value, fallback) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return fallback;
+  }
+
+  return Math.round(numericValue);
 };
 
 const isColumnZoomControlMode = (props) => props?.zoomControlMode === "columns";
@@ -88,9 +98,15 @@ export const createInitialState = ({ props } = {}) => ({
     position: { ...DEFAULT_ZOOM_POPOVER_POSITION },
   },
   hoveredItemId: undefined,
-  progressiveRenderedItemCount: DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
+  progressiveRenderedItemCount: parseNonNegativeIntegerProp(
+    props?.progressiveInitialItemCount,
+    DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
+  ),
   progressiveRenderSignature: "",
   progressiveFrameId: undefined,
+  soundWaveformRenderedItemCount: 0,
+  soundWaveformRenderSignature: "",
+  soundWaveformFrameId: undefined,
   syncRenderFrameId: undefined,
   dropdownMenu: {
     isOpen: false,
@@ -155,6 +171,37 @@ export const clearProgressiveFrameId = ({ state }) => {
 };
 
 export const selectProgressiveFrameId = ({ state }) => state.progressiveFrameId;
+
+export const setSoundWaveformRenderedItemCount = (
+  { state },
+  { itemCount } = {},
+) => {
+  state.soundWaveformRenderedItemCount = itemCount ?? 0;
+};
+
+export const selectSoundWaveformRenderedItemCount = ({ state }) =>
+  state.soundWaveformRenderedItemCount;
+
+export const setSoundWaveformRenderSignature = (
+  { state },
+  { signature } = {},
+) => {
+  state.soundWaveformRenderSignature = signature ?? "";
+};
+
+export const selectSoundWaveformRenderSignature = ({ state }) =>
+  state.soundWaveformRenderSignature;
+
+export const setSoundWaveformFrameId = ({ state }, { frameId } = {}) => {
+  state.soundWaveformFrameId = frameId;
+};
+
+export const clearSoundWaveformFrameId = ({ state }) => {
+  state.soundWaveformFrameId = undefined;
+};
+
+export const selectSoundWaveformFrameId = ({ state }) =>
+  state.soundWaveformFrameId;
 
 export const setSyncRenderFrameId = ({ state }, { frameId } = {}) => {
   state.syncRenderFrameId = frameId;
@@ -302,33 +349,47 @@ export const selectViewData = ({ state, props }) => {
     props,
   });
   const lazyImageCards = parseBooleanProp(props.lazyImageCards);
+  const lazySoundWaveforms = parseBooleanProp(props.lazySoundWaveforms);
+  const progressiveRenderEnabled = parseBooleanProp(props.progressiveRender);
   let remainingEagerImageCardCount = lazyImageCards
     ? DEFAULT_EAGER_IMAGE_CARD_COUNT
     : Number.POSITIVE_INFINITY;
-  let remainingProgressiveItemCount = parseBooleanProp(props.progressiveRender)
+  let remainingSoundWaveformCount = lazySoundWaveforms
+    ? state.soundWaveformRenderedItemCount
+    : Number.POSITIVE_INFINITY;
+  let remainingProgressiveItemCount = progressiveRenderEnabled
     ? state.progressiveRenderedItemCount
     : Number.POSITIVE_INFINITY;
 
   const groups = sourceGroups.map((group) => {
     const isCollapsed = state.collapsedIds.includes(group.id);
     const children = isCollapsed ? [] : (group.children ?? []);
-    const visibleChildren =
-      remainingProgressiveItemCount === Number.POSITIVE_INFINITY
-        ? children
-        : children.slice(0, Math.max(0, remainingProgressiveItemCount));
+    const progressiveChildren = buildProgressivePlaceholderChildren({
+      children,
+      remainingProgressiveItemCount,
+      groupId: group.id,
+      placeholderItemCount: children.length,
+      createPlaceholder: ({ item, absoluteIndex, groupId }) => ({
+        id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
+        domItemId: "",
+        sourceItemId: item.id,
+        cardKind: item.cardKind,
+        previewAspectRatio: item.previewAspectRatio,
+        isPlaceholder: true,
+        isInteractive: false,
+      }),
+    });
 
-    if (remainingProgressiveItemCount !== Number.POSITIVE_INFINITY) {
-      remainingProgressiveItemCount = Math.max(
-        0,
-        remainingProgressiveItemCount - children.length,
-      );
-    }
+    remainingProgressiveItemCount =
+      progressiveChildren.remainingProgressiveItemCount;
 
     return {
       ...group,
       isCollapsed,
+      hasChildren: children.length > 0,
       headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
-      children: visibleChildren.map((item) => {
+      progressiveContentMinHeight: 0,
+      children: progressiveChildren.children.map((item) => {
         const isSelected = item.id === props.selectedItemId;
         const defaultBorderColor = resolveDefaultBorderColor();
         const isInteractive = item.isInteractive !== false;
@@ -336,11 +397,24 @@ export const selectViewData = ({ state, props }) => {
           item.cardKind === "image" && Boolean(item.previewFileId);
         const shouldLazyLoadPreview =
           canRenderImagePreview && remainingEagerImageCardCount <= 0;
+        const hasSoundWaveform =
+          item.cardKind === "sound" && Boolean(item.waveformDataFileId);
+        const shouldRenderWaveform =
+          hasSoundWaveform && remainingSoundWaveformCount > 0;
 
         if (canRenderImagePreview) {
           remainingEagerImageCardCount = Math.max(
             0,
             remainingEagerImageCardCount - 1,
+          );
+        }
+        if (
+          hasSoundWaveform &&
+          remainingSoundWaveformCount !== Number.POSITIVE_INFINITY
+        ) {
+          remainingSoundWaveformCount = Math.max(
+            0,
+            remainingSoundWaveformCount - 1,
           );
         }
         const useFullWidthCard =
@@ -403,6 +477,19 @@ export const selectViewData = ({ state, props }) => {
             isInteractive && item.canPreview && item.id === state.hoveredItemId,
           ),
           shouldLazyLoadPreview,
+          shouldRenderWaveform,
+          placeholderCardWidth:
+            item.cardKind === "image"
+              ? useFullWidthCard
+                ? "f"
+                : maxWidth
+              : useFullWidthCard
+                ? "f"
+                : mediaWidth,
+          placeholderTextWidth: useFullWidthCard ? "60%" : mediaWidth * 0.6,
+          placeholderPreviewHeight:
+            item.cardKind === "image" ? imageHeight : mediaHeight,
+          useFullWidthPlaceholder: useFullWidthCard,
         };
       }),
     };
@@ -463,8 +550,9 @@ export const selectViewData = ({ state, props }) => {
     fullWidthImageCards,
     mobileLayout,
     canUpload: parseBooleanProp(props.canUpload, true),
-    progressiveRender: parseBooleanProp(props.progressiveRender),
+    progressiveRender: progressiveRenderEnabled,
     lazyImageCards,
+    lazySoundWaveforms,
     showImageCardPreview: parseBooleanProp(props.showImageCardPreview, true),
     scrollBottomPadding,
     draggingGroupId: state.draggingGroupId,

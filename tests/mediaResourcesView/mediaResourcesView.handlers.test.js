@@ -197,4 +197,97 @@ describe("mediaResourcesView.handlers", () => {
     );
     expect(render).toHaveBeenCalled();
   });
+
+  it("hydrates lazy sound waveforms after the initial paint window", () => {
+    const frameCallbacks = [];
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback) => {
+        frameCallbacks.push(callback);
+        return frameCallbacks.length;
+      }),
+    );
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    let renderedItemCount = 0;
+    let renderSignature = "";
+    let frameId;
+    const render = vi.fn();
+
+    try {
+      handleBeforeMount({
+        props: {
+          lazySoundWaveforms: true,
+          groups: [
+            {
+              id: "folder-1",
+              children: [
+                {
+                  id: "sound-1",
+                  cardKind: "sound",
+                  waveformDataFileId: "waveform-1",
+                },
+                {
+                  id: "sound-2",
+                  cardKind: "sound",
+                  waveformDataFileId: "waveform-2",
+                },
+                {
+                  id: "sound-3",
+                  cardKind: "sound",
+                  waveformDataFileId: "waveform-3",
+                },
+                {
+                  id: "sound-4",
+                  cardKind: "sound",
+                  waveformDataFileId: "waveform-4",
+                },
+                {
+                  id: "sound-5",
+                  cardKind: "sound",
+                  waveformDataFileId: "waveform-5",
+                },
+              ],
+            },
+          ],
+        },
+        store: {
+          selectProgressiveFrameId: () => undefined,
+          setProgressiveRenderSignature: vi.fn(),
+          setProgressiveRenderedItemCount: vi.fn(),
+          selectSoundWaveformFrameId: () => frameId,
+          setSoundWaveformFrameId: ({ frameId: nextFrameId }) => {
+            frameId = nextFrameId;
+          },
+          clearSoundWaveformFrameId: () => {
+            frameId = undefined;
+          },
+          selectSoundWaveformRenderedItemCount: () => renderedItemCount,
+          setSoundWaveformRenderedItemCount: ({ itemCount }) => {
+            renderedItemCount = itemCount;
+          },
+          selectSoundWaveformRenderSignature: () => renderSignature,
+          setSoundWaveformRenderSignature: ({ signature }) => {
+            renderSignature = signature;
+          },
+        },
+        render,
+      });
+
+      expect(renderedItemCount).toBe(0);
+      expect(render).not.toHaveBeenCalled();
+
+      for (let frameIndex = 0; frameIndex < 7; frameIndex += 1) {
+        frameCallbacks.shift()();
+        expect(renderedItemCount).toBe(0);
+        expect(render).not.toHaveBeenCalled();
+      }
+
+      frameCallbacks.shift()();
+      expect(renderedItemCount).toBe(4);
+      expect(render).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

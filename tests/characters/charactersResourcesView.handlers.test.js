@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleBeforeMount,
   handleItemContextMenu,
   handleItemDoubleClick,
 } from "../../src/components/charactersResourcesView/charactersResourcesView.handlers.js";
@@ -95,5 +96,78 @@ describe("charactersResourcesView.handlers", () => {
     );
     expect(showContextMenu).not.toHaveBeenCalled();
     expect(render).not.toHaveBeenCalled();
+  });
+
+  it("progressively renders character cards after the first batch", () => {
+    const frameCallbacks = [];
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn((callback) => {
+        frameCallbacks.push(callback);
+        return frameCallbacks.length;
+      }),
+    );
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    let renderedItemCount = 0;
+    let renderSignature = "";
+    let frameId;
+    const render = vi.fn();
+
+    try {
+      handleBeforeMount({
+        props: {
+          progressiveRender: true,
+          progressiveInitialItemCount: 2,
+          progressiveHydrationDelayFrameCount: 3,
+          groups: [
+            {
+              id: "folder-1",
+              children: [
+                { id: "character-1" },
+                { id: "character-2" },
+                { id: "character-3" },
+              ],
+            },
+          ],
+        },
+        store: {
+          selectProgressiveFrameId: () => frameId,
+          setProgressiveFrameId: ({ frameId: nextFrameId }) => {
+            frameId = nextFrameId;
+          },
+          clearProgressiveFrameId: () => {
+            frameId = undefined;
+          },
+          selectProgressiveRenderedItemCount: () => renderedItemCount,
+          setProgressiveRenderedItemCount: ({ itemCount }) => {
+            renderedItemCount = itemCount;
+          },
+          selectProgressiveRenderSignature: () => renderSignature,
+          setProgressiveRenderSignature: ({ signature }) => {
+            renderSignature = signature;
+          },
+        },
+        render,
+      });
+
+      expect(renderedItemCount).toBe(2);
+      expect(render).not.toHaveBeenCalled();
+
+      frameCallbacks.shift()();
+      expect(renderedItemCount).toBe(2);
+      expect(render).not.toHaveBeenCalled();
+
+      frameCallbacks.shift()();
+      expect(renderedItemCount).toBe(2);
+      expect(render).not.toHaveBeenCalled();
+
+      frameCallbacks.shift()();
+
+      expect(renderedItemCount).toBe(3);
+      expect(render).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

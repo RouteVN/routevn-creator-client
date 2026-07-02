@@ -132,7 +132,7 @@ export const createMediaPageHandlers = ({
 
   const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     const { store, refs, render } = deps;
-    const { fileExplorer, editForm } = refs;
+    const { fileExplorer } = refs;
 
     if (!itemId) {
       return;
@@ -153,13 +153,13 @@ export const createMediaPageHandlers = ({
       previewFileId: getEditPreviewFileId(item),
     });
     render();
-    editForm.reset();
-    editForm.setValues({ values: editValues });
+    refs.editForm?.reset?.();
+    refs.editForm?.setValues?.({ values: editValues });
   };
 
   const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
     const { store, refs, render } = deps;
-    const { fileExplorer, folderNameForm } = refs;
+    const { fileExplorer } = refs;
 
     if (!folderId) {
       return;
@@ -182,8 +182,8 @@ export const createMediaPageHandlers = ({
       defaultValues: values,
     });
     render();
-    folderNameForm.reset();
-    folderNameForm.setValues({ values });
+    refs.folderNameForm?.reset?.();
+    refs.folderNameForm?.setValues?.({ values });
   };
 
   const mountSubscriptions = (deps) => {

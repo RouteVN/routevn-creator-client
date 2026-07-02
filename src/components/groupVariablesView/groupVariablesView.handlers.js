@@ -12,6 +12,10 @@ import {
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
 
+const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
+const PROGRESSIVE_BATCH_ITEM_COUNT = 24;
+const PROGRESSIVE_HYDRATION_DELAY_FRAME_COUNT = 1;
+
 const parseBooleanProp = (value, fallback = false) => {
   if (value === undefined || value === null) {
     return fallback;
@@ -32,6 +36,203 @@ const parseBooleanProp = (value, fallback = false) => {
   }
 
   return Boolean(value);
+};
+
+const parseNonNegativeIntegerProp = (value, fallback) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return fallback;
+  }
+
+  return Math.round(numericValue);
+};
+
+const isProgressiveRenderEnabled = (props) => {
+  return parseBooleanProp(props?.progressiveRender);
+};
+
+const getProgressiveInitialItemCount = (props) => {
+  return parseNonNegativeIntegerProp(
+    props?.progressiveInitialItemCount,
+    DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
+  );
+};
+
+const getProgressiveHydrationDelayFrameCount = (props) => {
+  return parseNonNegativeIntegerProp(
+    props?.progressiveHydrationDelayFrameCount,
+    PROGRESSIVE_HYDRATION_DELAY_FRAME_COUNT,
+  );
+};
+
+const getProgressiveGroups = (props) => props?.flatGroups ?? [];
+
+const getProgressiveRenderSignature = (groups = []) => {
+  return JSON.stringify(
+    groups.map((group) => [
+      group?.id ?? "",
+      (group?.children ?? []).map((item) => item?.id ?? ""),
+    ]),
+  );
+};
+
+const countProgressiveItems = (groups = []) => {
+  return groups.reduce((sum, group) => sum + (group?.children?.length ?? 0), 0);
+};
+
+const cancelProgressiveRenderFrame = (store) => {
+  const frameId = store.selectProgressiveFrameId();
+  if (frameId === undefined) {
+    return;
+  }
+
+  cancelAnimationFrame(frameId);
+  store.clearProgressiveFrameId();
+};
+
+const cancelScheduledSyncRender = (store) => {
+  const frameId = store.selectSyncRenderFrameId?.();
+  if (frameId === undefined) {
+    return;
+  }
+
+  cancelAnimationFrame(frameId);
+  store.clearSyncRenderFrameId?.();
+};
+
+const scheduleSyncRender = (deps) => {
+  const { render, store } = deps;
+  if (typeof store.selectSyncRenderFrameId === "function") {
+    const activeFrameId = store.selectSyncRenderFrameId();
+    if (activeFrameId !== undefined) {
+      return;
+    }
+  }
+
+  if (typeof globalThis.requestAnimationFrame !== "function") {
+    render();
+    return;
+  }
+
+  const frameId = globalThis.requestAnimationFrame(() => {
+    store.clearSyncRenderFrameId?.();
+    render();
+  });
+
+  store.setSyncRenderFrameId?.({
+    frameId,
+  });
+};
+
+const scheduleProgressiveRender = (deps) => {
+  const { props, store, render } = deps;
+  if (!isProgressiveRenderEnabled(props)) {
+    return;
+  }
+
+  if (store.selectProgressiveFrameId() !== undefined) {
+    return;
+  }
+
+  const totalItemCount = countProgressiveItems(getProgressiveGroups(props));
+  if (store.selectProgressiveRenderedItemCount() >= totalItemCount) {
+    return;
+  }
+
+  const renderNextBatch = () => {
+    store.clearProgressiveFrameId();
+
+    const nextTotalItemCount = countProgressiveItems(
+      getProgressiveGroups(deps.props),
+    );
+    const nextRenderedItemCount = Math.min(
+      nextTotalItemCount,
+      store.selectProgressiveRenderedItemCount() + PROGRESSIVE_BATCH_ITEM_COUNT,
+    );
+
+    store.setProgressiveRenderedItemCount({
+      itemCount: nextRenderedItemCount,
+    });
+    render();
+
+    if (nextRenderedItemCount < nextTotalItemCount) {
+      scheduleProgressiveRender(deps);
+    }
+  };
+
+  const scheduleAfterFrames = (remainingFrameCount) => {
+    const frameId = requestAnimationFrame(() => {
+      if (remainingFrameCount <= 1) {
+        renderNextBatch();
+        return;
+      }
+
+      scheduleAfterFrames(remainingFrameCount - 1);
+    });
+
+    store.setProgressiveFrameId({ frameId });
+  };
+
+  scheduleAfterFrames(getProgressiveHydrationDelayFrameCount(props));
+};
+
+const syncProgressiveRenderState = (deps) => {
+  const { props, store } = deps;
+  const progressiveRenderEnabled = isProgressiveRenderEnabled(props);
+  const groups = getProgressiveGroups(props);
+  const totalItemCount = countProgressiveItems(groups);
+
+  if (!progressiveRenderEnabled) {
+    cancelProgressiveRenderFrame(store);
+    store.setProgressiveRenderSignature({ signature: "" });
+    store.setProgressiveRenderedItemCount({ itemCount: totalItemCount });
+    return true;
+  }
+
+  const nextSignature = getProgressiveRenderSignature(groups);
+  const currentSignature = store.selectProgressiveRenderSignature();
+  const currentRenderedItemCount = store.selectProgressiveRenderedItemCount();
+
+  if (nextSignature === currentSignature) {
+    if (store.selectProgressiveRenderedItemCount() < totalItemCount) {
+      scheduleProgressiveRender(deps);
+    }
+    return false;
+  }
+
+  cancelProgressiveRenderFrame(store);
+  store.setProgressiveRenderSignature({ signature: nextSignature });
+  const progressiveInitialItemCount = getProgressiveInitialItemCount(props);
+  const nextRenderedItemCount = currentSignature
+    ? Math.min(
+        totalItemCount,
+        Math.max(currentRenderedItemCount, progressiveInitialItemCount),
+      )
+    : Math.min(totalItemCount, progressiveInitialItemCount);
+  store.setProgressiveRenderedItemCount({
+    itemCount: nextRenderedItemCount,
+  });
+
+  if (nextRenderedItemCount < totalItemCount) {
+    scheduleProgressiveRender(deps);
+  }
+
+  return true;
+};
+
+export const handleBeforeMount = (deps) => {
+  syncProgressiveRenderState(deps);
+
+  return () => {
+    cancelProgressiveRenderFrame(deps.store);
+    cancelScheduledSyncRender(deps.store);
+  };
+};
+
+export const handleOnUpdate = (deps) => {
+  if (syncProgressiveRenderState(deps)) {
+    scheduleSyncRender(deps);
+  }
 };
 
 export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
@@ -88,7 +289,7 @@ export const handleTagFilterChange = (deps, payload) => {
 
 const getDataId = (event, attrName, fallbackPrefix = "") => {
   const value = event?.currentTarget?.getAttribute?.(attrName);
-  if (value) {
+  if (value !== undefined && value !== null) {
     return value;
   }
   if (!fallbackPrefix) {

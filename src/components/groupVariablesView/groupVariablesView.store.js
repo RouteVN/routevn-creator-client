@@ -8,6 +8,7 @@ import {
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
+import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
   clearTagFilterPopoverTagIds,
@@ -34,6 +35,7 @@ const DEFAULT_FORM_VALUES = {
 const DEFAULT_ENUM_VALUE_FORM_VALUES = {
   value: "",
 };
+const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
 
 const selectGroupVariablesViewCopy = (i18n = {}) =>
   selectI18nCopy(i18n, ["resourcePages", "variablesPage"]);
@@ -212,6 +214,10 @@ export const createInitialState = () => ({
   collapsedIds: [],
   ...createTagFilterPopoverState(),
   searchQuery: "",
+  progressiveRenderedItemCount: DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
+  progressiveRenderSignature: "",
+  progressiveFrameId: undefined,
+  syncRenderFrameId: undefined,
   isDialogOpen: false,
   targetGroupId: null,
   dialogMode: "add",
@@ -336,6 +342,46 @@ export const selectTargetItemId = ({ state }) => {
   return state.dropdownMenu.targetItemId;
 };
 
+export const setProgressiveRenderedItemCount = (
+  { state },
+  { itemCount } = {},
+) => {
+  state.progressiveRenderedItemCount = itemCount ?? 0;
+};
+
+export const selectProgressiveRenderedItemCount = ({ state }) =>
+  state.progressiveRenderedItemCount;
+
+export const setProgressiveRenderSignature = (
+  { state },
+  { signature } = {},
+) => {
+  state.progressiveRenderSignature = signature ?? "";
+};
+
+export const selectProgressiveRenderSignature = ({ state }) =>
+  state.progressiveRenderSignature;
+
+export const setProgressiveFrameId = ({ state }, { frameId } = {}) => {
+  state.progressiveFrameId = frameId;
+};
+
+export const clearProgressiveFrameId = ({ state }) => {
+  state.progressiveFrameId = undefined;
+};
+
+export const selectProgressiveFrameId = ({ state }) => state.progressiveFrameId;
+
+export const setSyncRenderFrameId = ({ state }, { frameId } = {}) => {
+  state.syncRenderFrameId = frameId;
+};
+
+export const clearSyncRenderFrameId = ({ state }) => {
+  state.syncRenderFrameId = undefined;
+};
+
+export const selectSyncRenderFrameId = ({ state }) => state.syncRenderFrameId;
+
 export const openEnumValuePopover = ({ state }, { x, y } = {}) => {
   state.enumValuePopover.isOpen = true;
   state.enumValuePopover.x = x ?? 0;
@@ -399,6 +445,15 @@ const parseBooleanProp = (value, fallback = false) => {
   return Boolean(value);
 };
 
+const parseNonNegativeIntegerProp = (value, fallback) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return fallback;
+  }
+
+  return Math.round(numericValue);
+};
+
 export const selectViewData = ({ state, props, i18n }) => {
   const copy = selectGroupVariablesViewCopy(i18n);
   const readonly = props.readonly === true;
@@ -419,6 +474,10 @@ export const selectViewData = ({ state, props, i18n }) => {
     mobileLayout,
     scrollBottomPadding: props.scrollBottomPadding,
   });
+  const progressiveRenderEnabled = parseBooleanProp(props.progressiveRender);
+  let remainingProgressiveItemCount = progressiveRenderEnabled
+    ? state.progressiveRenderedItemCount
+    : Number.POSITIVE_INFINITY;
 
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
@@ -466,34 +525,62 @@ export const selectViewData = ({ state, props, i18n }) => {
       const shouldShowGroup = !searchQuery || hasMatchingChildren;
 
       const isCollapsed = state.collapsedIds.includes(group.id);
-      const children = isCollapsed
-        ? []
-        : filteredChildren.map((item) => {
-            let defaultValue = item.default ?? "";
-            if (typeof defaultValue === "boolean") {
-              defaultValue = getBooleanLabel(defaultValue, copy);
-            }
-            const scope = item.scope || "context";
-            const variableType = item.variableType || "string";
-            return {
-              id: item.id,
-              name: item.name,
-              description: item.description ?? "",
-              scope: getScopeLabel(scope, copy),
-              variableType: getVariableTypeLabel(variableType, copy),
-              default: defaultValue,
-              isEnum: isVariableEnumEnabled(item),
-              isSelected: item.id === props.selectedItemId,
-            };
-          });
+      const children = isCollapsed ? [] : filteredChildren;
+      const progressiveChildren = buildProgressivePlaceholderChildren({
+        children,
+        remainingProgressiveItemCount,
+        groupId: group.id,
+        placeholderItemCount: children.length,
+        createPlaceholder: ({ item, absoluteIndex, groupId }) => ({
+          id: `${item.id ?? `${groupId}-${absoluteIndex}`}-placeholder`,
+          sourceItemId: item.id,
+          isPlaceholder: true,
+          isInteractive: false,
+        }),
+      });
+
+      remainingProgressiveItemCount =
+        progressiveChildren.remainingProgressiveItemCount;
+
+      const viewChildren = progressiveChildren.children.map((item) => {
+        if (item.isPlaceholder) {
+          return {
+            id: item.id,
+            sourceItemId: item.sourceItemId,
+            domItemId: "",
+            isPlaceholder: true,
+            cursor: "default",
+          };
+        }
+
+        let defaultValue = item.default ?? "";
+        if (typeof defaultValue === "boolean") {
+          defaultValue = getBooleanLabel(defaultValue, copy);
+        }
+        const scope = item.scope || "context";
+        const variableType = item.variableType || "string";
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description ?? "",
+          scope: getScopeLabel(scope, copy),
+          variableType: getVariableTypeLabel(variableType, copy),
+          default: defaultValue,
+          isEnum: isVariableEnumEnabled(item),
+          isSelected: item.id === props.selectedItemId,
+          domItemId: item.id,
+          cursor: "pointer",
+        };
+      });
 
       return {
         ...group,
         isCollapsed,
         headerBackgroundColor:
           group.id === props.selectedFolderId ? "mu" : "bg",
-        children,
+        children: viewChildren,
         hasChildren: filteredChildren.length > 0,
+        progressiveContentMinHeight: 0,
         shouldDisplay: shouldShowGroup,
       };
     })
@@ -560,6 +647,11 @@ export const selectViewData = ({ state, props, i18n }) => {
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,
     showMenuButton: parseBooleanProp(props.showMenuButton),
+    progressiveRender: progressiveRenderEnabled,
+    progressiveInitialItemCount: parseNonNegativeIntegerProp(
+      props.progressiveInitialItemCount,
+      DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
+    ),
     mobileLayout,
     scrollBottomPadding,
     hasActiveTagFilter,
