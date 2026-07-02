@@ -226,6 +226,7 @@ const {
   selectFolderById,
   selectSelectedItemId,
   selectSelectedFolderId,
+  selectFolderNameDialogItemId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -234,6 +235,10 @@ const {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
   openFolderNameDialog,
   closeFolderNameDialog,
   selectViewData: selectCatalogViewData,
@@ -294,6 +299,7 @@ export {
   selectFolderById,
   selectSelectedItemId,
   selectSelectedFolderId,
+  selectFolderNameDialogItemId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -302,11 +308,19 @@ export {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
   openFolderNameDialog,
   closeFolderNameDialog,
 };
 
 export const selectLayoutItemById = selectItemById;
+
+export const selectEditItemId = ({ state }) => state.editItemId;
+
+export const selectTargetGroupId = ({ state }) => state.targetGroupId;
 
 export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.isAddDialogOpen = true;

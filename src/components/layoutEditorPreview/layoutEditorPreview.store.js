@@ -497,6 +497,12 @@ export const setImageSelectorSelectedImageId = (
   state.imageSelectorDialog.selectedImageId = imageId ?? undefined;
 };
 
+export const selectDialogueDefaultValues = ({ state }) =>
+  state.dialogueDefaultValues;
+
+export const selectImageSelectorSelectedImageId = ({ state }) =>
+  state.imageSelectorDialog.selectedImageId;
+
 export const showFullImagePreview = ({ state }, { imageId } = {}) => {
   state.fullImagePreviewVisible = true;
   state.fullImagePreviewImageId = imageId;

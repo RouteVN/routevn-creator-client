@@ -11,6 +11,10 @@ import {
   createTagState,
   filterGroupsByActiveTags,
   openCreateTagDialogState,
+  selectActiveTagIdsState,
+  selectCreateTagContextState,
+  selectDetailTagIdsState,
+  selectTagsDataState,
   setActiveTagIdsState,
   setDetailTagIdsState,
   setDetailTagPopoverOpenState,
@@ -270,6 +274,9 @@ export const createCatalogPageStore = ({
 
   const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
 
+  const selectFolderNameDialogItemId = ({ state }) =>
+    state.folderNameDialogItemId;
+
   const setSearchQuery = ({ state }, { value } = {}) => {
     state.searchQuery = value ?? "";
   };
@@ -528,6 +535,7 @@ export const createCatalogPageStore = ({
     selectFolderById,
     selectSelectedItemId,
     selectSelectedFolderId,
+    selectFolderNameDialogItemId,
     selectIsTouchMode,
     selectIsMobileFileExplorerOpen,
     selectSuppressMobileDetailSheet,
@@ -541,6 +549,10 @@ export const createCatalogPageStore = ({
     closeCreateTagDialog,
     openFolderNameDialog,
     closeFolderNameDialog,
+    selectTagsData: selectTagsDataState,
+    selectActiveTagIds: selectActiveTagIdsState,
+    selectDetailTagIds: selectDetailTagIdsState,
+    selectCreateTagContext: selectCreateTagContextState,
     selectViewData,
   };
 };

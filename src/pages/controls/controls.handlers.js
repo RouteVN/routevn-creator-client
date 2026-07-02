@@ -398,7 +398,7 @@ export const handleControlFormActionClick = async (deps, payload) => {
 
   const description = values?.description ?? "";
   const tagIds = Array.isArray(values?.tagIds) ? values.tagIds : [];
-  const editItemId = store.getState().editItemId;
+  const { editItemId, targetGroupId } = store.selectDialogItemIds();
 
   if (editItemId) {
     const updateAttempt = await runResourcePageMutation({
@@ -438,7 +438,7 @@ export const handleControlFormActionClick = async (deps, payload) => {
             tagIds,
           },
           elements: createControlTemplate(projectResolution, copy),
-          parentId: store.getState().targetGroupId,
+          parentId: targetGroupId,
           position: "last",
         }),
     });

@@ -71,6 +71,11 @@ export const setFormValues = ({ state }, values = {}) => {
   state.formValues = values;
 };
 
+export const selectSubmitData = ({ state }) => ({
+  formValues: state.formValues,
+  scenes: state.scenes,
+});
+
 export const selectViewData = ({ state, props, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const scenes = toFlatItems(state.scenes);

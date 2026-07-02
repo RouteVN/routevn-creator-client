@@ -277,6 +277,7 @@ const {
   selectFolderById,
   selectSelectedItemId,
   selectSelectedFolderId,
+  selectFolderNameDialogItemId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -285,6 +286,10 @@ const {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
   openFolderNameDialog,
   closeFolderNameDialog,
   selectViewData: selectCatalogViewData,
@@ -388,6 +393,7 @@ export {
   closeMobileFileExplorer,
   selectSelectedItem,
   selectFolderById,
+  selectFolderNameDialogItemId,
   setTagsData,
   setActiveTagIds,
   setDetailTagIds,
@@ -395,6 +401,10 @@ export {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
   openFolderNameDialog,
   closeFolderNameDialog,
   selectSelectedItemId,
@@ -404,6 +414,8 @@ export {
 
 export const selectAnimationItemById = selectItemById;
 export const selectSelectedAnimation = selectSelectedItem;
+
+export const selectEditItemId = ({ state }) => state.editItemId;
 
 export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
   state.projectResolution = requireProjectResolution(

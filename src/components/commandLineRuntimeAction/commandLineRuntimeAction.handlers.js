@@ -38,13 +38,12 @@ export const handleSubmitClick = (deps, payload) => {
     return;
   }
 
-  const state = store.getState();
-  const mode = state.mode;
+  const { mode, action, formValues } = store.selectSubmitData();
   const values =
     detail.values ??
-    (Object.keys(state.formValues ?? {}).length > 0
-      ? state.formValues
-      : createRuntimeActionDefaultValues(mode, state.action));
+    (Object.keys(formValues ?? {}).length > 0
+      ? formValues
+      : createRuntimeActionDefaultValues(mode, action));
   const submitDetail = createRuntimeActionSubmitDetail(mode, values);
 
   if (!submitDetail) {

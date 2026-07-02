@@ -334,8 +334,7 @@ export const handleVariableSelectChange = (deps, payload) => {
   const { store, render } = deps;
   const variableId =
     payload._event.detail?.value ?? payload._event.target?.value;
-  const variablesData = store.getState().variablesData;
-  const variable = variablesData?.items?.[variableId];
+  const variable = store.selectVariableItemById({ variableId });
 
   store.setTempBranch({
     variableId,
@@ -381,10 +380,12 @@ export const handleEnumValueSelectChange = (deps, payload) => {
 
 export const handleBranchActionsChange = (deps, payload) => {
   const { store, render } = deps;
-  const state = store.getState();
 
   store.setTempBranch({
-    actions: mergeActions(state.tempBranch.actions, payload._event.detail),
+    actions: mergeActions(
+      store.selectTempBranchActions(),
+      payload._event.detail,
+    ),
   });
   render();
 };
@@ -392,10 +393,9 @@ export const handleBranchActionsChange = (deps, payload) => {
 export const handleBranchActionsDelete = (deps, payload) => {
   const { store, render } = deps;
   const actionType = payload._event.detail?.actionType;
-  const state = store.getState();
 
   store.setTempBranch({
-    actions: removeAction(state.tempBranch.actions, actionType),
+    actions: removeAction(store.selectTempBranchActions(), actionType),
   });
   render();
 };
@@ -410,12 +410,13 @@ export const handleSaveBranchClick = (deps, payload) => {
   payload._event.stopPropagation();
   const { appService, store, render, i18n } = deps;
   const copy = selectCommandLineCopy(i18n);
-  const state = store.getState();
-  const branchId = state.currentBranchId ?? generateId();
+  const { currentBranchId, tempBranch, variablesData } =
+    store.selectSaveBranchDraft();
+  const branchId = currentBranchId ?? generateId();
   const branch = createBranchFromTemp({
     branchId,
-    tempBranch: state.tempBranch,
-    variablesData: state.variablesData,
+    tempBranch,
+    variablesData,
     appService,
     copy,
   });

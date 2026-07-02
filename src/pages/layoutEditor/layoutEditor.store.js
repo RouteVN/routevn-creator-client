@@ -447,6 +447,8 @@ export const selectInitialPreviewData = ({ state }) => {
   return state.initialPreviewData;
 };
 
+export const selectIsPreviewMounted = ({ state }) => state.isPreviewMounted;
+
 export const selectViewData = ({ state, constants, i18n }) => {
   const copy = selectLayoutEditorPageCopy(i18n);
   const selectedItem = selectItemDataById(

@@ -29,7 +29,7 @@ export const handleAfterMount = async (deps) => {
 
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
-  const { formValues } = store.getState();
+  const formValues = store.selectFormValues();
 
   if (formValues?.resourceId) {
     dispatchEvent(

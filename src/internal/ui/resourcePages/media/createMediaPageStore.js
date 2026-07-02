@@ -11,6 +11,10 @@ import {
   createTagState,
   filterGroupsByActiveTags,
   openCreateTagDialogState,
+  selectActiveTagIdsState,
+  selectCreateTagContextState,
+  selectDetailTagIdsState,
+  selectTagsDataState,
   setActiveTagIdsState,
   setDetailTagIdsState,
   setDetailTagPopoverOpenState,
@@ -372,6 +376,10 @@ export const createMediaPageStore = ({
 
   const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+  const selectEditItemId = ({ state }) => state.editItemId;
+
+  const selectEditUploadResult = ({ state }) => state.editUploadResult;
+
   const selectFolderById = ({ state }, { folderId } = {}) => {
     return selectDataFolder(state, folderId);
   };
@@ -383,6 +391,9 @@ export const createMediaPageStore = ({
   const selectSuppressMobileDetailSheet = selectSuppressMobileDetailSheetState;
 
   const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
+
+  const selectFolderNameDialogItemId = ({ state }) =>
+    state.folderNameDialogItemId;
 
   const setSearchQuery = ({ state }, { value } = {}) => {
     state.searchQuery = value ?? "";
@@ -664,8 +675,11 @@ export const createMediaPageStore = ({
     selectSelectedItem,
     selectItemById,
     selectSelectedItemId,
+    selectEditItemId,
+    selectEditUploadResult,
     selectFolderById,
     selectSelectedFolderId,
+    selectFolderNameDialogItemId,
     selectIsTouchMode,
     selectIsMobileFileExplorerOpen,
     selectSuppressMobileDetailSheet,
@@ -677,6 +691,10 @@ export const createMediaPageStore = ({
     setDetailTagPopoverOpen,
     openCreateTagDialog,
     closeCreateTagDialog,
+    selectTagsData: selectTagsDataState,
+    selectActiveTagIds: selectActiveTagIdsState,
+    selectDetailTagIds: selectDetailTagIdsState,
+    selectCreateTagContext: selectCreateTagContextState,
     selectViewData,
   };
 };

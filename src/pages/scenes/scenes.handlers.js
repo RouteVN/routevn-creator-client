@@ -1034,7 +1034,7 @@ export const handleSceneFormAction = async (deps, payload) => {
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
-    if (!store.getState().showSceneForm) {
+    if (!store.selectShowSceneForm()) {
       return;
     }
 

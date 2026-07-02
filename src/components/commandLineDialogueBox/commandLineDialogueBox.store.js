@@ -697,10 +697,66 @@ export const setTextSpeed = (
 
 export const selectMode = ({ state }) => state.mode;
 
+export const selectSpriteSelectionState = ({ state }) => ({
+  spriteCharacterId: state.spriteCharacterId,
+  spriteTransformId: state.spriteTransformId,
+  selectedSpriteIds: state.selectedSpriteIds,
+  selectedSpriteGroupId: state.selectedSpriteGroupId,
+});
+
 export const selectSpriteCharacterId = ({ state }) => state.spriteCharacterId;
 
 export const selectTempSelectedSpriteIds = ({ state }) =>
   state.tempSelectedSpriteIds;
+
+export const selectDialogueBuildState = ({ state }) => ({
+  mode: state.mode,
+  selectedMode: state.selectedMode,
+  selectedResourceId: state.selectedResourceId,
+  selectedCharacterId: state.selectedCharacterId,
+  customCharacterName: state.customCharacterName,
+  characterName: state.characterName,
+  characterSpriteEnabled: state.characterSpriteEnabled,
+  spriteCharacterId: state.spriteCharacterId,
+  spriteTransformId: state.spriteTransformId,
+  spriteAnimationMode: state.spriteAnimationMode,
+  spriteAnimationId: state.spriteAnimationId,
+  selectedSpriteIds: state.selectedSpriteIds,
+  tempSelectedSpriteIds: state.tempSelectedSpriteIds,
+  appendDialogue: state.appendDialogue,
+  persistCharacter: state.persistCharacter,
+  clearPage: state.clearPage,
+  customizeTextSpeed: state.customizeTextSpeed,
+  textSpeed: state.textSpeed,
+});
+
+export const selectDialogueFormState = ({ state }) => ({
+  selectedMode: state.selectedMode,
+  selectedResourceId: state.selectedResourceId,
+  selectedCharacterId: state.selectedCharacterId,
+  customCharacterName: state.customCharacterName,
+  characterName: state.characterName,
+  appendDialogue: state.appendDialogue,
+  persistCharacter: state.persistCharacter,
+  clearPage: state.clearPage,
+  customizeTextSpeed: state.customizeTextSpeed,
+  textSpeed: state.textSpeed,
+});
+
+export const selectDialogueFormChangeState = ({ state }) => ({
+  selectedMode: state.selectedMode,
+  customizeTextSpeed: state.customizeTextSpeed,
+  selectedCharacterId: state.selectedCharacterId,
+  customCharacterName: state.customCharacterName,
+  characterName: state.characterName,
+  textSpeed: state.textSpeed,
+});
+
+export const selectSpriteSelectionConfirmState = ({ state }) => ({
+  mode: state.mode,
+  spriteCharacterId: state.spriteCharacterId,
+  tempSelectedSpriteIds: state.tempSelectedSpriteIds,
+});
 
 export const selectCurrentSpriteSelectionGroups = ({ state, props }) => {
   const selectedCharacter = getCharacterById({

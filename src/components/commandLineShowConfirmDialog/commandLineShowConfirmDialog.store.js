@@ -80,6 +80,16 @@ export const setCancelActions = ({ state }, { actions } = {}) => {
       : {};
 };
 
+export const selectConfirmActions = ({ state }) => state.confirmActions;
+
+export const selectCancelActions = ({ state }) => state.cancelActions;
+
+export const selectSubmitData = ({ state }) => ({
+  selectedResourceId: state.selectedResourceId,
+  confirmActions: state.confirmActions,
+  cancelActions: state.cancelActions,
+});
+
 export const selectViewData = ({ state, props, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const layoutOptions = toLayoutOptions(props.layouts);

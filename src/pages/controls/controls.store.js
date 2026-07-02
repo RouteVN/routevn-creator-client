@@ -197,6 +197,7 @@ const {
   selectFolderById,
   selectSelectedItemId,
   selectSelectedFolderId,
+  selectFolderNameDialogItemId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -205,6 +206,10 @@ const {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
   openFolderNameDialog,
   closeFolderNameDialog,
   selectViewData: selectCatalogViewData,
@@ -271,6 +276,7 @@ export {
   selectFolderById,
   selectSelectedItemId,
   selectSelectedFolderId,
+  selectFolderNameDialogItemId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -279,11 +285,20 @@ export {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
   openFolderNameDialog,
   closeFolderNameDialog,
 };
 
 export const selectControlItemById = selectItemById;
+
+export const selectDialogItemIds = ({ state }) => ({
+  editItemId: state.editItemId,
+  targetGroupId: state.targetGroupId,
+});
 
 export const selectKeyboardEditorKey = ({ state }) => state.keyboardEditorKey;
 export const selectKeyboardEditorPhase = ({ state }) =>

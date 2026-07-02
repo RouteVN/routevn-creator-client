@@ -7,12 +7,6 @@ const DIALOGUE_CHARACTER_ID_FIELD = "dialogue-character-id";
 const DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD = "dialogue-custom-character-name";
 const DIALOGUE_CHARACTER_NAME_FIELD = "dialogue-character-name";
 
-const getStoreState = (deps) => {
-  return deps.store.getState
-    ? deps.store.getState()
-    : deps.store._state || deps.store.state;
-};
-
 const getPreviewCharactersData = (deps) => {
   const repositoryState = deps.store.selectRepositoryState();
   return deps.props.charactersData ?? repositoryState?.characters;
@@ -137,7 +131,7 @@ export const handleDialogueFormChange = (deps, payload) => {
     });
 
     const dialogueDefaultValues =
-      getStoreState(deps)?.dialogueDefaultValues ?? {};
+      deps.store.selectDialogueDefaultValues() ?? {};
     if (dialogueDefaultValues[DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD] !== true) {
       deps.store.setDialogueDefaultValue({
         name: DIALOGUE_CHARACTER_NAME_FIELD,
@@ -157,7 +151,7 @@ export const handleDialogueFormChange = (deps, payload) => {
 
     if (fieldValue !== true) {
       const dialogueDefaultValues =
-        getStoreState(deps)?.dialogueDefaultValues ?? {};
+        deps.store.selectDialogueDefaultValues() ?? {};
       deps.store.setDialogueDefaultValue({
         name: DIALOGUE_CHARACTER_NAME_FIELD,
         fieldValue: getSelectedCharacterName(
@@ -264,13 +258,8 @@ export const handleImageSelectorCancel = (deps) => {
 };
 
 export const handleImageSelectorSubmit = (deps) => {
-  const state = deps.store.getState
-    ? deps.store.getState()
-    : deps.store._state || deps.store.state;
-  const imageSelectorDialog = state?.imageSelectorDialog;
-
   deps.store.setPreviewBackgroundImageId({
-    imageId: imageSelectorDialog?.selectedImageId,
+    imageId: deps.store.selectImageSelectorSelectedImageId(),
   });
   deps.store.closeImageSelectorDialog();
   deps.store.hideDropdownMenu();

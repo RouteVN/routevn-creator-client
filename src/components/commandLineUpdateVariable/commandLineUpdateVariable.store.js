@@ -154,6 +154,27 @@ export const selectOperations = ({ state }) => {
   return state.operations;
 };
 
+export const selectVariableItemById = ({ state }, { variableId } = {}) => {
+  return state.variablesData?.items?.[variableId];
+};
+
+export const selectOperationChangeData = ({ state }) => ({
+  tempOperation: state.tempOperation,
+  variable: state.variablesData?.items?.[state.tempOperation.variableId],
+});
+
+export const selectOperationSaveData = ({ state }) => ({
+  currentEditingId: state.currentEditingId,
+  tempOperation: state.tempOperation,
+  variablesData: state.variablesData,
+});
+
+export const selectSubmitData = ({ state }) => ({
+  actionId: state.actionId,
+  operations: state.operations,
+  variablesData: state.variablesData,
+});
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const variableItems = state.variablesData?.items ?? {};

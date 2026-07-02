@@ -1037,8 +1037,7 @@ export const handleFormActionClick = (deps, payload) => {
 
   if (action === "submit") {
     // Get the popover item ID from state
-    const storeState = store.getState ? store.getState() : store.state;
-    const itemId = storeState ? storeState.popover.itemId : null;
+    const itemId = store.selectPopoverItemId();
 
     // Hide popover
     store.hidePopover();

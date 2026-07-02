@@ -171,6 +171,7 @@ const {
   selectFolderById,
   selectSelectedItemId,
   selectSelectedFolderId,
+  selectFolderNameDialogItemId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -179,6 +180,10 @@ const {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
   openFolderNameDialog,
   closeFolderNameDialog,
   selectViewData: selectCatalogViewData,
@@ -246,6 +251,7 @@ export {
   selectFolderById,
   selectSelectedItemId,
   selectSelectedFolderId,
+  selectFolderNameDialogItemId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -254,11 +260,19 @@ export {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
   openFolderNameDialog,
   closeFolderNameDialog,
 };
 
 export const selectColorItemById = selectItemById;
+
+export const selectEditItemId = ({ state }) => state.editItemId;
+
+export const selectTargetGroupId = ({ state }) => state.targetGroupId;
 
 export const openEditDialog = ({ state }, { itemId } = {}) => {
   state.isEditDialogOpen = true;

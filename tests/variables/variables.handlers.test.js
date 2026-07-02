@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleVariableCreated } from "../../src/pages/variables/variables.handlers.js";
+import {
+  handleDataChanged,
+  handleVariableCreated,
+} from "../../src/pages/variables/variables.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const createRepositoryState = () => ({
@@ -39,9 +42,18 @@ const createDeps = ({ repositoryState = createRepositoryState() } = {}) => ({
   store: {
     setItems: vi.fn(),
     setTagsData: vi.fn(),
+    setSelectedFolderId: vi.fn(),
+    setSelectedItemId: vi.fn(),
+    selectVariableTreeItemById: vi.fn(
+      ({ itemId }) => repositoryState.variables.items[itemId],
+    ),
   },
   render: vi.fn(),
-  refs: {},
+  refs: {
+    fileexplorer: {
+      selectItem: vi.fn(),
+    },
+  },
 });
 
 describe("variables.handlers", () => {
@@ -79,5 +91,22 @@ describe("variables.handlers", () => {
       }),
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves selected folders after variables data refresh", async () => {
+    const deps = createDeps();
+
+    await handleDataChanged(deps, { selectedItemId: "folder1" });
+
+    expect(deps.store.selectVariableTreeItemById).toHaveBeenCalledWith({
+      itemId: "folder1",
+    });
+    expect(deps.store.setSelectedFolderId).toHaveBeenCalledWith({
+      folderId: "folder1",
+    });
+    expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
+    expect(deps.refs.fileexplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "folder1",
+    });
   });
 });

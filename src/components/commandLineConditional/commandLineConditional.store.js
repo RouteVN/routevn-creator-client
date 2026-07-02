@@ -280,6 +280,18 @@ export const selectDropdownMenuBranchId = ({ state }) => {
   return state.dropdownMenu.branchId;
 };
 
+export const selectVariableItemById = ({ state }, { variableId } = {}) => {
+  return state.variablesData?.items?.[variableId];
+};
+
+export const selectTempBranchActions = ({ state }) => state.tempBranch.actions;
+
+export const selectSaveBranchDraft = ({ state }) => ({
+  currentBranchId: state.currentBranchId,
+  tempBranch: state.tempBranch,
+  variablesData: state.variablesData,
+});
+
 export const selectViewData = ({ state, props, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const variableItems = state.variablesData?.items ?? {};

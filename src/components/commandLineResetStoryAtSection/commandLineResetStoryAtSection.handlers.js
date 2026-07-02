@@ -84,7 +84,7 @@ export const handleSubmitClick = (deps) => {
   const { appService, dispatchEvent, store, i18n } = deps;
   const copy = selectCommandLineCopy(i18n);
   const warningTitle = localizeCommandLineText("Warning", copy);
-  const { formValues, scenes } = store.getState();
+  const { formValues, scenes } = store.selectSubmitData();
   const sceneId = formValues?.sceneId;
   const sectionId = formValues?.sectionId;
 

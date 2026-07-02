@@ -189,10 +189,9 @@ const handleFileExplorerSelectionChanged = (deps, payload) => {
   handleBaseFileExplorerSelectionChanged(deps, payload);
 
   const { itemId, isFolder } = payload._event.detail;
-  const state = deps.store.getState();
   if (
-    state.isTouchMode &&
-    state.isMobileFileExplorerOpen &&
+    deps.store.selectIsTouchMode() &&
+    deps.store.selectIsMobileFileExplorerOpen() &&
     itemId &&
     !isFolder
   ) {
@@ -600,7 +599,7 @@ export const handleEditFormAddOptionClick = (deps) => {
   openCreateTagDialogForMode({
     deps,
     mode: "edit-form",
-    itemId: deps.store.getState().editItemId,
+    itemId: deps.store.selectEditItemId(),
   });
 };
 
@@ -1003,14 +1002,14 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  const editItemId = store.getState().editItemId;
+  const editItemId = store.selectEditItemId();
   if (!editItemId) {
     store.closeEditDialog();
     render();
     return;
   }
 
-  const editUploadResult = store.getState().editUploadResult;
+  const editUploadResult = store.selectEditUploadResult();
   const imagePatch = editUploadResult
     ? buildImageResourcePatchFromUploadResult(editUploadResult)
     : {};

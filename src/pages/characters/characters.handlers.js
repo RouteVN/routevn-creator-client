@@ -79,12 +79,7 @@ const buildSpriteTagsByCharacterId = (state) => {
 };
 
 const getValidSpriteGroupTagIds = ({ store, target, itemId } = {}) => {
-  const state = store.getState();
-  const characterId =
-    itemId ?? (target === "edit" ? state.editItemId : undefined);
-  return new Set(
-    Object.keys(state.spriteTagsByCharacterId?.[characterId]?.items ?? {}),
-  );
+  return store.selectValidSpriteGroupTagIds({ target, itemId });
 };
 
 const syncCharactersData = ({
@@ -113,14 +108,12 @@ const syncCharactersData = ({
 
 const getCharacterItemById = ({ store, itemId } = {}) => {
   if (!itemId) return undefined;
-  const item = store.getState().charactersData?.items?.[itemId];
-  if (!item || item.type !== "character") return undefined;
-  return item;
+  return store.selectCharacterItemById({ itemId });
 };
 
 const getCharacterFolderById = ({ store, folderId } = {}) => {
   if (!folderId) return undefined;
-  const item = store.getState().charactersData?.items?.[folderId];
+  const item = store.selectCharactersDataItemById({ itemId: folderId });
   if (!item || item.type !== "folder") return undefined;
   return item;
 };
@@ -256,7 +249,7 @@ const refreshCharactersData = async (deps, { selectedItemId } = {}) => {
   const { store, render, projectService, refs } = deps;
   syncCharactersData({ store, projectService });
   if (selectedItemId !== undefined) {
-    const item = store.getState().charactersData?.items?.[selectedItemId];
+    const item = store.selectCharactersDataItemById({ itemId: selectedItemId });
     if (item?.type === "folder") {
       store.setSelectedFolderId({ folderId: selectedItemId });
     } else {
@@ -424,7 +417,7 @@ export const handleFolderNameFormAction = async (deps, payload) => {
     return;
   }
 
-  const folderId = store.getState().folderNameDialogItemId;
+  const folderId = store.selectFolderNameDialogItemId();
   if (!folderId) {
     store.closeFolderNameDialog();
     render();
@@ -564,7 +557,7 @@ export const handleEditFormAddOptionClick = (deps) => {
   openCreateTagDialogForMode({
     deps,
     mode: "edit-form",
-    itemId: deps.store.getState().editItemId,
+    itemId: deps.store.selectEditItemId(),
   });
 };
 
@@ -598,7 +591,7 @@ export const handleDialogFormActionClick = async (deps, payload) => {
       return;
     }
 
-    if ((store.getState().dialogSpriteGroups ?? []).length > 0) {
+    if ((store.selectDialogSpriteGroups() ?? []).length > 0) {
       appService.showAlert({
         message: copy.spriteGroupsCreateMessage,
         title: copy.warningTitle,
@@ -608,7 +601,7 @@ export const handleDialogFormActionClick = async (deps, payload) => {
 
     const targetGroupId = store.selectTargetGroupId();
     const avatarFileId = store.selectAvatarFileId();
-    const avatarUploadResult = store.getState().avatarUploadResult;
+    const avatarUploadResult = store.selectAvatarUploadResult();
 
     // Create a synthetic event payload with the correct structure
     const characterCreatedPayload = {
@@ -898,9 +891,8 @@ export const handleSpriteGroupFormAction = (deps, payload) => {
     return;
   }
 
-  const state = store.getState();
-  const target = state.spriteGroupDialogTarget ?? "edit";
-  const index = state.spriteGroupDialogIndex;
+  const { target, index, editItemId, editSpriteGroups, dialogSpriteGroups } =
+    store.selectSpriteGroupDialogState();
   const isEditing = Number.isInteger(index);
   if (target === "add") {
     appService.showAlert({
@@ -923,9 +915,8 @@ export const handleSpriteGroupFormAction = (deps, payload) => {
     spriteGroups: [
       {
         id: isEditing
-          ? (target === "edit"
-              ? state.editSpriteGroups
-              : state.dialogSpriteGroups)?.[index]?.id
+          ? (target === "edit" ? editSpriteGroups : dialogSpriteGroups)?.[index]
+              ?.id
           : undefined,
         name,
         tags: Array.isArray(values?.tags) ? values.tags : [],
@@ -934,7 +925,7 @@ export const handleSpriteGroupFormAction = (deps, payload) => {
     validTagIds: getValidSpriteGroupTagIds({
       store,
       target,
-      itemId: state.editItemId,
+      itemId: editItemId,
     }),
     copy,
   });
@@ -976,19 +967,15 @@ export const handleSpriteGroupContextMenu = (deps, payload) => {
     return;
   }
 
+  const target = readSpriteGroupTarget(payload);
   store.showSpriteGroupDropdownMenu({
-    target: readSpriteGroupTarget(payload),
+    target,
     index,
     x: payload._event.clientX,
     y: payload._event.clientY,
     items: buildSpriteGroupDropdownItems({
       index,
-      total:
-        store.getState()[
-          readSpriteGroupTarget(payload) === "edit"
-            ? "editSpriteGroups"
-            : "dialogSpriteGroups"
-        ]?.length ?? 0,
+      total: store.selectSpriteGroupDraftCount({ target }),
       copy,
     }),
   });
@@ -1006,8 +993,8 @@ export const handleSpriteGroupDropdownMenuItemClick = (deps, payload) => {
   const copy = selectCopy(deps);
   const detail = payload._event.detail;
   const item = detail.item || detail;
-  const state = store.getState();
-  const { target, index } = state.spriteGroupDropdownMenu;
+  const { target, index, editItemId, editSpriteGroups } =
+    store.selectSpriteGroupDropdownState();
 
   store.hideSpriteGroupDropdownMenu();
 
@@ -1034,10 +1021,10 @@ export const handleSpriteGroupDropdownMenuItemClick = (deps, payload) => {
 
   if (item.value === "remove") {
     if (target === "edit") {
-      const spriteGroup = state.editSpriteGroups?.[index];
+      const spriteGroup = editSpriteGroups?.[index];
       const usage = findSpriteGroupUsage({
         repositoryState: projectService?.getRepositoryState?.(),
-        characterId: state.editItemId,
+        characterId: editItemId,
         spriteGroupId: spriteGroup?.id,
       });
 
@@ -1070,10 +1057,14 @@ export const handleEditFormAction = async (deps, payload) => {
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.values;
-    const editItemId = store.getState().editItemId;
-    const { editAvatarFileId, editAvatarUploadResult } = store.getState();
+    const {
+      editItemId,
+      editAvatarFileId,
+      editAvatarUploadResult,
+      editSpriteGroups,
+    } = store.selectEditCharacterDraft();
     const spriteGroupValidation = validateSpriteGroupsForSave({
-      spriteGroups: store.getState().editSpriteGroups,
+      spriteGroups: editSpriteGroups,
       validTagIds: getValidSpriteGroupTagIds({
         store,
         target: "edit",

@@ -77,6 +77,16 @@ export const createTagState = ({
   },
 });
 
+export const selectTagsDataState = ({ state }) =>
+  state.tagsData ?? createEmptyTagCollection();
+
+export const selectActiveTagIdsState = ({ state }) => state.activeTagIds ?? [];
+
+export const selectDetailTagIdsState = ({ state }) => state.detailTagIds ?? [];
+
+export const selectCreateTagContextState = ({ state }) =>
+  state.createTagContext ?? {};
+
 export const syncDetailTagIds = ({
   state,
   item,
@@ -391,7 +401,7 @@ export const createResourcePageTagHandlers = ({
     const draftTagIds =
       mode === "item"
         ? buildUniqueTagIds(
-            store.getState().detailTagIds ??
+            store.selectDetailTagIds() ??
               getSelectedItemTagIds({
                 deps,
                 itemId: resolvedItemId,
@@ -435,8 +445,7 @@ export const createResourcePageTagHandlers = ({
 
   const handleCreateTagDialogClose = (deps) => {
     const { render, store } = deps;
-    const { mode, itemId, draftTagIds } =
-      store.getState().createTagContext ?? {};
+    const { mode, itemId, draftTagIds } = store.selectCreateTagContext();
     store.closeCreateTagDialog();
 
     if (mode === "item" && itemId && itemId === getSelectedItemId({ deps })) {
@@ -584,8 +593,7 @@ export const createResourcePageTagHandlers = ({
       return;
     }
 
-    const { mode, itemId, draftTagIds } =
-      store.getState().createTagContext ?? {};
+    const { mode, itemId, draftTagIds } = store.selectCreateTagContext();
     const scopeKey = resolveScopeKey({
       deps,
       itemId,
@@ -616,7 +624,7 @@ export const createResourcePageTagHandlers = ({
     store.closeCreateTagDialog();
     store.setTagsData({
       tagsData: appendTagToCollection({
-        tagsCollection: store.getState().tagsData,
+        tagsCollection: store.selectTagsData(),
         tag: {
           id: tagId,
           type: "tag",
@@ -627,7 +635,7 @@ export const createResourcePageTagHandlers = ({
 
     if (mode === "filter") {
       store.setActiveTagIds({
-        tagIds: buildUniqueTagIds(store.getState().activeTagIds, [tagId]),
+        tagIds: buildUniqueTagIds(store.selectActiveTagIds(), [tagId]),
       });
     }
 

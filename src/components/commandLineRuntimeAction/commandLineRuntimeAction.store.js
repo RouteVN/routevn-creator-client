@@ -28,6 +28,12 @@ export const setFormValues = ({ state }, { values } = {}) => {
   state.formValues = values ?? {};
 };
 
+export const selectSubmitData = ({ state }) => ({
+  mode: state.mode,
+  action: state.action,
+  formValues: state.formValues,
+});
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const definition = getRuntimeActionDefinition(state.mode);

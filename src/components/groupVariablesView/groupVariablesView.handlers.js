@@ -806,16 +806,14 @@ export const handleFormActionClick = (deps, payload) => {
 
   const { store, render, dispatchEvent, props, appService, i18n } = deps;
   const copy = selectCopy(i18n);
-  const storeState = store.getState
-    ? store.getState()
-    : store._state || store.state;
+  const submitContext = store.selectSubmitContext();
 
   // Check which button was clicked
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
     const formData = mergeVariableFormValues({
-      storedValues: storeState.defaultValues,
+      storedValues: submitContext.defaultValues,
       formValues: payload._event.detail.values,
     });
     const name = formData.name?.trim();
@@ -829,14 +827,14 @@ export const handleFormActionClick = (deps, payload) => {
       return;
     }
 
-    const targetGroupId = storeState.targetGroupId;
-    const isEditMode = storeState.dialogMode === "edit";
-    const editingItemId = storeState.editingItemId;
+    const targetGroupId = submitContext.targetGroupId;
+    const isEditMode = submitContext.dialogMode === "edit";
+    const editingItemId = submitContext.editingItemId;
     const scope =
-      formData.scope ?? storeState.defaultValues?.scope ?? "context";
+      formData.scope ?? submitContext.defaultValues?.scope ?? "context";
     const variableType =
       formData.variableType ??
-      storeState.defaultValues?.variableType ??
+      submitContext.defaultValues?.variableType ??
       "string";
     const isEnum = variableType === "string" && formData.isEnum === true;
     const enumValues = isEnum

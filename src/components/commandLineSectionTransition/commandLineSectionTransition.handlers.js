@@ -1,3 +1,8 @@
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
@@ -51,7 +56,7 @@ export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store, appService, i18n } = deps;
   const copy = selectCommandLineCopy(i18n);
   const warningTitle = localizeCommandLineText("Warning", copy);
-  const { formValues, scenes } = store.getState();
+  const { formValues, scenes } = store.selectSubmitData();
 
   if (!formValues?.sceneId) {
     appService.showAlert({
@@ -137,7 +142,3 @@ export const handleTabClick = (deps) => {
   const { render } = deps;
   render();
 };
-import {
-  localizeCommandLineText,
-  selectCommandLineCopy,
-} from "../../internal/ui/sceneEditor/commandLineCopy.js";

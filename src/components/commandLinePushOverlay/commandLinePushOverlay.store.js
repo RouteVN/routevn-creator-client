@@ -46,6 +46,8 @@ export const setFormValues = ({ state }, payload = {}) => {
   state.formValues = payload;
 };
 
+export const selectFormValues = ({ state }) => state.formValues;
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const layouts = toFlatItems(state.layouts);

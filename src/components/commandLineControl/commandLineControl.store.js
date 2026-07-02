@@ -36,6 +36,8 @@ export const setSelectedResourceId = ({ state }, { resourceId } = {}) => {
   state.defaultValues.resourceId = resourceId;
 };
 
+export const selectSelectedControlId = ({ state }) => state.selectedControlId;
+
 export const selectViewData = ({ state, props, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const controls = props.controls || [];
