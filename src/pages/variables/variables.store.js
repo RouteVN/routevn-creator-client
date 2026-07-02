@@ -306,6 +306,9 @@ export const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
 export const selectVariableItemById = ({ state }, { itemId } = {}) =>
   selectVariableItem(state, itemId);
 
+export const selectVariableTreeItemById = ({ state }, { itemId } = {}) =>
+  state.variablesData?.items?.[itemId];
+
 export const selectFolderNameDialogItemId = ({ state }) =>
   state.folderNameDialogItemId;
 

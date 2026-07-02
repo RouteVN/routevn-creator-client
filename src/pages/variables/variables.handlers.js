@@ -125,7 +125,7 @@ const refreshVariablesData = async (deps, { selectedItemId } = {}) => {
     repositoryState: projectService.getState(),
   });
   if (selectedItemId !== undefined) {
-    const item = store.selectVariableItemById({ itemId: selectedItemId });
+    const item = store.selectVariableTreeItemById({ itemId: selectedItemId });
     if (item?.type === "folder") {
       store.setSelectedFolderId({ folderId: selectedItemId });
     } else {
