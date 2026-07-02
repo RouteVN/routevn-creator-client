@@ -55,12 +55,17 @@ const updater = updatesEnabled
 // Create subject for inter-component communication
 const subject = new Subject();
 
+const projectMediaOrigin =
+  (await invoke("get_project_media_server_origin").catch(() => undefined)) ??
+  undefined;
+
 // Create project service (manages repositories and project operations)
 const projectService = createProjectService({
   router,
   db: appDb,
   filePicker,
   creatorVersion,
+  projectMediaOrigin,
 });
 
 // Create app service
@@ -83,13 +88,8 @@ await appService.initUserConfig();
 
 const apiService = createApiService();
 
-// Initialize async resources first
-const projectMediaOrigin =
-  (await invoke("get_project_media_server_origin").catch(() => undefined)) ??
-  undefined;
 const graphicsService = await createGraphicsService({
   subject,
-  projectMediaOrigin,
 });
 
 // Create dialogue queue service for debounced writes

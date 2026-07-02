@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.routevn.creator</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>RouteVN Creator</name>
+  <summary>Create Visual Novels without any coding</summary>
+  <developer id="com.routevn">
+    <name>RouteVN Team</name>
+  </developer>
+  <description>
+    <p>Free and Open Source tool to create Visual Novels without any coding. Live preview, asset manager, layout editor. Fast, intuitive, reliable. Join our Discord server to stay updated.</p>
+  </description>
+  <launchable type="desktop-id">RouteVN Creator.desktop</launchable>
+  <icon type="stock">routevn-creator</icon>
+  <url type="homepage">https://routevn.com</url>
+  <url type="vcs-browser">https://github.com/RouteVN/routevn-creator-client</url>
+  <provides>
+    <binary>routevn-creator</binary>
+  </provides>
+  <categories>
+    <category>Graphics</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.7.2" date="2026-07-03"/>
+  </releases>
+</component>

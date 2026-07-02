@@ -49,6 +49,20 @@ import { normalizeExportFileEntries } from "../shared/projectExportService.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
+const VIDEO_EXTENSION_BY_MIME_TYPE = {
+  "video/mp4": "mp4",
+  "video/x-m4v": "m4v",
+  "video/webm": "webm",
+  "video/ogg": "ogv",
+  "video/quicktime": "mov",
+  "video/x-msvideo": "avi",
+  "video/x-ms-wmv": "wmv",
+  "video/mpeg": "mpeg",
+  "video/mp2t": "ts",
+  "video/3gpp": "3gp",
+  "video/3gpp2": "3g2",
+  "video/x-matroska": "mkv",
+};
 
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
@@ -76,6 +90,28 @@ const getByteLength = (value) => {
 
 const logExportSizeStats = (stats = {}) => {
   console.info("[export.bundle.size]", stats);
+};
+
+const getMediaServerVideoUrl = ({ projectMediaOrigin, filePath, mimeType }) => {
+  if (
+    typeof projectMediaOrigin !== "string" ||
+    projectMediaOrigin.length === 0 ||
+    typeof filePath !== "string" ||
+    filePath.length === 0
+  ) {
+    return undefined;
+  }
+
+  const normalizedMimeType =
+    typeof mimeType === "string" ? mimeType.toLowerCase() : "";
+  const extension = VIDEO_EXTENSION_BY_MIME_TYPE[normalizedMimeType];
+  if (!extension) {
+    return undefined;
+  }
+
+  return `${projectMediaOrigin}/file.${extension}?path=${encodeURIComponent(
+    filePath,
+  )}`;
 };
 
 const parseStoredAppValue = (value) => {
@@ -267,6 +303,7 @@ async function copyTemplateFiles(templateId, targetPath) {
 export const createTauriProjectServiceAdapters = ({
   collabLog,
   creatorVersion,
+  projectMediaOrigin,
 }) => {
   const filesPathByProjectPath = new Map();
   const fileUrlByCacheKey = new Map();
@@ -555,19 +592,33 @@ export const createTauriProjectServiceAdapters = ({
       };
     },
 
-    getFileContent: async ({ fileId, getCurrentReference }) => {
+    requiresFileMetadata: true,
+
+    getFileContent: async ({ fileId, fileMetadata, getCurrentReference }) => {
       const reference = getCurrentReference();
       const safeFileId = assertSafeProjectFileId(fileId);
+      const { filePath } = await resolveReferenceFilePath(
+        reference,
+        safeFileId,
+      );
+      const mediaUrl = getMediaServerVideoUrl({
+        projectMediaOrigin,
+        filePath,
+        mimeType: fileMetadata?.mimeType,
+      });
+      if (mediaUrl) {
+        return {
+          url: mediaUrl,
+          type: fileMetadata.mimeType,
+        };
+      }
+
       const cacheKey = getFileUrlCacheKey(reference, safeFileId);
       const cachedUrl = fileUrlByCacheKey.get(cacheKey);
       if (cachedUrl) {
         return { url: cachedUrl };
       }
 
-      const { filePath } = await resolveReferenceFilePath(
-        reference,
-        safeFileId,
-      );
       const url = convertFileSrc(filePath);
       fileUrlByCacheKey.set(cacheKey, url);
       return { url };
