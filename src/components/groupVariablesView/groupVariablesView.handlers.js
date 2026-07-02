@@ -288,7 +288,7 @@ export const handleTagFilterChange = (deps, payload) => {
 
 const getDataId = (event, attrName, fallbackPrefix = "") => {
   const value = event?.currentTarget?.getAttribute?.(attrName);
-  if (value) {
+  if (value !== undefined && value !== null) {
     return value;
   }
   if (!fallbackPrefix) {

@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleRowClick,
   handleRowContextMenu,
   handleRowDoubleClick,
 } from "../../src/components/groupVariablesView/groupVariablesView.handlers.js";
 
-const createRowEvent = (itemId) => ({
+const createRowEvent = (itemId, id = "rowRef0x0") => ({
   currentTarget: {
+    id,
     getAttribute: vi.fn((name) =>
       name === "data-item-id" ? itemId : undefined,
     ),
@@ -91,5 +93,20 @@ describe("groupVariablesView.handlers", () => {
       }),
     );
     expect(store.showContextMenu).not.toHaveBeenCalled();
+  });
+
+  it("ignores placeholder row events with empty data ids", () => {
+    const dispatchEvent = vi.fn();
+
+    handleRowClick(
+      {
+        dispatchEvent,
+      },
+      {
+        _event: createRowEvent(""),
+      },
+    );
+
+    expect(dispatchEvent).not.toHaveBeenCalled();
   });
 });

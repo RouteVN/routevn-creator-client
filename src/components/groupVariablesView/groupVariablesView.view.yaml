@@ -135,7 +135,7 @@ template:
                                               - rtgl-text c=mu-fg s=sm: ${defaultLabel}
                                       - $for item, j in group.children:
                                           - $if item.isPlaceholder:
-                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.domItemId} d=h w=f h=36 av=c bwb=xs cur=${item.cursor} g=md:
+                                              - rtgl-view#variablePlaceholderRef${i}x${j} d=h w=f h=36 av=c bwb=xs cur=${item.cursor} g=md:
                                                   - rtgl-view w=2fg av=c:
                                                       - rtgl-view w=55% h=12 bgc=mu br=sm: null
                                                   - rtgl-view w=1fg av=c:

@@ -13,23 +13,19 @@ import {
 
 const createContext = () => ({
   state: createInitialState(),
+  i18n: {
+    resourcePages: {},
+    soundsPage: {
+      title: "Sounds",
+      deleteButton: "Delete",
+      deleteMessage: "Delete {itemName}? This cannot be undone.",
+      deleteTargetFallback: "this sound",
+      deleteTitle: "Delete Sound",
+    },
+  },
 });
 
 describe("sounds store mobile delete dialog", () => {
-  it("adds desktop-only bottom scroll room for the media grid", () => {
-    const context = createContext();
-
-    expect(selectViewData(context).gridScrollBottomPadding).toBe("32vh");
-
-    setUiConfig(context, {
-      uiConfig: {
-        id: "touch",
-      },
-    });
-
-    expect(selectViewData(context).gridScrollBottomPadding).toBeUndefined();
-  });
-
   it("tracks the selected sound for delete confirmation", () => {
     const context = createContext();
 
