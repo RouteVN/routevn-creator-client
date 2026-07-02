@@ -1884,6 +1884,12 @@ export const selectViewData = ({ state, i18n }) => {
         section.id === state.selectedSectionId
           ? (state.selectedLineId ?? INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID)
           : INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID,
+      hasPreviousSectionLine: sections
+        .slice(0, index)
+        .some((item) => item.lines?.[0]?.id),
+      hasNextSectionLine: sections
+        .slice(index + 1)
+        .some((item) => item.lines?.[0]?.id),
       editorKey: `document-${section.id}-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
       documentEditorLines: sectionLines,
       documentLineDecorations: buildSceneDocumentLineDecorations({

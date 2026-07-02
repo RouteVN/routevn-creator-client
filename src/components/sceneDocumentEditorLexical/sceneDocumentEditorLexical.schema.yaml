@@ -16,6 +16,10 @@ propsSchema:
       type: string
     selectionActive:
       type: boolean
+    hasPreviousSectionLine:
+      type: boolean
+    hasNextSectionLine:
+      type: boolean
     showLineNumbers:
       type: boolean
     fontSize:

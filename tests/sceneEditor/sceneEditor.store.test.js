@@ -12,6 +12,7 @@ import {
   setTemporaryPresentationState,
   showSectionDropdownMenu,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("sceneEditorLexical.store", () => {
   it("presents text size as a select with full labels", () => {
@@ -40,7 +41,7 @@ describe("sceneEditorLexical.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const fontSizeField = viewData.sceneSettingsForm.fields.find(
       (field) => field.name === "fontSize",
     );
@@ -78,7 +79,7 @@ describe("sceneEditorLexical.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.canvasAspectRatio).toBe("1080 / 1920");
     expect(viewData.previewCanvasMaxWidth).toBe("min(100%, 28.125vh)");
@@ -187,7 +188,7 @@ describe("sceneEditorLexical.store", () => {
       },
     ]);
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.sections[0].isDeadEnd).toBe(false);
     expect(viewData.sectionsOverviewItems[0].isDeadEnd).toBe(false);
   });
@@ -227,7 +228,9 @@ describe("sceneEditorLexical.store", () => {
         resourceId: "background-1",
       },
     });
-    expect(selectViewData({ state }).presentationState.dialogue).toEqual({
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).presentationState.dialogue,
+    ).toEqual({
       mode: "nvl",
     });
 
@@ -348,17 +351,21 @@ describe("sceneEditorLexical.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.sectionEditorItems).toHaveLength(2);
     expect(viewData.sectionEditorItems[0].selectedLineId).toBe("line-1");
     expect(viewData.sectionEditorItems[0].selectionActive).toBe(true);
+    expect(viewData.sectionEditorItems[0].hasPreviousSectionLine).toBe(false);
+    expect(viewData.sectionEditorItems[0].hasNextSectionLine).toBe(true);
     expect(viewData.sectionEditorItems[0].documentEditorLines).toHaveLength(2);
     expect(viewData.sectionEditorItems[0].documentLineDecorations[0]).toEqual(
       expect.objectContaining({ id: "line-1", lineNumber: 1 }),
     );
     expect(viewData.sectionEditorItems[1].selectedLineId).toBe("");
     expect(viewData.sectionEditorItems[1].selectionActive).toBe(false);
+    expect(viewData.sectionEditorItems[1].hasPreviousSectionLine).toBe(true);
+    expect(viewData.sectionEditorItems[1].hasNextSectionLine).toBe(false);
     expect(viewData.sectionEditorItems[1].documentEditorLines).toHaveLength(1);
     expect(viewData.sectionEditorItems[1].documentLineDecorations[0]).toEqual(
       expect.objectContaining({ id: "line-3", lineNumber: 1 }),
@@ -467,7 +474,7 @@ describe("sceneEditorLexical.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(
       viewData.sectionEditorItems[0].documentLineDecorations[0].characterFileId,

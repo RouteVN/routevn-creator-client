@@ -208,6 +208,28 @@ const getTouchPairMetrics = (event, element) => {
   };
 };
 
+const getGesturePointWithinElement = (event, element) => {
+  if (!element) {
+    return undefined;
+  }
+
+  const rect = element.getBoundingClientRect();
+  const clientX = Number(event?.clientX);
+  const clientY = Number(event?.clientY);
+
+  if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    };
+  }
+
+  return {
+    x: rect.width / 2,
+    y: rect.height / 2,
+  };
+};
+
 const getActiveElement = (root = document) => {
   let active = root?.activeElement;
   while (active?.shadowRoot?.activeElement) {
@@ -1064,9 +1086,57 @@ export const handleContainerTouchCancel = (deps, payload) => {
   stopTouchGesture(deps);
 };
 
-export const handleContainerGestureEvent = (_deps, payload) => {
-  preventTouchDefault(payload?._event);
-  payload?._event?.stopPropagation?.();
+export const handleContainerGestureEvent = (deps, payload) => {
+  const { store, refs, dispatchEvent } = deps;
+  const event = payload?._event;
+
+  preventTouchDefault(event);
+  event?.stopPropagation?.();
+
+  if (store.selectIsDraggingMinimapViewport()) {
+    return;
+  }
+
+  const point = getGesturePointWithinElement(event, refs.container);
+  if (!point) {
+    return;
+  }
+
+  if (event?.type === "gesturestart") {
+    cancelPanAnimation(deps);
+    syncContainerSize(deps);
+    store.startTrackpadPinch({
+      centerX: point.x,
+      centerY: point.y,
+    });
+    return;
+  }
+
+  if (event?.type === "gesturechange") {
+    cancelPanAnimation(deps);
+    syncContainerSize(deps);
+
+    if (!store.selectTrackpadPinchGesture?.()) {
+      store.startTrackpadPinch({
+        centerX: point.x,
+        centerY: point.y,
+      });
+    }
+
+    store.updateTrackpadPinch({
+      centerX: point.x,
+      centerY: point.y,
+      scale: event.scale,
+    });
+    renderWithCursorSync(deps);
+    dispatchZoomChanged({ store, dispatchEvent });
+    dispatchPanChanged({ store, dispatchEvent });
+    return;
+  }
+
+  if (event?.type === "gestureend") {
+    store.stopTrackpadPinch();
+  }
 };
 
 export const handleZoomInClick = (deps) => {
@@ -1385,6 +1455,11 @@ export const handleWindowBlur = (deps) => {
   if (store.selectTouchGesture()) {
     clearTouchLongPressTimeout(deps);
     store.stopTouchGesture();
+    didChange = true;
+  }
+
+  if (store.selectTrackpadPinchGesture?.()) {
+    store.stopTrackpadPinch?.();
     didChange = true;
   }
 

@@ -34,6 +34,12 @@ const imagesData = {
 };
 
 describe("transforms.store", () => {
+  it("exposes the mobile edit action label", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state, i18n: EN_I18N }).editButton).toBe("Edit");
+  });
+
   it("applies preview image selections immediately and restores them on cancel", () => {
     const state = createInitialState();
     setImagesData({ state }, { imagesData });

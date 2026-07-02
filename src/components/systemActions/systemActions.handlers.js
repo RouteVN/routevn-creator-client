@@ -39,6 +39,17 @@ const dispatchTemporaryPresentationStateChange = (
   );
 };
 
+const dispatchActionsDialogOpen = ({ dispatchEvent, props }, mode) => {
+  dispatchEvent(
+    new CustomEvent("actions-dialog-open", {
+      detail: {
+        mode,
+        selectedLineId: props.selectedLineId,
+      },
+    }),
+  );
+};
+
 const syncRepositoryState = (deps) => {
   const { store, projectService } = deps;
   store.setRepositoryState({
@@ -293,9 +304,17 @@ export const handleCommandLineSubmit = (deps, payload) => {
 
 export const handleAddActionButtonClicked = (deps) => {
   const { store, render } = deps;
+  dispatchActionsDialogOpen(deps, "actions");
   store.showActionsDialog();
   store.setMode({ mode: "actions" });
   render();
+};
+
+export const handleActionControlMouseDown = (_deps, payload) => {
+  const event = payload?._event;
+  if (event?.button === undefined || event.button === 0) {
+    event.preventDefault?.();
+  }
 };
 
 export const handleEmbeddedCloseClick = (deps, payload) => {
@@ -368,6 +387,7 @@ export const handleActionItemClick = (deps, payload) => {
   const { store, render } = deps;
   const event = payload._event;
   const mode = event.currentTarget?.dataset?.mode;
+  dispatchActionsDialogOpen(deps, mode);
   store.showActionsDialog();
   store.setMode({ mode });
   render();

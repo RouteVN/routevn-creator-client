@@ -900,6 +900,24 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
   });
 };
 
+const openTransformEditDialog = async ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const itemData = deps.store.selectTransformItemById({ itemId });
+  if (!itemData) {
+    return;
+  }
+
+  await openTransformDialog({
+    deps,
+    editMode: true,
+    itemId,
+    itemData,
+  });
+};
+
 export const handleMobileDetailPreviewClick = async (deps, payload) => {
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();
@@ -915,6 +933,17 @@ export const handleMobileDetailPreviewClick = async (deps, payload) => {
         itemId,
       },
     },
+  });
+};
+
+export const handleMobileDetailEditClick = async (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const { store } = deps;
+  await openTransformEditDialog({
+    deps,
+    itemId: store.selectSelectedItemId(),
   });
 };
 
@@ -956,20 +985,9 @@ export const handleMobileDetailDeleteClick = async (deps, payload) => {
 
 export const handleTransformItemEdit = async (deps, payload) => {
   const { itemId } = payload._event.detail;
-  if (!itemId) {
-    return;
-  }
-
-  const itemData = deps.store.selectTransformItemById({ itemId });
-  if (!itemData) {
-    return;
-  }
-
-  await openTransformDialog({
+  await openTransformEditDialog({
     deps,
-    editMode: true,
     itemId,
-    itemData,
   });
 };
 
@@ -984,16 +1002,9 @@ export const handleDetailHeaderClick = async (deps) => {
     return;
   }
 
-  const itemData = store.selectTransformItemById({ itemId });
-  if (!itemData) {
-    return;
-  }
-
-  await openTransformDialog({
+  await openTransformEditDialog({
     deps,
-    editMode: true,
     itemId,
-    itemData,
   });
 };
 

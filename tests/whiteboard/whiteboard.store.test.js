@@ -7,8 +7,11 @@ import {
   setContainerSize,
   setHoveredItemId,
   setInitialZoomAndPan,
+  startTrackpadPinch,
   startMinimapViewportDragging,
+  stopTrackpadPinch,
   stopMinimapViewportDragging,
+  updateTrackpadPinch,
   updatePanFromMinimapViewportDragging,
 } from "../../src/components/whiteboard/whiteboard.store.js";
 
@@ -184,6 +187,43 @@ describe("whiteboard minimap viewport drag", () => {
 });
 
 describe("whiteboard.store", () => {
+  it("zooms desktop pinch gestures around their anchor point", () => {
+    const state = createInitialState();
+
+    setInitialZoomAndPan({ state }, { zoomLevel: 1, panX: -100, panY: -50 });
+    startTrackpadPinch({ state }, { centerX: 240, centerY: 160 });
+
+    updateTrackpadPinch(
+      { state },
+      {
+        centerX: 240,
+        centerY: 160,
+        scale: 1.5,
+      },
+    );
+
+    expect(state.zoomLevel).toBe(1.5);
+    expect(state.panX).toBe(-270);
+    expect(state.panY).toBe(-155);
+
+    updateTrackpadPinch(
+      { state },
+      {
+        centerX: 260,
+        centerY: 150,
+        scale: 0.5,
+      },
+    );
+
+    expect(state.zoomLevel).toBe(0.5);
+    expect(state.panX).toBe(90);
+    expect(state.panY).toBe(45);
+
+    stopTrackpadPinch({ state });
+
+    expect(state.trackpadPinchGesture).toBeUndefined();
+  });
+
   it("keeps scene node border width stable across hover and selection", () => {
     const state = createInitialState();
     const props = {

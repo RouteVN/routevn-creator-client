@@ -2243,6 +2243,15 @@ export const handleAddActionsButtonClick = (deps) => {
   render();
 };
 
+export const handleSystemActionsDialogOpen = (deps, payload) => {
+  const { store } = deps;
+  const detail = payload?._event?.detail || {};
+  const lineId = detail.selectedLineId || store.selectSelectedLineId();
+  if (lineId) {
+    store.setActionTargetLineId({ lineId });
+  }
+};
+
 export const handleMobileKeyboardToolbarActionClick = (deps, payload) => {
   const actionId = payload?._event?.detail?.actionId;
   payload?._event?.preventDefault?.();

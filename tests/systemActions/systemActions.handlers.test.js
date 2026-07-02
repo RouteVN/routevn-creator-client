@@ -11,6 +11,9 @@ import {
 import {
   handleActionsDialogClose,
   handleActionsDialogCloseRequest,
+  handleActionControlMouseDown,
+  handleActionItemClick,
+  handleAddActionButtonClicked,
   handleBackgroundTransformCustomize,
   handleBackgroundTransformEditorDone,
   handleGetBackgroundTransformPreviewCanvasRoot,
@@ -26,6 +29,112 @@ import {
 } from "../../src/components/systemActions/systemActions.handlers.js";
 
 describe("systemActions.handlers", () => {
+  it("announces the selected line before opening the add-action dialog", () => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+
+    handleAddActionButtonClicked({
+      props: {
+        selectedLineId: "line-2",
+      },
+      store: {
+        showActionsDialog: () => {
+          state.isActionsDialogOpen = true;
+        },
+        setMode: ({ mode }) => {
+          state.mode = mode;
+        },
+      },
+      render: vi.fn(),
+      dispatchEvent: (event) => {
+        dispatchedEvents.push(event);
+      },
+    });
+
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe("actions-dialog-open");
+    expect(dispatchedEvents[0].detail).toEqual({
+      mode: "actions",
+      selectedLineId: "line-2",
+    });
+    expect(state.isActionsDialogOpen).toBe(true);
+    expect(state.mode).toBe("actions");
+  });
+
+  it("announces the selected line before opening an existing action editor", () => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+
+    handleActionItemClick(
+      {
+        props: {
+          selectedLineId: "line-3",
+        },
+        store: {
+          showActionsDialog: () => {
+            state.isActionsDialogOpen = true;
+          },
+          setMode: ({ mode }) => {
+            state.mode = mode;
+          },
+        },
+        render: vi.fn(),
+        dispatchEvent: (event) => {
+          dispatchedEvents.push(event);
+        },
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              mode: "dialogue",
+            },
+          },
+        },
+      },
+    );
+
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe("actions-dialog-open");
+    expect(dispatchedEvents[0].detail).toEqual({
+      mode: "dialogue",
+      selectedLineId: "line-3",
+    });
+    expect(state.isActionsDialogOpen).toBe(true);
+    expect(state.mode).toBe("dialogue");
+  });
+
+  it("prevents action controls from stealing editor focus on mousedown", () => {
+    const preventDefault = vi.fn();
+
+    handleActionControlMouseDown(
+      {},
+      {
+        _event: {
+          preventDefault,
+        },
+      },
+    );
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves secondary action-control mousedown events available for context menus", () => {
+    const preventDefault = vi.fn();
+
+    handleActionControlMouseDown(
+      {},
+      {
+        _event: {
+          button: 2,
+          preventDefault,
+        },
+      },
+    );
+
+    expect(preventDefault).not.toHaveBeenCalled();
+  });
+
   it("keeps local merged actions but emits only the submitted action delta", () => {
     const state = createInitialState();
     const dispatchedEvents = [];

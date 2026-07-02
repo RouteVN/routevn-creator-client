@@ -3,6 +3,7 @@ import {
   handleContainerTouchEnd,
   handleContainerTouchMove,
   handleContainerTouchStart,
+  handleContainerGestureEvent,
   handleContainerWheel,
   handleEnsureItemVisible,
   handleItemMouseDown,
@@ -44,7 +45,9 @@ const createDeps = ({
 } = {}) => {
   const minimapItemRefs = createMinimapItemRefs();
   let currentPan = pan;
+  let currentZoomLevel = zoomLevel;
   let panAnimationFrameId;
+  let trackpadPinchGesture;
 
   const store = {
     selectContainerSize: vi.fn(() => ({
@@ -55,7 +58,7 @@ const createDeps = ({
     selectIsPanMode: vi.fn(() => false),
     selectIsPanning: vi.fn(() => false),
     selectPan: vi.fn(() => currentPan),
-    selectZoomLevel: vi.fn(() => zoomLevel),
+    selectZoomLevel: vi.fn(() => currentZoomLevel),
     selectMouseItemPress: vi.fn(() => undefined),
     clearMouseItemPress: vi.fn(),
     selectMinimapData: vi.fn(() => ({
@@ -86,6 +89,28 @@ const createDeps = ({
       panAnimationFrameId = undefined;
     }),
     zoomAt: vi.fn(),
+    startTrackpadPinch: vi.fn(({ centerX, centerY }) => {
+      trackpadPinchGesture = {
+        startZoomLevel: currentZoomLevel,
+        anchorCanvasX: (centerX - currentPan.x) / currentZoomLevel,
+        anchorCanvasY: (centerY - currentPan.y) / currentZoomLevel,
+      };
+    }),
+    updateTrackpadPinch: vi.fn(({ centerX, centerY, scale }) => {
+      if (!trackpadPinchGesture) {
+        return;
+      }
+
+      currentZoomLevel = trackpadPinchGesture.startZoomLevel * scale;
+      currentPan = {
+        x: centerX - trackpadPinchGesture.anchorCanvasX * currentZoomLevel,
+        y: centerY - trackpadPinchGesture.anchorCanvasY * currentZoomLevel,
+      };
+    }),
+    stopTrackpadPinch: vi.fn(() => {
+      trackpadPinchGesture = undefined;
+    }),
+    selectTrackpadPinchGesture: vi.fn(() => trackpadPinchGesture),
   };
   const refs = {
     container: {
@@ -126,6 +151,7 @@ const createDeps = ({
     dispatchEvent: vi.fn(),
     minimapItemRefs,
     getPan: () => currentPan,
+    getZoomLevel: () => currentZoomLevel,
   };
 };
 
@@ -309,6 +335,21 @@ const createMouseEvent = ({
   stopPropagation: vi.fn(),
 });
 
+const createGestureEvent = ({
+  type,
+  clientX = 0,
+  clientY = 0,
+  scale = 1,
+} = {}) => ({
+  type,
+  clientX,
+  clientY,
+  scale,
+  preventDefault: vi.fn(),
+  stopPropagation: vi.fn(),
+  cancelable: true,
+});
+
 describe("whiteboard minimap drag handlers", () => {
   beforeAll(() => {
     if (typeof globalThis.HTMLElement === "undefined") {
@@ -426,6 +467,69 @@ describe("whiteboard minimap drag handlers", () => {
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
     expect(deps.store.zoomAt).not.toHaveBeenCalled();
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("zooms with macOS trackpad gesture events", () => {
+    const deps = createDeps({
+      isDraggingMinimapViewport: false,
+      pan: { x: -100, y: -50 },
+      zoomLevel: 1,
+      containerWidth: 500,
+      containerHeight: 300,
+    });
+    const startEvent = createGestureEvent({
+      type: "gesturestart",
+      clientX: 250,
+      clientY: 150,
+    });
+    const changeEvent = createGestureEvent({
+      type: "gesturechange",
+      clientX: 250,
+      clientY: 150,
+      scale: 1.5,
+    });
+
+    handleContainerGestureEvent(deps, {
+      _event: startEvent,
+    });
+    handleContainerGestureEvent(deps, {
+      _event: changeEvent,
+    });
+
+    expect(startEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(changeEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(deps.store.startTrackpadPinch).toHaveBeenCalledWith({
+      centerX: 250,
+      centerY: 150,
+    });
+    expect(deps.store.updateTrackpadPinch).toHaveBeenCalledWith({
+      centerX: 250,
+      centerY: 150,
+      scale: 1.5,
+    });
+    expect(deps.getZoomLevel()).toBe(1.5);
+    expect(deps.getPan()).toEqual({ x: -275, y: -150 });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+
+    const dispatchedEvents = deps.dispatchEvent.mock.calls.map(
+      ([event]) => event,
+    );
+    expect(dispatchedEvents.map((event) => event.type)).toEqual([
+      "zoom-changed",
+      "pan-changed",
+    ]);
+    expect(dispatchedEvents[0].detail).toEqual({ zoomLevel: 1.5 });
+    expect(dispatchedEvents[1].detail).toEqual({
+      panX: -275,
+      panY: -150,
+    });
+
+    const endEvent = createGestureEvent({ type: "gestureend" });
+    handleContainerGestureEvent(deps, {
+      _event: endEvent,
+    });
+
+    expect(deps.store.stopTrackpadPinch).toHaveBeenCalledTimes(1);
   });
 
   it("drags the selected item after a one-finger touch moves", () => {

@@ -1147,6 +1147,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       textStyles: [],
       selectedLineId: undefined,
       selectionActive: true,
+      hasPreviousSectionLine: false,
+      hasNextSectionLine: false,
       showLineNumbers: true,
       fontSize: DEFAULT_EDITOR_FONT_SIZE,
       mode: "block",
@@ -1681,6 +1683,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   get selectionActive() {
     return this.state.selectionActive !== false;
+  }
+
+  set hasPreviousSectionLine(value) {
+    this.state.hasPreviousSectionLine = value === true || value === "true";
+  }
+
+  get hasPreviousSectionLine() {
+    return this.state.hasPreviousSectionLine === true;
+  }
+
+  set hasNextSectionLine(value) {
+    this.state.hasNextSectionLine = value === true || value === "true";
+  }
+
+  get hasNextSectionLine() {
+    return this.state.hasNextSectionLine === true;
   }
 
   set showLineNumbers(value) {
@@ -2574,6 +2592,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    if (this.handleImmediateTextModeVerticalBoundaryNavigation(event)) {
+      return;
+    }
+
     this.scheduleNativeSelectionLineSyncAfterVerticalNavigation(event);
     if (this.state?.mentionMenu?.isOpen && isArrowKeyEvent(event)) {
       this.closeMentionMenu({ dismissCurrentTrigger: true });
@@ -2658,13 +2680,61 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.clearPendingTextInputFallback();
   }
 
+  getTextModeVerticalNavigationDirection(event) {
+    return event.key === "ArrowUp"
+      ? "up"
+      : event.key === "ArrowDown"
+        ? "down"
+        : undefined;
+  }
+
+  hasAdjacentSectionLineForVerticalNavigation(direction) {
+    return direction === "up"
+      ? this.state.hasPreviousSectionLine === true
+      : this.state.hasNextSectionLine === true;
+  }
+
+  handleImmediateTextModeVerticalBoundaryNavigation(event) {
+    const navigationDirection =
+      this.getTextModeVerticalNavigationDirection(event);
+    if (
+      this.state?.mode !== "text-editor" ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.shiftKey ||
+      !navigationDirection ||
+      !this.hasAdjacentSectionLineForVerticalNavigation(navigationDirection)
+    ) {
+      return false;
+    }
+
+    const nativeSelection = this.getNativeLineSelectionContext();
+    const lineId = nativeSelection?.lineId || this.state.selectedLineId;
+    if (
+      !this.isTextModeVerticalNavigationBoundary(lineId, navigationDirection)
+    ) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    if (this.state?.mentionMenu?.isOpen && isArrowKeyEvent(event)) {
+      this.closeMentionMenu({ dismissCurrentTrigger: true });
+    }
+    this.dispatchTextModeVerticalBoundaryNavigation({
+      lineId,
+      nativeSelection,
+      direction: navigationDirection,
+    });
+    return true;
+  }
+
   scheduleNativeSelectionLineSyncAfterVerticalNavigation(event) {
     const navigationDirection =
-      event.key === "ArrowUp"
-        ? "up"
-        : event.key === "ArrowDown"
-          ? "down"
-          : undefined;
+      this.getTextModeVerticalNavigationDirection(event);
     if (
       this.state?.mode !== "text-editor" ||
       event.isComposing ||
