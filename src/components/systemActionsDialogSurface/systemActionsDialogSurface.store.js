@@ -7,6 +7,10 @@ const normalizeVariant = (variant) =>
 
 const isBooleanPropEnabled = (value) => value === true || value === "true";
 
+const selectDialogSize = (dialogWidth) => {
+  return dialogWidth === "100%" ? "md" : undefined;
+};
+
 export const setSuppressClose = ({ state }, { suppressClose } = {}) => {
   state.suppressClose = suppressClose === true;
 };
@@ -17,12 +21,14 @@ export const selectSuppressClose = ({ state }) => {
 
 export const selectViewData = ({ state, props }) => {
   const variant = normalizeVariant(props.variant);
+  const dialogWidth = props.dialogWidth ?? "800";
 
   return {
     open: props.open === true,
     variant,
     isSceneEditorLeft: variant === "scene-editor-left",
-    dialogWidth: props.dialogWidth ?? "800",
+    dialogWidth,
+    dialogSize: selectDialogSize(dialogWidth),
     dialogHeight: props.dialogHeight ?? "80vh",
     panelWidth: props.panelWidth ?? "50vw",
     suppressClose:

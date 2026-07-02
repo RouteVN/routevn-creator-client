@@ -523,6 +523,14 @@ const focusLinesEditorContainer = (refs, sectionId) => {
   });
 };
 
+const blurLinesEditorFocus = (refs) => {
+  forEachLinesEditorRef(refs, (linesEditorRef) => {
+    linesEditorRef.blurEditor?.({
+      lineId: linesEditorRef.getSelectedLineId?.(),
+    });
+  });
+};
+
 const shouldAnimateLineNavigation = (
   store,
   { previousLineId, nextLineId } = {},
@@ -3167,6 +3175,7 @@ export const handlePreviewClick = (deps, payload) => {
       syncStoreProjectState(store, projectService);
       didPersistDraft = true;
       store.setSkipNextEditorBlurDraftFlush({ value: true });
+      blurLinesEditorFocus(deps.refs);
       appService?.blurActiveElement?.();
       store.showPreviewSceneId({ sceneId, sectionId, lineId });
       store.setSkipNextEditorBlurDraftFlush({ value: false });

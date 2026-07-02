@@ -55,6 +55,10 @@ methods:
       description: Focuses the document editor surface.
       params: []
       returns: void
+    blurEditor:
+      description: Blurs the document editor surface and prevents focus restoration.
+      params: []
+      returns: void
     scrollLineIntoView:
       description: Scrolls a specific line block into view.
       params: []

@@ -250,7 +250,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     showSelected: !!attrs.showSelected,
     showEmbeddedClose: shouldShowEmbeddedClose(attrs),
     dialogVariant: getDialogVariant(attrs),
-    actionsDialogWidth: state.isTouchMode ? "100vw" : "800",
+    actionsDialogWidth: state.isTouchMode ? "100%" : "800",
     actionsDialogHeight: state.isTouchMode ? "100vh" : "80vh",
     actionsDialogPanelWidth: state.isTouchMode
       ? "100vw"

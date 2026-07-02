@@ -1887,6 +1887,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
+  blurEditor({ lineId = this.state.selectedLineId } = {}) {
+    this.clearPointerDownInsideEditor();
+    this.lastProgrammaticFocusTarget = undefined;
+    this.programmaticFocusRestoreUntil = 0;
+    this.invalidatePendingFocusRestore();
+    this.refs?.editor?.blur?.();
+    this.refs?.surface?.blur?.();
+    this.blur?.();
+    this.isEditorFocused = false;
+    this.hideSelectionPopover();
+    this.closeMentionMenu({
+      dismissCurrentTrigger: this.state.mentionMenu?.isOpen === true,
+    });
+    this.pendingSelectionSnapshot = undefined;
+    this.enterBlockMode({
+      focusSurface: false,
+      emitSelectionChange: false,
+      lineId,
+      scrollLine: false,
+    });
+  }
+
   scrollLineIntoView({ lineId, behavior = "auto", block = "nearest" } = {}) {
     const lineKey = this.lineKeyById.get(lineId);
     const lineElement = lineKey
