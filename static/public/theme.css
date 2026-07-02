@@ -36,7 +36,7 @@ body::-webkit-scrollbar {
 
 /* Firefox */
 * {
-  scrollbar-color: var(--input) transparent;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 *,
@@ -168,6 +168,19 @@ body {
 
   /* ring of text inputs */
   --ring: oklch(0.708 0 0);
+
+  --scrollbar-size: 6px;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: color-mix(
+    in oklch,
+    var(--background) 82%,
+    var(--foreground) 18%
+  );
+  --scrollbar-thumb-hover: color-mix(
+    in oklch,
+    var(--background) 76%,
+    var(--foreground) 24%
+  );
 }
 
 .dark {

@@ -14,4 +14,17 @@ describe("theme css", () => {
     expect(themeCss).toContain("*::before");
     expect(themeCss).toContain("*::after");
   });
+
+  it("uses app scrollbar theme tokens", () => {
+    const themeCss = readFileSync(
+      new URL("../../static/public/theme.css", import.meta.url),
+      "utf8",
+    );
+
+    expect(themeCss).toContain("--scrollbar-thumb:");
+    expect(themeCss).toContain("--scrollbar-thumb-hover:");
+    expect(themeCss).toContain(
+      "scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);",
+    );
+  });
 });
