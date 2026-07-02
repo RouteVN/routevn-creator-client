@@ -227,8 +227,8 @@ can miss Android-specific parser, layout, asset, and bridge behavior.
 - After JS, YAML view, or setup changes, reinstall with `bun run
   android:install`. A native reinstall without rebuilding Android web assets can
   leave the device running stale JavaScript.
-- Android builds must use the local frontend build path from `scripts/build.sh`
-  / `scripts/build-fe.js`, not a globally installed `rtgl` CLI. The local build
+- Android builds must use the local `rtgl` dev dependency through
+  `scripts/build.sh`, not a globally installed `rtgl` CLI. The local build
   preserves the repo's `rettangoli.config.yaml` options, including `i18n`.
 - If the app shell loads but the page is blank, check `adb logcat` first. Recent
   blank screens were caused by frontend render errors such as missing i18n
