@@ -9,9 +9,13 @@ import {
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
-  formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import {
+  IMAGE_PREVIEW_DISPLAY_MODE_CANVAS,
+  createImagePreviewOverlayViewData,
+  isImagePreviewDisplayMode,
+} from "../../internal/ui/resourcePages/imagePreviewOverlay.js";
 import {
   INITIAL_SPRITESHEET_CLIP_FPS,
   formatSpritesheetFps,
@@ -59,68 +63,9 @@ const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
 const IMAGE_CARD_MAX_WIDTH = 400;
 const IMAGE_CARD_HEIGHT = 225;
-const FULL_IMAGE_PREVIEW_DISPLAY_MODE_FIT = "fit";
-const FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS = "canvas";
 const CREATE_TAG_DEFAULT_VALUES = Object.freeze({
   name: "",
 });
-
-const createPreviewFrameStyle = (projectResolution) => {
-  const aspectRatio = formatProjectResolutionAspectRatio(projectResolution);
-
-  return [
-    `width: min(88vw, calc((100vh - 120px) * (${aspectRatio})))`,
-    `aspect-ratio: ${aspectRatio}`,
-    "max-width: 88vw",
-    "max-height: calc(100vh - 120px)",
-  ].join("; ");
-};
-
-const resolvePositiveNumber = (value) => {
-  const numericValue = Number(value);
-  return Number.isFinite(numericValue) && numericValue > 0
-    ? numericValue
-    : undefined;
-};
-
-const createPreviewImageWrapperStyle = ({
-  image,
-  displayMode,
-  projectResolution,
-} = {}) => {
-  if (displayMode !== FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS) {
-    return "position: absolute; inset: 0;";
-  }
-
-  const imageWidth = resolvePositiveNumber(image?.width);
-  const imageHeight = resolvePositiveNumber(image?.height);
-  if (!imageWidth || !imageHeight) {
-    return "position: absolute; inset: 0;";
-  }
-
-  const widthPercent = (imageWidth / projectResolution.width) * 100;
-  const heightPercent = (imageHeight / projectResolution.height) * 100;
-
-  return [
-    "position: absolute",
-    "left: 50%",
-    "top: 50%",
-    `width: ${widthPercent}%`,
-    `height: ${heightPercent}%`,
-    "transform: translate(-50%, -50%)",
-  ].join("; ");
-};
-
-const createPreviewModeButtonViewData = ({ displayMode, mode } = {}) => {
-  const selected = displayMode === mode;
-
-  return {
-    backgroundColor: selected ? "ac" : "bg",
-    borderColor: selected ? "ac" : "bo",
-    iconColor: selected ? "white" : "mu-fg",
-    selected,
-  };
-};
 
 const matchesSpriteGroupTags = ({ item, tagIds } = {}) => {
   if (!Array.isArray(tagIds) || tagIds.length === 0) {
@@ -660,7 +605,7 @@ export const createInitialState = () => ({
   ...createMobileResourcePageState(),
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
-  fullImagePreviewDisplayMode: FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS,
+  fullImagePreviewDisplayMode: IMAGE_PREVIEW_DISPLAY_MODE_CANVAS,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   isEditDialogOpen: false,
   editItemId: undefined,
@@ -805,7 +750,7 @@ export const clearCharacterSpritesView = ({ state }) => {
   state.selectedFolderId = undefined;
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
-  state.fullImagePreviewDisplayMode = FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
+  state.fullImagePreviewDisplayMode = IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
   state.projectResolution = DEFAULT_PROJECT_RESOLUTION;
   state.isEditDialogOpen = false;
   state.editItemId = undefined;
@@ -1306,8 +1251,7 @@ export const showFullImagePreview = ({ state }, { itemId } = {}) => {
 
   if (item?.type === "image" && item.fileId) {
     if (!state.fullImagePreviewVisible) {
-      state.fullImagePreviewDisplayMode =
-        FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
+      state.fullImagePreviewDisplayMode = IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
     }
     state.fullImagePreviewVisible = true;
     state.fullImagePreviewFileId = item.fileId;
@@ -1323,10 +1267,7 @@ export const setFullImagePreviewDisplayMode = (
   { state },
   { displayMode } = {},
 ) => {
-  if (
-    displayMode !== FULL_IMAGE_PREVIEW_DISPLAY_MODE_FIT &&
-    displayMode !== FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS
-  ) {
+  if (!isImagePreviewDisplayMode(displayMode)) {
     return;
   }
 
@@ -1516,10 +1457,6 @@ export const selectViewData = ({ state, i18n }) => {
     dialogInstructions: copy.dialogInstructions,
     emptyPreviewLabel: copy.emptyPreviewLabel,
     filesLabel: copy.filesLabel,
-    fullImagePreviewCanvasModeLabel: copy.previewCanvasModeLabel,
-    fullImagePreviewFitModeLabel: copy.previewFitModeLabel,
-    fullImagePreviewPreviousLabel: copy.previewPreviousLabel,
-    fullImagePreviewNextLabel: copy.previewNextLabel,
     noAnimationsFound: copy.noAnimationsFound,
     noSelectionLabel: copy.noSelectionLabel,
     noSpriteGroups: copy.noSpriteGroups,
@@ -1562,25 +1499,14 @@ export const selectViewData = ({ state, i18n }) => {
     acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp", ".json"],
     imageHeight: IMAGE_CARD_HEIGHT,
     maxWidth: IMAGE_CARD_MAX_WIDTH,
-    fullImagePreviewVisible: state.fullImagePreviewVisible,
-    fullImagePreviewFileId: state.fullImagePreviewFileId,
-    fullImagePreviewFrameStyle: createPreviewFrameStyle(projectResolution),
-    fullImagePreviewImageWrapperStyle: createPreviewImageWrapperStyle({
+    ...createImagePreviewOverlayViewData({
+      state,
       image: previewImage,
-      displayMode: state.fullImagePreviewDisplayMode,
       projectResolution,
+      previousItemId,
+      nextItemId,
+      copy,
     }),
-    fullImagePreviewDisplayMode: state.fullImagePreviewDisplayMode,
-    fullImagePreviewFitModeButton: createPreviewModeButtonViewData({
-      displayMode: state.fullImagePreviewDisplayMode,
-      mode: FULL_IMAGE_PREVIEW_DISPLAY_MODE_FIT,
-    }),
-    fullImagePreviewCanvasModeButton: createPreviewModeButtonViewData({
-      displayMode: state.fullImagePreviewDisplayMode,
-      mode: FULL_IMAGE_PREVIEW_DISPLAY_MODE_CANVAS,
-    }),
-    fullImagePreviewPreviousVisible: Boolean(previousItemId),
-    fullImagePreviewNextVisible: Boolean(nextItemId),
     folderContextMenuItems: createFolderContextMenuItems(copy),
     itemContextMenuItems: createItemContextMenuItems(copy),
     emptyContextMenuItems: createEmptyContextMenuItems(copy),
