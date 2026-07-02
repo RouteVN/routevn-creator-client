@@ -168,6 +168,26 @@ steps:
   - action: wait
     ms: 400
   - action: screenshot
+  - action: keypress
+    key: l
+  - action: wait
+    ms: 200
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return deepQuery(document, '#previewFitModeButton')?.getAttribute('aria-pressed'); })()"
+    value: "true"
+  - action: keypress
+    key: h
+  - action: wait
+    ms: 200
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return deepQuery(document, '#previewCanvasModeButton')?.getAttribute('aria-pressed'); })()"
+    value: "true"
   - action: select
     selector: "#previewOverlay"
     steps:
