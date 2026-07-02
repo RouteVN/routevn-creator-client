@@ -544,7 +544,7 @@ export const handleAppVersionMenuClose = (deps) => {
 };
 
 export const handleAppVersionMenuClickItem = async (deps, payload) => {
-  const { appService, store, render, updaterService, locale } = deps;
+  const { appService, store, render, updaterService, locale, i18n } = deps;
   const detail = payload._event.detail;
   const item = detail.item || detail;
 
@@ -566,7 +566,7 @@ export const handleAppVersionMenuClickItem = async (deps, payload) => {
     resolveUpdatesEnabled(deps) &&
     updaterService
   ) {
-    await updaterService.checkForUpdates(false);
+    await updaterService.checkForUpdates(false, { copy: i18n?.appPage ?? {} });
   }
 };
 

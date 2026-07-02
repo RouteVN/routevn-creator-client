@@ -16,6 +16,10 @@ propsSchema:
       type: string
     selectionActive:
       type: boolean
+    hasPreviousSectionLine:
+      type: boolean
+    hasNextSectionLine:
+      type: boolean
     showLineNumbers:
       type: boolean
     fontSize:
@@ -53,6 +57,10 @@ methods:
       returns: boolean
     focusContainer:
       description: Focuses the document editor surface.
+      params: []
+      returns: void
+    blurEditor:
+      description: Blurs the document editor surface and prevents focus restoration.
       params: []
       returns: void
     scrollLineIntoView:

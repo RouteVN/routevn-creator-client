@@ -5,6 +5,8 @@ export const selectViewData = ({ props }) => ({
   lineDecorations: props.lineDecorations || [],
   selectedLineId: props.selectedLineId,
   selectionActive: props.selectionActive ?? true,
+  hasPreviousSectionLine: props.hasPreviousSectionLine ?? false,
+  hasNextSectionLine: props.hasNextSectionLine ?? false,
   showLineNumbers: props.showLineNumbers ?? true,
   fontSize: props.fontSize ?? "md",
   textStyles: props.textStyles || [],

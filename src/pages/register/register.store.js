@@ -1,19 +1,23 @@
-const createRegisterForm = () => ({
-  title: "Register",
+const selectRegisterCopy = (i18n = {}) => i18n.registerPage ?? {};
+
+const createRegisterForm = (copy = {}) => ({
+  title: copy.title ?? "Register",
   fields: [
     {
       type: "read-only-text",
-      content: "Complete registration to continue.",
+      content:
+        copy.completeRegistrationMessage ??
+        "Complete registration to continue.",
     },
     {
       name: "acceptTerms",
       type: "checkbox",
-      content: "I accept Terms & Conditions",
+      content: copy.acceptTermsLabel ?? "I accept Terms & Conditions",
     },
     {
       name: "acceptPrivacy",
       type: "checkbox",
-      content: "I accept Privacy Policy",
+      content: copy.acceptPrivacyLabel ?? "I accept Privacy Policy",
     },
   ],
   actions: {
@@ -21,7 +25,7 @@ const createRegisterForm = () => ({
       {
         id: "register",
         variant: "pr",
-        label: "Register",
+        label: copy.registerButton ?? "Register",
         type: "submit",
       },
     ],
@@ -40,10 +44,13 @@ export const selectEmail = ({ state }) => {
   return state.email || "";
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectRegisterCopy(i18n);
+
   return {
     ...state,
-    registerForm: createRegisterForm(),
+    backButton: copy.backButton ?? "Back",
+    registerForm: createRegisterForm(copy),
     registerDefaultValues: {
       acceptTerms: false,
       acceptPrivacy: false,

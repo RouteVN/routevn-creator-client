@@ -1,3 +1,5 @@
+import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
+
 const toolbarItems = [
   {
     id: "arrow-left",
@@ -151,7 +153,26 @@ export const selectArrowRepeatState = ({ state }) => {
   };
 };
 
-export const selectViewData = ({ state }) => {
+const localizeToolbarItems = (items, copy = {}) => {
+  const labels = {
+    "arrow-left": copy.leftLabel ?? "Left",
+    "arrow-up": copy.upLabel ?? "Up",
+    "arrow-down": copy.downLabel ?? "Down",
+    "arrow-right": copy.rightLabel ?? "Right",
+    actions: copy.actionsLabel ?? "Actions",
+    preview: copy.previewButton ?? "Preview",
+    "sections-overview": copy.sectionsLabel ?? "Sections",
+    "scene-settings": copy.settingsTitle ?? "Settings",
+  };
+
+  return items.map((item) => ({
+    ...item,
+    title: labels[item.id] ?? item.title,
+  }));
+};
+
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectSceneEditorCopy(i18n);
   const visualViewportBottom =
     Number(state.visualOffsetTop) + Number(state.visualHeight);
   const toolbarTop = Number.isFinite(visualViewportBottom)
@@ -162,6 +183,6 @@ export const selectViewData = ({ state }) => {
     isVisible: state.isVisible,
     bottomStyle: `${state.bottom}px`,
     toolbarTopStyle: `${toolbarTop}px`,
-    toolbarItems,
+    toolbarItems: localizeToolbarItems(toolbarItems, copy),
   };
 };

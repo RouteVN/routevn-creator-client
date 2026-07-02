@@ -18,12 +18,20 @@ const TEXT_REVEAL_INDICATOR_STATE_LABELS = {
   revealing: "Revealing",
   complete: "Complete",
 };
+const TEXT_REVEAL_INDICATOR_STATE_LABEL_KEYS = {
+  revealing: "revealingLabel",
+  complete: "completeLabel",
+};
 
 export const isTextRevealIndicatorStateName = (value) =>
   value === "revealing" || value === "complete";
 
-export const getTextRevealIndicatorStateLabel = (stateName) =>
-  TEXT_REVEAL_INDICATOR_STATE_LABELS[stateName] ?? "Indicator";
+export const getTextRevealIndicatorStateLabel = (stateName, copy = {}) => {
+  const key = TEXT_REVEAL_INDICATOR_STATE_LABEL_KEYS[stateName];
+  return key
+    ? (copy[key] ?? TEXT_REVEAL_INDICATOR_STATE_LABELS[stateName])
+    : (copy.indicatorLabel ?? "Indicator");
+};
 
 export const isTextRevealIndicatorItemName = (name) =>
   name === "indicator.revealing" || name === "indicator.complete";
@@ -114,13 +122,13 @@ export const toTextRevealIndicatorValues = (indicator) => {
 
 export const createTextRevealIndicatorListItems = (
   indicator,
-  { revealSoundId } = {},
+  { revealSoundId, copy = {} } = {},
 ) => {
   const values = toTextRevealIndicatorValues(indicator);
   const items = [
     {
       name: "indicator.revealing",
-      label: "Revealing",
+      label: copy.revealingLabel ?? "Revealing",
       kind: values.revealing.kind,
       imageId: values.revealing.imageId,
       resourceId: values.revealing.resourceId,
@@ -128,7 +136,7 @@ export const createTextRevealIndicatorListItems = (
     },
     {
       name: "indicator.complete",
-      label: "Complete",
+      label: copy.completeLabel ?? "Complete",
       kind: values.complete.kind,
       imageId: values.complete.imageId,
       resourceId: values.complete.resourceId,
@@ -139,7 +147,7 @@ export const createTextRevealIndicatorListItems = (
   if (revealSoundId) {
     items.push({
       name: "revealSoundId",
-      label: "Sound",
+      label: copy.soundLabel ?? "Sound",
       soundId: revealSoundId,
     });
   }
@@ -149,15 +157,21 @@ export const createTextRevealIndicatorListItems = (
 
 export const createTextRevealIndicatorAddItems = (
   indicator,
-  { revealSoundId, supportsTextRevealSound = false } = {},
+  { revealSoundId, supportsTextRevealSound = false, copy = {} } = {},
 ) => {
   const values = toTextRevealIndicatorValues(indicator);
   const items = TEXT_REVEAL_INDICATOR_STATE_ITEMS.filter(
     (item) => !values[item.key]?.imageId && !values[item.key]?.resourceId,
-  );
+  ).map((item) => ({
+    ...item,
+    label: getTextRevealIndicatorStateLabel(item.key, copy),
+  }));
 
   if (supportsTextRevealSound && !revealSoundId) {
-    items.push(TEXT_REVEAL_INDICATOR_SOUND_ITEM);
+    items.push({
+      ...TEXT_REVEAL_INDICATOR_SOUND_ITEM,
+      label: copy.soundLabel ?? TEXT_REVEAL_INDICATOR_SOUND_ITEM.label,
+    });
   }
 
   return items;
@@ -177,21 +191,29 @@ export const createTextRevealIndicatorDialogDefaults = ({
   );
 };
 
-export const createTextRevealIndicatorForm = ({ stateName } = {}) => {
-  const stateLabel = getTextRevealIndicatorStateLabel(stateName);
+export const createTextRevealIndicatorForm = ({
+  stateName,
+  copy = {},
+} = {}) => {
+  const stateLabel = getTextRevealIndicatorStateLabel(stateName, copy);
 
   return {
-    title: `${stateLabel} Indicator`,
+    title:
+      stateName === "revealing"
+        ? (copy.revealingIndicatorTitle ?? `${stateLabel} Indicator`)
+        : stateName === "complete"
+          ? (copy.completeIndicatorTitle ?? `${stateLabel} Indicator`)
+          : (copy.indicatorTitle ?? `${stateLabel} Indicator`),
     fields: [
       {
         type: "slot",
         slot: "text-reveal-indicator-image",
-        label: "Visual",
+        label: copy.visualLabel ?? "Visual",
       },
       {
         name: "width",
         type: "input-number",
-        label: "Width",
+        label: copy.widthLabel ?? "Width",
         min: 1,
         step: 1,
         required: true,
@@ -199,7 +221,7 @@ export const createTextRevealIndicatorForm = ({ stateName } = {}) => {
       {
         name: "height",
         type: "input-number",
-        label: "Height",
+        label: copy.heightLabel ?? "Height",
         min: 1,
         step: 1,
         required: true,
@@ -207,13 +229,13 @@ export const createTextRevealIndicatorForm = ({ stateName } = {}) => {
       {
         name: "offsetX",
         type: "input-number",
-        label: "Offset X",
+        label: copy.offsetXLabel ?? "Offset X",
         step: 1,
       },
       {
         name: "offsetY",
         type: "input-number",
-        label: "Offset Y",
+        label: copy.offsetYLabel ?? "Offset Y",
         step: 1,
       },
     ],
@@ -223,12 +245,12 @@ export const createTextRevealIndicatorForm = ({ stateName } = {}) => {
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton ?? "Cancel",
         },
         {
           id: "submit",
           variant: "pr",
-          label: "Save",
+          label: copy.saveButton ?? "Save",
           validate: true,
         },
       ],

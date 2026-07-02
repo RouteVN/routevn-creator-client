@@ -340,6 +340,10 @@ const {
     );
     viewData.fullImagePreviewPreviousVisible = Boolean(previousItemId);
     viewData.fullImagePreviewNextVisible = Boolean(nextItemId);
+    viewData.fullImagePreviewCanvasModeLabel = copy.previewCanvasModeLabel;
+    viewData.fullImagePreviewFitModeLabel = copy.previewFitModeLabel;
+    viewData.fullImagePreviewPreviousLabel = copy.previewPreviousLabel;
+    viewData.fullImagePreviewNextLabel = copy.previewNextLabel;
     const deleteDialogItem = state.mobileDeleteDialogItemId
       ? state.data?.items?.[state.mobileDeleteDialogItemId]
       : undefined;

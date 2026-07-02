@@ -144,9 +144,9 @@ template:
           - 'rtgl-view w=1fg h=f pl=${contentLeftPadding} style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
-                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupSpritesheetsView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-initial-item-count=0 progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :uploadIcon=${uploadIcon} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupSpritesheetsView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :uploadIcon=${uploadIcon} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
-                      - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupSpritesheetsView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render progressive-initial-item-count=0 progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :uploadIcon=${uploadIcon} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                      - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupSpritesheetsView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :uploadIcon=${uploadIcon} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=300 min-w=220 max-w=520 resize-side="left":
                   - rtgl-view wh=f slot="content":
@@ -158,27 +158,27 @@ template:
                                       - rtgl-svg svg=edit wh=16: null
                                   - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
                                       - $if selectedItemId:
-                                          - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} :paused=${detailPreviewPaused} h=220 emptyLabel="No preview available"': null
-                                          - rtgl-tag-select#detailTagSelect slot="spritesheet-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                          - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} :paused=${detailPreviewPaused} h=220 :emptyLabel=${emptyPreviewLabel}': null
+                                          - rtgl-tag-select#detailTagSelect slot="spritesheet-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                                           - 'rtgl-view slot="spritesheet-animations" d=v w=f g=sm':
-                                              - rtgl-text s=sm c=mu-fg: Animations
+                                              - rtgl-text s=sm c=mu-fg: ${animationsLabel}
                                               - $if detailClipOptions.length > 0:
                                                   - $for clip, clipIndex in detailClipOptions:
                                                       - 'rtgl-view#detailClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
                                                           - rtgl-view d=h w=f av=c g=sm:
                                                               - rtgl-text w=1fg s=sm: ${clip.name}
                                                               - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
-                                                          - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fpsLabel} fps
+                                                          - rtgl-text s=xs c=mu-fg: ${clip.summaryLabel}
                                                 $else:
                                                   - rtgl-view w=f p=sm bgc=mu br=md:
-                                                      - rtgl-text s=xs c=mu-fg: No animations found
+                                                      - rtgl-text s=xs c=mu-fg: ${noAnimationsFound}
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                                  - rtgl-text s=md c=mu-fg: No selection
+                                  - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
   - $if showMobileFileExplorer:
       - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
           - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
-              - rtgl-text w=1fg s=md: Files
+              - rtgl-text w=1fg s=md: ${filesLabel}
               - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
                   - rtgl-svg svg=x wh=20 c=mu-fg: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
@@ -190,35 +190,35 @@ template:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
-                  - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: Preview
-                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: Delete
+                  - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: ${previewButton}
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
-                      - rtgl-tag-select#detailTagSelect slot="spritesheet-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                      - rtgl-tag-select#detailTagSelect slot="spritesheet-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#spritesheetDialog ?open=${isDialogOpen} s=lg:
       - $if isDialogPreviewMode:
           - 'rtgl-view slot="content" d=v w=f g=lg style="min-width: min(960px, 100vw - 64px);"':
-              - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=320 emptyLabel="No preview available"': null
+              - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=320 :emptyLabel=${emptyPreviewLabel}': null
               - rtgl-view d=v w=f g=sm:
-                  - rtgl-text s=sm c=mu-fg: Clips
+                  - rtgl-text s=sm c=mu-fg: ${clipsLabel}
                   - $if dialogClipOptions.length > 0:
                       - $for clip, clipIndex in dialogClipOptions:
                           - 'rtgl-view#dialogClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
                               - rtgl-view d=h w=f av=c g=sm:
                                   - rtgl-text w=1fg s=sm: ${clip.name}
                                   - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
-                              - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fpsLabel} fps
+                              - rtgl-text s=xs c=mu-fg: ${clip.summaryLabel}
                     $else:
                       - rtgl-view w=f p=sm bgc=mu br=md:
-                          - rtgl-text s=xs c=mu-fg: No animations found
+                          - rtgl-text s=xs c=mu-fg: ${noAnimationsFound}
         $else:
           - 'rtgl-view slot="content" d=h lg-d=v w=f g=lg style="min-width: min(960px, 100vw - 64px);"':
               - rtgl-view w=5fg lg-w=f d=v g=md:
                   - rtgl-view d=v g=xs:
                       - rtgl-text s=sm: ${dialogTitle}
-                      - rtgl-text s=xs c=mu-fg: Set the name and description, then select the PNG image and spritesheet JSON here.
+                      - rtgl-text s=xs c=mu-fg: ${dialogInstructions}
                   - rtgl-form#dialogForm key=${dialogFormKey} :defaultValues=${dialogValues} :form=${dialogForm} w=f:
                       - rtgl-view slot=spritesheet-image-source d=v g=xs:
                           - rtgl-view w=120 h=120 av=c ah=c:
@@ -228,7 +228,7 @@ template:
                                   - rvn-file-image#dialogImageSourceButton fileId=${dialogImageSourceFileId} w=120 h=120 bw=xs bc=bo br=md cur=pointer: null
                                 $else:
                                   - rtgl-view#dialogImageSourceButton w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                                      - rtgl-text c=mu-fg s=sm ta=c: Click to upload
+                                      - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
                       - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
                           - rtgl-view d=h g=sm av=c:
                               - rtgl-input w=f :value=${dialogAtlasFieldValue} disabled=true placeholder=${dialogAtlasFieldPlaceholder}: null
@@ -236,17 +236,17 @@ template:
               - rtgl-view w=6fg lg-w=f d=v g=md:
                   - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=260 emptyLabel=""': null
                   - rtgl-view d=v w=f g=sm:
-                      - rtgl-text s=sm c=mu-fg: Clips
+                      - rtgl-text s=sm c=mu-fg: ${clipsLabel}
                       - $if dialogClipOptions.length > 0:
                           - $for clip, clipIndex in dialogClipOptions:
                               - 'rtgl-view#dialogClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
                                   - rtgl-view d=h w=f av=c g=sm:
                                       - rtgl-text w=1fg s=sm: ${clip.name}
                                       - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
-                                  - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fpsLabel} fps
+                                  - rtgl-text s=xs c=mu-fg: ${clip.summaryLabel}
                         $else:
                           - rtgl-view w=f p=sm bgc=mu br=md:
-                              - rtgl-text s=xs c=mu-fg: Select valid spritesheet JSON to detect clips
+                              - rtgl-text s=xs c=mu-fg: ${selectValidJsonToDetectClips}
   - rtgl-dialog#clipFpsDialog ?open=${isClipFpsDialogOpen} s=sm:
       - rtgl-form#clipFpsForm key=${clipFpsDialogKey} slot=content :defaultValues=${clipFpsDialogValues} :form=${clipFpsForm} w=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:

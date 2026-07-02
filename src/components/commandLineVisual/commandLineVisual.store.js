@@ -20,6 +20,14 @@ import {
   normalizeBackgroundTransformEditorTransform,
   removeInlineTransformFields,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineDropdownMenu,
+  localizeCommandLineForm,
+  localizeCommandLineOptions,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const RESOURCE_TYPES = [
   { type: "image", label: "Images" },
@@ -1008,7 +1016,8 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
   });
 };
 
-export const selectViewData = ({ state, props = {} }) => {
+export const selectViewData = ({ state, props = {}, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const activeResourceType = getActiveResourceType(state);
   const activeResourceCollection =
     selectResourceCollection(state, activeResourceType) ??
@@ -1030,6 +1039,14 @@ export const selectViewData = ({ state, props = {} }) => {
     return {
       ...child,
       resourceType,
+      resourceTypeLabel: localizeCommandLineText(
+        resourceType === "image"
+          ? "Image"
+          : resourceType === "video"
+            ? "Video"
+            : "Layout",
+        copy,
+      ),
       previewFileId: child.thumbnailFileId || child.fileId,
       itemBorderColor: isSelected ? "pr" : "bo",
       itemHoverBorderColor: isSelected ? "pr" : "ac",
@@ -1054,7 +1071,10 @@ export const selectViewData = ({ state, props = {} }) => {
               id: `${resourceType}:root`,
               resourceType,
               groupId: `${resourceType}:root`,
-              fullLabel: getResourceTypeLabel(resourceType),
+              fullLabel: localizeCommandLineText(
+                getResourceTypeLabel(resourceType),
+                copy,
+              ),
               children: rootChildren,
               hasChildren: true,
               shouldDisplay: true,
@@ -1113,14 +1133,20 @@ export const selectViewData = ({ state, props = {} }) => {
     value: item.id,
     label: item.name,
     suffixText:
-      getAnimationType(item) === "transition" ? "Transition" : "Update",
+      getAnimationType(item) === "transition"
+        ? localizeCommandLineText("Transition", copy)
+        : localizeCommandLineText("Update", copy),
   }));
 
   // Get enriched visual data
   const enrichedVisuals = selectVisualsWithRepositoryData({ state });
   const processedSelectedVisuals = enrichedVisuals.map((visual) => ({
     ...visual,
-    displayName: visual.displayName || "Unknown Resource",
+    displayName:
+      visual.displayName === "Unknown Resource"
+        ? localizeCommandLineText("Unknown Resource", copy)
+        : visual.displayName ||
+          localizeCommandLineText("Unknown Resource", copy),
     animationMode:
       visual.animationMode ??
       getAnimationModeById(state.animations, visual.animations?.resourceId) ??
@@ -1158,7 +1184,12 @@ export const selectViewData = ({ state, props = {} }) => {
         visual.transformId ||
         (transformOptions.length > 0 ? transformOptions[0].value : undefined),
       customTransform: hasInlineTransform(visual),
-      customTransformDetails: createCustomTransformDetails(visual),
+      customTransformDetails: createCustomTransformDetails(visual).map(
+        (item) => ({
+          ...item,
+          label: localizeCommandLineText(item.label, copy),
+        }),
+      ),
       animationId: visual.animations?.resourceId,
       layer: normalizeVisualLayer(visual.layer),
       opacity: visual.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
@@ -1176,7 +1207,7 @@ export const selectViewData = ({ state, props = {} }) => {
 
     return {
       id: `layer-${option.value}`,
-      label: option.label,
+      label: localizeCommandLineText(option.label, copy),
       layer: option.value,
       visuals,
     };
@@ -1187,11 +1218,23 @@ export const selectViewData = ({ state, props = {} }) => {
     visuals: visualGroups.flatMap((group) => group.visuals),
     transformOptions,
     animationOptions,
-    layerOptions: VISUAL_LAYER_OPTIONS,
-    transformModeOptions: TRANSFORM_MODE_OPTIONS,
-    blurToggleOptions: COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
-    blurKernelSizeOptions: COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
-    blurRepeatEdgeOptions: COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
+    layerOptions: localizeCommandLineOptions(VISUAL_LAYER_OPTIONS, copy),
+    transformModeOptions: localizeCommandLineOptions(
+      TRANSFORM_MODE_OPTIONS,
+      copy,
+    ),
+    blurToggleOptions: localizeCommandLineOptions(
+      COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
+      copy,
+    ),
+    blurKernelSizeOptions: localizeCommandLineOptions(
+      COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
+      copy,
+    ),
+    blurRepeatEdgeOptions: localizeCommandLineOptions(
+      COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
+      copy,
+    ),
   };
   const addVisualDefaultValues = {
     transformId: state.pendingVisualTransformId ?? getDefaultTransformId(state),
@@ -1201,34 +1244,61 @@ export const selectViewData = ({ state, props = {} }) => {
   return {
     mode: state.mode,
     tab: activeResourceType,
-    tabs,
+    tabs: localizeCommandLineOptions(tabs, copy),
     resourceItems,
     resourceGroups,
     selectedVisuals: processedSelectedVisuals,
     transformOptions,
     animationOptions,
-    layerOptions: VISUAL_LAYER_OPTIONS,
+    layerOptions: localizeCommandLineOptions(VISUAL_LAYER_OPTIONS, copy),
     searchQuery: state.searchQuery,
-    searchPlaceholder: "Search...",
+    searchPlaceholder: localizeCommandLineText("Search...", copy),
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
     backgroundTransformEditor: createBackgroundTransformEditorViewData({
       state,
       props,
     }),
-    breadcrumb,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     defaultValues,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     addVisualPopover: {
       ...state.addVisualPopover,
       key: state.addVisualPopover.isOpen
         ? `${addVisualDefaultValues.transformId ?? ""}-${addVisualDefaultValues.layer}`
         : "closed",
     },
-    addVisualForm: createAddVisualForm({
-      transformOptions,
-      layerOptions: VISUAL_LAYER_OPTIONS,
-    }),
+    addVisualForm: localizeCommandLineForm(
+      createAddVisualForm({
+        transformOptions,
+        layerOptions: localizeCommandLineOptions(VISUAL_LAYER_OPTIONS, copy),
+      }),
+      copy,
+    ),
     addVisualDefaultValues,
+    noThumbnailLabel: localizeCommandLineText("No thumbnail", copy),
+    noResourceLabel: localizeCommandLineText("No Resource", copy),
+    layerLabel: localizeCommandLineText("Layer", copy),
+    opacityLabel: localizeCommandLineText("Opacity", copy),
+    blurLabel: localizeCommandLineText("Blur", copy),
+    qualityLabel: localizeCommandLineText("Quality", copy),
+    kernelLabel: localizeCommandLineText("Kernel", copy),
+    repeatEdgeLabel: localizeCommandLineText("Repeat Edge", copy),
+    transformLabel: localizeCommandLineText("Transform", copy),
+    editButtonLabel: localizeCommandLineText("Edit", copy),
+    predefinedTransformLabel: localizeCommandLineText(
+      "Predefined Transform",
+      copy,
+    ),
+    animationLabel: localizeCommandLineText("Animation", copy),
+    selectAnimationPlaceholder: localizeCommandLineText(
+      "Select animation",
+      copy,
+    ),
+    addVisualButtonLabel: localizeCommandLineText("+ Add Visual", copy),
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
+    selectButtonLabel: localizeCommandLineText("Select", copy),
+    transformEditorTitle: localizeCommandLineText("Transform", copy),
+    doneButtonLabel: localizeCommandLineText("Done", copy),
   };
 };

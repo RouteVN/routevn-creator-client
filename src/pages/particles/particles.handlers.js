@@ -25,9 +25,12 @@ import {
   PARTICLE_PRESET_OPTIONS,
 } from "./support/particlePresets.js";
 import { PARTICLE_TAG_SCOPE_KEY } from "./particles.store.js";
+import { selectParticlesPageCopy } from "./support/particlesPageCopy.js";
 
 const CREATE_PARTICLE_SETUP_STEP = "setup";
 const PARTICLE_EDITOR_STEP = "editor";
+
+const selectCopy = (deps = {}) => selectParticlesPageCopy(deps.i18n);
 
 const dataUrlToBlob = async (value) => {
   if (typeof value !== "string" || value.length === 0) {
@@ -114,6 +117,7 @@ const resolveDialogBaseParticle = ({ deps, fallbackParticle } = {}) => {
     particle: fallbackParticle,
     presetId: store.selectDialogPresetId(),
     projectResolution: store.selectProjectResolution(),
+    copy: selectCopy(deps),
   });
 };
 
@@ -200,7 +204,12 @@ const renderParticlePreview = async ({
   graphicsService.render(previewState);
 };
 
-const showParticleThumbnailError = ({ appService, message, error } = {}) => {
+const showParticleThumbnailError = ({
+  appService,
+  copy = {},
+  message,
+  error,
+} = {}) => {
   if (error) {
     console.error(`[particles] ${message}`, error);
   } else {
@@ -209,12 +218,13 @@ const showParticleThumbnailError = ({ appService, message, error } = {}) => {
 
   appService.showAlert({
     message,
-    title: "Error",
+    title: copy.errorTitle ?? "Error",
   });
 };
 
 const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   const { appService, graphicsService, projectService, refs, store } = deps;
+  const copy = selectCopy(deps);
 
   let renderableParticle;
   try {
@@ -225,8 +235,10 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   } catch (error) {
     showParticleThumbnailError({
       appService,
+      copy,
       error,
       message:
+        copy.failedSaveThumbnailPrepare ??
         "Failed to save particle thumbnail: particle data preparation failed.",
     });
     return;
@@ -248,8 +260,10 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   } catch (error) {
     showParticleThumbnailError({
       appService,
+      copy,
       error,
       message:
+        copy.failedSaveThumbnailRuntime ??
         "Failed to save particle thumbnail: preview runtime setup failed.",
     });
     return;
@@ -258,7 +272,10 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   if (!isReady) {
     showParticleThumbnailError({
       appService,
-      message: "Failed to save particle thumbnail: preview canvas unavailable.",
+      copy,
+      message:
+        copy.failedSaveThumbnailCanvas ??
+        "Failed to save particle thumbnail: preview canvas unavailable.",
     });
     return;
   }
@@ -269,8 +286,10 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   } catch (error) {
     showParticleThumbnailError({
       appService,
+      copy,
       error,
       message:
+        copy.failedSaveThumbnailState ??
         "Failed to save particle thumbnail: preview state creation failed.",
     });
     return;
@@ -284,8 +303,11 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   } catch (error) {
     showParticleThumbnailError({
       appService,
+      copy,
       error,
-      message: "Failed to save particle thumbnail: texture asset load failed.",
+      message:
+        copy.failedSaveThumbnailTexture ??
+        "Failed to save particle thumbnail: texture asset load failed.",
     });
     return;
   }
@@ -295,8 +317,11 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   } catch (error) {
     showParticleThumbnailError({
       appService,
+      copy,
       error,
-      message: "Failed to save particle thumbnail: preview render failed.",
+      message:
+        copy.failedSaveThumbnailRender ??
+        "Failed to save particle thumbnail: preview render failed.",
     });
     return;
   }
@@ -308,7 +333,9 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   if (!thumbnailImage) {
     showParticleThumbnailError({
       appService,
+      copy,
       message:
+        copy.failedSaveThumbnailCapture ??
         "Failed to save particle thumbnail: canvas capture returned no image.",
     });
     return;
@@ -320,8 +347,11 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   } catch (error) {
     showParticleThumbnailError({
       appService,
+      copy,
       error,
-      message: "Failed to save particle thumbnail: image conversion failed.",
+      message:
+        copy.failedSaveThumbnailConversion ??
+        "Failed to save particle thumbnail: image conversion failed.",
     });
     return;
   }
@@ -334,8 +364,11 @@ const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
   } catch (error) {
     showParticleThumbnailError({
       appService,
+      copy,
       error,
-      message: "Failed to save particle thumbnail: file storage failed.",
+      message:
+        copy.failedSaveThumbnailStorage ??
+        "Failed to save particle thumbnail: file storage failed.",
     });
     return;
   }
@@ -457,6 +490,7 @@ const resolveCreateSetupDialogValues = ({ deps, values } = {}) => {
   const presetValues = buildParticleFormValues({
     presetId,
     projectResolution: store.selectProjectResolution(),
+    copy: selectCopy(deps),
   });
 
   return {
@@ -488,6 +522,7 @@ const openParticleDialog = async ({
     store.openParticlePreviewDialog({
       itemId,
       itemData,
+      copy: selectCopy(deps),
     });
   } else {
     store.openParticleFormDialog({
@@ -497,6 +532,7 @@ const openParticleDialog = async ({
       itemData,
       presetId,
       targetGroupId,
+      copy: selectCopy(deps),
     });
   }
 
@@ -584,6 +620,7 @@ const {
   handleFolderNameFormAction,
 } = createCatalogPageHandlers({
   resourceType: "particles",
+  copy: ({ i18n }) => selectParticlesPageCopy(i18n),
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(repositoryState, PARTICLE_TAG_SCOPE_KEY);
 
@@ -768,6 +805,7 @@ export const handleParticleDialogClose = async (deps) => {
 
 export const handleParticleFormActionClick = async (deps, payload) => {
   const { appService, projectService, refs, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, valid, values: nextValues } = payload._event.detail;
   const dialogStep = store.selectDialogStep();
   const mergedValues = mergeDialogFormValues(store, nextValues);
@@ -806,8 +844,8 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   if (dialogStep === CREATE_PARTICLE_SETUP_STEP && !store.selectEditMode()) {
     if (!isValidParticlePresetId(presetId)) {
       appService.showAlert({
-        message: "Particle preset is required.",
-        title: "Warning",
+        message: copy.presetRequired ?? "Particle preset is required.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -815,8 +853,9 @@ export const handleParticleFormActionClick = async (deps, payload) => {
     const textureImageId = getTextureImageId(values);
     if (!textureImageId) {
       appService.showAlert({
-        message: "Particle texture image is required.",
-        title: "Warning",
+        message:
+          copy.textureImageRequired ?? "Particle texture image is required.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -828,8 +867,10 @@ export const handleParticleFormActionClick = async (deps, payload) => {
       })
     ) {
       appService.showAlert({
-        message: "Select a valid particle texture image.",
-        title: "Warning",
+        message:
+          copy.selectValidTextureImage ??
+          "Select a valid particle texture image.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -864,8 +905,8 @@ export const handleParticleFormActionClick = async (deps, payload) => {
 
   if (!particleData.name) {
     appService.showAlert({
-      message: "Particle name is required.",
-      title: "Warning",
+      message: copy.particleNameRequired ?? "Particle name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -873,8 +914,9 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   const textureImageId = getTextureImageId(values);
   if (!textureImageId) {
     appService.showAlert({
-      message: "Particle texture image is required.",
-      title: "Warning",
+      message:
+        copy.textureImageRequired ?? "Particle texture image is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -886,8 +928,10 @@ export const handleParticleFormActionClick = async (deps, payload) => {
     })
   ) {
     appService.showAlert({
-      message: "Select a valid particle texture image.",
-      title: "Warning",
+      message:
+        copy.selectValidTextureImage ??
+        "Select a valid particle texture image.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -925,7 +969,9 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   if (editMode && editItemId) {
     const updateAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to update particle.",
+      fallbackMessage:
+        copy.failedUpdateParticle ?? "Failed to update particle.",
+      title: copy.errorTitle ?? "Error",
       action: () =>
         projectService.updateParticle({
           particleId: editItemId,
@@ -949,7 +995,8 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   const particleId = generateId();
   const createAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to create particle.",
+    fallbackMessage: copy.failedCreateParticle ?? "Failed to create particle.",
+    title: copy.errorTitle ?? "Error",
     action: () =>
       projectService.createParticle({
         particleId,
@@ -1030,6 +1077,7 @@ export const handleDialogPreviewBackgroundImageContextMenu = async (
   payload,
 ) => {
   const { appService, render, store } = deps;
+  const copy = selectCopy(deps);
   const event = payload?._event;
   event?.preventDefault?.();
 
@@ -1038,7 +1086,9 @@ export const handleDialogPreviewBackgroundImageContextMenu = async (
   }
 
   const result = await appService.showDropdownMenu({
-    items: [{ type: "item", label: "Remove", key: "remove" }],
+    items: [
+      { type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" },
+    ],
     x: event.clientX,
     y: event.clientY,
     place: "bs",
@@ -1153,7 +1203,9 @@ const {
       tagId,
     });
   },
-  updateItemTagFallbackMessage: "Failed to update particle tags.",
+  updateItemTagFallbackMessage: ({ deps }) =>
+    selectCopy(deps).failedUpdateTags ?? "Failed to update particle tags.",
+  copy: ({ i18n }) => selectParticlesPageCopy(i18n),
 });
 
 export {
@@ -1186,15 +1238,26 @@ export const handleParticleFormTabClick = (deps, payload) => {
 };
 
 export const handleItemDelete = async (deps, payload) => {
-  const { projectService } = deps;
+  const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   if (!itemId) {
     return;
   }
 
-  await projectService.deleteParticles({
-    particleIds: [itemId],
+  const deleteAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: copy.failedDeleteParticle ?? "Failed to delete particle.",
+    title: copy.errorTitle ?? "Error",
+    action: () =>
+      projectService.deleteParticles({
+        particleIds: [itemId],
+      }),
   });
+
+  if (!deleteAttempt.ok) {
+    return;
+  }
 
   await refreshParticleData(deps);
 };

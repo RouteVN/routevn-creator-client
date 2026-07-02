@@ -1,3 +1,6 @@
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { selectWebServerPageCopy } from "./support/webServerPageCopy.js";
+
 const normalizeDisplayPath = (path) => {
   if (typeof path !== "string") {
     return "";
@@ -6,7 +9,13 @@ const normalizeDisplayPath = (path) => {
   return path.startsWith("\\\\?\\") ? path.slice(4) : path;
 };
 
-const buildDetailFields = ({ server } = {}) => {
+const getServerStatusText = (server = {}, copy = {}) => {
+  return server.status !== "stopped"
+    ? (copy.runningStatus ?? "Running")
+    : (copy.stoppedStatus ?? "Stopped");
+};
+
+const buildDetailFields = ({ server, copy = {} } = {}) => {
   if (!server) {
     return [];
   }
@@ -14,27 +23,27 @@ const buildDetailFields = ({ server } = {}) => {
   return [
     {
       type: "description",
-      value: "Items live only in memory.",
+      value: copy.memoryOnlyDescription ?? "Items live only in memory.",
     },
     {
       type: "text",
-      label: "Folder",
+      label: copy.folderLabel ?? "Folder",
       value: normalizeDisplayPath(server.rootPath),
     },
     {
       type: "text",
-      label: "URL",
+      label: copy.urlLabel ?? "URL",
       value: server.url ?? "",
     },
     {
       type: "text",
-      label: "Status",
+      label: copy.statusLabel ?? "Status",
       value: server.statusText ?? "",
     },
     {
       type: "slot",
       slot: "actions",
-      label: "Actions",
+      label: copy.actionsLabel ?? "Actions",
     },
   ];
 };
@@ -65,7 +74,8 @@ export const selectServerByRootPath = ({ state }, rootPath) => {
   return (state.servers ?? []).find((server) => server.rootPath === rootPath);
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectWebServerPageCopy(i18n);
   const selectedServer = selectServer({ state }, state.selectedItemId);
   const canAdd = state.platform === "tauri";
 
@@ -75,11 +85,16 @@ export const selectViewData = ({ state }) => {
     servers: (state.servers ?? []).map((server) => {
       const isSelected = server.id === state.selectedItemId;
       const isRunning = server.status !== "stopped";
+      const statusText = getServerStatusText(server, copy);
 
       return {
         ...server,
         displayRootPath: normalizeDisplayPath(server.rootPath),
-        statusText: isRunning ? "Running" : "Stopped",
+        statusText,
+        statusSummary: formatI18nCopy(
+          copy.statusSummaryTemplate ?? "Status: {status}",
+          { status: statusText },
+        ),
         canCopyUrl: isRunning && !!server.url,
         canStartServer: !isRunning && !!server.rootPath,
         canStopServer: isRunning && !!server.serverId,
@@ -90,11 +105,11 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedServer?.name ?? "",
     detailFields: buildDetailFields({
+      copy,
       server: selectedServer
         ? {
             ...selectedServer,
-            statusText:
-              selectedServer.status !== "stopped" ? "Running" : "Stopped",
+            statusText: getServerStatusText(selectedServer, copy),
           }
         : undefined,
     }),
@@ -104,10 +119,22 @@ export const selectViewData = ({ state }) => {
       selectedServer?.status === "stopped" && !!selectedServer?.rootPath,
     canStopSelectedServer:
       selectedServer?.status !== "stopped" && !!selectedServer?.serverId,
-    emptyStateTitle: canAdd ? "No web servers" : "Desktop only",
+    emptyStateTitle: canAdd
+      ? (copy.emptyTitle ?? "No web servers")
+      : (copy.desktopOnlyTitle ?? "Desktop only"),
     emptyStateDescription: canAdd
-      ? "Add a static site folder with an index.html file to serve it over localhost."
-      : "This release tool needs the Tauri desktop app because it starts a local server.",
+      ? (copy.emptyDescription ??
+        "Add a static site folder with an index.html file to serve it over localhost.")
+      : (copy.desktopOnlyDescription ??
+        "This release tool needs the Tauri desktop app because it starts a local server."),
+    title: copy.title ?? "Web Server",
+    addButton: copy.addButton ?? "Add",
+    copyUrlButton: copy.copyUrlButton ?? "Copy URL",
+    startButton: copy.startButton ?? "Start",
+    stopButton: copy.stopButton ?? "Stop",
+    startWebServerButton: copy.startWebServerButton ?? "Start Web Server",
+    stopWebServerButton: copy.stopWebServerButton ?? "Stop Web Server",
+    noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     resourceCategory: "releases",
     selectedResourceId: "webServer",
   };

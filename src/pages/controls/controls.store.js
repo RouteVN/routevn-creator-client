@@ -50,7 +50,7 @@ const createControlForm = ({ editMode = false, copy = {} } = {}) => ({
 
 const createSystemActionLabels = (copy = {}) => ({
   nextLine: copy.actionNextLine ?? "Next Line",
-  sectionTransition: copy.actionSectionTransition ?? "Transition",
+  sectionTransition: copy.actionSectionTransition ?? "Section Transition",
   resetStoryAtSection:
     copy.actionResetStoryAtSection ?? "Reset Story At Section",
   toggleAutoMode: copy.actionToggleAutoMode ?? "Toggle Auto Mode",

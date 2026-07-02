@@ -12,8 +12,10 @@ import {
   handleDropdownMenuClickItem,
   handleEditorBlur,
   handleNewLine,
+  handlePreviewClick,
   handleSectionMoveSceneFormActionClick,
   handleSelectedLineChanged,
+  handleSystemActionsDialogOpen,
   handleTemporaryPresentationStateChange,
   scrollEntrySelectionIntoView,
   syncSceneEditorRoutePayload,
@@ -38,6 +40,76 @@ const installAnimationFrameQueue = () => {
     },
   };
 };
+
+const waitForAsyncHandler = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
+describe("sceneEditorLexical.handlers preview", () => {
+  it("blurs mounted line editors before showing fullscreen preview", async () => {
+    const calls = [];
+    const line = { id: "line-1", actions: {} };
+    const draftSection = {
+      sceneId: "scene-1",
+      sectionId: "section-1",
+      lines: [line],
+    };
+    const linesEditor = {
+      dataset: { sectionId: "section-1" },
+      getLines: vi.fn(() => [line]),
+      getSelectedLineId: vi.fn(() => "line-1"),
+      blurEditor: vi.fn(() => calls.push("editor-blur")),
+      focusLine: vi.fn(),
+    };
+    const store = {
+      selectSceneId: vi.fn(() => "scene-1"),
+      selectSelectedSectionId: vi.fn(() => "section-1"),
+      selectSelectedLineId: vi.fn(() => "line-1"),
+      selectDraftSaveTimerId: vi.fn(() => undefined),
+      clearDraftSaveTimer: vi.fn(),
+      selectDraftSectionBySectionId: vi.fn(() => draftSection),
+      selectDraftSection: vi.fn(() => draftSection),
+      selectPendingDraftSections: vi.fn(() => []),
+      setDraftSavePendingSinceAt: vi.fn(),
+      setSkipNextEditorBlurDraftFlush: vi.fn(),
+      showPreviewSceneId: vi.fn(() => calls.push("show-preview")),
+      setRepositoryState: vi.fn(),
+      setDomainState: vi.fn(),
+      setRepositoryRevision: vi.fn(),
+    };
+    const deps = {
+      store,
+      refs: {
+        sectionEditor0: linesEditor,
+      },
+      appService: {
+        blurActiveElement: vi.fn(() => calls.push("app-blur")),
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        getRepositoryState: vi.fn(() => ({})),
+        getDomainState: vi.fn(() => ({})),
+        getRepositoryRevision: vi.fn(() => 1),
+      },
+      render: vi.fn(),
+    };
+
+    handlePreviewClick(deps, {});
+    await waitForAsyncHandler();
+
+    expect(linesEditor.blurEditor).toHaveBeenCalledWith({
+      lineId: "line-1",
+    });
+    expect(deps.appService.blurActiveElement).toHaveBeenCalled();
+    expect(store.showPreviewSceneId).toHaveBeenCalledWith({
+      sceneId: "scene-1",
+      sectionId: "section-1",
+      lineId: "line-1",
+    });
+    expect(calls).toEqual(["editor-blur", "app-blur", "show-preview"]);
+  });
+});
 
 describe("sceneEditorLexical.handlers route payload sync", () => {
   it("switches scene state when the mounted editor receives a new scene route payload", async () => {
@@ -400,6 +472,31 @@ describe("sceneEditorLexical.handlers transform editor resize", () => {
 });
 
 describe("sceneEditorLexical.handlers actions dialog", () => {
+  it("stores the system action dialog target line before the dialog opens", () => {
+    let actionTargetLineId;
+
+    handleSystemActionsDialogOpen(
+      {
+        store: {
+          selectSelectedLineId: vi.fn(() => "fallback-line"),
+          setActionTargetLineId: vi.fn(({ lineId }) => {
+            actionTargetLineId = lineId;
+          }),
+        },
+      },
+      {
+        _event: {
+          detail: {
+            selectedLineId: "line-2",
+            mode: "actions",
+          },
+        },
+      },
+    );
+
+    expect(actionTargetLineId).toBe("line-2");
+  });
+
   it("opens the background transform editor from the predefined transform when stale inline fields are present", () => {
     const openBackgroundTransformEditor = vi.fn();
     const open = vi.fn();

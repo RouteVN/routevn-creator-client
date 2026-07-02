@@ -3,6 +3,10 @@ import {
   createActionItemWithInlineTransform,
   createBackgroundWithInlineTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import { getRoutevnCreatorSystemActionDocsUrl } from "../../internal/routevnUrls.js";
 
 const toPlainObject = (value) => {
@@ -30,6 +34,17 @@ const dispatchTemporaryPresentationStateChange = (
     new CustomEvent("temporary-presentation-state-change", {
       detail: {
         presentationState,
+      },
+    }),
+  );
+};
+
+const dispatchActionsDialogOpen = ({ dispatchEvent, props }, mode) => {
+  dispatchEvent(
+    new CustomEvent("actions-dialog-open", {
+      detail: {
+        mode,
+        selectedLineId: props.selectedLineId,
       },
     }),
   );
@@ -289,9 +304,17 @@ export const handleCommandLineSubmit = (deps, payload) => {
 
 export const handleAddActionButtonClicked = (deps) => {
   const { store, render } = deps;
+  dispatchActionsDialogOpen(deps, "actions");
   store.showActionsDialog();
   store.setMode({ mode: "actions" });
   render();
+};
+
+export const handleActionControlMouseDown = (_deps, payload) => {
+  const event = payload?._event;
+  if (event?.button === undefined || event.button === 0) {
+    event.preventDefault?.();
+  }
 };
 
 export const handleEmbeddedCloseClick = (deps, payload) => {
@@ -311,13 +334,17 @@ export const handleHelpFloatingButtonClick = (deps, payload) => {
 export const handleVoicePreviewClick = (deps, payload) => {
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();
-  const { appService, store, render } = deps;
+  const { appService, i18n, store, render } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const voicePreview = store.selectVoicePreview();
 
   if (!voicePreview?.fileId) {
     appService.showAlert({
-      message: "Voice preview audio is unavailable.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Voice preview audio is unavailable.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }
@@ -360,6 +387,7 @@ export const handleActionItemClick = (deps, payload) => {
   const { store, render } = deps;
   const event = payload._event;
   const mode = event.currentTarget?.dataset?.mode;
+  dispatchActionsDialogOpen(deps, mode);
   store.showActionsDialog();
   store.setMode({ mode });
   render();

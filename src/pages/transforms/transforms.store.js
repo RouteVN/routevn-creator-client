@@ -517,6 +517,14 @@ const {
         state.dialogItemData?.previewFileId ??
         state.dialogItemData?.thumbnailFileId,
       previewPanel: buildPreviewPanel(state, copy),
+      cancelButton: copy.cancelButton,
+      confirmButton: copy.confirmButton,
+      noPreviewLabel: copy.noPreviewLabel,
+      noPreviewImageLabel: copy.noPreviewImageLabel,
+      previewLabel: copy.previewLabel,
+      editButton: copy.editMenuItem ?? "Edit",
+      selectImageLabel: copy.selectImageLabel,
+      updateToSetPreviewLabel: copy.updateToSetPreviewLabel,
       imageSelectorDialog: {
         ...state.imageSelectorDialog,
         title:

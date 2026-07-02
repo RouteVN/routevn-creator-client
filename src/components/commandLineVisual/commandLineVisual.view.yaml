@@ -142,7 +142,7 @@ template:
                                                           - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
                                                         $else:
                                                           - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                              - rtgl-text s=sm c=mu-fg: No thumbnail
+                                                              - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
                                                       - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
                                                           - rtgl-icon icon=play s=xl c=fg: null
                                                 $elif visual.resourceType == 'layout':
@@ -150,19 +150,19 @@ template:
                                                       - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
                                                     $else:
                                                       - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                          - rtgl-text s=sm c=mu-fg: No thumbnail
+                                                          - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
                                                 $elif visual.fileId:
                                                   - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
                                                 $else:
                                                   - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                      - rtgl-text s=sm c=mu-fg: No Resource
+                                                      - rtgl-text s=sm c=mu-fg: ${noResourceLabel}
                                               - rtgl-text s=xs c=mu-fg ellipsis w=200: ${visual.displayName}
                                       - rtgl-view w=1fg g=sm:
-                                          - rtgl-text s=sm c=mu-fg: Layer
+                                          - rtgl-text s=sm c=mu-fg: ${layerLabel}
                                           - rtgl-select#layer${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.layer} :options=${defaultValues.layerOptions} :selectedValue=${visual.layer} w=f no-clear: null
-                                          - rtgl-text s=sm c=mu-fg: Opacity
+                                          - rtgl-text s=sm c=mu-fg: ${opacityLabel}
                                           - rtgl-slider-input#opacity${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.id} min=0 max=1 step=0.01 w=f value=${visual.opacity}: null
-                                          - rtgl-text s=sm c=mu-fg: Blur
+                                          - rtgl-text s=sm c=mu-fg: ${blurLabel}
                                           - rtgl-segmented-control#blurToggle${groupIndex}x${i} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.blurEnabled} :options=${defaultValues.blurToggleOptions}: null
                                           - $if visual.blurEnabled:
                                               - rtgl-view d=h wrap g=sm w=f:
@@ -173,15 +173,15 @@ template:
                                                       - rtgl-text s=xs c=mu-fg: Y
                                                       - rtgl-input#blurY${groupIndex}x${i} data-index=${visual.visualIndex} data-blur-field=y type=number w=f value=${visual.blur.y}: null
                                                   - rtgl-view w=90 g=xs:
-                                                      - rtgl-text s=xs c=mu-fg: Quality
+                                                      - rtgl-text s=xs c=mu-fg: ${qualityLabel}
                                                       - rtgl-input#blurQuality${groupIndex}x${i} data-index=${visual.visualIndex} data-blur-field=quality type=number min=1 step=1 w=f value=${visual.blur.quality}: null
                                                   - rtgl-view w=120 g=xs:
-                                                      - rtgl-text s=xs c=mu-fg: Kernel
+                                                      - rtgl-text s=xs c=mu-fg: ${kernelLabel}
                                                       - rtgl-select#blurKernelSize${groupIndex}x${i} data-index=${visual.visualIndex} data-blur-field=kernelSize w=f no-clear :selectedValue=${visual.blur.kernelSize} :options=${defaultValues.blurKernelSizeOptions}: null
                                                   - rtgl-view w=160 g=xs:
-                                                      - rtgl-text s=xs c=mu-fg: Repeat Edge
+                                                      - rtgl-text s=xs c=mu-fg: ${repeatEdgeLabel}
                                                       - rtgl-segmented-control#blurRepeatEdgePixels${groupIndex}x${i} data-index=${visual.visualIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${visual.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}: null
-                                          - rtgl-text s=sm c=mu-fg: Transform
+                                          - rtgl-text s=sm c=mu-fg: ${transformLabel}
                                           - rtgl-segmented-control#customTransformMode${groupIndex}x${i} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.customTransform} :options=${defaultValues.transformModeOptions}: null
                                           - $if visual.customTransform:
                                               - rtgl-view d=h av=c w=f g=md:
@@ -190,15 +190,15 @@ template:
                                                           - 'rtgl-view#customTransformChip${groupIndex}x${i}x${j} data-index=${visual.visualIndex} d=h av=c g=sm bw=xs bc=bo h-bc=pr br=full bgc=mu ph=md pv=sm cur=pointer style="max-width: 220px; box-sizing: border-box;"':
                                                               - rtgl-text s=xs c=mu-fg ellipsis: ${item.label}
                                                               - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums; white-space: nowrap;"': ${item.value}
-                                                  - rtgl-button#customTransformButton${groupIndex}x${i} data-index=${visual.visualIndex} v=se: Edit
+                                                  - rtgl-button#customTransformButton${groupIndex}x${i} data-index=${visual.visualIndex} v=se: ${editButtonLabel}
                                             $else:
-                                              - rtgl-text s=sm c=mu-fg: Predefined Transform
+                                              - rtgl-text s=sm c=mu-fg: ${predefinedTransformLabel}
                                               - rtgl-select#transform${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.transformId} :options=${defaultValues.transformOptions} :selectedValue=${visual.transformId} w=f no-clear: null
-                                          - rtgl-text s=sm c=mu-fg: Animation
-                                          - rtgl-select#animation${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.animationId} :options=${defaultValues.animationOptions} :selectedValue=${visual.animationId} w=f placeholder="Select animation": null
-                  - rtgl-button#addVisualButton v=ol w=f mt=md: + Add Visual
+                                          - rtgl-text s=sm c=mu-fg: ${animationLabel}
+                                          - rtgl-select#animation${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.animationId} :options=${defaultValues.animationOptions} :selectedValue=${visual.animationId} w=f placeholder=${selectAnimationPlaceholder}: null
+                  - rtgl-button#addVisualButton v=ol w=f mt=md: ${addVisualButtonLabel}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-              - rtgl-button#submitButton: Submit
+              - rtgl-button#submitButton: ${submitButtonLabel}
       - $if mode == 'resource-select':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
@@ -225,7 +225,7 @@ template:
                                                       - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
                                                     $else:
                                                       - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                          - rtgl-text s=sm c=mu-fg: No thumbnail
+                                                          - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
                                                   - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
                                                       - rtgl-icon icon=play s=xl c=fg: null
                                             $elif item.resourceType == 'layout':
@@ -233,23 +233,23 @@ template:
                                                   - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
                                                 $else:
                                                   - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                      - rtgl-text s=sm c=mu-fg: No thumbnail
+                                                      - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
                                             $elif item.previewFileId:
                                               - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
                                             $else:
                                               - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                  - rtgl-text s=sm c=mu-fg: ${item.resourceType}
+                                                  - rtgl-text s=sm c=mu-fg: ${item.resourceTypeLabel}
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-              - rtgl-button#buttonSelect: Select
+              - rtgl-button#buttonSelect: ${selectButtonLabel}
   - rtgl-popover#addVisualPopover ?open=${addVisualPopover.isOpen} x=${addVisualPopover.position.x} y=${addVisualPopover.position.y} place=bs:
       - rtgl-form#addVisualForm key=${addVisualPopover.key} slot=content :defaultValues=${addVisualDefaultValues} :form=${addVisualForm} w=320: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - $if backgroundTransformEditor.isOpen:
       - 'rtgl-view pos=abs edge=f z=20 bgc=bg d=v style="pointer-events: auto; min-width: 0; min-height: 0;"':
           - rtgl-view h=48 bwb=xs w=f d=h av=c ph=md g=md:
-              - rtgl-text s=sm w=1fg: Transform
-              - rtgl-button#backgroundTransformEditorDoneButton v=pr: Done
+              - rtgl-text s=sm w=1fg: ${transformEditorTitle}
+              - rtgl-button#backgroundTransformEditorDoneButton v=pr: ${doneButtonLabel}
           - 'rtgl-view w=f h=1fg ah=c av=c style="min-width: 0; min-height: 0;"':
               - 'rtgl-view h=f style="width: ${backgroundTransformEditor.previewMaxWidth}; max-width: 100%; min-width: 0; min-height: 0;"':
                   - rvn-scene-editor-preview-canvas#backgroundTransformPreviewCanvasHost canvas-aspect-ratio="${backgroundTransformEditor.canvasAspectRatio}": null

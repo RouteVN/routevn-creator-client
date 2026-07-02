@@ -26,4 +26,4 @@ refs:
       furigana-dialog-request:
         handler: handleFuriganaDialogRequest
 template:
-  - rvn-lexical-scene-document-editor#editor :lines=${lines} :lineDecorations=${lineDecorations} :selectionActive=${selectionActive} :selectedLineId=${selectedLineId} :showLineNumbers=${showLineNumbers} :fontSize=${fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets}: null
+  - rvn-lexical-scene-document-editor#editor :lines=${lines} :lineDecorations=${lineDecorations} :selectionActive=${selectionActive} :selectedLineId=${selectedLineId} :hasPreviousSectionLine=${hasPreviousSectionLine} :hasNextSectionLine=${hasNextSectionLine} :showLineNumbers=${showLineNumbers} :fontSize=${fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets}: null

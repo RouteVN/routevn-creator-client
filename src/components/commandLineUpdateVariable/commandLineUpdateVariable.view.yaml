@@ -64,34 +64,34 @@ template:
                           - rtgl-text s=sm c=pr: ${operation.opLabel}
                           - $if operation.op != 'toggle':
                               - rtgl-text s=sm: ${operation.displayValue}
-                  - rtgl-button#addOperationButton v=ol w=f mt=md: + Add Operation
+                  - rtgl-button#addOperationButton v=ol w=f mt=md: ${addOperationButton}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-              - rtgl-button#submitButton ?disabled=${!hasOperations}: Submit
+              - rtgl-button#submitButton ?disabled=${!hasOperations}: ${submitButton}
       - $if mode == 'edit' && initiated:
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
               - rtgl-view g=md mt=md w=f:
-                  - rtgl-text s=sm c=mu-fg mb=sm: Variable
-                  - rtgl-select#variableSelect w=f :selectedValue=${tempOperation.variableId} :options=${variableOptions} placeholder="Choose a variable...": null
+                  - rtgl-text s=sm c=mu-fg mb=sm: ${variableLabel}
+                  - rtgl-select#variableSelect w=f :selectedValue=${tempOperation.variableId} :options=${variableOptions} placeholder="${variablePlaceholder}": null
                   - $if tempOperation.variableId:
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Operation
-                      - rtgl-select#operationSelect w=f :selectedValue=${tempOperation.op} :options=${operationOptions} placeholder="Choose an operation...": null
+                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${operationLabel}
+                      - rtgl-select#operationSelect w=f :selectedValue=${tempOperation.op} :options=${operationOptions} placeholder="${operationPlaceholder}": null
                   - $if showValueField && valueInputType == 'number':
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
-                      - rtgl-input#valueInput type=number w=f placeholder="Enter number..." value=${tempOperation.value}: null
+                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
+                      - rtgl-input#valueInput type=number w=f placeholder="${valueNumberPlaceholder}" value=${tempOperation.value}: null
                   - $if showRoundToField:
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Decimal Places
+                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${decimalPlacesLabel}
                       - rtgl-input#roundToInput type=number min=0 max=12 step=1 w=f value=${tempOperation.roundToValue}: null
                   - $if showValueField && valueInputType == 'boolean':
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
+                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
                       - rtgl-select#booleanSelect w=f :selectedValue=${tempOperation.booleanValue} :options=${booleanOptions}: null
                   - $if showValueField && showEnumValueSelect:
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
-                      - rtgl-select#enumValueSelect w=f :selectedValue=${tempOperation.value} :options=${enumValueOptions} placeholder="Choose a value...": null
+                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
+                      - rtgl-select#enumValueSelect w=f :selectedValue=${tempOperation.value} :options=${enumValueOptions} placeholder="${valueSelectPlaceholder}": null
                   - $if showValueField && valueInputType == 'string' && !showEnumValueSelect:
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
-                      - rtgl-input#valueInput w=f placeholder="Enter text..." value=${tempOperation.value}: null
+                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
+                      - rtgl-input#valueInput w=f placeholder="${valueTextPlaceholder}" value=${tempOperation.value}: null
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-              - rtgl-button#saveOperationButton ?disabled=${!canSaveOperation}: Save Operation
+              - rtgl-button#saveOperationButton ?disabled=${!canSaveOperation}: ${saveOperationButton}
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

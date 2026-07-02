@@ -1,4 +1,8 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const openBgmGallery = ({ store, render }) => {
   const selectedResource = store.selectSelectedResource();
@@ -15,7 +19,8 @@ const openBgmGallery = ({ store, render }) => {
 };
 
 const showCurrentBgmContextMenu = async (deps, event) => {
-  const { store, render, globalUI } = deps;
+  const { store, render, globalUI, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const selectedResource = store.selectSelectedResource();
 
   if (!selectedResource) {
@@ -24,7 +29,13 @@ const showCurrentBgmContextMenu = async (deps, event) => {
   }
 
   const result = await globalUI.showDropdownMenu({
-    items: [{ type: "item", label: "Remove", key: "remove" }],
+    items: [
+      {
+        type: "item",
+        label: localizeCommandLineText("Remove", copy),
+        key: "remove",
+      },
+    ],
     x: event.clientX,
     y: event.clientY,
     place: "bs",

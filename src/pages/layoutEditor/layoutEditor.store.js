@@ -11,6 +11,7 @@ import {
   toLayoutEditorContextMenuItems,
   toLayoutEditorExplorerItems,
 } from "./support/layoutEditorViewData.js";
+import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
 
 const normalizePreviewData = (previewData) => {
   return previewData && typeof previewData === "object"
@@ -39,6 +40,67 @@ const selectLayoutEditorCanvasMaxWidth = ({ state }) => {
   const maxWidthVh = Number((widthMultiplier * 50).toFixed(4));
 
   return `min(100%, ${maxWidthVh}vh)`;
+};
+
+const CREATE_TYPE_LABEL_KEYS = Object.freeze({
+  container: "containerMenuItem",
+  sprite: "imageMenuItem",
+  "spritesheet-animation": "spritesheetAnimationMenuItem",
+  particle: "particleMenuItem",
+  text: "textMenuItem",
+  slider: "sliderMenuItem",
+  input: "inputMenuItem",
+  "form-submit-button": "inputSubmitContainerMenuItem",
+  "fragment-ref": "fragmentMenuItem",
+  "container-confirm-dialog-ok": "containerConfirmOkMenuItem",
+  "container-confirm-dialog-cancel": "containerConfirmCancelMenuItem",
+  "text-dialogue-content": "textDialogueContentMenuItem",
+  "text-character-name": "textCharacterNameMenuItem",
+  "container-dialogue-line": "containerDialogueLineMenuItem",
+  "text-dialogue-line-character-name": "textLineCharacterNameMenuItem",
+  "text-dialogue-line-content": "textLineContentMenuItem",
+  "container-history-line": "containerHistoryItemMenuItem",
+  "text-history-line-character-name": "textHistoryCharacterNameMenuItem",
+  "text-history-line-content": "textHistoryLineContentMenuItem",
+  "container-choice-item": "containerRepeatedChoiceItemMenuItem",
+  "container-choice-single-item": "containerSingleChoiceItemMenuItem",
+  "container-save-load-slot": "containerSaveLoadSlotMenuItem",
+  "sprite-save-load-slot-image": "imageSaveImageMenuItem",
+  "text-save-load-slot-date": "textSaveDateMenuItem",
+  "text-choice-item-content": "textChoiceContentMenuItem",
+  rect: "rectMenuItem",
+});
+
+const VALUE_LABEL_KEYS = Object.freeze({
+  "rename-item": "renameMenuItem",
+  "delete-item": "deleteMenuItem",
+});
+
+const LABEL_TEXT_KEYS = Object.freeze({
+  "Add Element": "addElementMenuLabel",
+  Edit: "editMenuLabel",
+});
+
+const localizeMenuItems = (items = [], copy = {}) => {
+  return items.map((item) => {
+    if (!item?.label) {
+      return item;
+    }
+
+    const labelKey =
+      CREATE_TYPE_LABEL_KEYS[item.createType] ??
+      VALUE_LABEL_KEYS[item.value] ??
+      LABEL_TEXT_KEYS[item.label];
+
+    if (!labelKey || !copy[labelKey]) {
+      return item;
+    }
+
+    return {
+      ...item,
+      label: copy[labelKey],
+    };
+  });
 };
 
 export const createInitialState = () => {
@@ -387,7 +449,8 @@ export const selectInitialPreviewData = ({ state }) => {
 
 export const selectIsPreviewMounted = ({ state }) => state.isPreviewMounted;
 
-export const selectViewData = ({ state, constants }) => {
+export const selectViewData = ({ state, constants, i18n }) => {
+  const copy = selectLayoutEditorPageCopy(i18n);
   const selectedItem = selectItemDataById(
     { state },
     { itemId: state.selectedItemId },
@@ -411,11 +474,11 @@ export const selectViewData = ({ state, constants }) => {
     { layoutType },
   );
   const contextMenuItems = toLayoutEditorContextMenuItems(
-    parsedContextMenuItems,
+    localizeMenuItems(parsedContextMenuItems, copy),
     state.projectResolution,
   );
   const emptyContextMenuItems = toLayoutEditorContextMenuItems(
-    parsedEmptyContextMenuItems,
+    localizeMenuItems(parsedEmptyContextMenuItems, copy),
     state.projectResolution,
   );
   const flatLayoutItems = toFlatItems(state.layoutData);
@@ -472,6 +535,9 @@ export const selectViewData = ({ state, constants }) => {
 
   return {
     item,
+    loadingPreviewLabel: copy.loadingPreviewLabel,
+    noSelectionLabel: copy.noSelectionLabel,
+    savePreviewButton: copy.savePreviewButton,
     flatItems,
     selectedItemId: state.selectedItemId,
     detailPanelSelectedItemId: state.detailPanelSelectedItemId,

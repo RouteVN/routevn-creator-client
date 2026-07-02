@@ -1,5 +1,11 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const form = {
   fields: [
@@ -61,7 +67,8 @@ export const selectSubmitData = ({ state }) => ({
   scenes: state.scenes,
 });
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const scenes = toFlatItems(state.scenes);
   const allScenes = scenes.filter((item) => item.type === "scene");
   const selectedSceneId = state.formValues?.sceneId || props?.currentSceneId;
@@ -92,22 +99,28 @@ export const selectViewData = ({ state, props }) => {
   ) {
     sectionOptions.unshift({
       value: selectedSectionId,
-      label: `Missing section (${selectedSectionId})`,
+      label: `${localizeCommandLineText(
+        "Missing section",
+        copy,
+      )} (${selectedSectionId})`,
     });
   }
 
   return {
-    breadcrumb: [
-      {
-        id: "actions",
-        label: "Actions",
-        click: true,
-      },
-      {
-        label: "Reset Story At Section",
-      },
-    ],
-    form,
+    breadcrumb: localizeCommandLineBreadcrumb(
+      [
+        {
+          id: "actions",
+          label: "Actions",
+          click: true,
+        },
+        {
+          label: "Reset Story At Section",
+        },
+      ],
+      copy,
+    ),
+    form: localizeCommandLineForm(form, copy),
     defaultValues: state.formValues,
     context: {
       sceneOptions,

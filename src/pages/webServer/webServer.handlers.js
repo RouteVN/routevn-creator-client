@@ -1,3 +1,5 @@
+import { selectWebServerPageCopy } from "./support/webServerPageCopy.js";
+
 const normalizeRootPath = (path) => {
   if (typeof path !== "string" || path.length === 0) {
     return "";
@@ -31,27 +33,31 @@ const toServerItem = (server = {}, { itemId } = {}) => {
   };
 };
 
-const getStartServerErrorMessage = (error) => {
+const getStartServerErrorMessage = (error, copy = {}) => {
   const message = error?.message ?? "";
 
   if (message.includes("index.html")) {
-    return "Selected folder must contain an index.html file.";
+    return (
+      copy.selectedFolderMissingIndex ??
+      "Selected folder must contain an index.html file."
+    );
   }
 
   if (message.includes("directory")) {
-    return "Please select a valid folder.";
+    return copy.selectValidFolder ?? "Please select a valid folder.";
   }
 
-  return "Failed to start the web server.";
+  return copy.failedStartServer ?? "Failed to start the web server.";
 };
 
 const startServer = async (deps, { itemId, rootPath } = {}) => {
-  const { appService, render, store } = deps;
+  const { appService, render, store, i18n } = deps;
+  const copy = selectWebServerPageCopy(i18n);
 
   if (!rootPath) {
     appService.showAlert({
-      title: "Error",
-      message: "Server folder is missing.",
+      title: copy.errorTitle ?? "Error",
+      message: copy.serverFolderMissing ?? "Server folder is missing.",
     });
     return false;
   }
@@ -68,8 +74,8 @@ const startServer = async (deps, { itemId, rootPath } = {}) => {
       error,
     });
     appService.showAlert({
-      title: "Error",
-      message: getStartServerErrorMessage(error),
+      title: copy.errorTitle ?? "Error",
+      message: getStartServerErrorMessage(error, copy),
     });
     return false;
   }
@@ -85,7 +91,8 @@ const startServer = async (deps, { itemId, rootPath } = {}) => {
     });
     render();
     appService.showToast({
-      message: "That folder is already being served.",
+      message:
+        copy.folderAlreadyServed ?? "That folder is already being served.",
     });
     return false;
   }
@@ -98,14 +105,17 @@ const startServer = async (deps, { itemId, rootPath } = {}) => {
   render();
 
   appService.showToast({
-    message: existingServer ? "Web server restarted." : "Web server started.",
+    message: existingServer
+      ? (copy.serverRestarted ?? "Web server restarted.")
+      : (copy.serverStarted ?? "Web server started."),
   });
 
   return true;
 };
 
 const loadRunningServers = async (deps) => {
-  const { appService, render, store } = deps;
+  const { appService, render, store, i18n } = deps;
+  const copy = selectWebServerPageCopy(i18n);
 
   if (appService.getPlatform() !== "tauri") {
     store.setServers({
@@ -126,8 +136,8 @@ const loadRunningServers = async (deps) => {
   } catch (error) {
     console.error("Failed to load static web servers", { error });
     appService.showToast({
-      title: "Error",
-      message: "Failed to load running web servers.",
+      title: copy.errorTitle ?? "Error",
+      message: copy.failedLoadServers ?? "Failed to load running web servers.",
       status: "error",
     });
   }
@@ -148,12 +158,15 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleAddServerClick = async (deps) => {
-  const { appService } = deps;
+  const { appService, i18n } = deps;
+  const copy = selectWebServerPageCopy(i18n);
 
   if (appService.getPlatform() !== "tauri") {
     appService.showAlert({
-      title: "Unsupported",
-      message: "The web server page is only available in the desktop app.",
+      title: copy.unsupportedTitle ?? "Unsupported",
+      message:
+        copy.desktopOnlyAlert ??
+        "The web server page is only available in the desktop app.",
     });
     return;
   }
@@ -161,12 +174,13 @@ export const handleAddServerClick = async (deps) => {
   let rootPath;
   try {
     rootPath = await appService.openFolderPicker({
-      title: "Select Static Site Folder",
+      title: copy.selectStaticSiteFolderTitle ?? "Select Static Site Folder",
     });
   } catch {
     appService.showAlert({
-      title: "Error",
-      message: "Failed to open the folder picker.",
+      title: copy.errorTitle ?? "Error",
+      message:
+        copy.failedOpenFolderPicker ?? "Failed to open the folder picker.",
     });
     return;
   }
@@ -195,7 +209,8 @@ export const handleServerItemClick = (deps, payload) => {
 };
 
 export const handleCopyUrlClick = async (deps, payload) => {
-  const { appService, store } = deps;
+  const { appService, store, i18n } = deps;
+  const copy = selectWebServerPageCopy(i18n);
   payload?._event?.stopPropagation?.();
 
   const serverId = getItemIdFromEvent(payload?._event);
@@ -206,16 +221,16 @@ export const handleCopyUrlClick = async (deps, payload) => {
   const server = store.selectServer(serverId);
   if (!server?.url) {
     appService.showAlert({
-      title: "Error",
-      message: "Server URL is missing.",
+      title: copy.errorTitle ?? "Error",
+      message: copy.serverUrlMissing ?? "Server URL is missing.",
     });
     return;
   }
 
   if (server.status === "stopped") {
     appService.showAlert({
-      title: "Warning",
-      message: "Web server is stopped.",
+      title: copy.warningTitle ?? "Warning",
+      message: copy.serverStopped ?? "Web server is stopped.",
     });
     return;
   }
@@ -223,18 +238,19 @@ export const handleCopyUrlClick = async (deps, payload) => {
   try {
     await appService.copyText(server.url);
     appService.showToast({
-      message: "Server URL copied.",
+      message: copy.serverUrlCopied ?? "Server URL copied.",
     });
   } catch {
     appService.showAlert({
-      title: "Error",
-      message: "Failed to copy the server URL.",
+      title: copy.errorTitle ?? "Error",
+      message: copy.failedCopyServerUrl ?? "Failed to copy the server URL.",
     });
   }
 };
 
 export const handleStartServerClick = async (deps, payload) => {
-  const { appService, store } = deps;
+  const { appService, store, i18n } = deps;
+  const copy = selectWebServerPageCopy(i18n);
   payload?._event?.stopPropagation?.();
 
   const itemId = getItemIdFromEvent(payload?._event);
@@ -249,7 +265,7 @@ export const handleStartServerClick = async (deps, payload) => {
 
   if (server.status !== "stopped" && server.serverId) {
     appService.showToast({
-      message: "Web server is already running.",
+      message: copy.serverAlreadyRunning ?? "Web server is already running.",
     });
     return;
   }
@@ -261,7 +277,8 @@ export const handleStartServerClick = async (deps, payload) => {
 };
 
 export const handleStopServerClick = async (deps, payload) => {
-  const { appService, store, render } = deps;
+  const { appService, store, render, i18n } = deps;
+  const copy = selectWebServerPageCopy(i18n);
   payload?._event?.stopPropagation?.();
 
   const serverId = getItemIdFromEvent(payload?._event);
@@ -292,8 +309,8 @@ export const handleStopServerClick = async (deps, payload) => {
       error,
     });
     appService.showAlert({
-      title: "Error",
-      message: "Failed to stop the web server.",
+      title: copy.errorTitle ?? "Error",
+      message: copy.failedStopServer ?? "Failed to stop the web server.",
     });
     return;
   }
@@ -304,6 +321,6 @@ export const handleStopServerClick = async (deps, payload) => {
   render();
 
   appService.showToast({
-    message: "Web server stopped.",
+    message: copy.serverStoppedToast ?? "Web server stopped.",
   });
 };

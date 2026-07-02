@@ -39,7 +39,7 @@ describe("sounds view", () => {
 
     expect(mobileDetailBranch).toContain("mobileDetailPlayButton");
     expect(mobileDetailBranch).toContain("mobileDetailDeleteButton");
-    expect(mobileDetailBranch).toContain("pre=play: Play");
+    expect(mobileDetailBranch).toContain("pre=play: ${previewButton}");
 
     expect(soundsView).toContain("handler: handleMobileDetailPlayClick");
     expect(soundsView).toContain("handler: handleMobileDetailDeleteClick");

@@ -452,7 +452,6 @@ export const selectViewData = ({ state, i18n }) => {
     addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
     deleteButton: copy.deleteButton ?? "Delete",
     filesLabel: copy.filesLabel ?? "Files",
-    groupVariablesCopy: copy,
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
   };
 };

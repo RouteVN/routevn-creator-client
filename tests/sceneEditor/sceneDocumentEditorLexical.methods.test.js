@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { focusLine } from "../../src/components/sceneDocumentEditorLexical/sceneDocumentEditorLexical.methods.js";
+import {
+  blurEditor,
+  focusLine,
+} from "../../src/components/sceneDocumentEditorLexical/sceneDocumentEditorLexical.methods.js";
 
 const createHostElement = (editor) => {
   return {
@@ -101,5 +104,19 @@ describe("sceneDocumentEditorLexical methods", () => {
     } finally {
       animationFrame.restore();
     }
+  });
+
+  it("forwards blur requests to the mounted primitive editor", () => {
+    const payload = {
+      lineId: "line-1",
+    };
+    const editor = {
+      blurEditor: vi.fn(),
+    };
+    const hostElement = createHostElement(editor);
+
+    blurEditor.call(hostElement, payload);
+
+    expect(editor.blurEditor).toHaveBeenCalledWith(payload);
   });
 });

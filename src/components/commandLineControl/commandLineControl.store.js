@@ -1,3 +1,9 @@
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
 export const createInitialState = () => ({
   controls: [],
   selectedControlId: "",
@@ -32,7 +38,8 @@ export const setSelectedResourceId = ({ state }, { resourceId } = {}) => {
 
 export const selectSelectedControlId = ({ state }) => state.selectedControlId;
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const controls = props.controls || [];
 
   const controlOptions = controls.map((control) => ({
@@ -75,8 +82,8 @@ export const selectViewData = ({ state, props }) => {
     controls: controlOptions,
     selectedControlId: state.selectedControlId,
     submitDisabled: false,
-    breadcrumb,
-    form,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
+    form: localizeCommandLineForm(form, copy),
     defaultValues,
   };
 };

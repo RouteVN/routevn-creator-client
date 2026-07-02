@@ -74,6 +74,7 @@ export const createInitialState = () => ({
   mouseItemPress: undefined,
   hoveredItemId: undefined,
   touchGesture: undefined,
+  trackpadPinchGesture: undefined,
   lastTouchTap: undefined,
   isDraggingMinimapViewport: false,
   minimapViewportDrag: undefined,
@@ -374,6 +375,54 @@ export const stopTouchGesture = ({ state }, _payload = {}) => {
 };
 
 export const selectTouchGesture = ({ state }) => state.touchGesture;
+
+export const startTrackpadPinch = ({ state }, { centerX, centerY } = {}) => {
+  const startCenterX = Number(centerX);
+  const startCenterY = Number(centerY);
+
+  if (!Number.isFinite(startCenterX) || !Number.isFinite(startCenterY)) {
+    return;
+  }
+
+  state.trackpadPinchGesture = {
+    startZoomLevel: state.zoomLevel,
+    anchorCanvasX: (startCenterX - state.panX) / state.zoomLevel,
+    anchorCanvasY: (startCenterY - state.panY) / state.zoomLevel,
+  };
+};
+
+export const updateTrackpadPinch = (
+  { state },
+  { centerX, centerY, scale } = {},
+) => {
+  const gesture = state.trackpadPinchGesture;
+  const nextCenterX = Number(centerX);
+  const nextCenterY = Number(centerY);
+  const nextScale = Number(scale);
+
+  if (
+    !gesture ||
+    !Number.isFinite(nextCenterX) ||
+    !Number.isFinite(nextCenterY) ||
+    !Number.isFinite(nextScale) ||
+    nextScale <= 0
+  ) {
+    return;
+  }
+
+  const nextZoomLevel = clampZoomLevel(gesture.startZoomLevel * nextScale);
+
+  state.zoomLevel = nextZoomLevel;
+  state.panX = nextCenterX - gesture.anchorCanvasX * nextZoomLevel;
+  state.panY = nextCenterY - gesture.anchorCanvasY * nextZoomLevel;
+};
+
+export const stopTrackpadPinch = ({ state }, _payload = {}) => {
+  state.trackpadPinchGesture = undefined;
+};
+
+export const selectTrackpadPinchGesture = ({ state }) =>
+  state.trackpadPinchGesture;
 
 export const setLastTouchTap = (
   { state },
@@ -759,6 +808,7 @@ export const selectViewData = ({ state, props }) => {
   const minimapViewportCursor = state.isDraggingMinimapViewport
     ? "grabbing"
     : "grab";
+  const showArrows = parseBooleanProp(props.showArrows, true);
 
   // Calculate adaptive grid size for container background
   const getAdaptiveGridSize = (zoomLevel) => {
@@ -779,26 +829,29 @@ export const selectViewData = ({ state, props }) => {
   const startLineHeight = Math.max(2, Math.round(SCENE_BOX_HEIGHT / 45));
 
   // Generate arrows for each scene's transitions
-  items.forEach((sourceItem) => {
-    if (sourceItem.transitions && sourceItem.transitions.length > 0) {
-      sourceItem.transitions.forEach((targetSceneId) => {
-        const targetItem = items.find((item) => item.id === targetSceneId);
-        if (targetItem && targetItem.id !== sourceItem.id) {
-          const arrowData = drawArrowBetweenScenes(sourceItem, targetItem);
-          // Add unique identifier for DOM reference
-          arrowData.id = `arrow-${sourceItem.id}-to-${targetSceneId}`;
-          const selectedItemId = props.selectedItemId;
-          const isConnectedToSelected =
-            selectedItemId &&
-            (sourceItem.id === selectedItemId ||
-              targetSceneId === selectedItemId);
-          arrowData.strokeColor = "var(--foreground)";
-          arrowData.strokeWidth = isConnectedToSelected ? 2.25 : 1.5;
-          arrowsList.push(arrowData);
-        }
-      });
-    }
-  });
+  if (showArrows) {
+    const itemById = new Map(items.map((item) => [item.id, item]));
+    items.forEach((sourceItem) => {
+      if (sourceItem.transitions && sourceItem.transitions.length > 0) {
+        sourceItem.transitions.forEach((targetSceneId) => {
+          const targetItem = itemById.get(targetSceneId);
+          if (targetItem && targetItem.id !== sourceItem.id) {
+            const arrowData = drawArrowBetweenScenes(sourceItem, targetItem);
+            // Add unique identifier for DOM reference
+            arrowData.id = `arrow-${sourceItem.id}-to-${targetSceneId}`;
+            const selectedItemId = props.selectedItemId;
+            const isConnectedToSelected =
+              selectedItemId &&
+              (sourceItem.id === selectedItemId ||
+                targetSceneId === selectedItemId);
+            arrowData.strokeColor = "var(--foreground)";
+            arrowData.strokeWidth = isConnectedToSelected ? 2.25 : 1.5;
+            arrowsList.push(arrowData);
+          }
+        });
+      }
+    });
+  }
 
   const showTouchMinimap =
     isTouchMode &&
@@ -809,18 +862,21 @@ export const selectViewData = ({ state, props }) => {
   const minimapHeightScale = resolveMinimapHeightScale(
     props.minimapHeightScale,
   );
+  const showMinimap = showTouchMinimap || showDesktopMinimap;
 
   return {
     items,
-    showMinimap: showTouchMinimap || showDesktopMinimap,
+    showMinimap,
     showControls: !isTouchMode,
-    minimapData: selectMinimapData(
-      { state },
-      {
-        items,
-        heightScale: minimapHeightScale,
-      },
-    ),
+    minimapData: showMinimap
+      ? selectMinimapData(
+          { state },
+          {
+            items,
+            heightScale: minimapHeightScale,
+          },
+        )
+      : undefined,
     minimapContainerStyle: resolveMinimapContainerStyle(minimapPlacement),
     arrowsList,
     selectedItemId: props.selectedItemId,

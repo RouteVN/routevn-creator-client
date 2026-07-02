@@ -1,3 +1,10 @@
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
 const form = {
   fields: [
     {
@@ -83,7 +90,8 @@ export const selectSubmitData = ({ state }) => ({
   cancelActions: state.cancelActions,
 });
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const layoutOptions = toLayoutOptions(props.layouts);
   const selectedResourceId = resolveSelectedResourceId({
     layoutOptions,
@@ -112,8 +120,8 @@ export const selectViewData = ({ state, props }) => {
 
   return {
     mode: state.mode,
-    breadcrumb,
-    form,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
+    form: localizeCommandLineForm(form, copy),
     context: {
       layoutOptions,
     },
@@ -125,11 +133,13 @@ export const selectViewData = ({ state, props }) => {
     confirmActions: state.confirmActions,
     cancelActions: state.cancelActions,
     confirmActionsSummary:
-      confirmActionCount > 0 ? `${confirmActionCount} action(s)` : "No actions",
+      confirmActionCount > 0
+        ? `${confirmActionCount} ${localizeCommandLineText("action(s)", copy)}`
+        : localizeCommandLineText("No actions", copy),
     cancelActionsSummary:
       cancelActionCount > 0
-        ? `${cancelActionCount} action(s)`
-        : "Default hide only",
+        ? `${cancelActionCount} ${localizeCommandLineText("action(s)", copy)}`
+        : localizeCommandLineText("Default hide only", copy),
     nestedHiddenModes: ["showConfirmDialog", "hideConfirmDialog"],
   };
 };

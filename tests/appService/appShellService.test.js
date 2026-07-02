@@ -96,6 +96,30 @@ describe("appShellService", () => {
     });
   });
 
+  it("blurs the active element and asks the virtual keyboard to hide", () => {
+    const deps = createDeps();
+    const service = createAppShellService(deps);
+    const activeElement = {
+      blur: vi.fn(),
+    };
+    const hideKeyboard = vi.fn();
+    const root = {
+      activeElement,
+      defaultView: {
+        navigator: {
+          virtualKeyboard: {
+            hide: hideKeyboard,
+          },
+        },
+      },
+    };
+
+    service.blurActiveElement(root);
+
+    expect(activeElement.blur).toHaveBeenCalled();
+    expect(hideKeyboard).toHaveBeenCalled();
+  });
+
   it("shows a toast when opening an external URL fails", async () => {
     const deps = createDeps();
     deps.openUrl.mockRejectedValue(new Error("blocked"));

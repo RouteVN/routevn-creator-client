@@ -153,22 +153,24 @@ export const handleCancelEditClick = (deps) => {
 };
 
 export const handleSaveChoiceClick = (deps) => {
-  const { store, render, appService } = deps;
+  const { store, render, appService, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
+  const warningTitle = localizeCommandLineText("Warning", copy);
 
   const editForm = store.selectEditForm();
 
   if (!editForm.content || editForm.content.trim() === "") {
     appService.showAlert({
-      message: "Choice content cannot be empty",
-      title: "Warning",
+      message: localizeCommandLineText("Choice content cannot be empty", copy),
+      title: warningTitle,
     });
     return;
   }
 
   if (!editForm.actionType) {
     appService.showAlert({
-      message: "Please select an action type",
-      title: "Warning",
+      message: localizeCommandLineText("Please select an action type", copy),
+      title: warningTitle,
     });
     return;
   }
@@ -176,15 +178,15 @@ export const handleSaveChoiceClick = (deps) => {
   if (editForm.actionType === "sectionTransition") {
     if (!editForm.sceneId) {
       appService.showAlert({
-        message: "Please select a scene",
-        title: "Warning",
+        message: localizeCommandLineText("Please select a scene", copy),
+        title: warningTitle,
       });
       return;
     }
     if (!editForm.sectionId) {
       appService.showAlert({
-        message: "Please select a section",
-        title: "Warning",
+        message: localizeCommandLineText("Please select a section", copy),
+        title: warningTitle,
       });
       return;
     }
@@ -271,13 +273,14 @@ export const handleChoiceItemClick = (deps) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  const { dispatchEvent, appService } = deps;
+  const { dispatchEvent, appService, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const choicesData = buildChoicesDataFromState(deps);
 
   if (!choicesData) {
     appService.showAlert({
-      message: "Please select a choice layout",
-      title: "Warning",
+      message: localizeCommandLineText("Please select a choice layout", copy),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }
@@ -372,3 +375,7 @@ export const handleBreadcumbClick = (deps, payload) => {
     }
   }
 };
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";

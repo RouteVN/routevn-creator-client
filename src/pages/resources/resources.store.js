@@ -6,7 +6,7 @@ export const createInitialState = () => ({
       route: "/project/images",
     },
     {
-      id: "character",
+      id: "characters",
       label: "Character",
       route: "/project/characters",
     },
@@ -69,6 +69,16 @@ export const createInitialState = () => ({
   ],
 });
 
+const selectResourcesCopy = (i18n = {}) => i18n.resourcesPage ?? {};
+
+const selectResourceTypesCopy = (i18n = {}) => i18n.resourceTypes ?? {};
+
+const localizeResourceItems = (items = [], resourceTypesCopy = {}) =>
+  items.map((item) => ({
+    ...item,
+    label: resourceTypesCopy[item.id] ?? item.label,
+  }));
+
 export const selectResourceRoute = ({ state }, id) => {
   const resources = state.assets
     .concat(state.animatedAssets)
@@ -81,6 +91,23 @@ export const selectResourceRoute = ({ state }, id) => {
   return resource.route;
 };
 
-export const selectViewData = ({ state }) => {
-  return state;
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectResourcesCopy(i18n);
+  const resourceTypesCopy = selectResourceTypesCopy(i18n);
+
+  return {
+    ...state,
+    title: copy.title ?? "Resources",
+    assetsTitle: copy.assetsTitle ?? "Assets",
+    animatedAssetsTitle: copy.animatedAssetsTitle ?? "Animated Assets",
+    userInterfaceTitle: copy.userInterfaceTitle ?? "User Interface",
+    systemConfigTitle: copy.systemConfigTitle ?? "System Config",
+    assets: localizeResourceItems(state.assets, resourceTypesCopy),
+    animatedAssets: localizeResourceItems(
+      state.animatedAssets,
+      resourceTypesCopy,
+    ),
+    ui: localizeResourceItems(state.ui, resourceTypesCopy),
+    system: localizeResourceItems(state.system, resourceTypesCopy),
+  };
 };

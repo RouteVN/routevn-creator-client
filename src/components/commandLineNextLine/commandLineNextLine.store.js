@@ -1,3 +1,9 @@
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
 export const createInitialState = () => ({
   defaultValues: {},
 
@@ -18,7 +24,8 @@ export const createInitialState = () => ({
   },
 });
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   let breadcrumb = [
     {
       id: "actions",
@@ -32,8 +39,8 @@ export const selectViewData = ({ state }) => {
 
   return {
     submitDisabled: false,
-    breadcrumb,
-    form: state.form,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
+    form: localizeCommandLineForm(state.form, copy),
     defaultValues: state.defaultValues,
   };
 };

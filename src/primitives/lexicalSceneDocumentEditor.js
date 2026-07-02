@@ -1147,6 +1147,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       textStyles: [],
       selectedLineId: undefined,
       selectionActive: true,
+      hasPreviousSectionLine: false,
+      hasNextSectionLine: false,
       showLineNumbers: true,
       fontSize: DEFAULT_EDITOR_FONT_SIZE,
       mode: "block",
@@ -1683,6 +1685,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return this.state.selectionActive !== false;
   }
 
+  set hasPreviousSectionLine(value) {
+    this.state.hasPreviousSectionLine = value === true || value === "true";
+  }
+
+  get hasPreviousSectionLine() {
+    return this.state.hasPreviousSectionLine === true;
+  }
+
+  set hasNextSectionLine(value) {
+    this.state.hasNextSectionLine = value === true || value === "true";
+  }
+
+  get hasNextSectionLine() {
+    return this.state.hasNextSectionLine === true;
+  }
+
   set showLineNumbers(value) {
     this.state.showLineNumbers = value !== false;
     if (!this.isConnected || !this.refs.editor) {
@@ -1884,6 +1902,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       lineId: selectedLineId,
       emitSelectionChange: false,
       scrollLine,
+    });
+  }
+
+  blurEditor({ lineId = this.state.selectedLineId } = {}) {
+    this.clearPointerDownInsideEditor();
+    this.lastProgrammaticFocusTarget = undefined;
+    this.programmaticFocusRestoreUntil = 0;
+    this.invalidatePendingFocusRestore();
+    this.refs?.editor?.blur?.();
+    this.refs?.surface?.blur?.();
+    this.blur?.();
+    this.isEditorFocused = false;
+    this.hideSelectionPopover();
+    this.closeMentionMenu({
+      dismissCurrentTrigger: this.state.mentionMenu?.isOpen === true,
+    });
+    this.pendingSelectionSnapshot = undefined;
+    this.enterBlockMode({
+      focusSurface: false,
+      emitSelectionChange: false,
+      lineId,
+      scrollLine: false,
     });
   }
 
@@ -2552,6 +2592,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    if (this.handleImmediateTextModeVerticalBoundaryNavigation(event)) {
+      return;
+    }
+
     this.scheduleNativeSelectionLineSyncAfterVerticalNavigation(event);
     if (this.state?.mentionMenu?.isOpen && isArrowKeyEvent(event)) {
       this.closeMentionMenu({ dismissCurrentTrigger: true });
@@ -2636,13 +2680,61 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.clearPendingTextInputFallback();
   }
 
+  getTextModeVerticalNavigationDirection(event) {
+    return event.key === "ArrowUp"
+      ? "up"
+      : event.key === "ArrowDown"
+        ? "down"
+        : undefined;
+  }
+
+  hasAdjacentSectionLineForVerticalNavigation(direction) {
+    return direction === "up"
+      ? this.state.hasPreviousSectionLine === true
+      : this.state.hasNextSectionLine === true;
+  }
+
+  handleImmediateTextModeVerticalBoundaryNavigation(event) {
+    const navigationDirection =
+      this.getTextModeVerticalNavigationDirection(event);
+    if (
+      this.state?.mode !== "text-editor" ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.shiftKey ||
+      !navigationDirection ||
+      !this.hasAdjacentSectionLineForVerticalNavigation(navigationDirection)
+    ) {
+      return false;
+    }
+
+    const nativeSelection = this.getNativeLineSelectionContext();
+    const lineId = nativeSelection?.lineId || this.state.selectedLineId;
+    if (
+      !this.isTextModeVerticalNavigationBoundary(lineId, navigationDirection)
+    ) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    if (this.state?.mentionMenu?.isOpen && isArrowKeyEvent(event)) {
+      this.closeMentionMenu({ dismissCurrentTrigger: true });
+    }
+    this.dispatchTextModeVerticalBoundaryNavigation({
+      lineId,
+      nativeSelection,
+      direction: navigationDirection,
+    });
+    return true;
+  }
+
   scheduleNativeSelectionLineSyncAfterVerticalNavigation(event) {
     const navigationDirection =
-      event.key === "ArrowUp"
-        ? "up"
-        : event.key === "ArrowDown"
-          ? "down"
-          : undefined;
+      this.getTextModeVerticalNavigationDirection(event);
     if (
       this.state?.mode !== "text-editor" ||
       event.isComposing ||

@@ -1,3 +1,8 @@
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
 const TEMPORARY_VISUAL_PREVIEW_ID = "temporary-visual-preview";
 const DEFAULT_VISUAL_LAYER = 50;
 const VALID_VISUAL_LAYERS = [10, 30, 50, 70, 90];
@@ -579,7 +584,8 @@ export const handleRemoveVisualClick = (deps, payload) => {
 };
 
 export const handleButtonSelectClick = (deps) => {
-  const { store, render, appService } = deps;
+  const { store, render, appService, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const mode = store.selectMode();
   const selectedVisualIndex = store.selectSelectedVisualIndex();
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
@@ -588,8 +594,8 @@ export const handleButtonSelectClick = (deps) => {
   if (mode === "resource-select") {
     if (!tempSelectedResourceId || !tempSelectedResourceType) {
       appService.showAlert({
-        message: "A resource is required.",
-        title: "Warning",
+        message: localizeCommandLineText("A resource is required.", copy),
+        title: localizeCommandLineText("Warning", copy),
       });
       return;
     }

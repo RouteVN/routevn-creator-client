@@ -5,6 +5,7 @@ import {
   openAudioPlayer,
   selectActionsData,
   selectViewData,
+  setUiConfig,
   setRepositoryState,
   updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
@@ -1174,6 +1175,20 @@ describe("systemActions.store", () => {
     expect(sceneViewData.actionsDialogPanelWidth).toBe(
       "calc((100vw - 64px) / 2)",
     );
+  });
+
+  it("uses slot-relative dialog width in touch mode", () => {
+    const state = createInitialState();
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+
+    const viewData = selectViewData({
+      state,
+      props: {},
+    });
+
+    expect(viewData.actionsDialogWidth).toBe("100%");
+    expect(viewData.actionsDialogHeight).toBe("100vh");
+    expect(viewData.actionsDialogPanelWidth).toBe("100vw");
   });
 
   it("can hide the embedded close button for inline selected action lists", () => {

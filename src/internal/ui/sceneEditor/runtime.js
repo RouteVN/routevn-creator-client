@@ -36,6 +36,7 @@ import {
   getDebugNow,
   isDebugEnabled,
 } from "../../../deps/services/shared/debugLog.js";
+import { selectSceneEditorCopy } from "./sceneEditorCopy.js";
 
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
@@ -449,9 +450,10 @@ async function loadAssetsForSceneIds(
     uniqueSceneIds.forEach((sceneId) => {
       assetLoadCache.pendingSceneIds.delete(sceneId);
     });
+    const copy = selectSceneEditorCopy(deps.i18n);
     appService?.showAlert({
-      message: "Failed to load some scene assets",
-      title: "Warning",
+      message: copy.failedLoadSceneAssets ?? "Failed to load some scene assets",
+      title: copy.warningTitle ?? "Warning",
     });
     console.error("[sceneEditor] Failed to load scene assets:", error);
   } finally {
@@ -532,9 +534,10 @@ async function preloadFileReferences(
       await Promise.all(pendingLoadPromises);
     }
   } catch (error) {
+    const copy = selectSceneEditorCopy(deps.i18n);
     appService?.showAlert({
-      message: "Failed to load some scene assets",
-      title: "Warning",
+      message: copy.failedLoadSceneAssets ?? "Failed to load some scene assets",
+      title: copy.warningTitle ?? "Warning",
     });
     console.error(
       "[sceneEditor] Failed to load temporary scene assets:",

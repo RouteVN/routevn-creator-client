@@ -1,3 +1,8 @@
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
@@ -48,21 +53,23 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  const { dispatchEvent, store, appService } = deps;
+  const { dispatchEvent, store, appService, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
+  const warningTitle = localizeCommandLineText("Warning", copy);
   const { formValues, scenes } = store.selectSubmitData();
 
   if (!formValues?.sceneId) {
     appService.showAlert({
-      message: "Please select a scene",
-      title: "Warning",
+      message: localizeCommandLineText("Please select a scene", copy),
+      title: warningTitle,
     });
     return;
   }
 
   if (!formValues?.sectionId) {
     appService.showAlert({
-      message: "Please select a section",
-      title: "Warning",
+      message: localizeCommandLineText("Please select a section", copy),
+      title: warningTitle,
     });
     return;
   }
@@ -73,8 +80,11 @@ export const handleSubmitClick = (deps) => {
 
   if (!selectedScene || !selectedSection) {
     appService.showAlert({
-      message: "Please select a valid section for selected scene",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Please select a valid section for selected scene",
+        copy,
+      ),
+      title: warningTitle,
     });
     return;
   }

@@ -1,5 +1,10 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const form = {
   fields: [
@@ -71,7 +76,8 @@ export const selectSubmitData = ({ state }) => ({
   scenes: state.scenes,
 });
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const scenes = toFlatItems(state.scenes);
   const allScenes = scenes.filter((item) => item.type === "scene");
   const selectedSceneId = state.formValues?.sceneId || props?.currentSceneId;
@@ -91,7 +97,7 @@ export const selectViewData = ({ state, props }) => {
       click: true,
     },
     {
-      label: "Transition",
+      label: "Section Transition",
     },
   ];
 
@@ -134,8 +140,8 @@ export const selectViewData = ({ state, props }) => {
   return {
     initiated: state.initiated,
     mode: state.mode,
-    breadcrumb,
-    form,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
+    form: localizeCommandLineForm(form, copy),
     context,
     defaultValues: state.formValues,
   };

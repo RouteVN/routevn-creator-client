@@ -54,6 +54,12 @@ const isInputFocused = (root = document) => {
   return false;
 };
 
+const hideVirtualKeyboard = (root = document) => {
+  const resolvedWindow =
+    root?.defaultView || (typeof window === "undefined" ? undefined : window);
+  resolvedWindow?.navigator?.virtualKeyboard?.hide?.();
+};
+
 export const createAppShellService = ({
   router,
   subject,
@@ -71,12 +77,28 @@ export const createAppShellService = ({
     ...createNoopUpdater(),
     ...updater,
   };
+  let appCopyProvider = () => ({});
+
+  const getAppCopy = () => {
+    try {
+      return appCopyProvider?.() ?? {};
+    } catch {
+      return {};
+    }
+  };
 
   const getCurrentProjectId = () => {
     return router.getPayload()?.p ?? "";
   };
 
   return {
+    setAppCopyProvider(provider) {
+      appCopyProvider =
+        typeof provider === "function" ? provider : () => provider ?? {};
+    },
+
+    getAppCopy,
+
     navigate(path, payload, options = {}) {
       const timing =
         options.timing ??
@@ -122,9 +144,10 @@ export const createAppShellService = ({
       try {
         await openExternalUrl(url);
       } catch {
+        const copy = getAppCopy();
         globalUI.showToast({
-          title: "Error",
-          message: "Failed to open link.",
+          title: copy.errorTitle ?? "Error",
+          message: copy.failedOpenLink ?? "Failed to open link.",
           status: "error",
         });
       }
@@ -177,6 +200,7 @@ export const createAppShellService = ({
       if (active?.blur) {
         active.blur();
       }
+      hideVirtualKeyboard(root);
     },
 
     applyTheme(theme) {
@@ -199,12 +223,18 @@ export const createAppShellService = ({
       return Boolean(updatesEnabled);
     },
 
-    checkForUpdates(silent) {
-      return resolvedUpdater.checkForUpdates(silent);
+    checkForUpdates(silent, options = {}) {
+      return resolvedUpdater.checkForUpdates(silent, {
+        ...options,
+        copy: options.copy ?? getAppCopy(),
+      });
     },
 
-    startAutomaticUpdateChecks() {
-      return resolvedUpdater.startAutomaticChecks();
+    startAutomaticUpdateChecks(options = {}) {
+      return resolvedUpdater.startAutomaticChecks({
+        ...options,
+        getCopy: options.getCopy ?? getAppCopy,
+      });
     },
 
     getUpdateInfo() {

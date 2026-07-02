@@ -101,6 +101,79 @@ const form = {
   ],
 };
 
+const selectCopy = (i18n = {}) => {
+  if (!i18n.projectsPage) {
+    throw new Error("projectsPage i18n catalog is required.");
+  }
+
+  return i18n.projectsPage;
+};
+
+const createLocalizedForm = (copy = {}) => ({
+  ...form,
+  title: copy.createProjectTitle,
+  fields: form.fields.map((field) => {
+    if (field.name === "name") {
+      return {
+        ...field,
+        label: copy.projectNameLabel,
+        validations: [
+          {
+            ...field.validations[0],
+            message: copy.projectNameRequiredMessage,
+          },
+        ],
+      };
+    }
+
+    if (field.name === "description") {
+      return {
+        ...field,
+        label: copy.descriptionLabel,
+      };
+    }
+
+    if (field.name === "projectIcon") {
+      return {
+        ...field,
+        label: copy.projectIconLabel,
+      };
+    }
+
+    if (field.name === "resolution") {
+      return {
+        ...field,
+        label: copy.resolutionLabel,
+        description: copy.projectResolutionDescription,
+      };
+    }
+
+    if (field.name === "resolutionWidth") {
+      return {
+        ...field,
+        label: copy.resolutionWidthLabel,
+      };
+    }
+
+    if (field.name === "resolutionHeight") {
+      return {
+        ...field,
+        label: copy.resolutionHeightLabel,
+      };
+    }
+
+    if (field.name === "projectPath") {
+      return {
+        ...field,
+        label: copy.projectLocationLabel,
+        description: copy.projectLocationDescription,
+      };
+    }
+
+    return field;
+  }),
+});
+
 export const createInitialState = () => ({
   platform: "tauri",
   formKey: 0,
@@ -194,13 +267,16 @@ export const selectIsIconCropDialogOpen = ({ state }) => {
   return state.isIconCropDialogOpen;
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectCopy(i18n);
   return {
     platform: state.platform,
-    form,
+    form: createLocalizedForm(copy),
     formKey: `${state.formKey}-${state.defaultValues.resolution}`,
     defaultValues: state.defaultValues,
-    projectPathDisplay: state.defaultValues.projectPath || "No folder selected",
+    projectPathDisplay:
+      state.defaultValues.projectPath || copy.noFolderSelected,
+    noFolderSelectedLabel: copy.noFolderSelected,
     validationErrors: state.validationErrors,
     iconPreviewUrl: state.iconPreviewUrl,
     isIconCropDialogOpen: state.isIconCropDialogOpen,
@@ -209,5 +285,7 @@ export const selectViewData = ({ state }) => {
       platform: state.platform,
       values: state.defaultValues,
     },
+    clickToUploadLabel: copy.clickToUpload,
+    browseButtonLabel: copy.browseButton,
   };
 };

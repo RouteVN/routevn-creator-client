@@ -5,15 +5,29 @@ import {
   userInterfaceItems,
 } from "../resourceTypes/resourceTypes.store.js";
 
-const SIDEBAR_TITLE_ASSETS = "Assets";
-const SIDEBAR_TITLE_ANIMATED_ASSETS = "Animated Assets";
-const SIDEBAR_TITLE_USER_INTERFACE = "User Interface";
-const SIDEBAR_TITLE_SYSTEM = "System";
-const SIDEBAR_TITLE_SCENES = "Scenes";
-const SIDEBAR_TITLE_SETTINGS = "Settings";
+const SIDEBAR_ITEM_ASSETS = "assets";
+const SIDEBAR_ITEM_ANIMATED_ASSETS = "animatedAssets";
+const SIDEBAR_ITEM_USER_INTERFACE = "userInterface";
+const SIDEBAR_ITEM_SYSTEM = "system";
+const SIDEBAR_ITEM_SCENES = "scenes";
+const SIDEBAR_ITEM_RELEASE = "release";
+const SIDEBAR_ITEM_SETTINGS = "settings";
+
+const SIDEBAR_TITLE_KEYS = {
+  [SIDEBAR_ITEM_ASSETS]: "assetsTitle",
+  [SIDEBAR_ITEM_ANIMATED_ASSETS]: "animatedAssetsTitle",
+  [SIDEBAR_ITEM_USER_INTERFACE]: "userInterfaceTitle",
+  [SIDEBAR_ITEM_SYSTEM]: "systemTitle",
+  [SIDEBAR_ITEM_SCENES]: "scenesTitle",
+  [SIDEBAR_ITEM_RELEASE]: "releaseTitle",
+  [SIDEBAR_ITEM_SETTINGS]: "settingsTitle",
+};
+
+const selectSidebarCopy = (i18n = {}) => i18n.sidebarPage ?? {};
 
 export const createInitialState = () => ({
   header: {
+    id: "project",
     label: "Sidebar",
     path: "/project",
     image: {
@@ -25,31 +39,37 @@ export const createInitialState = () => ({
   },
   items: [
     {
+      id: SIDEBAR_ITEM_ASSETS,
       title: "Assets",
       path: "/project/images",
       icon: "image",
     },
     {
+      id: SIDEBAR_ITEM_ANIMATED_ASSETS,
       title: "Animated Assets",
       path: "/project/animations",
       icon: "animation",
     },
     {
+      id: SIDEBAR_ITEM_USER_INTERFACE,
       title: "User Interface",
       path: "/project/colors",
       icon: "color",
     },
     {
+      id: SIDEBAR_ITEM_SYSTEM,
       title: "System",
       path: "/project/controls",
       icon: "sliders",
     },
     {
+      id: SIDEBAR_ITEM_SCENES,
       title: "Scenes",
       path: "/project/scenes",
       icon: "script",
     },
     {
+      id: SIDEBAR_ITEM_RELEASE,
       title: "Release",
       path: "/project/releases/versions",
       icon: "rocket",
@@ -58,6 +78,7 @@ export const createInitialState = () => ({
       type: "spacer",
     },
     {
+      id: SIDEBAR_ITEM_SETTINGS,
       title: "Settings",
       path: "/project/about",
       icon: "settings",
@@ -69,7 +90,8 @@ export const setProjectImageUrl = ({ state }, { imageUrl } = {}) => {
   state.header.image.src = imageUrl;
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectSidebarCopy(i18n);
   const currentPath =
     typeof window !== "undefined" ? window.location.pathname : "";
 
@@ -79,39 +101,39 @@ export const selectViewData = ({ state }) => {
 
     // Check for exact match first
     const exactMatch = state.items.find((item) => item.path === currentPath);
-    if (exactMatch) return exactMatch.path;
+    if (exactMatch) return exactMatch.id;
 
     // Build category mappings from imported definitions
     const categoryMappings = [
       {
         items: assetItems,
-        sidebarPath: state.items.find(
-          (item) => item.title === SIDEBAR_TITLE_ASSETS,
-        )?.path,
+        sidebarItem: state.items.find(
+          (item) => item.id === SIDEBAR_ITEM_ASSETS,
+        ),
       },
       {
         items: animatedAssetItems,
-        sidebarPath: state.items.find(
-          (item) => item.title === SIDEBAR_TITLE_ANIMATED_ASSETS,
-        )?.path,
+        sidebarItem: state.items.find(
+          (item) => item.id === SIDEBAR_ITEM_ANIMATED_ASSETS,
+        ),
       },
       {
         items: userInterfaceItems,
-        sidebarPath: state.items.find(
-          (item) => item.title === SIDEBAR_TITLE_USER_INTERFACE,
-        )?.path,
+        sidebarItem: state.items.find(
+          (item) => item.id === SIDEBAR_ITEM_USER_INTERFACE,
+        ),
       },
       {
         items: systemConfigItems,
-        sidebarPath: state.items.find(
-          (item) => item.title === SIDEBAR_TITLE_SYSTEM,
-        )?.path,
+        sidebarItem: state.items.find(
+          (item) => item.id === SIDEBAR_ITEM_SYSTEM,
+        ),
       },
     ];
 
     // Check which category the current path belongs to
-    for (const { items, sidebarPath } of categoryMappings) {
-      if (!sidebarPath) continue;
+    for (const { items, sidebarItem } of categoryMappings) {
+      if (!sidebarItem) continue;
 
       // Check if current path matches any item in this category
       const matchFound = items.some((item) => {
@@ -137,39 +159,51 @@ export const selectViewData = ({ state }) => {
         return false;
       });
 
-      if (matchFound) return sidebarPath;
+      if (matchFound) return sidebarItem.id;
     }
 
     // For scenes - match any route starting with /project/scene
     if (currentPath.startsWith("/project/scene")) {
       const scenesItem = state.items.find(
-        (item) => item.title === SIDEBAR_TITLE_SCENES,
+        (item) => item.id === SIDEBAR_ITEM_SCENES,
       );
-      if (scenesItem) return scenesItem.path;
+      if (scenesItem) return scenesItem.id;
     }
 
     // For settings
     if (currentPath === "/project/about" || currentPath === "/project/user") {
       const settingsItem = state.items.find(
-        (item) => item.title === SIDEBAR_TITLE_SETTINGS,
+        (item) => item.id === SIDEBAR_ITEM_SETTINGS,
       );
-      if (settingsItem) return settingsItem.path;
+      if (settingsItem) return settingsItem.id;
     }
 
     if (
       currentPath === "/project/releases" ||
       currentPath.startsWith("/project/releases/")
     ) {
-      const releaseItem = state.items.find((item) => item.title === "Release");
-      if (releaseItem) return releaseItem.path;
+      const releaseItem = state.items.find(
+        (item) => item.id === SIDEBAR_ITEM_RELEASE,
+      );
+      if (releaseItem) return releaseItem.id;
     }
 
     return null;
   };
 
   return {
-    header: state.header,
-    items: state.items,
+    header: {
+      ...state.header,
+      label: copy.sidebarLabel ?? state.header.label,
+      image: {
+        ...state.header.image,
+        alt: copy.sidebarLabel ?? state.header.image.alt,
+      },
+    },
+    items: state.items.map((item) => ({
+      ...item,
+      title: copy[SIDEBAR_TITLE_KEYS[item.id]] ?? item.title,
+    })),
     selectedItemId: findMatchingItem(),
   };
 };

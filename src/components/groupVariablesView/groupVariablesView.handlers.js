@@ -1,4 +1,5 @@
 import { buildUniqueTagIds } from "../../internal/resourceTags.js";
+import { selectI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   isVariableEnumEnabled,
   normalizeVariableEnumValues,
@@ -340,6 +341,9 @@ const getVariableFormValues = ({ refs, store } = {}) => {
   });
 };
 
+const selectCopy = (i18n = {}) =>
+  selectI18nCopy(i18n, ["resourcePages", "variablesPage"]);
+
 const setVariableFormValues = ({ refs, render, store }, values = {}) => {
   refs?.variableForm?.setValues?.({
     values,
@@ -590,7 +594,8 @@ export const handleEnumValuePopoverClose = (deps) => {
 };
 
 export const handleEnumValueFormAction = (deps, payload) => {
-  const { appService, store } = deps;
+  const { appService, i18n, store } = deps;
+  const copy = selectCopy(i18n);
   const actionId = payload._event.detail.actionId;
   if (actionId !== "submit") {
     return;
@@ -601,8 +606,8 @@ export const handleEnumValueFormAction = (deps, payload) => {
 
   if (!value) {
     appService.showAlert({
-      message: "Enum value is required.",
-      title: "Warning",
+      message: copy.enumValueRequired ?? "Enum value is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -610,8 +615,8 @@ export const handleEnumValueFormAction = (deps, payload) => {
   const enumValues = normalizeVariableEnumValues(currentValues.enumValues);
   if (enumValues.includes(value)) {
     appService.showAlert({
-      message: "Enum value must be unique.",
-      title: "Warning",
+      message: copy.enumValueUnique ?? "Enum value must be unique.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -799,7 +804,8 @@ export const handleFormActionClick = (deps, payload) => {
     return;
   }
 
-  const { store, render, dispatchEvent, props, appService } = deps;
+  const { store, render, dispatchEvent, props, appService, i18n } = deps;
+  const copy = selectCopy(i18n);
   const submitContext = store.selectSubmitContext();
 
   // Check which button was clicked
@@ -815,8 +821,8 @@ export const handleFormActionClick = (deps, payload) => {
     // Don't submit if name is not set
     if (!name) {
       appService.showAlert({
-        message: "Variable name is required.",
-        title: "Warning",
+        message: copy.variableNameRequired ?? "Variable name is required.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -837,29 +843,36 @@ export const handleFormActionClick = (deps, payload) => {
     if (isEditMode && !editingItemId) {
       appService.showAlert({
         message:
+          copy.unableUpdateVariableReopen ??
           "Unable to update variable. Please reopen the editor and try again.",
-        title: "Warning",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
     if (!isEditMode && !targetGroupId) {
       appService.showAlert({
-        message: "Unable to add variable. Please select a group and try again.",
-        title: "Warning",
+        message:
+          copy.unableAddVariableSelectGroup ??
+          "Unable to add variable. Please select a group and try again.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
     if (isEnum && enumValues.length === 0) {
       appService.showAlert({
-        message: "Enum variables need at least one value.",
-        title: "Warning",
+        message:
+          copy.enumVariableNeedsValue ??
+          "Enum variables need at least one value.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
     if (isEnum && !enumValues.includes(formData.default)) {
       appService.showAlert({
-        message: "Choose a default value from the enum list.",
-        title: "Warning",
+        message:
+          copy.chooseDefaultEnumValue ??
+          "Choose a default value from the enum list.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -873,8 +886,8 @@ export const handleFormActionClick = (deps, payload) => {
       );
     if (isDuplicateName) {
       appService.showAlert({
-        message: "Variable name must be unique.",
-        title: "Warning",
+        message: copy.variableNameUnique ?? "Variable name must be unique.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }

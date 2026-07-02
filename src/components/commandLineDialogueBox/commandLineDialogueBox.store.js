@@ -5,6 +5,13 @@ import {
   buildCharacterSpritePreviewLayers,
   isCharacterSpriteResourceItem,
 } from "../../internal/characterSpritePreview.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  localizeCommandLineOptions,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const ANIMATION_MODE_OPTIONS = [
   {
@@ -158,6 +165,7 @@ const buildSpriteGroupBoxViewData = ({
   spriteSelectionGroups,
   selectedSpriteIdsByGroup,
   spritesCollection,
+  copy,
 } = {}) => {
   const spriteItemsById = Object.fromEntries(
     toFlatItems(spritesCollection ?? createEmptyCollection())
@@ -176,7 +184,8 @@ const buildSpriteGroupBoxViewData = ({
       id: spriteSelectionGroup.id,
       name: spriteSelectionGroup.name,
       selectedSpriteId,
-      selectedSpriteName: selectedSprite?.name ?? "No sprite",
+      selectedSpriteName:
+        selectedSprite?.name ?? localizeCommandLineText("No sprite", copy),
       hasSelection: !!selectedSpriteId,
       backgroundColor: selectedSpriteId ? "mu" : "bg",
     };
@@ -203,7 +212,12 @@ const buildSelectableTreeData = ({
   itemViewMapper = (item) => item,
   hideEmptyGroups = false,
   searchQuery = "",
+  copy,
 } = {}) => {
+  const ungroupedGroupLabel = localizeCommandLineText(
+    UNGROUPED_GROUP_LABEL,
+    copy,
+  );
   const normalizedSearchQuery = searchQuery.toLowerCase().trim();
   const matchesSearch = (item) => {
     if (!normalizedSearchQuery) {
@@ -268,8 +282,8 @@ const buildSelectableTreeData = ({
     explorerItems.unshift({
       id: syntheticRootId,
       type: "folder",
-      name: UNGROUPED_GROUP_LABEL,
-      fullLabel: UNGROUPED_GROUP_LABEL,
+      name: ungroupedGroupLabel,
+      fullLabel: ungroupedGroupLabel,
       _level: 0,
       parentId: null,
       hasChildren: true,
@@ -280,8 +294,8 @@ const buildSelectableTreeData = ({
     groups.unshift({
       id: syntheticRootId,
       type: "folder",
-      name: UNGROUPED_GROUP_LABEL,
-      fullLabel: UNGROUPED_GROUP_LABEL,
+      name: ungroupedGroupLabel,
+      fullLabel: ungroupedGroupLabel,
       _level: 0,
       parentId: null,
       hasChildren: true,
@@ -784,7 +798,8 @@ export const selectCurrentSpriteItemById = (
   ).find((item) => item.id === spriteId && isCharacterSpriteResourceItem(item));
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const layouts = props.layouts || [];
   const characters = props.characters || [];
   const transforms = props.transforms || createEmptyCollection();
@@ -819,6 +834,7 @@ export const selectViewData = ({ state, props }) => {
     spriteSelectionGroups,
     selectedSpriteIdsByGroup: state.selectedSpriteIds,
     spritesCollection: selectedSpriteCharacter?.sprites,
+    copy,
   });
   const spritePreviewFileIds = buildCharacterSpritePreviewFileIds({
     spritesCollection: selectedSpriteCharacter?.sprites,
@@ -837,7 +853,9 @@ export const selectViewData = ({ state, props }) => {
   const selectedSpriteCharacterView = selectedSpriteCharacter
     ? {
         ...selectedSpriteCharacter,
-        displayName: selectedSpriteCharacter.name || "Unnamed Character",
+        displayName:
+          selectedSpriteCharacter.name ||
+          localizeCommandLineText("Unnamed Character", copy),
         hasSpritePreview: spritePreviewLayers.length > 0,
         spritePreviewFileIds,
         spritePreviewLayers,
@@ -846,7 +864,7 @@ export const selectViewData = ({ state, props }) => {
       }
     : {
         id: "",
-        displayName: "No Character",
+        displayName: localizeCommandLineText("No Character", copy),
         hasSpritePreview: false,
         spritePreviewFileIds: [],
         spritePreviewLayers: [],
@@ -884,6 +902,7 @@ export const selectViewData = ({ state, props }) => {
     syntheticRootId: UNGROUPED_CHARACTER_GROUP_ID,
     itemFilter: (item) => item.type === "character",
     searchQuery: state.searchQuery,
+    copy,
   });
 
   let spriteItems = [];
@@ -917,6 +936,7 @@ export const selectViewData = ({ state, props }) => {
       itemViewMapper: buildSpritePreviewItemViewData,
       hideEmptyGroups: (selectedSpriteGroup?.tags ?? []).length > 0,
       searchQuery: state.searchQuery,
+      copy,
     });
     spriteItems = spriteTreeData.explorerItems;
     spriteGroups = spriteTreeData.groups;
@@ -1065,17 +1085,20 @@ export const selectViewData = ({ state, props }) => {
     customizeTextSpeed: state.customizeTextSpeed,
     textSpeed: normalizeTextSpeed(state.textSpeed),
     submitDisabled: !selectedResourceId,
-    breadcrumb,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     form: {
       ...state.form,
-      fields: mappedFields,
+      fields: localizeCommandLineForm({ fields: mappedFields }, copy).fields,
     },
     defaultValues,
     context,
     items: characterTreeData.explorerItems,
     groups: characterTreeData.groups,
     transformOptions,
-    animationModeOptions: ANIMATION_MODE_OPTIONS,
+    animationModeOptions: localizeCommandLineOptions(
+      ANIMATION_MODE_OPTIONS,
+      copy,
+    ),
     updateAnimationOptions,
     transitionAnimationOptions,
     spriteItems,
@@ -1084,7 +1107,15 @@ export const selectViewData = ({ state, props }) => {
     spriteSelectionTabs,
     selectedSpriteGroupId,
     searchQuery: state.searchQuery,
-    searchPlaceholder: "Search...",
+    searchPlaceholder: localizeCommandLineText("Search...", copy),
+    noAvatarLabel: localizeCommandLineText("No Avatar", copy),
+    noPreviewLabel: localizeCommandLineText("No preview", copy),
+    transformLabel: localizeCommandLineText("Transform", copy),
+    clearButtonLabel: localizeCommandLineText("Clear", copy),
+    animationLabel: localizeCommandLineText("Animation", copy),
+    spriteGroupsLabel: localizeCommandLineText("Sprite Groups", copy),
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
+    selectButtonLabel: localizeCommandLineText("Select", copy),
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewKind: state.fullImagePreviewKind,
     fullImagePreviewFileId: state.fullImagePreviewFileId,

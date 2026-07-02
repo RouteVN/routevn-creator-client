@@ -1,4 +1,8 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const hasSectionId = (scenes = {}, sectionId) => {
   if (typeof sectionId !== "string" || sectionId.length === 0) {
@@ -77,23 +81,25 @@ export const handleFormChange = (deps, payload) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  const { appService, dispatchEvent, store } = deps;
+  const { appService, dispatchEvent, store, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
+  const warningTitle = localizeCommandLineText("Warning", copy);
   const { formValues, scenes } = store.selectSubmitData();
   const sceneId = formValues?.sceneId;
   const sectionId = formValues?.sectionId;
 
   if (!sceneId) {
     appService.showAlert({
-      message: "Please select a scene",
-      title: "Warning",
+      message: localizeCommandLineText("Please select a scene", copy),
+      title: warningTitle,
     });
     return;
   }
 
   if (!sectionId) {
     appService.showAlert({
-      message: "Please select a section",
-      title: "Warning",
+      message: localizeCommandLineText("Please select a section", copy),
+      title: warningTitle,
     });
     return;
   }
@@ -103,8 +109,11 @@ export const handleSubmitClick = (deps) => {
 
   if (!selectedScene || !selectedSection || !hasSectionId(scenes, sectionId)) {
     appService.showAlert({
-      message: "Please select a valid section for selected scene",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Please select a valid section for selected scene",
+        copy,
+      ),
+      title: warningTitle,
     });
     return;
   }

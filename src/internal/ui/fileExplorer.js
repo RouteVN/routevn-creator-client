@@ -559,13 +559,23 @@ export const createResourceFileExplorerHandlers = ({
 
 export const createLayoutsFileExplorerHandlers = ({
   refresh = noopRefresh,
+  copy,
 }) => {
+  const resolveCopy = (deps) => {
+    if (typeof copy === "function") {
+      return copy(deps);
+    }
+
+    return copy ?? {};
+  };
+
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
       await projectService.ensureRepository();
 
       const state = projectService.getState();
+      const resolvedCopy = resolveCopy(deps);
       const menuItem = resolveMenuItem(detail);
       const action = menuItem?.value;
       const itemId = detail.itemId;
@@ -575,7 +585,7 @@ export const createLayoutsFileExplorerHandlers = ({
       if (action === "new-item") {
         await projectService.createLayoutItem({
           layoutId: generateId(),
-          name: "New Folder",
+          name: resolvedCopy.newFolderName ?? "New Folder",
           parentId: null,
           position: "last",
           data: {
@@ -589,7 +599,7 @@ export const createLayoutsFileExplorerHandlers = ({
 
         await projectService.createLayoutItem({
           layoutId: generateId(),
-          name: "New Folder",
+          name: resolvedCopy.newFolderName ?? "New Folder",
           parentId: itemId,
           position: "last",
           data: {
@@ -629,7 +639,9 @@ export const createLayoutsFileExplorerHandlers = ({
 
         if (usage.isUsed) {
           appService.showAlert({
-            message: "Cannot delete resource, it is currently in use.",
+            message:
+              resolvedCopy.cannotDeleteResourceInUse ??
+              "Cannot delete resource, it is currently in use.",
           });
           return;
         }
@@ -649,9 +661,10 @@ export const createLayoutsFileExplorerHandlers = ({
           appService.showAlert({
             message: getResultErrorMessage(
               duplicateLayoutId,
-              "Failed to duplicate layout.",
+              resolvedCopy.failedDuplicateLayout ??
+                "Failed to duplicate layout.",
             ),
-            title: "Error",
+            title: resolvedCopy.errorTitle ?? "Error",
           });
           return;
         }
@@ -808,7 +821,16 @@ export const createLayoutElementsFileExplorerHandlers = ({
   getLayoutId,
   getResourceType = () => "layouts",
   refresh = noopRefresh,
+  copy,
 }) => {
+  const resolveCopy = (deps) => {
+    if (typeof copy === "function") {
+      return copy(deps);
+    }
+
+    return copy ?? {};
+  };
+
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
@@ -818,9 +840,12 @@ export const createLayoutElementsFileExplorerHandlers = ({
       const layoutId = getLayoutId(deps);
       const resourceType = getResourceType(deps);
       const isControls = resourceType === "controls";
+      const resolvedCopy = resolveCopy(deps);
       if (!layoutId) {
         appService.showAlert({
-          message: isControls ? "Control is missing." : "Layout is missing.",
+          message: isControls
+            ? (resolvedCopy.controlMissing ?? "Control is missing.")
+            : (resolvedCopy.layoutMissing ?? "Layout is missing."),
         });
         return;
       }
@@ -869,7 +894,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
           elementId: createdItemId,
           data: {
             type: "folder",
-            name: "New Folder",
+            name: resolvedCopy.newFolderName ?? "New Folder",
           },
           parentId: null,
           position: "first",
@@ -885,7 +910,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
           elementId: createdItemId,
           data: {
             type: "folder",
-            name: "New Folder",
+            name: resolvedCopy.newFolderName ?? "New Folder",
           },
           parentId: itemId,
           position: "first",
@@ -920,9 +945,10 @@ export const createLayoutElementsFileExplorerHandlers = ({
           appService.showAlert({
             message: getResultErrorMessage(
               createResult,
-              "Failed to create element.",
+              resolvedCopy.failedCreateLayoutItem ??
+                "Failed to create layout item.",
             ),
-            title: "Error",
+            title: resolvedCopy.errorTitle ?? "Error",
           });
           console.error("Failed to create layout editor element:", {
             resourceType,
@@ -948,9 +974,12 @@ export const createLayoutElementsFileExplorerHandlers = ({
       const layoutId = getLayoutId(deps);
       const resourceType = getResourceType(deps);
       const isControls = resourceType === "controls";
+      const resolvedCopy = resolveCopy(deps);
       if (!layoutId) {
         appService.showAlert({
-          message: isControls ? "Control is missing." : "Layout is missing.",
+          message: isControls
+            ? (resolvedCopy.controlMissing ?? "Control is missing.")
+            : (resolvedCopy.layoutMissing ?? "Layout is missing."),
         });
         return;
       }
