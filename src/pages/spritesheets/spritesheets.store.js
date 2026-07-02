@@ -18,6 +18,7 @@ import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { createFolderChildFolderIdSet } from "../../internal/ui/resourcePages/rootGroups.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   buildMobileResourcePageViewData,
@@ -396,9 +397,10 @@ const selectDataFolder = (state, folderId) => {
   return item?.type === "folder" ? item : undefined;
 };
 
-const buildMediaGroups = (state) => {
+const buildMediaGroups = (state, { flatItems } = {}) => {
   const rawGroups = toFlatGroups(state.data);
   const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
+  const folderIdsWithChildFolders = createFolderChildFolderIdSet(flatItems);
 
   return rawGroups
     .map((group) => {
@@ -410,6 +412,7 @@ const buildMediaGroups = (state) => {
       return {
         ...group,
         children,
+        hasChildFolders: folderIdsWithChildFolders.has(group.id),
         hasChildren: children.length > 0,
         shouldDisplay,
       };
@@ -875,7 +878,7 @@ export const selectViewData = ({ state, i18n }) => {
   const copy = selectSpritesheetsPageCopy(i18n);
   const flatItems = applyFolderRequiredRootDragOptions(toFlatItems(state.data));
   const activeTagIds = state.activeTagIds ?? [];
-  const mediaGroups = buildMediaGroups(state)
+  const mediaGroups = buildMediaGroups(state, { flatItems })
     .map((group) => ({
       ...group,
       children: (group.children ?? []).filter((child) =>
