@@ -6,9 +6,11 @@ import android.content.ClipData;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -68,6 +70,9 @@ public class MainActivity extends Activity {
     private static final int ANDROID_FOLDER_PICKER_REQUEST_CODE = 3714;
     private static final long SPLASH_MIN_VISIBLE_MS = 1400L;
     private static final long SPLASH_MAX_VISIBLE_MS = 5000L;
+    private static final String DEBUG_VALIDATION_PREFS = "debug-validation";
+    private static final String NATIVE_EXPORTER_SMOKE_LAST_UPDATE_KEY =
+        "nativeExporterSmokeLastUpdateTime";
 
     private WebView webView;
     private long splashStartedAt;
@@ -97,6 +102,7 @@ public class MainActivity extends Activity {
 
         super.onCreate(savedInstanceState);
 
+        validateNativeExporterSmoke();
         configureWindow();
         configureWebView();
 
@@ -120,6 +126,162 @@ public class MainActivity extends Activity {
             getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(callback);
             backInvokedCallback = null;
         }
+    }
+
+    private void validateNativeExporterSmoke() {
+        if (!BuildConfig.DEBUG || !shouldRunNativeExporterSmoke()) {
+            return;
+        }
+
+        try {
+            Log.i(
+                TAG,
+                "Native exporter JNI smoke: " + NativeExporter.selfTest()
+            );
+
+            File smokeRoot = new File(getCacheDir(), "native-exporter-smoke");
+            if (!smokeRoot.exists() && !smokeRoot.mkdirs()) {
+                throw new IllegalStateException(
+                    "Failed to create native exporter smoke directory."
+                );
+            }
+            File smokeFile = File.createTempFile("smoke-", ".zip", smokeRoot);
+            File smokePartFile = new File(smokeFile.getPath() + ".part");
+            File smokeAssetA = new File(smokeRoot, "smoke-asset-a.png");
+            File smokeAssetB = new File(smokeRoot, "smoke-asset-b.png");
+            try {
+                writeNativeExporterSmokePng(smokeAssetA, 28, 36, 0xffff5566);
+                writeNativeExporterSmokePng(smokeAssetB, 136, 148, 0xff44aaff);
+
+                JSONArray assets = new JSONArray();
+                assets.put(
+                    createNativeExporterSmokeAsset(
+                        "smoke-asset-a",
+                        smokeAssetA
+                    )
+                );
+                assets.put(
+                    createNativeExporterSmokeAsset(
+                        "smoke-asset-b",
+                        smokeAssetB
+                    )
+                );
+
+                JSONObject payload = new JSONObject();
+                payload.put("outputPath", smokeFile.getAbsolutePath());
+                payload.put("assets", assets);
+                payload.put("instructionsJson", "{}");
+                payload.put("usePartFile", true);
+                JSONObject stats = NativeExporter.createDistributionZipStreamed(
+                    payload
+                );
+                Log.i(
+                    TAG,
+                    "Native exporter ZIP smoke: " +
+                    stats.toString() +
+                    ", zipFileBytes=" +
+                    smokeFile.length()
+                );
+            } finally {
+                deleteTemporaryFile(smokeFile);
+                deleteTemporaryFile(smokePartFile);
+                deleteTemporaryFile(smokeAssetA);
+                deleteTemporaryFile(smokeAssetB);
+            }
+            markNativeExporterSmokeComplete();
+        } catch (Throwable error) {
+            Log.e(TAG, "Native exporter JNI smoke failed.", error);
+        }
+    }
+
+    private boolean shouldRunNativeExporterSmoke() {
+        try {
+            long packageUpdatedAt = getPackageManager()
+                .getPackageInfo(getPackageName(), 0)
+                .lastUpdateTime;
+            SharedPreferences preferences = getSharedPreferences(
+                DEBUG_VALIDATION_PREFS,
+                MODE_PRIVATE
+            );
+            return (
+                preferences.getLong(
+                    NATIVE_EXPORTER_SMOKE_LAST_UPDATE_KEY,
+                    0L
+                ) !=
+                packageUpdatedAt
+            );
+        } catch (Exception error) {
+            return true;
+        }
+    }
+
+    private void markNativeExporterSmokeComplete() throws Exception {
+        long packageUpdatedAt = getPackageManager()
+            .getPackageInfo(getPackageName(), 0)
+            .lastUpdateTime;
+        getSharedPreferences(DEBUG_VALIDATION_PREFS, MODE_PRIVATE)
+            .edit()
+            .putLong(NATIVE_EXPORTER_SMOKE_LAST_UPDATE_KEY, packageUpdatedAt)
+            .apply();
+    }
+
+    private void writeNativeExporterSmokePng(
+        File file,
+        int accentX,
+        int accentY,
+        int accentColor
+    ) throws Exception {
+        Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888);
+        try {
+            for (int y = 0; y < 256; y += 1) {
+                for (int x = 0; x < 256; x += 1) {
+                    int noise = ((x * 31) ^ (y * 17) ^ ((x * y) % 251)) & 0xff;
+                    bitmap.setPixel(
+                        x,
+                        y,
+                        Color.argb(
+                            255,
+                            noise,
+                            (noise + 37) & 0xff,
+                            (noise + 91) & 0xff
+                        )
+                    );
+                }
+            }
+
+            for (int y = 24; y < 232; y += 1) {
+                for (int x = 20; x < 236; x += 1) {
+                    if ((x + y) % 7 == 0) {
+                        bitmap.setPixel(x, y, Color.argb(255, 240, 240, 240));
+                    }
+                }
+            }
+
+            for (int y = accentY; y < accentY + 40; y += 1) {
+                for (int x = accentX; x < accentX + 40; x += 1) {
+                    bitmap.setPixel(x, y, accentColor);
+                }
+            }
+
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                throw new IllegalStateException(
+                    "Failed to encode native exporter smoke PNG."
+                );
+            }
+            writeBytes(file, output.toByteArray());
+        } finally {
+            bitmap.recycle();
+        }
+    }
+
+    private JSONObject createNativeExporterSmokeAsset(String id, File file)
+        throws Exception {
+        JSONObject asset = new JSONObject();
+        asset.put("id", safePathSegment(id));
+        asset.put("path", file.getAbsolutePath());
+        asset.put("mime", "image/png");
+        return asset;
     }
 
     private void configureWindow() {
@@ -656,6 +818,18 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public String createDistributionZipStreamedToUri(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                JSONObject result =
+                    MainActivity.this.createDistributionZipStreamedToUri(payload);
+                return bridgeSuccess(result);
+            } catch (Throwable error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
         public String openFilePicker(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -773,7 +947,7 @@ public class MainActivity extends Activity {
         return result.toString();
     }
 
-    private String bridgeFailure(Exception error) {
+    private String bridgeFailure(Throwable error) {
         Log.e(TAG, "Android bridge call failed.", error);
         try {
             JSONObject result = new JSONObject();
@@ -1114,6 +1288,139 @@ public class MainActivity extends Activity {
         }
 
         return uri.toString();
+    }
+
+    private JSONObject createDistributionZipStreamedToUri(JSONObject payload)
+        throws Exception {
+        String safeProjectId = safePathSegment(payload.getString("projectId"));
+        String destinationUri = payload.getString("uri");
+        String instructionsJson = payload.getString("instructionsJson");
+
+        File exportsRoot = new File(getCacheDir(), "distribution-exports");
+        if (!exportsRoot.exists() && !exportsRoot.mkdirs()) {
+            throw new IllegalStateException("Failed to create export cache directory.");
+        }
+
+        File outputFile = File.createTempFile("distribution-", ".zip", exportsRoot);
+        File partFile = new File(outputFile.getPath() + ".part");
+
+        try {
+            JSONObject nativePayload = new JSONObject();
+            nativePayload.put("outputPath", outputFile.getAbsolutePath());
+            nativePayload.put(
+                "assets",
+                buildDistributionZipAssets(
+                    safeProjectId,
+                    payload.optJSONArray("fileEntries")
+                )
+            );
+            nativePayload.put("instructionsJson", instructionsJson);
+            nativePayload.put("usePartFile", payload.optBoolean("usePartFile", true));
+
+            String indexHtml = optionalJsonString(payload, "indexHtml");
+            if (indexHtml != null) {
+                nativePayload.put("indexHtml", indexHtml);
+            }
+
+            String mainJs = optionalJsonString(payload, "mainJs");
+            if (mainJs != null) {
+                nativePayload.put("mainJs", mainJs);
+            }
+
+            JSONObject stats = NativeExporter.createDistributionZipStreamed(
+                nativePayload
+            );
+            Uri uri = copyFileToUri(outputFile, destinationUri);
+
+            JSONObject result = new JSONObject();
+            result.put("uri", uri.toString());
+            result.put("stats", stats);
+            return result;
+        } finally {
+            deleteTemporaryFile(outputFile);
+            deleteTemporaryFile(partFile);
+        }
+    }
+
+    private JSONArray buildDistributionZipAssets(
+        String projectId,
+        JSONArray fileEntries
+    ) throws Exception {
+        JSONArray assets = new JSONArray();
+        if (fileEntries == null) {
+            return assets;
+        }
+
+        File filesRoot = new File(getProjectRoot(projectId), "files");
+        for (int index = 0; index < fileEntries.length(); index += 1) {
+            JSONObject entry = fileEntries.getJSONObject(index);
+            String safeFileId = safePathSegment(
+                entry.optString("id", entry.optString("fileId", ""))
+            );
+            File file = resolveSafeRelativeFile(filesRoot, safeFileId);
+            if (!file.isFile()) {
+                Log.w(
+                    TAG,
+                    "Skipping missing file during native ZIP export: " + safeFileId
+                );
+                continue;
+            }
+
+            String mimeType = entry.optString("mimeType", "");
+            if (isUnreliableMimeType(mimeType)) {
+                mimeType = resolveProjectFileMimeType(projectId, safeFileId, file);
+            } else {
+                mimeType = normalizeMimeType(mimeType);
+            }
+
+            JSONObject asset = new JSONObject();
+            asset.put("id", safeFileId);
+            asset.put("path", file.getAbsolutePath());
+            asset.put("mime", mimeType);
+            assets.put(asset);
+        }
+
+        return assets;
+    }
+
+    private Uri copyFileToUri(File inputFile, String uriString) throws Exception {
+        String normalizedUri = uriString == null ? "" : uriString.trim();
+        if (normalizedUri.isEmpty()) {
+            throw new IllegalArgumentException("Save location is required.");
+        }
+
+        if (!inputFile.isFile()) {
+            throw new IllegalStateException("Native export output was not created.");
+        }
+
+        Uri uri = Uri.parse(normalizedUri);
+        try (
+            FileInputStream input = new FileInputStream(inputFile);
+            OutputStream output = getContentResolver().openOutputStream(uri, "wt")
+        ) {
+            if (output == null) {
+                throw new IllegalStateException("Failed to open save location.");
+            }
+            writeOutputStream(output, input);
+        }
+
+        return uri;
+    }
+
+    private String optionalJsonString(JSONObject object, String key) {
+        if (!object.has(key) || object.isNull(key)) {
+            return null;
+        }
+        return object.optString(key, null);
+    }
+
+    private void deleteTemporaryFile(File file) {
+        if (file == null || !file.exists()) {
+            return;
+        }
+        if (!file.delete() && file.exists()) {
+            Log.w(TAG, "Failed to delete temporary file: " + file.getAbsolutePath());
+        }
     }
 
     private JSONObject importProjectFolderFromTreeUri(String uriString)
