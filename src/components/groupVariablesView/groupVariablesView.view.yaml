@@ -105,7 +105,7 @@ template:
           - $if showTagFilter:
               - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
                   - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
-      - 'rtgl-view h=1fg w=f sv style="min-width: 0; min-height: 0; padding-bottom: ${scrollBottomPadding}; box-sizing: border-box;"':
+      - 'rtgl-view h=1fg w=f sv style="min-width: 0; min-height: 0; box-sizing: border-box;"':
           - $if flatGroups.length > 0:
               - $for group, i in flatGroups:
                   - rtgl-view w=f ph=md pos=rel:
@@ -184,7 +184,7 @@ template:
                   - rtgl-text s=lg c=mu-fg: ${noDataMessage}
                   - rtgl-view h=64: null
           - $if flatGroups.length > 0:
-              - rtgl-view h=33vh: null
+              - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - $if !readonly:
       - rtgl-dialog#addVariableDialog s=md ?open=${isDialogOpen}:
           - rtgl-view slot=content g=md:

@@ -8,8 +8,13 @@ export const resolveResourceScrollBottomPadding = ({
   mobileLayout,
   scrollBottomPadding,
 } = {}) => {
+  const hasScrollBottomPadding =
+    scrollBottomPadding !== undefined &&
+    scrollBottomPadding !== "undefined" &&
+    scrollBottomPadding !== "";
+
   return (
-    scrollBottomPadding ??
+    (hasScrollBottomPadding ? scrollBottomPadding : undefined) ??
     (mobileLayout ? MOBILE_RESOURCE_SCROLL_BOTTOM_PADDING : "0px")
   );
 };

@@ -95,7 +95,7 @@ template:
                       - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
               - $if canImport:
                   - rtgl-button#importBtn s=sm pre=upload v=se: ${importText}
-      - 'rtgl-view h=1fg w=f sv style="min-width: 0; padding-bottom: ${scrollBottomPadding}; box-sizing: border-box;"':
+      - 'rtgl-view h=1fg w=f sv style="min-width: 0; box-sizing: border-box;"':
           - $if groups.length > 0:
               - $for group, gIndex in groups:
                   - rtgl-view w=f ph=md pos=rel:
@@ -220,6 +220,8 @@ template:
             $else:
               - rtgl-view w=f h=f av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No data
+          - $if groups.length > 0:
+              - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
       - $if showFilterPopoverSearch:
           - rtgl-text s=md: Filter

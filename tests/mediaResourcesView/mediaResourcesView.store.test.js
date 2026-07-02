@@ -4,6 +4,7 @@ import {
   selectViewData,
   setSoundWaveformRenderedItemCount,
 } from "../../src/components/mediaResourcesView/mediaResourcesView.store.js";
+import { MOBILE_RESOURCE_SCROLL_BOTTOM_PADDING } from "../../src/internal/ui/resourcePages/mobileResourcePage.js";
 
 describe("mediaResourcesView.store", () => {
   it("does not show a strong hover border on non-selected cards while another card is selected", () => {
@@ -161,6 +162,21 @@ describe("mediaResourcesView.store", () => {
       viewData.groups[0].children.every((item) => item.isPlaceholder === true),
     ).toBe(true);
     expect(viewData.groups[0].progressiveContentMinHeight).toBe(0);
+  });
+
+  it("uses the mobile scroll bottom padding when a bound padding prop is omitted", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: {
+        mobileLayout: true,
+        scrollBottomPadding: "undefined",
+      },
+    });
+
+    expect(viewData.scrollBottomPadding).toBe(
+      MOBILE_RESOURCE_SCROLL_BOTTOM_PADDING,
+    );
   });
 
   it("renders sound waveforms immediately by default", () => {
