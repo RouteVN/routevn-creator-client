@@ -23,6 +23,9 @@ const DEFAULT_SCENES_MAP_VIEWPORT = {
   panX: -80,
   panY: -40,
 };
+const TOUCH_MINIMAP_HYDRATION_FRAME_COUNT = 6;
+const WHITEBOARD_CONNECTIONS_HYDRATION_FRAME_COUNT = 4;
+const SCENE_OVERVIEW_HYDRATION_FRAME_COUNT = 8;
 
 const getProjectErrorMessage = (result, fallbackMessage) => {
   return (
@@ -394,7 +397,207 @@ const openSceneForm = ({
   sceneForm.setValues({ values: sceneFormValues });
 };
 
-const syncScenesState = ({ store, render, projectService } = {}) => {
+const cancelTouchMinimapHydrationFrame = (store) => {
+  const frameId = store.selectTouchMinimapFrameId?.();
+  if (frameId === undefined) {
+    return;
+  }
+
+  globalThis.cancelAnimationFrame?.(frameId);
+  store.clearTouchMinimapFrameId?.();
+};
+
+const cancelWhiteboardConnectionsHydrationFrame = (store) => {
+  const frameId = store.selectWhiteboardConnectionsFrameId?.();
+  if (frameId === undefined) {
+    return;
+  }
+
+  globalThis.cancelAnimationFrame?.(frameId);
+  store.clearWhiteboardConnectionsFrameId?.();
+};
+
+const cancelSceneOverviewRefreshFrame = (store) => {
+  const frameId = store.selectSceneOverviewFrameId?.();
+  if (frameId === undefined) {
+    return;
+  }
+
+  globalThis.cancelAnimationFrame?.(frameId);
+  store.clearSceneOverviewFrameId?.();
+};
+
+const scheduleAfterFrames = ({
+  frameCount,
+  setFrameId,
+  clearFrameId,
+  callback,
+} = {}) => {
+  if (typeof globalThis.requestAnimationFrame !== "function") {
+    callback?.();
+    return;
+  }
+
+  const scheduleNextFrame = (remainingFrameCount) => {
+    const frameId = globalThis.requestAnimationFrame(() => {
+      clearFrameId?.();
+
+      if (remainingFrameCount <= 1) {
+        callback?.();
+        return;
+      }
+
+      scheduleNextFrame(remainingFrameCount - 1);
+    });
+
+    setFrameId?.(frameId);
+  };
+
+  scheduleNextFrame(frameCount);
+};
+
+const scheduleTouchMinimapHydration = ({ store, render } = {}) => {
+  if (
+    !store.selectIsTouchMode?.() ||
+    store.selectIsTouchMinimapReady?.() ||
+    store.selectTouchMinimapFrameId?.() !== undefined
+  ) {
+    return;
+  }
+
+  scheduleAfterFrames({
+    frameCount: TOUCH_MINIMAP_HYDRATION_FRAME_COUNT,
+    setFrameId: (frameId) => store.setTouchMinimapFrameId?.({ frameId }),
+    clearFrameId: () => store.clearTouchMinimapFrameId?.(),
+    callback: () => {
+      store.setTouchMinimapReady?.({ isReady: true });
+      render?.();
+    },
+  });
+};
+
+const scheduleWhiteboardConnectionsHydration = ({ store, render } = {}) => {
+  if (
+    !store.selectIsTouchMode?.() ||
+    store.selectIsWhiteboardConnectionsReady?.() ||
+    store.selectWhiteboardConnectionsFrameId?.() !== undefined
+  ) {
+    return;
+  }
+
+  scheduleAfterFrames({
+    frameCount: WHITEBOARD_CONNECTIONS_HYDRATION_FRAME_COUNT,
+    setFrameId: (frameId) =>
+      store.setWhiteboardConnectionsFrameId?.({ frameId }),
+    clearFrameId: () => store.clearWhiteboardConnectionsFrameId?.(),
+    callback: () => {
+      store.setWhiteboardConnectionsReady?.({ isReady: true });
+      render?.();
+    },
+  });
+};
+
+const scheduleSceneOverviewRefresh = ({
+  store,
+  render,
+  projectService,
+  orderedSceneIds = [],
+  requestId,
+} = {}) => {
+  if (orderedSceneIds.length === 0) {
+    return;
+  }
+
+  if (store.selectSceneOverviewFrameId?.() !== undefined) {
+    return;
+  }
+
+  scheduleAfterFrames({
+    frameCount: SCENE_OVERVIEW_HYDRATION_FRAME_COUNT,
+    setFrameId: (frameId) => store.setSceneOverviewFrameId?.({ frameId }),
+    clearFrameId: () => store.clearSceneOverviewFrameId?.(),
+    callback: () => {
+      void refreshSceneOverviews({
+        store,
+        render,
+        projectService,
+        orderedSceneIds,
+        requestId,
+      });
+    },
+  });
+};
+
+const setInitialWhiteboardHydrationState = ({ store } = {}) => {
+  if (store.selectIsTouchMode?.()) {
+    store.setTouchMinimapReady?.({ isReady: false });
+    store.setWhiteboardConnectionsReady?.({ isReady: false });
+    return;
+  }
+
+  store.setTouchMinimapReady?.({ isReady: true });
+  store.setWhiteboardConnectionsReady?.({ isReady: true });
+};
+
+const cancelDeferredWhiteboardWork = (store) => {
+  cancelTouchMinimapHydrationFrame(store);
+  cancelWhiteboardConnectionsHydrationFrame(store);
+  cancelSceneOverviewRefreshFrame(store);
+};
+
+const hydrateDeferredWhiteboardWork = ({
+  store,
+  render,
+  projectService,
+  orderedSceneIds = [],
+  requestId,
+} = {}) => {
+  scheduleWhiteboardConnectionsHydration({ store, render });
+  scheduleTouchMinimapHydration({ store, render });
+
+  if (!store.selectIsTouchMode?.()) {
+    void refreshSceneOverviews({
+      store,
+      render,
+      projectService,
+      orderedSceneIds,
+      requestId,
+    });
+    return;
+  }
+
+  scheduleSceneOverviewRefresh({
+    store,
+    render,
+    projectService,
+    orderedSceneIds,
+    requestId,
+  });
+};
+
+const selectFileExplorerItemAfterRender = ({ refs, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const selectItem = () => {
+    refs.fileexplorer?.selectItem?.({ itemId });
+  };
+
+  if (typeof globalThis.requestAnimationFrame !== "function") {
+    selectItem();
+    return;
+  }
+
+  globalThis.requestAnimationFrame(selectItem);
+};
+
+const syncScenesState = ({
+  store,
+  render,
+  projectService,
+  shouldRender = true,
+} = {}) => {
   const baseSnapshot = buildScenesStateSnapshot({
     store,
     projectService,
@@ -411,7 +614,9 @@ const syncScenesState = ({ store, render, projectService } = {}) => {
 
   const requestId = store.selectSceneOverviewRequestId() + 1;
   store.setSceneOverviewRequestId({ requestId });
-  render?.();
+  if (shouldRender) {
+    render?.();
+  }
 
   return {
     ...baseSnapshot,
@@ -522,16 +727,19 @@ export const handleBeforeMount = (deps) => {
 
   return () => {
     subscription.unsubscribe();
+    cancelDeferredWhiteboardWork(store);
   };
 };
 
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
+  setInitialWhiteboardHydrationState({ store });
   const initialSnapshot = syncScenesState({
     store,
     render,
     projectService,
+    shouldRender: false,
   });
   const sceneItems = initialSnapshot?.sceneItems ?? [];
 
@@ -551,8 +759,6 @@ export const handleAfterMount = async (deps) => {
       appService,
       sceneId: persistedSelectedSceneId,
     });
-    const { fileexplorer } = refs;
-    fileexplorer?.selectItem({ itemId: persistedSelectedSceneId });
   }
 
   const initialViewport = resolveInitialWhiteboardViewport({
@@ -578,14 +784,20 @@ export const handleAfterMount = async (deps) => {
   }
 
   render();
-  focusFileExplorerKeyboardScope(deps);
-  void refreshSceneOverviews({
+  if (persistedSelectedSceneId && !store.selectIsTouchMode?.()) {
+    selectFileExplorerItemAfterRender({
+      refs,
+      itemId: persistedSelectedSceneId,
+    });
+  }
+  hydrateDeferredWhiteboardWork({
     store,
     render,
     projectService,
     orderedSceneIds: initialSnapshot?.orderedSceneIds ?? [],
     requestId: initialSnapshot?.requestId,
   });
+  focusFileExplorerKeyboardScope(deps);
 };
 
 export const handleSetInitialScene = async (sceneId, deps) => {
@@ -595,12 +807,14 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 
 const refreshScenesData = async (deps) => {
   const { store, render, projectService } = deps;
+  cancelDeferredWhiteboardWork(store);
+  setInitialWhiteboardHydrationState({ store });
   const snapshot = syncScenesState({
     store,
     render,
     projectService,
   });
-  void refreshSceneOverviews({
+  hydrateDeferredWhiteboardWork({
     store,
     render,
     projectService,

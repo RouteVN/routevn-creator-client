@@ -112,12 +112,19 @@ export const createInitialState = () => ({
   sceneOverviewRequestId: 0,
   isTouchMode: false,
   isMobileFileExplorerOpen: false,
+  isTouchMinimapReady: false,
+  touchMinimapFrameId: undefined,
+  isWhiteboardConnectionsReady: false,
+  whiteboardConnectionsFrameId: undefined,
+  sceneOverviewFrameId: undefined,
 });
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };
+
+export const selectIsTouchMode = ({ state }) => state.isTouchMode;
 
 export const openMobileFileExplorer = ({ state }, _payload = {}) => {
   state.isMobileFileExplorerOpen = true;
@@ -130,6 +137,56 @@ export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
 export const selectIsMobileFileExplorerOpen = ({ state }) => {
   return Boolean(state.isMobileFileExplorerOpen);
 };
+
+export const setTouchMinimapReady = ({ state }, { isReady } = {}) => {
+  state.isTouchMinimapReady = isReady === true;
+};
+
+export const selectIsTouchMinimapReady = ({ state }) =>
+  state.isTouchMinimapReady;
+
+export const setTouchMinimapFrameId = ({ state }, { frameId } = {}) => {
+  state.touchMinimapFrameId = frameId;
+};
+
+export const clearTouchMinimapFrameId = ({ state }) => {
+  state.touchMinimapFrameId = undefined;
+};
+
+export const selectTouchMinimapFrameId = ({ state }) =>
+  state.touchMinimapFrameId;
+
+export const setWhiteboardConnectionsReady = ({ state }, { isReady } = {}) => {
+  state.isWhiteboardConnectionsReady = isReady === true;
+};
+
+export const selectIsWhiteboardConnectionsReady = ({ state }) =>
+  state.isWhiteboardConnectionsReady;
+
+export const setWhiteboardConnectionsFrameId = (
+  { state },
+  { frameId } = {},
+) => {
+  state.whiteboardConnectionsFrameId = frameId;
+};
+
+export const clearWhiteboardConnectionsFrameId = ({ state }) => {
+  state.whiteboardConnectionsFrameId = undefined;
+};
+
+export const selectWhiteboardConnectionsFrameId = ({ state }) =>
+  state.whiteboardConnectionsFrameId;
+
+export const setSceneOverviewFrameId = ({ state }, { frameId } = {}) => {
+  state.sceneOverviewFrameId = frameId;
+};
+
+export const clearSceneOverviewFrameId = ({ state }) => {
+  state.sceneOverviewFrameId = undefined;
+};
+
+export const selectSceneOverviewFrameId = ({ state }) =>
+  state.sceneOverviewFrameId;
 
 export const setItems = ({ state }, { scenesData } = {}) => {
   state.scenesData = scenesData;
@@ -527,6 +584,8 @@ export const selectViewData = ({ state, i18n }) => {
     selectedDetailType,
     addSceneButtonVariant: state.isWaitingForTransform ? "pr" : "se",
     whiteboardItems: state.whiteboardItems,
+    showWhiteboardConnections:
+      !state.isTouchMode || state.isWhiteboardConnectionsReady,
     selectedSceneName: selectedItemName,
     selectedItemDescription,
     isWaitingForTransform: state.isWaitingForTransform,
@@ -560,7 +619,8 @@ export const selectViewData = ({ state, i18n }) => {
     showDetailPanel: !state.isTouchMode,
     showMobileScenesControls: state.isTouchMode,
     showMobileFileExplorer: state.isTouchMode && state.isMobileFileExplorerOpen,
-    showWhiteboardMinimapInTouchMode: state.isTouchMode,
+    showWhiteboardMinimapInTouchMode:
+      state.isTouchMode && state.isTouchMinimapReady,
     whiteboardMinimapPlacement: state.isTouchMode ? "top-right" : "bottom-left",
     whiteboardMinimapHeightScale: state.isTouchMode ? 2 / 3 : 1,
     title: copy.title ?? "Scenes",

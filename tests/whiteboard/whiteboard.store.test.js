@@ -162,6 +162,7 @@ describe("whiteboard minimap viewport drag", () => {
     });
 
     expect(defaultTouchViewData.showMinimap).toBe(false);
+    expect(defaultTouchViewData.minimapData).toBeUndefined();
 
     const forcedTouchViewData = selectViewData({
       state,
@@ -214,5 +215,29 @@ describe("whiteboard.store", () => {
     expect(selectedItem.borderWidth).toBe(normalItem.borderWidth);
     expect(hoveredItem.borderColor).toBe("fg");
     expect(selectedItem.borderColor).toBe("fg");
+  });
+
+  it("skips arrow data when showArrows is false", () => {
+    const state = createInitialState();
+    const props = {
+      showArrows: false,
+      items: [
+        {
+          id: "scene-1",
+          name: "Scene 1",
+          x: 0,
+          y: 0,
+          transitions: ["scene-2"],
+        },
+        {
+          id: "scene-2",
+          name: "Scene 2",
+          x: 240,
+          y: 0,
+        },
+      ],
+    };
+
+    expect(selectViewData({ state, props }).arrowsList).toEqual([]);
   });
 });
