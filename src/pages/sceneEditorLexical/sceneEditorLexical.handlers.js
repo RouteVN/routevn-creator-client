@@ -37,6 +37,7 @@ import {
   scrollSceneEditorSectionTabIntoView,
   selectSceneEditorSection,
 } from "../../internal/ui/sceneEditor/sectionOperations.js";
+import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
 const MISSING_PROJECT_RESOLUTION_MESSAGE =
@@ -50,6 +51,8 @@ const MIN_BACKGROUND_TRANSFORM_SCALE = 0.01;
 const BACKGROUND_TRANSFORM_KEYBOARD_NUDGE = 1;
 const BACKGROUND_TRANSFORM_KEYBOARD_LARGE_NUDGE = 10;
 const SCENE_EDITOR_SELECTION_URL_SYNC_THROTTLE_MS = 250;
+
+const selectCopy = ({ i18n } = {}) => selectSceneEditorCopy(i18n);
 
 const normalizeSceneEditorFontSize = (fontSize) =>
   SCENE_EDITOR_FONT_SIZES.has(fontSize) ? fontSize : "md";
@@ -576,14 +579,18 @@ const dispatchLineNavigationRender = (
 
 const assertSceneEditorCommandResult = (
   result,
-  { appService, fallbackMessage = "Failed to save scene changes" } = {},
+  {
+    appService,
+    errorTitle = "Error",
+    fallbackMessage = "Failed to save scene changes",
+  } = {},
 ) => {
   if (result?.valid !== false) {
     return result;
   }
 
   const message = result?.error?.message || fallbackMessage;
-  appService?.showAlert({ message: message, title: "Error" });
+  appService?.showAlert({ message: message, title: errorTitle });
 
   const error = new Error(message);
   error.code = result?.error?.code || "validation_failed";
@@ -1582,9 +1589,10 @@ export const handleBeforeMount = (deps) => {
         void syncSceneEditorRoutePayload(deps, routePayload, {
           shouldContinue: () => routeSyncId === routeSyncSequence,
         }).catch((error) => {
+          const copy = selectCopy(deps);
           console.error("[sceneEditor] Failed to switch scene", error);
           appService?.showToast?.({
-            message: "Failed to switch scene",
+            message: copy.failedSwitchScene ?? "Failed to switch scene",
             status: "error",
           });
         });
@@ -1617,9 +1625,11 @@ export const handleAfterMount = async (deps) => {
       throw error;
     }
 
+    const copy = selectCopy(deps);
     deps.appService?.showAlert({
-      message: MISSING_PROJECT_RESOLUTION_MESSAGE,
-      title: "Error",
+      message:
+        copy.missingProjectResolution ?? MISSING_PROJECT_RESOLUTION_MESSAGE,
+      title: copy.errorTitle ?? "Error",
     });
     deps.appService?.navigate("/projects");
   }
@@ -1694,6 +1704,7 @@ const openSectionTabDropdown = (deps, event) => {
 
 export const handleCommandLineSubmit = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
+  const copy = selectCopy(deps);
   const lineId = resolveActionTargetLineId(store);
   if (lineId) {
     store.setSelectedLineId({ selectedLineId: lineId });
@@ -1713,8 +1724,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       );
     } catch {
       appService?.showAlert({
-        message: "Invalid action payload (non-serializable data)",
-        title: "Error",
+        message:
+          copy.invalidActionPayload ??
+          "Invalid action payload (non-serializable data)",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -1730,7 +1743,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
           }),
           {
             appService,
-            fallbackMessage: "Failed to save section transition",
+            errorTitle: copy.errorTitle ?? "Error",
+            fallbackMessage:
+              copy.failedSaveSectionTransition ??
+              "Failed to save section transition",
           },
         );
       },
@@ -1767,8 +1783,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       );
     } catch {
       appService?.showAlert({
-        message: "Invalid action payload (non-serializable data)",
-        title: "Error",
+        message:
+          copy.invalidActionPayload ??
+          "Invalid action payload (non-serializable data)",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -1815,8 +1833,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       );
     } catch {
       appService?.showAlert({
-        message: "Invalid action payload (non-serializable data)",
-        title: "Error",
+        message:
+          copy.invalidActionPayload ??
+          "Invalid action payload (non-serializable data)",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -1862,8 +1882,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     );
   } catch {
     appService?.showAlert({
-      message: "Invalid action payload (non-serializable data)",
-      title: "Error",
+      message:
+        copy.invalidActionPayload ??
+        "Invalid action payload (non-serializable data)",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -1887,7 +1909,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
             }),
             {
               appService,
-              fallbackMessage: "Failed to save dialogue action",
+              errorTitle: copy.errorTitle ?? "Error",
+              fallbackMessage:
+                copy.failedSaveDialogueAction ??
+                "Failed to save dialogue action",
             },
           );
         }
@@ -1901,7 +1926,9 @@ export const handleCommandLineSubmit = async (deps, payload) => {
             }),
             {
               appService,
-              fallbackMessage: "Failed to save line actions",
+              errorTitle: copy.errorTitle ?? "Error",
+              fallbackMessage:
+                copy.failedSaveLineActions ?? "Failed to save line actions",
             },
           );
         }
@@ -2243,6 +2270,7 @@ export const handleMobileKeyboardStateChange = (deps, payload) => {
 
 export const handleSectionAddClick = (deps, payload) => {
   const { store, render } = deps;
+  const copy = selectCopy(deps);
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();
   if (isSectionsOverviewOpen(store)) {
@@ -2251,7 +2279,10 @@ export const handleSectionAddClick = (deps, payload) => {
 
   const scene = store.selectScene();
   const sectionCount = scene?.sections?.length || 0;
-  const defaultName = `Section ${sectionCount + 1}`;
+  const defaultName = (copy.sectionFallback ?? "Section {index}").replaceAll(
+    "{index}",
+    String(sectionCount + 1),
+  );
   store.showSectionCreateDialog({ defaultName });
   render();
 };
@@ -2289,12 +2320,13 @@ export const handleSectionsOverviewClose = (deps) => {
 
 export const handleSectionsOverviewWarningMouseEnter = (deps, payload) => {
   const { store, render } = deps;
+  const copy = selectCopy(deps);
   const rect = payload._event.currentTarget.getBoundingClientRect();
 
   store.showDeadEndTooltip({
     x: rect.left + rect.width / 2,
     y: rect.top - 8,
-    content: DEAD_END_TOOLTIP_CONTENT,
+    content: copy.deadEndTooltipContent ?? DEAD_END_TOOLTIP_CONTENT,
   });
   render();
 };
@@ -2615,10 +2647,13 @@ export const handleDropdownMenuClickOverlay = (deps) => {
   render();
 };
 
-const getDefaultSectionName = (store) => {
+const getDefaultSectionName = (store, copy = {}) => {
   const scene = store.selectScene();
   const sectionCount = scene?.sections?.length || 0;
-  return `Section ${sectionCount + 1}`;
+  return (copy.sectionFallback ?? "Section {index}").replaceAll(
+    "{index}",
+    String(sectionCount + 1),
+  );
 };
 
 const moveSceneEditorSectionWithinScene = async (
@@ -2626,6 +2661,7 @@ const moveSceneEditorSectionWithinScene = async (
   { sectionId, direction } = {},
 ) => {
   const { store, projectService, appService } = deps;
+  const copy = selectCopy(deps);
   const scene = store.selectScene();
   const sections = Array.isArray(scene?.sections) ? scene.sections : [];
   const sectionIndex = sections.findIndex(
@@ -2652,7 +2688,8 @@ const moveSceneEditorSectionWithinScene = async (
         }),
         {
           appService,
-          fallbackMessage: "Failed to move section",
+          errorTitle: copy.errorTitle ?? "Error",
+          fallbackMessage: copy.failedMoveSection ?? "Failed to move section",
         },
       );
     },
@@ -2671,6 +2708,7 @@ const moveSceneEditorSectionWithinScene = async (
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
+  const copy = selectCopy(deps);
   const item = payload._event.detail.item || payload._event.detail;
   const action = item?.value;
   const dropdownState = store.selectDropdownMenu();
@@ -2698,7 +2736,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   if (action === "add-section-above" || action === "add-section-below") {
     store.showSectionCreateDialog({
-      defaultName: getDefaultSectionName(store),
+      defaultName: getDefaultSectionName(store, copy),
       placementPosition: action === "add-section-above" ? "before" : "after",
       placementTargetSectionId: sectionId,
     });
@@ -2728,7 +2766,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
           }),
           {
             appService,
-            fallbackMessage: "Failed to delete section",
+            errorTitle: copy.errorTitle ?? "Error",
+            fallbackMessage:
+              copy.failedDeleteSection ?? "Failed to delete section",
           },
         );
       },
@@ -2765,7 +2805,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
           }),
           {
             appService,
-            fallbackMessage: "Failed to duplicate section",
+            errorTitle: copy.errorTitle ?? "Error",
+            fallbackMessage:
+              copy.failedDuplicateSection ?? "Failed to duplicate section",
           },
         );
       },
@@ -2929,6 +2971,7 @@ export const handleSceneSettingsFormAction = (deps, payload) => {
 
 export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
   const { store, render, projectService, appService, subject } = deps;
+  const copy = selectCopy(deps);
   const detail = payload._event.detail || {};
   const action = detail.actionId;
   const values = detail.values || {};
@@ -2950,16 +2993,17 @@ export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
 
   if (!sectionId || !sceneId || !targetSceneId) {
     appService?.showAlert({
-      message: "Select a scene to move this section.",
-      title: "Error",
+      message:
+        copy.selectSceneToMoveSection ?? "Select a scene to move this section.",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
 
   if (targetSceneId === sceneId) {
     appService?.showAlert({
-      message: "Select a different scene.",
-      title: "Error",
+      message: copy.selectDifferentScene ?? "Select a different scene.",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -2967,8 +3011,10 @@ export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
   const sourceScene = store.selectCommittedScene();
   if ((sourceScene?.sections?.length ?? 0) <= 1) {
     appService?.showAlert({
-      message: "This scene must keep at least one section.",
-      title: "Error",
+      message:
+        copy.sceneMustKeepOneSection ??
+        "This scene must keep at least one section.",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -2986,7 +3032,8 @@ export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
         }),
         {
           appService,
-          fallbackMessage: "Failed to move section",
+          errorTitle: copy.errorTitle ?? "Error",
+          fallbackMessage: copy.failedMoveSection ?? "Failed to move section",
         },
       );
     },
@@ -3145,6 +3192,7 @@ export const handleToggleSectionsGraphView = (deps) => {
 export const handlePreviewClick = (deps, payload) => {
   const openPreview = async () => {
     const { store, render, appService, projectService } = deps;
+    const copy = selectCopy(deps);
     let didPersistDraft = false;
 
     try {
@@ -3175,9 +3223,10 @@ export const handlePreviewClick = (deps, payload) => {
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       appService?.showAlert({
         message: didPersistDraft
-          ? "Failed to open preview"
-          : "Failed to save scene changes before preview",
-        title: "Error",
+          ? (copy.failedOpenPreview ?? "Failed to open preview")
+          : (copy.failedSaveBeforePreview ??
+            "Failed to save scene changes before preview"),
+        title: copy.errorTitle ?? "Error",
       });
     }
   };

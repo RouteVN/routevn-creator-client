@@ -80,27 +80,30 @@ export const createSpriteBlurFromDialogValues = (values = {}) =>
     repeatEdgePixels: values.blurRepeatEdgePixels,
   });
 
-export const createSpriteBlurForm = ({ submitLabel = "Add Blur" } = {}) => ({
-  title: "Blur",
+export const createSpriteBlurForm = ({
+  submitLabel = "Add Blur",
+  copy = {},
+} = {}) => ({
+  title: copy.blurTitle ?? "Blur",
   fields: [
     {
       name: "blurX",
-      label: "Blur X",
+      label: copy.blurXLabel ?? "Blur X",
       type: "input-number",
     },
     {
       name: "blurY",
-      label: "Blur Y",
+      label: copy.blurYLabel ?? "Blur Y",
       type: "input-number",
     },
     {
       name: "blurQuality",
-      label: "Quality",
+      label: copy.qualityLabel ?? "Quality",
       type: "input-number",
     },
     {
       name: "blurKernelSize",
-      label: "Kernel Size",
+      label: copy.kernelSizeLabel ?? "Kernel Size",
       type: "select",
       clearable: false,
       options: SPRITE_BLUR_KERNEL_SIZE_OPTIONS.map((value) => ({
@@ -110,12 +113,12 @@ export const createSpriteBlurForm = ({ submitLabel = "Add Blur" } = {}) => ({
     },
     {
       name: "blurRepeatEdgePixels",
-      label: "Repeat Edge Pixels",
+      label: copy.repeatEdgePixelsLabel ?? "Repeat Edge Pixels",
       type: "segmented-control",
       clearable: false,
       options: [
-        { value: false, label: "No" },
-        { value: true, label: "Yes" },
+        { value: false, label: copy.noOption ?? "No" },
+        { value: true, label: copy.yesOption ?? "Yes" },
       ],
     },
   ],
@@ -124,7 +127,7 @@ export const createSpriteBlurForm = ({ submitLabel = "Add Blur" } = {}) => ({
       {
         id: "cancel",
         variant: "se",
-        label: "Cancel",
+        label: copy.cancelButton ?? "Cancel",
         align: "left",
       },
       {
@@ -137,15 +140,15 @@ export const createSpriteBlurForm = ({ submitLabel = "Add Blur" } = {}) => ({
   },
 });
 
-export const getSpriteBlurSummary = (blur) => {
+export const getSpriteBlurSummary = (blur, copy = {}) => {
   if (!isSpriteBlurValue(blur)) {
-    return "No blur";
+    return copy.noBlurSummary ?? "No blur";
   }
 
   const normalizedBlur = normalizeSpriteBlur(blur);
   const edgeLabel = normalizedBlur.repeatEdgePixels
-    ? "repeat edge"
-    : "no repeat edge";
+    ? (copy.repeatEdgeSummary ?? "repeat edge")
+    : (copy.noRepeatEdgeSummary ?? "no repeat edge");
 
-  return `X ${normalizedBlur.x}, Y ${normalizedBlur.y}, quality ${normalizedBlur.quality}, kernel ${normalizedBlur.kernelSize}, ${edgeLabel}`;
+  return `X ${normalizedBlur.x}, Y ${normalizedBlur.y}, ${copy.qualitySummaryLabel ?? "quality"} ${normalizedBlur.quality}, ${copy.kernelSummaryLabel ?? "kernel"} ${normalizedBlur.kernelSize}, ${edgeLabel}`;
 };

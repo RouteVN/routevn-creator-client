@@ -178,9 +178,9 @@ template:
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
-                          - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-zoom-controls zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupTransformsView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-initial-item-count=0 progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :emptyMessage=${emptyMessage} :addText=${addText} canImport importText="Import" :itemContextMenuItems=${centerItemContextMenuItems}': null
+                          - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-zoom-controls zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupTransformsView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :emptyMessage=${emptyMessage} :addText=${addText} canImport :importText=${importButton} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
-                      - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupTransformsView.itemsPerRow" search-in-filter-popover progressive-render progressive-initial-item-count=0 progressive-hydration-delay-frame-count=4 :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} show-tag-filter :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :emptyMessage=${emptyMessage} :addText=${addText} canImport importText="Import" :itemContextMenuItems=${centerItemContextMenuItems}': null
+                      - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupTransformsView.itemsPerRow" search-in-filter-popover progressive-render progressive-hydration-delay-frame-count=4 :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} show-tag-filter :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :emptyMessage=${emptyMessage} :addText=${addText} canImport :importText=${importButton} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":
@@ -198,17 +198,17 @@ template:
                                                 $else:
                                                   - rtgl-view w=f h=f av=c ah=c bgc=bg:
                                                       - rtgl-view d=v av=c ah=c g=xs ph=sm:
-                                                          - rtgl-text s=xs c=mu-fg: No preview image
-                                                          - rtgl-text s=xs c=mu-fg: Update to set preview
+                                                          - rtgl-text s=xs c=mu-fg: ${noPreviewImageLabel}
+                                                          - rtgl-text s=xs c=mu-fg: ${updateToSetPreviewLabel}
                                       - $if selectedItemId:
-                                          - rtgl-tag-select#detailTagSelect slot="transform-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                          - rtgl-tag-select#detailTagSelect slot="transform-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                                  - rtgl-text s=md c=mu-fg: No selection
+                                  - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
   - $if showMobileFileExplorer:
       - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
           - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
-              - rtgl-text w=1fg s=md: Files
+              - rtgl-text w=1fg s=md: ${filesLabel}
               - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
                   - rtgl-svg svg=x wh=20 c=mu-fg: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
@@ -220,12 +220,12 @@ template:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
-                  - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: Preview
-                  - rtgl-button#mobileDetailDuplicateButton w=1fg v=se: Duplicate
-                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: Delete
+                  - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: ${previewButton}
+                  - rtgl-button#mobileDetailDuplicateButton w=1fg v=se: ${duplicateButton}
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
-                      - rtgl-tag-select#detailTagSelect slot="transform-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                      - rtgl-tag-select#detailTagSelect slot="transform-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#importDialog ?open=${isImportDialogOpen} s=md:
@@ -244,11 +244,11 @@ template:
                             $else:
                               - rtgl-view w=f h=f av=c ah=c bgc=bg:
                                   - rtgl-view d=v av=c ah=c g=xs ph=sm:
-                                      - rtgl-text s=xs c=mu-fg: No preview image
-                                      - rtgl-text s=xs c=mu-fg: Update to set preview
+                                      - rtgl-text s=xs c=mu-fg: ${noPreviewImageLabel}
+                                      - rtgl-text s=xs c=mu-fg: ${updateToSetPreviewLabel}
                 $else:
                   - rtgl-view w=6fg lg-w=f d=v g=md:
-                      - rtgl-text: Preview
+                      - rtgl-text: ${previewLabel}
                       - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
                           - rtgl-view pos=abs cor=full:
                               - 'div#canvas style="width: 100%; height: 100%; display: flex; background: #000;"': null
@@ -264,11 +264,11 @@ template:
                                                       - rvn-file-image w=f h=f fileId=${item.image.previewFileId}: null
                                                 $else:
                                                   - rtgl-view w=f h=90 br=md bw=xs bc=bo av=c ah=c:
-                                                      - rtgl-text s=xs c=mu-fg: No preview
+                                                      - rtgl-text s=xs c=mu-fg: ${noPreviewLabel}
                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.image.name}
                                     $else:
                                       - 'rtgl-view#transformPreviewImageButton${i} data-target=${item.target} w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
-                                          - rtgl-text c=mu-fg s=sm: Select image
+                                          - rtgl-text c=mu-fg s=sm: ${selectImageLabel}
   - rtgl-dropdown-menu#transformPreviewImageMenu :items=${previewImageMenu.items} ?open=${previewImageMenu.isOpen} x=${previewImageMenu.x} y=${previewImageMenu.y}: null
   - rtgl-dialog#transformPreviewImageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
       - $if imageSelectorDialog.open:
@@ -279,8 +279,8 @@ template:
                   - 'rtgl-view#transformPreviewImageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
                       - rvn-image-selector#transformPreviewImageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelTransformPreviewImageSelection variant=se: Cancel
-                  - rtgl-button#confirmTransformPreviewImageSelection variant=pr: OK
+                  - rtgl-button#cancelTransformPreviewImageSelection variant=se: ${cancelButton}
+                  - rtgl-button#confirmTransformPreviewImageSelection variant=pr: ${confirmButton}
   - $when: fullImagePreviewVisible
     'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: pointer; outline: none;"':
       - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null

@@ -24,6 +24,10 @@ import {
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import {
+  localizeSceneEditorForm,
+  selectSceneEditorCopy,
+} from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
@@ -39,6 +43,38 @@ const MOBILE_KEYBOARD_TOOLBAR_HEIGHT_PX = 48;
 const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 const MOBILE_PREVIEW_VERTICAL_PADDING_PX = 16;
 const MOBILE_PREVIEW_MIN_HEIGHT_PX = 72;
+
+const SCENE_EDITOR_DROPDOWN_COPY_KEYS = Object.freeze({
+  "Add section above": "addSectionAboveMenuItem",
+  "Add section below": "addSectionBelowMenuItem",
+  "Move up": "moveUpMenuItem",
+  "Move down": "moveDownMenuItem",
+  Edit: "editMenuItem",
+  Duplicate: "duplicateMenuItem",
+  "Move to scene": "moveToSceneMenuItem",
+  Delete: "deleteMenuItem",
+});
+
+const createSceneEditorFontSizeOptions = (copy = {}) => [
+  { value: "xs", label: copy.fontSizeExtraSmall ?? "Extra Small" },
+  { value: "sm", label: copy.fontSizeSmall ?? "Small" },
+  { value: "md", label: copy.fontSizeMedium ?? "Medium" },
+  { value: "lg", label: copy.fontSizeLarge ?? "Large" },
+  { value: "xl", label: copy.fontSizeExtraLarge ?? "Extra Large" },
+];
+
+const localizeDropdownMenu = (dropdownMenu = {}, copy = {}) => {
+  return {
+    ...dropdownMenu,
+    items: (dropdownMenu.items ?? []).map((item) => {
+      const copyKey = SCENE_EDITOR_DROPDOWN_COPY_KEYS[item.label];
+      return {
+        ...item,
+        label: copyKey ? (copy[copyKey] ?? item.label) : item.label,
+      };
+    }),
+  };
+};
 
 const normalizeSceneEditorFontSize = (fontSize) =>
   SCENE_EDITOR_FONT_SIZE_OPTIONS.some((option) => option.value === fontSize)
@@ -1654,11 +1690,12 @@ const selectBackgroundTransformEditorViewData = ({ state }) => {
   };
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectSceneEditorCopy(i18n);
   const scene = selectScene({ state });
   if (!scene) {
     return {
-      scene: { id: "", name: "Scene", sections: [] },
+      scene: { id: "", name: copy.sceneLabel ?? "Scene", sections: [] },
       sections: [],
       sectionsOverviewOpen: false,
       sectionsOverviewItems: [],
@@ -1670,7 +1707,7 @@ export const selectViewData = ({ state }) => {
       currentLine: null,
       actionsData: [],
       presentationState: selectEffectivePresentationState({ state }),
-      dropdownMenu: state.dropdownMenu,
+      dropdownMenu: localizeDropdownMenu(state.dropdownMenu, copy),
       popover: state.popover,
       selectedLineId: state.selectedLineId,
       sectionsGraphView: state.sectionsGraphView,
@@ -1716,6 +1753,11 @@ export const selectViewData = ({ state }) => {
         state,
       }),
       isTouchMode: state.isTouchMode,
+      loadingAssetsLabel: copy.loadingAssetsLabel ?? "Loading assets...",
+      loadingSceneLabel: copy.loadingSceneLabel ?? "Loading scene...",
+      previewButton: copy.previewButton ?? "Preview",
+      sectionsTitle: copy.sectionsLabel ?? "Sections",
+      stateTitle: copy.stateTitle ?? "State",
     };
   }
 
@@ -1753,7 +1795,12 @@ export const selectViewData = ({ state }) => {
   });
   const sectionsOverviewItems = scene.sections.map((section, index) => ({
     id: section.id,
-    name: section.name || `Section ${index + 1}`,
+    name:
+      section.name ||
+      (copy.sectionFallback ?? "Section {index}").replaceAll(
+        "{index}",
+        String(index + 1),
+      ),
     isSelected: section.id === state.selectedSectionId,
     rowBgc: "mu",
     rowBc: "mu",
@@ -1794,6 +1841,7 @@ export const selectViewData = ({ state }) => {
           },
         }
       : { fields: [], actions: { buttons: [] } };
+  const localizedSectionForm = localizeSceneEditorForm(sectionForm, copy);
 
   // Get current section for lines/actions panel
   const currentSection = scene.sections.find(
@@ -1824,7 +1872,12 @@ export const selectViewData = ({ state }) => {
     return {
       ...section,
       index,
-      name: section.name || `Section ${index + 1}`,
+      name:
+        section.name ||
+        (copy.sectionFallback ?? "Section {index}").replaceAll(
+          "{index}",
+          String(index + 1),
+        ),
       isSelected: section.id === state.selectedSectionId,
       selectionActive: section.id === state.selectedSectionId,
       selectedLineId:
@@ -1928,7 +1981,7 @@ export const selectViewData = ({ state }) => {
         label: "Text size",
         required: true,
         clearable: false,
-        options: SCENE_EDITOR_FONT_SIZE_OPTIONS,
+        options: createSceneEditorFontSizeOptions(copy),
       },
       {
         name: "isMuted",
@@ -1970,9 +2023,9 @@ export const selectViewData = ({ state }) => {
     textStyles,
     mentionTargets,
     documentLineDecorations,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: localizeDropdownMenu(state.dropdownMenu, copy),
     popover: state.popover,
-    form: sectionForm,
+    form: localizedSectionForm,
     selectedLineId: state.selectedLineId,
     selectedLine,
     selectedLineActions: toPlainObject(selectedLine?.actions),
@@ -2007,13 +2060,13 @@ export const selectViewData = ({ state }) => {
     presentationState: selectEffectivePresentationState({ state }),
     sectionLineChanges: state.sectionLineChanges,
     sectionCreateDialog: state.sectionCreateDialog,
-    sectionCreateForm,
+    sectionCreateForm: localizeSceneEditorForm(sectionCreateForm, copy),
     sectionMoveSceneDialog: state.sectionMoveSceneDialog,
-    sectionMoveSceneForm,
+    sectionMoveSceneForm: localizeSceneEditorForm(sectionMoveSceneForm, copy),
     sceneSettings: state.sceneSettings,
     linesEditorKey: `document-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
     sceneSettingsDialog: state.sceneSettingsDialog,
-    sceneSettingsForm,
+    sceneSettingsForm: localizeSceneEditorForm(sceneSettingsForm, copy),
     isScenePageLoading: state.isScenePageLoading,
     isSceneAssetLoading: state.isSceneAssetLoading,
     deadEndTooltip: state.deadEndTooltip,
@@ -2021,6 +2074,11 @@ export const selectViewData = ({ state }) => {
       state,
     }),
     isTouchMode: state.isTouchMode,
+    loadingAssetsLabel: copy.loadingAssetsLabel ?? "Loading assets...",
+    loadingSceneLabel: copy.loadingSceneLabel ?? "Loading scene...",
+    previewButton: copy.previewButton ?? "Preview",
+    sectionsTitle: copy.sectionsLabel ?? "Sections",
+    stateTitle: copy.stateTitle ?? "State",
   };
 };
 

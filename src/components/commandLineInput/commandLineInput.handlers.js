@@ -1,3 +1,8 @@
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
 const EMPTY_COLLECTION = {
   items: {},
   tree: [],
@@ -147,12 +152,16 @@ export const handleCancelFieldEditClick = (deps, payload = {}) => {
 
 export const handleSaveFieldEditClick = (deps, payload = {}) => {
   payload._event?.stopPropagation?.();
-  const { appService, render, store } = deps;
+  const { appService, i18n, render, store } = deps;
+  const copy = selectCommandLineCopy(i18n);
 
   if (!store.selectCanSaveEditField()) {
     appService.showAlert({
-      message: "Choose a string variable for this input field.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Choose a string variable for this input field.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }
@@ -164,30 +173,37 @@ export const handleSaveFieldEditClick = (deps, payload = {}) => {
 
 export const handleSubmitClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
-  const { appService, dispatchEvent, store } = deps;
+  const { appService, dispatchEvent, i18n, store } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const resourceId = store.selectSelectedResourceId();
   const fieldRows = store.selectFieldRows();
 
   if (!resourceId) {
     appService.showAlert({
-      message: "Please select an input layout.",
-      title: "Warning",
+      message: localizeCommandLineText("Please select an input layout.", copy),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }
 
   if (fieldRows.length === 0) {
     appService.showAlert({
-      message: "The selected input layout does not contain input fields.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "The selected input layout does not contain input fields.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }
 
   if (fieldRows.some((row) => !row.variableId)) {
     appService.showAlert({
-      message: "Map every input field to a string variable.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Map every input field to a string variable.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }

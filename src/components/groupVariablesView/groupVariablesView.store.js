@@ -19,6 +19,7 @@ import {
   toggleTagFilterPopoverTagId,
 } from "../../internal/ui/tagFilterPopover.js";
 import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { selectI18nCopy } from "../../internal/ui/i18nCopy.js";
 
 const DEFAULT_FORM_VALUES = {
   name: "",
@@ -35,6 +36,9 @@ const DEFAULT_ENUM_VALUE_FORM_VALUES = {
   value: "",
 };
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
+
+const selectGroupVariablesViewCopy = (i18n = {}) =>
+  selectI18nCopy(i18n, ["resourcePages", "variablesPage"]);
 
 const getScopeLabel = (scope, copy = {}) => {
   if (scope === "device") {
@@ -450,8 +454,8 @@ const parseNonNegativeIntegerProp = (value, fallback) => {
   return Math.round(numericValue);
 };
 
-export const selectViewData = ({ state, props }) => {
-  const copy = props.copy ?? {};
+export const selectViewData = ({ state, props, i18n }) => {
+  const copy = selectGroupVariablesViewCopy(i18n);
   const readonly = props.readonly === true;
   const rawSearchQuery = state.searchQuery ?? "";
   const searchQuery = rawSearchQuery.toLowerCase();

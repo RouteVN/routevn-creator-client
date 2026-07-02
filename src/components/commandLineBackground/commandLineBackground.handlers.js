@@ -3,6 +3,10 @@ import {
   BACKGROUND_TRANSFORM_FIELDS,
   createBackgroundWithInlineTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const createEmptyCollection = () => ({
   items: {},
@@ -450,13 +454,20 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleBackgroundImageRightClick = async (deps, payload) => {
-  const { store, render, appService } = deps;
+  const { store, render, appService, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const { _event: event } = payload;
   event.preventDefault();
   event.stopPropagation();
 
   const result = await appService.showDropdownMenu({
-    items: [{ type: "item", label: "Remove", key: "remove" }],
+    items: [
+      {
+        type: "item",
+        label: localizeCommandLineText("Remove", copy),
+        key: "remove",
+      },
+    ],
     x: event.clientX,
     y: event.clientY,
     place: "bs",

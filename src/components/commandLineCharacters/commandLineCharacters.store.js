@@ -25,6 +25,14 @@ import {
   normalizeBackgroundTransformEditorTransform,
   removeInlineTransformFields,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineDropdownMenu,
+  localizeCommandLineForm,
+  localizeCommandLineOptions,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const createEmptyCollection = () => ({
   items: {},
@@ -220,6 +228,7 @@ const buildSpriteGroupBoxViewData = ({
   spriteSelectionGroups,
   selectedSpriteIdsByGroup,
   spritesCollection,
+  copy,
 } = {}) => {
   const spriteItemsById = Object.fromEntries(
     toFlatItems(spritesCollection ?? createEmptyCollection())
@@ -239,7 +248,8 @@ const buildSpriteGroupBoxViewData = ({
         id: spriteSelectionGroup.id,
         name: spriteSelectionGroup.name,
         selectedSpriteId,
-        selectedSpriteName: selectedSprite?.name ?? "No sprite",
+        selectedSpriteName:
+          selectedSprite?.name ?? localizeCommandLineText("No sprite", copy),
         hasSelection: !!selectedSpriteId,
         backgroundColor: selectedSpriteId ? "mu" : "bg",
       };
@@ -964,7 +974,7 @@ export const setExistingCharacters = ({ state }, { characters } = {}) => {
   );
 };
 
-export const selectCharactersWithRepositoryData = ({ state }) => {
+export const selectCharactersWithRepositoryData = ({ state, copy }) => {
   if (!state.selectedCharacters || !Array.isArray(state.selectedCharacters)) {
     return [];
   }
@@ -1000,6 +1010,7 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
       spriteSelectionGroups,
       selectedSpriteIdsByGroup,
       spritesCollection: characterData?.sprites,
+      copy,
     });
 
     if (!characterData) {
@@ -1065,7 +1076,8 @@ const form = {
   ],
 };
 
-export const selectViewData = ({ state, props = {} }) => {
+export const selectViewData = ({ state, props = {}, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
   const matchesSearch = (item) => {
     if (!searchQuery) {
@@ -1085,6 +1097,10 @@ export const selectViewData = ({ state, props = {} }) => {
     itemViewMapper = (item) => item,
     hideEmptyGroups = false,
   } = {}) => {
+    const ungroupedGroupLabel = localizeCommandLineText(
+      UNGROUPED_GROUP_LABEL,
+      copy,
+    );
     const allItems = toFlatItems(collection);
     const filterVisibleItem = (item) => itemFilter(item) && matchesSearch(item);
     const rootChildren = allItems.filter(
@@ -1137,8 +1153,8 @@ export const selectViewData = ({ state, props = {} }) => {
       explorerItems.unshift({
         id: syntheticRootId,
         type: "folder",
-        name: UNGROUPED_GROUP_LABEL,
-        fullLabel: UNGROUPED_GROUP_LABEL,
+        name: ungroupedGroupLabel,
+        fullLabel: ungroupedGroupLabel,
         _level: 0,
         parentId: null,
         hasChildren: true,
@@ -1149,8 +1165,8 @@ export const selectViewData = ({ state, props = {} }) => {
       groups.unshift({
         id: syntheticRootId,
         type: "folder",
-        name: UNGROUPED_GROUP_LABEL,
-        fullLabel: UNGROUPED_GROUP_LABEL,
+        name: ungroupedGroupLabel,
+        fullLabel: ungroupedGroupLabel,
         _level: 0,
         parentId: null,
         hasChildren: true,
@@ -1192,14 +1208,22 @@ export const selectViewData = ({ state, props = {} }) => {
     value: item.id,
     label: item.name,
     suffixText:
-      getAnimationType(item) === "transition" ? "Transition" : "Update",
+      getAnimationType(item) === "transition"
+        ? localizeCommandLineText("Transition", copy)
+        : localizeCommandLineText("Update", copy),
   }));
 
   // Get enriched character data
-  const enrichedCharacters = selectCharactersWithRepositoryData({ state });
+  const enrichedCharacters = selectCharactersWithRepositoryData({
+    state,
+    copy,
+  });
   const processedSelectedCharacters = enrichedCharacters.map((character) => ({
     ...character,
-    displayName: character.name || "Unnamed Character",
+    displayName:
+      character.name === "Unknown Character"
+        ? localizeCommandLineText("Unknown Character", copy)
+        : character.name || localizeCommandLineText("Unnamed Character", copy),
     animationMode:
       character.animationMode ??
       getAnimationModeById(
@@ -1250,7 +1274,8 @@ export const selectViewData = ({ state, props = {} }) => {
       state.tempSelectedSpriteIds?.[selectedSpriteGroupId];
 
     if (enrichedSelectedChar && enrichedSelectedChar.sprites) {
-      selectedCharacterName = enrichedSelectedChar.name || "Character";
+      selectedCharacterName =
+        enrichedSelectedChar.name || localizeCommandLineText("Character", copy);
       const spriteTreeData = buildSelectableTreeData({
         collection: enrichedSelectedChar.sprites,
         selectedItemId: selectedSpriteId,
@@ -1294,7 +1319,8 @@ export const selectViewData = ({ state, props = {} }) => {
     });
     breadcrumb.push({
       id: "character-select",
-      label: selectedCharacterName || "Character",
+      label:
+        selectedCharacterName || localizeCommandLineText("Character", copy),
       click: true,
     });
     breadcrumb.push({
@@ -1315,7 +1341,12 @@ export const selectViewData = ({ state, props = {} }) => {
         char.transformId ||
         (transformOptions.length > 0 ? transformOptions[0].value : undefined),
       customTransform: hasInlineTransform(char),
-      customTransformDetails: createCustomTransformDetails(char),
+      customTransformDetails: createCustomTransformDetails(char).map(
+        (item) => ({
+          ...item,
+          label: localizeCommandLineText(item.label, copy),
+        }),
+      ),
       animationId: char.animations?.resourceId,
       opacity: char.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
       blurEnabled: Boolean(char.blur),
@@ -1330,10 +1361,22 @@ export const selectViewData = ({ state, props = {} }) => {
     characters: characterControls.slice().reverse(),
     transformOptions,
     animationOptions,
-    transformModeOptions: TRANSFORM_MODE_OPTIONS,
-    blurToggleOptions: COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
-    blurKernelSizeOptions: COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
-    blurRepeatEdgeOptions: COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
+    transformModeOptions: localizeCommandLineOptions(
+      TRANSFORM_MODE_OPTIONS,
+      copy,
+    ),
+    blurToggleOptions: localizeCommandLineOptions(
+      COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
+      copy,
+    ),
+    blurKernelSizeOptions: localizeCommandLineOptions(
+      COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
+      copy,
+    ),
+    blurRepeatEdgeOptions: localizeCommandLineOptions(
+      COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
+      copy,
+    ),
   };
 
   return {
@@ -1351,7 +1394,7 @@ export const selectViewData = ({ state, props = {} }) => {
     selectedSpriteGroupName,
     selectedCharacterName,
     searchQuery: state.searchQuery,
-    searchPlaceholder: "Search...",
+    searchPlaceholder: localizeCommandLineText("Search...", copy),
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewKind: state.fullImagePreviewKind,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
@@ -1362,9 +1405,34 @@ export const selectViewData = ({ state, props = {} }) => {
       state,
       props,
     }),
-    breadcrumb,
-    form,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
+    form: localizeCommandLineForm(form, copy),
     defaultValues,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
+    noAvatarLabel: localizeCommandLineText("No Avatar", copy),
+    noPreviewLabel: localizeCommandLineText("No preview", copy),
+    noSpriteLabel: localizeCommandLineText("No Sprite", copy),
+    transformLabel: localizeCommandLineText("Transform", copy),
+    editButtonLabel: localizeCommandLineText("Edit", copy),
+    predefinedTransformLabel: localizeCommandLineText(
+      "Predefined Transform",
+      copy,
+    ),
+    opacityLabel: localizeCommandLineText("Opacity", copy),
+    blurLabel: localizeCommandLineText("Blur", copy),
+    qualityLabel: localizeCommandLineText("Quality", copy),
+    kernelLabel: localizeCommandLineText("Kernel", copy),
+    repeatEdgeLabel: localizeCommandLineText("Repeat Edge", copy),
+    animationLabel: localizeCommandLineText("Animation", copy),
+    selectAnimationPlaceholder: localizeCommandLineText(
+      "Select animation",
+      copy,
+    ),
+    spriteGroupsLabel: localizeCommandLineText("Sprite Groups", copy),
+    addCharacterButtonLabel: localizeCommandLineText("+ Add Character", copy),
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
+    selectButtonLabel: localizeCommandLineText("Select", copy),
+    transformEditorTitle: localizeCommandLineText("Transform", copy),
+    doneButtonLabel: localizeCommandLineText("Done", copy),
   };
 };

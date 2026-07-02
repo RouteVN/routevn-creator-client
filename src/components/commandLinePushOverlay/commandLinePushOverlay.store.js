@@ -1,4 +1,9 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const form = {
   fields: [
@@ -41,7 +46,8 @@ export const setFormValues = ({ state }, payload = {}) => {
   state.formValues = payload;
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const layouts = toFlatItems(state.layouts);
   const allLayouts = layouts.filter((item) => item.type === "layout");
 
@@ -60,8 +66,8 @@ export const selectViewData = ({ state }) => {
   return {
     initiated: state.initiated,
     mode: state.mode,
-    breadcrumb,
-    form,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
+    form: localizeCommandLineForm(form, copy),
     context,
     defaultValues: state.formValues,
   };

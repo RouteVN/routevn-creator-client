@@ -1,7 +1,3 @@
-const INHERIT_TO_CHILDREN_OPTIONS = [
-  { label: "Disabled", value: false },
-  { label: "Enabled", value: true },
-];
 const CHILD_INTERACTION_ITEMS = [
   { label: "Hover", key: "hover", name: "hover.inheritToChildren" },
   { label: "Click", key: "click", name: "click.inheritToChildren" },
@@ -22,17 +18,33 @@ const isChildInteractionEnabled = (values = {}, key) => {
   return values?.[key]?.inheritToChildren === true;
 };
 
-export const getChildInteractionSummary = (values = {}) => {
+const createInheritToChildrenOptions = (copy = {}) => [
+  { label: copy.disabledOption ?? "Disabled", value: false },
+  { label: copy.enabledOption ?? "Enabled", value: true },
+];
+
+const getChildInteractionItemLabel = (item, copy = {}) => {
+  const key = {
+    hover: "hoverLabel",
+    click: "clickLabel",
+    rightClick: "rightClickLabel",
+    scrollUp: "scrollUpLabel",
+    scrollDown: "scrollDownLabel",
+  }[item.key];
+  return key ? (copy[key] ?? item.label) : item.label;
+};
+
+export const getChildInteractionSummary = (values = {}, copy = {}) => {
   const labels = [];
 
   CHILD_INTERACTION_ITEMS.forEach((item) => {
     if (isChildInteractionEnabled(values, item.key)) {
-      labels.push(item.label);
+      labels.push(getChildInteractionItemLabel(item, copy));
     }
   });
 
   if (labels.length === 0) {
-    return "None";
+    return copy.noneOption ?? "None";
   }
 
   return labels.join(", ");
@@ -44,16 +56,22 @@ export const hasChildInteractionInheritance = (values = {}) => {
   );
 };
 
-export const getChildInteractionItems = (values = {}) => {
+export const getChildInteractionItems = (values = {}, copy = {}) => {
   return CHILD_INTERACTION_ITEMS.filter((item) =>
     isChildInteractionEnabled(values, item.key),
-  );
+  ).map((item) => ({
+    ...item,
+    label: getChildInteractionItemLabel(item, copy),
+  }));
 };
 
-export const getAvailableChildInteractionItems = (values = {}) => {
+export const getAvailableChildInteractionItems = (values = {}, copy = {}) => {
   return CHILD_INTERACTION_ITEMS.filter(
     (item) => !isChildInteractionEnabled(values, item.key),
-  );
+  ).map((item) => ({
+    ...item,
+    label: getChildInteractionItemLabel(item, copy),
+  }));
 };
 
 export const createChildInteractionDialogDefaults = (values = {}) => {
@@ -76,49 +94,50 @@ export const createChildInteractionDialogDefaults = (values = {}) => {
   };
 };
 
-export const createChildInteractionForm = () => {
+export const createChildInteractionForm = (copy = {}) => {
+  const options = createInheritToChildrenOptions(copy);
   return {
-    title: "Child Interaction",
+    title: copy.childInteractionTitle ?? "Child Interaction",
     fields: [
       {
         name: "hover.inheritToChildren",
         type: "segmented-control",
-        label: "Hover",
+        label: copy.hoverLabel ?? "Hover",
         required: true,
         clearable: false,
-        options: INHERIT_TO_CHILDREN_OPTIONS,
+        options,
       },
       {
         name: "click.inheritToChildren",
         type: "segmented-control",
-        label: "Click",
+        label: copy.clickLabel ?? "Click",
         required: true,
         clearable: false,
-        options: INHERIT_TO_CHILDREN_OPTIONS,
+        options,
       },
       {
         name: "rightClick.inheritToChildren",
         type: "segmented-control",
-        label: "Right Click",
+        label: copy.rightClickLabel ?? "Right Click",
         required: true,
         clearable: false,
-        options: INHERIT_TO_CHILDREN_OPTIONS,
+        options,
       },
       {
         name: "scrollUp.inheritToChildren",
         type: "segmented-control",
-        label: "Scroll Up",
+        label: copy.scrollUpLabel ?? "Scroll Up",
         required: true,
         clearable: false,
-        options: INHERIT_TO_CHILDREN_OPTIONS,
+        options,
       },
       {
         name: "scrollDown.inheritToChildren",
         type: "segmented-control",
-        label: "Scroll Down",
+        label: copy.scrollDownLabel ?? "Scroll Down",
         required: true,
         clearable: false,
-        options: INHERIT_TO_CHILDREN_OPTIONS,
+        options,
       },
     ],
     actions: {
@@ -127,12 +146,12 @@ export const createChildInteractionForm = () => {
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton ?? "Cancel",
         },
         {
           id: "submit",
           variant: "pr",
-          label: "Save",
+          label: copy.saveButton ?? "Save",
         },
       ],
     },

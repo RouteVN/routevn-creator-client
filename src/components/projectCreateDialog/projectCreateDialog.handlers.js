@@ -18,6 +18,14 @@ const propsChanged = (oldProps = {}, newProps = {}) => {
   );
 };
 
+const selectCopy = (i18n = {}) => {
+  if (!i18n.projectsPage) {
+    throw new Error("projectsPage i18n catalog is required.");
+  }
+
+  return i18n.projectsPage;
+};
+
 const revokeIconPreviewUrl = ({ store } = {}) => {
   const previewUrl = store.selectIconPreviewUrl();
   if (!previewUrl) {
@@ -59,7 +67,8 @@ export const handleOnUpdate = (deps, payload = {}) => {
 };
 
 export const handleBrowseButtonClick = async (deps) => {
-  const { appService, store, render } = deps;
+  const { appService, i18n, store, render } = deps;
+  const copy = selectCopy(i18n);
 
   if (store.selectPlatform() === "web") {
     return;
@@ -67,7 +76,7 @@ export const handleBrowseButtonClick = async (deps) => {
 
   try {
     const selectedPath = await appService.openFolderPicker({
-      title: "Select Project Location",
+      title: copy.selectProjectLocationTitle,
     });
 
     if (!selectedPath) {
@@ -79,7 +88,7 @@ export const handleBrowseButtonClick = async (deps) => {
     });
     render();
   } catch {
-    appService.showAlert({ message: "Failed to select project location." });
+    appService.showAlert({ message: copy.failedSelectProjectLocation });
   }
 };
 
@@ -111,7 +120,8 @@ export const handleFormChange = (deps, payload) => {
 };
 
 export const handleProjectIconClick = async (deps) => {
-  const { appService, store, render } = deps;
+  const { appService, i18n, store, render } = deps;
+  const copy = selectCopy(i18n);
   let file;
 
   try {
@@ -121,7 +131,7 @@ export const handleProjectIconClick = async (deps) => {
       validations: ICON_VALIDATIONS,
     });
   } catch {
-    appService.showAlert({ message: "Failed to select project icon." });
+    appService.showAlert({ message: copy.failedSelectProjectIcon });
     return;
   }
 
@@ -144,12 +154,13 @@ export const handleIconCropDialogClose = (deps) => {
 };
 
 export const handleIconCropDialogConfirm = async (deps) => {
-  const { appService, refs, render, store } = deps;
+  const { appService, i18n, refs, render, store } = deps;
+  const copy = selectCopy(i18n);
 
   try {
     const croppedFile = await refs.iconCropDialog?.getCroppedFile?.();
     if (!croppedFile) {
-      throw new Error("Project icon crop is not ready.");
+      throw new Error(copy.projectIconCropNotReady);
     }
 
     revokeIconPreviewUrl({ store });
@@ -161,7 +172,7 @@ export const handleIconCropDialogConfirm = async (deps) => {
     store.closeIconCropDialog();
     render();
   } catch {
-    appService.showAlert({ message: "Failed to crop project icon." });
+    appService.showAlert({ message: copy.failedCropProjectIcon });
   }
 };
 
@@ -198,11 +209,12 @@ export const handleKeyDown = (deps, payload) => {
 };
 
 export const handleValidate = (deps) => {
-  const { refs, render, store } = deps;
+  const { i18n, refs, render, store } = deps;
+  const copy = selectCopy(i18n);
   const formValidation = refs.createProjectForm?.validate?.() ?? {
     valid: false,
     errors: {
-      form: "Form is not ready.",
+      form: copy.createProjectDialogNotReady,
     },
   };
   const errors = {};
@@ -210,7 +222,7 @@ export const handleValidate = (deps) => {
   const customErrors = {};
 
   if (store.selectPlatform() === "tauri" && !store.selectProjectPath()) {
-    customErrors.projectPath = "Project location is required.";
+    customErrors.projectPath = copy.projectLocationRequiredAlert;
     errors.projectPath = customErrors.projectPath;
   }
 

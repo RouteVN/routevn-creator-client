@@ -19,10 +19,10 @@ const routesWithoutNavbar = ["/projects", "/authenticate"];
 const routesWithoutMobileTabBar = [];
 
 const mobileTabBarItems = [
-  { id: "assets", icon: "image", label: "Assets" },
-  { id: "scene-map", icon: "script", label: "Scene Map" },
-  { id: "release", icon: "rocket", label: "Release" },
-  { id: "settings", icon: "settings", label: "Settings" },
+  { id: "assets", icon: "image", labelKey: "assetsTab" },
+  { id: "scene-map", icon: "script", labelKey: "sceneMapTab" },
+  { id: "release", icon: "rocket", labelKey: "releaseTab" },
+  { id: "settings", icon: "settings", labelKey: "settingsTab" },
 ];
 
 const mobileTabIdByRoutePattern = {
@@ -139,8 +139,11 @@ const selectActiveMobileTabId = ({ state }) => {
   return selectRouteMobileTabId({ state });
 };
 
-const selectMobileTabBarItems = ({ state }) => {
+const selectAppCopy = (i18n = {}) => i18n.appPage ?? {};
+
+const selectMobileTabBarItems = ({ state, i18n }) => {
   const activeMobileTabId = selectActiveMobileTabId({ state });
+  const copy = selectAppCopy(i18n);
   return mobileTabBarItems.map((item) => {
     const color =
       item.id === activeMobileTabId
@@ -150,7 +153,7 @@ const selectMobileTabBarItems = ({ state }) => {
     return {
       id: item.id,
       icon: item.icon,
-      label: item.label,
+      label: copy[item.labelKey] ?? item.id,
       color,
     };
   });
@@ -235,7 +238,8 @@ const selectRepositoryLoadingProgressPercent = ({ state }) => {
   return Math.min(100, Math.max(0, Math.round((current / total) * 100)));
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectAppCopy(i18n);
   const showSidebar = selectShowSidebar({ state });
   const showMobileTabBar = selectShowMobileTabBar({ state });
   const repositoryLoadingProgressPercent =
@@ -244,14 +248,14 @@ export const selectViewData = ({ state }) => {
     });
   const hasRepositoryLoadingProgress =
     state.repositoryLoadingTotal > 0 && state.isRepositoryLoading;
-  const repositoryLoadingBaseText = "Loading project...";
+  const repositoryLoadingBaseText = copy.loadingProject ?? "Loading project...";
 
   return {
     ...state,
     currentRoutePattern: selectCurrentRoutePattern({ state }),
     showSidebar,
     showMobileTabBar,
-    mobileTabBarItems: selectMobileTabBarItems({ state }),
+    mobileTabBarItems: selectMobileTabBarItems({ state, i18n }),
     mobileSheetVariant: state.mobileSheetVariant ?? "assets",
     appShellDirection: showMobileTabBar ? "v" : "h",
     contentWidth: showSidebar ? `calc(100vw - ${SIDEBAR_WIDTH_PX}px)` : "100vw",

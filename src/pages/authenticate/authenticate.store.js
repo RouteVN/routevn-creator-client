@@ -1,16 +1,19 @@
-const createRequestOtpForm = () => ({
-  title: "Login",
+const selectAuthenticateCopy = (i18n = {}) => i18n.authenticatePage ?? {};
+
+const createRequestOtpForm = (copy = {}) => ({
+  title: copy.loginTitle ?? "Login",
   fields: [
     {
       name: "email",
       type: "input-text",
-      label: "Email",
+      label: copy.emailLabel ?? "Email",
       placeholder: "name@example.com",
       required: true,
       validations: [
         {
           rule: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-          message: "Please enter a valid email address",
+          message:
+            copy.validEmailMessage ?? "Please enter a valid email address",
         },
       ],
     },
@@ -20,7 +23,7 @@ const createRequestOtpForm = () => ({
       {
         id: "request-otp",
         variant: "pr",
-        label: "Request OTP",
+        label: copy.requestOtpButton ?? "Request OTP",
         type: "submit",
         validate: true,
       },
@@ -28,19 +31,19 @@ const createRequestOtpForm = () => ({
   },
 });
 
-const createVerifyOtpForm = () => ({
-  title: "Login",
+const createVerifyOtpForm = (copy = {}) => ({
+  title: copy.loginTitle ?? "Login",
   fields: [
     {
       name: "otp",
       type: "input-text",
-      label: "OTP",
-      placeholder: "Enter OTP",
+      label: copy.otpLabel ?? "OTP",
+      placeholder: copy.otpPlaceholder ?? "Enter OTP",
       required: true,
       validations: [
         {
           rule: /^.+$/,
-          message: "OTP is required",
+          message: copy.otpRequired ?? "OTP is required",
         },
       ],
     },
@@ -50,7 +53,7 @@ const createVerifyOtpForm = () => ({
       {
         id: "next",
         variant: "pr",
-        label: "Next",
+        label: copy.nextButton ?? "Next",
         type: "submit",
         validate: true,
       },
@@ -58,23 +61,25 @@ const createVerifyOtpForm = () => ({
   },
 });
 
-const createRegisterForm = () => ({
-  title: "Register",
+const createRegisterForm = (copy = {}) => ({
+  title: copy.registerTitle ?? "Register",
   fields: [
     {
       type: "read-only-text",
-      content: "Complete registration to continue.",
+      content:
+        copy.completeRegistrationMessage ??
+        "Complete registration to continue.",
     },
     {
       name: "acceptTerms",
       type: "checkbox",
-      content: "I accept Terms & Conditions",
+      content: copy.acceptTermsLabel ?? "I accept Terms & Conditions",
       required: true,
     },
     {
       name: "acceptPrivacy",
       type: "checkbox",
-      content: "I accept Privacy Policy",
+      content: copy.acceptPrivacyLabel ?? "I accept Privacy Policy",
       required: true,
     },
   ],
@@ -83,7 +88,7 @@ const createRegisterForm = () => ({
       {
         id: "register",
         variant: "pr",
-        label: "Register",
+        label: copy.registerButton ?? "Register",
         type: "submit",
       },
     ],
@@ -115,7 +120,8 @@ export const selectRegisterCode = ({ state }) => {
   return state.registerCode || "";
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectAuthenticateCopy(i18n);
   const isRequestOtpStep = state.step === "request-otp";
   const isOtpStep = state.step === "verify-otp";
   const isRegisterStep = state.step === "register";
@@ -126,9 +132,10 @@ export const selectViewData = ({ state }) => {
     isRequestOtpStep,
     isOtpStep,
     isRegisterStep,
-    requestOtpForm: createRequestOtpForm(),
-    verifyOtpForm: createVerifyOtpForm(),
-    registerForm: createRegisterForm(),
+    backButton: copy.backButton ?? "Back",
+    requestOtpForm: createRequestOtpForm(copy),
+    verifyOtpForm: createVerifyOtpForm(copy),
+    registerForm: createRegisterForm(copy),
     requestOtpDefaultValues: { email: state.requestedEmail || "" },
     verifyOtpDefaultValues: { otp: "" },
     registerDefaultValues: { acceptTerms: false, acceptPrivacy: false },

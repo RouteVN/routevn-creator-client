@@ -1,20 +1,20 @@
-const SAVE_LOAD_PAGINATION_MODE_OPTIONS = [
-  { label: "Continuous", value: "continuous" },
-  { label: "Paginated", value: "paginated" },
+const createSaveLoadPaginationModeOptions = (copy = {}) => [
+  { label: copy.continuousOption ?? "Continuous", value: "continuous" },
+  { label: copy.paginatedOption ?? "Paginated", value: "paginated" },
 ];
 
-export const getSaveLoadPaginationSummary = ({ values } = {}) => {
+export const getSaveLoadPaginationSummary = ({ values, copy = {} } = {}) => {
   const paginationMode = values?.paginationMode ?? "continuous";
 
   if (paginationMode !== "paginated") {
-    return "Continuous";
+    return copy.continuousOption ?? "Continuous";
   }
 
   const paginationSize = Number(values?.paginationSize);
   const resolvedPaginationSize =
     Number.isFinite(paginationSize) && paginationSize > 0 ? paginationSize : 0;
 
-  return `Paginated: runtime.saveLoadPagination • ${resolvedPaginationSize} per page`;
+  return `${copy.paginatedOption ?? "Paginated"}: runtime.saveLoadPagination • ${resolvedPaginationSize} ${copy.perPageLabel ?? "per page"}`;
 };
 
 export const createSaveLoadPaginationDialogDefaults = (values = {}) => {
@@ -29,23 +29,23 @@ export const createSaveLoadPaginationDialogDefaults = (values = {}) => {
   };
 };
 
-export const createSaveLoadPaginationForm = () => {
+export const createSaveLoadPaginationForm = ({ copy = {} } = {}) => {
   return {
-    title: "Pagination",
+    title: copy.paginationTitle ?? "Pagination",
     fields: [
       {
         name: "paginationMode",
         type: "select",
-        label: "Pagination",
+        label: copy.paginationLabel ?? "Pagination",
         required: true,
         clearable: false,
-        options: SAVE_LOAD_PAGINATION_MODE_OPTIONS,
+        options: createSaveLoadPaginationModeOptions(copy),
       },
       {
         $when: 'paginationMode == "paginated"',
         name: "paginationSize",
         type: "input-number",
-        label: "Pagination Number",
+        label: copy.paginationNumberLabel ?? "Pagination Number",
         required: true,
       },
     ],
@@ -55,12 +55,12 @@ export const createSaveLoadPaginationForm = () => {
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton ?? "Cancel",
         },
         {
           id: "submit",
           variant: "pr",
-          label: "Save",
+          label: copy.saveButton ?? "Save",
         },
       ],
     },

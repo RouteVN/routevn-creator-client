@@ -27,6 +27,17 @@ export const PARTICLE_PRESET_OPTIONS = PRESET_METADATA.map((preset) => ({
   value: preset.id,
 }));
 
+export const createParticlePresetOptions = (copy = {}) =>
+  PRESET_METADATA.map((preset) => {
+    const labelKey = `preset${preset.id.charAt(0).toUpperCase()}${preset.id.slice(1)}Label`;
+
+    return {
+      id: preset.id,
+      label: copy[labelKey] ?? preset.label,
+      value: preset.id,
+    };
+  });
+
 const resolveDimension = (value, fallback) => {
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue) || numericValue <= 0) {
@@ -85,10 +96,10 @@ const createParticle = ({
   modules,
 });
 
-const createSnowPreset = ({ width, height }) =>
+const createSnowPreset = ({ width, height, copy = {} }) =>
   createParticle({
-    name: "Snow",
-    description: "Soft full-screen snowfall.",
+    name: copy.presetSnowLabel ?? "Snow",
+    description: copy.presetSnowDescription ?? "Soft full-screen snowfall.",
     width,
     height,
     seed: 20260408,
@@ -144,10 +155,10 @@ const createSnowPreset = ({ width, height }) =>
     },
   });
 
-const createRainPreset = ({ width, height }) =>
+const createRainPreset = ({ width, height, copy = {} }) =>
   createParticle({
-    name: "Rain",
-    description: "Fast diagonal rainfall.",
+    name: copy.presetRainLabel ?? "Rain",
+    description: copy.presetRainDescription ?? "Fast diagonal rainfall.",
     width,
     height,
     seed: 20260409,
@@ -204,10 +215,12 @@ const createRainPreset = ({ width, height }) =>
     },
   });
 
-const createSparklePreset = ({ width, height }) =>
+const createSparklePreset = ({ width, height, copy = {} }) =>
   createParticle({
-    name: "Sparkle",
-    description: "Short twinkling sparkles across the frame.",
+    name: copy.presetSparkleLabel ?? "Sparkle",
+    description:
+      copy.presetSparkleDescription ??
+      "Short twinkling sparkles across the frame.",
     width,
     height,
     seed: 12345,
@@ -267,16 +280,17 @@ const createSparklePreset = ({ width, height }) =>
 export const createParticlePreset = ({
   presetId = DEFAULT_PARTICLE_PRESET_ID,
   projectResolution,
+  copy,
 } = {}) => {
   const { width, height } = resolveProjectSize(projectResolution);
 
   switch (presetId) {
     case "rain":
-      return createRainPreset({ width, height });
+      return createRainPreset({ width, height, copy });
     case "sparkle":
-      return createSparklePreset({ width, height });
+      return createSparklePreset({ width, height, copy });
     case "snow":
     default:
-      return createSnowPreset({ width, height });
+      return createSnowPreset({ width, height, copy });
   }
 };

@@ -1,5 +1,12 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineDropdownMenu,
+  localizeCommandLineForm,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const CHOICE_UPDATE_VARIABLE_ALLOWED_MODES = Object.freeze(["updateVariable"]);
 
@@ -392,7 +399,8 @@ const form = {
   ],
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const layouts = props?.layouts || [];
   const allScenes = toFlatItems(state.scenes).filter(
     (item) => item.type === "scene",
@@ -430,7 +438,9 @@ export const selectViewData = ({ state, props }) => {
   }));
 
   const editModeTitle =
-    (state?.editingIndex ?? -1) >= 0 ? "Edit Choice" : "Add New Choice";
+    (state?.editingIndex ?? -1) >= 0
+      ? localizeCommandLineText("Edit Choice", copy)
+      : localizeCommandLineText("Add New Choice", copy);
 
   let breadcrumb = [
     {
@@ -502,13 +512,13 @@ export const selectViewData = ({ state, props }) => {
     editFormContext,
     defaultValues,
     editModeTitle,
-    breadcrumb,
-    choiceFormTemplate: CHOICE_FORM_TEMPLATE,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
+    choiceFormTemplate: localizeCommandLineForm(CHOICE_FORM_TEMPLATE, copy),
     choiceUpdateVariableActions,
     choiceUpdateVariableAllowedModes: CHOICE_UPDATE_VARIABLE_ALLOWED_MODES,
-    form,
+    form: localizeCommandLineForm(form, copy),
     context,
-    dropdownMenu,
+    dropdownMenu: localizeCommandLineDropdownMenu(dropdownMenu, copy),
   };
 
   return viewData;

@@ -82,20 +82,21 @@ const createGroupViewData = (group, selectedSpritesheetValue, searchQuery) => {
   };
 };
 
-const createRootGroup = (spritesheets) => {
+const createRootGroup = (spritesheets, copy = {}) => {
   const rootChildren = toFlatItems(spritesheets).filter(
     (item) => item.type === "spritesheet" && !item.parentId,
   );
 
   return {
     id: ROOT_GROUP_ID,
-    fullLabel: "Spritesheets",
+    fullLabel: copy.spritesheetsLabel ?? "Spritesheets",
     type: "folder",
     children: rootChildren,
   };
 };
 
-export const selectViewData = ({ state, props = {} }) => {
+export const selectViewData = ({ state, props = {}, i18n }) => {
+  const copy = i18n?.resourcePages ?? {};
   const spritesheets = state.spritesheets ?? { items: {}, tree: [] };
   const selectedSpritesheetValue =
     props.selectedSpritesheetValue ?? state.selectedSpritesheetValue;
@@ -103,7 +104,10 @@ export const selectViewData = ({ state, props = {} }) => {
   const { resourceId, animationName } = parseSpritesheetAnimationSelectionValue(
     selectedSpritesheetValue,
   );
-  const groups = [createRootGroup(spritesheets), ...toFlatGroups(spritesheets)]
+  const groups = [
+    createRootGroup(spritesheets, copy),
+    ...toFlatGroups(spritesheets),
+  ]
     .map((group) =>
       createGroupViewData(group, selectedSpritesheetValue, searchQuery),
     )
@@ -115,5 +119,6 @@ export const selectViewData = ({ state, props = {} }) => {
     selectedSpritesheetValue,
     selectedResourceId: resourceId,
     selectedAnimationName: animationName,
+    noPreviewLabel: copy.noPreviewLabel ?? "No preview",
   };
 };

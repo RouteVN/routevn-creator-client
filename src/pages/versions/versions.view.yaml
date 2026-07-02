@@ -49,13 +49,13 @@ template:
                   - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
                       - rtgl-view w=f d=h av=c g=md wrap:
                           - rtgl-view av=c g=sm d=h w=1fg:
-                              - rtgl-text: Versions
-                          - rtgl-button#saveVersionBtn v=pr s=sm pre=plus: Add
+                              - rtgl-text: ${title}
+                          - rtgl-button#saveVersionBtn v=pr s=sm pre=plus: ${addButton}
                   - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
                       - $if versions.length == 0:
                           - rtgl-view w=f h=f av=c ah=c:
                               - rtgl-view d=v ah=c g=md:
-                                  - rtgl-text s=lg c=mu-fg: No versions
+                                  - rtgl-text s=lg c=mu-fg: ${noVersionsMessage}
                         $else:
                           - 'rtgl-view d=v g=md w=f ph=md pt=md pb=sm mb=lg style="min-width: 0;"':
                               - $for item, i in versions:
@@ -64,7 +64,7 @@ template:
                                           - rtgl-text s=lg: ${item.name}
                                           - $if item.description:
                                               - rtgl-text s=sm c=mu-fg: ${item.description}
-                                          - rtgl-text s=xs c=mu-fg: Action ${item.actionIndex} • ${item.formattedCreatedAt}
+                                          - rtgl-text s=xs c=mu-fg: ${item.actionSummary}
                               - rtgl-view w=f h=30vh: null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
@@ -75,10 +75,10 @@ template:
                                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                                   - rtgl-svg svg=edit wh=16: null
                               - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                                  - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: Export Web
+                                  - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                              - rtgl-text s=md c=mu-fg: No selection
+                              - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
   - $if showMobileDetailSheet:
       - rvn-mobile-sheet#mobileDetailSheet ?open=${showMobileDetailSheet}:
           - rtgl-view slot=content d=v w=f h=f:
@@ -87,7 +87,7 @@ template:
                   - rtgl-svg svg=edit wh=16: null
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
-                      - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: Export Web
+                      - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
   - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md:
       - rtgl-view slot=content w=f:
           - rtgl-form#versionForm :form=${versionForm} w=f: null

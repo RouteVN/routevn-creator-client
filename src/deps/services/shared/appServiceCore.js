@@ -58,16 +58,20 @@ export const createAppServiceCore = ({
   const userConfigService = createUserConfigService({
     db,
     onLoadError: () => {
+      const copy = appShellService.getAppCopy?.() ?? {};
       appShellService.showToast({
-        title: "Error",
-        message: "Failed to load app settings. Using defaults.",
+        title: copy.errorTitle ?? "Error",
+        message:
+          copy.failedLoadAppSettings ??
+          "Failed to load app settings. Using defaults.",
         status: "error",
       });
     },
     onPersistError: () => {
+      const copy = appShellService.getAppCopy?.() ?? {};
       appShellService.showToast({
-        title: "Error",
-        message: "Failed to save app settings.",
+        title: copy.errorTitle ?? "Error",
+        message: copy.failedSaveAppSettings ?? "Failed to save app settings.",
         status: "error",
       });
     },

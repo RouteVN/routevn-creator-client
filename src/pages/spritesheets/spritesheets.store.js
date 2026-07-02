@@ -18,6 +18,7 @@ import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   buildMobileResourcePageViewData,
   closeMobileResourceFileExplorerState,
@@ -29,6 +30,7 @@ import {
   setMobileResourceDetailSheetSuppressedState,
   setMobileResourcePageUiConfigState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { selectSpritesheetsPageCopy } from "./support/spritesheetsPageCopy.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 export const SPRITESHEET_TAG_SCOPE_KEY = "spritesheets";
@@ -38,13 +40,13 @@ const CREATE_TAG_DEFAULT_VALUES = Object.freeze({
   name: "",
 });
 
-const createTagForm = {
-  title: "Create Tag",
+const createTagForm = (copy = {}) => ({
+  title: copy.createTagTitle ?? "Create Tag",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Tag Name",
+      label: copy.tagNameLabel ?? "Tag Name",
       required: true,
     },
   ],
@@ -54,77 +56,105 @@ const createTagForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Create Tag",
+        label: copy.createTagButton ?? "Create Tag",
       },
     ],
   },
-};
+});
 
-const folderContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-child-folder" },
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createFolderContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-child-folder",
+  },
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const itemContextMenuItems = [
-  { label: "Rename", type: "item", value: "rename-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createItemContextMenuItems = (copy = {}) => [
+  {
+    label: copy.renameMenuItem ?? "Rename",
+    type: "item",
+    value: "rename-item",
+  },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const emptyContextMenuItems = [
-  { label: "New Folder", type: "item", value: "new-item" },
+const createEmptyContextMenuItems = (copy = {}) => [
+  {
+    label: copy.newFolderMenuItem ?? "New Folder",
+    type: "item",
+    value: "new-item",
+  },
 ];
 
-const centerItemContextMenuItems = [
-  { label: "Edit", type: "item", value: "edit-item" },
-  { label: "Delete", type: "item", value: "delete-item" },
+const createCenterItemContextMenuItems = (copy = {}) => [
+  { label: copy.editMenuItem ?? "Edit", type: "item", value: "edit-item" },
+  {
+    label: copy.deleteMenuItem ?? "Delete",
+    type: "item",
+    value: "delete-item",
+  },
 ];
 
-const dialogForm = {
-  title: "Spritesheet",
+const createDialogForm = (copy = {}, submitLabel = copy.saveButton) => ({
+  title: copy.spritesheetTitle ?? "Spritesheet",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel ?? "Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
       required: false,
     },
     {
       type: "slot",
       slot: "spritesheet-image-source",
-      label: "Image",
+      label: copy.imageLabel ?? "Image",
     },
     {
       type: "slot",
       slot: "spritesheet-atlas-source",
-      label: "Spritesheet JSON",
+      label: copy.spritesheetJsonLabel ?? "Spritesheet JSON",
     },
     {
       name: "tagIds",
       type: "tag-select",
-      label: "Tags",
-      placeholder: "Select tags",
+      label: copy.tagsLabel ?? "Tags",
+      placeholder: copy.selectTagsPlaceholder ?? "Select tags",
       addOption: {
-        label: "Add tag",
+        label: copy.addTagOption ?? "Add tag",
       },
       required: false,
     },
     {
       name: "width",
       type: "input-number",
-      label: "Default Width",
+      label: copy.defaultWidthLabel ?? "Default Width",
       required: false,
     },
     {
       name: "height",
       type: "input-number",
-      label: "Default Height",
+      label: copy.defaultHeightLabel ?? "Default Height",
       required: false,
     },
   ],
@@ -134,36 +164,25 @@ const dialogForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Save",
+        label: submitLabel ?? copy.saveButton ?? "Save",
       },
     ],
   },
-};
-
-const buildDialogForm = (submitLabel) => ({
-  ...dialogForm,
-  actions: {
-    ...dialogForm.actions,
-    buttons: dialogForm.actions.buttons.map((button) => ({
-      ...button,
-      label: button.id === "submit" ? submitLabel : button.label,
-    })),
-  },
 });
 
-const folderNameForm = {
-  title: "Edit Folder",
+const createFolderNameForm = (copy = {}) => ({
+  title: copy.editFolderTitle ?? "Edit Folder",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel ?? "Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
       required: false,
     },
   ],
@@ -173,20 +192,20 @@ const folderNameForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Save",
+        label: copy.saveButton ?? "Save",
         validate: true,
       },
     ],
   },
-};
+});
 
-const clipFpsForm = {
-  title: "Clip FPS",
+const createClipFpsForm = (copy = {}) => ({
+  title: copy.clipFpsTitle ?? "Clip FPS",
   fields: [
     {
       name: "fps",
       type: "input-number",
-      label: "FPS",
+      label: copy.fpsLabel ?? "FPS",
       min: 0.1,
       step: 1,
       required: true,
@@ -198,19 +217,24 @@ const clipFpsForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Update FPS",
+        label: copy.updateFpsButton ?? "Update FPS",
       },
     ],
   },
-};
-
-const buildClipFpsForm = (clipName) => ({
-  ...clipFpsForm,
-  title:
-    typeof clipName === "string" && clipName.length > 0
-      ? `Clip FPS: ${clipName}`
-      : clipFpsForm.title,
 });
+
+const buildClipFpsForm = (clipName, copy = {}) => {
+  const form = createClipFpsForm(copy);
+  return {
+    ...form,
+    title:
+      typeof clipName === "string" && clipName.length > 0
+        ? formatI18nCopy(copy.clipFpsTitleWithName ?? "Clip FPS: {clipName}", {
+            clipName,
+          })
+        : form.title,
+  };
+};
 
 const matchesSearch = matchesTagAwareSearch;
 
@@ -240,6 +264,7 @@ const buildClipOptions = (
   animations = {},
   selectedClipName,
   missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
+  copy = {},
 ) => {
   const clipOptions = Object.entries(animations ?? {}).map(
     ([name, animation]) => {
@@ -264,14 +289,23 @@ const buildClipOptions = (
     clipOptions: clipOptions.map((clip) => ({
       ...clip,
       isSelected: clip.name === fallbackSelectedClipName,
-      loopLabel: clip.loop ? "Loop" : "Once",
+      loopLabel: clip.loop
+        ? (copy.loopLabel ?? "Loop")
+        : (copy.onceLabel ?? "Once"),
+      summaryLabel: formatI18nCopy(
+        copy.clipSummaryTemplate ?? "{frameCount} frames • {fpsLabel} fps",
+        {
+          frameCount: String(clip.frameCount),
+          fpsLabel: clip.fpsLabel,
+        },
+      ),
       borderColor: clip.name === fallbackSelectedClipName ? "ac" : "bo",
       backgroundColor: clip.name === fallbackSelectedClipName ? "mu" : "bg",
     })),
   };
 };
 
-const buildDetailFields = (item) => {
+const buildDetailFields = (item, copy = {}) => {
   if (!item) {
     return [];
   }
@@ -291,26 +325,26 @@ const buildDetailFields = (item) => {
     {
       type: "slot",
       slot: "spritesheet-tags",
-      label: "Tags",
+      label: copy.tagsLabel ?? "Tags",
     },
     {
       type: "text",
-      label: "File Type",
+      label: copy.fileTypeLabel ?? "File Type",
       value: item.fileType ?? "",
     },
     {
       type: "text",
-      label: "File Size",
+      label: copy.fileSizeLabel ?? "File Size",
       value: formatFileSize(item.fileSize),
     },
     {
       type: "text",
-      label: "Default Size",
+      label: copy.defaultSizeLabel ?? "Default Size",
       value: item.width && item.height ? `${item.width} × ${item.height}` : "",
     },
     {
       type: "text",
-      label: "Sheet Size",
+      label: copy.sheetSizeLabel ?? "Sheet Size",
       value:
         resolveSheetWidth(item) && resolveSheetHeight(item)
           ? `${resolveSheetWidth(item)} × ${resolveSheetHeight(item)}`
@@ -318,12 +352,12 @@ const buildDetailFields = (item) => {
     },
     {
       type: "text",
-      label: "Frames",
+      label: copy.framesLabel ?? "Frames",
       value: String(resolveFrameCount(item) || ""),
     },
     {
       type: "text",
-      label: "Animations",
+      label: copy.animationsLabel ?? "Animations",
       value: String(animationCount || ""),
     },
     {
@@ -334,7 +368,7 @@ const buildDetailFields = (item) => {
   ];
 };
 
-const buildFolderDetailFields = (folder) => {
+const buildFolderDetailFields = (folder, copy = {}) => {
   if (!folder) {
     return [];
   }
@@ -342,8 +376,8 @@ const buildFolderDetailFields = (folder) => {
   return [
     {
       type: "text",
-      label: "Type",
-      value: "folder",
+      label: copy.typeLabel ?? "Type",
+      value: copy.folderTypeValue ?? "folder",
     },
     {
       type: "description",
@@ -825,7 +859,8 @@ export const selectDialogPreviewUrl = ({ state }) => state.dialogPreviewUrl;
 export const selectClipFpsDialogClipName = ({ state }) =>
   state.clipFpsDialogClipName;
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectSpritesheetsPageCopy(i18n);
   const flatItems = applyFolderRequiredRootDragOptions(toFlatItems(state.data));
   const activeTagIds = state.activeTagIds ?? [];
   const mediaGroups = buildMediaGroups(state)
@@ -847,6 +882,7 @@ export const selectViewData = ({ state }) => {
     selectedItem?.animations,
     state.detailSelectedClipName,
     INITIAL_SPRITESHEET_CLIP_FPS,
+    copy,
   );
   const detailSelectedClipName = detailSelection.selectedClipName;
   const detailPreviewAnimation =
@@ -864,6 +900,7 @@ export const selectViewData = ({ state }) => {
     dialogAnimations,
     state.dialogSelectedClipName,
     INITIAL_SPRITESHEET_CLIP_FPS,
+    copy,
   );
   const dialogSelectedClipName = dialogSelection.selectedClipName;
 
@@ -888,13 +925,17 @@ export const selectViewData = ({ state }) => {
   const dialogAtlasFieldValue = state.dialogSourceFiles?.atlasFile?.name ?? "";
   const isDialogPreviewMode = state.dialogMode === "preview";
   const detailFields = selectedItem
-    ? buildDetailFields(selectedItem)
-    : buildFolderDetailFields(selectedFolder);
+    ? buildDetailFields(selectedItem, copy)
+    : buildFolderDetailFields(selectedFolder, copy);
+  const dialogSubmitLabel =
+    state.dialogMode === "create"
+      ? (copy.addSpritesheetButton ?? "Add Spritesheet")
+      : (copy.updateSpritesheetButton ?? "Update Spritesheet");
   return {
     resourceCategory: "animatedAssets",
     selectedResourceId: "spritesheets",
-    title: "Spritesheets",
-    uploadText: "Add",
+    title: copy.title ?? "Spritesheets",
+    uploadText: copy.addText ?? "Add",
     uploadIcon: "plus",
     acceptedFileTypes: [".png", ".json"],
     flatItems,
@@ -903,7 +944,7 @@ export const selectViewData = ({ state }) => {
       tagsCollection: state.tagsData,
     }),
     selectedTagFilterValues: activeTagIds,
-    tagFilterPlaceholder: "Filter tags",
+    tagFilterPlaceholder: copy.tagFilterPlaceholder ?? "Filter tags",
     selectedItemId: state.selectedItemId,
     selectedFolderId: state.selectedFolderId,
     selectedDetailId,
@@ -913,7 +954,7 @@ export const selectViewData = ({ state }) => {
     detailTagDraftValues: state.detailTagIds ?? [],
     isDetailTagSelectOpen: !!state.isDetailTagSelectOpen,
     detailTagAddOption: {
-      label: "Add tag",
+      label: copy.addTagOption ?? "Add tag",
     },
     detailFields,
     ...buildMobileResourcePageViewData({
@@ -925,11 +966,11 @@ export const selectViewData = ({ state }) => {
       ],
     }),
     searchQuery: state.searchQuery,
-    searchPlaceholder: "Search...",
-    folderContextMenuItems,
-    itemContextMenuItems,
-    emptyContextMenuItems,
-    centerItemContextMenuItems,
+    searchPlaceholder: copy.searchPlaceholder ?? "Search...",
+    folderContextMenuItems: createFolderContextMenuItems(copy),
+    itemContextMenuItems: createItemContextMenuItems(copy),
+    emptyContextMenuItems: createEmptyContextMenuItems(copy),
+    centerItemContextMenuItems: createCenterItemContextMenuItems(copy),
     startCollapsedFileExplorer: shouldStartCollapsedFileExplorer({
       flatItems,
       threshold: AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD,
@@ -948,24 +989,21 @@ export const selectViewData = ({ state }) => {
     dialogMode: state.dialogMode,
     dialogTitle:
       state.dialogMode === "create"
-        ? "Add Spritesheet"
+        ? (copy.addSpritesheetTitle ?? "Add Spritesheet")
         : state.dialogMode === "edit"
-          ? "Edit Spritesheet"
+          ? (copy.editSpritesheetTitle ?? "Edit Spritesheet")
           : "",
-    dialogSubmitLabel:
-      state.dialogMode === "create" ? "Add Spritesheet" : "Update Spritesheet",
-    dialogForm: buildDialogForm(
-      state.dialogMode === "create" ? "Add Spritesheet" : "Update Spritesheet",
-    ),
+    dialogSubmitLabel,
+    dialogForm: createDialogForm(copy, dialogSubmitLabel),
     dialogFormKey: `${state.dialogMode}-${state.dialogItemId ?? "new"}-${state.dialogRevision}`,
     dialogValues: state.dialogValues,
     isCreateTagDialogOpen: state.isCreateTagDialogOpen,
     createTagDefaultValues: state.createTagDefaultValues,
-    createTagForm,
+    createTagForm: createTagForm(copy),
     isClipFpsDialogOpen: state.isClipFpsDialogOpen,
     clipFpsDialogValues: state.clipFpsDialogValues,
     clipFpsDialogKey: `${state.clipFpsDialogClipName ?? "none"}-${state.clipFpsDialogRevision}`,
-    clipFpsForm: buildClipFpsForm(state.clipFpsDialogClipName),
+    clipFpsForm: buildClipFpsForm(state.clipFpsDialogClipName, copy),
     dialogPreviewUrl: state.dialogPreviewUrl,
     dialogPreviewFileId,
     dialogPreviewKey,
@@ -975,14 +1013,30 @@ export const selectViewData = ({ state }) => {
     dialogImageSourceFileId,
     dialogClipOptions: dialogSelection.clipOptions,
     dialogSelectedClipName,
-    dialogAtlasSourceLabel: "Upload",
+    dialogAtlasSourceLabel: copy.uploadButton ?? "Upload",
     dialogAtlasFieldValue,
     dialogAtlasFieldPlaceholder: dialogHasAtlasSource
-      ? "Current spritesheet JSON"
-      : "No JSON selected",
+      ? (copy.currentSpritesheetJson ?? "Current spritesheet JSON")
+      : (copy.noJsonSelected ?? "No JSON selected"),
     isFolderNameDialogOpen: state.isFolderNameDialogOpen,
     folderNameDialogItemId: state.folderNameDialogItemId,
-    folderNameForm,
+    folderNameForm: createFolderNameForm(copy),
     folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
+    addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
+    animationsLabel: copy.animationsLabel ?? "Animations",
+    clickToUploadLabel: copy.clickToUploadLabel ?? "Click to upload",
+    clipsLabel: copy.clipsLabel ?? "Clips",
+    deleteButton: copy.deleteButton ?? "Delete",
+    dialogInstructions:
+      copy.dialogInstructions ??
+      "Set the name and description, then select the PNG image and spritesheet JSON here.",
+    emptyPreviewLabel: copy.emptyPreviewLabel ?? "No preview available",
+    filesLabel: copy.filesLabel ?? "Files",
+    noAnimationsFound: copy.noAnimationsFound ?? "No animations found",
+    noSelectionLabel: copy.noSelectionLabel ?? "No selection",
+    previewButton: copy.previewMenuItem ?? "Preview",
+    selectValidJsonToDetectClips:
+      copy.selectValidJsonToDetectClips ??
+      "Select valid spritesheet JSON to detect clips",
   };
 };

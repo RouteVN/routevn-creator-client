@@ -50,9 +50,9 @@ template:
                                           - rtgl-text s=xs c=mu-fg: ${fieldRow.summary}
                             $else:
                               - rtgl-view p=md bgc=mu br=md w=f:
-                                  - rtgl-text s=sm c=mu-fg: No input fields found.
+                                  - rtgl-text s=sm c=mu-fg: ${noInputFieldsLabel}
               - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-                  - rtgl-button#submitButton ?disabled=${submitDisabled}: Submit
+                  - rtgl-button#submitButton ?disabled=${submitDisabled}: ${submitButtonLabel}
         $elif mode == "editField":
           - 'rtgl-view wh=f style="min-height: 0;"':
               - rtgl-view d=h g=md:
@@ -63,25 +63,25 @@ template:
                           - rtgl-text s=sm: ${editFieldForm.label}
                           - rtgl-text s=xs c=mu-fg: ${editFieldForm.field}
                       - rtgl-view d=v g=sm w=f:
-                          - rtgl-text s=sm c=mu-fg: Variable
-                          - rtgl-select#fieldEditVariable data-name=variableId w=f no-clear :selectedValue=${editFieldForm.variableId} :options=${fieldVariableOptions} placeholder="Choose a string variable...": null
+                          - rtgl-text s=sm c=mu-fg: ${variableLabel}
+                          - rtgl-select#fieldEditVariable data-name=variableId w=f no-clear :selectedValue=${editFieldForm.variableId} :options=${fieldVariableOptions} placeholder=${chooseStringVariablePlaceholder}: null
                       - rtgl-view d=h g=md w=f wrap:
                           - rtgl-view d=v g=xs w=150:
-                              - rtgl-text s=sm c=mu-fg: Required
+                              - rtgl-text s=sm c=mu-fg: ${requiredLabel}
                               - rtgl-segmented-control#fieldEditRequired data-name=required w=f no-clear :selectedValue=${editFieldForm.required} :options=${booleanOptions}: null
                           - rtgl-view d=v g=xs w=150:
-                              - rtgl-text s=sm c=mu-fg: Trim
+                              - rtgl-text s=sm c=mu-fg: ${trimLabel}
                               - rtgl-segmented-control#fieldEditTrim data-name=trim w=f no-clear :selectedValue=${editFieldForm.trim} :options=${booleanOptions}: null
                           - rtgl-view d=v g=xs w=150:
-                              - rtgl-text s=sm c=mu-fg: Multiline
+                              - rtgl-text s=sm c=mu-fg: ${multilineLabel}
                               - rtgl-segmented-control#fieldEditMultiline data-name=multiline w=f no-clear :selectedValue=${editFieldForm.multiline} :options=${booleanOptions}: null
                       - rtgl-view d=h g=md w=f wrap:
                           - rtgl-view d=v g=xs w=1fg:
-                              - rtgl-text s=sm c=mu-fg: Placeholder
+                              - rtgl-text s=sm c=mu-fg: ${placeholderLabel}
                               - rtgl-input#fieldEditPlaceholder data-name=placeholder w=f value=${editFieldForm.placeholder}: null
                           - rtgl-view d=v g=xs w=150:
-                              - rtgl-text s=sm c=mu-fg: Max Length
+                              - rtgl-text s=sm c=mu-fg: ${maxLengthLabel}
                               - rtgl-input#fieldEditMaxLength data-name=maxLength type=number min=0 step=1 w=f value=${editFieldForm.maxLength}: null
               - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-                  - rtgl-button#cancelFieldEditButton v=ol: Cancel
-                  - rtgl-button#saveFieldEditButton ?disabled=${!canSaveEditField}: Save Field
+                  - rtgl-button#cancelFieldEditButton v=ol: ${cancelButtonLabel}
+                  - rtgl-button#saveFieldEditButton ?disabled=${!canSaveEditField}: ${saveFieldButtonLabel}

@@ -8,7 +8,8 @@ export const lstrip = (prefix) => {
 };
 
 export const handleResourcesClick = (deps, payload) => {
-  const { selectResourceRoute } = deps.store;
+  const { appService, store, subject } = deps;
+  const { selectResourceRoute } = store;
   const target = payload._event.currentTarget;
   const resourceId =
     target?.dataset?.resourceId || lstrip("resource-")(target?.id || "") || "";
@@ -17,8 +18,8 @@ export const handleResourcesClick = (deps, payload) => {
     console.warn(`[resources] Missing route for resource id: ${resourceId}`);
     return;
   }
-  deps.subject.dispatch("redirect", {
+  subject.dispatch("redirect", {
     path: route,
+    payload: appService.getPayload(),
   });
-  // deps.router.redirect(route);
 };

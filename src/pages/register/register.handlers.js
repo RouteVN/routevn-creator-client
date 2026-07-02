@@ -1,3 +1,5 @@
+const selectRegisterCopy = (i18n = {}) => i18n.registerPage ?? {};
+
 export const handleAfterMount = (deps) => {
   const { appService, store, render } = deps;
   const payload = appService.getPayload() || {};
@@ -11,7 +13,8 @@ export const handleBackButtonClick = (deps) => {
 };
 
 export const handleFormAction = (deps, payload) => {
-  const { appService, store } = deps;
+  const { appService, store, i18n } = deps;
+  const copy = selectRegisterCopy(i18n);
   const detail = payload?._event?.detail || {};
 
   if (detail.actionId !== "register") {
@@ -23,7 +26,9 @@ export const handleFormAction = (deps, payload) => {
 
   if (!acceptTerms || !acceptPrivacy) {
     appService.showAlert({
-      message: "Please accept Terms and Privacy Policy.",
+      message:
+        copy.acceptTermsPrivacyRequired ??
+        "Please accept Terms and Privacy Policy.",
     });
     return;
   }
@@ -36,7 +41,9 @@ export const handleFormAction = (deps, payload) => {
     "";
 
   if (!email) {
-    appService.showAlert({ message: "Email is required." });
+    appService.showAlert({
+      message: copy.emailRequired ?? "Email is required.",
+    });
     return;
   }
 

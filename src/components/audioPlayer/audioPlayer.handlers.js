@@ -4,10 +4,14 @@ const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, props: attrs, render, audioService, appService } = deps;
+  const { store, props: attrs, render, audioService, appService, i18n } = deps;
+  const copy = i18n?.audioPlayerPage ?? {};
 
   if (!attrs) {
-    appService.showAlert({ message: "Missing fileId", title: "Error" });
+    appService.showAlert({
+      message: copy.missingFileId ?? "Missing fileId",
+      title: copy.errorTitle ?? i18n?.resourcePages?.errorTitle ?? "Error",
+    });
     return;
   }
 

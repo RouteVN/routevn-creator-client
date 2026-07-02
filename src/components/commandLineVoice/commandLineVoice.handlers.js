@@ -1,5 +1,9 @@
 import { buildVoiceResourceDataFromUploadResult } from "../../deps/services/shared/resourceImports.js";
 import { generateId } from "../../internal/id.js";
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const VOICE_FILE_ACCEPT = ".mp3,.wav,.ogg";
 const VOICE_FILE_PATTERN = /\.(mp3|wav|ogg)$/i;
@@ -37,12 +41,17 @@ export const handleAfterMount = async (deps) => {
 
 export const handleAudioWaveformClick = async (deps, payload) => {
   payload?._event?.stopPropagation?.();
-  const { appService, projectService, props, store, render } = deps;
+  const { appService, projectService, props, store, render, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const sceneId = getCurrentSceneId(props);
 
   if (!sceneId) {
     showAlert(appService, {
-      message: "Select a scene before adding voice audio.",
+      message: localizeCommandLineText(
+        "Select a scene before adding voice audio.",
+        copy,
+      ),
+      title: localizeCommandLineText("Error", copy),
     });
     return;
   }
@@ -58,7 +67,8 @@ export const handleAudioWaveformClick = async (deps, payload) => {
     });
   } catch {
     showAlert(appService, {
-      message: "Failed to upload voice.",
+      message: localizeCommandLineText("Failed to upload voice.", copy),
+      title: localizeCommandLineText("Error", copy),
     });
     return;
   }
@@ -69,9 +79,11 @@ export const handleAudioWaveformClick = async (deps, payload) => {
 
   if (!VOICE_FILE_PATTERN.test(file.name ?? "")) {
     showAlert(appService, {
-      message:
+      message: localizeCommandLineText(
         "Invalid file format. Please upload an audio file (.mp3, .wav, or .ogg).",
-      title: "Warning",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }
@@ -83,7 +95,8 @@ export const handleAudioWaveformClick = async (deps, payload) => {
     file.uploadSuccessful === false
   ) {
     showAlert(appService, {
-      message: "Failed to upload voice.",
+      message: localizeCommandLineText("Failed to upload voice.", copy),
+      title: localizeCommandLineText("Error", copy),
     });
     return;
   }
@@ -102,14 +115,16 @@ export const handleAudioWaveformClick = async (deps, payload) => {
     });
   } catch {
     showAlert(appService, {
-      message: "Failed to create voice.",
+      message: localizeCommandLineText("Failed to create voice.", copy),
+      title: localizeCommandLineText("Error", copy),
     });
     return;
   }
 
   if (createResult?.valid === false) {
     showAlert(appService, {
-      message: "Failed to create voice.",
+      message: localizeCommandLineText("Failed to create voice.", copy),
+      title: localizeCommandLineText("Error", copy),
     });
     return;
   }
@@ -127,13 +142,20 @@ export const handleAudioWaveformRightClick = async (deps, payload) => {
   event.stopPropagation();
 
   const { store, render, globalUI } = deps;
+  const copy = selectCommandLineCopy(deps.i18n);
   const selectedResource = store.selectSelectedResource();
   if (!selectedResource) {
     return;
   }
 
   const result = await globalUI.showDropdownMenu({
-    items: [{ type: "item", label: "Remove", key: "remove" }],
+    items: [
+      {
+        type: "item",
+        label: localizeCommandLineText("Remove", copy),
+        key: "remove",
+      },
+    ],
     x: event.clientX,
     y: event.clientY,
     place: "bs",
@@ -191,13 +213,17 @@ export const handleAudioPlayerClose = (deps) => {
 
 export const handleSubmitClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
-  const { appService, dispatchEvent, store } = deps;
+  const { appService, dispatchEvent, store, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const voice = store.selectVoicePayload();
 
   if (!voice.resourceId) {
     showAlert(appService, {
-      message: "Select a voice audio file first.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Select a voice audio file first.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }

@@ -32,12 +32,12 @@ template:
             $else:
               - rtgl-view w=120 h=120 av=c ah=c:
                   - rtgl-view#iconPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                      - rtgl-text c=mu-fg s=sm: Click to Upload
+                      - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
       - $if platform == 'tauri':
           - rtgl-view slot=project-path-selector g=xs:
               - rtgl-view d=h g=sm av=c:
-                  - rtgl-input#pathInput w=f :value=${projectPathDisplay} disabled=true placeholder="No folder selected": null
-                  - rtgl-button#browseButton variant=se: Browse
+                  - rtgl-input#pathInput w=f :value=${projectPathDisplay} disabled=true placeholder=${noFolderSelectedLabel}: null
+                  - rtgl-button#browseButton variant=se: ${browseButtonLabel}
               - $if validationErrors.projectPath:
                   - rtgl-text s=sm c=de: ${validationErrors.projectPath}
   - rvn-square-image-crop-dialog#iconCropDialog :open=${isIconCropDialogOpen} :file=${iconCropFile}: null

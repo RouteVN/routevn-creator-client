@@ -1,5 +1,9 @@
 import { generateId } from "../../internal/id.js";
 import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import {
   isVariableEnumEnabled,
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
@@ -142,10 +146,13 @@ const normalizeOperationForSave = ({ operation, variableItems } = {}) => {
   };
 };
 
-const showInvalidOperationValueAlert = (appService) => {
+const showInvalidOperationValueAlert = (appService, copy) => {
   appService.showAlert({
-    message: "Variable operation value is invalid.",
-    title: "Warning",
+    message: localizeCommandLineText(
+      "Variable operation value is invalid.",
+      copy,
+    ),
+    title: localizeCommandLineText("Warning", copy),
   });
 };
 
@@ -315,7 +322,8 @@ export const handleRoundToInputChange = (deps, payload) => {
 
 export const handleSaveOperationClick = (deps, payload) => {
   payload._event.stopPropagation();
-  const { appService, store, render } = deps;
+  const { appService, store, render, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const state = store.getState();
   const { currentEditingId, tempOperation, variablesData } = state;
 
@@ -326,7 +334,7 @@ export const handleSaveOperationClick = (deps, payload) => {
     });
 
     if (!normalized.valid) {
-      showInvalidOperationValueAlert(appService);
+      showInvalidOperationValueAlert(appService, copy);
       return;
     }
 
@@ -346,7 +354,8 @@ export const handleSaveOperationClick = (deps, payload) => {
 
 export const handleSubmitClick = (deps, payload) => {
   payload._event.stopPropagation();
-  const { dispatchEvent, store, appService } = deps;
+  const { dispatchEvent, store, appService, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const state = store.getState();
   const { actionId, operations, variablesData } = state;
   const variableItems = getVariableItems(variablesData);
@@ -405,14 +414,17 @@ export const handleSubmitClick = (deps, payload) => {
     .filter(Boolean);
 
   if (hasInvalidOperationValue) {
-    showInvalidOperationValueAlert(appService);
+    showInvalidOperationValueAlert(appService, copy);
     return;
   }
 
   if (validOperations.length === 0) {
     appService.showAlert({
-      message: "Please add at least one valid variable operation.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Please add at least one valid variable operation.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }

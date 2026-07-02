@@ -33,7 +33,8 @@ export const handleAfterMount = async (deps) => {
 export const handleItemClick = async (deps, payload) => {
   const { subject, appService } = deps;
   const currentPayload = appService.getPayload();
-  const path = payload._event.detail.item.id;
+  const item = payload._event.detail.item;
+  const path = item.path ?? item.id;
   const timing = createNavigationTiming({
     appService,
     source: "sidebar.item-click",

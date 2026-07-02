@@ -1,3 +1,9 @@
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineOptions,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
 const DEFAULT_AUDIO_VOLUME = 100;
 
 const normalizeVolume = (volume) => {
@@ -124,13 +130,17 @@ export const selectBreadcrumb = (_context) => [
   },
 ];
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const audio = selectSelectedResource({ state });
 
   return {
     audio,
-    breadcrumb: selectBreadcrumb({ state }),
-    loopOptions: LOOP_OPTIONS,
+    breadcrumb: localizeCommandLineBreadcrumb(
+      selectBreadcrumb({ state }),
+      copy,
+    ),
+    loopOptions: localizeCommandLineOptions(LOOP_OPTIONS, copy),
     voice: {
       ...state.voice,
       volume: state.voice.volume ?? DEFAULT_AUDIO_VOLUME,

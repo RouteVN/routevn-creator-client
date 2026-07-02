@@ -3,6 +3,12 @@ import {
   createRuntimeActionForm,
   getRuntimeActionDefinition,
 } from "../../internal/runtimeActions.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 export const createInitialState = () => ({
   mode: "",
@@ -22,7 +28,8 @@ export const setFormValues = ({ state }, { values } = {}) => {
   state.formValues = values ?? {};
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const definition = getRuntimeActionDefinition(state.mode);
   const breadcrumb = [
     {
@@ -50,13 +57,13 @@ export const selectViewData = ({ state }) => {
   }
 
   return {
-    breadcrumb,
-    form,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
+    form: localizeCommandLineForm(form, copy),
     defaultValues,
     context: {
       values: defaultValues,
     },
     formKey: `${state.mode}-${valueSource}`,
-    submitLabel: submitButton?.label ?? "Submit",
+    submitLabel: localizeCommandLineText(submitButton?.label ?? "Submit", copy),
   };
 };
