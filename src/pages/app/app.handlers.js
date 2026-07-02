@@ -178,6 +178,22 @@ const createRouteTransitionRunner = (deps) => {
     }
 
     const currentProjectId = appService.getCurrentProjectId();
+    if (isProjectRoute(canonicalPath) && !currentProjectId) {
+      markNavigationTiming(routeTiming, "route.missing-project.redirect");
+      appService.replace("/projects");
+      store.setCurrentRoute({ route: "/projects" });
+      store.setRepositoryLoading({ isLoading: false });
+      renderWithNavigationTiming({
+        render,
+        timing: routeTiming,
+        event: "route.missing-project-final",
+      });
+      finishNavigationTiming(routeTiming, "route.transition.complete", {
+        missingProjectId: true,
+      });
+      return;
+    }
+
     if (canonicalPath === "/project/scene-editor") {
       recordRecentSceneVisit({
         appService,
