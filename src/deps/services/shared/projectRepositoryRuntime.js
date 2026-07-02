@@ -207,6 +207,40 @@ const collectionTreeContainsItemId = (nodes = [], itemId) => {
   });
 };
 
+const hasReplayStringConflict = (leftValue, rightValue) => {
+  if (!isNonEmptyString(leftValue) || !isNonEmptyString(rightValue)) {
+    return false;
+  }
+
+  return leftValue !== rightValue;
+};
+
+const hasReplayNumberConflict = (leftValue, rightValue) => {
+  const leftNumber = Number(leftValue);
+  const rightNumber = Number(rightValue);
+  if (!Number.isFinite(leftNumber) || !Number.isFinite(rightNumber)) {
+    return false;
+  }
+
+  return leftNumber !== rightNumber;
+};
+
+const isReplayFileCreateDataCompatible = (existingFile, fileData) => {
+  if (existingFile?.type === "folder" || fileData?.type === "folder") {
+    return (
+      existingFile?.type === "folder" &&
+      fileData?.type === "folder" &&
+      !hasReplayStringConflict(existingFile.name, fileData.name)
+    );
+  }
+
+  return (
+    !hasReplayStringConflict(existingFile.mimeType, fileData.mimeType) &&
+    !hasReplayNumberConflict(existingFile.size, fileData.size) &&
+    !hasReplayStringConflict(existingFile.sha256, fileData.sha256)
+  );
+};
+
 const getReplayFailedCommandIndex = (error) => {
   const failedIndex = Number(error?.details?.commandIndex);
   return Number.isInteger(failedIndex) && failedIndex >= 0
@@ -246,9 +280,8 @@ const canSkipDuplicateFileCreateDuringReplay = ({
 
   return (
     existingFile.id === fileId &&
-    existingFile.mimeType === fileData.mimeType &&
-    Number(existingFile.size) === Number(fileData.size) &&
-    existingFile.sha256 === fileData.sha256
+    collectionTreeContainsItemId(repositoryState?.files?.tree, fileId) &&
+    isReplayFileCreateDataCompatible(existingFile, fileData)
   );
 };
 
@@ -300,22 +333,33 @@ const canSkipDuplicateResourceCreateDuringReplay = ({
 };
 
 const canAttemptSequentialReplayRecovery = ({ events, error } = {}) => {
+  const replayEvents = Array.isArray(events) ? events : [];
   const failedIndex = getReplayFailedCommandIndex(error);
-  if (!Number.isInteger(failedIndex) || failedIndex >= (events?.length || 0)) {
-    return false;
+  if (Number.isInteger(failedIndex) && failedIndex < replayEvents.length) {
+    const failedEvent = replayEvents[failedIndex];
+
+    return (
+      isDuplicateFileCreateReplayFailure({
+        event: failedEvent,
+        error,
+      }) ||
+      isDuplicateResourceCreateReplayFailure({
+        event: failedEvent,
+        error,
+      })
+    );
   }
 
-  const failedEvent = events[failedIndex];
-
-  return (
-    isDuplicateFileCreateReplayFailure({
-      event: failedEvent,
-      error,
-    }) ||
-    isDuplicateResourceCreateReplayFailure({
-      event: failedEvent,
-      error,
-    })
+  return replayEvents.some(
+    (event) =>
+      isDuplicateFileCreateReplayFailure({
+        event,
+        error,
+      }) ||
+      isDuplicateResourceCreateReplayFailure({
+        event,
+        error,
+      }),
   );
 };
 
