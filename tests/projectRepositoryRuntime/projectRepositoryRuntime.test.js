@@ -479,6 +479,109 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     expect(state.files.tree).toEqual([{ id: "file-1" }]);
   });
 
+  it("recovers duplicate file.create events when batched replay omits command index", () => {
+    const reduceEventToState = createFileReplayReducer();
+    const events = [
+      {
+        id: "event-1",
+        type: "file.create",
+        partition: "m",
+        payload: {
+          fileId: "file-1",
+          data: {
+            mimeType: "image/png",
+            size: 123,
+            sha256: "hash-1",
+          },
+        },
+      },
+      {
+        id: "event-2",
+        type: "file.create",
+        partition: "m",
+        payload: {
+          fileId: "file-1",
+          data: {
+            mimeType: "image/png",
+            size: 123,
+            sha256: "hash-1",
+          },
+        },
+      },
+    ];
+
+    const state = replayEventsToRepositoryState({
+      events,
+      untilEventIndex: events.length,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducer(reduceEventToState),
+    });
+
+    expect(state.files.items["file-1"]).toEqual({
+      id: "file-1",
+      mimeType: "image/png",
+      size: 123,
+      sha256: "hash-1",
+    });
+    expect(state.files.tree).toEqual([{ id: "file-1" }]);
+  });
+
+  it("recovers duplicate file.create events with compatible legacy file metadata", () => {
+    const reduceFileEventToState = createFileReplayReducer();
+    const snapshotState = structuredClone(initialProjectData);
+    snapshotState.files.items["file-1"] = {
+      id: "file-1",
+      mimeType: "image/png",
+    };
+    snapshotState.files.tree = [{ id: "file-1" }];
+    const reduceEventToState = ({ repositoryState, event }) => {
+      if (event?.type === "project.create") {
+        return structuredClone(event.payload.state);
+      }
+
+      return reduceFileEventToState({ repositoryState, event });
+    };
+    const events = [
+      {
+        id: "event-1",
+        type: "project.create",
+        partition: "m",
+        payload: {
+          state: snapshotState,
+        },
+      },
+      {
+        id: "event-2",
+        type: "file.create",
+        partition: "m",
+        payload: {
+          fileId: "file-1",
+          data: {
+            mimeType: "image/png",
+            size: 123,
+            sha256: "hash-1",
+          },
+        },
+      },
+    ];
+
+    const state = replayEventsToRepositoryState({
+      events,
+      untilEventIndex: events.length,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState:
+        createBatchedReducerWithCommandIndex(reduceEventToState),
+    });
+
+    expect(state.files.items["file-1"]).toEqual({
+      id: "file-1",
+      mimeType: "image/png",
+    });
+    expect(state.files.tree).toEqual([{ id: "file-1" }]);
+  });
+
   it("recovers identical duplicate image.create events during batched historical replay", () => {
     const reduceEventToState = createImageReplayReducer();
     const events = [
