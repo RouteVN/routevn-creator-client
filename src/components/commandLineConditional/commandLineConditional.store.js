@@ -4,6 +4,13 @@ import {
   isVariableEnumEnabled,
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineDropdownMenu,
+  localizeCommandLineOptions,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const CONDITION_OPERATOR_OPTIONS = [
   { value: "eq", label: "Equals" },
@@ -106,25 +113,27 @@ const formatConditionValue = (value) => {
   return JSON.stringify(value);
 };
 
-const getBranchSummary = (branch, variablesData = {}) => {
+const getBranchSummary = (branch, variablesData = {}, copy = {}) => {
   if (!Object.hasOwn(toPlainObject(branch), "when")) {
-    return DEFAULT_BRANCH_LABEL;
+    return localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy);
   }
 
   if (typeof branch.when === "string") {
-    return "Unsupported expression condition";
+    return localizeCommandLineText("Unsupported expression condition", copy);
   }
 
   const simpleCondition = getSimpleCondition(branch.when);
   if (simpleCondition) {
     const variable = variablesData.items?.[simpleCondition.variableId];
     const variableName = variable?.name ?? simpleCondition.variableId;
-    const operatorLabel =
-      CONDITION_OPERATOR_LABELS[simpleCondition.op] ?? simpleCondition.op;
+    const operatorLabel = localizeCommandLineText(
+      CONDITION_OPERATOR_LABELS[simpleCondition.op] ?? simpleCondition.op,
+      copy,
+    );
     return `${variableName} ${operatorLabel} ${formatConditionValue(simpleCondition.value)}`;
   }
 
-  return "Unsupported condition";
+  return localizeCommandLineText("Unsupported condition", copy);
 };
 
 const hasBranchCondition = (branch) => {
@@ -271,7 +280,8 @@ export const selectDropdownMenuBranchId = ({ state }) => {
   return state.dropdownMenu.branchId;
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const variableItems = state.variablesData?.items ?? {};
   const variableOptions = getVariableOptions(state.variablesData).map(
     (option) => {
@@ -279,7 +289,7 @@ export const selectViewData = ({ state, props }) => {
       const variableType = getVariableType(variable);
       return {
         ...option,
-        suffixText: variableType,
+        suffixText: localizeCommandLineText(variableType, copy),
       };
     },
   );
@@ -316,11 +326,14 @@ export const selectViewData = ({ state, props }) => {
     return {
       ...branch,
       index,
-      summary: getBranchSummary(branch, state.variablesData),
+      summary: getBranchSummary(branch, state.variablesData, copy),
       actionsSummary:
         branchActionCount > 0
-          ? `${branchActionCount} action${branchActionCount === 1 ? "" : "s"}`
-          : "No actions",
+          ? `${branchActionCount} ${localizeCommandLineText(
+              branchActionCount === 1 ? "action" : "actions",
+              copy,
+            )}`
+          : localizeCommandLineText("No actions", copy),
     };
   };
   const conditionBranches = state.branches
@@ -331,8 +344,8 @@ export const selectViewData = ({ state, props }) => {
     .map(createBranchViewData)[0];
   const editBranchLabel =
     state.tempBranch.conditionKind === "default"
-      ? DEFAULT_BRANCH_LABEL
-      : "Branch";
+      ? localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy)
+      : localizeCommandLineText("Branch", copy);
 
   const breadcrumb = [
     { id: "actions", label: "Actions", click: true },
@@ -357,7 +370,7 @@ export const selectViewData = ({ state, props }) => {
   return {
     initiated: state.initiated,
     mode: state.mode,
-    breadcrumb,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     branches: conditionBranches,
     defaultBranch,
     hasDefaultBranch: Boolean(defaultBranch),
@@ -366,8 +379,8 @@ export const selectViewData = ({ state, props }) => {
       booleanValue,
     },
     variableOptions,
-    operatorOptions,
-    booleanOptions,
+    operatorOptions: localizeCommandLineOptions(operatorOptions, copy),
+    booleanOptions: localizeCommandLineOptions(booleanOptions, copy),
     enumValueOptions: buildVariableEnumOptions(selectedEnumValues),
     showEnumValueSelect,
     showValueField,
@@ -375,8 +388,11 @@ export const selectViewData = ({ state, props }) => {
     branchActions: state.tempBranch.actions,
     branchActionsSummary:
       actionCount > 0
-        ? `${actionCount} action${actionCount === 1 ? "" : "s"}`
-        : "No actions",
+        ? `${actionCount} ${localizeCommandLineText(
+            actionCount === 1 ? "action" : "actions",
+            copy,
+          )}`
+        : localizeCommandLineText("No actions", copy),
     branchActionAllowedModes: BRANCH_ACTION_ALLOWED_MODES,
     hasBranches: state.branches.length > 0,
     canSaveBranch,
@@ -384,10 +400,32 @@ export const selectViewData = ({ state, props }) => {
     isEditingUnsupportedCondition,
     editBranchTitle:
       state.tempBranch.conditionKind === "default"
-        ? DEFAULT_BRANCH_LABEL
-        : "Branch",
+        ? localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy)
+        : localizeCommandLineText("Branch", copy),
     hiddenModes: getHiddenModes(props),
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
+    actionsLabel: localizeCommandLineText("Actions", copy),
+    addBranchButton: localizeCommandLineText("+ Add Branch", copy),
+    addDefaultBranchButton: localizeCommandLineText(
+      "+ Add Default Branch",
+      copy,
+    ),
+    branchesLabel: localizeCommandLineText("Branches", copy),
+    conditionLabel: localizeCommandLineText("Condition", copy),
+    defaultBranchLabel: localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy),
+    operatorLabel: localizeCommandLineText("Operator", copy),
+    saveButtonPrefix: localizeCommandLineText("Save", copy),
+    submitButton: localizeCommandLineText("Submit", copy),
+    unsupportedConditionLabel: localizeCommandLineText(
+      "Unsupported condition",
+      copy,
+    ),
+    valueLabel: localizeCommandLineText("Value", copy),
+    valueNumberPlaceholder: localizeCommandLineText("Enter number...", copy),
+    valueSelectPlaceholder: localizeCommandLineText("Choose a value...", copy),
+    valueTextPlaceholder: localizeCommandLineText("Enter text...", copy),
+    variableLabel: localizeCommandLineText("Variable", copy),
+    variablePlaceholder: localizeCommandLineText("Choose a variable...", copy),
   };
 };
 

@@ -13,6 +13,7 @@ import {
   AUTO_TWEEN_DEFAULT_DURATION,
   AUTO_TWEEN_DEFAULT_EASING,
 } from "./animationEditor.constants.js";
+import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy.js";
 
 const normalizeTween = (properties = {}) => {
   return Object.fromEntries(
@@ -53,6 +54,12 @@ const getEditorPayload = (appService) => {
 };
 
 const DEFAULT_NEW_ANIMATION_NAME = "New Animation";
+
+const selectCopy = ({ i18n } = {}) => selectAnimationEditorPageCopy(i18n);
+
+const getDefaultNewAnimationName = (copy = {}) => {
+  return copy.newAnimationName ?? DEFAULT_NEW_ANIMATION_NAME;
+};
 
 const stopPreviewPlaybackIndicator = ({ store } = {}) => {
   const frameId = store.selectPreviewPlaybackFrameId();
@@ -380,7 +387,7 @@ const resolvePersistedTransitionMask = ({ store, serializedMask } = {}) => {
   return structuredClone(store.selectEditItemData()?.animation?.mask);
 };
 
-const createAnimationPersistSnapshot = ({ store } = {}) => {
+const createAnimationPersistSnapshot = ({ copy, store } = {}) => {
   const dialogType = store.selectDialogType();
   let animationData;
 
@@ -425,7 +432,7 @@ const createAnimationPersistSnapshot = ({ store } = {}) => {
     editMode: store.selectEditMode(),
     editItemId: store.selectEditItemId(),
     targetGroupId: store.selectTargetGroupId(),
-    name: store.selectAnimationName().trim() || DEFAULT_NEW_ANIMATION_NAME,
+    name: store.selectAnimationName().trim() || getDefaultNewAnimationName(copy),
     description: store.selectAnimationDescription(),
     animationData,
   };
@@ -433,13 +440,15 @@ const createAnimationPersistSnapshot = ({ store } = {}) => {
 
 const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
   const { appService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
   let savedAnimationId = snapshot.editItemId;
   let mutationAttempt;
 
   if (snapshot.editMode && savedAnimationId) {
     mutationAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to update animation.",
+      fallbackMessage:
+        copy.failedUpdateAnimation ?? "Failed to update animation.",
       action: () =>
         projectService.updateAnimation({
           animationId: savedAnimationId,
@@ -454,7 +463,8 @@ const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
     savedAnimationId = generateId();
     mutationAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to create animation.",
+      fallbackMessage:
+        copy.failedCreateAnimation ?? "Failed to create animation.",
       action: () =>
         projectService.createAnimation({
           animationId: savedAnimationId,
@@ -532,6 +542,7 @@ const flushQueuedAutosave = async ({ deps } = {}) => {
     ) {
       const version = store.selectAutosaveVersion();
       const snapshot = createAnimationPersistSnapshot({
+        copy: selectCopy(deps),
         store,
       });
       const mutationAttempt = await persistEditorSnapshot({
@@ -601,6 +612,7 @@ const initializePreview = async ({ deps } = {}) => {
 
 const syncEditorState = async ({ deps, repositoryState } = {}) => {
   const { appService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
   const resolvedRepositoryState =
     repositoryState ?? projectService.getRepositoryState();
   const { animationId, dialogType, targetGroupId, name, description } =
@@ -623,7 +635,10 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
     });
 
     if (!itemData) {
-      appService.showAlert({ message: "Animation not found.", title: "Error" });
+      appService.showAlert({
+        message: copy.animationNotFound ?? "Animation not found.",
+        title: copy.errorTitle ?? "Error",
+      });
       appService.navigate(
         getAnimationEditorBackPath(),
         createAnimationEditorPayload({
@@ -648,7 +663,7 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
       dialogType,
     });
     store.setAnimationName({
-      name: name ?? DEFAULT_NEW_ANIMATION_NAME,
+      name: name ?? getDefaultNewAnimationName(copy),
     });
     store.setAnimationDescription({
       description: description ?? "",
@@ -691,6 +706,7 @@ export const handleBackClick = async (deps) => {
 
 export const handleSavePreviewClick = async (deps) => {
   const { appService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
   const autosaveAttempt = await flushQueuedAutosave({
     deps,
   });
@@ -702,8 +718,8 @@ export const handleSavePreviewClick = async (deps) => {
   const animationId = store.selectEditItemId();
   if (!animationId) {
     appService.showAlert({
-      message: "Animation is missing.",
-      title: "Error",
+      message: copy.animationMissing ?? "Animation is missing.",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -712,7 +728,9 @@ export const handleSavePreviewClick = async (deps) => {
     const previewData = store.selectPreviewData();
     const updateAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to save animation preview.",
+      fallbackMessage:
+        copy.failedSaveAnimationPreview ??
+        "Failed to save animation preview.",
       action: () =>
         projectService.updateAnimation({
           animationId,
@@ -730,11 +748,15 @@ export const handleSavePreviewClick = async (deps) => {
       data: projectService.getRepositoryState()?.animations,
     });
     render();
-    appService.showToast({ message: "Animation preview saved." });
+    appService.showToast({
+      message: copy.animationPreviewSaved ?? "Animation preview saved.",
+    });
   } catch {
     appService.showAlert({
-      message: "Failed to save animation preview.",
-      title: "Error",
+      message:
+        copy.failedSaveAnimationPreview ??
+        "Failed to save animation preview.",
+      title: copy.errorTitle ?? "Error",
     });
   }
 };
@@ -1368,6 +1390,7 @@ export const handleSingleMaskImageClick = (deps) => {
 
 export const handleSingleMaskImageRightClick = async (deps, payload) => {
   const { appService, store } = deps;
+  const copy = selectCopy(deps);
   const event = payload?._event;
   event?.preventDefault?.();
 
@@ -1376,7 +1399,13 @@ export const handleSingleMaskImageRightClick = async (deps, payload) => {
   }
 
   const result = await appService.showDropdownMenu({
-    items: [{ type: "item", label: "Remove", key: "remove" }],
+    items: [
+      {
+        type: "item",
+        label: copy.removeMenuItem ?? "Remove",
+        key: "remove",
+      },
+    ],
     x: event.clientX,
     y: event.clientY,
     place: "bs",
@@ -1606,7 +1635,9 @@ export const handleConfirmMaskImageSelection = async (deps) => {
       });
     } catch {
       appService?.showToast?.({
-        message: "Failed to update preview image.",
+        message:
+          selectCopy(deps).failedUpdatePreviewImage ??
+          "Failed to update preview image.",
       });
     }
     return;

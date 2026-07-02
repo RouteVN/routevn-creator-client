@@ -61,6 +61,43 @@ const ACTION_LABELS = {
   loadSlot: "Load Slot",
   ...RUNTIME_ACTION_LABELS,
 };
+const ACTION_INTERACTION_LABEL_KEYS = {
+  click: "interactionClick",
+  rightClick: "interactionRightClick",
+  scrollUp: "interactionScrollUp",
+  scrollDown: "interactionScrollDown",
+  change: "interactionChange",
+};
+const ACTION_LABEL_KEYS = {
+  nextLine: "actionNextLine",
+  sectionTransition: "actionSectionTransition",
+  resetStoryAtSection: "actionResetStoryAtSection",
+  toggleAutoMode: "actionToggleAutoMode",
+  toggleSkipMode: "actionToggleSkipMode",
+  startSkipMode: "actionStartSkipMode",
+  stopSkipMode: "actionStopSkipMode",
+  toggleDialogueUI: "actionToggleDialogueUI",
+  pushOverlay: "actionPushOverlay",
+  popOverlay: "actionPopOverlay",
+  rollbackByOffset: "actionRollbackByOffset",
+  updateVariable: "actionUpdateVariable",
+  showConfirmDialog: "actionShowConfirmDialog",
+  hideConfirmDialog: "actionHideConfirmDialog",
+  saveSlot: "actionSaveSlot",
+  loadSlot: "actionLoadSlot",
+  setDialogueTextSpeed: "actionSetDialogueTextSpeed",
+  setAutoForwardDelay: "actionSetAutoForwardDelay",
+  setSkipUnseenText: "actionSetSkipUnseenText",
+  setSkipTransitionsAndAnimations: "actionSetSkipTransitionsAndAnimations",
+  setSoundVolume: "actionSetSoundVolume",
+  setMusicVolume: "actionSetMusicVolume",
+  setMuteAll: "actionSetMuteAll",
+  setSaveLoadPagination: "actionSetSaveLoadPagination",
+  incrementSaveLoadPagination: "actionIncrementSaveLoadPagination",
+  decrementSaveLoadPagination: "actionDecrementSaveLoadPagination",
+  setMenuPage: "actionSetMenuPage",
+  setMenuEntryPoint: "actionSetMenuEntryPoint",
+};
 
 export const ACTION_INTERACTION_TYPES = [
   "click",
@@ -76,8 +113,14 @@ export const REVEAL_EFFECT_OPTIONS = [
   { label: "None", value: "none" },
 ];
 
-export const createTextContentDialogForm = () => ({
-  title: "Text",
+export const createRevealEffectOptions = (copy = {}) => [
+  { label: copy.revealEffectTypewriter ?? "Typewriter", value: "typewriter" },
+  { label: copy.revealEffectSoftWipe ?? "Soft Wipe", value: "softWipe" },
+  { label: copy.noneOption ?? "None", value: "none" },
+];
+
+export const createTextContentDialogForm = (copy = {}) => ({
+  title: copy.textTitle ?? "Text",
   fields: [
     {
       name: "content",
@@ -91,12 +134,12 @@ export const createTextContentDialogForm = () => ({
       {
         id: "cancel",
         variant: "se",
-        label: "Cancel",
+        label: copy.cancelButton ?? "Cancel",
       },
       {
         id: "submit",
         variant: "pr",
-        label: "Save",
+        label: copy.saveButton ?? "Save",
       },
     ],
   },
@@ -106,14 +149,26 @@ export const getLayoutInteractionActions = (values, interactionType) => {
   return getInteractionActions(values?.[interactionType]);
 };
 
-const toLayoutActionItems = (values, hiddenActionModes) => {
+const getActionInteractionLabel = (interactionType, copy = {}) => {
+  const key = ACTION_INTERACTION_LABEL_KEYS[interactionType];
+  return key ? (copy[key] ?? ACTION_INTERACTION_LABELS[interactionType]) : "";
+};
+
+const getActionLabel = (actionKey, copy = {}) => {
+  const copyKey = ACTION_LABEL_KEYS[actionKey];
+  return copyKey
+    ? (copy[copyKey] ?? ACTION_LABELS[actionKey] ?? actionKey)
+    : (ACTION_LABELS[actionKey] ?? actionKey);
+};
+
+const toLayoutActionItems = (values, hiddenActionModes, copy = {}) => {
   return ACTION_INTERACTION_TYPES.flatMap((interactionType) =>
     Object.entries(getLayoutInteractionActions(values, interactionType))
       .filter(([key]) => !hiddenActionModes.has(key))
       .map(([key]) => ({
         id: key,
         interactionType,
-        label: `${ACTION_INTERACTION_LABELS[interactionType]}: ${ACTION_LABELS[key] ?? key}`,
+        label: `${getActionInteractionLabel(interactionType, copy)}: ${getActionLabel(key, copy)}`,
         svg: SETTINGS_ACTION_MODES.has(key) ? "settings" : `action-${key}`,
       })),
   );
@@ -191,6 +246,7 @@ export const toInspectorValues = ({
   firstTextStyleId,
   hiddenActionModes,
   variablesData,
+  copy,
 }) => {
   const capabilities =
     getLayoutEditorElementDefinition(values?.type)?.capabilities ?? {};
@@ -281,11 +337,13 @@ export const toInspectorValues = ({
     textRevealIndicatorAddItems: createTextRevealIndicatorAddItems(indicator, {
       revealSoundId: values?.revealSoundId,
       supportsTextRevealSound: capabilities.supportsTextRevealSound === true,
+      copy,
     }),
     textRevealIndicatorItems: createTextRevealIndicatorListItems(indicator, {
       revealSoundId: values?.revealSoundId,
+      copy,
     }),
-    actions: toLayoutActionItems(values, hiddenActionModes),
+    actions: toLayoutActionItems(values, hiddenActionModes, copy),
   };
 };
 

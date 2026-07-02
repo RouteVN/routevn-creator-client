@@ -92,7 +92,7 @@ template:
                                           - rvn-file-image fileId=${selectedResource.fileId} w=f h=f: null
                                         $else:
                                           - rtgl-view w=f h=f av=c ah=c bgc=mu-fg:
-                                              - rtgl-text s=sm c=mu-fg: No thumbnail
+                                              - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
                                   - rtgl-view d=v w=f g=xs p=md:
                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${selectedResource.name}
                                       - $if selectedResource.typeInfo:
@@ -108,24 +108,24 @@ template:
                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${selectedResource.name}
                         $else:
                           - 'rtgl-view#backgroundImage w=355 bw=xs bc=bo h-bc=ac br=md bgc=mu av=c ah=c cur=pointer slot=background style="aspect-ratio: 16 / 9;"':
-                              - rtgl-text s=md c=mu-fg: Select Background
+                              - rtgl-text s=md c=mu-fg: ${selectBackgroundLabel}
                     $else:
                       - 'rtgl-view#backgroundImage w=355 bw=xs bc=bo h-bc=ac br=md bgc=mu av=c ah=c cur=pointer slot=background style="aspect-ratio: 16 / 9;"':
-                          - rtgl-text s=md c=mu-fg: Select Background
+                          - rtgl-text s=md c=mu-fg: ${selectBackgroundLabel}
                   - rtgl-view slot=custom-transform d=h av=c w=f g=md:
                       - rtgl-view d=h av=c w=1fg g=sm wrap:
                           - $for item, i in customTransformDetails:
                               - 'rtgl-view#customTransformChip${i} d=h av=c g=sm bw=xs bc=bo h-bc=pr br=full bgc=mu ph=md pv=sm cur=pointer style="max-width: 220px; box-sizing: border-box;"':
                                   - rtgl-text s=xs c=mu-fg ellipsis: ${item.label}
                                   - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums; white-space: nowrap;"': ${item.value}
-                      - rtgl-button#customTransformButton v=se: Edit
+                      - rtgl-button#customTransformButton v=se: ${editButtonLabel}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-              - rtgl-button#submitButton: Submit
+              - rtgl-button#submitButton: ${submitButtonLabel}
       - $if backgroundTransformEditor.isOpen:
           - 'rtgl-view pos=abs edge=f z=20 bgc=bg d=v style="pointer-events: auto; min-width: 0; min-height: 0;"':
               - rtgl-view h=48 bwb=xs w=f d=h av=c ph=md g=md:
-                  - rtgl-text s=sm w=1fg: Transform
-                  - rtgl-button#backgroundTransformEditorDoneButton v=pr: Done
+                  - rtgl-text s=sm w=1fg: ${transformEditorTitle}
+                  - rtgl-button#backgroundTransformEditorDoneButton v=pr: ${doneButtonLabel}
               - 'rtgl-view w=f h=1fg ah=c av=c style="min-width: 0; min-height: 0;"':
                   - 'rtgl-view h=f style="width: ${backgroundTransformEditor.previewMaxWidth}; max-width: 100%; min-width: 0; min-height: 0;"':
                       - rvn-scene-editor-preview-canvas#backgroundTransformPreviewCanvasHost canvas-aspect-ratio="${backgroundTransformEditor.canvasAspectRatio}": null
@@ -168,7 +168,7 @@ template:
                                                       - rvn-file-image fileId=${item.previewFileId} w=f h=f: null
                                                     $else:
                                                       - rtgl-view w=f h=f av=c ah=c bgc=mu-fg:
-                                                          - rtgl-text s=sm c=mu-fg: No thumbnail
+                                                          - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
                                               - rtgl-view d=v w=f g=xs p=md:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                   - $if item.typeInfo:
@@ -190,7 +190,7 @@ template:
                                               - rtgl-view w=f p=md:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-              - rtgl-button#buttonSelect: Select
+              - rtgl-button#buttonSelect: ${selectButtonLabel}
 
   - $when: fullImagePreviewVisible
     rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:

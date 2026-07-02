@@ -1,50 +1,65 @@
 import { persistAuthenticatedSession } from "../../deps/services/shared/authSession.js";
 
+const selectAuthenticateCopy = (i18n = {}) => i18n.authenticatePage ?? {};
+
 export const handleBackButtonClick = (deps) => {
   const { appService } = deps;
   appService.navigate("/projects");
 };
 
-const getErrorMessage = (error) => {
+const getErrorMessage = (error, copy = {}) => {
   const code = error?.code || "";
   if (code === "VALIDATION_ERROR") {
-    return "Please enter a valid email.";
+    return copy.validEmailAlert ?? "Please enter a valid email.";
   }
-  return error?.message || "Failed to request OTP. Please try again.";
+  return (
+    error?.message || copy.failedRequestOtp || "Failed to request OTP. Please try again."
+  );
 };
 
-const getAuthenticateErrorMessage = (error) => {
+const getAuthenticateErrorMessage = (error, copy = {}) => {
   const code = error?.code || "";
   if (code === "VALIDATION_ERROR") {
-    return "Please enter a valid OTP.";
+    return copy.validOtpAlert ?? "Please enter a valid OTP.";
   }
   if (code === "OTP_NOT_FOUND") {
-    return "OTP not found. Please request a new OTP.";
+    return copy.otpNotFound ?? "OTP not found. Please request a new OTP.";
   }
   if (code === "OTP_INVALID") {
-    return "Invalid OTP. Please try again.";
+    return copy.otpInvalid ?? "Invalid OTP. Please try again.";
   }
   if (code === "OTP_EXPIRED") {
-    return "OTP expired. Please request a new OTP.";
+    return copy.otpExpired ?? "OTP expired. Please request a new OTP.";
   }
-  return error?.message || "Failed to verify OTP. Please try again.";
+  return (
+    error?.message || copy.failedVerifyOtp || "Failed to verify OTP. Please try again."
+  );
 };
 
-const getRegisterErrorMessage = (error) => {
+const getRegisterErrorMessage = (error, copy = {}) => {
   const code = error?.code || "";
   if (code === "VALIDATION_ERROR") {
-    return "Invalid registration request.";
+    return copy.invalidRegistrationRequest ?? "Invalid registration request.";
   }
   if (code === "REGISTER_CODE_NOT_FOUND") {
-    return "Registration session expired. Please login again.";
+    return (
+      copy.registrationSessionExpired ??
+      "Registration session expired. Please login again."
+    );
   }
   if (code === "REGISTER_CODE_INVALID") {
-    return "Registration session is invalid. Please login again.";
+    return (
+      copy.registrationSessionInvalid ??
+      "Registration session is invalid. Please login again."
+    );
   }
   if (code === "REGISTER_CODE_EXPIRED") {
-    return "Registration session expired. Please login again.";
+    return (
+      copy.registrationSessionExpired ??
+      "Registration session expired. Please login again."
+    );
   }
-  return error?.message || "Failed to register. Please try again.";
+  return error?.message || copy.failedRegister || "Failed to register. Please try again.";
 };
 
 const shouldReissueRegisterCode = (error) => {
@@ -72,13 +87,16 @@ const extractRegisterCode = (result) => {
 };
 
 export const handleFormAction = async (deps, payload) => {
-  const { appService, apiService, store, render } = deps;
+  const { appService, apiService, store, render, i18n } = deps;
+  const copy = selectAuthenticateCopy(i18n);
   const detail = payload?._event?.detail || {};
 
   if (detail.actionId === "request-otp") {
     const email = detail?.values?.email?.trim?.() || "";
     if (!email) {
-      appService.showAlert({ message: "Email is required." });
+      appService.showAlert({
+        message: copy.emailRequired ?? "Email is required.",
+      });
       return;
     }
 
@@ -87,7 +105,7 @@ export const handleFormAction = async (deps, payload) => {
       store.setOtpRequested({ email });
       render();
     } catch (error) {
-      appService.showAlert({ message: getErrorMessage(error) });
+      appService.showAlert({ message: getErrorMessage(error, copy) });
     }
     return;
   }
@@ -95,13 +113,15 @@ export const handleFormAction = async (deps, payload) => {
   if (detail.actionId === "next") {
     const otp = detail?.values?.otp?.trim?.() || "";
     if (!otp) {
-      appService.showAlert({ message: "OTP is required." });
+      appService.showAlert({ message: copy.otpRequired ?? "OTP is required." });
       return;
     }
 
     const email = store.selectRequestedEmail();
     if (!email) {
-      appService.showAlert({ message: "Email is required." });
+      appService.showAlert({
+        message: copy.emailRequired ?? "Email is required.",
+      });
       return;
     }
 
@@ -116,7 +136,9 @@ export const handleFormAction = async (deps, payload) => {
             : "";
         if (!registerCode) {
           appService.showAlert({
-            message: "Registration failed. Please request OTP again.",
+            message:
+              copy.registrationFailedRequestOtpAgain ??
+              "Registration failed. Please request OTP again.",
           });
           return;
         }
@@ -129,7 +151,9 @@ export const handleFormAction = async (deps, payload) => {
       appService.navigate("/projects");
       return;
     } catch (error) {
-      appService.showAlert({ message: getAuthenticateErrorMessage(error) });
+      appService.showAlert({
+        message: getAuthenticateErrorMessage(error, copy),
+      });
     }
     return;
   }
@@ -140,7 +164,9 @@ export const handleFormAction = async (deps, payload) => {
 
     if (!acceptTerms || !acceptPrivacy) {
       appService.showAlert({
-        message: "Please accept Terms and Privacy Policy.",
+        message:
+          copy.acceptTermsPrivacyRequired ??
+          "Please accept Terms and Privacy Policy.",
       });
       return;
     }
@@ -149,7 +175,9 @@ export const handleFormAction = async (deps, payload) => {
     const registerCode = store.selectRegisterCode();
     if (!email || !registerCode) {
       appService.showAlert({
-        message: "Registration session expired. Please login again.",
+        message:
+          copy.registrationSessionExpired ??
+          "Registration session expired. Please login again.",
       });
       return;
     }
@@ -163,7 +191,9 @@ export const handleFormAction = async (deps, payload) => {
       appService.navigate("/projects");
     } catch (error) {
       if (!shouldReissueRegisterCode(error)) {
-        appService.showAlert({ message: getRegisterErrorMessage(error) });
+        appService.showAlert({
+          message: getRegisterErrorMessage(error, copy),
+        });
         return;
       }
 
@@ -175,7 +205,9 @@ export const handleFormAction = async (deps, payload) => {
         const nextRegisterCode = extractRegisterCode(reissueResult);
         if (!nextRegisterCode) {
           appService.showAlert({
-            message: "Registration session expired. Please login again.",
+            message:
+              copy.registrationSessionExpired ??
+              "Registration session expired. Please login again.",
           });
           return;
         }
@@ -189,7 +221,7 @@ export const handleFormAction = async (deps, payload) => {
         appService.navigate("/projects");
       } catch (reissueError) {
         appService.showAlert({
-          message: getRegisterErrorMessage(reissueError),
+          message: getRegisterErrorMessage(reissueError, copy),
         });
       }
       return;

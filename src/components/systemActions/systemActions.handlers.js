@@ -3,6 +3,10 @@ import {
   createActionItemWithInlineTransform,
   createBackgroundWithInlineTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import { getRoutevnCreatorSystemActionDocsUrl } from "../../internal/routevnUrls.js";
 
 const toPlainObject = (value) => {
@@ -311,13 +315,17 @@ export const handleHelpFloatingButtonClick = (deps, payload) => {
 export const handleVoicePreviewClick = (deps, payload) => {
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();
-  const { appService, store, render } = deps;
+  const { appService, i18n, store, render } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const voicePreview = store.selectVoicePreview();
 
   if (!voicePreview?.fileId) {
     appService.showAlert({
-      message: "Voice preview audio is unavailable.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Voice preview audio is unavailable.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }

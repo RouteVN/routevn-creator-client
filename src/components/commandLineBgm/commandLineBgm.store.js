@@ -1,4 +1,10 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const DEFAULT_AUDIO_VOLUME = 75;
 
@@ -171,7 +177,8 @@ export const selectBreadcrumb = ({ state }) => {
   return breadcrumb;
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const flatItems = toFlatItems(state.items).filter(
     (item) => item.type === "folder",
   );
@@ -223,11 +230,11 @@ export const selectViewData = ({ state }) => {
     groups: flatGroups,
     tempSelectedResourceId: state.tempSelectedResourceId,
     searchQuery: state.searchQuery,
-    searchPlaceholder: "Search...",
+    searchPlaceholder: localizeCommandLineText("Search...", copy),
     playingSound: state.playingSound,
     showAudioPlayer: state.showAudioPlayer,
-    breadcrumb,
-    form,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
+    form: localizeCommandLineForm(form, copy),
     defaultValues,
   };
 };

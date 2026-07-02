@@ -18,11 +18,13 @@ import {
   buildParticleFormValues,
   createParticleCreateSetupForm,
   createParticleForm,
+  createParticleFormTabs,
   resolveParticleTextureImageItem,
 } from "./support/particleForm.js";
 import { DEFAULT_PARTICLE_PRESET_ID } from "./support/particlePresets.js";
 import { formatParticleAspectRatio } from "./support/particlePreview.js";
 import { toParticleTextureImageOptions } from "../../internal/particles.js";
+import { selectParticlesPageCopy } from "./support/particlesPageCopy.js";
 
 const EMPTY_TREE = {
   items: {},
@@ -78,13 +80,13 @@ const buildDialogPreviewBackgroundImage = (state) => {
   };
 };
 
-const createTagForm = {
-  title: "Create Tag",
+const createTagForm = (copy = {}) => ({
+  title: copy.createTagTitle ?? "Create Tag",
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Tag Name",
+      label: copy.tagNameLabel ?? "Tag Name",
       required: true,
     },
   ],
@@ -94,11 +96,11 @@ const createTagForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Create Tag",
+        label: copy.createTagButton ?? "Create Tag",
       },
     ],
   },
-};
+});
 
 const createDialogForm = ({
   editMode = false,
@@ -106,6 +108,7 @@ const createDialogForm = ({
   tagsData = createEmptyTagCollection(),
   activeTab = DEFAULT_PARTICLE_FORM_TAB,
   dialogStep = PARTICLE_EDITOR_STEP,
+  copy = {},
 } = {}) => {
   const imageOptions = toParticleTextureImageOptions(imagesData);
   const tagOptions = buildTagFilterOptions({
@@ -115,6 +118,7 @@ const createDialogForm = ({
   if (!editMode && dialogStep === CREATE_PARTICLE_SETUP_STEP) {
     return createParticleCreateSetupForm({
       imageOptions,
+      copy,
     });
   }
 
@@ -123,13 +127,15 @@ const createDialogForm = ({
     imageOptions,
     tagOptions,
     activeTab,
+    copy,
   });
 };
 
-const createDefaultDialogState = (projectResolution) => {
+const createDefaultDialogState = (projectResolution, copy = {}) => {
   const particle = buildParticleFormValues({
     presetId: DEFAULT_PARTICLE_PRESET_ID,
     projectResolution,
+    copy,
   });
 
   return {
@@ -169,6 +175,7 @@ const {
   resourceCategory: "animatedAssets",
   addText: "Add",
   emptyMessage: "No particle effects found",
+  copy: selectParticlesPageCopy,
   matchesSearch,
   buildDetailFields: buildParticleDetailFields,
   buildCatalogItem: buildParticleCatalogItem,
@@ -200,26 +207,34 @@ const {
         ? buildParticleDetailFields({
             item: selectedItem,
             imagesData: state.imagesData,
+            copy,
           })
         : baseViewData.detailFields,
       tagFilterOptions: buildTagFilterOptions({
         tagsCollection: state.tagsData,
       }),
       selectedTagFilterValues: activeTagIds,
-      tagFilterPlaceholder: "Filter tags",
+      tagFilterPlaceholder: copy.tagFilterPlaceholder ?? "Filter tags",
       selectedItemTagIds: selectedItem?.tagIds ?? [],
       detailTagDraftValues: state.detailTagIds ?? [],
       isDetailTagSelectOpen: !!state.isDetailTagSelectOpen,
       detailTagAddOption: {
-        label: "Add tag",
+        label: copy.addTagOption ?? "Add tag",
       },
       isDialogOpen: state.isDialogOpen,
       isPreviewOnlyDialog: state.dialogMode === "preview",
       showParticleFormTabs: state.dialogStep === PARTICLE_EDITOR_STEP,
-      particleFormTabs: PARTICLE_FORM_TABS,
+      particleFormTabs: createParticleFormTabs(copy),
       selectedParticleFormTab: state.dialogFormTab,
       particleFormKey: `particle-form-${state.dialogStep}-${state.dialogFormTab}`,
-      particleForm: state.particleForm,
+      particleForm: createDialogForm({
+        editMode: state.editMode,
+        imagesData: state.imagesData,
+        tagsData: state.tagsData,
+        activeTab: state.dialogFormTab,
+        dialogStep: state.dialogStep,
+        copy,
+      }),
       dialogFormValues: state.dialogFormValues,
       dialogPreviewAspectRatio: state.dialogPreviewAspectRatio,
       dialogPreviewBackgroundImage: buildDialogPreviewBackgroundImage(state),
@@ -232,8 +247,18 @@ const {
       selectedTextureImageName: selectedTextureImageItem?.name ?? "",
       isCreateTagDialogOpen: state.isCreateTagDialogOpen,
       createTagDefaultValues: state.createTagDefaultValues,
-      createTagForm,
+      createTagForm: createTagForm(copy),
       selectedItem,
+      addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
+      backgroundImageLabel: copy.backgroundImageLabel ?? "Background Image",
+      cancelButton: copy.cancelButton ?? "Cancel",
+      confirmButton: copy.confirmButton ?? "OK",
+      deleteButton: copy.deleteButton ?? "Delete",
+      filesLabel: copy.filesLabel ?? "Files",
+      noSelectionLabel: copy.noSelectionLabel ?? "No selection",
+      previewButton: copy.previewMenuItem ?? "Preview",
+      removeMenuItem: copy.removeMenuItem ?? "Remove",
+      selectImageLabel: copy.selectImageOption ?? "Select image",
     };
   },
 });
@@ -423,6 +448,7 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
 
 const setDialogState = (state, options = {}) => {
   const {
+    copy = {},
     dialogMode = "form",
     editMode = false,
     dialogStep = editMode ? PARTICLE_EDITOR_STEP : CREATE_PARTICLE_SETUP_STEP,
@@ -436,6 +462,7 @@ const setDialogState = (state, options = {}) => {
     particle: itemData,
     presetId,
     projectResolution: state.projectResolution,
+    copy,
   });
 
   state.isDialogOpen = true;
@@ -458,6 +485,7 @@ const setDialogState = (state, options = {}) => {
     tagsData: state.tagsData,
     activeTab: state.dialogFormTab,
     dialogStep: state.dialogStep,
+    copy,
   });
 };
 

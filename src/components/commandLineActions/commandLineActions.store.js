@@ -1,4 +1,8 @@
 import { RUNTIME_ACTION_ITEMS } from "../../internal/runtimeActions.js";
+import {
+  localizeCommandLineItems,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const createSection = (label, items) => ({
   label,
@@ -315,12 +319,17 @@ const getActionItems = (attrs = {}) => {
 
 export const createInitialState = () => ({});
 
-export const selectViewData = ({ props: attrs }) => {
+export const selectViewData = ({ props: attrs, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
+
   return {
-    items: getActionItems(attrs),
+    items: localizeCommandLineItems(getActionItems(attrs), copy),
   };
 };
 
-export const selectItems = ({ props: attrs }) => {
-  return getActionItems(attrs);
+export const selectItems = ({ props: attrs, i18n }) => {
+  return localizeCommandLineItems(
+    getActionItems(attrs),
+    selectCommandLineCopy(i18n),
+  );
 };

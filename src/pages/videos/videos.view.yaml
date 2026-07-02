@@ -164,15 +164,15 @@ template:
                                               - rvn-file-image#detailThumbnail slot="video-thumbnail-file-id" fileId=${selectedPreviewFileId} h=135 bw=xs bc=bo br=md cur=pointer: null
                                             $else:
                                               - rtgl-view#detailThumbnailPlaceholder slot="video-thumbnail-file-id" w=f h=135 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                                                  - rtgl-text c=mu-fg s=sm: Click to Upload
-                                          - rtgl-tag-select#detailTagSelect slot="video-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                                  - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
+                                          - rtgl-tag-select#detailTagSelect slot="video-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                                  - rtgl-text s=md c=mu-fg: No selection
+                                  - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
   - $if showMobileFileExplorer:
       - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
           - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
-              - rtgl-text w=1fg s=md: Files
+              - rtgl-text w=1fg s=md: ${filesLabel}
               - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
                   - rtgl-svg svg=x wh=20 c=mu-fg: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
@@ -184,11 +184,11 @@ template:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
-                  - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=play: Preview
-                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: Delete
+                  - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=play: ${previewButton}
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
-                      - rtgl-tag-select#detailTagSelect slot="video-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                      - rtgl-tag-select#detailTagSelect slot="video-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
@@ -196,7 +196,7 @@ template:
                   - rvn-file-image#editDialogThumbnail slot="video-slot" fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
                 $else:
                   - rtgl-view#editDialogThumbnailPlaceholder slot="video-slot" w=f h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                      - rtgl-text c=mu-fg s=sm: Click to Upload
+                      - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
@@ -208,4 +208,4 @@ template:
                   - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
             $else:
               - rtgl-view slot=content w=f h=80vh av=c ah=c:
-                  - rtgl-text s=lg c=mu-fg: Loading video...
+                  - rtgl-text s=lg c=mu-fg: ${loadingLabel}

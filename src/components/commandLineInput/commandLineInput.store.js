@@ -1,6 +1,14 @@
 import { generateId } from "../../internal/id.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
+import {
+  formatCommandLineCopy,
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  localizeCommandLineOptions,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const INPUT_FIELDS_SLOT = "input-fields";
 const DEFAULT_FIELD_MAX_LENGTH = 32;
@@ -443,43 +451,73 @@ export const selectCanSubmit = ({ state }) => {
   return true;
 };
 
-const getFieldRowSummary = (row, variableLabel) => {
+const getFieldRowSummary = (row, variableLabel, copy) => {
   const summary = [
     variableLabel,
-    row.required ? "Required" : "Optional",
-    row.trim ? "Trim" : "Keep whitespace",
-    row.multiline ? "Multiline" : "Single line",
+    row.required
+      ? localizeCommandLineText("Required", copy)
+      : localizeCommandLineText("Optional", copy),
+    row.trim
+      ? localizeCommandLineText("Trim", copy)
+      : localizeCommandLineText("Keep whitespace", copy),
+    row.multiline
+      ? localizeCommandLineText("Multiline", copy)
+      : localizeCommandLineText("Single line", copy),
   ];
 
   if (row.placeholder) {
-    summary.push(`Placeholder: ${row.placeholder}`);
+    summary.push(
+      formatCommandLineCopy(
+        "Placeholder: {placeholder}",
+        {
+          placeholder: row.placeholder,
+        },
+        copy,
+      ),
+    );
   }
 
   if (row.maxLength !== "" && row.maxLength !== undefined) {
-    summary.push(`Max: ${row.maxLength}`);
+    summary.push(
+      formatCommandLineCopy(
+        "Max: {maxLength}",
+        {
+          maxLength: row.maxLength,
+        },
+        copy,
+      ),
+    );
   }
 
   return summary.join(" - ");
 };
 
-const createFieldDisplayRows = (fieldRows = [], variableOptions = []) => {
+const createFieldDisplayRows = (
+  fieldRows = [],
+  variableOptions = [],
+  copy,
+) => {
   const variableLabels = new Map(
     variableOptions.map((option) => [option.value, option.label]),
   );
 
   return fieldRows.map((row) => {
     const variableLabel =
-      variableLabels.get(row.variableId) ?? "No variable mapped";
+      variableLabels.get(row.variableId) ??
+      localizeCommandLineText("No variable mapped", copy);
 
     return {
       ...row,
       variableLabel,
-      summary: getFieldRowSummary(row, variableLabel),
+      summary: getFieldRowSummary(row, variableLabel, copy),
     };
   });
 };
 
-const createFieldVariableOptions = (variablesData = EMPTY_COLLECTION) => {
+const createFieldVariableOptions = (
+  variablesData = EMPTY_COLLECTION,
+  copy,
+) => {
   return getVariableOptions(variablesData, {
     type: "string",
   }).map((option) => {
@@ -489,19 +527,25 @@ const createFieldVariableOptions = (variablesData = EMPTY_COLLECTION) => {
 
     return {
       ...option,
-      suffixText: variableType,
+      suffixText: localizeCommandLineText(variableType, copy),
     };
   });
 };
 
-const createBreadcrumb = (state) => {
+const createBreadcrumb = (state, copy) => {
   const breadcrumb = [{ id: "actions", label: "Actions", click: true }];
 
   if (state.mode === "editField") {
     breadcrumb.push({ id: "input", label: "Input", click: true });
     breadcrumb.push({
       label: state.editFieldForm?.label
-        ? `Edit ${state.editFieldForm.label}`
+        ? formatCommandLineCopy(
+            "Edit {field}",
+            {
+              field: state.editFieldForm.label,
+            },
+            copy,
+          )
         : "Edit Field",
     });
     return breadcrumb;
@@ -511,24 +555,32 @@ const createBreadcrumb = (state) => {
   return breadcrumb;
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const layouts = props?.layouts ?? [];
   const layoutOptions = getInputLayoutOptions(layouts);
   const selectedResourceId = resolveSelectedResourceId({
     layouts,
     resourceId: state.selectedResourceId,
   });
-  const fieldVariableOptions = createFieldVariableOptions(state.variables);
+  const fieldVariableOptions = createFieldVariableOptions(
+    state.variables,
+    copy,
+  );
   const fieldRows = createFieldDisplayRows(
     selectFieldRows({ state }),
     fieldVariableOptions,
+    copy,
   );
   const editFieldForm = selectEditFieldForm({ state });
 
   return {
     mode: selectMode({ state }),
-    breadcrumb: createBreadcrumb(state),
-    form: FORM_TEMPLATE,
+    breadcrumb: localizeCommandLineBreadcrumb(
+      createBreadcrumb(state, copy),
+      copy,
+    ),
+    form: localizeCommandLineForm(FORM_TEMPLATE, copy),
     formKey: `${selectedResourceId}|${state.fieldOrder.join("|")}`,
     defaultValues: {
       resourceId: selectedResourceId,
@@ -542,8 +594,25 @@ export const selectViewData = ({ state, props }) => {
     hasFields: fieldRows.length > 0,
     editFieldForm,
     fieldVariableOptions,
-    booleanOptions: BOOLEAN_OPTIONS,
+    booleanOptions: localizeCommandLineOptions(BOOLEAN_OPTIONS, copy),
     canSaveEditField: selectCanSaveEditField({ state }),
     submitDisabled: !selectCanSubmit({ state }),
+    noInputFieldsLabel: localizeCommandLineText(
+      "No input fields found.",
+      copy,
+    ),
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
+    variableLabel: localizeCommandLineText("Variable", copy),
+    chooseStringVariablePlaceholder: localizeCommandLineText(
+      "Choose a string variable...",
+      copy,
+    ),
+    requiredLabel: localizeCommandLineText("Required", copy),
+    trimLabel: localizeCommandLineText("Trim", copy),
+    multilineLabel: localizeCommandLineText("Multiline", copy),
+    placeholderLabel: localizeCommandLineText("Placeholder", copy),
+    maxLengthLabel: localizeCommandLineText("Max Length", copy),
+    cancelButtonLabel: localizeCommandLineText("Cancel", copy),
+    saveFieldButtonLabel: localizeCommandLineText("Save Field", copy),
   };
 };

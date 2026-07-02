@@ -40,18 +40,20 @@ import {
   TRANSITION_PROPERTY_KEYS,
   UPDATE_PROPERTY_KEYS,
 } from "./animationEditor.constants.js";
+import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy.js";
 
 const createPropertyFieldConfig = (
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
+  copy = {},
 ) => {
   const { width, height } = requireProjectResolution(
     projectResolution,
-    "Project resolution",
+    copy.projectResolutionLabel ?? "Project resolution",
   );
 
   return {
     alpha: {
-      label: "Alpha",
+      label: copy.alphaPropertyLabel ?? "Alpha",
       defaultValue: 1,
       slider: {
         min: 0,
@@ -60,7 +62,7 @@ const createPropertyFieldConfig = (
       },
     },
     x: {
-      label: "Position X",
+      label: copy.positionXPropertyLabel ?? "Position X",
       defaultValue: width / 2,
       slider: {
         min: -width,
@@ -69,7 +71,7 @@ const createPropertyFieldConfig = (
       },
     },
     y: {
-      label: "Position Y",
+      label: copy.positionYPropertyLabel ?? "Position Y",
       defaultValue: height / 2,
       slider: {
         min: -height,
@@ -78,7 +80,7 @@ const createPropertyFieldConfig = (
       },
     },
     scaleX: {
-      label: "Scale X",
+      label: copy.scaleXPropertyLabel ?? "Scale X",
       defaultValue: 1,
       slider: {
         min: 0,
@@ -87,7 +89,7 @@ const createPropertyFieldConfig = (
       },
     },
     scaleY: {
-      label: "Scale Y",
+      label: copy.scaleYPropertyLabel ?? "Scale Y",
       defaultValue: 1,
       slider: {
         min: 0,
@@ -96,7 +98,7 @@ const createPropertyFieldConfig = (
       },
     },
     rotation: {
-      label: "Rotation",
+      label: copy.rotationPropertyLabel ?? "Rotation",
       defaultValue: 0,
       slider: {
         min: -360,
@@ -104,11 +106,12 @@ const createPropertyFieldConfig = (
         step: 1,
       },
       tooltip: {
-        content: "Rotation is measured in degrees.",
+        content:
+          copy.rotationPropertyTooltip ?? "Rotation is measured in degrees.",
       },
     },
     translateX: {
-      label: "Translate X",
+      label: copy.translateXPropertyLabel ?? "Translate X",
       defaultValue: 0,
       slider: {
         min: -2,
@@ -117,11 +120,12 @@ const createPropertyFieldConfig = (
       },
       tooltip: {
         content:
+          copy.translateXPropertyTooltip ??
           "Uses viewport-width units. 1 moves by one full screen width, -1 moves by one full screen width to the left.",
       },
     },
     translateY: {
-      label: "Translate Y",
+      label: copy.translateYPropertyLabel ?? "Translate Y",
       defaultValue: 0,
       slider: {
         min: -2,
@@ -130,11 +134,12 @@ const createPropertyFieldConfig = (
       },
       tooltip: {
         content:
+          copy.translateYPropertyTooltip ??
           "Uses viewport-height units. 1 moves by one full screen height, -1 moves by one full screen height upward.",
       },
     },
     blurX: {
-      label: "Blur X",
+      label: copy.blurXPropertyLabel ?? "Blur X",
       defaultValue: 0,
       slider: {
         min: 0,
@@ -143,7 +148,7 @@ const createPropertyFieldConfig = (
       },
     },
     blurY: {
-      label: "Blur Y",
+      label: copy.blurYPropertyLabel ?? "Blur Y",
       defaultValue: 0,
       slider: {
         min: 0,
@@ -174,6 +179,158 @@ const formatEasingLabel = (easingName) => {
   return easingName
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/^./, (value) => value.toUpperCase());
+};
+
+const STATIC_LABEL_COPY_KEYS = Object.freeze({
+  Absolute: "absoluteValueType",
+  Add: "addButton",
+  "Add animation property": "addAnimationPropertyTitle",
+  "Add Keyframe": "addKeyframeTitle",
+  "Add keyframe to left": "addKeyframeLeftMenuItem",
+  "Add keyframe to right": "addKeyframeRightMenuItem",
+  "Add Property": "addPropertyButton",
+  Alpha: "alphaPropertyLabel",
+  Auto: "autoTweenMode",
+  "BG Image": "backgroundImageLabel",
+  Cancel: "cancelButton",
+  Channel: "channelLabel",
+  "Custom Initial Value": "customInitialValueLabel",
+  "Custom Value": "customValueSource",
+  Delete: "deleteMenuItem",
+  "Delete keyframe": "deleteKeyframeMenuItem",
+  Done: "doneButton",
+  Duration: "durationLabel",
+  "Duration (ms)": "durationMsLabel",
+  "Duration in milliseconds": "durationMsPlaceholder",
+  Easing: "easingLabel",
+  Edit: "editMenuItem",
+  "Edit Auto Tween": "editAutoTweenTitle",
+  "Edit Initial Value": "editInitialValueTitle",
+  "Edit Keyframe": "editKeyframeTitle",
+  "Edit keyframe": "editKeyframeMenuItem",
+  Greyscale: "greyscaleChannel",
+  Image: "imageLabel",
+  In: "inTimelineLabel",
+  Initial: "initialLabel",
+  "Initial value": "initialValueLabel",
+  Invert: "invertLabel",
+  Keyframes: "keyframesTweenMode",
+  Kind: "kindLabel",
+  Linear: "linearEasingLabel",
+  "Move keyframe to left": "moveKeyframeLeftMenuItem",
+  "Move keyframe to right": "moveKeyframeRightMenuItem",
+  Max: "maxCombineLabel",
+  Min: "minCombineLabel",
+  Multiply: "multiplyCombineLabel",
+  No: "noLabel",
+  Off: "offLabel",
+  OK: "okButton",
+  On: "onLabel",
+  Out: "outTimelineLabel",
+  Preview: "previewTitle",
+  Property: "propertyLabel",
+  Relative: "relativeValueType",
+  Remove: "removeMenuItem",
+  Save: "saveButton",
+  Single: "singleMaskKind",
+  Softness: "softnessLabel",
+  Step: "stepSampleLabel",
+  "Tween Mode": "tweenModeLabel",
+  "The final value of the property at the end of the animation":
+    "keyframeValueTooltip",
+  "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation":
+    "initialValueTooltip",
+  "The time it takes for the animation keyframe to move from previous value to next value":
+    "keyframeDurationTooltip",
+  "Update Auto Tween": "updateAutoTweenButton",
+  "Update Keyframe": "updateKeyframeButton",
+  "Update Value": "updateValueButton",
+  "Use Default Value": "useDefaultValueSource",
+  "Use initial value": "useInitialValueLabel",
+  "Relative will add the value to the previous value. Absolute will set the property value to exactly the specified value":
+    "relativeValueTooltip",
+  "Value Source": "valueSourceLabel",
+  Value: "valueLabel",
+  "Value type": "valueTypeLabel",
+  "Incoming Image": "incomingImageLabel",
+  "Outgoing Image": "outgoingImageLabel",
+  "Target Image": "targetImageLabel",
+  Yes: "yesLabel",
+});
+
+const localizeText = (value, copy = {}) => {
+  const copyKey = STATIC_LABEL_COPY_KEYS[value];
+  return copyKey ? (copy[copyKey] ?? value) : value;
+};
+
+const localizeOptions = (options = [], copy = {}) => {
+  return options.map((option) => ({
+    ...option,
+    label: localizeText(option.label, copy),
+  }));
+};
+
+const localizeMenuItems = (items = [], copy = {}) => {
+  return items.map((item) => ({
+    ...item,
+    label: localizeText(item.label, copy),
+  }));
+};
+
+const localizeFormField = (field = {}, copy = {}) => {
+  const localizedField = { ...field };
+
+  if (localizedField.label) {
+    localizedField.label = localizeText(localizedField.label, copy);
+  }
+  if (localizedField.placeholder) {
+    localizedField.placeholder = localizeText(localizedField.placeholder, copy);
+  }
+  if (localizedField.tooltip?.content) {
+    localizedField.tooltip = {
+      ...localizedField.tooltip,
+      content: localizeText(localizedField.tooltip.content, copy),
+    };
+  }
+  if (Array.isArray(localizedField.options)) {
+    localizedField.options = localizeOptions(localizedField.options, copy);
+  }
+
+  return localizedField;
+};
+
+const localizeForm = (form = {}, copy = {}) => {
+  const localizedForm = { ...form };
+
+  if (localizedForm.title) {
+    localizedForm.title = localizeText(localizedForm.title, copy);
+  }
+  if (Array.isArray(localizedForm.fields)) {
+    localizedForm.fields = localizedForm.fields.map((field) =>
+      localizeFormField(field, copy),
+    );
+  }
+  if (localizedForm.actions?.buttons) {
+    localizedForm.actions = {
+      ...localizedForm.actions,
+      buttons: localizedForm.actions.buttons.map((button) => ({
+        ...button,
+        label: localizeText(button.label, copy),
+      })),
+    };
+  }
+
+  return localizedForm;
+};
+
+const createEasingOptions = (copy = {}) => {
+  return SUPPORTED_EASING_NAMES.map((easingName) => ({
+    label:
+      easingName === "linear"
+        ? (copy.linearEasingLabel ?? formatEasingLabel(easingName))
+        : formatEasingLabel(easingName),
+    value: easingName,
+  }));
 };
 
 const createPreviewRect = ({ id, x, y, fill, width, height } = {}) => {
@@ -463,12 +620,7 @@ const createAnimationResetState = ({
   };
 };
 
-const EASING_OPTIONS = Object.freeze(
-  SUPPORTED_EASING_NAMES.map((easingName) => ({
-    label: formatEasingLabel(easingName),
-    value: easingName,
-  })),
-);
+const EASING_OPTIONS = Object.freeze(createEasingOptions());
 
 const TWEEN_MODE_OPTIONS = Object.freeze([
   {
@@ -551,7 +703,7 @@ const createSliderField = ({
   return field;
 };
 
-const createAutoTweenFields = () => {
+const createAutoTweenFields = (copy = {}) => {
   return [
     {
       name: "duration",
@@ -565,17 +717,18 @@ const createAutoTweenFields = () => {
       name: "easing",
       type: "select",
       label: "Easing",
-      options: EASING_OPTIONS,
+      options: createEasingOptions(copy),
       required: true,
       defaultValue: AUTO_TWEEN_DEFAULT_EASING,
     },
-  ];
+  ].map((field) => localizeFormField(field, copy));
 };
 
-const createEditAutoTweenForm = () => {
-  return {
+const createEditAutoTweenForm = (copy = {}) => {
+  return localizeForm(
+    {
     title: "Edit Auto Tween",
-    fields: createAutoTweenFields(),
+    fields: createAutoTweenFields(copy),
     actions: {
       layout: "",
       buttons: [
@@ -586,13 +739,16 @@ const createEditAutoTweenForm = () => {
         },
       ],
     },
-  };
+    },
+    copy,
+  );
 };
 
 const createAddKeyframeForm = (
   property,
   propertyFieldConfig,
   { includeDuration = true } = {},
+  copy = {},
 ) => {
   if (!property) {
     return {};
@@ -645,12 +801,13 @@ const createAddKeyframeForm = (
       name: "easing",
       type: "select",
       label: "Easing",
-      options: EASING_OPTIONS,
+      options: createEasingOptions(copy),
       required: true,
     },
   );
 
-  return {
+  return localizeForm(
+    {
     title: "Add Keyframe",
     fields,
     actions: {
@@ -663,16 +820,19 @@ const createAddKeyframeForm = (
         },
       ],
     },
-  };
+    },
+    copy,
+  );
 };
 
 const createUpdateKeyframeForm = (
   property,
   propertyFieldConfig,
   options = {},
+  copy = {},
 ) => {
-  return {
-    ...createAddKeyframeForm(property, propertyFieldConfig, options),
+  return localizeForm({
+    ...createAddKeyframeForm(property, propertyFieldConfig, options, copy),
     title: "Edit Keyframe",
     actions: {
       layout: "",
@@ -684,13 +844,14 @@ const createUpdateKeyframeForm = (
         },
       ],
     },
-  };
+  }, copy);
 };
 
 const createAddPropertyForm = (
   availableProperties,
   propertyFieldConfig,
   { side, property } = {},
+  copy = {},
 ) => {
   const isUpdateSide = side === "update";
   const initialValueField = property
@@ -724,7 +885,7 @@ const createAddPropertyForm = (
       type: "segmented-control",
       label: "Tween Mode",
       noClear: true,
-      options: TWEEN_MODE_OPTIONS,
+      options: localizeOptions(TWEEN_MODE_OPTIONS, copy),
       required: true,
     });
     fields.push({
@@ -748,7 +909,7 @@ const createAddPropertyForm = (
         },
       ],
     });
-    const autoFields = createAutoTweenFields().map((field) => ({
+    const autoFields = createAutoTweenFields(copy).map((field) => ({
       ...field,
       $when: 'tweenMode == "auto"',
     }));
@@ -782,7 +943,8 @@ const createAddPropertyForm = (
     }
   }
 
-  return {
+  return localizeForm(
+    {
     title: "Add animation property",
     fields,
     actions: {
@@ -795,18 +957,21 @@ const createAddPropertyForm = (
         },
       ],
     },
-  };
+    },
+    copy,
+  );
 };
 
 const createTransitionAddPropertySideMenuItems = ({
   previousAvailable = false,
   nextAvailable = false,
+  copy = {},
 } = {}) => {
   const items = [];
 
   if (previousAvailable) {
     items.push({
-      label: "Out",
+      label: copy.outTimelineLabel ?? "Out",
       type: "item",
       value: "prev",
     });
@@ -814,7 +979,7 @@ const createTransitionAddPropertySideMenuItems = ({
 
   if (nextAvailable) {
     items.push({
-      label: "In",
+      label: copy.inTimelineLabel ?? "In",
       type: "item",
       value: "next",
     });
@@ -849,26 +1014,28 @@ const normalizeEditorMaskChannel = (channel) => {
     : DEFAULT_MASK_CHANNEL_OPTION.value;
 };
 
-const createEmptyMaskPanelData = () => ({
+const createEmptyMaskPanelData = (copy = {}) => ({
   enabled: false,
   unsupported: false,
   unsupportedKind: undefined,
+  unsupportedMessage: "",
+  unsupportedDescription: "",
   kind: "single",
-  kindLabel: "Single",
+  kindLabel: copy.singleMaskKind ?? "Single",
   channelValue: DEFAULT_MASK_CHANNEL_OPTION.value,
-  channelLabel: DEFAULT_MASK_CHANNEL_OPTION.label,
+  channelLabel: localizeText(DEFAULT_MASK_CHANNEL_OPTION.label, copy),
   sampleValue: "step",
   combineValue: "max",
   invertValue: "off",
-  invertLabel: "Off",
+  invertLabel: copy.offLabel ?? "Off",
   softness: 0.08,
   progressDuration: 900,
   progressDurationLabel: "900 ms",
   progressEasing: "linear",
-  progressEasingLabel: "Linear",
+  progressEasingLabel: copy.linearEasingLabel ?? "Linear",
   singleImage: undefined,
   imageItems: [],
-  imageLabel: "No image selected",
+  imageLabel: copy.noImageSelectedLabel ?? "No image selected",
   sequenceItems: [],
   compositeItems: [],
 });
@@ -879,6 +1046,10 @@ const getSectionProperties = (state, side) => {
 
 const getPropertyFieldConfig = (state) => {
   return createPropertyFieldConfig(state.projectResolution);
+};
+
+const getLocalizedPropertyFieldConfig = (state, copy = {}) => {
+  return createPropertyFieldConfig(state.projectResolution, copy);
 };
 
 const getDefaultInitialValues = (state) => {
@@ -2225,17 +2396,24 @@ const buildTransitionMaskPanelDataForMask = (
   state,
   transitionMask,
   unsupportedPersistedMask,
+  copy = {},
 ) => {
   if (!transitionMask && !unsupportedPersistedMask) {
-    return createEmptyMaskPanelData();
+    return createEmptyMaskPanelData(copy);
   }
 
   if (unsupportedPersistedMask) {
     return {
-      ...createEmptyMaskPanelData(),
+      ...createEmptyMaskPanelData(copy),
       enabled: true,
       unsupported: true,
       unsupportedKind: unsupportedPersistedMask.kind,
+      unsupportedMessage: `${
+        unsupportedPersistedMask.kind
+      } ${copy.unsupportedMaskMessageSuffix ?? "masks are hidden for now"}`,
+      unsupportedDescription:
+        copy.unsupportedMaskDescription ??
+        "This existing mask will be preserved when you save. Remove it if you want to add a new single-image mask.",
     };
   }
 
@@ -2274,36 +2452,48 @@ const buildTransitionMaskPanelDataForMask = (
     enabled: true,
     unsupported: false,
     unsupportedKind: undefined,
+    unsupportedMessage: "",
+    unsupportedDescription: "",
     kind,
-    kindLabel: getOptionLabel(MASK_KIND_OPTIONS, kind),
+    kindLabel: getOptionLabel(localizeOptions(MASK_KIND_OPTIONS, copy), kind),
     channelValue,
-    channelLabel: getOptionLabel(MASK_CHANNEL_OPTIONS, channelValue),
+    channelLabel: getOptionLabel(
+      localizeOptions(MASK_CHANNEL_OPTIONS, copy),
+      channelValue,
+    ),
     sampleValue: transitionMask.sample ?? "step",
     combineValue: transitionMask.combine ?? "max",
     invertValue,
-    invertLabel: getOptionLabel(MASK_BOOLEAN_OPTIONS, invertValue),
+    invertLabel: getOptionLabel(
+      localizeOptions(MASK_BOOLEAN_OPTIONS, copy),
+      invertValue,
+    ),
     softness: transitionMask.softness ?? 0.08,
     progressDuration,
     progressDurationLabel: `${progressDuration} ms`,
     progressEasing,
-    progressEasingLabel: getOptionLabel(EASING_OPTIONS, progressEasing),
+    progressEasingLabel: getOptionLabel(
+      createEasingOptions(copy),
+      progressEasing,
+    ),
     singleImage,
     imageItems: imageItems.filter((item) => item?.imageId),
-    imageLabel: singleImage?.name ?? "No image selected",
+    imageLabel: singleImage?.name ?? copy.noImageSelectedLabel ?? "No image selected",
     sequenceItems,
     compositeItems,
   };
 };
 
-const buildTransitionMaskPanelData = (state) => {
+const buildTransitionMaskPanelData = (state, copy = {}) => {
   return buildTransitionMaskPanelDataForMask(
     state,
     getTransitionMask(state),
     getUnsupportedPersistedTransitionMask(state),
+    copy,
   );
 };
 
-const buildPreviewPanelData = (state) => {
+const buildPreviewPanelData = (state, copy = {}) => {
   return {
     items: getPreviewImageSlotConfigs(state.dialogType).map((slot) => {
       const imageId =
@@ -2313,30 +2503,32 @@ const buildPreviewPanelData = (state) => {
       const image = buildMaskImageItem(state, imageId);
 
       return {
-        label: slot.label,
+        label: localizeText(slot.label, copy),
         target: slot.target,
         imageId,
         image,
-        imageLabel: image?.name ?? "Select image",
+        imageLabel: image?.name ?? copy.selectImageLabel ?? "Select image",
       };
     }),
   };
 };
 
-const buildMaskEditorPanelData = (state) => {
+const buildMaskEditorPanelData = (state, copy = {}) => {
   if (state.popover.mode === "addMask") {
     return buildTransitionMaskPanelDataForMask(
       state,
       state.pendingTransitionMask,
       undefined,
+      copy,
     );
   }
 
-  return buildTransitionMaskPanelData(state);
+  return buildTransitionMaskPanelData(state, copy);
 };
 
-export const selectViewData = ({ state }) => {
-  const propertyFieldConfig = getPropertyFieldConfig(state);
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectAnimationEditorPageCopy(i18n);
+  const propertyFieldConfig = getLocalizedPropertyFieldConfig(state, copy);
   const defaultInitialValuesByProperty = getDefaultInitialValues(state);
   const dialogType = state.dialogType;
   const updateProperties = getSectionProperties(state, "update");
@@ -2378,16 +2570,16 @@ export const selectViewData = ({ state }) => {
     "next",
     propertyFieldConfig,
   );
-  const transitionMaskPanel = buildTransitionMaskPanelData(state);
-  const maskEditorPanel = buildMaskEditorPanelData(state);
-  const previewPanel = buildPreviewPanelData(state);
+  const transitionMaskPanel = buildTransitionMaskPanelData(state, copy);
+  const maskEditorPanel = buildMaskEditorPanelData(state, copy);
+  const previewPanel = buildPreviewPanelData(state, copy);
   const imageFolderItems = toFlatItems(state.imagesData).filter(
     (item) => item.type === "folder",
   );
 
   const keyframeDropdownItems = (() => {
     if (state.popover.mode !== "keyframeMenu") {
-      return propertyNameDropdownItems;
+      return localizeMenuItems(propertyNameDropdownItems, copy);
     }
 
     const { side, property, index } = state.popover.payload;
@@ -2397,7 +2589,7 @@ export const selectViewData = ({ state }) => {
     const isFirstKeyframe = currentIndex === 0;
     const isLastKeyframe = currentIndex === keyframes.length - 1;
 
-    return baseKeyframeDropdownItems.filter((item) => {
+    return localizeMenuItems(baseKeyframeDropdownItems, copy).filter((item) => {
       if (item.value === "move-left" && isFirstKeyframe) {
         return false;
       }
@@ -2513,7 +2705,10 @@ export const selectViewData = ({ state }) => {
     animationName: state.dialogDefaultValues?.name ?? "",
     previewPlayheadTimeMs: state.previewPlayheadTimeMs,
     previewPlayheadVisible: state.previewPlayheadVisible,
-    dialogTypeLabel: dialogType === "transition" ? "Transition" : "Update",
+    dialogTypeLabel:
+      dialogType === "transition"
+        ? (copy.transitionType ?? "Transition")
+        : (copy.updateType ?? "Update"),
     transitionTimelineDuration,
     canvasAspectRatio: formatProjectResolutionAspectRatio(
       state.projectResolution,
@@ -2530,20 +2725,25 @@ export const selectViewData = ({ state }) => {
         side: addPropertySide,
         property: addPropertySelectedProperty,
       },
+      copy,
     ),
     addPropertyFormKey,
     addPropertyContext,
     addKeyframeForm: createAddKeyframeForm(
       state.popover.payload?.property,
       propertyFieldConfig,
+      {},
+      copy,
     ),
     addKeyframeDefaultValues,
     updateKeyframeForm: createUpdateKeyframeForm(
       state.popover.payload?.property,
       propertyFieldConfig,
+      {},
+      copy,
     ),
-    editAutoForm: createEditAutoTweenForm(),
-    editInitialValueForm,
+    editAutoForm: createEditAutoTweenForm(copy),
+    editInitialValueForm: localizeForm(editInitialValueForm, copy),
     editInitialValueContext,
     editKeyframeDefaultValues,
     editAutoDefaultValues,
@@ -2552,12 +2752,12 @@ export const selectViewData = ({ state }) => {
     transitionMaskPanel,
     maskEditorPanel,
     previewPanel,
-    maskKindOptions: MASK_KIND_OPTIONS,
-    maskChannelOptions: MASK_CHANNEL_OPTIONS,
-    maskSampleOptions: MASK_SAMPLE_OPTIONS,
-    maskCombineOptions: MASK_COMBINE_OPTIONS,
-    maskBooleanOptions: MASK_BOOLEAN_OPTIONS,
-    maskProgressEasingOptions: EASING_OPTIONS,
+    maskKindOptions: localizeOptions(MASK_KIND_OPTIONS, copy),
+    maskChannelOptions: localizeOptions(MASK_CHANNEL_OPTIONS, copy),
+    maskSampleOptions: localizeOptions(MASK_SAMPLE_OPTIONS, copy),
+    maskCombineOptions: localizeOptions(MASK_COMBINE_OPTIONS, copy),
+    maskBooleanOptions: localizeOptions(MASK_BOOLEAN_OPTIONS, copy),
+    maskProgressEasingOptions: createEasingOptions(copy),
     updateAddPropertyButtonVisible: updateAddPropertyOptions.length > 0,
     transitionAddPropertyButtonVisible:
       previousAddPropertyOptions.length > 0 ||
@@ -2565,6 +2765,7 @@ export const selectViewData = ({ state }) => {
     addPropertySideMenuItems: createTransitionAddPropertySideMenuItems({
       previousAvailable: previousAddPropertyOptions.length > 0,
       nextAvailable: nextAddPropertyOptions.length > 0,
+      copy,
     }),
     popover: {
       ...state.popover,
@@ -2586,5 +2787,33 @@ export const selectViewData = ({ state }) => {
     imageFolderItems,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
+    addButton: copy.addButton ?? "Add",
+    addMaskButton: copy.addMaskButton ?? "Add Mask",
+    addMaskTitle: copy.addMaskTitle ?? "Add Mask",
+    cancelButton: copy.cancelButton ?? "Cancel",
+    channelLabel: copy.channelLabel ?? "Channel",
+    doneButton: copy.doneButton ?? "Done",
+    editButton: copy.editMenuItem ?? "Edit",
+    editMaskTitle: copy.editMaskTitle ?? "Edit Mask",
+    imageLabel: copy.imageLabel ?? "Image",
+    inTimelineLabel: copy.inTimelineLabel ?? "In",
+    invertLabel: copy.invertLabel ?? "Invert",
+    kindLabel: copy.kindLabel ?? "Kind",
+    maskTitle: copy.maskTitle ?? "Mask",
+    noMaskAvailable: copy.noMaskAvailable ?? "No mask available.",
+    noPreviewLabel: copy.noPreviewLabel ?? "No preview",
+    okButton: copy.okButton ?? "OK",
+    outTimelineLabel: copy.outTimelineLabel ?? "Out",
+    playButton: copy.playButton ?? "Play",
+    previewTitle: copy.previewTitle ?? "Preview",
+    progressDurationLabel:
+      copy.progressDurationLabel ?? "Progress Duration (ms)",
+    progressEasingLabel: copy.progressEasingLabel ?? "Progress Easing",
+    removeButton: copy.removeMenuItem ?? "Remove",
+    saveButton: copy.saveButton ?? "Save",
+    selectImageLabel: copy.selectImageLabel ?? "Select image",
+    softnessLabel: copy.softnessLabel ?? "Softness",
+    tweenPropertiesTitle:
+      copy.tweenPropertiesTitle ?? "Tween Properties",
   };
 };

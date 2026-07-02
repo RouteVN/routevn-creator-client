@@ -1,5 +1,9 @@
 import { generateId } from "../../internal/id.js";
 import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import {
   isVariableEnumEnabled,
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
@@ -171,6 +175,7 @@ const createBranchFromTemp = ({
   tempBranch,
   variablesData,
   appService,
+  copy,
 } = {}) => {
   const branch = {
     id: branchId,
@@ -184,8 +189,8 @@ const createBranchFromTemp = ({
   if (tempBranch.conditionKind === "unsupported") {
     if (!Object.hasOwn(toPlainObject(tempBranch), "when")) {
       appService.showAlert({
-        message: "Condition is unsupported.",
-        title: "Warning",
+        message: localizeCommandLineText("Condition is unsupported.", copy),
+        title: localizeCommandLineText("Warning", copy),
       });
       return undefined;
     }
@@ -196,16 +201,19 @@ const createBranchFromTemp = ({
 
   if (tempBranch.conditionKind !== "variable") {
     appService.showAlert({
-      message: "Condition type is unsupported.",
-      title: "Warning",
+      message: localizeCommandLineText("Condition type is unsupported.", copy),
+      title: localizeCommandLineText("Warning", copy),
     });
     return undefined;
   }
 
   if (!["eq", "neq"].includes(tempBranch.op)) {
     appService.showAlert({
-      message: "Condition operator is unsupported.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Condition operator is unsupported.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return undefined;
   }
@@ -215,8 +223,11 @@ const createBranchFromTemp = ({
     const enumValues = normalizeVariableEnumValues(variable.enumValues);
     if (!enumValues.includes(tempBranch.value)) {
       appService.showAlert({
-        message: "Condition enum value is invalid.",
-        title: "Warning",
+        message: localizeCommandLineText(
+          "Condition enum value is invalid.",
+          copy,
+        ),
+        title: localizeCommandLineText("Warning", copy),
       });
       return undefined;
     }
@@ -230,8 +241,11 @@ const createBranchFromTemp = ({
 
   if (value === undefined) {
     appService.showAlert({
-      message: "Condition comparison value is invalid.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Condition comparison value is invalid.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return undefined;
   }
@@ -394,7 +408,8 @@ export const handleNestedActionsClose = (deps) => {
 
 export const handleSaveBranchClick = (deps, payload) => {
   payload._event.stopPropagation();
-  const { appService, store, render } = deps;
+  const { appService, store, render, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const state = store.getState();
   const branchId = state.currentBranchId ?? generateId();
   const branch = createBranchFromTemp({
@@ -402,6 +417,7 @@ export const handleSaveBranchClick = (deps, payload) => {
     tempBranch: state.tempBranch,
     variablesData: state.variablesData,
     appService,
+    copy,
   });
 
   if (!branch) {
@@ -417,13 +433,17 @@ export const handleSaveBranchClick = (deps, payload) => {
 
 export const handleSubmitClick = (deps, payload) => {
   payload._event.stopPropagation();
-  const { appService, dispatchEvent, store } = deps;
+  const { appService, dispatchEvent, store, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
   const branches = store.selectBranches();
 
   if (branches.length === 0) {
     appService.showAlert({
-      message: "Please add at least one branch.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "Please add at least one branch.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }
@@ -436,8 +456,11 @@ export const handleSubmitClick = (deps, payload) => {
 
   if (invalidElseIndex >= 0) {
     appService.showAlert({
-      message: "The default branch must be the last branch.",
-      title: "Warning",
+      message: localizeCommandLineText(
+        "The default branch must be the last branch.",
+        copy,
+      ),
+      title: localizeCommandLineText("Warning", copy),
     });
     return;
   }

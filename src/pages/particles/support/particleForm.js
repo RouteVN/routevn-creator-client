@@ -1,52 +1,73 @@
 import {
   DEFAULT_PARTICLE_PRESET_ID,
   PARTICLE_PRESET_OPTIONS,
+  createParticlePresetOptions,
   createParticlePreset,
 } from "./particlePresets.js";
 import { isBuiltinParticleTextureName } from "../../../internal/particles.js";
 
-const EMISSION_MODE_OPTIONS = [
-  { id: "continuous", label: "Continuous", value: "continuous" },
-  { id: "burst", label: "Burst", value: "burst" },
+const createEmissionModeOptions = (copy = {}) => [
+  {
+    id: "continuous",
+    label: copy.emissionModeContinuous ?? "Continuous",
+    value: "continuous",
+  },
+  { id: "burst", label: copy.emissionModeBurst ?? "Burst", value: "burst" },
 ];
 
-const DURATION_MODE_OPTIONS = [
-  { id: "infinite", label: "Infinite", value: "infinite" },
-  { id: "timed", label: "Timed", value: "timed" },
+const createDurationModeOptions = (copy = {}) => [
+  {
+    id: "infinite",
+    label: copy.durationModeInfinite ?? "Infinite",
+    value: "infinite",
+  },
+  { id: "timed", label: copy.durationModeTimed ?? "Timed", value: "timed" },
 ];
 
-const SOURCE_KIND_OPTIONS = [
-  { id: "point", label: "Point", value: "point" },
-  { id: "rect", label: "Rectangle", value: "rect" },
-  { id: "circle", label: "Circle", value: "circle" },
-  { id: "line", label: "Line", value: "line" },
+const createSourceKindOptions = (copy = {}) => [
+  { id: "point", label: copy.sourceKindPoint ?? "Point", value: "point" },
+  {
+    id: "rect",
+    label: copy.sourceKindRectangle ?? "Rectangle",
+    value: "rect",
+  },
+  { id: "circle", label: copy.sourceKindCircle ?? "Circle", value: "circle" },
+  { id: "line", label: copy.sourceKindLine ?? "Line", value: "line" },
 ];
 
-const VELOCITY_KIND_OPTIONS = [
-  { id: "directional", label: "Directional", value: "directional" },
-  { id: "radial", label: "Radial", value: "radial" },
+const createVelocityKindOptions = (copy = {}) => [
+  {
+    id: "directional",
+    label: copy.velocityKindDirectional ?? "Directional",
+    value: "directional",
+  },
+  { id: "radial", label: copy.velocityKindRadial ?? "Radial", value: "radial" },
 ];
 
-const FACE_VELOCITY_OPTIONS = [
-  { id: "off", label: "Off", value: false },
-  { id: "on", label: "On", value: true },
+const createFaceVelocityOptions = (copy = {}) => [
+  { id: "off", label: copy.offLabel ?? "Off", value: false },
+  { id: "on", label: copy.onLabel ?? "On", value: true },
 ];
 
-const PARTICLE_TAG_FIELD = {
+const createParticleTagField = (copy = {}, tagOptions = []) => ({
   name: "tagIds",
   type: "tag-select",
-  label: "Tags",
-  placeholder: "Select tags",
+  label: copy.tagsLabel ?? "Tags",
+  placeholder: copy.selectTagsPlaceholder ?? "Select tags",
+  options: tagOptions,
   addOption: {
-    label: "Add tag",
+    label: copy.addTagOption ?? "Add tag",
   },
   required: false,
-};
+});
 
-const resolveTextureImageOptions = (imageOptions = []) => [
+const resolveTextureImageOptions = (imageOptions = [], copy = {}) => [
   {
     id: "",
-    label: imageOptions.length > 0 ? "Select image" : "No images available",
+    label:
+      imageOptions.length > 0
+        ? (copy.selectImageOption ?? "Select image")
+        : (copy.noImagesAvailableOption ?? "No images available"),
     value: "",
   },
   ...imageOptions,
@@ -276,9 +297,29 @@ const capitalize = (value = "") => {
   return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 };
 
-const summarizeTexture = (texture, imageItems = {}) => {
+const getSourceKindLabel = (kind, copy = {}) => {
+  switch (kind) {
+    case "point":
+      return copy.sourceKindPoint ?? "Point";
+    case "circle":
+      return copy.sourceKindCircle ?? "Circle";
+    case "line":
+      return copy.sourceKindLine ?? "Line";
+    case "rect":
+    default:
+      return copy.sourceKindRectangle ?? "Rectangle";
+  }
+};
+
+const getEmissionModeLabel = (mode, copy = {}) => {
+  return mode === "burst"
+    ? (copy.emissionModeBurst ?? "Burst")
+    : (copy.emissionModeContinuous ?? "Continuous");
+};
+
+const summarizeTexture = (texture, imageItems = {}, copy = {}) => {
   if (!texture) {
-    return "Not set";
+    return copy.notSetValue ?? "Not set";
   }
 
   if (typeof texture === "string") {
@@ -286,10 +327,10 @@ const summarizeTexture = (texture, imageItems = {}) => {
   }
 
   if (texture?.mode) {
-    return `${capitalize(texture.mode)} selector`;
+    return `${capitalize(texture.mode)} ${copy.selectorLabel ?? "selector"}`;
   }
 
-  return "Legacy shape";
+  return copy.legacyShapeValue ?? "Legacy shape";
 };
 
 export const resolveParticleTextureImageItem = (texture, imageItems = {}) => {
@@ -317,9 +358,9 @@ export const resolveParticleTextureImageItem = (texture, imageItems = {}) => {
   return resolveParticleTextureImageItem(firstItem.src, imageItems);
 };
 
-const summarizeSource = (source) => {
+const summarizeSource = (source, copy = {}) => {
   const kind = source?.kind ?? "rect";
-  return capitalize(kind);
+  return getSourceKindLabel(kind, copy);
 };
 
 const withFieldTooltips = (fields = []) =>
@@ -343,26 +384,34 @@ const withFieldTooltips = (fields = []) =>
     };
   });
 
-export const createParticleCreateSetupForm = ({ imageOptions = [] } = {}) => ({
-  title: "Create Particle",
+export const createParticleCreateSetupForm = ({
+  imageOptions = [],
+  copy = {},
+} = {}) => ({
+  title: copy.createParticleTitle ?? "Create Particle",
   description:
+    copy.createSetupDescription ??
     "Choose a preset and texture image first. The preview updates here before you open the full editor.",
   fields: withFieldTooltips([
     {
       name: "presetId",
       type: "select",
-      label: "Preset",
-      description: "Start from a ready-made particle effect profile.",
+      label: copy.presetLabel ?? "Preset",
+      description:
+        copy.presetDescription ??
+        "Start from a ready-made particle effect profile.",
       required: true,
       clearable: false,
-      options: PARTICLE_PRESET_OPTIONS,
+      options: createParticlePresetOptions(copy),
     },
     {
       name: "textureImageId",
       type: "select",
-      label: "Texture Image",
-      description: "Choose the image used for each spawned particle.",
-      options: resolveTextureImageOptions(imageOptions),
+      label: copy.textureImageLabel ?? "Texture Image",
+      description:
+        copy.setupTextureImageDescription ??
+        "Choose the image used for each spawned particle.",
+      options: resolveTextureImageOptions(imageOptions, copy),
       required: true,
       clearable: false,
     },
@@ -372,13 +421,13 @@ export const createParticleCreateSetupForm = ({ imageOptions = [] } = {}) => ({
       {
         id: "cancel",
         variant: "se",
-        label: "Cancel",
+        label: copy.cancelButton ?? "Cancel",
         align: "left",
       },
       {
         id: "submit",
         variant: "pr",
-        label: "Next",
+        label: copy.nextButton ?? "Next",
         validate: true,
       },
     ],
@@ -393,6 +442,14 @@ export const PARTICLE_FORM_TABS = [
   { id: "movement", label: "Movement" },
 ];
 
+export const createParticleFormTabs = (copy = {}) => [
+  { id: "basics", label: copy.basicsTab ?? "Basics" },
+  { id: "appearance", label: copy.appearanceTab ?? "Appearance" },
+  { id: "emission", label: copy.emissionTab ?? "Emission" },
+  { id: "source", label: copy.sourceTab ?? "Source" },
+  { id: "movement", label: copy.movementTab ?? "Movement" },
+];
+
 const PARTICLE_FORM_TAB_IDS = new Set(
   PARTICLE_FORM_TABS.map((item) => item.id),
 );
@@ -400,38 +457,41 @@ const PARTICLE_FORM_TAB_IDS = new Set(
 const createParticleFieldsByTab = ({
   imageOptions = [],
   tagOptions = [],
+  copy = {},
 } = {}) => {
   const fieldsByTab = {
     basics: [
       {
         type: "read-only-text",
         content:
+          copy.basicsHelpText ??
           "Pick a texture image and adjust the main emitter fields. Preset values were applied before opening this form.",
       },
       {
         name: "name",
         type: "input-text",
-        label: "Name",
-        description: "Give this particle effect a name for the resource list.",
+        label: copy.nameLabel ?? "Name",
+        description:
+          copy.nameDescription ??
+          "Give this particle effect a name for the resource list.",
         required: true,
       },
       {
         name: "description",
         type: "input-textarea",
-        label: "Description",
+        label: copy.descriptionLabel ?? "Description",
         description:
+          copy.descriptionDescription ??
           "Optional notes about where or how this effect should be used.",
         required: false,
       },
-      {
-        ...PARTICLE_TAG_FIELD,
-        options: tagOptions,
-      },
+      createParticleTagField(copy, tagOptions),
       {
         name: "width",
         type: "input-number",
-        label: "Width",
+        label: copy.widthLabel ?? "Width",
         description:
+          copy.widthDescription ??
           "Set the particle preview and effect canvas width in pixels.",
         min: 1,
         step: 1,
@@ -440,8 +500,9 @@ const createParticleFieldsByTab = ({
       {
         name: "height",
         type: "input-number",
-        label: "Height",
+        label: copy.heightLabel ?? "Height",
         description:
+          copy.heightDescription ??
           "Set the particle preview and effect canvas height in pixels.",
         min: 1,
         step: 1,
@@ -450,8 +511,9 @@ const createParticleFieldsByTab = ({
       {
         name: "seed",
         type: "input-number",
-        label: "Seed",
+        label: copy.seedLabel ?? "Seed",
         description:
+          copy.seedDescription ??
           "Use a fixed random seed to make the effect replay consistently.",
         step: 1,
         required: false,
@@ -461,17 +523,20 @@ const createParticleFieldsByTab = ({
       {
         name: "emissionMode",
         type: "select",
-        label: "Emission Mode",
+        label: copy.emissionModeLabel ?? "Emission Mode",
         description:
+          copy.emissionModeDescription ??
           "Choose whether particles spawn continuously or in bursts.",
-        options: EMISSION_MODE_OPTIONS,
+        options: createEmissionModeOptions(copy),
         required: true,
       },
       {
         name: "emissionRate",
         type: "input-number",
-        label: "Rate / second",
-        description: "How many particles spawn each second in continuous mode.",
+        label: copy.emissionRateLabel ?? "Rate / second",
+        description:
+          copy.emissionRateDescription ??
+          "How many particles spawn each second in continuous mode.",
         min: 0,
         step: 1,
         required: false,
@@ -480,8 +545,10 @@ const createParticleFieldsByTab = ({
       {
         name: "burstCount",
         type: "input-number",
-        label: "Burst Count",
-        description: "How many particles spawn each time a burst is emitted.",
+        label: copy.burstCountLabel ?? "Burst Count",
+        description:
+          copy.burstCountDescription ??
+          "How many particles spawn each time a burst is emitted.",
         min: 1,
         step: 1,
         required: true,
@@ -490,8 +557,10 @@ const createParticleFieldsByTab = ({
       {
         name: "maxActive",
         type: "input-number",
-        label: "Max Active",
-        description: "Limit how many particles can exist at the same time.",
+        label: copy.maxActiveLabel ?? "Max Active",
+        description:
+          copy.maxActiveDescription ??
+          "Limit how many particles can exist at the same time.",
         min: 1,
         step: 1,
         required: false,
@@ -500,17 +569,21 @@ const createParticleFieldsByTab = ({
       {
         name: "durationMode",
         type: "segmented-control",
-        label: "Duration",
-        description: "Keep emitting forever or stop after a timed window.",
-        options: DURATION_MODE_OPTIONS,
+        label: copy.durationLabel ?? "Duration",
+        description:
+          copy.durationDescription ??
+          "Keep emitting forever or stop after a timed window.",
+        options: createDurationModeOptions(copy),
         required: true,
         $when: "emissionMode == 'continuous'",
       },
       {
         name: "durationSeconds",
         type: "input-number",
-        label: "Duration Seconds",
-        description: "How long emission lasts when using timed duration.",
+        label: copy.durationSecondsLabel ?? "Duration Seconds",
+        description:
+          copy.durationSecondsDescription ??
+          "How long emission lasts when using timed duration.",
         min: 0,
         step: 0.1,
         required: false,
@@ -519,8 +592,9 @@ const createParticleFieldsByTab = ({
       {
         name: "lifetimeMin",
         type: "input-number",
-        label: "Lifetime Min",
+        label: copy.lifetimeMinLabel ?? "Lifetime Min",
         description:
+          copy.lifetimeMinDescription ??
           "Shortest lifetime a spawned particle can have, in seconds.",
         min: 0,
         step: 0.1,
@@ -529,8 +603,9 @@ const createParticleFieldsByTab = ({
       {
         name: "lifetimeMax",
         type: "input-number",
-        label: "Lifetime Max",
+        label: copy.lifetimeMaxLabel ?? "Lifetime Max",
         description:
+          copy.lifetimeMaxDescription ??
           "Longest lifetime a spawned particle can have, in seconds.",
         min: 0,
         step: 0.1,
@@ -541,32 +616,39 @@ const createParticleFieldsByTab = ({
       {
         name: "sourceKind",
         type: "select",
-        label: "Source Shape",
-        description: "Choose the emitter shape particles spawn from.",
-        options: SOURCE_KIND_OPTIONS,
+        label: copy.sourceShapeLabel ?? "Source Shape",
+        description:
+          copy.sourceShapeDescription ??
+          "Choose the emitter shape particles spawn from.",
+        options: createSourceKindOptions(copy),
         required: true,
       },
       {
         name: "sourceX",
         type: "input-number",
-        label: "Source X",
-        description: "Horizontal start position of the emitter shape.",
+        label: copy.sourceXLabel ?? "Source X",
+        description:
+          copy.sourceXDescription ??
+          "Horizontal start position of the emitter shape.",
         step: 1,
         required: false,
       },
       {
         name: "sourceY",
         type: "input-number",
-        label: "Source Y",
-        description: "Vertical start position of the emitter shape.",
+        label: copy.sourceYLabel ?? "Source Y",
+        description:
+          copy.sourceYDescription ??
+          "Vertical start position of the emitter shape.",
         step: 1,
         required: false,
       },
       {
         name: "sourceWidth",
         type: "input-number",
-        label: "Source Width",
-        description: "Width of the rectangle emitter area.",
+        label: copy.sourceWidthLabel ?? "Source Width",
+        description:
+          copy.sourceWidthDescription ?? "Width of the rectangle emitter area.",
         min: 0,
         step: 1,
         required: false,
@@ -575,8 +657,10 @@ const createParticleFieldsByTab = ({
       {
         name: "sourceHeight",
         type: "input-number",
-        label: "Source Height",
-        description: "Height of the rectangle emitter area.",
+        label: copy.sourceHeightLabel ?? "Source Height",
+        description:
+          copy.sourceHeightDescription ??
+          "Height of the rectangle emitter area.",
         min: 0,
         step: 1,
         required: false,
@@ -585,8 +669,10 @@ const createParticleFieldsByTab = ({
       {
         name: "sourceRadius",
         type: "input-number",
-        label: "Source Radius",
-        description: "Outer radius of the circle emitter area.",
+        label: copy.sourceRadiusLabel ?? "Source Radius",
+        description:
+          copy.sourceRadiusDescription ??
+          "Outer radius of the circle emitter area.",
         min: 0,
         step: 1,
         required: false,
@@ -595,8 +681,10 @@ const createParticleFieldsByTab = ({
       {
         name: "sourceInnerRadius",
         type: "input-number",
-        label: "Inner Radius",
-        description: "Optional inner gap for ring-shaped circle emitters.",
+        label: copy.sourceInnerRadiusLabel ?? "Inner Radius",
+        description:
+          copy.sourceInnerRadiusDescription ??
+          "Optional inner gap for ring-shaped circle emitters.",
         min: 0,
         step: 1,
         required: false,
@@ -605,8 +693,9 @@ const createParticleFieldsByTab = ({
       {
         name: "sourceX2",
         type: "input-number",
-        label: "Line X2",
-        description: "Horizontal end position for line emitters.",
+        label: copy.lineX2Label ?? "Line X2",
+        description:
+          copy.lineX2Description ?? "Horizontal end position for line emitters.",
         step: 1,
         required: false,
         $when: "sourceKind == 'line'",
@@ -614,8 +703,9 @@ const createParticleFieldsByTab = ({
       {
         name: "sourceY2",
         type: "input-number",
-        label: "Line Y2",
-        description: "Vertical end position for line emitters.",
+        label: copy.lineY2Label ?? "Line Y2",
+        description:
+          copy.lineY2Description ?? "Vertical end position for line emitters.",
         step: 1,
         required: false,
         $when: "sourceKind == 'line'",
@@ -625,16 +715,19 @@ const createParticleFieldsByTab = ({
       {
         name: "velocityKind",
         type: "select",
-        label: "Velocity Type",
-        description: "Move particles in one direction or spread them radially.",
-        options: VELOCITY_KIND_OPTIONS,
+        label: copy.velocityTypeLabel ?? "Velocity Type",
+        description:
+          copy.velocityTypeDescription ??
+          "Move particles in one direction or spread them radially.",
+        options: createVelocityKindOptions(copy),
         required: true,
       },
       {
         name: "speedMin",
         type: "input-number",
-        label: "Speed Min",
-        description: "Minimum launch speed for new particles.",
+        label: copy.speedMinLabel ?? "Speed Min",
+        description:
+          copy.speedMinDescription ?? "Minimum launch speed for new particles.",
         min: 0,
         step: 1,
         required: false,
@@ -642,8 +735,9 @@ const createParticleFieldsByTab = ({
       {
         name: "speedMax",
         type: "input-number",
-        label: "Speed Max",
-        description: "Maximum launch speed for new particles.",
+        label: copy.speedMaxLabel ?? "Speed Max",
+        description:
+          copy.speedMaxDescription ?? "Maximum launch speed for new particles.",
         min: 0,
         step: 1,
         required: false,
@@ -651,8 +745,9 @@ const createParticleFieldsByTab = ({
       {
         name: "directionMin",
         type: "input-number",
-        label: "Direction / Angle Min",
+        label: copy.directionMinLabel ?? "Direction / Angle Min",
         description:
+          copy.directionMinDescription ??
           "Starting minimum direction or angle for particle movement.",
         step: 1,
         required: false,
@@ -660,8 +755,9 @@ const createParticleFieldsByTab = ({
       {
         name: "directionMax",
         type: "input-number",
-        label: "Direction / Angle Max",
+        label: copy.directionMaxLabel ?? "Direction / Angle Max",
         description:
+          copy.directionMaxDescription ??
           "Starting maximum direction or angle for particle movement.",
         step: 1,
         required: false,
@@ -669,8 +765,9 @@ const createParticleFieldsByTab = ({
       {
         name: "accelerationX",
         type: "input-number",
-        label: "Acceleration X",
+        label: copy.accelerationXLabel ?? "Acceleration X",
         description:
+          copy.accelerationXDescription ??
           "Horizontal acceleration applied over each particle's lifetime.",
         step: 1,
         required: false,
@@ -678,8 +775,9 @@ const createParticleFieldsByTab = ({
       {
         name: "accelerationY",
         type: "input-number",
-        label: "Acceleration Y",
+        label: copy.accelerationYLabel ?? "Acceleration Y",
         description:
+          copy.accelerationYDescription ??
           "Vertical acceleration applied over each particle's lifetime.",
         step: 1,
         required: false,
@@ -687,8 +785,9 @@ const createParticleFieldsByTab = ({
       {
         name: "maxSpeed",
         type: "input-number",
-        label: "Max Speed",
+        label: copy.maxSpeedLabel ?? "Max Speed",
         description:
+          copy.maxSpeedDescription ??
           "Clamp particle speed so acceleration does not exceed this limit.",
         min: 0,
         step: 1,
@@ -697,10 +796,11 @@ const createParticleFieldsByTab = ({
       {
         name: "faceVelocity",
         type: "segmented-control",
-        label: "Rotate Toward Movement",
+        label: copy.faceVelocityLabel ?? "Rotate Toward Movement",
         description:
+          copy.faceVelocityDescription ??
           "Turn each particle so it points in the direction it is moving.",
-        options: FACE_VELOCITY_OPTIONS,
+        options: createFaceVelocityOptions(copy),
         required: true,
         clearable: false,
       },
@@ -709,16 +809,19 @@ const createParticleFieldsByTab = ({
       {
         name: "textureImageId",
         type: "select",
-        label: "Texture Image",
-        description: "Choose the image used to draw each particle sprite.",
-        options: resolveTextureImageOptions(imageOptions),
+        label: copy.textureImageLabel ?? "Texture Image",
+        description:
+          copy.textureImageDescription ??
+          "Choose the image used to draw each particle sprite.",
+        options: resolveTextureImageOptions(imageOptions, copy),
         required: true,
       },
       {
         name: "scaleMin",
         type: "input-number",
-        label: "Scale Min",
+        label: copy.scaleMinLabel ?? "Scale Min",
         description:
+          copy.scaleMinDescription ??
           "Minimum particle scale at spawn or across the preset range.",
         min: 0,
         step: 0.05,
@@ -727,8 +830,9 @@ const createParticleFieldsByTab = ({
       {
         name: "scaleMax",
         type: "input-number",
-        label: "Scale Max",
+        label: copy.scaleMaxLabel ?? "Scale Max",
         description:
+          copy.scaleMaxDescription ??
           "Maximum particle scale at spawn or across the preset range.",
         min: 0,
         step: 0.05,
@@ -750,8 +854,11 @@ export const createParticleForm = ({
   imageOptions = [],
   tagOptions = [],
   activeTab = "basics",
+  copy = {},
 } = {}) => ({
-  title: editMode ? "Edit Particle" : "Add Particle",
+  title: editMode
+    ? (copy.editParticleTitle ?? "Edit Particle")
+    : (copy.addParticleTitle ?? "Add Particle"),
   fields: [
     {
       type: "slot",
@@ -760,6 +867,7 @@ export const createParticleForm = ({
     ...createParticleFieldsByTab({
       imageOptions,
       tagOptions,
+      copy,
     })[PARTICLE_FORM_TAB_IDS.has(activeTab) ? activeTab : "basics"],
   ],
   actions: {
@@ -768,7 +876,9 @@ export const createParticleForm = ({
       {
         id: "submit",
         variant: "pr",
-        label: editMode ? "Update Particle" : "Add Particle",
+        label: editMode
+          ? (copy.updateParticleButton ?? "Update Particle")
+          : (copy.addParticleButton ?? "Add Particle"),
         validate: true,
       },
     ],
@@ -779,11 +889,13 @@ export const resolveParticleBaseData = ({
   particle,
   presetId,
   projectResolution,
+  copy,
 } = {}) => {
   if (presetId) {
     return createParticlePreset({
       presetId,
       projectResolution,
+      copy,
     });
   }
 
@@ -794,6 +906,7 @@ export const resolveParticleBaseData = ({
   return createParticlePreset({
     presetId: DEFAULT_PARTICLE_PRESET_ID,
     projectResolution,
+    copy,
   });
 };
 
@@ -801,11 +914,13 @@ export const buildParticleFormValues = ({
   particle,
   presetId = "",
   projectResolution,
+  copy,
 } = {}) => {
   const resolvedParticle = resolveParticleBaseData({
     particle,
     presetId: presetId || undefined,
     projectResolution,
+    copy,
   });
   const modules = resolvedParticle.modules ?? {};
   const emission = modules.emission ?? {};
@@ -1110,6 +1225,7 @@ export const buildParticlePayload = ({
 export const buildParticleDetailFields = (input) => {
   const item = input?.item ?? input;
   const imagesData = input?.imagesData;
+  const copy = input?.copy ?? {};
   if (!item) {
     return [];
   }
@@ -1123,12 +1239,12 @@ export const buildParticleDetailFields = (input) => {
     ? {
         type: "slot",
         slot: "particle-texture-image",
-        label: "Texture Image",
+        label: copy.textureImageLabel ?? "Texture Image",
       }
     : {
         type: "text",
-        label: "Texture Image",
-        value: summarizeTexture(texture, imagesData?.items),
+        label: copy.textureImageLabel ?? "Texture Image",
+        value: summarizeTexture(texture, imagesData?.items, copy),
       };
 
   return [
@@ -1144,27 +1260,27 @@ export const buildParticleDetailFields = (input) => {
     {
       type: "slot",
       slot: "particle-tags",
-      label: "Tags",
+      label: copy.tagsLabel ?? "Tags",
     },
     {
       type: "text",
-      label: "Canvas Size",
+      label: copy.canvasSizeLabel ?? "Canvas Size",
       value: formatDimensionLabel(item.width ?? 0, item.height ?? 0),
     },
     {
       type: "text",
-      label: "Emission",
-      value: capitalize(item.modules?.emission?.mode ?? "continuous"),
+      label: copy.emissionLabel ?? "Emission",
+      value: getEmissionModeLabel(item.modules?.emission?.mode, copy),
     },
     {
       type: "text",
-      label: "Source",
-      value: summarizeSource(item.modules?.emission?.source),
+      label: copy.sourceLabel ?? "Source",
+      value: summarizeSource(item.modules?.emission?.source, copy),
     },
     textureImageField,
     {
       type: "text",
-      label: "Seed",
+      label: copy.seedLabel ?? "Seed",
       value: toTextValue(item.seed),
     },
   ];

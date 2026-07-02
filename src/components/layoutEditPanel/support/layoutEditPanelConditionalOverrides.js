@@ -1,16 +1,18 @@
-const CONDITION_OP_OPTIONS = [{ label: "Equals", value: "eq" }];
-const CONDITION_BOOLEAN_OPTIONS = [
-  { label: "True", value: true },
-  { label: "False", value: false },
+const createConditionOpOptions = (copy = {}) => [
+  { label: copy.equalsOption ?? "Equals", value: "eq" },
 ];
-const VISIBILITY_OPTIONS = [
-  { label: "Visible", value: true },
-  { label: "Hidden", value: false },
+const createConditionBooleanOptions = (copy = {}) => [
+  { label: copy.trueOption ?? "True", value: true },
+  { label: copy.falseOption ?? "False", value: false },
 ];
-const TEXT_ALIGNMENT_OPTIONS = [
-  { label: "Left", value: "left" },
-  { label: "Center", value: "center" },
-  { label: "Right", value: "right" },
+const createVisibilityOptions = (copy = {}) => [
+  { label: copy.visibleOption ?? "Visible", value: true },
+  { label: copy.hiddenOption ?? "Hidden", value: false },
+];
+const createTextAlignmentOptions = (copy = {}) => [
+  { label: copy.leftOption ?? "Left", value: "left" },
+  { label: copy.centerOption ?? "Center", value: "center" },
+  { label: copy.rightOption ?? "Right", value: "right" },
 ];
 const ANCHOR_OPTIONS = [
   { label: "Top Left", value: "topLeft", x: 0, y: 0 },
@@ -36,6 +38,36 @@ const CONDITIONAL_OVERRIDE_ATTRIBUTE_OPTIONS = [
   { label: "Text Alignment", value: "textStyle.align" },
   { label: "Visibility", value: "visible" },
 ];
+const CONDITIONAL_OVERRIDE_ATTRIBUTE_LABEL_KEYS = {
+  textStyleId: "textStyleLabel",
+  hoverTextStyleId: "hoverTextStyleLabel",
+  clickTextStyleId: "clickTextStyleLabel",
+  imageId: "imageLabel",
+  hoverImageId: "hoverImageLabel",
+  clickImageId: "clickImageLabel",
+  opacity: "opacityLabel",
+  anchor: "anchorLabel",
+  "textStyle.align": "textAlignmentLabel",
+  visible: "visibilityLabel",
+};
+
+const ANCHOR_OPTION_LABEL_KEYS = {
+  topLeft: "anchorTopLeft",
+  topCenter: "anchorTopCenter",
+  topRight: "anchorTopRight",
+  centerLeft: "anchorCenterLeft",
+  center: "anchorCenter",
+  centerRight: "anchorCenterRight",
+  bottomLeft: "anchorBottomLeft",
+  bottomCenter: "anchorBottomCenter",
+  bottomRight: "anchorBottomRight",
+};
+
+const getAnchorOptionLabel = (value, copy = {}) => {
+  const option = ANCHOR_OPTIONS.find((item) => item.value === value);
+  const copyKey = ANCHOR_OPTION_LABEL_KEYS[value];
+  return (copyKey ? copy[copyKey] : undefined) ?? option?.label ?? value;
+};
 
 const TEXT_STYLE_ATTRIBUTE_FIELD_SET = new Set([
   "textStyleId",
@@ -187,12 +219,18 @@ export const getConditionalOverrideSummary = (
   variablesData = {},
   options = {},
   getVisibilityConditionSummary,
+  copy = {},
 ) => {
-  return getVisibilityConditionSummary(rule?.when, variablesData, options);
+  return getVisibilityConditionSummary(rule?.when, variablesData, options, copy);
 };
 
-export const getConditionalOverrideAttributeLabel = (fieldName) => {
+export const getConditionalOverrideAttributeLabel = (
+  fieldName,
+  copy = {},
+) => {
+  const copyKey = CONDITIONAL_OVERRIDE_ATTRIBUTE_LABEL_KEYS[fieldName];
   return (
+    (copyKey ? copy[copyKey] : undefined) ??
     CONDITIONAL_OVERRIDE_ATTRIBUTE_OPTIONS.find(
       (item) => item.value === fieldName,
     )?.label ?? fieldName
@@ -229,14 +267,15 @@ export const createConditionalOverrideConditionDefaults = (
 export const createConditionalOverrideConditionForm = ({
   targetOptions,
   submitLabel = "Save",
+  copy = {},
 } = {}) => {
   return {
-    title: "Condition",
+    title: copy.conditionTitle ?? "Condition",
     fields: [
       {
         name: "target",
         type: "select",
-        label: "Target",
+        label: copy.targetLabel ?? "Target",
         required: true,
         clearable: false,
         options: targetOptions,
@@ -245,39 +284,39 @@ export const createConditionalOverrideConditionForm = ({
         $when: "target",
         name: "op",
         type: "segmented-control",
-        label: "Operation",
+        label: copy.operationLabel ?? "Operation",
         required: true,
         clearable: false,
-        options: CONDITION_OP_OPTIONS,
+        options: createConditionOpOptions(copy),
       },
       {
         $when: "target && selectedVariableType == 'boolean'",
         name: "booleanValue",
         type: "segmented-control",
-        label: "Value",
+        label: copy.valueLabel ?? "Value",
         required: true,
         clearable: false,
-        options: CONDITION_BOOLEAN_OPTIONS,
+        options: createConditionBooleanOptions(copy),
       },
       {
         $when: "target && selectedVariableType == 'number'",
         name: "numberValue",
         type: "input-number",
-        label: "Value",
+        label: copy.valueLabel ?? "Value",
         required: true,
       },
       {
         $when: "target && selectedValueKind == 'string'",
         name: "stringValue",
         type: "input-text",
-        label: "Value",
+        label: copy.valueLabel ?? "Value",
         required: true,
       },
       {
         $when: "target && selectedValueKind == 'character'",
         name: "characterValue",
         type: "select",
-        label: "Character",
+        label: copy.characterLabel ?? "Character",
         required: true,
         clearable: false,
         options: "${characterValueOptions}",
@@ -289,7 +328,7 @@ export const createConditionalOverrideConditionForm = ({
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton ?? "Cancel",
         },
         {
           id: "submit",
@@ -305,6 +344,7 @@ export const getConditionalOverrideAttributeOptions = ({
   rule,
   includeFieldName,
   capabilities = {},
+  copy = {},
 } = {}) => {
   const selectedFields = new Set(
     getConditionalOverrideSetFieldNames(rule?.set),
@@ -335,7 +375,10 @@ export const getConditionalOverrideAttributeOptions = ({
     (item) =>
       allowedFields.has(item.value) &&
       (item.value === includeFieldName || !selectedFields.has(item.value)),
-  );
+  ).map((item) => ({
+    ...item,
+    label: getConditionalOverrideAttributeLabel(item.value, copy),
+  }));
 };
 
 export const createConditionalOverrideAttributeDefaults = (
@@ -375,14 +418,15 @@ export const createConditionalOverrideAttributeForm = ({
   textStyleOptions,
   imageOptions,
   submitLabel = "Save",
+  copy = {},
 } = {}) => {
   return {
-    title: "Condition Attribute",
+    title: copy.conditionAttributeTitle ?? "Condition Attribute",
     fields: [
       {
         name: "fieldName",
         type: "select",
-        label: "Attribute",
+        label: copy.attributeLabel ?? "Attribute",
         required: true,
         clearable: false,
         options: attributeOptions,
@@ -392,7 +436,7 @@ export const createConditionalOverrideAttributeForm = ({
           "fieldName == 'textStyleId' || fieldName == 'hoverTextStyleId' || fieldName == 'clickTextStyleId'",
         name: "textStyleId",
         type: "select",
-        label: "Text Style",
+        label: copy.textStyleLabel ?? "Text Style",
         required: true,
         clearable: false,
         options: textStyleOptions,
@@ -402,7 +446,7 @@ export const createConditionalOverrideAttributeForm = ({
           "fieldName == 'imageId' || fieldName == 'hoverImageId' || fieldName == 'clickImageId'",
         name: "selectedImageId",
         type: "select",
-        label: "Image",
+        label: copy.imageLabel ?? "Image",
         required: true,
         clearable: false,
         options: imageOptions,
@@ -411,7 +455,7 @@ export const createConditionalOverrideAttributeForm = ({
         $when: "fieldName == 'opacity'",
         name: "opacity",
         type: "input-number",
-        label: "Opacity",
+        label: copy.opacityLabel ?? "Opacity",
         required: true,
         min: 0,
         max: 1,
@@ -421,11 +465,11 @@ export const createConditionalOverrideAttributeForm = ({
         $when: "fieldName == 'anchor'",
         name: "anchor",
         type: "select",
-        label: "Anchor",
+        label: copy.anchorLabel ?? "Anchor",
         required: true,
         clearable: false,
-        options: ANCHOR_OPTIONS.map(({ label, value }) => ({
-          label,
+        options: ANCHOR_OPTIONS.map(({ value }) => ({
+          label: getAnchorOptionLabel(value, copy),
           value,
         })),
       },
@@ -433,19 +477,19 @@ export const createConditionalOverrideAttributeForm = ({
         $when: "fieldName == 'textStyle.align'",
         name: "align",
         type: "segmented-control",
-        label: "Alignment",
+        label: copy.alignmentLabel ?? "Alignment",
         required: true,
         clearable: false,
-        options: TEXT_ALIGNMENT_OPTIONS,
+        options: createTextAlignmentOptions(copy),
       },
       {
         $when: "fieldName == 'visible'",
         name: "visible",
         type: "segmented-control",
-        label: "Visibility",
+        label: copy.visibilityLabel ?? "Visibility",
         required: true,
         clearable: false,
-        options: VISIBILITY_OPTIONS,
+        options: createVisibilityOptions(copy),
       },
     ],
     actions: {
@@ -454,7 +498,7 @@ export const createConditionalOverrideAttributeForm = ({
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton ?? "Cancel",
         },
         {
           id: "submit",
@@ -471,6 +515,7 @@ const formatConditionalOverrideAttributeValue = (
   set,
   textStylesData = {},
   imagesData = {},
+  copy = {},
 ) => {
   if (TEXT_STYLE_ATTRIBUTE_FIELD_SET.has(fieldName)) {
     const textStyleId = set?.[fieldName];
@@ -489,7 +534,7 @@ const formatConditionalOverrideAttributeValue = (
   if (fieldName === "anchor") {
     const option = findAnchorOptionByCoordinates(set?.anchorX, set?.anchorY);
     if (option) {
-      return option.label;
+      return getAnchorOptionLabel(option.value, copy);
     }
 
     const x = Number.isFinite(set?.anchorX) ? set.anchorX : "?";
@@ -500,14 +545,17 @@ const formatConditionalOverrideAttributeValue = (
   if (fieldName === "textStyle.align") {
     const value = set?.textStyle?.align;
     return (
-      TEXT_ALIGNMENT_OPTIONS.find((item) => item.value === value)?.label ??
+      createTextAlignmentOptions(copy).find((item) => item.value === value)
+        ?.label ??
       value ??
       ""
     );
   }
 
   if (fieldName === "visible") {
-    return set?.visible === false ? "Hidden" : "Visible";
+    return set?.visible === false
+      ? (copy.hiddenOption ?? "Hidden")
+      : (copy.visibleOption ?? "Visible");
   }
 
   return String(set?.[fieldName] ?? "");
@@ -517,6 +565,7 @@ export const toConditionalOverrideAttributeItems = (
   rule,
   textStylesData = {},
   imagesData = {},
+  copy = {},
 ) => {
   return getConditionalOverrideSetFieldNames(rule?.set).map((fieldName) => {
     const value = formatConditionalOverrideAttributeValue(
@@ -524,13 +573,15 @@ export const toConditionalOverrideAttributeItems = (
       rule?.set,
       textStylesData,
       imagesData,
+      copy,
     );
+    const label = getConditionalOverrideAttributeLabel(fieldName, copy);
 
     return {
       fieldName,
-      label: getConditionalOverrideAttributeLabel(fieldName),
+      label,
       value,
-      summary: `${getConditionalOverrideAttributeLabel(fieldName)}: ${value}`,
+      summary: `${label}: ${value}`,
     };
   });
 };

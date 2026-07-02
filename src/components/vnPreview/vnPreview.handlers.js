@@ -19,6 +19,7 @@ import {
   resolveSceneIdForSectionId,
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
+import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 
 const FORWARDED_PREVIEW_KEY_EVENT = "__rvnForwardedPreviewKeyEvent";
 const PREVIEW_FORWARDED_KEYS = new Set(["Enter"]);
@@ -290,9 +291,11 @@ async function loadAssetsForSceneIds(
       sceneIds: uniqueSceneIds,
     });
   } catch (error) {
+    const copy = selectSceneEditorCopy(deps.i18n);
     appService?.showAlert({
-      message: "Failed to load some preview assets",
-      title: "Warning",
+      message:
+        copy.failedLoadPreviewAssets ?? "Failed to load some preview assets",
+      title: copy.warningTitle ?? "Warning",
     });
     console.error("[vnPreview] Failed to load scene assets:", error);
   } finally {

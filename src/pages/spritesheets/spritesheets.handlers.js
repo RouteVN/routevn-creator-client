@@ -38,28 +38,30 @@ import {
 } from "../../internal/spritesheetAtlas.js";
 import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
 import { SPRITESHEET_TAG_SCOPE_KEY } from "./spritesheets.store.js";
+import { selectSpritesheetsPageCopy } from "./support/spritesheetsPageCopy.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const SPRITESHEET_IMAGE_FILE_ACCEPT = ".png";
 const SPRITESHEET_ATLAS_FILE_ACCEPT = ".json";
 const PNG_FILE_PATTERN = /\.png$/i;
 const JSON_FILE_PATTERN = /\.json$/i;
-const INVALID_IMPORT_FORMAT_MESSAGE =
-  "Only PNG spritesheets and spritesheet JSON files are supported.";
-const INVALID_IMPORT_PAIR_MESSAGE =
-  "Spritesheet import requires exactly one PNG image and one spritesheet JSON file.";
+const selectCopy = (deps = {}) => selectSpritesheetsPageCopy(deps.i18n);
 
-const showInvalidImportFormatToast = (appService) => {
+const showInvalidImportFormatToast = (appService, copy = {}) => {
   appService.showAlert({
-    message: INVALID_IMPORT_FORMAT_MESSAGE,
-    title: "Warning",
+    message:
+      copy.invalidImportFormatMessage ??
+      "Only PNG spritesheets and spritesheet JSON files are supported.",
+    title: copy.warningTitle ?? "Warning",
   });
 };
 
-const showInvalidImportPairToast = (appService) => {
+const showInvalidImportPairToast = (appService, copy = {}) => {
   appService.showAlert({
-    message: INVALID_IMPORT_PAIR_MESSAGE,
-    title: "Warning",
+    message:
+      copy.invalidImportPairMessage ??
+      "Spritesheet import requires exactly one PNG image and one spritesheet JSON file.",
+    title: copy.warningTitle ?? "Warning",
   });
 };
 
@@ -145,10 +147,10 @@ const resolveImportPair = (files = []) => {
   };
 };
 
-const parseImportSelection = async ({ appService, files } = {}) => {
+const parseImportSelection = async ({ appService, files, copy } = {}) => {
   const importPair = resolveImportPair(files);
   if (!importPair) {
-    showInvalidImportPairToast(appService);
+    showInvalidImportPairToast(appService, copy);
     return undefined;
   }
 
@@ -163,7 +165,10 @@ const parseImportSelection = async ({ appService, files } = {}) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to import spritesheet JSON.",
+      fallbackMessage:
+        copy.failedImportSpritesheetJson ??
+        "Failed to import spritesheet JSON.",
+      title: copy.errorTitle ?? "Error",
     });
     return undefined;
   }
@@ -321,6 +326,7 @@ const applyDialogSourceFiles = async ({
   nextAtlasFile,
 } = {}) => {
   const { appService, refs, render, store } = deps;
+  const copy = selectCopy(deps);
   const currentSourceFiles = store.selectDialogSourceFiles();
   const sourceFiles = {
     pngFile:
@@ -350,7 +356,10 @@ const applyDialogSourceFiles = async ({
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to read spritesheet source files.",
+      fallbackMessage:
+        copy.failedReadSpritesheetSourceFiles ??
+        "Failed to read spritesheet source files.",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -444,6 +453,7 @@ const buildSpritesheetPayload = ({
 
 const uploadSpritesheetSource = async ({
   appService,
+  copy,
   pngFile,
   projectService,
 } = {}) => {
@@ -458,7 +468,10 @@ const uploadSpritesheetSource = async ({
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to upload spritesheet image.",
+      fallbackMessage:
+        copy.failedUploadSpritesheetImage ??
+        "Failed to upload spritesheet image.",
+      title: copy.errorTitle ?? "Error",
     });
     return null;
   }
@@ -643,6 +656,7 @@ export const handleFolderNameDialogClose = (deps) => {
 
 export const handleFolderNameFormAction = async (deps, payload) => {
   const { appService, store, render } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -652,8 +666,8 @@ export const handleFolderNameFormAction = async (deps, payload) => {
   const description = values?.description?.trim() ?? "";
   if (!name) {
     appService.showAlert({
-      message: "Folder name is required.",
-      title: "Warning",
+      message: copy.folderNameRequired ?? "Folder name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -695,15 +709,17 @@ export const handleAddClick = (deps, payload) => {
 
 export const handleFilesDropped = async (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const { files, rejectedFiles, targetGroupId } = payload._event.detail;
 
   if ((rejectedFiles?.length ?? 0) > 0) {
-    showInvalidImportFormatToast(appService);
+    showInvalidImportFormatToast(appService, copy);
     return;
   }
 
   const importData = await parseImportSelection({
     appService,
+    copy,
     files,
   });
   if (!importData) {
@@ -724,11 +740,12 @@ export const handleFilesDropped = async (deps, payload) => {
 
 export const handleFilesDropRejected = (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   if ((payload._event.detail?.rejectedFiles?.length ?? 0) === 0) {
     return;
   }
 
-  showInvalidImportFormatToast(appService);
+  showInvalidImportFormatToast(appService, copy);
 };
 
 export const handleDialogClose = (deps) => {
@@ -740,6 +757,7 @@ export const handleDialogClose = (deps) => {
 
 export const handleDialogImageSourceClick = async (deps) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   let file;
 
   try {
@@ -751,7 +769,8 @@ export const handleDialogImageSourceClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select image.",
+      fallbackMessage: copy.failedSelectImage ?? "Failed to select image.",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -768,6 +787,7 @@ export const handleDialogImageSourceClick = async (deps) => {
 
 export const handleDialogAtlasSourceClick = async (deps) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   let file;
 
   try {
@@ -779,7 +799,9 @@ export const handleDialogAtlasSourceClick = async (deps) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to select JSON file.",
+      fallbackMessage:
+        copy.failedSelectJsonFile ?? "Failed to select JSON file.",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -821,6 +843,7 @@ export const handleDialogFormAddOptionClick = (deps) => {
 
 export const handleDialogFormAction = async (deps, payload) => {
   const { appService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -829,8 +852,8 @@ export const handleDialogFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Spritesheet name is required.",
-      title: "Warning",
+      message: copy.spritesheetNameRequired ?? "Spritesheet name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -847,22 +870,25 @@ export const handleDialogFormAction = async (deps, payload) => {
 
   if (dialogMode === "create" && !dialogSourceFiles?.pngFile) {
     appService.showAlert({
-      message: "Spritesheet image is required.",
-      title: "Warning",
+      message:
+        copy.spritesheetImageRequired ?? "Spritesheet image is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
 
   if (dialogMode === "create" && !dialogSourceFiles?.atlasFile) {
     appService.showAlert({
-      message: "Spritesheet JSON is required.",
-      title: "Warning",
+      message:
+        copy.spritesheetJsonRequired ?? "Spritesheet JSON is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
 
   const uploadResult = await uploadSpritesheetSource({
     appService,
+    copy,
     pngFile: dialogSourceFiles?.pngFile,
     projectService,
   });
@@ -872,8 +898,10 @@ export const handleDialogFormAction = async (deps, payload) => {
 
   if (dialogMode === "create" && !uploadResult) {
     appService.showAlert({
-      message: "Failed to upload spritesheet image.",
-      title: "Error",
+      message:
+        copy.failedUploadSpritesheetImage ??
+        "Failed to upload spritesheet image.",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -890,7 +918,9 @@ export const handleDialogFormAction = async (deps, payload) => {
     const spritesheetId = generateId();
     const createAttempt = await runResourcePageMutation({
       appService,
-      fallbackMessage: "Failed to create spritesheet.",
+      fallbackMessage:
+        copy.failedCreateSpritesheet ?? "Failed to create spritesheet.",
+      title: copy.errorTitle ?? "Error",
       action: () =>
         projectService.createSpritesheet({
           spritesheetId,
@@ -918,13 +948,18 @@ export const handleDialogFormAction = async (deps, payload) => {
   }
 
   if (!dialogItemId || !existingItem) {
-    appService.showAlert({ message: "Spritesheet not found.", title: "Error" });
+    appService.showAlert({
+      message: copy.spritesheetNotFound ?? "Spritesheet not found.",
+      title: copy.errorTitle ?? "Error",
+    });
     return;
   }
 
   const updateAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to update spritesheet.",
+    fallbackMessage:
+      copy.failedUpdateSpritesheet ?? "Failed to update spritesheet.",
+    title: copy.errorTitle ?? "Error",
     action: () =>
       projectService.updateSpritesheet({
         spritesheetId: dialogItemId,
@@ -995,11 +1030,12 @@ export const handleClipFpsFormAction = (deps, payload) => {
   }
 
   const { appService, render, store } = deps;
+  const copy = selectCopy(deps);
   const fps = normalizeSpritesheetFps(values?.fps);
   if (fps === undefined) {
     appService.showAlert({
-      message: "Clip FPS must be greater than 0.",
-      title: "Warning",
+      message: copy.clipFpsRequired ?? "Clip FPS must be greater than 0.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -1045,7 +1081,10 @@ const {
       tagId,
     });
   },
-  updateItemTagFallbackMessage: "Failed to update spritesheet tags.",
+  updateItemTagFallbackMessage: ({ deps }) =>
+    selectCopy(deps).failedUpdateSpritesheetTags ??
+    "Failed to update spritesheet tags.",
+  copy: ({ i18n }) => selectSpritesheetsPageCopy(i18n),
 });
 
 export {
@@ -1061,6 +1100,7 @@ export {
 
 export const handleItemDelete = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   if (!itemId) {
     return;
@@ -1073,14 +1113,19 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (usage.isUsed) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message:
+        copy.cannotDeleteResourceInUse ??
+        "Cannot delete resource, it is currently in use.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
 
   const deleteAttempt = await runResourcePageMutation({
     appService,
-    fallbackMessage: "Failed to delete spritesheet.",
+    fallbackMessage:
+      copy.failedDeleteSpritesheet ?? "Failed to delete spritesheet.",
+    title: copy.errorTitle ?? "Error",
     action: () =>
       projectService.deleteSpritesheets({
         spritesheetIds: [itemId],

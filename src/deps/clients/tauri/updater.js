@@ -14,12 +14,23 @@ const isMacOs = () => {
   return /Mac/.test(navigator.platform || "");
 };
 
+const formatUpdaterCopy = (template, values = {}) => {
+  return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
+    values[key] === undefined ? match : String(values[key]),
+  );
+};
+
+const resolveUpdaterCopy = (options = {}) => {
+  return options.copy ?? options ?? {};
+};
+
 const createUpdater = ({ globalUI, keyValueStore }) => {
   let updateAvailable = false;
   let updateInfo = null;
   let downloadProgress = 0;
 
-  const checkForUpdates = async (silent = false) => {
+  const checkForUpdates = async (silent = false, options = {}) => {
+    const copy = resolveUpdaterCopy(options);
     try {
       const update = await check(
         isMacOs()
@@ -32,8 +43,10 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
       if (!update) {
         if (!silent && globalUI) {
           await globalUI.showAlert({
-            message: "You are already on the latest version",
-            title: "Up to Date",
+            message:
+              copy.latestVersionMessage ??
+              "You are already on the latest version",
+            title: copy.upToDateTitle ?? "Up to Date",
           });
         }
         return null;
@@ -48,14 +61,21 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
 
       if (globalUI) {
         const shouldUpdate = await globalUI.showConfirm({
-          message: `Update ${update.version} is available!\n\nRelease notes:\n${update.body}`,
-          title: "Update Available",
-          confirmText: "Update Now",
-          cancelText: "Later",
+          message: formatUpdaterCopy(
+            copy.updateAvailableMessage ??
+              "Update {version} is available!\n\nRelease notes:\n{releaseNotes}",
+            {
+              version: update.version,
+              releaseNotes: update.body ?? "",
+            },
+          ),
+          title: copy.updateAvailableTitle ?? "Update Available",
+          confirmText: copy.updateNowButton ?? "Update Now",
+          cancelText: copy.laterButton ?? "Later",
         });
 
         if (shouldUpdate) {
-          await downloadAndInstall(update);
+          await downloadAndInstall(update, copy);
         }
       }
 
@@ -63,18 +83,24 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
     } catch (error) {
       console.error("Failed to check for updates:", error);
       if (!silent && globalUI) {
+        const message =
+          error?.message ||
+          copy.retrieveUpdateInfoFallback ||
+          "Could not retrieve update information.";
         await globalUI.showAlert({
-          message: `Failed to check for updates: ${
-            error?.message || "Could not retrieve update information."
-          }`,
-          title: "Error",
+          message: formatUpdaterCopy(
+            copy.failedCheckUpdatesMessage ??
+              "Failed to check for updates: {message}",
+            { message },
+          ),
+          title: copy.errorTitle ?? "Error",
         });
       }
       return null;
     }
   };
 
-  const downloadAndInstall = async (update) => {
+  const downloadAndInstall = async (update, copy = {}) => {
     try {
       let downloaded = 0;
       let contentLength = 0;
@@ -101,14 +127,22 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
       console.error("Failed to download and install update:", error);
       if (globalUI) {
         await globalUI.showAlert({
-          message: `Failed to install update: ${error.message}`,
-          title: "Error",
+          message: formatUpdaterCopy(
+            copy.failedInstallUpdateMessage ??
+              "Failed to install update: {message}",
+            { message: error?.message ?? "" },
+          ),
+          title: copy.errorTitle ?? "Error",
         });
       }
     }
   };
 
-  const startAutomaticChecks = () => {
+  const startAutomaticChecks = (options = {}) => {
+    const getCopy =
+      typeof options.getCopy === "function"
+        ? options.getCopy
+        : () => options.copy ?? {};
     const TEN_MINUTES_IN_MS = 10 * 60 * 1000;
     const SIX_HOURS_IN_MS = 6 * 60 * 60 * 1000;
 
@@ -118,7 +152,7 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
 
       if (!lastCheckTime || currentTime - lastCheckTime > SIX_HOURS_IN_MS) {
         try {
-          await checkForUpdates(true);
+          await checkForUpdates(true, { copy: getCopy() });
         } finally {
           await keyValueStore.set("lastCheckTime", currentTime);
         }

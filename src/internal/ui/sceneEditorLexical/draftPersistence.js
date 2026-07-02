@@ -9,6 +9,7 @@ import {
   enqueueLatestSceneEditorPersistence,
   enqueueSceneEditorPersistence,
 } from "../sceneEditor/persistenceQueue.js";
+import { selectSceneEditorCopy } from "../sceneEditor/sceneEditorCopy.js";
 
 export const DEFAULT_SCENE_EDITOR_DRAFT_SAVE_TIMING = {
   text: {
@@ -332,9 +333,12 @@ export const createSceneEditorDraftPersistence = ({
             deps.render();
           } catch (error) {
             if (showErrorAlert) {
+              const copy = selectSceneEditorCopy(deps.i18n);
               deps.appService?.showAlert({
-                message: "Failed to save scene changes",
-                title: "Error",
+                message:
+                  copy.failedSaveSceneChanges ??
+                  "Failed to save scene changes",
+                title: copy.errorTitle ?? "Error",
               });
             }
             throw error;

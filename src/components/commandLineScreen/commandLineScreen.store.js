@@ -1,4 +1,10 @@
 import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const createEmptyCollection = () => ({
   items: {},
@@ -265,7 +271,8 @@ export const selectScreenBlurActionValue = ({ state }) => {
   return undefined;
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const propsFormValues = getScreenFormValuesFromAction(props?.screen);
   const formValues = state.formValues ?? {};
   const selectedAnimationId = getSelectedFormValue(
@@ -309,7 +316,7 @@ export const selectViewData = ({ state, props }) => {
       : (selectedAnimationId ?? "new-screen");
 
   return {
-    breadcrumb: [
+    breadcrumb: localizeCommandLineBreadcrumb([
       {
         id: "actions",
         label: "Actions",
@@ -318,8 +325,8 @@ export const selectViewData = ({ state, props }) => {
       {
         label: "Screen",
       },
-    ],
-    form,
+    ], copy),
+    form: localizeCommandLineForm(form, copy),
     formKey,
     defaultValues: {
       ...formValues,
@@ -338,7 +345,7 @@ export const selectViewData = ({ state, props }) => {
         selectedAnimationId,
       ).map((option) => ({
         ...option,
-        suffixText: "Transition",
+        suffixText: localizeCommandLineText("Transition", copy),
       })),
     },
   };

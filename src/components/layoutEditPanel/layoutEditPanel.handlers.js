@@ -31,6 +31,7 @@ import {
   parseSpritesheetAnimationSelectionValue,
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
+import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 
 const ACTION_INTERACTION_TYPES = [
   "click",
@@ -80,9 +81,14 @@ const WHEEL_INCREMENT_FIELD_CONFIG = {
 };
 const TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_TARGET =
   "textRevealIndicatorVisualSource";
-const TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_ITEMS = [
-  { label: "Image", type: "item", value: "image" },
-  { label: "Spritesheet", type: "item", value: "spritesheet" },
+const selectCopy = (deps = {}) => selectLayoutEditPanelCopy(deps.i18n);
+const createTextRevealIndicatorVisualSourceItems = (copy = {}) => [
+  { label: copy.imageLabel ?? "Image", type: "item", value: "image" },
+  {
+    label: copy.spritesheetLabel ?? "Spritesheet",
+    type: "item",
+    value: "spritesheet",
+  },
 ];
 
 const arePlainObjectsShallowEqual = (left = {}, right = {}) => {
@@ -116,16 +122,30 @@ const getInteractionActionsSnapshot = (store, interactionType) => {
   return getInteractionActions(store.selectValues()[interactionKey]);
 };
 
-const getAvailableActionInteractionItems = (itemType) => {
+const getAvailableActionInteractionItems = (itemType, copy = {}) => {
   if (itemType === "slider") {
-    return [{ type: "item", label: "Change", key: "change" }];
+    return [
+      { type: "item", label: copy.changeLabel ?? "Change", key: "change" },
+    ];
   }
 
   return [
-    { type: "item", label: "Click", key: "click" },
-    { type: "item", label: "Right Click", key: "rightClick" },
-    { type: "item", label: "Scroll Up", key: "scrollUp" },
-    { type: "item", label: "Scroll Down", key: "scrollDown" },
+    { type: "item", label: copy.clickLabel ?? "Click", key: "click" },
+    {
+      type: "item",
+      label: copy.rightClickLabel ?? "Right Click",
+      key: "rightClick",
+    },
+    {
+      type: "item",
+      label: copy.scrollUpLabel ?? "Scroll Up",
+      key: "scrollUp",
+    },
+    {
+      type: "item",
+      label: copy.scrollDownLabel ?? "Scroll Down",
+      key: "scrollDown",
+    },
   ];
 };
 
@@ -676,6 +696,7 @@ export const handleOnUpdate = (deps, payload) => {
       values: popover.defaultValues,
       name: popover.name,
       projectResolution: newProps.projectResolution,
+      copy: selectCopy(deps),
     });
   }
 
@@ -684,6 +705,7 @@ export const handleOnUpdate = (deps, payload) => {
 
 export const handleGroupItemClick = (deps, payload) => {
   const { props, render, store } = deps;
+  const copy = selectCopy(deps);
   const { _event } = payload;
   const name = _event.currentTarget.dataset.name;
   const popoverForm = store.selectFieldPopoverForm({ name });
@@ -693,6 +715,7 @@ export const handleGroupItemClick = (deps, payload) => {
     name,
     form: popoverForm,
     projectResolution: props.projectResolution,
+    copy,
   });
 
   render();
@@ -770,6 +793,7 @@ export const handleVisibilityConditionItemClick = (deps) => {
 
 export const handleVisibilityConditionContextMenu = (deps, payload) => {
   const { render, store } = deps;
+  const copy = selectCopy(deps);
   payload._event.preventDefault();
 
   const targetName = payload._event.currentTarget?.dataset?.name;
@@ -781,6 +805,7 @@ export const handleVisibilityConditionContextMenu = (deps, payload) => {
     targetName,
     x: payload._event.clientX,
     y: payload._event.clientY,
+    copy,
   });
   render();
 };
@@ -793,6 +818,7 @@ export const handleSaveLoadPaginationItemClick = (deps) => {
 
 export const handleChildInteractionContextMenu = (deps, payload) => {
   const { render, store } = deps;
+  const copy = selectCopy(deps);
   payload._event.preventDefault();
 
   const name = payload._event.currentTarget.dataset.name;
@@ -804,6 +830,7 @@ export const handleChildInteractionContextMenu = (deps, payload) => {
     targetName: name,
     x: payload._event.clientX,
     y: payload._event.clientY,
+    copy,
   });
   render();
 };
@@ -822,11 +849,12 @@ export const handleTextContentItemClick = (deps) => {
 
 export const handleBlurItemRightClick = async (deps, payload) => {
   const { appService } = deps;
+  const copy = selectCopy(deps);
   const { _event: event } = payload;
   event.preventDefault();
 
   const result = await appService.showDropdownMenu({
-    items: [{ type: "item", label: "Remove", key: "remove" }],
+    items: [{ type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
     place: "bs",
@@ -1055,12 +1083,13 @@ export const handleOptionSelected = (deps, payload) => {
 
 export const handleSectionActionClick = async (deps, payload) => {
   const { render, store, appService, refs, props } = deps;
+  const copy = selectCopy(deps);
   const { _event } = payload;
   const id = _event.currentTarget.dataset.id;
 
   if (id === "actions") {
     const result = await appService.showDropdownMenu({
-      items: getAvailableActionInteractionItems(props.itemType),
+      items: getAvailableActionInteractionItems(props.itemType, copy),
       x: _event.clientX,
       y: _event.clientY,
       place: "bs",
@@ -1091,13 +1120,25 @@ export const handleSectionActionClick = async (deps, payload) => {
     const items = [];
     const { imageId, hoverImageId, clickImageId } = store.selectValues();
     if (!imageId) {
-      items.push({ type: "item", label: "Default", key: "imageId" });
+      items.push({
+        type: "item",
+        label: copy.defaultLabel ?? "Default",
+        key: "imageId",
+      });
     }
     if (!hoverImageId) {
-      items.push({ type: "item", label: "Hover", key: "hoverImageId" });
+      items.push({
+        type: "item",
+        label: copy.hoverLabel ?? "Hover",
+        key: "hoverImageId",
+      });
     }
     if (!clickImageId) {
-      items.push({ type: "item", label: "Click", key: "clickImageId" });
+      items.push({
+        type: "item",
+        label: copy.clickLabel ?? "Click",
+        key: "clickImageId",
+      });
     }
     const result = await appService.showDropdownMenu({
       items,
@@ -1122,14 +1163,14 @@ export const handleSectionActionClick = async (deps, payload) => {
     if (!hoverTextStyleId) {
       variantItems.push({
         type: "item",
-        label: "Hover",
+        label: copy.hoverLabel ?? "Hover",
         key: "hoverTextStyleId",
       });
     }
     if (!clickTextStyleId) {
       variantItems.push({
         type: "item",
-        label: "Clicked",
+        label: copy.clickedLabel ?? "Clicked",
         key: "clickTextStyleId",
       });
     }
@@ -1177,14 +1218,14 @@ export const handleSectionActionClick = async (deps, payload) => {
     if (!hoverSoundId) {
       variantItems.push({
         type: "item",
-        label: "Hover",
+        label: copy.hoverLabel ?? "Hover",
         key: "hoverSoundId",
       });
     }
     if (!clickSoundId) {
       variantItems.push({
         type: "item",
-        label: "Click",
+        label: copy.clickLabel ?? "Click",
         key: "clickSoundId",
       });
     }
@@ -1204,8 +1245,10 @@ export const handleSectionActionClick = async (deps, payload) => {
 
     if (store.selectSoundOptions().length === 0) {
       appService.showAlert({
-        message: "No sounds available. Create a sound resource first.",
-        title: "Warning",
+        message:
+          copy.noSoundsAvailable ??
+          "No sounds available. Create a sound resource first.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -1223,7 +1266,7 @@ export const handleSectionActionClick = async (deps, payload) => {
   } else if (id === "visibilityCondition") {
     handleVisibilityConditionItemClick(deps);
   } else if (id === "childInteraction") {
-    const items = getAvailableChildInteractionItems(store.selectValues()).map(
+    const items = getAvailableChildInteractionItems(store.selectValues(), copy).map(
       (item) => ({
         type: "item",
         label: item.label,
@@ -1259,6 +1302,7 @@ export const handleSectionActionClick = async (deps, payload) => {
     const items = createTextRevealIndicatorAddItems(currentValues.indicator, {
       revealSoundId: currentValues.revealSoundId,
       supportsTextRevealSound: capabilities.supportsTextRevealSound === true,
+      copy,
     });
     if (items.length === 0) {
       return;
@@ -1277,8 +1321,10 @@ export const handleSectionActionClick = async (deps, payload) => {
     if (result.item.key === "revealSoundId") {
       if (store.selectSoundOptions().length === 0) {
         appService.showAlert({
-          message: "No sounds available. Create a sound resource first.",
-          title: "Warning",
+          message:
+            copy.noSoundsAvailable ??
+            "No sounds available. Create a sound resource first.",
+          title: copy.warningTitle ?? "Warning",
         });
         return;
       }
@@ -1489,7 +1535,7 @@ export const handleTextRevealIndicatorImageFieldClick = (deps, payload) => {
     targetName: TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_TARGET,
     x: rect.left,
     y: rect.bottom,
-    items: TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_ITEMS,
+    items: createTextRevealIndicatorVisualSourceItems(selectCopy(deps)),
   });
   render();
 };
@@ -1516,9 +1562,10 @@ export const handleTextRevealIndicatorFormAction = (deps, payload) => {
   }
 
   if (!hasVisual) {
+    const copy = selectCopy(deps);
     store.setTextRevealIndicatorDialogValidationErrors({
       errors: {
-        imageId: "Visual is required.",
+        imageId: copy.visualRequired ?? "Visual is required.",
       },
     });
     render();
@@ -1649,8 +1696,11 @@ export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
   });
 
   if (availableAttributeOptions.length === 0) {
+    const copy = selectCopy(deps);
     appService.showAlert({
-      message: "All supported attributes are already added.",
+      message:
+        copy.allSupportedAttributesAdded ??
+        "All supported attributes are already added.",
     });
     return;
   }
@@ -1899,6 +1949,7 @@ export const handlePopoverFormChange = async (deps, payload) => {
     values: _event.detail.values,
     name,
     projectResolution: props.projectResolution,
+    copy: selectCopy(deps),
   });
   render();
 };
@@ -1921,12 +1972,14 @@ export const handlePopoverPresetClick = (deps, payload) => {
     },
     name,
     projectResolution: props.projectResolution,
+    copy: selectCopy(deps),
   });
   render();
 };
 
 export const handleListBarItemRightClick = async (deps, payload) => {
   const { render, store, appService } = deps;
+  const copy = selectCopy(deps);
   const { _event: event } = payload;
   event.preventDefault();
   const { name } = event.currentTarget.dataset;
@@ -1937,7 +1990,7 @@ export const handleListBarItemRightClick = async (deps, payload) => {
   }
 
   const result = await appService.showDropdownMenu({
-    items: [{ type: "item", label: "Remove", key: "remove" }],
+    items: [{ type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
     place: "bs",
@@ -2025,12 +2078,13 @@ export const handleListItemClick = async (deps, payload) => {
 
 export const handleListItemRightClick = async (deps, payload) => {
   const { render, store, appService } = deps;
+  const copy = selectCopy(deps);
   const { _event: event } = payload;
   event.preventDefault();
   const { id, interaction } = event.currentTarget.dataset;
   const interactionKey = getInteractionPropertyName(interaction);
   const result = await appService.showDropdownMenu({
-    items: [{ type: "item", label: "Remove", key: "remove" }],
+    items: [{ type: "item", label: copy.removeMenuItem ?? "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
     place: "bs",

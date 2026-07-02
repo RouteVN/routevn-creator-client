@@ -16,7 +16,7 @@ const parseBooleanProp = (value) => {
 const isNoBorderRadius = (value) =>
   value === "none" || value === "0" || value === 0;
 
-export const selectViewData = ({ props: attrs }) => {
+export const selectViewData = ({ props: attrs, i18n }) => {
   const layers = Array.isArray(attrs.layers)
     ? attrs.layers
         .filter((layer) => typeof layer?.fileId === "string" && layer.fileId)
@@ -59,5 +59,6 @@ export const selectViewData = ({ props: attrs }) => {
     spritesheetCheckerCellSize: attrs.spritesheetCheckerCellSize ?? "12",
     showSpritesheetCheckerboard: attrs.showSpritesheetCheckerboard ?? true,
     lazy: parseBooleanProp(attrs.lazy),
+    noPreviewLabel: i18n?.resourcePages?.noPreviewLabel ?? "No preview",
   };
 };

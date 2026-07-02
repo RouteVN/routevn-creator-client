@@ -10,10 +10,12 @@ import {
   toCharacterSelectOptions,
 } from "../../../internal/characterOptions.js";
 
-const VISIBILITY_CONDITION_OP_OPTIONS = [{ label: "Equals", value: "eq" }];
-const VISIBILITY_BOOLEAN_OPTIONS = [
-  { label: "True", value: true },
-  { label: "False", value: false },
+const createVisibilityConditionOpOptions = (copy = {}) => [
+  { label: copy.equalsOption ?? "Equals", value: "eq" },
+];
+const createVisibilityBooleanOptions = (copy = {}) => [
+  { label: copy.trueOption ?? "True", value: true },
+  { label: copy.falseOption ?? "False", value: false },
 ];
 const SUPPORTED_VISIBILITY_VARIABLE_TYPES = new Set([
   "boolean",
@@ -135,9 +137,10 @@ export const getVisibilityConditionSummary = (
   visibilityCondition,
   variablesData = {},
   options = {},
+  copy = {},
 ) => {
   if (!visibilityCondition?.target || visibilityCondition?.op !== "eq") {
-    return "Always visible";
+    return copy.alwaysVisibleSummary ?? "Always visible";
   }
 
   const targetName = getVisibilityConditionTargetName(
@@ -151,7 +154,7 @@ export const getVisibilityConditionSummary = (
           options.charactersData,
           visibilityCondition.value,
           {
-            noneLabel: "No Character",
+            noneLabel: copy.noCharacterOption ?? "No Character",
           },
         ) ?? `"${visibilityCondition.value ?? ""}"`)
       : typeof visibilityCondition.value === "string"
@@ -188,14 +191,17 @@ export const createVisibilityConditionDialogDefaults = (
   };
 };
 
-export const createVisibilityConditionForm = ({ targetOptions } = {}) => {
+export const createVisibilityConditionForm = ({
+  targetOptions,
+  copy = {},
+} = {}) => {
   return {
-    title: "Visibility Condition",
+    title: copy.visibilityConditionTitle ?? "Visibility Condition",
     fields: [
       {
         name: "target",
         type: "select",
-        label: "Target",
+        label: copy.targetLabel ?? "Target",
         required: false,
         options: targetOptions,
       },
@@ -203,39 +209,39 @@ export const createVisibilityConditionForm = ({ targetOptions } = {}) => {
         $when: "target",
         name: "op",
         type: "segmented-control",
-        label: "Operation",
+        label: copy.operationLabel ?? "Operation",
         required: true,
         clearable: false,
-        options: VISIBILITY_CONDITION_OP_OPTIONS,
+        options: createVisibilityConditionOpOptions(copy),
       },
       {
         $when: "target && selectedVariableType == 'boolean'",
         name: "booleanValue",
         type: "segmented-control",
-        label: "Value",
+        label: copy.valueLabel ?? "Value",
         required: true,
         clearable: false,
-        options: VISIBILITY_BOOLEAN_OPTIONS,
+        options: createVisibilityBooleanOptions(copy),
       },
       {
         $when: "target && selectedVariableType == 'number'",
         name: "numberValue",
         type: "input-number",
-        label: "Value",
+        label: copy.valueLabel ?? "Value",
         required: true,
       },
       {
         $when: "target && selectedValueKind == 'string'",
         name: "stringValue",
         type: "input-text",
-        label: "Value",
+        label: copy.valueLabel ?? "Value",
         required: true,
       },
       {
         $when: "target && selectedValueKind == 'character'",
         name: "characterValue",
         type: "select",
-        label: "Character",
+        label: copy.characterLabel ?? "Character",
         required: true,
         clearable: false,
         options: "${characterValueOptions}",
@@ -247,7 +253,7 @@ export const createVisibilityConditionForm = ({ targetOptions } = {}) => {
         {
           id: "submit",
           variant: "pr",
-          label: "Save",
+          label: copy.saveButton ?? "Save",
         },
       ],
     },

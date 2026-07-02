@@ -98,7 +98,7 @@ template:
                   - rtgl-view#actionItemVoice data-mode=voice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=microphone wh=24: null
                       - rtgl-text s=sm w=1fg ellipsis=true: ${preview.voice.name}
-                      - 'rtgl-button#voicePreviewButton sq v=ol pre=play title="Preview voice" aria-label="Preview voice"': null
+                      - 'rtgl-button#voicePreviewButton sq v=ol pre=play title="${previewVoiceLabel}" aria-label="${previewVoiceLabel}"': null
               - $if preview.sfx:
                   - rtgl-view#actionItemSfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=audio wh=24: null
@@ -163,27 +163,27 @@ template:
               - $if preview.nextLine:
                   - rtgl-view#actionItemNextLine data-mode=nextLine g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
-                      - rtgl-text s=sm: Next Line
+                      - rtgl-text s=sm: ${nextLineLabel}
               - $if preview.toggleAutoMode:
                   - rtgl-view#actionItemToggleAutoMode data-mode=toggleAutoMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="play" wh=24: null
-                      - rtgl-text s=sm: Toggle Auto Mode
+                      - rtgl-text s=sm: ${toggleAutoModeLabel}
               - $if preview.toggleSkipMode:
                   - rtgl-view#actionItemToggleSkipMode data-mode=toggleSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
-                      - rtgl-text s=sm: Toggle Skip Mode
+                      - rtgl-text s=sm: ${toggleSkipModeLabel}
               - $if preview.startSkipMode:
                   - rtgl-view#actionItemStartSkipMode data-mode=startSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
-                      - rtgl-text s=sm: Start Skip Mode
+                      - rtgl-text s=sm: ${startSkipModeLabel}
               - $if preview.stopSkipMode:
                   - rtgl-view#actionItemStopSkipMode data-mode=stopSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
-                      - rtgl-text s=sm: Stop Skip Mode
+                      - rtgl-text s=sm: ${stopSkipModeLabel}
               - $if preview.toggleDialogueUI:
                   - rtgl-view#actionItemToggleDialogueUI data-mode=toggleDialogueUI g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
-                      - rtgl-text s=sm: Toggle Dialogue Box Visibility
+                      - rtgl-text s=sm: ${toggleDialogueUILabel}
               - $if preview.runtimeActions:
                   - $for runtimeAction, i in preview.runtimeActions:
                       - rtgl-view#actionItemRuntime${i} data-mode=${runtimeAction.mode} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
@@ -192,11 +192,11 @@ template:
               - $if preview.pushOverlay:
                   - rtgl-view#actionItemPushOverlay data-mode=pushOverlay g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="layers" wh=24: null
-                      - rtgl-text s=sm: 'Push overlay: ${preview.pushOverlay.layout.name}'
+                      - rtgl-text s=sm: ${preview.pushOverlay.summary}
               - $if preview.popOverlay:
                   - rtgl-view#actionItemPopOverlay data-mode=popOverlay g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="layers" wh=24: null
-                      - rtgl-text s=sm: Pop current overlay
+                      - rtgl-text s=sm: ${preview.popOverlay.summary}
               - $if preview.rollbackByOffset:
                   - rtgl-view#actionItemRollbackByOffset data-mode=rollbackByOffset g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
@@ -205,24 +205,24 @@ template:
                   - rtgl-view#actionItemShowConfirmDialog data-mode=showConfirmDialog g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
                       - rtgl-svg svg="settings" wh=24: null
                       - rtgl-view d=v:
-                          - rtgl-text s=sm: 'Show confirm dialog: ${preview.showConfirmDialog.layoutName}'
-                          - rtgl-text s=xs c=mu-fg: 'Confirm: ${preview.showConfirmDialog.confirmActionCount} action(s), Cancel: ${preview.showConfirmDialog.cancelActionCount} action(s)'
+                          - rtgl-text s=sm: ${preview.showConfirmDialog.title}
+                          - rtgl-text s=xs c=mu-fg: ${preview.showConfirmDialog.summary}
               - $if preview.hideConfirmDialog:
                   - rtgl-view#actionItemHideConfirmDialog data-mode=hideConfirmDialog g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
-                      - rtgl-text s=sm: Hide confirm dialog
+                      - rtgl-text s=sm: ${hideConfirmDialogLabel}
               - $if preview.saveSlot:
                   - rtgl-view#actionItemSaveSlot data-mode=saveSlot g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
-                      - rtgl-text s=sm: 'Save slot ${preview.saveSlot.label}'
+                      - rtgl-text s=sm: ${preview.saveSlot.summary}
               - $if preview.loadSlot:
                   - rtgl-view#actionItemLoadSlot data-mode=loadSlot g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
-                      - rtgl-text s=sm: 'Load slot ${preview.loadSlot.label}'
+                      - rtgl-text s=sm: ${preview.loadSlot.summary}
               - $if preview.setNextLineConfig:
                   - rtgl-view#actionItemSetNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=settings wh=24: null
-                      - rtgl-text s=sm: Next Line Config
+                      - rtgl-text s=sm: ${nextLineConfigLabel}
               - $if preview.updateVariable:
                   - rtgl-view#actionItemUpdateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=variable wh=24: null
@@ -231,7 +231,7 @@ template:
                   - rtgl-view#actionItemConditional data-mode=conditional g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
                       - rtgl-svg svg=settings wh=24: null
                       - rtgl-view d=v:
-                          - rtgl-text s=sm: 'Conditional: ${preview.conditional.summary}'
+                          - rtgl-text s=sm: ${preview.conditional.title}
                           - rtgl-text s=xs c=mu-fg: ${preview.conditional.actionsSummary}
               - $if showAudioPlayer:
                   - rtgl-view h=72 w=f:
@@ -239,7 +239,7 @@ template:
           - rtgl-button#addActionButton v=ol w=f: +
           - $if showEmbeddedClose:
               - rtgl-view d=h av=c ah=e w=f g=lg:
-                  - rtgl-button#embeddedCloseButton: Confirm
+                  - rtgl-button#embeddedCloseButton: ${confirmButtonLabel}
   - rvn-system-actions-dialog-surface#actionsDialog key=${mode} :open=${isActionsDialogOpen} variant=${dialogVariant} :dialogWidth=${actionsDialogWidth} :dialogHeight=${actionsDialogHeight} :panelWidth=${actionsDialogPanelWidth} :suppressClose=${suppressDialogClose}:
       - $if isActionsDialogOpen:
           - 'rtgl-view slot=content w=f h=f pos=rel style="min-width: 0; min-height: 0;"':

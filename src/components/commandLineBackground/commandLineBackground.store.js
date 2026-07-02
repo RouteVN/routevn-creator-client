@@ -3,6 +3,13 @@ import {
   formatBackgroundTransformEditorMetric,
   normalizeBackgroundTransformEditorTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineForm,
+  localizeCommandLineOptions,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const tabs = [
   {
@@ -489,7 +496,10 @@ export const selectSelectedResource = ({ state }) => {
   );
 };
 
-const selectResourceById = ({ state }, { resourceId, resourceType } = {}) => {
+const selectResourceById = (
+  { state, copy },
+  { resourceId, resourceType } = {},
+) => {
   if (!resourceId || !resourceType) {
     return null;
   }
@@ -509,13 +519,13 @@ const selectResourceById = ({ state }, { resourceId, resourceType } = {}) => {
   }
 
   const layoutTypeLabels = {
-    general: "General",
-    "save-load": "Save / Load",
-    confirmDialog: "Confirm Dialog",
-    history: "History",
-    "dialogue-adv": "Dialogue ADV",
-    "dialogue-nvl": "Dialogue NVL",
-    choice: "Choice",
+    general: localizeCommandLineText("General", copy),
+    "save-load": localizeCommandLineText("Save / Load", copy),
+    confirmDialog: localizeCommandLineText("Confirm Dialog", copy),
+    history: localizeCommandLineText("History", copy),
+    "dialogue-adv": localizeCommandLineText("Dialogue ADV", copy),
+    "dialogue-nvl": localizeCommandLineText("Dialogue NVL", copy),
+    choice: localizeCommandLineText("Choice", copy),
   };
 
   const typeInfo = layoutTypeLabels[item.layoutType] ?? item.layoutType;
@@ -533,7 +543,7 @@ const selectResourceById = ({ state }, { resourceId, resourceType } = {}) => {
     layoutType: item.layoutType,
     layoutTypeDisplay: item.layoutType
       ? layoutTypeLabels[item.layoutType] || item.layoutType
-      : "Layout",
+      : localizeCommandLineText("Layout", copy),
     item: item,
     tab: resourceType,
   };
@@ -579,7 +589,8 @@ const createCustomTransformDetails = ({ state }) => {
   ];
 };
 
-export const selectViewData = ({ state, props = {} }) => {
+export const selectViewData = ({ state, props = {}, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const itemsMap = {
     image: state.imageItems,
     layout: state.layoutItems,
@@ -615,13 +626,13 @@ export const selectViewData = ({ state, props = {} }) => {
             "max-width: 100%; box-sizing: border-box;" +
             selectedResourceInsetStyle;
           const layoutTypeLabels = {
-            general: "General",
-            "save-load": "Save / Load",
-            confirmDialog: "Confirm Dialog",
-            history: "History",
-            "dialogue-adv": "Dialogue ADV",
-            "dialogue-nvl": "Dialogue NVL",
-            choice: "Choice",
+            general: localizeCommandLineText("General", copy),
+            "save-load": localizeCommandLineText("Save / Load", copy),
+            confirmDialog: localizeCommandLineText("Confirm Dialog", copy),
+            history: localizeCommandLineText("History", copy),
+            "dialogue-adv": localizeCommandLineText("Dialogue ADV", copy),
+            "dialogue-nvl": localizeCommandLineText("Dialogue NVL", copy),
+            choice: localizeCommandLineText("Choice", copy),
           };
 
           return {
@@ -634,7 +645,7 @@ export const selectViewData = ({ state, props = {} }) => {
             typeInfo: layoutTypeLabels[child.layoutType] ?? child.layoutType,
             layoutTypeDisplay: child.layoutType
               ? layoutTypeLabels[child.layoutType] || child.layoutType
-              : "Layout",
+              : localizeCommandLineText("Layout", copy),
           };
         });
 
@@ -647,7 +658,13 @@ export const selectViewData = ({ state, props = {} }) => {
     })
     .filter((group) => group.shouldDisplay);
 
-  const selectedResource = selectSelectedResource({ state });
+  const selectedResource = selectResourceById(
+    { state, copy },
+    {
+      resourceId: state.selectedResourceId,
+      resourceType: state.selectedResourceType,
+    },
+  );
   const breadcrumb = selectBreadcrumb({ state });
   const selectedAnimationMode = state.selectedAnimationMode ?? "none";
   const allAnimationItems = toFlatItems(state.animationItems).filter(
@@ -657,7 +674,9 @@ export const selectViewData = ({ state, props = {} }) => {
     value: item.id,
     label: item.name,
     suffixText:
-      getAnimationType(item) === "transition" ? "Transition" : "Update",
+      getAnimationType(item) === "transition"
+        ? localizeCommandLineText("Transition", copy)
+        : localizeCommandLineText("Update", copy),
   }));
   const transformOptions = toFlatItems(state.transformItems)
     .filter((item) => item.type === "transform")
@@ -823,13 +842,18 @@ export const selectViewData = ({ state, props = {} }) => {
   return {
     mode: state.mode,
     tab: state.tab,
-    tabs,
-    breadcrumb,
+    tabs: localizeCommandLineOptions(tabs, copy),
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     items: flatItems,
     groups: flatGroups,
     tempSelectedResourceId: state.tempSelectedResourceId,
     selectedResource,
-    customTransformDetails: createCustomTransformDetails({ state }),
+    customTransformDetails: createCustomTransformDetails({ state }).map(
+      (item) => ({
+        ...item,
+        label: localizeCommandLineText(item.label, copy),
+      }),
+    ),
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
     backgroundTransformEditor: createBackgroundTransformEditorViewData({
@@ -837,7 +861,7 @@ export const selectViewData = ({ state, props = {} }) => {
       props,
     }),
     searchQuery: state.searchQuery,
-    searchPlaceholder: "Search...",
+    searchPlaceholder: localizeCommandLineText("Search...", copy),
     dialogueForm: {
       key: [
         selectedResource?.resourceType ?? "none",
@@ -861,8 +885,15 @@ export const selectViewData = ({ state, props = {} }) => {
         state.selectedAnimationId ?? "none",
         state.backgroundLoop ? "loop" : "no-loop",
       ].join(":"),
-      form,
+      form: localizeCommandLineForm(form, copy),
       defaultValues,
     },
+    noThumbnailLabel: localizeCommandLineText("No thumbnail", copy),
+    selectBackgroundLabel: localizeCommandLineText("Select Background", copy),
+    editButtonLabel: localizeCommandLineText("Edit", copy),
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
+    selectButtonLabel: localizeCommandLineText("Select", copy),
+    transformEditorTitle: localizeCommandLineText("Transform", copy),
+    doneButtonLabel: localizeCommandLineText("Done", copy),
   };
 };

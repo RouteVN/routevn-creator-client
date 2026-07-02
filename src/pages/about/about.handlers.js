@@ -18,13 +18,13 @@ export const handleDataChanged = () => {
 };
 
 export const handleCheckForUpdates = async (deps) => {
-  const { updaterService } = deps;
+  const { updaterService, i18n } = deps;
   if (!resolveUpdatesEnabled(deps) || !updaterService) {
     return;
   }
 
   // Check for updates with UI feedback
-  await updaterService.checkForUpdates(false);
+  await updaterService.checkForUpdates(false, { copy: i18n?.appPage ?? {} });
 };
 
 export const handleClickSocialButton = async (deps, payload) => {

@@ -186,8 +186,8 @@ template:
                                               - rvn-file-image slot="avatar" w=128 h=128 bw=xs bc=bo br=f fileId="${selectedAvatarFileId}": null
                                             $else:
                                               - rtgl-view slot="avatar" w=128 h=128 av=c ah=c bgc=bg bc=bo bw=xs br=f:
-                                                  - rtgl-text c=mu-fg s=sm: No Avatar
-                                          - rtgl-tag-select#detailTagSelect slot="character-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                                  - rtgl-text c=mu-fg s=sm: ${noAvatarLabel}
+                                          - rtgl-tag-select#detailTagSelect slot="character-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                                           - 'rtgl-view slot="character-sprite-groups" d=v w=f g=sm':
                                               - $if selectedItemSpriteGroups.length > 0:
                                                   - $for spriteGroup, i in selectedItemSpriteGroups:
@@ -195,14 +195,14 @@ template:
                                                           - rtgl-text s=sm: ${spriteGroup.name}
                                                           - rtgl-text s=xs c=mu-fg: ${spriteGroup.tagSummary}
                                                 $else:
-                                                  - rtgl-text s=xs c=mu-fg: No sprite groups
+                                                  - rtgl-text s=xs c=mu-fg: ${noSpriteGroups}
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                                  - rtgl-text s=md c=mu-fg: No selection
+                                  - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
   - $if showMobileFileExplorer:
       - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
           - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
-              - rtgl-text w=1fg s=md: Files
+              - rtgl-text w=1fg s=md: ${filesLabel}
               - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
                   - rtgl-svg svg=x wh=20 c=mu-fg: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
@@ -214,11 +214,11 @@ template:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
-                  - rtgl-button#mobileDetailSpritesButton w=1fg v=se pre=image: Sprites
-                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: Delete
+                  - rtgl-button#mobileDetailSpritesButton w=1fg v=se pre=image: ${spriteGroupsLabel}
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
-                      - rtgl-tag-select#detailTagSelect slot="character-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                      - rtgl-tag-select#detailTagSelect slot="character-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#addCharacterDialog ?open=${isDialogOpen} s=md:
@@ -230,7 +230,7 @@ template:
                 $else:
                   - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
                       - rtgl-view#avatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                          - rtgl-text c=mu-fg s=sm: Click to Upload
+                          - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
@@ -240,12 +240,12 @@ template:
                 $else:
                   - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
                       - rtgl-view#editAvatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                          - rtgl-text c=mu-fg s=sm: Click to Upload
+                          - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
               - 'rtgl-view slot="sprite-groups-slot" d=v w=f g=md':
                   - $if editSpriteGroupTagOptions.length > 0:
                       - rtgl-view d=h w=f ah=e:
                           - rtgl-view w=1fg: null
-                          - rtgl-button.spriteGroupAddButton data-target=edit s=sm v=gh pre=plus: Add Group
+                          - rtgl-button.spriteGroupAddButton data-target=edit s=sm v=gh pre=plus: ${addGroupButton}
                       - $if editSpriteGroups.length > 0:
                           - $for spriteGroup, i in editSpriteGroups:
                               - rtgl-view.spriteGroupCard data-target=edit data-index=${i} d=v w=f g=xs p=md bw=xs bc=bo h-bc=ac br=md cur=pointer:
@@ -254,7 +254,7 @@ template:
                                       - rtgl-text s=xs c=mu-fg: ${spriteGroup.tagSummary}
                         $else:
                           - rtgl-view w=f p=md bgc=mu br=md:
-                              - rtgl-text s=xs c=mu-fg: No sprite groups yet
+                              - rtgl-text s=xs c=mu-fg: ${noSpriteGroupsYet}
                     $else:
                       - rtgl-view w=f p=md bgc=mu br=md:
                           - rtgl-text s=xs c=mu-fg: ${editSpriteGroupsMessage}

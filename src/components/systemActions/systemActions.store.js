@@ -9,6 +9,12 @@ import {
 } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
+import {
+  formatCommandLineCopy,
+  localizeCommandLineDropdownMenu,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 export const createInitialState = () => ({
   mode: "actions",
@@ -157,13 +163,15 @@ const resolveBackgroundPreviewAction = ({ actions, presentationState }) => {
   return previewBackground;
 };
 
-export const selectViewData = ({ state, props, props: attrs }) => {
+export const selectViewData = ({ state, props, props: attrs, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const displayActions = selectDisplayActions({ state });
   const actionProps = { ...props };
   actionProps.actions = selectAction({ state });
   const { actions: actionsObject, preview } = selectActionsData({
     props: actionProps,
     state,
+    copy,
   });
   const hiddenModes = getHiddenModes(attrs);
   const allowedModes = getAllowedModes(attrs);
@@ -227,7 +235,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     currentSceneId: props.currentSceneId,
     mode: state.mode,
     isActionsDialogOpen: state.isActionsDialogOpen,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     displayActions,
     actions: actionsObject,
     preview,
@@ -263,6 +271,22 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       attrs.backgroundTransformEditor?.suppressActionsDialogClose === true,
     backgroundTransformEditor: attrs.backgroundTransformEditor ?? {},
     isRuntimeActionMode: isRuntimeActionMode(state.mode),
+    previewVoiceLabel: localizeCommandLineText("Preview voice", copy),
+    nextLineLabel: localizeCommandLineText("Next Line", copy),
+    toggleAutoModeLabel: localizeCommandLineText("Toggle Auto Mode", copy),
+    toggleSkipModeLabel: localizeCommandLineText("Toggle Skip Mode", copy),
+    startSkipModeLabel: localizeCommandLineText("Start Skip Mode", copy),
+    stopSkipModeLabel: localizeCommandLineText("Stop Skip Mode", copy),
+    toggleDialogueUILabel: localizeCommandLineText(
+      "Toggle Dialogue Box Visibility",
+      copy,
+    ),
+    hideConfirmDialogLabel: localizeCommandLineText(
+      "Hide confirm dialog",
+      copy,
+    ),
+    nextLineConfigLabel: localizeCommandLineText("Next Line Config", copy),
+    confirmButtonLabel: localizeCommandLineText("Confirm", copy),
   };
 };
 
@@ -470,27 +494,37 @@ const isActionBranchDefault = (branch) => {
   );
 };
 
-const formatConditionalSummary = (branches = []) => {
+const formatConditionalSummary = (branches = [], copy) => {
   const conditionalCount = branches.filter(
     (branch) => !isActionBranchDefault(branch),
   ).length;
   const hasDefault = branches.some((branch) => isActionBranchDefault(branch));
   const branchLabel =
     conditionalCount === 1
-      ? "1 branch"
+      ? localizeCommandLineText("1 branch", copy)
       : conditionalCount > 1
-        ? `${conditionalCount} branches`
+        ? formatCommandLineCopy(
+            "{count} branches",
+            { count: conditionalCount },
+            copy,
+          )
         : "";
 
   if (branchLabel && hasDefault) {
-    return `${branchLabel} + default`;
+    return formatCommandLineCopy(
+      "{branches} + default",
+      { branches: branchLabel },
+      copy,
+    );
   }
 
   if (branchLabel) {
     return branchLabel;
   }
 
-  return hasDefault ? "default" : "0 branches";
+  return hasDefault
+    ? localizeCommandLineText("default", copy)
+    : localizeCommandLineText("0 branches", copy);
 };
 
 const isDisplayableScreenAction = (screenAction) => {
@@ -502,7 +536,7 @@ const isDisplayableScreenAction = (screenAction) => {
 };
 
 // Moved from sceneEditor.store.js - now returns object instead of array
-export const selectActionsData = ({ props, state }) => {
+export const selectActionsData = ({ props, state, copy }) => {
   const actions = normalizeLineActions(props.actions || {});
   const presentationState =
     props.presentationState && typeof props.presentationState === "object"
@@ -572,7 +606,10 @@ export const selectActionsData = ({ props, state }) => {
     actionsObject.screen = actions.screen;
     preview.screen = {
       animation,
-      label: animation?.name || animationResourceId || "Screen",
+      label:
+        animation?.name ||
+        animationResourceId ||
+        localizeCommandLineText("Screen", copy),
     };
   }
 
@@ -669,8 +706,10 @@ export const selectActionsData = ({ props, state }) => {
     if (scene) {
       const isCurrentScene =
         actions.sectionTransition.sceneId === props.currentSceneId;
-      const sceneName = scene.name || "Unknown Scene";
-      const sectionName = section?.name || "Unknown Section";
+      const sceneName =
+        scene.name || localizeCommandLineText("Unknown Scene", copy);
+      const sectionName =
+        section?.name || localizeCommandLineText("Unknown Section", copy);
 
       preview.sectionTransition = {
         scene,
@@ -695,8 +734,12 @@ export const selectActionsData = ({ props, state }) => {
       section,
       sectionId,
       label: targetLabel
-        ? `Reset story at ${targetLabel}`
-        : "Reset story at section",
+        ? formatCommandLineCopy(
+            "Reset story at {target}",
+            { target: targetLabel },
+            copy,
+          )
+        : localizeCommandLineText("Reset story at section", copy),
     };
   }
 
@@ -706,13 +749,20 @@ export const selectActionsData = ({ props, state }) => {
     if (layout) {
       preview.pushOverlay = {
         layout,
+        summary: formatCommandLineCopy(
+          "Push overlay: {layout}",
+          { layout: layout.name },
+          copy,
+        ),
       };
     }
   }
 
   if (actions.popOverlay) {
     actionsObject.popOverlay = actions.popOverlay;
-    preview.popOverlay = true;
+    preview.popOverlay = {
+      summary: localizeCommandLineText("Pop current overlay", copy),
+    };
   }
 
   if (actions.rollbackByOffset) {
@@ -721,7 +771,18 @@ export const selectActionsData = ({ props, state }) => {
     const offset = Number.isFinite(rawOffset) ? rawOffset : -1;
     preview.rollbackByOffset = {
       offset,
-      summary: `Rollback by ${Math.abs(offset)} line${Math.abs(offset) === 1 ? "" : "s"}`,
+      summary:
+        Math.abs(offset) === 1
+          ? formatCommandLineCopy(
+              "Rollback by {count} line",
+              { count: Math.abs(offset) },
+              copy,
+            )
+          : formatCommandLineCopy(
+              "Rollback by {count} lines",
+              { count: Math.abs(offset) },
+              copy,
+            ),
     };
   }
 
@@ -744,10 +805,23 @@ export const selectActionsData = ({ props, state }) => {
       layoutName:
         layoutsItems[actions.showConfirmDialog.resourceId]?.name ??
         actions.showConfirmDialog.resourceId ??
-        "No layout",
+        localizeCommandLineText("No layout", copy),
       confirmActionCount: Object.keys(confirmActions).length,
       cancelActionCount: Object.keys(cancelActions).length,
     };
+    preview.showConfirmDialog.title = formatCommandLineCopy(
+      "Show confirm dialog: {layout}",
+      { layout: preview.showConfirmDialog.layoutName },
+      copy,
+    );
+    preview.showConfirmDialog.summary = formatCommandLineCopy(
+      "Confirm: {confirmCount} action(s), Cancel: {cancelCount} action(s)",
+      {
+        confirmCount: preview.showConfirmDialog.confirmActionCount,
+        cancelCount: preview.showConfirmDialog.cancelActionCount,
+      },
+      copy,
+    );
   }
 
   if (actions.conditional) {
@@ -763,9 +837,25 @@ export const selectActionsData = ({ props, state }) => {
     preview.conditional = {
       branchCount: branches.length,
       actionCount,
-      summary: formatConditionalSummary(branches),
-      actionsSummary: `${actionCount} nested action${actionCount === 1 ? "" : "s"}`,
+      summary: formatConditionalSummary(branches, copy),
+      actionsSummary:
+        actionCount === 1
+          ? formatCommandLineCopy(
+              "{count} nested action",
+              { count: actionCount },
+              copy,
+            )
+          : formatCommandLineCopy(
+              "{count} nested actions",
+              { count: actionCount },
+              copy,
+            ),
     };
+    preview.conditional.title = formatCommandLineCopy(
+      "Conditional: {summary}",
+      { summary: preview.conditional.summary },
+      copy,
+    );
   }
 
   if (actions.hideConfirmDialog !== undefined) {
@@ -786,8 +876,13 @@ export const selectActionsData = ({ props, state }) => {
 
     preview.saveSlot = {
       slotId,
-      label: slotId ?? "Auto",
+      label: slotId ?? localizeCommandLineText("Auto", copy),
     };
+    preview.saveSlot.summary = formatCommandLineCopy(
+      "Save slot {slot}",
+      { slot: preview.saveSlot.label },
+      copy,
+    );
   }
 
   if (actions.loadSlot) {
@@ -803,8 +898,13 @@ export const selectActionsData = ({ props, state }) => {
 
     preview.loadSlot = {
       slotId,
-      label: slotId ?? "Auto",
+      label: slotId ?? localizeCommandLineText("Auto", copy),
     };
+    preview.loadSlot.summary = formatCommandLineCopy(
+      "Load slot {slot}",
+      { slot: preview.loadSlot.label },
+      copy,
+    );
   }
 
   const dialogueAction = resolveDialogueActionForPreview({
@@ -827,7 +927,11 @@ export const selectActionsData = ({ props, state }) => {
       typeof dialogueAction.character?.name !== "string" ||
       dialogueAction.character.name.length === 0
         ? undefined
-        : `Name: ${truncatePreviewText(dialogueAction.character.name)}`;
+        : formatCommandLineCopy(
+            "Name: {name}",
+            { name: truncatePreviewText(dialogueAction.character.name) },
+            copy,
+          );
     const hasDialogueCharacter =
       !!dialogueAction.characterId || customCharacterNameLabel !== undefined;
     const persistCharacterLabel =
@@ -835,7 +939,7 @@ export const selectActionsData = ({ props, state }) => {
       hasDialogueCharacter !== true ||
       dialogueAction.persistCharacter !== true
         ? undefined
-        : "Persist Speaker";
+        : localizeCommandLineText("Persist Speaker", copy);
     const spriteItems = Array.isArray(dialogueAction.character?.sprite?.items)
       ? dialogueAction.character.sprite.items
       : [];
@@ -843,17 +947,27 @@ export const selectActionsData = ({ props, state }) => {
       dialogueAction.character?.sprite?.animations?.resourceId;
     const spriteLabel =
       spriteItems.length > 0
-        ? `Sprite: ${spriteItems.length} layer${spriteItems.length === 1 ? "" : "s"}`
+        ? spriteItems.length === 1
+          ? formatCommandLineCopy(
+              "Sprite: {count} layer",
+              { count: spriteItems.length },
+              copy,
+            )
+          : formatCommandLineCopy(
+              "Sprite: {count} layers",
+              { count: spriteItems.length },
+              copy,
+            )
         : spriteAnimationId
-          ? "Sprite Animation"
+          ? localizeCommandLineText("Sprite Animation", copy)
           : undefined;
     const appendLabel =
       authoredDialogue?.append === true || dialogueAction.append === true
-        ? "append"
+        ? localizeCommandLineText("append", copy)
         : undefined;
     if (dialogueAction.clear === true) {
       preview.dialogue = {
-        name: "Dialogue: Clear",
+        name: localizeCommandLineText("Dialogue: Clear", copy),
         modeLabel: dialogueModeLabel,
         customCharacterNameLabel,
         persistCharacterLabel,
@@ -865,7 +979,7 @@ export const selectActionsData = ({ props, state }) => {
         name:
           layoutsItems[
             dialogueAction.ui?.resourceId ?? dialogueAction.gui?.resourceId
-          ]?.name || "No layout",
+          ]?.name || localizeCommandLineText("No layout", copy),
         modeLabel: dialogueModeLabel,
         customCharacterNameLabel,
         persistCharacterLabel,
@@ -916,7 +1030,7 @@ export const selectActionsData = ({ props, state }) => {
       );
       const variableName = toPreviewLabel(
         variable?.name ?? variableId,
-        "No variable",
+        localizeCommandLineText("No variable", copy),
       );
 
       return {
@@ -924,13 +1038,23 @@ export const selectActionsData = ({ props, state }) => {
         fieldLabel,
         variableId,
         variableName,
-        summary: `${fieldLabel}: ${variableName}`,
+        summary: formatCommandLineCopy(
+          "{field}: {variable}",
+          {
+            field: fieldLabel,
+            variable: variableName,
+          },
+          copy,
+        ),
       };
     });
 
     preview.form = {
       layout,
-      layoutName: layout?.name ?? actions.form.resourceId ?? "No layout",
+      layoutName:
+        layout?.name ??
+        actions.form.resourceId ??
+        localizeCommandLineText("No layout", copy),
       fields: fieldItems,
       fieldCount: fieldItems.length,
       submitActionCount: countActions(actions.form.submitActions),
@@ -1035,7 +1159,11 @@ export const selectActionsData = ({ props, state }) => {
           const variable = variableItems[op.variableId];
           const varName = variable?.name || op.variableId;
           if (op.op === "toggle") {
-            return `${varName} toggle`;
+            return formatCommandLineCopy(
+              "{variable} toggle",
+              { variable: varName },
+              copy,
+            );
           } else if (op.op === "set") {
             return `${varName} = ${op.value}`;
           } else if (op.op === "increment") {
@@ -1049,7 +1177,7 @@ export const selectActionsData = ({ props, state }) => {
           }
           return `${varName} ${op.op}`;
         })
-        .join(", ") || "No operations";
+        .join(", ") || localizeCommandLineText("No operations", copy);
 
     preview.updateVariable = {
       summary,

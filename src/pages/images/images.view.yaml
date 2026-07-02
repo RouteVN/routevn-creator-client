@@ -244,14 +244,14 @@ template:
                                           - $if selectedPreviewFileId:
                                               - 'div#detailImage.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
                                                   - rvn-file-image fileId=${selectedPreviewFileId} w=f h=f: null
-                                          - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                          - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                                  - rtgl-text s=md c=mu-fg: No selection
+                                  - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
   - $if showMobileFileExplorer:
       - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
           - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
-              - rtgl-text w=1fg s=md: Files
+              - rtgl-text w=1fg s=md: ${filesLabel}
               - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
                   - rtgl-svg svg=x wh=20 c=mu-fg: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
@@ -263,18 +263,18 @@ template:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
-                  - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: Preview
-                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: Delete
+                  - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: ${previewButton}
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
-                      - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                      - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#mobileDeleteDialog ?open=${mobileDeleteDialogOpen} s=sm:
       - rtgl-view slot=content g=lg p=lg:
           - rtgl-view d=v g=md:
               - rtgl-text s=lg: ${mobileDeleteDialogTitle}
               - rtgl-text c=mu-fg: ${mobileDeleteDialogMessage}
           - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#mobileDeleteCancelButton v=se: Cancel
+              - rtgl-button#mobileDeleteCancelButton v=se: ${cancelButton}
               - rtgl-button#mobileDeleteConfirmButton v=pr: ${mobileDeleteDialogConfirmLabel}
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
@@ -285,7 +285,7 @@ template:
                 $else:
                   - rtgl-view slot=image-slot av=c ah=c:
                       - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                          - rtgl-text c=mu-fg s=sm: Click to Upload
+                          - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
@@ -294,15 +294,15 @@ template:
     'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none; background-color: rgba(0, 0, 0, 0.9);"':
       - $if fullImagePreviewFileId:
           - 'rtgl-view pos=fix z=3002 d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="top: 8px; left: 50%; transform: translateX(-50%); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
-              - 'rtgl-view#previewCanvasModeButton role=button aria-label="Show image at canvas scale" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="Show image at canvas scale" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewCanvasModeButton.borderColor} bgc=${fullImagePreviewCanvasModeButton.backgroundColor} cur=pointer':
+              - 'rtgl-view#previewCanvasModeButton role=button aria-label="${fullImagePreviewCanvasModeLabel}" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="${fullImagePreviewCanvasModeLabel}" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewCanvasModeButton.borderColor} bgc=${fullImagePreviewCanvasModeButton.backgroundColor} cur=pointer':
                   - rtgl-svg svg=canvas-scale wh=18 c=${fullImagePreviewCanvasModeButton.iconColor}: null
-              - 'rtgl-view#previewFitModeButton role=button aria-label="Fit image to preview" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="Fit image to preview" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewFitModeButton.borderColor} bgc=${fullImagePreviewFitModeButton.backgroundColor} cur=pointer':
+              - 'rtgl-view#previewFitModeButton role=button aria-label="${fullImagePreviewFitModeLabel}" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="${fullImagePreviewFitModeLabel}" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewFitModeButton.borderColor} bgc=${fullImagePreviewFitModeButton.backgroundColor} cur=pointer':
                   - rtgl-svg svg=fit-to-frame wh=18 c=${fullImagePreviewFitModeButton.iconColor}: null
           - rtgl-view pos=fix edge=f ah=c av=c z=3001:
               - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
                   - 'div style="${fullImagePreviewImageWrapperStyle}"':
                       - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null
                   - $if fullImagePreviewPreviousVisible:
-                      - div#previewPrevious.imagePreviewEdge.imagePreviewEdgePrevious role=button aria-label="Previous image": null
+                      - div#previewPrevious.imagePreviewEdge.imagePreviewEdgePrevious role=button aria-label="${fullImagePreviewPreviousLabel}": null
                   - $if fullImagePreviewNextVisible:
-                      - div#previewNext.imagePreviewEdge.imagePreviewEdgeNext role=button aria-label="Next image": null
+                      - div#previewNext.imagePreviewEdge.imagePreviewEdgeNext role=button aria-label="${fullImagePreviewNextLabel}": null

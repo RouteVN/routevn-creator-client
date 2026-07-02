@@ -1,4 +1,5 @@
 import { generateId } from "../../internal/id.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { normalizeExportFileMimeType } from "../../internal/bundleRuntimeAssets.js";
 import {
   buildFilteredStateForExport,
@@ -6,6 +7,7 @@ import {
   constructProjectData,
 } from "../../internal/project/projection.js";
 import { createBundleInstructions } from "../../deps/services/shared/projectExportService.js";
+import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
 
 const getVersionDescription = (version) => {
   return version?.description ?? version?.notes ?? "";
@@ -83,16 +85,27 @@ const getVersionZipName = ({ appService, projectId, version } = {}) => {
   return `${projectName}_${version?.name ?? "version"}`;
 };
 
-const formatReplayFailureMessage = ({ replay } = {}) => {
+const formatReplayFailureMessage = ({ replay, copy = {} } = {}) => {
   const failedEventOffset = replay?.failedEventOffset;
   const targetEventCount = replay?.targetEventCount;
   const failedType = replay?.failedEvent?.type || "unknown";
 
   if (!Number.isFinite(Number(failedEventOffset))) {
-    return "History replay failed. Check the app console for details.";
+    return (
+      copy.historyReplayFailed ??
+      "History replay failed. Check the app console for details."
+    );
   }
 
-  return `History replay failed at event ${failedEventOffset}/${targetEventCount || "?"} (${failedType}). Check the app console for details.`;
+  return formatI18nCopy(
+    copy.historyReplayFailedAtEvent ??
+      "History replay failed at event {failedEventOffset}/{targetEventCount} ({failedType}). Check the app console for details.",
+    {
+      failedEventOffset,
+      targetEventCount: targetEventCount || "?",
+      failedType,
+    },
+  );
 };
 
 export const handleBeforeMount = (deps) => {
@@ -157,7 +170,8 @@ export const handleVersionFormClose = (deps) => {
 };
 
 export const handleVersionFormAction = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
+  const { store, render, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
   const { p: projectId } = appService.getPayload();
   const { actionId, values } = payload._event.detail;
 
@@ -174,8 +188,8 @@ export const handleVersionFormAction = async (deps, payload) => {
   const name = values?.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Version name is required.",
-      title: "Warning",
+      message: copy.versionNameRequired ?? "Version name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -230,9 +244,9 @@ export const handleVersionFormAction = async (deps, payload) => {
   } catch {
     appService.showAlert({
       message: editingVersionId
-        ? "Failed to update version."
-        : "Failed to create version.",
-      title: "Error",
+        ? (copy.failedUpdateVersion ?? "Failed to update version.")
+        : (copy.failedCreateVersion ?? "Failed to create version."),
+      title: copy.errorTitle ?? "Error",
     });
   }
 };
@@ -265,7 +279,8 @@ export const handleDropdownMenuClose = (deps) => {
 };
 
 export const handleDownloadZipClick = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
+  const { store, render, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
   payload._event.stopPropagation();
 
   const currentPayload = appService.getPayload();
@@ -275,7 +290,10 @@ export const handleDownloadZipClick = async (deps, payload) => {
   const version = store.selectVersion(versionId);
 
   if (!version) {
-    appService.showAlert({ message: "Version not found.", title: "Error" });
+    appService.showAlert({
+      message: copy.versionNotFound ?? "Version not found.",
+      title: copy.errorTitle ?? "Error",
+    });
     return;
   }
 
@@ -294,8 +312,11 @@ export const handleDownloadZipClick = async (deps, payload) => {
     outputPath = await projectService.promptDistributionZipPath(zipName);
   } catch (error) {
     appService.showAlert({
-      message: `Failed to open save dialog: ${error.message}`,
-      title: "Error",
+      message: formatI18nCopy(
+        copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
+        { message: error.message },
+      ),
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -306,8 +327,10 @@ export const handleDownloadZipClick = async (deps, payload) => {
   }
 
   appService.showAlert({
-    message: "Please wait while the bundle is being created...",
-    title: "Bundle in progress",
+    message:
+      copy.bundleInProgressMessage ??
+      "Please wait while the bundle is being created...",
+    title: copy.bundleInProgressTitle ?? "Bundle in progress",
   });
 
   try {
@@ -361,8 +384,11 @@ export const handleDownloadZipClick = async (deps, payload) => {
     }
 
     appService.showAlert({
-      message: `ZIP export completed.\nSaved to: ${savedPath}`,
-      title: "Export completed",
+      message: formatI18nCopy(
+        copy.zipExportCompletedMessage ?? "ZIP export completed.\nSaved to: {path}",
+        { path: savedPath },
+      ),
+      title: copy.exportCompletedTitle ?? "Export completed",
     });
   } catch (error) {
     const replay = error?.details?.replay;
@@ -379,15 +405,19 @@ export const handleDownloadZipClick = async (deps, payload) => {
 
     appService.showAlert({
       message: replay
-        ? `${formatReplayFailureMessage({ replay })}\n${error.message}`
-        : `Failed to save ZIP file: ${error.message}`,
-      title: "Error",
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${error.message}`
+        : formatI18nCopy(
+            copy.failedSaveZipFile ?? "Failed to save ZIP file: {message}",
+            { message: error.message },
+          ),
+      title: copy.errorTitle ?? "Error",
     });
   }
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
+  const { store, render, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
   const detail = payload._event.detail;
   const item = detail.item || detail;
   const versionId = store.selectDropdownMenuTargetVersionId();
@@ -418,8 +448,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   } catch {
     render();
     appService.showAlert({
-      message: "Failed to delete version.",
-      title: "Error",
+      message: copy.failedDeleteVersion ?? "Failed to delete version.",
+      title: copy.errorTitle ?? "Error",
     });
   }
 };

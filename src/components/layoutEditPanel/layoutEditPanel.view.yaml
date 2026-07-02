@@ -316,7 +316,7 @@ template:
                               - rtgl-view w=1fg: null
                               - $if barItem.kind == 'spritesheet' && barItem.resourceId:
                                   - rtgl-view w=56 h=32 overflow=hidden br=sm:
-                                      - 'rvn-spritesheet-preview key=${barItem.spritesheetPreviewKey} previewKey=${barItem.spritesheetPreviewKey} fileId=${barItem.spritesheetFileId} :atlas=${barItem.spritesheetAtlas} :animation=${barItem.spritesheetAnimation} w=f h=f emptyLabel="No preview"': null
+                                      - 'rvn-spritesheet-preview key=${barItem.spritesheetPreviewKey} previewKey=${barItem.spritesheetPreviewKey} fileId=${barItem.spritesheetFileId} :atlas=${barItem.spritesheetAtlas} :animation=${barItem.spritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
                                 $elif barItem.imageId:
                                   - rvn-file-image imageId=${barItem.imageId} source="thumbnail" h=32: null
                                 $elif barItem.soundId:
@@ -330,9 +330,9 @@ template:
                                       - rtgl-text s=xs c=mu-fg ellipsis w=100: ${barItem.soundName}
                                 $else:
                                   - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
-                                      - rtgl-text s=xs c=mu: Not set
+                                      - rtgl-text s=xs c=mu: ${notSetLabel}
                     $elif item.type == 'spritesheet-preview':
-                      - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} h=180 emptyLabel="Select a spritesheet animation"': null
+                      - 'rvn-spritesheet-preview key=${item.previewKey} previewKey=${item.previewKey} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} h=180 emptyLabel="${selectSpritesheetAnimationLabel}"': null
                     $elif item.type == 'popover-input':
                       - rtgl-view#groupItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
@@ -346,17 +346,17 @@ template:
                                   - rtgl-view d=h g=sm av=c w=f:
                                       - rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
                                           - rtgl-text s=sm: ${conditionalItem.summary}
-                                      - rtgl-button#conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: Delete
+                                      - rtgl-button#conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: ${deleteButton}
                                   - $if conditionalItem.attributeItems.length > 0:
                                       - $for attributeItem, m in conditionalItem.attributeItems:
                                           - rtgl-view key=${attributeItem.viewKey} d=h g=sm av=c w=f:
                                               - rtgl-view#conditionalOverrideAttribute${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
                                                   - rtgl-text s=xs: ${attributeItem.summary}
-                                              - rtgl-button#conditionalOverrideAttributeDelete${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} variant=se s=sm: Remove
+                                              - rtgl-button#conditionalOverrideAttributeDelete${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} variant=se s=sm: ${removeButton}
                                     $else:
-                                      - rtgl-text s=xs c=mu-fg: No attributes yet
+                                      - rtgl-text s=xs c=mu-fg: ${noAttributesYet}
                                   - rtgl-view d=h w=f ah=e:
-                                      - rtgl-button#conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh: Add Attribute
+                                      - rtgl-button#conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh: ${addAttributeButton}
                     $elif item.type == 'pagination-summary':
                       - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
@@ -415,12 +415,12 @@ template:
                       - rtgl-view#textRevealIndicatorImageField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                           - $if textRevealIndicatorDialog.kind == 'spritesheet' && textRevealIndicatorDialog.resourceId:
                               - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
-                                  - 'rvn-spritesheet-preview key=${textRevealIndicatorDialogPreviewKey} previewKey=${textRevealIndicatorDialogPreviewKey} fileId=${textRevealIndicatorDialogSpritesheetFileId} :atlas=${textRevealIndicatorDialogSpritesheetAtlas} :animation=${textRevealIndicatorDialogSpritesheetAnimation} w=f h=f emptyLabel="No preview"': null
+                                  - 'rvn-spritesheet-preview key=${textRevealIndicatorDialogPreviewKey} previewKey=${textRevealIndicatorDialogPreviewKey} fileId=${textRevealIndicatorDialogSpritesheetFileId} :atlas=${textRevealIndicatorDialogSpritesheetAtlas} :animation=${textRevealIndicatorDialogSpritesheetAnimation} w=f h=f emptyLabel="${noPreviewLabel}"': null
                             $elif textRevealIndicatorDialog.imageId:
                               - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
                                   - rvn-file-image imageId=${textRevealIndicatorDialog.imageId} source="thumbnail" w=f h=f: null
                             $else:
-                              - rtgl-text c=mu-fg ta=c: Select visual
+                              - rtgl-text c=mu-fg ta=c: ${selectVisualLabel}
                       - $if textRevealIndicatorDialog.validationErrors.imageId:
                           - rtgl-text s=sm c=de: ${textRevealIndicatorDialog.validationErrors.imageId}
   - rtgl-dialog#textContentDialog ?open=${textContentDialog.open} s=sm:
@@ -445,8 +445,8 @@ template:
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                       - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelImageSelection variant=se: Cancel
-                  - rtgl-button#confirmImageSelection variant=pr: OK
+                  - rtgl-button#cancelImageSelection variant=se: ${cancelButton}
+                  - rtgl-button#confirmImageSelection variant=pr: ${okButton}
   - rtgl-dialog#soundSelectorDialog ?open=${soundSelectorDialog.open} s=lg:
       - $if soundSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
@@ -456,8 +456,8 @@ template:
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                       - rvn-sound-selector#soundSelector selectedSoundId=${tempSelectedSoundId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelSoundSelection variant=se: Cancel
-                  - rtgl-button#confirmSoundSelection variant=pr: OK
+                  - rtgl-button#cancelSoundSelection variant=se: ${cancelButton}
+                  - rtgl-button#confirmSoundSelection variant=pr: ${okButton}
   - rtgl-dialog#spritesheetSelectorDialog ?open=${spritesheetSelectorDialog.open} s=xl:
       - $if spritesheetSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
@@ -467,8 +467,8 @@ template:
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                       - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelSpritesheetSelection variant=se: Cancel
-                  - rtgl-button#confirmSpritesheetSelection variant=pr: OK
+                  - rtgl-button#cancelSpritesheetSelection variant=se: ${cancelButton}
+                  - rtgl-button#confirmSpritesheetSelection variant=pr: ${okButton}
   - $when: fullImagePreviewVisible
     rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
       - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null

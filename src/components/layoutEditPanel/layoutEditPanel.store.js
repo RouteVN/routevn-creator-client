@@ -12,6 +12,7 @@ import { getRuntimeNumberFieldOptions } from "../../internal/runtimeFields.js";
 import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   getVisibilityConditionCharacterValueOptions,
   toVisibilityConditionTargetTypeByTarget,
@@ -48,7 +49,7 @@ import {
 } from "./support/layoutEditPanelBlur.js";
 import {
   ACTION_INTERACTION_TYPES,
-  REVEAL_EFFECT_OPTIONS,
+  createRevealEffectOptions,
   createTextContentDialogForm,
   getLayoutEditPanelSections,
   getLayoutInteractionActions,
@@ -63,6 +64,7 @@ import {
   createTextRevealIndicatorForm,
   isTextRevealIndicatorStateName,
 } from "./support/layoutEditPanelTextRevealIndicator.js";
+import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
 const POSITION_POPOVER_NAMES = new Set(["x", "y"]);
@@ -72,10 +74,179 @@ const TEXT_CONTENT_MENTION_VARIABLE_TYPES = new Set([
   "integer",
   "boolean",
 ]);
-const CHOICE_ITEM_OPTIONS = Array.from({ length: 20 }, (_item, index) => ({
-  label: `Choice ${index + 1}`,
-  value: index,
-}));
+const createChoiceItemOptions = (copy = {}) =>
+  Array.from({ length: 20 }, (_item, index) => ({
+    label: formatI18nCopy(copy.choiceItemLabel ?? "Choice {index}", {
+      index: index + 1,
+    }),
+    value: index,
+  }));
+const STATIC_LABEL_COPY_KEYS = {
+  Absolute: "absoluteOption",
+  Actions: "actionsSection",
+  Alignment: "alignmentLabel",
+  Anchor: "anchorLabel",
+  Appearance: "appearanceSection",
+  Auto: "autoOption",
+  "Bottom Center": "anchorBottomCenter",
+  "Bottom Left": "anchorBottomLeft",
+  "Bottom Right": "anchorBottomRight",
+  Center: "centerOption",
+  Choice: "choiceSection",
+  Click: "clickLabel",
+  Clicked: "clickedLabel",
+  Conditional: "conditionalSection",
+  "Child Interaction": "childInteractionTitle",
+  Default: "defaultLabel",
+  Direction: "directionSection",
+  Disabled: "disabledOption",
+  Effect: "effectLabel",
+  Enabled: "enabledOption",
+  Field: "fieldLabel",
+  Fixed: "fixedOption",
+  Fragment: "fragmentLabel",
+  Free: "freeOption",
+  "Gap X": "gapXLabel",
+  "Gap Y": "gapYLabel",
+  Height: "heightLabel",
+  Horizontal: "horizontalOption",
+  Hover: "hoverLabel",
+  Image: "imageLabel",
+  Indicator: "indicatorLabel",
+  Initial: "initialLabel",
+  Input: "inputSection",
+  Layout: "layoutSection",
+  Left: "leftOption",
+  Manual: "manualOption",
+  Max: "maxLabel",
+  Min: "minLabel",
+  None: "noneOption",
+  Opacity: "opacityLabel",
+  Pagination: "paginationTitle",
+  Particle: "particleLabel",
+  Position: "positionSection",
+  Ratio: "ratioLabel",
+  Revealing: "revealingLabel",
+  Right: "rightOption",
+  Scroll: "scrollSection",
+  Slider: "sliderLabel",
+  "Slider Bar": "sliderBarSection",
+  "Slider Thumb": "sliderThumbSection",
+  "Slider Values": "sliderValuesSection",
+  Sound: "soundLabel",
+  Spritesheet: "spritesheetLabel",
+  Step: "stepLabel",
+  Submit: "submitButton",
+  Text: "textTitle",
+  "Text Alignment": "textAlignmentLabel",
+  "Text Styles": "textStylesSection",
+  "Top Center": "anchorTopCenter",
+  "Top Left": "anchorTopLeft",
+  "Top Right": "anchorTopRight",
+  Value: "valueLabel",
+  Vertical: "verticalOption",
+  Visibility: "visibilityLabel",
+  Width: "widthLabel",
+};
+const localizeStaticLabel = (label, copy = {}) => {
+  const copyKey = STATIC_LABEL_COPY_KEYS[label];
+  return copyKey ? (copy[copyKey] ?? label) : label;
+};
+const localizeOptions = (options, copy = {}) => {
+  if (!Array.isArray(options)) {
+    return options;
+  }
+
+  return options.map((option) =>
+    typeof option?.label === "string"
+      ? {
+          ...option,
+          label: localizeStaticLabel(option.label, copy),
+        }
+      : option,
+  );
+};
+const localizeForm = (form, copy = {}) => {
+  if (!form || typeof form !== "object") {
+    return form;
+  }
+
+  const nextForm = {
+    ...form,
+  };
+  if (typeof nextForm.title === "string") {
+    nextForm.title = localizeStaticLabel(nextForm.title, copy);
+  }
+  if (Array.isArray(nextForm.fields)) {
+    nextForm.fields = nextForm.fields.map((field) => ({
+      ...field,
+      label:
+        typeof field.label === "string"
+          ? localizeStaticLabel(field.label, copy)
+          : field.label,
+      options: localizeOptions(field.options, copy),
+    }));
+  }
+  if (nextForm.actions && typeof nextForm.actions === "object") {
+    nextForm.actions = {
+      ...nextForm.actions,
+      buttons: Array.isArray(nextForm.actions.buttons)
+        ? nextForm.actions.buttons.map((button) => ({
+            ...button,
+            label:
+              typeof button.label === "string"
+                ? localizeStaticLabel(button.label, copy)
+                : button.label,
+          }))
+        : nextForm.actions.buttons,
+    };
+  }
+
+  return nextForm;
+};
+const localizePanelItem = (item, copy = {}) => {
+  const nextItem = {
+    ...item,
+  };
+  if (typeof nextItem.label === "string") {
+    nextItem.label = localizeStaticLabel(nextItem.label, copy);
+  }
+  if (Array.isArray(nextItem.options)) {
+    nextItem.options = localizeOptions(nextItem.options, copy);
+  }
+  if (Array.isArray(nextItem.fields)) {
+    nextItem.fields = nextItem.fields.map((field) => ({
+      ...field,
+      label:
+        typeof field.label === "string"
+          ? localizeStaticLabel(field.label, copy)
+          : field.label,
+      popoverForm: localizeForm(field.popoverForm, copy),
+    }));
+  }
+  if (Array.isArray(nextItem.items)) {
+    nextItem.items = nextItem.items.map((childItem) =>
+      localizePanelItem(childItem, copy),
+    );
+  }
+  if (Array.isArray(nextItem.attributeItems)) {
+    nextItem.attributeItems = nextItem.attributeItems.map((attributeItem) =>
+      localizePanelItem(attributeItem, copy),
+    );
+  }
+
+  return nextItem;
+};
+const localizePanelSections = (sections = [], copy = {}) => {
+  return sections.map((section) => ({
+    ...section,
+    label:
+      typeof section.label === "string"
+        ? localizeStaticLabel(section.label, copy)
+        : section.label,
+    items: (section.items ?? []).map((item) => localizePanelItem(item, copy)),
+  }));
+};
 const POSITION_POPOVER_PRESETS = [
   {
     label: "0",
@@ -312,6 +483,7 @@ const buildPopoverForm = ({
   projectResolution,
   values,
   value,
+  copy,
 } = {}) => {
   if (!POSITION_POPOVER_NAMES.has(name)) {
     return form;
@@ -347,7 +519,7 @@ const buildPopoverForm = ({
     {
       type: "slot",
       slot: POSITION_PRESETS_SLOT,
-      label: "Presets",
+      label: copy?.presetsLabel ?? "Presets",
     },
     ...remainingFields,
   ];
@@ -598,7 +770,7 @@ export const updateValueProperty = ({ state }, { value, name } = {}) => {
 
 export const openPopoverForm = (
   { state },
-  { x, y, name, form, projectResolution } = {},
+  { x, y, name, form, projectResolution, copy } = {},
 ) => {
   if (!name) {
     return;
@@ -628,6 +800,7 @@ export const openPopoverForm = (
       projectResolution,
       values: state.values,
       value,
+      copy,
     }),
     context: {
       popoverFormValues,
@@ -642,7 +815,7 @@ export const openPopoverForm = (
 
 export const updatePopoverFormContext = (
   { state },
-  { values = {}, name, projectResolution } = {},
+  { values = {}, name, projectResolution, copy } = {},
 ) => {
   const nextName = name ?? state.popover.name;
 
@@ -661,6 +834,7 @@ export const updatePopoverFormContext = (
     projectResolution,
     values: state.values,
     value: values.value,
+    copy,
   });
   state.popover.name = nextName;
   state.popover.key = state.popover.key + 1;
@@ -686,14 +860,14 @@ export const openVisibilityConditionDialog = ({ state }, _payload = {}) => {
 
 export const showContextMenu = (
   { state },
-  { targetName, x, y, items } = {},
+  { targetName, x, y, items, copy } = {},
 ) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetName = targetName;
   state.dropdownMenu.items = items ?? [
-    { label: "Delete", type: "item", value: "delete" },
+    { label: copy?.deleteMenuItem ?? "Delete", type: "item", value: "delete" },
   ];
 };
 
@@ -868,8 +1042,15 @@ export const closeConditionalOverrideAttributeDialog = (
   state.conditionalOverrideAttributeDialog.fieldName = undefined;
 };
 
-export const selectFieldPopoverForm = ({ constants, props }, { name } = {}) => {
-  return selectLayoutEditPanelFieldPopoverForm({ constants, props }, { name });
+export const selectFieldPopoverForm = (
+  { constants, props, i18n },
+  { name } = {},
+) => {
+  const copy = selectLayoutEditPanelCopy(i18n);
+  return localizeForm(
+    selectLayoutEditPanelFieldPopoverForm({ constants, props }, { name }),
+    copy,
+  );
 };
 
 export const selectPopoverForm = ({ state }) => {
@@ -1217,7 +1398,8 @@ const hydrateSoundListBarItems = (sections = [], soundsData = {}) => {
   });
 };
 
-export const selectViewData = ({ state, props, constants }) => {
+export const selectViewData = ({ state, props, constants, i18n }) => {
+  const copy = selectLayoutEditPanelCopy(i18n);
   const textStyleItems = toTextStyleOptions(state.textStylesData);
   const soundItems = toSoundOptions(state.soundsData);
   const imageItems = toImageOptions(state.imagesData);
@@ -1239,15 +1421,18 @@ export const selectViewData = ({ state, props, constants }) => {
   );
   const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
   const textStyleItemsWithNone = [
-    { label: "None", value: "" },
+    { label: copy.noneOption ?? "None", value: "" },
     ...textStyleItems,
   ];
-  const soundItemsWithNone = [{ label: "None", value: "" }, ...soundItems];
+  const soundItemsWithNone = [
+    { label: copy.noneOption ?? "None", value: "" },
+    ...soundItems,
+  ];
   const variableOptions = getVariableOptions(state.variablesData, {
     type: "number",
   });
   const sliderValueOptions = [
-    { label: "Manual", value: "" },
+    { label: copy.manualOption ?? "Manual", value: "" },
     ...getRuntimeNumberFieldOptions(),
   ];
   const fragmentLayoutOptions = getFragmentLayoutOptions(props.layoutsData);
@@ -1274,6 +1459,7 @@ export const selectViewData = ({ state, props, constants }) => {
     firstTextStyleId,
     hiddenActionModes: HIDDEN_LAYOUT_ACTION_MODES,
     variablesData: state.variablesData,
+    copy,
   });
   values.textRevealIndicatorItems = values.textRevealIndicatorItems.map(
     (item) => hydrateTextRevealIndicatorItem(item, state.spritesheetsData),
@@ -1304,11 +1490,13 @@ export const selectViewData = ({ state, props, constants }) => {
         state.variablesData,
         visibilityConditionOptions,
         getVisibilityConditionSummary,
+        copy,
       ),
       attributeItems: toConditionalOverrideAttributeItems(
         rule,
         state.textStylesData,
         state.imagesData,
+        copy,
       ),
     }),
   );
@@ -1341,74 +1529,73 @@ export const selectViewData = ({ state, props, constants }) => {
   const showAspectRatioMode =
     capabilities.supportsHeight === true && !showsDirectedContainerSizeMode;
   const hasSpriteBlur = isSpriteBlurValue(values.blur);
-  const sections = hydrateSoundListBarItems(
-    annotatePanelSections(
-      parseAndRender(
-        getLayoutEditPanelSections({
-          constants,
-          resourceType: props.resourceType,
-        }),
-        {
-          itemType: props.itemType,
-          layoutType: props.layoutType,
-          resourceType: props.resourceType,
-          isInsideDirectedContainer: props.isInsideDirectedContainer === true,
-          textStyleItems,
-          textStyleItemsWithNone,
-          soundItems,
-          soundItemsWithNone,
-          spritesheetSelectionItems,
-          particleSelectionItems,
-          sliderValueOptions,
-          spritesheetSelectionValue,
-          selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
-          selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,
-          selectedSpritesheetAnimation: selectedSpritesheetPreview.animation,
-          selectedSpritesheetPreviewKey:
-            spritesheetSelectionValue ??
-            `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}:${selectedSpritesheetPreview.animation?.fps ?? ""}`,
-          fragmentLayoutOptions,
-          values,
-          showLayoutSizeSection,
-          supportsWidthMode,
-          widthMode,
-          supportsHeightMode,
-          heightMode,
-          showWidthField,
-          showHeightField,
-          showAspectRatioMode,
-          paginationSummary: getSaveLoadPaginationSummary({
-            values,
-            variablesData: state.variablesData,
-          }),
-          childInteractionSummary: getChildInteractionSummary(values),
-          childInteractionItems: getChildInteractionItems(values),
-          choiceItemOptions: CHOICE_ITEM_OPTIONS,
-          hasChildInteractionInheritance:
-            hasChildInteractionInheritance(values),
-          canAddChildInteractionInheritance:
-            getAvailableChildInteractionItems(values).length > 0,
-          blurSummary: getSpriteBlurSummary(values.blur),
-          canAddSpriteBlur: !hasSpriteBlur,
-          canAddTextRevealIndicator:
-            values.textRevealIndicatorAddItems.length > 0,
-          canAddTextStyleVariant:
-            !values.hoverTextStyleId || !values.clickTextStyleId,
-          canAddSoundVariant: !values.hoverSoundId || !values.clickSoundId,
-          conditionalOverrideItems,
-          visibilityConditionSummary: getVisibilityConditionSummary(
-            currentVisibilityCondition,
-            state.variablesData,
-            visibilityConditionOptions,
-          ),
-          hasVisibilityCondition: !!currentVisibilityCondition?.target,
-          canAddSpriteImageVariant:
-            !values.imageId || !values.hoverImageId || !values.clickImageId,
-          showsGapField: showsDirectedContainerSizeMode,
-          ...capabilities,
-        },
+  const renderedSections = parseAndRender(
+    getLayoutEditPanelSections({
+      constants,
+      resourceType: props.resourceType,
+    }),
+    {
+      itemType: props.itemType,
+      layoutType: props.layoutType,
+      resourceType: props.resourceType,
+      isInsideDirectedContainer: props.isInsideDirectedContainer === true,
+      textStyleItems,
+      textStyleItemsWithNone,
+      soundItems,
+      soundItemsWithNone,
+      spritesheetSelectionItems,
+      particleSelectionItems,
+      sliderValueOptions,
+      spritesheetSelectionValue,
+      selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
+      selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,
+      selectedSpritesheetAnimation: selectedSpritesheetPreview.animation,
+      selectedSpritesheetPreviewKey:
+        spritesheetSelectionValue ??
+        `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}:${selectedSpritesheetPreview.animation?.fps ?? ""}`,
+      fragmentLayoutOptions,
+      values,
+      showLayoutSizeSection,
+      supportsWidthMode,
+      widthMode,
+      supportsHeightMode,
+      heightMode,
+      showWidthField,
+      showHeightField,
+      showAspectRatioMode,
+      paginationSummary: getSaveLoadPaginationSummary({
+        values,
+        variablesData: state.variablesData,
+        copy,
+      }),
+      childInteractionSummary: getChildInteractionSummary(values, copy),
+      childInteractionItems: getChildInteractionItems(values, copy),
+      choiceItemOptions: createChoiceItemOptions(copy),
+      hasChildInteractionInheritance: hasChildInteractionInheritance(values),
+      canAddChildInteractionInheritance:
+        getAvailableChildInteractionItems(values, copy).length > 0,
+      blurSummary: getSpriteBlurSummary(values.blur, copy),
+      canAddSpriteBlur: !hasSpriteBlur,
+      canAddTextRevealIndicator: values.textRevealIndicatorAddItems.length > 0,
+      canAddTextStyleVariant:
+        !values.hoverTextStyleId || !values.clickTextStyleId,
+      canAddSoundVariant: !values.hoverSoundId || !values.clickSoundId,
+      conditionalOverrideItems,
+      visibilityConditionSummary: getVisibilityConditionSummary(
+        currentVisibilityCondition,
+        state.variablesData,
+        visibilityConditionOptions,
+        copy,
       ),
-    ),
+      hasVisibilityCondition: !!currentVisibilityCondition?.target,
+      canAddSpriteImageVariant:
+        !values.imageId || !values.hoverImageId || !values.clickImageId,
+      showsGapField: showsDirectedContainerSizeMode,
+      ...capabilities,
+    },
+  );
+  const sections = hydrateSoundListBarItems(
+    annotatePanelSections(localizePanelSections(renderedSections, copy)),
     state.soundsData,
   );
   const visibilityConditionDialogDefaults =
@@ -1442,6 +1629,7 @@ export const selectViewData = ({ state, props, constants }) => {
       rule: editingConditionalOverrideAttributeRule,
       includeFieldName: state.conditionalOverrideAttributeDialog.fieldName,
       capabilities,
+      copy,
     });
   const conditionalOverrideAttributeDefaults =
     createConditionalOverrideAttributeDefaults(
@@ -1478,6 +1666,7 @@ export const selectViewData = ({ state, props, constants }) => {
     });
   const textRevealIndicatorDialogForm = createTextRevealIndicatorForm({
     stateName: state.textRevealIndicatorDialog.stateName,
+    copy,
   });
   const textRevealIndicatorDialogSpritesheetSelectionValue =
     toSpritesheetAnimationSelectionValue(
@@ -1503,7 +1692,7 @@ export const selectViewData = ({ state, props, constants }) => {
     config: {
       sections,
     },
-    revealEffectOptions: REVEAL_EFFECT_OPTIONS,
+    revealEffectOptions: createRevealEffectOptions(copy),
     revealEffectValue: values.revealEffect,
     popover: state.popover,
     visibilityConditionDialog: state.visibilityConditionDialog,
@@ -1511,6 +1700,7 @@ export const selectViewData = ({ state, props, constants }) => {
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
       targetOptions: visibilityConditionTargetOptions,
+      copy,
     }),
     visibilityConditionDialogContext: {
       selectedVariableType: selectedVisibilityConditionVariableType,
@@ -1522,15 +1712,19 @@ export const selectViewData = ({ state, props, constants }) => {
       createSaveLoadPaginationDialogDefaults(values),
     saveLoadPaginationDialogForm: createSaveLoadPaginationForm({
       variableOptions,
+      copy,
     }),
     childInteractionDialog: state.childInteractionDialog,
     childInteractionDialogDefaults:
       createChildInteractionDialogDefaults(values),
-    childInteractionDialogForm: createChildInteractionForm(),
+    childInteractionDialogForm: createChildInteractionForm(copy),
     spriteBlurDialog: state.spriteBlurDialog,
     spriteBlurDialogDefaults: createSpriteBlurDialogDefaults(values.blur),
     spriteBlurDialogForm: createSpriteBlurForm({
-      submitLabel: hasSpriteBlur ? "Save Blur" : "Add Blur",
+      submitLabel: hasSpriteBlur
+        ? (copy.saveBlurButton ?? "Save Blur")
+        : (copy.addBlurButton ?? "Add Blur"),
+      copy,
     }),
     textRevealIndicatorDialog: state.textRevealIndicatorDialog,
     textRevealIndicatorDialogDefaults,
@@ -1546,7 +1740,7 @@ export const selectViewData = ({ state, props, constants }) => {
     textContentDialogDefaults: {},
     textContentDialogContent: values.content,
     textContentSummaryParts: values.textContentSummaryParts,
-    textContentDialogForm: createTextContentDialogForm(),
+    textContentDialogForm: createTextContentDialogForm(copy),
     textContentMentionTargets,
     conditionalOverrideConditionDialog:
       state.conditionalOverrideConditionDialog,
@@ -1554,7 +1748,10 @@ export const selectViewData = ({ state, props, constants }) => {
     conditionalOverrideConditionDefaults,
     conditionalOverrideConditionForm: createConditionalOverrideConditionForm({
       targetOptions: visibilityConditionTargetOptions,
-      submitLabel: editingConditionalOverrideRule ? "Save" : "Create",
+      submitLabel: editingConditionalOverrideRule
+        ? (copy.saveButton ?? "Save")
+        : (copy.createButton ?? "Create"),
+      copy,
     }),
     conditionalOverrideConditionDialogContext: {
       selectedVariableType: selectedConditionalOverrideVariableType,
@@ -1569,8 +1766,9 @@ export const selectViewData = ({ state, props, constants }) => {
       textStyleOptions: textStyleItems,
       imageOptions: imageItems,
       submitLabel: state.conditionalOverrideAttributeDialog.fieldName
-        ? "Save"
-        : "Add",
+        ? (copy.saveButton ?? "Save")
+        : (copy.addButton ?? "Add"),
+      copy,
     }),
     conditionalOverrideAttributeDialogContext: {
       hasAttributeOptions: conditionalOverrideAttributeOptions.length > 0,
@@ -1586,5 +1784,16 @@ export const selectViewData = ({ state, props, constants }) => {
     spritesheetFolderItems,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
+    addAttributeButton: copy.addAttributeButton ?? "Add Attribute",
+    cancelButton: copy.cancelButton ?? "Cancel",
+    deleteButton: copy.deleteButton ?? "Delete",
+    noAttributesYet: copy.noAttributesYet ?? "No attributes yet",
+    noPreviewLabel: copy.noPreviewLabel ?? "No preview",
+    notSetLabel: copy.notSetLabel ?? "Not set",
+    okButton: copy.okButton ?? "OK",
+    removeButton: copy.removeButton ?? "Remove",
+    selectSpritesheetAnimationLabel:
+      copy.selectSpritesheetAnimationLabel ?? "Select a spritesheet animation",
+    selectVisualLabel: copy.selectVisualLabel ?? "Select visual",
   };
 };

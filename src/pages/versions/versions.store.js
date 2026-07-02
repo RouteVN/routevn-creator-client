@@ -1,9 +1,11 @@
 import { formatDate } from "../../internal/dates.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   buildMobileResourcePageViewData,
   createMobileResourcePageState,
   setMobileResourcePageUiConfigState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
 
 const findVersionById = (versions, versionId) => {
   if (!versionId) {
@@ -19,19 +21,21 @@ const getVersionDescription = (version) => {
   return version?.description ?? version?.notes ?? "";
 };
 
-const createVersionForm = ({ isEditing } = {}) => ({
-  title: isEditing ? "Edit Version" : "Create Version",
+const createVersionForm = ({ isEditing, copy = {} } = {}) => ({
+  title: isEditing
+    ? (copy.editVersionTitle ?? "Edit Version")
+    : (copy.createVersionTitle ?? "Create Version"),
   fields: [
     {
       name: "name",
       type: "input-text",
-      label: "Name",
+      label: copy.nameLabel ?? "Name",
       required: true,
     },
     {
       name: "description",
       type: "input-textarea",
-      label: "Description",
+      label: copy.descriptionLabel ?? "Description",
     },
   ],
   actions: {
@@ -40,11 +44,18 @@ const createVersionForm = ({ isEditing } = {}) => ({
       {
         id: "submit",
         variant: "pr",
-        label: isEditing ? "Update Version" : "Create Version",
+        label: isEditing
+          ? (copy.updateVersionButton ?? "Update Version")
+          : (copy.createVersionButton ?? "Create Version"),
       },
     ],
   },
 });
+
+const createDropdownMenuItems = (copy = {}) => [
+  { label: copy.editMenuItem ?? "Edit", type: "item", value: "edit" },
+  { label: copy.deleteMenuItem ?? "Delete", type: "item", value: "delete" },
+];
 
 export const createInitialState = () => ({
   versions: [],
@@ -61,15 +72,16 @@ export const createInitialState = () => ({
   },
 });
 
-export const openDropdownMenu = ({ state }, { x, y, versionId } = {}) => {
+export const openDropdownMenu = (
+  { state, i18n },
+  { x, y, versionId } = {},
+) => {
+  const copy = selectVersionsPageCopy(i18n);
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetVersionId = versionId;
-  state.dropdownMenu.items = [
-    { label: "Edit", type: "item", value: "edit" },
-    { label: "Delete", type: "item", value: "delete" },
-  ];
+  state.dropdownMenu.items = createDropdownMenuItems(copy);
 };
 
 export const closeDropdownMenu = ({ state }, _payload = {}) => {
@@ -121,7 +133,8 @@ export const selectVersion = ({ state }, versionId) => {
   return findVersionById(state.versions, versionId);
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectVersionsPageCopy(i18n);
   const selectedVersion = findVersionById(state.versions, state.selectedItemId);
   const isEditing = !!state.editingVersionId;
   const detailDescription = getVersionDescription(selectedVersion);
@@ -138,7 +151,7 @@ export const selectViewData = ({ state }) => {
           : []),
         {
           type: "text",
-          label: "Action",
+          label: copy.actionLabel ?? "Action",
           value:
             selectedVersion.actionIndex === undefined
               ? ""
@@ -146,13 +159,13 @@ export const selectViewData = ({ state }) => {
         },
         {
           type: "text",
-          label: "Created",
+          label: copy.createdLabel ?? "Created",
           value: formatDate(selectedVersion.createdAt),
         },
         {
           type: "slot",
           slot: "actions",
-          label: "Actions",
+          label: copy.actionsLabel ?? "Actions",
         },
       ]
     : [];
@@ -164,6 +177,13 @@ export const selectViewData = ({ state }) => {
       ...version,
       description: getVersionDescription(version),
       formattedCreatedAt: formatDate(version.createdAt),
+      actionSummary: formatI18nCopy(
+        copy.actionSummaryTemplate ?? "Action {actionIndex} • {createdAt}",
+        {
+          actionIndex: version.actionIndex,
+          createdAt: formatDate(version.createdAt),
+        },
+      ),
       itemBorderColor: isSelected ? "pr" : "bo",
       itemHoverBorderColor: isSelected ? "pr" : "ac",
     };
@@ -179,8 +199,13 @@ export const selectViewData = ({ state }) => {
       detailFields,
     }),
     isVersionDialogOpen: state.isVersionDialogOpen,
-    versionForm: createVersionForm({ isEditing }),
+    versionForm: createVersionForm({ isEditing, copy }),
     dropdownMenu: state.dropdownMenu,
+    title: copy.title ?? "Versions",
+    addButton: copy.addButton ?? "Add",
+    noVersionsMessage: copy.noVersionsMessage ?? "No versions",
+    exportWebButton: copy.exportWebButton ?? "Export Web",
+    noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     resourceCategory: "releases",
     resourceType: "versions",
     selectedResourceId: "versions",

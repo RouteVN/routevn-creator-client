@@ -42,9 +42,9 @@ template:
                   - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
                       - rtgl-view w=f d=h av=c g=md wrap:
                           - rtgl-view d=h av=c g=md w=1fg wrap:
-                              - rtgl-text: Web Server
+                              - rtgl-text: ${title}
                           - $if canAdd:
-                              - rtgl-button#addServerBtn v=pr s=sm pre=plus: Add
+                              - rtgl-button#addServerBtn v=pr s=sm pre=plus: ${addButton}
                   - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
                       - $if servers.length == 0:
                           - rtgl-view w=f h=f av=c ah=c:
@@ -57,15 +57,15 @@ template:
                                   - rtgl-view#serverItemRef${i} data-server-id="${item.id}" h=auto w=f bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md pt=md pb=sm ph=lg d=h av=c g=md cur=pointer:
                                       - 'rtgl-view w=1fg d=v g=xs style="min-width: 0;"':
                                           - rtgl-text s=lg ellipsis=true: ${item.name}
-                                          - rtgl-text s=xs c=mu-fg: 'Status: ${item.statusText}'
+                                          - rtgl-text s=xs c=mu-fg: ${item.statusSummary}
                                           - rtgl-text s=sm c=mu-fg ellipsis=true: ${item.displayRootPath}
                                           - rtgl-text s=xs c=mu-fg ellipsis=true: ${item.url}
                                       - $if item.canCopyUrl:
-                                          - rtgl-button#copyUrlBtn${i} data-server-id="${item.id}" v=se s=sm: Copy URL
+                                          - rtgl-button#copyUrlBtn${i} data-server-id="${item.id}" v=se s=sm: ${copyUrlButton}
                                       - $if item.canStartServer:
-                                          - rtgl-button#startServerBtn${i} data-server-id="${item.id}" v=se s=sm: Start
+                                          - rtgl-button#startServerBtn${i} data-server-id="${item.id}" v=se s=sm: ${startButton}
                                       - $if item.canStopServer:
-                                          - rtgl-button#stopServerBtn${i} data-server-id="${item.id}" v=se s=sm: Stop
+                                          - rtgl-button#stopServerBtn${i} data-server-id="${item.id}" v=se s=sm: ${stopButton}
                               - rtgl-view w=f h=30vh: null
           - rvn-resizable-panel panel-type=detail-panel w=300 min-w=220 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
@@ -75,11 +75,11 @@ template:
                               - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                               - $if canCopySelectedServerUrl:
-                                  - rtgl-button#copyDetailUrlBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: Copy URL
+                                  - rtgl-button#copyDetailUrlBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: ${copyUrlButton}
                               - $if canStartSelectedServer:
-                                  - rtgl-button#startDetailServerBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: Start Web Server
+                                  - rtgl-button#startDetailServerBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: ${startWebServerButton}
                               - $if canStopSelectedServer:
-                                  - rtgl-button#stopDetailServerBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: Stop Web Server
+                                  - rtgl-button#stopDetailServerBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: ${stopWebServerButton}
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                          - rtgl-text s=md c=mu-fg: No selection
+                          - rtgl-text s=md c=mu-fg: ${noSelectionLabel}

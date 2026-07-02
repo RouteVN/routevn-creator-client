@@ -132,6 +132,7 @@ const {
   },
   createExplorerHandlers: ({ refresh }) =>
     createLayoutsFileExplorerHandlers({
+      copy: ({ i18n }) => selectLayoutsPageCopy(i18n),
       refresh,
     }),
   tagging: {

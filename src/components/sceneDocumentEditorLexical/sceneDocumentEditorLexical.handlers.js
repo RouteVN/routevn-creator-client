@@ -14,13 +14,13 @@ const getPayloadEventType = (payload) => {
   return payload?._event?.type ?? payload?.type;
 };
 
-const createFuriganaForm = (textStyleOptions = []) => ({
-  title: "Add/edit furigana",
+const createFuriganaForm = (textStyleOptions = [], copy = {}) => ({
+  title: copy.furiganaTitle ?? "Add/edit furigana",
   fields: [
     {
       name: "textStyleId",
       type: "select",
-      label: "Text Style",
+      label: copy.textStyleLabel ?? "Text Style",
       required: true,
       noClear: true,
       options: textStyleOptions,
@@ -28,9 +28,9 @@ const createFuriganaForm = (textStyleOptions = []) => ({
     {
       name: "text",
       type: "input-text",
-      label: "Furigana Content",
+      label: copy.furiganaContentLabel ?? "Furigana Content",
       required: true,
-      placeholder: "Enter furigana",
+      placeholder: copy.furiganaPlaceholder ?? "Enter furigana",
     },
   ],
   actions: {
@@ -38,13 +38,13 @@ const createFuriganaForm = (textStyleOptions = []) => ({
       {
         id: "cancel",
         variant: "se",
-        label: "Cancel",
+        label: copy.cancelButton ?? "Cancel",
         align: "left",
       },
       {
         id: "submit",
         variant: "pr",
-        label: "Submit",
+        label: copy.submitButton ?? "Submit",
         validate: true,
       },
     ],
@@ -96,22 +96,25 @@ export const handleForwardEditorEvent = (deps, payload) => {
 };
 
 export const handleFuriganaDialogRequest = async (deps, payload) => {
-  const { appService, refs } = deps;
+  const { appService, refs, i18n } = deps;
+  const copy = selectSceneEditorCopy(i18n);
   const detail = getPayloadDetail(payload);
   const textStyleOptions = toTextStyleOptions(detail.textStyles ?? []);
 
   if (textStyleOptions.length === 0) {
     refs.editor?.clearPendingRichTextSelection?.();
     appService.showAlert({
-      title: "Warning",
-      message: "Create a text style before adding furigana.",
+      title: copy.warningTitle ?? "Warning",
+      message:
+        copy.createTextStyleBeforeFurigana ??
+        "Create a text style before adding furigana.",
     });
     return;
   }
 
   const dialogResult = await appService.showFormDialog({
     size: "md",
-    form: createFuriganaForm(textStyleOptions),
+    form: createFuriganaForm(textStyleOptions, copy),
     defaultValues: {
       textStyleId:
         detail.furigana?.textStyleId ??
@@ -131,8 +134,10 @@ export const handleFuriganaDialogRequest = async (deps, payload) => {
   if (!text || !textStyleId) {
     refs.editor?.clearPendingRichTextSelection?.();
     appService.showAlert({
-      title: "Warning",
-      message: "Furigana content and text style are required.",
+      title: copy.warningTitle ?? "Warning",
+      message:
+        copy.furiganaRequiredMessage ??
+        "Furigana content and text style are required.",
     });
     return;
   }
@@ -143,3 +148,4 @@ export const handleFuriganaDialogRequest = async (deps, payload) => {
   });
   refs.editor?.focus?.({ preventScroll: true });
 };
+import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";

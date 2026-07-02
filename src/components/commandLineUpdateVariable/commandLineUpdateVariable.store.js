@@ -4,6 +4,13 @@ import {
   isVariableEnumEnabled,
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
+import {
+  localizeCommandLineBreadcrumb,
+  localizeCommandLineDropdownMenu,
+  localizeCommandLineOptions,
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 // Operations available per variable type
 const OPERATIONS_BY_TYPE = {
@@ -147,7 +154,8 @@ export const selectOperations = ({ state }) => {
   return state.operations;
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, i18n }) => {
+  const copy = selectCommandLineCopy(i18n);
   const variableItems = state.variablesData?.items ?? {};
 
   const variableOptions = getVariableOptions(state.variablesData).map(
@@ -156,7 +164,7 @@ export const selectViewData = ({ state }) => {
       const variableType = (variable?.variableType || "string").toLowerCase();
       return {
         ...option,
-        suffixText: variableType,
+        suffixText: localizeCommandLineText(variableType, copy),
       };
     },
   );
@@ -203,9 +211,9 @@ export const selectViewData = ({ state }) => {
 
     return {
       ...op,
-      variableName: variable?.name || "Unknown",
+      variableName: variable?.name || localizeCommandLineText("Unknown", copy),
       type: varType,
-      opLabel: opDef?.label || op.op,
+      opLabel: localizeCommandLineText(opDef?.label || op.op, copy),
       displayValue,
     };
   });
@@ -231,12 +239,12 @@ export const selectViewData = ({ state }) => {
   return {
     initiated: state.initiated,
     mode: state.mode,
-    breadcrumb,
+    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     actionId: state.actionId,
     operations: operationsWithData,
     variableOptions,
-    operationOptions,
-    booleanOptions,
+    operationOptions: localizeCommandLineOptions(operationOptions, copy),
+    booleanOptions: localizeCommandLineOptions(booleanOptions, copy),
     enumValueOptions: buildVariableEnumOptions(selectedEnumValues),
     showEnumValueSelect,
     showRoundToField,
@@ -247,7 +255,22 @@ export const selectViewData = ({ state }) => {
       booleanValue,
       roundToValue,
     },
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
+    addOperationButton: localizeCommandLineText("+ Add Operation", copy),
+    decimalPlacesLabel: localizeCommandLineText("Decimal Places", copy),
+    operationLabel: localizeCommandLineText("Operation", copy),
+    operationPlaceholder: localizeCommandLineText(
+      "Choose an operation...",
+      copy,
+    ),
+    saveOperationButton: localizeCommandLineText("Save Operation", copy),
+    submitButton: localizeCommandLineText("Submit", copy),
+    valueLabel: localizeCommandLineText("Value", copy),
+    valueNumberPlaceholder: localizeCommandLineText("Enter number...", copy),
+    valueSelectPlaceholder: localizeCommandLineText("Choose a value...", copy),
+    valueTextPlaceholder: localizeCommandLineText("Enter text...", copy),
+    variableLabel: localizeCommandLineText("Variable", copy),
+    variablePlaceholder: localizeCommandLineText("Choose a variable...", copy),
     hasOperations: state.operations.length > 0,
     canSaveOperation:
       state.tempOperation.variableId &&

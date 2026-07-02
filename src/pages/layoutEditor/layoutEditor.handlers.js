@@ -34,6 +34,8 @@ import {
 } from "../../internal/particles.js";
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createLayoutEditorRepositoryStoreData } from "./support/layoutEditorRepositoryState.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -62,6 +64,8 @@ const SLIDER_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-slider-create-dialog";
 const SPRITE_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-sprite-create-dialog";
 const LAYOUT_EDITOR_PERSIST_ERROR_COOLDOWN_MS = 1500;
 
+const selectCopy = (deps = {}) => selectLayoutEditorPageCopy(deps.i18n);
+
 const getResultErrorMessage = (result, fallbackMessage) => {
   return (
     result?.error?.message ||
@@ -77,6 +81,7 @@ const showLayoutEditorError = ({
   fallbackMessage,
   lockedMessage = fallbackMessage,
   throttle = false,
+  copy = {},
 } = {}) => {
   if (throttle) {
     const now = Date.now();
@@ -95,7 +100,7 @@ const showLayoutEditorError = ({
   const message = isSqliteLockError(error)
     ? lockedMessage
     : error?.message || fallbackMessage;
-  appService.showAlert({ message: message, title: "Error" });
+  appService.showAlert({ message: message, title: copy.errorTitle ?? "Error" });
 };
 
 const runLayoutEditorPersistence = (deps, task) => {
@@ -105,11 +110,16 @@ const runLayoutEditorPersistence = (deps, task) => {
   });
 };
 
-const getLayoutEditorOwnerConfig = (resourceType, projectService) => {
+const getLayoutEditorOwnerConfig = (resourceType, projectService, copy = {}) => {
   const isControls = resourceType === "controls";
   return {
     ownerPayloadKey: isControls ? "controlId" : "layoutId",
-    ownerLabel: isControls ? "Control" : "Layout",
+    ownerLabel: isControls
+      ? (copy.controlLabel ?? "Control")
+      : (copy.layoutLabel ?? "Layout"),
+    ownerMissingMessage: isControls
+      ? (copy.controlMissing ?? "Control is missing.")
+      : (copy.layoutMissing ?? "Layout is missing."),
     updateItem: isControls
       ? projectService.updateControlItem.bind(projectService)
       : projectService.updateLayoutItem.bind(projectService),
@@ -259,15 +269,17 @@ const getSliderCreateOwnerConfig = (resourceType, projectService) => {
   };
 };
 
-const createFragmentCreateForm = (fragmentLayoutOptions = []) => {
+const createFragmentCreateForm = (fragmentLayoutOptions = [], copy = {}) => {
   return {
-    title: "Insert Fragment",
-    description: "Choose which fragment layout to insert into this layout",
+    title: copy.insertFragmentTitle ?? "Insert Fragment",
+    description:
+      copy.insertFragmentDescription ??
+      "Choose which fragment layout to insert into this layout",
     fields: [
       {
         name: "fragmentLayoutId",
         type: "select",
-        label: "Fragment",
+        label: copy.fragmentLabel ?? "Fragment",
         required: true,
         clearable: false,
         options: fragmentLayoutOptions,
@@ -278,13 +290,13 @@ const createFragmentCreateForm = (fragmentLayoutOptions = []) => {
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton ?? "Cancel",
           align: "left",
         },
         {
           id: "submit",
           variant: "pr",
-          label: "Insert Fragment",
+          label: copy.insertFragmentButton ?? "Insert Fragment",
           validate: true,
         },
       ],
@@ -292,22 +304,23 @@ const createFragmentCreateForm = (fragmentLayoutOptions = []) => {
   };
 };
 
-const createSpritesheetCreateForm = (selectionItems = []) => {
+const createSpritesheetCreateForm = (selectionItems = [], copy = {}) => {
   return {
-    title: "Create Spritesheet Animation",
+    title: copy.createSpritesheetAnimationTitle ?? "Create Spritesheet Animation",
     description:
+      copy.createSpritesheetAnimationDescription ??
       "Choose which imported spritesheet animation to insert into the layout",
     fields: [
       {
         name: "name",
         type: "input-text",
-        label: "Name",
+        label: copy.nameLabel ?? "Name",
         required: true,
       },
       {
         name: "spritesheetSelection",
         type: "select",
-        label: "Animation",
+        label: copy.animationLabel ?? "Animation",
         required: true,
         clearable: false,
         options: selectionItems,
@@ -318,13 +331,13 @@ const createSpritesheetCreateForm = (selectionItems = []) => {
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton ?? "Cancel",
           align: "left",
         },
         {
           id: "submit",
           variant: "pr",
-          label: "Create Animation",
+          label: copy.createAnimationButton ?? "Create Animation",
           validate: true,
         },
       ],
@@ -332,21 +345,23 @@ const createSpritesheetCreateForm = (selectionItems = []) => {
   };
 };
 
-const createParticleCreateForm = (selectionItems = []) => {
+const createParticleCreateForm = (selectionItems = [], copy = {}) => {
   return {
-    title: "Create Particle",
-    description: "Choose which particle effect to insert into the layout",
+    title: copy.createParticleTitle ?? "Create Particle",
+    description:
+      copy.createParticleDescription ??
+      "Choose which particle effect to insert into the layout",
     fields: [
       {
         name: "name",
         type: "input-text",
-        label: "Name",
+        label: copy.nameLabel ?? "Name",
         required: true,
       },
       {
         name: "particleId",
         type: "select",
-        label: "Particle",
+        label: copy.particleLabel ?? "Particle",
         required: true,
         clearable: false,
         options: selectionItems,
@@ -357,13 +372,13 @@ const createParticleCreateForm = (selectionItems = []) => {
         {
           id: "cancel",
           variant: "se",
-          label: "Cancel",
+          label: copy.cancelButton ?? "Cancel",
           align: "left",
         },
         {
           id: "submit",
           variant: "pr",
-          label: "Create Particle",
+          label: copy.createParticleButton ?? "Create Particle",
           validate: true,
         },
       ],
@@ -467,16 +482,17 @@ export const handleBackClick = async (deps) => {
 
 export const handleSaveButtonClick = async (deps) => {
   const { appService, projectService, refs, store } = deps;
+  const copy = selectCopy(deps);
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
   const previewData = store.selectPreviewData();
-  const { ownerPayloadKey, ownerLabel, updateItem } =
-    getLayoutEditorOwnerConfig(resourceType, projectService);
+  const { ownerPayloadKey, ownerLabel, ownerMissingMessage, updateItem } =
+    getLayoutEditorOwnerConfig(resourceType, projectService, copy);
 
   if (!layoutId) {
     appService.showAlert({
-      message: `${ownerLabel} is missing.`,
-      title: "Error",
+      message: ownerMissingMessage,
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -486,8 +502,12 @@ export const handleSaveButtonClick = async (deps) => {
       await refs.layoutEditorCanvas.captureThumbnailImage();
     if (!thumbnailImage) {
       appService.showAlert({
-        message: `Failed to capture ${ownerLabel.toLowerCase()} thumbnail.`,
-        title: "Error",
+        message: formatI18nCopy(
+          copy.failedCaptureOwnerThumbnail ??
+            "Failed to capture {ownerLabel} thumbnail.",
+          { ownerLabel: ownerLabel.toLowerCase() },
+        ),
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -507,8 +527,12 @@ export const handleSaveButtonClick = async (deps) => {
 
     if (updateResult?.valid === false) {
       appService.showAlert({
-        message: `Failed to save ${ownerLabel.toLowerCase()} preview.`,
-        title: "Error",
+        message: formatI18nCopy(
+          copy.failedSaveOwnerPreview ??
+            "Failed to save {ownerLabel} preview.",
+          { ownerLabel: ownerLabel.toLowerCase() },
+        ),
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -516,11 +540,19 @@ export const handleSaveButtonClick = async (deps) => {
     await refreshLayoutEditorData(deps, {
       selectedItemId: store.selectSelectedItemId(),
     });
-    appService.showToast({ message: `${ownerLabel} preview saved.` });
+    appService.showToast({
+      message: formatI18nCopy(
+        copy.ownerPreviewSaved ?? "{ownerLabel} preview saved.",
+        { ownerLabel },
+      ),
+    });
   } catch {
     appService.showAlert({
-      message: `Failed to save ${ownerLabel.toLowerCase()} preview.`,
-      title: "Error",
+      message: formatI18nCopy(
+        copy.failedSaveOwnerPreview ?? "Failed to save {ownerLabel} preview.",
+        { ownerLabel: ownerLabel.toLowerCase() },
+      ),
+      title: copy.errorTitle ?? "Error",
     });
   }
 };
@@ -618,33 +650,40 @@ const {
 } = createLayoutElementsFileExplorerHandlers({
   getLayoutId: ({ store }) => store.selectLayoutId(),
   getResourceType: ({ store }) => store.selectLayoutResourceType(),
+  copy: ({ i18n }) => selectLayoutEditorPageCopy(i18n),
   refresh: refreshLayoutEditorData,
 });
 
-const showSliderCreateDialog = async (appService, sliderAction = {}) => {
+const showSliderCreateDialog = async (
+  appService,
+  sliderAction = {},
+  copy = {},
+) => {
   return appService.showComponentDialog({
     component: SLIDER_CREATE_DIALOG_COMPONENT,
-    title: "Create Slider",
-    description: "Choose the slider images before inserting it into the layout",
+    title: copy.createSliderTitle ?? "Create Slider",
+    description:
+      copy.createSliderDescription ??
+      "Choose the slider images before inserting it into the layout",
     size: "md",
     props: {
       direction: sliderAction.direction,
       defaultValues: {
-        name: sliderAction.name ?? "Slider",
+        name: sliderAction.name ?? (copy.sliderDefaultName ?? "Slider"),
       },
     },
     actions: {
       buttons: [
         {
           id: "cancel",
-          label: "Cancel",
+          label: copy.cancelButton ?? "Cancel",
           variant: "se",
           align: "left",
           role: "cancel",
         },
         {
           id: "create",
-          label: "Create Slider",
+          label: copy.createSliderButton ?? "Create Slider",
           variant: "pr",
           role: "confirm",
           validate: true,
@@ -654,29 +693,35 @@ const showSliderCreateDialog = async (appService, sliderAction = {}) => {
   });
 };
 
-const showSpriteCreateDialog = async (appService, spriteAction = {}) => {
+const showSpriteCreateDialog = async (
+  appService,
+  spriteAction = {},
+  copy = {},
+) => {
   return appService.showComponentDialog({
     component: SPRITE_CREATE_DIALOG_COMPONENT,
-    title: "Create Image",
-    description: "Choose the image before inserting it into the layout",
+    title: copy.createImageTitle ?? "Create Image",
+    description:
+      copy.createImageDescription ??
+      "Choose the image before inserting it into the layout",
     size: "md",
     props: {
       defaultValues: {
-        name: spriteAction.name ?? "Image",
+        name: spriteAction.name ?? (copy.imageDefaultName ?? "Image"),
       },
     },
     actions: {
       buttons: [
         {
           id: "cancel",
-          label: "Cancel",
+          label: copy.cancelButton ?? "Cancel",
           variant: "se",
           align: "left",
           role: "cancel",
         },
         {
           id: "create",
-          label: "Create Image",
+          label: copy.createImageButton ?? "Create Image",
           variant: "pr",
           role: "confirm",
           validate: true,
@@ -687,6 +732,7 @@ const showSpriteCreateDialog = async (appService, spriteAction = {}) => {
 };
 
 const handleFileExplorerActionUnsafe = async (deps, payload) => {
+  const copy = selectCopy(deps);
   const saveLoadSlotAction = resolveSaveLoadSlotCreateAction(
     payload?._event?.detail,
   );
@@ -696,7 +742,10 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const resourceType = store.selectLayoutResourceType();
 
     if (!layoutId || resourceType !== "layouts") {
-      appService.showAlert({ message: "Layout is missing.", title: "Error" });
+      appService.showAlert({
+        message: copy.layoutMissing ?? "Layout is missing.",
+        title: copy.errorTitle ?? "Error",
+      });
       return;
     }
 
@@ -739,9 +788,9 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       appService.showAlert({
         message: getResultErrorMessage(
           createContainerResult,
-          "Failed to create save/load slot.",
+          copy.failedCreateSaveLoadSlot ?? "Failed to create save/load slot.",
         ),
-        title: "Error",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -758,9 +807,10 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       appService.showAlert({
         message: getResultErrorMessage(
           createImageResult,
-          "Failed to create save/load slot image.",
+          copy.failedCreateSaveLoadSlotImage ??
+            "Failed to create save/load slot image.",
         ),
-        title: "Error",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -777,9 +827,10 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       appService.showAlert({
         message: getResultErrorMessage(
           createDateResult,
-          "Failed to create save/load slot date.",
+          copy.failedCreateSaveLoadSlotDate ??
+            "Failed to create save/load slot date.",
         ),
-        title: "Error",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -801,14 +852,16 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     if (fragmentLayoutOptions.length === 0) {
       appService.showAlert({
-        message: "Mark a layout as a fragment first.",
-        title: "Warning",
+        message:
+          copy.markLayoutAsFragmentFirst ??
+          "Mark a layout as a fragment first.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
 
     const dialogResult = await appService.showFormDialog({
-      form: createFragmentCreateForm(fragmentLayoutOptions),
+      form: createFragmentCreateForm(fragmentLayoutOptions, copy),
       defaultValues: {
         fragmentLayoutId: fragmentLayoutOptions[0].value,
       },
@@ -821,8 +874,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const fragmentLayoutId = dialogResult.values?.fragmentLayoutId;
     if (!fragmentLayoutId) {
       appService.showAlert({
-        message: "Fragment is required.",
-        title: "Warning",
+        message: copy.fragmentRequired ?? "Fragment is required.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -834,15 +887,18 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       !isFragmentLayout(fragmentLayout)
     ) {
       appService.showAlert({
-        message: "Selected fragment is invalid.",
-        title: "Error",
+        message: copy.selectedFragmentInvalid ?? "Selected fragment is invalid.",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
 
     const layoutId = store.selectLayoutId();
     if (!layoutId) {
-      appService.showAlert({ message: "Layout is missing.", title: "Error" });
+      appService.showAlert({
+        message: copy.layoutMissing ?? "Layout is missing.",
+        title: copy.errorTitle ?? "Error",
+      });
       return;
     }
 
@@ -855,7 +911,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
         ...getLayoutEditorCreateDefinition("fragment-ref", {
           projectResolution: store.selectProjectResolution(),
         }).template,
-        name: fragmentLayout.name ?? "Fragment",
+        name: fragmentLayout.name ?? (copy.fragmentDefaultName ?? "Fragment"),
         fragmentLayoutId,
       },
       parentId,
@@ -866,9 +922,9 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       appService.showAlert({
         message: getResultErrorMessage(
           createResult,
-          "Failed to create fragment.",
+          copy.failedCreateFragment ?? "Failed to create fragment.",
         ),
-        title: "Error",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -889,16 +945,18 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     if (selectionItems.length === 0) {
       appService.showAlert({
-        message: "Import a spritesheet first.",
-        title: "Warning",
+        message: copy.importSpritesheetFirst ?? "Import a spritesheet first.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
 
     const dialogResult = await appService.showFormDialog({
-      form: createSpritesheetCreateForm(selectionItems),
+      form: createSpritesheetCreateForm(selectionItems, copy),
       defaultValues: {
-        name: spritesheetAction.name ?? "Spritesheet Animation",
+        name:
+          spritesheetAction.name ??
+          (copy.spritesheetAnimationDefaultName ?? "Spritesheet Animation"),
         spritesheetSelection:
           getFirstSpritesheetAnimationSelectionValue(spritesheetsData),
       },
@@ -911,8 +969,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const name = dialogResult.values?.name?.trim();
     if (!name) {
       appService.showAlert({
-        message: "Animation name is required.",
-        title: "Warning",
+        message: copy.animationNameRequired ?? "Animation name is required.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -923,8 +981,10 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       );
     if (!resourceId || !animationName) {
       appService.showAlert({
-        message: "Spritesheet animation is required.",
-        title: "Warning",
+        message:
+          copy.spritesheetAnimationRequired ??
+          "Spritesheet animation is required.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -932,12 +992,14 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const layoutId = store.selectLayoutId();
     const resourceType = store.selectLayoutResourceType();
     if (!layoutId) {
+      const { ownerMissingMessage } = getLayoutEditorOwnerConfig(
+        resourceType,
+        projectService,
+        copy,
+      );
       appService.showAlert({
-        message:
-          resourceType === "controls"
-            ? "Control is missing."
-            : "Layout is missing.",
-        title: "Error",
+        message: ownerMissingMessage,
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -988,9 +1050,10 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       appService.showAlert({
         message: getResultErrorMessage(
           createResult,
-          "Failed to create spritesheet animation.",
+          copy.failedCreateSpritesheetAnimation ??
+            "Failed to create spritesheet animation.",
         ),
-        title: "Error",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -1008,16 +1071,17 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     if (selectionItems.length === 0) {
       appService.showAlert({
-        message: "Create a particle effect first.",
-        title: "Warning",
+        message:
+          copy.createParticleEffectFirst ?? "Create a particle effect first.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
 
     const dialogResult = await appService.showFormDialog({
-      form: createParticleCreateForm(selectionItems),
+      form: createParticleCreateForm(selectionItems, copy),
       defaultValues: {
-        name: particleAction.name ?? "Particle",
+        name: particleAction.name ?? (copy.particleDefaultName ?? "Particle"),
         particleId: getFirstParticleSelectionValue(particlesData),
       },
     });
@@ -1029,8 +1093,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const name = dialogResult.values?.name?.trim();
     if (!name) {
       appService.showAlert({
-        message: "Particle name is required.",
-        title: "Warning",
+        message: copy.particleNameRequired ?? "Particle name is required.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -1038,8 +1102,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const particleId = dialogResult.values?.particleId;
     if (!particleId) {
       appService.showAlert({
-        message: "Particle is required.",
-        title: "Warning",
+        message: copy.particleRequired ?? "Particle is required.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
@@ -1047,12 +1111,14 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const layoutId = store.selectLayoutId();
     const resourceType = store.selectLayoutResourceType();
     if (!layoutId) {
+      const { ownerMissingMessage } = getLayoutEditorOwnerConfig(
+        resourceType,
+        projectService,
+        copy,
+      );
       appService.showAlert({
-        message:
-          resourceType === "controls"
-            ? "Control is missing."
-            : "Layout is missing.",
-        title: "Error",
+        message: ownerMissingMessage,
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -1102,9 +1168,9 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       appService.showAlert({
         message: getResultErrorMessage(
           createResult,
-          "Failed to create particle.",
+          copy.failedCreateParticle ?? "Failed to create particle.",
         ),
-        title: "Error",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -1130,11 +1196,12 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       spriteDialogResult = await showSpriteCreateDialog(
         appService,
         spriteAction,
+        copy,
       );
     } catch {
       appService.showAlert({
-        message: "Failed to open image dialog.",
-        title: "Error",
+        message: copy.failedOpenImageDialog ?? "Failed to open image dialog.",
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -1147,27 +1214,32 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const name = values.name?.trim();
     if (!name) {
       appService.showAlert({
-        message: "Image name is required.",
-        title: "Warning",
+        message: copy.imageNameRequired ?? "Image name is required.",
+        title: copy.warningTitle ?? "Warning",
       });
       return;
     }
 
     const imageId = values.imageId;
     if (!imageId) {
-      appService.showAlert({ message: "Image is required.", title: "Warning" });
+      appService.showAlert({
+        message: copy.imageRequired ?? "Image is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
       return;
     }
 
     const layoutId = store.selectLayoutId();
     const resourceType = store.selectLayoutResourceType();
     if (!layoutId) {
+      const { ownerMissingMessage } = getLayoutEditorOwnerConfig(
+        resourceType,
+        projectService,
+        copy,
+      );
       appService.showAlert({
-        message:
-          resourceType === "controls"
-            ? "Control is missing."
-            : "Layout is missing.",
-        title: "Error",
+        message: ownerMissingMessage,
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -1212,8 +1284,11 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     if (createResult?.valid === false) {
       appService.showAlert({
-        message: getResultErrorMessage(createResult, "Failed to create image."),
-        title: "Error",
+        message: getResultErrorMessage(
+          createResult,
+          copy.failedCreateImage ?? "Failed to create image.",
+        ),
+        title: copy.errorTitle ?? "Error",
       });
       return;
     }
@@ -1225,11 +1300,11 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
   let dialogResult;
 
   try {
-    dialogResult = await showSliderCreateDialog(appService, sliderAction);
+    dialogResult = await showSliderCreateDialog(appService, sliderAction, copy);
   } catch {
     appService.showAlert({
-      message: "Failed to open slider dialog.",
-      title: "Error",
+      message: copy.failedOpenSliderDialog ?? "Failed to open slider dialog.",
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -1242,8 +1317,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
   const name = values.name?.trim();
   if (!name) {
     appService.showAlert({
-      message: "Slider name is required.",
-      title: "Warning",
+      message: copy.sliderNameRequired ?? "Slider name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -1255,16 +1330,16 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
   if (!barImageId) {
     appService.showAlert({
-      message: "Bar image is required.",
-      title: "Warning",
+      message: copy.barImageRequired ?? "Bar image is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
 
   if (!thumbImageId) {
     appService.showAlert({
-      message: "Thumb image is required.",
-      title: "Warning",
+      message: copy.thumbImageRequired ?? "Thumb image is required.",
+      title: copy.warningTitle ?? "Warning",
     });
     return;
   }
@@ -1273,12 +1348,14 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
   if (!layoutId) {
+    const { ownerMissingMessage } = getLayoutEditorOwnerConfig(
+      resourceType,
+      projectService,
+      copy,
+    );
     appService.showAlert({
-      message:
-        resourceType === "controls"
-          ? "Control is missing."
-          : "Layout is missing.",
-      title: "Error",
+      message: ownerMissingMessage,
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -1317,8 +1394,11 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
   if (createResult?.valid === false) {
     appService.showAlert({
-      message: getResultErrorMessage(createResult, "Failed to create slider."),
-      title: "Error",
+      message: getResultErrorMessage(
+        createResult,
+        copy.failedCreateSlider ?? "Failed to create slider.",
+      ),
+      title: copy.errorTitle ?? "Error",
     });
     return;
   }
@@ -1327,6 +1407,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 };
 
 export const handleFileExplorerAction = async (deps, payload) => {
+  const copy = selectCopy(deps);
   try {
     await handleFileExplorerActionUnsafe(deps, payload);
   } catch (error) {
@@ -1337,9 +1418,12 @@ export const handleFileExplorerAction = async (deps, payload) => {
       appService: deps.appService,
       store: deps.store,
       error,
-      fallbackMessage: "Failed to create layout item.",
+      fallbackMessage:
+        copy.failedCreateLayoutItem ?? "Failed to create layout item.",
       lockedMessage:
+        copy.databaseBusyCreateLayoutItem ??
         "The project database is busy. RouteVN couldn't create the layout item. Please wait a moment and try again.",
+      copy,
     });
   }
 };
@@ -1356,6 +1440,7 @@ export const handleDataChanged = refreshLayoutEditorData;
  */
 async function handleDebouncedUpdate(deps, payload) {
   const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const { layoutId, resourceType, selectedItemId, updatedItem, replace } =
     payload;
 
@@ -1397,11 +1482,13 @@ async function handleDebouncedUpdate(deps, payload) {
           error: persistResult.updateResult?.error,
           fallbackMessage: getResultErrorMessage(
             persistResult.updateResult,
-            "Failed to save layout changes.",
+            copy.failedSaveLayoutChanges ?? "Failed to save layout changes.",
           ),
           lockedMessage:
+            copy.databaseBusySaveLayoutChanges ??
             "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.",
           throttle: true,
+          copy,
         });
         return {
           ok: false,
@@ -1434,10 +1521,13 @@ async function handleDebouncedUpdate(deps, payload) {
         appService,
         store,
         error,
-        fallbackMessage: "Failed to save layout changes.",
+        fallbackMessage:
+          copy.failedSaveLayoutChanges ?? "Failed to save layout changes.",
         lockedMessage:
+          copy.databaseBusySaveLayoutChanges ??
           "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.",
         throttle: true,
+        copy,
       });
       return {
         ok: false,

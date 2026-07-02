@@ -25,6 +25,8 @@ import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
 
+const selectAppCopy = (i18n = {}) => i18n.appPage ?? {};
+
 const isProjectRoute = (path) => {
   return path === "/project" || path.startsWith("/project/");
 };
@@ -148,7 +150,8 @@ const createRouteTransitionRunner = (deps) => {
     shouldUpdateHistory = false,
     timing,
   } = {}) => {
-    const { appService, projectService, store, render } = deps;
+    const { appService, projectService, store, render, i18n } = deps;
+    const copy = selectAppCopy(i18n);
     const currentTransitionToken = ++transitionToken;
     const nextPayload = normalizePayload(payload);
     const canonicalPath = getCanonicalRoutePath(path);
@@ -206,7 +209,7 @@ const createRouteTransitionRunner = (deps) => {
     });
     if (needsRepository && !isAlreadyEnsured) {
       store.setRepositoryLoadingPhase({
-        phase: "Refreshing project entry...",
+        phase: copy.refreshingProjectEntry ?? "Refreshing project entry...",
       });
     }
     renderWithNavigationTiming({
@@ -297,7 +300,7 @@ const createRouteTransitionRunner = (deps) => {
           }
 
           store.setRepositoryLoadingPhase({
-            phase: "Building project state...",
+            phase: copy.buildingProjectState ?? "Building project state...",
           });
 
           store.setRepositoryLoadingProgress({
@@ -337,7 +340,7 @@ const createRouteTransitionRunner = (deps) => {
       store.setRepositoryLoading({ isLoading: false });
       if (isIncompatibleProjectOpenError(error)) {
         await appService.showAlert({
-          title: "Incompatible Project",
+          title: copy.incompatibleProjectTitle ?? "Incompatible Project",
           message: getProjectOpenErrorMessage(error),
           status: "error",
         });
@@ -382,6 +385,7 @@ export const handleBeforeMount = (deps) => {
   const currentPath = appService.getPath();
   const initialPath = currentPath === "/" ? "/projects" : currentPath;
 
+  appService.setAppCopyProvider?.(() => selectAppCopy(deps.i18n));
   store.setUiConfig({ uiConfig });
   subject.dispatch("app.route.request", {
     path: initialPath,
@@ -399,7 +403,9 @@ export const handleAfterMount = (deps) => {
 
   // Start checking for updates on app startup (Tauri only)
   if (resolveUpdatesEnabled(deps) && updaterService) {
-    updaterService.startAutomaticChecks();
+    updaterService.startAutomaticChecks({
+      getCopy: () => selectAppCopy(deps.i18n),
+    });
   }
 };
 

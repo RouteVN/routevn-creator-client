@@ -23,9 +23,6 @@ propsSchema:
     tagFilterPlaceholder:
       type: string
       description: Placeholder for the tag filter control
-    copy:
-      type: object
-      description: Localized copy for visible labels and form text
     showTagFilter:
       type: boolean
       description: Whether to show the header tag filter
