@@ -851,7 +851,63 @@ export const setEditAvatarFileId = (
 
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;
 export const selectAvatarFileId = ({ state }) => state.avatarFileId;
+export const selectAvatarUploadResult = ({ state }) => state.avatarUploadResult;
 export const selectAvatarCropTarget = ({ state }) => state.avatarCropTarget;
+export const selectEditItemId = ({ state }) => state.editItemId;
+export const selectFolderNameDialogItemId = ({ state }) =>
+  state.folderNameDialogItemId;
+
+export const selectCharacterItemById = ({ state }, { itemId } = {}) => {
+  const item = state.charactersData?.items?.[itemId];
+  return item?.type === "character" ? item : undefined;
+};
+
+export const selectCharactersDataItemById = ({ state }, { itemId } = {}) => {
+  return itemId ? state.charactersData?.items?.[itemId] : undefined;
+};
+
+export const selectDialogSpriteGroups = ({ state }) => state.dialogSpriteGroups;
+
+export const selectSpriteGroupDialogState = ({ state }) => ({
+  target: state.spriteGroupDialogTarget ?? "edit",
+  index: state.spriteGroupDialogIndex,
+  editItemId: state.editItemId,
+  editSpriteGroups: state.editSpriteGroups,
+  dialogSpriteGroups: state.dialogSpriteGroups,
+});
+
+export const selectSpriteGroupDraftCount = (
+  { state },
+  { target = "edit" } = {},
+) => (state[getSpriteGroupDraftKey(target)] ?? []).length;
+
+export const selectSpriteGroupDropdownState = ({ state }) => ({
+  target: state.spriteGroupDropdownMenu.target,
+  index: state.spriteGroupDropdownMenu.index,
+  editItemId: state.editItemId,
+  editSpriteGroups: state.editSpriteGroups,
+});
+
+export const selectEditCharacterDraft = ({ state }) => ({
+  editItemId: state.editItemId,
+  editAvatarFileId: state.editAvatarFileId,
+  editAvatarUploadResult: state.editAvatarUploadResult,
+  editSpriteGroups: state.editSpriteGroups,
+});
+
+export const selectValidSpriteGroupTagIds = (
+  { state },
+  { target, itemId } = {},
+) => getValidSpriteGroupTagIds({ state, target, itemId });
+
+export const selectTagsData = ({ state }) => state.tagsData;
+
+export const selectActiveTagIds = ({ state }) => state.activeTagIds ?? [];
+
+export const selectDetailTagIds = ({ state }) => state.detailTagIds ?? [];
+
+export const selectCreateTagContext = ({ state }) =>
+  state.createTagContext ?? {};
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;

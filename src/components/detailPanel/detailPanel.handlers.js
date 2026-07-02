@@ -217,9 +217,7 @@ export const handleColorFormActionClick = (deps, payload) => {
   // Extract values from detail
   const values = detail.values;
 
-  // Get current dialog state
-  const state = store.getState ? store.getState() : store._state || store.state;
-  const fieldIndex = state.colorDialog.fieldIndex;
+  const fieldIndex = store.selectColorDialogFieldIndex();
 
   // Hide dialog
   store.hideColorDialog();
@@ -340,9 +338,7 @@ export const handleTextStyleFormActionClick = (deps, payload) => {
   // Extract values from detail
   const values = detail.values;
 
-  // Get current dialog state
-  const state = store.getState ? store.getState() : store._state || store.state;
-  const fieldIndex = state.textStyleDialog.fieldIndex;
+  const fieldIndex = store.selectTextStyleDialogFieldIndex();
 
   // Hide dialog
   store.hideTextStyleDialog();
@@ -397,9 +393,8 @@ export const handleImageSelectorSelection = (deps, payload) => {
 export const handleConfirmImageSelection = (deps) => {
   const { store, render, dispatchEvent } = deps;
 
-  const state = store.getState ? store.getState() : store._state || store.state;
-  const fieldIndex = state.imageSelectorDialog.fieldIndex;
-  const selectedImageId = state.imageSelectorDialog.selectedImageId;
+  const { fieldIndex, selectedImageId } =
+    store.selectImageSelectorDialogSelection();
 
   // Hide dialog
   store.hideImageSelectorDialog();

@@ -157,6 +157,7 @@ const {
   selectFolderById,
   selectSelectedItemId,
   selectSelectedFolderId,
+  selectFolderNameDialogItemId,
   setSearchQuery,
   openFolderNameDialog,
   closeFolderNameDialog,
@@ -393,6 +394,7 @@ export {
   openFolderNameDialog,
   openMobileFileExplorer,
   selectFolderById,
+  selectFolderNameDialogItemId,
   selectSelectedItem,
   selectSelectedFolderId,
   selectSelectedItemId,
@@ -402,6 +404,11 @@ export {
 
 export const selectParticleItemById = selectItemById;
 export const selectSelectedParticle = selectSelectedItem;
+export const selectTagsData = ({ state }) => state.tagsData;
+export const selectActiveTagIds = ({ state }) => state.activeTagIds ?? [];
+export const selectDetailTagIds = ({ state }) => state.detailTagIds ?? [];
+export const selectCreateTagContext = ({ state }) =>
+  state.createTagContext ?? {};
 
 export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
   state.projectResolution = requireProjectResolution(

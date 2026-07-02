@@ -56,6 +56,11 @@ export const setFormValues = ({ state }, { values } = {}) => {
   state.formValues = values ?? {};
 };
 
+export const selectSubmitData = ({ state }) => ({
+  formValues: state.formValues,
+  scenes: state.scenes,
+});
+
 export const selectViewData = ({ state, props }) => {
   const scenes = toFlatItems(state.scenes);
   const allScenes = scenes.filter((item) => item.type === "scene");

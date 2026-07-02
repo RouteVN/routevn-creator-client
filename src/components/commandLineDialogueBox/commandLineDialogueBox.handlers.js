@@ -270,7 +270,7 @@ const beginSpriteSelectionForCharacter = (
   { store, props },
   { characterId, spriteGroupId } = {},
 ) => {
-  const state = store.getState();
+  const state = store.selectSpriteSelectionState();
   const spriteSelectionGroups = getSpriteSelectionGroupsForCharacterId({
     characters: props?.characters,
     characterId,
@@ -423,9 +423,9 @@ const buildDialogueFromState = (
     clearPage,
     customizeTextSpeed,
     textSpeed,
-  } = store.getState();
+  } = store.selectDialogueBuildState();
   const selectedSpriteIds = resolveEffectiveSelectedSpriteIds({
-    state: store.getState(),
+    state: store.selectDialogueBuildState(),
     props,
     includeTemporarySpriteSelection,
   });
@@ -640,7 +640,7 @@ const syncDialogueFormValues = (deps) => {
     clearPage,
     customizeTextSpeed,
     textSpeed,
-  } = store.getState();
+  } = store.selectDialogueFormState();
   const values = {
     mode: selectedMode,
     resourceId: selectedResourceId,
@@ -681,7 +681,7 @@ export const handleFormChange = (deps, payload) => {
     return;
   }
 
-  const currentState = store.getState();
+  const currentState = store.selectDialogueFormChangeState();
   const selectedMode = formValues.mode === "nvl" ? "nvl" : "adv";
   const modeChanged = selectedMode !== currentState.selectedMode;
   const customCharacterName = toBoolean(formValues.customCharacterName);
@@ -778,7 +778,7 @@ export const handleCharacterSpriteBoxClick = (deps) => {
 export const handleCharacterSpriteGroupBoxClick = (deps, payload) => {
   const { store, render } = deps;
   const spriteGroupId = payload?._event?.currentTarget?.dataset?.spriteGroupId;
-  const characterId = store.getState().spriteCharacterId;
+  const characterId = store.selectSpriteCharacterId();
 
   if (!characterId) {
     return;
@@ -803,7 +803,7 @@ export const handleClearCharacterSpriteClick = (deps, payload) => {
 export const handleFileExplorerItemClick = (deps, payload) => {
   const { refs, store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
-  const mode = store.getState().mode;
+  const mode = store.selectMode();
 
   if (isFolder) {
     const groupElement = refs.galleryScroll?.querySelector(
@@ -815,7 +815,7 @@ export const handleFileExplorerItemClick = (deps, payload) => {
 
   if (mode === "sprite-select") {
     store.setTempSelectedSpriteId({
-      groupId: store.getState().selectedSpriteGroupId,
+      groupId: store.selectSelectedSpriteGroupId(),
       spriteId: itemId,
     });
     render();
@@ -852,7 +852,7 @@ export const handleSpriteItemClick = (deps, payload) => {
   const spriteId = payload._event.currentTarget.dataset.spriteId;
 
   store.setTempSelectedSpriteId({
-    groupId: store.getState().selectedSpriteGroupId,
+    groupId: store.selectSelectedSpriteGroupId(),
     spriteId,
   });
 
@@ -865,7 +865,7 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
   const spriteId = payload._event.currentTarget.dataset.spriteId;
   const character = getCharacterById({
     characters: props?.characters,
-    characterId: store.getState().spriteCharacterId,
+    characterId: store.selectSpriteCharacterId(),
   });
   const sprite = toFlatItems(
     character?.sprites ?? createEmptyCollection(),
@@ -877,7 +877,7 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
 
   const previewLayer = buildCharacterSpritePreviewLayer(sprite);
   store.setTempSelectedSpriteId({
-    groupId: store.getState().selectedSpriteGroupId,
+    groupId: store.selectSelectedSpriteGroupId(),
     spriteId,
   });
   store.showFullImagePreview({
@@ -895,10 +895,7 @@ export const handleSpriteGroupTabClick = (deps, payload) => {
   const { store, render } = deps;
   const spriteGroupId = payload._event.detail.id;
 
-  if (
-    !spriteGroupId ||
-    spriteGroupId === store.getState().selectedSpriteGroupId
-  ) {
+  if (!spriteGroupId || spriteGroupId === store.selectSelectedSpriteGroupId()) {
     return;
   }
 
@@ -932,7 +929,7 @@ export const handleAnimationChange = (deps, payload) => {
 
 export const handleButtonSelectClick = (deps) => {
   const { store, props, render } = deps;
-  const state = store.getState();
+  const state = store.selectSpriteSelectionConfirmState();
 
   if (state.mode === "sprite-select") {
     const spriteSelectionGroups = getSpriteSelectionGroupsForCharacterId({

@@ -24,7 +24,7 @@ export const handleFormChange = (deps, payload) => {
 
 export const handleSubmitClick = (deps) => {
   const { store, dispatchEvent } = deps;
-  const { selectedControlId } = store.getState();
+  const selectedControlId = store.selectSelectedControlId();
 
   const control = {
     resourceType: "control",

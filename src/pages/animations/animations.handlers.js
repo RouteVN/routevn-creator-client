@@ -1046,7 +1046,7 @@ export const handleEditFormAddOptionClick = (deps) => {
   openCreateTagDialogForMode({
     deps,
     mode: "edit-form",
-    itemId: deps.store.getState().editItemId,
+    itemId: deps.store.selectEditItemId(),
   });
 };
 
@@ -1073,7 +1073,7 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  const editItemId = store.getState().editItemId;
+  const editItemId = store.selectEditItemId();
   if (!editItemId) {
     return;
   }

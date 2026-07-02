@@ -1403,7 +1403,7 @@ export const handleFolderNameFormAction = async (deps, payload) => {
     return;
   }
 
-  const folderId = store.getState().folderNameDialogItemId;
+  const folderId = store.selectFolderNameDialogItemId();
   if (!folderId) {
     store.closeFolderNameDialog();
     render();
@@ -1654,7 +1654,7 @@ export const handleEditFormAddOptionClick = (deps) => {
   openCreateTagDialogForMode({
     deps,
     mode: "edit-form",
-    itemId: deps.store.getState().editItemId,
+    itemId: deps.store.selectEditItemId(),
   });
 };
 
@@ -1729,7 +1729,8 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  const { editItemId, editUploadResult } = store.getState();
+  const editItemId = store.selectEditItemId();
+  const editUploadResult = store.selectEditUploadResult();
   if (!editItemId) {
     store.closeEditDialog();
     render();

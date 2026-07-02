@@ -125,7 +125,7 @@ const refreshVariablesData = async (deps, { selectedItemId } = {}) => {
     repositoryState: projectService.getState(),
   });
   if (selectedItemId !== undefined) {
-    const item = store.getState().variablesData?.items?.[selectedItemId];
+    const item = store.selectVariableItemById({ itemId: selectedItemId });
     if (item?.type === "folder") {
       store.setSelectedFolderId({ folderId: selectedItemId });
     } else {
@@ -377,7 +377,7 @@ export const handleFolderNameFormAction = async (deps, payload) => {
     return;
   }
 
-  const folderId = store.getState().folderNameDialogItemId;
+  const folderId = store.selectFolderNameDialogItemId();
   if (!folderId) {
     store.closeFolderNameDialog();
     render();

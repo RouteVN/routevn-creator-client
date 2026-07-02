@@ -310,7 +310,7 @@ export const handleEditFormAddOptionClick = (deps) => {
   openCreateTagDialogForMode({
     deps,
     mode: "edit-form",
-    itemId: deps.store.getState().editItemId,
+    itemId: deps.store.selectEditItemId(),
   });
 };
 
@@ -1125,7 +1125,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
           layoutSchemaVersion: CURRENT_LAYOUT_SCHEMA_VERSION,
         },
         elements: createEmptyLayoutElements(),
-        parentId: store.getState().targetGroupId,
+        parentId: store.selectTargetGroupId(),
         position: "last",
       }),
   });
@@ -1155,7 +1155,7 @@ export const handleEditFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const editItemId = store.getState().editItemId;
+  const editItemId = store.selectEditItemId();
   if (!editItemId) {
     store.closeEditDialog();
     render();

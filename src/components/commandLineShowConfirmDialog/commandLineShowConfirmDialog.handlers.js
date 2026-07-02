@@ -84,18 +84,16 @@ export const handleCancelActionsClick = (deps) => {
 
 export const handleConfirmActionsChange = (deps, payload) => {
   const { render, store } = deps;
-  const state = store.getState();
   store.setConfirmActions({
-    actions: mergeActions(state.confirmActions, payload._event.detail),
+    actions: mergeActions(store.selectConfirmActions(), payload._event.detail),
   });
   render();
 };
 
 export const handleCancelActionsChange = (deps, payload) => {
   const { render, store } = deps;
-  const state = store.getState();
   store.setCancelActions({
-    actions: mergeActions(state.cancelActions, payload._event.detail),
+    actions: mergeActions(store.selectCancelActions(), payload._event.detail),
   });
   render();
 };
@@ -103,10 +101,9 @@ export const handleCancelActionsChange = (deps, payload) => {
 export const handleConfirmActionsDelete = (deps, payload) => {
   const { render, store } = deps;
   const actionType = payload._event.detail?.actionType;
-  const state = store.getState();
 
   store.setConfirmActions({
-    actions: removeAction(state.confirmActions, actionType),
+    actions: removeAction(store.selectConfirmActions(), actionType),
   });
   render();
 };
@@ -114,10 +111,9 @@ export const handleConfirmActionsDelete = (deps, payload) => {
 export const handleCancelActionsDelete = (deps, payload) => {
   const { render, store } = deps;
   const actionType = payload._event.detail?.actionType;
-  const state = store.getState();
 
   store.setCancelActions({
-    actions: removeAction(state.cancelActions, actionType),
+    actions: removeAction(store.selectCancelActions(), actionType),
   });
   render();
 };
@@ -130,21 +126,22 @@ export const handleNestedActionsClose = (deps) => {
 
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
-  const state = store.getState();
+  const { selectedResourceId, confirmActions, cancelActions } =
+    store.selectSubmitData();
 
-  if (!state.selectedResourceId) {
+  if (!selectedResourceId) {
     return;
   }
 
   const detail = {
     showConfirmDialog: {
-      resourceId: state.selectedResourceId,
-      confirmActions: toPlainObject(state.confirmActions),
+      resourceId: selectedResourceId,
+      confirmActions: toPlainObject(confirmActions),
     },
   };
 
-  if (Object.keys(toPlainObject(state.cancelActions)).length > 0) {
-    detail.showConfirmDialog.cancelActions = toPlainObject(state.cancelActions);
+  if (Object.keys(toPlainObject(cancelActions)).length > 0) {
+    detail.showConfirmDialog.cancelActions = toPlainObject(cancelActions);
   }
 
   dispatchEvent(

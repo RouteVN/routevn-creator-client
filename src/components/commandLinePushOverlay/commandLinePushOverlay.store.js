@@ -41,6 +41,8 @@ export const setFormValues = ({ state }, payload = {}) => {
   state.formValues = payload;
 };
 
+export const selectFormValues = ({ state }) => state.formValues;
+
 export const selectViewData = ({ state }) => {
   const layouts = toFlatItems(state.layouts);
   const allLayouts = layouts.filter((item) => item.type === "layout");

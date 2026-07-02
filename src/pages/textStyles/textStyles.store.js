@@ -8,6 +8,10 @@ import {
   createTagState,
   filterGroupsByActiveTags,
   openCreateTagDialogState,
+  selectActiveTagIdsState,
+  selectCreateTagContextState,
+  selectDetailTagIdsState,
+  selectTagsDataState,
   setActiveTagIdsState,
   setDetailTagIdsState,
   setDetailTagPopoverOpenState,
@@ -604,6 +608,22 @@ export const selectSelectedItem = ({ state }) => {
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
+
+export const selectIsDialogOpen = ({ state }) => state.isDialogOpen;
+
+export const selectFolderNameDialogItemId = ({ state }) =>
+  state.folderNameDialogItemId;
+
+export const selectCurrentPreviewText = ({ state }) =>
+  state.currentFormValues.previewText ?? "";
+
+export const selectTagsData = selectTagsDataState;
+
+export const selectActiveTagIds = selectActiveTagIdsState;
+
+export const selectDetailTagIds = selectDetailTagIdsState;
+
+export const selectCreateTagContext = selectCreateTagContextState;
 
 export const selectItemById = ({ state }, itemId) => {
   const flatItems = toFlatItems(state.textStylesData);

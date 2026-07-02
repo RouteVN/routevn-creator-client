@@ -256,6 +256,17 @@ export const setTempSelectedImageId = ({ state }, { imageId } = {}) => {
   state.imageSelectorDialog.selectedImageId = imageId;
 };
 
+export const selectColorDialogFieldIndex = ({ state }) =>
+  state.colorDialog.fieldIndex;
+
+export const selectTextStyleDialogFieldIndex = ({ state }) =>
+  state.textStyleDialog.fieldIndex;
+
+export const selectImageSelectorDialogSelection = ({ state }) => ({
+  fieldIndex: state.imageSelectorDialog.fieldIndex,
+  selectedImageId: state.imageSelectorDialog.selectedImageId,
+});
+
 export const selectViewData = ({ state, props }) => {
   const hasContent = props.fields && props.fields.length > 0;
   let visibleFields = props.fields

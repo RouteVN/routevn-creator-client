@@ -251,6 +251,13 @@ export const selectDefaultValues = ({ state }) => {
   return state.defaultValues;
 };
 
+export const selectSubmitContext = ({ state }) => ({
+  defaultValues: state.defaultValues,
+  targetGroupId: state.targetGroupId,
+  dialogMode: state.dialogMode,
+  editingItemId: state.editingItemId,
+});
+
 export const selectIsEditMode = ({ state }) => {
   return state.dialogMode === "edit";
 };

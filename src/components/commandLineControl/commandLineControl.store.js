@@ -30,6 +30,8 @@ export const setSelectedResourceId = ({ state }, { resourceId } = {}) => {
   state.defaultValues.resourceId = resourceId;
 };
 
+export const selectSelectedControlId = ({ state }) => state.selectedControlId;
+
 export const selectViewData = ({ state, props }) => {
   const controls = props.controls || [];
 

@@ -22,6 +22,12 @@ export const setFormValues = ({ state }, { values } = {}) => {
   state.formValues = values ?? {};
 };
 
+export const selectSubmitData = ({ state }) => ({
+  mode: state.mode,
+  action: state.action,
+  formValues: state.formValues,
+});
+
 export const selectViewData = ({ state }) => {
   const definition = getRuntimeActionDefinition(state.mode);
   const breadcrumb = [

@@ -78,7 +78,7 @@ export const handleFormChange = (deps, payload) => {
 
 export const handleSubmitClick = (deps) => {
   const { appService, dispatchEvent, store } = deps;
-  const { formValues, scenes } = store.getState();
+  const { formValues, scenes } = store.selectSubmitData();
   const sceneId = formValues?.sceneId;
   const sectionId = formValues?.sectionId;
 

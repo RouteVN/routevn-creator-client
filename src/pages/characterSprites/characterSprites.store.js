@@ -41,6 +41,10 @@ import {
   createTagForm,
   createTagState,
   openCreateTagDialogState,
+  selectActiveTagIdsState,
+  selectCreateTagContextState,
+  selectDetailTagIdsState,
+  selectTagsDataState,
   setActiveTagIdsState,
   setDetailTagIdsState,
   setDetailTagPopoverOpenState,
@@ -1214,6 +1218,21 @@ export const selectSelectedItemId = ({ state }) => {
 export const selectSelectedFolderId = ({ state }) => {
   return state.selectedFolderId;
 };
+
+export const selectEditItemId = ({ state }) => state.editItemId;
+
+export const selectEditUploadResult = ({ state }) => state.editUploadResult;
+
+export const selectFolderNameDialogItemId = ({ state }) =>
+  state.folderNameDialogItemId;
+
+export const selectTagsData = selectTagsDataState;
+
+export const selectActiveTagIds = selectActiveTagIdsState;
+
+export const selectDetailTagIds = selectDetailTagIdsState;
+
+export const selectCreateTagContext = selectCreateTagContextState;
 
 export const selectCharacterId = ({ state }) => {
   return state.characterId;

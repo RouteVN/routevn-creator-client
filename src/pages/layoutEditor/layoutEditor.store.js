@@ -385,6 +385,8 @@ export const selectInitialPreviewData = ({ state }) => {
   return state.initialPreviewData;
 };
 
+export const selectIsPreviewMounted = ({ state }) => state.isPreviewMounted;
+
 export const selectViewData = ({ state, constants }) => {
   const selectedItem = selectItemDataById(
     { state },

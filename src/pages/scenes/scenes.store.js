@@ -340,6 +340,10 @@ export const selectScenesData = ({ state }) => {
   return state.scenesData;
 };
 
+export const selectShowSceneForm = ({ state }) => {
+  return state.showSceneForm;
+};
+
 export const selectSceneItemById = ({ state }, { itemId } = {}) => {
   return state.scenesData?.items?.[itemId];
 };

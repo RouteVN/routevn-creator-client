@@ -239,7 +239,7 @@ export const handleEditFormAddOptionClick = (deps) => {
   openCreateTagDialogForMode({
     deps,
     mode: "edit-form",
-    itemId: deps.store.getState().editItemId,
+    itemId: deps.store.selectEditItemId(),
   });
 };
 
@@ -260,7 +260,7 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  const editItemId = store.getState().editItemId;
+  const editItemId = store.selectEditItemId();
   if (!editItemId) {
     store.closeEditDialog();
     render();
@@ -330,7 +330,7 @@ export const handleAddFormAction = async (deps, payload) => {
           tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
           hex: values?.hex ?? "#ffffff",
         },
-        parentId: store.getState().targetGroupId,
+        parentId: store.selectTargetGroupId(),
         position: "last",
       }),
   });

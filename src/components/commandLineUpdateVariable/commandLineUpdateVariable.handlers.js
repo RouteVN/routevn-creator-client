@@ -241,9 +241,7 @@ export const handleVariableSelectChange = (deps, payload) => {
   const value = payload._event.detail?.value || payload._event.target?.value;
 
   // Get variable type to set appropriate default value
-  const state = store.getState();
-  const variableItems = getVariableItems(state.variablesData);
-  const variable = variableItems[value];
+  const variable = store.selectVariableItemById({ variableId: value });
   // When variable changes, reset operation and set default value
   store.setTempOperation({
     variableId: value,
@@ -259,20 +257,19 @@ export const handleOperationSelectChange = (deps, payload) => {
   const value = payload._event.detail?.value || payload._event.target?.value;
 
   // When operation changes, reset value (especially for toggle)
-  const state = store.getState();
-  const variableItems = getVariableItems(state.variablesData);
-  const variable = variableItems[state.tempOperation.variableId];
+  const { tempOperation: currentTempOperation, variable } =
+    store.selectOperationChangeData();
 
   const tempOperation = {
     op: value,
     value: getOperationValue({
       variable,
       operation: value,
-      currentValue: state.tempOperation.value,
+      currentValue: currentTempOperation.value,
     }),
     roundTo:
       value === "divide"
-        ? (state.tempOperation.roundTo ?? DEFAULT_DIVIDE_ROUND_TO)
+        ? (currentTempOperation.roundTo ?? DEFAULT_DIVIDE_ROUND_TO)
         : undefined,
   };
 
@@ -316,8 +313,8 @@ export const handleRoundToInputChange = (deps, payload) => {
 export const handleSaveOperationClick = (deps, payload) => {
   payload._event.stopPropagation();
   const { appService, store, render } = deps;
-  const state = store.getState();
-  const { currentEditingId, tempOperation, variablesData } = state;
+  const { currentEditingId, tempOperation, variablesData } =
+    store.selectOperationSaveData();
 
   if (currentEditingId && tempOperation.variableId && tempOperation.op) {
     const normalized = normalizeOperationForSave({
@@ -347,8 +344,7 @@ export const handleSaveOperationClick = (deps, payload) => {
 export const handleSubmitClick = (deps, payload) => {
   payload._event.stopPropagation();
   const { dispatchEvent, store, appService } = deps;
-  const state = store.getState();
-  const { actionId, operations, variablesData } = state;
+  const { actionId, operations, variablesData } = store.selectSubmitData();
   const variableItems = getVariableItems(variablesData);
   let hasInvalidOperationValue = false;
 

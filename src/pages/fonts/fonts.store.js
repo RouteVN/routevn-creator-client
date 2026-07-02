@@ -183,8 +183,11 @@ const {
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
+  selectEditItemId,
+  selectEditUploadResult,
   selectFolderById,
   selectSelectedFolderId,
+  selectFolderNameDialogItemId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -193,6 +196,10 @@ const {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
   selectViewData: selectMediaViewData,
 } = createMediaPageStore({
   itemType: "font",
@@ -287,8 +294,11 @@ export {
   closeMobileFileExplorer,
   selectSelectedItem,
   selectSelectedItemId,
+  selectEditItemId,
+  selectEditUploadResult,
   selectFolderById,
   selectSelectedFolderId,
+  selectFolderNameDialogItemId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -297,9 +307,16 @@ export {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  selectTagsData,
+  selectActiveTagIds,
+  selectDetailTagIds,
+  selectCreateTagContext,
 };
 
 export const selectFontItemById = selectItemById;
+
+export const selectCachedFontInfo = ({ state }, { itemId } = {}) =>
+  itemId ? state.fontInfoById[itemId] : undefined;
 
 export const setModalOpen = ({ state }, { isOpen } = {}) => {
   state.isModalOpen = isOpen;

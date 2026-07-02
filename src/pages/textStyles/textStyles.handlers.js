@@ -84,7 +84,7 @@ const refreshTextStylesData = async (deps, { selectedItemId } = {}) => {
   const { store, render, projectService, refs } = deps;
   syncRepositoryToStore({ store, projectService });
   if (selectedItemId !== undefined) {
-    const item = store.getState().textStylesData?.items?.[selectedItemId];
+    const item = store.selectItemById(selectedItemId);
     if (item?.type === "folder") {
       store.setSelectedFolderId({ folderId: selectedItemId });
     } else {
@@ -230,7 +230,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   refs.fileExplorer?.selectItem?.({ itemId });
   store.setFormValuesFromItem({ item });
   store.setEditMode({ itemId });
-  if (!store.getState().isDialogOpen) {
+  if (!store.selectIsDialogOpen()) {
     store.toggleDialog();
   }
   render();
@@ -510,7 +510,7 @@ export const handleFolderNameFormAction = async (deps, payload) => {
     return;
   }
 
-  const folderId = store.getState().folderNameDialogItemId;
+  const folderId = store.selectFolderNameDialogItemId();
   if (!folderId) {
     store.closeFolderNameDialog();
     render();
@@ -611,7 +611,7 @@ export const handleFormActionClick = async (deps, payload) => {
     // Merge the left form values with the preview-column input.
     const formData = {
       ...payload._event.detail.values,
-      previewText: store.getState().currentFormValues.previewText ?? "",
+      previewText: store.selectCurrentPreviewText(),
     };
 
     // Get the store state using selector

@@ -360,7 +360,7 @@ export const createMediaPageHandlers = ({
       return;
     }
 
-    const folderId = store.getState().folderNameDialogItemId;
+    const folderId = store.selectFolderNameDialogItemId();
     if (!folderId) {
       store.closeFolderNameDialog();
       render();

@@ -658,7 +658,7 @@ export const handleFolderNameFormAction = async (deps, payload) => {
     return;
   }
 
-  const folderId = store.getState().folderNameDialogItemId;
+  const folderId = store.selectFolderNameDialogItemId();
   if (!folderId) {
     store.closeFolderNameDialog();
     render();

@@ -805,6 +805,18 @@ export const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
 export const selectFolderById = ({ state }, { folderId } = {}) =>
   selectDataFolder(state, folderId);
 
+export const selectFolderNameDialogItemId = ({ state }) =>
+  state.folderNameDialogItemId;
+
+export const selectTagsData = ({ state }) => state.tagsData;
+
+export const selectActiveTagIds = ({ state }) => state.activeTagIds ?? [];
+
+export const selectDetailTagIds = ({ state }) => state.detailTagIds ?? [];
+
+export const selectCreateTagContext = ({ state }) =>
+  state.createTagContext ?? {};
+
 export const selectDialogMode = ({ state }) => state.dialogMode;
 
 export const selectDialogItemId = ({ state }) => state.dialogItemId;

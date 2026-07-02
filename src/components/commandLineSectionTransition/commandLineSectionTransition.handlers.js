@@ -49,7 +49,7 @@ export const handleAfterMount = async (deps) => {
 
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store, appService } = deps;
-  const { formValues, scenes } = store.getState();
+  const { formValues, scenes } = store.selectSubmitData();
 
   if (!formValues?.sceneId) {
     appService.showAlert({

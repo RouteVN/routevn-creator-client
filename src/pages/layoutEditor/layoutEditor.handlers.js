@@ -443,7 +443,7 @@ export const handleAfterMount = async (deps) => {
   render();
 
   scheduleAfterNextPaint(() => {
-    if (store.getState().isPreviewMounted === true) {
+    if (store.selectIsPreviewMounted() === true) {
       return;
     }
 

@@ -73,6 +73,16 @@ export const setCancelActions = ({ state }, { actions } = {}) => {
       : {};
 };
 
+export const selectConfirmActions = ({ state }) => state.confirmActions;
+
+export const selectCancelActions = ({ state }) => state.cancelActions;
+
+export const selectSubmitData = ({ state }) => ({
+  selectedResourceId: state.selectedResourceId,
+  confirmActions: state.confirmActions,
+  cancelActions: state.cancelActions,
+});
+
 export const selectViewData = ({ state, props }) => {
   const layoutOptions = toLayoutOptions(props.layouts);
   const selectedResourceId = resolveSelectedResourceId({
