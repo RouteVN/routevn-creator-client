@@ -86,7 +86,7 @@ describe("tauri updater", () => {
       body: "Fix packaging.",
     });
     expect(fetchManualUpdateManifest).toHaveBeenCalledWith(
-      "https://static-1.routevn.com/test-latest.json",
+      "https://static-1.routevn.com/test-latest.json?target=linux&arch=x86_64&currentVersion=1.7.2",
     );
     expect(checkMock).not.toHaveBeenCalled();
     expect(globalUI.showConfirm).toHaveBeenCalledWith({
