@@ -9,6 +9,8 @@ const repoRoot = path.resolve(scriptDir, "..");
 
 const packageName = "routevn-creator";
 const displayName = "RouteVN Creator";
+const debArchitecture = "amd64";
+const rpmArchitecture = "x86_64";
 const legacyPackageName = packageName.replace(
   "routevn",
   ["route", "vn"].join("-"),
@@ -124,6 +126,17 @@ function inspectArtifact(kind, extension) {
   );
 
   for (const artifact of artifacts) {
+    const artifactName = path.basename(artifact);
+    const expectedArchitectureSuffix =
+      kind === "deb"
+        ? `_${debArchitecture}${extension}`
+        : `.${rpmArchitecture}${extension}`;
+
+    expect(
+      artifactName.endsWith(expectedArchitectureSuffix),
+      `${artifactName} must include ${kind === "deb" ? debArchitecture : rpmArchitecture} architecture`,
+    );
+
     inspectBinary(artifact, { requirePackageName: kind === "rpm" });
   }
 }

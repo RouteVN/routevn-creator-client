@@ -1,6 +1,11 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
+const LINUX_DOWNLOAD_URL = "https://routevn.com/en/creator/download/";
+const LINUX_UPDATE_TARGET = "linux";
+const LINUX_UPDATE_ARCH = "x86_64";
+const LINUX_UPDATE_PLATFORM = `${LINUX_UPDATE_TARGET}-${LINUX_UPDATE_ARCH}`;
+
 const isMacOs = () => {
   if (typeof navigator === "undefined") {
     return false;
@@ -14,6 +19,21 @@ const isMacOs = () => {
   return /Mac/.test(navigator.platform || "");
 };
 
+const isLinux = () => {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const userAgentPlatform = navigator.userAgentData?.platform;
+  if (typeof userAgentPlatform === "string") {
+    return userAgentPlatform === "Linux";
+  }
+
+  return /Linux/.test(
+    `${navigator.platform || ""} ${navigator.userAgent || ""}`,
+  );
+};
+
 const formatUpdaterCopy = (template, values = {}) => {
   return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
     values[key] === undefined ? match : String(values[key]),
@@ -24,7 +44,56 @@ const resolveUpdaterCopy = (options = {}) => {
   return options.copy ?? options ?? {};
 };
 
-const createUpdater = ({ globalUI, keyValueStore }) => {
+const normalizeVersion = (version) => {
+  return String(version ?? "").replace(/^v/i, "");
+};
+
+const getVersionParts = (version) => {
+  return normalizeVersion(version)
+    .split(/[.+-]/)
+    .map((part) => Number.parseInt(part, 10))
+    .map((part) => (Number.isFinite(part) ? part : 0));
+};
+
+const isNewerVersion = (version, currentVersion) => {
+  const normalizedVersion = normalizeVersion(version);
+  if (!normalizedVersion) {
+    return false;
+  }
+
+  if (!currentVersion) {
+    return true;
+  }
+
+  const versionParts = getVersionParts(normalizedVersion);
+  const currentParts = getVersionParts(currentVersion);
+  const length = Math.max(versionParts.length, currentParts.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const versionPart = versionParts[index] ?? 0;
+    const currentPart = currentParts[index] ?? 0;
+    if (versionPart > currentPart) {
+      return true;
+    }
+    if (versionPart < currentPart) {
+      return false;
+    }
+  }
+
+  return false;
+};
+
+const hasManualLinuxUpdatePlatform = (manifest = {}) => {
+  return Boolean(manifest.platforms?.[LINUX_UPDATE_PLATFORM]);
+};
+
+const createUpdater = ({
+  globalUI,
+  keyValueStore,
+  openUrl,
+  appVersion,
+  fetchManualUpdateManifest,
+}) => {
   let updateAvailable = false;
   let updateInfo = null;
   let downloadProgress = 0;
@@ -32,13 +101,16 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
   const checkForUpdates = async (silent = false, options = {}) => {
     const copy = resolveUpdaterCopy(options);
     try {
-      const update = await check(
-        isMacOs()
-          ? {
-              target: "macos-universal",
-            }
-          : undefined,
-      );
+      const linux = isLinux();
+      const update = linux
+        ? await checkManualDownloadUpdate()
+        : await check(
+            isMacOs()
+              ? {
+                  target: "macos-universal",
+                }
+              : undefined,
+          );
 
       if (!update) {
         if (!silent && globalUI) {
@@ -62,20 +134,29 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
       if (globalUI) {
         const shouldUpdate = await globalUI.showConfirm({
           message: formatUpdaterCopy(
-            copy.updateAvailableMessage ??
-              "Update {version} is available!\n\nRelease notes:\n{releaseNotes}",
+            linux
+              ? (copy.manualDownloadUpdateMessage ??
+                  "Update {version} is available.\n\nUpdates are installed manually. Open the RouteVN Creator download page, download the package for your distribution, and install it over the current version.\n\nRelease notes:\n{releaseNotes}")
+              : (copy.updateAvailableMessage ??
+                  "Update {version} is available!\n\nRelease notes:\n{releaseNotes}"),
             {
               version: update.version,
               releaseNotes: update.body ?? "",
             },
           ),
           title: copy.updateAvailableTitle ?? "Update Available",
-          confirmText: copy.updateNowButton ?? "Update Now",
+          confirmText: linux
+            ? (copy.openDownloadPageButton ?? "Open Download Page")
+            : (copy.updateNowButton ?? "Update Now"),
           cancelText: copy.laterButton ?? "Later",
         });
 
         if (shouldUpdate) {
-          await downloadAndInstall(update, copy);
+          if (linux) {
+            await openLinuxDownloadPage(copy);
+          } else {
+            await downloadAndInstall(update, copy);
+          }
         }
       }
 
@@ -97,6 +178,44 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
         });
       }
       return null;
+    }
+  };
+
+  const checkManualDownloadUpdate = async () => {
+    if (typeof fetchManualUpdateManifest !== "function") {
+      throw new Error("Manual update manifest fetch is unavailable.");
+    }
+
+    const manifest = await fetchManualUpdateManifest(
+      normalizeVersion(appVersion),
+    );
+    if (!hasManualLinuxUpdatePlatform(manifest)) {
+      return null;
+    }
+
+    const version = normalizeVersion(manifest?.version);
+    if (!isNewerVersion(version, appVersion)) {
+      return null;
+    }
+
+    return {
+      version,
+      date: manifest?.pub_date ?? manifest?.date,
+      body: manifest?.notes ?? manifest?.body,
+    };
+  };
+
+  const openLinuxDownloadPage = async (copy = {}) => {
+    try {
+      await openUrl(LINUX_DOWNLOAD_URL);
+    } catch (error) {
+      console.error("Failed to open manual download page:", error);
+      if (globalUI) {
+        await globalUI.showAlert({
+          message: copy.failedOpenLink ?? "Failed to open link.",
+          title: copy.errorTitle ?? "Error",
+        });
+      }
     }
   };
 

@@ -4,7 +4,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PKG_NAME="routevn-creator"
-AUR_OUT_DIR="${ROUTEVN_AUR_OUT_DIR:-${ROOT_DIR}/dist/aur}"
+LINUX_RELEASE_ARCH="x86_64"
+AUR_OUT_DIR="${ROUTEVN_AUR_OUT_DIR:-${ROOT_DIR}/dist/aur/${LINUX_RELEASE_ARCH}}"
 AUR_BUILD_DIR="${AUR_OUT_DIR}/build"
 PKGBUILD_SOURCE="${ROOT_DIR}/packaging/aur/PKGBUILD"
 
@@ -25,6 +26,11 @@ fi
 
 if ! command -v bun >/dev/null 2>&1; then
   echo "Error: bun is required to read Tauri metadata."
+  exit 1
+fi
+
+if [ "$(uname -m)" != "${LINUX_RELEASE_ARCH}" ]; then
+  echo "Error: the current AUR build supports ${LINUX_RELEASE_ARCH} only."
   exit 1
 fi
 
@@ -60,5 +66,5 @@ sed -i "s|^source=.*|source=(\"${ARCHIVE_FILE}\")|" "${AUR_BUILD_DIR}/PKGBUILD"
 
 find "${AUR_BUILD_DIR}" -maxdepth 1 -type f -name "*.pkg.tar.*" -exec cp -f {} "${AUR_OUT_DIR}/" \;
 
-echo "Arch package artifacts are in ${AUR_OUT_DIR}"
+echo "Arch ${LINUX_RELEASE_ARCH} package artifacts are in ${AUR_OUT_DIR}"
 echo "AUR build workspace is ${AUR_BUILD_DIR}"
