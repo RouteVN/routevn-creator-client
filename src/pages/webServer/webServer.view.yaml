@@ -37,7 +37,8 @@ template:
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-          - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
+          - 'rtgl-view w=1fg h=f pl=sm pos=rel style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view pos=abs h=1 bgc=bo style="left: 0; right: 0; top: 47px; z-index: 1001; pointer-events: none;"': null
               - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
                   - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
                       - rtgl-view w=f d=h av=c g=md wrap:

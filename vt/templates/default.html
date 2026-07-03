@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VT E2E Runner</title>
-    <link rel="stylesheet" href="/public/theme.css">
+    <link rel="stylesheet" href="/public/theme.css" />
     <script src="/public/rtgl-icons.js"></script>
-    <script src="/public/@rettangoli/ui@1.0.3/dist/rettangoli-iife-ui.min.js"></script>
+    <script src="/public/@rettangoli/ui@1.8.1/dist/rettangoli-iife-ui.min.js"></script>
     <script type="module">
       const VT_RESET_KEY = "routevn.vt.indexeddb-reset-done";
 
@@ -46,7 +46,10 @@
 
           return projectEntries
             .map((entry) => entry?.id)
-            .filter((projectId) => typeof projectId === "string" && projectId.length > 0);
+            .filter(
+              (projectId) =>
+                typeof projectId === "string" && projectId.length > 0,
+            );
         } catch {
           return [];
         } finally {
@@ -76,7 +79,10 @@
           try {
             const databases = await indexedDB.databases();
             databases.forEach((database) => {
-              if (typeof database?.name === "string" && database.name.length > 0) {
+              if (
+                typeof database?.name === "string" &&
+                database.name.length > 0
+              ) {
                 databaseNames.add(database.name);
               }
             });

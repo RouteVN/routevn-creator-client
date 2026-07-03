@@ -1,3 +1,4 @@
+import { normalizeTheme } from "../../internal/theme.js";
 import { selectAppearancePageCopy } from "./support/appearancePageCopy.js";
 
 const themeOptions = [
@@ -15,11 +16,11 @@ const themeOptions = [
     id: "light",
     name: "Light",
     copyKey: "lightThemeName",
-    previewPageBackground: "oklch(1 0 0)",
-    previewPanelBackground: "oklch(0.99 0 0)",
-    previewCardBackground: "oklch(0.97 0 0)",
-    previewAccent: "oklch(0.95 0 0)",
-    previewBorder: "oklch(0.922 0 0)",
+    previewPageBackground: "oklch(0.975 0.004 250)",
+    previewPanelBackground: "oklch(0.992 0.002 250)",
+    previewCardBackground: "oklch(0.94 0.006 250)",
+    previewAccent: "oklch(0.9 0.015 250)",
+    previewBorder: "oklch(0.84 0.012 250)",
   },
 ];
 
@@ -29,10 +30,16 @@ export const createInitialState = () => ({
   repositoryTarget: "settings",
   flatItems: [],
   currentTheme: "dark",
+  isTouchMode: false,
 });
 
 export const setCurrentTheme = ({ state }, { theme } = {}) => {
-  state.currentTheme = theme === "light" ? "light" : "dark";
+  state.currentTheme = normalizeTheme(theme);
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };
 
 export const selectViewData = ({ state, i18n }) => {
@@ -52,6 +59,10 @@ export const selectViewData = ({ state, i18n }) => {
   return {
     ...state,
     themes,
+    showExplorerPanel: !state.isTouchMode,
+    contentPadding: state.isTouchMode ? "0" : "lg",
+    contentBodyPadding: state.isTouchMode ? "lg" : "0",
+    contentBodyMarginTop: state.isTouchMode ? "0" : "lg",
     title: copy.title ?? "Appearance",
     themesTitle: copy.themesTitle ?? "Themes",
   };

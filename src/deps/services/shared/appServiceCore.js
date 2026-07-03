@@ -2,10 +2,7 @@ import { createAppShellService } from "./appShellService.js";
 import { createFileSelectionService } from "./fileSelectionService.js";
 import { createProjectEntriesService } from "./projectEntriesService.js";
 import { createUserConfigService } from "./userConfigService.js";
-
-const normalizeTheme = (theme) => {
-  return theme === "light" ? "light" : "dark";
-};
+import { normalizeTheme } from "../../../internal/theme.js";
 
 export const createAppServiceCore = ({
   db,

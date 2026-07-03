@@ -10,7 +10,7 @@
         "@lexical/selection": "0.22.0",
         "@lexical/utils": "0.22.0",
         "@rettangoli/fe": "1.2.0",
-        "@rettangoli/ui": "1.7.6",
+        "@rettangoli/ui": "1.8.1",
         "@rettangoli/vt": "1.0.5",
         "@routevn/creator-model": "1.9.0",
         "@tauri-apps/api": "2.11.0",
@@ -313,7 +313,7 @@
 
     "@rettangoli/sites": ["@rettangoli/sites@1.2.0", "", { "dependencies": { "gray-matter": "^4.0.3", "jempl": "^0.3.1-rc1", "js-yaml": "^4.1.0", "markdown-it": "^14.1.0", "shiki": "^3.13.0", "ws": "^8.18.0", "yahtml": "0.0.4" } }, "sha512-taGLXClBbCL0Qbj7fFIZ0wW54yHNlKb43cJFZR1Poer2pxvo5GCnShvqZEvUfkPBqp/PKyvLfiOwMxGkbJxqyg=="],
 
-    "@rettangoli/ui": ["@rettangoli/ui@1.7.6", "", { "dependencies": { "@rettangoli/fe": "1.1.3", "jempl": "1.0.1" } }, "sha512-zx5oEhAqDL3e3dQGCiHrdxwksBjz4OFVkr8PuP+7v5HRwK5ouEIDD+I/w7HpGIn9/ngE68X4LX2VONDPnDOiWw=="],
+    "@rettangoli/ui": ["@rettangoli/ui@1.8.1", "", { "dependencies": { "@rettangoli/fe": "1.2.0", "jempl": "1.0.1" } }, "sha512-5+fSboe9nIkAtRQ1gySIcZHsnPp+xnrAXWJVK4JVpoWqlFvkguLfCxvTIPVL8M6zgJR97ZwffSSJaBbHDS5+gQ=="],
 
     "@rettangoli/vt": ["@rettangoli/vt@1.0.5", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-YpZH5xQYj+x5Qy6gn+FUnMTUIQELrZkTA4qN8/U4n/1B4gpNHHPltJK/kVltZQVYVG0Tj676ZIKCMGN0ZAHdzg=="],
 
@@ -1006,8 +1006,6 @@
     "@rettangoli/sites/jempl": ["jempl@0.3.2", "", {}, "sha512-k8+u4mElt1TavcUptro3/g8rXC/Y1c19szO162pVq2GzcbHsnThszRKev39B9dS2hExIbA0MvyEjFLuGb1aGIg=="],
 
     "@rettangoli/sites/yahtml": ["yahtml@0.0.4", "", {}, "sha512-9QuyogoLkvpq1ETyiETeHtcFVqUUI0pl3RjgfJ8mlpeAvkP8f1risDDJ0s9rZ8H8TwAA9hegw3mzr2eTsdRT3g=="],
-
-    "@rettangoli/ui/@rettangoli/fe": ["@rettangoli/fe@1.1.3", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.1", "js-yaml": "^4.1.0", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-/fia9Ir5x5NU7fjfXtuioCwbc4ELj939pM+/vB9R7bOAPVKosKTspyOuYqMrstysfT84xfLEcPidBrI5OY/l0g=="],
 
     "@rettangoli/ui/jempl": ["jempl@1.0.1", "", {}, "sha512-aeOlPrZV1KVhwtMYidkH1vGLlLrCTZ8fk3LlDxLGyTFsZUMHDtvSuqmrCimJL0u2LZFg1rtoE4/1NzGjwmIoUw=="],
 
