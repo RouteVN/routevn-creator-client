@@ -551,6 +551,12 @@ export const selectViewData = ({ state, constants, i18n }) => {
           itemId: item?.id,
         });
   const showMobileSelectedNodeDetail = state.isTouchMode && Boolean(item);
+  const previewPanelVisibilityStyle = showMobileSelectedNodeDetail
+    ? "display: none;"
+    : "";
+  const previewHydrationData = state.isTouchMode
+    ? state.previewData
+    : state.initialPreviewData;
 
   return {
     item,
@@ -571,6 +577,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
     layoutEditorCanvasMaxWidth: selectLayoutEditorCanvasMaxWidth({ state }),
     previewData: state.previewData,
     initialPreviewData: state.initialPreviewData,
+    previewHydrationData,
     isPreviewMounted: state.isPreviewMounted,
     projectResolution: state.projectResolution,
     layout,
@@ -596,5 +603,6 @@ export const selectViewData = ({ state, constants, i18n }) => {
     showMobilePreviewButton: showMobileSelectedNodeDetail,
     showMobileNodeExplorer: state.isTouchMode && state.isMobileFileExplorerOpen,
     showMobileSelectedNodeDetail,
+    previewPanelVisibilityStyle,
   };
 };
