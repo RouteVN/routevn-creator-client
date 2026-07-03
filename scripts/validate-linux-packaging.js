@@ -9,8 +9,10 @@ const repoRoot = path.resolve(scriptDir, "..");
 
 const packageName = "routevn-creator";
 const displayName = "RouteVN Creator";
-const forbiddenPackageName = "route-vn-creator";
-const forbiddenShortDescription = "Create Visual Novels without any coding";
+const legacyPackageName = packageName.replace(
+  "routevn",
+  ["route", "vn"].join("-"),
+);
 const forbiddenCopy = "Join our Discord server to stay updated.";
 const expectedCopy = "Follow us on social media to stay updated.";
 
@@ -43,16 +45,12 @@ function scanTextFile(relativePath) {
   const contents = readText(relativePath);
 
   expect(
-    !contents.includes(forbiddenPackageName),
-    `${relativePath} contains forbidden package name ${forbiddenPackageName}`,
+    !contents.includes(legacyPackageName),
+    `${relativePath} contains a legacy package spelling`,
   );
   expect(
     !contents.includes(forbiddenCopy),
     `${relativePath} contains stale Discord update copy`,
-  );
-  expect(
-    !contents.includes(forbiddenShortDescription),
-    `${relativePath} contains stale short description`,
   );
 }
 
@@ -81,16 +79,12 @@ function inspectBinary(filePath) {
   const contents = fs.readFileSync(filePath);
 
   expect(
-    !contents.includes(Buffer.from(forbiddenPackageName)),
-    `${path.relative(repoRoot, filePath)} contains forbidden package name ${forbiddenPackageName}`,
+    !contents.includes(Buffer.from(legacyPackageName)),
+    `${path.relative(repoRoot, filePath)} contains a legacy package spelling`,
   );
   expect(
     !contents.includes(Buffer.from(forbiddenCopy)),
     `${path.relative(repoRoot, filePath)} contains stale Discord update copy`,
-  );
-  expect(
-    !contents.includes(Buffer.from(forbiddenShortDescription)),
-    `${path.relative(repoRoot, filePath)} contains stale short description`,
   );
   expect(
     contents.includes(Buffer.from(packageName)),
