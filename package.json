@@ -21,7 +21,7 @@
     "@lexical/selection": "0.22.0",
     "@lexical/utils": "0.22.0",
     "@rettangoli/fe": "1.2.0",
-    "@rettangoli/ui": "1.8.0",
+    "@rettangoli/ui": "1.8.1",
     "@rettangoli/vt": "1.0.5",
     "@routevn/creator-model": "1.9.0",
     "@tauri-apps/api": "2.11.0",
