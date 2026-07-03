@@ -14,6 +14,8 @@ import { EN_I18N } from "../support/i18n.js";
 
 const originalWindow = globalThis.window;
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+const originalRequestIdleCallback = globalThis.requestIdleCallback;
+const originalCancelIdleCallback = globalThis.cancelIdleCallback;
 
 const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
   const getUserConfig = vi.fn((key) => userConfig[key]);
@@ -95,6 +97,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       openMobileFileExplorer: vi.fn(),
       closeMobileFileExplorer: vi.fn(),
       selectIsMobileFileExplorerOpen: vi.fn(() => false),
+      selectShowSceneForm: vi.fn(() => true),
       resetSceneForm: vi.fn(),
       addWhiteboardItem: vi.fn(),
       selectSceneWhiteboardPosition: vi.fn(() => ({
@@ -130,11 +133,15 @@ describe("scenes.handlers config keys", () => {
       callback();
       return 1;
     };
+    globalThis.requestIdleCallback = undefined;
+    globalThis.cancelIdleCallback = undefined;
   });
 
   afterEach(() => {
     globalThis.window = originalWindow;
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    globalThis.requestIdleCallback = originalRequestIdleCallback;
+    globalThis.cancelIdleCallback = originalCancelIdleCallback;
   });
 
   it("loads the scenes viewport from project-scoped userConfig keys", async () => {
@@ -236,6 +243,30 @@ describe("scenes.handlers config keys", () => {
 
     resolveOverviews({});
     await Promise.resolve();
+  });
+
+  it("waits for idle time before loading scene overviews", async () => {
+    let idleCallback;
+    globalThis.requestIdleCallback = vi.fn((callback) => {
+      idleCallback = callback;
+      return 1;
+    });
+    globalThis.cancelIdleCallback = vi.fn();
+
+    const deps = createDeps();
+
+    await handleAfterMount(deps);
+
+    expect(deps.projectService.loadSceneOverviews).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledTimes(1);
+
+    idleCallback();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(deps.projectService.loadSceneOverviews).toHaveBeenCalledWith({
+      sceneIds: ["scene-1"],
+    });
   });
 
   it("animates scene map centering from file explorer scene selection", () => {

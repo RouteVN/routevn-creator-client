@@ -1231,6 +1231,147 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     });
   });
 
+  it("loads multiple fresh scene overviews with one committed-history scan", async () => {
+    const sceneIds = ["scene-1", "scene-2"];
+    const mainState = {
+      project: {},
+      story: {
+        initialSceneId: "scene-1",
+      },
+      layouts: {
+        items: {},
+        tree: [],
+      },
+      controls: {
+        items: {},
+        tree: [],
+      },
+      scenes: {
+        items: Object.fromEntries(
+          sceneIds.map((sceneId, index) => [
+            sceneId,
+            {
+              id: sceneId,
+              type: "scene",
+              name: `Scene ${index + 1}`,
+              position: {
+                x: index * 100,
+                y: 0,
+              },
+              sections: {
+                items: {},
+                tree: [],
+              },
+            },
+          ]),
+        ),
+        tree: sceneIds.map((sceneId) => ({ id: sceneId })),
+      },
+    };
+    const committedEvents = [
+      createProjectCreateRepositoryEvent({
+        projectId: "project-1",
+        state: mainState,
+      }),
+    ].map((event, index) => ({
+      ...structuredClone(event),
+      committedId: index + 1,
+    }));
+    const checkpoints = Object.fromEntries(
+      sceneIds.map((sceneId) => {
+        const partition = scenePartitionFor(sceneId);
+        return [
+          partition,
+          {
+            viewName: SCENE_OVERVIEW_VIEW_NAME,
+            viewVersion: "1",
+            partition,
+            lastCommittedId: committedEvents.length,
+            value: {
+              sceneId,
+              name: mainState.scenes.items[sceneId].name,
+              position: structuredClone(
+                mainState.scenes.items[sceneId].position,
+              ),
+              outgoingSceneIds: [],
+              sections: [],
+            },
+          },
+        ];
+      }),
+    );
+    const loadEvents = vi.fn(async () => structuredClone(committedEvents));
+    const listCommittedAfter = vi.fn(
+      async ({ sinceCommittedId = 0, limit } = {}) => {
+        const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
+        const normalizedLimit =
+          Number.isInteger(limit) && limit > 0 ? limit : committedEvents.length;
+        return committedEvents
+          .slice(startIndex, startIndex + normalizedLimit)
+          .map((event) => structuredClone(event));
+      },
+    );
+    const saveMaterializedViewCheckpoint = vi.fn(async () => {});
+    const reduceEventToState = ({ repositoryState, event }) =>
+      event?.payload?.state
+        ? structuredClone(event.payload.state)
+        : repositoryState;
+
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        listCommittedAfter,
+        loadMaterializedViewCheckpoint: async ({ viewName, partition }) => {
+          if (viewName === MAIN_VIEW_NAME && partition === "m") {
+            return {
+              viewName,
+              viewVersion: "1",
+              partition,
+              lastCommittedId: committedEvents.length,
+              value: structuredClone(mainState),
+            };
+          }
+
+          return checkpoints[partition];
+        },
+        loadMaterializedViewCheckpoints: async ({ partitions }) =>
+          partitions
+            .map((partition) => checkpoints[partition])
+            .filter(Boolean)
+            .map((checkpoint) => structuredClone(checkpoint)),
+        saveMaterializedViewCheckpoint,
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      initialRevision: committedEvents.length,
+      historyStats: {
+        committedCount: committedEvents.length,
+        latestCommittedId: committedEvents.length,
+        draftCount: 0,
+        latestDraftClock: 0,
+      },
+      loadEvents,
+      createInitialState: () => ({
+        scenes: {
+          items: {},
+          tree: [],
+        },
+      }),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducer(reduceEventToState),
+    });
+
+    listCommittedAfter.mockClear();
+
+    const overviews = await repository.loadSceneOverviews({ sceneIds });
+
+    expect(Object.keys(overviews)).toEqual(sceneIds);
+    expect(listCommittedAfter).toHaveBeenCalledTimes(2);
+    expect(
+      listCommittedAfter.mock.calls.map(([call]) => call.sinceCommittedId),
+    ).toEqual([0, 1]);
+    expect(saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
+  });
+
   it("pages committed history when activating a scene on a checkpoint-backed repository without drafts", async () => {
     const sceneId = "scene-1";
     const sectionId = "section-1";

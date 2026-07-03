@@ -26,6 +26,7 @@ const DEFAULT_SCENES_MAP_VIEWPORT = {
 const TOUCH_MINIMAP_HYDRATION_FRAME_COUNT = 6;
 const WHITEBOARD_CONNECTIONS_HYDRATION_FRAME_COUNT = 4;
 const SCENE_OVERVIEW_HYDRATION_FRAME_COUNT = 8;
+const SCENE_OVERVIEW_IDLE_TIMEOUT_MS = 4000;
 
 const getProjectErrorMessage = (result, fallbackMessage) => {
   return (
@@ -403,7 +404,7 @@ const cancelTouchMinimapHydrationFrame = (store) => {
     return;
   }
 
-  globalThis.cancelAnimationFrame?.(frameId);
+  cancelScheduledWork(frameId);
   store.clearTouchMinimapFrameId?.();
 };
 
@@ -413,7 +414,7 @@ const cancelWhiteboardConnectionsHydrationFrame = (store) => {
     return;
   }
 
-  globalThis.cancelAnimationFrame?.(frameId);
+  cancelScheduledWork(frameId);
   store.clearWhiteboardConnectionsFrameId?.();
 };
 
@@ -423,8 +424,31 @@ const cancelSceneOverviewRefreshFrame = (store) => {
     return;
   }
 
-  globalThis.cancelAnimationFrame?.(frameId);
+  cancelScheduledWork(frameId);
   store.clearSceneOverviewFrameId?.();
+};
+
+const cancelScheduledWork = (handle) => {
+  if (handle === undefined) {
+    return;
+  }
+
+  if (handle?.type === "idle") {
+    globalThis.cancelIdleCallback?.(handle.id);
+    return;
+  }
+
+  if (handle?.type === "timeout") {
+    globalThis.clearTimeout?.(handle.id);
+    return;
+  }
+
+  if (handle?.type === "animationFrame") {
+    globalThis.cancelAnimationFrame?.(handle.id);
+    return;
+  }
+
+  globalThis.cancelAnimationFrame?.(handle);
 };
 
 const scheduleAfterFrames = ({
@@ -454,6 +478,22 @@ const scheduleAfterFrames = ({
   };
 
   scheduleNextFrame(frameCount);
+};
+
+const scheduleIdleWork = ({ setFrameId, clearFrameId, callback } = {}) => {
+  if (typeof globalThis.requestIdleCallback === "function") {
+    const idleId = globalThis.requestIdleCallback(
+      () => {
+        clearFrameId?.();
+        callback?.();
+      },
+      { timeout: SCENE_OVERVIEW_IDLE_TIMEOUT_MS },
+    );
+    setFrameId?.({ type: "idle", id: idleId });
+    return;
+  }
+
+  callback?.();
 };
 
 const scheduleTouchMinimapHydration = ({ store, render } = {}) => {
@@ -517,12 +557,18 @@ const scheduleSceneOverviewRefresh = ({
     setFrameId: (frameId) => store.setSceneOverviewFrameId?.({ frameId }),
     clearFrameId: () => store.clearSceneOverviewFrameId?.(),
     callback: () => {
-      void refreshSceneOverviews({
-        store,
-        render,
-        projectService,
-        orderedSceneIds,
-        requestId,
+      scheduleIdleWork({
+        setFrameId: (frameId) => store.setSceneOverviewFrameId?.({ frameId }),
+        clearFrameId: () => store.clearSceneOverviewFrameId?.(),
+        callback: () => {
+          void refreshSceneOverviews({
+            store,
+            render,
+            projectService,
+            orderedSceneIds,
+            requestId,
+          });
+        },
       });
     },
   });
@@ -554,17 +600,6 @@ const hydrateDeferredWhiteboardWork = ({
 } = {}) => {
   scheduleWhiteboardConnectionsHydration({ store, render });
   scheduleTouchMinimapHydration({ store, render });
-
-  if (!store.selectIsTouchMode?.()) {
-    void refreshSceneOverviews({
-      store,
-      render,
-      projectService,
-      orderedSceneIds,
-      requestId,
-    });
-    return;
-  }
 
   scheduleSceneOverviewRefresh({
     store,
