@@ -210,7 +210,7 @@ template:
                                                   - $if item.subtitle:
                                                       - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.subtitle}
                                 $else:
-                                  - $if canAdd:
+                                  - $if canAdd && group.showEmptyAdd:
                                       - 'rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer style="grid-column: 1 / -1;"':
                                           - rtgl-svg svg=plus wh=24: null
                                           - rtgl-text: ${addText}

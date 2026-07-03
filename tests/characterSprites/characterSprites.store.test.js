@@ -10,12 +10,54 @@ import {
   selectAdjacentSpriteItemId,
   selectViewData,
   setFullImagePreviewDisplayMode,
+  setItems,
   setProjectResolution,
   setSelectedItemId,
   showFullImagePreview,
 } from "../../src/pages/characterSprites/characterSprites.store.js";
 
 describe("characterSprites store", () => {
+  it("marks media groups that contain child folders", () => {
+    const state = createInitialState();
+    state.characterName = "Hero";
+
+    setItems(
+      { state },
+      {
+        spritesData: {
+          tree: [
+            {
+              id: "parent-folder",
+              children: [{ id: "child-folder" }],
+            },
+          ],
+          items: {
+            "parent-folder": {
+              id: "parent-folder",
+              type: "folder",
+              name: "Parent",
+            },
+            "child-folder": {
+              id: "child-folder",
+              type: "folder",
+              name: "Child",
+            },
+          },
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.mediaGroups[0]).toEqual(
+      expect.objectContaining({
+        id: "parent-folder",
+        hasChildren: false,
+        hasChildFolders: true,
+      }),
+    );
+  });
+
   it("hides a resolved sprite item while its pending upload card is still visible", () => {
     const state = createInitialState();
     state.characterName = "Hero";

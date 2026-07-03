@@ -126,9 +126,10 @@ template:
                                                   - rtgl-view w=f p=md:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                 $else:
-                                  - 'rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer style="grid-column: 1 / -1;"':
-                                      - rtgl-svg svg=plus wh=24 c=pr: null
-                                      - rtgl-text s=md c=pr fw=500: ${addText}
+                                  - $if group.showEmptyAdd:
+                                      - 'rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer style="grid-column: 1 / -1;"':
+                                          - rtgl-svg svg=plus wh=24 c=pr: null
+                                          - rtgl-text s=md c=pr fw=500: ${addText}
             $elif searchQuery || selectedTagFilterValues.length > 0:
               - rtgl-view w=f h=400 av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: ${emptyMessage}

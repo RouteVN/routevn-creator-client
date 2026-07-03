@@ -144,13 +144,17 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
         ? options.getCopy
         : () => options.copy ?? {};
     const TEN_MINUTES_IN_MS = 10 * 60 * 1000;
-    const SIX_HOURS_IN_MS = 6 * 60 * 60 * 1000;
+    const TWO_HOURS_IN_MS = 2 * 60 * 60 * 1000;
 
-    const performCheck = async () => {
+    const performCheck = async ({ force = false } = {}) => {
       const lastCheckTime = await keyValueStore.get("lastCheckTime");
       const currentTime = Date.now();
 
-      if (!lastCheckTime || currentTime - lastCheckTime > SIX_HOURS_IN_MS) {
+      if (
+        force ||
+        !lastCheckTime ||
+        currentTime - lastCheckTime > TWO_HOURS_IN_MS
+      ) {
         try {
           await checkForUpdates(true, { copy: getCopy() });
         } finally {
@@ -159,7 +163,7 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
       }
     };
 
-    performCheck();
+    performCheck({ force: true });
 
     setInterval(performCheck, TEN_MINUTES_IN_MS);
   };

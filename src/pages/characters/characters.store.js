@@ -1,5 +1,6 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import { createFolderChildFolderIdSet } from "../../internal/ui/resourcePages/rootGroups.js";
 import {
   buildMobileResourcePageViewData,
   closeMobileResourceFileExplorerState,
@@ -935,6 +936,7 @@ export const selectViewData = ({ state, i18n }) => {
     toFlatItems(state.charactersData),
   );
   const rawFlatGroups = toFlatGroups(state.charactersData);
+  const folderIdsWithChildFolders = createFolderChildFolderIdSet(flatItems);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -1046,6 +1048,7 @@ export const selectViewData = ({ state, i18n }) => {
           ? {
               ...group,
               children: filteredChildren,
+              hasChildFolders: folderIdsWithChildFolders.has(group.id),
               hasChildren: filteredChildren.length > 0,
             }
           : null;
@@ -1054,21 +1057,21 @@ export const selectViewData = ({ state, i18n }) => {
   }
 
   const flatGroups = filteredGroups
-    .map((group) => ({
-      ...group,
-      children: (group.children || []).filter((item) =>
+    .map((group) => {
+      const children = (group.children || []).filter((item) =>
         matchesTagFilter({
           item,
           activeTagIds,
         }),
-      ),
-      hasChildren: (group.children || []).some((item) =>
-        matchesTagFilter({
-          item,
-          activeTagIds,
-        }),
-      ),
-    }))
+      );
+
+      return {
+        ...group,
+        children,
+        hasChildFolders: folderIdsWithChildFolders.has(group.id),
+        hasChildren: children.length > 0,
+      };
+    })
     .filter((group) => group.children.length > 0 || activeTagIds.length === 0);
 
   // Get edit item details

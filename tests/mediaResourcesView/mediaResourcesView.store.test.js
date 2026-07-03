@@ -61,6 +61,41 @@ describe("mediaResourcesView.store", () => {
     );
   });
 
+  it("does not show the empty upload card for groups with child folders", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: {
+        groups: [
+          {
+            id: "parent-folder",
+            children: [],
+            hasChildFolders: true,
+          },
+          {
+            id: "empty-folder",
+            children: [],
+          },
+        ],
+      },
+    });
+
+    expect(viewData.groups[0]).toEqual(
+      expect.objectContaining({
+        hasChildren: false,
+        hasChildFolders: true,
+        showEmptyUpload: false,
+      }),
+    );
+    expect(viewData.groups[1]).toEqual(
+      expect.objectContaining({
+        hasChildren: false,
+        hasChildFolders: false,
+        showEmptyUpload: true,
+      }),
+    );
+  });
+
   it("allows column zoom controls to drive mobile image grid columns", () => {
     const props = {
       mobileLayout: true,

@@ -1,5 +1,6 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import { createFolderChildFolderIdSet } from "../../internal/ui/resourcePages/rootGroups.js";
 import {
   buildTagViewData,
   closeCreateTagDialogState,
@@ -661,6 +662,7 @@ export const selectViewData = ({ state, i18n }) => {
     toFlatItems(state.textStylesData),
   );
   const rawFlatGroups = toFlatGroups(state.textStylesData);
+  const folderIdsWithChildFolders = createFolderChildFolderIdSet(flatItems);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -691,6 +693,7 @@ export const selectViewData = ({ state, i18n }) => {
           ? {
               ...group,
               children: filteredChildren,
+              hasChildFolders: folderIdsWithChildFolders.has(group.id),
               hasChildren: filteredChildren.length > 0,
             }
           : undefined;
@@ -727,9 +730,8 @@ export const selectViewData = ({ state, i18n }) => {
   };
 
   // Add text style preview data. Collapse state is owned by the center view.
-  const flatGroups = tagFilteredGroups.map((group) => ({
-    ...group,
-    children: (group.children ?? []).map((item) => {
+  const flatGroups = tagFilteredGroups.map((group) => {
+    const children = (group.children ?? []).map((item) => {
       const fontData = getFontData(item.fontId);
       return {
         ...item,
@@ -744,8 +746,15 @@ export const selectViewData = ({ state, i18n }) => {
             ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
             : "",
       };
-    }),
-  }));
+    });
+
+    return {
+      ...group,
+      hasChildFolders: folderIdsWithChildFolders.has(group.id),
+      hasChildren: children.length > 0,
+      children,
+    };
+  });
 
   // Helper function to get color name from ID
   const getColorName = (colorId) => {
