@@ -20,7 +20,7 @@ describe("resource type navigation", () => {
     expect(mobileViewData.items.map((item) => item.id)).toEqual(["controls"]);
   });
 
-  it("hides appearance from settings resource menus", () => {
+  it("shows appearance in settings resource menus", () => {
     const desktopViewData = selectDesktopResourceTypesViewData({
       props: {
         resourceCategory: "settings",
@@ -34,11 +34,14 @@ describe("resource type navigation", () => {
       },
     });
 
-    expect(desktopViewData.items.map((item) => item.id)).toEqual(["about"]);
+    expect(desktopViewData.items.map((item) => item.id)).toEqual([
+      "about",
+      "appearance",
+    ]);
     expect(
       mobileSidebarViewData.sections.flatMap((section) =>
         section.items.map((item) => item.id),
       ),
-    ).toEqual(["project", "about"]);
+    ).toEqual(["project", "about", "appearance"]);
   });
 });

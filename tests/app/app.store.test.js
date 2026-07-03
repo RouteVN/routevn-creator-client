@@ -24,11 +24,13 @@ describe("app.store repository loading progress", () => {
     );
   });
 
-  it("does not resolve the hidden appearance route", () => {
+  it("resolves the appearance route", () => {
     const state = createInitialState();
     state.currentRoute = "/project/appearance";
 
-    expect(selectViewData({ state }).currentRoutePattern).toBeUndefined();
+    expect(selectViewData({ state }).currentRoutePattern).toBe(
+      "/project/appearance",
+    );
   });
 
   it("derives a percentage-based loading message and bar width", () => {
