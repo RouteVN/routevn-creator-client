@@ -3,3 +3,6 @@
 !docker/appimage/
 !docker/appimage/build-in-container.sh
 !docker/appimage/ubuntu-22.04.Dockerfile
+!docker/aur/
+!docker/aur/build-in-container.sh
+!docker/aur/archlinux.Dockerfile
