@@ -441,6 +441,9 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+
   const cleanupSubscriptions = mountSubscriptions(deps);
   return async () => {
     await flushQueuedLayoutEditorUpdates(deps);
@@ -613,10 +616,47 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId: itemId });
+  if (store.selectIsTouchMode?.() && store.selectIsMobileFileExplorerOpen?.()) {
+    store.setDetailPanelSelectedItemId({
+      itemId,
+    });
+    store.closeMobileFileExplorer();
+    render();
+    return;
+  }
+
   render();
   scheduleDetailPanelSelectionRender(deps, {
     itemId,
   });
+};
+
+export const handleNodeButtonClick = (deps) => {
+  const { refs, render, store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+
+  store.openMobileFileExplorer();
+  render();
+
+  if (selectedItemId) {
+    scheduleAfterNextPaint(() => {
+      refs.fileExplorer?.selectItem?.({ itemId: selectedItemId });
+    });
+  }
+};
+
+export const handlePreviewButtonClick = (deps) => {
+  const { render, store } = deps;
+
+  store.setDetailPanelSelectedItemId({ itemId: undefined });
+  render();
+};
+
+export const handleMobileFileExplorerClose = (deps) => {
+  const { render, store } = deps;
+
+  store.closeMobileFileExplorer();
+  render();
 };
 
 export const handleAddLayoutClick = handleRenderOnly;
