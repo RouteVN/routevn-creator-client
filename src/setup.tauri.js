@@ -51,8 +51,8 @@ const updater = updatesEnabled
       keyValueStore: appDb,
       openUrl,
       appVersion,
-      fetchManualUpdateManifest: (url) =>
-        invoke("fetch_manual_update_manifest", { url }),
+      fetchManualUpdateManifest: (currentVersion) =>
+        invoke("fetch_manual_update_manifest", { currentVersion }),
     })
   : undefined;
 

@@ -20,14 +20,21 @@ const createGlobalUI = () => ({
   showConfirm: vi.fn(() => Promise.resolve(true)),
 });
 
-const createUpdaterClient = ({ globalUI = createGlobalUI(), openUrl } = {}) => {
-  const fetchManualUpdateManifest = vi.fn(() =>
-    Promise.resolve({
-      version: "1.7.3",
-      date: "2026-07-03",
-      body: "Fix packaging.",
-    }),
-  );
+const createUpdaterClient = ({
+  globalUI = createGlobalUI(),
+  manifest = {
+    version: "1.7.3",
+    date: "2026-07-03",
+    body: "Fix packaging.",
+    platforms: {
+      "linux-x86_64": {
+        url: "https://routevn.com/en/creator/download/",
+      },
+    },
+  },
+  openUrl,
+} = {}) => {
+  const fetchManualUpdateManifest = vi.fn(() => Promise.resolve(manifest));
 
   const updater = createUpdater({
     globalUI,
@@ -38,7 +45,6 @@ const createUpdaterClient = ({ globalUI = createGlobalUI(), openUrl } = {}) => {
     appVersion: "1.7.2",
     openUrl: openUrl ?? vi.fn(() => Promise.resolve()),
     fetchManualUpdateManifest,
-    updateManifestUrl: "https://static-1.routevn.com/test-latest.json",
   });
 
   return {
@@ -85,9 +91,7 @@ describe("tauri updater", () => {
       date: "2026-07-03",
       body: "Fix packaging.",
     });
-    expect(fetchManualUpdateManifest).toHaveBeenCalledWith(
-      "https://static-1.routevn.com/test-latest.json?target=linux&arch=x86_64&currentVersion=1.7.2",
-    );
+    expect(fetchManualUpdateManifest).toHaveBeenCalledWith("1.7.2");
     expect(checkMock).not.toHaveBeenCalled();
     expect(globalUI.showConfirm).toHaveBeenCalledWith({
       message: "Update 1.7.3 is available.\nFix packaging.",
@@ -97,5 +101,37 @@ describe("tauri updater", () => {
     });
     expect(openUrl).toHaveBeenCalledWith(DOWNLOAD_PAGE_URL);
     expect(relaunchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not prompt on Linux when the manifest has no x86_64 platform", async () => {
+    vi.stubGlobal("navigator", {
+      platform: "Linux x86_64",
+      userAgent: "RouteVN Creator Linux",
+    });
+
+    const globalUI = createGlobalUI();
+    const openUrl = vi.fn(() => Promise.resolve());
+    const { fetchManualUpdateManifest, updater } = createUpdaterClient({
+      globalUI,
+      manifest: {
+        version: "1.7.3",
+        date: "2026-07-03",
+        body: "Fix packaging.",
+        platforms: {
+          "windows-x86_64": {
+            url: "https://static-1.routevn.com/windows.msi",
+          },
+        },
+      },
+      openUrl,
+    });
+
+    const result = await updater.checkForUpdates(false);
+
+    expect(result).toBeNull();
+    expect(fetchManualUpdateManifest).toHaveBeenCalledWith("1.7.2");
+    expect(globalUI.showConfirm).not.toHaveBeenCalled();
+    expect(openUrl).not.toHaveBeenCalled();
+    expect(checkMock).not.toHaveBeenCalled();
   });
 });

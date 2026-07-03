@@ -2,10 +2,9 @@ import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
 const LINUX_DOWNLOAD_URL = "https://routevn.com/en/creator/download/";
-const UPDATE_MANIFEST_URL =
-  "https://static-1.routevn.com/routevn-creator-client/latestv1.json";
 const LINUX_UPDATE_TARGET = "linux";
 const LINUX_UPDATE_ARCH = "x86_64";
+const LINUX_UPDATE_PLATFORM = `${LINUX_UPDATE_TARGET}-${LINUX_UPDATE_ARCH}`;
 
 const isMacOs = () => {
   if (typeof navigator === "undefined") {
@@ -84,15 +83,8 @@ const isNewerVersion = (version, currentVersion) => {
   return false;
 };
 
-const getManualUpdateManifestUrl = (url, currentVersion) => {
-  const manifestUrl = new URL(url);
-  manifestUrl.searchParams.set("target", LINUX_UPDATE_TARGET);
-  manifestUrl.searchParams.set("arch", LINUX_UPDATE_ARCH);
-  manifestUrl.searchParams.set(
-    "currentVersion",
-    normalizeVersion(currentVersion),
-  );
-  return manifestUrl.toString();
+const hasManualLinuxUpdatePlatform = (manifest = {}) => {
+  return Boolean(manifest.platforms?.[LINUX_UPDATE_PLATFORM]);
 };
 
 const createUpdater = ({
@@ -101,7 +93,6 @@ const createUpdater = ({
   openUrl,
   appVersion,
   fetchManualUpdateManifest,
-  updateManifestUrl = UPDATE_MANIFEST_URL,
 }) => {
   let updateAvailable = false;
   let updateInfo = null;
@@ -195,11 +186,13 @@ const createUpdater = ({
       throw new Error("Manual update manifest fetch is unavailable.");
     }
 
-    const manifestUrl = getManualUpdateManifestUrl(
-      updateManifestUrl,
-      appVersion,
+    const manifest = await fetchManualUpdateManifest(
+      normalizeVersion(appVersion),
     );
-    const manifest = await fetchManualUpdateManifest(manifestUrl);
+    if (!hasManualLinuxUpdatePlatform(manifest)) {
+      return null;
+    }
+
     const version = normalizeVersion(manifest?.version);
     if (!isNewerVersion(version, appVersion)) {
       return null;
