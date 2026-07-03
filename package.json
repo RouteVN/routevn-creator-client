@@ -1,6 +1,6 @@
 {
   "name": "routevn-creator-client",
-  "description": "Free and Open Source tool to create Visual Novels without any coding. Live preview, asset manager, layout editor. Fast, intuitive, reliable. Join our Discord server to stay updated.",
+  "description": "Free and Open Source tool to create Visual Novels without any coding. Live preview, asset manager, layout editor. Fast, intuitive, reliable. Follow us on social media to stay updated.",
   "homepage": "https://routevn.com",
   "keywords": [
     "game-engine",
@@ -82,8 +82,9 @@
     "tauri:build": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json",
     "tauri:build:appimage": "./scripts/tauri-build-appimage.sh",
     "tauri:build:appimage:docker": "./scripts/tauri-build-appimage-docker.sh",
-    "tauri:build:linux:deb": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --bundles deb",
-    "tauri:build:linux:rpm": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --bundles rpm",
+    "tauri:validate:linux-packaging": "node scripts/validate-linux-packaging.js",
+    "tauri:build:linux:deb": "bun run build:tauri && rm -rf src-tauri/target/release/bundle/deb && tauri build --config src-tauri/tauri.prod.conf.json --config src-tauri/tauri.linux-packages.conf.json --bundles deb && node scripts/validate-linux-packaging.js --deb",
+    "tauri:build:linux:rpm": "bun run build:tauri && rm -rf src-tauri/target/release/bundle/rpm && tauri build --config src-tauri/tauri.prod.conf.json --config src-tauri/tauri.linux-packages.conf.json --bundles rpm && node scripts/validate-linux-packaging.js --rpm",
     "tauri:build:linux:aur": "./scripts/tauri-build-linux-aur.sh",
     "tauri:build:win": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --runner cargo-xwin --target x86_64-pc-windows-msvc",
     "tauri:build:win:steam": "./scripts/tauri-build-win-steam.sh",

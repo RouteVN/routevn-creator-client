@@ -9,9 +9,9 @@
     <name>RouteVN Team</name>
   </developer>
   <description>
-    <p>Free and Open Source tool to create Visual Novels without any coding. Live preview, asset manager, layout editor. Fast, intuitive, reliable. Join our Discord server to stay updated.</p>
+    <p>Free and Open Source tool to create Visual Novels without any coding. Live preview, asset manager, layout editor. Fast, intuitive, reliable. Follow us on social media to stay updated.</p>
   </description>
-  <launchable type="desktop-id">RouteVN Creator.desktop</launchable>
+  <launchable type="desktop-id">routevn-creator.desktop</launchable>
   <icon type="stock">routevn-creator</icon>
   <url type="homepage">https://routevn.com</url>
   <url type="vcs-browser">https://github.com/RouteVN/routevn-creator-client</url>

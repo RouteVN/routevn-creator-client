@@ -1,0 +1,14 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "routevn-creator",
+  "bundle": {
+    "linux": {
+      "deb": {
+        "desktopTemplate": "assets/linux-desktop.desktop.hbs"
+      },
+      "rpm": {
+        "desktopTemplate": "assets/linux-desktop.desktop.hbs"
+      }
+    }
+  }
+}
