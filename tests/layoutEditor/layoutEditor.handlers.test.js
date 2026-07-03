@@ -287,6 +287,35 @@ describe("layoutEditor.handleSaveButtonClick", () => {
       message: "Layout preview saved.",
     });
   });
+
+  it("keeps mobile preview saves from resyncing an unmounted file explorer", async () => {
+    const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback) => {
+      callback();
+      return 1;
+    };
+
+    try {
+      const deps = createLayoutEditorDeps();
+      deps.store.selectIsTouchMode = vi.fn(() => true);
+      deps.store.selectSelectedItemId = vi.fn(() => "node-1");
+      deps.store.setSelectedItemId = vi.fn();
+      deps.store.setDetailPanelSelectedItemId = vi.fn();
+
+      await handleSaveButtonClick(deps);
+
+      expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+        itemId: "node-1",
+      });
+      expect(deps.store.setDetailPanelSelectedItemId).not.toHaveBeenCalled();
+      expect(deps.appService.showAlert).not.toHaveBeenCalled();
+      expect(deps.appService.showToast).toHaveBeenCalledWith({
+        message: "Layout preview saved.",
+      });
+    } finally {
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    }
+  });
 });
 
 describe("layoutEditor.handleLayoutEditPanelUpdateHandler", () => {

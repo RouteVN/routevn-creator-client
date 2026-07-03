@@ -546,6 +546,7 @@ export const handleSaveButtonClick = async (deps) => {
 
     await refreshLayoutEditorData(deps, {
       selectedItemId: store.selectSelectedItemId(),
+      syncDetailPanel: !store.selectIsTouchMode?.(),
     });
     appService.showToast({
       message: formatI18nCopy(
@@ -674,7 +675,9 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
   );
   if (payload.selectedItemId) {
     store.setSelectedItemId({ itemId: payload.selectedItemId });
-    store.setDetailPanelSelectedItemId({ itemId: payload.selectedItemId });
+    if (payload.syncDetailPanel !== false) {
+      store.setDetailPanelSelectedItemId({ itemId: payload.selectedItemId });
+    }
   }
   render();
   if (payload.selectedItemId) {
@@ -683,7 +686,7 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
         return;
       }
 
-      refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
+      refs.fileExplorer?.selectItem?.({ itemId: payload.selectedItemId });
     });
   }
 };
