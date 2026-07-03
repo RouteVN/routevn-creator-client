@@ -88,6 +88,7 @@
     "tauri:build:linux:rpm": "bun run build:tauri && rm -rf src-tauri/target/release/bundle/rpm && tauri build --config src-tauri/tauri.prod.conf.json --config src-tauri/tauri.linux-packages.conf.json --bundles rpm && node scripts/validate-linux-packaging.js --rpm",
     "tauri:build:linux:rpm:docker": "./scripts/tauri-build-linux-package-docker.sh rpm",
     "tauri:build:linux:aur": "./scripts/tauri-build-linux-aur.sh",
+    "tauri:build:linux:aur:docker": "./scripts/tauri-build-linux-aur-docker.sh",
     "tauri:build:win": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --runner cargo-xwin --target x86_64-pc-windows-msvc",
     "tauri:build:win:steam": "./scripts/tauri-build-win-steam.sh",
     "tauri:build:mac": "./scripts/tauri-build-mac.sh",
