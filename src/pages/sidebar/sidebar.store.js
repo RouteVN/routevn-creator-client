@@ -171,7 +171,11 @@ export const selectViewData = ({ state, i18n }) => {
     }
 
     // For settings
-    if (currentPath === "/project/about" || currentPath === "/project/user") {
+    if (
+      currentPath === "/project/about" ||
+      currentPath === "/project/appearance" ||
+      currentPath === "/project/user"
+    ) {
       const settingsItem = state.items.find(
         (item) => item.id === SIDEBAR_ITEM_SETTINGS,
       );

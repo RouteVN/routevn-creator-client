@@ -10,17 +10,24 @@ refs:
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f style="min-width: 0; min-height: 0;"':
-          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
-              - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-          - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
-              - 'rtgl-view w=f h=f p=lg sv style="min-width: 0;"':
+          - $if showExplorerPanel:
+              - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+                  - rtgl-view slot="content" w=f h=f:
+                      - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+          - 'rtgl-view w=1fg h=f p=${contentPadding} d=v style="min-width: 0; min-height: 0;"':
+              - $if isTouchMode:
+                  - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+                      - rtgl-view w=f d=h av=c g=md wrap:
+                          - rtgl-view av=c g=sm d=h w=1fg:
+                              - rtgl-text: ${title}
+                $else:
                   - rtgl-text s=h2: ${title}
-                  - rtgl-view g=sm mt=lg:
+              - 'rtgl-view w=f h=1fg mt=${contentBodyMarginTop} p=${contentBodyPadding} sv style="min-width: 0; min-height: 0;"':
+                  - rtgl-view g=sm:
                       - rtgl-text s=h4: ${themesTitle}
                   - rtgl-view d=h g=lg wrap mt=lg:
                       - $for item, i in themes:
-                          - 'rtgl-view#themeCard${i} data-theme=${item.id} d=v g=md w=320 p=md bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} bgc=bg br=md cur=pointer':
+                          - 'rtgl-view#themeCard${i} data-theme=${item.id} d=v g=md w=320 sm-w=f p=md bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} bgc=bg br=md cur=pointer':
                               - 'rtgl-view d=v g=sm w=f p=md br=md bw=xs style="background-color: ${item.previewPageBackground}; border-color: ${item.previewBorder}; min-height: 152px;"':
                                   - 'rtgl-view h=88 w=f br=md style="background-color: ${item.previewPanelBackground};"': null
                                   - rtgl-view d=h g=sm:

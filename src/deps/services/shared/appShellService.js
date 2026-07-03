@@ -3,6 +3,12 @@ import {
   createNavigationTiming,
   markNavigationTiming,
 } from "../../../internal/navigationTiming.js";
+import {
+  APP_THEME_CLASS_NAMES,
+  getThemeClassName,
+  isDarkTheme,
+  normalizeTheme,
+} from "../../../internal/theme.js";
 
 const createNoopUpdater = () => ({
   checkForUpdates: async () => null,
@@ -12,10 +18,6 @@ const createNoopUpdater = () => ({
   isUpdateAvailable: () => false,
 });
 
-const normalizeTheme = (theme) => {
-  return theme === "light" ? "light" : "dark";
-};
-
 const applyThemeToDocument = (
   theme,
   root = typeof document === "undefined" ? undefined : document,
@@ -24,13 +26,23 @@ const applyThemeToDocument = (
   const body = root?.body;
   const documentElement = root?.documentElement;
 
-  if (body?.classList) {
-    body.classList.toggle("dark", resolvedTheme === "dark");
-  }
+  [body, documentElement].forEach((element) => {
+    if (!element?.classList) {
+      return;
+    }
 
-  if (documentElement?.classList) {
-    documentElement.classList.toggle("dark", resolvedTheme === "dark");
-  }
+    element.classList.toggle("dark", isDarkTheme(resolvedTheme));
+    APP_THEME_CLASS_NAMES.forEach((className) => {
+      element.classList.toggle(
+        className,
+        className === getThemeClassName(resolvedTheme),
+      );
+    });
+
+    if (element.dataset) {
+      element.dataset.rvnTheme = resolvedTheme;
+    }
+  });
 
   return resolvedTheme;
 };

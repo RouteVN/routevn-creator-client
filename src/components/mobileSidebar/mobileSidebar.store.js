@@ -97,6 +97,12 @@ const settingsItems = [
     path: "/project/about",
     icon: "info",
   },
+  {
+    id: "appearance",
+    label: "Appearance",
+    path: "/project/appearance",
+    icon: "sun",
+  },
 ];
 
 const assetsSections = [

@@ -87,6 +87,11 @@ const settingsItems = [
     name: "About",
     path: "/project/about",
   },
+  {
+    id: "appearance",
+    name: "Appearance",
+    path: "/project/appearance",
+  },
   // {
   //   id: "user",
   //   name: "User",

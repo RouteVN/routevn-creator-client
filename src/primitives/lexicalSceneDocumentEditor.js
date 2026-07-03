@@ -507,7 +507,7 @@ const STYLES = `
     border: 0;
     border-radius: 0;
     background: transparent;
-    color: rgba(248, 250, 252, 0.96);
+    color: var(--foreground);
     font-family: inherit;
     font-size: var(--scene-document-editor-font-size);
     font-weight: 400;
@@ -774,7 +774,7 @@ const STYLES = `
   }
 
   .preview-dialogue-label {
-    color: rgba(148, 163, 184, 0.92);
+    color: var(--muted-foreground);
     font-size: 12px;
     line-height: 1;
   }
@@ -856,7 +856,7 @@ const STYLES = `
     position: absolute;
     left: calc(var(--left-gutter-width) + var(--editor-inline-padding));
     top: 4px;
-    color: rgba(148, 163, 184, 0.88);
+    color: var(--muted-foreground);
     pointer-events: none;
     user-select: none;
   }
