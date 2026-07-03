@@ -64,6 +64,9 @@ describe("projects view", () => {
     );
 
     expect(projectsView).toContain(
+      'rtgl-view w=f d=v pl=md style="max-width: 1280px;"',
+    );
+    expect(projectsView).not.toContain(
       'rtgl-view w=f d=v ph=md style="max-width: 1280px;"',
     );
     expect(projectsView).not.toContain(

@@ -127,7 +127,21 @@ describe("mobile resource grid zoom wiring", () => {
     expect(importIndex).toBeLessThan(menuIndex);
   });
 
-  it("aligns item surfaces with the navbar inset in shared resource views", () => {
+  it("uses a narrow webkit scrollbar on the shared media scroll container", () => {
+    const mediaView = readFileSync(
+      new URL(
+        "../../src/components/mediaResourcesView/mediaResourcesView.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(mediaView).toContain("#scrollContainer::-webkit-scrollbar");
+    expect(mediaView).toContain("width: 1px");
+    expect(mediaView).toContain("height: 1px");
+  });
+
+  it("uses left-only item surface inset in shared resource views", () => {
     const sharedViews = [
       "mediaResourcesView/mediaResourcesView.view.yaml",
       "catalogResourcesView/catalogResourcesView.view.yaml",
@@ -142,7 +156,8 @@ describe("mobile resource grid zoom wiring", () => {
         "utf8",
       );
 
-      expect(view).toContain("ph=md pos=rel");
+      expect(view).toContain("pl=md pos=rel");
+      expect(view).not.toContain("ph=md pos=rel");
       expect(view).not.toContain("rtgl-grid w=f ph=sm");
       expect(view).not.toContain("rtgl-view w=f d=v ph=sm");
       expect(view).not.toContain("rtgl-view w=f mb=md p=sm");
