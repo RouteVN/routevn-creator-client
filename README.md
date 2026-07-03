@@ -77,6 +77,7 @@ npm i -g rtgl
 ```
 
 Install dependencies:
+
 ```shell
 bun install
 ```
@@ -86,6 +87,7 @@ bun install
 After installing dependencies, Husky will automatically set up git hooks. The pre-push hook will run `bun run lint` to ensure code quality before pushing changes.
 
 If you're setting up the project for the first time, make sure to run:
+
 ```shell
 bun run prepare
 ```
@@ -93,6 +95,7 @@ bun run prepare
 This ensures all git hooks are properly configured.
 
 **Note:** If you encounter errors when pushing due to linting issues, run:
+
 ```shell
 bun run lint:fix
 ```
@@ -104,6 +107,7 @@ This will automatically fix most linting errors. After fixing, you can commit th
 The project uses platform-specific entry points that are automatically configured during build:
 
 Run the project in watch mode:
+
 ```shell
 bun run watch:web
 ```
@@ -118,6 +122,7 @@ bunx serve _site -p 3001
 Open: http://localhost:3001/project
 
 **Build Commands:**
+
 - `bun run build` or `bun run build:web` - Build for web platform
 - `bun run watch:web` - Watch mode for web development
 
@@ -128,6 +133,7 @@ RouteVN Creator also supports running as a native desktop application using [Tau
 **Prerequisites:**
 
 Install Rust and system dependencies:
+
 ```shell
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -138,7 +144,7 @@ sudo apt update
 sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
 # Arch Linux:
-sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl libayatana-appindicator librsvg
+sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl libayatana-appindicator librsvg gst-libav gst-plugins-good gst-plugins-bad gst-plugins-ugly
 
 # Fedora/RHEL:
 sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libappindicator-gtk3-devel librsvg2-devel
@@ -153,16 +159,19 @@ The Tauri build automatically uses the desktop-specific configuration (`src/setu
 Add `env.dev` to your env variables. It is required to set the private key for the updater
 
 Start dev server from:
+
 ```shell
 bun run watch:tauri
 ```
 
 Run the Tauri app in development mode:
+
 ```shell
 bun run tauri:dev
 ```
 
 For cross-compilation to Windows from Linux/macOS:
+
 ```shell
 bun run tauri:dev:win
 ```
@@ -172,37 +181,47 @@ bun run tauri:dev:win
 For production we build installer using NSIS: https://v2.tauri.app/distribute/windows-installer/
 
 Build the desktop application:
+
 ```shell
 bun run tauri:build
 ```
 
 Build the Linux AppImage on the host:
+
 ```shell
 bun run tauri:build:linux:appimage
 ```
 
 Build the Linux AppImage in an Ubuntu 22.04 Docker builder for a more
 compatible release baseline:
+
 ```shell
 bun run tauri:build:linux:appimage:docker
 ```
+
 The Docker-built AppImage, signature, and checksum are copied to
 `dist/appimage/ubuntu-22.04/`.
 
 Build Linux native packages in Docker:
+
 ```shell
 bun run tauri:build:linux:deb:docker
 bun run tauri:build:linux:rpm:docker
+bun run tauri:build:linux:aur:docker
 ```
+
 The Docker-built packages and checksums are copied to
-`dist/linux-packages/ubuntu-22.04/` and `dist/linux-packages/fedora-43/`.
+`dist/linux-packages/ubuntu-22.04/`, `dist/linux-packages/fedora-43/`, and
+`dist/aur/`.
 
 Cross-compile for Windows:
+
 ```shell
 bun run tauri:build:win
 ```
 
 Build and notarize the macOS DMG:
+
 ```shell
 bun run tauri:build:mac
 ```
@@ -212,16 +231,19 @@ For the Apple signing and notarization setup, see [docs/runbooks/macos-signing-a
 The built application will be available in `src-tauri/target/release/` with platform-specific installers in `src-tauri/target/release/bundle/`.
 
 **Build Commands:**
+
 - `bun run build:tauri` - Build frontend for Tauri platform
 - `bun run watch:tauri` - Watch mode for Tauri development
 - `bun run tauri:build` - Build complete desktop application
 
 **Platform Support:**
+
 - **Windows**: `.exe` installer and `.msi` package
-- **macOS**: `.app` bundle and `.dmg` installer  
+- **macOS**: `.app` bundle and `.dmg` installer
 - **Linux**: `.AppImage`, `.deb`, and `.rpm` packages
 
 **Features:**
+
 - Native file system access
 - Better performance than web version
 - Offline-first with local storage
