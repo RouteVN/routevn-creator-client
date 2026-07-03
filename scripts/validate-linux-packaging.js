@@ -16,7 +16,12 @@ const legacyPackageName = packageName.replace(
   ["route", "vn"].join("-"),
 );
 const forbiddenCopy = "Join our Discord server to stay updated.";
-const expectedCopy = "Follow us on social media to stay updated.";
+const expectedSocialCopy = "Follow us on social media to stay updated.";
+const stalePackageDescription = [
+  "create",
+  "visual novels",
+  "without any coding",
+].join(" ");
 
 const args = new Set(process.argv.slice(2));
 const failures = [];
@@ -55,6 +60,7 @@ function expect(condition, message) {
 
 function scanTextFile(relativePath) {
   const contents = readText(relativePath);
+  const lowerContents = contents.toLowerCase();
 
   expect(
     !contents.includes(legacyPackageName),
@@ -63,6 +69,10 @@ function scanTextFile(relativePath) {
   expect(
     !contents.includes(forbiddenCopy),
     `${relativePath} contains stale Discord update copy`,
+  );
+  expect(
+    !lowerContents.includes(stalePackageDescription),
+    `${relativePath} contains stale package description copy`,
   );
 }
 
@@ -98,6 +108,10 @@ function inspectBinary(filePath, { requirePackageName }) {
     !contents.includes(Buffer.from(forbiddenCopy)),
     `${path.relative(repoRoot, filePath)} contains stale Discord update copy`,
   );
+  expect(
+    !contents.toString("utf8").toLowerCase().includes(stalePackageDescription),
+    `${path.relative(repoRoot, filePath)} contains stale package description copy`,
+  );
   if (requirePackageName) {
     expect(
       contents.includes(Buffer.from(packageName)),
@@ -109,20 +123,19 @@ function inspectBinary(filePath, { requirePackageName }) {
 function inspectArtifact(kind, extension) {
   const tauriConfig = readJson("src-tauri/tauri.conf.json");
   const bundleDirectory = path.join(getTargetDir(), "release", "bundle", kind);
-  const artifactPrefix =
+  const packageRelease = tauriConfig.bundle?.linux?.rpm?.release ?? "1";
+  const expectedArtifactName =
     kind === "deb"
-      ? `${packageName}_${tauriConfig.version}`
-      : `${packageName}-${tauriConfig.version}`;
+      ? `${packageName}_${tauriConfig.version}_${debArchitecture}${extension}`
+      : `${packageName}-${tauriConfig.version}-${packageRelease}.${rpmArchitecture}${extension}`;
   const artifacts = collectFiles(
     bundleDirectory,
-    (filePath) =>
-      path.basename(filePath).startsWith(artifactPrefix) &&
-      filePath.endsWith(extension),
+    (filePath) => path.basename(filePath) === expectedArtifactName,
   );
 
   expect(
     artifacts.length > 0,
-    `No ${kind} artifact found for ${packageName} ${tauriConfig.version}`,
+    `No ${kind} artifact found for ${expectedArtifactName}`,
   );
 
   for (const artifact of artifacts) {
@@ -136,6 +149,10 @@ function inspectArtifact(kind, extension) {
       artifactName.endsWith(expectedArchitectureSuffix),
       `${artifactName} must include ${kind === "deb" ? debArchitecture : rpmArchitecture} architecture`,
     );
+    expect(
+      artifactName === expectedArtifactName,
+      `${artifactName} must be ${expectedArtifactName}`,
+    );
 
     inspectBinary(artifact, { requirePackageName: kind === "rpm" });
   }
@@ -144,6 +161,7 @@ function inspectArtifact(kind, extension) {
 const sourceFiles = [
   "package.json",
   "src-tauri/tauri.conf.json",
+  "src-tauri/Cargo.toml",
   "src-tauri/tauri.prod.conf.json",
   "src-tauri/tauri.linux.conf.json",
   "src-tauri/tauri.linux-packages.conf.json",
@@ -163,10 +181,13 @@ const linuxConfig = readJson("src-tauri/tauri.linux.conf.json");
 const metainfo = readText("src-tauri/assets/com.routevn.creator.metainfo.xml");
 const desktopTemplate = readText("src-tauri/assets/linux-desktop.desktop.hbs");
 const aurPkgbuild = readText("packaging/aur/PKGBUILD");
+const aurSrcinfo = readText("packaging/aur/.SRCINFO");
+const aurPkgrel = aurPkgbuild.match(/^pkgrel=(\d+)$/m)?.[1];
 
 expect(
-  packageJson.description.includes(expectedCopy),
-  "package.json description does not use social media update copy",
+  packageJson.description.startsWith(displayName) &&
+    packageJson.description.includes(expectedSocialCopy),
+  "package.json description must use social media update copy",
 );
 expect(
   tauriConfig.productName === displayName,
@@ -177,8 +198,9 @@ expect(
   `Tauri mainBinaryName must be ${packageName}`,
 );
 expect(
-  tauriConfig.bundle.longDescription.includes(expectedCopy),
-  "Tauri longDescription does not use social media update copy",
+  tauriConfig.bundle.longDescription.startsWith(displayName) &&
+    tauriConfig.bundle.longDescription.includes(expectedSocialCopy),
+  "Tauri longDescription must use social media update copy",
 );
 expect(
   tauriConfig.bundle.shortDescription === displayName,
@@ -207,8 +229,12 @@ expect(
   "AppStream binary must be routevn-creator",
 );
 expect(
-  metainfo.includes(expectedCopy),
-  "AppStream description does not use social media update copy",
+  metainfo.includes(`<p>${displayName}. ${expectedSocialCopy}</p>`),
+  "AppStream description must use social media update copy",
+);
+expect(
+  metainfo.includes(`<release version="${tauriConfig.version}"`),
+  `AppStream release version must be ${tauriConfig.version}`,
 );
 expect(
   desktopTemplate.includes(`Name=${displayName}`),
@@ -217,6 +243,19 @@ expect(
 expect(
   aurPkgbuild.includes("pkgname=routevn-creator"),
   "AUR pkgname must be routevn-creator",
+);
+expect(
+  aurPkgbuild.includes(`pkgdesc="${displayName}"`),
+  "AUR pkgdesc must use RouteVN Creator",
+);
+expect(Boolean(aurPkgrel), "AUR pkgrel must be set");
+expect(
+  aurSrcinfo.includes(`\tpkgrel = ${aurPkgrel}`),
+  "AUR .SRCINFO pkgrel must match PKGBUILD",
+);
+expect(
+  aurSrcinfo.includes(`\tpkgdesc = ${displayName}`),
+  "AUR .SRCINFO pkgdesc must use RouteVN Creator",
 );
 expect(
   aurPkgbuild.includes("Comment=RouteVN Creator"),

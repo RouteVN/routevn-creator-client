@@ -1,7 +1,7 @@
 [package]
 name = "routevn-creator"
 version = "1.7.2"
-description = "Free and Open Source tool to create Visual Novels without any coding."
+description = "RouteVN Creator. Follow us on social media to stay updated."
 authors = ["Yuusoft"]
 license = "MIT"
 repository = "https://github.com/RouteVN/routevn-creator-client"

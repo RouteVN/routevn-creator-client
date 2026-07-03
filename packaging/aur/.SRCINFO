@@ -1,7 +1,7 @@
 pkgbase = routevn-creator
-	pkgdesc = Free and Open Source tool to create Visual Novels without any coding.
+	pkgdesc = RouteVN Creator
 	pkgver = 1.7.2
-	pkgrel = 2
+	pkgrel = 3
 	url = https://routevn.com
 	arch = x86_64
 	license = MIT

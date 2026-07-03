@@ -2,8 +2,8 @@
 
 pkgname=routevn-creator
 pkgver=1.7.2
-pkgrel=2
-pkgdesc="Free and Open Source tool to create Visual Novels without any coding."
+pkgrel=3
+pkgdesc="RouteVN Creator"
 arch=("x86_64")
 url="https://routevn.com"
 license=("MIT")
