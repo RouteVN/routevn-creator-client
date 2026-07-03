@@ -3,7 +3,6 @@ html {
   margin: 0;
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
-  scrollbar-gutter: stable both-edges;
   overscroll-behavior: none;
   overflow: hidden;
   position: fixed;
@@ -49,7 +48,6 @@ body::-webkit-scrollbar {
 body {
   -ms-overflow-style: none;
   scrollbar-width: none;
-  scrollbar-gutter: stable both-edges;
   height: 100%;
   width: 100%;
   margin: 0;
