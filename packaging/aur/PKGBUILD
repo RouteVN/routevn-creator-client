@@ -63,7 +63,7 @@ package() {
     "${pkgdir}/usr/share/applications/routevn-creator.desktop" <<'EOF'
 [Desktop Entry]
 Categories=Graphics;
-Comment=Create Visual Novels without any coding
+Comment=RouteVN Creator
 Exec=routevn-creator
 StartupWMClass=routevn-creator
 Icon=routevn-creator

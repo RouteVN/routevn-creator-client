@@ -10,6 +10,7 @@ const repoRoot = path.resolve(scriptDir, "..");
 const packageName = "routevn-creator";
 const displayName = "RouteVN Creator";
 const forbiddenPackageName = "route-vn-creator";
+const forbiddenShortDescription = "Create Visual Novels without any coding";
 const forbiddenCopy = "Join our Discord server to stay updated.";
 const expectedCopy = "Follow us on social media to stay updated.";
 
@@ -49,6 +50,10 @@ function scanTextFile(relativePath) {
     !contents.includes(forbiddenCopy),
     `${relativePath} contains stale Discord update copy`,
   );
+  expect(
+    !contents.includes(forbiddenShortDescription),
+    `${relativePath} contains stale short description`,
+  );
 }
 
 function collectFiles(directory, predicate) {
@@ -82,6 +87,10 @@ function inspectBinary(filePath) {
   expect(
     !contents.includes(Buffer.from(forbiddenCopy)),
     `${path.relative(repoRoot, filePath)} contains stale Discord update copy`,
+  );
+  expect(
+    !contents.includes(Buffer.from(forbiddenShortDescription)),
+    `${path.relative(repoRoot, filePath)} contains stale short description`,
   );
   expect(
     contents.includes(Buffer.from(packageName)),
@@ -151,12 +160,20 @@ expect(
   "Tauri longDescription does not use social media update copy",
 );
 expect(
+  tauriConfig.bundle.shortDescription === displayName,
+  `Tauri shortDescription must be ${displayName}`,
+);
+expect(
   linuxConfig.productName === packageName,
   `Linux Tauri productName must be ${packageName}`,
 );
 expect(
   metainfo.includes(`<name>${displayName}</name>`),
   "AppStream metainfo display name is wrong",
+);
+expect(
+  metainfo.includes(`<summary>${displayName}</summary>`),
+  "AppStream summary must use RouteVN Creator",
 );
 expect(
   metainfo.includes(
@@ -179,6 +196,10 @@ expect(
 expect(
   aurPkgbuild.includes("pkgname=routevn-creator"),
   "AUR pkgname must be routevn-creator",
+);
+expect(
+  aurPkgbuild.includes("Comment=RouteVN Creator"),
+  "AUR desktop comment must use RouteVN Creator",
 );
 expect(
   aurPkgbuild.includes("/usr/share/applications/routevn-creator.desktop"),
