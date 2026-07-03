@@ -60,6 +60,60 @@ export const createSceneBundleRuntime = ({
     return latestRelevantRevision;
   };
 
+  const getLatestOverviewRevisionsForScenes = async (sceneIds = []) => {
+    const normalizedSceneIds = sceneIds.filter(isNonEmptyString);
+    const revisionsBySceneId = new Map(
+      normalizedSceneIds.map((sceneId) => [sceneId, 0]),
+    );
+    if (normalizedSceneIds.length === 0) {
+      return revisionsBySceneId;
+    }
+
+    const sceneIdByPartition = new Map();
+    for (const sceneId of normalizedSceneIds) {
+      sceneIdByPartition.set(scenePartitionFor(sceneId), sceneId);
+      sceneIdByPartition.set(mainScenePartitionFor(sceneId), sceneId);
+    }
+
+    let latestRelevantMainRevision = 0;
+
+    for await (const committedBatch of iterateCommittedEventBatches({
+      listCommittedAfter,
+    })) {
+      for (const event of committedBatch) {
+        const partition = event?.partition;
+        const revision = getCommittedEventRevision(event);
+        const sceneId = sceneIdByPartition.get(partition);
+
+        if (sceneId) {
+          revisionsBySceneId.set(sceneId, revision);
+          continue;
+        }
+
+        if (
+          isMainPartition(partition) &&
+          doesCommittedEventAffectSceneOverview(event)
+        ) {
+          latestRelevantMainRevision = revision;
+        }
+      }
+    }
+
+    if (latestRelevantMainRevision > 0) {
+      for (const sceneId of normalizedSceneIds) {
+        revisionsBySceneId.set(
+          sceneId,
+          Math.max(
+            revisionsBySceneId.get(sceneId) || 0,
+            latestRelevantMainRevision,
+          ),
+        );
+      }
+    }
+
+    return revisionsBySceneId;
+  };
+
   const getSceneStateForOverview = async (sceneId) => {
     const activeSceneId = getActiveSceneId();
     const activeSceneState = getActiveSceneState();
@@ -157,7 +211,11 @@ export const createSceneBundleRuntime = ({
     scheduleOverviewWriteFlush();
   };
 
-  const buildAndStoreSceneOverview = async ({ sceneId, checkpoint = null }) => {
+  const buildAndStoreSceneOverview = async ({
+    sceneId,
+    checkpoint = null,
+    latestRelevantRevision,
+  }) => {
     if (!isNonEmptyString(sceneId)) {
       return undefined;
     }
@@ -189,7 +247,9 @@ export const createSceneBundleRuntime = ({
     queueSceneOverviewSave({
       sceneId,
       overview,
-      lastCommittedId: await getLatestOverviewRevisionForScene(sceneId),
+      lastCommittedId: Number.isFinite(latestRelevantRevision)
+        ? latestRelevantRevision
+        : await getLatestOverviewRevisionForScene(sceneId),
     });
 
     return structuredClone(overview);
@@ -198,6 +258,7 @@ export const createSceneBundleRuntime = ({
   const ensureSceneOverviewWithCheckpoint = async ({
     sceneId,
     checkpoint = null,
+    latestRelevantRevision,
   }) => {
     if (!isNonEmptyString(sceneId)) {
       return undefined;
@@ -216,15 +277,19 @@ export const createSceneBundleRuntime = ({
       return buildAndStoreSceneOverview({
         sceneId,
         checkpoint,
+        latestRelevantRevision,
       });
     }
 
-    const latestRelevantRevision =
-      await getLatestOverviewRevisionForScene(sceneId);
+    const resolvedLatestRelevantRevision = Number.isFinite(
+      latestRelevantRevision,
+    )
+      ? latestRelevantRevision
+      : await getLatestOverviewRevisionForScene(sceneId);
     if (
       isSceneOverviewCheckpointFresh({
         checkpoint,
-        latestRelevantRevision,
+        latestRelevantRevision: resolvedLatestRelevantRevision,
       })
     ) {
       return structuredClone(checkpoint.value);
@@ -233,6 +298,7 @@ export const createSceneBundleRuntime = ({
     return buildAndStoreSceneOverview({
       sceneId,
       checkpoint,
+      latestRelevantRevision: resolvedLatestRelevantRevision,
     });
   };
 
@@ -268,11 +334,14 @@ export const createSceneBundleRuntime = ({
         store,
         sceneIds,
       });
+      const latestRevisionsBySceneId =
+        await getLatestOverviewRevisionsForScenes(sceneIds);
 
       for (const sceneId of sceneIds) {
         const overview = await ensureSceneOverviewWithCheckpoint({
           sceneId,
           checkpoint: checkpointsBySceneId.get(sceneId),
+          latestRelevantRevision: latestRevisionsBySceneId.get(sceneId),
         });
         if (overview) {
           overviewsBySceneId[sceneId] = overview;

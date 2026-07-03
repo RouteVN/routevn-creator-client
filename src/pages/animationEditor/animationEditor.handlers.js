@@ -676,6 +676,11 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
   return true;
 };
 
+export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService } = deps;
   await projectService.ensureRepository();
@@ -747,6 +752,9 @@ export const handleSavePreviewClick = async (deps) => {
     store.setItems({
       data: projectService.getRepositoryState()?.animations,
     });
+    if (store.selectIsTouchMode()) {
+      store.closePreviewDialog({});
+    }
     render();
     appService.showToast({
       message: copy.animationPreviewSaved ?? "Animation preview saved.",
@@ -763,6 +771,52 @@ export const handleSavePreviewClick = async (deps) => {
 export const handleClosePopover = (deps) => {
   const { render, store } = deps;
   store.closePopover();
+  render();
+};
+
+export const handleMobileMaskClick = (deps, payload = {}) => {
+  const { render, store } = deps;
+
+  if (store.selectDialogType() !== "transition") {
+    return;
+  }
+
+  const event = payload._event;
+  const popoverPosition = {
+    x: event?.clientX ?? 0,
+    y: event?.clientY ?? 0,
+  };
+
+  if (store.selectHasEffectiveTransitionMask()) {
+    store.setPopover({
+      mode: "editMask",
+      x: popoverPosition.x,
+      y: popoverPosition.y,
+      payload: {},
+    });
+    render();
+    return;
+  }
+
+  store.startPendingTransitionMask({});
+  store.setPopover({
+    mode: "addMask",
+    x: popoverPosition.x,
+    y: popoverPosition.y,
+    payload: {},
+  });
+  render();
+};
+
+export const handleOpenPreviewDialog = (deps) => {
+  const { render, store } = deps;
+  store.openPreviewDialog({});
+  render();
+};
+
+export const handleClosePreviewDialog = (deps) => {
+  const { render, store } = deps;
+  store.closePreviewDialog({});
   render();
 };
 
@@ -1310,6 +1364,26 @@ export const handleAddMaskClick = (deps) => {
 export const handleDisableMaskClick = (deps) => {
   const { store } = deps;
   store.disableTransitionMask({});
+  commitMaskChange(deps);
+};
+
+export const handleMobileDisableMaskClick = (deps) => {
+  const { render, store } = deps;
+  store.openMaskRemoveConfirmDialog({});
+  render();
+};
+
+export const handleMaskRemoveConfirmDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeMaskRemoveConfirmDialog({});
+  render();
+};
+
+export const handleMaskRemoveConfirmClick = (deps) => {
+  const { store } = deps;
+  store.disableTransitionMask({});
+  store.closeMaskRemoveConfirmDialog({});
+  store.closePopover();
   commitMaskChange(deps);
 };
 

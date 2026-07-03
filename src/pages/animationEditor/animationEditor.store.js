@@ -4,6 +4,7 @@ import {
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import { toFlatItems } from "../../internal/project/tree.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   compileTransitionMaskForRuntime,
   createDefaultTransitionMask,
@@ -1224,6 +1225,9 @@ export const createInitialState = () => ({
   previewPlaybackDurationMs: undefined,
   previewPlaybackRequestId: undefined,
   previewImages: createInitialPreviewImages(),
+  isTouchMode: false,
+  isPreviewDialogOpen: false,
+  maskRemoveConfirmDialogOpen: false,
   popover: {
     mode: "none",
     x: undefined,
@@ -1254,6 +1258,14 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
     projectResolution,
     "Project resolution",
   );
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
+};
+
+export const selectIsTouchMode = ({ state }) => {
+  return state.isTouchMode;
 };
 
 export const setAnimationName = ({ state }, { name } = {}) => {
@@ -1871,6 +1883,10 @@ export const selectTransitionMask = ({ state }) => {
   return getTransitionMask(state);
 };
 
+export const selectHasEffectiveTransitionMask = ({ state }) => {
+  return Boolean(getEffectiveTransitionMask(state));
+};
+
 export const selectMaskEditorTransitionMask = ({ state }) => {
   return getMaskEditorTransitionMask(state);
 };
@@ -2393,6 +2409,22 @@ export const selectPreviewPlaybackRequestId = ({ state }) => {
   return state.previewPlaybackRequestId;
 };
 
+export const openPreviewDialog = ({ state }, _payload = {}) => {
+  state.isPreviewDialogOpen = true;
+};
+
+export const closePreviewDialog = ({ state }, _payload = {}) => {
+  state.isPreviewDialogOpen = false;
+};
+
+export const openMaskRemoveConfirmDialog = ({ state }, _payload = {}) => {
+  state.maskRemoveConfirmDialogOpen = true;
+};
+
+export const closeMaskRemoveConfirmDialog = ({ state }, _payload = {}) => {
+  state.maskRemoveConfirmDialogOpen = false;
+};
+
 const buildTransitionMaskPanelDataForMask = (
   state,
   transitionMask,
@@ -2789,6 +2821,11 @@ export const selectViewData = ({ state, i18n }) => {
     imageFolderItems,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
+    isPreviewDialogOpen: state.isPreviewDialogOpen,
+    maskRemoveConfirmDialogOpen: state.maskRemoveConfirmDialogOpen,
+    showRightPanel: !state.isTouchMode,
+    showMobileTweenActions: state.isTouchMode,
+    showMobileMaskButton: state.isTouchMode && dialogType === "transition",
     addButton: copy.addButton ?? "Add",
     addMaskButton: copy.addMaskButton ?? "Add Mask",
     addMaskTitle: copy.addMaskTitle ?? "Add Mask",
@@ -2797,10 +2834,15 @@ export const selectViewData = ({ state, i18n }) => {
     doneButton: copy.doneButton ?? "Done",
     editButton: copy.editMenuItem ?? "Edit",
     editMaskTitle: copy.editMaskTitle ?? "Edit Mask",
+    editPreviewButton: copy.editPreviewButton ?? "Edit Preview",
     imageLabel: copy.imageLabel ?? "Image",
     inTimelineLabel: copy.inTimelineLabel ?? "In",
     invertLabel: copy.invertLabel ?? "Invert",
     kindLabel: copy.kindLabel ?? "Kind",
+    maskRemoveConfirmMessage:
+      copy.maskRemoveConfirmMessage ??
+      "Remove this transition mask? This cannot be undone.",
+    maskRemoveConfirmTitle: copy.maskRemoveConfirmTitle ?? "Remove Mask",
     maskTitle: copy.maskTitle ?? "Mask",
     noMaskAvailable: copy.noMaskAvailable ?? "No mask available.",
     noPreviewLabel: copy.noPreviewLabel ?? "No preview",

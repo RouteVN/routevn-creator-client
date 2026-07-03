@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   createInitialState,
   selectViewData,
@@ -8,6 +9,8 @@ import {
   setLayout,
   setSelectedItemId,
   setDetailPanelSelectedItemId,
+  setPreviewData,
+  setUiConfig,
 } from "../../src/pages/layoutEditor/layoutEditor.store.js";
 
 const TEST_CONSTANTS = {
@@ -62,6 +65,7 @@ describe("layoutEditor.store", () => {
     const viewData = selectViewData({
       state,
       constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
     });
 
     expect(state.layout.layoutType).toBe("save-load");
@@ -120,6 +124,7 @@ describe("layoutEditor.store", () => {
       const viewData = selectViewData({
         state,
         constants: LAYOUT_EDITOR_CONSTANTS,
+        i18n: EN_I18N,
       });
 
       const contextMenuFragmentItem = viewData.contextMenuItems.find(
@@ -161,6 +166,7 @@ describe("layoutEditor.store", () => {
     const viewData = selectViewData({
       state,
       constants: LAYOUT_EDITOR_CONSTANTS,
+      i18n: EN_I18N,
     });
     const emptyMenuLabels = viewData.emptyContextMenuItems.map(
       (item) => item.label,
@@ -202,6 +208,7 @@ describe("layoutEditor.store", () => {
     const viewData = selectViewData({
       state,
       constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
     });
 
     expect(
@@ -262,6 +269,7 @@ describe("layoutEditor.store", () => {
           },
         ],
       },
+      i18n: EN_I18N,
     });
 
     const containerMenuItems = viewData.flatItems.find(
@@ -330,11 +338,91 @@ describe("layoutEditor.store", () => {
     const viewData = selectViewData({
       state,
       constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
     });
 
     expect(viewData.selectedItemIsInsideDirectedContainer).toBe(true);
     expect(viewData.isInsideDirectedContainer).toBe(false);
     expect(viewData.selectedItemId).toBe("child-selected");
     expect(viewData.detailPanelSelectedItemId).toBe("panel-item");
+  });
+
+  it("shows the selected node detail in place of the preview on touch layouts", () => {
+    const state = createInitialState();
+
+    syncRepositoryState(
+      { state },
+      {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId: "layout-1",
+        layout: {
+          id: "layout-1",
+          layoutType: "general",
+        },
+        layoutData: {
+          items: {
+            "node-1": {
+              type: "container",
+              name: "Node 1",
+            },
+          },
+          tree: [{ id: "node-1" }],
+        },
+      },
+    );
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    setPreviewData(
+      { state },
+      {
+        previewData: {
+          backgroundImageId: "unsaved-preview-image",
+        },
+      },
+    );
+    setSelectedItemId({ state }, { itemId: "node-1" });
+    setDetailPanelSelectedItemId({ state }, { itemId: "node-1" });
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.showExplorerPanel).toBe(false);
+    expect(viewData.showDetailPanel).toBe(false);
+    expect(viewData.showTopSavePreviewButton).toBe(false);
+    expect(viewData.showMobilePreviewHeader).toBe(false);
+    expect(viewData.showMobileNodeButton).toBe(true);
+    expect(viewData.showMobilePreviewButton).toBe(true);
+    expect(viewData.showMobileSelectedNodeDetail).toBe(true);
+    expect(viewData.previewPanelVisibilityStyle).toBe("display: none;");
+    expect(viewData.previewHydrationData).toEqual({
+      backgroundImageId: "unsaved-preview-image",
+    });
+    expect(viewData.initialPreviewData).toEqual({});
+    expect(viewData.nodeButtonLabel).toBe("Node");
+    expect(viewData.previewTitle).toBe("Preview");
+    expect(viewData.item.name).toBe("Node 1");
+  });
+
+  it("moves preview saving into the mobile preview header on touch layouts", () => {
+    const state = createInitialState();
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.showTopSavePreviewButton).toBe(false);
+    expect(viewData.showMobilePreviewHeader).toBe(true);
+    expect(viewData.showMobilePreviewButton).toBe(false);
+    expect(viewData.showMobileSelectedNodeDetail).toBe(false);
+    expect(viewData.previewPanelVisibilityStyle).toBe("");
+    expect(viewData.previewHydrationData).toEqual(viewData.previewData);
+    expect(viewData.previewTitle).toBe("Preview");
+    expect(viewData.savePreviewButton).toBe("Save Preview");
   });
 });

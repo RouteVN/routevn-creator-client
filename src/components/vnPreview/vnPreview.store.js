@@ -9,6 +9,57 @@ const createEmptyAssetLoadCache = () => ({
   fileIds: [],
 });
 
+const toPositiveDimension = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0
+    ? numericValue
+    : undefined;
+};
+
+const createViewportSize = () => ({
+  width:
+    toPositiveDimension(globalThis.window?.innerWidth) ??
+    DEFAULT_PROJECT_RESOLUTION.width,
+  height:
+    toPositiveDimension(globalThis.window?.innerHeight) ??
+    DEFAULT_PROJECT_RESOLUTION.height,
+});
+
+const formatCssPixels = (value) => `${Math.round(value * 100) / 100}px`;
+
+const createPreviewFrameStyle = ({ projectResolution, viewportSize }) => {
+  const projectWidth =
+    toPositiveDimension(projectResolution?.width) ??
+    DEFAULT_PROJECT_RESOLUTION.width;
+  const projectHeight =
+    toPositiveDimension(projectResolution?.height) ??
+    DEFAULT_PROJECT_RESOLUTION.height;
+  const viewportWidth =
+    toPositiveDimension(viewportSize?.width) ??
+    DEFAULT_PROJECT_RESOLUTION.width;
+  const viewportHeight =
+    toPositiveDimension(viewportSize?.height) ??
+    DEFAULT_PROJECT_RESOLUTION.height;
+  const scale = Math.min(
+    viewportWidth / projectWidth,
+    viewportHeight / projectHeight,
+  );
+  const width = projectWidth * scale;
+  const height = projectHeight * scale;
+
+  return [
+    "flex: 0 0 auto",
+    "position: relative",
+    `aspect-ratio: ${projectWidth} / ${projectHeight}`,
+    `width: ${formatCssPixels(width)}`,
+    `height: ${formatCssPixels(height)}`,
+    "max-width: 100vw",
+    "max-height: 100vh",
+    "overflow: hidden",
+    "background: #000",
+  ].join("; ");
+};
+
 const readAssetLoadCache = (state) => {
   if (!state || typeof state !== "object") {
     return createEmptyAssetLoadCache();
@@ -46,6 +97,7 @@ export const createInitialState = () => ({
   isPreviewReady: false,
   assetLoadCache: createEmptyAssetLoadCache(),
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
+  viewportSize: createViewportSize(),
 });
 
 export const setAssetLoading = ({ state }, { isLoading } = {}) => {
@@ -65,6 +117,14 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
     projectResolution,
     "Project resolution",
   );
+};
+
+export const setViewportSize = ({ state }, { width, height } = {}) => {
+  const currentViewportSize = state.viewportSize ?? createViewportSize();
+  state.viewportSize = {
+    width: toPositiveDimension(width) ?? currentViewportSize.width,
+    height: toPositiveDimension(height) ?? currentViewportSize.height,
+  };
 };
 
 export const selectAssetLoadCache = ({ state }) => readAssetLoadCache(state);
@@ -109,5 +169,9 @@ export const selectViewData = ({ props: attrs, state }) => {
     canvasAspectRatio: formatProjectResolutionAspectRatio(
       state.projectResolution,
     ),
+    previewFrameStyle: createPreviewFrameStyle({
+      projectResolution: state.projectResolution,
+      viewportSize: state.viewportSize,
+    }),
   };
 };

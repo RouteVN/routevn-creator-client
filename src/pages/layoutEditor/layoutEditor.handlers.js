@@ -441,6 +441,9 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+
   const cleanupSubscriptions = mountSubscriptions(deps);
   return async () => {
     await flushQueuedLayoutEditorUpdates(deps);
@@ -543,6 +546,7 @@ export const handleSaveButtonClick = async (deps) => {
 
     await refreshLayoutEditorData(deps, {
       selectedItemId: store.selectSelectedItemId(),
+      syncDetailPanel: !store.selectIsTouchMode?.(),
     });
     appService.showToast({
       message: formatI18nCopy(
@@ -613,10 +617,47 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId: itemId });
+  if (store.selectIsTouchMode?.() && store.selectIsMobileFileExplorerOpen?.()) {
+    store.setDetailPanelSelectedItemId({
+      itemId,
+    });
+    store.closeMobileFileExplorer();
+    render();
+    return;
+  }
+
   render();
   scheduleDetailPanelSelectionRender(deps, {
     itemId,
   });
+};
+
+export const handleNodeButtonClick = (deps) => {
+  const { refs, render, store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+
+  store.openMobileFileExplorer();
+  render();
+
+  if (selectedItemId) {
+    scheduleAfterNextPaint(() => {
+      refs.fileExplorer?.selectItem?.({ itemId: selectedItemId });
+    });
+  }
+};
+
+export const handlePreviewButtonClick = (deps) => {
+  const { render, store } = deps;
+
+  store.setDetailPanelSelectedItemId({ itemId: undefined });
+  render();
+};
+
+export const handleMobileFileExplorerClose = (deps) => {
+  const { render, store } = deps;
+
+  store.closeMobileFileExplorer();
+  render();
 };
 
 export const handleAddLayoutClick = handleRenderOnly;
@@ -634,7 +675,9 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
   );
   if (payload.selectedItemId) {
     store.setSelectedItemId({ itemId: payload.selectedItemId });
-    store.setDetailPanelSelectedItemId({ itemId: payload.selectedItemId });
+    if (payload.syncDetailPanel !== false) {
+      store.setDetailPanelSelectedItemId({ itemId: payload.selectedItemId });
+    }
   }
   render();
   if (payload.selectedItemId) {
@@ -643,7 +686,7 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
         return;
       }
 
-      refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
+      refs.fileExplorer?.selectItem?.({ itemId: payload.selectedItemId });
     });
   }
 };
