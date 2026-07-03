@@ -81,7 +81,7 @@
     "license": "MIT",
     "category": "GraphicsAndDesign",
     "shortDescription": "RouteVN Creator",
-    "longDescription": "Free and Open Source tool to create Visual Novels without any coding. Live preview, asset manager, layout editor. Fast, intuitive, reliable. Follow us on social media to stay updated.",
+    "longDescription": "RouteVN Creator. Follow us on social media to stay updated.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -107,6 +107,7 @@
         }
       },
       "rpm": {
+        "release": "2",
         "files": {
           "/usr/share/metainfo/com.routevn.creator.metainfo.xml": "assets/com.routevn.creator.metainfo.xml"
         }

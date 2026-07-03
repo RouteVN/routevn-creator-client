@@ -210,6 +210,11 @@ bun run tauri:build:linux:rpm:docker
 bun run tauri:build:linux:aur:docker
 ```
 
+Before rebuilding RPM packages for the same app version, increment
+`bundle.linux.rpm.release` in `src-tauri/tauri.conf.json`. Reset it to `"1"`
+when the app version changes. Debian package filenames stay on the app version.
+See `docs/runbooks/linux-release.md`.
+
 The Docker-built packages and checksums are copied to
 `dist/linux-packages/ubuntu-22.04/x86_64/`,
 `dist/linux-packages/fedora-43/x86_64/`, and `dist/aur/x86_64/`.
