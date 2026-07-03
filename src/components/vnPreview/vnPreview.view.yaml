@@ -1,11 +1,19 @@
 refs:
   previewSurface: {}
   canvas: {}
+  window:
+    eventListeners:
+      resize:
+        action: setViewportSize
+        throttle: 100
+        payload:
+          width: ${_event.target.innerWidth}
+          height: ${_event.target.innerHeight}
 template:
-  - 'rtgl-view#previewSurface pos=fix w=100vw h=100vh tabindex=-1 style="left: 0; top: 0; background: black; justify-content: center; align-items: center; outline: none;" z=3500 data-preview-ready=${isPreviewReady}':
-      - 'rtgl-view pos=rel bwb=xs style="aspect-ratio: ${canvasAspectRatio}; width: min(100vw, calc(100vh * (${canvasAspectRatio}))); height: min(100vh, calc(100vw / (${canvasAspectRatio}))); max-width: 100%; max-height: 100%"':
-          - rtgl-view pos=abs cor=full:
-              - 'div#canvas id=canvas style="width: 100%; height: 100%;display: flex; justify-content: center"': null
+  - 'rtgl-view#previewSurface pos=fix edge=f tabindex=-1 style="display: flex; justify-content: center; align-items: center; overflow: hidden; background: black; outline: none; min-width: 0; min-height: 0;" z=3500 data-preview-ready=${isPreviewReady}':
+      - 'rtgl-view bwb=xs style="${previewFrameStyle}"':
+          - rtgl-view pos=abs edge=f w=f h=f:
+              - 'div#canvas id=canvas style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; background: #000;"': null
           - $if isAssetLoading:
-              - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.6 av=c ah=c:
+              - rtgl-view pos=abs edge=f w=f h=f bgc=bg op=0.6 av=c ah=c:
                   - rtgl-text s=h3: Loading preview...
