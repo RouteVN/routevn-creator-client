@@ -2,6 +2,27 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("projects view", () => {
+  it("uses the shared navbar style for the projects title and mobile create action", () => {
+    const projectsView = readFileSync(
+      new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(projectsView).toContain(
+      "rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c",
+    );
+    expect(projectsView).toContain("rtgl-text: ${localTitle}");
+    expect(projectsView).toContain(
+      "rtgl-view#mobileCreateMenuButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo",
+    );
+    expect(projectsView).toContain("rtgl-svg svg=plus wh=16 c=mu-fg");
+    expect(projectsView).not.toContain("rtgl-text s=h3: ${localTitle}");
+    expect(projectsView).not.toContain("pt=lg pb=md");
+    expect(projectsView).not.toContain(
+      'rtgl-button#mobileCreateMenuButton sq pre=plus v="gh"',
+    );
+  });
+
   it("keeps the app version visible outside the scrollable project list", () => {
     const projectsView = readFileSync(
       new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
@@ -20,7 +41,7 @@ describe("projects view", () => {
 
     expect(scrollContainerIndex).toBeGreaterThan(-1);
     expect(footerContainerIndex).toBeGreaterThan(scrollContainerIndex);
-    expect(projectsView).toContain("rtgl-view sm-w=f w=640 ph=lg pv=lg ah=c");
+    expect(projectsView).toContain("rtgl-view sm-w=f w=640 ph=md pv=lg ah=c");
     expect(projectsView).toContain("$if platform != 'web'");
     expect(projectsView).toContain("rtgl-view#appVersionButton");
     expect(projectsView).toContain(
@@ -34,5 +55,19 @@ describe("projects view", () => {
     expect(projectsView).toContain("rtgl-form#languageForm");
     expect(footerTextIndex).toBeGreaterThan(footerContainerIndex);
     expect(projectsView).not.toContain("rtgl-view w=f ah=c pb=lg");
+  });
+
+  it("uses the standard navbar inset for header and list content", () => {
+    const projectsView = readFileSync(
+      new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(projectsView).toContain(
+      'rtgl-view w=f d=v ph=md style="max-width: 1280px;"',
+    );
+    expect(projectsView).not.toContain(
+      'rtgl-view w=f d=v ph=lg style="max-width: 1280px;"',
+    );
   });
 });

@@ -213,6 +213,11 @@ const createItemContextMenuItems = (copy = {}) => [
 
 const createCenterItemContextMenuItems = (copy = {}) => [
   {
+    label: copy.editMenuItem ?? "Edit",
+    type: "item",
+    value: "edit-item",
+  },
+  {
     label: copy.duplicateMenuItem ?? "Duplicate",
     type: "item",
     value: "duplicate-item",
@@ -314,6 +319,7 @@ export const createInitialState = () => ({
     { label: "Delete", type: "item", value: "delete-item" },
   ],
   centerItemContextMenuItems: [
+    { label: "Edit", type: "item", value: "edit-item" },
     { label: "Duplicate", type: "item", value: "duplicate-item" },
     { label: "Delete", type: "item", value: "delete-item" },
   ],
@@ -1106,6 +1112,7 @@ export const selectViewData = ({ state, i18n }) => {
     title: copy.title ?? "Text Styles",
     addText: copy.addText ?? "Add",
     addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
+    editButton: copy.editMenuItem ?? "Edit",
     deleteButton: copy.deleteButton ?? "Delete",
     duplicateButton: copy.duplicateButton ?? "Duplicate",
     filesLabel: copy.filesLabel ?? "Files",

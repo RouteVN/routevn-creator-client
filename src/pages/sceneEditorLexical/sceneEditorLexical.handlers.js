@@ -16,6 +16,11 @@ import {
   syncSceneEditorProjectState as syncStoreProjectState,
 } from "../../internal/ui/sceneEditor/lineOperations.js";
 import {
+  emitSceneEditorTiming,
+  getSceneEditorTimingDurationMs,
+  getSceneEditorTimingNow,
+} from "../../internal/ui/sceneEditor/sceneEditorTiming.js";
+import {
   cloneWithDiagnostics,
   initializeSceneEditorPage,
   mountSceneEditorSubscriptions,
@@ -737,7 +742,7 @@ export const syncSceneEditorRoutePayload = async (
     store.setSelectedSectionId({
       selectedSectionId: entrySelection.sectionId,
     });
-    store.setSelectedLineId({ selectedLineId: entrySelection.lineId });
+    store.setSelectedLineId({ selectedLineId: undefined });
 
     const nextPayload = {
       ...appService.getPayload(),
@@ -750,11 +755,7 @@ export const syncSceneEditorRoutePayload = async (
     } else {
       delete nextPayload.sectionId;
     }
-    if (entrySelection.lineId) {
-      nextPayload.lineId = entrySelection.lineId;
-    } else {
-      delete nextPayload.lineId;
-    }
+    delete nextPayload.lineId;
     appService.setPayload?.(nextPayload);
 
     reconcileCurrentEditorSession(deps);
@@ -1966,49 +1967,90 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
 export const handleEditorDataChanged = async (deps, payload) => {
   const { refs, render, subject, store } = deps;
+  const handlerStartedAt = getSceneEditorTimingNow();
+  const detail = payload?._event?.detail || {};
+  const traceId = detail.traceId;
   if (isSectionsOverviewOpen(store)) {
+    emitSceneEditorTiming("page.editor-data-changed.ignored", {
+      traceId,
+      reason: "sections-overview-open",
+      durationMs: getSceneEditorTimingDurationMs(handlerStartedAt),
+    });
     return;
   }
 
-  const nextLines = payload?._event?.detail?.lines;
+  const nextLines = detail.lines;
   if (!Array.isArray(nextLines)) {
+    emitSceneEditorTiming("page.editor-data-changed.ignored", {
+      traceId,
+      reason: "invalid-lines",
+      durationMs: getSceneEditorTimingDurationMs(handlerStartedAt),
+    });
     return;
   }
-  const changeReason = payload?._event?.detail?.reason || "text";
+  const changeReason = detail.reason || "text";
   const sectionId =
     getSectionIdFromPayload(payload) ||
     nextLines.find((line) => line?.sectionId)?.sectionId ||
     store.selectSelectedSectionId?.();
 
+  const reconcileStartedAt = getSceneEditorTimingNow();
   const draftSection = reconcileDraftSectionForSection(deps, sectionId);
+  const reconcileDurationMs =
+    getSceneEditorTimingDurationMs(reconcileStartedAt);
   if (!draftSection) {
+    emitSceneEditorTiming("page.editor-data-changed.ignored", {
+      traceId,
+      reason: "missing-draft-section",
+      sectionId,
+      lineCount: nextLines.length,
+      reconcileDurationMs,
+      durationMs: getSceneEditorTimingDurationMs(handlerStartedAt),
+    });
     return;
   }
 
+  const draftReplaceStartedAt = getSceneEditorTimingNow();
   const nextDraftSection = replaceSceneEditorDraftSectionLines(draftSection, {
     lines: nextLines,
     source: changeReason,
     dirty: true,
   });
   store.setDraftSection({ draftSection: nextDraftSection });
-  const detailSelectedLineId = payload?._event?.detail?.selectedLineId;
+  const draftReplaceDurationMs = getSceneEditorTimingDurationMs(
+    draftReplaceStartedAt,
+  );
+  const detailSelectedLineId = detail.selectedLineId;
   const selectedLineId =
     detailSelectedLineId ||
     (sectionId === store.selectSelectedSectionId?.()
       ? store.selectSelectedLineId()
       : undefined) ||
     nextLines[0]?.id;
+  const previousSectionId = store.selectSelectedSectionId?.();
+  const previousLineId = store.selectSelectedLineId?.();
+  const selectTargetStartedAt = getSceneEditorTimingNow();
   selectEditorTarget(deps, {
     sectionId,
     lineId: selectedLineId,
   });
+  const selectTargetDurationMs = getSceneEditorTimingDurationMs(
+    selectTargetStartedAt,
+  );
+  const selectionChanged =
+    previousSectionId !== store.selectSelectedSectionId?.() ||
+    previousLineId !== store.selectSelectedLineId?.();
+  const renderStartedAt = getSceneEditorTimingNow();
   render();
-  const focusTarget = payload?._event?.detail?.focusTarget;
+  const renderDurationMs = getSceneEditorTimingDurationMs(renderStartedAt);
+  const focusTarget = detail.focusTarget;
+  let focusScheduled = false;
   if (
     focusTarget?.lineId &&
     changeReason === "structure" &&
     focusTarget.skipPageRestore !== true
   ) {
+    focusScheduled = true;
     const focusPayload = {
       ...focusTarget,
       sectionId,
@@ -2020,56 +2062,114 @@ export const handleEditorDataChanged = async (deps, payload) => {
       });
     });
   }
+  const scheduleFlushStartedAt = getSceneEditorTimingNow();
   scheduleSceneEditorDraftFlush(deps, {
     reason: changeReason,
   });
+  const scheduleFlushDurationMs = getSceneEditorTimingDurationMs(
+    scheduleFlushStartedAt,
+  );
 
+  const canvasDispatchStartedAt = getSceneEditorTimingNow();
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
     syncPresentationState: true,
     skipAnimations: true,
   });
+  const canvasDispatchDurationMs = getSceneEditorTimingDurationMs(
+    canvasDispatchStartedAt,
+  );
+  emitSceneEditorTiming("page.editor-data-changed", {
+    traceId,
+    durationMs: getSceneEditorTimingDurationMs(handlerStartedAt),
+    sectionId,
+    selectedLineId,
+    changeReason,
+    lineCount: nextLines.length,
+    reconcileDurationMs,
+    draftReplaceDurationMs,
+    selectTargetDurationMs,
+    renderDurationMs,
+    scheduleFlushDurationMs,
+    canvasDispatchDurationMs,
+    selectionChanged,
+    focusScheduled,
+    canvasDispatched: true,
+  });
 };
 
 export const handleEditorCompositionStateChanged = (deps, payload) => {
   const { store } = deps;
+  const timingStartedAt = getSceneEditorTimingNow();
   const sectionId = getSectionIdFromPayload(payload);
   const draftSection =
     store.selectDraftSectionBySectionId?.({ sectionId }) ||
     reconcileDraftSectionForSection(deps, sectionId);
   if (!draftSection) {
+    emitSceneEditorTiming("page.editor-composition-state.ignored", {
+      durationMs: getSceneEditorTimingDurationMs(timingStartedAt),
+      sectionId,
+      reason: "missing-draft-section",
+    });
     return;
   }
 
+  const isComposing = payload?._event?.detail?.isComposing === true;
   const nextDraftSection = setSceneEditorDraftSectionCompositionState(
     draftSection,
     {
-      isComposing: payload?._event?.detail?.isComposing === true,
+      isComposing,
     },
   );
   store.setDraftSection({ draftSection: nextDraftSection });
+  emitSceneEditorTiming("page.editor-composition-state", {
+    durationMs: getSceneEditorTimingDurationMs(timingStartedAt),
+    sectionId,
+    isComposing,
+  });
 };
 
 export const handleEditorBlur = async (deps) => {
   const { store } = deps;
+  const blurStartedAt = getSceneEditorTimingNow();
   const skipDraftFlush = store.selectSkipNextEditorBlurDraftFlush?.() === true;
   if (skipDraftFlush) {
     store.setSkipNextEditorBlurDraftFlush({ value: false });
   }
 
   setTimeout(() => {
+    const timeoutStartedAt = getSceneEditorTimingNow();
+    const renderStartedAt = getSceneEditorTimingNow();
     deps.render();
+    const renderDurationMs = getSceneEditorTimingDurationMs(renderStartedAt);
 
     if (skipDraftFlush) {
+      emitSceneEditorTiming("page.editor-blur", {
+        durationMs: getSceneEditorTimingDurationMs(timeoutStartedAt),
+        queuedDelayMs: getSceneEditorTimingDurationMs(blurStartedAt),
+        renderDurationMs,
+        skipDraftFlush,
+      });
       return;
     }
 
+    const scheduleFlushStartedAt = getSceneEditorTimingNow();
     scheduleSceneEditorDraftFlush(deps, { reason: "text" });
+    emitSceneEditorTiming("page.editor-blur", {
+      durationMs: getSceneEditorTimingDurationMs(timeoutStartedAt),
+      queuedDelayMs: getSceneEditorTimingDurationMs(blurStartedAt),
+      renderDurationMs,
+      scheduleFlushDurationMs: getSceneEditorTimingDurationMs(
+        scheduleFlushStartedAt,
+      ),
+      skipDraftFlush,
+    });
   }, 0);
 };
 
 export const handleSelectedLineChanged = (deps, payload) => {
   const { store, refs, render, subject } = deps;
+  const timingStartedAt = getSceneEditorTimingNow();
   const detail = payload?._event?.detail || {};
   const lineId = detail.lineId;
   const sectionId =
@@ -2097,17 +2197,32 @@ export const handleSelectedLineChanged = (deps, payload) => {
   }
 
   if (!lineId || (isSameSelection && !adjacentSectionTarget)) {
+    emitSceneEditorTiming("page.selected-line-changed.ignored", {
+      durationMs: getSceneEditorTimingDurationMs(timingStartedAt),
+      reason: !lineId ? "missing-line-id" : "same-selection",
+      sectionId,
+      lineId,
+      previousSectionId,
+      previousLineId,
+      mode: detail.mode,
+    });
     return;
   }
 
   const target = adjacentSectionTarget || { sectionId, lineId };
+  const selectTargetStartedAt = getSceneEditorTimingNow();
   selectEditorTarget(deps, {
     sectionId: target.sectionId,
     lineId: target.lineId,
     payloadThrottleMs: SCENE_EDITOR_SELECTION_URL_SYNC_THROTTLE_MS,
   });
+  const selectTargetDurationMs = getSceneEditorTimingDurationMs(
+    selectTargetStartedAt,
+  );
 
+  const renderStartedAt = getSceneEditorTimingNow();
   render();
+  const renderDurationMs = getSceneEditorTimingDurationMs(renderStartedAt);
 
   if (adjacentSectionTarget) {
     requestAnimationFrame(() => {
@@ -2143,6 +2258,19 @@ export const handleSelectedLineChanged = (deps, payload) => {
     previousLineId,
     nextLineId: target.lineId,
     skipRender: true,
+  });
+  emitSceneEditorTiming("page.selected-line-changed", {
+    durationMs: getSceneEditorTimingDurationMs(timingStartedAt),
+    selectTargetDurationMs,
+    renderDurationMs,
+    sectionId: target.sectionId,
+    lineId: target.lineId,
+    previousSectionId,
+    previousLineId,
+    isSameSelection,
+    adjacentSectionNavigation: Boolean(adjacentSectionTarget),
+    mode: detail.mode,
+    navigationDirection: detail.navigationDirection,
   });
 };
 
@@ -2279,10 +2407,22 @@ export const handleMobileKeyboardToolbarActionClick = (deps, payload) => {
 
 export const handleMobileKeyboardStateChange = (deps, payload) => {
   const { store, render } = deps;
+  const startedAt = getSceneEditorTimingNow();
   const detail = payload?._event?.detail || {};
 
   store.setMobileKeyboardState(detail);
+  const renderStartedAt = getSceneEditorTimingNow();
   render();
+  const renderDurationMs = getSceneEditorTimingDurationMs(renderStartedAt);
+  emitSceneEditorTiming("page.mobile-keyboard-state", {
+    durationMs: getSceneEditorTimingDurationMs(startedAt),
+    renderDurationMs,
+    isVisible: detail.isVisible === true,
+    bottom: detail.bottom,
+    keyboardInset: detail.keyboardInset,
+    visualHeight: detail.visualHeight,
+    layoutHeight: detail.layoutHeight,
+  });
 };
 
 export const handleSectionAddClick = (deps, payload) => {

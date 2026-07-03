@@ -436,6 +436,23 @@ export const handleTextStyleItemDoubleClick = (deps, payload) => {
   openEditDialogWithValues({ deps, itemId });
 };
 
+export const handleTextStyleItemEdit = (deps, payload) => {
+  const { itemId } = payload._event.detail;
+  openEditDialogWithValues({ deps, itemId });
+};
+
+export const handleMobileDetailEditClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  openEditDialogWithValues({ deps, itemId });
+};
+
 export const handleMobileDetailDuplicateClick = async (deps, payload) => {
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();

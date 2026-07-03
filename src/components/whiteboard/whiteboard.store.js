@@ -58,6 +58,10 @@ const resolveMinimapContainerStyle = (placement) => {
     return ["right: 20px", "top: 20px", baseStyle].join("; ");
   }
 
+  if (placement === "top-left") {
+    return ["left: 20px", "top: 20px", baseStyle].join("; ");
+  }
+
   return ["left: 20px", "bottom: 20px", baseStyle].join("; ");
 };
 

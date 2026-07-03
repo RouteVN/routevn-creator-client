@@ -675,6 +675,151 @@ describe("renderSceneEditorState", () => {
     );
   });
 
+  it("backs off failed scene video asset loads after the first attempt", async () => {
+    const projectData = createProjectData();
+    projectData.resources.videos["intro-video"] = {
+      id: "intro-video",
+      fileId: "intro-video.mp4",
+      fileType: "video/mp4",
+      width: 1920,
+      height: 1080,
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[1].actions.background = {
+      resourceId: "intro-video",
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+    };
+    const graphicsService = createGraphicsService();
+    graphicsService.loadAssets = vi.fn(async (assets) => {
+      if (assets["intro-video.mp4"]) {
+        throw new Error('Timed out loading video asset "intro-video.mp4".');
+      }
+    });
+    const projectService = {
+      getFileContent: vi.fn(async (fileId) => ({
+        url: `asset://${fileId}`,
+      })),
+    };
+    const store = {
+      selectIsScenePageLoading: () => false,
+      selectPreviewScene: () => ({
+        previewVisible: false,
+      }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectTemporaryPresentationState: () => ({}),
+      selectIsBackgroundTransformEditorOpen: () => false,
+      selectScene: () => ({
+        sections: [{ id: "section-1" }],
+      }),
+      selectIsMuted: () => true,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      setSectionLineChanges: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      graphicsService,
+      projectService,
+      refs: {
+        previewCanvasHost: {
+          getCanvasRoot: () => ({
+            isConnected: true,
+          }),
+        },
+      },
+    };
+
+    await renderSceneEditorCanvas(deps, {
+      skipRender: true,
+      skipAnimations: true,
+    });
+    await renderSceneEditorCanvas(deps, {
+      skipRender: true,
+      skipAnimations: true,
+    });
+
+    expect(graphicsService.loadAssets).toHaveBeenCalledTimes(1);
+    expect(projectService.getFileContent).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reload scene audio after decoded audio is pruned", async () => {
+    const projectData = createProjectData();
+    projectData.resources.sounds["intro-bgm"] = {
+      id: "intro-bgm",
+      fileId: "intro-bgm.mp3",
+      fileType: "audio/mpeg",
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[1].actions.bgm = {
+      resourceId: "intro-bgm",
+      loop: true,
+      volume: 50,
+    };
+    const graphicsService = createGraphicsService();
+    graphicsService.hasLoadedAsset = vi.fn(() => false);
+    graphicsService.loadAssets = vi.fn(async () => {});
+    const projectService = {
+      getFileContent: vi.fn(async (fileId) => ({
+        url: `asset://${fileId}`,
+      })),
+    };
+    const store = {
+      selectIsScenePageLoading: () => false,
+      selectPreviewScene: () => ({
+        previewVisible: false,
+      }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectTemporaryPresentationState: () => ({}),
+      selectIsBackgroundTransformEditorOpen: () => false,
+      selectScene: () => ({
+        sections: [{ id: "section-1" }],
+      }),
+      selectIsMuted: () => true,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      setSectionLineChanges: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      graphicsService,
+      projectService,
+      refs: {
+        previewCanvasHost: {
+          getCanvasRoot: () => ({
+            isConnected: true,
+          }),
+        },
+      },
+    };
+
+    await renderSceneEditorCanvas(deps, {
+      skipRender: true,
+      skipAnimations: true,
+    });
+    await renderSceneEditorCanvas(deps, {
+      skipRender: true,
+      skipAnimations: true,
+    });
+
+    expect(graphicsService.loadAssets).toHaveBeenCalledTimes(1);
+    expect(projectService.getFileContent).toHaveBeenCalledTimes(1);
+  });
+
   it("syncs the graphics engine audio mute state from scene editor settings", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();

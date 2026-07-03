@@ -12,7 +12,7 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("scenes.store mobile layout", () => {
-  it("shows the mobile explorer controls and top-right minimap settings in touch mode", () => {
+  it("shows the mobile explorer controls and top-left minimap settings in touch mode", () => {
     const state = createInitialState();
     setUiConfig(
       { state },
@@ -35,7 +35,7 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.showMobileFileExplorer).toBe(true);
     expect(viewData.showWhiteboardMinimapInTouchMode).toBe(false);
     expect(viewData.showWhiteboardConnections).toBe(false);
-    expect(viewData.whiteboardMinimapPlacement).toBe("top-right");
+    expect(viewData.whiteboardMinimapPlacement).toBe("top-left");
     expect(viewData.whiteboardMinimapHeightScale).toBe(2 / 3);
 
     setTouchMinimapReady({ state }, { isReady: true });

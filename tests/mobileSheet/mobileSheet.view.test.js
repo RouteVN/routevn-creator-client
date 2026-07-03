@@ -13,6 +13,7 @@ describe("mobileSheet view", () => {
 
     expect(view).toContain("background: rgba(0, 0, 0, 0.42);");
     expect(view).toContain("rtgl-view pos=fix bgc=su");
+    expect(view).toContain("border-top: 1px solid var(--border);");
     expect(view).toContain("box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.22);");
     expect(view).not.toContain("rgba(15, 23, 42");
   });

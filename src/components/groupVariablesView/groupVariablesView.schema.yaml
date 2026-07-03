@@ -44,6 +44,12 @@ propsSchema:
     showMenuButton:
       type: boolean
       description: Whether to show the mobile menu button
+    menuButtonPlacement:
+      type: string
+      enum:
+        - leading
+        - trailing
+      description: Where the menu icon renders in the header
     mobileLayout:
       type: boolean
       description: Whether to use the mobile layout

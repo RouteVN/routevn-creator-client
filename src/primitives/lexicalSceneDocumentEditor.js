@@ -26,6 +26,12 @@ import { createEmptyHistoryState, registerHistory } from "@lexical/history";
 import { mergeRegister } from "@lexical/utils";
 import { generateId } from "../internal/id.js";
 import {
+  createSceneEditorTimingTraceId,
+  emitSceneEditorTiming,
+  getSceneEditorTimingDurationMs,
+  getSceneEditorTimingNow,
+} from "../internal/ui/sceneEditor/sceneEditorTiming.js";
+import {
   areSceneEditorLinesEqual,
   cloneSceneEditorLine,
   cloneSceneEditorLines,
@@ -1426,13 +1432,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.loadLines(this.state.lines, { emitChange: false });
     this.scheduleRender();
-    requestAnimationFrame(() => {
-      if (!this.isConnected) {
-        return;
-      }
-
-      this.focusContainer({ scrollLine: false });
-    });
   }
 
   disconnectedCallback() {
@@ -7343,21 +7342,33 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   syncFromEditorState(editorState) {
+    const traceId = createSceneEditorTimingTraceId("lexical-update");
+    const updateStartedAt = getSceneEditorTimingNow();
+    const snapshotStartedAt = getSceneEditorTimingNow();
     const snapshot = this.readEditorSnapshot(editorState);
+    const snapshotDurationMs =
+      getSceneEditorTimingDurationMs(snapshotStartedAt);
+    const changeReason = this.pendingChangeReason;
 
     const ownsFocus = this.isEditorFocused === true;
     const previousLines = this.state.lines;
     const previousSelectedLineId = this.state.selectedLineId;
+    const cloneStartedAt = getSceneEditorTimingNow();
     this.state.lines = cloneSceneEditorLines(snapshot.lines);
+    const cloneDurationMs = getSceneEditorTimingDurationMs(cloneStartedAt);
     this.state.selectedLineId =
       this.state.mode === "block" || !ownsFocus
         ? previousSelectedLineId
         : snapshot.selectedLineId;
     this.state.activeFormats = snapshot.activeFormats;
+    const plainTextStartedAt = getSceneEditorTimingNow();
     this.state.plainText = snapshot.lines
       .map((line) => getPlainTextFromContent(getLineDialogueContent(line)))
       .join("\n");
+    const plainTextDurationMs =
+      getSceneEditorTimingDurationMs(plainTextStartedAt);
 
+    const mentionStartedAt = getSceneEditorTimingNow();
     if (snapshot.mentionTrigger) {
       const openReason = this.getMentionTriggerOpenReason(
         snapshot.mentionTrigger,
@@ -7422,9 +7433,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         this.closeMentionMenu();
       }
     }
+    const mentionDurationMs = getSceneEditorTimingDurationMs(mentionStartedAt);
 
     this.scheduleRender();
 
+    const diffStartedAt = getSceneEditorTimingNow();
     const didLinesChange =
       previousLines.length !== this.state.lines.length ||
       previousLines.some((line, index) => {
@@ -7439,13 +7452,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
             JSON.stringify(nextLine?.actions || {})
         );
       });
+    const diffDurationMs = getSceneEditorTimingDurationMs(diffStartedAt);
 
     const focusTarget = this.pendingFocusTarget;
+    let dispatchDurationMs = 0;
     if (didLinesChange && !this.isApplyingExternalLines && ownsFocus) {
+      const dispatchStartedAt = getSceneEditorTimingNow();
       const detail = {
         lines: cloneSceneEditorLines(this.state.lines),
         selectedLineId: this.state.selectedLineId,
         reason: this.pendingChangeReason,
+        traceId,
       };
       if (focusTarget?.lineId) {
         detail.focusTarget = focusTarget;
@@ -7456,6 +7473,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           bubbles: true,
         }),
       );
+      dispatchDurationMs = getSceneEditorTimingDurationMs(dispatchStartedAt);
     }
     if (focusTarget) {
       this.pendingFocusTarget = undefined;
@@ -7466,6 +7484,27 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     this.pendingChangeReason = "text";
+    emitSceneEditorTiming("lexical.update", {
+      traceId,
+      durationMs: getSceneEditorTimingDurationMs(updateStartedAt),
+      snapshotDurationMs,
+      cloneDurationMs,
+      plainTextDurationMs,
+      mentionDurationMs,
+      diffDurationMs,
+      dispatchDurationMs,
+      lineCount: this.state.lines.length,
+      previousLineCount: previousLines.length,
+      didLinesChange,
+      didDispatchLinesChange:
+        didLinesChange && !this.isApplyingExternalLines && ownsFocus,
+      ownsFocus,
+      isComposing: this.isComposing === true,
+      mode: this.state.mode,
+      reason: changeReason,
+      selectedLineId: this.state.selectedLineId,
+      mentionOpen: this.state.mentionMenu?.isOpen === true,
+    });
   }
 
   dispatchSelectedLineChanged(lineId, detailOverride) {
@@ -7580,6 +7619,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   renderGutters() {
+    const renderStartedAt = getSceneEditorTimingNow();
     const lineDecorationsById = new Map();
 
     for (const lineDecoration of this.state.lineDecorations) {
@@ -7590,8 +7630,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       lineDecorationsById.set(lineDecoration.id, lineDecoration);
     }
 
+    let layoutReadCount = 0;
+    let measuredLineCount = 0;
+    let previewRowsCreated = 0;
+    let rightGutterMeasurementCount = 0;
+    let rowReplaceCount = 0;
     const surfaceRect = this.refs.surface.getBoundingClientRect();
+    layoutReadCount += 1;
     const maxRightGutterWidth = this.getMaxRightGutterWidth();
+    layoutReadCount += 1;
     let maxLineRightGutterWidth = DEFAULT_RIGHT_GUTTER_WIDTH;
     let shouldRenderAgain = false;
     const seenLeftRows = new Set();
@@ -7608,6 +7655,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
       const lineDecoration = lineDecorationsById.get(line.id) || {};
       const lineRect = lineElement.getBoundingClientRect();
+      layoutReadCount += 1;
+      measuredLineCount += 1;
       const top = Math.max(0, lineRect.top - surfaceRect.top);
       const height = Math.max(24, lineRect.height);
       const isSelected =
@@ -7625,7 +7674,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         height,
         isSelected,
       });
-      this.updateLeftGutterRow(leftRow, lineDecoration, index);
+      if (this.updateLeftGutterRow(leftRow, lineDecoration, index)) {
+        rowReplaceCount += 1;
+      }
       seenLeftRows.add(line.id);
 
       const previewItems = this.createPreviewItems(lineDecoration);
@@ -7646,12 +7697,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         height,
         isSelected,
       });
-      this.updateRightGutterRow(rightRow, lineDecoration, previewItems);
+      previewRowsCreated += 1;
+      if (this.updateRightGutterRow(rightRow, lineDecoration, previewItems)) {
+        rowReplaceCount += 1;
+      }
       const lineRightGutter = this.syncLineRightGutterWidth(
         lineElement,
         rightRow,
         maxRightGutterWidth,
       );
+      layoutReadCount += 1;
+      rightGutterMeasurementCount += 1;
       maxLineRightGutterWidth = Math.max(
         maxLineRightGutterWidth,
         lineRightGutter.width,
@@ -7669,6 +7725,21 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     if (shouldRenderAgain) {
       this.scheduleRender();
     }
+
+    emitSceneEditorTiming("lexical.gutters", {
+      durationMs: getSceneEditorTimingDurationMs(renderStartedAt),
+      lineCount: this.state.lines.length,
+      decorationCount: this.state.lineDecorations.length,
+      measuredLineCount,
+      layoutReadCount,
+      previewRowsCreated,
+      rightGutterMeasurementCount,
+      rowReplaceCount,
+      shouldRenderAgain,
+      showLineNumbers: this.state.showLineNumbers,
+      selectedLineId: this.state.selectedLineId,
+      mode: this.state.mode,
+    });
   }
 
   getOrCreateGutterRow(map, container, lineId) {
@@ -7700,7 +7771,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
 
     if (row.dataset.signature === signature) {
-      return;
+      return false;
     }
 
     row.dataset.signature = signature;
@@ -7714,16 +7785,18 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     row.append(this.createSpeakerSlot(lineDecoration));
+    return true;
   }
 
   updateRightGutterRow(row, lineDecoration = {}, previewItems) {
     const signature = this.buildRightGutterSignature(lineDecoration);
     if (row.dataset.signature === signature) {
-      return;
+      return false;
     }
 
     row.dataset.signature = signature;
     row.replaceChildren(previewItems);
+    return true;
   }
 
   buildRightGutterSignature(lineDecoration = {}) {

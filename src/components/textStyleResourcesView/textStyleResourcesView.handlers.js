@@ -566,6 +566,16 @@ export const handleContextMenuClickItem = (deps, payload) => {
     );
   }
 
+  if (action === "edit-item") {
+    dispatchEvent(
+      new CustomEvent("item-edit", {
+        detail: { itemId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   if (action === "delete-item") {
     dispatchEvent(
       new CustomEvent("item-delete", {

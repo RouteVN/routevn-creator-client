@@ -82,7 +82,7 @@ template:
                 $elif currentRoutePattern == "/project/releases/web-server":
                   - rvn-web-server: []
       - $if showMobileTabBar:
-          - 'rtgl-view w=f bgc=bg style="border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); flex-shrink: 0;"':
+          - 'rtgl-view w=f bgc=bg style="position: relative; z-index: 1150; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); flex-shrink: 0;"':
               - rtgl-view w=f h=64 d=h av=c:
                   - $for item, i in mobileTabBarItems:
                       - 'rtgl-view#mobileTabItem${i} data-tab-id=${item.id} w=1fg h=f d=v ah=c av=c g=xs cur=pointer style="touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;"':

@@ -76,7 +76,7 @@ template:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
           - rtgl-view w=f d=h av=c g=md wrap:
               - rtgl-view av=c g=sm d=h w=1fg:
-                  - $if showMenuButton:
+                  - $if showLeadingMenuButton:
                       - rtgl-view#menuButton w=36 h=36 ah=c av=c cur=pointer:
                           - rtgl-svg svg=hamburger wh=22 c=mu-fg: null
                   - $if navTitle:
@@ -89,6 +89,9 @@ template:
               - $if showTagFilter:
                   - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
                       - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
+              - $if showTrailingMenuButton:
+                  - rtgl-view#menuButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo:
+                      - rtgl-svg svg=hamburger wh=16 c=mu-fg: null
       - 'rtgl-view h=1fg w=f sv style="min-width: 0; box-sizing: border-box;"':
           - $if groups.length > 0:
               - $for group, gIndex in groups:
@@ -104,7 +107,7 @@ template:
                           - rtgl-view w=1fg: null
                           - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=plus: ${addText}
                       - $if !group.isCollapsed:
-                          - 'rtgl-grid w=f ph=sm pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0; min-height: ${group.progressiveContentMinHeight}px; align-content: start; align-items: start;"':
+                          - 'rtgl-grid w=f pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0; min-height: ${group.progressiveContentMinHeight}px; align-content: start; align-items: start;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
                                       - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.domItemId} w=${item.itemWidth} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":

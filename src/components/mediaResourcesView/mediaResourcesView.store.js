@@ -340,6 +340,9 @@ export const selectViewData = ({ state, props }) => {
     props.zoomInPopover === undefined
       ? true
       : parseBooleanProp(props.zoomInPopover);
+  const showMenuButton = parseBooleanProp(props.showMenuButton);
+  const menuButtonPlacement =
+    props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
   const hasActiveSearch = searchQuery.trim().length > 0;
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
@@ -550,7 +553,9 @@ export const selectViewData = ({ state, props }) => {
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,
     showBackButton: parseBooleanProp(props.showBackButton),
-    showMenuButton: parseBooleanProp(props.showMenuButton),
+    showLeadingMenuButton: showMenuButton && menuButtonPlacement === "leading",
+    showTrailingMenuButton:
+      showMenuButton && menuButtonPlacement === "trailing",
     fullWidthImageCards,
     mobileLayout,
     canUpload: parseBooleanProp(props.canUpload, true),

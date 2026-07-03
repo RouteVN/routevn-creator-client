@@ -23,6 +23,23 @@ describe("images view", () => {
     );
   });
 
+  it("moves the mobile file menu action to the trailing header controls", () => {
+    const imagesView = readFileSync(
+      new URL("../../src/pages/images/images.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    const mobileBranchStart = imagesView.indexOf("$if showMobileTopTabs");
+    const desktopBranchStart = imagesView.indexOf("$else:", mobileBranchStart);
+    const mobileBranch = imagesView.slice(
+      mobileBranchStart,
+      desktopBranchStart,
+    );
+
+    expect(mobileBranch).toContain("show-menu-button");
+    expect(mobileBranch).toContain("menu-button-placement=trailing");
+  });
+
   it("does not use the old mobile context-menu preview opt-in", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),
@@ -51,6 +68,30 @@ describe("images view", () => {
     );
 
     expect(mobileExplorerBranch).toContain("bottom-empty-space-height=80vh");
+  });
+
+  it("keeps the mobile file explorer header aligned with the image grid header height", () => {
+    const imagesView = readFileSync(
+      new URL("../../src/pages/images/images.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    const mobileExplorerStart = imagesView.indexOf(
+      "$if showMobileFileExplorer",
+    );
+    const mobileDetailSheetStart = imagesView.indexOf(
+      "$if showMobileDetailSheet",
+      mobileExplorerStart,
+    );
+    const mobileExplorerBranch = imagesView.slice(
+      mobileExplorerStart,
+      mobileDetailSheetStart,
+    );
+
+    expect(mobileExplorerBranch).toContain(
+      "rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md",
+    );
+    expect(mobileExplorerBranch).not.toContain("rtgl-view h=56 w=f d=h");
   });
 
   it("constrains the desktop file explorer to the remaining left-panel height", () => {
