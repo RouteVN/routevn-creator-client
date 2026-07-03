@@ -63,6 +63,10 @@ export const selectViewData = ({ state, i18n }) => {
     contentPadding: state.isTouchMode ? "0" : "lg",
     contentBodyPadding: state.isTouchMode ? "lg" : "0",
     contentBodyMarginTop: state.isTouchMode ? "0" : "lg",
+    themeGridColumns: state.isTouchMode
+      ? "2"
+      : "repeat(auto-fill, minmax(min(320px, 100%), 320px))",
+    themePreviewAspectRatio: "16 / 9",
     title: copy.title ?? "Appearance",
     themesTitle: copy.themesTitle ?? "Themes",
   };

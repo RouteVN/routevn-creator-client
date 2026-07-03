@@ -9,7 +9,7 @@ refs:
         handler: handleThemeCardClick
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
-      - 'rtgl-view d=h h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
           - $if showExplorerPanel:
               - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
                   - rtgl-view slot="content" w=f h=f:
@@ -25,13 +25,11 @@ template:
               - 'rtgl-view w=f h=1fg mt=${contentBodyMarginTop} p=${contentBodyPadding} sv style="min-width: 0; min-height: 0;"':
                   - rtgl-view g=sm:
                       - rtgl-text s=h4: ${themesTitle}
-                  - rtgl-view d=h g=lg wrap mt=lg:
+                  - 'rtgl-grid w=f mt=lg g=md cols="${themeGridColumns}" style="min-width: 0; align-content: start; align-items: start;"':
                       - $for item, i in themes:
-                          - 'rtgl-view#themeCard${i} data-theme=${item.id} d=v g=md w=320 sm-w=f p=md bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} bgc=bg br=md cur=pointer':
-                              - 'rtgl-view d=v g=sm w=f p=md br=md bw=xs style="background-color: ${item.previewPageBackground}; border-color: ${item.previewBorder}; min-height: 152px;"':
-                                  - 'rtgl-view h=88 w=f br=md style="background-color: ${item.previewPanelBackground};"': null
-                                  - rtgl-view d=h g=sm:
-                                      - 'rtgl-view w=1fg h=36 br=md style="background-color: ${item.previewCardBackground};"': null
-                                      - 'rtgl-view w=1fg h=36 br=md style="background-color: ${item.previewAccent}; opacity: 0.3;"': null
-                                      - 'rtgl-view w=1fg h=36 br=md style="background-color: ${item.previewAccent}; opacity: 0.65;"': null
-                              - rtgl-text s=xs c=mu-fg ellipsis=true w=f mt=auto: ${item.name}
+                          - 'rtgl-view#themeCard${i} data-theme=${item.id} d=v w=f bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} bgc=bg br=md cur=pointer overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                              - 'rtgl-view w=f p=xs style="background-color: ${item.previewPageBackground}; aspect-ratio: ${themePreviewAspectRatio}; border-bottom: 1px solid ${item.previewBorder}; box-sizing: border-box;"':
+                                  - 'rtgl-view w=f h=f p=xs br=sm style="background-color: ${item.previewPanelBackground}; box-sizing: border-box;"':
+                                      - 'rtgl-view w=f h=f br=sm style="background-color: ${item.previewCardBackground};"': null
+                              - rtgl-view w=f p=md:
+                                  - rtgl-text s=xs c=mu-fg ellipsis=true w=f: ${item.name}
