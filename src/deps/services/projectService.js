@@ -9,6 +9,7 @@ export const createProjectService = ({
   db,
   filePicker,
   creatorVersion,
+  projectMediaOrigin,
 }) => {
   const collabLog = (level, message, meta = {}) => {
     if (!ENABLE_VERBOSE_COLLAB_LOGS && level !== "warn" && level !== "error") {
@@ -25,7 +26,11 @@ export const createProjectService = ({
   };
 
   const { storageAdapter, fileAdapter, collabAdapter } =
-    createTauriProjectServiceAdapters({ collabLog, creatorVersion });
+    createTauriProjectServiceAdapters({
+      collabLog,
+      creatorVersion,
+      projectMediaOrigin,
+    });
 
   return createProjectServiceCore({
     router,

@@ -1,10 +1,11 @@
 [package]
-name = "app"
-version = "0.2.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+name = "routevn-creator"
+version = "1.7.2"
+description = "Free and Open Source tool to create Visual Novels without any coding."
+authors = ["Yuusoft"]
+license = "MIT"
+repository = "https://github.com/RouteVN/routevn-creator-client"
+homepage = "https://routevn.com"
 edition = "2021"
 rust-version = "1.77.2"
 

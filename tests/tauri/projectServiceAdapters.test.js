@@ -193,6 +193,56 @@ describe("tauri project service adapters preflight reads", () => {
     expect(mocked.join).not.toHaveBeenCalled();
   });
 
+  it("serves video file content through the project media server when available", async () => {
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+      projectMediaOrigin: "http://127.0.0.1:42123",
+    });
+
+    const result = await fileAdapter.getFileContent({
+      fileId: "video-1",
+      fileMetadata: { mimeType: "video/mp4" },
+      getCurrentReference: () => ({
+        projectPath: "/projects/dialune",
+        cacheKey: "/projects/dialune",
+      }),
+    });
+
+    expect(result).toEqual({
+      url: "http://127.0.0.1:42123/file.mp4?path=%2Fprojects%2Fdialune%2Ffiles%2Fvideo-1",
+      type: "video/mp4",
+    });
+    expect(mocked.convertFileSrc).not.toHaveBeenCalled();
+  });
+
+  it("continues to serve non-video file content through Tauri asset URLs", async () => {
+    mocked.convertFileSrc.mockImplementation((filePath) => {
+      return `asset://localhost/${encodeURIComponent(filePath)}`;
+    });
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+      projectMediaOrigin: "http://127.0.0.1:42123",
+    });
+
+    const result = await fileAdapter.getFileContent({
+      fileId: "image-1",
+      fileMetadata: { mimeType: "image/png" },
+      getCurrentReference: () => ({
+        projectPath: "/projects/dialune",
+        cacheKey: "/projects/dialune",
+      }),
+    });
+
+    expect(result).toEqual({
+      url: "asset://localhost/%2Fprojects%2Fdialune%2Ffiles%2Fimage-1",
+    });
+    expect(mocked.convertFileSrc).toHaveBeenCalledWith(
+      "/projects/dialune/files/image-1",
+    );
+  });
+
   it("passes repository mime metadata into streamed native ZIP export", async () => {
     mocked.exists.mockResolvedValue(true);
     mocked.invoke.mockResolvedValue({
