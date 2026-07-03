@@ -37,6 +37,14 @@ refs:
     eventListeners:
       form-action:
         handler: handleLanguageFormAction
+  appearanceDialog:
+    eventListeners:
+      close:
+        handler: handleAppearanceDialogClose
+  appearanceForm:
+    eventListeners:
+      form-action:
+        handler: handleAppearanceFormAction
   cloudCreateButton:
     eventListeners:
       click:
@@ -241,6 +249,9 @@ template:
   - rtgl-dialog#languageDialog ?open=${languageDialog.isOpen} s=sm:
       - rtgl-view slot=content w=f p=lg:
           - rtgl-form#languageForm key=${languageDialog.formKey} :form=${languageForm} :defaultValues=${languageDialog.defaultValues} w=f: null
+  - rtgl-dialog#appearanceDialog ?open=${appearanceDialog.isOpen} s=sm:
+      - rtgl-view slot=content w=f p=lg:
+          - rtgl-form#appearanceForm key=${appearanceDialog.formKey} :form=${appearanceForm} :defaultValues=${appearanceDialog.defaultValues} w=f: null
   - rtgl-dialog#editProfileDialog ?open=${profileDialog.isOpen} s=f:
       - rtgl-view slot=content w=f h=f p=xl:
           - rtgl-view w=f h=f ah=c av=s:

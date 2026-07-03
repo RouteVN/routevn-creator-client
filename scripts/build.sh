@@ -14,6 +14,7 @@ RETTANGOLI_VERSION="${RETTANGOLI_VERSION#~}"
 RETTANGOLI_URL="https://cdn.jsdelivr.net/npm/@rettangoli/ui@${RETTANGOLI_VERSION}/dist/rettangoli-iife-ui.min.js"
 RETTANGOLI_DIR="static/public/@rettangoli/ui@${RETTANGOLI_VERSION}/dist"
 RETTANGOLI_FILE="${RETTANGOLI_DIR}/rettangoli-iife-ui.min.js"
+LOCAL_RETTANGOLI_PACKAGE="node_modules/@rettangoli/ui/package.json"
 LOCAL_RETTANGOLI_FILE="node_modules/@rettangoli/ui/dist/rettangoli-iife-ui.min.js"
 LOCK_FILE="/tmp/routevn-creator-client-build.lock"
 RTGL_BIN="node_modules/.bin/rtgl"
@@ -53,6 +54,14 @@ if [ ! -f "${RETTANGOLI_FILE}" ]; then
   mkdir -p "${RETTANGOLI_DIR}"
 
   if [ -f "${LOCAL_RETTANGOLI_FILE}" ]; then
+    LOCAL_RETTANGOLI_VERSION=$(node -p "require('./${LOCAL_RETTANGOLI_PACKAGE}').version" 2>/dev/null || true)
+    if [ "${LOCAL_RETTANGOLI_VERSION}" != "${RETTANGOLI_VERSION}" ]; then
+      echo "Error: node_modules has Rettangoli UI v${LOCAL_RETTANGOLI_VERSION:-unknown}, expected v${RETTANGOLI_VERSION}."
+      echo "Run bun install before building so the local Rettangoli UI bundle matches package.json."
+      exit 1
+    fi
+
+    echo "Verified Rettangoli UI v${LOCAL_RETTANGOLI_VERSION} in node_modules."
     echo "Copying Rettangoli UI v${RETTANGOLI_VERSION} from node_modules..."
     cp "${LOCAL_RETTANGOLI_FILE}" "${RETTANGOLI_FILE}"
   # Download with curl or wget when local package asset is not available

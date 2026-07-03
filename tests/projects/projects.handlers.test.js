@@ -5,6 +5,8 @@ import {
   handleAppVersionClick,
   handleAppVersionMenuClickItem,
   handleAppVersionMenuClose,
+  handleAppearanceDialogClose,
+  handleAppearanceFormAction,
   handleCreateButtonClick,
   handleCreateDialogSubmit,
   handleDeleteDialogConfirm,
@@ -37,6 +39,8 @@ const createDeps = ({
     setCurrentProjectEntry: vi.fn(),
     getUserConfig: vi.fn(),
     setUserConfig: vi.fn(),
+    getTheme: vi.fn(() => "dark"),
+    setTheme: vi.fn((theme) => theme),
     navigate: vi.fn(),
   };
 
@@ -71,6 +75,10 @@ const createDeps = ({
       closeLanguageDialog: vi.fn(),
       selectIsLanguageDialogOpen: vi.fn(() => true),
       setCurrentLocale: vi.fn(),
+      openAppearanceDialog: vi.fn(),
+      closeAppearanceDialog: vi.fn(),
+      selectIsAppearanceDialogOpen: vi.fn(() => true),
+      setCurrentTheme: vi.fn(),
       openCreateDialog: vi.fn(),
       closeCreateDialog: vi.fn(),
       selectIsCreateDialogOpen: vi.fn(() => true),
@@ -378,12 +386,17 @@ describe("projects app version menu", () => {
           type: "item",
           value: "language",
         },
+        {
+          label: EN_I18N.projectsPage.appearanceMenuItem,
+          type: "item",
+          value: "appearance",
+        },
       ],
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
-  it("does not open the app version dropdown on web", () => {
+  it("opens the app version dropdown on web without the update item", () => {
     const deps = createDeps({ platform: "web" });
 
     handleAppVersionClick(deps, {
@@ -398,11 +411,26 @@ describe("projects app version menu", () => {
       },
     });
 
-    expect(deps.store.openAppVersionMenu).not.toHaveBeenCalled();
-    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.store.openAppVersionMenu).toHaveBeenCalledWith({
+      x: 140,
+      y: 700,
+      items: [
+        {
+          label: EN_I18N.projectsPage.languageMenuItem,
+          type: "item",
+          value: "language",
+        },
+        {
+          label: EN_I18N.projectsPage.appearanceMenuItem,
+          type: "item",
+          value: "appearance",
+        },
+      ],
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
-  it("does not open the app version dropdown when updates are disabled", () => {
+  it("opens the app version dropdown without the update item when updates are disabled", () => {
     const deps = createDeps();
     deps.updatesEnabled = false;
 
@@ -418,8 +446,23 @@ describe("projects app version menu", () => {
       },
     });
 
-    expect(deps.store.openAppVersionMenu).not.toHaveBeenCalled();
-    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.store.openAppVersionMenu).toHaveBeenCalledWith({
+      x: 140,
+      y: 700,
+      items: [
+        {
+          label: EN_I18N.projectsPage.languageMenuItem,
+          type: "item",
+          value: "language",
+        },
+        {
+          label: EN_I18N.projectsPage.appearanceMenuItem,
+          type: "item",
+          value: "appearance",
+        },
+      ],
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
   it("closes the app version dropdown", () => {
@@ -446,7 +489,9 @@ describe("projects app version menu", () => {
 
     expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
     expect(deps.render).toHaveBeenCalledTimes(1);
-    expect(deps.updaterService.checkForUpdates).toHaveBeenCalledWith(false);
+    expect(deps.updaterService.checkForUpdates).toHaveBeenCalledWith(false, {
+      copy: EN_I18N.appPage,
+    });
   });
 
   it("opens the language dialog from the app version dropdown", async () => {
@@ -469,6 +514,60 @@ describe("projects app version menu", () => {
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
     expect(deps.updaterService.checkForUpdates).not.toHaveBeenCalled();
+  });
+
+  it("opens the appearance dialog from the app version dropdown", async () => {
+    const deps = createDeps();
+    deps.appService.getTheme.mockReturnValue("light");
+
+    await handleAppVersionMenuClickItem(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: "appearance",
+          },
+        },
+      },
+    });
+
+    expect(deps.store.closeAppVersionMenu).toHaveBeenCalledTimes(1);
+    expect(deps.store.openAppearanceDialog).toHaveBeenCalledWith({
+      theme: "light",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.updaterService.checkForUpdates).not.toHaveBeenCalled();
+  });
+
+  it("closes the appearance dialog", () => {
+    const deps = createDeps();
+
+    handleAppearanceDialogClose(deps);
+
+    expect(deps.store.closeAppearanceDialog).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves the selected appearance theme", () => {
+    const deps = createDeps();
+    deps.appService.setTheme.mockReturnValue("light");
+
+    handleAppearanceFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "save-appearance",
+          values: {
+            theme: "light",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.setTheme).toHaveBeenCalledWith("light");
+    expect(deps.store.setCurrentTheme).toHaveBeenCalledWith({
+      theme: "light",
+    });
+    expect(deps.store.closeAppearanceDialog).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
   it("closes the language dialog", () => {

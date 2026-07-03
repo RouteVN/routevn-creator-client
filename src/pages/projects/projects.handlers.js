@@ -153,8 +153,11 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, uiConfig } = deps;
+  const { appService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
+  store.setCurrentTheme({
+    theme: appService.getTheme(),
+  });
 };
 
 const getProjectIdFromEvent = (event) => {
@@ -508,26 +511,32 @@ export const handleMobileActionMenuClickItem = async (deps, payload) => {
 export const handleAppVersionClick = (deps, payload) => {
   const { appService, store, render, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
-  if (appService.getPlatform() === "web" || !resolveUpdatesEnabled(deps)) {
-    return;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  const items = [];
+
+  if (appService.getPlatform() !== "web" && resolveUpdatesEnabled(deps)) {
+    items.push({
+      label: copy.checkUpdateMenuItem,
+      type: "item",
+      value: "check-update",
+    });
   }
 
-  const rect = payload._event.currentTarget.getBoundingClientRect();
+  items.push({
+    label: copy.languageMenuItem,
+    type: "item",
+    value: "language",
+  });
+  items.push({
+    label: copy.appearanceMenuItem,
+    type: "item",
+    value: "appearance",
+  });
+
   const menuPayload = {
     x: rect.left + rect.width / 2,
     y: rect.top,
-    items: [
-      {
-        label: copy.checkUpdateMenuItem,
-        type: "item",
-        value: "check-update",
-      },
-      {
-        label: copy.languageMenuItem,
-        type: "item",
-        value: "language",
-      },
-    ],
+    items,
   };
 
   store.openAppVersionMenu(menuPayload);
@@ -553,6 +562,14 @@ export const handleAppVersionMenuClickItem = async (deps, payload) => {
   if (item.value === "language") {
     store.openLanguageDialog({
       locale: resolveProjectsLocale({ appService, localeService: locale }),
+    });
+    render();
+    return;
+  }
+
+  if (item.value === "appearance") {
+    store.openAppearanceDialog({
+      theme: appService.getTheme(),
     });
     render();
     return;
@@ -608,6 +625,41 @@ export const handleLanguageFormAction = async (deps, payload) => {
     render();
   } catch {
     appService.showAlert({ message: copy.failedChangeLanguage });
+  }
+};
+
+export const handleAppearanceDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsAppearanceDialogOpen()) {
+    return;
+  }
+  store.closeAppearanceDialog();
+  render();
+};
+
+export const handleAppearanceFormAction = (deps, payload) => {
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+  const detail = payload?._event?.detail || {};
+  const actionId = detail.actionId;
+
+  if (actionId === "cancel") {
+    store.closeAppearanceDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "save-appearance") {
+    return;
+  }
+
+  try {
+    const nextTheme = appService.setTheme(detail?.values?.theme);
+    store.setCurrentTheme({ theme: nextTheme });
+    store.closeAppearanceDialog();
+    render();
+  } catch {
+    appService.showAlert({ message: copy.failedChangeAppearance });
   }
 };
 

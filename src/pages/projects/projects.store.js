@@ -1,3 +1,4 @@
+import { normalizeTheme } from "../../internal/theme.js";
 import {
   formatProjectsPageCopy,
   selectProjectsPageCopy,
@@ -23,6 +24,7 @@ export const createInitialState = () => ({
   platform: "tauri",
   appVersion: "",
   currentLocale: "en",
+  currentTheme: "dark",
 
   profileMenu: {
     isOpen: false,
@@ -50,6 +52,14 @@ export const createInitialState = () => ({
     formKey: 0,
     defaultValues: {
       locale: "en",
+    },
+  },
+
+  appearanceDialog: {
+    isOpen: false,
+    formKey: 0,
+    defaultValues: {
+      theme: "dark",
     },
   },
 
@@ -162,6 +172,10 @@ export const setCurrentLocale = ({ state }, { locale } = {}) => {
   state.currentLocale = locale ?? "en";
 };
 
+export const setCurrentTheme = ({ state }, { theme } = {}) => {
+  state.currentTheme = normalizeTheme(theme);
+};
+
 export const setAuthUser = ({ state }, { user } = {}) => {
   const name = user?.name?.trim?.() || "";
   const email = user?.email?.trim?.() || "";
@@ -242,14 +256,6 @@ export const selectIsMobileActionMenuOpen = ({ state }) => {
 };
 
 export const openAppVersionMenu = ({ state }, { x, y, items } = {}) => {
-  if (state.platform === "web") {
-    state.appVersionMenu.isOpen = false;
-    state.appVersionMenu.x = 0;
-    state.appVersionMenu.y = 0;
-    state.appVersionMenu.items = [];
-    return;
-  }
-
   state.appVersionMenu.isOpen = true;
   state.appVersionMenu.x = x;
   state.appVersionMenu.y = y;
@@ -281,6 +287,22 @@ export const closeLanguageDialog = ({ state }, _payload = {}) => {
 
 export const selectIsLanguageDialogOpen = ({ state }) => {
   return Boolean(state.languageDialog?.isOpen);
+};
+
+export const openAppearanceDialog = ({ state }, { theme } = {}) => {
+  state.appearanceDialog.isOpen = true;
+  state.appearanceDialog.formKey += 1;
+  state.appearanceDialog.defaultValues = {
+    theme: normalizeTheme(theme ?? state.currentTheme),
+  };
+};
+
+export const closeAppearanceDialog = ({ state }, _payload = {}) => {
+  state.appearanceDialog.isOpen = false;
+};
+
+export const selectIsAppearanceDialogOpen = ({ state }) => {
+  return Boolean(state.appearanceDialog?.isOpen);
 };
 
 export const selectIsProfileDialogOpen = ({ state }) => {
@@ -637,6 +659,43 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     },
   };
+  const appearanceForm = {
+    title: copy.appearanceTitle,
+    fields: [
+      {
+        name: "theme",
+        type: "select",
+        label: copy.themeLabel,
+        required: true,
+        options: [
+          {
+            value: "dark",
+            label: copy.darkThemeName,
+          },
+          {
+            value: "light",
+            label: copy.lightThemeName,
+          },
+        ],
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: copy.cancelButton,
+        },
+        {
+          id: "save-appearance",
+          variant: "pr",
+          label: copy.saveButton,
+          type: "submit",
+          validate: true,
+        },
+      ],
+    },
+  };
 
   const localProjects = Array.isArray(state.projects) ? state.projects : [];
   const cloudProjects = Array.isArray(state.cloudProjects)
@@ -683,6 +742,7 @@ export const selectViewData = ({ state, i18n }) => {
     cloudCreateForm,
     addMemberForm,
     languageForm,
+    appearanceForm,
     profileDialogForm,
     settingsDialogForm,
   };
