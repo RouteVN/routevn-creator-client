@@ -751,6 +751,115 @@ describe("renderSceneEditorState", () => {
     expect(projectService.getFileContent).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps valid scene videos loaded when another video fails", async () => {
+    const projectData = createProjectData();
+    projectData.resources.videos["intro-video"] = {
+      id: "intro-video",
+      fileId: "bad-video.mp4",
+      fileType: "video/mp4",
+      width: 1920,
+      height: 1080,
+    };
+    projectData.resources.videos["outro-video"] = {
+      id: "outro-video",
+      fileId: "good-video.mp4",
+      fileType: "video/mp4",
+      width: 1920,
+      height: 1080,
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[0].actions.background = {
+      resourceId: "outro-video",
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[1].actions.background = {
+      resourceId: "intro-video",
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+    };
+    const loadedAssetIds = new Set();
+    const graphicsService = createGraphicsService();
+    graphicsService.hasLoadedAsset = vi.fn((fileId) =>
+      loadedAssetIds.has(fileId),
+    );
+    graphicsService.loadAssets = vi.fn(async (assets) => {
+      if (assets["bad-video.mp4"]) {
+        throw new Error('Timed out loading video asset "bad-video.mp4".');
+      }
+
+      Object.keys(assets).forEach((fileId) => {
+        loadedAssetIds.add(fileId);
+      });
+    });
+    const projectService = {
+      getFileContent: vi.fn(async (fileId) => ({
+        url: `asset://${fileId}`,
+      })),
+    };
+    const store = {
+      selectIsScenePageLoading: () => false,
+      selectPreviewScene: () => ({
+        previewVisible: false,
+      }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectTemporaryPresentationState: () => ({}),
+      selectIsBackgroundTransformEditorOpen: () => false,
+      selectScene: () => ({
+        sections: [{ id: "section-1" }],
+      }),
+      selectIsMuted: () => true,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      setSectionLineChanges: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      graphicsService,
+      projectService,
+      refs: {
+        previewCanvasHost: {
+          getCanvasRoot: () => ({
+            isConnected: true,
+          }),
+        },
+      },
+    };
+
+    await renderSceneEditorCanvas(deps, {
+      skipRender: true,
+      skipAnimations: true,
+    });
+    await renderSceneEditorCanvas(deps, {
+      skipRender: true,
+      skipAnimations: true,
+    });
+
+    const loadedAssetCallKeys = graphicsService.loadAssets.mock.calls.map(
+      ([assets]) => Object.keys(assets),
+    );
+    expect(loadedAssetCallKeys).toEqual([
+      ["good-video.mp4", "bad-video.mp4"],
+      ["good-video.mp4"],
+      ["bad-video.mp4"],
+    ]);
+    expect(loadedAssetIds.has("good-video.mp4")).toBe(true);
+    expect(loadedAssetIds.has("bad-video.mp4")).toBe(false);
+    expect(projectService.getFileContent).toHaveBeenCalledTimes(2);
+  });
+
   it("does not reload scene audio after decoded audio is pruned", async () => {
     const projectData = createProjectData();
     projectData.resources.sounds["intro-bgm"] = {

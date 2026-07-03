@@ -4,16 +4,15 @@ import { describe, expect, it } from "vitest";
 describe("project page view", () => {
   it("uses the resource navbar icon style for back and project actions", () => {
     const projectView = readFileSync(
-      new URL(
-        "../../src/pages/project/project.view.yaml",
-        import.meta.url,
-      ),
+      new URL("../../src/pages/project/project.view.yaml", import.meta.url),
       "utf8",
     );
 
     expect(projectView).toContain(
-      'rtgl-view#backButton d=h av=c g=sm cur=pointer title="${i18n.projectPage.backToProjects}"',
+      'rtgl-view#backButton d=h av=c g=sm cur=pointer tabindex=0 role=button title="${i18n.projectPage.backToProjects}"',
     );
+    expect(projectView).toContain("keydown:");
+    expect(projectView).toContain("handler: handleBackButtonKeyDown");
     expect(projectView).toContain(
       "rtgl-view w=36 h=36 bw=xs br=md ah=c av=c bgc=bg bc=bo",
     );
@@ -35,10 +34,7 @@ describe("project page view", () => {
 
   it("aligns the detail content with the navbar icon inset", () => {
     const projectView = readFileSync(
-      new URL(
-        "../../src/pages/project/project.view.yaml",
-        import.meta.url,
-      ),
+      new URL("../../src/pages/project/project.view.yaml", import.meta.url),
       "utf8",
     );
 

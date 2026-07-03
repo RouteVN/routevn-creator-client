@@ -573,6 +573,9 @@ const loadAssetsWithFailureIsolation = async (
   const videoResult = await loadAssetEntriesAsGroup(
     graphicsService,
     videoEntries,
+    {
+      isolateFailures: true,
+    },
   );
 
   loadedAssetIds.push(

@@ -15,6 +15,8 @@ refs:
     eventListeners:
       click:
         handler: handleBackToProjects
+      keydown:
+        handler: handleBackButtonKeyDown
   projectActionsButton:
     eventListeners:
       click:
@@ -46,7 +48,7 @@ refs:
 template:
   - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
       - rtgl-view w=f d=h av=c g=sm:
-          - rtgl-view#backButton d=h av=c g=sm cur=pointer title="${i18n.projectPage.backToProjects}":
+          - rtgl-view#backButton d=h av=c g=sm cur=pointer tabindex=0 role=button title="${i18n.projectPage.backToProjects}":
               - rtgl-view w=36 h=36 bw=xs br=md ah=c av=c bgc=bg bc=bo:
                   - rtgl-svg svg=chevronLeft wh=16 c=mu-fg: null
               - rtgl-text s=sm: ${i18n.projectPage.backToProjects}
