@@ -48,6 +48,14 @@ refs:
     eventListeners:
       mousedown:
         handler: handleMinimapViewportMouseDown
+      touchstart:
+        handler: handleMinimapViewportTouchStart
+      touchmove:
+        handler: handleMinimapViewportTouchMove
+      touchend:
+        handler: handleMinimapViewportTouchEnd
+      touchcancel:
+        handler: handleMinimapViewportTouchCancel
   panBtn:
     eventListeners:
       click:
