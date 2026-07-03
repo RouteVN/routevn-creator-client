@@ -178,16 +178,24 @@ bun run tauri:build
 
 Build the Linux AppImage on the host:
 ```shell
-bun run tauri:build:appimage
+bun run tauri:build:linux:appimage
 ```
 
 Build the Linux AppImage in an Ubuntu 22.04 Docker builder for a more
 compatible release baseline:
 ```shell
-bun run tauri:build:appimage:docker
+bun run tauri:build:linux:appimage:docker
 ```
 The Docker-built AppImage, signature, and checksum are copied to
 `dist/appimage/ubuntu-22.04/`.
+
+Build Linux native packages in Docker:
+```shell
+bun run tauri:build:linux:deb:docker
+bun run tauri:build:linux:rpm:docker
+```
+The Docker-built packages and checksums are copied to
+`dist/linux-packages/ubuntu-22.04/` and `dist/linux-packages/fedora-43/`.
 
 Cross-compile for Windows:
 ```shell

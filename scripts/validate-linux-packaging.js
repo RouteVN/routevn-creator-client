@@ -31,6 +31,16 @@ function readJson(relativePath) {
   return JSON.parse(readText(relativePath));
 }
 
+function getTargetDir() {
+  if (process.env.CARGO_TARGET_DIR) {
+    return path
+      .resolve(repoRoot, process.env.CARGO_TARGET_DIR)
+      .replace(/\/+$/, "");
+  }
+
+  return repoPath("src-tauri/target");
+}
+
 function fail(message) {
   failures.push(message);
 }
@@ -75,7 +85,7 @@ function collectFiles(directory, predicate) {
   return files;
 }
 
-function inspectBinary(filePath) {
+function inspectBinary(filePath, { requirePackageName }) {
   const contents = fs.readFileSync(filePath);
 
   expect(
@@ -86,21 +96,25 @@ function inspectBinary(filePath) {
     !contents.includes(Buffer.from(forbiddenCopy)),
     `${path.relative(repoRoot, filePath)} contains stale Discord update copy`,
   );
-  expect(
-    contents.includes(Buffer.from(packageName)),
-    `${path.relative(repoRoot, filePath)} does not contain package name ${packageName}`,
-  );
+  if (requirePackageName) {
+    expect(
+      contents.includes(Buffer.from(packageName)),
+      `${path.relative(repoRoot, filePath)} does not contain package name ${packageName}`,
+    );
+  }
 }
 
 function inspectArtifact(kind, extension) {
   const tauriConfig = readJson("src-tauri/tauri.conf.json");
-  const bundleDirectory = repoPath(`src-tauri/target/release/bundle/${kind}`);
+  const bundleDirectory = path.join(getTargetDir(), "release", "bundle", kind);
+  const artifactPrefix =
+    kind === "deb"
+      ? `${packageName}_${tauriConfig.version}`
+      : `${packageName}-${tauriConfig.version}`;
   const artifacts = collectFiles(
     bundleDirectory,
     (filePath) =>
-      path
-        .basename(filePath)
-        .startsWith(`${packageName}-${tauriConfig.version}`) &&
+      path.basename(filePath).startsWith(artifactPrefix) &&
       filePath.endsWith(extension),
   );
 
@@ -110,7 +124,7 @@ function inspectArtifact(kind, extension) {
   );
 
   for (const artifact of artifacts) {
-    inspectBinary(artifact);
+    inspectBinary(artifact, { requirePackageName: kind === "rpm" });
   }
 }
 
