@@ -1227,6 +1227,7 @@ export const createInitialState = () => ({
   previewImages: createInitialPreviewImages(),
   isTouchMode: false,
   isPreviewDialogOpen: false,
+  maskRemoveConfirmDialogOpen: false,
   popover: {
     mode: "none",
     x: undefined,
@@ -2412,6 +2413,14 @@ export const closePreviewDialog = ({ state }, _payload = {}) => {
   state.isPreviewDialogOpen = false;
 };
 
+export const openMaskRemoveConfirmDialog = ({ state }, _payload = {}) => {
+  state.maskRemoveConfirmDialogOpen = true;
+};
+
+export const closeMaskRemoveConfirmDialog = ({ state }, _payload = {}) => {
+  state.maskRemoveConfirmDialogOpen = false;
+};
+
 const buildTransitionMaskPanelDataForMask = (
   state,
   transitionMask,
@@ -2809,6 +2818,7 @@ export const selectViewData = ({ state, i18n }) => {
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     isPreviewDialogOpen: state.isPreviewDialogOpen,
+    maskRemoveConfirmDialogOpen: state.maskRemoveConfirmDialogOpen,
     showRightPanel: !state.isTouchMode,
     showMobileTweenActions: state.isTouchMode,
     showMobileMaskButton: state.isTouchMode && dialogType === "transition",
@@ -2825,6 +2835,10 @@ export const selectViewData = ({ state, i18n }) => {
     inTimelineLabel: copy.inTimelineLabel ?? "In",
     invertLabel: copy.invertLabel ?? "Invert",
     kindLabel: copy.kindLabel ?? "Kind",
+    maskRemoveConfirmMessage:
+      copy.maskRemoveConfirmMessage ??
+      "Remove this transition mask? This cannot be undone.",
+    maskRemoveConfirmTitle: copy.maskRemoveConfirmTitle ?? "Remove Mask",
     maskTitle: copy.maskTitle ?? "Mask",
     noMaskAvailable: copy.noMaskAvailable ?? "No mask available.",
     noPreviewLabel: copy.noPreviewLabel ?? "No preview",

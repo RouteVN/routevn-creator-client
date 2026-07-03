@@ -1365,8 +1365,21 @@ export const handleDisableMaskClick = (deps) => {
 };
 
 export const handleMobileDisableMaskClick = (deps) => {
+  const { render, store } = deps;
+  store.openMaskRemoveConfirmDialog({});
+  render();
+};
+
+export const handleMaskRemoveConfirmDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeMaskRemoveConfirmDialog({});
+  render();
+};
+
+export const handleMaskRemoveConfirmClick = (deps) => {
   const { store } = deps;
   store.disableTransitionMask({});
+  store.closeMaskRemoveConfirmDialog({});
   store.closePopover();
   commitMaskChange(deps);
 };

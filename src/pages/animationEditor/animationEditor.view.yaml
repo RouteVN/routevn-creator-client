@@ -27,6 +27,18 @@ refs:
     eventListeners:
       click:
         handler: handleSavePreviewClick
+  maskRemoveConfirmDialog:
+    eventListeners:
+      close:
+        handler: handleMaskRemoveConfirmDialogClose
+  maskRemoveCancelButton:
+    eventListeners:
+      click:
+        handler: handleMaskRemoveConfirmDialogClose
+  maskRemoveConfirmButton:
+    eventListeners:
+      click:
+        handler: handleMaskRemoveConfirmClick
   addPropertiesButton:
     eventListeners:
       click:
@@ -463,10 +475,20 @@ template:
                       - rtgl-button#cancelMaskButton s=sm v=se: ${cancelButton}
                       - rtgl-button#addMaskButton s=sm v=pr: ${addMaskButton}
               - $if popover.mode == 'editMask':
-                  - rtgl-view d=h g=sm w=f ah=e pt=sm:
+                  - rtgl-view d=h g=sm w=f av=c pt=sm:
                       - $if showMobileMaskButton:
                           - rtgl-button#mobileDisableMaskButton s=sm v=se: ${removeButton}
+                      - rtgl-view w=1fg: null
                       - rtgl-button#editMaskDoneButton s=sm v=pr: ${saveButton}
+  - rtgl-dialog#maskRemoveConfirmDialog ?open=${maskRemoveConfirmDialogOpen} s=sm:
+      - $if maskRemoveConfirmDialogOpen:
+          - rtgl-view slot=content d=v w=f g=lg p=lg:
+              - rtgl-view d=v w=f g=md:
+                  - rtgl-text s=lg: ${maskRemoveConfirmTitle}
+                  - rtgl-text c=mu-fg: ${maskRemoveConfirmMessage}
+              - rtgl-view d=h g=sm w=f ah=e:
+                  - rtgl-button#maskRemoveCancelButton s=sm v=se: ${cancelButton}
+                  - rtgl-button#maskRemoveConfirmButton s=sm v=pr: ${removeButton}
   - rtgl-dialog#previewDialog ?open=${isPreviewDialogOpen} s=md:
       - $if isPreviewDialogOpen:
           - 'rtgl-view slot=content d=v w=f g=md style="max-width: calc(100vw - 32px); max-height: calc(100vh - 96px);"':

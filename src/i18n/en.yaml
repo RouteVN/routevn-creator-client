@@ -569,6 +569,8 @@ animationEditorPage:
   keyframeValueTooltip: "The final value of the property at the end of the animation"
   kindLabel: "Kind"
   linearEasingLabel: "Linear"
+  maskRemoveConfirmMessage: "Remove this transition mask? This cannot be undone."
+  maskRemoveConfirmTitle: "Remove Mask"
   maskTitle: "Mask"
   maxCombineLabel: "Max"
   minCombineLabel: "Min"

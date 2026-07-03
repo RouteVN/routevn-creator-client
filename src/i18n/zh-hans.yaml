@@ -569,6 +569,8 @@ animationEditorPage:
   keyframeValueTooltip: "动画结束时该属性的最终值。"
   kindLabel: "类型"
   linearEasingLabel: "线性"
+  maskRemoveConfirmMessage: "要移除这个转场遮罩吗？此操作无法撤消。"
+  maskRemoveConfirmTitle: "移除遮罩"
   maskTitle: "遮罩"
   maxCombineLabel: "最大"
   minCombineLabel: "最小"
