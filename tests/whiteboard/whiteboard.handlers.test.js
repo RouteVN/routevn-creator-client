@@ -8,6 +8,9 @@ import {
   handleEnsureItemVisible,
   handleItemMouseDown,
   handleMinimapViewportMouseDown,
+  handleMinimapViewportTouchEnd,
+  handleMinimapViewportTouchMove,
+  handleMinimapViewportTouchStart,
   handleWindowMouseMove,
   handleWindowMouseUp,
 } from "../../src/components/whiteboard/whiteboard.handlers.js";
@@ -78,6 +81,7 @@ const createDeps = ({
     startMinimapViewportDragging: vi.fn(),
     updatePanFromMinimapViewportDragging: vi.fn(),
     stopMinimapViewportDragging: vi.fn(),
+    clearLastTouchTap: vi.fn(),
     setPan: vi.fn(({ panX, panY }) => {
       currentPan = { x: panX, y: panY };
     }),
@@ -305,6 +309,7 @@ const createTouchEvent = ({
   clientX,
   clientY,
   touches,
+  changedTouches,
   timeStamp,
 } = {}) => ({
   target,
@@ -314,6 +319,7 @@ const createTouchEvent = ({
       clientY,
     },
   ],
+  changedTouches: changedTouches ?? [],
   timeStamp,
   preventDefault: vi.fn(),
   stopPropagation: vi.fn(),
@@ -434,6 +440,83 @@ describe("whiteboard minimap drag handlers", () => {
           visible: true,
         }),
       }),
+    });
+  });
+
+  it("drags the minimap viewport with one-finger touch events", () => {
+    const deps = createDeps({ minimapHeightScale: 2 / 3 });
+    const touchStartEvent = createTouchEvent({
+      clientX: 150,
+      clientY: 230,
+    });
+
+    handleMinimapViewportTouchStart(deps, {
+      _event: touchStartEvent,
+    });
+
+    expect(touchStartEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(touchStartEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.store.selectMinimapData).toHaveBeenCalledWith({
+      items: [],
+      heightScale: 2 / 3,
+    });
+    expect(deps.store.startMinimapViewportDragging).toHaveBeenCalledWith({
+      mouseX: 50,
+      mouseY: 30,
+      minimapData: expect.objectContaining({
+        viewport: expect.objectContaining({
+          visible: true,
+        }),
+      }),
+    });
+
+    const touchMoveEvent = createTouchEvent({
+      clientX: 180,
+      clientY: 255,
+    });
+
+    handleMinimapViewportTouchMove(deps, {
+      _event: touchMoveEvent,
+    });
+
+    expect(touchMoveEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(touchMoveEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(
+      deps.store.updatePanFromMinimapViewportDragging,
+    ).toHaveBeenCalledWith({
+      mouseX: 80,
+      mouseY: 55,
+    });
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+
+    const touchEndEvent = createTouchEvent({
+      touches: [],
+      changedTouches: [
+        {
+          clientX: 190,
+          clientY: 265,
+        },
+      ],
+    });
+
+    handleMinimapViewportTouchEnd(deps, {
+      _event: touchEndEvent,
+    });
+
+    expect(
+      deps.store.updatePanFromMinimapViewportDragging,
+    ).toHaveBeenLastCalledWith({
+      mouseX: 90,
+      mouseY: 65,
+    });
+    expect(deps.store.stopMinimapViewportDragging).toHaveBeenCalledTimes(1);
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+
+    const dispatchedEvent = deps.dispatchEvent.mock.calls[0][0];
+    expect(dispatchedEvent.type).toBe("pan-changed");
+    expect(dispatchedEvent.detail).toEqual({
+      panX: -120,
+      panY: -80,
     });
   });
 

@@ -177,6 +177,13 @@ const getPrimaryTouchPoint = (event, element) => {
   return getTouchPointWithinElement(event?.touches?.[0], element);
 };
 
+const getActiveTouchPoint = (event, element) => {
+  return getTouchPointWithinElement(
+    event?.touches?.[0] ?? event?.changedTouches?.[0],
+    element,
+  );
+};
+
 const getTouchClientPoint = (event) => {
   const touch = event?.touches?.[0];
   if (!touch) {
@@ -740,6 +747,60 @@ const dispatchZoomChanged = ({ store, dispatchEvent } = {}) => {
   );
 };
 
+const startMinimapViewportDrag = (deps, { mouseX, mouseY } = {}) => {
+  const { store } = deps;
+  const minimapData = store.selectMinimapData({
+    items: deps.props?.items ?? [],
+    heightScale: deps.props?.minimapHeightScale,
+  });
+
+  if (!minimapData?.viewport?.visible) {
+    return false;
+  }
+
+  store.startMinimapViewportDragging({
+    mouseX,
+    mouseY,
+    minimapData,
+  });
+  renderWithCursorSync(deps);
+  return true;
+};
+
+const updateMinimapViewportDrag = (deps, { mouseX, mouseY } = {}) => {
+  const { store, refs } = deps;
+
+  if (!store.selectIsDraggingMinimapViewport()) {
+    return false;
+  }
+
+  if (!refs.minimapContainer) {
+    store.stopMinimapViewportDragging();
+    renderWithCursorSync(deps);
+    return false;
+  }
+
+  store.updatePanFromMinimapViewportDragging({
+    mouseX,
+    mouseY,
+  });
+  syncPanPresentation(deps);
+  return true;
+};
+
+const finishMinimapViewportDrag = (deps) => {
+  const { store, dispatchEvent } = deps;
+
+  if (!store.selectIsDraggingMinimapViewport()) {
+    return false;
+  }
+
+  store.stopMinimapViewportDragging();
+  dispatchPanChanged({ store, dispatchEvent });
+  renderWithCursorSync(deps);
+  return true;
+};
+
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
@@ -1190,7 +1251,7 @@ export const handleZoomOutClick = (deps) => {
 };
 
 export const handleMinimapViewportMouseDown = (deps, payload) => {
-  const { store, refs } = deps;
+  const { refs } = deps;
   const { _event: event } = payload;
 
   if (!isPrimaryMouseButton(event)) {
@@ -1204,14 +1265,6 @@ export const handleMinimapViewportMouseDown = (deps, payload) => {
     return;
   }
 
-  const minimapData = store.selectMinimapData({
-    items: deps.props?.items || [],
-    heightScale: deps.props?.minimapHeightScale,
-  });
-  if (!minimapData?.viewport?.visible) {
-    return;
-  }
-
   event.preventDefault();
   event.stopPropagation();
 
@@ -1220,12 +1273,75 @@ export const handleMinimapViewportMouseDown = (deps, payload) => {
     minimapContainer,
   );
 
-  store.startMinimapViewportDragging({
-    mouseX,
-    mouseY,
-    minimapData,
+  startMinimapViewportDrag(deps, { mouseX, mouseY });
+};
+
+export const handleMinimapViewportTouchStart = (deps, payload) => {
+  const { refs, store } = deps;
+  const { _event: event } = payload;
+
+  preventTouchDefault(event);
+  event?.stopPropagation?.();
+  cancelPanAnimation(deps);
+  syncContainerSize(deps);
+  clearTouchLongPressTimeout(deps);
+  store.clearLastTouchTap();
+
+  const point = getActiveTouchPoint(event, refs.minimapContainer);
+  if (!point) {
+    return;
+  }
+
+  startMinimapViewportDrag(deps, {
+    mouseX: point.x,
+    mouseY: point.y,
   });
-  renderWithCursorSync(deps);
+};
+
+export const handleMinimapViewportTouchMove = (deps, payload) => {
+  const { refs } = deps;
+  const { _event: event } = payload;
+
+  preventTouchDefault(event);
+  event?.stopPropagation?.();
+
+  const point = getActiveTouchPoint(event, refs.minimapContainer);
+  if (!point) {
+    return;
+  }
+
+  updateMinimapViewportDrag(deps, {
+    mouseX: point.x,
+    mouseY: point.y,
+  });
+};
+
+export const handleMinimapViewportTouchEnd = (deps, payload) => {
+  const { refs } = deps;
+  const { _event: event } = payload;
+
+  preventTouchDefault(event);
+  event?.stopPropagation?.();
+
+  const point = getActiveTouchPoint(event, refs.minimapContainer);
+  if (point) {
+    updateMinimapViewportDrag(deps, {
+      mouseX: point.x,
+      mouseY: point.y,
+    });
+  }
+
+  if ((event?.touches?.length ?? 0) === 0) {
+    finishMinimapViewportDrag(deps);
+  }
+};
+
+export const handleMinimapViewportTouchCancel = (deps, payload) => {
+  const { _event: event } = payload;
+
+  preventTouchDefault(event);
+  event?.stopPropagation?.();
+  finishMinimapViewportDrag(deps);
 };
 
 export const handleItemMouseDown = (deps, payload) => {
