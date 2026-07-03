@@ -553,6 +553,7 @@ animationEditorPage:
   editKeyframeMenuItem: "Edit keyframe"
   editKeyframeTitle: "Edit Keyframe"
   editMaskTitle: "Edit Mask"
+  editPreviewButton: "Edit Preview"
   failedSaveAnimationPreview: "Failed to save animation preview."
   failedUpdatePreviewImage: "Failed to update preview image."
   greyscaleChannel: "Greyscale"

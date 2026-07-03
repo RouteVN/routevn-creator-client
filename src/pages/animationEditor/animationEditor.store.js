@@ -4,6 +4,7 @@ import {
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import { toFlatItems } from "../../internal/project/tree.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   compileTransitionMaskForRuntime,
   createDefaultTransitionMask,
@@ -1224,6 +1225,8 @@ export const createInitialState = () => ({
   previewPlaybackDurationMs: undefined,
   previewPlaybackRequestId: undefined,
   previewImages: createInitialPreviewImages(),
+  isTouchMode: false,
+  isPreviewDialogOpen: false,
   popover: {
     mode: "none",
     x: undefined,
@@ -1254,6 +1257,10 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
     projectResolution,
     "Project resolution",
   );
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
 };
 
 export const setAnimationName = ({ state }, { name } = {}) => {
@@ -1871,6 +1878,10 @@ export const selectTransitionMask = ({ state }) => {
   return getTransitionMask(state);
 };
 
+export const selectHasEffectiveTransitionMask = ({ state }) => {
+  return Boolean(getEffectiveTransitionMask(state));
+};
+
 export const selectMaskEditorTransitionMask = ({ state }) => {
   return getMaskEditorTransitionMask(state);
 };
@@ -2393,6 +2404,14 @@ export const selectPreviewPlaybackRequestId = ({ state }) => {
   return state.previewPlaybackRequestId;
 };
 
+export const openPreviewDialog = ({ state }, _payload = {}) => {
+  state.isPreviewDialogOpen = true;
+};
+
+export const closePreviewDialog = ({ state }, _payload = {}) => {
+  state.isPreviewDialogOpen = false;
+};
+
 const buildTransitionMaskPanelDataForMask = (
   state,
   transitionMask,
@@ -2789,6 +2808,10 @@ export const selectViewData = ({ state, i18n }) => {
     imageFolderItems,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
+    isPreviewDialogOpen: state.isPreviewDialogOpen,
+    showRightPanel: !state.isTouchMode,
+    showMobileTweenActions: state.isTouchMode,
+    showMobileMaskButton: state.isTouchMode && dialogType === "transition",
     addButton: copy.addButton ?? "Add",
     addMaskButton: copy.addMaskButton ?? "Add Mask",
     addMaskTitle: copy.addMaskTitle ?? "Add Mask",
@@ -2797,6 +2820,7 @@ export const selectViewData = ({ state, i18n }) => {
     doneButton: copy.doneButton ?? "Done",
     editButton: copy.editMenuItem ?? "Edit",
     editMaskTitle: copy.editMaskTitle ?? "Edit Mask",
+    editPreviewButton: copy.editPreviewButton ?? "Edit Preview",
     imageLabel: copy.imageLabel ?? "Image",
     inTimelineLabel: copy.inTimelineLabel ?? "In",
     invertLabel: copy.invertLabel ?? "Invert",

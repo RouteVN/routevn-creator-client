@@ -676,6 +676,11 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
   return true;
 };
 
+export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService } = deps;
   await projectService.ensureRepository();
@@ -763,6 +768,52 @@ export const handleSavePreviewClick = async (deps) => {
 export const handleClosePopover = (deps) => {
   const { render, store } = deps;
   store.closePopover();
+  render();
+};
+
+export const handleMobileMaskClick = (deps, payload = {}) => {
+  const { render, store } = deps;
+
+  if (store.selectDialogType() !== "transition") {
+    return;
+  }
+
+  const event = payload._event;
+  const popoverPosition = {
+    x: event?.clientX ?? 0,
+    y: event?.clientY ?? 0,
+  };
+
+  if (store.selectHasEffectiveTransitionMask()) {
+    store.setPopover({
+      mode: "editMask",
+      x: popoverPosition.x,
+      y: popoverPosition.y,
+      payload: {},
+    });
+    render();
+    return;
+  }
+
+  store.startPendingTransitionMask({});
+  store.setPopover({
+    mode: "addMask",
+    x: popoverPosition.x,
+    y: popoverPosition.y,
+    payload: {},
+  });
+  render();
+};
+
+export const handleOpenPreviewDialog = (deps) => {
+  const { render, store } = deps;
+  store.openPreviewDialog({});
+  render();
+};
+
+export const handleClosePreviewDialog = (deps) => {
+  const { render, store } = deps;
+  store.closePreviewDialog({});
   render();
 };
 

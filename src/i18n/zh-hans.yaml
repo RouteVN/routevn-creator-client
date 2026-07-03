@@ -553,6 +553,7 @@ animationEditorPage:
   editKeyframeMenuItem: "编辑关键帧"
   editKeyframeTitle: "编辑关键帧"
   editMaskTitle: "编辑遮罩"
+  editPreviewButton: "编辑预览"
   failedSaveAnimationPreview: "无法保存动画预览。"
   failedUpdatePreviewImage: "无法更新预览图像。"
   greyscaleChannel: "灰度"

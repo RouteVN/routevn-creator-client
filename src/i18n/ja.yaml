@@ -553,6 +553,7 @@ animationEditorPage:
   editKeyframeMenuItem: "キーフレームを編集"
   editKeyframeTitle: "キーフレームを編集"
   editMaskTitle: "マスクを編集"
+  editPreviewButton: "プレビューを編集"
   failedSaveAnimationPreview: "アニメーションプレビューを保存できませんでした。"
   failedUpdatePreviewImage: "プレビュー画像を更新できませんでした。"
   greyscaleChannel: "グレースケール"
