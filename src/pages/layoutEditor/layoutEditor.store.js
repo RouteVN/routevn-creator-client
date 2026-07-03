@@ -4,6 +4,7 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   isItemDirectChildOfDirectedContainer,
   isItemInsideSaveLoadSlot,
@@ -125,6 +126,8 @@ export const createInitialState = () => {
     persistedPreviewData: {},
     initialPreviewData: {},
     isPreviewMounted: false,
+    isTouchMode: false,
+    isMobileFileExplorerOpen: false,
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
     lastPersistErrorAt: 0,
@@ -219,6 +222,18 @@ export const setPreviewData = ({ state }, { previewData } = {}) => {
 
 export const setPreviewMounted = ({ state }, { isMounted } = {}) => {
   state.isPreviewMounted = isMounted === true;
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
+};
+
+export const openMobileFileExplorer = ({ state }, _payload = {}) => {
+  state.isMobileFileExplorerOpen = true;
+};
+
+export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
+  state.isMobileFileExplorerOpen = false;
 };
 
 export const updateSelectedItem = ({ state }, { itemId, updatedItem } = {}) => {
@@ -448,6 +463,9 @@ export const selectInitialPreviewData = ({ state }) => {
 };
 
 export const selectIsPreviewMounted = ({ state }) => state.isPreviewMounted;
+export const selectIsTouchMode = ({ state }) => state.isTouchMode;
+export const selectIsMobileFileExplorerOpen = ({ state }) =>
+  state.isMobileFileExplorerOpen;
 
 export const selectViewData = ({ state, constants, i18n }) => {
   const copy = selectLayoutEditorPageCopy(i18n);
@@ -532,11 +550,15 @@ export const selectViewData = ({ state, constants, i18n }) => {
           parentIdById,
           itemId: item?.id,
         });
+  const showMobileSelectedNodeDetail = state.isTouchMode && Boolean(item);
 
   return {
     item,
     loadingPreviewLabel: copy.loadingPreviewLabel,
     noSelectionLabel: copy.noSelectionLabel,
+    nodeButtonLabel: copy.nodeButtonLabel ?? "Node",
+    nodeExplorerTitle: copy.nodeExplorerTitle ?? copy.nodeButtonLabel ?? "Node",
+    previewTitle: copy.previewTitle ?? "Preview",
     savePreviewButton: copy.savePreviewButton,
     flatItems,
     selectedItemId: state.selectedItemId,
@@ -565,5 +587,14 @@ export const selectViewData = ({ state, constants, i18n }) => {
     selectedItemIsInsideDirectedContainer,
     isInsideSaveLoadSlot: detailPanelIsInsideSaveLoadSlot,
     isInsideDirectedContainer: detailPanelIsInsideDirectedContainer,
+    isTouchMode: state.isTouchMode,
+    showExplorerPanel: !state.isTouchMode,
+    showDetailPanel: !state.isTouchMode,
+    showTopSavePreviewButton: !state.isTouchMode,
+    showMobilePreviewHeader: state.isTouchMode && !showMobileSelectedNodeDetail,
+    showMobileNodeButton: state.isTouchMode,
+    showMobilePreviewButton: showMobileSelectedNodeDetail,
+    showMobileNodeExplorer: state.isTouchMode && state.isMobileFileExplorerOpen,
+    showMobileSelectedNodeDetail,
   };
 };

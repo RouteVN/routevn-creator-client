@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 import {
   handleBackClick,
   handleFileExplorerAction,
+  handleFileExplorerItemClick,
   handleLayoutEditorCanvasDragUpdate,
   handleLayoutEditorCanvasMetricsChange,
   handleLayoutEditPanelUpdateHandler,
+  handlePreviewButtonClick,
   handleSaveButtonClick,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { enqueueLayoutEditorPersistence } from "../../src/pages/layoutEditor/support/layoutEditorPersistenceQueue.js";
@@ -108,6 +111,7 @@ const createLayoutEditorDeps = ({
     subject: {
       dispatch: vi.fn(),
     },
+    i18n: EN_I18N,
   };
 };
 
@@ -282,6 +286,35 @@ describe("layoutEditor.handleSaveButtonClick", () => {
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Layout preview saved.",
     });
+  });
+
+  it("keeps mobile preview saves from resyncing an unmounted file explorer", async () => {
+    const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback) => {
+      callback();
+      return 1;
+    };
+
+    try {
+      const deps = createLayoutEditorDeps();
+      deps.store.selectIsTouchMode = vi.fn(() => true);
+      deps.store.selectSelectedItemId = vi.fn(() => "node-1");
+      deps.store.setSelectedItemId = vi.fn();
+      deps.store.setDetailPanelSelectedItemId = vi.fn();
+
+      await handleSaveButtonClick(deps);
+
+      expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+        itemId: "node-1",
+      });
+      expect(deps.store.setDetailPanelSelectedItemId).not.toHaveBeenCalled();
+      expect(deps.appService.showAlert).not.toHaveBeenCalled();
+      expect(deps.appService.showToast).toHaveBeenCalledWith({
+        message: "Layout preview saved.",
+      });
+    } finally {
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    }
   });
 });
 
@@ -527,5 +560,52 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
     expect(
       deps.refs.layoutEditPanel.setSelectedElementMetrics,
     ).not.toHaveBeenCalled();
+  });
+});
+
+describe("layoutEditor.handleFileExplorerItemClick", () => {
+  it("closes the mobile node explorer and reveals detail for the selected node", async () => {
+    const store = {
+      setSelectedItemId: vi.fn(),
+      selectIsTouchMode: vi.fn(() => true),
+      selectIsMobileFileExplorerOpen: vi.fn(() => true),
+      setDetailPanelSelectedItemId: vi.fn(),
+      closeMobileFileExplorer: vi.fn(),
+    };
+    const render = vi.fn();
+
+    await handleFileExplorerItemClick(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            itemId: "node-1",
+          },
+        },
+      },
+    );
+
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({ itemId: "node-1" });
+    expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+      itemId: "node-1",
+    });
+    expect(store.closeMobileFileExplorer).toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("layoutEditor.handlePreviewButtonClick", () => {
+  it("returns mobile node detail back to the preview pane", () => {
+    const store = {
+      setDetailPanelSelectedItemId: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handlePreviewButtonClick({ store, render });
+
+    expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(render).toHaveBeenCalledTimes(1);
   });
 });
