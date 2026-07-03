@@ -9,6 +9,7 @@ import {
   setLayout,
   setSelectedItemId,
   setDetailPanelSelectedItemId,
+  setPreviewData,
   setUiConfig,
 } from "../../src/pages/layoutEditor/layoutEditor.store.js";
 
@@ -370,6 +371,14 @@ describe("layoutEditor.store", () => {
       },
     );
     setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+    setPreviewData(
+      { state },
+      {
+        previewData: {
+          backgroundImageId: "unsaved-preview-image",
+        },
+      },
+    );
     setSelectedItemId({ state }, { itemId: "node-1" });
     setDetailPanelSelectedItemId({ state }, { itemId: "node-1" });
 
@@ -386,6 +395,11 @@ describe("layoutEditor.store", () => {
     expect(viewData.showMobileNodeButton).toBe(true);
     expect(viewData.showMobilePreviewButton).toBe(true);
     expect(viewData.showMobileSelectedNodeDetail).toBe(true);
+    expect(viewData.previewPanelVisibilityStyle).toBe("display: none;");
+    expect(viewData.previewHydrationData).toEqual({
+      backgroundImageId: "unsaved-preview-image",
+    });
+    expect(viewData.initialPreviewData).toEqual({});
     expect(viewData.nodeButtonLabel).toBe("Node");
     expect(viewData.previewTitle).toBe("Preview");
     expect(viewData.item.name).toBe("Node 1");
@@ -406,6 +420,8 @@ describe("layoutEditor.store", () => {
     expect(viewData.showMobilePreviewHeader).toBe(true);
     expect(viewData.showMobilePreviewButton).toBe(false);
     expect(viewData.showMobileSelectedNodeDetail).toBe(false);
+    expect(viewData.previewPanelVisibilityStyle).toBe("");
+    expect(viewData.previewHydrationData).toEqual(viewData.previewData);
     expect(viewData.previewTitle).toBe("Preview");
     expect(viewData.savePreviewButton).toBe("Save Preview");
   });
