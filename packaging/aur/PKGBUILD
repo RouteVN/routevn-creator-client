@@ -2,12 +2,17 @@
 
 pkgname=routevn-creator
 pkgver=1.7.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Free and Open Source tool to create Visual Novels without any coding."
 arch=("x86_64")
 url="https://routevn.com"
 license=("MIT")
+options=("!debug" "!lto")
 depends=(
+  "gst-libav"
+  "gst-plugins-bad"
+  "gst-plugins-good"
+  "gst-plugins-ugly"
   "gtk3"
   "hicolor-icon-theme"
   "libayatana-appindicator"
@@ -19,20 +24,19 @@ depends=(
 )
 makedepends=(
   "bun"
+  "node-gyp"
   "pkgconf"
   "rust"
-)
-optdepends=(
-  "gst-libav: MP4/H.264 media playback"
-  "gst-plugins-good: common GStreamer media codecs"
-  "gst-plugins-bad: additional GStreamer media codecs"
-  "gst-plugins-ugly: patent-encumbered GStreamer media codecs"
 )
 source=("${pkgname}-${pkgver}::git+https://github.com/RouteVN/routevn-creator-client.git#tag=v${pkgver}")
 sha256sums=("SKIP")
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # Arch packages should link against the system SQLite package.
+  export LIBSQLITE3_SYS_USE_PKG_CONFIG=1
+  export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=${srcdir}=/usr/src/debug/${pkgname}"
 
   bun install --frozen-lockfile
   bun run build:tauri
@@ -42,7 +46,9 @@ build() {
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
-  install -Dm755 "src-tauri/target/release/routevn-creator" \
+  local cargo_target_dir="${CARGO_TARGET_DIR:-src-tauri/target}"
+
+  install -Dm755 "${cargo_target_dir}/release/routevn-creator" \
     "${pkgdir}/usr/bin/routevn-creator"
 
   install -Dm644 "src-tauri/icons/32x32.png" \

@@ -3,6 +3,10 @@
 !docker/appimage/
 !docker/appimage/build-in-container.sh
 !docker/appimage/ubuntu-22.04.Dockerfile
+!docker/linux-packages/
+!docker/linux-packages/build-in-container.sh
+!docker/linux-packages/fedora-43.Dockerfile
+!docker/linux-packages/ubuntu-22.04.Dockerfile
 !docker/aur/
 !docker/aur/build-in-container.sh
 !docker/aur/archlinux.Dockerfile

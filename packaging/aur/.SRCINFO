@@ -1,13 +1,18 @@
 pkgbase = routevn-creator
 	pkgdesc = Free and Open Source tool to create Visual Novels without any coding.
 	pkgver = 1.7.2
-	pkgrel = 1
+	pkgrel = 2
 	url = https://routevn.com
 	arch = x86_64
 	license = MIT
 	makedepends = bun
+	makedepends = node-gyp
 	makedepends = pkgconf
 	makedepends = rust
+	depends = gst-libav
+	depends = gst-plugins-bad
+	depends = gst-plugins-good
+	depends = gst-plugins-ugly
 	depends = gtk3
 	depends = hicolor-icon-theme
 	depends = libayatana-appindicator
@@ -16,10 +21,8 @@ pkgbase = routevn-creator
 	depends = sqlite
 	depends = webkit2gtk-4.1
 	depends = xdg-utils
-	optdepends = gst-libav: MP4/H.264 media playback
-	optdepends = gst-plugins-good: common GStreamer media codecs
-	optdepends = gst-plugins-bad: additional GStreamer media codecs
-	optdepends = gst-plugins-ugly: patent-encumbered GStreamer media codecs
+	options = !debug
+	options = !lto
 	source = routevn-creator-1.7.2::git+https://github.com/RouteVN/routevn-creator-client.git#tag=v1.7.2
 	sha256sums = SKIP
 
