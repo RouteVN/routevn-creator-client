@@ -1264,6 +1264,10 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
 };
 
+export const selectIsTouchMode = ({ state }) => {
+  return state.isTouchMode;
+};
+
 export const setAnimationName = ({ state }, { name } = {}) => {
   state.dialogDefaultValues.name = name ?? "";
 };

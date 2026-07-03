@@ -752,6 +752,9 @@ export const handleSavePreviewClick = async (deps) => {
     store.setItems({
       data: projectService.getRepositoryState()?.animations,
     });
+    if (store.selectIsTouchMode()) {
+      store.closePreviewDialog({});
+    }
     render();
     appService.showToast({
       message: copy.animationPreviewSaved ?? "Animation preview saved.",
