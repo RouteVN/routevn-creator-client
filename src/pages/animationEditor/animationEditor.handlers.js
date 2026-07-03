@@ -1364,6 +1364,13 @@ export const handleDisableMaskClick = (deps) => {
   commitMaskChange(deps);
 };
 
+export const handleMobileDisableMaskClick = (deps) => {
+  const { store } = deps;
+  store.disableTransitionMask({});
+  store.closePopover();
+  commitMaskChange(deps);
+};
+
 export const handleMaskKindChange = (deps, payload) => {
   const { store } = deps;
   store.setTransitionMaskKind({

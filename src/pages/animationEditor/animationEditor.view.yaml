@@ -129,6 +129,10 @@ refs:
     eventListeners:
       click:
         handler: handleDisableMaskClick
+  mobileDisableMaskButton:
+    eventListeners:
+      click:
+        handler: handleMobileDisableMaskClick
   editMaskButton:
     eventListeners:
       click:
@@ -460,6 +464,8 @@ template:
                       - rtgl-button#addMaskButton s=sm v=pr: ${addMaskButton}
               - $if popover.mode == 'editMask':
                   - rtgl-view d=h g=sm w=f ah=e pt=sm:
+                      - $if showMobileMaskButton:
+                          - rtgl-button#mobileDisableMaskButton s=sm v=se: ${removeButton}
                       - rtgl-button#editMaskDoneButton s=sm v=pr: ${saveButton}
   - rtgl-dialog#previewDialog ?open=${isPreviewDialogOpen} s=md:
       - $if isPreviewDialogOpen:
