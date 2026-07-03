@@ -303,3 +303,13 @@ export const handleBackToProjects = async (deps) => {
   const { appService } = deps;
   appService.navigate("/projects");
 };
+
+export const handleBackButtonKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  handleBackToProjects(deps);
+};

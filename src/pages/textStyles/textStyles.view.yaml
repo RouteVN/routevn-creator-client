@@ -13,6 +13,8 @@ refs:
     eventListeners:
       item-click:
         handler: handleTextStyleItemClick
+      item-edit:
+        handler: handleTextStyleItemEdit
       item-dblclick:
         handler: handleTextStyleItemDoubleClick
       item-duplicate:
@@ -37,6 +39,12 @@ refs:
     eventListeners:
       close:
         handler: handleMobileDetailSheetClose
+  mobileDetailEditButton:
+    eventListeners:
+      click:
+        handler: handleMobileDetailEditClick
+        preventDefault: true
+        stopPropagation: true
   mobileDetailDuplicateButton:
     eventListeners:
       click:
@@ -144,7 +152,7 @@ template:
           - 'rtgl-view w=1fg h=f pl=${contentLeftPadding} style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
-                      - 'rvn-text-style-resources-view#typographyView w=f h=f :navTitle=${title} show-menu-button show-zoom-controls zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupTextStylesView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${flatGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                      - 'rvn-text-style-resources-view#typographyView w=f h=f :navTitle=${title} show-menu-button menu-button-placement=trailing show-zoom-controls zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupTextStylesView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${flatGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
                       - 'rvn-text-style-resources-view#typographyView w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=4 items-per-row-config-key="groupTextStylesView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :groups=${flatGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
@@ -166,9 +174,9 @@ template:
                                   - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
   - $if showMobileFileExplorer:
       - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
-          - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
+          - rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
               - rtgl-text w=1fg s=md: ${filesLabel}
-              - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
+              - rtgl-view#mobileFileExplorerClose w=40 h=40 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo:
                   - rtgl-svg svg=x wh=20 c=mu-fg: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
               - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
@@ -179,6 +187,7 @@ template:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
+                  - rtgl-button#mobileDetailEditButton w=1fg v=se pre=edit: ${editButton}
                   - rtgl-button#mobileDetailDuplicateButton w=1fg v=se: ${duplicateButton}
                   - rtgl-button#mobileDetailDeleteButton w=1fg v=se: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':

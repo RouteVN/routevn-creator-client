@@ -9,6 +9,7 @@ describe("app view", () => {
     );
 
     expect(appView).toContain("rvn-mobile-sheet#mobileSheet");
+    expect(appView).toContain("position: relative; z-index: 1150;");
     expect(appView).toContain(
       "rtgl-view#mobileTabItem${i} data-tab-id=${item.id}",
     );

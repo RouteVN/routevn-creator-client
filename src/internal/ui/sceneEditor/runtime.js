@@ -37,10 +37,15 @@ import {
   isDebugEnabled,
 } from "../../../deps/services/shared/debugLog.js";
 import { selectSceneEditorCopy } from "./sceneEditorCopy.js";
+import {
+  emitSceneEditorTiming,
+  shouldMeasureSceneEditorTiming,
+} from "./sceneEditorTiming.js";
 
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
 const CANVAS_RUNTIME_LINE_SYNC_WINDOW_MS = 1200;
+const FAILED_SCENE_ASSET_RETRY_DELAY_MS = 60000;
 
 const isSceneEditorPreviewVisible = (store) => {
   return store?.selectPreviewScene?.()?.previewVisible === true;
@@ -219,6 +224,7 @@ const createAssetLoadCache = () => ({
   pendingSceneIds: new Set(),
   fileIds: new Set(),
   pendingFileLoads: new Map(),
+  failedFileLoads: new Map(),
 });
 
 let assetLoadCache = createAssetLoadCache();
@@ -227,9 +233,104 @@ const resetAssetLoadCache = () => {
   assetLoadCache = createAssetLoadCache();
 };
 
-const hasCachedSceneAsset = (deps, fileId) => {
+const getAssetLoadTimestamp = () => getDebugNow();
+
+const getErrorMessage = (error) => {
+  if (typeof error?.message === "string" && error.message.length > 0) {
+    return error.message;
+  }
+
+  return String(error ?? "Unknown asset load error");
+};
+
+const clearExpiredFailedSceneAsset = (fileId) => {
+  const failure = assetLoadCache.failedFileLoads.get(fileId);
+  if (!failure) {
+    return false;
+  }
+
+  const failedAtMs = Number(failure.failedAtMs);
+  if (
+    Number.isFinite(failedAtMs) &&
+    getAssetLoadTimestamp() - failedAtMs < FAILED_SCENE_ASSET_RETRY_DELAY_MS
+  ) {
+    return true;
+  }
+
+  assetLoadCache.failedFileLoads.delete(fileId);
+  return false;
+};
+
+const markSceneAssetsLoaded = (fileIds = []) => {
+  fileIds.forEach((fileId) => {
+    if (!fileId) {
+      return;
+    }
+    assetLoadCache.fileIds.add(fileId);
+    assetLoadCache.failedFileLoads.delete(fileId);
+  });
+};
+
+const markSceneAssetLoadFailures = (failures = []) => {
+  failures.forEach(({ fileId, error }) => {
+    if (!fileId) {
+      return;
+    }
+    assetLoadCache.fileIds.delete(fileId);
+    assetLoadCache.failedFileLoads.set(fileId, {
+      failedAtMs: getAssetLoadTimestamp(),
+      message: getErrorMessage(error),
+    });
+  });
+};
+
+const getResourceItemsByFileId = (resources = {}) => {
+  const { sounds, images, videos = {}, voices = {}, fonts = {} } = resources;
+  const voiceItems = Object.values(voices || {}).flatMap((sceneVoices) =>
+    Object.values(sceneVoices || {}),
+  );
+
+  return new Map(
+    [
+      ...Object.values(sounds || {}),
+      ...voiceItems,
+      ...Object.values(images || {}),
+      ...Object.values(videos || {}),
+      ...Object.values(fonts || {}),
+    ]
+      .filter((item) => item?.fileId)
+      .map((item) => [item.fileId, item]),
+  );
+};
+
+const resolveFileReferenceType = (
+  fileReference,
+  resourceItemsByFileId = new Map(),
+) => {
+  const resourceType = resourceItemsByFileId.get(fileReference?.url)?.fileType;
+  if (typeof resourceType === "string" && resourceType.length > 0) {
+    return resourceType;
+  }
+
+  return fileReference?.type;
+};
+
+const isAudioAssetReference = (fileReference, resourceItemsByFileId) => {
+  const type = resolveFileReferenceType(fileReference, resourceItemsByFileId);
+  return (
+    typeof type === "string" &&
+    (type.startsWith("audio/") || type === "audio/*")
+  );
+};
+
+const hasCachedSceneAsset = (deps, fileReference, resourceItemsByFileId) => {
+  const fileId = fileReference?.url;
   if (!fileId || !assetLoadCache.fileIds.has(fileId)) {
     return false;
+  }
+
+  if (isAudioAssetReference(fileReference, resourceItemsByFileId)) {
+    return true;
   }
 
   const hasLoadedAsset = deps.graphicsService?.hasLoadedAsset;
@@ -243,6 +344,42 @@ const hasCachedSceneAsset = (deps, fileId) => {
   }
 
   return isStillLoaded;
+};
+
+const getUniqueFileIdsFromReferences = (fileReferences = []) => {
+  return Array.from(
+    new Set(fileReferences.map((fileReference) => fileReference?.url)),
+  ).filter(Boolean);
+};
+
+const selectFileReferencesForAssetLoad = (
+  deps,
+  fileReferences = [],
+  resources = {},
+) => {
+  const resourceItemsByFileId = getResourceItemsByFileId(resources);
+  const skippedFailedFileIds = new Set();
+  const missingFileReferences = fileReferences.filter((fileReference) => {
+    const fileId = fileReference?.url;
+    if (!fileId) {
+      return false;
+    }
+
+    if (clearExpiredFailedSceneAsset(fileId)) {
+      skippedFailedFileIds.add(fileId);
+      return false;
+    }
+
+    return (
+      !hasCachedSceneAsset(deps, fileReference, resourceItemsByFileId) &&
+      !assetLoadCache.pendingFileLoads.has(fileId)
+    );
+  });
+
+  return {
+    missingFileReferences,
+    skippedFailedFileIds: Array.from(skippedFailedFileIds),
+  };
 };
 
 const findNonCloneablePaths = (root, limit = 5) => {
@@ -315,21 +452,7 @@ async function createAssetsFromFileIds(
   projectService,
   resources,
 ) {
-  const { sounds, images, videos = {}, voices = {}, fonts = {} } = resources;
-  const voiceItems = Object.values(voices || {}).flatMap((sceneVoices) =>
-    Object.values(sceneVoices || {}),
-  );
-  const resourceItemsByFileId = new Map(
-    [
-      ...Object.values(sounds || {}),
-      ...voiceItems,
-      ...Object.values(images || {}),
-      ...Object.values(videos || {}),
-      ...Object.values(fonts || {}),
-    ]
-      .filter((item) => item?.fileId)
-      .map((item) => [item.fileId, item]),
-  );
+  const resourceItemsByFileId = getResourceItemsByFileId(resources);
 
   const assets = {};
   for (const fileObj of fileReferences) {
@@ -352,13 +475,175 @@ async function createAssetsFromFileIds(
   return assets;
 }
 
+const isVideoAsset = (asset) => {
+  return typeof asset?.type === "string" && asset.type.startsWith("video/");
+};
+
+const splitAssetEntriesForLoading = (assets = {}) => {
+  const entries = Object.entries(assets);
+  return {
+    primaryEntries: entries.filter(([, asset]) => !isVideoAsset(asset)),
+    videoEntries: entries.filter(([, asset]) => isVideoAsset(asset)),
+  };
+};
+
+const entriesToAssets = (entries = []) => Object.fromEntries(entries);
+
+const loadAssetEntriesAsGroup = async (
+  graphicsService,
+  entries,
+  { isolateFailures = false } = {},
+) => {
+  if (entries.length === 0) {
+    return {
+      loadedAssetIds: [],
+      failedAssetLoads: [],
+    };
+  }
+
+  try {
+    await graphicsService.loadAssets(entriesToAssets(entries));
+    return {
+      loadedAssetIds: entries.map(([fileId]) => fileId),
+      failedAssetLoads: [],
+    };
+  } catch (error) {
+    if (!isolateFailures || entries.length === 1) {
+      return {
+        loadedAssetIds: [],
+        failedAssetLoads: entries.map(([fileId]) => ({ fileId, error })),
+      };
+    }
+
+    const settled = await Promise.allSettled(
+      entries.map(async ([fileId, asset]) => {
+        await graphicsService.loadAssets({ [fileId]: asset });
+        return fileId;
+      }),
+    );
+
+    return settled.reduce(
+      (result, entry, index) => {
+        const fileId = entries[index]?.[0];
+        if (entry.status === "fulfilled") {
+          result.loadedAssetIds.push(entry.value);
+          return result;
+        }
+
+        result.failedAssetLoads.push({
+          fileId,
+          error: entry.reason,
+        });
+        return result;
+      },
+      {
+        loadedAssetIds: [],
+        failedAssetLoads: [],
+      },
+    );
+  }
+};
+
+const loadAssetsWithFailureIsolation = async (
+  graphicsService,
+  assets,
+  expectedFileIds,
+) => {
+  const loadedAssetIds = [];
+  const failedAssetLoads = [];
+  const unresolvedAssetIds = expectedFileIds.filter(
+    (fileId) => !assets[fileId],
+  );
+
+  unresolvedAssetIds.forEach((fileId) => {
+    failedAssetLoads.push({
+      fileId,
+      error: new Error("Scene asset file content was not available"),
+    });
+  });
+
+  const { primaryEntries, videoEntries } = splitAssetEntriesForLoading(assets);
+  const primaryResult = await loadAssetEntriesAsGroup(
+    graphicsService,
+    primaryEntries,
+    {
+      isolateFailures: true,
+    },
+  );
+  const videoResult = await loadAssetEntriesAsGroup(
+    graphicsService,
+    videoEntries,
+    {
+      isolateFailures: true,
+    },
+  );
+
+  loadedAssetIds.push(
+    ...primaryResult.loadedAssetIds,
+    ...videoResult.loadedAssetIds,
+  );
+  failedAssetLoads.push(
+    ...primaryResult.failedAssetLoads,
+    ...videoResult.failedAssetLoads,
+  );
+
+  markSceneAssetsLoaded(loadedAssetIds);
+  markSceneAssetLoadFailures(failedAssetLoads);
+
+  return {
+    loadedAssetIds,
+    failedAssetLoads,
+    primaryAssetCount: primaryEntries.length,
+    videoAssetCount: videoEntries.length,
+    unresolvedAssetCount: unresolvedAssetIds.length,
+  };
+};
+
+const loadMissingAssetReferences = async (
+  deps,
+  missingFileReferences,
+  resources,
+  context,
+) => {
+  const { graphicsService, projectService } = deps;
+  const startedAt = getDebugNow();
+  const expectedFileIds = getUniqueFileIdsFromReferences(missingFileReferences);
+  const assets = await createAssetsFromFileIds(
+    missingFileReferences,
+    projectService,
+    resources,
+  );
+  const result = await loadAssetsWithFailureIsolation(
+    graphicsService,
+    assets,
+    expectedFileIds,
+  );
+
+  emitSceneEditorTiming("runtime.assets.load", {
+    ...context,
+    durationMs: getDebugDurationMs(startedAt),
+    requestedAssetCount: expectedFileIds.length,
+    loadedAssetCount: result.loadedAssetIds.length,
+    failedAssetCount: result.failedAssetLoads.length,
+    primaryAssetCount: result.primaryAssetCount,
+    videoAssetCount: result.videoAssetCount,
+    unresolvedAssetCount: result.unresolvedAssetCount,
+    failedAssetIds: result.failedAssetLoads.map(({ fileId }) => fileId),
+    failedAssetMessages: result.failedAssetLoads.map(({ error }) =>
+      getErrorMessage(error),
+    ),
+  });
+
+  return result.loadedAssetIds;
+};
+
 async function loadAssetsForSceneIds(
   deps,
   projectData,
   sceneIds,
   { showLoading = true } = {},
 ) {
-  const { graphicsService, projectService, appService } = deps;
+  const { appService } = deps;
   const allScenes = projectData?.story?.scenes || {};
 
   const uniqueSceneIds = Array.from(new Set(sceneIds || [])).filter(
@@ -369,17 +654,15 @@ async function loadAssetsForSceneIds(
   }
 
   const fileReferences = extractFileIdsForScenes(projectData, uniqueSceneIds);
-  const missingFileReferences = fileReferences.filter((fileReference) => {
-    const fileId = fileReference?.url;
-    return (
-      fileId &&
-      !hasCachedSceneAsset(deps, fileId) &&
-      !assetLoadCache.pendingFileLoads.has(fileId)
+  const { missingFileReferences, skippedFailedFileIds } =
+    selectFileReferencesForAssetLoad(
+      deps,
+      fileReferences,
+      projectData.resources,
     );
-  });
-  const pendingFileIds = fileReferences
-    .map((fileReference) => fileReference?.url)
-    .filter((fileId) => assetLoadCache.pendingFileLoads.has(fileId));
+  const pendingFileIds = getUniqueFileIdsFromReferences(fileReferences).filter(
+    (fileId) => assetLoadCache.pendingFileLoads.has(fileId),
+  );
   const isAnySceneUntracked = uniqueSceneIds.some(
     (sceneId) =>
       !assetLoadCache.sceneIds.has(sceneId) &&
@@ -395,13 +678,10 @@ async function loadAssetsForSceneIds(
   }
 
   const shouldShowLoading = showLoading && missingFileReferences.length > 0;
-  let loadedAssetIds = [];
   const pendingLoadPromises = pendingFileIds
     .map((fileId) => assetLoadCache.pendingFileLoads.get(fileId))
     .filter(Boolean);
-  const newFileIds = missingFileReferences
-    .map((fileReference) => fileReference?.url)
-    .filter(Boolean);
+  const newFileIds = getUniqueFileIdsFromReferences(missingFileReferences);
 
   try {
     uniqueSceneIds.forEach((sceneId) => {
@@ -414,27 +694,27 @@ async function loadAssetsForSceneIds(
 
     if (missingFileReferences.length > 0) {
       const nextLoadPromise = (async () => {
-        const assets = await createAssetsFromFileIds(
+        return await loadMissingAssetReferences(
+          deps,
           missingFileReferences,
-          projectService,
           projectData.resources,
+          {
+            source: "scene",
+            sceneIds: uniqueSceneIds,
+            skippedFailedAssetCount: skippedFailedFileIds.length,
+            skippedFailedAssetIds: skippedFailedFileIds,
+          },
         );
-        await graphicsService.loadAssets(assets);
-        return Object.keys(assets);
       })();
 
       newFileIds.forEach((fileId) => {
         assetLoadCache.pendingFileLoads.set(fileId, nextLoadPromise);
       });
 
-      loadedAssetIds = await nextLoadPromise.finally(() => {
+      await nextLoadPromise.finally(() => {
         newFileIds.forEach((fileId) => {
           assetLoadCache.pendingFileLoads.delete(fileId);
         });
-      });
-
-      loadedAssetIds.forEach((fileId) => {
-        assetLoadCache.fileIds.add(fileId);
       });
     }
 
@@ -472,18 +752,12 @@ async function preloadFileReferences(
     return;
   }
 
-  const { graphicsService, projectService, appService } = deps;
-  const missingFileReferences = fileReferences.filter((fileReference) => {
-    const fileId = fileReference?.url;
-    return (
-      fileId &&
-      !hasCachedSceneAsset(deps, fileId) &&
-      !assetLoadCache.pendingFileLoads.has(fileId)
-    );
-  });
-  const pendingFileIds = fileReferences
-    .map((fileReference) => fileReference?.url)
-    .filter((fileId) => assetLoadCache.pendingFileLoads.has(fileId));
+  const { appService } = deps;
+  const { missingFileReferences, skippedFailedFileIds } =
+    selectFileReferencesForAssetLoad(deps, fileReferences, resources);
+  const pendingFileIds = getUniqueFileIdsFromReferences(fileReferences).filter(
+    (fileId) => assetLoadCache.pendingFileLoads.has(fileId),
+  );
 
   if (missingFileReferences.length === 0 && pendingFileIds.length === 0) {
     return;
@@ -493,9 +767,7 @@ async function preloadFileReferences(
   const pendingLoadPromises = pendingFileIds
     .map((fileId) => assetLoadCache.pendingFileLoads.get(fileId))
     .filter(Boolean);
-  const newFileIds = missingFileReferences
-    .map((fileReference) => fileReference?.url)
-    .filter(Boolean);
+  const newFileIds = getUniqueFileIdsFromReferences(missingFileReferences);
 
   try {
     if (shouldShowLoading) {
@@ -504,29 +776,26 @@ async function preloadFileReferences(
 
     if (missingFileReferences.length > 0) {
       const nextLoadPromise = (async () => {
-        const assets = await createAssetsFromFileIds(
+        return await loadMissingAssetReferences(
+          deps,
           missingFileReferences,
-          projectService,
           resources,
+          {
+            source: "file-references",
+            skippedFailedAssetCount: skippedFailedFileIds.length,
+            skippedFailedAssetIds: skippedFailedFileIds,
+          },
         );
-        if (Object.keys(assets).length > 0) {
-          await graphicsService.loadAssets?.(assets);
-        }
-        return Object.keys(assets);
       })();
 
       newFileIds.forEach((fileId) => {
         assetLoadCache.pendingFileLoads.set(fileId, nextLoadPromise);
       });
 
-      const loadedAssetIds = await nextLoadPromise.finally(() => {
+      await nextLoadPromise.finally(() => {
         newFileIds.forEach((fileId) => {
           assetLoadCache.pendingFileLoads.delete(fileId);
         });
-      });
-
-      loadedAssetIds.forEach((fileId) => {
-        assetLoadCache.fileIds.add(fileId);
       });
     }
 
@@ -578,54 +847,47 @@ async function preloadLayoutAssetsByIds(deps, projectData, layoutIds) {
   }
 
   const fileReferences = extractFileIdsForLayouts(projectData, uniqueLayoutIds);
-  const missingFileReferences = fileReferences.filter((fileReference) => {
-    const fileId = fileReference?.url;
-    return (
-      fileId &&
-      !hasCachedSceneAsset(deps, fileId) &&
-      !assetLoadCache.pendingFileLoads.has(fileId)
+  const { missingFileReferences, skippedFailedFileIds } =
+    selectFileReferencesForAssetLoad(
+      deps,
+      fileReferences,
+      projectData.resources,
     );
-  });
-  const pendingFileIds = fileReferences
-    .map((fileReference) => fileReference?.url)
-    .filter((fileId) => assetLoadCache.pendingFileLoads.has(fileId));
+  const pendingFileIds = getUniqueFileIdsFromReferences(fileReferences).filter(
+    (fileId) => assetLoadCache.pendingFileLoads.has(fileId),
+  );
 
   if (missingFileReferences.length === 0 && pendingFileIds.length === 0) {
     return;
   }
 
-  const { graphicsService, projectService } = deps;
   const pendingLoadPromises = pendingFileIds
     .map((fileId) => assetLoadCache.pendingFileLoads.get(fileId))
     .filter(Boolean);
-  const newFileIds = missingFileReferences
-    .map((fileReference) => fileReference?.url)
-    .filter(Boolean);
-  let loadedFileIds = [];
-
+  const newFileIds = getUniqueFileIdsFromReferences(missingFileReferences);
   if (missingFileReferences.length > 0) {
     const nextLoadPromise = (async () => {
-      const assets = await createAssetsFromFileIds(
+      return await loadMissingAssetReferences(
+        deps,
         missingFileReferences,
-        projectService,
         projectData.resources,
+        {
+          source: "layout",
+          layoutIds: uniqueLayoutIds,
+          skippedFailedAssetCount: skippedFailedFileIds.length,
+          skippedFailedAssetIds: skippedFailedFileIds,
+        },
       );
-      await graphicsService.loadAssets(assets);
-      return Object.keys(assets);
     })();
 
     newFileIds.forEach((fileId) => {
       assetLoadCache.pendingFileLoads.set(fileId, nextLoadPromise);
     });
 
-    loadedFileIds = await nextLoadPromise.finally(() => {
+    await nextLoadPromise.finally(() => {
       newFileIds.forEach((fileId) => {
         assetLoadCache.pendingFileLoads.delete(fileId);
       });
-    });
-
-    loadedFileIds.forEach((fileId) => {
-      assetLoadCache.fileIds.add(fileId);
     });
   }
 
@@ -824,16 +1086,18 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     skipCanvasPaint = false,
   } = payload;
   const perfEnabled = isDebugEnabled(SCENE_EDITOR_PERF_SCOPE);
-  const renderStartedAt = perfEnabled ? getDebugNow() : 0;
+  const timingEnabled = shouldMeasureSceneEditorTiming();
+  const shouldMeasure = perfEnabled || timingEnabled;
+  const renderStartedAt = shouldMeasure ? getDebugNow() : 0;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
-  const projectDataProjectionStartedAt = perfEnabled ? getDebugNow() : 0;
+  const projectDataProjectionStartedAt = shouldMeasure ? getDebugNow() : 0;
   const projectedProjectData = store.selectProjectData();
-  const projectDataProjectionDurationMs = perfEnabled
+  const projectDataProjectionDurationMs = shouldMeasure
     ? getDebugDurationMs(projectDataProjectionStartedAt)
     : undefined;
-  const projectDataSelectionStartedAt = perfEnabled ? getDebugNow() : 0;
+  const projectDataSelectionStartedAt = shouldMeasure ? getDebugNow() : 0;
   const selection = {
     sceneId,
     sectionId,
@@ -843,7 +1107,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     projectedProjectData,
     selection,
   );
-  const projectDataSelectionDurationMs = perfEnabled
+  const projectDataSelectionDurationMs = shouldMeasure
     ? getDebugDurationMs(projectDataSelectionStartedAt)
     : undefined;
   const isMuted = store.selectIsMuted();
@@ -855,25 +1119,25 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   );
 
   const onRenderState = createRuntimeCurrentLineRenderStateHandler(deps);
-  const engineInitStartedAt = perfEnabled ? getDebugNow() : 0;
+  const engineInitStartedAt = shouldMeasure ? getDebugNow() : 0;
   initRouteEngineWithDiagnostics(graphicsService, projectData, {
     enableGlobalKeyboardBindings: false,
     suppressRenderEffects: true,
     onRenderState,
   });
-  const engineInitDurationMs = perfEnabled
+  const engineInitDurationMs = shouldMeasure
     ? getDebugDurationMs(engineInitStartedAt)
     : undefined;
-  const presentationStateStartedAt = perfEnabled ? getDebugNow() : 0;
+  const presentationStateStartedAt = shouldMeasure ? getDebugNow() : 0;
   const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState({
     presentationState,
   });
-  const presentationStateDurationMs = perfEnabled
+  const presentationStateDurationMs = shouldMeasure
     ? getDebugDurationMs(presentationStateStartedAt)
     : undefined;
   const temporaryPresentationState = selectTemporaryPresentationState(store);
-  const temporaryPresentationStateStartedAt = perfEnabled ? getDebugNow() : 0;
+  const temporaryPresentationStateStartedAt = shouldMeasure ? getDebugNow() : 0;
   let renderProjectData = await prepareTemporaryPresentationProjectData(
     deps,
     projectData,
@@ -893,10 +1157,10 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       onRenderState,
     });
   }
-  const temporaryPresentationStateDurationMs = perfEnabled
+  const temporaryPresentationStateDurationMs = shouldMeasure
     ? getDebugDurationMs(temporaryPresentationStateStartedAt)
     : undefined;
-  const renderStateSelectStartedAt = perfEnabled ? getDebugNow() : 0;
+  const renderStateSelectStartedAt = shouldMeasure ? getDebugNow() : 0;
   const currentRenderState = graphicsService.engineSelectRenderState();
   const renderStateSummary = {
     elementCount: Array.isArray(currentRenderState?.elements)
@@ -909,7 +1173,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       ? currentRenderState.audio.length
       : 0,
   };
-  const renderStateSelectDurationMs = perfEnabled
+  const renderStateSelectDurationMs = shouldMeasure
     ? getDebugDurationMs(renderStateSelectStartedAt)
     : undefined;
   if (!currentRenderState) {
@@ -919,6 +1183,20 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
         sceneId,
         sectionId,
         lineId,
+      });
+    }
+    if (timingEnabled) {
+      emitSceneEditorTiming("runtime.render-state.missing-render-state", {
+        durationMs: getDebugDurationMs(renderStartedAt),
+        sceneId,
+        sectionId,
+        lineId,
+        projectDataProjectionDurationMs,
+        projectDataSelectionDurationMs,
+        engineInitDurationMs,
+        renderStateSelectDurationMs,
+        presentationStateDurationMs,
+        temporaryPresentationStateDurationMs,
       });
     }
     return;
@@ -938,16 +1216,16 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       ? []
       : (graphicsService.collectRenderStateAudioKeys?.(currentRenderState) ??
         []);
-  const audioLoadStartedAt = perfEnabled ? getDebugNow() : 0;
+  const audioLoadStartedAt = shouldMeasure ? getDebugNow() : 0;
   await graphicsService.ensureAudioAssetsLoaded(activeAudioFileIds);
-  const audioLoadDurationMs = perfEnabled
+  const audioLoadDurationMs = shouldMeasure
     ? getDebugDurationMs(audioLoadStartedAt)
     : undefined;
 
   let canvasPaintDurationMs = 0;
   if (!skipCanvasPaint) {
     await attachGraphicsCanvasToMountedRoot(deps, 2);
-    const canvasPaintStartedAt = perfEnabled ? getDebugNow() : 0;
+    const canvasPaintStartedAt = shouldMeasure ? getDebugNow() : 0;
     if (backgroundTransformEditorOpen) {
       const backgroundTransformCanvasState =
         createBackgroundTransformEditorCanvasState({
@@ -966,12 +1244,12 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
         skipAnimations,
       });
     }
-    if (perfEnabled) {
+    if (shouldMeasure) {
       canvasPaintDurationMs = getDebugDurationMs(canvasPaintStartedAt);
     }
   }
 
-  const nextLineConfigStartedAt = perfEnabled ? getDebugNow() : 0;
+  const nextLineConfigStartedAt = shouldMeasure ? getDebugNow() : 0;
   graphicsService.engineHandleActions(
     {
       setNextLineConfig: {
@@ -985,12 +1263,35 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       suppressRenderEffects: true,
     },
   );
-  const nextLineConfigDurationMs = perfEnabled
+  const nextLineConfigDurationMs = shouldMeasure
     ? getDebugDurationMs(nextLineConfigStartedAt)
     : undefined;
 
   if (perfEnabled) {
     debugLog(SCENE_EDITOR_PERF_SCOPE, "render-state.complete", {
+      durationMs: getDebugDurationMs(renderStartedAt),
+      sceneId,
+      sectionId,
+      lineId,
+      skipAnimations,
+      skipCanvasPaint,
+      isMuted,
+      projectDataProjectionDurationMs,
+      projectDataSelectionDurationMs,
+      engineInitDurationMs,
+      renderStateSelectDurationMs,
+      audioLoadDurationMs,
+      canvasPaintDurationMs,
+      nextLineConfigDurationMs,
+      presentationStateDurationMs,
+      temporaryPresentationStateDurationMs,
+      elementCount: renderStateSummary.elementCount,
+      animationCount: renderStateSummary.animationCount,
+      audioCount: renderStateSummary.audioCount,
+    });
+  }
+  if (timingEnabled) {
+    emitSceneEditorTiming("runtime.render-state.complete", {
       durationMs: getDebugDurationMs(renderStartedAt),
       sceneId,
       sectionId,
@@ -1045,31 +1346,53 @@ export const resolveSceneEditorEntrySelection = (scene, { sectionId } = {}) => {
 
 export const updateSceneEditorSectionChanges = async (deps) => {
   const { store, graphicsService } = deps;
+  const timingStartedAt = getDebugNow();
   const selectedSectionId = store.selectSelectedSectionId();
   const sectionIds = getSceneSectionIds(store.selectScene?.());
   if (sectionIds.length === 0 && selectedSectionId) {
     sectionIds.push(selectedSectionId);
   }
   if (sectionIds.length === 0) {
+    emitSceneEditorTiming("runtime.section-changes", {
+      durationMs: getDebugDurationMs(timingStartedAt),
+      selectedSectionId,
+      sectionCount: 0,
+    });
     return;
   }
 
   const changesBySectionId = {};
+  let lineChangeCount = 0;
   for (const sectionId of sectionIds) {
     changesBySectionId[sectionId] =
       graphicsService.engineSelectSectionLineChanges({
         sectionId,
         includePresentationState: true,
       });
+    lineChangeCount += Array.isArray(changesBySectionId[sectionId]?.lines)
+      ? changesBySectionId[sectionId].lines.length
+      : 0;
   }
 
   if (store.setSectionLineChangesBySectionId) {
     store.setSectionLineChangesBySectionId({ changesBySectionId });
+    emitSceneEditorTiming("runtime.section-changes", {
+      durationMs: getDebugDurationMs(timingStartedAt),
+      selectedSectionId,
+      sectionCount: sectionIds.length,
+      lineChangeCount,
+    });
     return;
   }
 
   store.setSectionLineChanges({
     changes: selectedSectionId ? changesBySectionId[selectedSectionId] : {},
+  });
+  emitSceneEditorTiming("runtime.section-changes", {
+    durationMs: getDebugDurationMs(timingStartedAt),
+    selectedSectionId,
+    sectionCount: sectionIds.length,
+    lineChangeCount,
   });
 };
 
@@ -1103,7 +1426,19 @@ export const initializeSceneEditorPage = async (deps) => {
     store.setSelectedSectionId({
       selectedSectionId: entrySelection.sectionId,
     });
-    store.setSelectedLineId({ selectedLineId: entrySelection.lineId });
+    store.setSelectedLineId({ selectedLineId: undefined });
+    const nextPayload = {
+      ...appService.getPayload(),
+      s: sceneId,
+    };
+    delete nextPayload.sceneId;
+    if (entrySelection.sectionId) {
+      nextPayload.sectionId = entrySelection.sectionId;
+    } else {
+      delete nextPayload.sectionId;
+    }
+    delete nextPayload.lineId;
+    appService.setPayload?.(nextPayload);
   }
 
   resetAssetLoadCache("initialize scene editor");
@@ -1220,11 +1555,27 @@ export const restoreSceneEditorFromPreview = async (deps) => {
 
 export const renderSceneEditorCanvas = async (deps, payload) => {
   const { store, render } = deps;
+  const timingEnabled = shouldMeasureSceneEditorTiming();
+  const canvasStartedAt = timingEnabled ? getDebugNow() : 0;
   if (store.selectIsScenePageLoading()) {
+    if (timingEnabled) {
+      emitSceneEditorTiming("runtime.render-canvas.skipped", {
+        durationMs: getDebugDurationMs(canvasStartedAt),
+        reason: "scene-page-loading",
+        skipRender: payload?.skipRender === true,
+      });
+    }
     return;
   }
 
   if (isSceneEditorPreviewVisible(store)) {
+    if (timingEnabled) {
+      emitSceneEditorTiming("runtime.render-canvas.skipped", {
+        durationMs: getDebugDurationMs(canvasStartedAt),
+        reason: "preview-visible",
+        skipRender: payload?.skipRender === true,
+      });
+    }
     return;
   }
 
@@ -1234,14 +1585,23 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
     preferTransformEditorCanvas: backgroundTransformEditorOpen,
   });
   if (!mountedCanvasRoot?.isConnected) {
+    if (timingEnabled) {
+      emitSceneEditorTiming("runtime.render-canvas.skipped", {
+        durationMs: getDebugDurationMs(canvasStartedAt),
+        reason: "missing-canvas-root",
+        skipRender: payload?.skipRender === true,
+      });
+    }
     return;
   }
 
   const perfEnabled = isDebugEnabled(SCENE_EDITOR_PERF_SCOPE);
-  const renderStartedAt = perfEnabled ? getDebugNow() : 0;
+  const shouldMeasure = perfEnabled || timingEnabled;
+  const renderStartedAt = shouldMeasure ? getDebugNow() : 0;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
+  const projectDataStartedAt = shouldMeasure ? getDebugNow() : 0;
   const projectData = createProjectDataWithSelectedEntryPoint(
     store.selectProjectData(),
     {
@@ -1250,6 +1610,9 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
       lineId,
     },
   );
+  const projectDataDurationMs = shouldMeasure
+    ? getDebugDurationMs(projectDataStartedAt)
+    : undefined;
   const sceneIdsToLoad = extractInitialHybridSceneIds(projectData, sceneId);
   const shouldSyncPresentationState =
     payload?.skipRender === true && payload?.syncPresentationState === true;
@@ -1257,23 +1620,23 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
     ? getPresentationStateSnapshot(store)
     : undefined;
 
-  const sceneAssetLoadStartedAt = perfEnabled ? getDebugNow() : 0;
+  const sceneAssetLoadStartedAt = shouldMeasure ? getDebugNow() : 0;
   await loadAssetsForSceneIds(deps, projectData, sceneIdsToLoad, {
     showLoading: false,
   });
-  const sceneAssetLoadDurationMs = perfEnabled
+  const sceneAssetLoadDurationMs = shouldMeasure
     ? getDebugDurationMs(sceneAssetLoadStartedAt)
     : undefined;
   void preloadDirectTransitionScenes(deps, projectData, sceneIdsToLoad);
 
-  const renderSceneStateStartedAt = perfEnabled ? getDebugNow() : 0;
+  const renderSceneStateStartedAt = shouldMeasure ? getDebugNow() : 0;
   await renderSceneEditorState(deps, payload);
-  const renderSceneStateDurationMs = perfEnabled
+  const renderSceneStateDurationMs = shouldMeasure
     ? getDebugDurationMs(renderSceneStateStartedAt)
     : undefined;
-  const sectionChangesStartedAt = perfEnabled ? getDebugNow() : 0;
+  const sectionChangesStartedAt = shouldMeasure ? getDebugNow() : 0;
   await updateSceneEditorSectionChanges(deps);
-  const sectionChangesDurationMs = perfEnabled
+  const sectionChangesDurationMs = shouldMeasure
     ? getDebugDurationMs(sectionChangesStartedAt)
     : undefined;
 
@@ -1284,9 +1647,9 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
       previousPresentationStateSnapshot !==
         getPresentationStateSnapshot(store));
   if (shouldRenderUi) {
-    const uiRenderStartedAt = perfEnabled ? getDebugNow() : 0;
+    const uiRenderStartedAt = shouldMeasure ? getDebugNow() : 0;
     render();
-    if (perfEnabled) {
+    if (shouldMeasure) {
       uiRenderDurationMs = getDebugDurationMs(uiRenderStartedAt);
     }
   }
@@ -1300,6 +1663,26 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
       skipRender: payload?.skipRender === true,
       skipAnimations: payload?.skipAnimations ?? true,
       skipCanvasPaint: payload?.skipCanvasPaint === true,
+      projectDataDurationMs,
+      sceneAssetLoadDurationMs,
+      renderSceneStateDurationMs,
+      sectionChangesDurationMs,
+      uiRenderDurationMs,
+      sceneIdsToLoad,
+    });
+  }
+  if (timingEnabled) {
+    emitSceneEditorTiming("runtime.render-canvas.complete", {
+      durationMs: getDebugDurationMs(renderStartedAt),
+      sceneId,
+      sectionId,
+      lineId,
+      skipRender: payload?.skipRender === true,
+      skipAnimations: payload?.skipAnimations ?? true,
+      skipCanvasPaint: payload?.skipCanvasPaint === true,
+      syncPresentationState: payload?.syncPresentationState === true,
+      shouldRenderUi,
+      projectDataDurationMs,
       sceneAssetLoadDurationMs,
       renderSceneStateDurationMs,
       sectionChangesDurationMs,
@@ -1624,9 +2007,27 @@ export const mountSceneEditorSubscriptions = (deps) => {
   const streams = [
     subject.pipe(
       filter(({ action }) => action === "sceneEditor.renderCanvas"),
+      tap(({ payload }) => {
+        emitSceneEditorTiming("runtime.render-canvas.event", {
+          phase: "received",
+          skipRender: payload?.skipRender === true,
+          skipAnimations: payload?.skipAnimations ?? true,
+          skipCanvasPaint: payload?.skipCanvasPaint === true,
+          syncPresentationState: payload?.syncPresentationState === true,
+        });
+      }),
       debounceTime(50),
       tap(async ({ payload }) => {
+        const queueStartedAt = getDebugNow();
         await queueRenderCanvas(payload);
+        emitSceneEditorTiming("runtime.render-canvas.event", {
+          phase: "queued-complete",
+          durationMs: getDebugDurationMs(queueStartedAt),
+          skipRender: payload?.skipRender === true,
+          skipAnimations: payload?.skipAnimations ?? true,
+          skipCanvasPaint: payload?.skipCanvasPaint === true,
+          syncPresentationState: payload?.syncPresentationState === true,
+        });
       }),
     ),
     subject.pipe(

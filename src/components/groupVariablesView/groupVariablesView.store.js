@@ -469,6 +469,9 @@ export const selectViewData = ({ state, props, i18n }) => {
   const activeTagIds = props.selectedTagFilterValues ?? [];
   const hasActiveTagFilter = activeTagIds.length > 0;
   const searchInFilterPopover = parseBooleanProp(props.searchInFilterPopover);
+  const showMenuButton = parseBooleanProp(props.showMenuButton);
+  const menuButtonPlacement =
+    props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
   const hasActiveSearch = rawSearchQuery.trim().length > 0;
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
@@ -657,7 +660,9 @@ export const selectViewData = ({ state, props, i18n }) => {
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,
-    showMenuButton: parseBooleanProp(props.showMenuButton),
+    showLeadingMenuButton: showMenuButton && menuButtonPlacement === "leading",
+    showTrailingMenuButton:
+      showMenuButton && menuButtonPlacement === "trailing",
     progressiveRender: progressiveRenderEnabled,
     progressiveInitialItemCount: parseNonNegativeIntegerProp(
       props.progressiveInitialItemCount,

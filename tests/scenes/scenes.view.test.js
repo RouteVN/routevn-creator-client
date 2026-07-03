@@ -2,13 +2,33 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("scenes view", () => {
-  it("aligns mobile hamburger controls with the top-right minimap", () => {
+  it("uses a bordered top-right mobile hamburger opener", () => {
     const scenesView = readFileSync(
       new URL("../../src/pages/scenes/scenes.view.yaml", import.meta.url),
       "utf8",
     );
 
-    expect(scenesView).toContain('style="left: 16px; top: 20px;"');
+    expect(scenesView).toContain('style="right: 8px; top: 8px;"');
+    expect(scenesView).toContain(
+      'rtgl-view#mobileFileExplorerOpenButton w=40 h=40 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo title="${title}"',
+    );
+    expect(scenesView).toContain("rtgl-svg svg=hamburger wh=20 c=mu-fg");
+    expect(scenesView).toContain(
+      "rtgl-view#mobileFileExplorerClose w=40 h=40 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo",
+    );
+    expect(scenesView).toContain("rtgl-svg svg=x wh=20 c=mu-fg");
     expect(scenesView).not.toContain("env(safe-area-inset-top)");
+  });
+
+  it("uses the same mobile file explorer navbar sizing as images", () => {
+    const scenesView = readFileSync(
+      new URL("../../src/pages/scenes/scenes.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(scenesView).toContain(
+      "rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md",
+    );
+    expect(scenesView).not.toContain("rtgl-view h=56 w=f d=h av=c");
   });
 });

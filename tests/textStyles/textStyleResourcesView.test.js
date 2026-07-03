@@ -162,6 +162,42 @@ describe("textStyleResourcesView", () => {
     expect(render).toHaveBeenCalled();
   });
 
+  it("dispatches item-edit from the card context menu", () => {
+    const dispatchEvent = vi.fn();
+    const hideContextMenu = vi.fn();
+    const render = vi.fn();
+
+    handleContextMenuClickItem(
+      {
+        store: {
+          selectDropdownMenu: () => ({
+            targetItemId: "text-style-1",
+          }),
+          hideContextMenu,
+        },
+        dispatchEvent,
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            item: {
+              value: "edit-item",
+            },
+          },
+        },
+      },
+    );
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe("item-edit");
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      itemId: "text-style-1",
+    });
+    expect(hideContextMenu).toHaveBeenCalled();
+    expect(render).toHaveBeenCalled();
+  });
+
   it("uses a two-column mobile default with a six-column maximum", () => {
     const props = {
       mobileLayout: true,

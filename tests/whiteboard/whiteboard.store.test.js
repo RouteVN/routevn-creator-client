@@ -184,6 +184,28 @@ describe("whiteboard minimap viewport drag", () => {
     expect(forcedTouchViewData.minimapContainerStyle).toContain("right: 20px");
     expect(forcedTouchViewData.minimapContainerStyle).toContain("top: 20px");
   });
+
+  it("can show the minimap at the top left", () => {
+    const state = createInitialState();
+    const items = createItems();
+
+    setContainerSize({ state }, { width: 480, height: 320 });
+
+    const forcedTouchViewData = selectViewData({
+      state,
+      props: {
+        items,
+        isTouchMode: true,
+        showMinimapInTouchMode: true,
+        minimapPlacement: "top-left",
+        minimapHeightScale: 2 / 3,
+      },
+    });
+
+    expect(forcedTouchViewData.showMinimap).toBe(true);
+    expect(forcedTouchViewData.minimapContainerStyle).toContain("left: 20px");
+    expect(forcedTouchViewData.minimapContainerStyle).toContain("top: 20px");
+  });
 });
 
 describe("whiteboard.store", () => {

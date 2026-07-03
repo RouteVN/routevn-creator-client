@@ -1,3 +1,9 @@
+import {
+  emitSceneEditorTiming,
+  getSceneEditorTimingDurationMs,
+  getSceneEditorTimingNow,
+} from "../../internal/ui/sceneEditor/sceneEditorTiming.js";
+
 const KEYBOARD_VISIBLE_INSET_PX = 100;
 const ARROW_REPEAT_DELAY_MS = 280;
 const ARROW_REPEAT_INTERVAL_MS = 70;
@@ -321,8 +327,11 @@ export const handleBeforeMount = (deps) => {
     0;
   let animationFrameId;
   let focusTimerId;
+  let pendingSyncReason = "mount";
 
   const syncKeyboardState = () => {
+    const startedAt = getSceneEditorTimingNow();
+    const syncReason = pendingSyncReason;
     animationFrameId = undefined;
     const metrics = getViewportMetrics(largestViewportHeight);
     largestViewportHeight = Math.max(
@@ -352,15 +361,44 @@ export const handleBeforeMount = (deps) => {
       currentState.visualHeight === Math.round(nextState.visualHeight) &&
       currentState.layoutHeight === Math.round(nextState.layoutHeight)
     ) {
+      emitSceneEditorTiming("mobile-keyboard.sync", {
+        durationMs: getSceneEditorTimingDurationMs(startedAt),
+        reason: syncReason,
+        changed: false,
+        isVisible: nextState.isVisible,
+        bottom: Math.round(nextState.bottom),
+        keyboardInset: Math.round(nextState.keyboardInset),
+        visualHeight: Math.round(nextState.visualHeight),
+        layoutHeight: Math.round(nextState.layoutHeight),
+      });
       return;
     }
 
     store.setKeyboardState(nextState);
     dispatchKeyboardStateChange(dispatchEvent, store.selectKeyboardState());
+    const renderStartedAt = getSceneEditorTimingNow();
     render();
+    const renderDurationMs = getSceneEditorTimingDurationMs(renderStartedAt);
+    emitSceneEditorTiming("mobile-keyboard.sync", {
+      durationMs: getSceneEditorTimingDurationMs(startedAt),
+      renderDurationMs,
+      reason: syncReason,
+      changed: true,
+      isVisible: nextState.isVisible,
+      bottom: Math.round(nextState.bottom),
+      keyboardInset: Math.round(nextState.keyboardInset),
+      visualOffsetTop: Math.round(nextState.visualOffsetTop),
+      pageTop: Math.round(nextState.pageTop),
+      visualHeight: Math.round(nextState.visualHeight),
+      layoutHeight: Math.round(nextState.layoutHeight),
+    });
   };
 
-  const scheduleSync = () => {
+  const scheduleSync = (eventOrReason) => {
+    pendingSyncReason =
+      typeof eventOrReason === "string"
+        ? eventOrReason
+        : eventOrReason?.type || "manual";
     if (animationFrameId !== undefined) {
       cancelAnimationFrame(animationFrameId);
     }
@@ -369,7 +407,7 @@ export const handleBeforeMount = (deps) => {
 
   const scheduleFocusSync = () => {
     clearTimeout(focusTimerId);
-    focusTimerId = setTimeout(scheduleSync, 60);
+    focusTimerId = setTimeout(() => scheduleSync("focus-delay"), 60);
   };
   const stopArrowRepeatOnPointerEnd = () => {
     stopArrowRepeat(store);
@@ -500,12 +538,19 @@ export const handleToolbarItemContextMenu = (deps, payload) => {
 };
 
 export const handleToolbarItemClick = ({ dispatchEvent }, payload) => {
+  const startedAt = getSceneEditorTimingNow();
   const actionId = payload._event.currentTarget.dataset.actionId;
   payload._event.preventDefault();
   payload._event.stopPropagation();
 
   const direction = DIRECTION_BY_ACTION_ID[actionId];
   if (direction) {
+    emitSceneEditorTiming("mobile-keyboard.action-click", {
+      durationMs: getSceneEditorTimingDurationMs(startedAt),
+      actionId,
+      ignored: true,
+      reason: "arrow-repeat-action",
+    });
     return;
   }
 
@@ -518,4 +563,9 @@ export const handleToolbarItemClick = ({ dispatchEvent }, payload) => {
       bubbles: true,
     }),
   );
+  emitSceneEditorTiming("mobile-keyboard.action-click", {
+    durationMs: getSceneEditorTimingDurationMs(startedAt),
+    actionId,
+    ignored: false,
+  });
 };

@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleFormActionClick,
   handleItemDuplicate,
+  handleMobileDetailEditClick,
 } from "../../src/pages/textStyles/textStyles.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("textStyles.handlers", () => {
   const createProjectState = () => ({
@@ -29,6 +31,7 @@ describe("textStyles.handlers", () => {
       editingItemId: undefined,
     },
   } = {}) => ({
+    i18n: EN_I18N,
     store: {
       getState: () => ({
         currentFormValues: {
@@ -36,6 +39,7 @@ describe("textStyles.handlers", () => {
         },
       }),
       selectDialogState: vi.fn(() => dialogState),
+      selectCurrentPreviewText: vi.fn(() => "Preview"),
       resetFormValues: vi.fn(),
       clearEditMode: vi.fn(),
       toggleDialog: vi.fn(),
@@ -118,6 +122,7 @@ describe("textStyles.handlers", () => {
       tree: [],
     };
     const deps = {
+      i18n: EN_I18N,
       store: {
         getState: () => ({ textStylesData }),
         setItems: vi.fn(({ textStylesData: nextTextStylesData } = {}) => {
@@ -128,6 +133,7 @@ describe("textStyles.handlers", () => {
         setFontsData: vi.fn(),
         setSelectedFolderId: vi.fn(),
         setSelectedItemId: vi.fn(),
+        selectItemById: vi.fn((itemId) => textStylesData.items[itemId]),
       },
       refs: {
         fileExplorer: {
@@ -185,5 +191,58 @@ describe("textStyles.handlers", () => {
     expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
       itemId: "text-style-copy",
     });
+  });
+
+  it("opens the selected text style from the mobile detail edit action", () => {
+    const item = {
+      id: "text-style-1",
+      type: "textStyle",
+      name: "Dialogue",
+      colorId: "color-1",
+      fontId: "font-1",
+      fontSize: 24,
+      lineHeight: 1.5,
+      fontWeight: "400",
+    };
+    const event = {
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "text-style-1"),
+        selectItemById: vi.fn(() => item),
+        setSelectedItemId: vi.fn(),
+        setFormValuesFromItem: vi.fn(),
+        setEditMode: vi.fn(),
+        selectIsDialogOpen: vi.fn(() => false),
+        toggleDialog: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleMobileDetailEditClick(deps, {
+      _event: event,
+    });
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "text-style-1",
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "text-style-1",
+    });
+    expect(deps.store.setFormValuesFromItem).toHaveBeenCalledWith({ item });
+    expect(deps.store.setEditMode).toHaveBeenCalledWith({
+      itemId: "text-style-1",
+    });
+    expect(deps.store.toggleDialog).toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalled();
   });
 });

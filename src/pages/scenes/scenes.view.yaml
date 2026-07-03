@@ -164,13 +164,14 @@ template:
       - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
       - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
       - $if showMobileScenesControls:
-          - 'rtgl-view pos=abs z=200 style="left: 16px; top: 20px;"':
-              - rtgl-button#mobileFileExplorerOpenButton sq pre=hamburger v=se title="${title}": null
+          - 'rtgl-view pos=abs z=200 style="right: 8px; top: 8px;"':
+              - rtgl-view#mobileFileExplorerOpenButton w=40 h=40 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo title="${title}":
+                  - rtgl-svg svg=hamburger wh=20 c=mu-fg: null
       - $if showMobileFileExplorer:
           - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
-              - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
+              - rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
                   - rtgl-text w=1fg s=md: ${title}
-                  - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
+                  - rtgl-view#mobileFileExplorerClose w=40 h=40 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo:
                       - rtgl-svg svg=x wh=20 c=mu-fg: null
               - 'rtgl-view w=f h=1fg style="min-height: 0;"':
                   - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null

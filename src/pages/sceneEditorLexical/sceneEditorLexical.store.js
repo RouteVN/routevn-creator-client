@@ -20,6 +20,11 @@ import {
   normalizeBackgroundTransformEditorTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 import {
+  emitSceneEditorTiming,
+  getSceneEditorTimingDurationMs,
+  getSceneEditorTimingNow,
+} from "../../internal/ui/sceneEditor/sceneEditorTiming.js";
+import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
@@ -1571,9 +1576,44 @@ export const setSceneSettings = (
 };
 
 export const selectProjectData = ({ state }) => {
-  return constructProjectData(
-    prepareProjectDataSourceStateForPreview(buildProjectDataSourceState(state)),
+  const timingStartedAt = getSceneEditorTimingNow();
+  const sourceStartedAt = getSceneEditorTimingNow();
+  const sourceState = buildProjectDataSourceState(state);
+  const sourceDurationMs = getSceneEditorTimingDurationMs(sourceStartedAt);
+  const sanitizeStartedAt = getSceneEditorTimingNow();
+  const sanitizedState = prepareProjectDataSourceStateForPreview(sourceState);
+  const sanitizeDurationMs = getSceneEditorTimingDurationMs(sanitizeStartedAt);
+  const constructStartedAt = getSceneEditorTimingNow();
+  const projectData = constructProjectData(sanitizedState);
+  const constructDurationMs =
+    getSceneEditorTimingDurationMs(constructStartedAt);
+  const sceneItems = sourceState?.scenes?.items || {};
+  const sectionCount = Object.values(sceneItems).reduce(
+    (sum, scene) => sum + Object.keys(scene?.sections?.items || {}).length,
+    0,
   );
+  const lineCount = Object.values(sceneItems).reduce((sum, scene) => {
+    const sections = Object.values(scene?.sections?.items || {});
+    return (
+      sum +
+      sections.reduce(
+        (sectionSum, section) =>
+          sectionSum + Object.keys(section?.lines?.items || {}).length,
+        0,
+      )
+    );
+  }, 0);
+  emitSceneEditorTiming("store.select-project-data", {
+    durationMs: getSceneEditorTimingDurationMs(timingStartedAt),
+    sourceDurationMs,
+    sanitizeDurationMs,
+    constructDurationMs,
+    sceneCount: Object.keys(sceneItems).length,
+    sectionCount,
+    lineCount,
+    draftSectionCount: Object.keys(state.draftSections || {}).length,
+  });
+  return projectData;
 };
 
 const selectCanvasAspectRatio = ({ state }) => {
@@ -1691,9 +1731,21 @@ const selectBackgroundTransformEditorViewData = ({ state }) => {
 };
 
 export const selectViewData = ({ state, i18n }) => {
+  const timingStartedAt = getSceneEditorTimingNow();
   const copy = selectSceneEditorCopy(i18n);
+  const sceneSelectStartedAt = getSceneEditorTimingNow();
   const scene = selectScene({ state });
+  const sceneSelectDurationMs =
+    getSceneEditorTimingDurationMs(sceneSelectStartedAt);
   if (!scene) {
+    emitSceneEditorTiming("store.select-view-data", {
+      durationMs: getSceneEditorTimingDurationMs(timingStartedAt),
+      sceneSelectDurationMs,
+      hasScene: false,
+      sectionCount: 0,
+      totalLineCount: 0,
+      isTouchMode: state.isTouchMode,
+    });
     return {
       scene: { id: "", name: copy.sceneLabel ?? "Scene", sections: [] },
       sections: [],
@@ -1761,16 +1813,19 @@ export const selectViewData = ({ state, i18n }) => {
     };
   }
 
+  const optionsStartedAt = getSceneEditorTimingNow();
   const repositoryState = selectRepositoryState({ state });
   const layouts = repositoryState.layouts || { items: {} };
   const controls = repositoryState.controls || { items: {} };
   const textStyles = buildTextStyleOptions(repositoryState);
   const mentionTargets = buildMentionTargetOptions(repositoryState);
+  const optionsDurationMs = getSceneEditorTimingDurationMs(optionsStartedAt);
   const selectedSceneFirstSectionId = scene.sections?.[0]?.id;
   const selectedSceneInitialSectionId =
     scene.initialSectionId || selectedSceneFirstSectionId;
   const menuSceneId = repositoryState.story?.initialSceneId;
 
+  const sectionPresentationStartedAt = getSceneEditorTimingNow();
   const sectionPresentationById = Object.fromEntries(
     scene.sections.map((section) => [
       section.id,
@@ -1783,8 +1838,13 @@ export const selectViewData = ({ state, i18n }) => {
       }),
     ]),
   );
+  const sectionPresentationDurationMs = getSceneEditorTimingDurationMs(
+    sectionPresentationStartedAt,
+  );
 
+  const graphStartedAt = getSceneEditorTimingNow();
   const sectionTransitionsDAG = selectSectionTransitionsDAG({ state });
+  const graphDurationMs = getSceneEditorTimingDurationMs(graphStartedAt);
 
   const sections = scene.sections.map((section) => {
     return {
@@ -1854,6 +1914,7 @@ export const selectViewData = ({ state, i18n }) => {
   const documentEditorLines = Array.isArray(currentSection?.lines)
     ? currentSection.lines
     : [];
+  const selectedDecorationsStartedAt = getSceneEditorTimingNow();
   const documentLineDecorations = buildSceneDocumentLineDecorations({
     lines: documentEditorLines,
     repositoryState,
@@ -1862,6 +1923,10 @@ export const selectViewData = ({ state, i18n }) => {
       currentSection?.id,
     ),
   });
+  const selectedDecorationsDurationMs = getSceneEditorTimingDurationMs(
+    selectedDecorationsStartedAt,
+  );
+  const sectionItemsStartedAt = getSceneEditorTimingNow();
   const sectionEditorItems = sections.map((section, index) => {
     const sectionLines = Array.isArray(section.lines) ? section.lines : [];
     const sectionLineChanges = getSectionLineChangesForSection(
@@ -1899,6 +1964,9 @@ export const selectViewData = ({ state, i18n }) => {
       }),
     };
   });
+  const sectionItemsDurationMs = getSceneEditorTimingDurationMs(
+    sectionItemsStartedAt,
+  );
 
   const isEditingSection = state.sectionCreateDialog.mode === "edit";
   const moveSectionSceneOptions = buildMoveSectionSceneOptions(
@@ -2018,6 +2086,45 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     },
   };
+  const layoutCharacterStartedAt = getSceneEditorTimingNow();
+  const layoutsViewData = Object.entries(selectLayouts({ state })).map(
+    ([id, item]) => ({
+      id,
+      ...item,
+    }),
+  );
+  const allCharacters = Object.entries(
+    repositoryState.characters?.items || {},
+  ).map(([id, item]) => ({
+    id,
+    ...item,
+  }));
+  const layoutCharacterDurationMs = getSceneEditorTimingDurationMs(
+    layoutCharacterStartedAt,
+  );
+  const totalLineCount = scene.sections.reduce(
+    (sum, section) =>
+      sum + (Array.isArray(section.lines) ? section.lines.length : 0),
+    0,
+  );
+  emitSceneEditorTiming("store.select-view-data", {
+    durationMs: getSceneEditorTimingDurationMs(timingStartedAt),
+    sceneSelectDurationMs,
+    optionsDurationMs,
+    sectionPresentationDurationMs,
+    graphDurationMs,
+    selectedDecorationsDurationMs,
+    sectionItemsDurationMs,
+    layoutCharacterDurationMs,
+    hasScene: true,
+    sectionCount: scene.sections.length,
+    totalLineCount,
+    selectedSectionLineCount: documentEditorLines.length,
+    textStyleCount: textStyles.length,
+    mentionTargetCount: mentionTargets.length,
+    isTouchMode: state.isTouchMode,
+    sectionsGraphView: state.sectionsGraphView,
+  });
 
   return {
     scene: scene,
@@ -2036,16 +2143,8 @@ export const selectViewData = ({ state, i18n }) => {
     selectedLine,
     selectedLineActions: toPlainObject(selectedLine?.actions),
     sectionsGraphView: state.sectionsGraphView,
-    layouts: Object.entries(selectLayouts({ state })).map(([id, item]) => ({
-      id,
-      ...item,
-    })),
-    allCharacters: Object.entries(repositoryState.characters?.items || {}).map(
-      ([id, item]) => ({
-        id,
-        ...item,
-      }),
-    ),
+    layouts: layoutsViewData,
+    allCharacters,
     sectionsGraph: JSON.stringify(sectionTransitionsDAG, null, 2),
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,

@@ -57,4 +57,17 @@ describe("textStyles.store", () => {
       }),
     );
   });
+
+  it("exposes edit actions for text style item surfaces", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.editButton).toBe("Edit");
+    expect(viewData.centerItemContextMenuItems[0]).toEqual({
+      label: "Edit",
+      type: "item",
+      value: "edit-item",
+    });
+  });
 });

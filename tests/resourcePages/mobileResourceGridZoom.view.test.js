@@ -41,6 +41,17 @@ const fullWidthResourcePages = [
   ["characters", "characters/characters.view.yaml"],
 ];
 
+const mobileMenuResourcePages = [
+  ...resourcePages.map(([name, relativePath]) => [name, relativePath]),
+  ...fullWidthResourcePages,
+  ["variables", "variables/variables.view.yaml"],
+];
+
+const mobileIconOnlyImportPages = [
+  ["animations", "animations/animations.view.yaml"],
+  ["transforms", "transforms/transforms.view.yaml"],
+];
+
 const readMobileBranch = (relativePath) => {
   const view = readFileSync(
     new URL(`../../src/pages/${relativePath}`, import.meta.url),
@@ -76,4 +87,65 @@ describe("mobile resource grid zoom wiring", () => {
       expect(mobileBranch).not.toContain("items-per-row-config-key");
     },
   );
+
+  it.each(mobileMenuResourcePages)(
+    "uses the trailing mobile menu placement for %s",
+    (_name, relativePath) => {
+      const mobileBranch = readMobileBranch(relativePath);
+
+      expect(mobileBranch).toContain("show-menu-button");
+      expect(mobileBranch).toContain("menu-button-placement=trailing");
+    },
+  );
+
+  it.each(mobileIconOnlyImportPages)(
+    "uses an icon-only mobile import action before the menu on %s",
+    (_name, relativePath) => {
+      const mobileBranch = readMobileBranch(relativePath);
+
+      expect(mobileBranch).toContain("canImport");
+      expect(mobileBranch).toContain("import-icon-only");
+      expect(mobileBranch).toContain("menu-button-placement=trailing");
+    },
+  );
+
+  it("renders catalog import icon controls between filter and trailing menu", () => {
+    const catalogView = readFileSync(
+      new URL(
+        "../../src/components/catalogResourcesView/catalogResourcesView.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const filterIndex = catalogView.indexOf("tagFilterButton");
+    const importIndex = catalogView.indexOf("showIconImportButton");
+    const menuIndex = catalogView.indexOf("showTrailingMenuButton");
+
+    expect(catalogView).toContain("rtgl-view#importBtn w=36 h=36");
+    expect(filterIndex).toBeGreaterThan(-1);
+    expect(importIndex).toBeGreaterThan(filterIndex);
+    expect(importIndex).toBeLessThan(menuIndex);
+  });
+
+  it("aligns item surfaces with the navbar inset in shared resource views", () => {
+    const sharedViews = [
+      "mediaResourcesView/mediaResourcesView.view.yaml",
+      "catalogResourcesView/catalogResourcesView.view.yaml",
+      "textStyleResourcesView/textStyleResourcesView.view.yaml",
+      "charactersResourcesView/charactersResourcesView.view.yaml",
+      "groupVariablesView/groupVariablesView.view.yaml",
+    ];
+
+    for (const relativePath of sharedViews) {
+      const view = readFileSync(
+        new URL(`../../src/components/${relativePath}`, import.meta.url),
+        "utf8",
+      );
+
+      expect(view).toContain("ph=md pos=rel");
+      expect(view).not.toContain("rtgl-grid w=f ph=sm");
+      expect(view).not.toContain("rtgl-view w=f d=v ph=sm");
+      expect(view).not.toContain("rtgl-view w=f mb=md p=sm");
+    }
+  });
 });
