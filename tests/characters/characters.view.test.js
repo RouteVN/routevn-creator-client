@@ -27,7 +27,7 @@ describe("characters view", () => {
       "rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md",
     );
     expect(mobileExplorerBranch).toContain(
-      "rtgl-view#mobileFileExplorerClose w=40 h=40 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo",
+      "rtgl-button#mobileFileExplorerClose sq pre=x v=ol w=36 h=36",
     );
     expect(mobileExplorerBranch).not.toContain("rtgl-view h=56 w=f d=h");
   });
