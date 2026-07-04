@@ -14,6 +14,8 @@ struct UpdateManifest {
     date: Option<String>,
     notes: Option<String>,
     body: Option<String>,
+    #[serde(rename = "manualDownloadUrl")]
+    manual_download_url: Option<String>,
     platforms: Option<serde_json::Value>,
 }
 
@@ -23,6 +25,7 @@ pub struct ManualUpdateManifest {
     version: String,
     date: Option<String>,
     body: Option<String>,
+    manual_download_url: Option<String>,
     platforms: Option<serde_json::Value>,
 }
 
@@ -77,6 +80,7 @@ pub async fn fetch_manual_update_manifest(
         version,
         date: manifest.pub_date.or(manifest.date),
         body: manifest.notes.or(manifest.body),
+        manual_download_url: manifest.manual_download_url,
         platforms: manifest.platforms,
     })
 }

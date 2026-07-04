@@ -14,6 +14,7 @@ vi.mock("@tauri-apps/plugin-process", () => ({
 import createUpdater from "../../src/deps/clients/tauri/updater.js";
 
 const DOWNLOAD_PAGE_URL = "https://routevn.com/en/creator/download/";
+const CUSTOM_DOWNLOAD_PAGE_URL = `${DOWNLOAD_PAGE_URL}?from=updater`;
 
 const createGlobalUI = () => ({
   showAlert: vi.fn(() => Promise.resolve()),
@@ -26,11 +27,7 @@ const createUpdaterClient = ({
     version: "1.7.3",
     date: "2026-07-03",
     body: "Fix packaging.",
-    platforms: {
-      "linux-x86_64": {
-        url: "https://routevn.com/en/creator/download/",
-      },
-    },
+    manualDownloadUrl: CUSTOM_DOWNLOAD_PAGE_URL,
   },
   openUrl,
 } = {}) => {
@@ -99,11 +96,11 @@ describe("tauri updater", () => {
       confirmText: "Open Download Page",
       cancelText: "Later",
     });
-    expect(openUrl).toHaveBeenCalledWith(DOWNLOAD_PAGE_URL);
+    expect(openUrl).toHaveBeenCalledWith(CUSTOM_DOWNLOAD_PAGE_URL);
     expect(relaunchMock).not.toHaveBeenCalled();
   });
 
-  it("does not prompt on Linux when the manifest has no x86_64 platform", async () => {
+  it("does not prompt on Linux when the manifest version is not newer", async () => {
     vi.stubGlobal("navigator", {
       platform: "Linux x86_64",
       userAgent: "RouteVN Creator Linux",
@@ -114,14 +111,10 @@ describe("tauri updater", () => {
     const { fetchManualUpdateManifest, updater } = createUpdaterClient({
       globalUI,
       manifest: {
-        version: "1.7.3",
+        version: "1.7.2",
         date: "2026-07-03",
         body: "Fix packaging.",
-        platforms: {
-          "windows-x86_64": {
-            url: "https://static-1.routevn.com/windows.msi",
-          },
-        },
+        manualDownloadUrl: CUSTOM_DOWNLOAD_PAGE_URL,
       },
       openUrl,
     });

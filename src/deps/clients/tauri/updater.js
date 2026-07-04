@@ -2,9 +2,6 @@ import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
 const LINUX_DOWNLOAD_URL = "https://routevn.com/en/creator/download/";
-const LINUX_UPDATE_TARGET = "linux";
-const LINUX_UPDATE_ARCH = "x86_64";
-const LINUX_UPDATE_PLATFORM = `${LINUX_UPDATE_TARGET}-${LINUX_UPDATE_ARCH}`;
 
 const isMacOs = () => {
   if (typeof navigator === "undefined") {
@@ -83,10 +80,6 @@ const isNewerVersion = (version, currentVersion) => {
   return false;
 };
 
-const hasManualLinuxUpdatePlatform = (manifest = {}) => {
-  return Boolean(manifest.platforms?.[LINUX_UPDATE_PLATFORM]);
-};
-
 const createUpdater = ({
   globalUI,
   keyValueStore,
@@ -153,7 +146,7 @@ const createUpdater = ({
 
         if (shouldUpdate) {
           if (linux) {
-            await openLinuxDownloadPage(copy);
+            await openLinuxDownloadPage(copy, update.manualDownloadUrl);
           } else {
             await downloadAndInstall(update, copy);
           }
@@ -189,9 +182,6 @@ const createUpdater = ({
     const manifest = await fetchManualUpdateManifest(
       normalizeVersion(appVersion),
     );
-    if (!hasManualLinuxUpdatePlatform(manifest)) {
-      return null;
-    }
 
     const version = normalizeVersion(manifest?.version);
     if (!isNewerVersion(version, appVersion)) {
@@ -202,12 +192,13 @@ const createUpdater = ({
       version,
       date: manifest?.pub_date ?? manifest?.date,
       body: manifest?.notes ?? manifest?.body,
+      manualDownloadUrl: manifest?.manualDownloadUrl ?? LINUX_DOWNLOAD_URL,
     };
   };
 
-  const openLinuxDownloadPage = async (copy = {}) => {
+  const openLinuxDownloadPage = async (copy = {}, url = LINUX_DOWNLOAD_URL) => {
     try {
-      await openUrl(LINUX_DOWNLOAD_URL);
+      await openUrl(url);
     } catch (error) {
       console.error("Failed to open manual download page:", error);
       if (globalUI) {
