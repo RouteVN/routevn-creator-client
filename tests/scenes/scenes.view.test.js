@@ -10,13 +10,12 @@ describe("scenes view", () => {
 
     expect(scenesView).toContain('style="right: 8px; top: 8px;"');
     expect(scenesView).toContain(
-      'rtgl-view#mobileFileExplorerOpenButton w=40 h=40 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo title="${title}"',
+      'rtgl-view#mobileFileExplorerOpenButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo title="${title}"',
     );
-    expect(scenesView).toContain("rtgl-svg svg=hamburger wh=20 c=mu-fg");
+    expect(scenesView).toContain("rtgl-svg svg=hamburger wh=16 c=mu-fg");
     expect(scenesView).toContain(
-      "rtgl-view#mobileFileExplorerClose w=40 h=40 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo",
+      "rtgl-button#mobileFileExplorerClose sq pre=x v=ol w=36 h=36",
     );
-    expect(scenesView).toContain("rtgl-svg svg=x wh=20 c=mu-fg");
     expect(scenesView).not.toContain("env(safe-area-inset-top)");
   });
 

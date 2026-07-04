@@ -174,8 +174,7 @@ template:
       - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
           - rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
               - rtgl-text w=1fg s=md: ${filesLabel}
-              - rtgl-view#mobileFileExplorerClose w=40 h=40 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo:
-                  - rtgl-svg svg=x wh=20 c=mu-fg: null
+              - rtgl-button#mobileFileExplorerClose sq pre=x v=ol w=36 h=36: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
               - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
   - $if showMobileDetailSheet:
