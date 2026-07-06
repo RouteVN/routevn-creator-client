@@ -55,6 +55,7 @@ const createNoopRouteEnginePersistence = () => ({
 
 const DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID = "dialogue-character-sprite";
 const INTERACTION_SOUND_KEYS = ["hover", "click", "rightClick"];
+const VIDEO_ASSET_READY_TIMEOUT_MS = 15000;
 
 const normalizeGraphicsInteractionSoundVolume = (value) => {
   if (value === undefined || value === null) {
@@ -949,6 +950,99 @@ export const createGraphicsService = async ({
     return undefined;
   };
 
+  const isVideoReadyForPlayback = (video) => {
+    if (!video) {
+      return true;
+    }
+
+    const haveFutureData =
+      typeof video.HAVE_FUTURE_DATA === "number" ? video.HAVE_FUTURE_DATA : 3;
+
+    return (
+      video.readyState >= haveFutureData &&
+      video.videoWidth > 0 &&
+      video.videoHeight > 0
+    );
+  };
+
+  const getVideoLoadError = (key, video) => {
+    const error = video?.error;
+    if (!error) {
+      return new Error(`Video asset "${key}" failed to load.`);
+    }
+
+    const details =
+      typeof error.message === "string" && error.message.length > 0
+        ? error.message
+        : `media error code ${error.code}`;
+    return new Error(`Video asset "${key}" failed to load (${details}).`);
+  };
+
+  const waitForVideoReadyForPlayback = async (key) => {
+    const video = getVideoResourceForKey(key);
+    if (!video || isVideoReadyForPlayback(video)) {
+      return;
+    }
+
+    await new Promise((resolve, reject) => {
+      let timeoutId;
+      const cleanup = () => {
+        clearTimeout(timeoutId);
+        video.removeEventListener("loadeddata", handleReady);
+        video.removeEventListener("canplay", handleReady);
+        video.removeEventListener("canplaythrough", handleReady);
+        video.removeEventListener("playing", handleReady);
+        video.removeEventListener("error", handleError);
+      };
+      const finish = () => {
+        cleanup();
+        resolve();
+      };
+      const fail = (error) => {
+        cleanup();
+        reject(error);
+      };
+      const handleReady = () => {
+        if (isVideoReadyForPlayback(video)) {
+          finish();
+        }
+      };
+      const handleError = () => {
+        fail(getVideoLoadError(key, video));
+      };
+
+      video.addEventListener("loadeddata", handleReady);
+      video.addEventListener("canplay", handleReady);
+      video.addEventListener("canplaythrough", handleReady);
+      video.addEventListener("playing", handleReady);
+      video.addEventListener("error", handleError);
+      timeoutId = setTimeout(() => {
+        fail(
+          new Error(`Timed out waiting for video asset "${key}" to preload.`),
+        );
+      }, VIDEO_ASSET_READY_TIMEOUT_MS);
+
+      try {
+        video.preload = "auto";
+        video.load();
+      } catch {}
+
+      handleReady();
+    });
+  };
+
+  const waitForVideoAssetsReadyForPlayback = async (assetEntries = []) => {
+    const videoAssetKeys = assetEntries
+      .filter(([, value]) => classifyAsset(value?.type) === "video")
+      .map(([key]) => key);
+
+    if (videoAssetKeys.length === 0) {
+      return;
+    }
+
+    await Promise.all(videoAssetKeys.map(waitForVideoReadyForPlayback));
+  };
+
   const getTrackedVideoEntries = () => {
     const videoKeys = Array.from(loadedAssetTypes.entries())
       .filter(([, type]) => type === "video")
@@ -1316,6 +1410,15 @@ export const createGraphicsService = async ({
         return;
       }
       await activeRouteGraphics.loadAssets(renderAssetBufferMap);
+
+      if (
+        runtimeVersion !== assetLoadRuntimeVersion ||
+        routeGraphics !== activeRouteGraphics
+      ) {
+        return;
+      }
+
+      await waitForVideoAssetsReadyForPlayback(renderAssetEntries);
 
       if (
         runtimeVersion !== assetLoadRuntimeVersion ||
