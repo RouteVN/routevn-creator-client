@@ -55,8 +55,9 @@ const createNoopRouteEnginePersistence = () => ({
 
 const DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID = "dialogue-character-sprite";
 const INTERACTION_SOUND_KEYS = ["hover", "click", "rightClick"];
-const VIDEO_ASSET_READY_TIMEOUT_MS = 15000;
-const VIDEO_ASSET_WARMUP_TIMEOUT_MS = 15000;
+const VIDEO_ASSET_READY_TIMEOUT_MS = 3000;
+const VIDEO_ASSET_WARMUP_TIMEOUT_MS = 2500;
+const VIDEO_ASSET_FRAME_WARMUP_TIMEOUT_MS = 500;
 
 const normalizeGraphicsInteractionSoundVolume = (value) => {
   if (value === undefined || value === null) {
@@ -1068,7 +1069,7 @@ export const createGraphicsService = async ({
       video.addEventListener("error", handleError);
       timeoutId = setTimeout(() => {
         fail(new Error(`Timed out warming video asset "${key}".`));
-      }, VIDEO_ASSET_WARMUP_TIMEOUT_MS);
+      }, VIDEO_ASSET_FRAME_WARMUP_TIMEOUT_MS);
       callbackId = video.requestVideoFrameCallback(() => {
         callbackId = undefined;
         finish();
@@ -1124,31 +1125,54 @@ export const createGraphicsService = async ({
       return;
     }
 
-    await waitForVideoReadyForPlayback(key, video);
-
-    if (video.__routevnPlaybackWarmed === true) {
+    if (
+      video.__routevnPlaybackWarmed === true ||
+      video.__routevnPlaybackWarmupStarted === true
+    ) {
       return;
     }
 
-    const previousMuted = video.muted;
-    const previousVolume = video.volume;
-    const previousLoop = video.loop;
-
+    video.__routevnPlaybackWarmupStarted = true;
+    let previousMuted = video.muted;
+    let previousVolume = video.volume;
+    let previousLoop = video.loop;
+    let shouldRestorePlaybackProperties = false;
+    let didWarmPlayback = false;
     try {
+      await waitForVideoReadyForPlayback(key, video);
+
+      if (getVideoResourceForKey(key) !== video) {
+        return;
+      }
+
+      previousMuted = video.muted;
+      previousVolume = video.volume;
+      previousLoop = video.loop;
+      shouldRestorePlaybackProperties = true;
+
       video.muted = true;
       video.volume = 0;
       video.loop = true;
       await startVideoPlaybackWarmup(key, video);
       await waitForVideoWarmFrame(key, video);
-      video.__routevnPlaybackWarmed = true;
+      didWarmPlayback = true;
+    } catch {
     } finally {
-      try {
-        video.pause?.();
-      } catch {}
-      resetVideoPlaybackPosition(video);
-      video.muted = previousMuted;
-      video.volume = previousVolume;
-      video.loop = previousLoop;
+      if (getVideoResourceForKey(key) === video) {
+        try {
+          video.pause?.();
+        } catch {}
+        resetVideoPlaybackPosition(video);
+
+        if (shouldRestorePlaybackProperties) {
+          video.muted = previousMuted;
+          video.volume = previousVolume;
+          video.loop = previousLoop;
+        }
+
+        video.__routevnPlaybackWarmed = didWarmPlayback;
+        video.__routevnPlaybackWarmupStarted = false;
+      }
     }
   };
 
