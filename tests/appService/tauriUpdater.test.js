@@ -13,25 +13,28 @@ vi.mock("@tauri-apps/plugin-process", () => ({
 
 import createUpdater from "../../src/deps/clients/tauri/updater.js";
 
-const DOWNLOAD_PAGE_URL = "https://routevn.com/en/creator/download/";
-const CUSTOM_DOWNLOAD_PAGE_URL = `${DOWNLOAD_PAGE_URL}?from=updater`;
-
 const createGlobalUI = () => ({
   showAlert: vi.fn(() => Promise.resolve()),
   showConfirm: vi.fn(() => Promise.resolve(true)),
 });
 
+const createUpdate = ({
+  version = "1.7.3",
+  date = "2026-07-03",
+  body = "Fix packaging.",
+  downloadAndInstall = vi.fn(() => Promise.resolve()),
+} = {}) => ({
+  version,
+  date,
+  body,
+  downloadAndInstall,
+});
+
 const createUpdaterClient = ({
   globalUI = createGlobalUI(),
-  manifest = {
-    version: "1.7.3",
-    date: "2026-07-03",
-    body: "Fix packaging.",
-    manualDownloadUrl: CUSTOM_DOWNLOAD_PAGE_URL,
-  },
-  openUrl,
+  update = createUpdate(),
 } = {}) => {
-  const fetchManualUpdateManifest = vi.fn(() => Promise.resolve(manifest));
+  checkMock.mockResolvedValue(update);
 
   const updater = createUpdater({
     globalUI,
@@ -39,14 +42,11 @@ const createUpdaterClient = ({
       get: vi.fn(),
       set: vi.fn(),
     },
-    appVersion: "1.7.2",
-    openUrl: openUrl ?? vi.fn(() => Promise.resolve()),
-    fetchManualUpdateManifest,
   });
 
   return {
-    fetchManualUpdateManifest,
     updater,
+    update,
   };
 };
 
@@ -60,26 +60,26 @@ describe("tauri updater", () => {
     vi.unstubAllGlobals();
   });
 
-  it("opens the manual download page on Linux", async () => {
+  it("downloads and installs Linux updates through the Tauri updater", async () => {
     vi.stubGlobal("navigator", {
       platform: "Linux x86_64",
       userAgent: "RouteVN Creator Linux",
     });
 
     const globalUI = createGlobalUI();
-    const openUrl = vi.fn(() => Promise.resolve());
-    const { fetchManualUpdateManifest, updater } = createUpdaterClient({
+    const downloadAndInstall = vi.fn(() => Promise.resolve());
+    const { updater } = createUpdaterClient({
       globalUI,
-      openUrl,
+      update: createUpdate({ downloadAndInstall }),
     });
 
     const result = await updater.checkForUpdates(false, {
       copy: {
         laterButton: "Later",
-        manualDownloadUpdateMessage:
+        updateAvailableMessage:
           "Update {version} is available.\n{releaseNotes}",
-        openDownloadPageButton: "Open Download Page",
         updateAvailableTitle: "Update Available",
+        updateNowButton: "Update Now",
       },
     });
 
@@ -88,43 +88,53 @@ describe("tauri updater", () => {
       date: "2026-07-03",
       body: "Fix packaging.",
     });
-    expect(fetchManualUpdateManifest).toHaveBeenCalledWith("1.7.2");
-    expect(checkMock).not.toHaveBeenCalled();
+    expect(checkMock).toHaveBeenCalledWith(undefined);
     expect(globalUI.showConfirm).toHaveBeenCalledWith({
       message: "Update 1.7.3 is available.\nFix packaging.",
       title: "Update Available",
-      confirmText: "Open Download Page",
+      confirmText: "Update Now",
       cancelText: "Later",
     });
-    expect(openUrl).toHaveBeenCalledWith(CUSTOM_DOWNLOAD_PAGE_URL);
-    expect(relaunchMock).not.toHaveBeenCalled();
+    expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function));
+    expect(relaunchMock).toHaveBeenCalled();
   });
 
-  it("does not prompt on Linux when the manifest version is not newer", async () => {
+  it("does not prompt on Linux when no update is available", async () => {
     vi.stubGlobal("navigator", {
       platform: "Linux x86_64",
       userAgent: "RouteVN Creator Linux",
     });
 
     const globalUI = createGlobalUI();
-    const openUrl = vi.fn(() => Promise.resolve());
-    const { fetchManualUpdateManifest, updater } = createUpdaterClient({
+    const { updater } = createUpdaterClient({
       globalUI,
-      manifest: {
-        version: "1.7.2",
-        date: "2026-07-03",
-        body: "Fix packaging.",
-        manualDownloadUrl: CUSTOM_DOWNLOAD_PAGE_URL,
-      },
-      openUrl,
+      update: null,
     });
 
     const result = await updater.checkForUpdates(false);
 
     expect(result).toBeNull();
-    expect(fetchManualUpdateManifest).toHaveBeenCalledWith("1.7.2");
+    expect(checkMock).toHaveBeenCalledWith(undefined);
     expect(globalUI.showConfirm).not.toHaveBeenCalled();
-    expect(openUrl).not.toHaveBeenCalled();
-    expect(checkMock).not.toHaveBeenCalled();
+    expect(globalUI.showAlert).toHaveBeenCalledWith({
+      message: "You are already on the latest version",
+      title: "Up to Date",
+    });
+    expect(relaunchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps using the universal updater target on macOS", async () => {
+    vi.stubGlobal("navigator", {
+      platform: "MacIntel",
+      userAgent: "RouteVN Creator macOS",
+    });
+
+    const { updater } = createUpdaterClient();
+
+    await updater.checkForUpdates(true);
+
+    expect(checkMock).toHaveBeenCalledWith({
+      target: "macos-universal",
+    });
   });
 });

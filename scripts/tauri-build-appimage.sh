@@ -95,6 +95,9 @@ ensure_appimage_output_plugin() {
   echo "${appimage_plugin}"
 }
 
+# Temporary workaround while waiting for Tauri to expose linuxdeploy's
+# --exclude-library option as bundle.linux.appimage.excludeLibraries:
+# https://github.com/tauri-apps/tauri/pull/15662
 remove_bundled_graphics_stack() {
   local appdir
   local lib_dir

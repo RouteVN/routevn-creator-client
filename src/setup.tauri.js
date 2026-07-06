@@ -49,10 +49,6 @@ const updater = updatesEnabled
   ? createUpdater({
       globalUI,
       keyValueStore: appDb,
-      openUrl,
-      appVersion,
-      fetchManualUpdateManifest: (currentVersion) =>
-        invoke("fetch_manual_update_manifest", { currentVersion }),
     })
   : undefined;
 

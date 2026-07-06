@@ -9,8 +9,6 @@ const repoRoot = path.resolve(scriptDir, "..");
 
 const packageName = "routevn-creator";
 const displayName = "RouteVN Creator";
-const debArchitecture = "amd64";
-const rpmArchitecture = "x86_64";
 const legacyPackageName = packageName.replace(
   "routevn",
   ["route", "vn"].join("-"),
@@ -23,7 +21,6 @@ const stalePackageDescription = [
   "without any coding",
 ].join(" ");
 
-const args = new Set(process.argv.slice(2));
 const failures = [];
 
 function repoPath(relativePath) {
@@ -36,16 +33,6 @@ function readText(relativePath) {
 
 function readJson(relativePath) {
   return JSON.parse(readText(relativePath));
-}
-
-function getTargetDir() {
-  if (process.env.CARGO_TARGET_DIR) {
-    return path
-      .resolve(repoRoot, process.env.CARGO_TARGET_DIR)
-      .replace(/\/+$/, "");
-  }
-
-  return repoPath("src-tauri/target");
 }
 
 function fail(message) {
@@ -76,95 +63,12 @@ function scanTextFile(relativePath) {
   );
 }
 
-function collectFiles(directory, predicate) {
-  if (!fs.existsSync(directory)) {
-    return [];
-  }
-
-  const entries = fs.readdirSync(directory, { withFileTypes: true });
-  const files = [];
-
-  for (const entry of entries) {
-    const entryPath = path.join(directory, entry.name);
-
-    if (entry.isDirectory()) {
-      files.push(...collectFiles(entryPath, predicate));
-    } else if (predicate(entryPath)) {
-      files.push(entryPath);
-    }
-  }
-
-  return files;
-}
-
-function inspectBinary(filePath, { requirePackageName }) {
-  const contents = fs.readFileSync(filePath);
-
-  expect(
-    !contents.includes(Buffer.from(legacyPackageName)),
-    `${path.relative(repoRoot, filePath)} contains a legacy package spelling`,
-  );
-  expect(
-    !contents.includes(Buffer.from(forbiddenCopy)),
-    `${path.relative(repoRoot, filePath)} contains stale Discord update copy`,
-  );
-  expect(
-    !contents.toString("utf8").toLowerCase().includes(stalePackageDescription),
-    `${path.relative(repoRoot, filePath)} contains stale package description copy`,
-  );
-  if (requirePackageName) {
-    expect(
-      contents.includes(Buffer.from(packageName)),
-      `${path.relative(repoRoot, filePath)} does not contain package name ${packageName}`,
-    );
-  }
-}
-
-function inspectArtifact(kind, extension) {
-  const tauriConfig = readJson("src-tauri/tauri.conf.json");
-  const bundleDirectory = path.join(getTargetDir(), "release", "bundle", kind);
-  const packageRelease = tauriConfig.bundle?.linux?.rpm?.release ?? "1";
-  const expectedArtifactName =
-    kind === "deb"
-      ? `${packageName}_${tauriConfig.version}_${debArchitecture}${extension}`
-      : `${packageName}-${tauriConfig.version}-${packageRelease}.${rpmArchitecture}${extension}`;
-  const artifacts = collectFiles(
-    bundleDirectory,
-    (filePath) => path.basename(filePath) === expectedArtifactName,
-  );
-
-  expect(
-    artifacts.length > 0,
-    `No ${kind} artifact found for ${expectedArtifactName}`,
-  );
-
-  for (const artifact of artifacts) {
-    const artifactName = path.basename(artifact);
-    const expectedArchitectureSuffix =
-      kind === "deb"
-        ? `_${debArchitecture}${extension}`
-        : `.${rpmArchitecture}${extension}`;
-
-    expect(
-      artifactName.endsWith(expectedArchitectureSuffix),
-      `${artifactName} must include ${kind === "deb" ? debArchitecture : rpmArchitecture} architecture`,
-    );
-    expect(
-      artifactName === expectedArtifactName,
-      `${artifactName} must be ${expectedArtifactName}`,
-    );
-
-    inspectBinary(artifact, { requirePackageName: kind === "rpm" });
-  }
-}
-
 const sourceFiles = [
   "package.json",
   "src-tauri/tauri.conf.json",
   "src-tauri/Cargo.toml",
   "src-tauri/tauri.prod.conf.json",
   "src-tauri/tauri.linux.conf.json",
-  "src-tauri/tauri.linux-packages.conf.json",
   "src-tauri/assets/com.routevn.creator.metainfo.xml",
   "src-tauri/assets/linux-desktop.desktop.hbs",
   "packaging/aur/PKGBUILD",
@@ -265,14 +169,6 @@ expect(
   aurPkgbuild.includes("/usr/share/applications/routevn-creator.desktop"),
   "AUR desktop file must be routevn-creator.desktop",
 );
-
-if (args.has("--rpm")) {
-  inspectArtifact("rpm", ".rpm");
-}
-
-if (args.has("--deb")) {
-  inspectArtifact("deb", ".deb");
-}
 
 if (failures.length > 0) {
   console.error("Linux packaging validation failed:");
