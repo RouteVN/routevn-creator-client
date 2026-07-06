@@ -90,6 +90,7 @@ const apiService = createApiService();
 
 const graphicsService = await createGraphicsService({
   subject,
+  projectMediaOrigin,
 });
 
 // Create dialogue queue service for debounced writes

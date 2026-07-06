@@ -401,6 +401,66 @@ describe("graphicsService", () => {
     });
   });
 
+  it("routes tauri Pixi video media through the provided localhost origin", async () => {
+    const filePath = "/Users/test/project/files/video-1";
+    const localhostOrigin = "http://127.0.0.1:45123";
+    const expectedUrl = `${localhostOrigin}/pixi-asset.mp4?path=${encodeURIComponent(filePath)}`;
+    const bufferManager = {
+      has: vi.fn(() => false),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({
+        "video-1": {
+          url: expectedUrl,
+          type: "video/mp4",
+          source: "url",
+        },
+      })),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+      projectMediaOrigin: localhostOrigin,
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    await service.loadAssets({
+      "video-1": {
+        url: `http://asset.localhost/${encodeURIComponent(filePath)}`,
+        type: "video/mp4",
+      },
+    });
+
+    expect(bufferManager.load).toHaveBeenCalledWith({
+      "video-1": {
+        url: expectedUrl,
+        type: "video/mp4",
+      },
+    });
+    expect(routeGraphicsInstance.loadAssets).toHaveBeenCalledWith({
+      "video-1": {
+        url: expectedUrl,
+        type: "video/mp4",
+        source: "url",
+      },
+    });
+  });
+
   it("decodes data url image assets locally instead of sending them through the fetch-based loader", async () => {
     const bufferManager = {
       has: vi.fn(() => false),

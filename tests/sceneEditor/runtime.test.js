@@ -751,6 +751,80 @@ describe("renderSceneEditorState", () => {
     expect(projectService.getFileContent).toHaveBeenCalledTimes(1);
   });
 
+  it("uses project file metadata for scene videos when resource fileType is missing", async () => {
+    const projectData = createProjectData();
+    projectData.resources.videos["intro-video"] = {
+      id: "intro-video",
+      fileId: "metadata-video.mp4",
+      width: 1920,
+      height: 1080,
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[1].actions.background = {
+      resourceId: "intro-video",
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+    };
+    const graphicsService = createGraphicsService();
+    graphicsService.loadAssets = vi.fn(async () => {});
+    const projectService = {
+      getFileContent: vi.fn(async (fileId) => ({
+        url: `http://127.0.0.1:45000/file.mp4?path=${fileId}`,
+        type: "video/mp4",
+      })),
+    };
+    const store = {
+      selectIsScenePageLoading: () => false,
+      selectPreviewScene: () => ({
+        previewVisible: false,
+      }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectTemporaryPresentationState: () => ({}),
+      selectIsBackgroundTransformEditorOpen: () => false,
+      selectScene: () => ({
+        sections: [{ id: "section-1" }],
+      }),
+      selectIsMuted: () => true,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      setSectionLineChanges: vi.fn(),
+    };
+
+    await renderSceneEditorCanvas(
+      {
+        store,
+        render: vi.fn(),
+        graphicsService,
+        projectService,
+        refs: {
+          previewCanvasHost: {
+            getCanvasRoot: () => ({
+              isConnected: true,
+            }),
+          },
+        },
+      },
+      {
+        skipRender: true,
+        skipAnimations: true,
+      },
+    );
+
+    expect(graphicsService.loadAssets).toHaveBeenCalledWith({
+      "metadata-video.mp4": {
+        url: "http://127.0.0.1:45000/file.mp4?path=metadata-video.mp4",
+        type: "video/mp4",
+      },
+    });
+  });
+
   it("keeps valid scene videos loaded when another video fails", async () => {
     const projectData = createProjectData();
     projectData.resources.videos["intro-video"] = {

@@ -460,11 +460,11 @@ async function createAssetsFromFileIds(
     const foundItem = resourceItemsByFileId.get(fileId);
 
     try {
-      const { url } = await projectService.getFileContent(fileId);
-      const type = foundItem?.fileType ?? fileObj?.type;
+      const result = await projectService.getFileContent(fileId);
+      const type = foundItem?.fileType ?? result.type ?? fileObj?.type;
 
       assets[fileId] = {
-        url,
+        url: result.url,
         type: type || "image/png",
       };
     } catch (error) {
