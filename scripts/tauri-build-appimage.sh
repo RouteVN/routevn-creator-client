@@ -111,10 +111,6 @@ remove_bundled_graphics_stack() {
     "libGLdispatch*.so*"
     "libgbm*.so*"
     "libdrm*.so*"
-    "libwayland-client.so*"
-    "libwayland-cursor.so*"
-    "libwayland-egl.so*"
-    "libwayland-server.so*"
   )
 
   appdir="$1"
