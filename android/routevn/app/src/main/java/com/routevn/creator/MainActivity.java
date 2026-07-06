@@ -64,6 +64,10 @@ public class MainActivity extends Activity {
     private static final String TAG = "RouteVNAndroid";
     private static final String APP_ASSET_HOST = "appassets.androidplatform.net";
     private static final String APP_URL = "https://" + APP_ASSET_HOST + "/web/index.html";
+    private static final String DEV_SERVER_HOST = "127.0.0.1";
+    private static final int DEV_SERVER_PORT = 3001;
+    private static final String DEV_SERVER_URL =
+        "http://" + DEV_SERVER_HOST + ":" + DEV_SERVER_PORT + "/android/index.html";
     private static final int FILE_CHOOSER_REQUEST_CODE = 3711;
     private static final int ANDROID_FILE_PICKER_REQUEST_CODE = 3712;
     private static final int ANDROID_SAVE_FILE_PICKER_REQUEST_CODE = 3713;
@@ -324,7 +328,7 @@ public class MainActivity extends Activity {
 
         webView.setWebViewClient(new RouteVNWebViewClient());
         webView.setWebChromeClient(new RouteVNWebChromeClient());
-        webView.loadUrl(APP_URL);
+        webView.loadUrl(getInitialAppUrl());
 
         FrameLayout rootView = new FrameLayout(this);
         rootView.setBackgroundColor(Color.BLACK);
@@ -420,11 +424,30 @@ public class MainActivity extends Activity {
         cookieManager.setAcceptThirdPartyCookies(webView, true);
     }
 
+    private String getInitialAppUrl() {
+        if (BuildConfig.DEBUG) {
+            Log.i(TAG, "Loading Android dev server URL: " + DEV_SERVER_URL);
+            return DEV_SERVER_URL;
+        }
+
+        return APP_URL;
+    }
+
     private boolean isAppAssetUrl(Uri uri) {
         return (
             uri != null &&
             "https".equals(uri.getScheme()) &&
             APP_ASSET_HOST.equals(uri.getHost())
+        );
+    }
+
+    private boolean isDebugDevServerUrl(Uri uri) {
+        return (
+            BuildConfig.DEBUG &&
+            uri != null &&
+            "http".equals(uri.getScheme()) &&
+            DEV_SERVER_HOST.equals(uri.getHost()) &&
+            uri.getPort() == DEV_SERVER_PORT
         );
     }
 
@@ -535,7 +558,7 @@ public class MainActivity extends Activity {
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             Uri uri = request.getUrl();
-            if (isAppAssetUrl(uri)) {
+            if (isAppAssetUrl(uri) || isDebugDevServerUrl(uri)) {
                 return false;
             }
 
@@ -546,7 +569,7 @@ public class MainActivity extends Activity {
         @SuppressWarnings("deprecation")
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             Uri uri = Uri.parse(url);
-            if (isAppAssetUrl(uri)) {
+            if (isAppAssetUrl(uri) || isDebugDevServerUrl(uri)) {
                 return false;
             }
 

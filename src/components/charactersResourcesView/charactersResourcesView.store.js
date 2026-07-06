@@ -11,6 +11,8 @@ import {
 import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
+const MENU_BUTTON_LABEL = "Menu";
+const FILTER_BUTTON_LABEL = "Filter";
 
 export const createInitialState = () => ({
   collapsedIds: [],
@@ -221,9 +223,9 @@ export const selectViewData = ({ state, props }) => {
     },
     showTagFilter: parseBooleanProp(props.showTagFilter),
     hasActiveTagFilter,
-    tagFilterButtonBackgroundColor: hasActiveFilter ? "ac" : "bg",
-    tagFilterButtonBorderColor: hasActiveFilter ? "ac" : "bo",
-    tagFilterButtonIconColor: hasActiveFilter ? "white" : "mu-fg",
+    tagFilterButtonVariant: hasActiveFilter ? "pr" : "ol",
+    menuButtonLabel: MENU_BUTTON_LABEL,
+    filterButtonLabel: FILTER_BUTTON_LABEL,
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,

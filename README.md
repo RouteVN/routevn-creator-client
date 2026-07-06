@@ -126,6 +126,25 @@ Open: http://localhost:3001/project
 - `bun run build` or `bun run build:web` - Build for web platform
 - `bun run watch:web` - Watch mode for web development
 
+### Android Application
+
+Install the debug shell once after native Android changes:
+
+```shell
+bun run android:install
+```
+
+Start the Android JS dev server:
+
+```shell
+bun run watch:android
+```
+
+The debug app loads `http://127.0.0.1:3001/android/index.html`. The watch
+script prepares `_site`, configures `adb reverse tcp:3001 tcp:3001` when a
+device is connected, and serves `src/setup.android.js` so frontend changes can
+be refreshed without reinstalling the APK.
+
 ### Desktop Application (Tauri)
 
 RouteVN Creator also supports running as a native desktop application using [Tauri](https://tauri.app/), providing better performance and system integration.

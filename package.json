@@ -55,6 +55,7 @@
     "build:android:assets": "node scripts/build-android-assets.js",
     "watch:web": "rtgl fe watch -s src/setup.web.js",
     "watch:tauri": "rtgl fe watch -s src/setup.tauri.js",
+    "watch:android": "./scripts/watch-android.sh",
     "android:install": "bun run build:android && cd android/routevn && ./gradlew installDebug",
     "android:bundle": "bun run build:android && cd android/routevn && ./gradlew bundleRelease",
     "test": "node scripts/test.js",

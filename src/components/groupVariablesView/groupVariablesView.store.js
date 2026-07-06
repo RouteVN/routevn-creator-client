@@ -36,6 +36,7 @@ const DEFAULT_ENUM_VALUE_FORM_VALUES = {
   value: "",
 };
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
+const MENU_BUTTON_LABEL = "Menu";
 
 const selectGroupVariablesViewCopy = (i18n = {}) =>
   selectI18nCopy(i18n, ["resourcePages", "variablesPage"]);
@@ -671,9 +672,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     mobileLayout,
     scrollBottomPadding,
     hasActiveTagFilter,
-    tagFilterButtonBackgroundColor: hasActiveFilter ? "ac" : "bg",
-    tagFilterButtonBorderColor: hasActiveFilter ? "ac" : "bo",
-    tagFilterButtonIconColor: hasActiveFilter ? "white" : "mu-fg",
+    tagFilterButtonVariant: hasActiveFilter ? "pr" : "ol",
+    menuButtonLabel: copy.menuButtonLabel ?? MENU_BUTTON_LABEL,
     isDialogOpen: state.isDialogOpen,
     defaultValues: defaultValues,
     form,

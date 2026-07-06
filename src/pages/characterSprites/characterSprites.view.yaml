@@ -296,7 +296,7 @@ template:
       - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
           - rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
               - rtgl-text w=1fg s=md: ${filesLabel}
-              - rtgl-button#mobileFileExplorerClose sq pre=x v=ol w=36 h=36: null
+              - rtgl-button#mobileFileExplorerClose sq pre=x v=ol: null
           - 'rtgl-view w=f h=1fg style="min-height: 0;"':
               - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag start-collapsed=${startCollapsedFileExplorer} :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
   - $if showMobileDetailSheet:
@@ -381,10 +381,8 @@ template:
     'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none; background-color: rgba(0, 0, 0, 0.9);"':
       - $if fullImagePreviewFileId:
           - 'rtgl-view pos=fix z=3002 d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="top: 8px; left: 50%; transform: translateX(-50%); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
-              - 'rtgl-view#previewCanvasModeButton role=button aria-label="${fullImagePreviewCanvasModeLabel}" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="${fullImagePreviewCanvasModeLabel}" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewCanvasModeButton.borderColor} bgc=${fullImagePreviewCanvasModeButton.backgroundColor} cur=pointer':
-                  - rtgl-svg svg=canvas-scale wh=18 c=${fullImagePreviewCanvasModeButton.iconColor}: null
-              - 'rtgl-view#previewFitModeButton role=button aria-label="${fullImagePreviewFitModeLabel}" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="${fullImagePreviewFitModeLabel}" w=36 h=36 ah=c av=c br=md bw=xs bc=${fullImagePreviewFitModeButton.borderColor} bgc=${fullImagePreviewFitModeButton.backgroundColor} cur=pointer':
-                  - rtgl-svg svg=fit-to-frame wh=18 c=${fullImagePreviewFitModeButton.iconColor}: null
+              - 'rtgl-button#previewCanvasModeButton sq pre=canvas-scale v=${fullImagePreviewCanvasModeButton.variant} aria-label="${fullImagePreviewCanvasModeLabel}" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="${fullImagePreviewCanvasModeLabel}"': null
+              - 'rtgl-button#previewFitModeButton sq pre=fit-to-frame v=${fullImagePreviewFitModeButton.variant} aria-label="${fullImagePreviewFitModeLabel}" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="${fullImagePreviewFitModeLabel}"': null
           - rtgl-view pos=fix edge=f ah=c av=c z=3001:
               - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
                   - 'div style="${fullImagePreviewImageWrapperStyle}"':
