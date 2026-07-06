@@ -468,7 +468,26 @@ describe("graphicsService", () => {
         this.readyState = 0;
         this.videoWidth = 0;
         this.videoHeight = 0;
+        this.currentTime = 0;
+        this.loop = false;
+        this.muted = false;
+        this.paused = true;
+        this.volume = 0.8;
         this.load = vi.fn();
+        this.pause = vi.fn(() => {
+          this.paused = true;
+        });
+        this.play = vi.fn(
+          () =>
+            new Promise((resolve) => {
+              this.resolvePlay = () => {
+                this.paused = false;
+                this.currentTime = 0.25;
+                this.dispatch("playing");
+                resolve();
+              };
+            }),
+        );
         this.listenersByType = new Map();
       }
 
@@ -557,9 +576,25 @@ describe("graphicsService", () => {
       video.videoHeight = 1080;
       video.dispatch("canplay");
 
+      await vi.waitFor(() => {
+        expect(video.play).toHaveBeenCalled();
+      });
+      await Promise.resolve();
+
+      expect(resolved).toBe(false);
+      expect(video.muted).toBe(true);
+      expect(video.volume).toBe(0);
+      expect(video.loop).toBe(true);
+
+      video.resolvePlay();
       await pendingLoad;
 
       expect(resolved).toBe(true);
+      expect(video.pause).toHaveBeenCalled();
+      expect(video.currentTime).toBe(0);
+      expect(video.muted).toBe(false);
+      expect(video.volume).toBe(0.8);
+      expect(video.loop).toBe(false);
     } finally {
       if (originalHTMLVideoElement === undefined) {
         delete globalThis.HTMLVideoElement;
