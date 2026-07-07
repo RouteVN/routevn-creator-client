@@ -148,8 +148,9 @@ template:
               - rtgl-view w=1fg: null
               - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
           - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
-              - rtgl-view h=f w=1fg sv:
-                  - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
+              - $if showImageSelectorFileExplorer:
+                  - rtgl-view h=f w=1fg sv:
+                      - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
               - rtgl-view h=f w=2fg sv g=lg:
                   - $if tab == 'image':
                       - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery}: null

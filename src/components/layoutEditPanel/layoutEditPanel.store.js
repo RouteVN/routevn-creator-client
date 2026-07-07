@@ -13,6 +13,7 @@ import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layou
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   getVisibilityConditionCharacterValueOptions,
   toVisibilityConditionTargetTypeByTarget,
@@ -729,10 +730,15 @@ export const createInitialState = () => {
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
     values: createDefaultValues(),
+    isTouchMode: false,
   };
 
   resetSelectionUiState(state);
   return state;
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
 };
 
 export const updateValueProperty = ({ state }, { value, name } = {}) => {
@@ -1776,6 +1782,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,
     imageFolderItems,
+    showImageSelectorFileExplorer: !state.isTouchMode,
     soundSelectorDialog: state.soundSelectorDialog,
     tempSelectedSoundId: state.tempSelectedSoundId,
     soundFolderItems,

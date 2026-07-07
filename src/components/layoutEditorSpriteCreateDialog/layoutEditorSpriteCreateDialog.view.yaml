@@ -52,8 +52,9 @@ template:
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
       - rtgl-view slot=content d=v w=f g=md:
           - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
-              - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
-                  - rvn-base-file-explorer#baseFileExplorer :items=${fileExplorerItems} shrinkable: null
+              - $if showImageSelectorFileExplorer:
+                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                      - rvn-base-file-explorer#baseFileExplorer :items=${fileExplorerItems} shrinkable: null
               - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                   - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
           - rtgl-view d=h g=sm w=f ah=e:

@@ -2819,6 +2819,7 @@ export const selectViewData = ({ state, i18n }) => {
     addPropertyFormDefaultValues,
     imageSelectorDialog: state.imageSelectorDialog,
     imageFolderItems,
+    showImageSelectorFileExplorer: !state.isTouchMode,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     isPreviewDialogOpen: state.isPreviewDialogOpen,
