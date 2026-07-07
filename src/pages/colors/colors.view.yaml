@@ -41,6 +41,12 @@ refs:
         handler: handleMobileDetailPreviewClick
         preventDefault: true
         stopPropagation: true
+  mobileDetailEditButton:
+    eventListeners:
+      click:
+        handler: handleMobileDetailEditClick
+        preventDefault: true
+        stopPropagation: true
   mobileDetailDeleteButton:
     eventListeners:
       click:
@@ -163,6 +169,7 @@ template:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
+                  - rtgl-button#mobileDetailEditButton w=1fg v=se pre=edit: ${editButton}
                   - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: ${previewButton}
                   - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
