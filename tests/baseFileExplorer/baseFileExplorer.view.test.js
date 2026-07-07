@@ -36,5 +36,6 @@ describe("baseFileExplorer view", () => {
     expect(view).toContain("touchstart:");
     expect(view).toContain("handler: handleItemTouchStart");
     expect(view).toContain("touch-action: ${item.touchAction};");
+    expect(view).toContain("data-file-explorer-arrow=true");
   });
 });

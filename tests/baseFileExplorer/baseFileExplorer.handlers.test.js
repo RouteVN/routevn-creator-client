@@ -63,9 +63,16 @@ const createItemElement = ({ id, top, parentElement, getScrollTop }) => {
   };
 };
 
-const createPointerEvent = ({ currentTarget, x, y, pointerId = 1 } = {}) => {
+const createPointerEvent = ({
+  currentTarget,
+  target = currentTarget,
+  x,
+  y,
+  pointerId = 1,
+} = {}) => {
   return {
     currentTarget,
+    target,
     pointerId,
     pointerType: "touch",
     isPrimary: true,
@@ -76,10 +83,17 @@ const createPointerEvent = ({ currentTarget, x, y, pointerId = 1 } = {}) => {
   };
 };
 
-const createTouchEvent = ({ currentTarget, x, y, ended = false } = {}) => {
+const createTouchEvent = ({
+  currentTarget,
+  target = currentTarget,
+  x,
+  y,
+  ended = false,
+} = {}) => {
   const touch = { clientX: x, clientY: y };
   return {
     currentTarget,
+    target,
     touches: ended ? [] : [touch],
     changedTouches: [touch],
     preventDefault: vi.fn(),
@@ -96,6 +110,13 @@ const createContextMenuEvent = ({ currentTarget, firesTouchEvents } = {}) => {
     stopPropagation: vi.fn(),
     sourceCapabilities:
       firesTouchEvents === undefined ? undefined : { firesTouchEvents },
+  };
+};
+
+const createArrowTarget = () => {
+  return {
+    closest: (selector) =>
+      selector === "[data-file-explorer-arrow]" ? {} : undefined,
   };
 };
 
@@ -424,6 +445,102 @@ describe("baseFileExplorer handlers", () => {
     expect(deps.store.selectIsDragging()).toBe(false);
     expect(deps.store.selectTouchScrollActive()).toBe(true);
     expect(deps.refs.root.scrollTop).toBe(12);
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("keeps pointer scroll active after pre-longpress pointer movement", () => {
+    vi.useFakeTimers();
+    const { deps } = createDragDeps({
+      itemCount: 12,
+      rootHeight: 96,
+    });
+
+    handleItemPointerDown(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.itemRef0,
+        pointerId: 7,
+        x: 10,
+        y: 32,
+      }),
+    });
+
+    handleWindowPointerMove(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.itemRef0,
+        pointerId: 7,
+        x: 10,
+        y: 20,
+      }),
+    });
+
+    expect(deps.store.selectTouchScrollActive()).toBe(true);
+    expect(deps.store.selectTouchDragPointerId()).toBe(7);
+    expect(deps.refs.root.scrollTop).toBe(12);
+
+    handleWindowPointerMove(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.itemRef0,
+        pointerId: 7,
+        x: 10,
+        y: 8,
+      }),
+    });
+
+    expect(deps.refs.root.scrollTop).toBe(24);
+
+    handleWindowPointerUp(deps, {
+      _event: createPointerEvent({
+        currentTarget: deps.refs.itemRef0,
+        pointerId: 7,
+        x: 10,
+        y: 8,
+      }),
+    });
+
+    expect(deps.store.selectTouchScrollActive()).toBe(false);
+    expect(deps.store.selectTouchDragPointerId()).toBeUndefined();
+  });
+
+  it("does not claim touch or pointer starts from the folder arrow", () => {
+    vi.useFakeTimers();
+    const { deps } = createDragDeps();
+    const arrowTarget = createArrowTarget();
+    const pointerDownEvent = createPointerEvent({
+      currentTarget: deps.refs.itemRef0,
+      target: arrowTarget,
+      x: 10,
+      y: 16,
+    });
+    const touchStartEvent = createTouchEvent({
+      currentTarget: deps.refs.itemRef0,
+      target: arrowTarget,
+      x: 10,
+      y: 16,
+    });
+
+    handleItemPointerDown(deps, {
+      _event: pointerDownEvent,
+    });
+    handleItemTouchStart(deps, {
+      _event: touchStartEvent,
+    });
+    handleWindowTouchEnd(deps, {
+      _event: createTouchEvent({
+        currentTarget: deps.refs.itemRef0,
+        target: arrowTarget,
+        x: 10,
+        y: 16,
+        ended: true,
+      }),
+    });
+    vi.advanceTimersByTime(400);
+
+    expect(pointerDownEvent.preventDefault).not.toHaveBeenCalled();
+    expect(touchStartEvent.preventDefault).not.toHaveBeenCalled();
+    expect(deps.refs.itemRef0.setPointerCapture).not.toHaveBeenCalled();
+    expect(deps.store.selectPendingDrag()).toBeNull();
+    expect(deps.store.selectIsDragging()).toBe(false);
+    expect(deps.store.selectSelectedItemId()).toBeUndefined();
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
   });
 

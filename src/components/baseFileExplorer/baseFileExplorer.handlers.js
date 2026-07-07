@@ -78,6 +78,13 @@ const isDragEnabledForAttrs = (attrs) => {
   );
 };
 
+const isFolderArrowEvent = (event) => {
+  return (
+    typeof event?.target?.closest === "function" &&
+    Boolean(event.target.closest("[data-file-explorer-arrow]"))
+  );
+};
+
 const calculateForbiddenTargets = (sourceItem, allItems) => {
   if (!sourceItem) return [];
 
@@ -673,9 +680,11 @@ const scrollRootByTouchDelta = (deps, { fromPoint, toPoint } = {}) => {
 
 const startTouchScroll = (deps, { fromPoint, toPoint } = {}) => {
   const { store } = deps;
+  const pointerId = store.selectTouchDragPointerId();
   clearTouchDragTimer(store);
   store.clearPendingDrag();
   store.clearTouchDrag();
+  store.setTouchDragPointerId({ pointerId });
   store.setTouchScrollActive({ active: true });
   store.setTouchScrollLastPoint({ point: toPoint });
   scrollRootByTouchDelta(deps, { fromPoint, toPoint });
@@ -850,20 +859,21 @@ const updateDragTarget = (deps, { clientY } = {}) => {
 
 export const handleItemMouseDown = (deps, payload) => {
   const { store } = deps;
+  const event = payload?._event;
 
   if (store.selectTouchContextMenuSuppressUntil() > Date.now()) {
     return;
   }
 
   // Drag should start only on primary button.
-  if (payload?._event?.button !== 0) {
+  if (event?.button !== 0 || isFolderArrowEvent(event)) {
     return;
   }
 
   createPendingDrag(deps, {
-    event: payload._event,
-    clientX: payload._event.clientX,
-    clientY: payload._event.clientY,
+    event,
+    clientX: event.clientX,
+    clientY: event.clientY,
   });
 };
 
@@ -872,6 +882,10 @@ export const handleItemPointerDown = (deps, payload) => {
   const event = payload?._event;
 
   if (event?.pointerType === "mouse" || event?.isPrimary === false) {
+    return;
+  }
+
+  if (isFolderArrowEvent(event)) {
     return;
   }
 
@@ -902,12 +916,17 @@ export const handleItemPointerDown = (deps, payload) => {
 
 export const handleItemTouchStart = (deps, payload) => {
   const { store } = deps;
+  const event = payload?._event;
   if (store.selectTouchDragPointerId() !== undefined) {
     return;
   }
 
-  const touchPoint = getTouchPoint(payload?._event);
-  if (!touchPoint || payload?._event?.touches?.length !== 1) {
+  if (isFolderArrowEvent(event)) {
+    return;
+  }
+
+  const touchPoint = getTouchPoint(event);
+  if (!touchPoint || event?.touches?.length !== 1) {
     return;
   }
 
@@ -920,7 +939,7 @@ export const handleItemTouchStart = (deps, payload) => {
   };
 
   const hasPendingDrag = createPendingDrag(deps, {
-    event: payload._event,
+    event,
     clientX: point.x,
     clientY: point.y,
   });
@@ -929,8 +948,8 @@ export const handleItemTouchStart = (deps, payload) => {
     return;
   }
 
-  payload._event?.preventDefault?.();
-  payload._event?.stopPropagation?.();
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
   startMobileLongPressTimer(deps, { point });
 };
 
