@@ -66,6 +66,11 @@ export const createInitialState = () => ({
       label: "Controls",
       route: "/project/controls",
     },
+    {
+      id: "variables",
+      label: "Variables",
+      route: "/project/variables",
+    },
   ],
 });
 

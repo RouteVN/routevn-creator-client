@@ -7,7 +7,7 @@ import { selectViewData as selectDesktopResourceTypesViewData } from "../../src/
 import { selectViewData as selectMobileResourceTypesViewData } from "../../src/components/imagesMobileResourceTypes/imagesMobileResourceTypes.store.js";
 
 describe("resource type navigation", () => {
-  it("hides variables from system resource menus", () => {
+  it("shows variables in system resource menus", () => {
     const props = {
       resourceCategory: "systemConfig",
       selectedResourceId: "controls",
@@ -16,8 +16,14 @@ describe("resource type navigation", () => {
     const desktopViewData = selectDesktopResourceTypesViewData({ props });
     const mobileViewData = selectMobileResourceTypesViewData({ props });
 
-    expect(desktopViewData.items.map((item) => item.id)).toEqual(["controls"]);
-    expect(mobileViewData.items.map((item) => item.id)).toEqual(["controls"]);
+    expect(desktopViewData.items.map((item) => item.id)).toEqual([
+      "controls",
+      "variables",
+    ]);
+    expect(mobileViewData.items.map((item) => item.id)).toEqual([
+      "controls",
+      "variables",
+    ]);
   });
 
   it("shows appearance in settings resource menus", () => {
