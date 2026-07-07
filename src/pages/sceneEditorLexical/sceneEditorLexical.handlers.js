@@ -3601,7 +3601,7 @@ export const handleBackClick = async (deps) => {
   const { appService } = deps;
   await flushSceneEditorDrafts(deps, { force: true });
   const { p } = appService.getPayload();
-  appService.navigate("/project/scenes", { p });
+  appService.navigate("/project/scenes", { p }, { historyMode: "replace" });
 };
 
 export const handleSystemActionsActionDelete = async (deps, payload) => {

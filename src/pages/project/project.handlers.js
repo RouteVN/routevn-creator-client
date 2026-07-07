@@ -301,7 +301,9 @@ export const handleEditIconCropDialogConfirm = async (deps) => {
 
 export const handleBackToProjects = async (deps) => {
   const { appService } = deps;
-  appService.navigate("/projects");
+  appService.navigate("/projects", undefined, {
+    historyState: { preserveProjectsEntryOnProjectOpen: true },
+  });
 };
 
 export const handleBackButtonKeyDown = (deps, payload) => {

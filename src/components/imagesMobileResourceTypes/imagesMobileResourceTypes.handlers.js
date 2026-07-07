@@ -26,7 +26,10 @@ export const handleItemClick = (deps, payload) => {
     event: payload._event,
     data: { itemId: id },
   });
-  appService.navigate(resourceItem.path, currentPayload, { timing });
+  appService.navigate(resourceItem.path, currentPayload, {
+    historyMode: "replace",
+    timing,
+  });
 };
 
 export const handleItemPointerDown = (deps, payload) => {

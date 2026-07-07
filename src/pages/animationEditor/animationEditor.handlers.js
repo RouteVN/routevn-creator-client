@@ -645,6 +645,7 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
         createAnimationEditorPayload({
           payload: appService.getPayload() || {},
         }),
+        { historyMode: "replace" },
       );
       return false;
     }
@@ -707,6 +708,7 @@ export const handleBackClick = async (deps) => {
     createAnimationEditorPayload({
       payload: currentPayload,
     }),
+    { historyMode: "replace" },
   );
 };
 

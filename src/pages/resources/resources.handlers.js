@@ -21,5 +21,6 @@ export const handleResourcesClick = (deps, payload) => {
   subject.dispatch("redirect", {
     path: route,
     payload: appService.getPayload(),
+    historyMode: "replace",
   });
 };
