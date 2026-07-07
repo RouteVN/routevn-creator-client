@@ -24,6 +24,10 @@ import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
+const ROUTE_HISTORY_MODES = new Set(["push", "replace", "none"]);
+
+const normalizeRouteHistoryMode = (historyMode, fallback = "none") =>
+  ROUTE_HISTORY_MODES.has(historyMode) ? historyMode : fallback;
 
 const selectAppCopy = (i18n = {}) => i18n.appPage ?? {};
 
@@ -147,6 +151,7 @@ const createRouteTransitionRunner = (deps) => {
   return async ({
     path,
     payload,
+    historyMode,
     shouldUpdateHistory = false,
     timing,
   } = {}) => {
@@ -155,6 +160,10 @@ const createRouteTransitionRunner = (deps) => {
     const currentTransitionToken = ++transitionToken;
     const nextPayload = normalizePayload(payload);
     const canonicalPath = getCanonicalRoutePath(path);
+    const routeHistoryMode = normalizeRouteHistoryMode(
+      historyMode,
+      shouldUpdateHistory ? "push" : "none",
+    );
     const routeTiming =
       timing ??
       createNavigationTiming({
@@ -164,15 +173,15 @@ const createRouteTransitionRunner = (deps) => {
         payload: nextPayload,
       });
     markNavigationTiming(routeTiming, "route.transition.start", {
-      shouldUpdateHistory,
+      historyMode: routeHistoryMode,
       requestedPath: path,
       canonicalPath,
     });
 
-    if (shouldUpdateHistory) {
+    if (routeHistoryMode === "push") {
       appService.redirect(canonicalPath, nextPayload);
       markNavigationTiming(routeTiming, "route.history.redirected");
-    } else if (canonicalPath !== path) {
+    } else if (routeHistoryMode === "replace" || canonicalPath !== path) {
       appService.replace(canonicalPath, nextPayload);
       markNavigationTiming(routeTiming, "route.history.replaced");
     }
@@ -545,6 +554,12 @@ const subscriptions = (deps) => {
         const nextPayload = shouldUpdateHistory
           ? payload.payload
           : payload?.payload;
+        const historyMode = normalizeRouteHistoryMode(
+          payload?.historyMode,
+          shouldUpdateHistory || !!payload?.shouldUpdateHistory
+            ? "push"
+            : "none",
+        );
         const timing =
           payload?.timing ??
           createNavigationTiming({
@@ -555,15 +570,13 @@ const subscriptions = (deps) => {
           });
         markNavigationTiming(timing, "route.subscription.received", {
           action,
-          shouldUpdateHistory:
-            shouldUpdateHistory || !!payload?.shouldUpdateHistory,
+          historyMode,
         });
 
         runRouteTransition({
           path,
           payload: nextPayload,
-          shouldUpdateHistory:
-            shouldUpdateHistory || !!payload?.shouldUpdateHistory,
+          historyMode,
           timing,
         }).catch((error) => {
           markNavigationTiming(timing, "route.subscription.error", {
@@ -595,7 +608,13 @@ const subscriptions = (deps) => {
 
             event.preventDefault();
             event.stopPropagation();
-            appService.navigate(targetPath, getCurrentQueryPayload(appService));
+            appService.navigate(
+              targetPath,
+              getCurrentQueryPayload(appService),
+              {
+                historyMode: "replace",
+              },
+            );
           }),
         ),
       ),

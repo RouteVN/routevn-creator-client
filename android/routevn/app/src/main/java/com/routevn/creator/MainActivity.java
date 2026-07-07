@@ -474,7 +474,7 @@ public class MainActivity extends Activity {
 
     private void handleBackPressed() {
         if (webView == null) {
-            finish();
+            moveTaskToBack(true);
             return;
         }
 
@@ -482,7 +482,7 @@ public class MainActivity extends Activity {
             "(function(){return Boolean(window.routeVNNativeBack && window.routeVNNativeBack());})()",
             value -> {
                 if (!"true".equals(value)) {
-                    finish();
+                    moveTaskToBack(true);
                 }
             }
         );

@@ -485,7 +485,13 @@ export const handleBackClick = async (deps) => {
   }
   const currentPayload = appService.getPayload() || {};
   const nextPath = getLayoutEditorBackPath(currentPayload);
-  appService.navigate(nextPath, { p: currentPayload.p });
+  appService.navigate(
+    nextPath,
+    { p: currentPayload.p },
+    {
+      historyMode: "replace",
+    },
+  );
 };
 
 export const handleSaveButtonClick = async (deps) => {

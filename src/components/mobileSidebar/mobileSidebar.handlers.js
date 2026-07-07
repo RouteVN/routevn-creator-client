@@ -74,9 +74,12 @@ export const handleItemClick = (deps, payload = {}) => {
     event: payload._event,
     data: { itemId },
   });
+  const historyMode =
+    item.path === "/project/scene-editor" ? "push" : "replace";
   subject.dispatch("redirect", {
     path: item.path,
     payload: nextPayload,
+    historyMode,
     timing,
   });
 };

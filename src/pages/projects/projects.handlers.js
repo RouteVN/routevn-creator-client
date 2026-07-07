@@ -215,7 +215,7 @@ const navigateToProjectRoute = async (
     appService.setCurrentProjectEntry(project);
   }
 
-  appService.navigate(path, { p: projectId });
+  appService.navigate(path, { p: projectId }, { historyMode: "replace" });
 };
 
 const createProjectFromValues = async (deps, values = {}) => {

@@ -45,6 +45,7 @@ export const handleItemClick = async (deps, payload) => {
   subject.dispatch("redirect", {
     path,
     payload: currentPayload, // Pass through current payload (including projectId)
+    historyMode: "replace",
     timing,
   });
 };
@@ -61,6 +62,7 @@ export const handleHeaderClick = (deps) => {
   subject.dispatch("redirect", {
     path: "/project",
     payload: currentPayload, // Pass through current payload (including projectId)
+    historyMode: "replace",
     timing,
   });
 };

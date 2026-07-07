@@ -2071,7 +2071,9 @@ export const handleItemDelete = async (deps, payload) => {
 
 export const handleBackClick = (deps) => {
   const { appService } = deps;
-  appService.navigate("/project/characters", appService.getPayload());
+  appService.navigate("/project/characters", appService.getPayload(), {
+    historyMode: "replace",
+  });
 };
 
 const {

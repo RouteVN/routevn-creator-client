@@ -120,8 +120,9 @@ export const createAppShellService = ({
           path,
           payload,
         });
+      const historyMode = options.historyMode;
       markNavigationTiming(timing, "appService.navigate.dispatch");
-      subject.dispatch("redirect", { path, payload, timing });
+      subject.dispatch("redirect", { path, payload, timing, historyMode });
     },
 
     redirect(path, payload) {
