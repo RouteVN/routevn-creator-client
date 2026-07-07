@@ -177,6 +177,18 @@ export const handleMobileDetailPreviewClick = (deps, payload) => {
   });
 };
 
+export const handleMobileDetailEditClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const itemId = deps.store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  openEditDialogWithValues({ deps, itemId });
+};
+
 export const handleMobileDetailDeleteClick = async (deps, payload) => {
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();

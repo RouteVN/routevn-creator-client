@@ -209,6 +209,7 @@ const {
       ...baseViewData,
       selectedColorHex: selectedItem?.hex ?? "",
       isEditDialogOpen: state.isEditDialogOpen,
+      editButton: copy.editMenuItem ?? "Edit",
       editDefaultValues: {
         name: editItem?.name ?? "",
         hex: editItem?.hex ?? "",
