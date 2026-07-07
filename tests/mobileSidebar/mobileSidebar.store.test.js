@@ -29,6 +29,32 @@ const createScenesData = () => ({
 });
 
 describe("mobileSidebar scene map sections", () => {
+  it("shows system resources under the assets sheet", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        variant: "assets",
+      },
+    });
+    const systemSection = viewData.sections.find(
+      (section) => section.id === "system",
+    );
+
+    expect(systemSection).toMatchObject({
+      label: "System",
+    });
+    expect(systemSection.items.map((item) => item.id)).toEqual([
+      "controls",
+      "variables",
+    ]);
+    expect(systemSection.items.map((item) => item.path)).toEqual([
+      "/project/controls",
+      "/project/variables",
+    ]);
+  });
+
   it("shows scene map and recently visited scenes instead of a full linear scene list", () => {
     const state = createInitialState();
     setScenesData({ state }, { scenesData: createScenesData() });
