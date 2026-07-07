@@ -27,6 +27,108 @@ const GLOBAL_NAV_TIMEOUT_MS = 1500;
 
 const selectAppCopy = (i18n = {}) => i18n.appPage ?? {};
 
+const formatCopy = (template, values = {}) => {
+  return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
+    values[key] === undefined ? match : String(values[key]),
+  );
+};
+
+const isDifferentPath = (left, right) => {
+  return Boolean(left && right && left !== right);
+};
+
+const shouldSkipAppImageAutomaticUpdates = (status = {}) => {
+  return (
+    status.available === true &&
+    status.integrated === true &&
+    isDifferentPath(status.appimagePath, status.installedAppimagePath)
+  );
+};
+
+export const maybePromptLinuxAppImageDesktopIntegration = async (deps) => {
+  const { appService, i18n } = deps;
+  const copy = selectAppCopy(i18n);
+
+  if (
+    appService?.getDistribution?.() !== "direct" ||
+    typeof appService.getLinuxAppImageDesktopIntegrationStatus !== "function" ||
+    typeof appService.installLinuxAppImageDesktopIntegration !== "function" ||
+    typeof appService.restartLinuxAppImageFromDesktopIntegration !== "function"
+  ) {
+    return { skipAutomaticUpdateChecks: false };
+  }
+
+  let status;
+  try {
+    status = await appService.getLinuxAppImageDesktopIntegrationStatus();
+  } catch (error) {
+    console.error(
+      "Failed to inspect Linux AppImage desktop integration:",
+      error,
+    );
+    return { skipAutomaticUpdateChecks: false };
+  }
+
+  if (!status?.available) {
+    return { skipAutomaticUpdateChecks: false };
+  }
+
+  if (status.integrated) {
+    return {
+      skipAutomaticUpdateChecks: shouldSkipAppImageAutomaticUpdates(status),
+    };
+  }
+
+  const shouldInstall = await appService.showDialog({
+    title: copy.linuxDesktopIntegrationTitle ?? "Add to Applications?",
+    message:
+      copy.linuxDesktopIntegrationMessage ??
+      "Copy RouteVN Creator to ~/Applications, add the launcher icon, and reopen it from there.",
+    confirmText: copy.linuxDesktopIntegrationConfirm ?? "Add to Applications",
+    cancelText: copy.linuxDesktopIntegrationCancel ?? "Not Now",
+  });
+
+  if (!shouldInstall) {
+    return { skipAutomaticUpdateChecks: false };
+  }
+
+  let nextStatus;
+  try {
+    nextStatus = await appService.installLinuxAppImageDesktopIntegration();
+  } catch (error) {
+    const message = error?.message ?? String(error ?? "");
+    await appService.showAlert?.({
+      title: copy.errorTitle ?? "Error",
+      message: formatCopy(
+        copy.linuxDesktopIntegrationFailed ??
+          "Could not add RouteVN Creator to Applications: {message}",
+        { message },
+      ),
+      status: "error",
+    });
+    return { skipAutomaticUpdateChecks: false };
+  }
+
+  try {
+    await appService.restartLinuxAppImageFromDesktopIntegration();
+  } catch (error) {
+    const message = error?.message ?? String(error ?? "");
+    await appService.showAlert?.({
+      title: copy.errorTitle ?? "Error",
+      message: formatCopy(
+        copy.linuxDesktopIntegrationRestartFailed ??
+          "RouteVN Creator was added to Applications, but could not reopen it: {message}",
+        { message },
+      ),
+      status: "error",
+    });
+  }
+
+  return {
+    skipAutomaticUpdateChecks: shouldSkipAppImageAutomaticUpdates(nextStatus),
+  };
+};
+
 const isProjectRoute = (path) => {
   return path === "/project" || path.startsWith("/project/");
 };
@@ -415,14 +517,27 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = (deps) => {
-  const { updaterService } = deps;
+  void maybePromptLinuxAppImageDesktopIntegration(deps)
+    .catch((error) => {
+      console.error(
+        "Failed to handle Linux AppImage desktop integration:",
+        error,
+      );
+      return { skipAutomaticUpdateChecks: false };
+    })
+    .then(({ skipAutomaticUpdateChecks = false } = {}) => {
+      const { updaterService } = deps;
 
-  // Start checking for updates on app startup (Tauri only)
-  if (resolveUpdatesEnabled(deps) && updaterService) {
-    updaterService.startAutomaticChecks({
-      getCopy: () => selectAppCopy(deps.i18n),
+      if (
+        !skipAutomaticUpdateChecks &&
+        resolveUpdatesEnabled(deps) &&
+        updaterService
+      ) {
+        updaterService.startAutomaticChecks({
+          getCopy: () => selectAppCopy(deps.i18n),
+        });
+      }
     });
-  }
 };
 
 export const handleWindowPop = (deps) => {

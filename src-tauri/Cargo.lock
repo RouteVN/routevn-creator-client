@@ -3918,7 +3918,7 @@ dependencies = [
 
 [[package]]
 name = "routevn-creator"
-version = "1.7.2"
+version = "1.7.3"
 dependencies = [
  "log",
  "routevn-exporter",

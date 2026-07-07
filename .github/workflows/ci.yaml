@@ -29,5 +29,8 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Validate Linux Packaging Metadata
+        run: bun run tauri:validate:linux-packaging
+
       - name: Build Web
         run: bun run build:web

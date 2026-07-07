@@ -219,7 +219,7 @@ bun run tauri:build:linux:appimage:docker
 ```
 
 The Docker-built x86_64 AppImage, signature, and checksum are copied to
-`dist/appimage/ubuntu-22.04/x86_64/`.
+`src-tauri/target/release/bundle/appimage/linux-x86_64-<version>/`.
 
 Linux direct releases are AppImage-only. See
 `docs/runbooks/linux-release.md`.

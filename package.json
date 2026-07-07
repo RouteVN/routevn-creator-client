@@ -84,8 +84,6 @@
     "tauri:build:linux:appimage": "./scripts/tauri-build-appimage.sh",
     "tauri:build:linux:appimage:docker": "./scripts/tauri-build-appimage-docker.sh",
     "tauri:validate:linux-packaging": "node scripts/validate-linux-packaging.js",
-    "tauri:build:linux:aur": "./scripts/tauri-build-linux-aur.sh",
-    "tauri:build:linux:aur:docker": "./scripts/tauri-build-linux-aur-docker.sh",
     "tauri:build:win": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --runner cargo-xwin --target x86_64-pc-windows-msvc",
     "tauri:build:win:steam": "./scripts/tauri-build-win-steam.sh",
     "tauri:build:mac": "./scripts/tauri-build-mac.sh",
