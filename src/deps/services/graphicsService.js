@@ -756,6 +756,35 @@ export const createGraphicsService = async ({
     );
   };
 
+  const collectElementVideoKeys = (elements = [], keys = []) => {
+    for (const element of elements) {
+      if (!element || typeof element !== "object") {
+        continue;
+      }
+
+      const key = element.src;
+      if (
+        typeof key === "string" &&
+        key &&
+        (element.type === "video" || loadedAssetTypes.get(key) === "video")
+      ) {
+        keys.push(key);
+      }
+
+      if (Array.isArray(element.children)) {
+        collectElementVideoKeys(element.children, keys);
+      }
+    }
+
+    return keys;
+  };
+
+  const getRenderStateVideoKeys = (renderState) => {
+    return Array.from(
+      new Set(collectElementVideoKeys(renderState?.elements ?? [])),
+    );
+  };
+
   const getMissingDecodedAudioKeys = (assetKeys = []) => {
     const uniqueAudioKeys = Array.from(
       new Set(assetKeys.filter((key) => typeof key === "string" && key)),
@@ -1181,6 +1210,15 @@ export const createGraphicsService = async ({
       .filter(([, value]) => classifyAsset(value?.type) === "video")
       .map(([key]) => key);
 
+    if (videoAssetKeys.length === 0) {
+      return;
+    }
+
+    await Promise.all(videoAssetKeys.map(warmVideoForPlayback));
+  };
+
+  const warmRenderStateVideoAssets = async (renderState) => {
+    const videoAssetKeys = getRenderStateVideoKeys(renderState);
     if (videoAssetKeys.length === 0) {
       return;
     }
@@ -2088,6 +2126,7 @@ export const createGraphicsService = async ({
 
     ensureAudioAssetsLoaded,
     collectRenderStateAudioKeys: getRenderStateAudioKeys,
+    warmRenderStateVideoAssets,
 
     engineRenderCurrentState: (options = {}) => {
       if (!engine || !routeGraphics) {

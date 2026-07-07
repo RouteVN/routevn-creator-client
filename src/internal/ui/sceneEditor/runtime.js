@@ -1224,6 +1224,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
 
   let canvasPaintDurationMs = 0;
   if (!skipCanvasPaint) {
+    await graphicsService.warmRenderStateVideoAssets?.(currentRenderState);
     await attachGraphicsCanvasToMountedRoot(deps, 2);
     const canvasPaintStartedAt = shouldMeasure ? getDebugNow() : 0;
     if (backgroundTransformEditorOpen) {

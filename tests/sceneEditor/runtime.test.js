@@ -441,6 +441,52 @@ describe("renderSceneEditorState", () => {
     expect(engineRenderCurrentState).toHaveBeenCalledTimes(1);
   });
 
+  it("warms render-state videos before painting the canvas", async () => {
+    const projectData = createProjectData();
+    const graphicsService = createGraphicsService();
+    const renderState = {
+      id: "render-with-video",
+      elements: [
+        {
+          id: "intro-video",
+          type: "video",
+          src: "blob:http://localhost/intro-video.mp4",
+        },
+      ],
+      audio: [],
+      animations: [],
+    };
+    const warmRenderStateVideoAssets = vi.fn(async () => {});
+    const engineRenderCurrentState = vi.fn();
+    graphicsService.engineSelectRenderState = vi.fn(() => renderState);
+    graphicsService.warmRenderStateVideoAssets = warmRenderStateVideoAssets;
+    graphicsService.engineRenderCurrentState = engineRenderCurrentState;
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectPreviewRuntimeGlobal: () => ({
+        dialogueTextSpeed: 100,
+      }),
+      selectIsMuted: () => false,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      presentationState: undefined,
+    };
+
+    await renderSceneEditorState({
+      store,
+      graphicsService,
+    });
+
+    expect(warmRenderStateVideoAssets).toHaveBeenCalledWith(renderState);
+    expect(warmRenderStateVideoAssets.mock.invocationCallOrder[0]).toBeLessThan(
+      engineRenderCurrentState.mock.invocationCallOrder[0],
+    );
+  });
+
   it("skips preview animations by default unless explicitly enabled", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();
