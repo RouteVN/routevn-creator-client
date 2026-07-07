@@ -134,6 +134,25 @@ remove_bundled_graphics_stack() {
   echo "Removed ${removed_count} bundled graphics stack libraries from ${appdir}."
 }
 
+fix_appimage_desktop_metadata() {
+  local appdir
+  local desktop_file
+  local icon_file
+
+  appdir="$1"
+  desktop_file="${appdir}/routevn-creator.desktop"
+  icon_file="${appdir}/routevn-creator.png"
+
+  if [ -f "${desktop_file}" ]; then
+    sed -i 's/^Name=.*/Name=RouteVN Creator/' "${desktop_file}"
+  fi
+
+  if [ -e "${icon_file}" ]; then
+    rm -f "${appdir}/.DirIcon"
+    cp -L "${icon_file}" "${appdir}/.DirIcon"
+  fi
+}
+
 repack_appimage() {
   local appdir
   local appimage_path
@@ -149,6 +168,7 @@ repack_appimage() {
   appimage_file="$(basename "${appimage_path}")"
 
   remove_bundled_graphics_stack "${appdir}"
+  fix_appimage_desktop_metadata "${appdir}"
   rm -f "${appimage_path}" "${appimage_path}.sig" "${appimage_path}.sha256"
 
   (
