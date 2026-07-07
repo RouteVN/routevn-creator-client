@@ -13,6 +13,53 @@ const createPathWithPayload = (path, payload) => {
   return query ? `${path}?${query}` : path;
 };
 
+const ANDROID_ROUTER_STACK_STORAGE_KEY = "routevn.android.router.stack.v1";
+
+const getRouterStorage = () => {
+  try {
+    return globalThis.window?.sessionStorage;
+  } catch {
+    return undefined;
+  }
+};
+
+const isPersistedStack = (stack) => {
+  return (
+    Array.isArray(stack) &&
+    stack.length > 0 &&
+    stack.every((entry) => typeof entry === "string" && entry.trim())
+  );
+};
+
+const readPersistedStack = () => {
+  const storage = getRouterStorage();
+  if (!storage) {
+    return undefined;
+  }
+
+  try {
+    const rawStack = storage.getItem(ANDROID_ROUTER_STACK_STORAGE_KEY);
+    if (!rawStack) {
+      return undefined;
+    }
+
+    const stack = JSON.parse(rawStack);
+    if (isPersistedStack(stack)) {
+      return stack;
+    }
+
+    storage.removeItem(ANDROID_ROUTER_STACK_STORAGE_KEY);
+  } catch {
+    try {
+      storage.removeItem(ANDROID_ROUTER_STACK_STORAGE_KEY);
+    } catch {
+      // Storage can be disabled in restricted WebView contexts.
+    }
+  }
+
+  return undefined;
+};
+
 const parsePathAndPayload = (path, payload) => {
   const parsed = new URL(path || "/projects", "https://routevn.android");
   const nextPayload = {};
@@ -31,11 +78,30 @@ export default class AndroidRouter {
   onStackChange = undefined;
 
   constructor({ initialPath = "/projects", onStackChange } = {}) {
-    this.stackEntries = [parsePathAndPayload(initialPath)];
+    const persistedStack = readPersistedStack();
+    const stack = persistedStack ?? [initialPath];
+    this.stackEntries = stack.map((path) => parsePathAndPayload(path));
     this.onStackChange = onStackChange;
   }
 
+  persistStack = () => {
+    const storage = getRouterStorage();
+    if (!storage) {
+      return;
+    }
+
+    try {
+      storage.setItem(
+        ANDROID_ROUTER_STACK_STORAGE_KEY,
+        JSON.stringify(this.stack),
+      );
+    } catch {
+      // Navigation should keep working even if session storage is unavailable.
+    }
+  };
+
   emitStackChange = () => {
+    this.persistStack();
     this.onStackChange?.({
       canGoBack: this.canGoBack(),
       stack: this.stack,
