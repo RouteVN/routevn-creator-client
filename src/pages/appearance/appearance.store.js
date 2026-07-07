@@ -61,7 +61,7 @@ export const selectViewData = ({ state, i18n }) => {
     themes,
     showExplorerPanel: !state.isTouchMode,
     contentPadding: state.isTouchMode ? "0" : "lg",
-    contentBodyPadding: state.isTouchMode ? "lg" : "0",
+    contentBodyPadding: state.isTouchMode ? "md" : "0",
     contentBodyMarginTop: state.isTouchMode ? "0" : "lg",
     themeGridColumns: state.isTouchMode
       ? "2"
