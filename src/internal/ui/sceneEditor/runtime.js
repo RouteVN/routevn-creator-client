@@ -460,11 +460,11 @@ async function createAssetsFromFileIds(
     const foundItem = resourceItemsByFileId.get(fileId);
 
     try {
-      const { url } = await projectService.getFileContent(fileId);
-      const type = foundItem?.fileType ?? fileObj?.type;
+      const result = await projectService.getFileContent(fileId);
+      const type = foundItem?.fileType ?? result.type ?? fileObj?.type;
 
       assets[fileId] = {
-        url,
+        url: result.url,
         type: type || "image/png",
       };
     } catch (error) {
@@ -1224,6 +1224,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
 
   let canvasPaintDurationMs = 0;
   if (!skipCanvasPaint) {
+    await graphicsService.warmRenderStateVideoAssets?.(currentRenderState);
     await attachGraphicsCanvasToMountedRoot(deps, 2);
     const canvasPaintStartedAt = shouldMeasure ? getDebugNow() : 0;
     if (backgroundTransformEditorOpen) {

@@ -26,8 +26,13 @@ import { registerPrimitives } from "./primitives/registerPrimitives";
 registerPrimitives();
 
 const rawDistribution = import.meta.env?.VITE_ROUTEVN_DISTRIBUTION;
-const distribution = rawDistribution === "steam" ? "steam" : "direct";
-const updatesEnabled = distribution !== "steam";
+const distribution =
+  rawDistribution === "steam" || rawDistribution === "package"
+    ? rawDistribution
+    : "direct";
+const updatesEnabled = distribution === "direct";
+const linuxUpdateInstallMode =
+  distribution === "package" ? "package-manager" : "appimage";
 
 // Initialize app database
 const appDb = createDb({ path: "sqlite:app.db" });
@@ -49,10 +54,7 @@ const updater = updatesEnabled
   ? createUpdater({
       globalUI,
       keyValueStore: appDb,
-      openUrl,
-      appVersion,
-      fetchManualUpdateManifest: (currentVersion) =>
-        invoke("fetch_manual_update_manifest", { currentVersion }),
+      linuxUpdateInstallMode,
     })
   : undefined;
 
@@ -94,6 +96,7 @@ const apiService = createApiService();
 
 const graphicsService = await createGraphicsService({
   subject,
+  projectMediaOrigin,
 });
 
 // Create dialogue queue service for debounced writes

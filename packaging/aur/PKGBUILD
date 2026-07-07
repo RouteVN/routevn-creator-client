@@ -37,6 +37,7 @@ build() {
   # Arch packages should link against the system SQLite package.
   export LIBSQLITE3_SYS_USE_PKG_CONFIG=1
   export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=${srcdir}=/usr/src/debug/${pkgname}"
+  export VITE_ROUTEVN_DISTRIBUTION=package
 
   bun install --frozen-lockfile
   bun run build:tauri

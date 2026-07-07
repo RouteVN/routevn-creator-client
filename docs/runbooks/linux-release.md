@@ -1,36 +1,34 @@
 # Linux Release
 
-This runbook covers the direct-download Linux package release flow for RouteVN
-Creator.
+This runbook covers the direct-download Linux release flow for RouteVN Creator.
+Linux direct releases are AppImage-only.
 
 ## Versioning
 
 - Keep the app version in `src-tauri/tauri.conf.json` and
   `src-tauri/Cargo.toml` aligned.
-- Debian packages use the app version only. For example, app version `1.7.2`
-  should build `routevn-creator_1.7.2_amd64.deb`.
-- For RPM package rebuilds of the same app version, increment
-  `bundle.linux.rpm.release` in `src-tauri/tauri.conf.json` before building.
-  For example, the second RPM build for app version `1.7.2` should be
-  `routevn-creator-1.7.2-2.x86_64.rpm`.
-- Reset `bundle.linux.rpm.release` to `"1"` when the app version changes.
-- For AUR package rebuilds of the same app version, increment `pkgrel` in
-  `packaging/aur/PKGBUILD` and regenerate `packaging/aur/.SRCINFO`.
-- Do not change the app version only to represent an RPM or AUR package
-  release.
+- Do not change the app version only to represent a package rebuild.
 
 ## Build
 
-Build Linux x86_64 native packages in Docker:
+Build the Linux x86_64 AppImage on the host:
 
 ```shell
-bun run tauri:build:linux:deb:docker
-bun run tauri:build:linux:rpm:docker
-bun run tauri:build:linux:aur:docker
+bun run tauri:build:linux:appimage
 ```
 
-The Docker-built packages and checksums are copied to:
+Build the Linux x86_64 AppImage in the Ubuntu 22.04 Docker builder for a more
+compatible release baseline:
 
-- `dist/linux-packages/ubuntu-22.04/x86_64/`
-- `dist/linux-packages/fedora-43/x86_64/`
-- `dist/aur/x86_64/`
+```shell
+bun run tauri:build:linux:appimage:docker
+```
+
+The Docker-built AppImage, updater signature, and checksum are copied to:
+
+- `dist/appimage/ubuntu-22.04/x86_64/`
+
+## Updater
+
+The Tauri updater supports Linux through the AppImage artifact only. Do not
+publish `.deb` or `.rpm` updater entries.

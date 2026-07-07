@@ -3921,9 +3921,7 @@ name = "routevn-creator"
 version = "1.7.2"
 dependencies = [
  "log",
- "reqwest",
  "routevn-exporter",
- "rustls",
  "serde",
  "serde_json",
  "tauri",

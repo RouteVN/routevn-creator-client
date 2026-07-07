@@ -94,23 +94,6 @@
     "linux": {
       "appimage": {
         "bundleMediaFramework": true
-      },
-      "deb": {
-        "recommends": [
-          "gstreamer1.0-libav",
-          "gstreamer1.0-plugins-good",
-          "gstreamer1.0-plugins-bad",
-          "gstreamer1.0-plugins-ugly"
-        ],
-        "files": {
-          "/usr/share/metainfo/com.routevn.creator.metainfo.xml": "assets/com.routevn.creator.metainfo.xml"
-        }
-      },
-      "rpm": {
-        "release": "2",
-        "files": {
-          "/usr/share/metainfo/com.routevn.creator.metainfo.xml": "assets/com.routevn.creator.metainfo.xml"
-        }
       }
     },
     "macOS": {

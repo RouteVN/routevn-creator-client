@@ -8,12 +8,15 @@ OUT_DIR="${ROUTEVN_OUT_DIR:-/out}"
 CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/cache/cargo-target}"
 BUN_INSTALL_CACHE_DIR="${BUN_INSTALL_CACHE_DIR:-/cache/bun}"
 CARGO_HOME="${CARGO_HOME:-/cache/cargo-home}"
+XDG_CACHE_HOME="${XDG_CACHE_HOME:-/cache/xdg}"
+HOST_TAURI_CACHE_DIR="${HOST_TAURI_CACHE_DIR:-/host-tauri-cache}"
 HOST_UID="${HOST_UID:-}"
 HOST_GID="${HOST_GID:-}"
 
 export CARGO_TARGET_DIR
 export BUN_INSTALL_CACHE_DIR
 export CARGO_HOME
+export XDG_CACHE_HOME
 export RUSTUP_HOME="${RUSTUP_HOME:-/opt/rustup}"
 export APPIMAGE_EXTRACT_AND_RUN="${APPIMAGE_EXTRACT_AND_RUN:-1}"
 export NO_STRIP="${NO_STRIP:-1}"
@@ -35,7 +38,12 @@ if ! grep -q '^TAURI_SIGNING_PRIVATE_KEY=' "${SRC_DIR}/.env"; then
 fi
 
 rm -rf "${WORK_DIR}"
-mkdir -p "${WORK_DIR}" "${OUT_DIR}" "${BUN_INSTALL_CACHE_DIR}" "${CARGO_HOME}" "${CARGO_TARGET_DIR}"
+mkdir -p "${WORK_DIR}" "${OUT_DIR}" "${BUN_INSTALL_CACHE_DIR}" "${CARGO_HOME}" "${CARGO_TARGET_DIR}" "${XDG_CACHE_HOME}"
+
+if [ -d "${HOST_TAURI_CACHE_DIR}" ]; then
+  mkdir -p "${XDG_CACHE_HOME}/tauri"
+  cp -a "${HOST_TAURI_CACHE_DIR}/." "${XDG_CACHE_HOME}/tauri/"
+fi
 
 rsync -a --delete \
   --exclude '.git' \

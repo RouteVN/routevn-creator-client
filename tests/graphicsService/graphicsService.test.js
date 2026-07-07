@@ -401,6 +401,349 @@ describe("graphicsService", () => {
     });
   });
 
+  it("routes tauri Pixi video media through the provided localhost origin", async () => {
+    const filePath = "/Users/test/project/files/video-1";
+    const localhostOrigin = "http://127.0.0.1:45123";
+    const expectedUrl = `${localhostOrigin}/pixi-asset.mp4?path=${encodeURIComponent(filePath)}`;
+    const bufferManager = {
+      has: vi.fn(() => false),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({
+        "video-1": {
+          url: expectedUrl,
+          type: "video/mp4",
+          source: "url",
+        },
+      })),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+      projectMediaOrigin: localhostOrigin,
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    await service.loadAssets({
+      "video-1": {
+        url: `http://asset.localhost/${encodeURIComponent(filePath)}`,
+        type: "video/mp4",
+      },
+    });
+
+    expect(bufferManager.load).toHaveBeenCalledWith({
+      "video-1": {
+        url: expectedUrl,
+        type: "video/mp4",
+      },
+    });
+    expect(routeGraphicsInstance.loadAssets).toHaveBeenCalledWith({
+      "video-1": {
+        url: expectedUrl,
+        type: "video/mp4",
+        source: "url",
+      },
+    });
+  });
+
+  it("waits for video assets to have playable frame data before resolving", async () => {
+    class FakeVideoElement {
+      constructor() {
+        this.HAVE_FUTURE_DATA = 3;
+        this.readyState = 0;
+        this.videoWidth = 0;
+        this.videoHeight = 0;
+        this.currentTime = 0;
+        this.loop = false;
+        this.muted = false;
+        this.paused = true;
+        this.volume = 0.8;
+        this.load = vi.fn();
+        this.pause = vi.fn(() => {
+          this.paused = true;
+        });
+        this.play = vi.fn(
+          () =>
+            new Promise((resolve) => {
+              this.resolvePlay = () => {
+                this.paused = false;
+                this.currentTime = 0.25;
+                this.dispatch("playing");
+                resolve();
+              };
+            }),
+        );
+        this.listenersByType = new Map();
+      }
+
+      addEventListener(type, listener) {
+        const listeners = this.listenersByType.get(type) ?? new Set();
+        listeners.add(listener);
+        this.listenersByType.set(type, listeners);
+      }
+
+      removeEventListener(type, listener) {
+        this.listenersByType.get(type)?.delete(listener);
+      }
+
+      dispatch(type) {
+        this.listenersByType.get(type)?.forEach((listener) => listener());
+      }
+    }
+
+    const originalHTMLVideoElement = globalThis.HTMLVideoElement;
+    globalThis.HTMLVideoElement = FakeVideoElement;
+
+    try {
+      const video = new FakeVideoElement();
+      const bufferManager = {
+        has: vi.fn(() => false),
+        load: vi.fn(async () => {}),
+        getBufferMap: vi.fn(() => ({
+          "video-1": {
+            url: "http://127.0.0.1:45123/file.mp4?path=video-1",
+            type: "video/mp4",
+            source: "url",
+          },
+        })),
+        clear: vi.fn(),
+      };
+      createAssetBufferManagerMock.mockReturnValue(bufferManager);
+      routeGraphicsInstance.loadAssets.mockImplementationOnce(async () => {
+        assetsCache.set("video-1", {
+          source: {
+            resource: video,
+          },
+        });
+      });
+
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({
+        subject: {
+          dispatch: vi.fn(),
+        },
+      });
+
+      await service.init({
+        canvas: {
+          children: [],
+          appendChild: vi.fn(),
+          removeChild: vi.fn(),
+        },
+        width: 1920,
+        height: 1080,
+      });
+
+      let resolved = false;
+      const pendingLoad = service
+        .loadAssets({
+          "video-1": {
+            url: "http://127.0.0.1:45123/file.mp4?path=video-1",
+            type: "video/mp4",
+          },
+        })
+        .then(() => {
+          resolved = true;
+        });
+
+      await vi.waitFor(() => {
+        expect(video.load).toHaveBeenCalled();
+      });
+      await Promise.resolve();
+
+      expect(resolved).toBe(false);
+      expect(video.preload).toBe("auto");
+
+      video.readyState = video.HAVE_FUTURE_DATA;
+      video.videoWidth = 1920;
+      video.videoHeight = 1080;
+      video.dispatch("canplay");
+
+      await vi.waitFor(() => {
+        expect(video.play).toHaveBeenCalled();
+      });
+      await Promise.resolve();
+
+      expect(resolved).toBe(false);
+      expect(video.muted).toBe(true);
+      expect(video.volume).toBe(0);
+      expect(video.loop).toBe(true);
+
+      video.resolvePlay();
+      await pendingLoad;
+
+      expect(resolved).toBe(true);
+      expect(video.pause).toHaveBeenCalled();
+      expect(video.currentTime).toBe(0);
+      expect(video.muted).toBe(false);
+      expect(video.volume).toBe(0.8);
+      expect(video.loop).toBe(false);
+    } finally {
+      if (originalHTMLVideoElement === undefined) {
+        delete globalThis.HTMLVideoElement;
+      } else {
+        globalThis.HTMLVideoElement = originalHTMLVideoElement;
+      }
+    }
+  });
+
+  it("continues loading when video playback warm-up stalls", async () => {
+    vi.useFakeTimers();
+
+    class FakeVideoElement {
+      constructor() {
+        this.HAVE_FUTURE_DATA = 3;
+        this.readyState = 0;
+        this.videoWidth = 0;
+        this.videoHeight = 0;
+        this.currentTime = 0;
+        this.loop = false;
+        this.muted = false;
+        this.paused = true;
+        this.volume = 0.8;
+        this.load = vi.fn();
+        this.pause = vi.fn(() => {
+          this.paused = true;
+        });
+        this.play = vi.fn(() => new Promise(() => {}));
+        this.listenersByType = new Map();
+      }
+
+      addEventListener(type, listener) {
+        const listeners = this.listenersByType.get(type) ?? new Set();
+        listeners.add(listener);
+        this.listenersByType.set(type, listeners);
+      }
+
+      removeEventListener(type, listener) {
+        this.listenersByType.get(type)?.delete(listener);
+      }
+
+      dispatch(type) {
+        this.listenersByType.get(type)?.forEach((listener) => listener());
+      }
+    }
+
+    const originalHTMLVideoElement = globalThis.HTMLVideoElement;
+    globalThis.HTMLVideoElement = FakeVideoElement;
+
+    try {
+      const video = new FakeVideoElement();
+      const bufferManager = {
+        has: vi.fn(() => false),
+        load: vi.fn(async () => {}),
+        getBufferMap: vi.fn(() => ({
+          "video-1": {
+            url: "http://127.0.0.1:45123/file.mp4?path=video-1",
+            type: "video/mp4",
+            source: "url",
+          },
+        })),
+        clear: vi.fn(),
+      };
+      createAssetBufferManagerMock.mockReturnValue(bufferManager);
+      routeGraphicsInstance.loadAssets.mockImplementationOnce(async () => {
+        assetsCache.set("video-1", {
+          source: {
+            resource: video,
+          },
+        });
+      });
+
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({
+        subject: {
+          dispatch: vi.fn(),
+        },
+      });
+
+      await service.init({
+        canvas: {
+          children: [],
+          appendChild: vi.fn(),
+          removeChild: vi.fn(),
+        },
+        width: 1920,
+        height: 1080,
+      });
+
+      let resolved = false;
+      const pendingLoad = service
+        .loadAssets({
+          "video-1": {
+            url: "http://127.0.0.1:45123/file.mp4?path=video-1",
+            type: "video/mp4",
+          },
+        })
+        .then(() => {
+          resolved = true;
+        });
+
+      await vi.waitFor(() => {
+        expect(video.load).toHaveBeenCalled();
+      });
+
+      video.readyState = video.HAVE_FUTURE_DATA;
+      video.videoWidth = 1920;
+      video.videoHeight = 1080;
+      video.dispatch("canplay");
+
+      await vi.waitFor(() => {
+        expect(video.play).toHaveBeenCalled();
+      });
+      expect(resolved).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(3000);
+      await pendingLoad;
+
+      expect(resolved).toBe(true);
+      expect(video.pause).toHaveBeenCalled();
+      expect(video.currentTime).toBe(0);
+      expect(video.muted).toBe(false);
+      expect(video.volume).toBe(0.8);
+      expect(video.loop).toBe(false);
+
+      video.play.mockClear();
+      await service.warmRenderStateVideoAssets({
+        elements: [
+          {
+            id: "video-element",
+            type: "video",
+            src: "video-1",
+          },
+        ],
+      });
+
+      expect(video.play).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      if (originalHTMLVideoElement === undefined) {
+        delete globalThis.HTMLVideoElement;
+      } else {
+        globalThis.HTMLVideoElement = originalHTMLVideoElement;
+      }
+    }
+  });
+
   it("decodes data url image assets locally instead of sending them through the fetch-based loader", async () => {
     const bufferManager = {
       has: vi.fn(() => false),

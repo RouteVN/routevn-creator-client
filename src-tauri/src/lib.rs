@@ -5,7 +5,6 @@ mod export_zip;
 mod project_file_protocol;
 mod project_media_server;
 mod static_web_server;
-mod updater_manifest;
 
 #[cfg(target_os = "linux")]
 fn configure_linux_graphics_workarounds() {
@@ -45,8 +44,7 @@ pub fn run() {
             project_media_server::get_project_media_server_origin,
             static_web_server::start_static_web_server,
             static_web_server::stop_static_web_server,
-            static_web_server::list_static_web_servers,
-            updater_manifest::fetch_manual_update_manifest
+            static_web_server::list_static_web_servers
         ])
         .setup(|_app| {
             #[cfg(debug_assertions)]

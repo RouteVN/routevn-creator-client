@@ -55,6 +55,9 @@ const createNoopRouteEnginePersistence = () => ({
 
 const DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID = "dialogue-character-sprite";
 const INTERACTION_SOUND_KEYS = ["hover", "click", "rightClick"];
+const VIDEO_ASSET_READY_TIMEOUT_MS = 3000;
+const VIDEO_ASSET_WARMUP_TIMEOUT_MS = 2500;
+const VIDEO_ASSET_FRAME_WARMUP_TIMEOUT_MS = 500;
 
 const normalizeGraphicsInteractionSoundVolume = (value) => {
   if (value === undefined || value === null) {
@@ -753,6 +756,35 @@ export const createGraphicsService = async ({
     );
   };
 
+  const collectElementVideoKeys = (elements = [], keys = []) => {
+    for (const element of elements) {
+      if (!element || typeof element !== "object") {
+        continue;
+      }
+
+      const key = element.src;
+      if (
+        typeof key === "string" &&
+        key &&
+        (element.type === "video" || loadedAssetTypes.get(key) === "video")
+      ) {
+        keys.push(key);
+      }
+
+      if (Array.isArray(element.children)) {
+        collectElementVideoKeys(element.children, keys);
+      }
+    }
+
+    return keys;
+  };
+
+  const getRenderStateVideoKeys = (renderState) => {
+    return Array.from(
+      new Set(collectElementVideoKeys(renderState?.elements ?? [])),
+    );
+  };
+
   const getMissingDecodedAudioKeys = (assetKeys = []) => {
     const uniqueAudioKeys = Array.from(
       new Set(assetKeys.filter((key) => typeof key === "string" && key)),
@@ -947,6 +979,253 @@ export const createGraphicsService = async ({
     }
 
     return undefined;
+  };
+
+  const isVideoReadyForPlayback = (video) => {
+    if (!video) {
+      return true;
+    }
+
+    const haveFutureData =
+      typeof video.HAVE_FUTURE_DATA === "number" ? video.HAVE_FUTURE_DATA : 3;
+
+    return (
+      video.readyState >= haveFutureData &&
+      video.videoWidth > 0 &&
+      video.videoHeight > 0
+    );
+  };
+
+  const getVideoLoadError = (key, video) => {
+    const error = video?.error;
+    if (!error) {
+      return new Error(`Video asset "${key}" failed to load.`);
+    }
+
+    const details =
+      typeof error.message === "string" && error.message.length > 0
+        ? error.message
+        : `media error code ${error.code}`;
+    return new Error(`Video asset "${key}" failed to load (${details}).`);
+  };
+
+  const waitForVideoReadyForPlayback = async (key, video) => {
+    if (!video || isVideoReadyForPlayback(video)) {
+      return;
+    }
+
+    await new Promise((resolve, reject) => {
+      let timeoutId;
+      const cleanup = () => {
+        clearTimeout(timeoutId);
+        video.removeEventListener("loadeddata", handleReady);
+        video.removeEventListener("canplay", handleReady);
+        video.removeEventListener("canplaythrough", handleReady);
+        video.removeEventListener("playing", handleReady);
+        video.removeEventListener("error", handleError);
+      };
+      const finish = () => {
+        cleanup();
+        resolve();
+      };
+      const fail = (error) => {
+        cleanup();
+        reject(error);
+      };
+      const handleReady = () => {
+        if (isVideoReadyForPlayback(video)) {
+          finish();
+        }
+      };
+      const handleError = () => {
+        fail(getVideoLoadError(key, video));
+      };
+
+      video.addEventListener("loadeddata", handleReady);
+      video.addEventListener("canplay", handleReady);
+      video.addEventListener("canplaythrough", handleReady);
+      video.addEventListener("playing", handleReady);
+      video.addEventListener("error", handleError);
+      timeoutId = setTimeout(() => {
+        fail(
+          new Error(`Timed out waiting for video asset "${key}" to preload.`),
+        );
+      }, VIDEO_ASSET_READY_TIMEOUT_MS);
+
+      try {
+        video.preload = "auto";
+        video.load();
+      } catch {}
+
+      handleReady();
+    });
+  };
+
+  const waitForVideoWarmFrame = async (key, video) => {
+    if (
+      !video ||
+      video.paused ||
+      typeof video.requestVideoFrameCallback !== "function"
+    ) {
+      return;
+    }
+
+    await new Promise((resolve, reject) => {
+      let timeoutId;
+      let callbackId;
+      const cleanup = () => {
+        clearTimeout(timeoutId);
+        video.removeEventListener("error", handleError);
+        if (
+          callbackId !== undefined &&
+          typeof video.cancelVideoFrameCallback === "function"
+        ) {
+          video.cancelVideoFrameCallback(callbackId);
+        }
+      };
+      const finish = () => {
+        cleanup();
+        resolve();
+      };
+      const fail = (error) => {
+        cleanup();
+        reject(error);
+      };
+      const handleError = () => {
+        fail(getVideoLoadError(key, video));
+      };
+
+      video.addEventListener("error", handleError);
+      timeoutId = setTimeout(() => {
+        fail(new Error(`Timed out warming video asset "${key}".`));
+      }, VIDEO_ASSET_FRAME_WARMUP_TIMEOUT_MS);
+      callbackId = video.requestVideoFrameCallback(() => {
+        callbackId = undefined;
+        finish();
+      });
+    });
+  };
+
+  const resetVideoPlaybackPosition = (video) => {
+    try {
+      if (Number.isFinite(video.currentTime) && video.currentTime !== 0) {
+        video.currentTime = 0;
+      }
+    } catch {}
+  };
+
+  const startVideoPlaybackWarmup = async (key, video) => {
+    const playResult = video.play?.();
+    if (!playResult || typeof playResult.then !== "function") {
+      return;
+    }
+
+    await new Promise((resolve, reject) => {
+      let timeoutId;
+      const cleanup = () => {
+        clearTimeout(timeoutId);
+        video.removeEventListener("playing", finish);
+        video.removeEventListener("error", handleError);
+      };
+      const finish = () => {
+        cleanup();
+        resolve();
+      };
+      const fail = (error) => {
+        cleanup();
+        reject(error);
+      };
+      const handleError = () => {
+        fail(getVideoLoadError(key, video));
+      };
+
+      video.addEventListener("playing", finish);
+      video.addEventListener("error", handleError);
+      timeoutId = setTimeout(() => {
+        fail(new Error(`Timed out starting video asset "${key}".`));
+      }, VIDEO_ASSET_WARMUP_TIMEOUT_MS);
+      playResult.then(finish, fail);
+    });
+  };
+
+  const warmVideoForPlayback = async (key) => {
+    const video = getVideoResourceForKey(key);
+    if (!video) {
+      return;
+    }
+
+    if (
+      video.__routevnPlaybackWarmed === true ||
+      video.__routevnPlaybackWarmupAttempted === true ||
+      video.__routevnPlaybackWarmupStarted === true
+    ) {
+      return;
+    }
+
+    video.__routevnPlaybackWarmupStarted = true;
+    video.__routevnPlaybackWarmupAttempted = true;
+    let previousMuted = video.muted;
+    let previousVolume = video.volume;
+    let previousLoop = video.loop;
+    let shouldRestorePlaybackProperties = false;
+    let didWarmPlayback = false;
+    try {
+      await waitForVideoReadyForPlayback(key, video);
+
+      if (getVideoResourceForKey(key) !== video) {
+        return;
+      }
+
+      previousMuted = video.muted;
+      previousVolume = video.volume;
+      previousLoop = video.loop;
+      shouldRestorePlaybackProperties = true;
+
+      video.muted = true;
+      video.volume = 0;
+      video.loop = true;
+      await startVideoPlaybackWarmup(key, video);
+      await waitForVideoWarmFrame(key, video);
+      didWarmPlayback = true;
+    } catch {
+    } finally {
+      if (getVideoResourceForKey(key) === video) {
+        try {
+          video.pause?.();
+        } catch {}
+        resetVideoPlaybackPosition(video);
+
+        if (shouldRestorePlaybackProperties) {
+          video.muted = previousMuted;
+          video.volume = previousVolume;
+          video.loop = previousLoop;
+        }
+
+        video.__routevnPlaybackWarmed = didWarmPlayback;
+        video.__routevnPlaybackWarmupStarted = false;
+      }
+    }
+  };
+
+  const warmVideoAssetsForPlayback = async (assetEntries = []) => {
+    const videoAssetKeys = assetEntries
+      .filter(([, value]) => classifyAsset(value?.type) === "video")
+      .map(([key]) => key);
+
+    if (videoAssetKeys.length === 0) {
+      return;
+    }
+
+    await Promise.all(videoAssetKeys.map(warmVideoForPlayback));
+  };
+
+  const warmRenderStateVideoAssets = async (renderState) => {
+    const videoAssetKeys = getRenderStateVideoKeys(renderState);
+    if (videoAssetKeys.length === 0) {
+      return;
+    }
+
+    await Promise.all(videoAssetKeys.map(warmVideoForPlayback));
   };
 
   const getTrackedVideoEntries = () => {
@@ -1316,6 +1595,15 @@ export const createGraphicsService = async ({
         return;
       }
       await activeRouteGraphics.loadAssets(renderAssetBufferMap);
+
+      if (
+        runtimeVersion !== assetLoadRuntimeVersion ||
+        routeGraphics !== activeRouteGraphics
+      ) {
+        return;
+      }
+
+      await warmVideoAssetsForPlayback(renderAssetEntries);
 
       if (
         runtimeVersion !== assetLoadRuntimeVersion ||
@@ -1840,6 +2128,7 @@ export const createGraphicsService = async ({
 
     ensureAudioAssetsLoaded,
     collectRenderStateAudioKeys: getRenderStateAudioKeys,
+    warmRenderStateVideoAssets,
 
     engineRenderCurrentState: (options = {}) => {
       if (!engine || !routeGraphics) {
