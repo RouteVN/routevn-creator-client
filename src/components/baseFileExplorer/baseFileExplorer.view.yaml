@@ -8,6 +8,10 @@ refs:
       mousedown:
         required: true
         handler: handleItemMouseDown
+      pointerdown:
+        handler: handleItemPointerDown
+      touchstart:
+        handler: handleItemTouchStart
       contextmenu:
         handler: handleItemContextMenu
       click:
@@ -39,6 +43,8 @@ refs:
 styles:
   ':host':
     '-webkit-user-select': none
+    '-webkit-touch-callout': none
+    '-webkit-tap-highlight-color': transparent
     '-moz-user-select': none
     '-ms-user-select': none
     user-select: none
@@ -51,10 +57,10 @@ template:
             $else:
               - rtgl-view w=f:
                   - $for item, i in items:
-                      - 'rtgl-view#itemRef${i} data-item-id=${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px; min-width: 0; box-sizing: border-box;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
+                      - 'rtgl-view#itemRef${i} data-item-id=${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px; min-width: 0; box-sizing: border-box; touch-action: ${item.touchAction}; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
                           - $if shrinkable && item.hasChildren:
                               - rtgl-view d=h av=c ah=c w=16 h=16 min-w=16:
-                                  - rtgl-svg#arrowRef${i} data-item-id=${item.id} svg=${item.arrowIcon} wh=16 cur=pointer: null
+                                  - rtgl-svg#arrowRef${i} data-item-id=${item.id} data-file-explorer-arrow=true svg=${item.arrowIcon} wh=16 cur=pointer: null
                             $else:
                               - rtgl-view d=h av=c ah=c w=16 h=16 min-w=16: null
                           - 'rtgl-view d=h g=md av=c w=1fg style="min-width: 0; overflow: hidden;"':

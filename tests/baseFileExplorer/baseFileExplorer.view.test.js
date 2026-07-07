@@ -27,4 +27,15 @@ describe("baseFileExplorer view", () => {
     expect(view).not.toContain("rtgl-view w=f h=f:");
     expect(view).not.toContain("rtgl-view#container w=f h=1fg");
   });
+
+  it("wires touchstart for mobile long-press drag", () => {
+    const view = readView();
+
+    expect(view).toContain("pointerdown:");
+    expect(view).toContain("handler: handleItemPointerDown");
+    expect(view).toContain("touchstart:");
+    expect(view).toContain("handler: handleItemTouchStart");
+    expect(view).toContain("touch-action: ${item.touchAction};");
+    expect(view).toContain("data-file-explorer-arrow=true");
+  });
 });
