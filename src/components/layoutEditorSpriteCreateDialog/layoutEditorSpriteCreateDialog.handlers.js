@@ -19,6 +19,9 @@ const syncImagesData = (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
+  deps.store.setUiConfig({
+    uiConfig: deps.uiConfig,
+  });
   syncImagesData(deps);
   deps.store.syncFromProps({
     props: deps.props,

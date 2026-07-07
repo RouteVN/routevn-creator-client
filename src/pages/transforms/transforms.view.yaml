@@ -129,10 +129,6 @@ refs:
     eventListeners:
       item-click:
         handler: handleTransformPreviewImageSelectorFileExplorerClick
-  cancelTransformPreviewImageSelection:
-    eventListeners:
-      click:
-        handler: handleTransformPreviewImageSelectorCancel
   confirmTransformPreviewImageSelection:
     eventListeners:
       click:
@@ -289,7 +285,6 @@ template:
                   - 'rtgl-view#transformPreviewImageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
                       - rvn-image-selector#transformPreviewImageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelTransformPreviewImageSelection variant=se: ${cancelButton}
                   - rtgl-button#confirmTransformPreviewImageSelection variant=pr: ${confirmButton}
   - $when: fullImagePreviewVisible
     'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: pointer; outline: none;"':

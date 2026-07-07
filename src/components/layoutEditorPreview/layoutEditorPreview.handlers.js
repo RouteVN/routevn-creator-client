@@ -74,6 +74,9 @@ const didInitialPreviewDataChange = (oldProps = {}, newProps = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
+  deps.store.setUiConfig({
+    uiConfig: deps.uiConfig,
+  });
   deps.store.setLayoutState({
     layoutState: deps.props.layoutState,
   });

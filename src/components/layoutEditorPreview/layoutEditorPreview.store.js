@@ -15,6 +15,7 @@ import {
 import { createPersistedPreviewState } from "./support/layoutEditorPreviewPersistence.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { toCharacterSelectOptions } from "../../internal/characterOptions.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const EMPTY_LAYOUT_DATA = {
   items: {},
@@ -244,7 +245,12 @@ export const createInitialState = () => ({
   },
   fullImagePreviewVisible: false,
   fullImagePreviewImageId: undefined,
+  isTouchMode: false,
 });
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
+};
 
 export const setLayoutState = ({ state }, { layoutState } = {}) => {
   state.layoutState = layoutState;
@@ -685,6 +691,7 @@ export const selectViewData = ({ state, constants, props = {} }) => {
     imageSelectorDialog: state.imageSelectorDialog,
     dropdownMenu: state.dropdownMenu,
     fileExplorerItems,
+    showImageSelectorFileExplorer: !state.isTouchMode,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     showDialogueForm: previewBackgroundFormTarget === "dialogue",

@@ -59,4 +59,18 @@ describe("transforms view", () => {
       "rvn-base-file-explorer#transformPreviewImageSelectorFileExplorer",
     );
   });
+
+  it("does not show a cancel button in the preview image selector", () => {
+    const transformsView = readFileSync(
+      new URL(
+        "../../src/pages/transforms/transforms.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(transformsView).not.toContain(
+      "rtgl-button#cancelTransformPreviewImageSelection",
+    );
+  });
 });

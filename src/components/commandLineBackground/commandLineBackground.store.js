@@ -10,6 +10,7 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const tabs = [
   {
@@ -180,7 +181,12 @@ export const createInitialState = () => ({
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
   searchQuery: "",
+  isTouchMode: false,
 });
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
+};
 
 export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
@@ -845,6 +851,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     tabs: localizeCommandLineOptions(tabs, copy),
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     items: flatItems,
+    showImageSelectorFileExplorer: !state.isTouchMode,
     groups: flatGroups,
     tempSelectedResourceId: state.tempSelectedResourceId,
     selectedResource,

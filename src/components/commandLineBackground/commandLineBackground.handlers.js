@@ -295,7 +295,11 @@ export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, props } = deps;
+  const { store, props, uiConfig } = deps;
+
+  store.setUiConfig({
+    uiConfig,
+  });
 
   if (!props.background) {
     return;
