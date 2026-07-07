@@ -10,13 +10,21 @@ describe("scenes view", () => {
 
     expect(scenesView).toContain('style="right: 8px; top: 8px;"');
     expect(scenesView).toContain(
-      'rtgl-view#mobileFileExplorerOpenButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo title="${title}"',
+      'rtgl-button#mobileFileExplorerOpenButton sq pre=hamburger v=ol title="${title}" aria-label="${title}"',
     );
-    expect(scenesView).toContain("rtgl-svg svg=hamburger wh=16 c=mu-fg");
-    expect(scenesView).toContain(
-      "rtgl-button#mobileFileExplorerClose sq pre=x v=ol w=36 h=36",
-    );
+    expect(scenesView).toContain("rtgl-button#mobileFileExplorerClose sq pre=x v=ol");
     expect(scenesView).not.toContain("env(safe-area-inset-top)");
+  });
+
+  it("centers the create scene popover as an overlay on mobile", () => {
+    const scenesView = readFileSync(
+      new URL("../../src/pages/scenes/scenes.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(scenesView).toContain(
+      "rtgl-popover#sceneFormPopover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y} md-place=center md-overlay",
+    );
   });
 
   it("uses the same mobile file explorer navbar sizing as images", () => {

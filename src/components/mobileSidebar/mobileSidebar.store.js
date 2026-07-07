@@ -75,6 +75,21 @@ const userInterfaceItems = [
   },
 ];
 
+const systemItems = [
+  {
+    id: "controls",
+    label: "Controls",
+    path: "/project/controls",
+    icon: "sliders",
+  },
+  {
+    id: "variables",
+    label: "Variables",
+    path: "/project/variables",
+    icon: "variable",
+  },
+];
+
 const releaseItems = [
   {
     id: "versions",
@@ -120,6 +135,11 @@ const assetsSections = [
     id: "user-interface",
     label: "User Interface",
     items: userInterfaceItems,
+  },
+  {
+    id: "system",
+    label: "System",
+    items: systemItems,
   },
 ];
 
