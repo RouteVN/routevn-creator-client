@@ -338,6 +338,7 @@ const {
         ? getAnimationTypeLabel(selectedAnimationItem.animationType, copy)
         : "",
       descriptionLabel: copy.descriptionLabel ?? "Description",
+      editButton: copy.editMenuItem ?? "Edit",
       importButton: copy.importMenuButton ?? copy.importButton ?? "Import",
       tagsLabel: copy.tagsLabel ?? "Tags",
       typeLabel: copy.typeLabel ?? "Type",

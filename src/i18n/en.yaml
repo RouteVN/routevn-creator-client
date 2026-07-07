@@ -961,6 +961,7 @@ charactersPage:
   spriteGroupTagRequiredAtIndex: "Sprite group {index} must have at least one tag."
   spriteGroupsCreateMessage: "Create the character first, then add groups."
   spriteGroupsLabel: "Sprite Groups"
+  spritesButtonLabel: "Sprites"
   title: "Characters"
   updateCharacterButton: "Update Character"
   updateGroupButton: "Update Group"
