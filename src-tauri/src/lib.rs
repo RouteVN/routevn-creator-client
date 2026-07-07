@@ -2,6 +2,7 @@
 use tauri::Manager;
 
 mod export_zip;
+mod linux_desktop_integration;
 mod project_file_protocol;
 mod project_media_server;
 mod static_web_server;
@@ -41,6 +42,9 @@ pub fn run() {
         .plugin(tauri_plugin_persisted_scope::init())
         .invoke_handler(tauri::generate_handler![
             export_zip::create_distribution_zip_streamed,
+            linux_desktop_integration::get_linux_appimage_desktop_integration_status,
+            linux_desktop_integration::install_linux_appimage_desktop_integration,
+            linux_desktop_integration::restart_linux_appimage_from_desktop_integration,
             project_media_server::get_project_media_server_origin,
             static_web_server::start_static_web_server,
             static_web_server::stop_static_web_server,

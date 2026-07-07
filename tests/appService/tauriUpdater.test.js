@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { JSDOM } from "jsdom";
 
 const checkMock = vi.hoisted(() => vi.fn());
 const relaunchMock = vi.hoisted(() => vi.fn());
@@ -33,7 +34,6 @@ const createUpdate = ({
 const createUpdaterClient = ({
   globalUI = createGlobalUI(),
   update = createUpdate(),
-  linuxUpdateInstallMode = "appimage",
 } = {}) => {
   checkMock.mockResolvedValue(update);
 
@@ -43,13 +43,21 @@ const createUpdaterClient = ({
       get: vi.fn(),
       set: vi.fn(),
     },
-    linuxUpdateInstallMode,
   });
 
   return {
     updater,
     update,
   };
+};
+
+const setupDocument = () => {
+  const dom = new JSDOM(
+    "<!doctype html><html><head></head><body></body></html>",
+  );
+  vi.stubGlobal("window", dom.window);
+  vi.stubGlobal("document", dom.window.document);
+  return dom.window.document;
 };
 
 describe("tauri updater", () => {
@@ -101,41 +109,93 @@ describe("tauri updater", () => {
     expect(relaunchMock).toHaveBeenCalled();
   });
 
-  it("does not self-install package-managed Linux updates", async () => {
-    vi.stubGlobal("navigator", {
-      platform: "Linux x86_64",
-      userAgent: "RouteVN Creator Linux",
-    });
-
+  it("shows a blocking Rettangoli dialog while downloading an update", async () => {
+    const document = setupDocument();
     const globalUI = createGlobalUI();
-    const downloadAndInstall = vi.fn(() => Promise.resolve());
-    const { updater } = createUpdaterClient({
-      globalUI,
-      linuxUpdateInstallMode: "package-manager",
-      update: createUpdate({ downloadAndInstall }),
+    let finishDownload;
+    const downloadFinished = new Promise((resolve) => {
+      finishDownload = resolve;
     });
+    const downloadAndInstall = vi.fn(async (onProgress) => {
+      onProgress({
+        event: "Started",
+        data: { contentLength: 100 },
+      });
+      onProgress({
+        event: "Progress",
+        data: { chunkLength: 45 },
+      });
+      await downloadFinished;
+      onProgress({
+        event: "Finished",
+        data: {},
+      });
+    });
+    const { updater } = createUpdaterClient({ globalUI });
 
-    const result = await updater.checkForUpdates(false, {
-      copy: {
-        packageManagedLinuxUpdateMessage:
-          "Update {version} is available. Use your package manager.",
-        updateAvailableTitle: "Update Available",
+    const updatePromise = updater.downloadAndInstall(
+      createUpdate({ downloadAndInstall }),
+      {
+        updateDownloadMessage: "Keep the app open.",
+        updateDownloadProgressMessage: "{progress}% complete",
+        updateDownloadTitle: "Downloading update",
+        updateInstallingMessage: "Installing update...",
       },
-    });
+    );
 
-    expect(result).toEqual({
-      version: "1.7.3",
-      date: "2026-07-03",
-      body: "Fix packaging.",
+    await Promise.resolve();
+
+    const dialog = document.getElementById("routevn-update-progress-dialog");
+    expect(dialog?.tagName.toLowerCase()).toBe("rtgl-dialog");
+    expect(dialog?.hasAttribute("open")).toBe(true);
+    expect(dialog?.textContent).toContain("Downloading update");
+    expect(dialog?.textContent).toContain("Keep the app open.");
+    expect(dialog?.textContent).toContain("45% complete");
+    expect(dialog?.querySelector('[role="progressbar"]')).toBeNull();
+
+    finishDownload();
+    await updatePromise;
+
+    expect(
+      document.getElementById("routevn-update-progress-dialog"),
+    ).toBeNull();
+    expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function));
+    expect(relaunchMock).toHaveBeenCalled();
+    expect(globalUI.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("removes the progress dialog before showing update install failures", async () => {
+    const document = setupDocument();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const globalUI = createGlobalUI();
+    const downloadAndInstall = vi.fn(async (onProgress) => {
+      onProgress({
+        event: "Started",
+        data: { contentLength: 100 },
+      });
+      throw new Error("network failed");
     });
-    expect(checkMock).toHaveBeenCalledWith(undefined);
-    expect(globalUI.showAlert).toHaveBeenCalledWith({
-      message: "Update 1.7.3 is available. Use your package manager.",
-      title: "Update Available",
-    });
-    expect(globalUI.showConfirm).not.toHaveBeenCalled();
-    expect(downloadAndInstall).not.toHaveBeenCalled();
-    expect(relaunchMock).not.toHaveBeenCalled();
+    const { updater } = createUpdaterClient({ globalUI });
+
+    try {
+      await updater.downloadAndInstall(createUpdate({ downloadAndInstall }), {
+        failedInstallUpdateMessage: "Install failed: {message}",
+        errorTitle: "Error",
+      });
+
+      expect(
+        document.getElementById("routevn-update-progress-dialog"),
+      ).toBeNull();
+      expect(globalUI.showAlert).toHaveBeenCalledWith({
+        message: "Install failed: network failed",
+        title: "Error",
+      });
+      expect(relaunchMock).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it("does not prompt on Linux when no update is available", async () => {
