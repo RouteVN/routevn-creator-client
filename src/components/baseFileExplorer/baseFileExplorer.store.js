@@ -30,6 +30,17 @@ export const createInitialState = () => ({
   containerTop: 0,
   forbiddenIndices: [],
   pendingDrag: null,
+  touchDragTimerId: undefined,
+  touchDragStartPoint: undefined,
+  touchDragCurrentPoint: undefined,
+  touchDragPointerId: undefined,
+  touchDragActive: false,
+  touchScrollActive: false,
+  touchScrollLastPoint: undefined,
+  touchContextMenuSuppressUntil: 0,
+  suppressNextClick: false,
+  dragAutoScrollTimerId: undefined,
+  dragAutoScrollPoint: undefined,
 
   // Track collapsed folder IDs
   collapsedIds: [],
@@ -64,7 +75,6 @@ export const startDragging = (
 
 export const stopDragging = ({ state }, _payload = {}) => {
   state.isDragging = false;
-  state.selectedItemId = undefined;
   state.targetDragIndex = -2;
   state.targetDragPosition = 0;
   state.targetDropPosition = "above";
@@ -96,6 +106,73 @@ export const setPendingDrag = ({ state }, { pendingDrag } = {}) => {
 
 export const clearPendingDrag = ({ state }, _payload = {}) => {
   state.pendingDrag = null;
+};
+
+export const setTouchDragTimerId = ({ state }, { timerId } = {}) => {
+  state.touchDragTimerId = timerId;
+};
+
+export const setTouchDragStartPoint = ({ state }, { point } = {}) => {
+  state.touchDragStartPoint = point;
+};
+
+export const setTouchDragCurrentPoint = ({ state }, { point } = {}) => {
+  state.touchDragCurrentPoint = point;
+};
+
+export const setTouchDragPointerId = ({ state }, { pointerId } = {}) => {
+  state.touchDragPointerId = pointerId;
+};
+
+export const setTouchDragActive = ({ state }, { active } = {}) => {
+  state.touchDragActive = active === true;
+};
+
+export const setTouchScrollActive = ({ state }, { active } = {}) => {
+  state.touchScrollActive = active === true;
+};
+
+export const setTouchScrollLastPoint = ({ state }, { point } = {}) => {
+  state.touchScrollLastPoint = point;
+};
+
+export const clearTouchDrag = ({ state }, _payload = {}) => {
+  state.touchDragTimerId = undefined;
+  state.touchDragStartPoint = undefined;
+  state.touchDragCurrentPoint = undefined;
+  state.touchDragPointerId = undefined;
+  state.touchDragActive = false;
+  state.touchScrollActive = false;
+  state.touchScrollLastPoint = undefined;
+};
+
+export const setTouchContextMenuSuppressUntil = (
+  { state },
+  { suppressUntil } = {},
+) => {
+  state.touchContextMenuSuppressUntil = suppressUntil ?? 0;
+};
+
+export const setSuppressNextClick = ({ state }, { suppress } = {}) => {
+  state.suppressNextClick = suppress === true;
+};
+
+export const setDragAutoScrollTimerId = ({ state }, { timerId } = {}) => {
+  state.dragAutoScrollTimerId = timerId;
+};
+
+export const setDragAutoScrollPoint = ({ state }, { point } = {}) => {
+  state.dragAutoScrollPoint = point;
+};
+
+export const clearDragAutoScroll = ({ state }, _payload = {}) => {
+  state.dragAutoScrollTimerId = undefined;
+  state.dragAutoScrollPoint = undefined;
+};
+
+export const setDragLayout = ({ state }, { itemRects, containerTop } = {}) => {
+  state.itemRects = itemRects ?? {};
+  state.containerTop = containerTop ?? 0;
 };
 
 export const selectTargetDragIndex = ({ state }) => {
@@ -132,6 +209,50 @@ export const selectForbiddenIndices = ({ state }) => {
 
 export const selectPendingDrag = ({ state }) => {
   return state.pendingDrag;
+};
+
+export const selectTouchDragTimerId = ({ state }) => {
+  return state.touchDragTimerId;
+};
+
+export const selectTouchDragStartPoint = ({ state }) => {
+  return state.touchDragStartPoint;
+};
+
+export const selectTouchDragCurrentPoint = ({ state }) => {
+  return state.touchDragCurrentPoint;
+};
+
+export const selectTouchDragPointerId = ({ state }) => {
+  return state.touchDragPointerId;
+};
+
+export const selectTouchDragActive = ({ state }) => {
+  return state.touchDragActive;
+};
+
+export const selectTouchScrollActive = ({ state }) => {
+  return state.touchScrollActive;
+};
+
+export const selectTouchScrollLastPoint = ({ state }) => {
+  return state.touchScrollLastPoint;
+};
+
+export const selectTouchContextMenuSuppressUntil = ({ state }) => {
+  return state.touchContextMenuSuppressUntil;
+};
+
+export const selectSuppressNextClick = ({ state }) => {
+  return state.suppressNextClick;
+};
+
+export const selectDragAutoScrollTimerId = ({ state }) => {
+  return state.dragAutoScrollTimerId;
+};
+
+export const selectDragAutoScrollPoint = ({ state }) => {
+  return state.dragAutoScrollPoint;
 };
 
 export const selectCollapsedIds = ({ state }) => {
@@ -291,6 +412,11 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   });
 
   const targetDragItem = visibleItems[state.targetDragIndex];
+  const suppressItemHover = state.isDragging || state.suppressNextClick;
+  const dragEnabled =
+    getBooleanAttr(attrs, "allowDrag", "allow-drag") ||
+    getBooleanAttr(attrs, "draggable", "draggable");
+  const touchAction = dragEnabled ? "none" : "pan-y";
 
   // Map items with additional UI properties
   const processedItems = visibleItems.map((item) => {
@@ -311,7 +437,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       bc = "fg";
     }
 
-    if (state.isDragging) {
+    if (suppressItemHover) {
       hBgc = "";
     }
 
@@ -346,6 +472,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       bc,
       hBgc,
       bgc,
+      touchAction,
     };
   });
 
