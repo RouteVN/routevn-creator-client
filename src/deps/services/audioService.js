@@ -90,6 +90,14 @@ export const createAudioService = () => {
       gainNode.connect(audioContext.destination);
     },
 
+    async unlock() {
+      service.init();
+
+      if (audioContext?.state === "suspended") {
+        await audioContext.resume();
+      }
+    },
+
     cleanup() {
       if (audioContext && audioContext.state !== "closed") {
         audioContext.close();

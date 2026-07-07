@@ -29,6 +29,7 @@ export const createInitialState = () => ({
     items: [
       {
         label: "Delete",
+        icon: "trash",
         type: "item",
         value: "delete",
       },

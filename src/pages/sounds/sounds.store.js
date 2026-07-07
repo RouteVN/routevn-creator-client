@@ -180,6 +180,9 @@ const {
       showAudioPlayer: state.showAudioPlayer,
       audioPlayerLeft: state.isTouchMode ? 0 : state.audioPlayerLeft,
       audioPlayerRight: state.isTouchMode ? 0 : state.audioPlayerRight,
+      audioPlayerBottom: state.isTouchMode
+        ? "calc(64px + env(safe-area-inset-bottom))"
+        : "0px",
       mobileDeleteDialogOpen: state.mobileDeleteDialogOpen,
       mobileDeleteDialogTitle: copy.deleteTitle,
       mobileDeleteDialogMessage: copy.deleteMessage.replace(

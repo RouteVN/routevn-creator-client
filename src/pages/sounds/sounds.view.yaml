@@ -195,7 +195,7 @@ template:
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
                   - rtgl-button#mobileDetailPlayButton w=1fg v=se pre=play: ${previewButton}
-                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: ${deleteButton}
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect slot="sound-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
@@ -207,7 +207,7 @@ template:
                   - rtgl-text c=mu-fg: ${mobileDeleteDialogMessage}
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#mobileDeleteCancelButton v=se: ${cancelButton}
-                  - rtgl-button#mobileDeleteConfirmButton v=pr: ${mobileDeleteDialogConfirmLabel}
+                  - rtgl-button#mobileDeleteConfirmButton v=pr pre=trash: ${mobileDeleteDialogConfirmLabel}
   - $if isEditDialogOpen:
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
           - rtgl-view slot=content g=md:
@@ -225,5 +225,5 @@ template:
       - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
           - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - $if showAudioPlayer:
-      - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
+      - 'rtgl-view h=72 pos=fix z=1500 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px; bottom: ${audioPlayerBottom};"':
           - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :mobileLayout=${mobileLayout} :title=${playingSound.title}: null

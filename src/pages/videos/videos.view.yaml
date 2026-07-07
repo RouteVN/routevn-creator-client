@@ -185,7 +185,7 @@ template:
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
                   - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=play: ${previewButton}
-                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: ${deleteButton}
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect slot="video-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null

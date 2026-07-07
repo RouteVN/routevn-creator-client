@@ -2,6 +2,12 @@ import { assertSafeAndroidStorageSegment } from "../../clients/android/storagePa
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 
 const PROJECT_FILE_EXTENSION_BY_MIME_TYPE = {
+  "audio/mpeg": "mp3",
+  "audio/mp3": "mp3",
+  "audio/ogg": "ogg",
+  "audio/wav": "wav",
+  "audio/wave": "wav",
+  "audio/x-wav": "wav",
   "image/gif": "gif",
   "image/jpeg": "jpg",
   "image/png": "png",

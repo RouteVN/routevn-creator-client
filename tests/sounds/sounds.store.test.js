@@ -71,6 +71,7 @@ describe("sounds store audio player layout", () => {
 
     expect(selectViewData(context).audioPlayerLeft).toBe(364);
     expect(selectViewData(context).audioPlayerRight).toBe(270);
+    expect(selectViewData(context).audioPlayerBottom).toBe("0px");
 
     setUiConfig(context, {
       uiConfig: {
@@ -80,5 +81,8 @@ describe("sounds store audio player layout", () => {
 
     expect(selectViewData(context).audioPlayerLeft).toBe(0);
     expect(selectViewData(context).audioPlayerRight).toBe(0);
+    expect(selectViewData(context).audioPlayerBottom).toBe(
+      "calc(64px + env(safe-area-inset-bottom))",
+    );
   });
 });

@@ -17,12 +17,12 @@ template:
           - rtgl-view w=f av=c p=md h=f:
               - rtgl-text c=mu-fg: Loading audio...
         $else:
-          - rtgl-view w=f g=md bgc=mu:
-              - rtgl-view w=f:
+          - 'rtgl-view w=f h=f d=v bgc=mu style="min-height: 0;"':
+              - 'rtgl-view w=f style="flex: 0 0 6px;"':
                   - 'rtgl-view#progressBar w=f h=6 br=full cur=pointer pos=rel bgc=su style="overflow: hidden;"':
                       - 'rtgl-view h=f bgc=ac br=full style="width: ${progressPercentage}%; transition: width 0.1s ease;"': null
               - $if mobileLayout:
-                  - 'rtgl-view d=h av=c w=f h=f p=md g=md style="min-width: 0; box-sizing: border-box;"':
+                  - 'rtgl-view d=h av=c w=f h=1fg p=md g=md style="min-width: 0; min-height: 0; box-sizing: border-box;"':
                       - 'rtgl-text w=1fg ellipsis=true style="min-width: 0;"': ${title}
                       - 'rtgl-view d=h av=c g=md ah=c style="flex: 0 0 auto;"':
                           - 'rtgl-view d=h av=c g=xs ah=e style="width: 96px; flex: 0 0 96px; white-space: nowrap; font-variant-numeric: tabular-nums;"':
@@ -37,7 +37,7 @@ template:
                       - 'rtgl-view#playerCloser w=32 h=32 av=c ah=c cur=pointer style="flex: 0 0 32px;"':
                           - rtgl-svg svg=cross w=16 h=16: null
                 $else:
-                  - rtgl-view ph=md d=h av=c w=f h=f p=md:
+                  - 'rtgl-view ph=md d=h av=c w=f h=1fg p=md style="min-height: 0;"':
                       - rtgl-text w=250 ellipsis=true: ${title}
                       - rtgl-view d=h av=c g=lg w=1fg ah=c:
                           - rtgl-view#playPauseBtn cur=pointer:
