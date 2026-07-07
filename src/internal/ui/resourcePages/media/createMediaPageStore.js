@@ -51,6 +51,7 @@ const createFolderContextMenuItems = (copy = {}) => [
   },
   {
     label: copy.deleteMenuItem ?? "Delete",
+    icon: "trash",
     type: "item",
     value: "delete-item",
   },
@@ -64,6 +65,7 @@ const createItemContextMenuItems = (copy = {}) => [
   },
   {
     label: copy.deleteMenuItem ?? "Delete",
+    icon: "trash",
     type: "item",
     value: "delete-item",
   },
@@ -92,6 +94,7 @@ const createMediaCenterItemContextMenuItems = (previewMenuLabel, copy = {}) => {
 
   items.push({
     label: copy.deleteMenuItem ?? "Delete",
+    icon: "trash",
     type: "item",
     value: "delete-item",
   });

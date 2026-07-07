@@ -40,6 +40,7 @@ describe("sounds view", () => {
     expect(mobileDetailBranch).toContain("mobileDetailPlayButton");
     expect(mobileDetailBranch).toContain("mobileDetailDeleteButton");
     expect(mobileDetailBranch).toContain("pre=play: ${previewButton}");
+    expect(mobileDetailBranch).toContain("pre=trash: ${deleteButton}");
 
     expect(soundsView).toContain("handler: handleMobileDetailPlayClick");
     expect(soundsView).toContain("handler: handleMobileDetailDeleteClick");
@@ -58,6 +59,9 @@ describe("sounds view", () => {
     expect(soundsView).toContain("handler: handleMobileDeleteDialogCancel");
     expect(soundsView).toContain("handler: handleMobileDeleteDialogConfirm");
     expect(soundsView).toContain("mobileDeleteDialogMessage");
+    expect(soundsView).toContain(
+      "rtgl-button#mobileDeleteConfirmButton v=pr pre=trash",
+    );
   });
 
   it("sizes the bottom audio player from view data offsets", () => {
@@ -67,9 +71,11 @@ describe("sounds view", () => {
     );
 
     expect(soundsView).toContain(
-      'style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"',
+      'style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px; bottom: ${audioPlayerBottom};"',
     );
     expect(soundsView).toContain(":mobileLayout=${mobileLayout}");
+    expect(soundsView).toContain("z=1500");
+    expect(soundsView).toContain("bottom: ${audioPlayerBottom};");
   });
 
   it("passes bottom scroll room to the media grid", () => {

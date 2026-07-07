@@ -98,6 +98,20 @@ describe("mobile resource grid zoom wiring", () => {
     },
   );
 
+  it.each(mobileMenuResourcePages)(
+    "uses a trash icon for the mobile delete action on %s",
+    (_name, relativePath) => {
+      const view = readFileSync(
+        new URL(`../../src/pages/${relativePath}`, import.meta.url),
+        "utf8",
+      );
+
+      expect(view).toContain(
+        "rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}",
+      );
+    },
+  );
+
   it.each(mobileIconOnlyImportPages)(
     "uses an icon-only mobile import action before the menu on %s",
     (_name, relativePath) => {
@@ -121,7 +135,7 @@ describe("mobile resource grid zoom wiring", () => {
     const importIndex = catalogView.indexOf("showIconImportButton");
     const menuIndex = catalogView.indexOf("showTrailingMenuButton");
 
-    expect(catalogView).toContain("rtgl-view#importBtn w=36 h=36");
+    expect(catalogView).toContain("rtgl-button#importBtn sq pre=upload v=ol");
     expect(filterIndex).toBeGreaterThan(-1);
     expect(importIndex).toBeGreaterThan(filterIndex);
     expect(importIndex).toBeLessThan(menuIndex);
@@ -141,7 +155,7 @@ describe("mobile resource grid zoom wiring", () => {
     expect(mediaView).toContain("height: 1px");
   });
 
-  it("uses left-only item surface inset in shared resource views", () => {
+  it("uses normal horizontal item surface inset in shared resource views", () => {
     const sharedViews = [
       "mediaResourcesView/mediaResourcesView.view.yaml",
       "catalogResourcesView/catalogResourcesView.view.yaml",
@@ -156,8 +170,8 @@ describe("mobile resource grid zoom wiring", () => {
         "utf8",
       );
 
-      expect(view).toContain("pl=md pos=rel");
-      expect(view).not.toContain("ph=md pos=rel");
+      expect(view).toContain("ph=md pos=rel");
+      expect(view).not.toContain("pl=md pos=rel");
       expect(view).not.toContain("rtgl-grid w=f ph=sm");
       expect(view).not.toContain("rtgl-view w=f d=v ph=sm");
       expect(view).not.toContain("rtgl-view w=f mb=md p=sm");

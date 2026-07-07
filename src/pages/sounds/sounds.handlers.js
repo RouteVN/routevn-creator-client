@@ -332,7 +332,7 @@ const openSoundPreviewById = ({
   syncExplorer = false,
   suppressMobileDetailSheet = false,
 } = {}) => {
-  const { refs, store, render } = deps;
+  const { appService, refs, store, render } = deps;
   if (!itemId) {
     return;
   }
@@ -341,6 +341,11 @@ const openSoundPreviewById = ({
   if (!soundItem?.fileId) {
     return;
   }
+
+  void appService
+    .getAudioService?.()
+    ?.unlock?.()
+    ?.catch?.(() => {});
 
   store.setSelectedItemId({
     itemId,

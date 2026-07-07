@@ -661,12 +661,25 @@ public class MainActivity extends Activity {
                 return new WebResourceResponse(
                     mimeType,
                     null,
+                    200,
+                    "OK",
+                    createInternalFileResponseHeaders(),
                     new FileInputStream(file)
                 );
             } catch (Exception error) {
                 return null;
             }
         }
+    }
+
+    private Map<String, String> createInternalFileResponseHeaders() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Access-Control-Allow-Origin", "*");
+        headers.put("Access-Control-Allow-Methods", "GET, OPTIONS");
+        headers.put("Access-Control-Allow-Headers", "Origin, Range, Accept, Content-Type");
+        headers.put("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges");
+        headers.put("Cross-Origin-Resource-Policy", "cross-origin");
+        return headers;
     }
 
     private final class AndroidBridge {

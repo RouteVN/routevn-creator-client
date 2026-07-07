@@ -74,8 +74,12 @@ describe("sounds handlers", () => {
   });
 
   it("plays mobile long-press previews without opening the detail sheet", () => {
+    const unlock = vi.fn(() => Promise.resolve());
     const deps = {
       i18n: EN_I18N,
+      appService: {
+        getAudioService: vi.fn(() => ({ unlock })),
+      },
       store: {
         selectSoundItemById: vi.fn(({ itemId }) => ({
           id: itemId,
@@ -114,14 +118,23 @@ describe("sounds handlers", () => {
       fileId: "sound-file-1",
       fileName: "Theme",
     });
+    expect(deps.appService.getAudioService).toHaveBeenCalledTimes(1);
+    expect(unlock).toHaveBeenCalledTimes(1);
+    expect(unlock.mock.invocationCallOrder[0]).toBeLessThan(
+      deps.store.openAudioPlayer.mock.invocationCallOrder[0],
+    );
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
   it("plays selected mobile detail sounds", () => {
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
+    const unlock = vi.fn(() => Promise.resolve());
     const deps = {
       i18n: EN_I18N,
+      appService: {
+        getAudioService: vi.fn(() => ({ unlock })),
+      },
       store: {
         selectSelectedItemId: vi.fn(() => "sound-1"),
         selectSoundItemById: vi.fn(({ itemId }) => ({
@@ -161,6 +174,11 @@ describe("sounds handlers", () => {
       fileId: "sound-file-1",
       fileName: "Theme",
     });
+    expect(deps.appService.getAudioService).toHaveBeenCalledTimes(1);
+    expect(unlock).toHaveBeenCalledTimes(1);
+    expect(unlock.mock.invocationCallOrder[0]).toBeLessThan(
+      deps.store.openAudioPlayer.mock.invocationCallOrder[0],
+    );
   });
 
   it("opens a confirmation dialog for selected mobile detail sound deletes", () => {
