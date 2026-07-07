@@ -152,6 +152,10 @@ expect(
   aurPkgbuild.includes(`pkgdesc="${displayName}"`),
   "AUR pkgdesc must use RouteVN Creator",
 );
+expect(
+  aurPkgbuild.includes("export VITE_ROUTEVN_DISTRIBUTION=package"),
+  "AUR build must disable direct-download updater UI",
+);
 expect(Boolean(aurPkgrel), "AUR pkgrel must be set");
 expect(
   aurSrcinfo.includes(`\tpkgrel = ${aurPkgrel}`),

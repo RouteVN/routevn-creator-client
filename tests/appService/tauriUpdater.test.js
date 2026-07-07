@@ -33,6 +33,7 @@ const createUpdate = ({
 const createUpdaterClient = ({
   globalUI = createGlobalUI(),
   update = createUpdate(),
+  linuxUpdateInstallMode = "appimage",
 } = {}) => {
   checkMock.mockResolvedValue(update);
 
@@ -42,6 +43,7 @@ const createUpdaterClient = ({
       get: vi.fn(),
       set: vi.fn(),
     },
+    linuxUpdateInstallMode,
   });
 
   return {
@@ -97,6 +99,43 @@ describe("tauri updater", () => {
     });
     expect(downloadAndInstall).toHaveBeenCalledWith(expect.any(Function));
     expect(relaunchMock).toHaveBeenCalled();
+  });
+
+  it("does not self-install package-managed Linux updates", async () => {
+    vi.stubGlobal("navigator", {
+      platform: "Linux x86_64",
+      userAgent: "RouteVN Creator Linux",
+    });
+
+    const globalUI = createGlobalUI();
+    const downloadAndInstall = vi.fn(() => Promise.resolve());
+    const { updater } = createUpdaterClient({
+      globalUI,
+      linuxUpdateInstallMode: "package-manager",
+      update: createUpdate({ downloadAndInstall }),
+    });
+
+    const result = await updater.checkForUpdates(false, {
+      copy: {
+        packageManagedLinuxUpdateMessage:
+          "Update {version} is available. Use your package manager.",
+        updateAvailableTitle: "Update Available",
+      },
+    });
+
+    expect(result).toEqual({
+      version: "1.7.3",
+      date: "2026-07-03",
+      body: "Fix packaging.",
+    });
+    expect(checkMock).toHaveBeenCalledWith(undefined);
+    expect(globalUI.showAlert).toHaveBeenCalledWith({
+      message: "Update 1.7.3 is available. Use your package manager.",
+      title: "Update Available",
+    });
+    expect(globalUI.showConfirm).not.toHaveBeenCalled();
+    expect(downloadAndInstall).not.toHaveBeenCalled();
+    expect(relaunchMock).not.toHaveBeenCalled();
   });
 
   it("does not prompt on Linux when no update is available", async () => {

@@ -721,6 +721,19 @@ describe("graphicsService", () => {
       expect(video.muted).toBe(false);
       expect(video.volume).toBe(0.8);
       expect(video.loop).toBe(false);
+
+      video.play.mockClear();
+      await service.warmRenderStateVideoAssets({
+        elements: [
+          {
+            id: "video-element",
+            type: "video",
+            src: "video-1",
+          },
+        ],
+      });
+
+      expect(video.play).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
       if (originalHTMLVideoElement === undefined) {

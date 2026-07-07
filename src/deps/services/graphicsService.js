@@ -1156,12 +1156,14 @@ export const createGraphicsService = async ({
 
     if (
       video.__routevnPlaybackWarmed === true ||
+      video.__routevnPlaybackWarmupAttempted === true ||
       video.__routevnPlaybackWarmupStarted === true
     ) {
       return;
     }
 
     video.__routevnPlaybackWarmupStarted = true;
+    video.__routevnPlaybackWarmupAttempted = true;
     let previousMuted = video.muted;
     let previousVolume = video.volume;
     let previousLoop = video.loop;

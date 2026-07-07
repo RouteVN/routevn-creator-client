@@ -14,6 +14,19 @@ const isMacOs = () => {
   return /Mac/.test(navigator.platform || "");
 };
 
+const isLinux = () => {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const userAgentPlatform = navigator.userAgentData?.platform;
+  if (typeof userAgentPlatform === "string") {
+    return userAgentPlatform === "Linux";
+  }
+
+  return /Linux/.test(navigator.platform || navigator.userAgent || "");
+};
+
 const formatUpdaterCopy = (template, values = {}) => {
   return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
     values[key] === undefined ? match : String(values[key]),
@@ -24,10 +37,36 @@ const resolveUpdaterCopy = (options = {}) => {
   return options.copy ?? options ?? {};
 };
 
-const createUpdater = ({ globalUI, keyValueStore }) => {
+const createUpdater = ({
+  globalUI,
+  keyValueStore,
+  linuxUpdateInstallMode = "appimage",
+}) => {
   let updateAvailable = false;
   let updateInfo = null;
   let downloadProgress = 0;
+
+  const canInstallUpdate = () => {
+    return !isLinux() || linuxUpdateInstallMode === "appimage";
+  };
+
+  const showPackageManagedLinuxUpdate = async (update, copy = {}) => {
+    if (!globalUI) {
+      return;
+    }
+
+    await globalUI.showAlert({
+      message: formatUpdaterCopy(
+        copy.packageManagedLinuxUpdateMessage ??
+          "Update {version} is available. Please update RouteVN Creator through your package manager.",
+        {
+          version: update.version,
+          releaseNotes: update.body ?? "",
+        },
+      ),
+      title: copy.updateAvailableTitle ?? "Update Available",
+    });
+  };
 
   const checkForUpdates = async (silent = false, options = {}) => {
     const copy = resolveUpdaterCopy(options);
@@ -58,6 +97,13 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
         date: update.date,
         body: update.body,
       };
+
+      if (!canInstallUpdate()) {
+        if (!silent) {
+          await showPackageManagedLinuxUpdate(update, copy);
+        }
+        return updateInfo;
+      }
 
       if (globalUI) {
         const shouldUpdate = await globalUI.showConfirm({
