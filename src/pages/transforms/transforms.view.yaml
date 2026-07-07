@@ -129,10 +129,6 @@ refs:
     eventListeners:
       item-click:
         handler: handleTransformPreviewImageSelectorFileExplorerClick
-  cancelTransformPreviewImageSelection:
-    eventListeners:
-      click:
-        handler: handleTransformPreviewImageSelectorCancel
   confirmTransformPreviewImageSelection:
     eventListeners:
       click:
@@ -230,8 +226,8 @@ template:
                       - rtgl-button#mobileDetailEditButton w=1fg v=se pre=edit: ${editButton}
                       - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: ${previewButton}
                   - rtgl-view d=h w=f g=sm:
-                      - rtgl-button#mobileDetailDuplicateButton w=1fg v=se: ${duplicateButton}
-                      - rtgl-button#mobileDetailDeleteButton w=1fg v=se: ${deleteButton}
+                      - rtgl-button#mobileDetailDuplicateButton w=1fg v=se pre=duplicate: ${duplicateButton}
+                      - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect slot="transform-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
@@ -283,12 +279,12 @@ template:
       - $if imageSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
               - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
-                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-base-file-explorer#transformPreviewImageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
+                  - $if showTransformPreviewImageSelectorFileExplorer:
+                      - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                          - rvn-base-file-explorer#transformPreviewImageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
                   - 'rtgl-view#transformPreviewImageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
                       - rvn-image-selector#transformPreviewImageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelTransformPreviewImageSelection variant=se: ${cancelButton}
                   - rtgl-button#confirmTransformPreviewImageSelection variant=pr: ${confirmButton}
   - $when: fullImagePreviewVisible
     'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: pointer; outline: none;"':

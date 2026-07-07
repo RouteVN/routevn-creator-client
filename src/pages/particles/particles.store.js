@@ -240,6 +240,7 @@ const {
       dialogPreviewAspectRatio: state.dialogPreviewAspectRatio,
       dialogPreviewBackgroundImage: buildDialogPreviewBackgroundImage(state),
       previewImageSelectorDialog: state.previewImageSelectorDialog,
+      showImageSelectorFileExplorer: !state.isTouchMode,
       imageFolderItems: toFlatItems(state.imagesData).filter(
         (item) => item.type === "folder",
       ),

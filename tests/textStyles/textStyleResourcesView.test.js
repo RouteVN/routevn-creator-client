@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleBeforeMount,
   handleContextMenuClickItem,
   handleItemContextMenu,
   handleItemDoubleClick,
+  handleZoomOut,
 } from "../../src/components/textStyleResourcesView/textStyleResourcesView.handlers.js";
 import {
   createInitialState,
@@ -10,6 +12,20 @@ import {
   showContextMenu,
   setProgressiveRenderedItemCount,
 } from "../../src/components/textStyleResourcesView/textStyleResourcesView.store.js";
+
+const createMobileColumnZoomProps = () => ({
+  mobileLayout: true,
+  showZoomControls: true,
+  zoomControlMode: "columns",
+  itemsPerRowConfigKey: "groupTextStylesView.itemsPerRow",
+});
+
+const createProgressiveStore = (overrides = {}) => ({
+  selectProgressiveFrameId: () => undefined,
+  setProgressiveRenderSignature: vi.fn(),
+  setProgressiveRenderedItemCount: vi.fn(),
+  ...overrides,
+});
 
 describe("textStyleResourcesView", () => {
   it("ignores mobile item double clicks", () => {
@@ -239,6 +255,59 @@ describe("textStyleResourcesView", () => {
     expect(viewData.itemsPerRow).toBe(6);
     expect(viewData.cardGridColumns).toBe("6");
     expect(viewData.zoomControlMax).toBe(6);
+  });
+
+  it("does not restore desktop column counts for mobile text style zoom", () => {
+    const getUserConfig = vi.fn((key) =>
+      key === "groupTextStylesView.itemsPerRow" ? 8 : undefined,
+    );
+    const setItemsPerRow = vi.fn();
+
+    handleBeforeMount({
+      props: createMobileColumnZoomProps(),
+      appService: {
+        getUserConfig,
+      },
+      store: createProgressiveStore({
+        setItemsPerRow,
+      }),
+    });
+
+    expect(getUserConfig).toHaveBeenCalledWith(
+      "groupTextStylesView.mobileItemsPerRow",
+    );
+    expect(getUserConfig).not.toHaveBeenCalledWith(
+      "groupTextStylesView.itemsPerRow",
+    );
+    expect(setItemsPerRow).not.toHaveBeenCalled();
+  });
+
+  it("persists mobile text style columns separately from desktop", () => {
+    let itemsPerRow = 6;
+    const setUserConfig = vi.fn();
+    const render = vi.fn();
+
+    const handled = handleZoomOut({
+      props: createMobileColumnZoomProps(),
+      appService: {
+        setUserConfig,
+      },
+      store: {
+        selectItemsPerRow: () => itemsPerRow,
+        setItemsPerRow: ({ itemsPerRow: nextItemsPerRow }) => {
+          itemsPerRow = nextItemsPerRow;
+        },
+      },
+      render,
+    });
+
+    expect(handled).toBe(true);
+    expect(itemsPerRow).toBe(6);
+    expect(setUserConfig).toHaveBeenCalledWith(
+      "groupTextStylesView.mobileItemsPerRow",
+      6,
+    );
+    expect(render).toHaveBeenCalled();
   });
 
   it("reserves text style placeholders before progressive hydration", () => {

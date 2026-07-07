@@ -597,8 +597,11 @@ const applyPanelValueUpdate = (
 };
 
 export const handleBeforeMount = (deps) => {
-  const { props, store } = deps;
+  const { props, store, uiConfig } = deps;
   const values = props.values || {};
+  store.setUiConfig({
+    uiConfig,
+  });
   store.setValues({
     values,
   });

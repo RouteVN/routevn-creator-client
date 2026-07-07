@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+APPIMAGE_ARTIFACT_FILE_NAME="RouteVN-Creator.AppImage"
+
 load_env() {
   if [ -f ".env" ]; then
     set -a
@@ -22,6 +24,17 @@ get_target_dir() {
 
 get_appimage_bundle_dir() {
   echo "$(get_target_dir)/release/bundle/appimage"
+}
+
+get_stable_appimage_path() {
+  echo "$(get_appimage_bundle_dir)/${APPIMAGE_ARTIFACT_FILE_NAME}"
+}
+
+clean_appimage_bundle_dir() {
+  local bundle_dir
+
+  bundle_dir="$(get_appimage_bundle_dir)"
+  rm -rf "${bundle_dir}"
 }
 
 find_single_appdir() {
@@ -134,22 +147,50 @@ remove_bundled_graphics_stack() {
   echo "Removed ${removed_count} bundled graphics stack libraries from ${appdir}."
 }
 
+fix_appimage_desktop_metadata() {
+  local appdir
+  local desktop_file
+  local icon_file
+
+  appdir="$1"
+  desktop_file="${appdir}/routevn-creator.desktop"
+  icon_file="${appdir}/routevn-creator.png"
+
+  if [ -f "${desktop_file}" ]; then
+    sed -i 's/^Name=.*/Name=RouteVN Creator/' "${desktop_file}"
+  fi
+
+  if [ -e "${icon_file}" ]; then
+    rm -f "${appdir}/.DirIcon"
+    cp -L "${icon_file}" "${appdir}/.DirIcon"
+  fi
+}
+
 repack_appimage() {
   local appdir
-  local appimage_path
+  local source_appimage_path
+  local stable_appimage_path
   local appimage_plugin
   local bundle_dir
   local generated_appimage
-  local appimage_file
+  local stable_appimage_file
 
   appdir="$(find_single_appdir)"
-  appimage_path="$(find_latest_appimage)"
+  source_appimage_path="$(find_latest_appimage)"
+  stable_appimage_path="$(get_stable_appimage_path)"
   appimage_plugin="$(ensure_appimage_output_plugin)"
   bundle_dir="$(get_appimage_bundle_dir)"
-  appimage_file="$(basename "${appimage_path}")"
+  stable_appimage_file="$(basename "${stable_appimage_path}")"
 
   remove_bundled_graphics_stack "${appdir}"
-  rm -f "${appimage_path}" "${appimage_path}.sig" "${appimage_path}.sha256"
+  fix_appimage_desktop_metadata "${appdir}"
+  rm -f \
+    "${source_appimage_path}" \
+    "${source_appimage_path}.sig" \
+    "${source_appimage_path}.sha256" \
+    "${stable_appimage_path}" \
+    "${stable_appimage_path}.sig" \
+    "${stable_appimage_path}.sha256"
 
   (
     cd "${bundle_dir}"
@@ -157,13 +198,13 @@ repack_appimage() {
   )
 
   generated_appimage="$(find_latest_appimage)"
-  if [ "${generated_appimage}" != "${appimage_path}" ]; then
-    mv "${generated_appimage}" "${appimage_path}"
+  if [ "${generated_appimage}" != "${stable_appimage_path}" ]; then
+    mv -f "${generated_appimage}" "${stable_appimage_path}"
   fi
 
-  tauri signer sign "${appimage_path}" >/dev/null
+  tauri signer sign "${stable_appimage_path}" >/dev/null
 
-  echo "Repacked AppImage without bundled graphics stack: ${appimage_file}"
+  echo "Repacked AppImage without bundled graphics stack: ${stable_appimage_file}"
 }
 
 write_appimage_checksum() {
@@ -215,10 +256,12 @@ fi
 
 export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
 
+bun run tauri:validate:linux-packaging
 bun run build:tauri
 
 export NO_STRIP="${NO_STRIP:-1}"
 
+clean_appimage_bundle_dir
 tauri build --config src-tauri/tauri.prod.conf.json --bundles appimage
 repack_appimage
 write_appimage_checksum

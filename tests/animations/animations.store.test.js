@@ -42,6 +42,7 @@ describe("animations.store", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
+    expect(viewData.editButton).toBe("Edit");
     expect(viewData).not.toHaveProperty("selectedAnimationPreviewFileId");
     expect(viewData.selectedAnimationPreviewAspectRatio).toBe("1920 / 1080");
     expect(viewData.animationPreviewOpacity).toBe(0);

@@ -196,7 +196,7 @@ template:
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
                   - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: ${previewButton}
-                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se: ${deleteButton}
+                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - $if selectedTextureImageFileId:
@@ -238,8 +238,9 @@ template:
       - $if previewImageSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
               - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
-                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
+                  - $if showImageSelectorFileExplorer:
+                      - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                          - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
                   - 'rtgl-view#imageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
                       - rvn-image-selector#imageSelector selectedImageId=${previewImageSelectorDialog.selectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:

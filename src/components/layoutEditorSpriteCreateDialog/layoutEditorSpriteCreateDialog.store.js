@@ -1,4 +1,5 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const createDefaultValuesFromProps = (props = {}) => {
   const source = props.defaultValues ?? {};
@@ -24,7 +25,12 @@ export const createInitialState = () => {
     fullImagePreviewVisible: false,
     fullImagePreviewImageId: undefined,
     validationErrors: {},
+    isTouchMode: false,
   };
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode = isTouchUiConfig(uiConfig);
 };
 
 export const syncFromProps = ({ state }, { props } = {}) => {
@@ -104,6 +110,7 @@ export const selectViewData = ({ state, constants }) => {
     imageId: state.imageId,
     imageSelectorDialog: state.imageSelectorDialog,
     fileExplorerItems,
+    showImageSelectorFileExplorer: !state.isTouchMode,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     validationErrors: state.validationErrors,

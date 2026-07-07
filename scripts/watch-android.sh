@@ -48,6 +48,9 @@ cp -rf static/* _site/
 mkdir -p _site/public
 cp -f static/public/rtgl-icons.js _site/public/rtgl-icons.js
 
+echo "Building initial Android frontend bundle..."
+"${RTGL_BIN}" fe build -s src/setup.android.js
+
 if command -v adb >/dev/null 2>&1; then
   ADB_ARGS=()
   if [ -n "${ANDROID_SERIAL:-}" ]; then

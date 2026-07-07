@@ -79,8 +79,25 @@ const toItemsPerRowFromColumnZoomControlValue = (value, props) => {
   );
 };
 
-const getItemsPerRowConfigKey = (props) =>
-  props?.itemsPerRowConfigKey ?? undefined;
+const getMobileItemsPerRowConfigKey = (configKey) => {
+  const itemsPerRowSuffix = ".itemsPerRow";
+  if (configKey.endsWith(itemsPerRowSuffix)) {
+    return `${configKey.slice(0, -itemsPerRowSuffix.length)}.mobileItemsPerRow`;
+  }
+
+  return `${configKey}.mobile`;
+};
+
+const getItemsPerRowConfigKey = (props) => {
+  const configKey = props?.itemsPerRowConfigKey ?? undefined;
+  if (!configKey) {
+    return undefined;
+  }
+
+  return isMobileColumnZoomControl(props)
+    ? getMobileItemsPerRowConfigKey(configKey)
+    : configKey;
+};
 
 const syncPersistedItemsPerRow = ({ appService, props, store } = {}) => {
   if (!isColumnZoomControlMode(props)) {

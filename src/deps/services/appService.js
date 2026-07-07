@@ -296,5 +296,33 @@ export const createAppService = (params) => {
         throw error;
       }
     },
+
+    async getLinuxAppImageDesktopIntegrationStatus() {
+      try {
+        return await invoke("get_linux_appimage_desktop_integration_status");
+      } catch (error) {
+        const message = String(error?.message ?? error ?? "");
+        if (
+          message.includes(
+            "Command get_linux_appimage_desktop_integration_status not found",
+          )
+        ) {
+          return {
+            available: false,
+            integrated: false,
+          };
+        }
+
+        throw error;
+      }
+    },
+
+    async installLinuxAppImageDesktopIntegration() {
+      return invoke("install_linux_appimage_desktop_integration");
+    },
+
+    async restartLinuxAppImageFromDesktopIntegration() {
+      return invoke("restart_linux_appimage_from_desktop_integration");
+    },
   };
 };

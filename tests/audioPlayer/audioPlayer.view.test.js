@@ -2,6 +2,30 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("audio player view", () => {
+  it("fills the player height without pushing controls below center", () => {
+    const audioPlayerView = readFileSync(
+      new URL(
+        "../../src/components/audioPlayer/audioPlayer.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(audioPlayerView).toContain(
+      'rtgl-view w=f h=f d=v bgc=mu style="min-height: 0;"',
+    );
+    expect(audioPlayerView).toContain(
+      'rtgl-view w=f style="flex: 0 0 6px;"',
+    );
+    expect(audioPlayerView).toContain(
+      'rtgl-view d=h av=c w=f h=1fg p=md g=md style="min-width: 0; min-height: 0; box-sizing: border-box;"',
+    );
+    expect(audioPlayerView).toContain(
+      'rtgl-view ph=md d=h av=c w=f h=1fg p=md style="min-height: 0;"',
+    );
+    expect(audioPlayerView).not.toContain("rtgl-view w=f g=md bgc=mu");
+  });
+
   it("keeps desktop playback controls centered after the title", () => {
     const audioPlayerView = readFileSync(
       new URL(

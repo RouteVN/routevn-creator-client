@@ -71,8 +71,6 @@ const sourceFiles = [
   "src-tauri/tauri.linux.conf.json",
   "src-tauri/assets/com.routevn.creator.metainfo.xml",
   "src-tauri/assets/linux-desktop.desktop.hbs",
-  "packaging/aur/PKGBUILD",
-  "packaging/aur/.SRCINFO",
 ];
 
 for (const sourceFile of sourceFiles) {
@@ -84,9 +82,13 @@ const tauriConfig = readJson("src-tauri/tauri.conf.json");
 const linuxConfig = readJson("src-tauri/tauri.linux.conf.json");
 const metainfo = readText("src-tauri/assets/com.routevn.creator.metainfo.xml");
 const desktopTemplate = readText("src-tauri/assets/linux-desktop.desktop.hbs");
-const aurPkgbuild = readText("packaging/aur/PKGBUILD");
-const aurSrcinfo = readText("packaging/aur/.SRCINFO");
-const aurPkgrel = aurPkgbuild.match(/^pkgrel=(\d+)$/m)?.[1];
+const appImageDockerBuildScript = readText(
+  "scripts/tauri-build-appimage-docker.sh",
+);
+const readme = readText("README.md");
+const linuxReleaseRunbook = readText("docs/runbooks/linux-release.md");
+const expectedAppImageDockerOutput =
+  "src-tauri/target/release/bundle/appimage/linux-x86_64-<version>";
 
 expect(
   packageJson.description.startsWith(displayName) &&
@@ -145,35 +147,23 @@ expect(
   "Linux desktop template display name is wrong",
 );
 expect(
-  aurPkgbuild.includes("pkgname=routevn-creator"),
-  "AUR pkgname must be routevn-creator",
+  appImageDockerBuildScript.includes(
+    '${ROOT_DIR}/src-tauri/target/release/bundle/appimage/${APPIMAGE_RELEASE_DIR}',
+  ),
+  "Docker AppImage output must stay under the Tauri target bundle directory",
 );
 expect(
-  aurPkgbuild.includes(`pkgdesc="${displayName}"`),
-  "AUR pkgdesc must use RouteVN Creator",
+  !appImageDockerBuildScript.includes("dist/appimage"),
+  "Docker AppImage output must not use dist/appimage",
 );
 expect(
-  aurPkgbuild.includes("export VITE_ROUTEVN_DISTRIBUTION=package"),
-  "AUR build must disable direct-download updater UI",
-);
-expect(Boolean(aurPkgrel), "AUR pkgrel must be set");
-expect(
-  aurSrcinfo.includes(`\tpkgrel = ${aurPkgrel}`),
-  "AUR .SRCINFO pkgrel must match PKGBUILD",
+  readme.includes(expectedAppImageDockerOutput),
+  "README AppImage Docker output path must use the versioned Tauri target bundle directory",
 );
 expect(
-  aurSrcinfo.includes(`\tpkgdesc = ${displayName}`),
-  "AUR .SRCINFO pkgdesc must use RouteVN Creator",
+  linuxReleaseRunbook.includes(expectedAppImageDockerOutput),
+  "Linux release runbook AppImage Docker output path must use the versioned Tauri target bundle directory",
 );
-expect(
-  aurPkgbuild.includes("Comment=RouteVN Creator"),
-  "AUR desktop comment must use RouteVN Creator",
-);
-expect(
-  aurPkgbuild.includes("/usr/share/applications/routevn-creator.desktop"),
-  "AUR desktop file must be routevn-creator.desktop",
-);
-
 if (failures.length > 0) {
   console.error("Linux packaging validation failed:");
 

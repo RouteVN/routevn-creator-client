@@ -153,11 +153,14 @@ describe("mediaResourcesView.handlers", () => {
 
   it("clamps restored mobile column counts to six", () => {
     const setItemsPerRow = vi.fn();
+    const getUserConfig = vi.fn((key) =>
+      key === "groupImagesView.mobileItemsPerRow" ? 12 : undefined,
+    );
 
     handleBeforeMount({
       props: createMobileColumnZoomProps(),
       appService: {
-        getUserConfig: vi.fn(() => 12),
+        getUserConfig,
       },
       store: {
         setItemsPerRow,
@@ -167,6 +170,12 @@ describe("mediaResourcesView.handlers", () => {
       },
     });
 
+    expect(getUserConfig).toHaveBeenCalledWith(
+      "groupImagesView.mobileItemsPerRow",
+    );
+    expect(getUserConfig).not.toHaveBeenCalledWith(
+      "groupImagesView.itemsPerRow",
+    );
     expect(setItemsPerRow).toHaveBeenCalledWith({ itemsPerRow: 6 });
   });
 
@@ -192,7 +201,7 @@ describe("mediaResourcesView.handlers", () => {
     expect(handled).toBe(true);
     expect(itemsPerRow).toBe(6);
     expect(setUserConfig).toHaveBeenCalledWith(
-      "groupImagesView.itemsPerRow",
+      "groupImagesView.mobileItemsPerRow",
       6,
     );
     expect(render).toHaveBeenCalled();

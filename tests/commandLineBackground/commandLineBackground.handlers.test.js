@@ -49,6 +49,7 @@ import {
   setSelectedTransform,
   setTab,
   setTempSelectedResource,
+  setUiConfig,
 } from "../../src/components/commandLineBackground/commandLineBackground.store.js";
 
 const createEmptyCollection = () => ({
@@ -107,6 +108,7 @@ const createStoreApi = (state) => ({
   setTab: (payload) => setTab({ state }, payload),
   setTempSelectedResource: (payload) =>
     setTempSelectedResource({ state }, payload),
+  setUiConfig: (payload) => setUiConfig({ state }, payload),
 });
 
 const setRepositoryCollections = (state) => {

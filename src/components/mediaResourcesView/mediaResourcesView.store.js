@@ -263,7 +263,7 @@ export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
   state.dropdownMenu.items = props.itemContextMenuItems ?? [
-    { label: "Delete", type: "item", value: "delete-item" },
+    { label: "Delete", icon: "trash", type: "item", value: "delete-item" },
   ];
 };
 

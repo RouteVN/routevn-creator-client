@@ -110,4 +110,42 @@ describe("images file explorer", () => {
       message: "Cannot delete resource, it is currently in use.",
     });
   });
+
+  it("refreshes after drag reorder without changing page selection", async () => {
+    const refresh = vi.fn(async () => {});
+    const moveImage = vi.fn(async () => {});
+    const deps = {
+      projectService: {
+        ensureRepository: vi.fn(async () => {}),
+        moveImage,
+      },
+    };
+    const handlers = createResourceFileExplorerHandlers({
+      resourceType: "images",
+      refresh,
+    });
+
+    await handlers.handleFileExplorerTargetChanged(deps, {
+      _event: {
+        detail: {
+          source: {
+            id: "image-1",
+          },
+          target: {
+            id: "image-2",
+            parentId: "folder-1",
+          },
+          position: "below",
+        },
+      },
+    });
+
+    expect(moveImage).toHaveBeenCalledWith({
+      imageId: "image-1",
+      parentId: "folder-1",
+      position: "after",
+      positionTargetId: "image-2",
+    });
+    expect(refresh).toHaveBeenCalledWith(deps);
+  });
 });

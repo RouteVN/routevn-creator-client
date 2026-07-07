@@ -41,11 +41,48 @@ const initializeCollapsedFolders = (deps) => {
 
 export const handleBeforeMount = (deps) => {
   initializeCollapsedFolders(deps);
-  return mountSubscriptions(deps);
+  const cleanupSubscriptions = mountSubscriptions(deps);
+  return () => {
+    clearTouchDragTimer(deps.store);
+    clearDragAutoScrollTimer(deps.store);
+    cleanupSubscriptions();
+  };
 };
 
 const getItemIdFromEvent = (event) => {
   return event?.currentTarget?.getAttribute?.("data-item-id") || "";
+};
+
+const getTouchPoint = (event) => {
+  return event?.touches?.[0] ?? event?.changedTouches?.[0];
+};
+
+const getPointerPoint = (event) => {
+  if (
+    typeof event?.clientX !== "number" ||
+    typeof event?.clientY !== "number"
+  ) {
+    return undefined;
+  }
+
+  return {
+    x: event.clientX,
+    y: event.clientY,
+  };
+};
+
+const isDragEnabledForAttrs = (attrs) => {
+  return (
+    isBooleanAttrEnabled(attrs, "allowDrag", "allow-drag") ||
+    isBooleanAttrEnabled(attrs, "draggable", "draggable")
+  );
+};
+
+const isFolderArrowEvent = (event) => {
+  return (
+    typeof event?.target?.closest === "function" &&
+    Boolean(event.target.closest("[data-file-explorer-arrow]"))
+  );
 };
 
 const calculateForbiddenTargets = (sourceItem, allItems) => {
@@ -288,6 +325,13 @@ const isDropPlacementAllowed = ({
 };
 
 const DRAG_ACTIVATION_DISTANCE = 4;
+const TOUCH_LONG_PRESS_DELAY_MS = 360;
+const TOUCH_SCROLL_CANCEL_DISTANCE = 8;
+const TOUCH_CONTEXT_MENU_SUPPRESS_MS = 1200;
+const DRAG_AUTO_SCROLL_EDGE_SIZE = 48;
+const DRAG_AUTO_SCROLL_INTERVAL_MS = 50;
+const DRAG_AUTO_SCROLL_MIN_STEP = 4;
+const DRAG_AUTO_SCROLL_MAX_STEP = 20;
 
 /**
  *  we need to find the item that is under the mouse
@@ -422,56 +466,268 @@ export const getSelectedItemIndex = (
   };
 };
 
-export const handleItemMouseDown = (deps, payload) => {
-  const { store, refs, props, props: attrs } = deps;
+const getItemRefEntries = (refs = {}) => {
+  return Object.entries(refs).filter(([key]) => key.startsWith("itemRef"));
+};
 
-  // Drag should start only on primary button.
-  if (payload?._event?.button !== 0) {
+const getDragContainerRect = (deps, { event } = {}) => {
+  const eventContainerRect =
+    event?.currentTarget?.parentElement?.getBoundingClientRect?.();
+  if (eventContainerRect) {
+    return eventContainerRect;
+  }
+
+  const firstItemElement = getItemRefEntries(deps.refs ?? [])[0]?.[1];
+  return firstItemElement?.parentElement?.getBoundingClientRect?.();
+};
+
+const measureDragLayout = (deps, { event } = {}) => {
+  const containerRect = getDragContainerRect(deps, { event });
+  if (!containerRect) {
+    return undefined;
+  }
+
+  const itemRects = getItemRefEntries(deps.refs ?? {}).reduce(
+    (acc, [, ref]) => {
+      const itemId = ref?.getAttribute?.("data-item-id");
+      if (!itemId) {
+        return acc;
+      }
+
+      const rect = ref.getBoundingClientRect();
+      acc[itemId] = {
+        top: rect.top,
+        bottom: rect.bottom,
+        height: rect.height,
+        y: rect.top,
+        relativeTop: rect.top - containerRect.top,
+        relativeBottom: rect.bottom - containerRect.top,
+      };
+      return acc;
+    },
+    {},
+  );
+
+  return {
+    itemRects,
+    containerTop: containerRect.top,
+  };
+};
+
+const refreshDragLayout = (deps) => {
+  const layout = measureDragLayout(deps);
+  if (!layout) {
+    return false;
+  }
+
+  deps.store.setDragLayout(layout);
+  return true;
+};
+
+const clearDragAutoScrollTimer = (store) => {
+  const timerId = store.selectDragAutoScrollTimerId();
+  if (timerId !== undefined) {
+    clearInterval(timerId);
+  }
+
+  store.clearDragAutoScroll();
+};
+
+const getRootMaxScrollTop = (root) => {
+  const scrollHeight = Number(root?.scrollHeight);
+  const clientHeight = Number(root?.clientHeight);
+  if (!Number.isFinite(scrollHeight) || !Number.isFinite(clientHeight)) {
+    return 0;
+  }
+
+  return Math.max(0, scrollHeight - clientHeight);
+};
+
+const getDragAutoScrollStep = (root, point) => {
+  const rect = root?.getBoundingClientRect?.();
+  if (!rect || !point) {
+    return 0;
+  }
+
+  const maxScrollTop = getRootMaxScrollTop(root);
+  if (maxScrollTop <= 0) {
+    return 0;
+  }
+
+  const distanceToTop = point.y - rect.top;
+  if (distanceToTop < DRAG_AUTO_SCROLL_EDGE_SIZE && root.scrollTop > 0) {
+    const ratio = Math.min(
+      1,
+      (DRAG_AUTO_SCROLL_EDGE_SIZE - distanceToTop) / DRAG_AUTO_SCROLL_EDGE_SIZE,
+    );
+    return -Math.round(
+      DRAG_AUTO_SCROLL_MIN_STEP +
+        ratio * (DRAG_AUTO_SCROLL_MAX_STEP - DRAG_AUTO_SCROLL_MIN_STEP),
+    );
+  }
+
+  const distanceToBottom = rect.bottom - point.y;
+  if (
+    distanceToBottom < DRAG_AUTO_SCROLL_EDGE_SIZE &&
+    root.scrollTop < maxScrollTop
+  ) {
+    const ratio = Math.min(
+      1,
+      (DRAG_AUTO_SCROLL_EDGE_SIZE - distanceToBottom) /
+        DRAG_AUTO_SCROLL_EDGE_SIZE,
+    );
+    return Math.round(
+      DRAG_AUTO_SCROLL_MIN_STEP +
+        ratio * (DRAG_AUTO_SCROLL_MAX_STEP - DRAG_AUTO_SCROLL_MIN_STEP),
+    );
+  }
+
+  return 0;
+};
+
+const applyDragAutoScroll = (deps) => {
+  const { refs, store } = deps;
+  const root = refs?.root;
+  const point = store.selectDragAutoScrollPoint();
+  const step = getDragAutoScrollStep(root, point);
+  if (step === 0) {
+    clearDragAutoScrollTimer(store);
     return;
   }
 
-  const isDragEnabled =
-    isBooleanAttrEnabled(attrs, "allowDrag", "allow-drag") ||
-    isBooleanAttrEnabled(attrs, "draggable", "draggable");
-
-  if (!isDragEnabled) {
+  const maxScrollTop = getRootMaxScrollTop(root);
+  const previousScrollTop = root.scrollTop;
+  root.scrollTop = Math.max(
+    0,
+    Math.min(maxScrollTop, previousScrollTop + step),
+  );
+  if (root.scrollTop === previousScrollTop) {
+    clearDragAutoScrollTimer(store);
     return;
   }
 
-  const refIds = refs;
+  refreshDragLayout(deps);
+  updateDragTarget(deps, { clientY: point.y });
+};
 
-  // Get the container element to calculate relative positions
-  const containerRect =
-    payload._event.currentTarget.parentElement.getBoundingClientRect();
+const updateDragAutoScroll = (deps, { point } = {}) => {
+  const { store, refs } = deps;
+  store.setDragAutoScrollPoint({ point });
 
-  const itemRects = Object.keys(refIds).reduce((acc, key) => {
-    const ref = refIds[key];
-    if (!key.startsWith("itemRef")) {
-      return acc;
+  if (!store.selectIsDragging()) {
+    clearDragAutoScrollTimer(store);
+    return;
+  }
+
+  if (getDragAutoScrollStep(refs?.root, point) === 0) {
+    clearDragAutoScrollTimer(store);
+    return;
+  }
+
+  if (store.selectDragAutoScrollTimerId() !== undefined) {
+    return;
+  }
+
+  const timerId = setInterval(() => {
+    if (!store.selectIsDragging()) {
+      clearDragAutoScrollTimer(store);
+      return;
     }
-    const itemId = ref?.getAttribute?.("data-item-id");
-    if (!itemId) {
-      return acc;
-    }
-    const rect = ref.getBoundingClientRect();
-    acc[itemId] = {
-      top: rect.top,
-      bottom: rect.bottom,
-      height: rect.height,
-      y: rect.top,
-      relativeTop: rect.top - containerRect.top,
-      relativeBottom: rect.bottom - containerRect.top,
-    };
-    return acc;
-  }, {});
 
-  const itemId = getItemIdFromEvent(payload._event);
+    applyDragAutoScroll(deps);
+  }, DRAG_AUTO_SCROLL_INTERVAL_MS);
+  store.setDragAutoScrollTimerId({ timerId });
+  applyDragAutoScroll(deps);
+};
+
+const suppressTouchContextMenu = (store) => {
+  store.setTouchContextMenuSuppressUntil({
+    suppressUntil: Date.now() + TOUCH_CONTEXT_MENU_SUPPRESS_MS,
+  });
+};
+
+const clearTouchDragTimer = (store) => {
+  const timerId = store.selectTouchDragTimerId();
+  if (timerId === undefined) {
+    return;
+  }
+
+  clearTimeout(timerId);
+  store.setTouchDragTimerId({ timerId: undefined });
+};
+
+const cancelPendingTouchDrag = (deps) => {
+  const { store } = deps;
+  clearTouchDragTimer(store);
+  clearDragAutoScrollTimer(store);
+  store.clearPendingDrag();
+  store.clearTouchDrag();
+};
+
+const scrollRootByTouchDelta = (deps, { fromPoint, toPoint } = {}) => {
+  const root = deps.refs?.root;
+  if (!root || !fromPoint || !toPoint) {
+    return;
+  }
+
+  const deltaY = fromPoint.y - toPoint.y;
+  if (deltaY === 0) {
+    return;
+  }
+
+  root.scrollTop += deltaY;
+};
+
+const startTouchScroll = (deps, { fromPoint, toPoint } = {}) => {
+  const { store } = deps;
+  const pointerId = store.selectTouchDragPointerId();
+  clearTouchDragTimer(store);
+  store.clearPendingDrag();
+  store.clearTouchDrag();
+  store.setTouchDragPointerId({ pointerId });
+  store.setTouchScrollActive({ active: true });
+  store.setTouchScrollLastPoint({ point: toPoint });
+  scrollRootByTouchDelta(deps, { fromPoint, toPoint });
+};
+
+const selectPendingTouchItem = (deps) => {
+  const { dispatchEvent, props, render, store } = deps;
+  const pendingDrag = store.selectPendingDrag();
+  const itemId = pendingDrag?.id;
   if (!itemId) {
-    return;
+    return false;
   }
-  const sourceItem = props.items.find((item) => item.id === itemId);
-  const forbiddenTargetIds = calculateForbiddenTargets(sourceItem, props.items);
-  const visibleItems = getVisibleItems(props.items, store.selectCollapsedIds());
+
+  const item = props.items?.find((entry) => entry.id === itemId);
+  store.clearPendingDrag();
+  store.setSelectedItemId({ itemId });
+  render();
+  scrollItemIntoView({ deps, itemId });
+  emitItemClick({ dispatchEvent, item });
+  return true;
+};
+
+const createPendingDrag = (deps, { event, clientX, clientY } = {}) => {
+  const { store, props, props: attrs } = deps;
+
+  if (!isDragEnabledForAttrs(attrs)) {
+    return false;
+  }
+
+  const dragLayout = measureDragLayout(deps, { event });
+  if (!dragLayout) {
+    return false;
+  }
+
+  const itemId = getItemIdFromEvent(event);
+  if (!itemId) {
+    return false;
+  }
+
+  const allItems = props.items ?? [];
+  const sourceItem = allItems.find((item) => item.id === itemId);
+  const forbiddenTargetIds = calculateForbiddenTargets(sourceItem, allItems);
+  const visibleItems = getVisibleItems(allItems, store.selectCollapsedIds());
   const forbiddenIndices = forbiddenTargetIds
     .map((id) => visibleItems.findIndex((item) => item.id === id))
     .filter((index) => index !== -1);
@@ -479,13 +735,222 @@ export const handleItemMouseDown = (deps, payload) => {
   store.setPendingDrag({
     pendingDrag: {
       id: itemId,
-      itemRects,
-      containerTop: containerRect.top,
+      itemRects: dragLayout.itemRects,
+      containerTop: dragLayout.containerTop,
       forbiddenIndices,
-      startX: payload._event.clientX,
-      startY: payload._event.clientY,
+      startX: clientX,
+      startY: clientY,
     },
   });
+
+  return true;
+};
+
+const startDraggingFromPending = (deps) => {
+  const { store } = deps;
+  const pendingDrag = store.selectPendingDrag();
+  if (!pendingDrag) {
+    return false;
+  }
+
+  store.startDragging({
+    id: pendingDrag.id,
+    itemRects: pendingDrag.itemRects,
+    containerTop: pendingDrag.containerTop,
+    forbiddenIndices: pendingDrag.forbiddenIndices,
+  });
+
+  return true;
+};
+
+const startMobileLongPressTimer = (deps, { point } = {}) => {
+  const { store } = deps;
+
+  store.setTouchDragStartPoint({ point });
+  store.setTouchDragCurrentPoint({ point });
+  suppressTouchContextMenu(store);
+
+  const timerId = setTimeout(() => {
+    store.setTouchDragTimerId({ timerId: undefined });
+
+    if (!startDraggingFromPending(deps)) {
+      store.clearTouchDrag();
+      return;
+    }
+
+    store.setTouchDragActive({ active: true });
+    store.setSuppressNextClick({ suppress: true });
+
+    const currentPoint = store.selectTouchDragCurrentPoint() ?? point;
+    updateDragTarget(deps, { clientY: currentPoint.y });
+    updateDragAutoScroll(deps, { point: currentPoint });
+  }, TOUCH_LONG_PRESS_DELAY_MS);
+
+  store.setTouchDragTimerId({ timerId });
+};
+
+const updateDragTarget = (deps, { clientY } = {}) => {
+  const { store, render, props } = deps;
+
+  if (!store.selectIsDragging()) {
+    return;
+  }
+
+  const itemRects = store.selectItemRects();
+  const containerTop = store.selectContainerTop();
+  const items = props.items ?? [];
+  const visibleItems = getVisibleItems(items, store.selectCollapsedIds());
+  const sourceId = store.selectSelectedItemId();
+  const sourceItem = items.find((item) => item.id === sourceId);
+  const forbiddenIndices = store.selectForbiddenIndices();
+
+  const result = getSelectedItemIndex(clientY, itemRects, 0, items);
+
+  const isDropAllowed = isDropPlacementAllowed({
+    sourceItem,
+    visibleItems,
+    targetIndex: result.index,
+    dropPosition: result.dropPosition,
+    forbiddenIndices,
+  });
+
+  if (!isDropAllowed) {
+    store.setTargetDragIndex({ index: -2 });
+    store.setTargetDragPosition({ position: 0 });
+    store.setTargetDropPosition({ dropPosition: "none" });
+    render();
+    return;
+  }
+
+  const sourceIndex = visibleItems.findIndex((item) => item.id === sourceId);
+  let isNoOpDrop = false;
+
+  if (result.dropPosition === "inside") {
+    isNoOpDrop = visibleItems[result.index]?.id === sourceId;
+  } else if (result.dropPosition === "above") {
+    isNoOpDrop = result.index === sourceIndex;
+  } else if (result.dropPosition === "below") {
+    isNoOpDrop = result.index === sourceIndex;
+  }
+
+  if (isNoOpDrop) {
+    store.setTargetDragIndex({ index: -2 });
+    store.setTargetDragPosition({ position: 0 });
+    store.setTargetDropPosition({ dropPosition: "none" });
+    render();
+    return;
+  }
+
+  const relativePosition = result.position - containerTop;
+
+  if (
+    store.selectTargetDragIndex() === result.index &&
+    store.selectTargetDragPosition() === relativePosition &&
+    store.selectTargetDropPosition() === result.dropPosition
+  ) {
+    return;
+  }
+
+  store.setTargetDragIndex({ index: result.index });
+  store.setTargetDragPosition({ position: relativePosition });
+  store.setTargetDropPosition({ dropPosition: result.dropPosition });
+  render();
+};
+
+export const handleItemMouseDown = (deps, payload) => {
+  const { store } = deps;
+  const event = payload?._event;
+
+  if (store.selectTouchContextMenuSuppressUntil() > Date.now()) {
+    return;
+  }
+
+  // Drag should start only on primary button.
+  if (event?.button !== 0 || isFolderArrowEvent(event)) {
+    return;
+  }
+
+  createPendingDrag(deps, {
+    event,
+    clientX: event.clientX,
+    clientY: event.clientY,
+  });
+};
+
+export const handleItemPointerDown = (deps, payload) => {
+  const { store } = deps;
+  const event = payload?._event;
+
+  if (event?.pointerType === "mouse" || event?.isPrimary === false) {
+    return;
+  }
+
+  if (isFolderArrowEvent(event)) {
+    return;
+  }
+
+  const point = getPointerPoint(event);
+  if (!point) {
+    return;
+  }
+
+  clearTouchDragTimer(store);
+  store.clearTouchDrag();
+
+  const hasPendingDrag = createPendingDrag(deps, {
+    event,
+    clientX: point.x,
+    clientY: point.y,
+  });
+
+  if (!hasPendingDrag) {
+    return;
+  }
+
+  event.preventDefault?.();
+  event.stopPropagation?.();
+  event.currentTarget?.setPointerCapture?.(event.pointerId);
+  store.setTouchDragPointerId({ pointerId: event.pointerId });
+  startMobileLongPressTimer(deps, { point });
+};
+
+export const handleItemTouchStart = (deps, payload) => {
+  const { store } = deps;
+  const event = payload?._event;
+  if (store.selectTouchDragPointerId() !== undefined) {
+    return;
+  }
+
+  if (isFolderArrowEvent(event)) {
+    return;
+  }
+
+  const touchPoint = getTouchPoint(event);
+  if (!touchPoint || event?.touches?.length !== 1) {
+    return;
+  }
+
+  clearTouchDragTimer(store);
+  store.clearTouchDrag();
+
+  const point = {
+    x: touchPoint.clientX,
+    y: touchPoint.clientY,
+  };
+
+  const hasPendingDrag = createPendingDrag(deps, {
+    event,
+    clientX: point.x,
+    clientY: point.y,
+  });
+
+  if (!hasPendingDrag) {
+    return;
+  }
+
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  startMobileLongPressTimer(deps, { point });
 };
 
 export const handleWindowMouseUp = (deps) => {
@@ -493,6 +958,7 @@ export const handleWindowMouseUp = (deps) => {
   const isDragging = store.selectIsDragging();
 
   if (!isDragging) {
+    clearDragAutoScrollTimer(store);
     if (store.selectPendingDrag()) {
       store.clearPendingDrag();
     }
@@ -506,6 +972,7 @@ export const handleWindowMouseUp = (deps) => {
   const sourceItem = allItems.find((item) => item.id === sourceId);
   const forbiddenIndices = store.selectForbiddenIndices();
   const finishDragging = () => {
+    clearDragAutoScrollTimer(store);
     store.stopDragging();
     render();
   };
@@ -560,7 +1027,7 @@ export const handleWindowMouseUp = (deps) => {
 };
 
 export const handleWindowMouseMove = (deps, payload) => {
-  const { store, render, props } = deps;
+  const { store } = deps;
   let isDragging = store.selectIsDragging();
   const isPrimaryButtonPressed = (payload?._event?.buttons & 1) === 1;
 
@@ -588,12 +1055,7 @@ export const handleWindowMouseMove = (deps, payload) => {
       return;
     }
 
-    store.startDragging({
-      id: pendingDrag.id,
-      itemRects: pendingDrag.itemRects,
-      containerTop: pendingDrag.containerTop,
-      forbiddenIndices: pendingDrag.forbiddenIndices,
-    });
+    startDraggingFromPending(deps);
 
     isDragging = true;
   }
@@ -602,77 +1064,206 @@ export const handleWindowMouseMove = (deps, payload) => {
     return;
   }
 
-  const itemRects = store.selectItemRects();
-  const containerTop = store.selectContainerTop();
-  const items = props.items || [];
-  const visibleItems = getVisibleItems(items, store.selectCollapsedIds());
-  const sourceId = store.selectSelectedItemId();
-  const sourceItem = items.find((item) => item.id === sourceId);
-  const forbiddenIndices = store.selectForbiddenIndices();
+  const point = {
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+  };
+  updateDragTarget(deps, { clientY: point.y });
+  updateDragAutoScroll(deps, { point });
+};
 
-  const result = getSelectedItemIndex(
-    payload._event.clientY,
-    itemRects,
-    0,
-    items,
-  );
+const handleMobilePointMove = (deps, payload, { point } = {}) => {
+  const { store } = deps;
 
-  const isDropAllowed = isDropPlacementAllowed({
-    sourceItem,
-    visibleItems,
-    targetIndex: result.index,
-    dropPosition: result.dropPosition,
-    forbiddenIndices,
+  if (store.selectTouchScrollActive()) {
+    payload._event.preventDefault();
+    payload._event.stopPropagation();
+
+    const lastPoint = store.selectTouchScrollLastPoint();
+    scrollRootByTouchDelta(deps, { fromPoint: lastPoint, toPoint: point });
+    store.setTouchScrollLastPoint({ point });
+    return;
+  }
+
+  if (!store.selectTouchDragActive()) {
+    const startPoint = store.selectTouchDragStartPoint();
+    const pendingDrag = store.selectPendingDrag();
+    if (!startPoint || !pendingDrag) {
+      return;
+    }
+
+    store.setTouchDragCurrentPoint({ point });
+
+    const deltaX = point.x - startPoint.x;
+    const deltaY = point.y - startPoint.y;
+    const dragDistance = Math.hypot(deltaX, deltaY);
+
+    if (dragDistance > TOUCH_SCROLL_CANCEL_DISTANCE) {
+      payload._event.preventDefault();
+      payload._event.stopPropagation();
+      startTouchScroll(deps, { fromPoint: startPoint, toPoint: point });
+    }
+    return;
+  }
+
+  if (!store.selectIsDragging()) {
+    cancelPendingTouchDrag(deps);
+    return;
+  }
+
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
+  store.setTouchDragCurrentPoint({ point });
+  updateDragTarget(deps, { clientY: point.y });
+  updateDragAutoScroll(deps, { point });
+};
+
+export const handleWindowTouchMove = (deps, payload) => {
+  const touchPoint = getTouchPoint(payload?._event);
+  if (!touchPoint) {
+    return;
+  }
+
+  handleMobilePointMove(deps, payload, {
+    point: {
+      x: touchPoint.clientX,
+      y: touchPoint.clientY,
+    },
   });
+};
 
-  if (!isDropAllowed) {
-    store.setTargetDragIndex({ index: -2 });
-    store.setTargetDragPosition({ position: 0 });
-    store.setTargetDropPosition({ dropPosition: "none" });
-    render();
-    return;
-  }
-
-  const sourceIndex = visibleItems.findIndex((item) => item.id === sourceId);
-
-  // Check if the drop position would result in no movement
-  let isNoOpDrop = false;
-
-  if (result.dropPosition === "inside") {
-    // Dropping inside the source itself
-    isNoOpDrop = visibleItems[result.index]?.id === sourceId;
-  } else if (result.dropPosition === "above") {
-    // Dropping above the source (which means index would be sourceIndex)
-    isNoOpDrop = result.index === sourceIndex;
-  } else if (result.dropPosition === "below") {
-    // Dropping below the source (which means index would be sourceIndex)
-    isNoOpDrop = result.index === sourceIndex;
-  }
-
-  // If dragging would result in no movement, hide the drag indicators
-  if (isNoOpDrop) {
-    store.setTargetDragIndex({ index: -2 }); // -2 means no drag indicator
-    store.setTargetDragPosition({ position: 0 });
-    store.setTargetDropPosition({ dropPosition: "none" });
-    render();
-    return;
-  }
-
-  // Convert absolute position to relative position
-  const relativePosition = result.position - containerTop;
+export const handleWindowPointerMove = (deps, payload) => {
+  const { store } = deps;
+  const event = payload?._event;
+  const pointerId = store.selectTouchDragPointerId();
 
   if (
-    store.selectTargetDragIndex() === result.index &&
-    store.selectTargetDragPosition() === relativePosition &&
-    store.selectTargetDropPosition() === result.dropPosition
+    pointerId === undefined ||
+    event?.pointerId !== pointerId ||
+    event?.pointerType === "mouse"
   ) {
     return;
   }
 
-  store.setTargetDragIndex({ index: result.index });
-  store.setTargetDragPosition({ position: relativePosition });
-  store.setTargetDropPosition({ dropPosition: result.dropPosition });
-  render();
+  const point = getPointerPoint(event);
+  if (!point) {
+    return;
+  }
+
+  handleMobilePointMove(deps, payload, { point });
+};
+
+const handleMobilePointEnd = (deps, payload, { point } = {}) => {
+  const { store } = deps;
+  const hasTouchPointEndState =
+    store.selectTouchScrollActive() ||
+    store.selectTouchDragActive() ||
+    store.selectPendingDrag() ||
+    store.selectTouchDragStartPoint() !== undefined ||
+    store.selectTouchDragPointerId() !== undefined;
+
+  if (!hasTouchPointEndState) {
+    return;
+  }
+
+  if (store.selectTouchScrollActive()) {
+    payload?._event?.preventDefault?.();
+    clearDragAutoScrollTimer(store);
+    store.clearTouchDrag();
+    return;
+  }
+
+  if (!store.selectTouchDragActive()) {
+    clearTouchDragTimer(store);
+    payload?._event?.preventDefault?.();
+    payload?._event?.stopPropagation?.();
+    if (selectPendingTouchItem(deps)) {
+      store.clearTouchDrag();
+      return;
+    }
+
+    cancelPendingTouchDrag(deps);
+    return;
+  }
+
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  store.setSuppressNextClick({ suppress: true });
+  suppressTouchContextMenu(store);
+  if (point) {
+    store.setTouchDragCurrentPoint({ point });
+    updateDragTarget(deps, { clientY: point.y });
+  }
+  deps.handlers.handleWindowMouseUp(deps, payload);
+  clearTouchDragTimer(store);
+  store.clearTouchDrag();
+};
+
+export const handleWindowTouchEnd = (deps, payload) => {
+  const touchPoint = getTouchPoint(payload?._event);
+  handleMobilePointEnd(deps, payload, {
+    point: touchPoint
+      ? {
+          x: touchPoint.clientX,
+          y: touchPoint.clientY,
+        }
+      : undefined,
+  });
+};
+
+export const handleWindowPointerUp = (deps, payload) => {
+  const { store } = deps;
+  const event = payload?._event;
+  const pointerId = store.selectTouchDragPointerId();
+
+  if (
+    pointerId === undefined ||
+    event?.pointerId !== pointerId ||
+    event?.pointerType === "mouse"
+  ) {
+    return;
+  }
+
+  handleMobilePointEnd(deps, payload, {
+    point: getPointerPoint(event),
+  });
+};
+
+export const handleWindowTouchCancel = (deps, payload) => {
+  const { store, render } = deps;
+
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  if (store.selectTouchDragActive()) {
+    suppressTouchContextMenu(store);
+    return;
+  }
+
+  if (store.selectIsDragging()) {
+    clearDragAutoScrollTimer(store);
+    store.stopDragging();
+    render();
+  }
+
+  suppressTouchContextMenu(store);
+  cancelPendingTouchDrag(deps);
+};
+
+export const handleWindowPointerCancel = (deps, payload) => {
+  const { store } = deps;
+  const event = payload?._event;
+  const pointerId = store.selectTouchDragPointerId();
+
+  if (
+    pointerId === undefined ||
+    event?.pointerId !== pointerId ||
+    event?.pointerType === "mouse"
+  ) {
+    return;
+  }
+
+  deps.handlers.handleWindowTouchCancel(deps, payload);
 };
 
 const subscriptions = (deps) => {
@@ -687,11 +1278,62 @@ const subscriptions = (deps) => {
         deps.handlers.handleWindowMouseUp(deps, { _event: e });
       }),
     ),
+    fromEvent(window, "touchmove", { passive: false }).pipe(
+      tap((e) => {
+        deps.handlers.handleWindowTouchMove(deps, { _event: e });
+      }),
+    ),
+    fromEvent(window, "touchend", { passive: false }).pipe(
+      tap((e) => {
+        deps.handlers.handleWindowTouchEnd(deps, { _event: e });
+      }),
+    ),
+    fromEvent(window, "touchcancel", { passive: false }).pipe(
+      tap((e) => {
+        deps.handlers.handleWindowTouchCancel(deps, { _event: e });
+      }),
+    ),
+    fromEvent(window, "pointermove", { passive: false }).pipe(
+      tap((e) => {
+        deps.handlers.handleWindowPointerMove(deps, { _event: e });
+      }),
+    ),
+    fromEvent(window, "pointerup", { passive: false }).pipe(
+      tap((e) => {
+        deps.handlers.handleWindowPointerUp(deps, { _event: e });
+      }),
+    ),
+    fromEvent(window, "pointercancel", { passive: false }).pipe(
+      tap((e) => {
+        deps.handlers.handleWindowPointerCancel(deps, { _event: e });
+      }),
+    ),
   ];
+};
+
+const shouldSuppressTouchContextMenu = (deps, event) => {
+  const { store, props: attrs } = deps;
+  if (!isDragEnabledForAttrs(attrs)) {
+    return false;
+  }
+
+  return (
+    event?.sourceCapabilities?.firesTouchEvents === true ||
+    store.selectTouchDragActive() ||
+    store.selectTouchScrollActive() ||
+    store.selectTouchDragStartPoint() !== undefined ||
+    store.selectTouchContextMenuSuppressUntil() > Date.now()
+  );
 };
 
 export const handleContainerContextMenu = (deps, payload) => {
   const { store, render, props } = deps;
+  if (shouldSuppressTouchContextMenu(deps, payload._event)) {
+    payload._event.preventDefault();
+    payload._event.stopPropagation();
+    return;
+  }
+
   const target = payload._event.target;
   if (
     typeof target?.closest === "function" &&
@@ -742,6 +1384,10 @@ export const handleItemContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   payload._event.stopPropagation();
 
+  if (shouldSuppressTouchContextMenu(deps, payload._event)) {
+    return;
+  }
+
   const itemId = getItemIdFromEvent(payload._event);
   if (!itemId) {
     return;
@@ -781,6 +1427,13 @@ export const handleItemContextMenu = (deps, payload) => {
 
 export const handleItemClick = (deps, payload) => {
   const { store, render, props } = deps;
+  if (store.selectSuppressNextClick()) {
+    payload?._event?.preventDefault?.();
+    payload?._event?.stopPropagation?.();
+    store.setSuppressNextClick({ suppress: false });
+    return;
+  }
+
   const itemId = getItemIdFromEvent(payload._event);
   if (!itemId) {
     return;
