@@ -1122,6 +1122,7 @@ export const selectViewData = ({ state, i18n }) => {
     noSpriteGroups: copy.noSpriteGroups,
     noSpriteGroupsYet: copy.noSpriteGroupsYet,
     spriteGroupsLabel: copy.spriteGroupsLabel,
+    spritesButtonLabel: copy.spritesButtonLabel ?? "Sprites",
     resourceCategory: "assets",
     selectedResourceId: "characters",
     selectedItemId: state.selectedItemId,

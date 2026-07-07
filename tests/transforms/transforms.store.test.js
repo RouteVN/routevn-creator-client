@@ -40,6 +40,22 @@ describe("transforms.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N }).editButton).toBe("Edit");
   });
 
+  it("hides the preview image selector file explorer in touch mode", () => {
+    const state = createInitialState();
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N })
+        .showTransformPreviewImageSelectorFileExplorer,
+    ).toBe(true);
+
+    state.isTouchMode = true;
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N })
+        .showTransformPreviewImageSelectorFileExplorer,
+    ).toBe(false);
+  });
+
   it("applies preview image selections immediately and restores them on cancel", () => {
     const state = createInitialState();
     setImagesData({ state }, { imagesData });

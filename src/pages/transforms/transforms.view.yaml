@@ -230,7 +230,7 @@ template:
                       - rtgl-button#mobileDetailEditButton w=1fg v=se pre=edit: ${editButton}
                       - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: ${previewButton}
                   - rtgl-view d=h w=f g=sm:
-                      - rtgl-button#mobileDetailDuplicateButton w=1fg v=se: ${duplicateButton}
+                      - rtgl-button#mobileDetailDuplicateButton w=1fg v=se pre=duplicate: ${duplicateButton}
                       - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
@@ -283,8 +283,9 @@ template:
       - $if imageSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
               - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
-                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
-                      - rvn-base-file-explorer#transformPreviewImageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
+                  - $if showTransformPreviewImageSelectorFileExplorer:
+                      - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                          - rvn-base-file-explorer#transformPreviewImageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
                   - 'rtgl-view#transformPreviewImageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
                       - rvn-image-selector#transformPreviewImageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:

@@ -961,6 +961,7 @@ charactersPage:
   spriteGroupTagRequiredAtIndex: "立绘组 {index} 必须至少有一个标签。"
   spriteGroupsCreateMessage: "请先创建角色，然后再添加组。"
   spriteGroupsLabel: "立绘组"
+  spritesButtonLabel: "立绘"
   title: "角色"
   updateCharacterButton: "更新角色"
   updateGroupButton: "更新组"

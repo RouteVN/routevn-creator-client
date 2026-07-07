@@ -532,6 +532,7 @@ const {
             ? copy.selectBackgroundTitle
             : copy.selectTargetImageTitle,
       },
+      showTransformPreviewImageSelectorFileExplorer: !state.isTouchMode,
       canvasAspectRatio: formatProjectResolutionAspectRatio(
         state.projectResolution,
       ),

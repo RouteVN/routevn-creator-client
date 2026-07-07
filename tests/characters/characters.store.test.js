@@ -119,6 +119,8 @@ describe("characters store sprite group tags", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
+    expect(viewData.spriteGroupsLabel).toBe("Sprite Groups");
+    expect(viewData.spritesButtonLabel).toBe("Sprites");
     expect(viewData.selectedItemSpriteGroups.map((group) => group.id)).toEqual([
       "group-face",
       "group-body",
