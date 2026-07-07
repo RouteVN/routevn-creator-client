@@ -17,6 +17,9 @@ const MIN_ITEMS_PER_ROW = 1;
 const MAX_ITEMS_PER_ROW = 12;
 const MAX_MOBILE_ITEMS_PER_ROW = 6;
 const DEFAULT_CARD_WIDTH = 360;
+const MENU_BUTTON_LABEL = "Menu";
+const ZOOM_BUTTON_LABEL = "Zoom";
+const FILTER_BUTTON_LABEL = "Filter";
 const DEFAULT_ZOOM_POPOVER_POSITION = Object.freeze({
   x: 0,
   y: 0,
@@ -322,9 +325,7 @@ export const selectViewData = ({ state, props }) => {
     },
     showTagFilter: parseBooleanProp(props.showTagFilter),
     hasActiveTagFilter,
-    tagFilterButtonBackgroundColor: hasActiveFilter ? "ac" : "bg",
-    tagFilterButtonBorderColor: hasActiveFilter ? "ac" : "bo",
-    tagFilterButtonIconColor: hasActiveFilter ? "white" : "mu-fg",
+    tagFilterButtonVariant: hasActiveFilter ? "pr" : "ol",
     itemsPerRow,
     cardGridColumns,
     zoomControlValue: toColumnZoomControlValue(itemsPerRow, props),
@@ -334,6 +335,9 @@ export const selectViewData = ({ state, props }) => {
     showZoomControls:
       useColumnZoomControl && parseBooleanProp(props.showZoomControls),
     zoomPopover: state.zoomPopover,
+    menuButtonLabel: MENU_BUTTON_LABEL,
+    zoomButtonLabel: ZOOM_BUTTON_LABEL,
+    filterButtonLabel: FILTER_BUTTON_LABEL,
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,

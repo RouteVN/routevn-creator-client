@@ -76,7 +76,7 @@ the project service's local command session and native SQLite-backed storage.
 - `android/routevn/app/src/main/java/com/routevn/creator/MainActivity.java`:
   native WebView shell and JavaScript bridge.
 
-The WebView loads packaged assets through `WebViewAssetLoader` at:
+Release builds load packaged assets through `WebViewAssetLoader` at:
 
 ```text
 https://appassets.androidplatform.net/web/index.html
@@ -86,13 +86,52 @@ This gives the local bundle an HTTPS origin while serving packaged app files.
 
 ## Build And Install
 
+### Android JS Watch Mode
+
+Debug Android builds load the local Android dev server instead of packaged
+assets:
+
+```text
+http://127.0.0.1:3001/android/index.html
+```
+
+Install the debug app once after native Android changes:
+
+```bash
+bun run android:install
+```
+
+Then run the Android frontend watch server:
+
+```bash
+bun run watch:android
+```
+
+`watch:android` prepares `_site`, runs `adb reverse tcp:3001 tcp:3001` when a
+device is connected, and starts `rtgl fe watch` with `src/setup.android.js`.
+After that, JS, YAML view, store, handler, i18n, and setup changes are served
+from the dev server. Refresh or relaunch the app without reinstalling the APK.
+
+If multiple Android devices are connected, set `ANDROID_SERIAL` before running
+the watch command:
+
+```bash
+ANDROID_SERIAL=<device-serial> bun run watch:android
+```
+
+Release builds still load packaged assets through `WebViewAssetLoader`. Debug
+builds are dev-server shells by default.
+
+### Native Shell And Packaged Assets
+
 Build Android web assets:
 
 ```bash
 bun run build:android
 ```
 
-Build the debug APK:
+Build the debug APK. Debug builds load the dev server and use these packaged
+assets only as fallback development artifacts:
 
 ```bash
 cd android/routevn
@@ -111,7 +150,7 @@ Or use the combined script:
 bun run android:install
 ```
 
-Build a release app bundle:
+Build a release app bundle to validate packaged web assets:
 
 ```bash
 bun run android:bundle
@@ -224,9 +263,15 @@ can miss Android-specific parser, layout, asset, and bridge behavior.
 
 ### Build And Blank Screens
 
-- After JS, YAML view, or setup changes, reinstall with `bun run
-  android:install`. A native reinstall without rebuilding Android web assets can
-  leave the device running stale JavaScript.
+- During Android JS watch mode, JS, YAML view, store, handler, i18n, and setup
+  changes should refresh from `http://127.0.0.1:3001/android/index.html`
+  without reinstalling the APK.
+- For packaged-asset validation, build a release bundle with `bun run
+  android:bundle`. A native release build without rebuilding Android web assets
+  can package stale JavaScript.
+- If a debug app shows a WebView network error on launch, start
+  `bun run watch:android` and confirm `adb reverse tcp:3001 tcp:3001` is active
+  for the device.
 - Android builds must use the local `rtgl` dev dependency through
   `scripts/build.sh`, not a globally installed `rtgl` CLI. The local build
   preserves the repo's `rettangoli.config.yaml` options, including `i18n`.

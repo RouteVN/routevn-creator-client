@@ -48,16 +48,13 @@ refs:
 template:
   - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
       - rtgl-view w=f d=h av=c g=sm:
-          - rtgl-view#backButton d=h av=c g=sm cur=pointer tabindex=0 role=button title="${i18n.projectPage.backToProjects}":
-              - rtgl-view w=36 h=36 bw=xs br=md ah=c av=c bgc=bg bc=bo:
-                  - rtgl-svg svg=chevronLeft wh=16 c=mu-fg: null
-              - rtgl-text s=sm: ${i18n.projectPage.backToProjects}
+          - 'rtgl-button#backButton sq pre=chevronLeft v=ol title="${i18n.projectPage.backToProjects}" aria-label="${i18n.projectPage.backToProjects}"': null
+          - rtgl-text s=sm ml=xs: ${i18n.projectPage.backToProjects}
           - $if projectSource == 'cloud':
               - rtgl-text s=xs c=mu-fg: ${i18n.projectPage.cloudProject}
           - rtgl-view w=1fg: null
           - $if showAndroidProjectActions:
-              - rtgl-view#projectActionsButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo:
-                  - rtgl-svg svg=ellipsis wh=16 c=mu-fg: null
+              - 'rtgl-button#projectActionsButton sq pre=ellipsis v=ol title="${i18n.projectPage.exportProject}" aria-label="${i18n.projectPage.exportProject}"': null
   - rtgl-view w=f h=f pt=md:
       - rtgl-view w=f h=f d=v:
           - rvn-detail-view#detailView w=f h=1fg :fields=${detailFields}:

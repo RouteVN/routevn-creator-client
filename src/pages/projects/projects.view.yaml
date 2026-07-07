@@ -149,8 +149,7 @@ template:
                   - rtgl-text: ${localTitle}
                   - rtgl-view w=1fg: null
                   - $if showMobileProjectActions:
-                      - rtgl-view#mobileCreateMenuButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo:
-                          - rtgl-svg svg=plus wh=16 c=mu-fg: null
+                      - 'rtgl-button#mobileCreateMenuButton sq pre=plus v=ol title="${createButtonText}" aria-label="${createButtonText}"': null
                     $else:
                       - rtgl-view d=h g=sm:
                           - rtgl-button#createButton data-testid=create-project-button: ${createButtonText}

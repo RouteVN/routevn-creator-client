@@ -64,6 +64,7 @@ export const createImagePreviewModeButtonViewData = ({
     borderColor: selected ? "ac" : "bo",
     iconColor: selected ? "white" : "mu-fg",
     selected,
+    variant: selected ? "pr" : "ol",
   };
 };
 

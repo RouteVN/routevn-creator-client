@@ -179,11 +179,11 @@ template:
           - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
               - 'rtgl-view w="calc((100vw - 64px) / 2)" d=v h=f style="min-width: 0; min-height: 0;"':
                   - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h:
-                      - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
+                      - rtgl-button#backButton sq pre=chevronLeft v=ol mr=sm: null
                       - rtgl-view w=1fg d=h av=c:
                           - rtgl-text w=1fg ellipsis=true: ${scene.name}
-                          - rtgl-button#sectionsOverview sq pre=hamburger v="gh" ml=sm: null
-                          - rtgl-button#sceneSettingsButton sq pre=settings v="gh": null
+                          - rtgl-button#sectionsOverview sq pre=hamburger v=ol ml=sm: null
+                          - rtgl-button#sceneSettingsButton sq pre=settings v=ol: null
                   - $if sectionsGraphView:
                       - rtgl-view w=f h=1fg:
                           - rtgl-view d=h w=f:

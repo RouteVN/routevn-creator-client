@@ -51,7 +51,7 @@ template:
                       - rtgl-view w=f d=h av=c g=md wrap:
                           - rtgl-view av=c g=sm d=h w=1fg:
                               - rtgl-text: ${title}
-                          - rtgl-button#saveVersionBtn v=pr s=sm pre=plus: ${addButton}
+                          - 'rtgl-button#saveVersionBtn v=pr sq pre=plus title="${addButton}" aria-label="${addButton}"': null
                   - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
                       - $if versions.length == 0:
                           - rtgl-view w=f h=f av=c ah=c:
