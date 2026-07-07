@@ -60,7 +60,7 @@ const readPersistedStack = () => {
   return undefined;
 };
 
-const parsePathAndPayload = (path, payload) => {
+const parsePathAndPayload = (path, payload, state) => {
   const parsed = new URL(path || "/projects", "https://routevn.android");
   const nextPayload = {};
   for (const [key, value] of parsed.searchParams.entries()) {
@@ -70,6 +70,7 @@ const parsePathAndPayload = (path, payload) => {
   return {
     path: parsed.pathname || "/projects",
     payload: payload ? { ...payload } : nextPayload,
+    state: state && typeof state === "object" ? { ...state } : {},
   };
 };
 
@@ -125,20 +126,25 @@ export default class AndroidRouter {
     return { ...this.getCurrentEntry().payload };
   };
 
+  getHistoryState = () => {
+    return { ...this.getCurrentEntry().state };
+  };
+
   setPayload = (payload) => {
     this.getCurrentEntry().payload = { ...payload };
     this.emitStackChange();
   };
 
-  redirect = (path, payload) => {
-    this.stackEntries.push(parsePathAndPayload(path, payload));
+  redirect = (path, payload, options = {}) => {
+    this.stackEntries.push(parsePathAndPayload(path, payload, options.state));
     this.emitStackChange();
   };
 
-  replace = (path, payload) => {
+  replace = (path, payload, options = {}) => {
     this.stackEntries[this.stackEntries.length - 1] = parsePathAndPayload(
       path,
       payload,
+      options.state,
     );
     this.emitStackChange();
   };

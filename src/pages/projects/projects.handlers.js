@@ -215,7 +215,11 @@ const navigateToProjectRoute = async (
     appService.setCurrentProjectEntry(project);
   }
 
-  appService.navigate(path, { p: projectId }, { historyMode: "replace" });
+  const currentHistoryState = appService.getHistoryState?.() ?? {};
+  const historyMode = currentHistoryState.preserveProjectsEntryOnProjectOpen
+    ? "push"
+    : "replace";
+  appService.navigate(path, { p: projectId }, { historyMode });
 };
 
 const createProjectFromValues = async (deps, values = {}) => {

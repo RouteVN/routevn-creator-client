@@ -121,16 +121,23 @@ export const createAppShellService = ({
           payload,
         });
       const historyMode = options.historyMode;
+      const historyState = options.historyState;
       markNavigationTiming(timing, "appService.navigate.dispatch");
-      subject.dispatch("redirect", { path, payload, timing, historyMode });
+      subject.dispatch("redirect", {
+        path,
+        payload,
+        timing,
+        historyMode,
+        historyState,
+      });
     },
 
-    redirect(path, payload) {
-      router.redirect(path, payload);
+    redirect(path, payload, options) {
+      router.redirect(path, payload, options);
     },
 
-    replace(path, payload) {
-      router.replace(path, payload);
+    replace(path, payload, options) {
+      router.replace(path, payload, options);
     },
 
     getPath() {
@@ -139,6 +146,10 @@ export const createAppShellService = ({
 
     getPayload() {
       return router.getPayload();
+    },
+
+    getHistoryState() {
+      return router.getHistoryState?.() ?? {};
     },
 
     getCurrentProjectId() {

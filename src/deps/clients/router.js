@@ -66,7 +66,7 @@ export default class WebRouter {
       return;
     }
 
-    window.history.replaceState({}, "", finalPath);
+    window.history.replaceState(this.getHistoryState(), "", finalPath);
     this.lastPayloadReplaceAt = Date.now();
   };
 
@@ -117,16 +117,24 @@ export default class WebRouter {
     this.schedulePendingPayload(throttleMs - elapsedMs);
   };
 
-  redirect = (path, payload) => {
-    this.clearPendingPayload();
-    const finalPath = createPathWithPayload(path, payload);
-    window.history.pushState({}, "", finalPath);
+  getHistoryState = () => {
+    const state = window.history.state;
+    if (state && typeof state === "object") {
+      return { ...state };
+    }
+    return {};
   };
 
-  replace = (path, payload) => {
+  redirect = (path, payload, options = {}) => {
     this.clearPendingPayload();
     const finalPath = createPathWithPayload(path, payload);
-    window.history.replaceState({}, "", finalPath);
+    window.history.pushState(options.state ?? {}, "", finalPath);
+  };
+
+  replace = (path, payload, options = {}) => {
+    this.clearPendingPayload();
+    const finalPath = createPathWithPayload(path, payload);
+    window.history.replaceState(options.state ?? {}, "", finalPath);
   };
 
   back = () => {

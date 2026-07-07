@@ -152,6 +152,7 @@ const createRouteTransitionRunner = (deps) => {
     path,
     payload,
     historyMode,
+    historyState,
     shouldUpdateHistory = false,
     timing,
   } = {}) => {
@@ -179,10 +180,10 @@ const createRouteTransitionRunner = (deps) => {
     });
 
     if (routeHistoryMode === "push") {
-      appService.redirect(canonicalPath, nextPayload);
+      appService.redirect(canonicalPath, nextPayload, { state: historyState });
       markNavigationTiming(routeTiming, "route.history.redirected");
     } else if (routeHistoryMode === "replace" || canonicalPath !== path) {
-      appService.replace(canonicalPath, nextPayload);
+      appService.replace(canonicalPath, nextPayload, { state: historyState });
       markNavigationTiming(routeTiming, "route.history.replaced");
     }
 
@@ -577,6 +578,7 @@ const subscriptions = (deps) => {
           path,
           payload: nextPayload,
           historyMode,
+          historyState: payload?.historyState,
           timing,
         }).catch((error) => {
           markNavigationTiming(timing, "route.subscription.error", {
