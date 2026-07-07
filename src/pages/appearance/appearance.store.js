@@ -10,6 +10,9 @@ const themeOptions = [
     previewPanelBackground: "oklch(0.18 0 0)",
     previewCardBackground: "oklch(0.269 0 0)",
     previewAccent: "oklch(0.371 0 0)",
+    previewPrimary: "oklch(0.922 0 0)",
+    previewSecondary: "oklch(0.269 0 0)",
+    previewInput: "oklch(1 0 0 / 15%)",
     previewBorder: "oklch(1 0 0 / 10%)",
   },
   {
@@ -20,6 +23,9 @@ const themeOptions = [
     previewPanelBackground: "oklch(0.992 0.002 250)",
     previewCardBackground: "oklch(0.94 0.006 250)",
     previewAccent: "oklch(0.9 0.015 250)",
+    previewPrimary: "oklch(0.32 0.018 250)",
+    previewSecondary: "oklch(0.945 0.006 250)",
+    previewInput: "oklch(0.91 0.008 250)",
     previewBorder: "oklch(0.84 0.012 250)",
   },
 ];
@@ -53,6 +59,7 @@ export const selectViewData = ({ state, i18n }) => {
       isSelected,
       itemBorderColor: isSelected ? "pr" : "bo",
       itemHoverBorderColor: isSelected ? "pr" : "ac",
+      previewTiles: [],
     };
   });
 

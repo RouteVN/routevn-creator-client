@@ -16,7 +16,7 @@ describe("appearance store", () => {
 
     expect(viewData.showExplorerPanel).toBe(false);
     expect(viewData.contentPadding).toBe("0");
-    expect(viewData.contentBodyPadding).toBe("lg");
+    expect(viewData.contentBodyPadding).toBe("md");
     expect(viewData.contentBodyMarginTop).toBe("0");
     expect(viewData.themeGridColumns).toBe("2");
     expect(viewData.themePreviewAspectRatio).toBe("16 / 9");
@@ -32,5 +32,16 @@ describe("appearance store", () => {
       "repeat(auto-fill, minmax(min(320px, 100%), 320px))",
     );
     expect(viewData.themePreviewAspectRatio).toBe("16 / 9");
+  });
+
+  it("exposes multiple representative colors for theme thumbnails", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.themes[0].previewPrimary).toBe("oklch(0.922 0 0)");
+    expect(viewData.themes[0].previewInput).toBe("oklch(1 0 0 / 15%)");
+    expect(viewData.themes[1].previewPrimary).toBe("oklch(0.32 0.018 250)");
+    expect(viewData.themes[1].previewInput).toBe("oklch(0.91 0.008 250)");
   });
 });
