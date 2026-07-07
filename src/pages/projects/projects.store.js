@@ -704,6 +704,8 @@ export const selectViewData = ({ state, i18n }) => {
   const hasLocalProjects = localProjects.length > 0;
   const hasCloudProjects = cloudProjects.length > 0;
   const showCloudLoginHint = !state.isLoggedIn;
+  const isDesktopProjectLayout =
+    !state.isTouchMode && state.platform !== "android";
 
   return {
     ...state,
@@ -715,6 +717,7 @@ export const selectViewData = ({ state, i18n }) => {
     openButtonText: copy.importButton,
     profileDisplayName,
     avatarImageSrc,
+    navbarContentWidth: isDesktopProjectLayout ? "640" : "f",
     showMobileProjectActions: Boolean(state.isTouchMode),
     showProjectAccountActions: Boolean(
       state.showCloudProjects && !state.isTouchMode,

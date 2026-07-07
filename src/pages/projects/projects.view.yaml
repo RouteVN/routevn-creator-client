@@ -144,8 +144,8 @@ refs:
 template:
   - rtgl-view h=100vh w=100vw d=v:
       - 'rtgl-view w=f h=f d=v style="min-height: 0;"':
-          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
-              - rtgl-view w=f d=h av=c g=md wrap:
+          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c ah=c:
+              - 'rtgl-view sm-w=f w=${navbarContentWidth} d=h av=c g=md wrap':
                   - rtgl-text: ${localTitle}
                   - rtgl-view w=1fg: null
                   - $if showMobileProjectActions:
