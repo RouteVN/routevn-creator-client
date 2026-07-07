@@ -20,6 +20,12 @@ describe("appearance view", () => {
     expect(appearanceView).toContain(
       "aspect-ratio: ${themePreviewAspectRatio};",
     );
+    expect(appearanceView).toContain("rtgl-view w=f h=f d=h g=sm");
+    expect(appearanceView).toContain("rtgl-view w=3fg h=f br=sm");
+    expect(appearanceView).toContain("rtgl-view w=7fg h=f d=v g=sm");
+    expect(appearanceView).toContain("rtgl-view w=f h=2fg d=h g=sm");
+    expect(appearanceView).not.toContain("display: grid");
+    expect(appearanceView).not.toContain("div key=");
     expect(appearanceView).toContain("w=f bw=xs");
     expect(appearanceView).not.toContain("w=320 sm-w=f");
     expect(appearanceView).not.toContain("min-height: 152px");

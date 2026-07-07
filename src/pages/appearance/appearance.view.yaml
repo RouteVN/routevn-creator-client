@@ -29,7 +29,17 @@ template:
                       - $for item, i in themes:
                           - 'rtgl-view#themeCard${i} data-theme=${item.id} d=v w=f bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} bgc=bg br=md cur=pointer overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
                               - 'rtgl-view w=f p=xs style="background-color: ${item.previewPageBackground}; aspect-ratio: ${themePreviewAspectRatio}; border-bottom: 1px solid ${item.previewBorder}; box-sizing: border-box;"':
-                                  - 'rtgl-view w=f h=f p=xs br=sm style="background-color: ${item.previewPanelBackground}; box-sizing: border-box;"':
-                                      - 'rtgl-view w=f h=f br=sm style="background-color: ${item.previewCardBackground};"': null
+                                  - rtgl-view w=f h=f d=h g=sm:
+                                      - 'rtgl-view w=3fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewPanelBackground}; border-color: ${item.previewBorder};"': null
+                                      - rtgl-view w=7fg h=f d=v g=sm:
+                                          - rtgl-view w=f h=2fg d=h g=sm:
+                                              - 'rtgl-view w=2fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewCardBackground}; border-color: ${item.previewBorder};"': null
+                                              - 'rtgl-view w=1fg h=f br=sm style="background-color: ${item.previewPrimary};"': null
+                                          - rtgl-view w=f h=1fg d=h g=sm:
+                                              - 'rtgl-view w=1fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewAccent}; border-color: ${item.previewBorder};"': null
+                                              - 'rtgl-view w=2fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewInput}; border-color: ${item.previewBorder};"': null
+                                          - rtgl-view w=f h=1fg d=h g=sm:
+                                              - 'rtgl-view w=1fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewSecondary}; border-color: ${item.previewBorder};"': null
+                                              - 'rtgl-view w=2fg h=f br=sm bw=xs bc=bo style="background-color: ${item.previewCardBackground}; border-color: ${item.previewBorder};"': null
                               - rtgl-view w=f p=md:
                                   - rtgl-text s=xs c=mu-fg ellipsis=true w=f: ${item.name}
