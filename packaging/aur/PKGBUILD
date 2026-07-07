@@ -1,8 +1,8 @@
 # Maintainer: RouteVN Team
 
 pkgname=routevn-creator
-pkgver=1.7.2
-pkgrel=3
+pkgver=1.8.1
+pkgrel=1
 pkgdesc="RouteVN Creator"
 arch=("x86_64")
 url="https://routevn.com"
