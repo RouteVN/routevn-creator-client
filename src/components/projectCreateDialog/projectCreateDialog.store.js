@@ -189,7 +189,7 @@ export const syncFromProps = ({ state }, { props } = {}) => {
   state.platform =
     props?.platform === "tauri"
       ? "tauri"
-      : props?.platform === "android"
+      : props?.platform === "android" || props?.platform === "ios"
         ? "android"
         : "web";
   state.formKey += 1;

@@ -53,7 +53,7 @@ template:
           - $if projectSource == 'cloud':
               - rtgl-text s=xs c=mu-fg: ${i18n.projectPage.cloudProject}
           - rtgl-view w=1fg: null
-          - $if showAndroidProjectActions:
+          - $if showNativeProjectActions:
               - 'rtgl-button#projectActionsButton sq pre=ellipsis v=ol title="${i18n.projectPage.exportProject}" aria-label="${i18n.projectPage.exportProject}"': null
   - rtgl-view w=f h=f pt=md:
       - rtgl-view w=f h=f d=v:

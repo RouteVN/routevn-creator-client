@@ -310,9 +310,15 @@ describe("projects.handleProjectsClick", () => {
       name: "Project One",
       projectPath: "/projects/project-one",
     });
-    expect(deps.appService.navigate).toHaveBeenCalledWith("/project", {
-      p: "project-1",
-    });
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project",
+      {
+        p: "project-1",
+      },
+      {
+        historyMode: "replace",
+      },
+    );
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
 });

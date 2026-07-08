@@ -99,22 +99,42 @@ const getItemsPerRowConfigKey = (props) => {
     : configKey;
 };
 
-const syncPersistedItemsPerRow = ({ appService, props, store } = {}) => {
+const getItemsPerRowSyncSignature = (props) => {
   if (!isColumnZoomControlMode(props)) {
-    return;
+    return "none";
+  }
+
+  return [
+    getItemsPerRowConfigKey(props) ?? "",
+    clampItemsPerRow(props?.defaultItemsPerRow, props),
+    getMaxItemsPerRow(props),
+  ].join("|");
+};
+
+const syncPersistedItemsPerRow = ({ appService, props, store } = {}) => {
+  const signature = getItemsPerRowSyncSignature(props);
+  if (store.selectItemsPerRowSyncSignature?.() === signature) {
+    return false;
+  }
+
+  store.setItemsPerRowSyncSignature?.({ signature });
+  if (!isColumnZoomControlMode(props)) {
+    return false;
   }
 
   const configKey = getItemsPerRowConfigKey(props);
-  if (!configKey || typeof appService?.getUserConfig !== "function") {
-    return;
-  }
+  const itemsPerRow =
+    configKey && typeof appService?.getUserConfig === "function"
+      ? appService.getUserConfig(configKey)
+      : undefined;
 
-  const itemsPerRow = appService.getUserConfig(configKey);
-  if (itemsPerRow === undefined) {
-    return;
-  }
-
-  store.setItemsPerRow({ itemsPerRow: clampItemsPerRow(itemsPerRow, props) });
+  store.setItemsPerRow({
+    itemsPerRow: clampItemsPerRow(
+      itemsPerRow ?? props?.defaultItemsPerRow,
+      props,
+    ),
+  });
+  return true;
 };
 
 const persistItemsPerRow = ({ appService, props, store } = {}) => {
@@ -650,10 +670,15 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleOnUpdate = (deps) => {
+  const didItemsPerRowChange = syncPersistedItemsPerRow(deps);
   const didProgressiveRenderChange = syncProgressiveRenderState(deps);
   const didSoundWaveformHydrationChange = syncSoundWaveformHydrationState(deps);
 
-  if (didProgressiveRenderChange || didSoundWaveformHydrationChange) {
+  if (
+    didItemsPerRowChange ||
+    didProgressiveRenderChange ||
+    didSoundWaveformHydrationChange
+  ) {
     scheduleSyncRender(deps);
   }
 };

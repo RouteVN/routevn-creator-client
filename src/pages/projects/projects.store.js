@@ -705,7 +705,9 @@ export const selectViewData = ({ state, i18n }) => {
   const hasCloudProjects = cloudProjects.length > 0;
   const showCloudLoginHint = !state.isLoggedIn;
   const isDesktopProjectLayout =
-    !state.isTouchMode && state.platform !== "android";
+    !state.isTouchMode &&
+    state.platform !== "android" &&
+    state.platform !== "ios";
 
   return {
     ...state,

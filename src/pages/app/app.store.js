@@ -12,6 +12,7 @@ export const createInitialState = () => ({
 const SIDEBAR_WIDTH_PX = 64;
 const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 const HELP_BUTTON_BOTTOM_OFFSET_PX = 24;
+const HELP_BUTTON_TOUCH_EXTRA_BOTTOM_OFFSET_PX = 40;
 const MOBILE_TAB_BAR_ACTIVE_COLOR = "white";
 const MOBILE_TAB_BAR_INACTIVE_COLOR = "mu-fg";
 
@@ -262,11 +263,15 @@ export const selectViewData = ({ state, i18n }) => {
     appShellDirection: showMobileTabBar ? "v" : "h",
     contentWidth: showSidebar ? `calc(100vw - ${SIDEBAR_WIDTH_PX}px)` : "100vw",
     contentHeight: showMobileTabBar
-      ? `calc(100vh - ${MOBILE_TAB_BAR_HEIGHT_PX}px - env(safe-area-inset-bottom))`
+      ? `calc(var(--rvn-app-viewport-height, 100vh) - ${MOBILE_TAB_BAR_HEIGHT_PX}px)`
       : "100%",
-    helpButtonBottom: showMobileTabBar
-      ? `calc(${MOBILE_TAB_BAR_HEIGHT_PX + HELP_BUTTON_BOTTOM_OFFSET_PX}px + env(safe-area-inset-bottom))`
-      : "24px",
+    helpButtonBottom: state.isTouchMode
+      ? `${
+          MOBILE_TAB_BAR_HEIGHT_PX +
+          HELP_BUTTON_BOTTOM_OFFSET_PX +
+          HELP_BUTTON_TOUCH_EXTRA_BOTTOM_OFFSET_PX
+        }px`
+      : `${HELP_BUTTON_BOTTOM_OFFSET_PX}px`,
     repositoryLoadingProgressPercent,
     repositoryLoadingProgressWidth: `${repositoryLoadingProgressPercent}%`,
     hasRepositoryLoadingProgress,
