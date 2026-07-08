@@ -39,6 +39,10 @@ refs:
     eventListeners:
       close:
         handler: handleSceneFormClose
+  sceneFormDialog:
+    eventListeners:
+      close:
+        handler: handleSceneFormClose
   editDialog:
     eventListeners:
       close:
@@ -156,8 +160,12 @@ template:
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                                   - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
-      - rtgl-popover#sceneFormPopover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y} md-place=center md-overlay:
-          - rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=${sceneFormData} :form=${sceneFormFields} w=320: null
+      - $if showSceneFormPopover:
+          - rtgl-popover#sceneFormPopover ?open=${showSceneFormPopover} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
+              - rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=${sceneFormData} :form=${sceneFormFields} w=320: null
+      - $if showSceneFormDialog:
+          - rtgl-dialog#sceneFormDialog ?open=${showSceneFormDialog} s=sm:
+              - rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=${sceneFormData} :form=${sceneFormFields} w=f: null
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
           - rtgl-view slot=content g=md:
               - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f: null

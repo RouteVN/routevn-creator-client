@@ -5,6 +5,7 @@ import {
   openMobileFileExplorer,
   selectIsMobileFileExplorerOpen,
   selectViewData,
+  setShowSceneForm,
   setTouchMinimapReady,
   setUiConfig,
   setWhiteboardConnectionsReady,
@@ -65,5 +66,29 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.showWhiteboardMinimapInTouchMode).toBe(false);
     expect(viewData.whiteboardMinimapPlacement).toBe("bottom-left");
     expect(viewData.whiteboardMinimapHeightScale).toBe(1);
+  });
+
+  it("uses a popover on desktop and a dialog on touch for scene creation", () => {
+    const state = createInitialState();
+
+    setShowSceneForm({ state }, { show: true });
+
+    const desktopViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(desktopViewData.showSceneFormPopover).toBe(true);
+    expect(desktopViewData.showSceneFormDialog).toBe(false);
+
+    setUiConfig(
+      { state },
+      {
+        uiConfig: {
+          id: "touch",
+          inputMode: "touch",
+        },
+      },
+    );
+
+    const touchViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(touchViewData.showSceneFormPopover).toBe(false);
+    expect(touchViewData.showSceneFormDialog).toBe(true);
   });
 });

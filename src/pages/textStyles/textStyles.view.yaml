@@ -195,18 +195,24 @@ template:
                       - rtgl-tag-select#detailTagSelect slot="text-style-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#addTypographyDialog ?open=${isDialogOpen}:
+  - $if showDialogPreviewCanvas:
       - $if isDialogOpen:
-          - rtgl-view slot=content d=h g=md w=800:
-              - rtgl-view w=1fg:
+          - rtgl-dialog#addTypographyDialog ?open=${isDialogOpen}:
+              - rtgl-view slot=content d=h g=md w=800:
+                  - rtgl-view w=1fg:
+                      - rtgl-form#textStyleForm key=${formKey} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f: null
+                  - rtgl-view w=1fg p=md d=v g=md:
+                      - rtgl-text s=lg fw=b: ${previewLabel}
+                      - 'rtgl-view w=f style="aspect-ratio: 16 / 9; min-width: 0; overflow: hidden;"':
+                          - rvn-font-preview h=f fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} strokeColor=${previewStrokeColor} strokeWidth=${previewStrokeWidth} fontWeight=${previewFontWeight} width=f padding=8 showBorder=true: null
+                      - rtgl-view d=v g=sm w=f:
+                          - rtgl-text: ${previewTextLabel}
+                          - rtgl-input#previewTextInput key=${formKey} w=f value="${previewTextInputValue}": null
+    $else:
+      - $if isDialogOpen:
+          - rtgl-dialog#addTypographyDialog ?open=${isDialogOpen} s=md:
+              - rtgl-view slot=content g=md:
                   - rtgl-form#textStyleForm key=${formKey} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f: null
-              - rtgl-view w=1fg p=md d=v g=md:
-                  - rtgl-text s=lg fw=b: ${previewLabel}
-                  - 'rtgl-view w=f style="aspect-ratio: 16 / 9; min-width: 0; overflow: hidden;"':
-                      - rvn-font-preview h=f fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} strokeColor=${previewStrokeColor} strokeWidth=${previewStrokeWidth} fontWeight=${previewFontWeight} width=f padding=8 showBorder=true: null
-                  - rtgl-view d=v g=sm w=f:
-                      - rtgl-text: ${previewTextLabel}
-                      - rtgl-input#previewTextInput key=${formKey} w=f value="${previewTextInputValue}": null
   - rtgl-dialog#addColorDialog ?open=${isAddColorDialogOpen} s=sm:
       - $if isAddColorDialogOpen:
           - rtgl-form#addColorForm slot=content :defaultValues=${addColorDefaultValues} :form=${addColorForm} w=f: null

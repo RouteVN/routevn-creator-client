@@ -632,6 +632,7 @@ animationEditorPage:
   softnessLabel: "ソフトネス"
   stepSampleLabel: "ステップ"
   targetImageLabel: "対象画像"
+  timelineLabel: "タイムライン"
   translateXPropertyLabel: "移動X"
   translateXPropertyTooltip: "画面幅単位を使います。1で画面幅1つ分右へ、-1で画面幅1つ分左へ移動します。"
   translateYPropertyLabel: "移動Y"

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleAddMaskClick,
   handleAddKeyframeFormSubmit,
+  handleAddPropertiesClick,
   handleAddPropertyFormChange,
   handleAddPropertyFormSubmit,
   handleConfirmMaskImageSelection,
@@ -13,6 +14,7 @@ import {
   handleRulerTimeLeave,
   handleSavePreviewClick,
 } from "../../src/pages/animationEditor/animationEditor.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("animationEditor.handlers", () => {
   const createIdleAutosaveMocks = () => ({
@@ -74,6 +76,75 @@ describe("animationEditor.handlers", () => {
       mode: "editMask",
       x: 120,
       y: 160,
+      payload: {},
+    });
+    expect(render).toHaveBeenCalled();
+  });
+
+  it("opens the add-property dialog directly for touch transition animations", () => {
+    const store = {
+      selectDialogType: vi.fn(() => "transition"),
+      selectIsTouchMode: vi.fn(() => true),
+      selectDefaultAddPropertySide: vi.fn(() => "next"),
+      setPopover: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleAddPropertiesClick(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          clientX: 24,
+          clientY: 48,
+          currentTarget: {
+            dataset: {},
+          },
+        },
+      },
+    );
+
+    expect(store.setPopover).toHaveBeenCalledWith({
+      mode: "addProperty",
+      x: 24,
+      y: 48,
+      payload: {
+        side: "next",
+      },
+    });
+    expect(render).toHaveBeenCalled();
+  });
+
+  it("keeps the transition add-property side menu on desktop", () => {
+    const store = {
+      selectDialogType: vi.fn(() => "transition"),
+      selectIsTouchMode: vi.fn(() => false),
+      setPopover: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleAddPropertiesClick(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          clientX: 24,
+          clientY: 48,
+          currentTarget: {
+            dataset: {},
+          },
+        },
+      },
+    );
+
+    expect(store.setPopover).toHaveBeenCalledWith({
+      mode: "addPropertySideMenu",
+      x: 24,
+      y: 48,
       payload: {},
     });
     expect(render).toHaveBeenCalled();
@@ -280,6 +351,46 @@ describe("animationEditor.handlers", () => {
         initialValue: 1,
         property: "scaleX",
         useInitialValue: true,
+      },
+    });
+    expect(render).toHaveBeenCalled();
+  });
+
+  it("resets add-property choices when the mobile transition side changes", () => {
+    const store = {
+      selectPopover: vi.fn(() => ({
+        formValues: {
+          side: "prev",
+          property: "x",
+          useInitialValue: true,
+          initialValue: 12,
+        },
+      })),
+      updatePopoverFormValues: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleAddPropertyFormChange(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            name: "side",
+            value: "next",
+          },
+        },
+      },
+    );
+
+    expect(store.updatePopoverFormValues).toHaveBeenCalledWith({
+      formValues: {
+        side: "next",
+        property: undefined,
+        useInitialValue: true,
+        initialValue: undefined,
       },
     });
     expect(render).toHaveBeenCalled();
@@ -783,6 +894,7 @@ describe("animationEditor.handlers", () => {
         animations: [],
       })),
       selectPreviewData: vi.fn(() => previewData),
+      selectIsTouchMode: vi.fn(() => false),
       setItems: vi.fn(),
     };
     const projectService = {
@@ -809,6 +921,7 @@ describe("animationEditor.handlers", () => {
 
     await handleSavePreviewClick({
       appService,
+      i18n: EN_I18N,
       projectService,
       render,
       store,

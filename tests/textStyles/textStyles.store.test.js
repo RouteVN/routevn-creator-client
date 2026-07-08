@@ -3,6 +3,7 @@ import {
   createInitialState,
   selectViewData,
   setItems,
+  setUiConfig,
 } from "../../src/pages/textStyles/textStyles.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -69,5 +70,27 @@ describe("textStyles.store", () => {
       type: "item",
       value: "edit-item",
     });
+  });
+
+  it("hides the text style dialog preview canvas in touch mode", () => {
+    const state = createInitialState();
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).showDialogPreviewCanvas,
+    ).toBe(true);
+
+    setUiConfig(
+      { state },
+      {
+        uiConfig: {
+          id: "touch",
+          inputMode: "touch",
+        },
+      },
+    );
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).showDialogPreviewCanvas,
+    ).toBe(false);
   });
 });

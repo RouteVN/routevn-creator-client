@@ -236,6 +236,7 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
   Single: "singleMaskKind",
   Softness: "softnessLabel",
   Step: "stepSampleLabel",
+  Timeline: "timelineLabel",
   "Tween Mode": "tweenModeLabel",
   "The final value of the property at the end of the animation":
     "keyframeValueTooltip",
@@ -852,7 +853,7 @@ const createUpdateKeyframeForm = (
 const createAddPropertyForm = (
   availableProperties,
   propertyFieldConfig,
-  { side, property } = {},
+  { side, property, sideOptions = [] } = {},
   copy = {},
 ) => {
   const isUpdateSide = side === "update";
@@ -871,15 +872,26 @@ const createAddPropertyForm = (
       ? 'tweenMode != "auto" && useInitialValue == true'
       : "useInitialValue == true";
   }
-  const fields = [
-    {
-      name: "property",
-      type: "select",
-      label: "Property",
-      options: availableProperties,
+  const fields = [];
+
+  if (sideOptions.length > 0) {
+    fields.push({
+      name: "side",
+      type: "segmented-control",
+      label: "Timeline",
+      noClear: true,
+      options: sideOptions,
       required: true,
-    },
-  ];
+    });
+  }
+
+  fields.push({
+    name: "property",
+    type: "select",
+    label: "Property",
+    options: availableProperties,
+    required: true,
+  });
 
   if (isUpdateSide) {
     fields.push({
@@ -1391,6 +1403,21 @@ export const selectDefaultInitialValue = ({ state }, { property } = {}) => {
   }
 
   return getDefaultInitialValues(state)[property] ?? 0;
+};
+
+export const selectDefaultAddPropertySide = ({ state }) => {
+  if (state.dialogType !== "transition") {
+    return "update";
+  }
+
+  const propertyFieldConfig = getLocalizedPropertyFieldConfig(state);
+  const previousOptions = getAvailableProperties(
+    state,
+    "prev",
+    propertyFieldConfig,
+  );
+
+  return previousOptions.length > 0 ? "prev" : "next";
 };
 
 const resolveDialogSide = (state, side) => {
@@ -2573,14 +2600,6 @@ export const selectViewData = ({ state, i18n }) => {
     nextProperties,
     mask: getEffectiveTransitionMask(state),
   });
-  const addPropertySide =
-    state.popover.payload?.side ??
-    (dialogType === "transition" ? "prev" : "update");
-  const addPropertyOptions = getAvailableProperties(
-    state,
-    addPropertySide,
-    propertyFieldConfig,
-  );
   const updateTimelineDefaultValues = createTimelineDefaultValues(
     UPDATE_PROPERTY_KEYS,
     propertyFieldConfig,
@@ -2602,6 +2621,23 @@ export const selectViewData = ({ state, i18n }) => {
   const nextAddPropertyOptions = getAvailableProperties(
     state,
     "next",
+    propertyFieldConfig,
+  );
+  const transitionAddPropertySideOptions =
+    createTransitionAddPropertySideMenuItems({
+      previousAvailable: previousAddPropertyOptions.length > 0,
+      nextAvailable: nextAddPropertyOptions.length > 0,
+      copy,
+    });
+  const defaultTransitionAddPropertySide =
+    previousAddPropertyOptions.length > 0 ? "prev" : "next";
+  const addPropertySide =
+    state.popover.formValues.side ??
+    state.popover.payload?.side ??
+    (dialogType === "transition" ? defaultTransitionAddPropertySide : "update");
+  const addPropertyOptions = getAvailableProperties(
+    state,
+    addPropertySide,
     propertyFieldConfig,
   );
   const transitionMaskPanel = buildTransitionMaskPanelData(state, copy);
@@ -2646,6 +2682,10 @@ export const selectViewData = ({ state, i18n }) => {
   let editInitialValueDefaultValues = {};
   let editInitialValueContext = {};
   let addPropertySelectedProperty = addPropertyOptions[0]?.value;
+
+  if (dialogType === "transition") {
+    addPropertyFormDefaultValues.side = addPropertySide;
+  }
 
   if (state.popover.mode === "addProperty") {
     addPropertySelectedProperty =
@@ -2731,6 +2771,19 @@ export const selectViewData = ({ state, i18n }) => {
     };
   }
 
+  const showAddPropertyPopover =
+    !state.isTouchMode && state.popover.mode === "addProperty";
+  const showAddKeyframePopover =
+    !state.isTouchMode && state.popover.mode === "addKeyframe";
+  const showEditKeyframePopover =
+    !state.isTouchMode && state.popover.mode === "editKeyframe";
+  const showAddPropertyDialog =
+    state.isTouchMode && state.popover.mode === "addProperty";
+  const showAddKeyframeDialog =
+    state.isTouchMode && state.popover.mode === "addKeyframe";
+  const showEditKeyframeDialog =
+    state.isTouchMode && state.popover.mode === "editKeyframe";
+
   return {
     resourceCategory: ANIMATION_RESOURCE_CATEGORY,
     selectedResourceId: ANIMATION_SELECTED_RESOURCE_ID,
@@ -2758,6 +2811,10 @@ export const selectViewData = ({ state, i18n }) => {
       {
         side: addPropertySide,
         property: addPropertySelectedProperty,
+        sideOptions:
+          state.isTouchMode && dialogType === "transition"
+            ? transitionAddPropertySideOptions
+            : [],
       },
       copy,
     ),
@@ -2796,20 +2853,14 @@ export const selectViewData = ({ state, i18n }) => {
     transitionAddPropertyButtonVisible:
       previousAddPropertyOptions.length > 0 ||
       nextAddPropertyOptions.length > 0,
-    addPropertySideMenuItems: createTransitionAddPropertySideMenuItems({
-      previousAvailable: previousAddPropertyOptions.length > 0,
-      nextAvailable: nextAddPropertyOptions.length > 0,
-      copy,
-    }),
+    addPropertySideMenuItems: transitionAddPropertySideOptions,
     popover: {
       ...state.popover,
-      popoverIsOpen: [
-        "addProperty",
-        "addKeyframe",
-        "editKeyframe",
-        "editAuto",
-        "editInitialValue",
-      ].includes(state.popover.mode),
+      popoverIsOpen:
+        ["editAuto", "editInitialValue"].includes(state.popover.mode) ||
+        showAddPropertyPopover ||
+        showAddKeyframePopover ||
+        showEditKeyframePopover,
       maskDialogIsOpen: ["editMask", "addMask"].includes(state.popover.mode),
       dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
         state.popover.mode,
@@ -2827,6 +2878,12 @@ export const selectViewData = ({ state, i18n }) => {
     showRightPanel: !state.isTouchMode,
     showMobileTweenActions: state.isTouchMode,
     showMobileMaskButton: state.isTouchMode && dialogType === "transition",
+    showAddPropertyPopover,
+    showAddKeyframePopover,
+    showEditKeyframePopover,
+    showAddPropertyDialog,
+    showAddKeyframeDialog,
+    showEditKeyframeDialog,
     addButton: copy.addButton ?? "Add",
     addMaskButton: copy.addMaskButton ?? "Add Mask",
     addMaskTitle: copy.addMaskTitle ?? "Add Mask",
