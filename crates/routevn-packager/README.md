@@ -12,20 +12,16 @@ Current implementation status:
 
 - desktop only
 - Tauri 2 based shell
-- host-local builds only for now
+- host-local packaging by default
 
 That means:
 
-- Linux builds on Linux
-- macOS builds on macOS
-- Windows builds on Windows
+- Linux packages are produced from Linux hosts
+- macOS packages are produced from macOS hosts
+- Windows packages are produced from Windows hosts, or from the repository's
+  Windows player-template Docker build flow
 
 Mobile and store-specific packaging are not implemented yet.
-
-Supporting docs:
-
-- [TAURI_RESEARCH.md](./TAURI_RESEARCH.md): Tauri implementation research
-- [ROADMAP.md](./ROADMAP.md): desktop-only roadmap and checklist
 
 ## Input Format
 
@@ -97,7 +93,8 @@ icon = "../fixtures/sample-icon.png"
 targets = ["linux"]
 ```
 
-A committed example lives at [examples/sample-config.toml](/home/han4wluc/repositories/RouteVN/routevn-packager/examples/sample-config.toml).
+A committed example lives at
+[examples/sample-config.toml](./examples/sample-config.toml).
 
 ## Defaults
 
@@ -111,6 +108,22 @@ Example:
 
 - `my_cool-game.zip` becomes `My Cool Game`
 - identifier becomes `vn.routevn.my-cool-game`
+
+## Windows Player Template
+
+The Creator app exports portable Windows players and NSIS installers from a
+prebuilt Windows player template checked in under
+`src-tauri/assets/player-templates/windows/`.
+
+Build or refresh that template with:
+
+```bash
+bun run player-template:build:win:docker
+```
+
+The template is generated from [tauri-shell](./tauri-shell). Per-project
+metadata, icon resources, and the embedded RouteVN package are stamped by the
+Creator app during export.
 
 ## Linux Requirements
 
@@ -145,10 +158,10 @@ cargo run -- build ./path/to/export.zip --out ./dist
 
 Sample fixtures included in the repo:
 
-- [fixtures/sample-export/index.html](/home/han4wluc/repositories/RouteVN/routevn-packager/fixtures/sample-export/index.html)
-- [fixtures/sample-export/main.js](/home/han4wluc/repositories/RouteVN/routevn-packager/fixtures/sample-export/main.js)
-- [fixtures/sample-export/package.bin](/home/han4wluc/repositories/RouteVN/routevn-packager/fixtures/sample-export/package.bin)
-- [fixtures/sample-icon.png](/home/han4wluc/repositories/RouteVN/routevn-packager/fixtures/sample-icon.png)
+- [fixtures/sample-export/index.html](./fixtures/sample-export/index.html)
+- [fixtures/sample-export/main.js](./fixtures/sample-export/main.js)
+- [fixtures/sample-export/package.bin](./fixtures/sample-export/package.bin)
+- [fixtures/sample-icon.png](./fixtures/sample-icon.png)
 
 Create a sample zip from the fixture on systems with `bsdtar`:
 
@@ -166,8 +179,8 @@ cargo run -- build /tmp/sample-export.zip --out /tmp/routevn-out --icon fixtures
 
 The repo now contains:
 
-- a Rust CLI in [src](/home/han4wluc/repositories/RouteVN/routevn-packager/src)
-- a reusable Tauri shell in [tauri-shell](/home/han4wluc/repositories/RouteVN/routevn-packager/tauri-shell)
+- a Rust CLI in [src](./src)
+- a reusable Tauri shell in [tauri-shell](./tauri-shell)
 - test coverage for zip validation, metadata resolution, target handling, artifact collection, and generated Tauri config
 
 The build flow is:
