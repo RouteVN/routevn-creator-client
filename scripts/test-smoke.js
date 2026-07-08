@@ -123,6 +123,25 @@ const createRangeFetch =
     });
   };
 
+const createFullBundleFetch = (bytes) => {
+  let requestCount = 0;
+
+  const fetchBundle = async () => {
+    requestCount += 1;
+
+    return new Response(bytes, {
+      status: 200,
+      headers: {
+        "content-length": String(bytes.byteLength),
+      },
+    });
+  };
+
+  fetchBundle.getRequestCount = () => requestCount;
+
+  return fetchBundle;
+};
+
 const store = createRepositoryStoreStub();
 const repository = await createProjectRepository({
   projectId,
@@ -602,6 +621,13 @@ const rangeReader = await createBundleRangeReader({
 });
 const rangeInstructions = await rangeReader.readInstructions();
 const rangeAsset = await rangeReader.readAsset("hero.png");
+const fullBundleFetch = createFullBundleFetch(rangeBundle);
+const fullResponseReader = await createBundleRangeReader({
+  url: "package.bin",
+  fetchFn: fullBundleFetch,
+});
+const fullResponseInstructions = await fullResponseReader.readInstructions();
+const fullResponseAsset = await fullResponseReader.readAsset("hero.png");
 assert.equal(domainState.story.initialSceneId, "scene-1");
 assert.deepEqual(domainState.scenes["scene-1"].sectionIds, [
   "section-1",
@@ -656,6 +682,15 @@ assert.deepEqual(
   Array.from(rangeAsset.buffer),
   [137, 80, 78, 71, 13, 10, 26, 10],
 );
+assert.equal(
+  fullResponseInstructions.bundleMetadata.bundler.appVersion,
+  "1.0.0-rc2",
+);
+assert.deepEqual(
+  Array.from(fullResponseAsset.buffer),
+  [137, 80, 78, 71, 13, 10, 26, 10],
+);
+assert.equal(fullBundleFetch.getRequestCount(), 1);
 assert.equal(
   bundleInstructions.bundleMetadata.project.namespace,
   "project-namespace-1",

@@ -745,10 +745,32 @@ export const createBundleRangeReader = async ({
   }
 
   let totalLength;
+  let fullBundleBytes;
+
+  const readCachedRange = (start, length) => {
+    if (!fullBundleBytes) {
+      return undefined;
+    }
+
+    const end = start + length;
+    const bytes = fullBundleBytes.slice(start, end);
+    if (bytes.byteLength !== length) {
+      throw new Error(
+        `Bundle range request returned ${bytes.byteLength} bytes, expected ${length}`,
+      );
+    }
+
+    return bytes;
+  };
 
   const readRange = async (start, length) => {
     if (length <= 0) {
       return new Uint8Array();
+    }
+
+    const cachedBytes = readCachedRange(start, length);
+    if (cachedBytes) {
+      return cachedBytes;
     }
 
     const response = await fetchFn(url, {
@@ -757,9 +779,15 @@ export const createBundleRangeReader = async ({
       },
     });
 
+    if (response.status === 200) {
+      fullBundleBytes = new Uint8Array(await response.arrayBuffer());
+      totalLength = fullBundleBytes.byteLength;
+      return readCachedRange(start, length);
+    }
+
     if (response.status !== 206) {
       throw new Error(
-        `Bundle range request failed: expected 206, received ${response.status}`,
+        `Bundle range request failed: expected 206 or full 200, received ${response.status}`,
       );
     }
 
