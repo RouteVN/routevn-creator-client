@@ -131,15 +131,25 @@ const getBundleProjectTitle = (bundleMetadata) => {
   return "";
 };
 
+const hasTauriCurrentWindow = () =>
+  !!globalThis.window?.__TAURI_INTERNALS__?.metadata?.currentWindow;
+
 const setNativeWindowTitle = (title) => {
-  if (!globalThis.window?.__TAURI_INTERNALS__?.metadata?.currentWindow) {
+  if (!hasTauriCurrentWindow()) {
     return;
   }
 
   void getCurrentWindow()
     .setTitle(title)
+    .then(() => {
+      recordDiagnosticStep("Set native window title", { title });
+    })
     .catch((error) => {
       console.warn("Failed to set native window title.", error);
+      recordDiagnosticStep("Failed to set native window title", {
+        title,
+        error: formatErrorForDiagnostics(error),
+      });
     });
 };
 
@@ -173,6 +183,19 @@ const setBundleFavicon = ({ url, type }) => {
   link.href = url;
 };
 
+const setNativeWindowIcon = async ({ assetId, bytes }) => {
+  if (!hasTauriCurrentWindow()) {
+    return false;
+  }
+
+  await getCurrentWindow().setIcon(bytes);
+  recordDiagnosticStep("Set native window icon", {
+    assetId,
+    size: bytes.byteLength,
+  });
+  return true;
+};
+
 const readBundleAssetObjectUrl = async ({ bundleReader, assetId }) => {
   const metadata = await bundleReader.readAsset(assetId);
   if (metadata?.encoding === "diced-image") {
@@ -180,6 +203,8 @@ const readBundleAssetObjectUrl = async ({ bundleReader, assetId }) => {
   }
 
   const content = metadata.buffer;
+  const bytes =
+    content instanceof Uint8Array ? content.slice() : new Uint8Array(content);
   const fileType = await fileTypeFromBuffer(content);
   const type = resolveBundleAssetMimeType({
     bundleMime: metadata.mime,
@@ -190,6 +215,7 @@ const readBundleAssetObjectUrl = async ({ bundleReader, assetId }) => {
     url: URL.createObjectURL(new Blob([content], { type })),
     type,
     size: content.byteLength,
+    bytes,
   };
 };
 
@@ -209,10 +235,22 @@ const loadBundleFavicon = async ({ bundleMetadata, bundleReader }) => {
       url: favicon.url,
       type: favicon.type,
     });
+    const didSetNativeIcon = await setNativeWindowIcon({
+      assetId: iconFileId,
+      bytes: favicon.bytes,
+    }).catch((error) => {
+      console.warn("Failed to set native window icon.", error);
+      recordDiagnosticStep("Failed to set native window icon", {
+        assetId: iconFileId,
+        error: formatErrorForDiagnostics(error),
+      });
+      return false;
+    });
     recordDiagnosticStep("Loaded project favicon", {
       assetId: iconFileId,
       type: favicon.type,
       size: favicon.size,
+      nativeIcon: didSetNativeIcon,
     });
   } catch (error) {
     console.warn("Failed to load project favicon.", error);
