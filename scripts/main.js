@@ -107,6 +107,14 @@ const recordDiagnosticStep = (message, details) => {
   console.info("[RouteVN player]", message, details ?? "");
 };
 
+document.addEventListener(
+  "contextmenu",
+  (event) => {
+    event.preventDefault();
+  },
+  { capture: true },
+);
+
 const formatDiagnosticEvents = () =>
   diagnosticEvents
     .map((event) => {
@@ -134,33 +142,52 @@ const getBundleProjectTitle = (bundleMetadata) => {
 const hasTauriCurrentWindow = () =>
   !!globalThis.window?.__TAURI_INTERNALS__?.metadata?.currentWindow;
 
-const setNativeWindowTitle = (title) => {
+const setNativeWindowTitle = async (title) => {
   if (!hasTauriCurrentWindow()) {
-    return;
+    return false;
   }
 
-  void getCurrentWindow()
-    .setTitle(title)
-    .then(() => {
-      recordDiagnosticStep("Set native window title", { title });
-    })
-    .catch((error) => {
-      console.warn("Failed to set native window title.", error);
-      recordDiagnosticStep("Failed to set native window title", {
-        title,
-        error: formatErrorForDiagnostics(error),
-      });
+  try {
+    await getCurrentWindow().setTitle(title);
+    recordDiagnosticStep("Set native window title", { title });
+    return true;
+  } catch (error) {
+    console.warn("Failed to set native window title.", error);
+    recordDiagnosticStep("Failed to set native window title", {
+      title,
+      error: formatErrorForDiagnostics(error),
     });
+    return false;
+  }
 };
 
-const setBundleDocumentTitle = (bundleMetadata) => {
+const setBundleDocumentTitle = async (bundleMetadata) => {
   const title = getBundleProjectTitle(bundleMetadata);
   if (!title) {
-    return;
+    return false;
   }
 
   document.title = title;
-  setNativeWindowTitle(title);
+  return setNativeWindowTitle(title);
+};
+
+const showNativeWindow = async ({ reason } = {}) => {
+  if (!hasTauriCurrentWindow()) {
+    return false;
+  }
+
+  try {
+    await getCurrentWindow().show();
+    recordDiagnosticStep("Showed native window", { reason });
+    return true;
+  } catch (error) {
+    console.warn("Failed to show native window.", error);
+    recordDiagnosticStep("Failed to show native window", {
+      reason,
+      error: formatErrorForDiagnostics(error),
+    });
+    return false;
+  }
 };
 
 const setBundleFavicon = ({ url, type }) => {
@@ -222,7 +249,7 @@ const readBundleAssetObjectUrl = async ({ bundleReader, assetId }) => {
 const loadBundleFavicon = async ({ bundleMetadata, bundleReader }) => {
   const iconFileId = bundleMetadata?.project?.iconFileId;
   if (!iconFileId || !bundleReader.hasAsset(iconFileId)) {
-    return;
+    return false;
   }
 
   recordDiagnosticStep("Loading project favicon", { assetId: iconFileId });
@@ -252,12 +279,14 @@ const loadBundleFavicon = async ({ bundleMetadata, bundleReader }) => {
       size: favicon.size,
       nativeIcon: didSetNativeIcon,
     });
+    return didSetNativeIcon;
   } catch (error) {
     console.warn("Failed to load project favicon.", error);
     recordDiagnosticStep("Failed to load project favicon", {
       assetId: iconFileId,
       error: formatErrorForDiagnostics(error),
     });
+    return false;
   }
 };
 
@@ -535,11 +564,13 @@ const preloadBundleData = async () => {
   const jsonData = {
     ...vnbundleInstructions.projectData,
   };
-  setBundleDocumentTitle(vnbundleInstructions.bundleMetadata);
-  void loadBundleFavicon({
-    bundleMetadata: vnbundleInstructions.bundleMetadata,
-    bundleReader,
-  });
+  await Promise.all([
+    setBundleDocumentTitle(vnbundleInstructions.bundleMetadata),
+    loadBundleFavicon({
+      bundleMetadata: vnbundleInstructions.bundleMetadata,
+      bundleReader,
+    }),
+  ]);
 
   return {
     jsonData,
@@ -792,9 +823,6 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
     });
 
   canvasContainer?.appendChild(routeGraphics.canvas);
-  canvasContainer?.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-  });
 
   engine = createRouteEngine({ handlePendingEffects: effectsHandler });
   const preloadSaveSlotImagesResult = await preloadRuntimeSaveSlotImages(
@@ -851,12 +879,14 @@ const bootstrap = async () => {
     engineRuntime.startEngine();
     await engineRuntime.waitForFirstRender();
     hideLoadingOverlay();
+    await showNativeWindow({ reason: "first-render" });
   } catch (error) {
     console.error("Failed to start bundle player:", error);
     setLoadingError({
       summary: "The player could not finish startup.",
       error,
     });
+    await showNativeWindow({ reason: "startup-error" });
   }
 };
 
