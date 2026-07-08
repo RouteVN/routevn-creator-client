@@ -154,6 +154,28 @@ The native bridge in `RouteVNApp.swift` handles:
 - iOS document picker results
 - local project folder import/export
 
+## Simulator Validation
+
+Simulator validation is the active mobile gate until physical-device testing is
+available.
+
+Current simulator-safe checks:
+
+- `bun run ios:run -- --smoke-test`
+- ZIP integrity check on the smoke-test export
+- iOS adapter tests under `tests/ios/`
+- shared mobile viewport/unit tests under `tests/`
+
+The adapter tests cover:
+
+- iOS router stack persistence
+- file picker fallback and native-result cleanup
+- save picker and selected-file writes
+- opaque folder-picker URI forwarding
+- native streamed ZIP export delegation
+- JavaScript ZIP fallback writes to the selected URI
+- disabled remote collaboration behavior
+
 ## Current Device Test Needs
 
 Simulator is enough for initial shell, SQLite, and packaged asset validation.

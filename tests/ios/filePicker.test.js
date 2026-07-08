@@ -2,20 +2,18 @@ import { JSDOM } from "jsdom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
-  callAndroidBridge: vi.fn(),
+  callIOSBridge: vi.fn(),
 }));
 
-vi.mock("../../src/deps/clients/android/bridge.js", async () => {
-  const actual = await vi.importActual(
-    "../../src/deps/clients/android/bridge.js",
-  );
+vi.mock("../../src/deps/clients/ios/bridge.js", async () => {
+  const actual = await vi.importActual("../../src/deps/clients/ios/bridge.js");
   return {
     ...actual,
-    callAndroidBridge: mocked.callAndroidBridge,
+    callIOSBridge: mocked.callIOSBridge,
   };
 });
 
-import { createAndroidFilePicker } from "../../src/deps/clients/android/filePicker.js";
+import { createIOSFilePicker } from "../../src/deps/clients/ios/filePicker.js";
 
 const originalWindow = globalThis.window;
 const originalDocument = globalThis.document;
@@ -25,7 +23,7 @@ const originalFetch = globalThis.fetch;
 
 const installDom = () => {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-    url: "https://appassets.androidplatform.net/web/index.html",
+    url: "https://routevn.ios/ios/index.html",
   });
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
@@ -34,11 +32,11 @@ const installDom = () => {
   return dom;
 };
 
-describe("android file picker", () => {
+describe("ios file picker", () => {
   let dom;
 
   beforeEach(() => {
-    mocked.callAndroidBridge.mockReset();
+    mocked.callIOSBridge.mockReset();
     dom = installDom();
   });
 
@@ -70,28 +68,30 @@ describe("android file picker", () => {
         this.onchange?.({ target: this });
       });
 
-    const file = await createAndroidFilePicker().openFilePicker({
+    const file = await createIOSFilePicker().openFilePicker({
       multiple: false,
     });
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(file.name).toBe("hello.txt");
-    expect(document.getElementById("routevnAndroidFilePickerInput")).toBeNull();
+    expect(document.getElementById("routevnIOSFilePickerInput")).toBeNull();
   });
 
   it("cleans native picker request files after reading descriptors", async () => {
     const fetchedUrls = [];
     const deletedRequests = [];
+    let pickerPayload;
     globalThis.fetch = vi.fn(async (url) => {
       fetchedUrls.push(url);
       return new Response(new Blob(["hello"], { type: "text/plain" }), {
         status: 200,
       });
     });
-    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+    mocked.callIOSBridge.mockImplementation((method, payload) => {
       if (method === "openFilePicker") {
+        pickerPayload = payload;
         Promise.resolve().then(() => {
-          window.__routeVNAndroidFilePickerResult({
+          window.__routeVNIOSFilePickerResult({
             requestId: payload.requestId,
             files: [
               {
@@ -99,56 +99,62 @@ describe("android file picker", () => {
                 fileId: "file-0",
                 name: "hello.txt",
                 type: "text/plain",
-                url: `https://appassets.androidplatform.net/android-files/picker/${payload.requestId}/files/file-0`,
+                url: `routevn://app/ios-files/picker/${payload.requestId}/files/file-0`,
               },
             ],
           });
         });
-        return true;
+        return Promise.resolve(true);
       }
 
       if (method === "deletePickerRequest") {
         deletedRequests.push(payload.requestId);
-        return true;
+        return Promise.resolve(true);
       }
 
       throw new Error(`Unexpected bridge method: ${method}`);
     });
 
-    const file = await createAndroidFilePicker().openFilePicker({
+    const file = await createIOSFilePicker().openFilePicker({
       multiple: false,
+      accept: "image/*",
     });
 
     expect(file.name).toBe("hello.txt");
+    expect(pickerPayload).toEqual({
+      requestId: "picker-1",
+      multiple: false,
+      accept: "image/*",
+    });
     expect(fetchedUrls).toEqual([
-      "https://appassets.androidplatform.net/android-files/picker/picker-1/files/file-0",
+      "routevn://app/ios-files/picker/picker-1/files/file-0",
     ]);
     expect(deletedRequests).toEqual(["picker-1"]);
   });
 
   it("opens the native save picker when no bytes are supplied", async () => {
     let savePayload;
-    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+    mocked.callIOSBridge.mockImplementation((method, payload) => {
       if (method === "openSaveFilePicker") {
         savePayload = payload;
         Promise.resolve().then(() => {
-          window.__routeVNAndroidSaveFileResult({
+          window.__routeVNIOSSaveFileResult({
             requestId: payload.requestId,
-            uri: "content://exports/project_version.zip",
+            uri: "file:///exports/project_version.zip",
           });
         });
-        return true;
+        return Promise.resolve(true);
       }
 
       throw new Error(`Unexpected bridge method: ${method}`);
     });
 
-    const selectedUri = await createAndroidFilePicker().saveFilePicker({
+    const selectedUri = await createIOSFilePicker().saveFilePicker({
       defaultPath: "project_version.zip",
       mimeType: "application/zip",
     });
 
-    expect(selectedUri).toBe("content://exports/project_version.zip");
+    expect(selectedUri).toBe("file:///exports/project_version.zip");
     expect(savePayload).toEqual({
       requestId: "save-1",
       filename: "project_version.zip",
@@ -158,32 +164,34 @@ describe("android file picker", () => {
 
   it("opens the native folder picker with writable access when requested", async () => {
     let folderPayload;
-    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+    mocked.callIOSBridge.mockImplementation((method, payload) => {
       if (method === "openFolderPicker") {
         folderPayload = payload;
         Promise.resolve().then(() => {
-          window.__routeVNAndroidFolderPickerResult({
+          window.__routeVNIOSFolderPickerResult({
             requestId: payload.requestId,
             folder: {
-              uri: "content://exports",
+              uri: "routevn-folder://selected/folder-1",
               name: "Exports",
+              sourceUri: "file:///exports",
             },
           });
         });
-        return true;
+        return Promise.resolve(true);
       }
 
       throw new Error(`Unexpected bridge method: ${method}`);
     });
 
-    const folder = await createAndroidFilePicker().openFolderPicker({
+    const folder = await createIOSFilePicker().openFolderPicker({
       title: "Select Export Folder",
       writable: true,
     });
 
     expect(folder).toEqual({
-      uri: "content://exports",
+      uri: "routevn-folder://selected/folder-1",
       name: "Exports",
+      sourceUri: "file:///exports",
     });
     expect(folderPayload).toEqual({
       requestId: "folder-1",
@@ -192,43 +200,43 @@ describe("android file picker", () => {
     });
   });
 
-  it("writes supplied bytes to a selected Android save URI", async () => {
+  it("writes supplied bytes to a selected iOS save URI", async () => {
     let writePayload;
-    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+    mocked.callIOSBridge.mockImplementation((method, payload) => {
       if (method === "writeFileToUri") {
         writePayload = payload;
-        return payload.uri;
+        return Promise.resolve(payload.uri);
       }
 
       throw new Error(`Unexpected bridge method: ${method}`);
     });
 
-    const selectedUri = await createAndroidFilePicker().saveFilePicker({
-      uri: "content://exports/project_version.zip",
+    const selectedUri = await createIOSFilePicker().saveFilePicker({
+      uri: "file:///exports/project_version.zip",
       bytes: Uint8Array.from([1, 2, 3]),
       mimeType: "application/zip",
     });
 
-    expect(selectedUri).toBe("content://exports/project_version.zip");
+    expect(selectedUri).toBe("file:///exports/project_version.zip");
     expect(writePayload).toEqual({
-      uri: "content://exports/project_version.zip",
+      uri: "file:///exports/project_version.zip",
       mimeType: "application/zip",
       base64: "AQID",
     });
   });
 
-  it("writes supplied blobs to Android downloads", async () => {
+  it("writes supplied blobs to iOS downloads", async () => {
     let writePayload;
-    mocked.callAndroidBridge.mockImplementation((method, payload) => {
+    mocked.callIOSBridge.mockImplementation((method, payload) => {
       if (method === "writeDownloadFile") {
         writePayload = payload;
-        return "file:///downloads/readme.txt";
+        return Promise.resolve("file:///downloads/readme.txt");
       }
 
       throw new Error(`Unexpected bridge method: ${method}`);
     });
 
-    const selectedUri = await createAndroidFilePicker().saveFilePicker(
+    const selectedUri = await createIOSFilePicker().saveFilePicker(
       new Blob(["hello"], { type: "text/plain" }),
       "readme.txt",
     );

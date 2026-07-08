@@ -1,5 +1,16 @@
 # Animation Editor Transition Mask Plan
 
+## Status
+
+Status as of 2026-07-08: the client already contains transition-mask editor
+state, UI wiring, persistence, and serialization paths. This document remains
+useful as an end-state checklist, but it should not be read as an unstarted
+plan.
+
+Before continuing mask work, audit the current implementation against the done
+criteria below, especially real transition preview parity, export/runtime asset
+reachability, and image usage/deletion protection.
+
 ## Purpose
 
 This document defines the end state and implementation path for adding
