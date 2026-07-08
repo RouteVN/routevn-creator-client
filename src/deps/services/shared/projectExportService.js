@@ -51,25 +51,57 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
         inset: 0;
         display: grid;
         place-items: center;
+        box-sizing: border-box;
+        padding: 24px;
         color: #fff;
         background: #000;
-        font: 600 24px/1.2 sans-serif;
-        letter-spacing: 0.02em;
         z-index: 10;
         user-select: none;
       }
 
-      #loading.ready {
-        cursor: pointer;
+      #loading.error {
+        cursor: default;
+        text-align: left;
+        user-select: text;
       }
 
       #loading.hidden {
         display: none;
       }
+
+      #loading .loading-error {
+        width: min(760px, calc(100vw - 32px));
+      }
+
+      #loading .loading-error-title {
+        margin: 0 0 8px;
+        font: 700 24px/1.2 sans-serif;
+      }
+
+      #loading .loading-error-summary {
+        margin: 0 0 16px;
+        color: #f1f5f9;
+        font: 500 15px/1.45 sans-serif;
+      }
+
+      #loading .loading-error-details {
+        box-sizing: border-box;
+        width: 100%;
+        max-height: min(58vh, 520px);
+        margin: 0;
+        overflow: auto;
+        padding: 12px;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        background: #0f172a;
+        color: #e2e8f0;
+        font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+        white-space: pre-wrap;
+      }
     </style>
   </head>
   <body>
-    <div id="loading">Loading...</div>
+    <div id="loading"></div>
     <div id="canvas"></div>
   </body>
   <script>
@@ -402,6 +434,8 @@ const buildChunkManifest = async (instructions, assets = {}) => {
 };
 
 export const createBundleInstructions = ({ projectData, bundler, project }) => {
+  const projectTitle = project?.title ?? project?.name ?? "";
+
   return {
     projectData,
     bundleMetadata: {
@@ -411,6 +445,8 @@ export const createBundleInstructions = ({ projectData, bundler, project }) => {
       },
       project: {
         namespace: project?.namespace ?? "",
+        title: projectTitle,
+        iconFileId: project?.iconFileId ?? "",
       },
     },
   };

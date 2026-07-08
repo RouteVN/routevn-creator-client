@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BUNDLE_FORMAT_VERSION_V4,
   BUNDLE_HEADER_SIZE,
+  createBundleInstructions,
   createBundleResult,
   createProjectExportService,
   normalizeExportFileEntries,
@@ -107,6 +108,23 @@ describe("projectExportService", () => {
       { id: "file-3", mimeType: "font/ttf" },
       { id: "file-4" },
     ]);
+  });
+
+  it("stores project title and icon metadata in bundle instructions", () => {
+    expect(
+      createBundleInstructions({
+        projectData: {},
+        project: {
+          namespace: "project-one",
+          title: "Project One",
+          iconFileId: "icon-1",
+        },
+      }).bundleMetadata.project,
+    ).toEqual({
+      namespace: "project-one",
+      title: "Project One",
+      iconFileId: "icon-1",
+    });
   });
 
   it("stores repeated raw assets once in bundle format v4", async () => {
@@ -365,5 +383,4 @@ describe("projectExportService", () => {
       "scene-1",
     );
   });
-
 });

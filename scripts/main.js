@@ -1,4 +1,5 @@
 import { fileTypeFromBuffer } from "file-type";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import createRouteEngine, {
   createEffectsHandler,
   createIndexedDbPersistence,
@@ -17,6 +18,277 @@ import {
 } from "../src/internal/runtime/graphicsEngineRuntime.js";
 import { resolveBundleAssetMimeType } from "../src/internal/bundleRuntimeAssets.js";
 import { createBundleRangeReader as createPackageBinRangeReader } from "../src/deps/services/shared/projectExportService.js";
+
+const MAX_DIAGNOSTIC_EVENTS = 24;
+const MAX_DIAGNOSTIC_TEXT_LENGTH = 12_000;
+const diagnosticEvents = [];
+
+const truncateDiagnosticText = (value) => {
+  if (value.length <= MAX_DIAGNOSTIC_TEXT_LENGTH) {
+    return value;
+  }
+
+  return `${value.slice(0, MAX_DIAGNOSTIC_TEXT_LENGTH)}\n... truncated ...`;
+};
+
+const stringifyDiagnosticValue = (value) => {
+  if (value === undefined) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value instanceof Error) {
+    return formatErrorForDiagnostics(value);
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+};
+
+const formatErrorForDiagnostics = (error) => {
+  if (!error) {
+    return "";
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  const lines = [];
+  const name = typeof error.name === "string" ? error.name : "";
+  const message =
+    typeof error.message === "string" && error.message.length > 0
+      ? error.message
+      : String(error);
+
+  lines.push(name && name !== "Error" ? `${name}: ${message}` : message);
+
+  if (error.details !== undefined) {
+    lines.push(`Details: ${stringifyDiagnosticValue(error.details)}`);
+  }
+
+  if (error.stack) {
+    lines.push(`Stack: ${error.stack}`);
+  }
+
+  if (error.cause) {
+    lines.push(`Cause: ${formatErrorForDiagnostics(error.cause)}`);
+  }
+
+  return lines.filter(Boolean).join("\n");
+};
+
+const createRuntimeError = (message, cause, details) => {
+  const error = new Error(message);
+  error.cause = cause;
+  if (details !== undefined) {
+    error.details = details;
+  }
+  return error;
+};
+
+const recordDiagnosticStep = (message, details) => {
+  const entry = {
+    time: new Date().toISOString(),
+    message,
+    details,
+  };
+  diagnosticEvents.push(entry);
+  if (diagnosticEvents.length > MAX_DIAGNOSTIC_EVENTS) {
+    diagnosticEvents.shift();
+  }
+
+  console.info("[RouteVN player]", message, details ?? "");
+};
+
+document.addEventListener(
+  "contextmenu",
+  (event) => {
+    event.preventDefault();
+  },
+  { capture: true },
+);
+
+const formatDiagnosticEvents = () =>
+  diagnosticEvents
+    .map((event) => {
+      const details = stringifyDiagnosticValue(event.details);
+      return details
+        ? `[${event.time}] ${event.message}\n${details}`
+        : `[${event.time}] ${event.message}`;
+    })
+    .join("\n\n");
+
+const getBundleProjectTitle = (bundleMetadata) => {
+  const title = bundleMetadata?.project?.title?.trim?.();
+  if (title) {
+    return title;
+  }
+
+  const name = bundleMetadata?.project?.name?.trim?.();
+  if (name) {
+    return name;
+  }
+
+  return "";
+};
+
+const hasTauriCurrentWindow = () =>
+  !!globalThis.window?.__TAURI_INTERNALS__?.metadata?.currentWindow;
+
+const setNativeWindowTitle = async (title) => {
+  if (!hasTauriCurrentWindow()) {
+    return false;
+  }
+
+  try {
+    await getCurrentWindow().setTitle(title);
+    recordDiagnosticStep("Set native window title", { title });
+    return true;
+  } catch (error) {
+    console.warn("Failed to set native window title.", error);
+    recordDiagnosticStep("Failed to set native window title", {
+      title,
+      error: formatErrorForDiagnostics(error),
+    });
+    return false;
+  }
+};
+
+const setBundleDocumentTitle = async (bundleMetadata) => {
+  const title = getBundleProjectTitle(bundleMetadata);
+  if (!title) {
+    return false;
+  }
+
+  document.title = title;
+  return setNativeWindowTitle(title);
+};
+
+const showNativeWindow = async ({ reason } = {}) => {
+  if (!hasTauriCurrentWindow()) {
+    return false;
+  }
+
+  try {
+    await getCurrentWindow().show();
+    recordDiagnosticStep("Showed native window", { reason });
+    return true;
+  } catch (error) {
+    console.warn("Failed to show native window.", error);
+    recordDiagnosticStep("Failed to show native window", {
+      reason,
+      error: formatErrorForDiagnostics(error),
+    });
+    return false;
+  }
+};
+
+const setBundleFavicon = ({ url, type }) => {
+  const head = document.head;
+  if (!head || !url) {
+    return;
+  }
+
+  let link = document.querySelector(
+    'link[rel="icon"][data-routevn-bundle-icon="true"]',
+  );
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    link.dataset.routevnBundleIcon = "true";
+    head.appendChild(link);
+  }
+
+  link.type = type ?? "image/png";
+  link.href = url;
+};
+
+const setNativeWindowIcon = async ({ assetId, bytes }) => {
+  if (!hasTauriCurrentWindow()) {
+    return false;
+  }
+
+  await getCurrentWindow().setIcon(bytes);
+  recordDiagnosticStep("Set native window icon", {
+    assetId,
+    size: bytes.byteLength,
+  });
+  return true;
+};
+
+const readBundleAssetObjectUrl = async ({ bundleReader, assetId }) => {
+  const metadata = await bundleReader.readAsset(assetId);
+  if (metadata?.encoding === "diced-image") {
+    throw new Error("Diced image assets are not supported as favicon images.");
+  }
+
+  const content = metadata.buffer;
+  const bytes =
+    content instanceof Uint8Array ? content.slice() : new Uint8Array(content);
+  const fileType = await fileTypeFromBuffer(content);
+  const type = resolveBundleAssetMimeType({
+    bundleMime: metadata.mime,
+    detectedMime: fileType?.mime,
+  });
+
+  return {
+    url: URL.createObjectURL(new Blob([content], { type })),
+    type,
+    size: content.byteLength,
+    bytes,
+  };
+};
+
+const loadBundleFavicon = async ({ bundleMetadata, bundleReader }) => {
+  const iconFileId = bundleMetadata?.project?.iconFileId;
+  if (!iconFileId || !bundleReader.hasAsset(iconFileId)) {
+    return false;
+  }
+
+  recordDiagnosticStep("Loading project favicon", { assetId: iconFileId });
+  try {
+    const favicon = await readBundleAssetObjectUrl({
+      bundleReader,
+      assetId: iconFileId,
+    });
+    setBundleFavicon({
+      url: favicon.url,
+      type: favicon.type,
+    });
+    const didSetNativeIcon = await setNativeWindowIcon({
+      assetId: iconFileId,
+      bytes: favicon.bytes,
+    }).catch((error) => {
+      console.warn("Failed to set native window icon.", error);
+      recordDiagnosticStep("Failed to set native window icon", {
+        assetId: iconFileId,
+        error: formatErrorForDiagnostics(error),
+      });
+      return false;
+    });
+    recordDiagnosticStep("Loaded project favicon", {
+      assetId: iconFileId,
+      type: favicon.type,
+      size: favicon.size,
+      nativeIcon: didSetNativeIcon,
+    });
+    return didSetNativeIcon;
+  } catch (error) {
+    console.warn("Failed to load project favicon.", error);
+    recordDiagnosticStep("Failed to load project favicon", {
+      assetId: iconFileId,
+      error: formatErrorForDiagnostics(error),
+    });
+    return false;
+  }
+};
 
 const collectBundleAssetIds = ({ value, hasAsset, result = new Set() }) => {
   if (typeof value === "string") {
@@ -49,59 +321,95 @@ const createBundleAssetLoader = ({ bundleReader, routeGraphics }) => {
   const assetLoadPromises = new Map();
   const dicedAtlasPixelCache = new Map();
 
-  const shouldBufferAsset = (mimeType = "") => {
-    return (
-      mimeType.startsWith("audio/") ||
-      mimeType.startsWith("font/") ||
-      [
-        "application/font-woff",
-        "application/font-woff2",
-        "application/x-font-ttf",
-        "application/x-font-otf",
-      ].includes(mimeType)
+  const createAssetBuffer = (content) => {
+    if (content instanceof ArrayBuffer) {
+      return content.slice(0);
+    }
+
+    return content.buffer.slice(
+      content.byteOffset,
+      content.byteOffset + content.byteLength,
     );
   };
 
   const createRuntimeAsset = async (assetId) => {
-    const metadata = await bundleReader.readAsset(assetId);
+    recordDiagnosticStep("Reading bundle asset", { assetId });
+    let metadata;
+    try {
+      metadata = await bundleReader.readAsset(assetId);
+    } catch (error) {
+      throw createRuntimeError(
+        `Failed to read bundle asset "${assetId}".`,
+        error,
+        { assetId },
+      );
+    }
 
     if (metadata?.encoding === "diced-image") {
       let atlas;
       if (!dicedAtlasPixelCache.has(metadata.atlasId)) {
-        atlas = await bundleReader.readAtlas(metadata.atlasId);
+        recordDiagnosticStep("Reading diced image atlas", {
+          assetId,
+          atlasId: metadata.atlasId,
+        });
+        try {
+          atlas = await bundleReader.readAtlas(metadata.atlasId);
+        } catch (error) {
+          throw createRuntimeError(
+            `Failed to read diced atlas "${metadata.atlasId}" for asset "${assetId}".`,
+            error,
+            { assetId, atlasId: metadata.atlasId },
+          );
+        }
       }
 
-      return createRuntimeAssetFromDicedImage({
-        asset: metadata,
-        atlases: atlas
-          ? {
-              [metadata.atlasId]: atlas,
-            }
-          : {},
-        atlasCache: dicedAtlasPixelCache,
-      });
+      try {
+        return await createRuntimeAssetFromDicedImage({
+          asset: metadata,
+          atlases: atlas
+            ? {
+                [metadata.atlasId]: atlas,
+              }
+            : {},
+          atlasCache: dicedAtlasPixelCache,
+        });
+      } catch (error) {
+        throw createRuntimeError(
+          `Failed to reconstruct diced image asset "${assetId}".`,
+          error,
+          {
+            assetId,
+            atlasId: metadata.atlasId,
+            width: metadata.width,
+            height: metadata.height,
+          },
+        );
+      }
     }
 
     const content = metadata.buffer;
-    const fileType = await fileTypeFromBuffer(content);
+    let fileType;
+    try {
+      fileType = await fileTypeFromBuffer(content);
+    } catch (error) {
+      throw createRuntimeError(
+        `Failed to inspect bundle asset "${assetId}".`,
+        error,
+        {
+          assetId,
+          mime: metadata.mime,
+          size: content?.byteLength,
+        },
+      );
+    }
     const detectedType = resolveBundleAssetMimeType({
       bundleMime: metadata.mime,
       detectedMime: fileType?.mime,
     });
-    if (shouldBufferAsset(detectedType)) {
-      return {
-        buffer: content.buffer.slice(
-          content.byteOffset,
-          content.byteOffset + content.byteLength,
-        ),
-        source: "buffer",
-        type: detectedType,
-      };
-    }
 
     return {
-      source: "url",
-      url: URL.createObjectURL(new Blob([content], { type: detectedType })),
+      buffer: createAssetBuffer(content),
+      source: "buffer",
       type: detectedType,
       size: content.byteLength,
     };
@@ -118,9 +426,31 @@ const createBundleAssetLoader = ({ bundleReader, routeGraphics }) => {
 
     const loadPromise = (async () => {
       const asset = await createRuntimeAsset(assetId);
-      await routeGraphics.loadAssets({
-        [assetId]: asset,
-      });
+      try {
+        const loadedAssets = await routeGraphics.loadAssets({
+          [assetId]: asset,
+        });
+        recordDiagnosticStep("Loaded route graphics asset", {
+          assetId,
+          source: asset?.source,
+          type: asset?.type,
+          size: asset?.size,
+          returnedAssetCount: Array.isArray(loadedAssets)
+            ? loadedAssets.length
+            : undefined,
+        });
+      } catch (error) {
+        throw createRuntimeError(
+          `Graphics engine failed to load asset "${assetId}".`,
+          error,
+          {
+            assetId,
+            source: asset?.source,
+            type: asset?.type,
+            size: asset?.size,
+          },
+        );
+      }
 
       loadedAssetIds.add(assetId);
     })().finally(() => {
@@ -159,44 +489,88 @@ const hideLoadingOverlay = () => {
   }
 };
 
-const setLoadingText = (text) => {
+const setLoadingError = ({
+  summary = "Failed to load",
+  error,
+  details,
+} = {}) => {
   const loadingElement = document.getElementById("loading");
-  if (loadingElement) {
-    loadingElement.textContent = text;
+  if (!loadingElement) {
+    return;
   }
-};
 
-const setLoadingReadyForClick = () => {
-  const loadingElement = document.getElementById("loading");
-  if (loadingElement) {
-    loadingElement.textContent = "Click to start";
-    loadingElement.classList.add("ready");
+  loadingElement.classList.remove("hidden");
+  loadingElement.classList.add("error");
+  loadingElement.textContent = "";
+
+  const panel = document.createElement("div");
+  panel.className = "loading-error";
+
+  const title = document.createElement("h1");
+  title.className = "loading-error-title";
+  title.textContent = "Failed to load";
+
+  const summaryElement = document.createElement("p");
+  summaryElement.className = "loading-error-summary";
+  summaryElement.textContent = summary;
+
+  const detailBlocks = [];
+  const detailsText = stringifyDiagnosticValue(details);
+  if (detailsText) {
+    detailBlocks.push(`Context:\n${detailsText}`);
   }
-};
 
-const waitForClickToStart = async () => {
-  const loadingElement = document.getElementById("loading");
-  if (!loadingElement) return;
+  const errorText = formatErrorForDiagnostics(error);
+  if (errorText) {
+    detailBlocks.push(`Error:\n${errorText}`);
+  }
 
-  await new Promise((resolve) => {
-    const handleClick = () => {
-      loadingElement.removeEventListener("click", handleClick);
-      loadingElement.classList.remove("ready");
-      resolve();
-    };
+  const recentSteps = formatDiagnosticEvents();
+  if (recentSteps) {
+    detailBlocks.push(`Recent steps:\n${recentSteps}`);
+  }
 
-    loadingElement.addEventListener("click", handleClick);
-  });
+  const detailsElement = document.createElement("pre");
+  detailsElement.className = "loading-error-details";
+  detailsElement.textContent = truncateDiagnosticText(
+    detailBlocks.filter(Boolean).join("\n\n"),
+  );
+
+  panel.append(title, summaryElement, detailsElement);
+  loadingElement.append(panel);
 };
 
 const preloadBundleData = async () => {
+  recordDiagnosticStep("Opening package bundle", { url: "./package.bin" });
   const bundleReader = await createPackageBinRangeReader({
     url: "./package.bin",
+  }).catch((error) => {
+    throw createRuntimeError("Failed to open package.bin.", error, {
+      url: "./package.bin",
+    });
   });
-  const vnbundleInstructions = await bundleReader.readInstructions();
+  recordDiagnosticStep("Reading bundle instructions", {
+    totalLength: bundleReader.totalLength,
+    assetCount: Object.keys(bundleReader.manifest?.assets ?? {}).length,
+    atlasCount: Object.keys(bundleReader.manifest?.atlases ?? {}).length,
+  });
+  const vnbundleInstructions = await bundleReader
+    .readInstructions()
+    .catch((error) => {
+      throw createRuntimeError("Failed to read bundle instructions.", error, {
+        totalLength: bundleReader.totalLength,
+      });
+    });
   const jsonData = {
     ...vnbundleInstructions.projectData,
   };
+  await Promise.all([
+    setBundleDocumentTitle(vnbundleInstructions.bundleMetadata),
+    loadBundleFavicon({
+      bundleMetadata: vnbundleInstructions.bundleMetadata,
+      bundleReader,
+    }),
+  ]);
 
   return {
     jsonData,
@@ -221,7 +595,13 @@ const createBundleNamespace = (bundleMetadata) => {
 };
 
 const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
-  const plugins = await loadGraphicsEnginePlugins();
+  recordDiagnosticStep("Preparing graphics runtime", {
+    assetCount: Object.keys(bundleReader.manifest?.assets ?? {}).length,
+    atlasCount: Object.keys(bundleReader.manifest?.atlases ?? {}).length,
+  });
+  const plugins = await loadGraphicsEnginePlugins().catch((error) => {
+    throw createRuntimeError("Failed to load graphics engine plugins.", error);
+  });
   const namespace = createBundleNamespace(bundleMetadata);
 
   // Create dedicated ticker for auto mode
@@ -231,11 +611,13 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
   const routeGraphics = createRouteGraphics();
   let engine;
   let resolveFirstRender;
-  let firstRenderResolved = false;
+  let rejectFirstRender;
+  let firstRenderSettled = false;
   let latestPreparedRenderState;
   let renderAssetLoadToken = 0;
-  const firstRenderPromise = new Promise((resolve) => {
+  const firstRenderPromise = new Promise((resolve, reject) => {
     resolveFirstRender = resolve;
+    rejectFirstRender = reject;
   });
   const bundleAssetLoader = createBundleAssetLoader({
     bundleReader,
@@ -269,17 +651,51 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
   }
 
   const markFirstRender = () => {
-    if (firstRenderResolved) {
+    if (firstRenderSettled) {
       return;
     }
 
-    firstRenderResolved = true;
+    firstRenderSettled = true;
     resolveFirstRender();
   };
 
+  const failFirstRender = (error) => {
+    if (firstRenderSettled) {
+      return false;
+    }
+
+    firstRenderSettled = true;
+    rejectFirstRender(error);
+    return true;
+  };
+
+  const handleRuntimeRenderFailure = (error, details) => {
+    const runtimeError = createRuntimeError(
+      "Failed to render runtime state.",
+      error,
+      details,
+    );
+    console.error("Failed to render runtime state:", runtimeError);
+
+    if (failFirstRender(runtimeError)) {
+      return;
+    }
+
+    setLoadingError({
+      summary: "The player failed while rendering the current scene.",
+      error: runtimeError,
+    });
+  };
+
   const renderPreparedState = (renderState) => {
-    routeGraphics.render(renderState);
-    markFirstRender();
+    try {
+      routeGraphics.render(renderState);
+      markFirstRender();
+    } catch (error) {
+      handleRuntimeRenderFailure(error, {
+        hasRenderState: !!renderState,
+      });
+    }
   };
 
   const renderEngineState = (renderState) => {
@@ -298,7 +714,9 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
 
     const loadToken = renderAssetLoadToken + 1;
     renderAssetLoadToken = loadToken;
-    setLoadingText("Loading assets...");
+    recordDiagnosticStep("Loading render assets", {
+      assetIds: missingAssetIds,
+    });
 
     void bundleAssetLoader
       .ensureAssetsLoaded(missingAssetIds)
@@ -310,11 +728,28 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
         renderPreparedState(latestPreparedRenderState);
       })
       .catch((error) => {
-        console.error("Failed to load runtime assets:", error);
-        setLoadingText("Failed to load");
+        const runtimeError = createRuntimeError(
+          "Failed to load runtime assets.",
+          error,
+          {
+            assetIds: missingAssetIds,
+            renderAssetLoadToken: loadToken,
+          },
+        );
+
+        console.error("Failed to load runtime assets:", runtimeError);
+        if (failFirstRender(runtimeError)) {
+          return;
+        }
+
+        setLoadingError({
+          summary: "Runtime asset loading failed after the player started.",
+          error: runtimeError,
+        });
       });
   };
 
+  recordDiagnosticStep("Loading runtime save data", { namespace });
   const persistence = createIndexedDbPersistence({ namespace });
   const {
     saveSlots,
@@ -322,7 +757,11 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
     globalAccountVariables,
     globalRuntime,
     accountViewedRegistry,
-  } = await persistence.load();
+  } = await persistence.load().catch((error) => {
+    throw createRuntimeError("Failed to load runtime save data.", error, {
+      namespace,
+    });
+  });
 
   const effectsHandler = createEffectsHandler({
     getEngine: () => engine,
@@ -365,23 +804,36 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
       },
     });
 
-  await routeGraphics.init({
+  recordDiagnosticStep("Initializing graphics engine", {
     width: screenWidth,
     height: screenHeight,
-    plugins,
-    eventHandler: routeGraphicsEventHandler,
   });
+  await routeGraphics
+    .init({
+      width: screenWidth,
+      height: screenHeight,
+      plugins,
+      eventHandler: routeGraphicsEventHandler,
+    })
+    .catch((error) => {
+      throw createRuntimeError("Failed to initialize graphics engine.", error, {
+        width: screenWidth,
+        height: screenHeight,
+      });
+    });
 
   canvasContainer?.appendChild(routeGraphics.canvas);
-  canvasContainer?.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-  });
 
   engine = createRouteEngine({ handlePendingEffects: effectsHandler });
   const preloadSaveSlotImagesResult = await preloadRuntimeSaveSlotImages(
     routeGraphics,
     saveSlots,
-  );
+  ).catch((error) => {
+    throw createRuntimeError(
+      "Failed to preload saved thumbnail images.",
+      error,
+    );
+  });
 
   if (preloadSaveSlotImagesResult.failed > 0) {
     console.warn(
@@ -390,21 +842,28 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
   }
 
   const startEngine = () => {
-    engine.init({
-      namespace,
-      initialState: {
-        global: {
-          saveSlots,
-          variables: {
-            ...globalDeviceVariables,
-            ...globalAccountVariables,
+    recordDiagnosticStep("Starting route engine", { namespace });
+    try {
+      engine.init({
+        namespace,
+        initialState: {
+          global: {
+            saveSlots,
+            variables: {
+              ...globalDeviceVariables,
+              ...globalAccountVariables,
+            },
+            runtime: globalRuntime,
+            accountViewedRegistry,
           },
-          runtime: globalRuntime,
-          accountViewedRegistry,
+          projectData: jsonData,
         },
-        projectData: jsonData,
-      },
-    });
+      });
+    } catch (error) {
+      throw createRuntimeError("Failed to start route engine.", error, {
+        namespace,
+      });
+    }
   };
 
   return {
@@ -417,14 +876,17 @@ const bootstrap = async () => {
   try {
     const preloadedData = await preloadBundleData();
     const engineRuntime = await prepareEngine(preloadedData);
-    setLoadingReadyForClick();
-    await waitForClickToStart();
     engineRuntime.startEngine();
     await engineRuntime.waitForFirstRender();
     hideLoadingOverlay();
+    await showNativeWindow({ reason: "first-render" });
   } catch (error) {
     console.error("Failed to start bundle player:", error);
-    setLoadingText("Failed to load");
+    setLoadingError({
+      summary: "The player could not finish startup.",
+      error,
+    });
+    await showNativeWindow({ reason: "startup-error" });
   }
 };
 

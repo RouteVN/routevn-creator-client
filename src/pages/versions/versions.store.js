@@ -233,9 +233,7 @@ export const selectViewData = ({ state, i18n }) => {
       copy.exportWindowsExecutableButton ?? "Export Windows EXE",
     exportWindowsInstallerButton:
       copy.exportWindowsInstallerButton ?? "Export Windows Installer",
-    canExportWindowsExecutable:
-      state.platform === "tauri" &&
-      state.windowsExportAvailability.portableExecutable,
+    canExportWindowsExecutable: state.platform === "tauri",
     canExportWindowsInstaller:
       state.platform === "tauri" && state.windowsExportAvailability.installer,
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",

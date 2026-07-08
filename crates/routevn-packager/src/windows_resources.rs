@@ -19,10 +19,21 @@ const CODEPAGE_UNICODE: u32 = 1200;
 const RT_ICON: u16 = 3;
 const RT_GROUP_ICON: u16 = 14;
 const RT_VERSION: u16 = 16;
+const RT_MANIFEST: u16 = 24;
 const RESOURCE_ICON_ID: u16 = 1;
 const RESOURCE_VERSION_ID: u16 = 1;
+const RESOURCE_MANIFEST_ID: u16 = 1;
 const MAX_WINDOWS_ICON_SIZE: u32 = 256;
 const MIN_WINDOWS_ICON_SIZE: u32 = 64;
+const WINDOWS_COMMON_CONTROLS_MANIFEST: &[u8] = br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*" />
+    </dependentAssembly>
+  </dependency>
+</assembly>
+"#;
 
 #[derive(Clone, Copy, Debug)]
 pub struct WindowsResourceMetadata<'a> {
@@ -423,11 +434,16 @@ fn build_resource_section(
             bytes: version_info,
             code_page: CODEPAGE_UNICODE,
         },
+        ResourceData {
+            bytes: WINDOWS_COMMON_CONTROLS_MANIFEST.to_vec(),
+            code_page: 0,
+        },
     ];
     let tree = ResourceNode::Directory(vec![
         type_resource_entry(RT_ICON, RESOURCE_ICON_ID, 0),
         type_resource_entry(RT_GROUP_ICON, RESOURCE_ICON_ID, 1),
         type_resource_entry(RT_VERSION, RESOURCE_VERSION_ID, 2),
+        type_resource_entry(RT_MANIFEST, RESOURCE_MANIFEST_ID, 3),
     ]);
     let mut bytes = Vec::new();
     let mut data_entry_patches = Vec::new();
@@ -842,8 +858,8 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        WindowsResourceMetadata, WindowsResourceStampRequest, parse_windows_version_parts,
-        stamp_windows_resources,
+        WINDOWS_COMMON_CONTROLS_MANIFEST, WindowsResourceMetadata, WindowsResourceStampRequest,
+        parse_windows_version_parts, stamp_windows_resources,
     };
 
     const PNG_64: &[u8] = &[
@@ -899,6 +915,11 @@ mod tests {
         assert!(resource_size > 0);
         assert!(outcome.resource_bytes > 0);
         assert!(stamped.windows(PNG_64.len()).any(|window| window == PNG_64));
+        assert!(
+            stamped
+                .windows(WINDOWS_COMMON_CONTROLS_MANIFEST.len())
+                .any(|window| window == WINDOWS_COMMON_CONTROLS_MANIFEST)
+        );
         let title_marker = utf16le("My Game");
         assert!(
             stamped

@@ -92,13 +92,22 @@ else
   target_root="${manifest_dir}/target"
 fi
 
-exe_path="${target_root}/${target}/${profile_dir}/app.exe"
-if [[ ! -f "${exe_path}" ]]; then
-  exe_path="$(find "${target_root}/${target}/${profile_dir}" -maxdepth 1 -type f -name "*.exe" -print -quit)"
+profile_path="${target_root}/${target}/${profile_dir}"
+exe_path=""
+for candidate_name in routevn-creator.exe app.exe; do
+  candidate_path="${profile_path}/${candidate_name}"
+  if [[ -f "${candidate_path}" ]]; then
+    exe_path="${candidate_path}"
+    break
+  fi
+done
+
+if [[ -z "${exe_path}" ]]; then
+  exe_path="$(find "${profile_path}" -maxdepth 1 -type f -name "*.exe" -printf "%T@ %p\n" | sort -nr | awk 'NR == 1 { $1 = ""; sub(/^ /, ""); print }')"
 fi
 
 if [[ -z "${exe_path}" ]] || [[ ! -f "${exe_path}" ]]; then
-  echo "Could not find built Windows executable under ${target_root}/${target}/${profile_dir}" >&2
+  echo "Could not find built Windows executable under ${profile_path}" >&2
   exit 1
 fi
 

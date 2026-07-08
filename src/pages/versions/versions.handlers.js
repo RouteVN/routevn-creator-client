@@ -122,6 +122,70 @@ const getProjectExportTitle = ({ projectInfo } = {}) => {
   return projectInfo?.name?.trim?.();
 };
 
+const UNKNOWN_ERROR_MESSAGE =
+  "Unknown error. Check the developer console for details.";
+const WINDOWS_EXPORT_COMMAND_RESTART_MESSAGE =
+  "The running Tauri shell does not include Windows export commands. Restart the Tauri dev process so the native shell rebuilds.";
+
+const getErrorMessage = (error, fallback = UNKNOWN_ERROR_MESSAGE) => {
+  if (typeof error === "string") {
+    return error.trim() || fallback;
+  }
+
+  const message = error?.message;
+  if (typeof message === "string" && message.trim()) {
+    return message.trim();
+  }
+
+  try {
+    const serialized = JSON.stringify(error);
+    if (serialized && serialized !== "{}") {
+      return serialized;
+    }
+  } catch {}
+
+  return fallback;
+};
+
+const getWindowsExportErrorMessage = (error) => {
+  const message = getErrorMessage(error);
+  if (
+    /^Command export_windows_(portable_executable|installer_from_project) not found$/.test(
+      message,
+    )
+  ) {
+    return `${message}. ${WINDOWS_EXPORT_COMMAND_RESTART_MESSAGE}`;
+  }
+
+  return message;
+};
+
+const formatWindowsExportErrorCopy = ({ template, error }) =>
+  formatI18nCopy(template, {
+    message: getWindowsExportErrorMessage(error),
+  });
+
+const logWindowsExportError = ({
+  exportType,
+  error,
+  version,
+  versionId,
+  outputPath,
+  windowsFileVersion,
+  replay,
+} = {}) => {
+  console.error(`Version Windows ${exportType} export failed`, {
+    errorMessage: getWindowsExportErrorMessage(error),
+    versionId,
+    versionName: version?.name,
+    versionActionIndex: version?.actionIndex,
+    outputPath,
+    windowsFileVersion,
+    replay,
+    error,
+  });
+};
+
 const WINDOWS_VERSION_PART_BASE = 65536;
 const WINDOWS_VERSION_PART_MAX = 65535;
 const WINDOWS_VERSION_ACTION_INDEX_MAX =
@@ -196,6 +260,17 @@ const createVersionExportData = async ({
 
     return entry;
   });
+
+  if (
+    projectInfo.iconFileId &&
+    !fileEntries.some((entry) => entry.fileId === projectInfo.iconFileId)
+  ) {
+    fileEntries.push({
+      fileId: projectInfo.iconFileId,
+      mimeType: "image/png",
+    });
+  }
+
   const transformedData = createBundleInstructions({
     projectData: constructedProjectData,
     bundler: {
@@ -203,6 +278,8 @@ const createVersionExportData = async ({
     },
     project: {
       namespace: projectInfo.namespace,
+      title: getProjectExportTitle({ projectInfo }),
+      iconFileId: projectInfo.iconFileId,
     },
   });
 
@@ -421,7 +498,7 @@ export const handleDownloadZipClick = async (deps, payload) => {
     appService.showAlert({
       message: formatI18nCopy(
         copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
-        { message: error.message },
+        { message: getErrorMessage(error) },
       ),
       title: copy.errorTitle ?? "Error",
     });
@@ -486,10 +563,10 @@ export const handleDownloadZipClick = async (deps, payload) => {
 
     appService.showAlert({
       message: replay
-        ? `${formatReplayFailureMessage({ replay, copy })}\n${error.message}`
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error)}`
         : formatI18nCopy(
             copy.failedSaveZipFile ?? "Failed to save ZIP file: {message}",
-            { message: error.message },
+            { message: getErrorMessage(error) },
           ),
       title: copy.errorTitle ?? "Error",
     });
@@ -523,11 +600,12 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
     windowsFileVersion = getWindowsFileVersion({ version });
   } catch (error) {
     appService.showAlert({
-      message: formatI18nCopy(
-        copy.failedSaveWindowsExecutable ??
+      message: formatWindowsExportErrorCopy({
+        template:
+          copy.failedSaveWindowsExecutable ??
           "Failed to save Windows executable: {message}",
-        { message: error.message },
-      ),
+        error,
+      }),
       title: copy.errorTitle ?? "Error",
     });
     return;
@@ -543,11 +621,19 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
   try {
     outputPath = await projectService.promptWindowsExecutablePath(exeName);
   } catch (error) {
+    logWindowsExportError({
+      exportType: "executable save dialog",
+      error,
+      version,
+      versionId,
+      windowsFileVersion,
+    });
     appService.showAlert({
-      message: formatI18nCopy(
-        copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
-        { message: error.message },
-      ),
+      message: formatWindowsExportErrorCopy({
+        template:
+          copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
+        error,
+      }),
       title: copy.errorTitle ?? "Error",
     });
     return;
@@ -597,24 +683,25 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
   } catch (error) {
     const replay = error?.details?.replay;
 
-    if (replay) {
-      console.error("Version Windows executable export history replay failed", {
-        versionId,
-        versionName: version?.name,
-        versionActionIndex: version?.actionIndex,
-        replay,
-        error,
-      });
-    }
+    logWindowsExportError({
+      exportType: "executable",
+      error,
+      version,
+      versionId,
+      outputPath,
+      windowsFileVersion,
+      replay,
+    });
 
     appService.showAlert({
       message: replay
-        ? `${formatReplayFailureMessage({ replay, copy })}\n${error.message}`
-        : formatI18nCopy(
-            copy.failedSaveWindowsExecutable ??
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error)}`
+        : formatWindowsExportErrorCopy({
+            template:
+              copy.failedSaveWindowsExecutable ??
               "Failed to save Windows executable: {message}",
-            { message: error.message },
-          ),
+            error,
+          }),
       title: copy.errorTitle ?? "Error",
     });
   }
@@ -647,11 +734,12 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
     windowsFileVersion = getWindowsFileVersion({ version });
   } catch (error) {
     appService.showAlert({
-      message: formatI18nCopy(
-        copy.failedSaveWindowsInstaller ??
+      message: formatWindowsExportErrorCopy({
+        template:
+          copy.failedSaveWindowsInstaller ??
           "Failed to save Windows installer: {message}",
-        { message: error.message },
-      ),
+        error,
+      }),
       title: copy.errorTitle ?? "Error",
     });
     return;
@@ -667,11 +755,19 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
   try {
     outputPath = await projectService.promptWindowsInstallerPath(installerName);
   } catch (error) {
+    logWindowsExportError({
+      exportType: "installer save dialog",
+      error,
+      version,
+      versionId,
+      windowsFileVersion,
+    });
     appService.showAlert({
-      message: formatI18nCopy(
-        copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
-        { message: error.message },
-      ),
+      message: formatWindowsExportErrorCopy({
+        template:
+          copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
+        error,
+      }),
       title: copy.errorTitle ?? "Error",
     });
     return;
@@ -720,24 +816,25 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
   } catch (error) {
     const replay = error?.details?.replay;
 
-    if (replay) {
-      console.error("Version Windows installer export history replay failed", {
-        versionId,
-        versionName: version?.name,
-        versionActionIndex: version?.actionIndex,
-        replay,
-        error,
-      });
-    }
+    logWindowsExportError({
+      exportType: "installer",
+      error,
+      version,
+      versionId,
+      outputPath,
+      windowsFileVersion,
+      replay,
+    });
 
     appService.showAlert({
       message: replay
-        ? `${formatReplayFailureMessage({ replay, copy })}\n${error.message}`
-        : formatI18nCopy(
-            copy.failedSaveWindowsInstaller ??
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error)}`
+        : formatWindowsExportErrorCopy({
+            template:
+              copy.failedSaveWindowsInstaller ??
               "Failed to save Windows installer: {message}",
-            { message: error.message },
-          ),
+            error,
+          }),
       title: copy.errorTitle ?? "Error",
     });
   }

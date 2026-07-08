@@ -200,7 +200,7 @@ const decodeAtlasBufferToPixels = async ({ buffer, mime }) => {
   }
 };
 
-const encodePixelsToObjectUrl = async ({ width, height, pixels }) => {
+const encodePixelsToPngBuffer = async ({ width, height, pixels }) => {
   const canvas = createCanvas({ width, height });
   const context = canvas.getContext("2d");
   if (!context) {
@@ -225,7 +225,7 @@ const encodePixelsToObjectUrl = async ({ width, height, pixels }) => {
     });
   }
 
-  return URL.createObjectURL(blob);
+  return blob.arrayBuffer();
 };
 
 export const createRuntimeAssetFromDicedImage = async ({
@@ -263,15 +263,16 @@ export const createRuntimeAssetFromDicedImage = async ({
     indices: asset.indices,
     rect: asset.rect,
   });
-  const url = await encodePixelsToObjectUrl({
+  const buffer = await encodePixelsToPngBuffer({
     width: Number(asset.width ?? 0),
     height: Number(asset.height ?? 0),
     pixels,
   });
 
   return {
-    url,
+    buffer,
+    source: "buffer",
     type: "image/png",
-    size: pixels.byteLength,
+    size: buffer.byteLength,
   };
 };
