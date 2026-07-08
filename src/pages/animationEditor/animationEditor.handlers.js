@@ -827,6 +827,19 @@ export const handleAddPropertiesClick = (deps, payload) => {
   const side = payload._event.currentTarget?.dataset?.side;
 
   if (!side && store.selectDialogType() === "transition") {
+    if (store.selectIsTouchMode()) {
+      store.setPopover({
+        mode: "addProperty",
+        x: payload._event.clientX,
+        y: payload._event.clientY,
+        payload: {
+          side: store.selectDefaultAddPropertySide(),
+        },
+      });
+      render();
+      return;
+    }
+
     store.setPopover({
       mode: "addPropertySideMenu",
       x: payload._event.clientX,
@@ -879,10 +892,17 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
     popover,
     payload,
   });
-  const { property, useInitialValue, tweenMode, duration, easing } =
-    mergedValues;
+  const {
+    property,
+    useInitialValue,
+    tweenMode,
+    duration,
+    easing,
+    side: submittedSide,
+  } = mergedValues;
+  const targetSide = submittedSide ?? side;
   const defaultInitialValue = store.selectDefaultInitialValue({ property });
-  const useAutoTween = side === "update" && tweenMode === "auto";
+  const useAutoTween = targetSide === "update" && tweenMode === "auto";
   const submittedInitialValue = hasOwnFormValue(trackedValues, "initialValue")
     ? trackedValues.initialValue
     : defaultInitialValue;
@@ -896,7 +916,7 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
       : undefined;
 
   store.addProperty({
-    side,
+    side: targetSide,
     property,
     initialValue: finalInitialValue,
     tweenMode,
@@ -1279,6 +1299,20 @@ const isPreviewImageSelectorTarget = (target) => {
 export const handleAddPropertyFormChange = (deps, payload) => {
   const { render, store } = deps;
   const { name, value } = payload._event.detail ?? {};
+  if (name === "side") {
+    const currentFormValues = store.selectPopover().formValues ?? {};
+    store.updatePopoverFormValues({
+      formValues: {
+        ...currentFormValues,
+        side: value,
+        property: undefined,
+        initialValue: undefined,
+      },
+    });
+    render();
+    return;
+  }
+
   if (name === "property") {
     const currentFormValues = store.selectPopover().formValues ?? {};
     const initialValue = store.selectDefaultInitialValue({

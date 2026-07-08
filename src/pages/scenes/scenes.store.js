@@ -594,6 +594,8 @@ export const selectViewData = ({ state, i18n }) => {
     selectedItemDescription,
     isWaitingForTransform: state.isWaitingForTransform,
     showSceneForm: state.showSceneForm,
+    showSceneFormPopover: state.showSceneForm && !state.isTouchMode,
+    showSceneFormDialog: state.showSceneForm && state.isTouchMode,
     sceneFormKey,
     sceneFormPosition: state.sceneFormPosition,
     sceneFormData: sceneFormDefaultValues,

@@ -622,6 +622,7 @@ animationEditorPage:
   softnessLabel: "Softness"
   stepSampleLabel: "Step"
   targetImageLabel: "Target Image"
+  timelineLabel: "Timeline"
   translateXPropertyLabel: "Translate X"
   translateXPropertyTooltip: "Uses viewport-width units. 1 moves by one full screen width, -1 moves by one full screen width to the left."
   translateYPropertyLabel: "Translate Y"

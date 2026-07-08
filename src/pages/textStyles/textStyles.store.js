@@ -1135,6 +1135,7 @@ export const selectViewData = ({ state, i18n }) => {
     isDialogOpen: state.isDialogOpen,
     dialogForm: dialogForm,
     dialogDefaultValues,
+    showDialogPreviewCanvas: !state.isTouchMode,
     formKey: `${state.selectedItemId}-${state.isDialogOpen || state.isAddFontDialogOpen}`,
     ...buildTagViewData({
       state,

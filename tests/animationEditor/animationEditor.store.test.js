@@ -20,16 +20,18 @@ import {
   setProjectResolution,
   setTransitionMaskChannel,
   setTransitionMaskImage,
+  setUiConfig,
   startPendingTransitionMask,
   updatePopoverFormValues,
 } from "../../src/pages/animationEditor/animationEditor.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("animationEditor.store", () => {
   it("does not show Mask in the transition Add menu", () => {
     const state = createInitialState();
     openDialog({ state }, { dialogType: "transition" });
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.transitionAddPropertyButtonVisible).toBe(true);
     expect(viewData.addPropertySideMenuItems).not.toContainEqual({
@@ -52,7 +54,7 @@ describe("animationEditor.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.popover.popoverIsOpen).toBe(false);
     expect(viewData.popover.maskDialogIsOpen).toBe(true);
@@ -72,7 +74,7 @@ describe("animationEditor.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.transitionMaskPanel.enabled).toBe(false);
     expect(viewData.maskEditorPanel.enabled).toBe(true);
@@ -92,11 +94,147 @@ describe("animationEditor.store", () => {
     openDialog({ state }, { dialogType: "transition" });
     enableTransitionMask({ state });
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(state.transitionMask.channel).toBe("red");
     expect(viewData.transitionMaskPanel.channelValue).toBe("red");
     expect(viewData.transitionMaskPanel.channelLabel).toBe("Greyscale");
+  });
+
+  it("uses popovers on desktop and dialogs on touch for add-property and keyframe forms", () => {
+    const state = createInitialState();
+
+    setPopover(
+      { state },
+      {
+        mode: "addProperty",
+        payload: {
+          side: "update",
+        },
+      },
+    );
+
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.popover.popoverIsOpen).toBe(true);
+    expect(viewData.showAddPropertyPopover).toBe(true);
+    expect(viewData.showAddPropertyDialog).toBe(false);
+    expect(viewData.showAddKeyframePopover).toBe(false);
+    expect(viewData.showAddKeyframeDialog).toBe(false);
+    expect(viewData.showEditKeyframePopover).toBe(false);
+    expect(viewData.showEditKeyframeDialog).toBe(false);
+
+    setPopover(
+      { state },
+      {
+        mode: "addKeyframe",
+        payload: {
+          side: "update",
+          property: "x",
+          index: 0,
+        },
+      },
+    );
+
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.popover.popoverIsOpen).toBe(true);
+    expect(viewData.showAddPropertyPopover).toBe(false);
+    expect(viewData.showAddPropertyDialog).toBe(false);
+    expect(viewData.showAddKeyframePopover).toBe(true);
+    expect(viewData.showAddKeyframeDialog).toBe(false);
+    expect(viewData.showEditKeyframePopover).toBe(false);
+    expect(viewData.showEditKeyframeDialog).toBe(false);
+
+    setPopover(
+      { state },
+      {
+        mode: "editKeyframe",
+        payload: {
+          side: "update",
+          property: "x",
+          index: 0,
+        },
+      },
+    );
+
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.popover.popoverIsOpen).toBe(true);
+    expect(viewData.showAddPropertyPopover).toBe(false);
+    expect(viewData.showAddPropertyDialog).toBe(false);
+    expect(viewData.showAddKeyframePopover).toBe(false);
+    expect(viewData.showAddKeyframeDialog).toBe(false);
+    expect(viewData.showEditKeyframePopover).toBe(true);
+    expect(viewData.showEditKeyframeDialog).toBe(false);
+
+    setUiConfig(
+      { state },
+      {
+        uiConfig: {
+          id: "touch",
+          inputMode: "touch",
+        },
+      },
+    );
+
+    setPopover(
+      { state },
+      {
+        mode: "addProperty",
+        payload: {
+          side: "update",
+        },
+      },
+    );
+
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.popover.popoverIsOpen).toBe(false);
+    expect(viewData.showAddPropertyPopover).toBe(false);
+    expect(viewData.showAddPropertyDialog).toBe(true);
+    expect(viewData.showAddKeyframePopover).toBe(false);
+    expect(viewData.showAddKeyframeDialog).toBe(false);
+    expect(viewData.showEditKeyframePopover).toBe(false);
+    expect(viewData.showEditKeyframeDialog).toBe(false);
+
+    setPopover(
+      { state },
+      {
+        mode: "addKeyframe",
+        payload: {
+          side: "update",
+          property: "x",
+          index: 0,
+        },
+      },
+    );
+
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.popover.popoverIsOpen).toBe(false);
+    expect(viewData.showAddPropertyPopover).toBe(false);
+    expect(viewData.showAddPropertyDialog).toBe(false);
+    expect(viewData.showAddKeyframePopover).toBe(false);
+    expect(viewData.showAddKeyframeDialog).toBe(true);
+    expect(viewData.showEditKeyframePopover).toBe(false);
+    expect(viewData.showEditKeyframeDialog).toBe(false);
+
+    setPopover(
+      { state },
+      {
+        mode: "editKeyframe",
+        payload: {
+          side: "update",
+          property: "x",
+          index: 0,
+        },
+      },
+    );
+
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.popover.popoverIsOpen).toBe(false);
+    expect(viewData.showAddPropertyPopover).toBe(false);
+    expect(viewData.showAddPropertyDialog).toBe(false);
+    expect(viewData.showAddKeyframePopover).toBe(false);
+    expect(viewData.showAddKeyframeDialog).toBe(false);
+    expect(viewData.showEditKeyframePopover).toBe(false);
+    expect(viewData.showEditKeyframeDialog).toBe(true);
   });
 
   it("normalizes removed mask channels to greyscale red", () => {
@@ -130,9 +268,10 @@ describe("animationEditor.store", () => {
         },
       },
     );
-    const xField = selectViewData({ state }).addKeyframeForm.fields.find(
-      (field) => field.name === "value",
-    );
+    const xField = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).addKeyframeForm.fields.find((field) => field.name === "value");
 
     setPopover(
       { state },
@@ -143,9 +282,10 @@ describe("animationEditor.store", () => {
         },
       },
     );
-    const yField = selectViewData({ state }).addKeyframeForm.fields.find(
-      (field) => field.name === "value",
-    );
+    const yField = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).addKeyframeForm.fields.find((field) => field.name === "value");
 
     expect(xField).toMatchObject({
       min: -1920,
@@ -172,7 +312,7 @@ describe("animationEditor.store", () => {
       },
     );
 
-    let viewData = selectViewData({ state });
+    let viewData = selectViewData({ state, i18n: EN_I18N });
     const propertyField = viewData.addPropertyForm.fields.find(
       (field) => field.name === "property",
     );
@@ -198,7 +338,7 @@ describe("animationEditor.store", () => {
         },
       },
     );
-    viewData = selectViewData({ state });
+    viewData = selectViewData({ state, i18n: EN_I18N });
     expect(
       viewData.addPropertyForm.fields.find(
         (field) => field.name === "initialValue",
@@ -218,7 +358,7 @@ describe("animationEditor.store", () => {
         },
       },
     );
-    viewData = selectViewData({ state });
+    viewData = selectViewData({ state, i18n: EN_I18N });
     expect(
       viewData.addPropertyForm.fields.find(
         (field) => field.name === "initialValue",
@@ -244,7 +384,7 @@ describe("animationEditor.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const propertyField = viewData.addPropertyForm.fields.find(
       (field) => field.name === "property",
     );
@@ -313,7 +453,7 @@ describe("animationEditor.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const propertyField = viewData.addPropertyForm.fields.find(
       (field) => field.name === "property",
     );
@@ -355,7 +495,7 @@ describe("animationEditor.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const addPropertyForm = viewData.addPropertyForm;
     const initialValueFields = addPropertyForm.fields.filter(
       (field) => field.name === "initialValue",
@@ -394,9 +534,7 @@ describe("animationEditor.store", () => {
       },
     );
 
-    const viewData = selectViewData({
-      state,
-    });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const initialValueFields = viewData.addPropertyForm.fields.filter(
       (field) => field.name === "initialValue",
     );
@@ -453,7 +591,7 @@ describe("animationEditor.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.transitionMaskPanel.singleImage).toMatchObject({
       imageId: "mask",
@@ -510,7 +648,7 @@ describe("animationEditor.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.previewPanel.items).toEqual([
       expect.objectContaining({

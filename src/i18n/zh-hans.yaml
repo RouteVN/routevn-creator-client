@@ -622,6 +622,7 @@ animationEditorPage:
   softnessLabel: "柔化"
   stepSampleLabel: "阶梯"
   targetImageLabel: "目标图像"
+  timelineLabel: "时间线"
   translateXPropertyLabel: "平移 X"
   translateXPropertyTooltip: "使用视口宽度单位。1 表示向右移动一个完整屏幕宽度，-1 表示向左移动一个完整屏幕宽度。"
   translateYPropertyLabel: "平移 Y"

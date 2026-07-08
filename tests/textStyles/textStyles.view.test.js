@@ -34,4 +34,44 @@ describe("textStyles view", () => {
     expect(textStylesView).toContain("handler: handleMobileDetailEditClick");
     expect(textStylesView).toContain("handler: handleTextStyleItemEdit");
   });
+
+  it("hides the add/edit preview canvas in the mobile dialog branch", () => {
+    const textStylesView = readFileSync(
+      new URL(
+        "../../src/pages/textStyles/textStyles.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    const desktopPreviewStart = textStylesView.indexOf(
+      "$if showDialogPreviewCanvas",
+    );
+    const mobileBranchStart = textStylesView.indexOf(
+      "$else:",
+      desktopPreviewStart,
+    );
+    const dialogEnd = textStylesView.indexOf(
+      "rtgl-dialog#addColorDialog",
+      mobileBranchStart,
+    );
+    const desktopBranch = textStylesView.slice(
+      desktopPreviewStart,
+      mobileBranchStart,
+    );
+    const mobileBranch = textStylesView.slice(mobileBranchStart, dialogEnd);
+
+    expect(desktopBranch).toContain("rvn-font-preview");
+    expect(desktopBranch).toContain("previewTextInput");
+    expect(mobileBranch).toContain("$if isDialogOpen");
+    expect(mobileBranch).toContain("rtgl-form#textStyleForm");
+    expect(mobileBranch).toContain(
+      "rtgl-dialog#addTypographyDialog ?open=${isDialogOpen} s=md",
+    );
+    expect(mobileBranch).toContain("rtgl-view slot=content g=md");
+    expect(mobileBranch).not.toContain("rvn-font-preview");
+    expect(mobileBranch).not.toContain("previewTextInput");
+    expect(mobileBranch).not.toContain("100vw");
+    expect(mobileBranch).not.toContain("calc(100vw");
+  });
 });

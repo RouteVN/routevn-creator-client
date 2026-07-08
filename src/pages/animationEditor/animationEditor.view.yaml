@@ -95,6 +95,18 @@ refs:
     eventListeners:
       close:
         handler: handleClosePopover
+  addPropertyDialog:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+  addKeyframeDialog:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+  editKeyframeDialog:
+    eventListeners:
+      close:
+        handler: handleClosePopover
   maskDialog:
     eventListeners:
       close:
@@ -414,13 +426,13 @@ template:
                                       - 'rtgl-view#previewImageButton${i} data-target=${item.target} w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
                                           - rtgl-text c=mu-fg s=sm: ${selectImageLabel}
   - rtgl-popover#addPropertyPopover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
-      - $if popover.mode == 'addProperty':
+      - $if showAddPropertyPopover:
           - rtgl-view slot=content:
               - rtgl-form#addPropertyForm key=${addPropertyFormKey} :form=${addPropertyForm} :context=${addPropertyContext} :defaultValues=${addPropertyFormDefaultValues}: null
-      - $if popover.mode == 'addKeyframe':
+      - $if showAddKeyframePopover:
           - rtgl-view slot=content:
               - rtgl-form#addKeyframeForm :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues}: null
-      - $if popover.mode == 'editKeyframe':
+      - $if showEditKeyframePopover:
           - rtgl-view slot=content:
               - rtgl-form#editKeyframeForm :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues}: null
       - $if popover.mode == 'editAuto':
@@ -429,6 +441,15 @@ template:
       - $if popover.mode == 'editInitialValue':
           - rtgl-view slot=content:
               - rtgl-form#editInitialValueForm :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null
+  - $if showAddPropertyDialog:
+      - rtgl-dialog#addPropertyDialog ?open=${showAddPropertyDialog} s=sm:
+          - rtgl-form#addPropertyForm key=${addPropertyFormKey} slot=content :form=${addPropertyForm} :context=${addPropertyContext} :defaultValues=${addPropertyFormDefaultValues} w=f: null
+  - $if showAddKeyframeDialog:
+      - rtgl-dialog#addKeyframeDialog ?open=${showAddKeyframeDialog} s=sm:
+          - rtgl-form#addKeyframeForm slot=content :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues} w=f: null
+  - $if showEditKeyframeDialog:
+      - rtgl-dialog#editKeyframeDialog ?open=${showEditKeyframeDialog} s=sm:
+          - rtgl-form#editKeyframeForm slot=content :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues} w=f: null
   - rtgl-dialog#maskDialog ?open=${popover.maskDialogIsOpen} s=sm:
       - $if popover.mode == 'editMask' || popover.mode == 'addMask':
           - 'rtgl-view slot=content d=v w=f g=md style="max-width: calc(100vw - 32px);"':

@@ -18,14 +18,20 @@ describe("scenes view", () => {
     expect(scenesView).toContain("padding-top: env(safe-area-inset-top)");
   });
 
-  it("centers the create scene popover as an overlay on mobile", () => {
+  it("uses a popover for desktop scene creation and a dialog form for mobile", () => {
     const scenesView = readFileSync(
       new URL("../../src/pages/scenes/scenes.view.yaml", import.meta.url),
       "utf8",
     );
 
     expect(scenesView).toContain(
-      "rtgl-popover#sceneFormPopover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y} md-place=center md-overlay",
+      "rtgl-popover#sceneFormPopover ?open=${showSceneFormPopover} x=${sceneFormPosition.x} y=${sceneFormPosition.y}",
+    );
+    expect(scenesView).toContain(
+      "rtgl-dialog#sceneFormDialog ?open=${showSceneFormDialog} s=sm",
+    );
+    expect(scenesView).toContain(
+      "rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=${sceneFormData} :form=${sceneFormFields} w=f",
     );
   });
 
