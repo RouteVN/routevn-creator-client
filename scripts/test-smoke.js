@@ -106,7 +106,8 @@ const parseBundleInstructions = async (bundle) => {
 const createRangeFetch =
   (bytes) =>
   async (_url, init = {}) => {
-    const range = init.headers?.Range ?? init.headers?.range ?? "";
+    assert.equal(init.headers?.Range, undefined);
+    const range = init.headers?.range ?? "";
     const match = /^bytes=(\d+)-(\d+)$/.exec(range);
     assert.ok(match, "range fetch must receive a byte range");
 

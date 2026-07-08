@@ -41,6 +41,7 @@ const refreshWindowsExportAvailability = async (deps) => {
         installer: false,
         templateAvailable: false,
         installerHostSupported: false,
+        installerToolAvailable: false,
       },
     });
     return;
@@ -57,6 +58,7 @@ const refreshWindowsExportAvailability = async (deps) => {
         installer: false,
         templateAvailable: false,
         installerHostSupported: false,
+        installerToolAvailable: false,
       },
     });
   }
@@ -118,6 +120,29 @@ const getVersionZipName = ({ appService, projectId, version } = {}) => {
 
 const getProjectExportTitle = ({ projectInfo } = {}) => {
   return projectInfo?.name?.trim?.();
+};
+
+const WINDOWS_VERSION_PART_BASE = 65536;
+const WINDOWS_VERSION_PART_MAX = 65535;
+const WINDOWS_VERSION_ACTION_INDEX_MAX =
+  WINDOWS_VERSION_PART_MAX * WINDOWS_VERSION_PART_BASE +
+  WINDOWS_VERSION_PART_MAX;
+
+const getWindowsFileVersion = ({ version } = {}) => {
+  const actionIndex = Number(version?.actionIndex);
+  if (
+    !Number.isSafeInteger(actionIndex) ||
+    actionIndex < 0 ||
+    actionIndex > WINDOWS_VERSION_ACTION_INDEX_MAX
+  ) {
+    throw new Error(
+      "Windows export requires a valid non-negative release action index.",
+    );
+  }
+
+  return `1.0.${Math.floor(actionIndex / WINDOWS_VERSION_PART_BASE)}.${
+    actionIndex % WINDOWS_VERSION_PART_BASE
+  }`;
 };
 
 const formatReplayFailureMessage = ({ replay, copy = {} } = {}) => {
@@ -493,6 +518,21 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
   store.setSelectedItemId({ itemId: versionId });
   render();
 
+  let windowsFileVersion;
+  try {
+    windowsFileVersion = getWindowsFileVersion({ version });
+  } catch (error) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedSaveWindowsExecutable ??
+          "Failed to save Windows executable: {message}",
+        { message: error.message },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
   const exeName = getVersionZipName({
     appService,
     projectId,
@@ -539,7 +579,7 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
       outputPath,
       {
         title: getProjectExportTitle({ projectInfo }),
-        version: version?.name?.trim?.(),
+        version: windowsFileVersion,
         publisher: projectInfo?.publisher,
         iconFileId: projectInfo?.iconFileId,
       },
@@ -602,6 +642,21 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
   store.setSelectedItemId({ itemId: versionId });
   render();
 
+  let windowsFileVersion;
+  try {
+    windowsFileVersion = getWindowsFileVersion({ version });
+  } catch (error) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedSaveWindowsInstaller ??
+          "Failed to save Windows installer: {message}",
+        { message: error.message },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
   const installerName = getVersionZipName({
     appService,
     projectId,
@@ -647,7 +702,7 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
       outputPath,
       {
         title: getProjectExportTitle({ projectInfo }),
-        version: version?.name?.trim?.(),
+        version: windowsFileVersion,
         publisher: projectInfo?.publisher,
         iconFileId: projectInfo?.iconFileId,
       },

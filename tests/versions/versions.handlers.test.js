@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
+  handleDownloadWindowsExecutableClick,
+  handleDownloadWindowsInstallerClick,
   handleDownloadZipClick,
   handleMobileDetailSheetClose,
   handleVersionFormAction,
@@ -41,10 +43,21 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       addVersionToProject: vi.fn(async () => {}),
       getCurrentProjectInfo: vi.fn(async () => ({
         namespace: "project-one",
+        name: "Project One",
+        iconFileId: "icon-1",
+        publisher: "Studio One",
       })),
       promptDistributionZipPath: vi.fn(async () => undefined),
       createDistributionZipStreamedToPath: vi.fn(async () => "/tmp/export.zip"),
       createDistributionZipStreamed: vi.fn(async () => "/tmp/export.zip"),
+      promptWindowsExecutablePath: vi.fn(async () => "/tmp/export.exe"),
+      promptWindowsInstallerPath: vi.fn(async () => "/tmp/export-setup.exe"),
+      createWindowsPortableExecutableToPath: vi.fn(async () => ({
+        outputPath: "/tmp/export.exe",
+      })),
+      createWindowsInstallerToPath: vi.fn(async () => ({
+        outputPath: "/tmp/export-setup.exe",
+      })),
     },
     store: {
       selectEditingVersionId: vi.fn(() => editingVersionId),
@@ -61,12 +74,27 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
   };
 };
 
+const createVersionClickPayload = (versionId = "version-1") => ({
+  _event: {
+    stopPropagation: vi.fn(),
+    currentTarget: {
+      dataset: {
+        versionId,
+      },
+    },
+  },
+});
+
 describe("versions lifecycle", () => {
   it("syncs touch UI config before mount", () => {
     const setUiConfig = vi.fn();
     const deps = {
+      appService: {
+        getPlatform: vi.fn(() => "web"),
+      },
       store: {
         setUiConfig,
+        setPlatform: vi.fn(),
       },
       uiConfig: {
         id: "touch",
@@ -79,6 +107,7 @@ describe("versions lifecycle", () => {
     expect(setUiConfig).toHaveBeenCalledWith({
       uiConfig: deps.uiConfig,
     });
+    expect(deps.store.setPlatform).toHaveBeenCalledWith({ platform: "web" });
   });
 });
 
@@ -376,5 +405,109 @@ describe("versions.handleDownloadZipClick", () => {
     expect(
       deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
     ).toEqual([{ fileId: "file-font-1" }]);
+  });
+});
+
+describe("versions Windows export handlers", () => {
+  it("uses a numeric Windows file version instead of the release display name for EXE export", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({
+      repository,
+      version: {
+        id: "version-1",
+        name: "Version 1",
+        actionIndex: 3,
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    });
+
+    await handleDownloadWindowsExecutableClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(
+      deps.projectService.createWindowsPortableExecutableToPath,
+    ).toHaveBeenCalled();
+    expect(
+      deps.projectService.createWindowsPortableExecutableToPath.mock
+        .calls[0][3],
+    ).toMatchObject({
+      title: "Project One",
+      version: "1.0.0.3",
+      publisher: "Studio One",
+      iconFileId: "icon-1",
+    });
+  });
+
+  it("uses a numeric Windows file version instead of the release display name for installer export", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({
+      repository,
+      version: {
+        id: "version-1",
+        name: "Version 1",
+        actionIndex: 65536,
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    });
+
+    await handleDownloadWindowsInstallerClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.projectService.createWindowsInstallerToPath).toHaveBeenCalled();
+    expect(
+      deps.projectService.createWindowsInstallerToPath.mock.calls[0][3],
+    ).toMatchObject({
+      title: "Project One",
+      version: "1.0.1.0",
+      publisher: "Studio One",
+      iconFileId: "icon-1",
+    });
+  });
+
+  it("stops before opening the save dialog when Windows file version data is missing", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({
+      repository,
+      version: {
+        id: "version-1",
+        name: "Version 1",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    });
+
+    await handleDownloadWindowsExecutableClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(
+      deps.projectService.promptWindowsExecutablePath,
+    ).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.createWindowsPortableExecutableToPath,
+    ).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          "Windows export requires a valid non-negative release action index.",
+        ),
+      }),
+    );
   });
 });

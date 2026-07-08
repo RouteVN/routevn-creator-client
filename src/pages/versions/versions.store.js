@@ -66,6 +66,7 @@ export const createInitialState = () => ({
     installer: false,
     templateAvailable: false,
     installerHostSupported: false,
+    installerToolAvailable: false,
   },
   ...createMobileResourcePageState(),
   isVersionDialogOpen: false,
@@ -122,6 +123,8 @@ export const setWindowsExportAvailability = (
     !!availability?.templateAvailable;
   state.windowsExportAvailability.installerHostSupported =
     !!availability?.installerHostSupported;
+  state.windowsExportAvailability.installerToolAvailable =
+    !!availability?.installerToolAvailable;
 };
 
 export const openVersionDialog = ({ state }, { versionId } = {}) => {

@@ -84,6 +84,33 @@ const requireWindowsExecutableMetadataValue = ({ value, label }) => {
   return normalizedValue;
 };
 
+const WINDOWS_VERSION_PART_MAX = 65535;
+
+const normalizeWindowsExecutableVersion = (value) => {
+  const normalizedValue = requireWindowsExecutableMetadataValue({
+    value,
+    label: "Windows file version",
+  });
+  const parts = normalizedValue.split(".");
+  const isValidVersion =
+    parts.length <= 4 &&
+    parts.every((part) => {
+      if (!/^\d+$/.test(part)) {
+        return false;
+      }
+
+      return Number(part) <= WINDOWS_VERSION_PART_MAX;
+    });
+
+  if (!isValidVersion) {
+    throw new Error(
+      "Windows file version must be numeric dot-separated text like 1.0.0.",
+    );
+  }
+
+  return normalizedValue;
+};
+
 const normalizeWindowsExecutableMetadata = ({
   title,
   version,
@@ -97,10 +124,7 @@ const normalizeWindowsExecutableMetadata = ({
       value: title,
       label: "Project title",
     }),
-    version: requireWindowsExecutableMetadataValue({
-      value: version,
-      label: "Version name",
-    }),
+    version: normalizeWindowsExecutableVersion(version),
     publisher: normalizedPublisher ? normalizedPublisher : null,
     iconFileId: requireWindowsExecutableMetadataValue({
       value: iconFileId,
@@ -493,6 +517,8 @@ export const createTauriProjectServiceAdapters = ({
     let hostCapabilities = {
       portableExecutable: false,
       installer: false,
+      installerHostSupported: false,
+      installerToolAvailable: false,
     };
     try {
       hostCapabilities = await invoke("get_windows_export_host_capabilities");
@@ -503,7 +529,8 @@ export const createTauriProjectServiceAdapters = ({
         templateAvailable && !!hostCapabilities?.portableExecutable,
       installer: templateAvailable && !!hostCapabilities?.installer,
       templateAvailable,
-      installerHostSupported: !!hostCapabilities?.installer,
+      installerHostSupported: !!hostCapabilities?.installerHostSupported,
+      installerToolAvailable: !!hostCapabilities?.installerToolAvailable,
     };
   };
 

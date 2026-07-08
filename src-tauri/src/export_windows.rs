@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::path::{Path, PathBuf};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,6 +28,8 @@ pub struct ExportWindowsInstallerResult {
 pub struct WindowsExportHostCapabilities {
     portable_executable: bool,
     installer: bool,
+    installer_host_supported: bool,
+    installer_tool_available: bool,
 }
 
 struct WindowsExecutableMetadata {
@@ -37,9 +40,15 @@ struct WindowsExecutableMetadata {
 
 #[tauri::command]
 pub fn get_windows_export_host_capabilities() -> WindowsExportHostCapabilities {
+    let installer_host_supported = cfg!(target_os = "windows");
+    let installer_tool_available =
+        installer_host_supported && resolve_default_makensis_path().is_some();
+
     WindowsExportHostCapabilities {
         portable_executable: true,
-        installer: cfg!(target_os = "windows"),
+        installer: installer_host_supported && installer_tool_available,
+        installer_host_supported,
+        installer_tool_available,
     }
 }
 
@@ -252,11 +261,11 @@ fn export_windows_installer_sync(
         publisher,
     };
     validate_windows_executable_metadata(&metadata)?;
-    let makensis_path = makensis_path.map(std::path::PathBuf::from);
+    let makensis_path = resolve_makensis_path(makensis_path)?;
     let outcome = routevn_packager::installer::build_nsis_installer(
         routevn_packager::installer::InstallerRequest {
-            exe_path: std::path::Path::new(&exe_path),
-            output_path: std::path::Path::new(&output_path),
+            exe_path: Path::new(&exe_path),
+            output_path: Path::new(&output_path),
             title: &metadata.title,
             version: &metadata.version,
             publisher: metadata.publisher.as_deref(),
@@ -294,6 +303,7 @@ fn export_windows_installer_from_project_sync(
         publisher,
     };
     validate_windows_executable_metadata(&metadata)?;
+    let makensis_path = resolve_makensis_path(makensis_path)?;
     let temp = tempfile::tempdir()
         .map_err(|error| format!("Failed to create temporary installer workspace: {error}"))?;
     let staged_exe_stem = sanitize_windows_file_stem(&metadata.title)?;
@@ -320,11 +330,10 @@ fn export_windows_installer_from_project_sync(
     )
     .map_err(|e| e.to_string())?;
 
-    let makensis_path = makensis_path.map(std::path::PathBuf::from);
     let outcome = routevn_packager::installer::build_nsis_installer(
         routevn_packager::installer::InstallerRequest {
             exe_path: &staged_exe_path,
-            output_path: std::path::Path::new(&output_path),
+            output_path: Path::new(&output_path),
             title: &metadata.title,
             version: &metadata.version,
             publisher: metadata.publisher.as_deref(),
@@ -358,6 +367,83 @@ fn resolve_payload_key_material(
         (None, None) => Ok(routevn_packager::payload::generate_payload_key_material()),
         _ => Err("keyHex and nonceHex must both be supplied, or neither".to_string()),
     }
+}
+
+fn resolve_makensis_path(value: Option<String>) -> Result<Option<PathBuf>, String> {
+    if let Some(value) = value {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return Ok(None);
+        }
+
+        let path = PathBuf::from(trimmed);
+        if path.exists() {
+            return Ok(Some(path));
+        }
+
+        if let Some(path) = resolve_command_on_path(trimmed) {
+            return Ok(Some(path));
+        }
+
+        return Err(format!("NSIS makensis executable was not found: {trimmed}"));
+    }
+
+    if let Some(path) = resolve_default_makensis_path() {
+        return Ok(Some(path));
+    }
+
+    if cfg!(target_os = "windows") {
+        return Err(
+            "NSIS makensis.exe is required for Windows installer export. Install NSIS or set ROUTEVN_MAKENSIS_PATH."
+                .to_string(),
+        );
+    }
+
+    Ok(None)
+}
+
+fn resolve_default_makensis_path() -> Option<PathBuf> {
+    resolve_makensis_env_path()
+        .or_else(resolve_makensis_on_path)
+        .or_else(resolve_makensis_in_standard_windows_locations)
+}
+
+fn resolve_makensis_env_path() -> Option<PathBuf> {
+    std::env::var_os("ROUTEVN_MAKENSIS_PATH")
+        .map(PathBuf::from)
+        .filter(|path| path.is_file())
+}
+
+fn resolve_makensis_on_path() -> Option<PathBuf> {
+    let candidates = if cfg!(target_os = "windows") {
+        vec!["makensis.exe", "makensis"]
+    } else {
+        vec!["makensis"]
+    };
+
+    candidates.into_iter().find_map(resolve_command_on_path)
+}
+
+fn resolve_command_on_path(command: &str) -> Option<PathBuf> {
+    let path_value = std::env::var_os("PATH")?;
+
+    std::env::split_paths(&path_value).find_map(|directory| {
+        let path = directory.join(command);
+        path.is_file().then_some(path)
+    })
+}
+
+fn resolve_makensis_in_standard_windows_locations() -> Option<PathBuf> {
+    if !cfg!(target_os = "windows") {
+        return None;
+    }
+
+    ["ProgramFiles", "ProgramFiles(x86)"]
+        .into_iter()
+        .filter_map(std::env::var_os)
+        .map(PathBuf::from)
+        .map(|directory| directory.join("NSIS").join("makensis.exe"))
+        .find(|path| path.is_file())
 }
 
 fn sanitize_windows_file_stem(value: &str) -> Result<String, String> {

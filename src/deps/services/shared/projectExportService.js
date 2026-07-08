@@ -82,18 +82,27 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
           return "";
         }
 
+        const normalizedName = name.toLowerCase();
+
         if (typeof headers.get === "function") {
-          return headers.get(name) || "";
+          return headers.get(name) || headers.get(normalizedName) || "";
         }
 
         if (Array.isArray(headers)) {
           const entry = headers.find(
-            ([key]) => String(key).toLowerCase() === name.toLowerCase(),
+            ([key]) => String(key).toLowerCase() === normalizedName,
           );
           return entry?.[1] || "";
         }
 
-        return headers[name] || headers[name.toLowerCase()] || "";
+        if (typeof headers === "object") {
+          const entry = Object.entries(headers).find(
+            ([key]) => String(key).toLowerCase() === normalizedName,
+          );
+          return entry?.[1] || "";
+        }
+
+        return "";
       };
 
       const getRangeHeader = (input, init) => {
@@ -744,7 +753,7 @@ export const createBundleRangeReader = async ({
 
     const response = await fetchFn(url, {
       headers: {
-        Range: createRangeHeader(start, length),
+        range: createRangeHeader(start, length),
       },
     });
 
@@ -931,6 +940,7 @@ export const createProjectExportService = ({
         installer: false,
         templateAvailable: false,
         installerHostSupported: false,
+        installerToolAvailable: false,
       };
     }
 
