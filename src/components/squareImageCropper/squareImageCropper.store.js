@@ -2,7 +2,7 @@ const VIEWPORT_SIZE = 320;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.1;
-const MAX_OUTPUT_SIZE = 512;
+const MAX_OUTPUT_SIZE = 256;
 const MIN_OUTPUT_SIZE = 64;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));

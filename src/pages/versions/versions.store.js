@@ -60,6 +60,13 @@ const createDropdownMenuItems = (copy = {}) => [
 export const createInitialState = () => ({
   versions: [],
   selectedItemId: undefined,
+  platform: "web",
+  windowsExportAvailability: {
+    portableExecutable: false,
+    installer: false,
+    templateAvailable: false,
+    installerHostSupported: false,
+  },
   ...createMobileResourcePageState(),
   isVersionDialogOpen: false,
   editingVersionId: undefined,
@@ -98,6 +105,23 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
     uiConfig,
     clearSearchOnTouch: false,
   });
+};
+
+export const setPlatform = ({ state }, { platform } = {}) => {
+  state.platform = platform ?? "web";
+};
+
+export const setWindowsExportAvailability = (
+  { state },
+  { availability } = {},
+) => {
+  state.windowsExportAvailability.portableExecutable =
+    !!availability?.portableExecutable;
+  state.windowsExportAvailability.installer = !!availability?.installer;
+  state.windowsExportAvailability.templateAvailable =
+    !!availability?.templateAvailable;
+  state.windowsExportAvailability.installerHostSupported =
+    !!availability?.installerHostSupported;
 };
 
 export const openVersionDialog = ({ state }, { versionId } = {}) => {
@@ -202,6 +226,15 @@ export const selectViewData = ({ state, i18n }) => {
     addButton: copy.addButton ?? "Add",
     noVersionsMessage: copy.noVersionsMessage ?? "No versions",
     exportWebButton: copy.exportWebButton ?? "Export Web",
+    exportWindowsExecutableButton:
+      copy.exportWindowsExecutableButton ?? "Export Windows EXE",
+    exportWindowsInstallerButton:
+      copy.exportWindowsInstallerButton ?? "Export Windows Installer",
+    canExportWindowsExecutable:
+      state.platform === "tauri" &&
+      state.windowsExportAvailability.portableExecutable,
+    canExportWindowsInstaller:
+      state.platform === "tauri" && state.windowsExportAvailability.installer,
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     resourceCategory: "releases",
     resourceType: "versions",

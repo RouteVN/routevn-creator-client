@@ -330,5 +330,11 @@ export const createProjectServiceCore = ({
     promptDistributionZipPath: exportService.promptDistributionZipPath,
     createDistributionZipStreamedToPath:
       exportService.createDistributionZipStreamedToPath,
+    promptWindowsExecutablePath: exportService.promptWindowsExecutablePath,
+    promptWindowsInstallerPath: exportService.promptWindowsInstallerPath,
+    getWindowsExportAvailability: exportService.getWindowsExportAvailability,
+    createWindowsPortableExecutableToPath:
+      exportService.createWindowsPortableExecutableToPath,
+    createWindowsInstallerToPath: exportService.createWindowsInstallerToPath,
   };
 };

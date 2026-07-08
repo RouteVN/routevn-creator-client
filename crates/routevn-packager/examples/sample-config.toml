@@ -1,0 +1,5 @@
+title = "Sample Export"
+identifier = "vn.routevn.sample-export"
+version = "0.1.0"
+icon = "../fixtures/sample-icon.svg"
+targets = ["linux"]

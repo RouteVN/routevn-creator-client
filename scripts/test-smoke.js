@@ -25,6 +25,7 @@ import {
   BUNDLE_APP_NAME,
   createBundle,
   createBundleInstructions,
+  createBundleRangeReader,
   parseBundle,
 } from "../src/deps/services/shared/projectExportService.js";
 import { toHierarchyStructure } from "../src/internal/project/tree.js";
@@ -101,6 +102,25 @@ const parseBundleInstructions = async (bundle) => {
   const parsedBundle = await parseBundle(bundle);
   return parsedBundle.instructions;
 };
+
+const createRangeFetch =
+  (bytes) =>
+  async (_url, init = {}) => {
+    const range = init.headers?.Range ?? init.headers?.range ?? "";
+    const match = /^bytes=(\d+)-(\d+)$/.exec(range);
+    assert.ok(match, "range fetch must receive a byte range");
+
+    const start = Number(match[1]);
+    const end = Number(match[2]);
+    const body = bytes.slice(start, end + 1);
+
+    return new Response(body, {
+      status: 206,
+      headers: {
+        "content-range": `bytes ${start}-${end}/${bytes.byteLength}`,
+      },
+    });
+  };
 
 const store = createRepositoryStoreStub();
 const repository = await createProjectRepository({
@@ -569,6 +589,18 @@ const bundlePayload = createBundleInstructions({
 });
 const bundle = await createBundle(bundlePayload);
 const bundleInstructions = await parseBundleInstructions(bundle);
+const rangeBundle = await createBundle(bundlePayload, {
+  "hero.png": {
+    mime: "image/png",
+    buffer: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+  },
+});
+const rangeReader = await createBundleRangeReader({
+  url: "package.bin",
+  fetchFn: createRangeFetch(rangeBundle),
+});
+const rangeInstructions = await rangeReader.readInstructions();
+const rangeAsset = await rangeReader.readAsset("hero.png");
 assert.equal(domainState.story.initialSceneId, "scene-1");
 assert.deepEqual(domainState.scenes["scene-1"].sectionIds, [
   "section-1",
@@ -618,6 +650,11 @@ assert.equal(
   BUNDLE_APP_NAME,
 );
 assert.equal(bundleInstructions.bundleMetadata.bundler.appVersion, "1.0.0-rc2");
+assert.equal(rangeInstructions.bundleMetadata.bundler.appVersion, "1.0.0-rc2");
+assert.deepEqual(
+  Array.from(rangeAsset.buffer),
+  [137, 80, 78, 71, 13, 10, 26, 10],
+);
 assert.equal(
   bundleInstructions.bundleMetadata.project.namespace,
   "project-namespace-1",

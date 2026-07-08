@@ -94,7 +94,10 @@
     "tauri:build:win:steam": "./scripts/tauri-build-win-steam.sh",
     "tauri:build:mac": "./scripts/tauri-build-mac.sh",
     "tauri:build:mac:steam": "./scripts/tauri-build-mac-steam.sh",
-    "tauri:build:linux:steam": "./scripts/tauri-build-linux-steam.sh"
+    "tauri:build:linux:steam": "./scripts/tauri-build-linux-steam.sh",
+    "player-template:prepare": "bun run build:bundle && node scripts/build-windows-player-template.js --prepare-only",
+    "player-template:build:win": "bun run build:bundle && node scripts/build-windows-player-template.js",
+    "player-template:build:win:docker": "./scripts/build-windows-player-template-docker.sh"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.1",

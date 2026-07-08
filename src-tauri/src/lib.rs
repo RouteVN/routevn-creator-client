@@ -1,6 +1,7 @@
 #[cfg(debug_assertions)]
 use tauri::Manager;
 
+mod export_windows;
 mod export_zip;
 mod linux_desktop_integration;
 mod project_file_protocol;
@@ -11,7 +12,11 @@ mod static_web_server;
 fn configure_linux_graphics_workarounds() {
     // WebKitGTK's DMABUF renderer can corrupt WebGL/Pixi output on some Mesa and VM drivers.
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
-        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        // SAFETY: this runs at process startup before the Tauri runtime starts
+        // worker threads or plugins that could concurrently read environment.
+        unsafe {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
     }
 }
 
@@ -25,8 +30,12 @@ pub fn run() {
     // Enable WebKit inspector for WSL
     #[cfg(debug_assertions)]
     {
-        std::env::set_var("WEBKIT_INSPECTOR_SERVER", "127.0.0.1:9333");
-        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        // SAFETY: debug environment is configured before the Tauri runtime is
+        // started, so there are no concurrent environment readers here.
+        unsafe {
+            std::env::set_var("WEBKIT_INSPECTOR_SERVER", "127.0.0.1:9333");
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        }
     }
 
     tauri::Builder::default()
@@ -42,6 +51,11 @@ pub fn run() {
         .plugin(tauri_plugin_persisted_scope::init())
         .invoke_handler(tauri::generate_handler![
             export_zip::create_distribution_zip_streamed,
+            export_windows::export_windows_installer,
+            export_windows::export_windows_installer_from_project,
+            export_windows::export_windows_portable_executable,
+            export_windows::get_windows_export_host_capabilities,
+            export_windows::stamp_windows_executable,
             linux_desktop_integration::get_linux_appimage_desktop_integration_status,
             linux_desktop_integration::install_linux_appimage_desktop_integration,
             linux_desktop_integration::restart_linux_appimage_from_desktop_integration,

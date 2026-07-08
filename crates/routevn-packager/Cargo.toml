@@ -1,0 +1,18 @@
+[package]
+name = "routevn-packager"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85.0"
+
+[dependencies]
+chacha20poly1305 = "0.10.1"
+clap = { version = "4.5.40", features = ["derive"] }
+semver = "1.0.27"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+sha2 = "0.10"
+tempfile = "3.23.0"
+thiserror = "2.0.17"
+toml = "0.8.23"
+walkdir = "2.5.0"
+zip = { version = "4.6.1", default-features = false, features = ["deflate"] }

@@ -15,6 +15,14 @@ refs:
     eventListeners:
       click:
         handler: handleDownloadZipClick
+  detailWindowsExeBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadWindowsExecutableClick
+  detailWindowsInstallerBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadWindowsInstallerClick
   detailHeader:
     eventListeners:
       click:
@@ -76,7 +84,12 @@ template:
                                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                                   - rtgl-svg svg=edit wh=16: null
                               - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                                  - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
+                                  - rtgl-view slot=actions d=v g=sm w=f:
+                                      - rtgl-button#detailDownloadBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
+                                      - $if canExportWindowsExecutable:
+                                          - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
+                                      - $if canExportWindowsInstaller:
+                                          - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
@@ -88,7 +101,12 @@ template:
                   - rtgl-svg svg=edit wh=16: null
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
-                      - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
+                      - rtgl-view slot=actions d=v g=sm w=f:
+                          - rtgl-button#detailDownloadBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
+                          - $if canExportWindowsExecutable:
+                              - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
+                          - $if canExportWindowsInstaller:
+                              - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
   - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md:
       - rtgl-view slot=content w=f:
           - rtgl-form#versionForm :form=${versionForm} w=f: null
