@@ -9,21 +9,16 @@ describe("project page view", () => {
     );
 
     expect(projectView).toContain(
-      'rtgl-view#backButton d=h av=c g=sm cur=pointer tabindex=0 role=button title="${i18n.projectPage.backToProjects}"',
+      'rtgl-button#backButton sq pre=chevronLeft v=ol title="${i18n.projectPage.backToProjects}" aria-label="${i18n.projectPage.backToProjects}"',
     );
     expect(projectView).toContain("keydown:");
     expect(projectView).toContain("handler: handleBackButtonKeyDown");
     expect(projectView).toContain(
-      "rtgl-view w=36 h=36 bw=xs br=md ah=c av=c bgc=bg bc=bo",
-    );
-    expect(projectView).toContain("rtgl-svg svg=chevronLeft wh=16 c=mu-fg");
-    expect(projectView).toContain(
-      "rtgl-text s=sm: ${i18n.projectPage.backToProjects}",
+      "rtgl-text s=sm ml=xs: ${i18n.projectPage.backToProjects}",
     );
     expect(projectView).toContain(
-      "rtgl-view#projectActionsButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo",
+      'rtgl-button#projectActionsButton sq pre=ellipsis v=ol title="${i18n.projectPage.exportProject}" aria-label="${i18n.projectPage.exportProject}"',
     );
-    expect(projectView).toContain("rtgl-svg svg=ellipsis wh=16 c=mu-fg");
     expect(projectView).not.toContain(
       "rtgl-button#backButton pre=chevronLeft v=gh",
     );

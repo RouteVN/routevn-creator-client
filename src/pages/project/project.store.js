@@ -187,7 +187,8 @@ export const selectViewData = ({ state, i18n }) => {
     projectExportLoadingStatusText: copy.exportingProject,
     projectSource: state.project.source,
     projectActionMenu: state.projectActionMenu,
-    showAndroidProjectActions:
-      state.platform === "android" && state.project.source === "local",
+    showNativeProjectActions:
+      (state.platform === "android" || state.platform === "ios") &&
+      state.project.source === "local",
   };
 };

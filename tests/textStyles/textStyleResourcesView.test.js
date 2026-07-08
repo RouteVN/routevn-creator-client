@@ -257,7 +257,7 @@ describe("textStyleResourcesView", () => {
     expect(viewData.zoomControlMax).toBe(6);
   });
 
-  it("does not restore desktop column counts for mobile text style zoom", () => {
+  it("uses the mobile text style column default instead of restoring desktop columns", () => {
     const getUserConfig = vi.fn((key) =>
       key === "groupTextStylesView.itemsPerRow" ? 8 : undefined,
     );
@@ -279,7 +279,7 @@ describe("textStyleResourcesView", () => {
     expect(getUserConfig).not.toHaveBeenCalledWith(
       "groupTextStylesView.itemsPerRow",
     );
-    expect(setItemsPerRow).not.toHaveBeenCalled();
+    expect(setItemsPerRow).toHaveBeenCalledWith({ itemsPerRow: 2 });
   });
 
   it("persists mobile text style columns separately from desktop", () => {

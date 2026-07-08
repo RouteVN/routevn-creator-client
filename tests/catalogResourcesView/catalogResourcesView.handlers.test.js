@@ -113,7 +113,7 @@ describe("catalogResourcesView.handlers", () => {
     expect(render).not.toHaveBeenCalled();
   });
 
-  it("does not restore desktop column counts for mobile column zoom", () => {
+  it("uses the mobile column default instead of restoring desktop column counts", () => {
     const getUserConfig = vi.fn((key) =>
       key === "groupControlsView.itemsPerRow" ? 8 : undefined,
     );
@@ -135,7 +135,7 @@ describe("catalogResourcesView.handlers", () => {
     expect(getUserConfig).not.toHaveBeenCalledWith(
       "groupControlsView.itemsPerRow",
     );
-    expect(setItemsPerRow).not.toHaveBeenCalled();
+    expect(setItemsPerRow).toHaveBeenCalledWith({ itemsPerRow: 2 });
   });
 
   it("persists mobile column counts separately from desktop", () => {

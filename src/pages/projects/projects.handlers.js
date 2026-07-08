@@ -425,7 +425,7 @@ export const handleOpenButtonClick = async (deps) => {
   const { appService, store, render, i18n } = deps;
   const copy = selectProjectsPageCopy(i18n);
   const platform = appService.getPlatform();
-  if (platform !== "tauri" && platform !== "android") {
+  if (platform !== "tauri" && platform !== "android" && platform !== "ios") {
     return;
   }
 
@@ -460,7 +460,8 @@ export const handleMobileCreateMenuButtonClick = (deps, payload) => {
   const copy = selectProjectsPageCopy(i18n);
   const rect = payload._event.currentTarget.getBoundingClientRect();
   const platform = appService.getPlatform();
-  const canImportProjects = platform === "tauri" || platform === "android";
+  const canImportProjects =
+    platform === "tauri" || platform === "android" || platform === "ios";
   const menuPayload = {
     x: rect.right,
     y: rect.bottom,

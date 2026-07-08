@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Build script for RouteVN Creator Client
-# Usage: ./scripts/build.sh [web|tauri|android]
+# Usage: ./scripts/build.sh [web|tauri|android|ios]
 
 set -e
 
@@ -110,6 +110,11 @@ done
 if [ "${BUILD_TYPE}" = "android" ]; then
   echo "Preparing Android assets..."
   bun run build:android:assets
+fi
+
+if [ "${BUILD_TYPE}" = "ios" ]; then
+  echo "Preparing iOS assets..."
+  bun run build:ios:assets
 fi
 
 echo "Build completed for ${BUILD_TYPE}"

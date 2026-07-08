@@ -13,9 +13,8 @@ describe("projects view", () => {
     );
     expect(projectsView).toContain("rtgl-text: ${localTitle}");
     expect(projectsView).toContain(
-      "rtgl-view#mobileCreateMenuButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo",
+      'rtgl-button#mobileCreateMenuButton sq pre=plus v=ol title="${createButtonText}" aria-label="${createButtonText}"',
     );
-    expect(projectsView).toContain("rtgl-svg svg=plus wh=16 c=mu-fg");
     expect(projectsView).not.toContain("rtgl-text s=h3: ${localTitle}");
     expect(projectsView).not.toContain("pt=lg pb=md");
     expect(projectsView).not.toContain(
@@ -33,7 +32,7 @@ describe("projects view", () => {
       'rtgl-view w=f h=1fg ah=c sv style="min-height: 0;"',
     );
     const footerContainerIndex = projectsView.indexOf(
-      'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom);"',
+      'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0;"',
     );
     const footerTextIndex = projectsView.indexOf(
       "rtgl-text s=xs c=mu-fg: RouteVN Creator ${appVersion}",

@@ -87,16 +87,16 @@ describe("projects.store addProject", () => {
     });
   });
 
-  it("does not open the app version update menu on web", () => {
+  it("opens the app version menu without update items on web", () => {
     const state = createInitialState();
     setPlatform({ state }, { platform: "web" });
 
     openAppVersionMenu({ state }, { x: 120, y: 320 });
 
     expect(state.appVersionMenu).toEqual({
-      isOpen: false,
-      x: 0,
-      y: 0,
+      isOpen: true,
+      x: 120,
+      y: 320,
       items: [],
     });
   });

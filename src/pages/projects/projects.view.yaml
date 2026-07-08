@@ -142,7 +142,7 @@ refs:
       click:
         handler: handleDeleteDialogConfirm
 template:
-  - rtgl-view h=100vh w=100vw d=v:
+  - 'rtgl-view w=100vw d=v style="height: var(--rvn-app-viewport-height, 100vh);"':
       - 'rtgl-view w=f h=f d=v style="min-height: 0;"':
           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c ah=c:
               - 'rtgl-view sm-w=f w=${navbarContentWidth} d=h av=c g=md wrap':
@@ -153,7 +153,7 @@ template:
                     $else:
                       - rtgl-view d=h g=sm:
                           - rtgl-button#createButton data-testid=create-project-button: ${createButtonText}
-                          - $if platform == 'tauri' || platform == 'android':
+                          - $if platform == 'tauri' || platform == 'android' || platform == 'ios':
                               - rtgl-button#openButton variant=se: ${openButtonText}
                   - $if showProjectAccountActions:
                       - $if isLoggedIn:
@@ -180,7 +180,7 @@ template:
                                           - rtgl-image wh=56 src="/public/project_logo_placeholder.png" bw=xs bc=bo of=con br=md: null
                                       - rtgl-view w=1fg:
                                           - rtgl-text ellipsis w=f: ${project.name}
-                                          - $if platform != 'android' && project.projectPath:
+                                          - $if platform != 'android' && platform != 'ios' && project.projectPath:
                                               - 'rtgl-view d=h g=sm av=c mt=xs w=f style="min-width: 0;"':
                                                   - rtgl-svg wh=14 svg=folder c=mu-fg: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${project.projectPath}
@@ -213,7 +213,7 @@ template:
                                                   - rtgl-text s=xs c=mu-fg: ${i18n.projectsPage.membersLabel}
                                                   - rtgl-text s=xs c=mu-fg: ${project.memberCount}
                                   - rtgl-view h="33vh": null
-          - 'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom);"':
+          - 'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0;"':
               - 'rtgl-view sm-w=f w=640 ph=md pv=lg ah=c':
                   - $if platform != 'web':
                       - rtgl-view#appVersionButton d=h av=c ah=c ph=md pv=sm br=sm h-bgc=mu cur=pointer:

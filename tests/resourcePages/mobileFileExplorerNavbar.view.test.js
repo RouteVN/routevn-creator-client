@@ -62,8 +62,10 @@ describe("mobile file explorer navbar", () => {
         "rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md",
       );
       expect(view).toContain(
-        "rtgl-button#mobileFileExplorerClose sq pre=x v=ol w=36 h=36",
+        "rtgl-button#mobileFileExplorerClose sq pre=x v=ol",
       );
+      expect(view).toContain("padding-top: env(safe-area-inset-top)");
+      expect(view).toContain("padding-bottom: env(safe-area-inset-bottom)");
       expect(view).not.toContain(
         "rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md",
       );

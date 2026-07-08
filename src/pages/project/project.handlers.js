@@ -58,14 +58,15 @@ const resolveFolderUri = (folder) => {
   return folder?.uri ?? "";
 };
 
-const exportCurrentAndroidProject = async (deps) => {
+const exportCurrentNativeProject = async (deps) => {
   const { appService, projectService, store, render, i18n } = deps;
   const copy = selectProjectPageCopy(i18n);
   const currentProject = appService.getCurrentProjectEntry();
   const projectId = currentProject?.id ?? "";
+  const platform = appService.getPlatform();
 
   if (
-    appService.getPlatform() !== "android" ||
+    (platform !== "android" && platform !== "ios") ||
     currentProject?.source !== "local"
   ) {
     return;
@@ -157,7 +158,7 @@ export const handleProjectActionMenuClickItem = async (deps, payload) => {
   render();
 
   if (item?.value === "export") {
-    await exportCurrentAndroidProject(deps);
+    await exportCurrentNativeProject(deps);
   }
 };
 

@@ -54,3 +54,9 @@ src/setup.js
 /android/routevn/*.iml
 /*.jks
 /*.keystore
+
+/ios/routevn/build
+/ios/routevn/routevn/web
+/ios/routevn/**/*.xcuserdata
+/ios/routevn/**/xcuserdata/
+/ios/routevn/**/*.xcuserstate

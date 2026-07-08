@@ -95,6 +95,7 @@ const toColumnZoomControlValue = (itemsPerRow, props) => {
 export const createInitialState = ({ props } = {}) => ({
   zoomLevel: 1,
   itemsPerRow: clampItemsPerRow(props?.defaultItemsPerRow, props),
+  itemsPerRowSyncSignature: "",
   collapsedIds: [],
   ...createTagFilterPopoverState(),
   zoomPopover: {
@@ -133,6 +134,13 @@ export const setItemsPerRow = ({ state, props }, { itemsPerRow } = {}) => {
 };
 
 export const selectItemsPerRow = ({ state }) => state.itemsPerRow;
+
+export const setItemsPerRowSyncSignature = ({ state }, { signature } = {}) => {
+  state.itemsPerRowSyncSignature = signature ?? "";
+};
+
+export const selectItemsPerRowSyncSignature = ({ state }) =>
+  state.itemsPerRowSyncSignature;
 
 export const openZoomPopover = ({ state }, { position } = {}) => {
   state.zoomPopover.isOpen = true;
