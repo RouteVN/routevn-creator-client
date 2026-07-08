@@ -53,7 +53,7 @@ routevn-packager build ./my-game.zip \
   --title "My Game" \
   --identifier vn.routevn.my-game \
   --version 1.0.0 \
-  --icon ./app-icon.svg
+  --icon ./app-icon.png
 ```
 
 Supported flags:
@@ -93,7 +93,7 @@ Example:
 title = "Sample Export"
 identifier = "vn.routevn.sample-export"
 version = "0.1.0"
-icon = "../fixtures/sample-icon.svg"
+icon = "../fixtures/sample-icon.png"
 targets = ["linux"]
 ```
 
@@ -148,7 +148,7 @@ Sample fixtures included in the repo:
 - [fixtures/sample-export/index.html](/home/han4wluc/repositories/RouteVN/routevn-packager/fixtures/sample-export/index.html)
 - [fixtures/sample-export/main.js](/home/han4wluc/repositories/RouteVN/routevn-packager/fixtures/sample-export/main.js)
 - [fixtures/sample-export/package.bin](/home/han4wluc/repositories/RouteVN/routevn-packager/fixtures/sample-export/package.bin)
-- [fixtures/sample-icon.svg](/home/han4wluc/repositories/RouteVN/routevn-packager/fixtures/sample-icon.svg)
+- [fixtures/sample-icon.png](/home/han4wluc/repositories/RouteVN/routevn-packager/fixtures/sample-icon.png)
 
 Create a sample zip from the fixture on systems with `bsdtar`:
 
@@ -159,7 +159,7 @@ bsdtar -a -cf /tmp/sample-export.zip -C fixtures/sample-export .
 Then run:
 
 ```bash
-cargo run -- build /tmp/sample-export.zip --out /tmp/routevn-out --icon fixtures/sample-icon.svg
+cargo run -- build /tmp/sample-export.zip --out /tmp/routevn-out --icon fixtures/sample-icon.png
 ```
 
 ## Implementation Notes
