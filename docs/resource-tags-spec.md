@@ -1,5 +1,16 @@
 # Resource Tags Spec
 
+## Status
+
+Status as of 2026-07-08: implementation has moved beyond the original plan in
+this document. The client contains tag commands, projected tag state, tag-select
+UI, and tag filtering/assignment behavior across multiple resource areas.
+
+Use this document as an audit checklist for future tag work, not as proof that
+resource tags are unstarted. Before adding new tag scope or UI behavior, first
+compare this spec against the current model package, `src/internal/project/`,
+and the resource-page tests.
+
 ## Purpose
 
 This document defines the persisted model and editor behavior for resource tags.

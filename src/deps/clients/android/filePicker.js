@@ -67,6 +67,28 @@ const toUint8Array = (value) => {
   return undefined;
 };
 
+const readBlobBytes = async (blob) => {
+  if (typeof blob?.arrayBuffer === "function") {
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  const FileReaderCtor = globalThis.FileReader ?? globalThis.window?.FileReader;
+  if (!FileReaderCtor) {
+    throw new Error("Blob reading is not supported.");
+  }
+
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReaderCtor();
+    reader.onload = () => {
+      resolve(new Uint8Array(reader.result));
+    };
+    reader.onerror = () => {
+      reject(reader.error ?? new Error("Failed to read blob."));
+    };
+    reader.readAsArrayBuffer(blob);
+  });
+};
+
 const createFileFromBytes = ({ file, bytes }) => {
   const name = file?.name || "selected-file";
   const options = {
@@ -401,7 +423,7 @@ export const createAndroidFilePicker = () => {
 
     async saveFilePicker(blobOrOptions, maybeFilename) {
       if (blobOrOptions instanceof Blob) {
-        const bytes = new Uint8Array(await blobOrOptions.arrayBuffer());
+        const bytes = await readBlobBytes(blobOrOptions);
         return callAndroidBridge("writeDownloadFile", {
           filename: maybeFilename || "download",
           mimeType: blobOrOptions.type || "application/octet-stream",
