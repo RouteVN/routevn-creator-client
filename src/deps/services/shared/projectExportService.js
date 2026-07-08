@@ -72,6 +72,186 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
     <div id="loading">Loading...</div>
     <div id="canvas"></div>
   </body>
+  <script>
+    (() => {
+      const originalFetch = window.fetch.bind(window);
+      const embeddedPackageChunkSize = 1024 * 1024;
+
+      const getHeaderValue = (headers, name) => {
+        if (!headers) {
+          return "";
+        }
+
+        const normalizedName = name.toLowerCase();
+
+        if (typeof headers.get === "function") {
+          return headers.get(name) || headers.get(normalizedName) || "";
+        }
+
+        if (Array.isArray(headers)) {
+          const entry = headers.find(
+            ([key]) => String(key).toLowerCase() === normalizedName,
+          );
+          return entry?.[1] || "";
+        }
+
+        if (typeof headers === "object") {
+          const entry = Object.entries(headers).find(
+            ([key]) => String(key).toLowerCase() === normalizedName,
+          );
+          return entry?.[1] || "";
+        }
+
+        return "";
+      };
+
+      const getRangeHeader = (input, init) => {
+        return (
+          getHeaderValue(init?.headers, "range") ||
+          getHeaderValue(input?.headers, "range")
+        );
+      };
+
+      const parseRangeHeader = (rangeHeader, totalLength) => {
+        if (!rangeHeader) {
+          return undefined;
+        }
+
+        const match = /^bytes=(\\d*)-(\\d*)$/.exec(rangeHeader.trim());
+        if (!match || totalLength === 0) {
+          return { invalid: true };
+        }
+
+        let start;
+        let end;
+
+        if (match[1] === "") {
+          const suffixLength = Number(match[2]);
+          if (!Number.isFinite(suffixLength) || suffixLength <= 0) {
+            return { invalid: true };
+          }
+          start = Math.max(totalLength - suffixLength, 0);
+          end = totalLength - 1;
+        } else {
+          start = Number(match[1]);
+          end = match[2] === "" ? totalLength - 1 : Number(match[2]);
+        }
+
+        if (
+          !Number.isSafeInteger(start) ||
+          !Number.isSafeInteger(end) ||
+          start < 0 ||
+          end < start ||
+          start >= totalLength
+        ) {
+          return { invalid: true };
+        }
+
+        return {
+          start,
+          end: Math.min(end, totalLength - 1),
+        };
+      };
+
+      const createEmbeddedPackageResponse = async ({ invoke, rangeHeader }) => {
+        const info = await invoke("get_embedded_package_info");
+        const totalLength = Number(info?.byteLength || 0);
+        if (!rangeHeader) {
+          return new Response(null, {
+            status: 416,
+            headers: {
+              "accept-ranges": "bytes",
+              "content-range": "bytes */" + totalLength,
+            },
+          });
+        }
+
+        const parsedRange = parseRangeHeader(rangeHeader, totalLength);
+
+        if (parsedRange?.invalid) {
+          return new Response(null, {
+            status: 416,
+            headers: {
+              "accept-ranges": "bytes",
+              "content-range": "bytes */" + totalLength,
+            },
+          });
+        }
+
+        const start = parsedRange?.start ?? 0;
+        const end = parsedRange?.end ?? totalLength - 1;
+        const contentLength = Math.max(end - start + 1, 0);
+        let cursor = start;
+
+        const stream = new ReadableStream({
+          async pull(controller) {
+            if (cursor > end || contentLength === 0) {
+              controller.close();
+              return;
+            }
+
+            const length = Math.min(
+              embeddedPackageChunkSize,
+              end - cursor + 1,
+            );
+            const bytes = await invoke("read_embedded_package_range", {
+              offset: cursor,
+              length,
+            });
+            const normalizedBytes =
+              bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+
+            if (normalizedBytes.byteLength === 0) {
+              controller.close();
+              return;
+            }
+
+            cursor += normalizedBytes.byteLength;
+            controller.enqueue(normalizedBytes);
+          },
+        });
+
+        const headers = {
+          "accept-ranges": "bytes",
+          "content-length": String(contentLength),
+          "content-type": "application/octet-stream",
+        };
+        if (parsedRange) {
+          headers["content-range"] =
+            "bytes " + start + "-" + end + "/" + totalLength;
+        }
+
+        return new Response(stream, {
+          status: parsedRange ? 206 : 200,
+          headers,
+        });
+      };
+
+      window.fetch = async (input, init) => {
+        const rawUrl = typeof input === "string" ? input : input?.url;
+
+        if (rawUrl) {
+          try {
+            const resolvedUrl = new URL(rawUrl, window.location.href);
+            const invoke = window.__TAURI__?.core?.invoke;
+
+            if (resolvedUrl.pathname.endsWith("/package.bin") && invoke) {
+              try {
+                return await createEmbeddedPackageResponse({
+                  invoke,
+                  rangeHeader: getRangeHeader(input, init),
+                });
+              } catch (error) {
+                console.warn("Falling back to package.bin fetch.", error);
+              }
+            }
+          } catch {}
+        }
+
+        return originalFetch(input, init);
+      };
+    })();
+  </script>
   <script src="./main.js" type="module"></script>
 </html>
 `;
@@ -373,6 +553,46 @@ const reconstructChunkedEntry = ({
   };
 };
 
+const reconstructChunkedEntryFromReader = async ({
+  metadata,
+  chunks,
+  chunkPayloadOffset,
+  readRange,
+}) => {
+  const chunkIds = Array.isArray(metadata?.chunks) ? metadata.chunks : [];
+  const size = Number(metadata?.size ?? 0);
+
+  if (chunkIds.length === 0) {
+    return {
+      buffer: new Uint8Array(size),
+      mime: metadata?.mime,
+      size,
+    };
+  }
+
+  const result = new Uint8Array(size);
+  let offset = 0;
+
+  for (const chunkId of chunkIds) {
+    const chunk = chunks?.[chunkId];
+    if (!chunk) {
+      throw new Error(`Missing chunk metadata: ${chunkId}`);
+    }
+
+    const start = Number(chunk.start ?? 0) + chunkPayloadOffset;
+    const length = Number(chunk.length ?? 0);
+    const chunkBytes = await readRange(start, length);
+    result.set(chunkBytes, offset);
+    offset += chunkBytes.byteLength;
+  }
+
+  return {
+    buffer: result,
+    mime: metadata?.mime,
+    size,
+  };
+};
+
 const reconstructV4AssetEntry = ({
   metadata,
   chunks,
@@ -405,6 +625,41 @@ const reconstructV4AssetEntry = ({
     chunks,
     chunkPayloadOffset,
     arrayBuffer,
+  });
+};
+
+const reconstructV4AssetEntryFromReader = async ({
+  metadata,
+  chunks,
+  chunkPayloadOffset,
+  readRange,
+}) => {
+  if (metadata?.encoding === "diced-image") {
+    return {
+      encoding: "diced-image",
+      mime: metadata?.mime,
+      size: Number(metadata?.size ?? 0),
+      width: Number(metadata?.width ?? 0),
+      height: Number(metadata?.height ?? 0),
+      atlasId: metadata?.atlasId ?? "",
+      vertices: Array.isArray(metadata?.vertices) ? metadata.vertices : [],
+      uvs: Array.isArray(metadata?.uvs) ? metadata.uvs : [],
+      indices: Array.isArray(metadata?.indices) ? metadata.indices : [],
+      rect: metadata?.rect ?? {
+        x: 0,
+        y: 0,
+        width: Number(metadata?.width ?? 0),
+        height: Number(metadata?.height ?? 0),
+      },
+      pivot: metadata?.pivot ?? { x: 0, y: 0 },
+    };
+  }
+
+  return reconstructChunkedEntryFromReader({
+    metadata,
+    chunks,
+    chunkPayloadOffset,
+    readRange,
   });
 };
 
@@ -461,6 +716,162 @@ export const parseBundle = async (bundle) => {
     assets,
     atlases,
     instructions: JSON.parse(textDecoder.decode(instructionsEntry.buffer)),
+  };
+};
+
+const createRangeHeader = (start, length) => {
+  const end = start + length - 1;
+  return `bytes=${start}-${end}`;
+};
+
+const getContentRangeLength = (value) => {
+  const match = /^bytes\s+\d+-\d+\/(\d+)$/i.exec(value ?? "");
+  if (!match) {
+    return undefined;
+  }
+
+  const length = Number(match[1]);
+  return Number.isSafeInteger(length) ? length : undefined;
+};
+
+export const createBundleRangeReader = async ({
+  url = "./package.bin",
+  fetchFn = globalThis.fetch?.bind(globalThis),
+} = {}) => {
+  if (typeof fetchFn !== "function") {
+    throw new Error(
+      "A fetch implementation is required for bundle range reads.",
+    );
+  }
+
+  let totalLength;
+  let fullBundleBytes;
+
+  const readCachedRange = (start, length) => {
+    if (!fullBundleBytes) {
+      return undefined;
+    }
+
+    const end = start + length;
+    const bytes = fullBundleBytes.slice(start, end);
+    if (bytes.byteLength !== length) {
+      throw new Error(
+        `Bundle range request returned ${bytes.byteLength} bytes, expected ${length}`,
+      );
+    }
+
+    return bytes;
+  };
+
+  const readRange = async (start, length) => {
+    if (length <= 0) {
+      return new Uint8Array();
+    }
+
+    const cachedBytes = readCachedRange(start, length);
+    if (cachedBytes) {
+      return cachedBytes;
+    }
+
+    const response = await fetchFn(url, {
+      headers: {
+        range: createRangeHeader(start, length),
+      },
+    });
+
+    if (response.status === 200) {
+      fullBundleBytes = new Uint8Array(await response.arrayBuffer());
+      totalLength = fullBundleBytes.byteLength;
+      return readCachedRange(start, length);
+    }
+
+    if (response.status !== 206) {
+      throw new Error(
+        `Bundle range request failed: expected 206 or full 200, received ${response.status}`,
+      );
+    }
+
+    const contentRangeLength = getContentRangeLength(
+      response.headers.get("content-range"),
+    );
+    if (contentRangeLength !== undefined) {
+      totalLength = contentRangeLength;
+    }
+
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength !== length) {
+      throw new Error(
+        `Bundle range request returned ${bytes.byteLength} bytes, expected ${length}`,
+      );
+    }
+
+    return bytes;
+  };
+
+  const headerBytes = await readRange(0, BUNDLE_HEADER_SIZE);
+  const headerView = new DataView(
+    headerBytes.buffer,
+    headerBytes.byteOffset,
+    headerBytes.byteLength,
+  );
+  const version = headerView.getUint8(0);
+  if (version !== BUNDLE_FORMAT_VERSION_V4) {
+    throw new Error(`Unsupported bundle version: ${version}`);
+  }
+
+  const manifestLength = headerView.getUint32(1, false);
+  const manifestBytes = await readRange(BUNDLE_HEADER_SIZE, manifestLength);
+  const manifest = JSON.parse(textDecoder.decode(manifestBytes));
+  const chunkPayloadOffset = BUNDLE_HEADER_SIZE + manifestLength;
+
+  const readChunkedEntry = (metadata) =>
+    reconstructChunkedEntryFromReader({
+      metadata,
+      chunks: manifest.chunks,
+      chunkPayloadOffset,
+      readRange,
+    });
+
+  const readAsset = async (assetId) => {
+    const metadata = manifest.assets?.[assetId];
+    if (!metadata) {
+      throw new Error(`Missing asset metadata: ${assetId}`);
+    }
+
+    return reconstructV4AssetEntryFromReader({
+      metadata,
+      chunks: manifest.chunks,
+      chunkPayloadOffset,
+      readRange,
+    });
+  };
+
+  const readAtlas = async (atlasId) => {
+    const metadata = manifest.atlases?.[atlasId];
+    if (!metadata) {
+      throw new Error(`Missing atlas metadata: ${atlasId}`);
+    }
+
+    return readChunkedEntry(metadata);
+  };
+
+  const readInstructions = async () => {
+    const instructionsEntry = await readChunkedEntry(manifest.instructions);
+    return JSON.parse(textDecoder.decode(instructionsEntry.buffer));
+  };
+
+  return {
+    version,
+    manifest,
+    get totalLength() {
+      return totalLength;
+    },
+    hasAsset(assetId) {
+      return !!manifest.assets?.[assetId];
+    },
+    readAsset,
+    readAtlas,
+    readInstructions,
   };
 };
 
@@ -531,6 +942,78 @@ export const createProjectExportService = ({
       staticFiles: await getBundleStaticFiles(),
       getCurrentReference,
       getFileContent,
+    });
+  };
+
+  service.promptWindowsExecutablePath = async (exeName, options = {}) => {
+    return fileAdapter.promptWindowsExecutablePath({
+      exeName,
+      options,
+      filePicker,
+    });
+  };
+
+  service.promptWindowsInstallerPath = async (installerName, options = {}) => {
+    return fileAdapter.promptWindowsInstallerPath({
+      installerName,
+      options,
+      filePicker,
+    });
+  };
+
+  service.getWindowsExportAvailability = async (options = {}) => {
+    if (typeof fileAdapter.getWindowsExportAvailability !== "function") {
+      return {
+        portableExecutable: false,
+        installer: false,
+        templateAvailable: false,
+        installerHostSupported: false,
+        installerToolAvailable: false,
+      };
+    }
+
+    return fileAdapter.getWindowsExportAvailability({
+      options,
+    });
+  };
+
+  service.createWindowsPortableExecutableToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) => {
+    return fileAdapter.createWindowsPortableExecutableToPath({
+      projectData,
+      fileEntries: normalizeExportFileEntries(fileEntries),
+      outputPath,
+      title: metadata.title,
+      version: metadata.version,
+      publisher: metadata.publisher,
+      iconFileId: metadata.iconFileId,
+      options,
+      getCurrentReference,
+    });
+  };
+
+  service.createWindowsInstallerToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) => {
+    return fileAdapter.createWindowsInstallerToPath({
+      projectData,
+      fileEntries: normalizeExportFileEntries(fileEntries),
+      outputPath,
+      title: metadata.title,
+      version: metadata.version,
+      publisher: metadata.publisher,
+      iconFileId: metadata.iconFileId,
+      options,
+      getCurrentReference,
     });
   };
 

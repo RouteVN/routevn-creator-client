@@ -1,5 +1,5 @@
-import { mkdir, writeFile, exists } from "@tauri-apps/plugin-fs";
-import { join } from "@tauri-apps/api/path";
+import { mkdir, writeFile, readFile, exists } from "@tauri-apps/plugin-fs";
+import { join, resolveResource } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import JSZip from "jszip";
 import {
@@ -49,6 +49,8 @@ import { normalizeExportFileEntries } from "../shared/projectExportService.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
+const WINDOWS_PLAYER_TEMPLATE_RESOURCE =
+  "player-templates/windows/RouteVNPlayerTemplate.exe";
 const VIDEO_EXTENSION_BY_MIME_TYPE = {
   "video/mp4": "mp4",
   "video/x-m4v": "m4v",
@@ -71,6 +73,65 @@ const normalizeProjectInfo = (projectInfo = {}) => ({
   description: projectInfo.description ?? "",
   iconFileId: projectInfo.iconFileId ?? null,
 });
+
+const requireWindowsExecutableMetadataValue = ({ value, label }) => {
+  const normalizedValue = value?.trim?.();
+
+  if (!normalizedValue) {
+    throw new Error(`${label} is required for Windows export.`);
+  }
+
+  return normalizedValue;
+};
+
+const WINDOWS_VERSION_PART_MAX = 65535;
+
+const normalizeWindowsExecutableVersion = (value) => {
+  const normalizedValue = requireWindowsExecutableMetadataValue({
+    value,
+    label: "Windows file version",
+  });
+  const parts = normalizedValue.split(".");
+  const isValidVersion =
+    parts.length <= 4 &&
+    parts.every((part) => {
+      if (!/^\d+$/.test(part)) {
+        return false;
+      }
+
+      return Number(part) <= WINDOWS_VERSION_PART_MAX;
+    });
+
+  if (!isValidVersion) {
+    throw new Error(
+      "Windows file version must be numeric dot-separated text like 1.0.0.",
+    );
+  }
+
+  return normalizedValue;
+};
+
+const normalizeWindowsExecutableMetadata = ({
+  title,
+  version,
+  publisher,
+  iconFileId,
+}) => {
+  const normalizedPublisher = publisher?.trim?.();
+
+  return {
+    title: requireWindowsExecutableMetadataValue({
+      value: title,
+      label: "Project title",
+    }),
+    version: normalizeWindowsExecutableVersion(version),
+    publisher: normalizedPublisher ? normalizedPublisher : null,
+    iconFileId: requireWindowsExecutableMetadataValue({
+      value: iconFileId,
+      label: "Project icon",
+    }),
+  };
+};
 
 const getByteLength = (value) => {
   if (!value) {
@@ -378,6 +439,24 @@ export const createTauriProjectServiceAdapters = ({
     };
   };
 
+  const readWindowsExecutableIconPng = async ({
+    iconFileId,
+    getCurrentReference,
+  }) => {
+    const { filePath } = await resolveReferenceFilePath(
+      getCurrentReference(),
+      iconFileId,
+      { label: "Project icon file id" },
+    );
+    const iconBytes = await readFile(filePath);
+
+    if (!iconBytes?.byteLength) {
+      throw new Error("Project icon is required for Windows export.");
+    }
+
+    return Array.from(iconBytes);
+  };
+
   const promptDistributionZipPath = async ({
     zipName,
     options = {},
@@ -390,7 +469,72 @@ export const createTauriProjectServiceAdapters = ({
     });
   };
 
-  const collectDistributionZipAssets = async ({
+  const promptWindowsExecutablePath = async ({
+    exeName,
+    options = {},
+    filePicker,
+  }) => {
+    return filePicker.saveFilePicker({
+      title: options.title || "Save Windows Executable",
+      defaultPath: `${exeName}.exe`,
+      filters: [{ name: "Windows Executable", extensions: ["exe"] }],
+    });
+  };
+
+  const promptWindowsInstallerPath = async ({
+    installerName,
+    options = {},
+    filePicker,
+  }) => {
+    return filePicker.saveFilePicker({
+      title: options.title || "Save Windows Installer",
+      defaultPath: `${installerName} Setup.exe`,
+      filters: [{ name: "Windows Installer", extensions: ["exe"] }],
+    });
+  };
+
+  const resolveWindowsPlayerTemplatePath = async (options = {}) => {
+    if (options.templatePath) {
+      return options.templatePath;
+    }
+
+    try {
+      return await resolveResource(WINDOWS_PLAYER_TEMPLATE_RESOURCE);
+    } catch {
+      throw new Error(
+        "Windows player template is not bundled with this Creator build.",
+      );
+    }
+  };
+
+  const getWindowsExportAvailability = async ({ options = {} } = {}) => {
+    let templateAvailable = false;
+    try {
+      const templatePath = await resolveWindowsPlayerTemplatePath(options);
+      templateAvailable = await exists(templatePath);
+    } catch {}
+
+    let hostCapabilities = {
+      portableExecutable: false,
+      installer: false,
+      installerHostSupported: false,
+      installerToolAvailable: false,
+    };
+    try {
+      hostCapabilities = await invoke("get_windows_export_host_capabilities");
+    } catch {}
+
+    return {
+      portableExecutable:
+        templateAvailable && !!hostCapabilities?.portableExecutable,
+      installer: templateAvailable && !!hostCapabilities?.installer,
+      templateAvailable,
+      installerHostSupported: !!hostCapabilities?.installerHostSupported,
+      installerToolAvailable: !!hostCapabilities?.installerToolAvailable,
+    };
+  };
+
+  const collectDistributionAssets = async ({
     fileEntries,
     getCurrentReference,
   }) => {
@@ -425,7 +569,7 @@ export const createTauriProjectServiceAdapters = ({
     options = {},
     getCurrentReference,
   }) => {
-    const assets = await collectDistributionZipAssets({
+    const assets = await collectDistributionAssets({
       fileEntries,
       getCurrentReference,
     });
@@ -441,6 +585,87 @@ export const createTauriProjectServiceAdapters = ({
     logExportSizeStats(stats);
 
     return outputPath;
+  };
+
+  const createWindowsPortableExecutableToPath = async ({
+    projectData,
+    fileEntries,
+    outputPath,
+    title,
+    version,
+    publisher,
+    iconFileId,
+    options = {},
+    getCurrentReference,
+  }) => {
+    const metadata = normalizeWindowsExecutableMetadata({
+      title,
+      version,
+      publisher,
+      iconFileId,
+    });
+    const iconPng = await readWindowsExecutableIconPng({
+      iconFileId: metadata.iconFileId,
+      getCurrentReference,
+    });
+    const assets = await collectDistributionAssets({
+      fileEntries,
+      getCurrentReference,
+    });
+    const templatePath = await resolveWindowsPlayerTemplatePath(options);
+    const result = await invoke("export_windows_portable_executable", {
+      templatePath,
+      outputPath,
+      assets,
+      instructionsJson: JSON.stringify(projectData),
+      title: metadata.title,
+      version: metadata.version,
+      publisher: metadata.publisher,
+      iconPng,
+    });
+
+    logExportSizeStats(result?.stats);
+    return result;
+  };
+
+  const createWindowsInstallerToPath = async ({
+    projectData,
+    fileEntries,
+    outputPath,
+    title,
+    version,
+    publisher,
+    iconFileId,
+    options = {},
+    getCurrentReference,
+  }) => {
+    const metadata = normalizeWindowsExecutableMetadata({
+      title,
+      version,
+      publisher,
+      iconFileId,
+    });
+    const iconPng = await readWindowsExecutableIconPng({
+      iconFileId: metadata.iconFileId,
+      getCurrentReference,
+    });
+    const assets = await collectDistributionAssets({
+      fileEntries,
+      getCurrentReference,
+    });
+    const templatePath = await resolveWindowsPlayerTemplatePath(options);
+
+    return invoke("export_windows_installer_from_project", {
+      templatePath,
+      outputPath,
+      assets,
+      instructionsJson: JSON.stringify(projectData),
+      title: metadata.title,
+      version: metadata.version,
+      publisher: metadata.publisher,
+      iconPng,
+      makensisPath: options.makensisPath || null,
+    });
   };
 
   const storageAdapter = {
@@ -732,6 +957,11 @@ export const createTauriProjectServiceAdapters = ({
 
     promptDistributionZipPath,
     createDistributionZipStreamedToPath,
+    promptWindowsExecutablePath,
+    promptWindowsInstallerPath,
+    getWindowsExportAvailability,
+    createWindowsPortableExecutableToPath,
+    createWindowsInstallerToPath,
   };
 
   const collabAdapter = {

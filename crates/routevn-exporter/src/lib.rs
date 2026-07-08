@@ -52,6 +52,27 @@ pub struct ZipExportStats {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PackageBinExportStats {
+    pub raw_asset_bytes: u64,
+    pub asset_count: usize,
+    pub package_bin_bytes: u64,
+    pub unique_chunk_count: usize,
+    pub chunk_reference_count: usize,
+    pub stored_chunk_bytes: u64,
+    pub deduped_bytes: u64,
+    pub diced_asset_count: usize,
+    pub atlas_count: usize,
+    pub image_optimized_bytes_saved: u64,
+}
+
+#[derive(Debug)]
+pub struct PackageBinExportResult {
+    pub package_bin: Vec<u8>,
+    pub stats: PackageBinExportStats,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct BundleChunking {
     algorithm: &'static str,
     mode: &'static str,
@@ -156,6 +177,23 @@ struct PackageBinStats {
     diced_asset_count: usize,
     atlas_count: usize,
     image_optimized_bytes_saved: u64,
+}
+
+impl PackageBinStats {
+    fn to_export_stats(&self, asset_count: usize) -> PackageBinExportStats {
+        PackageBinExportStats {
+            raw_asset_bytes: self.raw_asset_bytes,
+            asset_count,
+            package_bin_bytes: self.package_bin_bytes,
+            unique_chunk_count: self.unique_chunk_count,
+            chunk_reference_count: self.chunk_reference_count,
+            stored_chunk_bytes: self.stored_chunk_bytes,
+            deduped_bytes: self.deduped_bytes,
+            diced_asset_count: self.diced_asset_count,
+            atlas_count: self.atlas_count,
+            image_optimized_bytes_saved: self.image_optimized_bytes_saved,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -706,8 +744,8 @@ fn build_bundle_manifest(
     ))
 }
 
-fn write_package_bin_entry<W: Write + Seek>(
-    zip: &mut ZipWriter<W>,
+fn write_package_bin_contents<W: Write>(
+    writer: &mut W,
     assets: &[ZipAssetInput],
     instructions_json: &str,
 ) -> Result<PackageBinStats, String> {
@@ -725,13 +763,16 @@ fn write_package_bin_entry<W: Write + Seek>(
         bytes
     };
 
-    zip.write_all(&header)
+    writer
+        .write_all(&header)
         .map_err(|e| format!("Failed to write bundle header: {e}"))?;
-    zip.write_all(&manifest_bytes)
+    writer
+        .write_all(&manifest_bytes)
         .map_err(|e| format!("Failed to write bundle manifest: {e}"))?;
 
     for chunk_bytes in chunk_payloads.values() {
-        zip.write_all(chunk_bytes)
+        writer
+            .write_all(chunk_bytes)
             .map_err(|e| format!("Failed to write bundle chunk payload: {e}"))?;
     }
 
@@ -739,6 +780,27 @@ fn write_package_bin_entry<W: Write + Seek>(
         BUNDLE_HEADER_SIZE as u64 + manifest_bytes.len() as u64 + stats.stored_chunk_bytes;
 
     Ok(stats)
+}
+
+fn write_package_bin_entry<W: Write + Seek>(
+    zip: &mut ZipWriter<W>,
+    assets: &[ZipAssetInput],
+    instructions_json: &str,
+) -> Result<PackageBinStats, String> {
+    write_package_bin_contents(zip, assets, instructions_json)
+}
+
+pub fn create_package_bin(
+    assets: Vec<ZipAssetInput>,
+    instructions_json: String,
+) -> Result<PackageBinExportResult, String> {
+    let mut package_bin = Vec::new();
+    let stats = write_package_bin_contents(&mut package_bin, &assets, &instructions_json)?;
+
+    Ok(PackageBinExportResult {
+        package_bin,
+        stats: stats.to_export_stats(assets.len()),
+    })
 }
 
 fn write_distribution_zip(
@@ -1088,23 +1150,25 @@ mod tests {
 
         fs::write(&asset_a_path, &asset_bytes).expect("write asset a");
         fs::write(&asset_b_path, &asset_bytes).expect("write asset b");
+        let assets = vec![
+            ZipAssetInput {
+                id: "file-a".to_string(),
+                path: asset_a_path.display().to_string(),
+                mime: Some("application/octet-stream".to_string()),
+            },
+            ZipAssetInput {
+                id: "file-b".to_string(),
+                path: asset_b_path.display().to_string(),
+                mime: Some("application/octet-stream".to_string()),
+            },
+        ];
+        let instructions_json = r#"{"projectData":{"story":{"initialSceneId":"scene-1","scenes":{"scene-1":{"initialSectionId":"section-1","sections":{"section-1":{"lines":[]}}}}}}}"#
+            .to_string();
 
         let stats = create_distribution_zip_streamed_sync(
             output_path.display().to_string(),
-            vec![
-                ZipAssetInput {
-                    id: "file-a".to_string(),
-                    path: asset_a_path.display().to_string(),
-                    mime: Some("application/octet-stream".to_string()),
-                },
-                ZipAssetInput {
-                    id: "file-b".to_string(),
-                    path: asset_b_path.display().to_string(),
-                    mime: Some("application/octet-stream".to_string()),
-                },
-            ],
-            r#"{"projectData":{"story":{"initialSceneId":"scene-1","scenes":{"scene-1":{"initialSectionId":"section-1","sections":{"section-1":{"lines":[]}}}}}}}"#
-                .to_string(),
+            assets,
+            instructions_json.clone(),
             Some("<!doctype html><html></html>".to_string()),
             Some("console.log('bundle');".to_string()),
             false,
@@ -1130,6 +1194,25 @@ mod tests {
             .expect("package.bin entry")
             .read_to_end(&mut package_bin)
             .expect("read package.bin");
+        let direct_package = create_package_bin(
+            vec![
+                ZipAssetInput {
+                    id: "file-a".to_string(),
+                    path: asset_a_path.display().to_string(),
+                    mime: Some("application/octet-stream".to_string()),
+                },
+                ZipAssetInput {
+                    id: "file-b".to_string(),
+                    path: asset_b_path.display().to_string(),
+                    mime: Some("application/octet-stream".to_string()),
+                },
+            ],
+            instructions_json,
+        )
+        .expect("direct package bin export should succeed");
+        assert_eq!(direct_package.package_bin, package_bin);
+        assert_eq!(direct_package.stats.asset_count, 2);
+        assert_eq!(direct_package.stats.package_bin_bytes, package_bin.len() as u64);
 
         let (version, manifest) = parse_bundle_manifest(&package_bin);
         assert_eq!(version, BUNDLE_VERSION);

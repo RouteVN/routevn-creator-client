@@ -31,6 +31,39 @@ const refreshVersionsData = async (deps) => {
   render();
 };
 
+const refreshWindowsExportAvailability = async (deps) => {
+  const { store, projectService, appService } = deps;
+
+  if (appService.getPlatform() !== "tauri") {
+    store.setWindowsExportAvailability({
+      availability: {
+        portableExecutable: false,
+        installer: false,
+        templateAvailable: false,
+        installerHostSupported: false,
+        installerToolAvailable: false,
+      },
+    });
+    return;
+  }
+
+  try {
+    store.setWindowsExportAvailability({
+      availability: await projectService.getWindowsExportAvailability(),
+    });
+  } catch {
+    store.setWindowsExportAvailability({
+      availability: {
+        portableExecutable: false,
+        installer: false,
+        templateAvailable: false,
+        installerHostSupported: false,
+        installerToolAvailable: false,
+      },
+    });
+  }
+};
+
 const openCreateVersionDialog = ({ deps } = {}) => {
   const { store, render } = deps;
 
@@ -85,6 +118,33 @@ const getVersionZipName = ({ appService, projectId, version } = {}) => {
   return `${projectName}_${version?.name ?? "version"}`;
 };
 
+const getProjectExportTitle = ({ projectInfo } = {}) => {
+  return projectInfo?.name?.trim?.();
+};
+
+const WINDOWS_VERSION_PART_BASE = 65536;
+const WINDOWS_VERSION_PART_MAX = 65535;
+const WINDOWS_VERSION_ACTION_INDEX_MAX =
+  WINDOWS_VERSION_PART_MAX * WINDOWS_VERSION_PART_BASE +
+  WINDOWS_VERSION_PART_MAX;
+
+const getWindowsFileVersion = ({ version } = {}) => {
+  const actionIndex = Number(version?.actionIndex);
+  if (
+    !Number.isSafeInteger(actionIndex) ||
+    actionIndex < 0 ||
+    actionIndex > WINDOWS_VERSION_ACTION_INDEX_MAX
+  ) {
+    throw new Error(
+      "Windows export requires a valid non-negative release action index.",
+    );
+  }
+
+  return `1.0.${Math.floor(actionIndex / WINDOWS_VERSION_PART_BASE)}.${
+    actionIndex % WINDOWS_VERSION_PART_BASE
+  }`;
+};
+
 const formatReplayFailureMessage = ({ replay, copy = {} } = {}) => {
   const failedEventOffset = replay?.failedEventOffset;
   const targetEventCount = replay?.targetEventCount;
@@ -108,12 +168,59 @@ const formatReplayFailureMessage = ({ replay, copy = {} } = {}) => {
   );
 };
 
+const createVersionExportData = async ({
+  appService,
+  projectService,
+  version,
+} = {}) => {
+  const projectInfo = await projectService.getCurrentProjectInfo();
+  const repositoryState = await projectService.loadRepositoryState(
+    version?.actionIndex,
+  );
+  const usage = collectUsedResourcesForExport(repositoryState);
+  const filteredState = buildFilteredStateForExport(repositoryState, usage);
+  const constructedProjectData = constructProjectData(filteredState);
+  const fileEntries = usage.fileIds.map((fileId) => {
+    const fileRecord = filteredState.files?.items?.[fileId];
+    const normalizedMimeType = normalizeExportFileMimeType({
+      mimeType: fileRecord?.mimeType,
+      assetType: fileRecord?.type,
+    });
+    const entry = {
+      fileId,
+    };
+
+    if (normalizedMimeType) {
+      entry.mimeType = normalizedMimeType;
+    }
+
+    return entry;
+  });
+  const transformedData = createBundleInstructions({
+    projectData: constructedProjectData,
+    bundler: {
+      appVersion: appService.getAppVersion(),
+    },
+    project: {
+      namespace: projectInfo.namespace,
+    },
+  });
+
+  return {
+    projectInfo,
+    transformedData,
+    fileEntries,
+  };
+};
+
 export const handleBeforeMount = (deps) => {
-  const { store, uiConfig } = deps;
+  const { appService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
+  store.setPlatform({ platform: appService.getPlatform() });
 };
 
 export const handleAfterMount = async (deps) => {
+  await refreshWindowsExportAvailability(deps);
   await refreshVersionsData(deps);
 };
 
@@ -334,37 +441,10 @@ export const handleDownloadZipClick = async (deps, payload) => {
   });
 
   try {
-    const projectInfo = await projectService.getCurrentProjectInfo();
-    const repositoryState = await projectService.loadRepositoryState(
-      version?.actionIndex,
-    );
-    const usage = collectUsedResourcesForExport(repositoryState);
-    const filteredState = buildFilteredStateForExport(repositoryState, usage);
-    const constructedProjectData = constructProjectData(filteredState);
-    const fileEntries = usage.fileIds.map((fileId) => {
-      const fileRecord = filteredState.files?.items?.[fileId];
-      const normalizedMimeType = normalizeExportFileMimeType({
-        mimeType: fileRecord?.mimeType,
-        assetType: fileRecord?.type,
-      });
-      const entry = {
-        fileId,
-      };
-
-      if (normalizedMimeType) {
-        entry.mimeType = normalizedMimeType;
-      }
-
-      return entry;
-    });
-    const transformedData = createBundleInstructions({
-      projectData: constructedProjectData,
-      bundler: {
-        appVersion: appService.getAppVersion(),
-      },
-      project: {
-        namespace: projectInfo.namespace,
-      },
+    const { transformedData, fileEntries } = await createVersionExportData({
+      appService,
+      projectService,
+      version,
     });
     const savedPath = outputPath
       ? await projectService.createDistributionZipStreamedToPath(
@@ -409,6 +489,253 @@ export const handleDownloadZipClick = async (deps, payload) => {
         ? `${formatReplayFailureMessage({ replay, copy })}\n${error.message}`
         : formatI18nCopy(
             copy.failedSaveZipFile ?? "Failed to save ZIP file: {message}",
+            { message: error.message },
+          ),
+      title: copy.errorTitle ?? "Error",
+    });
+  }
+};
+
+export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
+  const { store, render, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  payload._event.stopPropagation();
+
+  const currentPayload = appService.getPayload();
+  const projectId = currentPayload.p ?? "";
+  const versionId = resolveVersionIdFromPayload(payload);
+  const version = store.selectVersion(versionId);
+
+  if (!version) {
+    appService.showAlert({
+      message: copy.versionNotFound ?? "Version not found.",
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  store.closeDropdownMenu();
+  store.setSelectedItemId({ itemId: versionId });
+  render();
+
+  let windowsFileVersion;
+  try {
+    windowsFileVersion = getWindowsFileVersion({ version });
+  } catch (error) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedSaveWindowsExecutable ??
+          "Failed to save Windows executable: {message}",
+        { message: error.message },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  const exeName = getVersionZipName({
+    appService,
+    projectId,
+    version,
+  });
+  let outputPath;
+
+  try {
+    outputPath = await projectService.promptWindowsExecutablePath(exeName);
+  } catch (error) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
+        { message: error.message },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  if (outputPath === null) {
+    appService.closeAll();
+    return;
+  }
+
+  appService.showAlert({
+    message:
+      copy.windowsExecutableInProgressMessage ??
+      "Please wait while the Windows executable is being created...",
+    title:
+      copy.windowsExecutableInProgressTitle ?? "Windows export in progress",
+  });
+
+  try {
+    const { projectInfo, transformedData, fileEntries } =
+      await createVersionExportData({
+        appService,
+        projectService,
+        version,
+      });
+    const result = await projectService.createWindowsPortableExecutableToPath(
+      transformedData,
+      fileEntries,
+      outputPath,
+      {
+        title: getProjectExportTitle({ projectInfo }),
+        version: windowsFileVersion,
+        publisher: projectInfo?.publisher,
+        iconFileId: projectInfo?.iconFileId,
+      },
+    );
+    const savedPath = result?.outputPath ?? outputPath;
+
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.windowsExecutableExportCompletedMessage ??
+          "Windows executable export completed.\nSaved to: {path}",
+        { path: savedPath },
+      ),
+      title: copy.exportCompletedTitle ?? "Export completed",
+    });
+  } catch (error) {
+    const replay = error?.details?.replay;
+
+    if (replay) {
+      console.error("Version Windows executable export history replay failed", {
+        versionId,
+        versionName: version?.name,
+        versionActionIndex: version?.actionIndex,
+        replay,
+        error,
+      });
+    }
+
+    appService.showAlert({
+      message: replay
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${error.message}`
+        : formatI18nCopy(
+            copy.failedSaveWindowsExecutable ??
+              "Failed to save Windows executable: {message}",
+            { message: error.message },
+          ),
+      title: copy.errorTitle ?? "Error",
+    });
+  }
+};
+
+export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
+  const { store, render, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  payload._event.stopPropagation();
+
+  const currentPayload = appService.getPayload();
+  const projectId = currentPayload.p ?? "";
+  const versionId = resolveVersionIdFromPayload(payload);
+  const version = store.selectVersion(versionId);
+
+  if (!version) {
+    appService.showAlert({
+      message: copy.versionNotFound ?? "Version not found.",
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  store.closeDropdownMenu();
+  store.setSelectedItemId({ itemId: versionId });
+  render();
+
+  let windowsFileVersion;
+  try {
+    windowsFileVersion = getWindowsFileVersion({ version });
+  } catch (error) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedSaveWindowsInstaller ??
+          "Failed to save Windows installer: {message}",
+        { message: error.message },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  const installerName = getVersionZipName({
+    appService,
+    projectId,
+    version,
+  });
+  let outputPath;
+
+  try {
+    outputPath = await projectService.promptWindowsInstallerPath(installerName);
+  } catch (error) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
+        { message: error.message },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  if (outputPath === null) {
+    appService.closeAll();
+    return;
+  }
+
+  appService.showAlert({
+    message:
+      copy.windowsInstallerInProgressMessage ??
+      "Please wait while the Windows installer is being created...",
+    title: copy.windowsInstallerInProgressTitle ?? "Windows installer export",
+  });
+
+  try {
+    const { projectInfo, transformedData, fileEntries } =
+      await createVersionExportData({
+        appService,
+        projectService,
+        version,
+      });
+    const result = await projectService.createWindowsInstallerToPath(
+      transformedData,
+      fileEntries,
+      outputPath,
+      {
+        title: getProjectExportTitle({ projectInfo }),
+        version: windowsFileVersion,
+        publisher: projectInfo?.publisher,
+        iconFileId: projectInfo?.iconFileId,
+      },
+    );
+    const savedPath = result?.outputPath ?? outputPath;
+
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.windowsInstallerExportCompletedMessage ??
+          "Windows installer export completed.\nSaved to: {path}",
+        { path: savedPath },
+      ),
+      title: copy.exportCompletedTitle ?? "Export completed",
+    });
+  } catch (error) {
+    const replay = error?.details?.replay;
+
+    if (replay) {
+      console.error("Version Windows installer export history replay failed", {
+        versionId,
+        versionName: version?.name,
+        versionActionIndex: version?.actionIndex,
+        replay,
+        error,
+      });
+    }
+
+    appService.showAlert({
+      message: replay
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${error.message}`
+        : formatI18nCopy(
+            copy.failedSaveWindowsInstaller ??
+              "Failed to save Windows installer: {message}",
             { message: error.message },
           ),
       title: copy.errorTitle ?? "Error",

@@ -72,7 +72,7 @@ fn new_java_string(env: &mut JNIEnv, value: String) -> jstring {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeSelfTest(
     mut env: JNIEnv,
     _class: JClass,
@@ -85,7 +85,7 @@ pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeSelfTest(
     new_java_string(&mut env, message)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeCreateDistributionZipStreamed(
     mut env: JNIEnv,
     _class: JClass,

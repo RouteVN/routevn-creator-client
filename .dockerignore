@@ -3,6 +3,9 @@
 !docker/appimage/
 !docker/appimage/build-in-container.sh
 !docker/appimage/ubuntu-22.04.Dockerfile
+!docker/windows-player-template/
+!docker/windows-player-template/build-in-container.sh
+!docker/windows-player-template/ubuntu-22.04.Dockerfile
 !docker/linux-packages/
 !docker/linux-packages/build-in-container.sh
 !docker/linux-packages/fedora-43.Dockerfile

@@ -68,6 +68,10 @@ copy.
   default style for local store updates.
 - Use simple normalization such as `value ?? null` unless real runtime type
   narrowing is required.
+- Fail fast for required domain/export metadata instead of inventing fallback
+  values. Defaults are acceptable for UI labels and local preferences, but data
+  written into user artifacts, persisted records, filenames, manifests, or
+  native metadata must come from an explicit source or raise a clear error.
 - In handlers, destructure the dependencies you use at the top of the
   function (`const { store, refs, appService, projectService } = deps`)
   instead of repeatedly using `deps.store`, `deps.refs`, and similar dotted

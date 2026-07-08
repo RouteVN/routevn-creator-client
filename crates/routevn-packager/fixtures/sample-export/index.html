@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RouteVN Sample Export</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        background: #f4efe6;
+        color: #2f2a24;
+      }
+
+      #app {
+        padding: 2rem;
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 20px 60px rgba(47, 42, 36, 0.12);
+        min-width: min(90vw, 32rem);
+      }
+
+      code {
+        font-family: ui-monospace, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <section id="app">
+      <h1>RouteVN Sample Export</h1>
+      <p id="status">Loading package.bin...</p>
+      <pre id="payload"></pre>
+    </section>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

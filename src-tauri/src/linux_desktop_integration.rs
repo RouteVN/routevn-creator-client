@@ -11,14 +11,14 @@ pub struct LinuxAppImageDesktopIntegrationStatus {
 }
 
 #[tauri::command]
-pub fn get_linux_appimage_desktop_integration_status(
-) -> Result<LinuxAppImageDesktopIntegrationStatus, String> {
+pub fn get_linux_appimage_desktop_integration_status()
+-> Result<LinuxAppImageDesktopIntegrationStatus, String> {
     Ok(get_status())
 }
 
 #[tauri::command]
-pub fn install_linux_appimage_desktop_integration(
-) -> Result<LinuxAppImageDesktopIntegrationStatus, String> {
+pub fn install_linux_appimage_desktop_integration()
+-> Result<LinuxAppImageDesktopIntegrationStatus, String> {
     install_integration()?;
     Ok(get_status())
 }

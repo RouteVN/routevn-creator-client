@@ -6,9 +6,9 @@ use std::{
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
     sync::{
+        Mutex,
         atomic::{AtomicU64, Ordering},
         mpsc::{self, Receiver, Sender},
-        Mutex,
     },
     thread::{self, JoinHandle},
     time::Duration,

@@ -1,11 +1,11 @@
 use tauri::{
+    Runtime, UriSchemeContext, Url,
     http::{
+        Request, Response, StatusCode,
         header::{
             ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE,
         },
-        Request, Response, StatusCode,
     },
-    Runtime, UriSchemeContext, Url,
 };
 
 const PROJECT_FILE_REQUEST_BASE: &str = "http://project-file.localhost";
@@ -90,7 +90,7 @@ pub fn handle<R: Runtime>(
             return build_error_response(
                 StatusCode::BAD_REQUEST,
                 "Invalid project-file request URL",
-            )
+            );
         }
     };
 
