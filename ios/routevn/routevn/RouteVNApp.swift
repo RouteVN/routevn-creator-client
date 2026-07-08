@@ -30,6 +30,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private var canGoBackInWebApp = false
     private var pendingDocumentPicker: PendingDocumentPicker?
     private var didRunSmokeTest = false
+    private var securityScopedFolders: [String: SecurityScopedFolderSelection] = [:]
+    private let securityScopedFoldersLock = NSLock()
     private let backgroundBridgeQueue = DispatchQueue(
         label: "com.routevn.creator.ios.bridge.background",
         qos: .userInitiated
@@ -1104,12 +1106,10 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                     ])
                     return
                 }
+                let folderResult = try createFolderPickerResult(requestId: pending.requestId, sourceURL: url)
                 sendFolderPickerResult([
                     "requestId": pending.requestId,
-                    "folder": [
-                        "uri": url.absoluteString,
-                        "name": url.lastPathComponent
-                    ]
+                    "folder": folderResult
                 ])
             }
         } catch {
@@ -1120,6 +1120,17 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 sendFolderPickerError(requestId: pending.requestId, message: error.localizedDescription)
             }
         }
+    }
+
+    private func createFolderPickerResult(requestId: String, sourceURL: URL) throws -> [String: Any] {
+        let safeRequestId = try storage.safePathSegment(requestId)
+        storeSecurityScopedFolderSelection(requestId: safeRequestId, url: sourceURL)
+
+        return [
+            "uri": securityScopedFolderURI(requestId: safeRequestId),
+            "name": sourceURL.lastPathComponent,
+            "sourceUri": sourceURL.absoluteString
+        ]
     }
 
     private func createPickerFileResult(requestId: String, sourceURL: URL, index: Int) throws -> [String: Any] {
@@ -1149,6 +1160,66 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             "size": NSNumber(value: data.count),
             "url": "routevn://app/ios-files/picker/\(requestId)/files/\(fileId)"
         ]
+    }
+
+    private func securityScopedFolderURI(requestId: String) -> String {
+        "routevn-folder://selected/\(requestId)"
+    }
+
+    private func securityScopedFolderRequestId(uriString: String) -> String? {
+        guard let url = URL(string: uriString), url.scheme == "routevn-folder" else {
+            return nil
+        }
+
+        if url.host == "selected" {
+            return url.pathComponents.dropFirst().first
+        }
+
+        return url.host
+    }
+
+    private func storeSecurityScopedFolderSelection(requestId: String, url: URL) {
+        securityScopedFoldersLock.lock()
+        defer {
+            securityScopedFoldersLock.unlock()
+        }
+
+        securityScopedFolders[requestId] = SecurityScopedFolderSelection(url: url)
+    }
+
+    private func loadSecurityScopedFolderSelection(requestId: String) -> SecurityScopedFolderSelection? {
+        securityScopedFoldersLock.lock()
+        defer {
+            securityScopedFoldersLock.unlock()
+        }
+
+        return securityScopedFolders[requestId]
+    }
+
+    private func accessFolderURL(
+        uriString: String,
+        fallbackURL: URL? = nil,
+        missingMessage: String
+    ) throws -> SecurityScopedFolderAccess {
+        if let requestId = securityScopedFolderRequestId(uriString: uriString) {
+            let safeRequestId = try storage.safePathSegment(requestId)
+            guard let selection = loadSecurityScopedFolderSelection(requestId: safeRequestId) else {
+                throw RouteVNError.message("Selected folder access has expired.")
+            }
+            let didAccess = selection.url.startAccessingSecurityScopedResource()
+            return SecurityScopedFolderAccess(url: selection.url, didAccess: didAccess)
+        }
+
+        if let selectedURL = URL(string: uriString), selectedURL.isFileURL {
+            let didAccess = selectedURL.startAccessingSecurityScopedResource()
+            return SecurityScopedFolderAccess(url: selectedURL, didAccess: didAccess)
+        }
+
+        if let fallbackURL {
+            return SecurityScopedFolderAccess(url: fallbackURL, didAccess: false)
+        }
+
+        throw RouteVNError.message(missingMessage)
     }
 
     private func sendFilePickerError(requestId: String, message: String) {
@@ -1221,15 +1292,13 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     }
 
     private func importProjectFolder(uriString: String) throws -> [String: Any] {
-        guard let folderURL = URL(string: uriString), folderURL.isFileURL else {
-            throw RouteVNError.message("Project folder is required.")
-        }
-
-        let didAccess = folderURL.startAccessingSecurityScopedResource()
+        let folderAccess = try accessFolderURL(
+            uriString: uriString,
+            missingMessage: "Project folder is required."
+        )
+        let folderURL = folderAccess.url
         defer {
-            if didAccess {
-                folderURL.stopAccessingSecurityScopedResource()
-            }
+            folderAccess.stop()
         }
 
         let projectDbURL = folderURL.appendingPathComponent("project.db")
@@ -1296,18 +1365,14 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
         let projectInfo = try readProjectInfo(databaseURL: projectDbURL)
         let exportFolderName = resolveProjectExportFolderName(projectInfo: projectInfo)
-        let destinationRootURL: URL
-        if let selectedURL = URL(string: destinationUriString), selectedURL.isFileURL {
-            destinationRootURL = selectedURL
-        } else {
-            destinationRootURL = storage.exportsRoot
-        }
-
-        let didAccess = destinationRootURL.startAccessingSecurityScopedResource()
+        let destinationAccess = try accessFolderURL(
+            uriString: destinationUriString,
+            fallbackURL: storage.exportsRoot,
+            missingMessage: "Project export folder is required."
+        )
+        let destinationRootURL = destinationAccess.url
         defer {
-            if didAccess {
-                destinationRootURL.stopAccessingSecurityScopedResource()
-            }
+            destinationAccess.stop()
         }
 
         let exportRootURL = destinationRootURL.appendingPathComponent(exportFolderName)
@@ -1442,12 +1507,31 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
             .filter { !$0.isEmpty }
         let contentTypes = tokens.compactMap { token -> UTType? in
+            if let wildcardType = wildcardContentType(token) {
+                return wildcardType
+            }
+
             if token.hasPrefix(".") {
                 return UTType(filenameExtension: String(token.dropFirst()))
             }
             return UTType(mimeType: token)
         }
         return contentTypes.isEmpty ? [.item] : contentTypes
+    }
+
+    private func wildcardContentType(_ token: String) -> UTType? {
+        switch token {
+        case "image/*":
+            return .image
+        case "audio/*":
+            return .audio
+        case "video/*":
+            return .movie
+        case "text/*":
+            return .text
+        default:
+            return nil
+        }
     }
 
     private func copySidecarIfPresent(source: URL, suffix: String, target: URL) throws {
@@ -1481,6 +1565,21 @@ private struct PendingDocumentPicker {
     let requestId: String
     let multiple: Bool
     let writable: Bool
+}
+
+private struct SecurityScopedFolderSelection {
+    let url: URL
+}
+
+private struct SecurityScopedFolderAccess {
+    let url: URL
+    let didAccess: Bool
+
+    func stop() {
+        if didAccess {
+            url.stopAccessingSecurityScopedResource()
+        }
+    }
 }
 
 private struct RouteVNDistributionAsset {
