@@ -3,8 +3,10 @@ import {
   createInitialState,
   selectViewData,
   setSelectedItemId,
+  setPlatform,
   setUiConfig,
   setVersions,
+  setWindowsExportAvailability,
 } from "../../src/pages/versions/versions.store.js";
 
 const version = {
@@ -56,5 +58,46 @@ describe("versions store mobile view data", () => {
     expect(viewData.showDetailPanel).toBe(true);
     expect(viewData.showMobileDetailSheet).toBe(false);
     expect(viewData.contentLeftPadding).toBe("sm");
+  });
+});
+
+describe("versions store export actions", () => {
+  it("shows Windows EXE export in Tauri without hiding it behind resource preflight", () => {
+    const state = createInitialState();
+
+    setPlatform({ state }, { platform: "tauri" });
+    setWindowsExportAvailability(
+      { state },
+      {
+        availability: {
+          portableExecutable: false,
+          installer: false,
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.canExportWindowsExecutable).toBe(true);
+    expect(viewData.canExportWindowsInstaller).toBe(false);
+  });
+
+  it("hides Windows exports in web runtime", () => {
+    const state = createInitialState();
+
+    setWindowsExportAvailability(
+      { state },
+      {
+        availability: {
+          portableExecutable: true,
+          installer: true,
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.canExportWindowsExecutable).toBe(false);
+    expect(viewData.canExportWindowsInstaller).toBe(false);
   });
 });

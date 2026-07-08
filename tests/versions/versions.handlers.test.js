@@ -283,8 +283,19 @@ describe("versions.handleDownloadZipClick", () => {
       deps.projectService.createDistributionZipStreamed,
     ).toHaveBeenCalled();
     expect(
+      deps.projectService.createDistributionZipStreamed.mock.calls[0][0]
+        .bundleMetadata.project,
+    ).toMatchObject({
+      namespace: "project-one",
+      title: "Project One",
+      iconFileId: "icon-1",
+    });
+    expect(
       deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
-    ).toEqual([{ fileId: "file-1", mimeType: "image/png" }]);
+    ).toEqual([
+      { fileId: "file-1", mimeType: "image/png" },
+      { fileId: "icon-1", mimeType: "image/png" },
+    ]);
   });
 
   it("drops invalid font mime metadata before export", async () => {
@@ -404,7 +415,10 @@ describe("versions.handleDownloadZipClick", () => {
     ).toHaveBeenCalled();
     expect(
       deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
-    ).toEqual([{ fileId: "file-font-1" }]);
+    ).toEqual([
+      { fileId: "file-font-1" },
+      { fileId: "icon-1", mimeType: "image/png" },
+    ]);
   });
 });
 
@@ -509,5 +523,95 @@ describe("versions Windows export handlers", () => {
         ),
       }),
     );
+  });
+
+  it("shows and logs string errors from Windows EXE export", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({
+      repository,
+    });
+    deps.projectService.createWindowsPortableExecutableToPath = vi.fn(
+      async () => {
+        throw "native export failed";
+      },
+    );
+
+    try {
+      await handleDownloadWindowsExecutableClick(
+        deps,
+        createVersionClickPayload(),
+      );
+
+      expect(deps.appService.showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("native export failed"),
+        }),
+      );
+      expect(consoleError).toHaveBeenCalledWith(
+        "Version Windows executable export failed",
+        expect.objectContaining({
+          error: "native export failed",
+          errorMessage: "native export failed",
+          outputPath: "/tmp/export.exe",
+          versionActionIndex: 3,
+          versionId: "version-1",
+          versionName: "Version 1",
+          windowsFileVersion: "1.0.0.3",
+        }),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("explains missing native Windows EXE export command errors", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({
+      repository,
+    });
+    deps.projectService.createWindowsPortableExecutableToPath = vi.fn(
+      async () => {
+        throw "Command export_windows_portable_executable not found";
+      },
+    );
+
+    try {
+      await handleDownloadWindowsExecutableClick(
+        deps,
+        createVersionClickPayload(),
+      );
+
+      expect(deps.appService.showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            "Restart the Tauri dev process so the native shell rebuilds.",
+          ),
+        }),
+      );
+      expect(consoleError).toHaveBeenCalledWith(
+        "Version Windows executable export failed",
+        expect.objectContaining({
+          errorMessage: expect.stringContaining(
+            "Restart the Tauri dev process so the native shell rebuilds.",
+          ),
+        }),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });
