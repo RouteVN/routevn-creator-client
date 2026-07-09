@@ -1,12 +1,10 @@
-import {
-  getLineDialogueContent,
-  getPlainTextFromContent,
-} from "./sceneEditorLexical/contentModel.js";
-import { toFlatItems } from "../project/tree.js";
-import { formatI18nCopy } from "./i18nCopy.js";
+import { toFlatItems } from "./project/tree.js";
+import { formatI18nCopy } from "./ui/i18nCopy.js";
 
 const TEXT_PART_SEPARATOR = "\n";
 const FALLBACK_WORD_PATTERN = /[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu;
+const EDITOR_CARET_TEXT = "\u200b";
+const REFERENCE_DISPLAY_TEXT_PROPERTY = "__displayText";
 
 const segmenters = new Map();
 
@@ -24,6 +22,7 @@ const getSegmenter = (granularity) => {
 
 const normalizeTextPart = (value) =>
   String(value ?? "")
+    .replaceAll(EDITOR_CARET_TEXT, "")
     .replace(/\r\n?/g, "\n")
     .trim();
 
@@ -39,9 +38,35 @@ const toOrderedItems = (value) => {
   return [];
 };
 
+const getReferenceDisplayText = (item = {}) => {
+  const displayText = item?.reference?.[REFERENCE_DISPLAY_TEXT_PROPERTY];
+  if (typeof displayText === "string" && displayText.length > 0) {
+    return displayText;
+  }
+
+  const resourceId = item?.reference?.resourceId;
+  return typeof resourceId === "string" && resourceId.length > 0
+    ? resourceId
+    : "";
+};
+
+const getContentItemPlainText = (item = {}) => {
+  if (item?.reference) {
+    return getReferenceDisplayText(item);
+  }
+
+  return String(item?.text ?? "");
+};
+
+const getPlainTextFromContent = (items = []) => {
+  return (Array.isArray(items) ? items : [])
+    .map(getContentItemPlainText)
+    .join("");
+};
+
 const collectLineTextParts = (line = {}, parts) => {
   const dialogueText = normalizeTextPart(
-    getPlainTextFromContent(getLineDialogueContent(line)),
+    getPlainTextFromContent(line?.actions?.dialogue?.content),
   );
   if (dialogueText) {
     parts.push(dialogueText);

@@ -22,34 +22,22 @@ describe("scenes.store mobile layout", () => {
           id: "scene-1",
           type: "scene",
           name: "Scene 1",
-          sections: {
-            items: {
-              "section-1": {
-                id: "section-1",
-                name: "Section 1",
-                lines: {
-                  items: {
-                    "line-1": {
-                      id: "line-1",
-                      actions: {
-                        dialogue: {
-                          content: [{ text: "Hello world" }],
-                        },
-                        choice: {
-                          items: [{ content: "Go home" }],
-                        },
-                      },
-                    },
-                  },
-                  tree: [{ id: "line-1" }],
-                },
-              },
-            },
-            tree: [{ id: "section-1" }],
-          },
         },
       },
       tree: [{ id: "scene-1" }],
+    };
+    state.sceneOverviewsById = {
+      "scene-1": {
+        textStats: {
+          wordCount: 4,
+        },
+        sections: [
+          {
+            sectionId: "section-1",
+            name: "Section 1",
+          },
+        ],
+      },
     };
 
     const viewData = selectViewData({ state, i18n: EN_I18N });

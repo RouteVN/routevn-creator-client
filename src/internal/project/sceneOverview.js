@@ -1,6 +1,7 @@
 import { normalizeLineActions } from "./engineActions.js";
 import { getInteractionActions } from "./interactionPayload.js";
 import { toFlatItems } from "./tree.js";
+import { buildSceneTextStats } from "../sceneTextStats.js";
 
 const LAYOUT_ACTION_INTERACTION_KEYS = [
   "click",
@@ -249,11 +250,13 @@ export const buildSceneOverview = ({ repositoryState, sceneId }) => {
         repositoryState,
       }),
     );
+  const textStats = buildSceneTextStats(scene);
 
   return {
     sceneId,
     name: scene?.name || `Scene ${sceneId}`,
     position: structuredClone(scene?.position || { x: 0, y: 0 }),
+    textStats,
     outgoingSceneIds: [
       ...new Set(sections.flatMap((section) => section.outgoingSceneIds)),
     ],

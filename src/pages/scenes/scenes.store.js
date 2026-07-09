@@ -4,7 +4,7 @@ import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   buildSceneTextStats,
   formatSceneTextStatsLabel,
-} from "../../internal/ui/sceneTextStats.js";
+} from "../../internal/sceneTextStats.js";
 import { selectScenesPageCopy } from "./support/scenesPageCopy.js";
 
 const createContextMenuItems = (copy = {}) => [
@@ -451,10 +451,15 @@ export const selectViewData = ({ state, i18n }) => {
     const selectedSceneOverview = state.sceneOverviewsById?.[selectedScene.id];
     selectedItemName = selectedScene.name ?? "";
     selectedItemDescription = selectedScene.description ?? "";
-    selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
-      buildSceneTextStats(selectedScene),
-      copy,
-    );
+    const selectedSceneTextStats =
+      selectedSceneOverview?.textStats ??
+      (selectedScene.sections ? buildSceneTextStats(selectedScene) : undefined);
+    if (selectedSceneTextStats) {
+      selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
+        selectedSceneTextStats,
+        copy,
+      );
+    }
     selectedSceneSections = Array.isArray(selectedSceneOverview?.sections)
       ? selectedSceneOverview.sections.map((section, index) => ({
           id: section.sectionId || section.id,
