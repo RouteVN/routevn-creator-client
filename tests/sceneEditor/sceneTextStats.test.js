@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSceneTextStats,
   getSceneTextForStats,
-} from "../../src/internal/sceneTextStats.js";
+} from "../../src/internal/ui/sceneTextStats.js";
 
 describe("sceneTextStats", () => {
   it("counts dialogue words and choice text", () => {

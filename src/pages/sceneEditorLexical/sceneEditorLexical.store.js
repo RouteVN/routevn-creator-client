@@ -38,7 +38,7 @@ import {
   createEmptySceneTextStats,
   formatSceneTextStatsLabel,
   normalizeSceneTextStats,
-} from "../../internal/sceneTextStats.js";
+} from "../../internal/ui/sceneTextStats.js";
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 

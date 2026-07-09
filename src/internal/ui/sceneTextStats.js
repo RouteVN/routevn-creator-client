@@ -1,5 +1,5 @@
-import { toFlatItems } from "./project/tree.js";
-import { formatI18nCopy } from "./ui/i18nCopy.js";
+import { toFlatItems } from "../project/tree.js";
+import { formatI18nCopy } from "./i18nCopy.js";
 
 const TEXT_PART_SEPARATOR = "\n";
 const FALLBACK_WORD_PATTERN = /[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu;

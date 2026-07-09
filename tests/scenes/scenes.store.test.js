@@ -22,22 +22,34 @@ describe("scenes.store mobile layout", () => {
           id: "scene-1",
           type: "scene",
           name: "Scene 1",
+          sections: {
+            items: {
+              "section-1": {
+                id: "section-1",
+                name: "Section 1",
+                lines: {
+                  items: {
+                    "line-1": {
+                      id: "line-1",
+                      actions: {
+                        dialogue: {
+                          content: [{ text: "Hello world" }],
+                        },
+                        choice: {
+                          items: [{ content: "Go home" }],
+                        },
+                      },
+                    },
+                  },
+                  tree: [{ id: "line-1" }],
+                },
+              },
+            },
+            tree: [{ id: "section-1" }],
+          },
         },
       },
       tree: [{ id: "scene-1" }],
-    };
-    state.sceneOverviewsById = {
-      "scene-1": {
-        textStats: {
-          wordCount: 4,
-        },
-        sections: [
-          {
-            sectionId: "section-1",
-            name: "Section 1",
-          },
-        ],
-      },
     };
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
@@ -45,7 +57,7 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.selectedSceneTextStatsLabel).toBe("4 words");
   });
 
-  it("hides the selected scene word-count label when the overview has no words", () => {
+  it("hides the selected scene word-count label when scene content is not loaded", () => {
     const state = createInitialState();
     state.selectedItemId = "scene-1";
     state.scenesData = {
@@ -58,13 +70,46 @@ describe("scenes.store mobile layout", () => {
       },
       tree: [{ id: "scene-1" }],
     };
-    state.sceneOverviewsById = {
-      "scene-1": {
-        textStats: {
-          wordCount: 0,
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.selectedSceneTextStatsLabel).toBe("");
+  });
+
+  it("hides the selected scene word-count label when loaded content has no words", () => {
+    const state = createInitialState();
+    state.selectedItemId = "scene-1";
+    state.scenesData = {
+      items: {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          name: "Scene 1",
+          sections: {
+            items: {
+              "section-1": {
+                id: "section-1",
+                name: "Section 1",
+                lines: {
+                  items: {
+                    "line-1": {
+                      id: "line-1",
+                      actions: {
+                        dialogue: {
+                          content: [{ text: "" }],
+                        },
+                      },
+                    },
+                  },
+                  tree: [{ id: "line-1" }],
+                },
+              },
+            },
+            tree: [{ id: "section-1" }],
+          },
         },
-        sections: [],
       },
+      tree: [{ id: "scene-1" }],
     };
 
     const viewData = selectViewData({ state, i18n: EN_I18N });

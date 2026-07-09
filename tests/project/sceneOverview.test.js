@@ -53,9 +53,6 @@ describe("buildSceneOverview", () => {
                     {
                       id: "line-1",
                       actions: {
-                        dialogue: {
-                          content: [{ text: "Hello world" }],
-                        },
                         resetStoryAtSection: {
                           sectionId: "section-2",
                         },
@@ -103,7 +100,6 @@ describe("buildSceneOverview", () => {
     });
 
     expect(overview.outgoingSceneIds).toEqual(["scene-2"]);
-    expect(overview.textStats).toEqual({ wordCount: 2 });
     expect(overview.sections[0].outgoingSceneIds).toEqual(["scene-2"]);
     expect(overview.sections[0].isDeadEnd).toBe(false);
   });

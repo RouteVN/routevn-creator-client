@@ -5,7 +5,7 @@ import {
   buildSceneTextStats,
   formatSceneTextStatsLabel,
   normalizeSceneTextStats,
-} from "../../internal/sceneTextStats.js";
+} from "../../internal/ui/sceneTextStats.js";
 import { selectScenesPageCopy } from "./support/scenesPageCopy.js";
 
 const createContextMenuItems = (copy = {}) => [
@@ -452,9 +452,9 @@ export const selectViewData = ({ state, i18n }) => {
     const selectedSceneOverview = state.sceneOverviewsById?.[selectedScene.id];
     selectedItemName = selectedScene.name ?? "";
     selectedItemDescription = selectedScene.description ?? "";
-    const selectedSceneTextStats =
-      selectedSceneOverview?.textStats ??
-      (selectedScene.sections ? buildSceneTextStats(selectedScene) : undefined);
+    const selectedSceneTextStats = selectedScene.sections
+      ? buildSceneTextStats(selectedScene)
+      : undefined;
     if (normalizeSceneTextStats(selectedSceneTextStats).wordCount > 0) {
       selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
         selectedSceneTextStats,
