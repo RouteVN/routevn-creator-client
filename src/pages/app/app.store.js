@@ -1,5 +1,6 @@
 export const createInitialState = () => ({
   currentRoute: "/projects",
+  platform: "web",
   isTouchMode: false,
   isMobileSheetOpen: false,
   mobileSheetVariant: undefined,
@@ -12,7 +13,8 @@ export const createInitialState = () => ({
 const SIDEBAR_WIDTH_PX = 64;
 const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 const HELP_BUTTON_BOTTOM_OFFSET_PX = 24;
-const HELP_BUTTON_TOUCH_EXTRA_BOTTOM_OFFSET_PX = 40;
+const HELP_BUTTON_IOS_TOUCH_EXTRA_BOTTOM_OFFSET_PX = 40;
+const HELP_BUTTON_ANDROID_TOUCH_EXTRA_BOTTOM_OFFSET_PX = -8;
 const MOBILE_TAB_BAR_ACTIVE_COLOR = "white";
 const MOBILE_TAB_BAR_INACTIVE_COLOR = "mu-fg";
 
@@ -167,6 +169,10 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };
 
+export const setPlatform = ({ state }, { platform } = {}) => {
+  state.platform = platform ?? "web";
+};
+
 export const setCurrentRoute = ({ state }, { route } = {}) => {
   state.currentRoute = route;
 };
@@ -241,6 +247,26 @@ const selectRepositoryLoadingProgressPercent = ({ state }) => {
   return Math.min(100, Math.max(0, Math.round((current / total) * 100)));
 };
 
+const selectHelpButtonBottom = ({ state }) => {
+  if (!state.isTouchMode) {
+    return `${HELP_BUTTON_BOTTOM_OFFSET_PX}px`;
+  }
+
+  if (state.platform === "ios") {
+    return `calc(${
+      MOBILE_TAB_BAR_HEIGHT_PX +
+      HELP_BUTTON_BOTTOM_OFFSET_PX +
+      HELP_BUTTON_IOS_TOUCH_EXTRA_BOTTOM_OFFSET_PX
+    }px + var(--rvn-mobile-safe-area-inset-bottom, 0px))`;
+  }
+
+  return `${
+    MOBILE_TAB_BAR_HEIGHT_PX +
+    HELP_BUTTON_BOTTOM_OFFSET_PX +
+    HELP_BUTTON_ANDROID_TOUCH_EXTRA_BOTTOM_OFFSET_PX
+  }px`;
+};
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectAppCopy(i18n);
   const showSidebar = selectShowSidebar({ state });
@@ -265,13 +291,7 @@ export const selectViewData = ({ state, i18n }) => {
     contentHeight: showMobileTabBar
       ? `calc(var(--rvn-app-viewport-height, 100vh) - ${MOBILE_TAB_BAR_HEIGHT_PX}px)`
       : "100%",
-    helpButtonBottom: state.isTouchMode
-      ? `${
-          MOBILE_TAB_BAR_HEIGHT_PX +
-          HELP_BUTTON_BOTTOM_OFFSET_PX +
-          HELP_BUTTON_TOUCH_EXTRA_BOTTOM_OFFSET_PX
-        }px`
-      : `${HELP_BUTTON_BOTTOM_OFFSET_PX}px`,
+    helpButtonBottom: selectHelpButtonBottom({ state }),
     repositoryLoadingProgressPercent,
     repositoryLoadingProgressWidth: `${repositoryLoadingProgressPercent}%`,
     hasRepositoryLoadingProgress,

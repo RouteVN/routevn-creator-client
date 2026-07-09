@@ -1,8 +1,9 @@
+import { MOBILE_SAFE_AREA_INSET_BOTTOM_VALUE } from "../mobileSafeAreaInsets.js";
+
 export const isTouchUiConfig = (uiConfig) =>
   uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 
-export const MOBILE_RESOURCE_SCROLL_BOTTOM_PADDING =
-  "calc(96px + env(safe-area-inset-bottom))";
+export const MOBILE_RESOURCE_SCROLL_BOTTOM_PADDING = `calc(96px + ${MOBILE_SAFE_AREA_INSET_BOTTOM_VALUE})`;
 
 export const resolveResourceScrollBottomPadding = ({
   mobileLayout,

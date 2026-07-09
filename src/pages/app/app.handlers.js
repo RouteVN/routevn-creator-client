@@ -515,6 +515,7 @@ export const handleBeforeMount = (deps) => {
 
   appService.setAppCopyProvider?.(() => selectAppCopy(deps.i18n));
   store.setUiConfig({ uiConfig });
+  store.setPlatform({ platform: appService.getPlatform() });
   subject.dispatch("app.route.request", {
     path: initialPath,
     payload: appService.getPayload(),

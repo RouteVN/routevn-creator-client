@@ -181,7 +181,7 @@ const {
       audioPlayerLeft: state.isTouchMode ? 0 : state.audioPlayerLeft,
       audioPlayerRight: state.isTouchMode ? 0 : state.audioPlayerRight,
       audioPlayerBottom: state.isTouchMode
-        ? "calc(64px + env(safe-area-inset-bottom))"
+        ? "calc(64px + var(--rvn-mobile-safe-area-inset-bottom, 0px))"
         : "0px",
       mobileDeleteDialogOpen: state.mobileDeleteDialogOpen,
       mobileDeleteDialogTitle: copy.deleteTitle,

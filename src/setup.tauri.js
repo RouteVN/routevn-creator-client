@@ -21,9 +21,11 @@ import Subject from "./deps/subject";
 import Router from "./deps/clients/router";
 import { createGraphicsService } from "./deps/services/graphicsService";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
+import { configureMobileSafeAreaInsets } from "./internal/ui/mobileSafeAreaInsets.js";
 import { registerPrimitives } from "./primitives/registerPrimitives";
 
 registerPrimitives();
+configureMobileSafeAreaInsets();
 
 const rawDistribution = import.meta.env?.VITE_ROUTEVN_DISTRIBUTION;
 const distribution = rawDistribution === "steam" ? rawDistribution : "direct";

@@ -70,7 +70,7 @@ describe("images view", () => {
     expect(mobileExplorerBranch).toContain("bottom-empty-space-height=80vh");
   });
 
-  it("keeps the mobile file explorer clear of iOS safe areas", () => {
+  it("uses platform-controlled safe-area variables for the mobile file explorer", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),
       "utf8",
@@ -89,11 +89,13 @@ describe("images view", () => {
     );
 
     expect(mobileExplorerBranch).toContain(
-      "padding-top: env(safe-area-inset-top)",
+      "padding-top: var(--rvn-mobile-safe-area-inset-top, 0px)",
     );
     expect(mobileExplorerBranch).toContain(
-      "padding-bottom: env(safe-area-inset-bottom)",
+      "padding-bottom: var(--rvn-mobile-safe-area-inset-bottom, 0px)",
     );
+    expect(mobileExplorerBranch).not.toContain("env(safe-area-inset-top)");
+    expect(mobileExplorerBranch).not.toContain("env(safe-area-inset-bottom)");
   });
 
   it("keeps the mobile file explorer header aligned with the image grid header height", () => {

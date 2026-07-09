@@ -18,6 +18,7 @@ import Subject from "./deps/subject.js";
 import Router from "./deps/clients/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
+import { configureMobileSafeAreaInsets } from "./internal/ui/mobileSafeAreaInsets.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
@@ -46,6 +47,7 @@ const activeUiVersion = isTouchPrimaryDevice() ? "touch" : "normal";
 const uiConfig = uiVersions[activeUiVersion];
 document.documentElement.dataset.rvnUiVersion = uiConfig.id;
 document.documentElement.dataset.rvnInputMode = uiConfig.inputMode;
+configureMobileSafeAreaInsets();
 
 // Initialize app database using web adapter
 const appDb = createDb({ path: "app" });

@@ -1696,7 +1696,7 @@ const selectMobileSceneEditorBottomInset = ({ state }) => {
     return "0px";
   }
 
-  return `calc(${MOBILE_TAB_BAR_HEIGHT_PX}px + env(safe-area-inset-bottom))`;
+  return `calc(${MOBILE_TAB_BAR_HEIGHT_PX}px + var(--rvn-mobile-safe-area-inset-bottom, 0px))`;
 };
 
 const selectSystemActionsDialogPanelWidth = ({ state }) => {

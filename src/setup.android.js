@@ -13,6 +13,7 @@ import { createAudioService } from "./deps/services/audioService.js";
 import Subject from "./deps/subject.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
+import { configureMobileSafeAreaInsets } from "./internal/ui/mobileSafeAreaInsets.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
@@ -25,6 +26,7 @@ const uiConfig = {
 };
 document.documentElement.dataset.rvnUiVersion = uiConfig.id;
 document.documentElement.dataset.rvnInputMode = uiConfig.inputMode;
+configureMobileSafeAreaInsets();
 
 const readAndroidEnv = (key, fallback) => {
   const value = window.env?.[key];

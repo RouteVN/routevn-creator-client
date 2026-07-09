@@ -15,7 +15,10 @@ describe("scenes view", () => {
     expect(scenesView).toContain(
       "rtgl-button#mobileFileExplorerClose sq pre=x v=ol",
     );
-    expect(scenesView).toContain("padding-top: env(safe-area-inset-top)");
+    expect(scenesView).toContain(
+      "padding-top: var(--rvn-mobile-safe-area-inset-top, 0px)",
+    );
+    expect(scenesView).not.toContain("env(safe-area-inset-top)");
   });
 
   it("uses a popover for desktop scene creation and a dialog form for mobile", () => {

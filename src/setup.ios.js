@@ -16,6 +16,7 @@ import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { createBundleInstructions } from "./deps/services/shared/projectExportService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "./internal/projectResolution.js";
+import { configureMobileSafeAreaInsets } from "./internal/ui/mobileSafeAreaInsets.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
@@ -28,6 +29,10 @@ const uiConfig = {
 };
 document.documentElement.dataset.rvnUiVersion = uiConfig.id;
 document.documentElement.dataset.rvnInputMode = uiConfig.inputMode;
+configureMobileSafeAreaInsets({
+  top: "env(safe-area-inset-top)",
+  bottom: "env(safe-area-inset-bottom)",
+});
 
 const readIOSEnv = (key, fallback) => {
   const value = window.env?.[key];

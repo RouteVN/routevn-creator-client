@@ -175,7 +175,7 @@ template:
           - 'rtgl-view pos=abs z=200 style="right: 8px; top: 8px;"':
               - 'rtgl-button#mobileFileExplorerOpenButton sq pre=hamburger v=ol title="${title}" aria-label="${title}"': null
       - $if showMobileFileExplorer:
-          - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;"':
+          - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0; padding-top: var(--rvn-mobile-safe-area-inset-top, 0px); padding-bottom: var(--rvn-mobile-safe-area-inset-bottom, 0px); box-sizing: border-box;"':
               - rtgl-view h=48 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
                   - rtgl-text w=1fg s=md: ${filesLabel}
                   - rtgl-button#mobileFileExplorerClose sq pre=x v=ol: null

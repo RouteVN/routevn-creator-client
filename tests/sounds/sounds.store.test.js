@@ -82,7 +82,7 @@ describe("sounds store audio player layout", () => {
     expect(selectViewData(context).audioPlayerLeft).toBe(0);
     expect(selectViewData(context).audioPlayerRight).toBe(0);
     expect(selectViewData(context).audioPlayerBottom).toBe(
-      "calc(64px + env(safe-area-inset-bottom))",
+      "calc(64px + var(--rvn-mobile-safe-area-inset-bottom, 0px))",
     );
   });
 });

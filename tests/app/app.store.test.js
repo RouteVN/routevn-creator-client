@@ -3,9 +3,11 @@ import {
   createInitialState,
   openMobileSheet,
   selectViewData,
+  setPlatform,
   setRepositoryLoading,
   setRepositoryLoadingPhase,
   setRepositoryLoadingProgress,
+  setUiConfig,
 } from "../../src/pages/app/app.store.js";
 
 const selectMobileTab = ({ state, tabId }) => {
@@ -167,5 +169,33 @@ describe("app.store mobile tab active state", () => {
 
     expect(selectMobileTab({ state, tabId: "release" }).color).toBe("white");
     expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
+  });
+});
+
+describe("app.store help button position", () => {
+  it("keeps the desktop help button near the bottom edge", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state }).helpButtonBottom).toBe("24px");
+  });
+
+  it("places the Android touch help button below the iOS-safe position", () => {
+    const state = createInitialState();
+
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+    setPlatform({ state }, { platform: "android" });
+
+    expect(selectViewData({ state }).helpButtonBottom).toBe("80px");
+  });
+
+  it("keeps the iOS touch help button above the tab bar safe area", () => {
+    const state = createInitialState();
+
+    setUiConfig({ state }, { uiConfig: { id: "touch" } });
+    setPlatform({ state }, { platform: "ios" });
+
+    expect(selectViewData({ state }).helpButtonBottom).toBe(
+      "calc(128px + var(--rvn-mobile-safe-area-inset-bottom, 0px))",
+    );
   });
 });
