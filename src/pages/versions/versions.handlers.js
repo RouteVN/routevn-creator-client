@@ -31,6 +31,39 @@ const refreshVersionsData = async (deps) => {
   render();
 };
 
+const refreshWindowsExportAvailability = async (deps) => {
+  const { store, projectService, appService } = deps;
+
+  if (appService.getPlatform() !== "tauri") {
+    store.setWindowsExportAvailability({
+      availability: {
+        portableExecutable: false,
+        installer: false,
+        templateAvailable: false,
+        installerHostSupported: false,
+        installerToolAvailable: false,
+      },
+    });
+    return;
+  }
+
+  try {
+    store.setWindowsExportAvailability({
+      availability: await projectService.getWindowsExportAvailability(),
+    });
+  } catch {
+    store.setWindowsExportAvailability({
+      availability: {
+        portableExecutable: false,
+        installer: false,
+        templateAvailable: false,
+        installerHostSupported: false,
+        installerToolAvailable: false,
+      },
+    });
+  }
+};
+
 const openCreateVersionDialog = ({ deps } = {}) => {
   const { store, render } = deps;
 
@@ -258,11 +291,13 @@ const createVersionExportData = async ({
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, uiConfig } = deps;
+  const { appService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
+  store.setPlatform({ platform: appService.getPlatform() });
 };
 
 export const handleAfterMount = async (deps) => {
+  await refreshWindowsExportAvailability(deps);
   await refreshVersionsData(deps);
 };
 

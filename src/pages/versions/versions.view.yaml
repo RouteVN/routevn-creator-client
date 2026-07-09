@@ -15,6 +15,14 @@ refs:
     eventListeners:
       click:
         handler: handleDownloadZipClick
+  detailWindowsExeBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadWindowsExecutableClick
+  detailWindowsInstallerBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadWindowsInstallerClick
   detailHeader:
     eventListeners:
       click:
