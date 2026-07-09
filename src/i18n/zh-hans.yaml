@@ -1461,6 +1461,8 @@ sceneEditorPage:
   rightLabel: "右"
   sceneLabel: "场景"
   sceneMustKeepOneSection: "该场景必须至少保留一个段落。"
+  sceneTextStatsWordLabel: "{count} 个词"
+  sceneTextStatsWordsLabel: "{count} 个词"
   sectionNameLabel: "段落名称"
   selectDifferentScene: "请选择另一个场景。"
   selectSceneToMoveSection: "请选择要移动该段落的目标场景。"

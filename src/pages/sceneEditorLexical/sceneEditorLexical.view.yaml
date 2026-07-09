@@ -203,7 +203,9 @@ template:
               - rtgl-view w=1 h=f bgc=mu: null
               - 'rtgl-view w=1fg d=v h=f style="min-width: 0; min-height: 0;"':
                   - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h jc=e g=sm:
-                      - rtgl-button#previewButton: ${previewButton}
+                      - 'rtgl-button#previewButton sq pre=play v=ol title="${previewButton}" aria-label="${previewButton}"': null
+                      - rtgl-view w=1fg: null
+                      - 'rtgl-text s=xs c=mu-fg style="white-space: nowrap;"': ${sceneTextStatsLabel}
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if backgroundTransformEditor.isOpen == false:
                           - 'rtgl-view w=f style="min-width: 0;"':

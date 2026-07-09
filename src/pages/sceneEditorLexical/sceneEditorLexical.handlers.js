@@ -56,6 +56,8 @@ const MIN_BACKGROUND_TRANSFORM_SCALE = 0.01;
 const BACKGROUND_TRANSFORM_KEYBOARD_NUDGE = 1;
 const BACKGROUND_TRANSFORM_KEYBOARD_LARGE_NUDGE = 10;
 const SCENE_EDITOR_SELECTION_URL_SYNC_THROTTLE_MS = 250;
+const SCENE_TEXT_STATS_REFRESH_DEBOUNCE_MS = 400;
+const SCENE_TEXT_STATS_IDLE_TIMEOUT_MS = 1500;
 
 const selectCopy = ({ i18n } = {}) => selectSceneEditorCopy(i18n);
 
@@ -94,6 +96,75 @@ const clearTemporaryPresentationPreview = ({ store, subject }) => {
     preserveAnimationPlayback: true,
     skipAnimations: true,
   });
+};
+
+const cancelSceneTextStatsRefresh = (store) => {
+  const handle = store.selectSceneTextStatsRefreshHandle?.();
+  if (!handle) {
+    return;
+  }
+
+  if (handle.type === "idle") {
+    globalThis.cancelIdleCallback?.(handle.id);
+  } else if (handle.type === "timeout") {
+    globalThis.clearTimeout?.(handle.id);
+  }
+
+  store.clearSceneTextStatsRefreshHandle?.();
+};
+
+const recomputeSceneTextStats = (deps, { render = true } = {}) => {
+  deps.store.refreshSceneTextStats?.();
+  if (render) {
+    deps.render?.();
+  }
+};
+
+const refreshSceneTextStatsNow = (deps, options = {}) => {
+  cancelSceneTextStatsRefresh(deps.store);
+  recomputeSceneTextStats(deps, options);
+};
+
+const runScheduledSceneTextStatsRefresh = (deps, options = {}) => {
+  const { store } = deps;
+
+  if (typeof globalThis.requestIdleCallback !== "function") {
+    recomputeSceneTextStats(deps, options);
+    return;
+  }
+
+  const idleId = globalThis.requestIdleCallback(
+    () => {
+      store.clearSceneTextStatsRefreshHandle?.();
+      recomputeSceneTextStats(deps, options);
+    },
+    { timeout: SCENE_TEXT_STATS_IDLE_TIMEOUT_MS },
+  );
+  store.setSceneTextStatsRefreshHandle?.({
+    handle: { type: "idle", id: idleId },
+  });
+};
+
+const scheduleSceneTextStatsRefresh = (
+  deps,
+  { debounceMs = SCENE_TEXT_STATS_REFRESH_DEBOUNCE_MS, render = true } = {},
+) => {
+  const { store } = deps;
+  cancelSceneTextStatsRefresh(store);
+
+  const timeoutId = globalThis.setTimeout?.(() => {
+    store.clearSceneTextStatsRefreshHandle?.();
+    runScheduledSceneTextStatsRefresh(deps, { render });
+  }, debounceMs);
+
+  if (timeoutId !== undefined) {
+    store.setSceneTextStatsRefreshHandle?.({
+      handle: { type: "timeout", id: timeoutId },
+    });
+    return;
+  }
+
+  recomputeSceneTextStats(deps, { render });
 };
 
 const flattenRefs = (value) => {
@@ -644,6 +715,7 @@ const refreshSceneEditorStateFromProject = async (deps) => {
   syncStoreProjectState(store, projectService);
   reconcileCurrentEditorSession(deps);
   await updateSceneEditorSectionChanges(deps);
+  refreshSceneTextStatsNow(deps, { render: false });
 };
 
 const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
@@ -667,6 +739,7 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   await updateSceneEditorSectionChanges(deps);
 
   if (hadPendingSessionChanges) {
+    recomputeSceneTextStats(deps, { render: false });
     subject.dispatch("sceneEditor.renderCanvas", {
       skipRender: true,
       syncPresentationState: true,
@@ -675,6 +748,7 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
     return;
   }
 
+  refreshSceneTextStatsNow(deps, { render: false });
   render();
   subject.dispatch("sceneEditor.renderCanvas", {
     skipAnimations: true,
@@ -760,6 +834,7 @@ export const syncSceneEditorRoutePayload = async (
 
     reconcileCurrentEditorSession(deps);
     await updateSceneEditorSectionChanges(deps);
+    refreshSceneTextStatsNow(deps, { render: false });
     if (!canContinue()) {
       return;
     }
@@ -1614,6 +1689,7 @@ export const handleBeforeMount = (deps) => {
     routeSubscription.unsubscribe();
     cleanupRuntimeSubscriptions();
     cleanupBackgroundTransformEditorSubscriptions();
+    cancelSceneTextStatsRefresh(store);
     await flushSceneEditorDrafts(deps, { force: true });
     await projectService.clearActiveSceneId().catch(() => {});
     await resetSceneEditorRuntime(deps);
@@ -1627,6 +1703,7 @@ export const handleAfterMount = async (deps) => {
       syncProjectState: syncStoreProjectState,
     });
     reconcileCurrentEditorSession(deps);
+    refreshSceneTextStatsNow(deps, { render: false });
     deps.render();
     scrollEntrySelectionIntoView(deps);
   } catch (error) {
@@ -2043,6 +2120,7 @@ export const handleEditorDataChanged = async (deps, payload) => {
   const renderStartedAt = getSceneEditorTimingNow();
   render();
   const renderDurationMs = getSceneEditorTimingDurationMs(renderStartedAt);
+  scheduleSceneTextStatsRefresh(deps);
   const focusTarget = detail.focusTarget;
   let focusScheduled = false;
   if (
@@ -2566,6 +2644,7 @@ export const handleNewLine = async (deps, payload) => {
     lineId: newLine.id,
   });
   render();
+  scheduleSceneTextStatsRefresh(deps);
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
     syncPresentationState: true,
@@ -3469,6 +3548,7 @@ const deleteSceneEditorLine = async (deps, lineId) => {
     lineId: nextSelectedLineId,
   });
   render();
+  scheduleSceneTextStatsRefresh(deps);
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
     syncPresentationState: true,

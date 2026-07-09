@@ -33,6 +33,12 @@ import {
   localizeSceneEditorForm,
   selectSceneEditorCopy,
 } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import {
+  buildSceneTextStats,
+  createEmptySceneTextStats,
+  normalizeSceneTextStats,
+} from "../../internal/ui/sceneEditorLexical/textStats.js";
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
@@ -67,6 +73,29 @@ const createSceneEditorFontSizeOptions = (copy = {}) => [
   { value: "lg", label: copy.fontSizeLarge ?? "Large" },
   { value: "xl", label: copy.fontSizeExtraLarge ?? "Extra Large" },
 ];
+
+const formatSceneTextStatsNumber = (value) => {
+  const count = Math.max(0, Math.trunc(Number(value) || 0));
+
+  return count.toLocaleString();
+};
+
+const formatSceneTextStatsWordCount = (count, copy = {}) => {
+  const template =
+    count === 1
+      ? (copy.sceneTextStatsWordLabel ?? "{count} word")
+      : (copy.sceneTextStatsWordsLabel ?? "{count} words");
+
+  return formatI18nCopy(template, {
+    count: formatSceneTextStatsNumber(count),
+  });
+};
+
+const formatSceneTextStatsLabel = (stats = {}, copy = {}) => {
+  const normalizedStats = normalizeSceneTextStats(stats);
+
+  return formatSceneTextStatsWordCount(normalizedStats.wordCount, copy);
+};
 
 const localizeDropdownMenu = (dropdownMenu = {}, copy = {}) => {
   return {
@@ -679,6 +708,8 @@ export const createInitialState = () => ({
   draftSection: undefined,
   draftSections: {},
   draftSaveTimerId: undefined,
+  sceneTextStats: createEmptySceneTextStats(),
+  sceneTextStatsRefreshHandle: undefined,
   lastDraftFlushStartedAt: 0,
   draftSavePendingSinceAt: 0,
   draftFlushInFlight: false,
@@ -813,6 +844,22 @@ export const setDraftSaveTimerId = ({ state }, { timerId } = {}) => {
 
 export const clearDraftSaveTimer = ({ state }, _payload = {}) => {
   state.draftSaveTimerId = undefined;
+};
+
+export const setSceneTextStatsRefreshHandle = ({ state }, { handle } = {}) => {
+  state.sceneTextStatsRefreshHandle = handle;
+};
+
+export const clearSceneTextStatsRefreshHandle = ({ state }, _payload = {}) => {
+  state.sceneTextStatsRefreshHandle = undefined;
+};
+
+export const refreshSceneTextStats = ({ state }, _payload = {}) => {
+  state.sceneTextStats = buildSceneTextStats(selectScene({ state }));
+};
+
+export const setSceneTextStats = ({ state }, { stats } = {}) => {
+  state.sceneTextStats = normalizeSceneTextStats(stats);
 };
 
 export const setLastDraftFlushStartedAt = ({ state }, { timestamp } = {}) => {
@@ -1062,6 +1109,14 @@ export const selectPendingDraftSections = ({ state }) => {
 
 export const selectDraftSaveTimerId = ({ state }) => {
   return state.draftSaveTimerId;
+};
+
+export const selectSceneTextStatsRefreshHandle = ({ state }) => {
+  return state.sceneTextStatsRefreshHandle;
+};
+
+export const selectSceneTextStats = ({ state }) => {
+  return normalizeSceneTextStats(state.sceneTextStats);
 };
 
 export const selectLastDraftFlushStartedAt = ({ state }) => {
@@ -1801,6 +1856,10 @@ export const selectViewData = ({ state, i18n }) => {
       isScenePageLoading: state.isScenePageLoading,
       isSceneAssetLoading: state.isSceneAssetLoading,
       deadEndTooltip: state.deadEndTooltip,
+      sceneTextStatsLabel: formatSceneTextStatsLabel(
+        state.sceneTextStats,
+        copy,
+      ),
       backgroundTransformEditor: selectBackgroundTransformEditorViewData({
         state,
       }),
@@ -2175,6 +2234,7 @@ export const selectViewData = ({ state, i18n }) => {
     isScenePageLoading: state.isScenePageLoading,
     isSceneAssetLoading: state.isSceneAssetLoading,
     deadEndTooltip: state.deadEndTooltip,
+    sceneTextStatsLabel: formatSceneTextStatsLabel(state.sceneTextStats, copy),
     backgroundTransformEditor: selectBackgroundTransformEditorViewData({
       state,
     }),

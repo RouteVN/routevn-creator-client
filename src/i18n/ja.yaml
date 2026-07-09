@@ -1461,6 +1461,8 @@ sceneEditorPage:
   rightLabel: "右"
   sceneLabel: "シーン"
   sceneMustKeepOneSection: "このシーンには少なくとも1つのセクションが必要です。"
+  sceneTextStatsWordLabel: "{count}語"
+  sceneTextStatsWordsLabel: "{count}語"
   sectionNameLabel: "セクション名"
   selectDifferentScene: "別のシーンを選択してください。"
   selectSceneToMoveSection: "このセクションの移動先シーンを選択してください。"
