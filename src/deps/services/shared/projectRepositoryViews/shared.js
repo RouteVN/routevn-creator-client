@@ -13,7 +13,7 @@ export const SCENE_OVERVIEW_VIEW_NAME =
   "project_repository_scene_overview_state";
 export const MAIN_VIEW_VERSION = "1";
 export const SCENE_VIEW_VERSION = "2";
-export const SCENE_OVERVIEW_VIEW_VERSION = "1";
+export const SCENE_OVERVIEW_VIEW_VERSION = "2";
 export const COMMITTED_HISTORY_BATCH_LIMIT = 256;
 export const VIEW_CHECKPOINT = {
   mode: "debounce",

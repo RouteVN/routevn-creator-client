@@ -10,6 +10,7 @@ import {
 import {
   MAIN_VIEW_NAME,
   SCENE_OVERVIEW_VIEW_NAME,
+  SCENE_OVERVIEW_VIEW_VERSION,
   createMainProjectionState,
 } from "../../src/deps/services/shared/projectRepositoryViews/shared.js";
 import {
@@ -1284,7 +1285,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
           partition,
           {
             viewName: SCENE_OVERVIEW_VIEW_NAME,
-            viewVersion: "1",
+            viewVersion: SCENE_OVERVIEW_VIEW_VERSION,
             partition,
             lastCommittedId: committedEvents.length,
             value: {
@@ -1293,6 +1294,9 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
               position: structuredClone(
                 mainState.scenes.items[sceneId].position,
               ),
+              textStats: {
+                wordCount: 0,
+              },
               outgoingSceneIds: [],
               sections: [],
             },
