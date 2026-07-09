@@ -45,6 +45,33 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.selectedSceneTextStatsLabel).toBe("4 words");
   });
 
+  it("hides the selected scene word-count label when the overview has no words", () => {
+    const state = createInitialState();
+    state.selectedItemId = "scene-1";
+    state.scenesData = {
+      items: {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          name: "Scene 1",
+        },
+      },
+      tree: [{ id: "scene-1" }],
+    };
+    state.sceneOverviewsById = {
+      "scene-1": {
+        textStats: {
+          wordCount: 0,
+        },
+        sections: [],
+      },
+    };
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.selectedSceneTextStatsLabel).toBe("");
+  });
+
   it("shows the mobile explorer controls and top-left minimap settings in touch mode", () => {
     const state = createInitialState();
     setUiConfig(

@@ -4,6 +4,7 @@ import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   buildSceneTextStats,
   formatSceneTextStatsLabel,
+  normalizeSceneTextStats,
 } from "../../internal/sceneTextStats.js";
 import { selectScenesPageCopy } from "./support/scenesPageCopy.js";
 
@@ -454,7 +455,7 @@ export const selectViewData = ({ state, i18n }) => {
     const selectedSceneTextStats =
       selectedSceneOverview?.textStats ??
       (selectedScene.sections ? buildSceneTextStats(selectedScene) : undefined);
-    if (selectedSceneTextStats) {
+    if (normalizeSceneTextStats(selectedSceneTextStats).wordCount > 0) {
       selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
         selectedSceneTextStats,
         copy,
