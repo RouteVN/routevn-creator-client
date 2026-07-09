@@ -33,12 +33,12 @@ import {
   localizeSceneEditorForm,
   selectSceneEditorCopy,
 } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   buildSceneTextStats,
   createEmptySceneTextStats,
+  formatSceneTextStatsLabel,
   normalizeSceneTextStats,
-} from "../../internal/ui/sceneEditorLexical/textStats.js";
+} from "../../internal/ui/sceneTextStats.js";
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
@@ -73,29 +73,6 @@ const createSceneEditorFontSizeOptions = (copy = {}) => [
   { value: "lg", label: copy.fontSizeLarge ?? "Large" },
   { value: "xl", label: copy.fontSizeExtraLarge ?? "Extra Large" },
 ];
-
-const formatSceneTextStatsNumber = (value) => {
-  const count = Math.max(0, Math.trunc(Number(value) || 0));
-
-  return count.toLocaleString();
-};
-
-const formatSceneTextStatsWordCount = (count, copy = {}) => {
-  const template =
-    count === 1
-      ? (copy.sceneTextStatsWordLabel ?? "{count} word")
-      : (copy.sceneTextStatsWordsLabel ?? "{count} words");
-
-  return formatI18nCopy(template, {
-    count: formatSceneTextStatsNumber(count),
-  });
-};
-
-const formatSceneTextStatsLabel = (stats = {}, copy = {}) => {
-  const normalizedStats = normalizeSceneTextStats(stats);
-
-  return formatSceneTextStatsWordCount(normalizedStats.wordCount, copy);
-};
 
 const localizeDropdownMenu = (dropdownMenu = {}, copy = {}) => {
   return {

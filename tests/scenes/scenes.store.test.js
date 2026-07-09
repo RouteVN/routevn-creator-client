@@ -13,6 +13,50 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("scenes.store mobile layout", () => {
+  it("exposes the selected scene word-count label", () => {
+    const state = createInitialState();
+    state.selectedItemId = "scene-1";
+    state.scenesData = {
+      items: {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          name: "Scene 1",
+          sections: {
+            items: {
+              "section-1": {
+                id: "section-1",
+                name: "Section 1",
+                lines: {
+                  items: {
+                    "line-1": {
+                      id: "line-1",
+                      actions: {
+                        dialogue: {
+                          content: [{ text: "Hello world" }],
+                        },
+                        choice: {
+                          items: [{ content: "Go home" }],
+                        },
+                      },
+                    },
+                  },
+                  tree: [{ id: "line-1" }],
+                },
+              },
+            },
+            tree: [{ id: "section-1" }],
+          },
+        },
+      },
+      tree: [{ id: "scene-1" }],
+    };
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.selectedSceneTextStatsLabel).toBe("4 words");
+  });
+
   it("shows the mobile explorer controls and top-left minimap settings in touch mode", () => {
     const state = createInitialState();
     setUiConfig(

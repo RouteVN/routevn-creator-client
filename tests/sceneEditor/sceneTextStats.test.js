@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSceneTextStats,
   getSceneTextForStats,
-} from "../../src/internal/ui/sceneEditorLexical/textStats.js";
+} from "../../src/internal/ui/sceneTextStats.js";
 
 describe("sceneTextStats", () => {
   it("counts dialogue words and choice text", () => {
@@ -77,6 +77,40 @@ describe("sceneTextStats", () => {
 
     expect(stats).toEqual({
       wordCount: 3,
+    });
+  });
+
+  it("counts repository-shaped scene sections and lines", () => {
+    const scene = {
+      sections: {
+        items: {
+          "section-1": {
+            id: "section-1",
+            lines: {
+              items: {
+                "line-1": {
+                  id: "line-1",
+                  actions: {
+                    dialogue: {
+                      content: [{ text: "Hello world" }],
+                    },
+                    choice: {
+                      items: [{ content: "Go home" }],
+                    },
+                  },
+                },
+              },
+              tree: [{ id: "line-1" }],
+            },
+          },
+        },
+        tree: [{ id: "section-1" }],
+      },
+    };
+
+    expect(getSceneTextForStats(scene)).toBe("Hello world\nGo home");
+    expect(buildSceneTextStats(scene)).toEqual({
+      wordCount: 4,
     });
   });
 });

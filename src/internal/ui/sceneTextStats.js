@@ -1,7 +1,9 @@
 import {
   getLineDialogueContent,
   getPlainTextFromContent,
-} from "./contentModel.js";
+} from "./sceneEditorLexical/contentModel.js";
+import { toFlatItems } from "../project/tree.js";
+import { formatI18nCopy } from "./i18nCopy.js";
 
 const TEXT_PART_SEPARATOR = "\n";
 const FALLBACK_WORD_PATTERN = /[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu;
@@ -24,6 +26,18 @@ const normalizeTextPart = (value) =>
   String(value ?? "")
     .replace(/\r\n?/g, "\n")
     .trim();
+
+const toOrderedItems = (value) => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (value && typeof value === "object") {
+    return toFlatItems(value);
+  }
+
+  return [];
+};
 
 const collectLineTextParts = (line = {}, parts) => {
   const dialogueText = normalizeTextPart(
@@ -49,8 +63,8 @@ const collectLineTextParts = (line = {}, parts) => {
 export const getSceneTextForStats = (scene = {}) => {
   const parts = [];
 
-  (Array.isArray(scene?.sections) ? scene.sections : []).forEach((section) => {
-    (Array.isArray(section?.lines) ? section.lines : []).forEach((line) => {
+  toOrderedItems(scene?.sections).forEach((section) => {
+    toOrderedItems(section?.lines).forEach((line) => {
       collectLineTextParts(line, parts);
     });
   });
@@ -94,6 +108,25 @@ export const createEmptySceneTextStats = () => ({
 export const normalizeSceneTextStats = (stats = {}) => ({
   wordCount: Math.max(0, Math.trunc(Number(stats.wordCount) || 0)),
 });
+
+const formatSceneTextStatsNumber = (value) => {
+  const count = Math.max(0, Math.trunc(Number(value) || 0));
+
+  return count.toLocaleString();
+};
+
+export const formatSceneTextStatsLabel = (stats = {}, copy = {}) => {
+  const normalizedStats = normalizeSceneTextStats(stats);
+  const count = normalizedStats.wordCount;
+  const template =
+    count === 1
+      ? (copy.sceneTextStatsWordLabel ?? "{count} word")
+      : (copy.sceneTextStatsWordsLabel ?? "{count} words");
+
+  return formatI18nCopy(template, {
+    count: formatSceneTextStatsNumber(count),
+  });
+};
 
 export const buildSceneTextStats = (scene = {}) => {
   const text = getSceneTextForStats(scene);

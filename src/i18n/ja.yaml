@@ -1404,6 +1404,8 @@ scenesPage:
   sceneNameDescription: "シーン名を入力"
   sceneNameLabel: "シーン名"
   sceneNameRequired: "シーン名は必須です。"
+  sceneTextStatsWordLabel: "{count}語"
+  sceneTextStatsWordsLabel: "{count}語"
   sectionFallback: "セクション{index}"
   sectionsLabel: "セクション"
   setInitialSceneMenuItem: "初期シーンに設定"

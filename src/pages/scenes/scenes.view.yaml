@@ -137,6 +137,7 @@ template:
                                                   - rtgl-text c=mu-fg: ${selectedItemDescription}
                                           - rtgl-view h=1 w=f bgc=mu mv=md: null
                                           - rtgl-view d=v w=f g=md ph=md pb=md:
+                                              - rtgl-text s=sm c=mu-fg: ${selectedSceneTextStatsLabel}
                                               - rtgl-view#sectionsListToggle d=h w=f av=c cur=pointer:
                                                   - rtgl-text s=sm: ${sectionsLabel}
                                                   - rtgl-view w=1fg: null

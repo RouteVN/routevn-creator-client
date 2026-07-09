@@ -1404,6 +1404,8 @@ scenesPage:
   sceneNameDescription: "输入场景名称"
   sceneNameLabel: "场景名称"
   sceneNameRequired: "场景名称为必填项。"
+  sceneTextStatsWordLabel: "{count} 个词"
+  sceneTextStatsWordsLabel: "{count} 个词"
   sectionFallback: "段落 {index}"
   sectionsLabel: "段落"
   setInitialSceneMenuItem: "设为初始场景"

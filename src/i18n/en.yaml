@@ -1404,6 +1404,8 @@ scenesPage:
   sceneNameDescription: "Enter the scene name"
   sceneNameLabel: "Scene Name"
   sceneNameRequired: "Scene name is required."
+  sceneTextStatsWordLabel: "{count} word"
+  sceneTextStatsWordsLabel: "{count} words"
   sectionFallback: "Section {index}"
   sectionsLabel: "Sections"
   setInitialSceneMenuItem: "Set Initial Scene"

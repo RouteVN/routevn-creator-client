@@ -1,6 +1,10 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import {
+  buildSceneTextStats,
+  formatSceneTextStatsLabel,
+} from "../../internal/ui/sceneTextStats.js";
 import { selectScenesPageCopy } from "./support/scenesPageCopy.js";
 
 const createContextMenuItems = (copy = {}) => [
@@ -440,12 +444,17 @@ export const selectViewData = ({ state, i18n }) => {
 
   let selectedItemName = "";
   let selectedItemDescription = "";
+  let selectedSceneTextStatsLabel = "";
   let selectedSceneSections = [];
   let detailFields = [];
   if (selectedScene?.type === "scene") {
     const selectedSceneOverview = state.sceneOverviewsById?.[selectedScene.id];
     selectedItemName = selectedScene.name ?? "";
     selectedItemDescription = selectedScene.description ?? "";
+    selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
+      buildSceneTextStats(selectedScene),
+      copy,
+    );
     selectedSceneSections = Array.isArray(selectedSceneOverview?.sections)
       ? selectedSceneOverview.sections.map((section, index) => ({
           id: section.sectionId || section.id,
@@ -614,6 +623,7 @@ export const selectViewData = ({ state, i18n }) => {
     showMapAddHint: state.showMapAddHint,
     sectionsListOpen: state.sectionsListOpen,
     selectedSceneSections,
+    selectedSceneTextStatsLabel,
     selectedItemName,
     detailFields,
     deadEndTooltip: state.deadEndTooltip,
