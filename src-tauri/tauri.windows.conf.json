@@ -1,0 +1,15 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "RouteVN Creator",
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "dragDropEnabled": false
+      }
+    ]
+  }
+}
