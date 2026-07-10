@@ -12,7 +12,7 @@ const SCHEMA_VERSION: i64 = 1;
 const BUSY_TIMEOUT: Duration = Duration::from_millis(5_000);
 const LEGACY_MIGRATION_KEY: &str = "legacyIndexedDbMigrationCompleted";
 
-const SAVE_SLOTS_KEY: &str = "saveSlots";
+const SAVE_SLOT_KEY_PREFIX: &str = "saveSlots:";
 const GLOBAL_DEVICE_VARIABLES_KEY: &str = "globalDeviceVariables";
 const GLOBAL_ACCOUNT_VARIABLES_KEY: &str = "globalAccountVariables";
 const GLOBAL_RUNTIME_KEY: &str = "globalRuntime";
@@ -24,12 +24,12 @@ BEGIN IMMEDIATE;
 CREATE TABLE persistence_values (
   key TEXT PRIMARY KEY CHECK (
     key IN (
-      'saveSlots',
       'globalDeviceVariables',
       'globalAccountVariables',
       'globalRuntime',
       'accountViewedRegistry'
     )
+    OR key GLOB 'saveSlots:?*'
   ),
   value_json TEXT NOT NULL,
   updated_at INTEGER NOT NULL
@@ -79,9 +79,8 @@ impl Default for PlayerPersistenceState {
 }
 
 impl PlayerPersistenceState {
-    fn entries(&self) -> [(&'static str, &Value); 5] {
+    fn non_slot_entries(&self) -> [(&'static str, &Value); 4] {
         [
-            (SAVE_SLOTS_KEY, &self.save_slots),
             (GLOBAL_DEVICE_VARIABLES_KEY, &self.global_device_variables),
             (GLOBAL_ACCOUNT_VARIABLES_KEY, &self.global_account_variables),
             (GLOBAL_RUNTIME_KEY, &self.global_runtime),
@@ -180,15 +179,28 @@ fn require_object(value: &Value, label: &str) -> PersistenceResult<()> {
     }
 }
 
+fn save_slot_persistence_key(slot_key: &str) -> PersistenceResult<String> {
+    if slot_key.is_empty() {
+        return Err("Runtime save slot key must not be empty".to_string());
+    }
+
+    Ok(format!("{SAVE_SLOT_KEY_PREFIX}{slot_key}"))
+}
+
+fn persistence_save_slot_key(key: &str) -> Option<&str> {
+    key.strip_prefix(SAVE_SLOT_KEY_PREFIX)
+        .filter(|slot_key| !slot_key.is_empty())
+}
+
 fn validate_persistence_key(key: &str) -> PersistenceResult<()> {
     if [
-        SAVE_SLOTS_KEY,
         GLOBAL_DEVICE_VARIABLES_KEY,
         GLOBAL_ACCOUNT_VARIABLES_KEY,
         GLOBAL_RUNTIME_KEY,
         ACCOUNT_VIEWED_REGISTRY_KEY,
     ]
     .contains(&key)
+        || persistence_save_slot_key(key).is_some()
     {
         Ok(())
     } else {
@@ -231,10 +243,94 @@ fn upsert_persistence_value(
              VALUES (?1, ?2, ?3)\n\
              ON CONFLICT(key) DO UPDATE SET\n\
                value_json = excluded.value_json,\n\
-               updated_at = excluded.updated_at",
+               updated_at = excluded.updated_at\n\
+             WHERE persistence_values.value_json <> excluded.value_json",
             params![key, value_json, updated_at],
         )
         .map_err(|error| format!("Failed to persist runtime key {key}: {error}"))?;
+    Ok(())
+}
+
+fn read_save_slots(connection: &Connection) -> PersistenceResult<Value> {
+    let mut statement = connection
+        .prepare(
+            "SELECT key, value_json FROM persistence_values
+             WHERE substr(key, 1, ?1) = ?2
+             ORDER BY key",
+        )
+        .map_err(|error| format!("Failed to prepare runtime save-slot load: {error}"))?;
+    let rows = statement
+        .query_map(
+            params![SAVE_SLOT_KEY_PREFIX.len() as i64, SAVE_SLOT_KEY_PREFIX],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        )
+        .map_err(|error| format!("Failed to read runtime save slots: {error}"))?;
+    let mut save_slots = Map::new();
+
+    for row in rows {
+        let (key, value_json) =
+            row.map_err(|error| format!("Failed to read runtime save-slot row: {error}"))?;
+        let slot_key = persistence_save_slot_key(&key)
+            .ok_or_else(|| format!("Malformed runtime save-slot persistence key: {key}"))?;
+        let value = serde_json::from_str::<Value>(&value_json).map_err(|error| {
+            format!("Runtime persistence key {key} contains invalid JSON: {error}")
+        })?;
+        require_object(&value, &format!("Runtime persistence key {key}"))?;
+        save_slots.insert(slot_key.to_string(), value);
+    }
+
+    Ok(Value::Object(save_slots))
+}
+
+fn sync_save_slots(
+    connection: &Connection,
+    save_slots: &Value,
+    updated_at: i64,
+) -> PersistenceResult<()> {
+    require_object(save_slots, "Runtime save slots")?;
+    let save_slots = save_slots
+        .as_object()
+        .expect("validated runtime save-slot object");
+
+    for (slot_key, value) in save_slots {
+        save_slot_persistence_key(slot_key)?;
+        require_object(value, &format!("Runtime save slot {slot_key}"))?;
+    }
+
+    let existing_slot_keys = {
+        let mut statement = connection
+            .prepare(
+                "SELECT key FROM persistence_values
+                 WHERE substr(key, 1, ?1) = ?2",
+            )
+            .map_err(|error| format!("Failed to prepare runtime save-slot sync: {error}"))?;
+        let rows = statement
+            .query_map(
+                params![SAVE_SLOT_KEY_PREFIX.len() as i64, SAVE_SLOT_KEY_PREFIX],
+                |row| row.get::<_, String>(0),
+            )
+            .map_err(|error| format!("Failed to inspect runtime save slots: {error}"))?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|error| format!("Failed to inspect runtime save-slot row: {error}"))?
+    };
+
+    for key in existing_slot_keys {
+        let slot_key = persistence_save_slot_key(&key)
+            .ok_or_else(|| format!("Malformed runtime save-slot persistence key: {key}"))?;
+        if !save_slots.contains_key(slot_key) {
+            connection
+                .execute("DELETE FROM persistence_values WHERE key = ?1", [&key])
+                .map_err(|error| {
+                    format!("Failed to delete runtime save slot {slot_key}: {error}")
+                })?;
+        }
+    }
+
+    for (slot_key, value) in save_slots {
+        let key = save_slot_persistence_key(slot_key)?;
+        upsert_persistence_value(connection, &key, value, updated_at)?;
+    }
+
     Ok(())
 }
 
@@ -264,7 +360,7 @@ fn load_from_connection(connection: &Connection) -> PersistenceResult<PlayerPers
 
     Ok(PlayerPersistenceLoadResult {
         persistence: PlayerPersistenceState {
-            save_slots: read_persistence_value(connection, SAVE_SLOTS_KEY)?,
+            save_slots: read_save_slots(connection)?,
             global_device_variables: read_persistence_value(
                 connection,
                 GLOBAL_DEVICE_VARIABLES_KEY,
@@ -290,6 +386,9 @@ pub(crate) fn load(path: &Path) -> PersistenceResult<PlayerPersistenceLoadResult
 }
 
 pub(crate) fn save_value(path: &Path, key: &str, value: Value) -> PersistenceResult<()> {
+    if persistence_save_slot_key(key).is_some() {
+        return Err("Runtime save slots must be written through the save-slot sync".to_string());
+    }
     validate_persistence_key(key)?;
     require_object(&value, &format!("Runtime persistence key {key}"))?;
     let mut connection = open_database(path)?;
@@ -300,6 +399,18 @@ pub(crate) fn save_value(path: &Path, key: &str, value: Value) -> PersistenceRes
     transaction
         .commit()
         .map_err(|error| format!("Failed to commit runtime persistence value: {error}"))
+}
+
+pub(crate) fn save_slots(path: &Path, save_slots: Value) -> PersistenceResult<()> {
+    require_object(&save_slots, "Runtime save slots")?;
+    let mut connection = open_database(path)?;
+    let transaction = connection
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(|error| format!("Failed to begin runtime save-slot transaction: {error}"))?;
+    sync_save_slots(&transaction, &save_slots, current_timestamp_ms()?)?;
+    transaction
+        .commit()
+        .map_err(|error| format!("Failed to commit runtime save slots: {error}"))
 }
 
 pub(crate) fn clear(path: &Path) -> PersistenceResult<()> {
@@ -333,7 +444,8 @@ pub(crate) fn complete_legacy_migration(
 
         if native_value_count == 0 {
             let updated_at = current_timestamp_ms()?;
-            for (key, value) in legacy_state.entries() {
+            sync_save_slots(&transaction, &legacy_state.save_slots, updated_at)?;
+            for (key, value) in legacy_state.non_slot_entries() {
                 upsert_persistence_value(&transaction, key, value, updated_at)?;
             }
         }
@@ -671,7 +783,7 @@ mod tests {
         connection
             .execute(
                 "INSERT INTO persistence_values (key, value_json, updated_at) VALUES (?1, ?2, ?3)",
-                params![SAVE_SLOTS_KEY, "not-json", 1],
+                params!["saveSlots:1", "not-json", 1],
             )
             .expect("insert invalid persisted JSON");
         drop(connection);
@@ -683,7 +795,7 @@ mod tests {
         let stored = connection
             .query_row(
                 "SELECT value_json FROM persistence_values WHERE key = ?1",
-                [SAVE_SLOTS_KEY],
+                ["saveSlots:1"],
                 |row| row.get::<_, String>(0),
             )
             .expect("invalid row remains");
@@ -724,20 +836,116 @@ mod tests {
     }
 
     #[test]
+    fn stores_save_slots_by_key_without_rewriting_unchanged_slots() {
+        let (_directory, path) = database_path();
+        save_slots(
+            &path,
+            json!({
+                "1": {"slotId": 1, "state": {"lineId": "line-1"}},
+                "2": {"slotId": 2, "state": {"lineId": "line-2"}}
+            }),
+        )
+        .expect("save initial slots");
+
+        let connection = open_database(&path).expect("open save-slot database");
+        let stored_keys = {
+            let mut statement = connection
+                .prepare(
+                    "SELECT key FROM persistence_values
+                     WHERE substr(key, 1, ?1) = ?2
+                     ORDER BY key",
+                )
+                .expect("prepare save-slot keys");
+            statement
+                .query_map(
+                    params![SAVE_SLOT_KEY_PREFIX.len() as i64, SAVE_SLOT_KEY_PREFIX],
+                    |row| row.get::<_, String>(0),
+                )
+                .expect("query save-slot keys")
+                .collect::<Result<Vec<_>, _>>()
+                .expect("collect save-slot keys")
+        };
+        assert_eq!(stored_keys, vec!["saveSlots:1", "saveSlots:2"]);
+        connection
+            .execute(
+                "UPDATE persistence_values SET updated_at = 10 WHERE key = 'saveSlots:1'",
+                [],
+            )
+            .expect("set slot 1 timestamp");
+        connection
+            .execute(
+                "UPDATE persistence_values SET updated_at = 20 WHERE key = 'saveSlots:2'",
+                [],
+            )
+            .expect("set slot 2 timestamp");
+        drop(connection);
+
+        save_slots(
+            &path,
+            json!({
+                "1": {"slotId": 1, "state": {"lineId": "line-1"}},
+                "2": {"slotId": 2, "state": {"lineId": "line-3"}}
+            }),
+        )
+        .expect("update one slot");
+
+        let connection = open_database(&path).expect("reopen save-slot database");
+        let slot_1_updated_at = connection
+            .query_row(
+                "SELECT updated_at FROM persistence_values WHERE key = 'saveSlots:1'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .expect("slot 1 timestamp");
+        let slot_2_updated_at = connection
+            .query_row(
+                "SELECT updated_at FROM persistence_values WHERE key = 'saveSlots:2'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .expect("slot 2 timestamp");
+        assert_eq!(slot_1_updated_at, 10);
+        assert!(slot_2_updated_at > 20);
+        drop(connection);
+
+        save_slots(
+            &path,
+            json!({"1": {"slotId": 1, "state": {"lineId": "line-1"}}}),
+        )
+        .expect("delete missing slot");
+        assert_eq!(
+            load(&path)
+                .expect("load remaining slot")
+                .persistence
+                .save_slots,
+            json!({"1": {"slotId": 1, "state": {"lineId": "line-1"}}})
+        );
+    }
+
+    #[test]
     fn legacy_migration_never_overwrites_native_values() {
         let (_directory, path) = database_path();
-        save_value(&path, SAVE_SLOTS_KEY, json!({"native": true})).expect("native save");
+        save_slots(
+            &path,
+            json!({"native": {"slotId": "native", "source": "native"}}),
+        )
+        .expect("native save");
 
         let imported = complete_legacy_migration(
             &path,
             PlayerPersistenceState {
-                save_slots: json!({"legacy": true}),
+                save_slots: json!({
+                    "native": {"slotId": "native", "source": "legacy"}
+                }),
                 ..PlayerPersistenceState::default()
             },
         )
         .expect("complete migration");
 
-        assert_eq!(imported.persistence.save_slots, json!({"native": true}));
+        assert_eq!(
+            imported.persistence.save_slots,
+            json!({"native": {"slotId": "native", "source": "native"}})
+        );
         assert!(imported.legacy_migration_completed);
     }
 

@@ -69,19 +69,19 @@ persistence, where multiple bundles can share one browser origin.
 
 ## SQLite Schema
 
-The initial database stores each Route Engine persistence value as a separate
-JSON row:
+The initial database stores each save slot as its own JSON row and keeps the
+remaining Route Engine persistence values in separate aggregate rows:
 
 ```sql
 CREATE TABLE persistence_values (
   key TEXT PRIMARY KEY CHECK (
     key IN (
-      'saveSlots',
       'globalDeviceVariables',
       'globalAccountVariables',
       'globalRuntime',
       'accountViewedRegistry'
     )
+    OR key GLOB 'saveSlots:?*'
   ),
   value_json TEXT NOT NULL,
   updated_at INTEGER NOT NULL
@@ -95,16 +95,21 @@ CREATE TABLE persistence_metadata (
 
 Use `PRAGMA user_version` as the database schema version.
 
-Keeping these values in separate rows has two important properties:
+Save-slot keys use the exact shape `saveSlots:<slotId>`, for example
+`saveSlots:1`, `saveSlots:2`, or `saveSlots:auto`.
 
+Keeping these values in separate rows has three important properties:
+
+- saving one slot does not rewrite other slots or their thumbnails
 - frequently updated variables or viewed state do not rewrite save-slot
   thumbnails
 - the persisted JSON shapes stay aligned with the Route Engine persistence
   adapter contract
 
-A missing row loads as an empty object. Invalid JSON, an unsupported schema
-version, or a corrupt database is an explicit load failure; the player must not
-silently replace it with an empty database.
+A missing aggregate row loads as an empty object. Save-slot rows are combined
+into the `saveSlots` object expected by Route Engine. Invalid JSON, an
+unsupported schema version, or a corrupt database is an explicit load failure;
+the player must not silently replace it with an empty database.
 
 `persistence_metadata` records internal database state rather than Route Engine
 values. Schema version 1 uses
@@ -140,6 +145,7 @@ The implemented command boundary is:
 
 - `load_player_persistence`
 - `clear_player_persistence`
+- `save_player_save_slots`
 - `save_player_persistence_value`
 - `apply_player_scoped_data_updates`
 - `complete_legacy_player_persistence_migration`
@@ -158,6 +164,8 @@ PRAGMA busy_timeout = 5000;
 Additional rules:
 
 - each adapter call resolves only after its transaction commits
+- `saveSlots(saveSlots)` synchronizes `saveSlots:<slotId>` rows in one
+  transaction; unchanged slots retain their existing row and timestamp
 - `applyScopedDataUpdates` applies all supplied operations in order inside one
   transaction
 - incremental scoped updates must not be last-write coalesced
@@ -177,7 +185,8 @@ cutover uses a one-time import:
 
 1. Open `runtime.db`.
 2. If it has no native runtime values, read the legacy IndexedDB record.
-3. Import all persistence fields in one SQLite transaction.
+3. Expand `saveSlots` into `saveSlots:<slotId>` rows and import all persistence
+   fields in one SQLite transaction.
 4. Load the committed SQLite values into Route Engine.
 5. Stop writing to IndexedDB.
 

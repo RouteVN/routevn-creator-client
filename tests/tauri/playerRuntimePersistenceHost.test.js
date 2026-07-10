@@ -139,10 +139,7 @@ describe("Windows player runtime persistence host", () => {
 
     expect(invoke.mock.calls).toEqual([
       ["clear_player_persistence", undefined],
-      [
-        "save_player_persistence_value",
-        { key: "saveSlots", value: { slot1: {} } },
-      ],
+      ["save_player_save_slots", { saveSlots: { slot1: {} } }],
       [
         "save_player_persistence_value",
         { key: "globalDeviceVariables", value: { textSpeed: 42 } },

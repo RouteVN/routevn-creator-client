@@ -79,6 +79,14 @@ async fn clear_player_persistence(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn save_player_save_slots(app: tauri::AppHandle, save_slots: Value) -> Result<(), String> {
+    run_persistence_task(app, "player save-slot sync", move |path| {
+        player_persistence::save_slots(&path, save_slots)
+    })
+    .await
+}
+
+#[tauri::command]
 async fn save_player_persistence_value(
     app: tauri::AppHandle,
     key: String,
@@ -120,6 +128,7 @@ pub fn run() {
             read_embedded_package_range,
             load_player_persistence,
             clear_player_persistence,
+            save_player_save_slots,
             save_player_persistence_value,
             apply_player_scoped_data_updates,
             complete_legacy_player_persistence_migration

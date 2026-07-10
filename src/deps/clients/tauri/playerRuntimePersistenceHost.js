@@ -62,7 +62,9 @@
     },
 
     saveSlots(value) {
-      return saveValue("saveSlots", value);
+      return invoke("save_player_save_slots", {
+        saveSlots: normalizeObject(value),
+      });
     },
 
     saveGlobalDeviceVariables(value) {

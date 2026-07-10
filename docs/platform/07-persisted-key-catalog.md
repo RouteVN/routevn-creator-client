@@ -181,7 +181,9 @@ The native Windows player stores Route Engine runtime persistence in:
 
 The `persistence_values` table uses these key ids:
 
-- `saveSlots`
+- `saveSlots:<slotId>`
+  - one row per save slot
+  - examples: `saveSlots:1`, `saveSlots:2`, `saveSlots:auto`
 - `globalDeviceVariables`
 - `globalAccountVariables`
 - `globalRuntime`
@@ -194,8 +196,8 @@ The internal `persistence_metadata` table currently uses:
   - remains present when runtime values are cleared
 
 The database belongs to one game identified by the Tauri application
-identifier. These keys are therefore not prefixed or partitioned by project id
-or namespace.
+identifier. None of these keys are additionally prefixed or partitioned by
+project id or namespace.
 
 For schema, durability, adapter, and migration rules, see
 `11-windows-player-runtime-persistence.md`.
