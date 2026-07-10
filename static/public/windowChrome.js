@@ -7,17 +7,28 @@
   const styles = `
     :root {
       --rvn-window-chrome-height: 32px;
-      --rvn-window-controls-width: 184px;
+    }
+
+    :root[data-rvn-window-chrome="custom"] {
+      --rvn-window-content-offset: 0px;
+      --rvn-app-viewport-height: 100vh;
+    }
+
+    :root[data-rvn-window-chrome="custom"][data-rvn-window-fullscreen="false"] {
+      --rvn-window-content-offset: var(--rvn-window-chrome-height);
+      --rvn-app-viewport-height: calc(
+        100vh - var(--rvn-window-chrome-height)
+      );
+    }
+
+    :root[data-rvn-window-chrome="custom"] body {
+      top: var(--rvn-window-content-offset);
+      height: calc(100% - var(--rvn-window-content-offset));
     }
 
     #${WINDOW_CHROME_ID} {
       all: initial;
       --rvn-window-control-width: 46px;
-      --rvn-window-chrome-surface: color-mix(
-        in srgb,
-        var(--surface, #1f1f1f) 88%,
-        transparent
-      );
       position: fixed;
       inset: 0 0 auto 0;
       z-index: 2147483646;
@@ -27,7 +38,8 @@
       width: 100%;
       height: var(--rvn-window-chrome-height);
       overflow: hidden;
-      background: transparent;
+      border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+      background: var(--surface, #1f1f1f);
       color: var(--foreground, #f5f5f5);
       font-family: Roboto, "Segoe UI Variable", "Segoe UI", sans-serif;
       font-size: 12px;
@@ -36,6 +48,8 @@
       -webkit-user-select: none;
       pointer-events: none;
       contain: layout style;
+      -webkit-backdrop-filter: blur(18px) saturate(1.2);
+      backdrop-filter: blur(18px) saturate(1.2);
     }
 
     #${WINDOW_CHROME_ID}[data-focused="false"] {
@@ -48,25 +62,19 @@
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-drag-region {
       min-width: 0;
-      width: min(280px, 100%);
+      width: 100%;
       height: 100%;
       box-sizing: border-box;
       display: flex;
       align-items: center;
-      justify-self: start;
+      justify-self: stretch;
       gap: 8px;
       padding: 0 10px;
-      border-right: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-      border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-      border-bottom-right-radius: 6px;
-      background: var(--surface, #1f1f1f);
-      background: var(--rvn-window-chrome-surface);
+      background: transparent;
       cursor: default;
       pointer-events: auto;
       -webkit-app-region: drag;
       app-region: drag;
-      -webkit-backdrop-filter: blur(18px) saturate(1.2);
-      backdrop-filter: blur(18px) saturate(1.2);
     }
 
     #${WINDOW_CHROME_ID}[data-fullscreen="true"]
@@ -95,16 +103,11 @@
       display: flex;
       align-items: stretch;
       height: 100%;
-      border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
       border-left: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-      border-bottom-left-radius: 6px;
-      background: var(--surface, #1f1f1f);
-      background: var(--rvn-window-chrome-surface);
+      background: transparent;
       pointer-events: auto;
       -webkit-app-region: no-drag;
       app-region: no-drag;
-      -webkit-backdrop-filter: blur(18px) saturate(1.2);
-      backdrop-filter: blur(18px) saturate(1.2);
     }
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control {
@@ -166,20 +169,15 @@
       pointer-events: none;
     }
 
-    #${WINDOW_CHROME_ID} .rvn-window-chrome-icon-restore,
     #${WINDOW_CHROME_ID} .rvn-window-chrome-icon-exit-fullscreen {
       display: none;
     }
 
-    #${WINDOW_CHROME_ID}[data-maximized="true"]
-      .rvn-window-chrome-icon-maximize,
     #${WINDOW_CHROME_ID}[data-fullscreen="true"]
       .rvn-window-chrome-icon-enter-fullscreen {
       display: none;
     }
 
-    #${WINDOW_CHROME_ID}[data-maximized="true"]
-      .rvn-window-chrome-icon-restore,
     #${WINDOW_CHROME_ID}[data-fullscreen="true"]
       .rvn-window-chrome-icon-exit-fullscreen {
       display: block;
@@ -236,29 +234,6 @@
       >
         <svg viewBox="0 0 12 12" aria-hidden="true">
           <path d="M1 9.5h10" />
-        </svg>
-      </button>
-      <button
-        class="rvn-window-chrome-control"
-        type="button"
-        data-window-action="maximize"
-        aria-label="Maximize"
-        title="Maximize"
-      >
-        <svg
-          class="rvn-window-chrome-icon-maximize"
-          viewBox="0 0 12 12"
-          aria-hidden="true"
-        >
-          <rect x="1.5" y="1.5" width="9" height="9" />
-        </svg>
-        <svg
-          class="rvn-window-chrome-icon-restore"
-          viewBox="0 0 12 12"
-          aria-hidden="true"
-        >
-          <path d="M3.5 1.5h7v7h-2" />
-          <rect x="1.5" y="3.5" width="7" height="7" />
         </svg>
       </button>
       <button
@@ -327,7 +302,6 @@
     chrome.id = WINDOW_CHROME_ID;
     chrome.dataset.focused = "true";
     chrome.dataset.fullscreen = "false";
-    chrome.dataset.maximized = "false";
     chrome.setAttribute("aria-label", "Application window");
     chrome.innerHTML = markup;
     chrome.style.visibility = "hidden";
@@ -335,9 +309,6 @@
 
     const minimizeButton = chrome.querySelector(
       '[data-window-action="minimize"]',
-    );
-    const maximizeButton = chrome.querySelector(
-      '[data-window-action="maximize"]',
     );
     const fullscreenButton = chrome.querySelector(
       '[data-window-action="fullscreen"]',
@@ -355,7 +326,6 @@
       actionPending: false,
       focused: true,
       fullscreen: false,
-      maximized: false,
     };
     let statusTimer;
     let syncRevision = 0;
@@ -364,17 +334,16 @@
     const applyState = () => {
       chrome.dataset.focused = String(state.focused);
       chrome.dataset.fullscreen = String(state.fullscreen);
-      chrome.dataset.maximized = String(state.maximized);
+
+      if (document.documentElement.dataset.rvnWindowChrome === "custom") {
+        document.documentElement.dataset.rvnWindowFullscreen = String(
+          state.fullscreen,
+        );
+      }
 
       controlButtons.forEach((button) => {
         button.disabled = state.actionPending;
       });
-      maximizeButton.disabled = state.actionPending || state.fullscreen;
-
-      const maximizeLabel = state.maximized ? "Restore" : "Maximize";
-      maximizeButton.setAttribute("aria-label", maximizeLabel);
-      maximizeButton.title = maximizeLabel;
-      maximizeButton.setAttribute("aria-pressed", String(state.maximized));
 
       const fullscreenLabel = state.fullscreen
         ? "Exit fullscreen"
@@ -406,15 +375,11 @@
     const syncWindowState = async () => {
       const revision = ++syncRevision;
       try {
-        const [fullscreen, maximized] = await Promise.all([
-          appWindow.isFullscreen(),
-          appWindow.isMaximized(),
-        ]);
+        const fullscreen = await appWindow.isFullscreen();
         if (revision !== syncRevision) {
           return;
         }
         state.fullscreen = fullscreen;
-        state.maximized = maximized;
         applyState();
       } catch (error) {
         if (revision === syncRevision) {
@@ -442,9 +407,6 @@
 
     minimizeButton.addEventListener("click", () => {
       runWindowAction("Minimize", () => appWindow.minimize());
-    });
-    maximizeButton.addEventListener("click", () => {
-      runWindowAction("Resize", () => appWindow.toggleMaximize());
     });
     fullscreenButton.addEventListener("click", () => {
       runWindowAction("Toggle fullscreen", () =>
@@ -510,6 +472,7 @@
 
     chrome.style.visibility = "";
     document.documentElement.dataset.rvnWindowChrome = "custom";
+    applyState();
     window.addEventListener("keydown", handleKeyDown);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("beforeunload", cleanup, { once: true });

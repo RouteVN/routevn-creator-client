@@ -83,13 +83,11 @@ const createWindowHarness = ({
   });
 
   let fullscreen = false;
-  let maximized = false;
   let resizedHandler;
   let focusedHandler;
   const appWindow = {
     close: vi.fn(async () => {}),
     isFullscreen: vi.fn(async () => fullscreen),
-    isMaximized: vi.fn(async () => maximized),
     minimize: vi.fn(async () => {}),
     onFocusChanged: vi.fn(async (handler) => {
       focusedHandler = handler;
@@ -106,9 +104,6 @@ const createWindowHarness = ({
       if (decorationsError) {
         throw decorationsError;
       }
-    }),
-    toggleMaximize: vi.fn(async () => {
-      maximized = !maximized;
     }),
   };
 
@@ -170,8 +165,10 @@ describe("standalone window chrome", () => {
         "core:window:allow-set-decorations",
         "core:window:allow-set-fullscreen",
         "core:window:allow-start-dragging",
-        "core:window:allow-toggle-maximize",
       ]),
+    );
+    expect(defaultCapability.permissions).not.toContain(
+      "core:window:allow-toggle-maximize",
     );
   });
 
@@ -218,7 +215,41 @@ describe("standalone window chrome", () => {
     ).toBeNull();
   });
 
-  it("uses one control surface for windowed, maximized, and fullscreen states", async () => {
+  it("renders a continuous bar and reserves content space when windowed", async () => {
+    const harness = createWindowHarness();
+    await flushTasks();
+
+    const { document } = harness.dom.window;
+    const styleElement = document.querySelector("#rvn-window-chrome-styles");
+    const rules = new Map(
+      [...styleElement.sheet.cssRules]
+        .filter((rule) => rule.selectorText)
+        .map((rule) => [rule.selectorText, rule.style]),
+    );
+    const chromeRule = rules.get("#rvn-window-chrome");
+    const dragRegionRule = rules.get(
+      "#rvn-window-chrome .rvn-window-chrome-drag-region",
+    );
+    const windowedRootRule = rules.get(
+      ':root[data-rvn-window-chrome="custom"][data-rvn-window-fullscreen="false"]',
+    );
+    const bodyRule = rules.get(':root[data-rvn-window-chrome="custom"] body');
+
+    expect(chromeRule.getPropertyValue("background")).toBe(
+      "var(--surface, #1f1f1f)",
+    );
+    expect(chromeRule.getPropertyValue("border-bottom")).not.toBe("");
+    expect(dragRegionRule.getPropertyValue("width")).toBe("100%");
+    expect(
+      windowedRootRule.getPropertyValue("--rvn-window-content-offset"),
+    ).toBe("var(--rvn-window-chrome-height)");
+    expect(bodyRule.getPropertyValue("top")).toBe(
+      "var(--rvn-window-content-offset)",
+    );
+    expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("false");
+  });
+
+  it("uses one control surface for windowed and fullscreen states", async () => {
     const harness = createWindowHarness();
     await flushTasks();
 
@@ -227,30 +258,22 @@ describe("standalone window chrome", () => {
     const minimizeButton = chrome.querySelector(
       '[data-window-action="minimize"]',
     );
-    const maximizeButton = chrome.querySelector(
-      '[data-window-action="maximize"]',
-    );
     const fullscreenButton = chrome.querySelector(
       '[data-window-action="fullscreen"]',
     );
     const closeButton = chrome.querySelector('[data-window-action="close"]');
 
-    expect(chrome.dataset.maximized).toBe("false");
     expect(chrome.dataset.fullscreen).toBe("false");
     expect(harness.appWindow.setDecorations).toHaveBeenCalledWith(false);
-
-    maximizeButton.click();
-    await flushTasks();
-    expect(harness.appWindow.toggleMaximize).toHaveBeenCalledOnce();
-    expect(chrome.dataset.maximized).toBe("true");
-    expect(maximizeButton.getAttribute("aria-label")).toBe("Restore");
+    expect(chrome.querySelector('[data-window-action="maximize"]')).toBeNull();
+    expect(chrome.querySelectorAll("[data-window-action]")).toHaveLength(3);
 
     fullscreenButton.click();
     await flushTasks();
     expect(harness.appWindow.setFullscreen).toHaveBeenCalledWith(true);
     expect(chrome.dataset.fullscreen).toBe("true");
+    expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("true");
     expect(fullscreenButton.getAttribute("aria-label")).toBe("Exit fullscreen");
-    expect(maximizeButton.disabled).toBe(true);
 
     minimizeButton.click();
     await flushTasks();
@@ -287,10 +310,10 @@ describe("standalone window chrome", () => {
     await flushTasks();
     expect(harness.appWindow.setFullscreen).toHaveBeenLastCalledWith(false);
     expect(fullscreenButton.getAttribute("aria-pressed")).toBe("false");
+    expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("false");
 
     harness.getResizedHandler()();
     await flushTasks();
     expect(harness.appWindow.isFullscreen).toHaveBeenCalled();
-    expect(harness.appWindow.isMaximized).toHaveBeenCalled();
   });
 });
