@@ -1,20 +1,22 @@
 # 06 Project Identity And Metadata
 
-Date baseline: April 16, 2026.
+Date baseline: July 10, 2026.
 
 This document defines the current ownership and behavior of project identity,
-project metadata, and exported runtime save identity.
+project metadata, browser-hosted bundle save identity, and the native Windows
+player save-identity contract.
 
 ## Summary
 
-There are three separate concepts that are easy to confuse:
+There are four separate concepts that are easy to confuse:
 
 1. app project entry id
 2. committed repository event `project_id`
-3. bundled runtime save namespace
+3. browser-hosted bundle save namespace
+4. native Windows player application identifier
 
-For new projects, the first and third now come from `projectInfo` in the
-project-specific DB.
+For new projects, the first and third come from `projectInfo` in the
+project-specific DB. The fourth is owned by the native player package.
 
 ## Project Metadata
 
@@ -33,8 +35,8 @@ Important details:
 
 - this metadata is not owned by repository state
 - `projectInfo.id` is the canonical project/folder id for new projects
-- `projectInfo.namespace` is the canonical exported runtime save namespace for
-  new projects
+- `projectInfo.namespace` is the canonical browser-hosted bundle save namespace
+  for new projects
 - `iconFileId` is stored in `projectInfo`, but the actual icon binary lives in
   the project `files/` folder
 
@@ -70,7 +72,7 @@ Important details:
 - project identity for new projects is not derived from committed event rows
 - the canonical id for new projects lives in `projectInfo.id`
 
-## Bundled Runtime Namespace
+## Browser Bundle Runtime Namespace
 
 The exported bundled runtime now prefers the namespace written into bundle
 metadata from `projectInfo.namespace`.
@@ -82,10 +84,12 @@ Bundle metadata now carries:
 Important details:
 
 - `projectId` is not exported into the bundle
-- runtime IndexedDB/save identity should come from the project-specific DB
-  namespace, not the browser path
+- browser IndexedDB/save identity should come from the project-specific DB
+  namespace, not only from the browser path
 - the browser-path namespace remains only as a fallback for older bundles that
   do not carry bundle metadata namespace
+- the native Windows SQLite player does not use this namespace as a database
+  partition key
 
 Implication:
 
@@ -94,15 +98,35 @@ Implication:
 - two different exports should not collide just because they are hosted at the
   same path
 
+## Native Windows Player Identifier
+
+An exported Windows player is a single-game native application. Its stable
+Tauri application identifier is its runtime save identity.
+
+Important details:
+
+- one Tauri identifier must identify exactly one game
+- the identifier must stay stable across releases of that game
+- a different game must not reuse the identifier
+- the native player stores one unpartitioned `runtime.db` in its Tauri app
+  local data directory
+- the database does not use `projectInfo.namespace`, `projectInfo.id`, title,
+  executable path, or release version as a partition key
+
+For the complete SQLite and adapter contract, see
+`11-windows-player-runtime-persistence.md`.
+
 ## Current Guidance
 
 Use these rules when reasoning about identity:
 
 - for project display metadata, use `projectInfo`
 - for canonical project identity on new projects, use `projectInfo.id`
-- for exported runtime save identity on new projects, use
+- for browser-hosted bundle save identity on new projects, use
   `projectInfo.namespace`
+- for native Windows player save identity, use the stable Tauri application
+  identifier
 - for repository history semantics, reason about committed repository events
 - do not assume `state.project.id` came from repository state
-- do not expose `projectInfo.id` into the exported bundle unless a separate
-  product requirement explicitly needs it
+- do not expose `projectInfo.id` into the exported bundle merely to drive
+  runtime save identity

@@ -8,6 +8,7 @@ Scope:
 
 - global app DB key-value ids
 - project-specific DB `app` store key-value ids
+- exported Windows player runtime SQLite keys
 - intentionally non-persisted runtime-only values
 
 This document does not list repository resource ids such as `sceneId`,
@@ -148,7 +149,7 @@ Important ownership rule:
 
 - `projectInfo.id` is the source of truth for canonical project identity on new
   projects
-- `projectInfo.namespace` is the source of truth for exported runtime save
+- `projectInfo.namespace` is the source of truth for browser-hosted bundle save
   identity on new projects
 - `projectId` must not be exported into the bundle just to drive runtime save
   identity
@@ -170,6 +171,35 @@ Current storage key shape:
 
 These rows are projection caches/checkpoints, not user-facing config.
 
+## Exported Windows Player Runtime SQLite Keys
+
+The native Windows player stores Route Engine runtime persistence in:
+
+```text
+<Tauri app local data directory>/runtime.db
+```
+
+The `persistence_values` table uses these key ids:
+
+- `saveSlots`
+- `globalDeviceVariables`
+- `globalAccountVariables`
+- `globalRuntime`
+- `accountViewedRegistry`
+
+The internal `persistence_metadata` table currently uses:
+
+- `legacyIndexedDbMigrationCompleted`
+  - records completion of the one-time browser-storage import
+  - remains present when runtime values are cleared
+
+The database belongs to one game identified by the Tauri application
+identifier. These keys are therefore not prefixed or partitioned by project id
+or namespace.
+
+For schema, durability, adapter, and migration rules, see
+`11-windows-player-runtime-persistence.md`.
+
 ## Runtime-Only Values
 
 These values are intentionally not persisted in any DB.
@@ -190,6 +220,7 @@ Use this split:
 - global app DB: project discovery/list cache plus `userConfig`
 - project-specific DB `app` store: canonical project metadata plus project-local
   app-owned state
+- exported Windows player DB: one game's native Route Engine runtime state
 - runtime-only values: explicit overrides that are intentionally not persisted
 
 When adding a new persisted key, update this document in the same PR.

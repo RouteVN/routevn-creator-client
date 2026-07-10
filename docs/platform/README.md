@@ -60,6 +60,7 @@ Bundle implementation points:
 6. `08-id-generation.md`
 7. `09-partitioning-and-write-contract.md`
 8. `10-model-compatibility-and-upgrades.md`
+9. `11-windows-player-runtime-persistence.md`
 
 ## Implementation Mapping
 

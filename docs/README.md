@@ -31,3 +31,4 @@
 4. [05 Storage](./platform/05-storage.md)
 5. [09 Partitioning and Write Contract](./platform/09-partitioning-and-write-contract.md)
 6. [10 Model Compatibility And Upgrades](./platform/10-model-compatibility-and-upgrades.md)
+7. [11 Windows Player Runtime Persistence](./platform/11-windows-player-runtime-persistence.md)

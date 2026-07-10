@@ -3,7 +3,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { BUNDLE_PLAYER_INDEX_HTML } from "../src/deps/services/shared/projectExportService.js";
+import { WINDOWS_PLAYER_INDEX_HTML } from "../src/deps/services/shared/projectExportService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -99,6 +99,10 @@ const ensureBuildTooling = async () => {
 
 const stagePlayerFrontend = async () => {
   const bundleMainJsPath = path.join(rootDir, "static/bundle/main.js");
+  const persistenceHostPath = path.join(
+    rootDir,
+    "src/deps/clients/tauri/playerRuntimePersistenceHost.js",
+  );
 
   if (!(await pathExists(bundleMainJsPath))) {
     throw new Error(
@@ -109,9 +113,13 @@ const stagePlayerFrontend = async () => {
   await mkdir(shellDistDir, { recursive: true });
   await writeFile(
     path.join(shellDistDir, "index.html"),
-    BUNDLE_PLAYER_INDEX_HTML,
+    WINDOWS_PLAYER_INDEX_HTML,
   );
   await copyFile(bundleMainJsPath, path.join(shellDistDir, "main.js"));
+  await copyFile(
+    persistenceHostPath,
+    path.join(shellDistDir, "player-runtime-persistence-host.js"),
+  );
 };
 
 const resolveBuiltTemplateExe = async () => {
