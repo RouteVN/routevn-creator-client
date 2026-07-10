@@ -4,20 +4,6 @@
   const APP_ICON =
     "data:image/png;base64,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";
 
-  const windowApi = globalThis.__TAURI__?.window;
-  const platform =
-    globalThis.navigator?.userAgentData?.platform ??
-    globalThis.navigator?.platform ??
-    "";
-  const isWindows =
-    platform === "Windows" ||
-    platform.startsWith("Win") ||
-    globalThis.navigator?.userAgent?.includes("Windows");
-
-  if (!isWindows || !windowApi?.getCurrentWindow) {
-    return;
-  }
-
   const styles = `
     :root {
       --rvn-window-chrome-height: 32px;
@@ -314,8 +300,13 @@
     </div>
   `;
 
-  const mountWindowChrome = () => {
+  const mountWindowChrome = async () => {
     if (!document.body || document.getElementById(WINDOW_CHROME_ID)) {
+      return;
+    }
+
+    const windowApi = globalThis.__TAURI__?.window;
+    if (!windowApi?.getCurrentWindow) {
       return;
     }
 
@@ -339,8 +330,8 @@
     chrome.dataset.maximized = "false";
     chrome.setAttribute("aria-label", "Application window");
     chrome.innerHTML = markup;
+    chrome.style.visibility = "hidden";
     document.body.prepend(chrome);
-    document.documentElement.dataset.rvnWindowChrome = "custom";
 
     const minimizeButton = chrome.querySelector(
       '[data-window-action="minimize"]',
@@ -482,9 +473,6 @@
         syncWindowState();
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
     const registerWindowListeners = async () => {
       try {
         unlisteners.push(
@@ -509,9 +497,22 @@
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       unlisteners.splice(0).forEach((unlisten) => unlisten());
     };
-    window.addEventListener("beforeunload", cleanup, { once: true });
-
     applyState();
+
+    try {
+      await appWindow.setDecorations(false);
+    } catch (error) {
+      chrome.remove();
+      styleElement.remove();
+      console.error("Failed to enable custom window controls.", error);
+      return;
+    }
+
+    chrome.style.visibility = "";
+    document.documentElement.dataset.rvnWindowChrome = "custom";
+    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", cleanup, { once: true });
     syncWindowState();
     registerWindowListeners();
   };

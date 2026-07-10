@@ -28,6 +28,16 @@ const defaultCapability = JSON.parse(
     "utf8",
   ),
 );
+const packageJson = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL("../../package.json", import.meta.url)),
+    "utf8",
+  ),
+);
+const watchTauriScript = readFileSync(
+  fileURLToPath(new URL("../../scripts/watch-tauri.sh", import.meta.url)),
+  "utf8",
+);
 
 const openDocuments = new Set();
 
@@ -47,7 +57,11 @@ const collectIndexFiles = (directory) => {
   });
 };
 
-const createWindowHarness = ({ platform = "Win32", withTauri = true } = {}) => {
+const createWindowHarness = ({
+  decorationsError,
+  platform = "Win32",
+  withTauri = true,
+} = {}) => {
   const dom = new JSDOM(
     '<!doctype html><html><head></head><body class="dark"><rvn-app></rvn-app></body></html>',
     {
@@ -88,6 +102,11 @@ const createWindowHarness = ({ platform = "Win32", withTauri = true } = {}) => {
     setFullscreen: vi.fn(async (nextFullscreen) => {
       fullscreen = nextFullscreen;
     }),
+    setDecorations: vi.fn(async () => {
+      if (decorationsError) {
+        throw decorationsError;
+      }
+    }),
     toggleMaximize: vi.fn(async () => {
       maximized = !maximized;
     }),
@@ -115,6 +134,7 @@ const createWindowHarness = ({ platform = "Win32", withTauri = true } = {}) => {
 afterEach(() => {
   openDocuments.forEach((dom) => dom.window.close());
   openDocuments.clear();
+  vi.restoreAllMocks();
 });
 
 describe("standalone window chrome", () => {
@@ -140,13 +160,14 @@ describe("standalone window chrome", () => {
     });
   });
 
-  it("enables frameless Windows access with the required window permissions", () => {
+  it("keeps a native fallback until runtime custom chrome can activate", () => {
     expect(tauriWindowsConfig.app.withGlobalTauri).toBe(true);
-    expect(tauriWindowsConfig.app.windows[0].decorations).toBe(false);
+    expect(tauriWindowsConfig.app.windows[0].decorations).toBe(true);
     expect(defaultCapability.permissions).toEqual(
       expect.arrayContaining([
         "core:window:allow-close",
         "core:window:allow-minimize",
+        "core:window:allow-set-decorations",
         "core:window:allow-set-fullscreen",
         "core:window:allow-start-dragging",
         "core:window:allow-toggle-maximize",
@@ -154,16 +175,46 @@ describe("standalone window chrome", () => {
     );
   });
 
-  it("does not mount outside the Windows Tauri runtime", async () => {
+  it("copies standalone assets before starting the Tauri watch server", () => {
+    expect(packageJson.scripts["watch:tauri"]).toBe("./scripts/watch-tauri.sh");
+    expect(watchTauriScript).toContain("cp -rf static/. _site/");
+    expect(watchTauriScript).toContain(
+      'exec "${RTGL_BIN}" fe watch -s src/setup.tauri.js',
+    );
+  });
+
+  it("does not mount without the Tauri window API", async () => {
     const webHarness = createWindowHarness({ withTauri: false });
-    const linuxHarness = createWindowHarness({ platform: "Linux x86_64" });
     await flushTasks();
 
     expect(
       webHarness.dom.window.document.querySelector("#rvn-window-chrome"),
     ).toBeNull();
+  });
+
+  it("mounts from the Tauri API without relying on navigator platform", async () => {
+    const harness = createWindowHarness({ platform: "Unknown" });
+    await flushTasks();
+
+    expect(harness.appWindow.setDecorations).toHaveBeenCalledWith(false);
     expect(
-      linuxHarness.dom.window.document.querySelector("#rvn-window-chrome"),
+      harness.dom.window.document.querySelector("#rvn-window-chrome"),
+    ).not.toBeNull();
+  });
+
+  it("leaves native chrome available when custom chrome cannot activate", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const harness = createWindowHarness({
+      decorationsError: new Error("permission denied"),
+    });
+    await flushTasks();
+
+    expect(harness.appWindow.setDecorations).toHaveBeenCalledWith(false);
+    expect(
+      harness.dom.window.document.querySelector("#rvn-window-chrome"),
+    ).toBeNull();
+    expect(
+      harness.dom.window.document.querySelector("#rvn-window-chrome-styles"),
     ).toBeNull();
   });
 
@@ -186,6 +237,7 @@ describe("standalone window chrome", () => {
 
     expect(chrome.dataset.maximized).toBe("false");
     expect(chrome.dataset.fullscreen).toBe("false");
+    expect(harness.appWindow.setDecorations).toHaveBeenCalledWith(false);
 
     maximizeButton.click();
     await flushTasks();

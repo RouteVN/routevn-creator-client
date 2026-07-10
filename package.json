@@ -56,7 +56,7 @@
     "build:ios": "./scripts/build.sh ios",
     "build:ios:assets": "node scripts/build-ios-assets.js",
     "watch:web": "rtgl fe watch -s src/setup.web.js",
-    "watch:tauri": "rtgl fe watch -s src/setup.tauri.js",
+    "watch:tauri": "./scripts/watch-tauri.sh",
     "watch:android": "./scripts/watch-android.sh",
     "watch:ios": "./scripts/watch-ios.sh",
     "android:install": "bun run build:android && cd android/routevn && ./gradlew installDebug",

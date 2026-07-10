@@ -7,7 +7,7 @@
         "title": "RouteVN Creator",
         "resizable": true,
         "fullscreen": false,
-        "decorations": false,
+        "decorations": true,
         "dragDropEnabled": false
       }
     ]
