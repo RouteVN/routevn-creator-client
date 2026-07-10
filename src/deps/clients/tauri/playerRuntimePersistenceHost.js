@@ -4,16 +4,42 @@
   const isPlainObject = (value) =>
     Object.prototype.toString.call(value) === "[object Object]";
 
-  const normalizeObject = (value) =>
-    isPlainObject(value) ? value : emptyObject();
+  const requirePlainObject = (value, label) => {
+    if (!isPlainObject(value)) {
+      throw new Error(`${label} must be a JSON object.`);
+    }
 
-  const normalizePersistence = (value = {}) => ({
-    saveSlots: normalizeObject(value.saveSlots),
-    globalDeviceVariables: normalizeObject(value.globalDeviceVariables),
-    globalAccountVariables: normalizeObject(value.globalAccountVariables),
-    globalRuntime: normalizeObject(value.globalRuntime),
-    accountViewedRegistry: normalizeObject(value.accountViewedRegistry),
-  });
+    return value;
+  };
+
+  const normalizeObjectField = (value, label) =>
+    value === undefined ? emptyObject() : requirePlainObject(value, label);
+
+  const normalizePersistence = (value = {}) => {
+    const persistence = requirePlainObject(value, "Player persistence");
+    return {
+      saveSlots: normalizeObjectField(
+        persistence.saveSlots,
+        "Player persistence saveSlots",
+      ),
+      globalDeviceVariables: normalizeObjectField(
+        persistence.globalDeviceVariables,
+        "Player persistence globalDeviceVariables",
+      ),
+      globalAccountVariables: normalizeObjectField(
+        persistence.globalAccountVariables,
+        "Player persistence globalAccountVariables",
+      ),
+      globalRuntime: normalizeObjectField(
+        persistence.globalRuntime,
+        "Player persistence globalRuntime",
+      ),
+      accountViewedRegistry: normalizeObjectField(
+        persistence.accountViewedRegistry,
+        "Player persistence accountViewedRegistry",
+      ),
+    };
+  };
 
   const invoke = (command, args) => {
     const tauriInvoke = globalThis.__TAURI__?.core?.invoke;
@@ -27,7 +53,7 @@
   const saveValue = (key, value) =>
     invoke("save_player_persistence_value", {
       key,
-      value: normalizeObject(value),
+      value: requirePlainObject(value, `Player persistence ${key}`),
     });
 
   const createPersistence = ({ createLegacyPersistence } = {}) => ({
@@ -63,7 +89,7 @@
 
     saveSlots(value) {
       return invoke("save_player_save_slots", {
-        saveSlots: normalizeObject(value),
+        saveSlots: requirePlainObject(value, "Player persistence saveSlots"),
       });
     },
 

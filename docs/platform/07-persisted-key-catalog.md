@@ -184,23 +184,40 @@ The `persistence_values` table uses these key ids:
 - `saveSlots:<slotId>`
   - one row per save slot
   - examples: `saveSlots:1`, `saveSlots:2`, `saveSlots:auto`
+  - value: one format-versioned save entry containing matching `slotId`,
+    `savedAt`, optional `image`, and `state.contexts`
 - `globalDeviceVariables`
+  - value: object keyed by non-empty device-scoped variable id
 - `globalAccountVariables`
+  - value: object keyed by non-empty account-scoped variable id
 - `globalRuntime`
+  - value: closed object containing only durable dialogue, auto-forward, skip,
+    volume, and mute preferences
 - `accountViewedRegistry`
+  - value: viewed section frontiers and viewed resource ids in `sections` and
+    `resources` arrays
+
+All `persistence_values.value_json` roots are JSON objects. Values are
+key-specifically validated before a write and again on load. Invalid values are
+not converted to `{}`. In particular, a `saveSlots:<slotId>` row is rejected if
+its nested save state is malformed or its internal `slotId` does not identify
+the physical key's suffix.
 
 The internal `persistence_metadata` table currently uses:
 
 - `legacyIndexedDbMigrationCompleted`
   - records completion of the one-time browser-storage import
+  - exact SQLite text value: `1`
   - remains present when runtime values are cleared
 
 The database belongs to one game identified by the Tauri application
 identifier. None of these keys are additionally prefixed or partitioned by
 project id or namespace.
 
-For schema, durability, adapter, and migration rules, see
-`11-windows-player-runtime-persistence.md`.
+For database location, durability, adapter, and migration rules, see
+`11-windows-player-runtime-persistence.md`. For the normative complete key,
+field, type, JSON shape, validation, and atomic rejection contract, see
+`12-windows-player-runtime-key-value-contract.md`.
 
 ## Runtime-Only Values
 

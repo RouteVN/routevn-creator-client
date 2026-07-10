@@ -590,7 +590,9 @@ Do not collapse these into one field.
   this installed game?"
 
 The native Windows persistence contract is defined in
-`docs/platform/11-windows-player-runtime-persistence.md`.
+`docs/platform/11-windows-player-runtime-persistence.md`; the complete physical
+key and JSON value contract is defined in
+`docs/platform/12-windows-player-runtime-key-value-contract.md`.
 
 The canonical implementation points are:
 
@@ -810,7 +812,9 @@ Project identity has an important split:
 
 For the current full contract, see
 `docs/platform/06-project-identity-and-metadata.md` and
-`docs/platform/11-windows-player-runtime-persistence.md`.
+`docs/platform/11-windows-player-runtime-persistence.md`. The native runtime
+row value contract is in
+`docs/platform/12-windows-player-runtime-key-value-contract.md`.
 
 ## Current Canonical Patterns
 

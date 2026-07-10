@@ -26,6 +26,8 @@ Date baseline: April 9, 2026.
 - `command_envelope_version = 1`
 - `model_schema_version = 1`
 - `bundle_format_version = 2`
+- `windows_player_runtime_schema_version = 1`
+- `windows_player_save_format_version = 1`
 - `protocol_version = "1.0"`
 - `command_version = 1`
 - entity ids are base58 strings
@@ -61,6 +63,7 @@ Bundle implementation points:
 7. `09-partitioning-and-write-contract.md`
 8. `10-model-compatibility-and-upgrades.md`
 9. `11-windows-player-runtime-persistence.md`
+10. `12-windows-player-runtime-key-value-contract.md`
 
 ## Implementation Mapping
 

@@ -30,10 +30,42 @@ const createPersistenceState = (overrides = {}) => ({
   ...overrides,
 });
 
+const createSaveSlot = (slotId, lineId = "line-1") => ({
+  formatVersion: 1,
+  slotId,
+  savedAt: 1_700_000_000_000,
+  state: {
+    contexts: [
+      {
+        currentPointerMode: "read",
+        pointers: {
+          read: { sectionId: "section-1", lineId },
+        },
+        configuration: {},
+        views: [],
+        bgm: {},
+        variables: {},
+        rollback: {
+          currentIndex: 0,
+          isRestoring: false,
+          replayStartIndex: 0,
+          timeline: [
+            {
+              sectionId: "section-1",
+              lineId,
+              rollbackPolicy: "free",
+            },
+          ],
+        },
+      },
+    ],
+  },
+});
+
 describe("Windows player runtime persistence host", () => {
   it("loads native SQLite state without opening legacy IndexedDB after migration", async () => {
     const nativeState = createPersistenceState({
-      saveSlots: { slot1: { lineId: "line-1" } },
+      saveSlots: { 1: createSaveSlot(1) },
     });
     const invoke = vi.fn(async () => ({
       persistence: nativeState,
@@ -131,15 +163,15 @@ describe("Windows player runtime persistence host", () => {
     ];
 
     await persistence.clear();
-    await persistence.saveSlots({ slot1: {} });
+    await persistence.saveSlots({ 1: createSaveSlot(1) });
     await persistence.saveGlobalDeviceVariables({ textSpeed: 42 });
     await persistence.saveGlobalAccountVariables({ routeUnlocked: true });
-    await persistence.saveGlobalRuntime([]);
+    await persistence.saveGlobalRuntime({ skipUnseenText: false });
     await persistence.applyScopedDataUpdates(updates);
 
     expect(invoke.mock.calls).toEqual([
       ["clear_player_persistence", undefined],
-      ["save_player_save_slots", { saveSlots: { slot1: {} } }],
+      ["save_player_save_slots", { saveSlots: { 1: createSaveSlot(1) } }],
       [
         "save_player_persistence_value",
         { key: "globalDeviceVariables", value: { textSpeed: 42 } },
@@ -148,11 +180,44 @@ describe("Windows player runtime persistence host", () => {
         "save_player_persistence_value",
         { key: "globalAccountVariables", value: { routeUnlocked: true } },
       ],
-      ["save_player_persistence_value", { key: "globalRuntime", value: {} }],
+      [
+        "save_player_persistence_value",
+        { key: "globalRuntime", value: { skipUnseenText: false } },
+      ],
       ["apply_player_scoped_data_updates", { updates }],
     ]);
     expect(() => persistence.applyScopedDataUpdates({})).toThrow(
       "applyScopedDataUpdates requires an updates array.",
     );
+  });
+
+  it("rejects non-object write values instead of silently saving empty objects", () => {
+    const invoke = vi.fn(async () => undefined);
+    const persistence = createHost(invoke).createPersistence();
+
+    expect(() => persistence.saveSlots([])).toThrow(
+      "Player persistence saveSlots must be a JSON object.",
+    );
+    expect(() => persistence.saveGlobalDeviceVariables(null)).toThrow(
+      "Player persistence globalDeviceVariables must be a JSON object.",
+    );
+    expect(() => persistence.saveGlobalRuntime("invalid")).toThrow(
+      "Player persistence globalRuntime must be a JSON object.",
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed loaded state instead of coercing it before migration", async () => {
+    const invoke = vi.fn(async () => ({
+      persistence: createPersistenceState({ globalRuntime: [] }),
+      legacyMigrationCompleted: true,
+      hasNativeValues: true,
+    }));
+    const persistence = createHost(invoke).createPersistence();
+
+    await expect(persistence.load()).rejects.toThrow(
+      "Player persistence globalRuntime must be a JSON object.",
+    );
+    expect(invoke).toHaveBeenCalledOnce();
   });
 });

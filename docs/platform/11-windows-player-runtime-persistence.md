@@ -83,13 +83,16 @@ CREATE TABLE persistence_values (
     )
     OR key GLOB 'saveSlots:?*'
   ),
-  value_json TEXT NOT NULL,
-  updated_at INTEGER NOT NULL
+  value_json TEXT NOT NULL CHECK (
+    json_valid(value_json)
+    AND json_type(value_json) = 'object'
+  ),
+  updated_at INTEGER NOT NULL CHECK (updated_at >= 0)
 );
 
 CREATE TABLE persistence_metadata (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
+  key TEXT PRIMARY KEY CHECK (key = 'legacyIndexedDbMigrationCompleted'),
+  value TEXT NOT NULL CHECK (value = '1')
 );
 ```
 
@@ -97,6 +100,11 @@ Use `PRAGMA user_version` as the database schema version.
 
 Save-slot keys use the exact shape `saveSlots:<slotId>`, for example
 `saveSlots:1`, `saveSlots:2`, or `saveSlots:auto`.
+
+The complete normative key and JSON value contract is defined in
+`12-windows-player-runtime-key-value-contract.md`. That document is the source
+of truth for required fields, allowed types, closed and extensible objects,
+slot-key/value identity, scoped update payloads, and rejection behavior.
 
 Keeping these values in separate rows has three important properties:
 
@@ -163,6 +171,11 @@ PRAGMA busy_timeout = 5000;
 
 Additional rules:
 
+- every payload is parsed and semantically validated before any SQL mutation
+- every stored value is validated again when it is loaded
+- invalid payloads are rejected; they are never converted to `{}` and saved
+- one invalid item rejects the complete adapter call, including all slot
+  deletes/updates or all scoped operations in that call
 - each adapter call resolves only after its transaction commits
 - `saveSlots(saveSlots)` synchronizes `saveSlots:<slotId>` rows in one
   transaction; unchanged slots retain their existing row and timestamp
@@ -185,14 +198,20 @@ cutover uses a one-time import:
 
 1. Open `runtime.db`.
 2. If it has no native runtime values, read the legacy IndexedDB record.
-3. Expand `saveSlots` into `saveSlots:<slotId>` rows and import all persistence
+3. Validate the complete legacy record against the native key/value contract.
+4. Expand `saveSlots` into `saveSlots:<slotId>` rows and import all persistence
    fields in one SQLite transaction.
-4. Load the committed SQLite values into Route Engine.
-5. Stop writing to IndexedDB.
+5. Load the committed SQLite values into Route Engine.
+6. Stop writing to IndexedDB.
 
 Do not dual-write SQLite and IndexedDB. Do not delete the legacy IndexedDB
 record until the native import has committed and the compatibility policy
 explicitly permits deletion.
+
+If validation fails, the transaction writes no values and does not set
+`legacyIndexedDbMigrationCompleted`. The legacy IndexedDB record and any
+existing native database remain available for diagnosis or a future compatible
+import.
 
 The migration may use the legacy bundle namespace only to locate the old
 IndexedDB record. It must not add that namespace as a partition key in
