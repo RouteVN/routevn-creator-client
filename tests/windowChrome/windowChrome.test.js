@@ -262,7 +262,7 @@ describe("standalone window chrome", () => {
     expect(document.documentElement.dataset.rvnWindowMaximized).toBe("false");
   });
 
-  it("reveals maximized chrome only near the top edge", async () => {
+  it("reveals maximized chrome within the expanded top-edge hover zone", async () => {
     const harness = createWindowHarness();
     await flushTasks();
 
@@ -277,17 +277,17 @@ describe("standalone window chrome", () => {
     expect(document.documentElement.dataset.rvnWindowMaximized).toBe("true");
 
     harness.dom.window.dispatchEvent(
-      new harness.dom.window.MouseEvent("pointermove", { clientY: 4 }),
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 12 }),
     );
     expect(chrome.dataset.revealed).toBe("true");
 
     harness.dom.window.dispatchEvent(
-      new harness.dom.window.MouseEvent("pointermove", { clientY: 36 }),
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 47 }),
     );
     expect(chrome.dataset.revealed).toBe("true");
 
     harness.dom.window.dispatchEvent(
-      new harness.dom.window.MouseEvent("pointermove", { clientY: 41 }),
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 49 }),
     );
     expect(chrome.dataset.revealed).toBe("false");
 
@@ -329,7 +329,17 @@ describe("standalone window chrome", () => {
     expect(fullscreenButton.getAttribute("aria-label")).toBe("Exit fullscreen");
     expect(fullscreenButton.hasAttribute("title")).toBe(false);
     harness.dom.window.dispatchEvent(
-      new harness.dom.window.MouseEvent("pointermove", { clientY: 4 }),
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 12 }),
+    );
+    expect(chrome.dataset.revealed).toBe("true");
+
+    harness.dom.window.dispatchEvent(
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 47 }),
+    );
+    expect(chrome.dataset.revealed).toBe("true");
+
+    harness.dom.window.dispatchEvent(
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 49 }),
     );
     expect(chrome.dataset.revealed).toBe("false");
 
