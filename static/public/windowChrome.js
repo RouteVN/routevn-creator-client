@@ -202,12 +202,12 @@
       display: none;
     }
 
-    #${WINDOW_CHROME_ID}[data-fullscreen="true"]
+    #${WINDOW_CHROME_ID}[data-expanded="true"]
       .rvn-window-chrome-icon-enter-fullscreen {
       display: none;
     }
 
-    #${WINDOW_CHROME_ID}[data-fullscreen="true"]
+    #${WINDOW_CHROME_ID}[data-expanded="true"]
       .rvn-window-chrome-icon-exit-fullscreen {
       display: block;
     }
@@ -326,6 +326,7 @@
 
     const chrome = document.createElement("header");
     chrome.id = WINDOW_CHROME_ID;
+    chrome.dataset.expanded = "false";
     chrome.dataset.focused = "true";
     chrome.dataset.fullscreen = "false";
     chrome.dataset.maximized = "false";
@@ -364,6 +365,8 @@
     const unlisteners = [];
 
     const applyState = () => {
+      const expanded = state.fullscreen || state.maximized;
+      chrome.dataset.expanded = String(expanded);
       chrome.dataset.focused = String(state.focused);
       chrome.dataset.fullscreen = String(state.fullscreen);
       chrome.dataset.maximized = String(state.maximized);
@@ -378,17 +381,21 @@
         document.documentElement.dataset.rvnWindowMaximized = String(
           state.maximized,
         );
+        document.documentElement.dataset.rvnWindowExpanded = String(expanded);
       }
 
       controlButtons.forEach((button) => {
         button.disabled = state.actionPending;
       });
 
-      const fullscreenLabel = state.fullscreen
-        ? "Exit fullscreen"
-        : "Enter fullscreen";
+      let fullscreenLabel = "Enter fullscreen";
+      if (state.fullscreen) {
+        fullscreenLabel = "Exit fullscreen";
+      } else if (state.maximized) {
+        fullscreenLabel = "Restore window";
+      }
       fullscreenButton.setAttribute("aria-label", fullscreenLabel);
-      fullscreenButton.setAttribute("aria-pressed", String(state.fullscreen));
+      fullscreenButton.setAttribute("aria-pressed", String(expanded));
 
       dragRegionNodes.forEach((node) => {
         if (state.fullscreen) {
@@ -470,13 +477,27 @@
       }
     };
 
+    const toggleExpandedWindow = async () => {
+      if (!state.fullscreen && !state.maximized) {
+        await appWindow.setFullscreen(true);
+        return;
+      }
+
+      const wasFullscreen = state.fullscreen;
+      const wasMaximized = state.maximized;
+      if (wasFullscreen) {
+        await appWindow.setFullscreen(false);
+      }
+      if (wasMaximized) {
+        await appWindow.unmaximize();
+      }
+    };
+
     minimizeButton.addEventListener("click", () => {
       runWindowAction("Minimize", () => appWindow.minimize());
     });
     fullscreenButton.addEventListener("click", () => {
-      runWindowAction("Toggle fullscreen", () =>
-        appWindow.setFullscreen(!state.fullscreen),
-      );
+      runWindowAction("Toggle fullscreen", toggleExpandedWindow);
     });
     closeButton.addEventListener("click", () => {
       runWindowAction("Close", () => appWindow.close());
@@ -488,11 +509,9 @@
         fullscreenButton.click();
         return;
       }
-      if (event.key === "Escape" && state.fullscreen) {
+      if (event.key === "Escape" && (state.fullscreen || state.maximized)) {
         event.preventDefault();
-        runWindowAction("Exit fullscreen", () =>
-          appWindow.setFullscreen(false),
-        );
+        runWindowAction("Restore window", toggleExpandedWindow);
       }
     };
     const handleVisibilityChange = () => {

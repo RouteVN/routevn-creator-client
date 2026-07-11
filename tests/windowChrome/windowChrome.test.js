@@ -108,6 +108,9 @@ const createWindowHarness = ({
         throw decorationsError;
       }
     }),
+    unmaximize: vi.fn(async () => {
+      maximized = false;
+    }),
   };
 
   if (withTauri) {
@@ -175,6 +178,7 @@ describe("standalone window chrome", () => {
         "core:window:allow-set-decorations",
         "core:window:allow-set-fullscreen",
         "core:window:allow-start-dragging",
+        "core:window:allow-unmaximize",
       ]),
     );
     expect(defaultCapability.permissions).not.toContain(
@@ -273,13 +277,32 @@ describe("standalone window chrome", () => {
 
     const { document } = harness.dom.window;
     const chrome = document.querySelector("#rvn-window-chrome");
+    const fullscreenButton = chrome.querySelector(
+      '[data-window-action="fullscreen"]',
+    );
+    const enterFullscreenIcon = chrome.querySelector(
+      ".rvn-window-chrome-icon-enter-fullscreen",
+    );
+    const exitFullscreenIcon = chrome.querySelector(
+      ".rvn-window-chrome-icon-exit-fullscreen",
+    );
     harness.setMaximized(true);
     harness.getResizedHandler()();
     await flushTasks();
 
     expect(chrome.dataset.maximized).toBe("true");
+    expect(chrome.dataset.expanded).toBe("true");
     expect(chrome.dataset.revealed).toBe("false");
+    expect(fullscreenButton.getAttribute("aria-label")).toBe("Restore window");
+    expect(fullscreenButton.getAttribute("aria-pressed")).toBe("true");
+    expect(
+      harness.dom.window.getComputedStyle(enterFullscreenIcon).display,
+    ).toBe("none");
+    expect(
+      harness.dom.window.getComputedStyle(exitFullscreenIcon).display,
+    ).toBe("block");
     expect(document.documentElement.dataset.rvnWindowMaximized).toBe("true");
+    expect(document.documentElement.dataset.rvnWindowExpanded).toBe("true");
 
     harness.dom.window.dispatchEvent(
       new harness.dom.window.MouseEvent("pointermove", { clientY: 12 }),
@@ -296,11 +319,21 @@ describe("standalone window chrome", () => {
     );
     expect(chrome.dataset.revealed).toBe("false");
 
-    harness.setMaximized(false);
-    harness.getResizedHandler()();
+    harness.dom.window.dispatchEvent(
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 12 }),
+    );
+    fullscreenButton.click();
     await flushTasks();
+    expect(harness.appWindow.unmaximize).toHaveBeenCalledOnce();
+    expect(harness.appWindow.setFullscreen).not.toHaveBeenCalled();
+    expect(chrome.dataset.expanded).toBe("false");
     expect(chrome.dataset.revealed).toBe("true");
+    expect(fullscreenButton.getAttribute("aria-label")).toBe(
+      "Enter fullscreen",
+    );
+    expect(fullscreenButton.getAttribute("aria-pressed")).toBe("false");
     expect(document.documentElement.dataset.rvnWindowMaximized).toBe("false");
+    expect(document.documentElement.dataset.rvnWindowExpanded).toBe("false");
   });
 
   it("uses one control surface for windowed and fullscreen states", async () => {
@@ -318,6 +351,7 @@ describe("standalone window chrome", () => {
     const closeButton = chrome.querySelector('[data-window-action="close"]');
 
     expect(chrome.dataset.fullscreen).toBe("false");
+    expect(chrome.dataset.expanded).toBe("false");
     expect(harness.appWindow.setDecorations).toHaveBeenCalledWith(false);
     expect(chrome.querySelector('[data-window-action="maximize"]')).toBeNull();
     expect(chrome.querySelectorAll("[data-window-action]")).toHaveLength(3);
@@ -329,8 +363,10 @@ describe("standalone window chrome", () => {
     await flushTasks();
     expect(harness.appWindow.setFullscreen).toHaveBeenCalledWith(true);
     expect(chrome.dataset.fullscreen).toBe("true");
+    expect(chrome.dataset.expanded).toBe("true");
     expect(chrome.dataset.revealed).toBe("false");
     expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("true");
+    expect(document.documentElement.dataset.rvnWindowExpanded).toBe("true");
     expect(fullscreenButton.getAttribute("aria-label")).toBe("Exit fullscreen");
     expect(fullscreenButton.hasAttribute("title")).toBe(false);
     harness.dom.window.dispatchEvent(
