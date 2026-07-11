@@ -65,6 +65,7 @@ const createWindowHarness = ({
   const dom = new JSDOM(
     '<!doctype html><html><head></head><body class="dark"><rvn-app></rvn-app></body></html>',
     {
+      pretendToBeVisual: true,
       runScripts: "outside-only",
       url: "http://localhost/",
     },
@@ -125,6 +126,9 @@ const createWindowHarness = ({
     dom,
     getFocusedHandler: () => focusedHandler,
     getResizedHandler: () => resizedHandler,
+    setFullscreenState: (nextFullscreen) => {
+      fullscreen = nextFullscreen;
+    },
     setMaximized: (nextMaximized) => {
       maximized = nextMaximized;
     },
@@ -135,6 +139,7 @@ afterEach(() => {
   openDocuments.forEach((dom) => dom.window.close());
   openDocuments.clear();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("standalone window chrome", () => {
@@ -384,5 +389,45 @@ describe("standalone window chrome", () => {
     await flushTasks();
     expect(harness.appWindow.isFullscreen).toHaveBeenCalled();
     expect(harness.appWindow.isMaximized).toHaveBeenCalled();
+  });
+
+  it("rechecks fullscreen after an external resize transition settles", async () => {
+    vi.useFakeTimers();
+    const harness = createWindowHarness();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const chrome =
+      harness.dom.window.document.querySelector("#rvn-window-chrome");
+    harness.getResizedHandler()();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(chrome.dataset.fullscreen).toBe("false");
+
+    harness.setFullscreenState(true);
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(chrome.dataset.fullscreen).toBe("true");
+    expect(chrome.dataset.revealed).toBe("false");
+  });
+
+  it("polls for external fullscreen changes that emit no window event", async () => {
+    vi.useFakeTimers();
+    const harness = createWindowHarness();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const { document } = harness.dom.window;
+    const chrome = document.querySelector("#rvn-window-chrome");
+    harness.setFullscreenState(true);
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(chrome.dataset.fullscreen).toBe("true");
+    expect(chrome.dataset.revealed).toBe("false");
+    expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("true");
+
+    harness.setFullscreenState(false);
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(chrome.dataset.fullscreen).toBe("false");
+    expect(chrome.dataset.revealed).toBe("true");
+    expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("false");
   });
 });
