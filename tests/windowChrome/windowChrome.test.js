@@ -259,6 +259,8 @@ describe("standalone window chrome", () => {
     expect(chromeRule.getPropertyValue("border-bottom")).not.toBe("");
     expect(controlsRule.getPropertyValue("border-left")).toBe("");
     expect(dragRegionRule.getPropertyValue("width")).toBe("100%");
+    expect(dragRegionRule.getPropertyValue("gap")).toBe("4px");
+    expect(dragRegionRule.getPropertyValue("padding")).toBe("0 8px");
     expect(
       windowedRootRule.getPropertyValue("--rvn-window-content-offset"),
     ).toBe("var(--rvn-window-chrome-height)");

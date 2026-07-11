@@ -97,8 +97,8 @@
       display: flex;
       align-items: center;
       justify-self: stretch;
-      gap: 8px;
-      padding: 0 10px;
+      gap: 4px;
+      padding: 0 8px;
       background: transparent;
       cursor: default;
       pointer-events: auto;
