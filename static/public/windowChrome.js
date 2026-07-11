@@ -169,11 +169,15 @@
       justify-content: center;
       color: inherit;
       cursor: default;
+      transition-property: background-color, color;
+      transition-duration: 400ms;
+      transition-timing-function: ease-out;
       -webkit-app-region: no-drag;
       app-region: no-drag;
     }
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control:hover {
+      transition-duration: 0ms;
       background: color-mix(
         in srgb,
         var(--foreground, #f5f5f5) 11%,
@@ -182,6 +186,7 @@
     }
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control:active {
+      transition-duration: 0ms;
       background: color-mix(
         in srgb,
         var(--foreground, #f5f5f5) 18%,
@@ -203,6 +208,12 @@
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control-close:active {
       background: #c42b1c;
       color: #ffffff;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #${WINDOW_CHROME_ID} .rvn-window-chrome-control {
+        transition: none;
+      }
     }
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control svg {

@@ -289,6 +289,15 @@ describe("standalone window chrome", () => {
     const controlsRule = rules.get(
       "#rvn-window-chrome .rvn-window-chrome-controls",
     );
+    const controlRule = rules.get(
+      "#rvn-window-chrome .rvn-window-chrome-control",
+    );
+    const controlHoverRule = rules.get(
+      "#rvn-window-chrome .rvn-window-chrome-control:hover",
+    );
+    const controlActiveRule = rules.get(
+      "#rvn-window-chrome .rvn-window-chrome-control:active",
+    );
     const windowedRootRule = rules.get(
       ':root[data-rvn-window-chrome="custom"][data-rvn-window-fullscreen="false"][data-rvn-window-maximized="false"]',
     );
@@ -303,6 +312,19 @@ describe("standalone window chrome", () => {
     expect(chromeRule.getPropertyValue("background")).toBe("#202020");
     expect(chromeRule.getPropertyValue("border-bottom")).not.toBe("");
     expect(controlsRule.getPropertyValue("border-left")).toBe("");
+    expect(controlRule.getPropertyValue("transition-property")).toBe(
+      "background-color, color",
+    );
+    expect(controlRule.getPropertyValue("transition-duration")).toBe("400ms");
+    expect(controlRule.getPropertyValue("transition-timing-function")).toBe(
+      "ease-out",
+    );
+    expect(controlHoverRule.getPropertyValue("transition-duration")).toBe(
+      "0ms",
+    );
+    expect(controlActiveRule.getPropertyValue("transition-duration")).toBe(
+      "0ms",
+    );
     expect(dragRegionRule.getPropertyValue("width")).toBe("100%");
     expect(dragRegionRule.getPropertyValue("gap")).toBe("6px");
     expect(dragRegionRule.getPropertyValue("padding")).toBe("0 8px");
