@@ -45,7 +45,7 @@
       height: var(--rvn-window-chrome-height);
       overflow: hidden;
       border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-      background: var(--surface, #1f1f1f);
+      background: #202020;
       color: var(--foreground, #f5f5f5);
       font-family: Roboto, "Segoe UI Variable", "Segoe UI", sans-serif;
       font-size: 12px;
@@ -132,7 +132,6 @@
       display: flex;
       align-items: stretch;
       height: 100%;
-      border-left: 1px solid var(--border, rgba(255, 255, 255, 0.1));
       background: transparent;
       pointer-events: auto;
       -webkit-app-region: no-drag;
@@ -261,7 +260,7 @@
         aria-label="Minimize"
       >
         <svg viewBox="0 0 12 12" aria-hidden="true">
-          <path d="M1 9.5h10" />
+          <path d="M1.5 6h9" />
         </svg>
       </button>
       <button
@@ -277,14 +276,15 @@
           viewBox="0 0 12 12"
           aria-hidden="true"
         >
-          <path d="M1 4V1h3M8 1h3v3M11 8v3H8M4 11H1V8" />
+          <path d="M1.75 2.25h8.5v7.5h-8.5z" />
         </svg>
         <svg
           class="rvn-window-chrome-icon-exit-fullscreen"
           viewBox="0 0 12 12"
           aria-hidden="true"
         >
-          <path d="M4 1v3H1M11 4H8V1M8 11V8h3M1 8h3v3" />
+          <path d="M3.25 3.5v-2h7.25V8h-1.75" />
+          <path d="M1.5 3.5h7.25V10H1.5z" />
         </svg>
       </button>
       <button

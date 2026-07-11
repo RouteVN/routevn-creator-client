@@ -244,6 +244,9 @@ describe("standalone window chrome", () => {
     const dragRegionRule = rules.get(
       "#rvn-window-chrome .rvn-window-chrome-drag-region",
     );
+    const controlsRule = rules.get(
+      "#rvn-window-chrome .rvn-window-chrome-controls",
+    );
     const windowedRootRule = rules.get(
       ':root[data-rvn-window-chrome="custom"][data-rvn-window-fullscreen="false"][data-rvn-window-maximized="false"]',
     );
@@ -252,10 +255,9 @@ describe("standalone window chrome", () => {
     );
     const bodyRule = rules.get(':root[data-rvn-window-chrome="custom"] body');
 
-    expect(chromeRule.getPropertyValue("background")).toBe(
-      "var(--surface, #1f1f1f)",
-    );
+    expect(chromeRule.getPropertyValue("background")).toBe("#202020");
     expect(chromeRule.getPropertyValue("border-bottom")).not.toBe("");
+    expect(controlsRule.getPropertyValue("border-left")).toBe("");
     expect(dragRegionRule.getPropertyValue("width")).toBe("100%");
     expect(
       windowedRootRule.getPropertyValue("--rvn-window-content-offset"),
@@ -269,6 +271,31 @@ describe("standalone window chrome", () => {
     expect(maximizedHiddenRule.getPropertyValue("visibility")).toBe("hidden");
     expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("false");
     expect(document.documentElement.dataset.rvnWindowMaximized).toBe("false");
+  });
+
+  it("uses centered Windows-style window control icons", async () => {
+    const harness = createWindowHarness();
+    await flushTasks();
+
+    const chrome =
+      harness.dom.window.document.querySelector("#rvn-window-chrome");
+    const minimizePath = chrome.querySelector(
+      '[data-window-action="minimize"] path',
+    );
+    const enterFullscreenPaths = chrome.querySelectorAll(
+      ".rvn-window-chrome-icon-enter-fullscreen path",
+    );
+    const exitFullscreenPaths = chrome.querySelectorAll(
+      ".rvn-window-chrome-icon-exit-fullscreen path",
+    );
+
+    expect(minimizePath.getAttribute("d")).toBe("M1.5 6h9");
+    expect(
+      [...enterFullscreenPaths].map((path) => path.getAttribute("d")),
+    ).toEqual(["M1.75 2.25h8.5v7.5h-8.5z"]);
+    expect(
+      [...exitFullscreenPaths].map((path) => path.getAttribute("d")),
+    ).toEqual(["M3.25 3.5v-2h7.25V8h-1.75", "M1.5 3.5h7.25V10H1.5z"]);
   });
 
   it("reveals maximized chrome within the expanded top-edge hover zone", async () => {
