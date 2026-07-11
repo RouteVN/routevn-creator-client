@@ -38,6 +38,29 @@ const watchTauriScript = readFileSync(
   fileURLToPath(new URL("../../scripts/watch-tauri.sh", import.meta.url)),
   "utf8",
 );
+const tauriCargoToml = readFileSync(
+  fileURLToPath(new URL("../../src-tauri/Cargo.toml", import.meta.url)),
+  "utf8",
+);
+const tauriLibSource = readFileSync(
+  fileURLToPath(new URL("../../src-tauri/src/lib.rs", import.meta.url)),
+  "utf8",
+);
+const windowsSystemMenuSource = readFileSync(
+  fileURLToPath(
+    new URL("../../src-tauri/src/windows_system_menu.rs", import.meta.url),
+  ),
+  "utf8",
+);
+const windowsSystemMenuWindowsSource = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../src-tauri/src/windows_system_menu_windows.rs",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
 
 const openDocuments = new Set();
 
@@ -87,6 +110,7 @@ const createWindowHarness = ({
   let maximized = false;
   let resizedHandler;
   let focusedHandler;
+  const invoke = vi.fn(async () => {});
   const appWindow = {
     close: vi.fn(async () => {}),
     isFullscreen: vi.fn(async () => fullscreen),
@@ -115,6 +139,9 @@ const createWindowHarness = ({
 
   if (withTauri) {
     dom.window.__TAURI__ = {
+      core: {
+        invoke,
+      },
       window: {
         getCurrentWindow: () => appWindow,
       },
@@ -129,6 +156,7 @@ const createWindowHarness = ({
     dom,
     getFocusedHandler: () => focusedHandler,
     getResizedHandler: () => resizedHandler,
+    invoke,
     setFullscreenState: (nextFullscreen) => {
       fullscreen = nextFullscreen;
     },
@@ -192,6 +220,19 @@ describe("standalone window chrome", () => {
     expect(watchTauriScript).toContain(
       'exec "${RTGL_BIN}" fe watch -s src/setup.tauri.js',
     );
+  });
+
+  it("registers a native Windows system-menu command", () => {
+    expect(tauriCargoToml).toContain('cfg(target_os = "windows")');
+    expect(tauriCargoToml).toContain('"Win32_UI_WindowsAndMessaging"');
+    expect(tauriLibSource).toContain("mod windows_system_menu;");
+    expect(tauriLibSource).toContain(
+      "windows_system_menu::show_windows_system_menu",
+    );
+    expect(windowsSystemMenuSource).toContain("windows_impl::show(hwnd)");
+    expect(windowsSystemMenuWindowsSource).toContain("GetSystemMenu");
+    expect(windowsSystemMenuWindowsSource).toContain("TrackPopupMenuEx");
+    expect(windowsSystemMenuWindowsSource).toContain("WM_SYSCOMMAND");
   });
 
   it("does not mount without the Tauri window API", async () => {
@@ -259,7 +300,7 @@ describe("standalone window chrome", () => {
     expect(chromeRule.getPropertyValue("border-bottom")).not.toBe("");
     expect(controlsRule.getPropertyValue("border-left")).toBe("");
     expect(dragRegionRule.getPropertyValue("width")).toBe("100%");
-    expect(dragRegionRule.getPropertyValue("gap")).toBe("4px");
+    expect(dragRegionRule.getPropertyValue("gap")).toBe("6px");
     expect(dragRegionRule.getPropertyValue("padding")).toBe("0 8px");
     expect(
       windowedRootRule.getPropertyValue("--rvn-window-content-offset"),
@@ -284,20 +325,88 @@ describe("standalone window chrome", () => {
     const minimizePath = chrome.querySelector(
       '[data-window-action="minimize"] path',
     );
-    const enterFullscreenPaths = chrome.querySelectorAll(
-      ".rvn-window-chrome-icon-enter-fullscreen path",
+    const appMenuButton = chrome.querySelector(".rvn-window-chrome-app-menu");
+    const enterFullscreenRect = chrome.querySelector(
+      ".rvn-window-chrome-icon-enter-fullscreen rect",
     );
-    const exitFullscreenPaths = chrome.querySelectorAll(
+    const exitFullscreenPath = chrome.querySelector(
       ".rvn-window-chrome-icon-exit-fullscreen path",
     );
+    const exitFullscreenRect = chrome.querySelector(
+      ".rvn-window-chrome-icon-exit-fullscreen rect",
+    );
 
+    expect(appMenuButton.hasAttribute("data-tauri-drag-region")).toBe(false);
     expect(minimizePath.getAttribute("d")).toBe("M1.5 6h9");
     expect(
-      [...enterFullscreenPaths].map((path) => path.getAttribute("d")),
-    ).toEqual(["M1.75 2.25h8.5v7.5h-8.5z"]);
+      ["x", "y", "width", "height", "rx"].map((attribute) =>
+        enterFullscreenRect.getAttribute(attribute),
+      ),
+    ).toEqual(["1.75", "2", "8.5", "8", "0.5"]);
+    expect(exitFullscreenPath.getAttribute("d")).toBe(
+      "M3.25 3.5V2a.5.5 0 0 1 .5-.5H10a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5H8.75",
+    );
     expect(
-      [...exitFullscreenPaths].map((path) => path.getAttribute("d")),
-    ).toEqual(["M3.25 3.5v-2h7.25V8h-1.75", "M1.5 3.5h7.25V10H1.5z"]);
+      ["x", "y", "width", "height", "rx"].map((attribute) =>
+        exitFullscreenRect.getAttribute(attribute),
+      ),
+    ).toEqual(["1.5", "3.5", "7.25", "7", "0.5"]);
+  });
+
+  it("opens the system menu on click or context menu and closes on double click", async () => {
+    vi.useFakeTimers();
+    const harness = createWindowHarness();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const appMenuButton = harness.dom.window.document.querySelector(
+      ".rvn-window-chrome-app-menu",
+    );
+    appMenuButton.dispatchEvent(
+      new harness.dom.window.MouseEvent("click", {
+        bubbles: true,
+        detail: 1,
+      }),
+    );
+    await vi.advanceTimersByTimeAsync(499);
+    expect(harness.invoke).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(harness.invoke).toHaveBeenCalledWith("show_windows_system_menu");
+
+    await vi.advanceTimersByTimeAsync(0);
+    harness.invoke.mockClear();
+    const contextMenuEvent = new harness.dom.window.MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+    });
+    appMenuButton.dispatchEvent(contextMenuEvent);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(contextMenuEvent.defaultPrevented).toBe(true);
+    expect(harness.invoke).toHaveBeenCalledWith("show_windows_system_menu");
+
+    harness.invoke.mockClear();
+    appMenuButton.dispatchEvent(
+      new harness.dom.window.MouseEvent("click", {
+        bubbles: true,
+        detail: 1,
+      }),
+    );
+    appMenuButton.dispatchEvent(
+      new harness.dom.window.MouseEvent("click", {
+        bubbles: true,
+        detail: 2,
+      }),
+    );
+    appMenuButton.dispatchEvent(
+      new harness.dom.window.MouseEvent("dblclick", {
+        bubbles: true,
+        cancelable: true,
+        detail: 2,
+      }),
+    );
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(harness.appWindow.close).toHaveBeenCalledOnce();
+    expect(harness.invoke).not.toHaveBeenCalled();
   });
 
   it("reveals maximized chrome within the expanded top-edge hover zone", async () => {

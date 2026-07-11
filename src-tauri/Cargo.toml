@@ -36,3 +36,9 @@ urlencoding = "2.1"
 routevn-exporter = { path = "../crates/routevn-exporter" }
 routevn-packager = { path = "../crates/routevn-packager" }
 tempfile = "3"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "=0.61.3", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+] }
