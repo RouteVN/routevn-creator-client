@@ -282,6 +282,7 @@ describe("standalone window chrome", () => {
         .map((rule) => [rule.selectorText, rule.style]),
     );
     const chromeRule = rules.get("#rvn-window-chrome");
+    const rootRule = rules.get(":root");
     const dragRegionRule = rules.get(
       "#rvn-window-chrome .rvn-window-chrome-drag-region",
     );
@@ -296,6 +297,9 @@ describe("standalone window chrome", () => {
     );
     const bodyRule = rules.get(':root[data-rvn-window-chrome="custom"] body');
 
+    expect(rootRule.getPropertyValue("--rvn-window-chrome-height")).toBe(
+      "30px",
+    );
     expect(chromeRule.getPropertyValue("background")).toBe("#202020");
     expect(chromeRule.getPropertyValue("border-bottom")).not.toBe("");
     expect(controlsRule.getPropertyValue("border-left")).toBe("");
@@ -448,12 +452,12 @@ describe("standalone window chrome", () => {
     expect(chrome.dataset.revealed).toBe("true");
 
     harness.dom.window.dispatchEvent(
-      new harness.dom.window.MouseEvent("pointermove", { clientY: 47 }),
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 46 }),
     );
     expect(chrome.dataset.revealed).toBe("true");
 
     harness.dom.window.dispatchEvent(
-      new harness.dom.window.MouseEvent("pointermove", { clientY: 49 }),
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 47 }),
     );
     expect(chrome.dataset.revealed).toBe("false");
 
@@ -513,12 +517,12 @@ describe("standalone window chrome", () => {
     expect(chrome.dataset.revealed).toBe("true");
 
     harness.dom.window.dispatchEvent(
-      new harness.dom.window.MouseEvent("pointermove", { clientY: 47 }),
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 46 }),
     );
     expect(chrome.dataset.revealed).toBe("true");
 
     harness.dom.window.dispatchEvent(
-      new harness.dom.window.MouseEvent("pointermove", { clientY: 49 }),
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 47 }),
     );
     expect(chrome.dataset.revealed).toBe("false");
 
