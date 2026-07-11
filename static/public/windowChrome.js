@@ -61,7 +61,7 @@
       backdrop-filter: blur(18px) saturate(1.2);
     }
 
-    #${WINDOW_CHROME_ID}[data-maximized="true"][data-fullscreen="false"][data-revealed="false"] {
+    #${WINDOW_CHROME_ID}[data-revealed="false"] {
       opacity: 0;
       transform: translateY(-100%);
       visibility: hidden;
@@ -362,7 +362,7 @@
       chrome.dataset.fullscreen = String(state.fullscreen);
       chrome.dataset.maximized = String(state.maximized);
       chrome.dataset.revealed = String(
-        !state.maximized || state.fullscreen || state.revealed,
+        !state.fullscreen && (!state.maximized || state.revealed),
       );
 
       if (document.documentElement.dataset.rvnWindowChrome === "custom") {

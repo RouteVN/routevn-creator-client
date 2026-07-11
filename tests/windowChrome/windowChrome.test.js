@@ -239,7 +239,7 @@ describe("standalone window chrome", () => {
       ':root[data-rvn-window-chrome="custom"][data-rvn-window-fullscreen="false"][data-rvn-window-maximized="false"]',
     );
     const maximizedHiddenRule = rules.get(
-      '#rvn-window-chrome[data-maximized="true"][data-fullscreen="false"][data-revealed="false"]',
+      '#rvn-window-chrome[data-revealed="false"]',
     );
     const bodyRule = rules.get(':root[data-rvn-window-chrome="custom"] body');
 
@@ -324,9 +324,14 @@ describe("standalone window chrome", () => {
     await flushTasks();
     expect(harness.appWindow.setFullscreen).toHaveBeenCalledWith(true);
     expect(chrome.dataset.fullscreen).toBe("true");
+    expect(chrome.dataset.revealed).toBe("false");
     expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("true");
     expect(fullscreenButton.getAttribute("aria-label")).toBe("Exit fullscreen");
     expect(fullscreenButton.hasAttribute("title")).toBe(false);
+    harness.dom.window.dispatchEvent(
+      new harness.dom.window.MouseEvent("pointermove", { clientY: 4 }),
+    );
+    expect(chrome.dataset.revealed).toBe("false");
 
     minimizeButton.click();
     await flushTasks();
