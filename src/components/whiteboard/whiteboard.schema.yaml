@@ -29,6 +29,8 @@ propsSchema:
       type: string
     minimapHeightScale:
       type: number
+    minimapTopInset:
+      type: number
 methods:
   properties:
     ensureItemVisible:

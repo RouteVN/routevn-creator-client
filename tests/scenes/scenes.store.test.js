@@ -38,6 +38,7 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.showWhiteboardConnections).toBe(false);
     expect(viewData.whiteboardMinimapPlacement).toBe("top-left");
     expect(viewData.whiteboardMinimapHeightScale).toBe(2 / 3);
+    expect(viewData.whiteboardMinimapTopInset).toBe(8);
 
     setTouchMinimapReady({ state }, { isReady: true });
     setWhiteboardConnectionsReady({ state }, { isReady: true });
@@ -66,6 +67,7 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.showWhiteboardMinimapInTouchMode).toBe(false);
     expect(viewData.whiteboardMinimapPlacement).toBe("bottom-left");
     expect(viewData.whiteboardMinimapHeightScale).toBe(1);
+    expect(viewData.whiteboardMinimapTopInset).toBeUndefined();
   });
 
   it("uses a popover on desktop and a dialog on touch for scene creation", () => {

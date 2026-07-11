@@ -3,7 +3,7 @@
 set -e
 
 PORT="3001"
-RETTANGOLI_VERSION=$(node -p "require('./package.json').dependencies['@rettangoli/ui']" 2>/dev/null || echo "1.8.2")
+RETTANGOLI_VERSION=$(node -p "require('./package.json').dependencies['@rettangoli/ui']" 2>/dev/null || echo "1.9.1")
 RETTANGOLI_VERSION="${RETTANGOLI_VERSION#^}"
 RETTANGOLI_VERSION="${RETTANGOLI_VERSION#~}"
 
