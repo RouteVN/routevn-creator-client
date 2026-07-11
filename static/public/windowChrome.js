@@ -524,6 +524,10 @@
       }
     };
 
+    const toggleFullscreen = async () => {
+      await appWindow.setFullscreen(!state.fullscreen);
+    };
+
     const openSystemMenu = async () => {
       if (!invoke) {
         throw new Error("Tauri invoke API is unavailable");
@@ -570,7 +574,7 @@
     const handleKeyDown = (event) => {
       if (event.key === "F11") {
         event.preventDefault();
-        fullscreenButton.click();
+        runWindowAction("Toggle fullscreen", toggleFullscreen);
         return;
       }
       if (event.key === "Escape" && (state.fullscreen || state.maximized)) {

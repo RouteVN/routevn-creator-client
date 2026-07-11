@@ -883,18 +883,35 @@ export const createGraphicsService = async ({
           getMissingDecodedAudioKeys(getRenderStateAudioKeys(nextRenderState)),
         );
 
-        if (!hasDeferredRenderState && remainingMissingAudioKeys.length > 0) {
-          scheduleDeferredAudioRender(
-            remainingMissingAudioKeys,
-            nextRenderState,
-          );
-          return;
-        }
-
         if (scheduledToken === deferredAudioRenderToken) {
           deferredAudioRenderKeySignature = "";
         }
-        renderEngineState(nextRenderState, {
+
+        if (!hasDeferredRenderState && remainingMissingAudioKeys.length > 0) {
+          const remainingSignature = remainingMissingAudioKeys
+            .slice()
+            .sort()
+            .join("|");
+          if (remainingSignature !== nextSignature) {
+            scheduleDeferredAudioRender(
+              remainingMissingAudioKeys,
+              nextRenderState,
+            );
+            return;
+          }
+        }
+
+        let renderStateAfterAudioDecode = nextRenderState;
+        if (remainingMissingAudioKeys.length > 0) {
+          const { renderableAudio } = splitRenderableAudio(
+            nextRenderState?.audio,
+          );
+          renderStateAfterAudioDecode = {
+            ...nextRenderState,
+            audio: renderableAudio,
+          };
+        }
+        renderEngineState(renderStateAfterAudioDecode, {
           allowDeferredAudio: false,
         });
       })

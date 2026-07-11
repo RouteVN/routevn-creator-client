@@ -222,6 +222,20 @@ describe("standalone window chrome", () => {
     );
   });
 
+  it("keeps static entry points on the packaged Rettangoli UI version", () => {
+    const rettangoliUiVersion = packageJson.dependencies["@rettangoli/ui"];
+    const rettangoliUiEntryFiles = collectIndexFiles(staticDirectory).filter(
+      (file) => readFileSync(file, "utf8").includes("/public/@rettangoli/ui@"),
+    );
+
+    expect(rettangoliUiEntryFiles.length).toBeGreaterThan(0);
+    rettangoliUiEntryFiles.forEach((file) => {
+      expect(readFileSync(file, "utf8")).toContain(
+        `/public/@rettangoli/ui@${rettangoliUiVersion}/dist/rettangoli-iife-ui.min.js`,
+      );
+    });
+  });
+
   it("registers a native Windows system-menu command", () => {
     expect(tauriCargoToml).toContain('cfg(target_os = "windows")');
     expect(tauriCargoToml).toContain('"Win32_UI_WindowsAndMessaging"');
@@ -584,11 +598,17 @@ describe("standalone window chrome", () => {
     harness.getFocusedHandler()({ payload: false });
     expect(chrome.dataset.focused).toBe("false");
 
+    harness.setMaximized(true);
+    harness.getResizedHandler()();
+    await flushTasks();
+    expect(chrome.dataset.maximized).toBe("true");
+
     harness.dom.window.dispatchEvent(
       new harness.dom.window.KeyboardEvent("keydown", { key: "F11" }),
     );
     await flushTasks();
     expect(harness.appWindow.setFullscreen).toHaveBeenLastCalledWith(true);
+    expect(harness.appWindow.unmaximize).not.toHaveBeenCalled();
     expect(fullscreenButton.getAttribute("aria-pressed")).toBe("true");
 
     harness.dom.window.dispatchEvent(
@@ -596,6 +616,7 @@ describe("standalone window chrome", () => {
     );
     await flushTasks();
     expect(harness.appWindow.setFullscreen).toHaveBeenLastCalledWith(false);
+    expect(harness.appWindow.unmaximize).toHaveBeenCalledOnce();
     expect(fullscreenButton.getAttribute("aria-pressed")).toBe("false");
     expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("false");
 
