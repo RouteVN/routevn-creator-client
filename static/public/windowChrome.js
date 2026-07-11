@@ -213,7 +213,7 @@
       stroke: currentColor;
       stroke-linecap: square;
       stroke-linejoin: miter;
-      stroke-width: 1.2;
+      stroke-width: 1;
       pointer-events: none;
     }
 
@@ -301,15 +301,15 @@
           viewBox="0 0 12 12"
           aria-hidden="true"
         >
-          <rect x="1.75" y="2" width="8.5" height="8" rx="0.5" />
+          <rect x="1.5" y="1.5" width="9" height="9" rx="1" />
         </svg>
         <svg
           class="rvn-window-chrome-icon-exit-fullscreen"
           viewBox="0 0 12 12"
           aria-hidden="true"
         >
-          <path d="M3.25 3.5V2a.5.5 0 0 1 .5-.5H10a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5H8.75" />
-          <rect x="1.5" y="3.5" width="7.25" height="7" rx="0.5" />
+          <path d="M3.5 3.5v-1a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1" />
+          <rect x="1.5" y="3.5" width="7" height="7" rx="1" />
         </svg>
       </button>
       <button

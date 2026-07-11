@@ -326,6 +326,14 @@ describe("standalone window chrome", () => {
 
     const chrome =
       harness.dom.window.document.querySelector("#rvn-window-chrome");
+    const controlIconRule = [
+      ...harness.dom.window.document.querySelector("#rvn-window-chrome-styles")
+        .sheet.cssRules,
+    ].find(
+      (rule) =>
+        rule.selectorText ===
+        "#rvn-window-chrome .rvn-window-chrome-control svg",
+    );
     const minimizePath = chrome.querySelector(
       '[data-window-action="minimize"] path',
     );
@@ -341,20 +349,21 @@ describe("standalone window chrome", () => {
     );
 
     expect(appMenuButton.hasAttribute("data-tauri-drag-region")).toBe(false);
+    expect(controlIconRule.style.getPropertyValue("stroke-width")).toBe("1");
     expect(minimizePath.getAttribute("d")).toBe("M1.5 6h9");
     expect(
       ["x", "y", "width", "height", "rx"].map((attribute) =>
         enterFullscreenRect.getAttribute(attribute),
       ),
-    ).toEqual(["1.75", "2", "8.5", "8", "0.5"]);
+    ).toEqual(["1.5", "1.5", "9", "9", "1"]);
     expect(exitFullscreenPath.getAttribute("d")).toBe(
-      "M3.25 3.5V2a.5.5 0 0 1 .5-.5H10a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5H8.75",
+      "M3.5 3.5v-1a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1",
     );
     expect(
       ["x", "y", "width", "height", "rx"].map((attribute) =>
         exitFullscreenRect.getAttribute(attribute),
       ),
-    ).toEqual(["1.5", "3.5", "7.25", "7", "0.5"]);
+    ).toEqual(["1.5", "3.5", "7", "7", "1"]);
   });
 
   it("opens the system menu on click or context menu and closes on double click", async () => {
