@@ -316,7 +316,7 @@ describe("standalone window chrome", () => {
       "background-color, color",
     );
     expect(controlRule.getPropertyValue("background-color")).toBe("#202020");
-    expect(controlRule.getPropertyValue("transition-duration")).toBe("400ms");
+    expect(controlRule.getPropertyValue("transition-duration")).toBe("100ms");
     expect(controlRule.getPropertyValue("transition-timing-function")).toBe(
       "linear",
     );

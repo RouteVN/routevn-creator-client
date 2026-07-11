@@ -171,7 +171,7 @@
       color: inherit;
       cursor: default;
       transition-property: background-color, color;
-      transition-duration: 400ms;
+      transition-duration: 100ms;
       transition-timing-function: linear;
       -webkit-app-region: no-drag;
       app-region: no-drag;
