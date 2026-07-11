@@ -167,7 +167,7 @@
       height: 100%;
       align-items: center;
       justify-content: center;
-      background-color: transparent;
+      background-color: #202020;
       color: inherit;
       cursor: default;
       transition-property: background-color, color;
@@ -179,11 +179,7 @@
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control:hover {
       transition-duration: 0ms;
-      background-color: color-mix(
-        in srgb,
-        var(--foreground, #f5f5f5) 11%,
-        transparent
-      );
+      background-color: #2d2d2d;
     }
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control:active {
@@ -209,12 +205,6 @@
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control-close:active {
       background-color: #c42b1c;
       color: #ffffff;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      #${WINDOW_CHROME_ID} .rvn-window-chrome-control {
-        transition: none;
-      }
     }
 
     #${WINDOW_CHROME_ID} .rvn-window-chrome-control svg {

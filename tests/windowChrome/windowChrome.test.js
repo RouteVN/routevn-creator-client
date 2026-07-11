@@ -315,14 +315,14 @@ describe("standalone window chrome", () => {
     expect(controlRule.getPropertyValue("transition-property")).toBe(
       "background-color, color",
     );
-    expect(controlRule.getPropertyValue("background-color")).toBe(
-      "transparent",
-    );
+    expect(controlRule.getPropertyValue("background-color")).toBe("#202020");
     expect(controlRule.getPropertyValue("transition-duration")).toBe("400ms");
     expect(controlRule.getPropertyValue("transition-timing-function")).toBe(
       "linear",
     );
-    expect(controlHoverRule.getPropertyValue("background-color")).not.toBe("");
+    expect(controlHoverRule.getPropertyValue("background-color")).toBe(
+      "#2d2d2d",
+    );
     expect(controlHoverRule.getPropertyValue("transition-duration")).toBe(
       "0ms",
     );
