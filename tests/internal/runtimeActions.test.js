@@ -8,6 +8,31 @@ import {
 } from "../../src/internal/runtimeActions.js";
 
 describe("runtimeActions", () => {
+  it.each(["setMenuPage", "setMenuEntryPoint"])(
+    "does not add placeholder text to %s",
+    (mode) => {
+      const valueField = createRuntimeActionForm(mode).fields.find(
+        (field) => field.name === "value",
+      );
+
+      expect(valueField).not.toHaveProperty("placeholder");
+    },
+  );
+
+  it.each([
+    ["setMenuPage", "settings"],
+    ["setMenuEntryPoint", "pause-menu"],
+  ])("uses the existing %s value as the form default", (mode, value) => {
+    expect(
+      createRuntimeActionDefaultValues(mode, {
+        value,
+      }),
+    ).toEqual({
+      valueSource: "fixed",
+      value,
+    });
+  });
+
   it("shows a value source segmented control for runtime value actions", () => {
     expect(createRuntimeActionForm("setMusicVolume")).toMatchObject({
       fields: [

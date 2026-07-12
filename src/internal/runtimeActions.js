@@ -21,7 +21,6 @@ const createValueActionDefinition = ({
   min,
   step,
   description,
-  placeholder,
 } = {}) => {
   const field = getRuntimeFieldItem(runtimeId);
 
@@ -34,7 +33,6 @@ const createValueActionDefinition = ({
     description: description ?? field?.description,
     defaultValue: field?.default,
     valueLabel: "Value",
-    placeholder,
     min,
     step,
   };
@@ -140,7 +138,6 @@ export const RUNTIME_ACTION_DEFINITIONS = Object.freeze({
     icon: "settings",
     runtimeId: "menuPage",
     inputType: "text",
-    placeholder: "menu-page-id",
   }),
   setMenuEntryPoint: createValueActionDefinition({
     mode: "setMenuEntryPoint",
@@ -148,7 +145,6 @@ export const RUNTIME_ACTION_DEFINITIONS = Object.freeze({
     icon: "settings",
     runtimeId: "menuEntryPoint",
     inputType: "text",
-    placeholder: "entry-point",
   }),
 });
 
@@ -235,7 +231,6 @@ const createFixedValueField = (definition) => {
     description: definition.description,
     min: definition.min,
     step: definition.step,
-    placeholder: definition.placeholder,
   };
 };
 

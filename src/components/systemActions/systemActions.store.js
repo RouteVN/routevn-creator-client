@@ -239,6 +239,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     displayActions,
     actions: actionsObject,
+    runtimeAction: actionsObject[state.mode] ?? {},
     preview,
     playingSound: state.playingSound,
     showAudioPlayer: state.showAudioPlayer,
