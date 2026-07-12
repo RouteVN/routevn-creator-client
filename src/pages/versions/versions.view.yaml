@@ -86,6 +86,8 @@ template:
                               - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                                   - rtgl-view slot=actions d=v g=sm w=f:
                                       - rtgl-button#detailDownloadBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
+                                      - $if canExportWindowsExecutable:
+                                          - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
@@ -99,6 +101,8 @@ template:
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-view slot=actions d=v g=sm w=f:
                           - rtgl-button#detailDownloadBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
+                          - $if canExportWindowsExecutable:
+                              - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
   - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md:
       - rtgl-view slot=content w=f:
           - rtgl-form#versionForm :form=${versionForm} w=f: null
