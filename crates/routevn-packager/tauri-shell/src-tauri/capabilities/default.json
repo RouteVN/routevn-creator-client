@@ -7,6 +7,11 @@
     "core:default",
     "core:window:allow-set-title",
     "core:window:allow-set-icon",
-    "core:window:allow-show"
+    "core:window:allow-show",
+    "sql:default",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "sql:allow-select",
+    "sql:allow-close"
   ]
 }

@@ -577,7 +577,8 @@ and native save-identity concepts:
 - native Windows player save identity
   - source of truth is the stable Tauri application identifier
   - one identifier represents exactly one game
-  - native runtime data is stored in one unpartitioned app-local `runtime.db`
+  - native runtime data is stored in one unpartitioned app-config `runtime.db`
+    (`%APPDATA%` on Windows)
   - `projectInfo.namespace` is not a native SQLite partition key
 
 Do not collapse these into one field.
@@ -586,7 +587,7 @@ Do not collapse these into one field.
 - bundler metadata answers: "Which app/version produced this artifact?"
 - browser bundle namespace answers: "Which IndexedDB save bucket belongs to
   this browser-hosted game?"
-- native Windows identifier answers: "Which app-local `runtime.db` belongs to
+- native Windows identifier answers: "Which app-config `runtime.db` belongs to
   this installed game?"
 
 The native Windows persistence contract is defined in

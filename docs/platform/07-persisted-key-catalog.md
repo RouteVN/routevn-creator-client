@@ -176,10 +176,10 @@ These rows are projection caches/checkpoints, not user-facing config.
 The native Windows player stores Route Engine runtime persistence in:
 
 ```text
-<Tauri app local data directory>/runtime.db
+<Tauri app config directory>/runtime.db
 ```
 
-The `persistence_values` table uses these key ids:
+The generic `kv` table uses these key ids:
 
 - `saveSlots:<slotId>`
   - one row per save slot
@@ -197,15 +197,17 @@ The `persistence_values` table uses these key ids:
   - value: viewed section frontiers and viewed resource ids in `sections` and
     `resources` arrays
 
-All `persistence_values.value_json` roots are JSON objects. Values are
+All RouteVN `kv.value` roots are JSON objects encoded as valid JSON text. Values are
 key-specifically validated before a write and again on load. Invalid values are
 not converted to `{}`. In particular, a `saveSlots:<slotId>` row is rejected if
 its nested save state is malformed or its internal `slotId` does not identify
 the physical key's suffix.
 
-Schema version 1 has no `persistence_metadata` table and no internal metadata
-keys. `PRAGMA user_version` is the only database schema version. The native
-Windows player does not read or import existing IndexedDB runtime data.
+Schema version 1 has no persistence metadata table and no internal metadata
+keys. `PRAGMA user_version` is the only database schema version. The Windows
+JavaScript adapter owns RouteVN semantic validation; Rust only registers the
+generic Tauri SQL plugin. The native Windows player does not read or import
+existing IndexedDB runtime data.
 
 The database belongs to one game identified by the Tauri application
 identifier. None of these keys are additionally prefixed or partitioned by

@@ -82,7 +82,10 @@ data. Its implementation contract is recorded in
 
 Storage location:
 
-- `<Tauri app local data directory>/runtime.db`
+- `<Tauri app config directory>/runtime.db`
+
+On Windows this is the roaming application-data tree (`%APPDATA%`) resolved by
+the Tauri SQL plugin from `sqlite:runtime.db`.
 
 This database is scoped by the Tauri application identifier. One identifier
 represents one game, so `runtime.db` has no project-id or namespace partition.

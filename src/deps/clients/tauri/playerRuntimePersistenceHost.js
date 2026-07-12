@@ -1,100 +1,131 @@
-(() => {
-  const emptyObject = () => ({});
+import {
+  ACCOUNT_VIEWED_REGISTRY_KEY,
+  GLOBAL_ACCOUNT_VARIABLES_KEY,
+  GLOBAL_DEVICE_VARIABLES_KEY,
+  GLOBAL_RUNTIME_KEY,
+  applyScopedDataUpdates as applyPlayerScopedDataUpdates,
+  cloneJsonValue,
+  createEmptyPlayerPersistenceState,
+  createSaveSlotsBatch,
+  persistenceRowsToState,
+  snapshotPlayerPersistenceValue,
+  snapshotSaveSlots,
+  snapshotScopedDataUpdates,
+} from "../../../internal/playerRuntimePersistence.js";
+import { createDb } from "./db.js";
 
-  const isPlainObject = (value) =>
-    Object.prototype.toString.call(value) === "[object Object]";
+const PLAYER_RUNTIME_DATABASE_PATH = "sqlite:runtime.db";
+const PLAYER_RUNTIME_SCHEMA_VERSION = 1;
 
-  const requirePlainObject = (value, label) => {
-    if (!isPlainObject(value)) {
-      throw new Error(`${label} must be a JSON object.`);
-    }
+const FIELD_BY_PERSISTENCE_KEY = Object.freeze({
+  [GLOBAL_DEVICE_VARIABLES_KEY]: "globalDeviceVariables",
+  [GLOBAL_ACCOUNT_VARIABLES_KEY]: "globalAccountVariables",
+  [GLOBAL_RUNTIME_KEY]: "globalRuntime",
+  [ACCOUNT_VIEWED_REGISTRY_KEY]: "accountViewedRegistry",
+});
 
-    return value;
-  };
-
-  const normalizeObjectField = (value, label) =>
-    value === undefined ? emptyObject() : requirePlainObject(value, label);
-
-  const normalizePersistence = (value = {}) => {
-    const persistence = requirePlainObject(value, "Player persistence");
-    return {
-      saveSlots: normalizeObjectField(
-        persistence.saveSlots,
-        "Player persistence saveSlots",
-      ),
-      globalDeviceVariables: normalizeObjectField(
-        persistence.globalDeviceVariables,
-        "Player persistence globalDeviceVariables",
-      ),
-      globalAccountVariables: normalizeObjectField(
-        persistence.globalAccountVariables,
-        "Player persistence globalAccountVariables",
-      ),
-      globalRuntime: normalizeObjectField(
-        persistence.globalRuntime,
-        "Player persistence globalRuntime",
-      ),
-      accountViewedRegistry: normalizeObjectField(
-        persistence.accountViewedRegistry,
-        "Player persistence accountViewedRegistry",
-      ),
-    };
-  };
-
-  const invoke = (command, args) => {
-    const tauriInvoke = globalThis.__TAURI__?.core?.invoke;
-    if (typeof tauriInvoke !== "function") {
-      throw new Error("The native RouteVN player bridge is unavailable.");
-    }
-
-    return tauriInvoke(command, args);
-  };
-
-  const saveValue = (key, value) =>
-    invoke("save_player_persistence_value", {
-      key,
-      value: requirePlainObject(value, `Player persistence ${key}`),
+export const createPlayerRuntimePersistenceHost = ({
+  createDatabase = createDb,
+} = {}) => ({
+  createPersistence() {
+    const db = createDatabase({
+      path: PLAYER_RUNTIME_DATABASE_PATH,
+      durability: "full",
+      schemaVersion: PLAYER_RUNTIME_SCHEMA_VERSION,
     });
+    let state = createEmptyPlayerPersistenceState();
+    let stateLoaded = false;
+    let initializationPromise;
+    let operationQueue = Promise.resolve();
 
-  const createPersistence = () => ({
-    kind: "native-sqlite",
+    const enqueue = (operation) => {
+      const nextOperation = operationQueue.then(operation);
+      operationQueue = nextOperation.catch(() => {});
+      return nextOperation;
+    };
 
-    async load() {
-      return normalizePersistence(await invoke("load_player_persistence"));
-    },
+    const ensureInitialized = async () => {
+      initializationPromise ??= db.init();
+      await initializationPromise;
+    };
 
-    clear() {
-      return invoke("clear_player_persistence");
-    },
+    const reloadState = async () => {
+      await ensureInitialized();
+      stateLoaded = false;
+      const nextState = persistenceRowsToState(await db.list());
+      state = nextState;
+      stateLoaded = true;
+    };
 
-    saveSlots(value) {
-      return invoke("save_player_save_slots", {
-        saveSlots: requirePlainObject(value, "Player persistence saveSlots"),
-      });
-    },
-
-    saveGlobalDeviceVariables(value) {
-      return saveValue("globalDeviceVariables", value);
-    },
-
-    saveGlobalAccountVariables(value) {
-      return saveValue("globalAccountVariables", value);
-    },
-
-    saveGlobalRuntime(value) {
-      return saveValue("globalRuntime", value);
-    },
-
-    applyScopedDataUpdates(updates = []) {
-      if (!Array.isArray(updates)) {
-        throw new Error("applyScopedDataUpdates requires an updates array.");
+    const ensureStateLoaded = async () => {
+      if (!stateLoaded) {
+        await reloadState();
       }
+    };
 
-      return invoke("apply_player_scoped_data_updates", { updates });
-    },
-  });
+    const saveFixedValue = (key, value) => {
+      const snapshot = snapshotPlayerPersistenceValue(key, value);
+      return enqueue(async () => {
+        await ensureStateLoaded();
+        await db.set(key, snapshot);
+        state[FIELD_BY_PERSISTENCE_KEY[key]] = snapshot;
+      });
+    };
 
-  globalThis.__ROUTEVN_PLAYER_HOST__ = Object.freeze({
-    createPersistence,
-  });
-})();
+    return {
+      kind: "native-sqlite",
+
+      load() {
+        return enqueue(async () => {
+          await reloadState();
+          return cloneJsonValue(state, "Loaded player persistence");
+        });
+      },
+
+      clear() {
+        return enqueue(async () => {
+          await ensureInitialized();
+          await db.clear();
+          state = createEmptyPlayerPersistenceState();
+          stateLoaded = true;
+        });
+      },
+
+      saveSlots(value) {
+        const snapshot = snapshotSaveSlots(value);
+        return enqueue(async () => {
+          await ensureStateLoaded();
+          const batch = createSaveSlotsBatch(state.saveSlots, snapshot);
+          await db.applyBatch(batch);
+          state.saveSlots = snapshot;
+        });
+      },
+
+      saveGlobalDeviceVariables(value) {
+        return saveFixedValue(GLOBAL_DEVICE_VARIABLES_KEY, value);
+      },
+
+      saveGlobalAccountVariables(value) {
+        return saveFixedValue(GLOBAL_ACCOUNT_VARIABLES_KEY, value);
+      },
+
+      saveGlobalRuntime(value) {
+        return saveFixedValue(GLOBAL_RUNTIME_KEY, value);
+      },
+
+      applyScopedDataUpdates(updates = []) {
+        const snapshot = snapshotScopedDataUpdates(updates);
+        return enqueue(async () => {
+          await ensureStateLoaded();
+          const result = applyPlayerScopedDataUpdates(state, snapshot);
+          await db.applyBatch({ puts: result.puts });
+          state = result.nextState;
+        });
+      },
+    };
+  },
+});
+
+globalThis.__ROUTEVN_PLAYER_HOST__ = Object.freeze(
+  createPlayerRuntimePersistenceHost(),
+);

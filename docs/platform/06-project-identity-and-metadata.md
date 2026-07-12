@@ -109,7 +109,7 @@ Important details:
 - the identifier must stay stable across releases of that game
 - a different game must not reuse the identifier
 - the native player stores one unpartitioned `runtime.db` in its Tauri app
-  local data directory
+  config directory; on Windows this is under `%APPDATA%`
 - the database does not use `projectInfo.namespace`, `projectInfo.id`, title,
   executable path, or release version as a partition key
 

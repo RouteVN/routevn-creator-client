@@ -101,12 +101,15 @@ const stagePlayerFrontend = async () => {
   const bundleMainJsPath = path.join(rootDir, "static/bundle/main.js");
   const persistenceHostPath = path.join(
     rootDir,
-    "src/deps/clients/tauri/playerRuntimePersistenceHost.js",
+    "static/bundle/player-runtime-persistence-host.js",
   );
 
-  if (!(await pathExists(bundleMainJsPath))) {
+  if (
+    !(await pathExists(bundleMainJsPath)) ||
+    !(await pathExists(persistenceHostPath))
+  ) {
     throw new Error(
-      "static/bundle/main.js is missing. Run `bun run build:bundle` first.",
+      "The player frontend bundles are missing. Run `bun run build:bundle` first.",
     );
   }
 

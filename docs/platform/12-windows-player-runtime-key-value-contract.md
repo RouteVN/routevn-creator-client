@@ -14,7 +14,7 @@ This contract is deliberately explicit because these rows contain player save
 data. A value that does not satisfy this document must not be written.
 
 The database location, single-game identity decision, durability settings,
-native command boundary, and SQLite-only startup policy are defined in
+JavaScript/Rust ownership boundary, and SQLite-only startup policy are defined in
 `11-windows-player-runtime-persistence.md`.
 
 ## Identity And Namespace Rule
@@ -40,15 +40,14 @@ saveSlots:1
 
 ## SQLite Row Contract
 
-`persistence_values` has one row per independently persisted value:
+`kv` has one row per independently persisted value:
 
-| Column       | Contract                                          |
-| ------------ | ------------------------------------------------- |
-| `key`        | One supported fixed key or `saveSlots:<slotId>`   |
-| `value_json` | Syntactically valid JSON whose root is an object  |
-| `updated_at` | Non-negative Unix epoch timestamp in milliseconds |
+| Column  | Contract                                                         |
+| ------- | ---------------------------------------------------------------- |
+| `key`   | One supported fixed key or `saveSlots:<slotId>`                  |
+| `value` | Text containing syntactically valid JSON whose root is an object |
 
-The supported `persistence_values.key` values are:
+The supported `kv.key` values are:
 
 | Physical key             |  Cardinality | JSON value                            |
 | ------------------------ | -----------: | ------------------------------------- |
@@ -79,7 +78,7 @@ Rules:
 - `<slotId>` must not be empty.
 - A slot ID may be a non-empty JSON string or a JavaScript-safe integer.
 - Numeric slot IDs use their base-10 string form in the physical key.
-- The `slotId` inside `value_json` must identify the same slot as the key
+- The `slotId` inside `value` must identify the same slot as the key
   suffix.
 - The prefix and capitalization are exact.
 
@@ -112,7 +111,7 @@ The Route Engine adapter call still receives an aggregate snapshot:
 The native adapter validates that complete snapshot and writes two physical
 rows:
 
-| Physical key  | `value_json` root          |
+| Physical key  | `value` root               |
 | ------------- | -------------------------- |
 | `saveSlots:1` | `saveEntryForSlot1` itself |
 | `saveSlots:2` | `saveEntryForSlot2` itself |
@@ -256,7 +255,8 @@ global variables, render snapshots, timers, or other transient state are not
 allowed.
 
 `configuration`, each `views` entry, and `bgm` are engine-owned JSON objects.
-The native layer validates their container types. When `bgm.resourceId` is
+The Windows JavaScript adapter validates their container types. When
+`bgm.resourceId` is
 present, it must be a string.
 
 ### Read Pointer
@@ -271,10 +271,10 @@ present, it must be a string.
 closed.
 
 The native storage layer cannot prove that these IDs exist in the exported
-project because project data is not passed into persistence commands. Route
+project because project data is not passed into persistence calls. Route
 Engine performs that referential check against the current `projectData` when
-it hydrates or loads a slot. The native layer still validates the complete JSON
-shape and pointer consistency before storage.
+it hydrates or loads a slot. The Windows JavaScript adapter still validates the
+complete JSON shape and pointer consistency before storage.
 
 ### Context Variables
 
@@ -294,11 +294,12 @@ Variable IDs must be non-empty. A variable's top-level value must not be
 `null`. Nested object or array data may contain `null` because that remains a
 valid object-variable payload.
 
-The native database does not receive the game's variable configuration, so it
+The Windows persistence adapter does not receive the game's variable
+configuration, so it
 cannot determine whether a particular ID was authored as a string, number,
 boolean, or object variable. Route Engine validates that configured type before
-it emits persistence updates. The native layer validates the complete allowed
-JSON value domain and rejects `null` or non-JSON values.
+it emits persistence updates. The Windows JavaScript adapter validates the
+complete allowed JSON value domain and rejects `null` or non-JSON values.
 
 ### Context Runtime
 
@@ -505,7 +506,7 @@ version or browser-migration marker is stored.
 
 `applyScopedDataUpdates` does not create another physical key. It modifies
 `globalDeviceVariables`, `globalAccountVariables`, or
-`accountViewedRegistry` transactionally.
+`accountViewedRegistry` atomically.
 
 ### Variable Set
 
@@ -560,35 +561,42 @@ Rules:
 - Entry objects are closed and their IDs are non-empty strings.
 - `lineId` is optional; when present it is a non-empty string.
 
-The operations in one call are ordered. The Rust adapter validates the complete
-batch and builds the resulting values before issuing any SQL write. If any
-operation is invalid, no operation in the batch commits.
+The operations in one call are ordered. The Windows JavaScript adapter clones
+and validates the complete batch, then builds every resulting aggregate value
+before issuing one generic KV batch. If any operation is invalid, no SQL write
+begins.
 
 ## Validation Pipeline
 
 Every write passes through all applicable layers:
 
-1. The Windows JavaScript host requires object-shaped persistence payloads. It
-   does not silently convert arrays, strings, `null`, or other invalid values to
-   `{}`.
-2. The Tauri command boundary and `serde_json` accept only syntactically valid
-   JSON values.
-3. Rust validates the key-specific semantic contract in this document.
-4. Multi-value operations validate their complete snapshot or batch before any
-   SQL mutation. SQLite transactions provide a second all-or-nothing boundary.
-5. SQLite `CHECK` constraints require a supported key, a valid object-root JSON
-   document, and a non-negative `updated_at` value.
-6. Every value is parsed and semantically validated again on load before it is
-   returned to Route Engine.
+1. The Windows JavaScript adapter performs a strict recursive JSON clone. It
+   rejects `undefined`, functions, symbols, `BigInt`, non-finite numbers,
+   cycles, non-JSON object instances, sparse arrays, symbol-keyed properties,
+   and values whose serialization would silently discard data.
+2. JavaScript validates the exact physical key plus the key-specific semantic
+   contract in this document. Object roots, required fields, closed objects,
+   safe integers, slot identity, and pointer consistency are checked here.
+3. Multi-value operations validate their complete snapshot or batch before any
+   queued SQL mutation. The adapter computes all resulting values only after
+   that complete validation succeeds.
+4. The shared `createDb` client serializes each value as JSON. SQLite's
+   `json_valid(value)` check is a final syntax boundary.
+5. A save-slot or scoped-update batch is issued as one SQLite statement, so all
+   of its puts and physical deletes succeed or fail together.
+6. Every stored value is parsed and semantically validated again on load before
+   it is returned to Route Engine.
 
-The SQLite checks are defense in depth. They do not replace the Rust semantic
-validator because SQLite cannot express the complete nested save-slot contract.
+The generic SQLite schema cannot express the complete key catalog or nested
+save-slot contract. Its JSON check is defense in depth and does not replace the
+JavaScript semantic validator. Rust does not perform application validation.
 
 ## Rejection And Atomicity Rules
 
 When validation fails:
 
-- the command returns an error
+- malformed supplied write data throws synchronously before storage work is
+  queued
 - no invalid value is inserted or updated
 - `saveSlots(...)` does not delete an omitted old slot or update any valid slot
   from the same rejected snapshot
@@ -601,13 +609,15 @@ with `{}`.
 
 ## Row Update Semantics
 
-- A changed row receives a new `updated_at` timestamp.
-- An unchanged row is not rewritten and keeps its existing timestamp.
+- There is no persisted row timestamp or `updated_at` column.
+- An unchanged save-slot row is not rewritten.
 - `saveSlots(...)` deletes physical slot rows absent from a valid incoming slot
-  snapshot and upserts changed/present slots in the same transaction.
+  snapshot and upserts changed/present slots in one atomic SQLite statement.
 - Deleting a slot is represented by its absence from the valid aggregate
   snapshot, not by storing `null`.
-- `clear()` deletes all `persistence_values` rows in one transaction.
+- SQL `NULL` is used only as an internal batch-delete marker and is removed by
+  an SQLite trigger in the same statement; it is not a committed JSON value.
+- `clear()` deletes all `kv` rows in one SQLite statement.
 
 ## Versioning Rules
 
@@ -619,8 +629,9 @@ current and only accepted version is `1`.
 
 Changing this contract requires coordinated changes:
 
-- adding or removing a physical fixed key requires a SQLite schema migration,
-  Rust validation, adapter coverage, tests, and this document
+- adding or removing a physical fixed key requires JavaScript validation and
+  mapping changes, adapter coverage, tests, and this document; the generic KV
+  schema does not itself enumerate RouteVN keys
 - changing required slot state or context fields requires an explicit save
   format compatibility decision and normally a `formatVersion` change
 - changing table columns or SQLite constraints requires a `user_version`
@@ -628,27 +639,34 @@ Changing this contract requires coordinated changes:
 - adding a scoped operation requires an explicit operation name and validation;
   existing operations must not be overloaded with a new meaning
 - adding a persisted global runtime field requires Route Engine's persisted
-  runtime catalog, Rust validation, defaults, tests, and this document to move
-  together
+  runtime catalog, JavaScript validation, defaults, tests, and this document to
+  move together
 
 Do not broaden validation ad hoc to make a malformed row load. Compatibility
 must be named, tested, and documented.
 
 ## Canonical Implementation And Tests
 
-- Rust schema, validation, transactions, and read validation:
-  `crates/routevn-packager/tauri-shell/src-tauri/src/player_persistence.rs`
-- Windows JavaScript host boundary:
+- RouteVN key/value validation, mapping, and read validation:
+  `src/internal/playerRuntimePersistence.js`
+- Windows JavaScript host adapter:
   `src/deps/clients/tauri/playerRuntimePersistenceHost.js`
-- Native command wiring:
+- generic SQLite KV operations and atomic batch statement:
+  `src/deps/clients/tauri/db.js`
+- generic SQL plugin registration:
   `crates/routevn-packager/tauri-shell/src-tauri/src/lib.rs`
+- player SQL permissions:
+  `crates/routevn-packager/tauri-shell/src-tauri/capabilities/default.json`
+- semantic contract tests:
+  `tests/internal/playerRuntimePersistence.test.js`
 - JavaScript host tests:
   `tests/tauri/playerRuntimePersistenceHost.test.js`
+- shared KV tests: `tests/tauri/db.locking.test.js`
 - Route Engine source contract pinned by this app:
   `route-engine-js@1.26.1`
 
-The Rust tests cover valid numeric and named slots, each nested malformed slot
-family, fixed-key value validation, malformed scoped updates, rejected
-multi-slot snapshots, invalid JSON at the SQLite boundary, semantic validation
-on load, the absence of a metadata table, and preservation of corrupt rows for
-diagnosis.
+The JavaScript tests cover valid numeric and named slots, every nested malformed
+slot family, fixed-key validation, malformed scoped updates, complete-batch
+rejection, strict JSON validation, semantic validation on load, per-slot row
+diffs, atomic generic KV batches, failed-write cache behavior, and preservation
+of corrupt rows for diagnosis.

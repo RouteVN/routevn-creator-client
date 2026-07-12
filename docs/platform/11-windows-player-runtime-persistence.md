@@ -6,46 +6,63 @@ Status: implemented.
 
 ## Purpose
 
-This document defines durable runtime persistence for an exported Windows
-player. It covers save slots, persistent variables, runtime preferences, and
-viewed-state data produced while playing an exported game.
+This document defines the architecture and ownership boundaries for durable
+runtime persistence in an exported Windows player. The exact physical keys and
+JSON value contracts are normative in
+`12-windows-player-runtime-key-value-contract.md`.
 
-This contract is specific to the native Windows player. Browser-hosted bundle
-persistence remains a separate platform contract.
+Browser-hosted bundle persistence remains a separate platform contract.
 
 ## Decision
 
 - An exported Windows player is a single-game native application.
 - Its Tauri application identifier is its durable game identity.
 - One application identifier must identify exactly one game.
-- The player stores runtime data in one native SQLite database named
-  `runtime.db`.
+- The player stores runtime data in one SQLite database named `runtime.db`.
 - The database is not partitioned by project id, namespace, title, executable
-  path, or release version.
-- The Windows player must not use WebView IndexedDB for runtime persistence.
-- The Windows player does not read, import, migrate, dual-write, or delete
-  browser IndexedDB runtime data.
+  path, player profile, or release version.
+- Runtime values use the existing generic JavaScript SQLite KV client.
+- RouteVN key mapping, JSON validation, save-slot synchronization, and scoped
+  update logic are JavaScript application concerns.
+- Rust registers the generic Tauri SQL plugin. It does not implement RouteVN
+  persistence commands or understand RouteVN persistence values.
+- The Windows player must not use, read, import, migrate, dual-write, or delete
+  WebView IndexedDB runtime data.
 
-The canonical database location is:
+## Database Location
 
-```text
-<Tauri app local data directory>/runtime.db
-```
-
-On Windows this resolves conceptually to:
-
-```text
-%LOCALAPPDATA%/<tauri-identifier>/runtime.db
-```
-
-For the current shell identifier, that is:
+The Windows host opens this plugin URL:
 
 ```text
-%LOCALAPPDATA%/vn.routevn.shell/runtime.db
+sqlite:runtime.db
 ```
 
-The path must be resolved through Tauri rather than assembled from environment
-variables in frontend JavaScript.
+For a relative SQLite URL, the pinned Tauri SQL plugin resolves the file under
+Tauri's application config directory. The canonical location is therefore:
+
+```text
+<Tauri app config directory>/runtime.db
+```
+
+On Windows this resolves conceptually to the roaming application-data tree:
+
+```text
+%APPDATA%/<tauri-identifier>/runtime.db
+```
+
+For the current shell identifier, the conceptual path is:
+
+```text
+%APPDATA%/vn.routevn.shell/runtime.db
+```
+
+The adapter passes only `sqlite:runtime.db` to the plugin. It must not assemble
+an `%APPDATA%` path from environment variables. The SQL plugin and Tauri path
+resolver own the platform-specific path.
+
+SQLite may create `runtime.db-wal` and `runtime.db-shm` beside the database
+while the player is running. They are normal SQLite sidecars, not separate save
+identities.
 
 ## Application Identifier Invariant
 
@@ -59,69 +76,34 @@ Required behavior:
   identity
 - a different game must not reuse the same identifier
 
-`vn.routevn.shell` therefore represents one game identity. If the export
-system supports installing multiple independent games on the same Windows user
-account, it must give each game a stable, unique Tauri identifier at the native
-packaging boundary. Adding a namespace column to `runtime.db` is not the
-replacement for that invariant.
+The reusable template currently uses `vn.routevn.shell` for every export, so
+those exports share this database path until per-game identifier stamping is
+implemented. This is an accepted temporary packaging limitation. The later
+packaging change must assign each game a stable unique Tauri identifier; it
+must not add a namespace inside `runtime.db` as a substitute.
 
 `projectInfo.namespace` and `bundleMetadata.project.namespace` are not native
-Windows database keys. They may remain relevant to browser-hosted bundle
-persistence, where multiple bundles can share one browser origin.
+Windows database keys. They remain relevant only to contracts such as a web
+host where multiple bundles may share one browser origin.
 
-## SQLite Schema
+## Ownership Boundary
 
-The initial database stores each save slot as its own JSON row and keeps the
-remaining Route Engine persistence values in separate aggregate rows:
+The runtime path is:
 
-```sql
-CREATE TABLE persistence_values (
-  key TEXT PRIMARY KEY CHECK (
-    key IN (
-      'globalDeviceVariables',
-      'globalAccountVariables',
-      'globalRuntime',
-      'accountViewedRegistry'
-    )
-    OR key GLOB 'saveSlots:?*'
-  ),
-  value_json TEXT NOT NULL CHECK (
-    json_valid(value_json)
-    AND json_type(value_json) = 'object'
-  ),
-  updated_at INTEGER NOT NULL CHECK (updated_at >= 0)
-);
+```text
+Route Engine persistence interface
+  -> Windows JavaScript host adapter
+  -> JavaScript RouteVN key/value validation and mapping
+  -> shared JavaScript createDb KV client
+  -> generic Tauri SQL plugin
+  -> SQLite runtime.db
 ```
 
-Schema version 1 has one application table: `persistence_values`. It has no
-metadata table and no metadata keys. Use `PRAGMA user_version` as the database
-schema version.
+Responsibilities are intentionally split as follows.
 
-Save-slot keys use the exact shape `saveSlots:<slotId>`, for example
-`saveSlots:1`, `saveSlots:2`, or `saveSlots:auto`.
+### Route Engine
 
-The complete normative key and JSON value contract is defined in
-`12-windows-player-runtime-key-value-contract.md`. That document is the source
-of truth for required fields, allowed types, closed and extensible objects,
-slot-key/value identity, scoped update payloads, and rejection behavior.
-
-Keeping these values in separate rows has three important properties:
-
-- saving one slot does not rewrite other slots or their thumbnails
-- frequently updated variables or viewed state do not rewrite save-slot
-  thumbnails
-- the persisted JSON shapes stay aligned with the Route Engine persistence
-  adapter contract
-
-A missing aggregate row loads as an empty object. Save-slot rows are combined
-into the `saveSlots` object expected by Route Engine. Invalid JSON, an
-unsupported schema version, or a corrupt database is an explicit load failure;
-the player must not silently replace it with an empty database.
-
-## Runtime Adapter Contract
-
-The Windows adapter must implement the persistence interface expected by Route
-Engine:
+Route Engine calls only its persistence interface:
 
 - `load()`
 - `clear()`
@@ -131,31 +113,109 @@ Engine:
 - `saveGlobalRuntime(globalRuntime)`
 - `applyScopedDataUpdates(updates)`
 
-The shared player runtime should receive this adapter as a host dependency.
-The web host may supply IndexedDB persistence; the Windows host supplies the
-native SQLite adapter.
+It does not receive a database path, SQL statements, or the generic KV client.
 
-Frontend JavaScript must not receive a database path or a generic SQL
-connection. It calls narrow Tauri commands, and the Rust player shell owns:
+### Windows JavaScript Adapter
 
-- app-local path resolution
-- database creation and schema migration
-- SQL statements and transactions
-- validation of persistence keys and scoped updates
-- locking, retry, and error translation
+The Windows adapter owns all application semantics:
 
-The implemented command boundary is:
+- exact supported physical key names
+- one-row-per-slot expansion and reconstruction
+- complete pre-write JSON validation
+- semantic validation for each key family
+- revalidation of every loaded row
+- save-slot diffing
+- ordered scoped-update interpretation
+- in-memory persistence state used to calculate scoped updates
+- mapping complete adapter calls to generic KV operations
 
-- `load_player_persistence`
-- `clear_player_persistence`
-- `save_player_save_slots`
-- `save_player_persistence_value`
-- `apply_player_scoped_data_updates`
+Validation is synchronous at the public adapter boundary. A malformed payload
+throws before database initialization or any queued SQLite mutation begins.
+
+The adapter serializes its calls. It updates its cached state only after the
+corresponding SQLite operation succeeds. A failed write therefore cannot make
+later calls believe an uncommitted value was stored.
+
+### Shared JavaScript SQLite Client
+
+`src/deps/clients/tauri/db.js` is storage-generic. It owns:
+
+- loading a managed Tauri SQL connection
+- SQLite busy timeout and lock retry
+- operation serialization per client instance
+- creation of the generic `kv` table
+- JSON serialization and parsing
+- `get`, `set`, `remove`, `list`, `clear`, and atomic `applyBatch` operations
+- optional durability and schema-version checks
+
+The shared client must not contain RouteVN player key names, save-slot shapes,
+viewed-registry logic, or Route Engine concepts.
+
+### Rust Player Shell
+
+Rust owns native-shell integration only:
+
+- registers `tauri_plugin_sql`
+- grants the required SQL plugin capabilities
+- retains the native embedded-package commands used to read the packaged game
+
+There are no `load_player_persistence`, `save_player_persistence_value`,
+`save_player_save_slots`, `clear_player_persistence`, or
+`apply_player_scoped_data_updates` Rust commands. There is no RouteVN-specific
+Rust SQLite module.
+
+## SQLite Schema
+
+Schema version 1 uses the same generic table contract as the Creator's shared
+SQLite KV client:
+
+```sql
+CREATE TABLE IF NOT EXISTS kv (
+  key TEXT PRIMARY KEY,
+  value TEXT CHECK (value IS NULL OR json_valid(value))
+);
+```
+
+Committed RouteVN rows always have a non-null, syntactically valid JSON text
+value. SQL `NULL` is reserved as the internal delete marker for one-statement
+atomic batches. These triggers remove that marker in the same SQLite statement:
+
+```sql
+CREATE TRIGGER IF NOT EXISTS kv_delete_null_after_insert
+AFTER INSERT ON kv
+WHEN NEW.value IS NULL
+BEGIN
+  DELETE FROM kv WHERE key = NEW.key;
+END;
+
+CREATE TRIGGER IF NOT EXISTS kv_delete_null_after_update
+AFTER UPDATE OF value ON kv
+WHEN NEW.value IS NULL
+BEGIN
+  DELETE FROM kv WHERE key = NEW.key;
+END;
+```
+
+The generic SQL schema deliberately does not enumerate RouteVN keys. The
+JavaScript player contract allows only the fixed keys and `saveSlots:<slotId>`
+keys documented in `12-windows-player-runtime-key-value-contract.md`.
+
+Schema version is `PRAGMA user_version = 1`. A nonzero version other than `1`
+is an explicit open failure. There is no metadata table and no metadata key.
 
 ## Write And Durability Contract
 
-Use these SQLite settings unless a tested platform constraint requires a
-documented change:
+The player creates the shared client with:
+
+```js
+createDb({
+  path: "sqlite:runtime.db",
+  durability: "full",
+  schemaVersion: 1,
+});
+```
+
+That applies:
 
 ```sql
 PRAGMA journal_mode = WAL;
@@ -165,74 +225,65 @@ PRAGMA busy_timeout = 5000;
 
 Additional rules:
 
-- every payload is parsed and semantically validated before any SQL mutation
-- every stored value is validated again when it is loaded
-- invalid payloads are rejected; they are never converted to `{}` and saved
-- one invalid item rejects the complete adapter call, including all slot
-  deletes/updates or all scoped operations in that call
-- each adapter call resolves only after its transaction commits
-- `saveSlots(saveSlots)` synchronizes `saveSlots:<slotId>` rows in one
-  transaction; unchanged slots retain their existing row and timestamp
-- `applyScopedDataUpdates` applies all supplied operations in order inside one
-  transaction
-- incremental scoped updates must not be last-write coalesced
-- `clear()` clears runtime values for this game without deleting or replacing
-  the executable
-- a persistence write failure must produce user-visible feedback
-- startup load failures must preserve the existing database for diagnosis and
-  recovery
+- every complete adapter payload is cloned and validated before any SQL write
+- invalid values are rejected; they are never converted to `{}` and saved
+- one invalid item rejects the entire save-slot snapshot or scoped-update batch
+- every stored row is parsed and semantically validated again on load
+- `saveSlots` puts changed slots and deletes removed slots with one atomic
+  `applyBatch` SQLite statement
+- unchanged slots are not rewritten
+- `applyScopedDataUpdates` evaluates every supplied operation in order, builds
+  all affected aggregate values, then writes them with one atomic batch
+- scoped updates are not last-write coalesced before their ordered evaluation
+- a promise resolves only after the plugin reports that SQLite operation
+  completed
+- `clear()` deletes all KV rows without deleting or replacing the executable
+- a load failure preserves the existing database and offending rows for
+  diagnosis and recovery
 
-SQLite WAL sidecar files may exist while the player is running. They are part
-of normal SQLite operation and must not be treated as separate save identities.
+The generic batch implementation passes put and delete operations as JSON to
+one `INSERT ... SELECT FROM json_each(...) ON CONFLICT DO UPDATE` statement.
+The null-delete triggers above make deletes part of that same statement. It
+does not try to simulate a transaction with separate `BEGIN`, write, and
+`COMMIT` plugin calls, because those calls are not guaranteed to use one pooled
+connection.
 
-## No Browser Storage Migration
+## Startup And No IndexedDB Migration
 
-The native Windows player is SQLite-only from its first startup. Its startup
-sequence is:
+The native Windows startup sequence is:
 
-1. Resolve the Tauri app-local data directory.
-2. Open or create `runtime.db`.
-3. Load and validate the rows in `persistence_values`.
-4. Return empty objects for missing fixed rows and an empty save-slot object
-   when no slot rows exist.
+1. Create the native persistence adapter.
+2. Open or create `sqlite:runtime.db` through the SQL plugin.
+3. Verify or initialize `PRAGMA user_version`.
+4. Load all `kv` rows.
+5. Parse and validate every physical key and value.
+6. Reconstruct the aggregate Route Engine persistence state.
+
+Missing fixed keys load as `{}`. No save-slot rows load as `saveSlots: {}`.
+Present malformed data is an error, not missing data.
 
 The native host never opens IndexedDB. Existing browser or WebView IndexedDB
-records are intentionally ignored and remain untouched. They are not imported
-into SQLite, and no migration-completion marker is stored. This also means a
-first native run starts with empty runtime state when `runtime.db` does not yet
-contain values.
+records are intentionally ignored and left untouched. No migration marker is
+stored. A first native run starts empty unless `runtime.db` already contains
+valid values.
 
 Browser-hosted bundles continue to use their separate IndexedDB persistence
-contract. Removing native migration support does not change browser-hosted
-storage.
-
-## Platform Boundary
-
-Windows native player:
-
-```text
-Tauri identifier -> app local data directory -> runtime.db
-```
-
-Browser-hosted bundle:
-
-```text
-browser origin + bundle namespace -> IndexedDB record
-```
-
-The two hosts share the Route Engine persistence interface, not the storage
-technology or identity mechanism.
+contract. The two hosts share the Route Engine interface, not storage identity
+or storage technology.
 
 ## Canonical Implementation Areas
 
 - shared bundle player runtime: `scripts/main.js`
-- Windows persistence host adapter:
+- Windows persistence host:
   `src/deps/clients/tauri/playerRuntimePersistenceHost.js`
-- bundle/player HTML selection:
-  `src/deps/services/shared/projectExportService.js`
+- RouteVN persistence validation and mapping:
+  `src/internal/playerRuntimePersistence.js`
+- shared SQLite KV client: `src/deps/clients/tauri/db.js`
+- Windows host bundle config:
+  `scripts/vite.player-runtime-host.config.js`
 - Windows template staging: `scripts/build-windows-player-template.js`
-- native SQLite implementation:
-  `crates/routevn-packager/tauri-shell/src-tauri/src/player_persistence.rs`
-- native command wiring:
+- SQL plugin registration:
   `crates/routevn-packager/tauri-shell/src-tauri/src/lib.rs`
+- SQL plugin permissions:
+  `crates/routevn-packager/tauri-shell/src-tauri/capabilities/default.json`
 - Route Engine persistence contract: `route-engine-js`
