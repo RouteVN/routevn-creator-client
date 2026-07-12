@@ -88,6 +88,8 @@ template:
                                       - rtgl-button#detailDownloadBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
                                       - $if canExportWindowsExecutable:
                                           - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
+                                      - $if canExportWindowsInstaller:
+                                          - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
@@ -103,6 +105,8 @@ template:
                           - rtgl-button#detailDownloadBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
                           - $if canExportWindowsExecutable:
                               - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
+                          - $if canExportWindowsInstaller:
+                              - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
   - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md:
       - rtgl-view slot=content w=f:
           - rtgl-form#versionForm :form=${versionForm} w=f: null
