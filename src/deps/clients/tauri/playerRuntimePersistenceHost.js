@@ -56,31 +56,11 @@
       value: requirePlainObject(value, `Player persistence ${key}`),
     });
 
-  const createPersistence = ({ createLegacyPersistence } = {}) => ({
+  const createPersistence = () => ({
     kind: "native-sqlite",
 
     async load() {
-      let loaded = await invoke("load_player_persistence");
-      if (!loaded?.legacyMigrationCompleted) {
-        let legacyState = normalizePersistence();
-
-        if (!loaded?.hasNativeValues) {
-          if (typeof createLegacyPersistence !== "function") {
-            throw new Error(
-              "The legacy player persistence reader is unavailable.",
-            );
-          }
-
-          const legacyPersistence = createLegacyPersistence();
-          legacyState = normalizePersistence(await legacyPersistence.load());
-        }
-
-        loaded = await invoke("complete_legacy_player_persistence_migration", {
-          legacyState,
-        });
-      }
-
-      return normalizePersistence(loaded?.persistence);
+      return normalizePersistence(await invoke("load_player_persistence"));
     },
 
     clear() {

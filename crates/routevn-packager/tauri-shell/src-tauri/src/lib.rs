@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::path::PathBuf;
 use tauri::Manager;
 
-use player_persistence::{PlayerPersistenceLoadResult, PlayerPersistenceState, ScopedDataUpdate};
+use player_persistence::{PlayerPersistenceState, ScopedDataUpdate};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -61,9 +61,7 @@ where
 }
 
 #[tauri::command]
-async fn load_player_persistence(
-    app: tauri::AppHandle,
-) -> Result<PlayerPersistenceLoadResult, String> {
+async fn load_player_persistence(app: tauri::AppHandle) -> Result<PlayerPersistenceState, String> {
     run_persistence_task(app, "player persistence load", |path| {
         player_persistence::load(&path)
     })
@@ -109,17 +107,6 @@ async fn apply_player_scoped_data_updates(
     .await
 }
 
-#[tauri::command]
-async fn complete_legacy_player_persistence_migration(
-    app: tauri::AppHandle,
-    legacy_state: PlayerPersistenceState,
-) -> Result<PlayerPersistenceLoadResult, String> {
-    run_persistence_task(app, "legacy player persistence migration", move |path| {
-        player_persistence::complete_legacy_migration(&path, legacy_state)
-    })
-    .await
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -130,8 +117,7 @@ pub fn run() {
             clear_player_persistence,
             save_player_save_slots,
             save_player_persistence_value,
-            apply_player_scoped_data_updates,
-            complete_legacy_player_persistence_migration
+            apply_player_scoped_data_updates
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

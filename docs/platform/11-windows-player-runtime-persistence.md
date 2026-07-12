@@ -1,6 +1,6 @@
 # 11 Windows Player Runtime Persistence
 
-Date baseline: July 10, 2026.
+Date baseline: July 12, 2026.
 
 Status: implemented.
 
@@ -23,6 +23,8 @@ persistence remains a separate platform contract.
 - The database is not partitioned by project id, namespace, title, executable
   path, or release version.
 - The Windows player must not use WebView IndexedDB for runtime persistence.
+- The Windows player does not read, import, migrate, dual-write, or delete
+  browser IndexedDB runtime data.
 
 The canonical database location is:
 
@@ -89,14 +91,11 @@ CREATE TABLE persistence_values (
   ),
   updated_at INTEGER NOT NULL CHECK (updated_at >= 0)
 );
-
-CREATE TABLE persistence_metadata (
-  key TEXT PRIMARY KEY CHECK (key = 'legacyIndexedDbMigrationCompleted'),
-  value TEXT NOT NULL CHECK (value = '1')
-);
 ```
 
-Use `PRAGMA user_version` as the database schema version.
+Schema version 1 has one application table: `persistence_values`. It has no
+metadata table and no metadata keys. Use `PRAGMA user_version` as the database
+schema version.
 
 Save-slot keys use the exact shape `saveSlots:<slotId>`, for example
 `saveSlots:1`, `saveSlots:2`, or `saveSlots:auto`.
@@ -118,10 +117,6 @@ A missing aggregate row loads as an empty object. Save-slot rows are combined
 into the `saveSlots` object expected by Route Engine. Invalid JSON, an
 unsupported schema version, or a corrupt database is an explicit load failure;
 the player must not silently replace it with an empty database.
-
-`persistence_metadata` records internal database state rather than Route Engine
-values. Schema version 1 uses
-`legacyIndexedDbMigrationCompleted = '1'` to prevent repeated legacy imports.
 
 ## Runtime Adapter Contract
 
@@ -156,7 +151,6 @@ The implemented command boundary is:
 - `save_player_save_slots`
 - `save_player_persistence_value`
 - `apply_player_scoped_data_updates`
-- `complete_legacy_player_persistence_migration`
 
 ## Write And Durability Contract
 
@@ -191,31 +185,26 @@ Additional rules:
 SQLite WAL sidecar files may exist while the player is running. They are part
 of normal SQLite operation and must not be treated as separate save identities.
 
-## Browser Storage Migration
+## No Browser Storage Migration
 
-If a released Windows player already has IndexedDB runtime data, the native
-cutover uses a one-time import:
+The native Windows player is SQLite-only from its first startup. Its startup
+sequence is:
 
-1. Open `runtime.db`.
-2. If it has no native runtime values, read the legacy IndexedDB record.
-3. Validate the complete legacy record against the native key/value contract.
-4. Expand `saveSlots` into `saveSlots:<slotId>` rows and import all persistence
-   fields in one SQLite transaction.
-5. Load the committed SQLite values into Route Engine.
-6. Stop writing to IndexedDB.
+1. Resolve the Tauri app-local data directory.
+2. Open or create `runtime.db`.
+3. Load and validate the rows in `persistence_values`.
+4. Return empty objects for missing fixed rows and an empty save-slot object
+   when no slot rows exist.
 
-Do not dual-write SQLite and IndexedDB. Do not delete the legacy IndexedDB
-record until the native import has committed and the compatibility policy
-explicitly permits deletion.
+The native host never opens IndexedDB. Existing browser or WebView IndexedDB
+records are intentionally ignored and remain untouched. They are not imported
+into SQLite, and no migration-completion marker is stored. This also means a
+first native run starts with empty runtime state when `runtime.db` does not yet
+contain values.
 
-If validation fails, the transaction writes no values and does not set
-`legacyIndexedDbMigrationCompleted`. The legacy IndexedDB record and any
-existing native database remain available for diagnosis or a future compatible
-import.
-
-The migration may use the legacy bundle namespace only to locate the old
-IndexedDB record. It must not add that namespace as a partition key in
-`runtime.db`.
+Browser-hosted bundles continue to use their separate IndexedDB persistence
+contract. Removing native migration support does not change browser-hosted
+storage.
 
 ## Platform Boundary
 

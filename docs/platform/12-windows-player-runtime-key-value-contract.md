@@ -1,6 +1,6 @@
 # 12 Windows Player Runtime Key/Value Contract
 
-Date baseline: July 11, 2026.
+Date baseline: July 12, 2026.
 
 Status: implemented and normative for schema version 1.
 
@@ -14,7 +14,7 @@ This contract is deliberately explicit because these rows contain player save
 data. A value that does not satisfy this document must not be written.
 
 The database location, single-game identity decision, durability settings,
-native command boundary, and IndexedDB cutover are defined in
+native command boundary, and SQLite-only startup policy are defined in
 `11-windows-player-runtime-persistence.md`.
 
 ## Identity And Namespace Rule
@@ -42,21 +42,21 @@ saveSlots:1
 
 `persistence_values` has one row per independently persisted value:
 
-| Column | Contract |
-| --- | --- |
-| `key` | One supported fixed key or `saveSlots:<slotId>` |
-| `value_json` | Syntactically valid JSON whose root is an object |
+| Column       | Contract                                          |
+| ------------ | ------------------------------------------------- |
+| `key`        | One supported fixed key or `saveSlots:<slotId>`   |
+| `value_json` | Syntactically valid JSON whose root is an object  |
 | `updated_at` | Non-negative Unix epoch timestamp in milliseconds |
 
 The supported `persistence_values.key` values are:
 
-| Physical key | Cardinality | JSON value |
-| --- | ---: | --- |
-| `saveSlots:<slotId>` | Zero or more | One complete save-slot object |
-| `globalDeviceVariables` | Zero or one | Device-scoped variable map |
-| `globalAccountVariables` | Zero or one | Account-scoped variable map |
-| `globalRuntime` | Zero or one | Persisted global runtime preferences |
-| `accountViewedRegistry` | Zero or one | Account-level viewed-content registry |
+| Physical key             |  Cardinality | JSON value                            |
+| ------------------------ | -----------: | ------------------------------------- |
+| `saveSlots:<slotId>`     | Zero or more | One complete save-slot object         |
+| `globalDeviceVariables`  |  Zero or one | Device-scoped variable map            |
+| `globalAccountVariables` |  Zero or one | Account-scoped variable map           |
+| `globalRuntime`          |  Zero or one | Persisted global runtime preferences  |
+| `accountViewedRegistry`  |  Zero or one | Account-level viewed-content registry |
 
 There is no aggregate `saveSlots` row. Route Engine uses an aggregate
 `saveSlots` object in memory, but the native adapter expands it into one row per
@@ -86,11 +86,11 @@ Rules:
 Examples:
 
 | Route Engine slot ID | Physical SQLite key | Stored `slotId` |
-| --- | --- | --- |
-| `1` | `saveSlots:1` | `1` |
-| `2` | `saveSlots:2` | `2` |
-| `"auto"` | `saveSlots:auto` | `"auto"` |
-| `"quick"` | `saveSlots:quick` | `"quick"` |
+| -------------------- | ------------------- | --------------- |
+| `1`                  | `saveSlots:1`       | `1`             |
+| `2`                  | `saveSlots:2`       | `2`             |
+| `"auto"`             | `saveSlots:auto`    | `"auto"`        |
+| `"quick"`            | `saveSlots:quick`   | `"quick"`       |
 
 These combinations are invalid:
 
@@ -112,8 +112,8 @@ The Route Engine adapter call still receives an aggregate snapshot:
 The native adapter validates that complete snapshot and writes two physical
 rows:
 
-| Physical key | `value_json` root |
-| --- | --- |
+| Physical key  | `value_json` root          |
+| ------------- | -------------------------- |
 | `saveSlots:1` | `saveEntryForSlot1` itself |
 | `saveSlots:2` | `saveEntryForSlot2` itself |
 
@@ -215,13 +215,13 @@ string or `null` when present.
 
 ### Top-Level Save Entry
 
-| Field | Required | Type and rule |
-| --- | ---: | --- |
-| `formatVersion` | Yes | Integer; must equal `1` |
-| `slotId` | Yes | Non-empty string or JavaScript-safe integer; must match the physical key suffix |
-| `savedAt` | Yes | Non-negative JavaScript-safe integer Unix timestamp in milliseconds |
-| `image` | No | String or `null`; normally an image data URL |
-| `state` | Yes | Save state object defined below |
+| Field           | Required | Type and rule                                                                   |
+| --------------- | -------: | ------------------------------------------------------------------------------- |
+| `formatVersion` |      Yes | Integer; must equal `1`                                                         |
+| `slotId`        |      Yes | Non-empty string or JavaScript-safe integer; must match the physical key suffix |
+| `savedAt`       |      Yes | Non-negative JavaScript-safe integer Unix timestamp in milliseconds             |
+| `image`         |       No | String or `null`; normally an image data URL                                    |
+| `state`         |      Yes | Save state object defined below                                                 |
 
 The top-level save entry is the only extensible object in the save-slot
 contract. Additional top-level JSON fields are preserved for Route Engine or
@@ -232,24 +232,24 @@ extension.
 
 `state` is a closed object with exactly one supported field:
 
-| Field | Required | Type and rule |
-| --- | ---: | --- |
-| `contexts` | Yes | Non-empty array of save-context objects |
+| Field      | Required | Type and rule                           |
+| ---------- | -------: | --------------------------------------- |
+| `contexts` |      Yes | Non-empty array of save-context objects |
 
 Each `contexts` entry must satisfy the complete context contract below.
 
 ### Save Context
 
-| Field | Required | Type and rule |
-| --- | ---: | --- |
-| `currentPointerMode` | Yes | String; exactly `read` |
-| `pointers` | Yes | Closed object containing exactly one required `read` pointer |
-| `configuration` | Yes | JSON object owned by Route Engine |
-| `views` | Yes | Array whose entries are JSON objects |
-| `bgm` | Yes | JSON object; optional `resourceId` must be a string |
-| `variables` | Yes | Variable map defined below |
-| `runtime` | No | Closed context-runtime object defined below |
-| `rollback` | Yes | Closed rollback-state object defined below |
+| Field                | Required | Type and rule                                                |
+| -------------------- | -------: | ------------------------------------------------------------ |
+| `currentPointerMode` |      Yes | String; exactly `read`                                       |
+| `pointers`           |      Yes | Closed object containing exactly one required `read` pointer |
+| `configuration`      |      Yes | JSON object owned by Route Engine                            |
+| `views`              |      Yes | Array whose entries are JSON objects                         |
+| `bgm`                |      Yes | JSON object; optional `resourceId` must be a string          |
+| `variables`          |      Yes | Variable map defined below                                   |
+| `runtime`            |       No | Closed context-runtime object defined below                  |
+| `rollback`           |      Yes | Closed rollback-state object defined below                   |
 
 The context object is closed. Fields such as `projectData`, `pendingEffects`,
 global variables, render snapshots, timers, or other transient state are not
@@ -261,11 +261,11 @@ present, it must be a string.
 
 ### Read Pointer
 
-| Field | Required | Type and rule |
-| --- | ---: | --- |
-| `sceneId` | No | String |
-| `sectionId` | Yes | Non-empty string |
-| `lineId` | Yes | Non-empty string |
+| Field       | Required | Type and rule    |
+| ----------- | -------: | ---------------- |
+| `sceneId`   |       No | String           |
+| `sectionId` |      Yes | Non-empty string |
+| `lineId`    |      Yes | Non-empty string |
 
 `sectionId` and `lineId` must be non-empty strings. The pointer object is
 closed.
@@ -282,13 +282,13 @@ shape and pointer consistency before storage.
 JSON object whose property names are variable IDs.
 
 | Variable value root type | Allowed |
-| --- | ---: |
-| String | Yes |
-| Finite number | Yes |
-| Boolean | Yes |
-| JSON object | Yes |
-| JSON array | Yes |
-| `null` | No |
+| ------------------------ | ------: |
+| String                   |     Yes |
+| Finite number            |     Yes |
+| Boolean                  |     Yes |
+| JSON object              |     Yes |
+| JSON array               |     Yes |
+| `null`                   |      No |
 
 Variable IDs must be non-empty. A variable's top-level value must not be
 `null`. Nested object or array data may contain `null` because that remains a
@@ -305,11 +305,11 @@ JSON value domain and rejects `null` or non-JSON values.
 `runtime` is optional. If present, it is closed and all three fields are
 required:
 
-| Field | Required | Type and rule |
-| --- | ---: | --- |
-| `saveLoadPagination` | Yes | JavaScript-safe integer greater than or equal to `1` |
-| `menuPage` | Yes | String; may be empty |
-| `menuEntryPoint` | Yes | String; may be empty |
+| Field                | Required | Type and rule                                        |
+| -------------------- | -------: | ---------------------------------------------------- |
+| `saveLoadPagination` |      Yes | JavaScript-safe integer greater than or equal to `1` |
+| `menuPage`           |      Yes | String; may be empty                                 |
+| `menuEntryPoint`     |      Yes | String; may be empty                                 |
 
 `saveLoadPagination` must be a JavaScript-safe integer greater than or equal to
 `1`. `menuPage` and `menuEntryPoint` may be empty strings.
@@ -321,21 +321,21 @@ These fields belong inside a slot context. They must not be written into the
 
 Rollback-state fields:
 
-| Field | Required | Type and rule |
-| --- | ---: | --- |
-| `currentIndex` | Yes | JavaScript-safe integer identifying an entry in `timeline` |
-| `isRestoring` | Yes | Boolean |
-| `replayStartIndex` | Yes | Non-negative JavaScript-safe integer |
-| `timeline` | Yes | Non-empty array of rollback-checkpoint objects |
+| Field              | Required | Type and rule                                              |
+| ------------------ | -------: | ---------------------------------------------------------- |
+| `currentIndex`     |      Yes | JavaScript-safe integer identifying an entry in `timeline` |
+| `isRestoring`      |      Yes | Boolean                                                    |
+| `replayStartIndex` |      Yes | Non-negative JavaScript-safe integer                       |
+| `timeline`         |      Yes | Non-empty array of rollback-checkpoint objects             |
 
 Rollback-checkpoint fields:
 
-| Field | Required | Type and rule |
-| --- | ---: | --- |
-| `sectionId` | Yes | Non-empty string |
-| `lineId` | Yes | Non-empty string |
-| `rollbackPolicy` | No | String |
-| `executedActions` | No | Array of closed action objects |
+| Field             | Required | Type and rule                  |
+| ----------------- | -------: | ------------------------------ |
+| `sectionId`       |      Yes | Non-empty string               |
+| `lineId`          |      Yes | Non-empty string               |
+| `rollbackPolicy`  |       No | String                         |
+| `executedActions` |       No | Array of closed action objects |
 
 Each `executedActions` entry requires a non-empty string `type`. It may also
 contain `payload`, whose value may be any syntactically valid JSON value. No
@@ -397,15 +397,15 @@ database.
 
 This row stores only the seven durable global runtime preferences:
 
-| Field | Type | Default | Additional validation |
-| --- | --- | ---: | --- |
-| `dialogueTextSpeed` | Number | `50` | Finite JSON number |
-| `autoForwardDelay` | Number | `1000` | Finite JSON number |
-| `skipUnseenText` | Boolean | `false` | None |
-| `skipTransitionsAndAnimations` | Boolean | `false` | None |
-| `soundVolume` | Number | `50` | From `0` through `100` inclusive |
-| `musicVolume` | Number | `50` | From `0` through `100` inclusive |
-| `muteAll` | Boolean | `false` | None |
+| Field                          | Type    | Default | Additional validation            |
+| ------------------------------ | ------- | ------: | -------------------------------- |
+| `dialogueTextSpeed`            | Number  |    `50` | Finite JSON number               |
+| `autoForwardDelay`             | Number  |  `1000` | Finite JSON number               |
+| `skipUnseenText`               | Boolean | `false` | None                             |
+| `skipTransitionsAndAnimations` | Boolean | `false` | None                             |
+| `soundVolume`                  | Number  |    `50` | From `0` through `100` inclusive |
+| `musicVolume`                  | Number  |    `50` | From `0` through `100` inclusive |
+| `muteAll`                      | Boolean | `false` | None                             |
 
 Canonical full value:
 
@@ -466,10 +466,10 @@ Canonical value:
 
 Canonical fields:
 
-| Field | Required | Type and rule |
-| --- | ---: | --- |
-| `sections` | No | Array of closed section-view objects |
-| `resources` | No | Array of closed resource-view objects |
+| Field       | Required | Type and rule                         |
+| ----------- | -------: | ------------------------------------- |
+| `sections`  |       No | Array of closed section-view objects  |
+| `resources` |       No | Array of closed resource-view objects |
 
 Each section-view object requires a non-empty string `sectionId`. It may also
 contain `lastLineId` as a string or `null`. Each resource-view object contains
@@ -480,9 +480,9 @@ or `null` `lastLineId` represents the whole-section-viewed form. `{}` is a valid
 empty or pre-normalized record; native `markViewed` writes canonical
 `sections` and `resources` arrays.
 
-For compatibility with legacy IndexedDB records and Route Engine's existing
-hydration rules, an entry in either array may also be a non-empty string or a
-JavaScript-safe integer:
+Route Engine's existing hydration rules also accept an entry in either array as
+a non-empty string or a JavaScript-safe integer. The SQLite validator preserves
+that accepted input shape:
 
 ```json
 {
@@ -491,22 +491,15 @@ JavaScript-safe integer:
 }
 ```
 
-New native scoped updates do not produce this scalar form.
+New native scoped updates do not produce this scalar form. This allowance does
+not provide or imply an IndexedDB import path.
 
-## `persistence_metadata` Key And Value
+## No Metadata Keys
 
-`persistence_metadata` is not Route Engine JSON storage. Schema version 1
-allows exactly one internal key/value pair:
-
-| Key | Value | Meaning |
-| --- | --- | --- |
-| `legacyIndexedDbMigrationCompleted` | Text value `1` | The one-time legacy IndexedDB decision/import committed successfully |
-
-The value is the SQLite text `1`, not JSON `true`, JSON `1`, or the string
-`"true"` inside a JSON document.
-
-`clear()` deletes rows from `persistence_values` but preserves this marker so
-cleared legacy data is not imported again.
+Schema version 1 has no `persistence_metadata` table and defines no metadata
+keys. `PRAGMA user_version` is the database schema version. Save-slot
+`formatVersion` is the save-entry format version. No third persistence-contract
+version or browser-migration marker is stored.
 
 ## Scoped Update Input Contract
 
@@ -600,7 +593,6 @@ When validation fails:
 - `saveSlots(...)` does not delete an omitted old slot or update any valid slot
   from the same rejected snapshot
 - `applyScopedDataUpdates(...)` commits none of the batch
-- a legacy import writes no runtime rows and does not write the migration marker
 - an invalid stored row causes an explicit load failure and remains untouched
   for diagnosis
 
@@ -615,8 +607,7 @@ with `{}`.
   snapshot and upserts changed/present slots in the same transaction.
 - Deleting a slot is represented by its absence from the valid aggregate
   snapshot, not by storing `null`.
-- `clear()` deletes all `persistence_values` rows in one transaction and keeps
-  `persistence_metadata`.
+- `clear()` deletes all `persistence_values` rows in one transaction.
 
 ## Versioning Rules
 
@@ -658,6 +649,6 @@ must be named, tested, and documented.
 
 The Rust tests cover valid numeric and named slots, each nested malformed slot
 family, fixed-key value validation, malformed scoped updates, rejected
-multi-slot snapshots, rejected legacy imports, invalid JSON at the SQLite
-boundary, semantic validation on load, and preservation of corrupt rows for
+multi-slot snapshots, invalid JSON at the SQLite boundary, semantic validation
+on load, the absence of a metadata table, and preservation of corrupt rows for
 diagnosis.

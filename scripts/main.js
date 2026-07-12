@@ -603,9 +603,7 @@ const createRuntimePersistence = ({ namespace }) => {
     return createIndexedDbPersistence({ namespace });
   }
 
-  return createHostPersistence({
-    createLegacyPersistence: () => createIndexedDbPersistence({ namespace }),
-  });
+  return createHostPersistence();
 };
 
 const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {

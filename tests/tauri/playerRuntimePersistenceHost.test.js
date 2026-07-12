@@ -63,91 +63,16 @@ const createSaveSlot = (slotId, lineId = "line-1") => ({
 });
 
 describe("Windows player runtime persistence host", () => {
-  it("loads native SQLite state without opening legacy IndexedDB after migration", async () => {
+  it("loads native SQLite state directly", async () => {
     const nativeState = createPersistenceState({
       saveSlots: { 1: createSaveSlot(1) },
     });
-    const invoke = vi.fn(async () => ({
-      persistence: nativeState,
-      legacyMigrationCompleted: true,
-    }));
-    const createLegacyPersistence = vi.fn();
-    const persistence = createHost(invoke).createPersistence({
-      createLegacyPersistence,
-    });
+    const invoke = vi.fn(async () => nativeState);
+    const persistence = createHost(invoke).createPersistence();
 
     await expect(persistence.load()).resolves.toEqual(nativeState);
     expect(invoke).toHaveBeenCalledOnce();
     expect(invoke).toHaveBeenCalledWith("load_player_persistence", undefined);
-    expect(createLegacyPersistence).not.toHaveBeenCalled();
-  });
-
-  it("imports legacy IndexedDB state once when native migration is incomplete", async () => {
-    const legacyState = createPersistenceState({
-      globalDeviceVariables: { textSpeed: 42 },
-      accountViewedRegistry: {
-        sections: [{ sectionId: "intro", lastLineId: "line-2" }],
-        resources: [],
-      },
-    });
-    const invoke = vi.fn(async (command) => {
-      if (command === "load_player_persistence") {
-        return {
-          persistence: createPersistenceState(),
-          legacyMigrationCompleted: false,
-          hasNativeValues: false,
-        };
-      }
-
-      return {
-        persistence: legacyState,
-        legacyMigrationCompleted: true,
-      };
-    });
-    const legacyLoad = vi.fn(async () => legacyState);
-    const createLegacyPersistence = vi.fn(() => ({ load: legacyLoad }));
-    const persistence = createHost(invoke).createPersistence({
-      createLegacyPersistence,
-    });
-
-    await expect(persistence.load()).resolves.toEqual(legacyState);
-    expect(createLegacyPersistence).toHaveBeenCalledOnce();
-    expect(legacyLoad).toHaveBeenCalledOnce();
-    expect(invoke).toHaveBeenNthCalledWith(
-      2,
-      "complete_legacy_player_persistence_migration",
-      { legacyState },
-    );
-  });
-
-  it("marks migration complete without opening IndexedDB when native rows exist", async () => {
-    const nativeState = createPersistenceState({
-      globalRuntime: { skipUnseenText: true },
-    });
-    const invoke = vi
-      .fn()
-      .mockResolvedValueOnce({
-        persistence: nativeState,
-        legacyMigrationCompleted: false,
-        hasNativeValues: true,
-      })
-      .mockResolvedValueOnce({
-        persistence: nativeState,
-        legacyMigrationCompleted: true,
-        hasNativeValues: true,
-      });
-    const createLegacyPersistence = vi.fn();
-    const persistence = createHost(invoke).createPersistence({
-      createLegacyPersistence,
-    });
-
-    await expect(persistence.load()).resolves.toEqual(nativeState);
-    expect(createLegacyPersistence).not.toHaveBeenCalled();
-    expect(invoke).toHaveBeenNthCalledWith(
-      2,
-      "complete_legacy_player_persistence_migration",
-      { legacyState: createPersistenceState() },
-    );
   });
 
   it("maps the Route Engine adapter contract to narrow native commands", async () => {
@@ -207,12 +132,10 @@ describe("Windows player runtime persistence host", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
-  it("rejects malformed loaded state instead of coercing it before migration", async () => {
-    const invoke = vi.fn(async () => ({
-      persistence: createPersistenceState({ globalRuntime: [] }),
-      legacyMigrationCompleted: true,
-      hasNativeValues: true,
-    }));
+  it("rejects malformed loaded state instead of coercing it", async () => {
+    const invoke = vi.fn(async () =>
+      createPersistenceState({ globalRuntime: [] }),
+    );
     const persistence = createHost(invoke).createPersistence();
 
     await expect(persistence.load()).rejects.toThrow(

@@ -10,7 +10,6 @@ use serde_json::{Map, Value};
 
 const SCHEMA_VERSION: i64 = 1;
 const BUSY_TIMEOUT: Duration = Duration::from_millis(5_000);
-const LEGACY_MIGRATION_KEY: &str = "legacyIndexedDbMigrationCompleted";
 const SAVE_FORMAT_VERSION: i64 = 1;
 const MAX_JAVASCRIPT_SAFE_INTEGER: i64 = 9_007_199_254_740_991;
 
@@ -40,11 +39,6 @@ CREATE TABLE persistence_values (
   updated_at INTEGER NOT NULL CHECK (updated_at >= 0)
 );
 
-CREATE TABLE persistence_metadata (
-  key TEXT PRIMARY KEY CHECK (key = 'legacyIndexedDbMigrationCompleted'),
-  value TEXT NOT NULL CHECK (value = '1')
-);
-
 PRAGMA user_version = 1;
 
 COMMIT;
@@ -56,18 +50,13 @@ fn empty_object() -> Value {
     Value::Object(Map::new())
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PlayerPersistenceState {
-    #[serde(default = "empty_object")]
     save_slots: Value,
-    #[serde(default = "empty_object")]
     global_device_variables: Value,
-    #[serde(default = "empty_object")]
     global_account_variables: Value,
-    #[serde(default = "empty_object")]
     global_runtime: Value,
-    #[serde(default = "empty_object")]
     account_viewed_registry: Value,
 }
 
@@ -81,25 +70,6 @@ impl Default for PlayerPersistenceState {
             account_viewed_registry: empty_object(),
         }
     }
-}
-
-impl PlayerPersistenceState {
-    fn non_slot_entries(&self) -> [(&'static str, &Value); 4] {
-        [
-            (GLOBAL_DEVICE_VARIABLES_KEY, &self.global_device_variables),
-            (GLOBAL_ACCOUNT_VARIABLES_KEY, &self.global_account_variables),
-            (GLOBAL_RUNTIME_KEY, &self.global_runtime),
-            (ACCOUNT_VIEWED_REGISTRY_KEY, &self.account_viewed_registry),
-        ]
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct PlayerPersistenceLoadResult {
-    persistence: PlayerPersistenceState,
-    legacy_migration_completed: bool,
-    has_native_values: bool,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -734,15 +704,6 @@ fn validate_save_slots_value(save_slots: &Value) -> PersistenceResult<()> {
     Ok(())
 }
 
-fn validate_persistence_state(state: &PlayerPersistenceState) -> PersistenceResult<()> {
-    validate_save_slots_value(&state.save_slots)?;
-    for (key, value) in state.non_slot_entries() {
-        validate_persistence_value(key, value)?;
-    }
-
-    Ok(())
-}
-
 fn save_slot_persistence_key(slot_key: &str) -> PersistenceResult<String> {
     if slot_key.is_empty() {
         return Err("Runtime save slot key must not be empty".to_string());
@@ -892,53 +853,17 @@ fn sync_save_slots(
     Ok(())
 }
 
-fn read_legacy_migration_completed(connection: &Connection) -> PersistenceResult<bool> {
-    let value = connection
-        .query_row(
-            "SELECT value FROM persistence_metadata WHERE key = ?1",
-            [LEGACY_MIGRATION_KEY],
-            |row| row.get::<_, String>(0),
-        )
-        .optional()
-        .map_err(|error| format!("Failed to read legacy migration state: {error}"))?;
-
-    match value.as_deref() {
-        None => Ok(false),
-        Some("1") => Ok(true),
-        Some(value) => Err(format!("Invalid legacy migration state value: {value}")),
-    }
-}
-
-fn load_from_connection(connection: &Connection) -> PersistenceResult<PlayerPersistenceLoadResult> {
-    let native_value_count = connection
-        .query_row("SELECT COUNT(*) FROM persistence_values", [], |row| {
-            row.get::<_, i64>(0)
-        })
-        .map_err(|error| format!("Failed to inspect native persistence values: {error}"))?;
-
-    Ok(PlayerPersistenceLoadResult {
-        persistence: PlayerPersistenceState {
-            save_slots: read_save_slots(connection)?,
-            global_device_variables: read_persistence_value(
-                connection,
-                GLOBAL_DEVICE_VARIABLES_KEY,
-            )?,
-            global_account_variables: read_persistence_value(
-                connection,
-                GLOBAL_ACCOUNT_VARIABLES_KEY,
-            )?,
-            global_runtime: read_persistence_value(connection, GLOBAL_RUNTIME_KEY)?,
-            account_viewed_registry: read_persistence_value(
-                connection,
-                ACCOUNT_VIEWED_REGISTRY_KEY,
-            )?,
-        },
-        legacy_migration_completed: read_legacy_migration_completed(connection)?,
-        has_native_values: native_value_count > 0,
+fn load_from_connection(connection: &Connection) -> PersistenceResult<PlayerPersistenceState> {
+    Ok(PlayerPersistenceState {
+        save_slots: read_save_slots(connection)?,
+        global_device_variables: read_persistence_value(connection, GLOBAL_DEVICE_VARIABLES_KEY)?,
+        global_account_variables: read_persistence_value(connection, GLOBAL_ACCOUNT_VARIABLES_KEY)?,
+        global_runtime: read_persistence_value(connection, GLOBAL_RUNTIME_KEY)?,
+        account_viewed_registry: read_persistence_value(connection, ACCOUNT_VIEWED_REGISTRY_KEY)?,
     })
 }
 
-pub(crate) fn load(path: &Path) -> PersistenceResult<PlayerPersistenceLoadResult> {
+pub(crate) fn load(path: &Path) -> PersistenceResult<PlayerPersistenceState> {
     let connection = open_database(path)?;
     load_from_connection(&connection)
 }
@@ -981,46 +906,6 @@ pub(crate) fn clear(path: &Path) -> PersistenceResult<()> {
     transaction
         .commit()
         .map_err(|error| format!("Failed to commit runtime persistence clear: {error}"))
-}
-
-pub(crate) fn complete_legacy_migration(
-    path: &Path,
-    legacy_state: PlayerPersistenceState,
-) -> PersistenceResult<PlayerPersistenceLoadResult> {
-    let mut connection = open_database(path)?;
-    let transaction = connection
-        .transaction_with_behavior(TransactionBehavior::Immediate)
-        .map_err(|error| format!("Failed to begin legacy persistence import: {error}"))?;
-
-    if !read_legacy_migration_completed(&transaction)? {
-        let native_value_count = transaction
-            .query_row("SELECT COUNT(*) FROM persistence_values", [], |row| {
-                row.get::<_, i64>(0)
-            })
-            .map_err(|error| format!("Failed to inspect native persistence values: {error}"))?;
-
-        if native_value_count == 0 {
-            validate_persistence_state(&legacy_state)?;
-            let updated_at = current_timestamp_ms()?;
-            sync_save_slots(&transaction, &legacy_state.save_slots, updated_at)?;
-            for (key, value) in legacy_state.non_slot_entries() {
-                upsert_persistence_value(&transaction, key, value, updated_at)?;
-            }
-        }
-
-        transaction
-            .execute(
-                "INSERT INTO persistence_metadata (key, value) VALUES (?1, '1')\n\
-                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                [LEGACY_MIGRATION_KEY],
-            )
-            .map_err(|error| format!("Failed to record legacy persistence import: {error}"))?;
-    }
-
-    transaction
-        .commit()
-        .map_err(|error| format!("Failed to commit legacy persistence import: {error}"))?;
-    load_from_connection(&connection)
 }
 
 fn string_or_number_id(value: &Value) -> Option<String> {
@@ -1329,15 +1214,6 @@ mod tests {
         })
     }
 
-    fn valid_save_slot_with_source(slot_id: Value, line_id: &str, source: &str) -> Value {
-        let mut save_slot = valid_save_slot(slot_id, line_id);
-        save_slot
-            .as_object_mut()
-            .expect("save-slot object")
-            .insert("source".to_string(), Value::String(source.to_string()));
-        save_slot
-    }
-
     fn replace_save_slot_value(mut save_slot: Value, pointer: &str, value: Value) -> Value {
         *save_slot
             .pointer_mut(pointer)
@@ -1350,9 +1226,7 @@ mod tests {
         let (_directory, path) = database_path();
         let loaded = load(&path).expect("load empty persistence");
 
-        assert_eq!(loaded.persistence, PlayerPersistenceState::default());
-        assert!(!loaded.legacy_migration_completed);
-        assert!(!loaded.has_native_values);
+        assert_eq!(loaded, PlayerPersistenceState::default());
 
         let connection = open_database(&path).expect("open database");
         let version = connection
@@ -1371,6 +1245,14 @@ mod tests {
             .query_row("PRAGMA busy_timeout", [], |row| row.get::<_, i64>(0))
             .expect("busy timeout");
         assert_eq!(busy_timeout, 5_000);
+        let metadata_table_count = connection
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'persistence_metadata'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .expect("metadata table count");
+        assert_eq!(metadata_table_count, 0);
     }
 
     #[test]
@@ -1426,7 +1308,7 @@ mod tests {
         save_slots(&path, json!({"auto": save_slot.clone()})).expect("save named slot");
 
         assert_eq!(
-            load(&path).expect("load named slot").persistence.save_slots,
+            load(&path).expect("load named slot").save_slots,
             json!({"auto": save_slot})
         );
     }
@@ -1647,7 +1529,7 @@ mod tests {
     }
 
     #[test]
-    fn database_constraints_reject_unknown_keys_timestamps_and_metadata() {
+    fn database_constraints_reject_unknown_keys_and_timestamps() {
         let (_directory, path) = database_path();
         let connection = open_database(&path).expect("create database");
 
@@ -1667,30 +1549,6 @@ mod tests {
             .expect_err("reject negative update timestamp");
         assert!(
             invalid_timestamp
-                .to_string()
-                .contains("CHECK constraint failed")
-        );
-
-        let unknown_metadata = connection
-            .execute(
-                "INSERT INTO persistence_metadata (key, value) VALUES (?1, ?2)",
-                params!["unknown", "1"],
-            )
-            .expect_err("reject unknown metadata key");
-        assert!(
-            unknown_metadata
-                .to_string()
-                .contains("CHECK constraint failed")
-        );
-
-        let invalid_metadata_value = connection
-            .execute(
-                "INSERT INTO persistence_metadata (key, value) VALUES (?1, ?2)",
-                params![LEGACY_MIGRATION_KEY, "true"],
-            )
-            .expect_err("reject invalid metadata value");
-        assert!(
-            invalid_metadata_value
                 .to_string()
                 .contains("CHECK constraint failed")
         );
@@ -1814,36 +1672,50 @@ mod tests {
     }
 
     #[test]
-    fn persists_values_and_clear_keeps_migration_marker() {
+    fn persists_values_and_clear_deletes_all_runtime_rows() {
         let (_directory, path) = database_path();
-        let legacy = PlayerPersistenceState {
+        let expected = PlayerPersistenceState {
             save_slots: json!({"1": valid_save_slot(json!(1), "line-1")}),
             global_device_variables: json!({"textSpeed": 42}),
             global_account_variables: json!({"routeUnlocked": true}),
             global_runtime: json!({"skipUnseenText": false}),
             account_viewed_registry: json!({"sections": [], "resources": []}),
         };
-        let imported = complete_legacy_migration(&path, legacy.clone()).expect("legacy import");
+        save_slots(&path, expected.save_slots.clone()).expect("save slots");
+        save_value(
+            &path,
+            GLOBAL_DEVICE_VARIABLES_KEY,
+            expected.global_device_variables.clone(),
+        )
+        .expect("save device variables");
+        save_value(
+            &path,
+            GLOBAL_ACCOUNT_VARIABLES_KEY,
+            expected.global_account_variables.clone(),
+        )
+        .expect("save account variables");
+        save_value(&path, GLOBAL_RUNTIME_KEY, expected.global_runtime.clone())
+            .expect("save runtime preferences");
+        save_value(
+            &path,
+            ACCOUNT_VIEWED_REGISTRY_KEY,
+            expected.account_viewed_registry.clone(),
+        )
+        .expect("save viewed registry");
 
-        assert_eq!(imported.persistence, legacy);
-        assert!(imported.legacy_migration_completed);
-        assert!(imported.has_native_values);
-
-        save_value(&path, GLOBAL_RUNTIME_KEY, json!({"skipUnseenText": true}))
-            .expect("save runtime value");
-        assert_eq!(
-            load(&path)
-                .expect("load saved persistence")
-                .persistence
-                .global_runtime,
-            json!({"skipUnseenText": true})
-        );
+        assert_eq!(load(&path).expect("load saved persistence"), expected);
 
         clear(&path).expect("clear persistence");
         let cleared = load(&path).expect("load cleared persistence");
-        assert_eq!(cleared.persistence, PlayerPersistenceState::default());
-        assert!(cleared.legacy_migration_completed);
-        assert!(!cleared.has_native_values);
+        assert_eq!(cleared, PlayerPersistenceState::default());
+
+        let connection = open_database(&path).expect("open cleared database");
+        let row_count = connection
+            .query_row("SELECT COUNT(*) FROM persistence_values", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .expect("cleared row count");
+        assert_eq!(row_count, 0);
     }
 
     #[test]
@@ -1922,10 +1794,7 @@ mod tests {
         save_slots(&path, json!({"1": valid_save_slot(json!(1), "line-1")}))
             .expect("delete missing slot");
         assert_eq!(
-            load(&path)
-                .expect("load remaining slot")
-                .persistence
-                .save_slots,
+            load(&path).expect("load remaining slot").save_slots,
             json!({"1": valid_save_slot(json!(1), "line-1")})
         );
     }
@@ -1970,10 +1839,7 @@ mod tests {
         assert!(error.contains("saveSlots:3.state.contexts[0].variables.score"));
 
         assert_eq!(
-            load(&path)
-                .expect("load original slots")
-                .persistence
-                .save_slots,
+            load(&path).expect("load original slots").save_slots,
             original_slots
         );
         let connection = open_database(&path).expect("reopen save-slot database");
@@ -1999,71 +1865,6 @@ mod tests {
                 ("saveSlots:2".to_string(), 20)
             ]
         );
-    }
-
-    #[test]
-    fn legacy_import_validates_the_complete_snapshot_before_writing_or_marking_it() {
-        let (_directory, path) = database_path();
-        let result = complete_legacy_migration(
-            &path,
-            PlayerPersistenceState {
-                save_slots: json!({"1": valid_save_slot(json!(1), "line-1")}),
-                global_runtime: json!({"soundVolume": 101}),
-                ..PlayerPersistenceState::default()
-            },
-        );
-
-        let error = result.expect_err("reject invalid legacy snapshot");
-        assert!(error.contains("soundVolume must be between 0 and 100"));
-
-        let connection = open_database(&path).expect("open rejected migration database");
-        let value_count = connection
-            .query_row("SELECT COUNT(*) FROM persistence_values", [], |row| {
-                row.get::<_, i64>(0)
-            })
-            .expect("count persistence values");
-        let metadata_count = connection
-            .query_row("SELECT COUNT(*) FROM persistence_metadata", [], |row| {
-                row.get::<_, i64>(0)
-            })
-            .expect("count persistence metadata");
-        assert_eq!(value_count, 0);
-        assert_eq!(metadata_count, 0);
-    }
-
-    #[test]
-    fn legacy_migration_never_overwrites_native_values() {
-        let (_directory, path) = database_path();
-        save_slots(
-            &path,
-            json!({
-                "native": valid_save_slot_with_source(json!("native"), "line-1", "native")
-            }),
-        )
-        .expect("native save");
-
-        let imported = complete_legacy_migration(
-            &path,
-            PlayerPersistenceState {
-                save_slots: json!({
-                    "native": valid_save_slot_with_source(
-                        json!("native"),
-                        "line-1",
-                        "legacy"
-                    )
-                }),
-                ..PlayerPersistenceState::default()
-            },
-        )
-        .expect("complete migration");
-
-        assert_eq!(
-            imported.persistence.save_slots,
-            json!({
-                "native": valid_save_slot_with_source(json!("native"), "line-1", "native")
-            })
-        );
-        assert!(imported.legacy_migration_completed);
     }
 
     #[test]
@@ -2109,7 +1910,7 @@ mod tests {
         )
         .expect("apply scoped updates");
 
-        let persistence = load(&path).expect("load scoped values").persistence;
+        let persistence = load(&path).expect("load scoped values");
         assert_eq!(
             persistence.global_device_variables,
             json!({"textSpeed": 42})
@@ -2155,7 +1956,6 @@ mod tests {
         assert_eq!(
             load(&path)
                 .expect("load after rejected update")
-                .persistence
                 .global_device_variables,
             json!({})
         );
@@ -2207,9 +2007,7 @@ mod tests {
         assert!(error.contains("updates[1].value.sections[0].sectionId"));
 
         assert_eq!(
-            load(&path)
-                .expect("load after rejected batches")
-                .persistence,
+            load(&path).expect("load after rejected batches"),
             PlayerPersistenceState::default()
         );
     }

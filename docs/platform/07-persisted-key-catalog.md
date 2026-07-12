@@ -203,18 +203,15 @@ not converted to `{}`. In particular, a `saveSlots:<slotId>` row is rejected if
 its nested save state is malformed or its internal `slotId` does not identify
 the physical key's suffix.
 
-The internal `persistence_metadata` table currently uses:
-
-- `legacyIndexedDbMigrationCompleted`
-  - records completion of the one-time browser-storage import
-  - exact SQLite text value: `1`
-  - remains present when runtime values are cleared
+Schema version 1 has no `persistence_metadata` table and no internal metadata
+keys. `PRAGMA user_version` is the only database schema version. The native
+Windows player does not read or import existing IndexedDB runtime data.
 
 The database belongs to one game identified by the Tauri application
 identifier. None of these keys are additionally prefixed or partitioned by
 project id or namespace.
 
-For database location, durability, adapter, and migration rules, see
+For database location, durability, adapter, and startup rules, see
 `11-windows-player-runtime-persistence.md`. For the normative complete key,
 field, type, JSON shape, validation, and atomic rejection contract, see
 `12-windows-player-runtime-key-value-contract.md`.
