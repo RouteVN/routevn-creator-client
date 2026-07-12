@@ -3595,6 +3595,7 @@ dependencies = [
  "tauri-plugin-log",
  "tauri-plugin-sql",
  "time",
+ "windows",
  "writeable",
 ]
 

@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { WINDOWS_PLAYER_INDEX_HTML } from "../../src/deps/services/shared/projectExportService.js";
 
 const windowChromeSource = readFileSync(
   fileURLToPath(
@@ -60,6 +61,70 @@ const windowsSystemMenuWindowsSource = readFileSync(
   fileURLToPath(
     new URL(
       "../../src-tauri/src/windows_system_menu_windows.rs",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
+const playerBuildScript = readFileSync(
+  fileURLToPath(
+    new URL("../../scripts/build-windows-player-template.js", import.meta.url),
+  ),
+  "utf8",
+);
+const playerShellConfig = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL(
+        "../../crates/routevn-packager/tauri-shell/src-tauri/tauri.conf.json",
+        import.meta.url,
+      ),
+    ),
+    "utf8",
+  ),
+);
+const playerShellCapability = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL(
+        "../../crates/routevn-packager/tauri-shell/src-tauri/capabilities/default.json",
+        import.meta.url,
+      ),
+    ),
+    "utf8",
+  ),
+);
+const playerShellCargoToml = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../crates/routevn-packager/tauri-shell/src-tauri/Cargo.toml",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
+const playerShellLibSource = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../crates/routevn-packager/tauri-shell/src-tauri/src/lib.rs",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
+const playerWindowsSystemMenuSource = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../crates/routevn-packager/tauri-shell/src-tauri/src/windows_system_menu.rs",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
+const playerWindowsSystemMenuWindowsSource = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../crates/routevn-packager/tauri-shell/src-tauri/src/windows_system_menu_windows.rs",
       import.meta.url,
     ),
   ),
@@ -206,6 +271,19 @@ describe("standalone window chrome", () => {
     );
   });
 
+  it("is staged and loaded by the exported Windows player shell", () => {
+    expect(WINDOWS_PLAYER_INDEX_HTML).toContain(
+      '<script src="./windowChrome.js" defer></script>',
+    );
+    expect(WINDOWS_PLAYER_INDEX_HTML.indexOf("windowChrome.js")).toBeLessThan(
+      WINDOWS_PLAYER_INDEX_HTML.indexOf("./main.js"),
+    );
+    expect(playerBuildScript).toContain('"static/public/windowChrome.js"');
+    expect(playerBuildScript).toContain(
+      'path.join(shellDistDir, "windowChrome.js")',
+    );
+  });
+
   it("keeps a native fallback until runtime custom chrome can activate", () => {
     expect(tauriWindowsConfig.app.withGlobalTauri).toBe(true);
     expect(tauriWindowsConfig.app.windows[0].decorations).toBe(true);
@@ -220,6 +298,24 @@ describe("standalone window chrome", () => {
       ]),
     );
     expect(defaultCapability.permissions).not.toContain(
+      "core:window:allow-toggle-maximize",
+    );
+  });
+
+  it("keeps the exported player native frame until custom chrome activates", () => {
+    expect(playerShellConfig.app.withGlobalTauri).toBe(true);
+    expect(playerShellConfig.app.windows[0].decorations).toBe(true);
+    expect(playerShellCapability.permissions).toEqual(
+      expect.arrayContaining([
+        "core:window:allow-close",
+        "core:window:allow-minimize",
+        "core:window:allow-set-decorations",
+        "core:window:allow-set-fullscreen",
+        "core:window:allow-start-dragging",
+        "core:window:allow-unmaximize",
+      ]),
+    );
+    expect(playerShellCapability.permissions).not.toContain(
       "core:window:allow-toggle-maximize",
     );
   });
@@ -257,6 +353,17 @@ describe("standalone window chrome", () => {
     expect(windowsSystemMenuWindowsSource).toContain("GetSystemMenu");
     expect(windowsSystemMenuWindowsSource).toContain("TrackPopupMenuEx");
     expect(windowsSystemMenuWindowsSource).toContain("WM_SYSCOMMAND");
+
+    expect(playerShellCargoToml).toContain('cfg(target_os = "windows")');
+    expect(playerShellCargoToml).toContain('"Win32_UI_WindowsAndMessaging"');
+    expect(playerShellLibSource).toContain("mod windows_system_menu;");
+    expect(playerShellLibSource).toContain(
+      "windows_system_menu::show_windows_system_menu",
+    );
+    expect(playerWindowsSystemMenuSource).toContain("windows_impl::show(hwnd)");
+    expect(playerWindowsSystemMenuWindowsSource).toContain("GetSystemMenu");
+    expect(playerWindowsSystemMenuWindowsSource).toContain("TrackPopupMenuEx");
+    expect(playerWindowsSystemMenuWindowsSource).toContain("WM_SYSCOMMAND");
   });
 
   it("does not mount without the Tauri window API", async () => {
@@ -276,6 +383,26 @@ describe("standalone window chrome", () => {
     expect(
       harness.dom.window.document.querySelector("#rvn-window-chrome"),
     ).not.toBeNull();
+  });
+
+  it("tracks the exported project title and icon from document branding", async () => {
+    const harness = createWindowHarness();
+    await flushTasks();
+
+    const { document } = harness.dom.window;
+    const title = document.querySelector(".rvn-window-chrome-title");
+    const icon = document.querySelector(".rvn-window-chrome-icon");
+    expect(title.textContent.trim()).toBe("RouteVN Creator");
+
+    document.title = "Exported Project";
+    const favicon = document.createElement("link");
+    favicon.rel = "icon";
+    favicon.href = "data:image/png;base64,cHJvamVjdA==";
+    document.head.append(favicon);
+    await flushTasks();
+
+    expect(title.textContent).toBe("Exported Project");
+    expect(icon.src).toBe("data:image/png;base64,cHJvamVjdA==");
   });
 
   it("leaves native chrome available when custom chrome cannot activate", async () => {
@@ -363,6 +490,7 @@ describe("standalone window chrome", () => {
     expect(bodyRule.getPropertyValue("top")).toBe(
       "var(--rvn-window-content-offset)",
     );
+    expect(bodyRule.getPropertyValue("position")).toBe("fixed");
     expect(maximizedHiddenRule.getPropertyValue("transform")).toBe(
       "translateY(-100%)",
     );
