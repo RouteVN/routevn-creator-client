@@ -594,6 +594,7 @@ export const createGraphicsService = async ({
   let pendingClickInteractionTimeouts = new Map();
   let deferredAudioRenderToken = 0;
   let deferredAudioRenderKeySignature = "";
+  let deferredAudioRenderState;
   let suppressedEngineRenderEffects = 0;
   let isEngineAudioMuted = false;
   let runtimeInteractionsEnabled = true;
@@ -690,6 +691,7 @@ export const createGraphicsService = async ({
   const invalidateDeferredAudioRender = () => {
     deferredAudioRenderToken += 1;
     deferredAudioRenderKeySignature = "";
+    deferredAudioRenderState = undefined;
   };
 
   const setEngineAudioMuted = (value) => {
@@ -829,6 +831,14 @@ export const createGraphicsService = async ({
     };
   };
 
+  const createAudioFallbackRenderState = (renderState) => {
+    const { renderableAudio } = splitRenderableAudio(renderState?.audio);
+    return {
+      ...renderState,
+      audio: renderableAudio,
+    };
+  };
+
   const pruneDecodedAudioCache = async (retainedAudioKeys = []) => {
     const retainedAudioKeySet = new Set(
       retainedAudioKeys.filter((key) => typeof key === "string" && key),
@@ -844,13 +854,16 @@ export const createGraphicsService = async ({
     await Promise.all(keysToUnload.map((key) => AudioAsset.unload?.(key)));
   };
 
-  const scheduleDeferredAudioRender = (audioKeys = []) => {
+  const scheduleDeferredAudioRender = (audioKeys = [], renderState) => {
     const uniqueAudioKeys = getDecodableAudioKeys(audioKeys);
     const nextSignature = uniqueAudioKeys.slice().sort().join("|");
 
     if (uniqueAudioKeys.length === 0) {
+      invalidateDeferredAudioRender();
       return;
     }
+
+    deferredAudioRenderState = renderState;
 
     if (nextSignature === deferredAudioRenderKeySignature) {
       return;
@@ -870,31 +883,61 @@ export const createGraphicsService = async ({
           return;
         }
 
-        const nextRenderState = engine.selectRenderState();
+        const hasDeferredRenderState = deferredAudioRenderState !== undefined;
+        const nextRenderState = hasDeferredRenderState
+          ? deferredAudioRenderState
+          : engine.selectRenderState();
+        deferredAudioRenderState = undefined;
         const remainingMissingAudioKeys = getDecodableAudioKeys(
           getMissingDecodedAudioKeys(getRenderStateAudioKeys(nextRenderState)),
         );
 
-        if (remainingMissingAudioKeys.length > 0) {
-          scheduleDeferredAudioRender(remainingMissingAudioKeys);
-          return;
-        }
-
         if (scheduledToken === deferredAudioRenderToken) {
           deferredAudioRenderKeySignature = "";
         }
-        renderEngineState(nextRenderState, {
+
+        if (!hasDeferredRenderState && remainingMissingAudioKeys.length > 0) {
+          const remainingSignature = remainingMissingAudioKeys
+            .slice()
+            .sort()
+            .join("|");
+          if (remainingSignature !== nextSignature) {
+            scheduleDeferredAudioRender(
+              remainingMissingAudioKeys,
+              nextRenderState,
+            );
+            return;
+          }
+        }
+
+        let renderStateAfterAudioDecode = nextRenderState;
+        if (remainingMissingAudioKeys.length > 0) {
+          renderStateAfterAudioDecode =
+            createAudioFallbackRenderState(nextRenderState);
+        }
+        renderEngineState(renderStateAfterAudioDecode, {
           allowDeferredAudio: false,
         });
       })
       .catch((error) => {
+        let rejectedRenderState;
         if (scheduledToken === deferredAudioRenderToken) {
           deferredAudioRenderKeySignature = "";
+          rejectedRenderState = deferredAudioRenderState;
+          deferredAudioRenderState = undefined;
         }
         console.error(
           "[graphicsService] Failed to decode deferred audio render assets",
           error,
         );
+        if (rejectedRenderState && engine && routeGraphics) {
+          renderEngineState(
+            createAudioFallbackRenderState(rejectedRenderState),
+            {
+              allowDeferredAudio: false,
+            },
+          );
+        }
       });
   };
 
@@ -1711,6 +1754,7 @@ export const createGraphicsService = async ({
     const requestedAudioKeys = getRenderStateAudioKeys(nextRenderState);
     let retainedAudioKeys = requestedAudioKeys;
     let missingAudioKeys = [];
+    let deferredAnimatedRenderState;
 
     if (allowDeferredAudio && !effectiveSkipAudio) {
       const splitAudio = splitRenderableAudio(nextRenderState.audio);
@@ -1718,6 +1762,16 @@ export const createGraphicsService = async ({
       missingAudioKeys = getMissingDecodedAudioKeys(requestedAudioKeys);
 
       if (splitAudio.missingAudioKeys.length > 0) {
+        const decodableMissingAudioKeys = getDecodableAudioKeys(
+          splitAudio.missingAudioKeys,
+        );
+        if (
+          (nextRenderState.animations?.length ?? 0) > 0 &&
+          decodableMissingAudioKeys.length ===
+            splitAudio.missingAudioKeys.length
+        ) {
+          deferredAnimatedRenderState = nextRenderState;
+        }
         nextRenderState = {
           ...nextRenderState,
           audio: renderableAudio,
@@ -1726,8 +1780,17 @@ export const createGraphicsService = async ({
       }
 
       if (missingAudioKeys.length > 0) {
-        scheduleDeferredAudioRender(missingAudioKeys);
+        scheduleDeferredAudioRender(
+          missingAudioKeys,
+          deferredAnimatedRenderState,
+        );
+      } else {
+        invalidateDeferredAudioRender();
       }
+    }
+
+    if (deferredAnimatedRenderState) {
+      return;
     }
 
     nextRenderState = {
