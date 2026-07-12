@@ -364,6 +364,7 @@ try {
   assert.ok(zip.file("main.js"));
   const indexHtml = await zip.file("index.html").async("string");
   assert.ok(!indexHtml.includes("/@vite/client"));
+  assert.ok(!indexHtml.includes("player-runtime-persistence-host.js"));
 
   const packageBin = await zip.file("package.bin").async("arraybuffer");
   const parsed = await parseBundle(packageBin);

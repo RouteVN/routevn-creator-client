@@ -3,9 +3,11 @@ import {
   createInitialState,
   openMobileSheet,
   selectViewData,
+  setPlatform,
   setRepositoryLoading,
   setRepositoryLoadingPhase,
   setRepositoryLoadingProgress,
+  setUiConfig,
 } from "../../src/pages/app/app.store.js";
 
 const selectMobileTab = ({ state, tabId }) => {
@@ -167,5 +169,28 @@ describe("app.store mobile tab active state", () => {
 
     expect(selectMobileTab({ state, tabId: "release" }).color).toBe("white");
     expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
+  });
+});
+
+describe("app.store floating help button", () => {
+  it("uses platform-specific touch offsets", () => {
+    const androidState = createInitialState();
+    setPlatform({ state: androidState }, { platform: "android" });
+    setUiConfig(
+      { state: androidState },
+      { uiConfig: { id: "touch", inputMode: "touch" } },
+    );
+
+    const iosState = createInitialState();
+    setPlatform({ state: iosState }, { platform: "ios" });
+    setUiConfig(
+      { state: iosState },
+      { uiConfig: { id: "touch", inputMode: "touch" } },
+    );
+
+    expect(selectViewData({ state: androidState }).helpButtonBottom).toBe(
+      "92px",
+    );
+    expect(selectViewData({ state: iosState }).helpButtonBottom).toBe("128px");
   });
 });

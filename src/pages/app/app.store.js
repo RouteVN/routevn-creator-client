@@ -1,4 +1,5 @@
 export const createInitialState = () => ({
+  platform: "web",
   currentRoute: "/projects",
   isTouchMode: false,
   isMobileSheetOpen: false,
@@ -12,7 +13,8 @@ export const createInitialState = () => ({
 const SIDEBAR_WIDTH_PX = 64;
 const MOBILE_TAB_BAR_HEIGHT_PX = 64;
 const HELP_BUTTON_BOTTOM_OFFSET_PX = 24;
-const HELP_BUTTON_TOUCH_EXTRA_BOTTOM_OFFSET_PX = 40;
+const HELP_BUTTON_TOUCH_BOTTOM_OFFSET_PX = 28;
+const HELP_BUTTON_IOS_EXTRA_BOTTOM_OFFSET_PX = 36;
 const MOBILE_TAB_BAR_ACTIVE_COLOR = "white";
 const MOBILE_TAB_BAR_INACTIVE_COLOR = "mu-fg";
 
@@ -167,6 +169,10 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };
 
+export const setPlatform = ({ state }, { platform } = {}) => {
+  state.platform = platform ?? "web";
+};
+
 export const setCurrentRoute = ({ state }, { route } = {}) => {
   state.currentRoute = route;
 };
@@ -268,8 +274,10 @@ export const selectViewData = ({ state, i18n }) => {
     helpButtonBottom: state.isTouchMode
       ? `${
           MOBILE_TAB_BAR_HEIGHT_PX +
-          HELP_BUTTON_BOTTOM_OFFSET_PX +
-          HELP_BUTTON_TOUCH_EXTRA_BOTTOM_OFFSET_PX
+          HELP_BUTTON_TOUCH_BOTTOM_OFFSET_PX +
+          (state.platform === "ios"
+            ? HELP_BUTTON_IOS_EXTRA_BOTTOM_OFFSET_PX
+            : 0)
         }px`
       : `${HELP_BUTTON_BOTTOM_OFFSET_PX}px`,
     repositoryLoadingProgressPercent,

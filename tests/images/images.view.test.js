@@ -89,7 +89,7 @@ describe("images view", () => {
     );
 
     expect(mobileExplorerBranch).toContain(
-      "padding-top: env(safe-area-inset-top)",
+      "padding-top: var(--rvn-mobile-overlay-top-inset, 0px)",
     );
     expect(mobileExplorerBranch).toContain(
       "padding-bottom: env(safe-area-inset-bottom)",

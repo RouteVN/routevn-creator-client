@@ -32,6 +32,7 @@ describe("project page handlers", () => {
     expect(enterEvent.preventDefault).toHaveBeenCalledTimes(1);
     expect(spaceEvent.preventDefault).toHaveBeenCalledTimes(1);
     const expectedOptions = {
+      historyMode: "replace",
       historyState: { preserveProjectsEntryOnProjectOpen: true },
     };
     expect(deps.appService.navigate).toHaveBeenNthCalledWith(

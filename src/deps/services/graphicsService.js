@@ -831,6 +831,14 @@ export const createGraphicsService = async ({
     };
   };
 
+  const createAudioFallbackRenderState = (renderState) => {
+    const { renderableAudio } = splitRenderableAudio(renderState?.audio);
+    return {
+      ...renderState,
+      audio: renderableAudio,
+    };
+  };
+
   const pruneDecodedAudioCache = async (retainedAudioKeys = []) => {
     const retainedAudioKeySet = new Set(
       retainedAudioKeys.filter((key) => typeof key === "string" && key),
@@ -851,6 +859,7 @@ export const createGraphicsService = async ({
     const nextSignature = uniqueAudioKeys.slice().sort().join("|");
 
     if (uniqueAudioKeys.length === 0) {
+      invalidateDeferredAudioRender();
       return;
     }
 
@@ -883,29 +892,52 @@ export const createGraphicsService = async ({
           getMissingDecodedAudioKeys(getRenderStateAudioKeys(nextRenderState)),
         );
 
-        if (!hasDeferredRenderState && remainingMissingAudioKeys.length > 0) {
-          scheduleDeferredAudioRender(
-            remainingMissingAudioKeys,
-            nextRenderState,
-          );
-          return;
-        }
-
         if (scheduledToken === deferredAudioRenderToken) {
           deferredAudioRenderKeySignature = "";
         }
-        renderEngineState(nextRenderState, {
+
+        if (!hasDeferredRenderState && remainingMissingAudioKeys.length > 0) {
+          const remainingSignature = remainingMissingAudioKeys
+            .slice()
+            .sort()
+            .join("|");
+          if (remainingSignature !== nextSignature) {
+            scheduleDeferredAudioRender(
+              remainingMissingAudioKeys,
+              nextRenderState,
+            );
+            return;
+          }
+        }
+
+        let renderStateAfterAudioDecode = nextRenderState;
+        if (remainingMissingAudioKeys.length > 0) {
+          renderStateAfterAudioDecode =
+            createAudioFallbackRenderState(nextRenderState);
+        }
+        renderEngineState(renderStateAfterAudioDecode, {
           allowDeferredAudio: false,
         });
       })
       .catch((error) => {
+        let rejectedRenderState;
         if (scheduledToken === deferredAudioRenderToken) {
           deferredAudioRenderKeySignature = "";
+          rejectedRenderState = deferredAudioRenderState;
+          deferredAudioRenderState = undefined;
         }
         console.error(
           "[graphicsService] Failed to decode deferred audio render assets",
           error,
         );
+        if (rejectedRenderState && engine && routeGraphics) {
+          renderEngineState(
+            createAudioFallbackRenderState(rejectedRenderState),
+            {
+              allowDeferredAudio: false,
+            },
+          );
+        }
       });
   };
 

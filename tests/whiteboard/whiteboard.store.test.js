@@ -199,12 +199,13 @@ describe("whiteboard minimap viewport drag", () => {
         showMinimapInTouchMode: true,
         minimapPlacement: "top-left",
         minimapHeightScale: 2 / 3,
+        minimapTopInset: 8,
       },
     });
 
     expect(forcedTouchViewData.showMinimap).toBe(true);
     expect(forcedTouchViewData.minimapContainerStyle).toContain("left: 20px");
-    expect(forcedTouchViewData.minimapContainerStyle).toContain("top: 20px");
+    expect(forcedTouchViewData.minimapContainerStyle).toContain("top: 8px");
   });
 });
 

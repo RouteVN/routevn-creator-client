@@ -629,6 +629,7 @@ export const selectViewData = ({ state, i18n }) => {
       state.isTouchMode && state.isTouchMinimapReady,
     whiteboardMinimapPlacement: state.isTouchMode ? "top-left" : "bottom-left",
     whiteboardMinimapHeightScale: state.isTouchMode ? 2 / 3 : 1,
+    whiteboardMinimapTopInset: state.isTouchMode ? 8 : undefined,
     filesLabel: copy.filesLabel ?? "Files",
     title: copy.title ?? "Scenes",
     previewButton: copy.previewMenuItem ?? "Preview",

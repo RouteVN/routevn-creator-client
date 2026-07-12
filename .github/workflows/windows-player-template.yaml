@@ -1,18 +1,6 @@
 name: Windows Player Template
 
 on:
-  pull_request:
-    paths:
-      - "crates/routevn-packager/**"
-      - "docker/windows-player-template/**"
-      - "scripts/build-windows-player-template.js"
-      - "scripts/build-windows-player-template-docker.sh"
-      - "scripts/main.js"
-      - "src/deps/services/shared/projectExportService.js"
-      - "package.json"
-      - "bun.lock"
-      - "rust-toolchain.toml"
-      - ".github/workflows/windows-player-template.yaml"
   workflow_dispatch:
 
 jobs:

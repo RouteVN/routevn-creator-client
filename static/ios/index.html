@@ -21,6 +21,7 @@
       }
 
       body {
+        --rvn-mobile-overlay-top-inset: env(safe-area-inset-top);
         --rvn-app-viewport-height: calc(
           100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)
         );
@@ -42,7 +43,7 @@
     </script>
     <link rel="stylesheet" href="/public/theme.css" />
     <script src="/public/rtgl-icons.js"></script>
-    <script src="/public/@rettangoli/ui@1.8.2/dist/rettangoli-iife-ui.min.js"></script>
+    <script src="/public/@rettangoli/ui@1.9.1/dist/rettangoli-iife-ui.min.js"></script>
     <script type="module" src="/public/main.js"></script>
     <script>
       window.addEventListener("load", () => {

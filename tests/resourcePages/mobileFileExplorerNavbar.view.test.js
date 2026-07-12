@@ -49,6 +49,22 @@ const mobileFileExplorerPages = [
 ];
 
 describe("mobile file explorer navbar", () => {
+  it("enables the overlay top inset only in the iOS shell", () => {
+    const iosEntry = readFileSync(
+      new URL("../../static/ios/index.html", import.meta.url),
+      "utf8",
+    );
+    const androidEntry = readFileSync(
+      new URL("../../static/android/index.html", import.meta.url),
+      "utf8",
+    );
+
+    expect(iosEntry).toContain(
+      "--rvn-mobile-overlay-top-inset: env(safe-area-inset-top)",
+    );
+    expect(androidEntry).not.toContain("--rvn-mobile-overlay-top-inset");
+  });
+
   it.each(mobileFileExplorerPages)(
     "matches the images navbar style for %s",
     (_name, relativePath, explorerCondition) => {
@@ -64,7 +80,9 @@ describe("mobile file explorer navbar", () => {
       expect(view).toContain(
         "rtgl-button#mobileFileExplorerClose sq pre=x v=ol",
       );
-      expect(view).toContain("padding-top: env(safe-area-inset-top)");
+      expect(view).toContain(
+        "padding-top: var(--rvn-mobile-overlay-top-inset, 0px)",
+      );
       expect(view).toContain("padding-bottom: env(safe-area-inset-bottom)");
       expect(view).not.toContain(
         "rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md",
