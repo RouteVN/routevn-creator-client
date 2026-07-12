@@ -287,6 +287,10 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
   <script src="./main.js" type="module"></script>
 </html>
 `;
+export const WINDOWS_PLAYER_INDEX_HTML = BUNDLE_PLAYER_INDEX_HTML.replace(
+  '  <script src="./main.js" type="module"></script>',
+  '  <script src="./player-runtime-persistence-host.js"></script>\n  <script src="./main.js" type="module"></script>',
+);
 const BUNDLE_MANIFEST_CHUNKING = Object.freeze({
   algorithm: "none",
   mode: "whole-file-only",

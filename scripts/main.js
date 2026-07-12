@@ -490,6 +490,7 @@ const hideLoadingOverlay = () => {
 };
 
 const setLoadingError = ({
+  title: titleText = "Failed to load",
   summary = "Failed to load",
   error,
   details,
@@ -508,7 +509,7 @@ const setLoadingError = ({
 
   const title = document.createElement("h1");
   title.className = "loading-error-title";
-  title.textContent = "Failed to load";
+  title.textContent = titleText;
 
   const summaryElement = document.createElement("p");
   summaryElement.className = "loading-error-summary";
@@ -592,6 +593,17 @@ const createBundleNamespace = (bundleMetadata) => {
       : "/";
 
   return `bundle:${pathname}`;
+};
+
+const createRuntimePersistence = ({ namespace }) => {
+  const createHostPersistence =
+    globalThis.__ROUTEVN_PLAYER_HOST__?.createPersistence;
+
+  if (typeof createHostPersistence !== "function") {
+    return createIndexedDbPersistence({ namespace });
+  }
+
+  return createHostPersistence();
 };
 
 const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
@@ -749,8 +761,12 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
       });
   };
 
-  recordDiagnosticStep("Loading runtime save data", { namespace });
-  const persistence = createIndexedDbPersistence({ namespace });
+  const persistence = createRuntimePersistence({ namespace });
+  const persistenceKind = persistence.kind ?? "indexed-db";
+  recordDiagnosticStep("Loading runtime save data", {
+    persistenceKind,
+    namespace,
+  });
   const {
     saveSlots,
     globalDeviceVariables,
@@ -759,12 +775,34 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
     accountViewedRegistry,
   } = await persistence.load().catch((error) => {
     throw createRuntimeError("Failed to load runtime save data.", error, {
+      persistenceKind,
       namespace,
     });
   });
 
+  const handlePersistenceError = (error) => {
+    const runtimeError = createRuntimeError(
+      "Failed to save runtime data.",
+      error,
+      { persistenceKind },
+    );
+    console.error("Failed to save runtime data:", runtimeError);
+    recordDiagnosticStep("Runtime persistence write failed", {
+      error: formatErrorForDiagnostics(runtimeError),
+      persistenceKind,
+    });
+    setLoadingError({
+      title: "Failed to save",
+      summary:
+        "The player could not save runtime data. Existing save data was left in place.",
+      error: runtimeError,
+    });
+    void showNativeWindow({ reason: "persistence-error" });
+  };
+
   const effectsHandler = createEffectsHandler({
     getEngine: () => engine,
+    handlePersistenceError,
     persistence,
     routeGraphics: {
       render: renderEngineState,

@@ -1,3 +1,4 @@
+import SqliteDatabase from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const joinMock = vi.fn(async (...parts) => parts.join("/"));
@@ -22,11 +23,13 @@ const createLockError = (message = "database is locked") => {
 const createFakeDb = ({
   lockedExecuteBySql = {},
   lockedSelectBySql = {},
+  schemaVersion = 0,
 } = {}) => {
   const kv = new Map();
   const events = [];
   const executeFailures = new Map(Object.entries(lockedExecuteBySql));
   const selectFailures = new Map(Object.entries(lockedSelectBySql));
+  let currentSchemaVersion = schemaVersion;
 
   const shouldFail = (sql, failures) => {
     for (const [pattern, remaining] of failures.entries()) {
@@ -47,13 +50,25 @@ const createFakeDb = ({
 
       if (String(sql).includes("INSERT OR REPLACE INTO kv")) {
         kv.set(args[0], args[1]);
-      } else if (String(sql).includes("DELETE FROM kv")) {
+      } else if (String(sql).includes("FROM json_each($1)")) {
+        JSON.parse(args[0]).forEach(({ key, value }) => {
+          if (value === null) {
+            kv.delete(key);
+          } else {
+            kv.set(key, value);
+          }
+        });
+      } else if (String(sql).includes("DELETE FROM kv WHERE key = $1")) {
         kv.delete(args[0]);
+      } else if (String(sql).trim() === "DELETE FROM kv") {
+        kv.clear();
       } else if (String(sql).includes("INSERT INTO events")) {
         events.push({
           type: args[0],
           payload: args[1],
         });
+      } else if (String(sql).includes("PRAGMA user_version=")) {
+        currentSchemaVersion = Number(String(sql).split("=").at(-1));
       }
 
       return {
@@ -69,6 +84,18 @@ const createFakeDb = ({
       if (String(sql).includes("SELECT value FROM kv WHERE key = $1")) {
         const value = kv.get(args[0]);
         return value === undefined ? [] : [{ value }];
+      }
+
+      if (String(sql).includes("SELECT key, value FROM kv")) {
+        const prefix = String(sql).includes("substr(key") ? args[1] : undefined;
+        return Array.from(kv.entries())
+          .filter(([key]) => prefix === undefined || key.startsWith(prefix))
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, value]) => ({ key, value }));
+      }
+
+      if (String(sql).includes("PRAGMA user_version")) {
+        return [{ user_version: currentSchemaVersion }];
       }
 
       if (String(sql).includes("SELECT type, payload FROM events")) {
@@ -248,5 +275,158 @@ describe("tauri db lock handling", () => {
     ]);
     expect(loadMock).toHaveBeenCalledTimes(2);
     expect(staleDb.close).toHaveBeenCalledWith("sqlite:app.db");
+  });
+
+  it("lists, atomically batches, and clears JSON key values", async () => {
+    const fakeDb = createFakeDb();
+    loadMock.mockResolvedValue(fakeDb);
+
+    const { createDb } = await import("../../src/deps/clients/tauri/db.js");
+    const db = createDb({
+      path: "sqlite:runtime.db",
+      durability: "full",
+      schemaVersion: 1,
+    });
+    await db.init();
+
+    await db.applyBatch({
+      puts: [
+        { key: "saveSlots:1", value: { slotId: 1 } },
+        { key: "saveSlots:2", value: { slotId: 2 } },
+        { key: "globalRuntime", value: { muteAll: false } },
+      ],
+    });
+    await db.applyBatch({
+      puts: [{ key: "saveSlots:2", value: { slotId: 22 } }],
+      deletes: ["saveSlots:1"],
+    });
+
+    await expect(db.list({ prefix: "saveSlots:" })).resolves.toEqual([
+      { key: "saveSlots:2", value: { slotId: 22 } },
+    ]);
+    await expect(db.get("globalRuntime")).resolves.toEqual({ muteAll: false });
+
+    const batchCalls = fakeDb.execute.mock.calls.filter(([sql]) =>
+      String(sql).includes("FROM json_each($1)"),
+    );
+    expect(batchCalls).toHaveLength(2);
+    expect(fakeDb.select).toHaveBeenCalledWith("PRAGMA journal_mode=WAL");
+    expect(fakeDb.execute).toHaveBeenCalledWith("PRAGMA synchronous=FULL");
+    expect(fakeDb.execute).toHaveBeenCalledWith("PRAGMA user_version=1");
+
+    await db.clear();
+    await expect(db.list()).resolves.toEqual([]);
+  });
+
+  it("executes atomic batch puts and deletes against real SQLite", async () => {
+    const sqlite = new SqliteDatabase(":memory:");
+    const bindParameters = (args) =>
+      Object.fromEntries(
+        args.map((value, index) => [String(index + 1), value]),
+      );
+    const sqlitePluginDb = {
+      execute: vi.fn(async (sql, args = []) => {
+        const statement = sqlite.prepare(sql);
+        const result =
+          args.length === 0
+            ? statement.run()
+            : statement.run(bindParameters(args));
+        return {
+          lastInsertId: Number(result.lastInsertRowid),
+          rowsAffected: result.changes,
+        };
+      }),
+      select: vi.fn(async (sql, args = []) => {
+        const statement = sqlite.prepare(sql);
+        return args.length === 0
+          ? statement.all()
+          : statement.all(bindParameters(args));
+      }),
+    };
+    loadMock.mockResolvedValue(sqlitePluginDb);
+
+    try {
+      const { createDb } = await import("../../src/deps/clients/tauri/db.js");
+      const db = createDb({
+        path: "sqlite:runtime.db",
+        schemaVersion: 1,
+      });
+      await db.init();
+      await db.applyBatch({
+        puts: [
+          { key: "saveSlots:1", value: { slotId: 1 } },
+          { key: "saveSlots:2", value: { slotId: 2 } },
+          { key: "globalRuntime", value: { muteAll: false } },
+        ],
+      });
+      await db.applyBatch({
+        puts: [{ key: "saveSlots:2", value: { slotId: 22 } }],
+        deletes: ["saveSlots:1"],
+      });
+
+      await expect(db.list()).resolves.toEqual([
+        { key: "globalRuntime", value: { muteAll: false } },
+        { key: "saveSlots:2", value: { slotId: 22 } },
+      ]);
+      expect(
+        sqlite
+          .prepare("SELECT COUNT(*) AS count FROM kv WHERE value IS NULL")
+          .get().count,
+      ).toBe(0);
+      expect(sqlite.pragma("user_version", { simple: true })).toBe(1);
+      expect(() =>
+        sqlite
+          .prepare("INSERT INTO kv (key, value) VALUES (?, ?)")
+          .run("corrupt", "not-json"),
+      ).toThrow();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("rejects malformed batch input before touching SQLite", async () => {
+    const fakeDb = createFakeDb();
+    loadMock.mockResolvedValue(fakeDb);
+
+    const { createDb } = await import("../../src/deps/clients/tauri/db.js");
+    const db = createDb({ path: "sqlite:runtime.db" });
+    await db.init();
+    const callsBeforeBatch = fakeDb.execute.mock.calls.length;
+
+    await expect(
+      db.applyBatch({ puts: [{ key: "invalid", value: undefined }] }),
+    ).rejects.toThrow("Db batch puts[0].value must be JSON-serializable");
+    expect(fakeDb.execute).toHaveBeenCalledTimes(callsBeforeBatch);
+  });
+
+  it("rejects an unsupported nonzero schema version before creating tables", async () => {
+    const fakeDb = createFakeDb({ schemaVersion: 2 });
+    loadMock.mockResolvedValue(fakeDb);
+
+    const { createDb } = await import("../../src/deps/clients/tauri/db.js");
+    const db = createDb({
+      path: "sqlite:runtime.db",
+      schemaVersion: 1,
+    });
+
+    await expect(db.init()).rejects.toThrow("Unsupported Db schema version: 2");
+    expect(
+      fakeDb.execute.mock.calls.some(([sql]) =>
+        String(sql).includes("CREATE TABLE IF NOT EXISTS kv"),
+      ),
+    ).toBe(false);
+  });
+
+  it("requires initialization even for an empty batch", async () => {
+    const fakeDb = createFakeDb();
+    loadMock.mockResolvedValue(fakeDb);
+
+    const { createDb } = await import("../../src/deps/clients/tauri/db.js");
+    const db = createDb({ path: "sqlite:runtime.db" });
+
+    await expect(db.applyBatch()).rejects.toThrow(
+      "Db not initialized. Call init() first.",
+    );
+    expect(fakeDb.execute).not.toHaveBeenCalled();
   });
 });

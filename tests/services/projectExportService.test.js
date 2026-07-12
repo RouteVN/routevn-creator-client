@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BUNDLE_FORMAT_VERSION_V4,
   BUNDLE_HEADER_SIZE,
+  BUNDLE_PLAYER_INDEX_HTML,
+  WINDOWS_PLAYER_INDEX_HTML,
   createBundleInstructions,
   createBundleResult,
   createProjectExportService,
@@ -14,6 +16,18 @@ const originalFetch = globalThis.fetch;
 describe("projectExportService", () => {
   afterEach(() => {
     globalThis.fetch = originalFetch;
+  });
+
+  it("loads native persistence only in the Windows player HTML", () => {
+    expect(BUNDLE_PLAYER_INDEX_HTML).not.toContain(
+      "player-runtime-persistence-host.js",
+    );
+    expect(WINDOWS_PLAYER_INDEX_HTML).toContain(
+      '<script src="./player-runtime-persistence-host.js"></script>',
+    );
+    expect(
+      WINDOWS_PLAYER_INDEX_HTML.indexOf("player-runtime-persistence-host.js"),
+    ).toBeLessThan(WINDOWS_PLAYER_INDEX_HTML.indexOf("./main.js"));
   });
 
   it("delegates promptDistributionZipPath through the stable file-adapter contract", async () => {

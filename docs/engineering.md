@@ -547,7 +547,8 @@ concerns belong behind one of these facades.
 
 ### Bundle Contract
 
-Exported `package.bin` files have two distinct version concepts:
+The exported bundle/player contract has two version concepts plus separate web
+and native save-identity concepts:
 
 - binary format version
   - stored in byte `0` of the bundle header
@@ -565,18 +566,34 @@ Exported `package.bin` files have two distinct version concepts:
   - used for provenance, debugging, and support
   - these are not compatibility gates; they are exporter provenance only
 
-- bundled runtime save namespace
+- browser-hosted bundle save namespace
   - source of truth is project-specific DB `projectInfo.namespace`
   - exported into bundle metadata as `bundleMetadata.project.namespace`
-  - runtime should use that namespace for IndexedDB/save identity
+  - browser runtime should use that namespace for IndexedDB/save identity
   - `projectId` must not be exposed into the exported bundle for this purpose
   - runtime may fall back to `bundle:${window.location.pathname}` only for
     older bundles that do not carry namespace metadata
+
+- native Windows player save identity
+  - source of truth is the stable Tauri application identifier
+  - one identifier represents exactly one game
+  - native runtime data is stored in one unpartitioned app-config `runtime.db`
+    (`%APPDATA%` on Windows)
+  - `projectInfo.namespace` is not a native SQLite partition key
 
 Do not collapse these into one field.
 
 - format version answers: "Can this runtime parse the bundle structure?"
 - bundler metadata answers: "Which app/version produced this artifact?"
+- browser bundle namespace answers: "Which IndexedDB save bucket belongs to
+  this browser-hosted game?"
+- native Windows identifier answers: "Which app-config `runtime.db` belongs to
+  this installed game?"
+
+The native Windows persistence contract is defined in
+`docs/platform/11-windows-player-runtime-persistence.md`; the complete physical
+key and JSON value contract is defined in
+`docs/platform/12-windows-player-runtime-key-value-contract.md`.
 
 The canonical implementation points are:
 
@@ -789,10 +806,16 @@ Project identity has an important split:
 - app project entries should mirror that id for routing/listing, but they are
   not the ownership source
 - committed repository event history in `project.db` still stores `project_id`
-  per committed row, but exported save identity should use `projectInfo.namespace`
+  per committed row
+- browser-hosted bundle save identity uses `projectInfo.namespace`
+- native Windows player save identity uses the stable Tauri application
+  identifier and one unpartitioned `runtime.db`
 
 For the current full contract, see
-`docs/platform/06-project-identity-and-metadata.md`.
+`docs/platform/06-project-identity-and-metadata.md` and
+`docs/platform/11-windows-player-runtime-persistence.md`. The native runtime
+row value contract is in
+`docs/platform/12-windows-player-runtime-key-value-contract.md`.
 
 ## Current Canonical Patterns
 

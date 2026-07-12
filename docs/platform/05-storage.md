@@ -62,8 +62,8 @@ Important details:
 
 - `projectInfo` is the source of truth for project display metadata
 - `projectInfo.id` is the canonical folder/project id for new projects
-- `projectInfo.namespace` is the canonical exported runtime save namespace for
-  new projects
+- `projectInfo.namespace` is the canonical browser-hosted bundle save namespace
+  for new projects
 - repository state is not the source of truth for `name`, `description`, or
   `iconFileId`
 - committed event rows also store `project_id`
@@ -71,8 +71,28 @@ Important details:
   `projectInfo`
 
 For the current identity split between app project ids, committed-event
-`project_id`, and bundled runtime namespace, see
+`project_id`, browser bundle namespace, and native player identity, see
 `06-project-identity-and-metadata.md`.
+
+## Exported Windows Player DB
+
+The native Windows player owns a separate SQLite database for runtime save
+data. Its implementation contract is recorded in
+`11-windows-player-runtime-persistence.md`.
+
+Storage location:
+
+- `<Tauri app config directory>/runtime.db`
+
+On Windows this is the roaming application-data tree (`%APPDATA%`) resolved by
+the Tauri SQL plugin from `sqlite:runtime.db`.
+
+This database is scoped by the Tauri application identifier. One identifier
+represents one game, so `runtime.db` has no project-id or namespace partition.
+It is not the Creator project DB and does not contain repository history.
+
+For the complete contract, see
+`11-windows-player-runtime-persistence.md`.
 
 The global app DB separately owns app-level cached project listing data and the
 shared `userConfig` object.

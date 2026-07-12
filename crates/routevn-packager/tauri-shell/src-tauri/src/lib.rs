@@ -34,6 +34,7 @@ fn read_embedded_package_range(offset: u64, length: u64) -> Result<Vec<u8>, Stri
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_sql::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             get_embedded_package_info,
             read_embedded_package_range

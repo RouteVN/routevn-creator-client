@@ -3,7 +3,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { BUNDLE_PLAYER_INDEX_HTML } from "../src/deps/services/shared/projectExportService.js";
+import { WINDOWS_PLAYER_INDEX_HTML } from "../src/deps/services/shared/projectExportService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -99,19 +99,30 @@ const ensureBuildTooling = async () => {
 
 const stagePlayerFrontend = async () => {
   const bundleMainJsPath = path.join(rootDir, "static/bundle/main.js");
+  const persistenceHostPath = path.join(
+    rootDir,
+    "static/bundle/player-runtime-persistence-host.js",
+  );
 
-  if (!(await pathExists(bundleMainJsPath))) {
+  if (
+    !(await pathExists(bundleMainJsPath)) ||
+    !(await pathExists(persistenceHostPath))
+  ) {
     throw new Error(
-      "static/bundle/main.js is missing. Run `bun run build:bundle` first.",
+      "The player frontend bundles are missing. Run `bun run build:bundle` first.",
     );
   }
 
   await mkdir(shellDistDir, { recursive: true });
   await writeFile(
     path.join(shellDistDir, "index.html"),
-    BUNDLE_PLAYER_INDEX_HTML,
+    WINDOWS_PLAYER_INDEX_HTML,
   );
   await copyFile(bundleMainJsPath, path.join(shellDistDir, "main.js"));
+  await copyFile(
+    persistenceHostPath,
+    path.join(shellDistDir, "player-runtime-persistence-host.js"),
+  );
 };
 
 const resolveBuiltTemplateExe = async () => {

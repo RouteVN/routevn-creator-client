@@ -8,6 +8,7 @@ Scope:
 
 - global app DB key-value ids
 - project-specific DB `app` store key-value ids
+- exported Windows player runtime SQLite keys
 - intentionally non-persisted runtime-only values
 
 This document does not list repository resource ids such as `sceneId`,
@@ -148,7 +149,7 @@ Important ownership rule:
 
 - `projectInfo.id` is the source of truth for canonical project identity on new
   projects
-- `projectInfo.namespace` is the source of truth for exported runtime save
+- `projectInfo.namespace` is the source of truth for browser-hosted bundle save
   identity on new projects
 - `projectId` must not be exported into the bundle just to drive runtime save
   identity
@@ -170,6 +171,53 @@ Current storage key shape:
 
 These rows are projection caches/checkpoints, not user-facing config.
 
+## Exported Windows Player Runtime SQLite Keys
+
+The native Windows player stores Route Engine runtime persistence in:
+
+```text
+<Tauri app config directory>/runtime.db
+```
+
+The generic `kv` table uses these key ids:
+
+- `saveSlots:<slotId>`
+  - one row per save slot
+  - examples: `saveSlots:1`, `saveSlots:2`, `saveSlots:auto`
+  - value: one format-versioned save entry containing matching `slotId`,
+    `savedAt`, optional `image`, and `state.contexts`
+- `globalDeviceVariables`
+  - value: object keyed by non-empty device-scoped variable id
+- `globalAccountVariables`
+  - value: object keyed by non-empty account-scoped variable id
+- `globalRuntime`
+  - value: closed object containing only durable dialogue, auto-forward, skip,
+    volume, and mute preferences
+- `accountViewedRegistry`
+  - value: viewed section frontiers and viewed resource ids in `sections` and
+    `resources` arrays
+
+All RouteVN `kv.value` roots are JSON objects encoded as valid JSON text. Values are
+key-specifically validated before a write and again on load. Invalid values are
+not converted to `{}`. In particular, a `saveSlots:<slotId>` row is rejected if
+its nested save state is malformed or its internal `slotId` does not identify
+the physical key's suffix.
+
+Schema version 1 has no persistence metadata table and no internal metadata
+keys. `PRAGMA user_version` is the only database schema version. The Windows
+JavaScript adapter owns RouteVN semantic validation; Rust only registers the
+generic Tauri SQL plugin. The native Windows player does not read or import
+existing IndexedDB runtime data.
+
+The database belongs to one game identified by the Tauri application
+identifier. None of these keys are additionally prefixed or partitioned by
+project id or namespace.
+
+For database location, durability, adapter, and startup rules, see
+`11-windows-player-runtime-persistence.md`. For the normative complete key,
+field, type, JSON shape, validation, and atomic rejection contract, see
+`12-windows-player-runtime-key-value-contract.md`.
+
 ## Runtime-Only Values
 
 These values are intentionally not persisted in any DB.
@@ -190,6 +238,7 @@ Use this split:
 - global app DB: project discovery/list cache plus `userConfig`
 - project-specific DB `app` store: canonical project metadata plus project-local
   app-owned state
+- exported Windows player DB: one game's native Route Engine runtime state
 - runtime-only values: explicit overrides that are intentionally not persisted
 
 When adding a new persisted key, update this document in the same PR.

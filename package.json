@@ -48,7 +48,7 @@
     "vite": "6.4.2"
   },
   "scripts": {
-    "build:bundle": "vite build --config scripts/vite.bundle.config.js",
+    "build:bundle": "vite build --config scripts/vite.bundle.config.js && vite build --config scripts/vite.player-runtime-host.config.js",
     "build:web": "./scripts/build.sh web",
     "build:tauri": "./scripts/build.sh tauri",
     "build:android": "./scripts/build.sh android",
