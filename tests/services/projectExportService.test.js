@@ -18,16 +18,29 @@ describe("projectExportService", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("loads native persistence only in the Windows player HTML", () => {
+  it("loads native chrome and persistence only in the Windows player HTML", () => {
+    expect(BUNDLE_PLAYER_INDEX_HTML).not.toContain("windowChrome.js");
     expect(BUNDLE_PLAYER_INDEX_HTML).not.toContain(
       "player-runtime-persistence-host.js",
     );
     expect(WINDOWS_PLAYER_INDEX_HTML).toContain(
+      '<script src="./windowChrome.js" defer></script>',
+    );
+    expect(WINDOWS_PLAYER_INDEX_HTML).toContain(
       '<script src="./player-runtime-persistence-host.js"></script>',
+    );
+    expect(WINDOWS_PLAYER_INDEX_HTML.indexOf("windowChrome.js")).toBeLessThan(
+      WINDOWS_PLAYER_INDEX_HTML.indexOf("player-runtime-persistence-host.js"),
     );
     expect(
       WINDOWS_PLAYER_INDEX_HTML.indexOf("player-runtime-persistence-host.js"),
     ).toBeLessThan(WINDOWS_PLAYER_INDEX_HTML.indexOf("./main.js"));
+  });
+
+  it("sizes the player canvas within custom window chrome", () => {
+    expect(BUNDLE_PLAYER_INDEX_HTML).toContain(
+      "var(--rvn-app-viewport-height, 100vh)",
+    );
   });
 
   it("delegates promptDistributionZipPath through the stable file-adapter contract", async () => {

@@ -103,10 +103,12 @@ const stagePlayerFrontend = async () => {
     rootDir,
     "static/bundle/player-runtime-persistence-host.js",
   );
+  const windowChromePath = path.join(rootDir, "static/public/windowChrome.js");
 
   if (
     !(await pathExists(bundleMainJsPath)) ||
-    !(await pathExists(persistenceHostPath))
+    !(await pathExists(persistenceHostPath)) ||
+    !(await pathExists(windowChromePath))
   ) {
     throw new Error(
       "The player frontend bundles are missing. Run `bun run build:bundle` first.",
@@ -123,6 +125,7 @@ const stagePlayerFrontend = async () => {
     persistenceHostPath,
     path.join(shellDistDir, "player-runtime-persistence-host.js"),
   );
+  await copyFile(windowChromePath, path.join(shellDistDir, "windowChrome.js"));
 };
 
 const resolveBuiltTemplateExe = async () => {

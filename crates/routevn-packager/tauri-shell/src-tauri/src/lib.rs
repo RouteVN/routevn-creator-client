@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+mod windows_system_menu;
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct EmbeddedPackageInfo {
@@ -37,7 +39,8 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             get_embedded_package_info,
-            read_embedded_package_range
+            read_embedded_package_range,
+            windows_system_menu::show_windows_system_menu
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
