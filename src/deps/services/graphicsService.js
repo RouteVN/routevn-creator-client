@@ -831,6 +831,14 @@ export const createGraphicsService = async ({
     };
   };
 
+  const createAudioFallbackRenderState = (renderState) => {
+    const { renderableAudio } = splitRenderableAudio(renderState?.audio);
+    return {
+      ...renderState,
+      audio: renderableAudio,
+    };
+  };
+
   const pruneDecodedAudioCache = async (retainedAudioKeys = []) => {
     const retainedAudioKeySet = new Set(
       retainedAudioKeys.filter((key) => typeof key === "string" && key),
@@ -851,6 +859,7 @@ export const createGraphicsService = async ({
     const nextSignature = uniqueAudioKeys.slice().sort().join("|");
 
     if (uniqueAudioKeys.length === 0) {
+      invalidateDeferredAudioRender();
       return;
     }
 
@@ -903,26 +912,32 @@ export const createGraphicsService = async ({
 
         let renderStateAfterAudioDecode = nextRenderState;
         if (remainingMissingAudioKeys.length > 0) {
-          const { renderableAudio } = splitRenderableAudio(
-            nextRenderState?.audio,
-          );
-          renderStateAfterAudioDecode = {
-            ...nextRenderState,
-            audio: renderableAudio,
-          };
+          renderStateAfterAudioDecode =
+            createAudioFallbackRenderState(nextRenderState);
         }
         renderEngineState(renderStateAfterAudioDecode, {
           allowDeferredAudio: false,
         });
       })
       .catch((error) => {
+        let rejectedRenderState;
         if (scheduledToken === deferredAudioRenderToken) {
           deferredAudioRenderKeySignature = "";
+          rejectedRenderState = deferredAudioRenderState;
+          deferredAudioRenderState = undefined;
         }
         console.error(
           "[graphicsService] Failed to decode deferred audio render assets",
           error,
         );
+        if (rejectedRenderState && engine && routeGraphics) {
+          renderEngineState(
+            createAudioFallbackRenderState(rejectedRenderState),
+            {
+              allowDeferredAudio: false,
+            },
+          );
+        }
       });
   };
 

@@ -12,6 +12,10 @@ const windowChromeSource = readFileSync(
 const staticDirectory = fileURLToPath(
   new URL("../../static/", import.meta.url),
 );
+const testPermissionsHtml = readFileSync(
+  fileURLToPath(new URL("../../static/test-permissions.html", import.meta.url)),
+  "utf8",
+);
 const tauriWindowsConfig = JSON.parse(
   readFileSync(
     fileURLToPath(
@@ -194,6 +198,12 @@ describe("standalone window chrome", () => {
         html.indexOf("/public/main.js"),
       );
     });
+  });
+
+  it("is loaded by the permissions-test document", () => {
+    expect(testPermissionsHtml).toContain(
+      '<script src="/public/windowChrome.js" defer></script>',
+    );
   });
 
   it("keeps a native fallback until runtime custom chrome can activate", () => {
