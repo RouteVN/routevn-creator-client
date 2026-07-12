@@ -52,14 +52,14 @@ const parseBooleanProp = (value, fallback = false) => {
   return value === true || value === "true";
 };
 
-const resolveMinimapContainerStyle = (placement) => {
+const resolveMinimapContainerStyle = (placement, topInset) => {
   const baseStyle = "overflow: hidden;";
   if (placement === "top-right") {
-    return ["right: 20px", "top: 20px", baseStyle].join("; ");
+    return ["right: 20px", `top: ${topInset}px`, baseStyle].join("; ");
   }
 
   if (placement === "top-left") {
-    return ["left: 20px", "top: 20px", baseStyle].join("; ");
+    return ["left: 20px", `top: ${topInset}px`, baseStyle].join("; ");
   }
 
   return ["left: 20px", "bottom: 20px", baseStyle].join("; ");
@@ -68,6 +68,11 @@ const resolveMinimapContainerStyle = (placement) => {
 const resolveMinimapHeightScale = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 1;
+};
+
+const resolveMinimapTopInset = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : 20;
 };
 
 export const createInitialState = () => ({
@@ -866,6 +871,7 @@ export const selectViewData = ({ state, props }) => {
   const minimapHeightScale = resolveMinimapHeightScale(
     props.minimapHeightScale,
   );
+  const minimapTopInset = resolveMinimapTopInset(props.minimapTopInset);
   const showMinimap = showTouchMinimap || showDesktopMinimap;
 
   return {
@@ -881,7 +887,10 @@ export const selectViewData = ({ state, props }) => {
           },
         )
       : undefined,
-    minimapContainerStyle: resolveMinimapContainerStyle(minimapPlacement),
+    minimapContainerStyle: resolveMinimapContainerStyle(
+      minimapPlacement,
+      minimapTopInset,
+    ),
     arrowsList,
     selectedItemId: props.selectedItemId,
     isPanMode: state.isPinnedPanMode || state.isKeyboardPanMode,

@@ -514,6 +514,7 @@ export const handleBeforeMount = (deps) => {
   const initialPath = currentPath === "/" ? "/projects" : currentPath;
 
   appService.setAppCopyProvider?.(() => selectAppCopy(deps.i18n));
+  store.setPlatform({ platform: appService.getPlatform() });
   store.setUiConfig({ uiConfig });
   subject.dispatch("app.route.request", {
     path: initialPath,
