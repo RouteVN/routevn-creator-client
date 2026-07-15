@@ -2702,7 +2702,7 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
-  it("restores the slash mention trigger caret when the overlay closes the menu", async () => {
+  it("restores the slash mention trigger caret when Escape closes the focused popover", async () => {
     const restoreDomGlobals = installDomGlobals();
 
     try {
@@ -2719,6 +2719,8 @@ describe("lexical scene document editor line editing", () => {
         },
       });
       const rootElement = document.createElement("div");
+      const surfaceElement = document.createElement("div");
+      const mentionMenuElement = document.createElement("button");
       const editorElement = Object.create(
         LexicalSceneDocumentEditorElement.prototype,
       );
@@ -2727,7 +2729,11 @@ describe("lexical scene document editor line editing", () => {
       let triggerTextKey;
 
       rootElement.tabIndex = 0;
-      document.body.append(rootElement);
+      mentionMenuElement.items = [{ id: "character-1", label: "Alex" }];
+      mentionMenuElement.open = true;
+      mentionMenuElement.render = vi.fn();
+      surfaceElement.append(rootElement, mentionMenuElement);
+      document.body.append(surfaceElement);
       editor.setRootElement(rootElement);
       editorElement.editor = editor;
       Object.defineProperty(editorElement, "dataset", {
@@ -2740,14 +2746,8 @@ describe("lexical scene document editor line editing", () => {
       });
       editorElement.refs = {
         editor: rootElement,
-        surface: {
-          dataset: {},
-        },
-        mentionMenu: {
-          items: [{ id: "character-1", label: "Alex" }],
-          open: true,
-          render: vi.fn(),
-        },
+        surface: surfaceElement,
+        mentionMenu: mentionMenuElement,
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
@@ -2802,12 +2802,30 @@ describe("lexical scene document editor line editing", () => {
       editorElement.isEditorFocused = true;
       editorElement.mentionMenuFocusRestoreTimerId = undefined;
       editorElement.hasActiveMentionTrigger = vi.fn(() => false);
+      editorElement.hideSelectionPopover = vi.fn();
       editorElement.scheduleRender = vi.fn();
 
-      editorElement.handleMentionMenuClose();
+      const globalShortcut = vi.fn();
+      const captureHandler =
+        editorElement.handleWindowKeyDownCapture.bind(editorElement);
+      window.addEventListener("keydown", captureHandler, true);
+      window.addEventListener("keydown", globalShortcut);
+      mentionMenuElement.focus();
+
+      const event = new window.KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "Escape",
+      });
+      mentionMenuElement.dispatchEvent(event);
+      window.removeEventListener("keydown", captureHandler, true);
+      window.removeEventListener("keydown", globalShortcut);
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(editorElement.refs.mentionMenu.open).toBe(false);
+      expect(event.defaultPrevented).toBe(true);
+      expect(globalShortcut).not.toHaveBeenCalled();
+      expect(mentionMenuElement.open).toBe(false);
+      expect(document.activeElement).toBe(rootElement);
       expect(editorElement.state.selectedLineId).toBe("line-2");
       expect(editorElement.getCurrentSelectionSnapshot()).toEqual({
         lineId: "line-2",
