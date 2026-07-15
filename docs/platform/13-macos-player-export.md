@@ -27,7 +27,8 @@ player-templates/macos/RouteVNPlayerTemplate.app.zip
 The maintainer pipeline builds `universal-apple-darwin`, validates that every
 Mach-O contains `arm64` and `x86_64`, checks executable permissions and symlink
 containment, and archives the template with `ditto`. The exact archive is
-committed as a regular Git file and uploaded by the template workflow.
+produced locally and committed as a regular Git file. CI does not build or
+publish the macOS player template.
 
 The template executable name stays stable. Export changes only the outer app
 directory, top-level bundle metadata, resources, and signature.
@@ -109,7 +110,6 @@ messages.
 ## Canonical Implementation Areas
 
 - template build: `scripts/build-macos-player-template.js`
-- template workflow: `.github/workflows/macos-player-template.yaml`
 - native exporter: `src-tauri/src/export_macos.rs`
 - shared payload: `crates/routevn-packager/src/payload.rs`
 - shared player shell:

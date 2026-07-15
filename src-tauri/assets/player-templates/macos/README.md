@@ -24,5 +24,5 @@ checks symlink containment and executable permissions, and archives the app
 with `ditto`. The exporter re-validates the bundled template and the final
 player archive.
 
-The GitHub Actions workflow `macos-player-template.yaml` builds and uploads the
-template artifact for release use.
+The template is built locally and committed as a regular Git artifact. CI does
+not build or publish it.

@@ -167,12 +167,12 @@ template build:
    output so Creator release assembly can verify the intended artifact.
 8. Install the resulting template ZIP under the Creator resource directory.
 9. Commit the binary artifact as a regular Git file, matching the existing
-   Windows player-template policy. The release workflow also uploads the exact
-   archive as a build artifact.
+   Windows player-template policy.
 
 Expected maintainer-facing additions include a macOS template build script, a
-package script equivalent to `player-template:build:win`, and a GitHub Actions
-workflow that uploads the exact template archive consumed by Creator releases.
+package script equivalent to `player-template:build:win`, and the exact locally
+built template archive consumed by Creator releases. CI does not build or
+publish the macOS player template.
 
 Ordinary RouteVN users never run this template build.
 
@@ -435,7 +435,6 @@ Primary implementation areas:
 - `crates/routevn-packager/src/payload.rs`
 - `crates/routevn-packager/tauri-shell/src-tauri/src/lib.rs`
 - `scripts/build-macos-player-template.js`
-- `.github/workflows/macos-player-template.yaml`
 - relevant service, Versions, project metadata, and player-shell tests
 
 ## Dependency Boundary
@@ -482,7 +481,7 @@ payloads, and a shell-level test proves the runtime identifier is not
 
 ### Phase 3: Universal Template Pipeline
 
-- add the macOS staging/build script and CI workflow
+- add the local macOS staging/build script
 - validate every Mach-O architecture and required SQL capability
 - produce the digest-recorded template ZIP consumed by Creator
 
