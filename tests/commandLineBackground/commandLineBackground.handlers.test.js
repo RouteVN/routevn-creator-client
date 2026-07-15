@@ -10,6 +10,7 @@ import {
   handleResourceItemClick,
   handleSpritesheetSelected,
   handleSubmitClick,
+  handleTabClick,
 } from "../../src/components/commandLineBackground/commandLineBackground.handlers.js";
 import {
   createInitialState,
@@ -1028,6 +1029,59 @@ describe("commandLineBackground.handlers", () => {
         animationName: "wind",
       },
     });
+  });
+
+  it("restores the selected background preview when a tab change clears the temporary resource", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setRepositoryCollections(state);
+    setMode({ state }, { mode: "gallery" });
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+
+    handleSpritesheetSelected(
+      { store, render, dispatchEvent },
+      {
+        _event: {
+          detail: {
+            resourceId: "bg-spritesheet",
+            animationName: "wind",
+          },
+        },
+      },
+    );
+    dispatchEvent.mockClear();
+    render.mockClear();
+
+    handleTabClick(
+      { store, render, dispatchEvent },
+      {
+        _event: {
+          detail: {
+            id: "image",
+          },
+        },
+      },
+    );
+
+    expect(selectTempSelectedResource({ state })).toBeNull();
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+        },
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(1);
   });
 
   it("submits playback continuity inside background animations", () => {

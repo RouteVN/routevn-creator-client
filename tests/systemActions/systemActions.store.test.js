@@ -778,6 +778,134 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("uses effective presentation resources for partial background and visual actions", () => {
+    const state = createInitialState();
+    const atlas = {
+      frames: {
+        "storm-0": {
+          frame: { x: 0, y: 0, w: 64, h: 64 },
+        },
+      },
+    };
+    const animation = {
+      frames: ["storm-0"],
+      fps: 12,
+    };
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          spritesheets: {
+            items: {
+              "weather-sheet": {
+                id: "weather-sheet",
+                type: "spritesheet",
+                name: "Weather",
+                fileId: "file-weather-sheet",
+                jsonData: atlas,
+                animations: { storm: animation },
+              },
+            },
+            tree: [{ id: "weather-sheet" }],
+          },
+        },
+      },
+    );
+
+    const partialAnimationResult = selectActionsData({
+      state,
+      props: {
+        actions: {
+          background: {
+            animationName: "storm",
+          },
+          visual: {
+            items: [
+              {
+                id: "weather-visual",
+                opacity: 0.5,
+              },
+            ],
+          },
+        },
+        presentationState: {
+          background: {
+            resourceId: "weather-sheet",
+            animationName: "storm",
+          },
+          visual: {
+            items: [
+              {
+                id: "weather-visual",
+                resourceId: "weather-sheet",
+                resourceType: "spritesheet",
+                animationName: "storm",
+                opacity: 0.5,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(partialAnimationResult.actions.background).toEqual({
+      resourceId: "weather-sheet",
+      animationName: "storm",
+    });
+    expect(partialAnimationResult.preview.background).toMatchObject({
+      id: "weather-sheet",
+      type: "spritesheet",
+      animationName: "storm",
+      spritesheetAnimation: animation,
+    });
+    expect(partialAnimationResult.actions.visual.items[0]).toEqual({
+      id: "weather-visual",
+      resourceId: "weather-sheet",
+      resourceType: "spritesheet",
+      animationName: "storm",
+      opacity: 0.5,
+    });
+    expect(partialAnimationResult.preview.visual.items[0]).toMatchObject({
+      id: "weather-visual",
+      resourceId: "weather-sheet",
+      resourceType: "spritesheet",
+      animationName: "storm",
+      spritesheetAnimation: animation,
+    });
+
+    const colorOnlyResult = selectActionsData({
+      state,
+      props: {
+        actions: {
+          background: {
+            colorId: "storm-tint",
+          },
+        },
+        presentationState: {
+          background: {
+            resourceId: "weather-sheet",
+            animationName: "storm",
+            colorId: "storm-tint",
+          },
+        },
+      },
+    });
+
+    expect(colorOnlyResult.actions.background).toEqual({
+      resourceId: "weather-sheet",
+      animationName: "storm",
+      colorId: "storm-tint",
+    });
+    expect(colorOnlyResult.preview.background).toMatchObject({
+      id: "weather-sheet",
+      type: "spritesheet",
+      animationName: "storm",
+      spritesheetAnimation: animation,
+      colorId: "storm-tint",
+    });
+  });
+
   it("includes custom character name and persist character labels in dialogue preview when a character is selected", () => {
     const state = createInitialState();
 
