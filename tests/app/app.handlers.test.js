@@ -1,5 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-import { maybePromptLinuxAppImageDesktopIntegration } from "../../src/pages/app/app.handlers.js";
+import { JSDOM } from "jsdom";
+import { NEVER } from "rxjs";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  handleBeforeMount,
+  maybePromptLinuxAppImageDesktopIntegration,
+} from "../../src/pages/app/app.handlers.js";
 
 const createDeps = ({
   distribution = "direct",
@@ -45,6 +50,194 @@ const createDeps = ({
     },
   };
 };
+
+const createNavigationShortcutHarness = () => {
+  const dom = new JSDOM("<!doctype html><body></body>");
+  vi.stubGlobal("window", dom.window);
+  vi.stubGlobal("document", dom.window.document);
+  vi.stubGlobal("Element", dom.window.Element);
+
+  const appService = {
+    getPath: vi.fn(() => "/project/images"),
+    getPayload: vi.fn(() => ({ p: "project-1" })),
+    getPlatform: vi.fn(() => "web"),
+    isInputFocused: vi.fn(() => true),
+    navigate: vi.fn(),
+    setAppCopyProvider: vi.fn(),
+  };
+  const deps = {
+    appService,
+    store: {
+      setPlatform: vi.fn(),
+      setUiConfig: vi.fn(),
+    },
+    subject: {
+      dispatch: vi.fn(),
+      pipe: vi.fn(() => NEVER),
+    },
+    uiConfig: {},
+  };
+  const cleanup = handleBeforeMount(deps);
+
+  return {
+    appService,
+    cleanup,
+    document: dom.window.document,
+    KeyboardEvent: dom.window.KeyboardEvent,
+  };
+};
+
+const navigationShortcutCases = [
+  ["pr", "/project"],
+  ["i", "/project/images"],
+  ["sp", "/project/spritesheets"],
+  ["ch", "/project/characters"],
+  ["so", "/project/sounds"],
+  ["tr", "/project/transforms"],
+  ["an", "/project/animations"],
+  ["pa", "/project/particles"],
+  ["vi", "/project/videos"],
+  ["co", "/project/colors"],
+  ["f", "/project/fonts"],
+  ["ts", "/project/text-styles"],
+  ["l", "/project/layouts"],
+  ["ct", "/project/controls"],
+  ["va", "/project/variables"],
+  ["sc", "/project/scenes"],
+  ["r", "/project/releases/versions"],
+  ["ws", "/project/releases/web-server"],
+  ["ab", "/project/about"],
+  ["ap", "/project/appearance"],
+];
+
+const createKeyboardScope = (harness) => {
+  const keyboardScope = harness.document.createElement("div");
+  keyboardScope.tabIndex = -1;
+  harness.document.body.append(keyboardScope);
+  keyboardScope.focus();
+  return keyboardScope;
+};
+
+const dispatchKeyboardSequence = ({ harness, target, keys }) => {
+  for (const key of keys) {
+    target.dispatchEvent(
+      new harness.KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key,
+      }),
+    );
+  }
+};
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("app project navigation shortcuts", () => {
+  it.each(navigationShortcutCases)(
+    "navigates with g %s from a focused non-editable keyboard scope",
+    (sequence, targetPath) => {
+      const harness = createNavigationShortcutHarness();
+      const keyboardScope = createKeyboardScope(harness);
+
+      dispatchKeyboardSequence({
+        harness,
+        target: keyboardScope,
+        keys: ["g", ...sequence],
+      });
+
+      expect(harness.appService.navigate).toHaveBeenCalledWith(
+        targetPath,
+        { p: "project-1" },
+        { historyMode: "replace" },
+      );
+      harness.cleanup();
+    },
+  );
+
+  it("normalizes uppercase shortcut keys", () => {
+    const harness = createNavigationShortcutHarness();
+    const keyboardScope = createKeyboardScope(harness);
+
+    dispatchKeyboardSequence({
+      harness,
+      target: keyboardScope,
+      keys: ["G", "C", "H"],
+    });
+
+    expect(harness.appService.navigate).toHaveBeenCalledWith(
+      "/project/characters",
+      { p: "project-1" },
+      { historyMode: "replace" },
+    );
+    harness.cleanup();
+  });
+
+  it.each([
+    ["ch", "/project/characters"],
+    ["l", "/project/layouts"],
+  ])(
+    "resolves g %s before a focused page scope consumes h or l",
+    (sequence, targetPath) => {
+      const harness = createNavigationShortcutHarness();
+      const keyboardScope = createKeyboardScope(harness);
+      keyboardScope.addEventListener("keydown", (event) => {
+        const key = String(event.key).toLowerCase();
+        if (key === "h" || key === "l") {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      });
+
+      dispatchKeyboardSequence({
+        harness,
+        target: keyboardScope,
+        keys: ["g", ...sequence],
+      });
+
+      expect(harness.appService.navigate).toHaveBeenCalledWith(
+        targetPath,
+        { p: "project-1" },
+        { historyMode: "replace" },
+      );
+      harness.cleanup();
+    },
+  );
+
+  it.each(["p", "h", "c", "o", "y", "v", "t", "s", "n", "a"])(
+    "does not retain the legacy g %s shortcut",
+    (legacyKey) => {
+      const harness = createNavigationShortcutHarness();
+      const keyboardScope = createKeyboardScope(harness);
+
+      dispatchKeyboardSequence({
+        harness,
+        target: keyboardScope,
+        keys: ["g", legacyKey],
+      });
+
+      expect(harness.appService.navigate).not.toHaveBeenCalled();
+      harness.cleanup();
+    },
+  );
+
+  it("does not navigate while a text input is focused", () => {
+    const harness = createNavigationShortcutHarness();
+    const input = harness.document.createElement("input");
+    harness.document.body.append(input);
+    input.focus();
+
+    dispatchKeyboardSequence({
+      harness,
+      target: input,
+      keys: ["g", "c", "h"],
+    });
+
+    expect(harness.appService.navigate).not.toHaveBeenCalled();
+    harness.cleanup();
+  });
+});
 
 describe("app Linux AppImage desktop integration", () => {
   it("prompts and installs desktop integration for direct AppImage builds", async () => {
