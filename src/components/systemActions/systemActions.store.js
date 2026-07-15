@@ -23,6 +23,7 @@ import {
 export const createInitialState = () => ({
   mode: "actions",
   actions: {},
+  authoredDialogueWasCleared: false,
   isTouchMode: false,
   isActionsDialogOpen: false,
   suppressDialogClose: false,
@@ -189,6 +190,8 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
   const displayActions = selectDisplayActions({ state });
   const actionProps = { ...props };
   actionProps.actions = selectAction({ state });
+  actionProps.authoredDialogueWasCleared =
+    state.authoredDialogueWasCleared === true;
   const { actions: actionsObject, preview } = selectActionsData({
     props: actionProps,
     state,
@@ -356,6 +359,13 @@ export const updateActions = ({ state }, payload = {}) => {
   if (previousVoiceResourceId !== nextVoiceResourceId) {
     closeAudioPlayer({ state });
   }
+};
+
+export const setAuthoredDialogueWasCleared = (
+  { state },
+  { authoredDialogueWasCleared } = {},
+) => {
+  state.authoredDialogueWasCleared = authoredDialogueWasCleared === true;
 };
 
 export const showActionsDialog = ({ state }, _payload = {}) => {
@@ -954,9 +964,14 @@ export const selectActionsData = ({ props, state, copy }) => {
     presentationState,
     props,
   });
+  const authoredDialogueWasCleared =
+    props.actionType === "presentation" &&
+    (props.authoredDialogueWasCleared === true ||
+      props.actions?.dialogue?.clear === true);
 
   const shouldShowDialogue =
     dialogueAction &&
+    !authoredDialogueWasCleared &&
     (props.actionType !== "presentation" ||
       isDisplayablePresentationDialogue(dialogueAction, layoutsItems));
 

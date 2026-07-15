@@ -19,6 +19,14 @@ const normalizeActionsObject = (value) => {
   return normalizeLineActions(toPlainObject(value));
 };
 
+const syncActions = (store, value) => {
+  const actions = toPlainObject(value);
+  store.setAuthoredDialogueWasCleared({
+    authoredDialogueWasCleared: actions.dialogue?.clear === true,
+  });
+  store.updateActions(normalizeActionsObject(actions));
+};
+
 const mergeActions = (currentActions, nextPartialActions) => {
   return {
     ...toPlainObject(currentActions),
@@ -60,12 +68,9 @@ const syncRepositoryState = (deps) => {
 export const open = (deps, payload) => {
   const { store, render } = deps;
   const { mode, actions } = payload;
-  const nextActions =
-    actions !== undefined
-      ? normalizeActionsObject(actions)
-      : normalizeActionsObject(deps.props?.actions);
+  const nextActions = actions !== undefined ? actions : deps.props?.actions;
 
-  store.updateActions(nextActions);
+  syncActions(store, nextActions);
   store.showActionsDialog();
   store.setMode({ mode });
   render();
@@ -80,7 +85,7 @@ export const handleAfterMount = async (deps) => {
 export const handleBeforeMount = (deps) => {
   const { props, render, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
-  store.updateActions(normalizeActionsObject(props.actions));
+  syncActions(store, props.actions);
   store.setRepositoryState({
     repositoryState: deps.projectService.getRepositoryState(),
   });
@@ -91,7 +96,7 @@ export const handleOnUpdate = (deps, changes) => {
   const { render, store } = deps;
   const { newProps } = changes;
   syncRepositoryState(deps);
-  store.updateActions(normalizeActionsObject(newProps.actions));
+  syncActions(store, newProps.actions);
 
   if (
     !isBooleanPropEnabled(newProps?.suppressDialogClose) &&
@@ -292,6 +297,11 @@ export const handleCommandLineSubmit = (deps, payload) => {
     mergeActions(store.selectAction(), submittedActions),
   );
 
+  if (Object.hasOwn(submittedActions, "dialogue")) {
+    store.setAuthoredDialogueWasCleared({
+      authoredDialogueWasCleared: submittedActions.dialogue?.clear === true,
+    });
+  }
   store.updateActions(nextActions);
   dispatchEvent(
     new CustomEvent("actions-change", {

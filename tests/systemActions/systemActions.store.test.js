@@ -5,6 +5,7 @@ import {
   openAudioPlayer,
   selectActionsData,
   selectViewData as selectViewDataBase,
+  setAuthoredDialogueWasCleared,
   setUiConfig,
   setRepositoryState,
   updateActions,
@@ -1102,6 +1103,62 @@ describe("systemActions.store", () => {
         presentationState: {
           dialogue: {
             clear: true,
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue).toBeUndefined();
+    expect(preview.dialogue).toBeUndefined();
+  });
+
+  it("keeps cleared dialogue hidden after its content is edited", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: {
+            items: {
+              "dialogue-layout": {
+                id: "dialogue-layout",
+                type: "layout",
+                name: "Main Dialogue",
+                layoutType: "dialogue-adv",
+              },
+            },
+            tree: [{ id: "dialogue-layout" }],
+          },
+        },
+      },
+    );
+
+    updateActions(
+      { state },
+      {
+        dialogue: {
+          content: [{ text: "Edited after deletion" }],
+        },
+      },
+    );
+    setAuthoredDialogueWasCleared(
+      { state },
+      { authoredDialogueWasCleared: true },
+    );
+
+    const { actions, preview } = selectViewData({
+      state,
+      props: {
+        actionType: "presentation",
+        actions: {},
+        presentationState: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            mode: "adv",
+            content: [{ text: "Edited after deletion" }],
           },
         },
       },
