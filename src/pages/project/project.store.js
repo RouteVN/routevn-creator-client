@@ -2,6 +2,15 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolution,
 } from "../../internal/projectResolution.js";
+import {
+  DEFAULT_PROJECT_LANGUAGE,
+  normalizeProjectLanguage,
+} from "../../internal/projectLanguage.js";
+import {
+  createProjectLanguageOptions,
+  selectProjectLanguageCopy,
+  selectProjectLanguageLabel,
+} from "../../internal/ui/projectLanguage.js";
 import { selectProjectPageCopy } from "./support/projectPageCopy.js";
 
 export const createInitialState = () => ({
@@ -9,6 +18,7 @@ export const createInitialState = () => ({
   project: {
     name: "",
     description: "",
+    language: DEFAULT_PROJECT_LANGUAGE,
     iconFileId: undefined,
     resolution: DEFAULT_PROJECT_RESOLUTION,
     source: "local",
@@ -25,6 +35,7 @@ export const createInitialState = () => ({
   editDefaultValues: {
     name: "",
     description: "",
+    language: DEFAULT_PROJECT_LANGUAGE,
   },
   editIconFileId: undefined,
   editIconCropFile: undefined,
@@ -38,6 +49,7 @@ export const setCurrentProject = ({ state }, { project } = {}) => {
   state.project = {
     name: project?.name ?? "",
     description: project?.description ?? "",
+    language: normalizeProjectLanguage(project?.language),
     iconFileId: project?.iconFileId ?? undefined,
     resolution: project?.resolution ?? DEFAULT_PROJECT_RESOLUTION,
     source: project?.source === "cloud" ? "cloud" : "local",
@@ -70,6 +82,7 @@ export const openEditDialog = ({ state }, _payload = {}) => {
   state.editDefaultValues = {
     name: state.project.name ?? "",
     description: state.project.description ?? "",
+    language: state.project.language,
   };
   state.editIconFileId = state.project.iconFileId ?? undefined;
 };
@@ -80,6 +93,7 @@ export const closeEditDialog = ({ state }, _payload = {}) => {
   state.editDefaultValues = {
     name: "",
     description: "",
+    language: DEFAULT_PROJECT_LANGUAGE,
   };
   state.editIconFileId = undefined;
   state.editIconCropFile = undefined;
@@ -117,6 +131,7 @@ export const selectIsEditIconCropDialogOpen = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectProjectPageCopy(i18n);
+  const projectLanguageCopy = selectProjectLanguageCopy(i18n);
   const detailFields = [
     {
       type: "slot",
@@ -132,6 +147,11 @@ export const selectViewData = ({ state, i18n }) => {
       type: "slot",
       slot: "project-description",
       label: "",
+    },
+    {
+      type: "slot",
+      slot: "project-language",
+      label: projectLanguageCopy.label,
     },
     {
       type: "text",
@@ -155,6 +175,15 @@ export const selectViewData = ({ state, i18n }) => {
         required: false,
       },
       {
+        name: "language",
+        type: "select",
+        label: projectLanguageCopy.label,
+        description: projectLanguageCopy.description,
+        required: true,
+        clearable: false,
+        options: createProjectLanguageOptions(i18n),
+      },
+      {
         type: "slot",
         slot: "project-icon-edit",
         label: copy.projectIconLabel,
@@ -176,6 +205,7 @@ export const selectViewData = ({ state, i18n }) => {
     detailFields,
     projectName: state.project.name ?? "",
     projectDescription: state.project.description ?? "",
+    projectLanguage: selectProjectLanguageLabel(i18n, state.project.language),
     projectIconFileId: state.project.iconFileId,
     isEditDialogOpen: state.isEditDialogOpen,
     isEditIconCropDialogOpen: state.isEditIconCropDialogOpen,

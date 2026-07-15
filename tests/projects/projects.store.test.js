@@ -25,8 +25,8 @@ describe("projects.store addProject", () => {
       {
         project: {
           id: "project-1",
-          name: "DiaLune",
-          projectPath: "/old/DiaLune-migrated",
+          name: "Project Two",
+          projectPath: "/old/project-two-migrated",
         },
       },
     );
@@ -38,8 +38,8 @@ describe("projects.store addProject", () => {
       {
         project: {
           id: "project-1",
-          name: "DiaLune",
-          projectPath: "/new/DiaLune-migrated",
+          name: "Project Two",
+          projectPath: "/new/project-two-migrated",
         },
       },
     );
@@ -47,8 +47,8 @@ describe("projects.store addProject", () => {
     expect(state.projects).toEqual([
       {
         id: "project-1",
-        name: "DiaLune",
-        projectPath: "/new/DiaLune-migrated",
+        name: "Project Two",
+        projectPath: "/new/project-two-migrated",
       },
     ]);
   });

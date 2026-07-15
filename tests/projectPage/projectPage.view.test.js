@@ -37,4 +37,18 @@ describe("project page view", () => {
     expect(projectView).toContain("rtgl-view w=f h=f pt=md:");
     expect(projectView).not.toContain("rtgl-view w=f h=f ph=lg pt=md:");
   });
+
+  it("opens the edit dialog when project language is clicked", () => {
+    const projectView = readFileSync(
+      new URL("../../src/pages/project/project.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(projectView).toContain("projectLanguage:");
+    expect(projectView).toContain("handler: handleEditButtonClick");
+    expect(projectView).toContain(
+      "rtgl-view#projectLanguage slot=project-language cur=pointer",
+    );
+    expect(projectView).toContain("rtgl-text: ${projectLanguage}");
+  });
 });

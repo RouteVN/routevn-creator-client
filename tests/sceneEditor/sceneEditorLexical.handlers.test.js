@@ -22,6 +22,7 @@ import {
   scrollEntrySelectionIntoView,
   syncSceneEditorRoutePayload,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const installAnimationFrameQueue = () => {
   const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
@@ -81,6 +82,7 @@ describe("sceneEditorLexical.handlers preview", () => {
       setRepositoryRevision: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       refs: {
         sectionEditor0: linesEditor,
@@ -786,6 +788,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       clearTemporaryPresentationState: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -811,6 +814,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       clearTemporaryPresentationState: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -1267,6 +1271,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       clearTemporaryPresentationState: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -1302,6 +1307,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       clearTemporaryPresentationState: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -1356,6 +1362,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       clearTemporaryPresentationState: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -1775,6 +1782,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     };
     const moveSectionItem = vi.fn();
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -2439,6 +2447,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     const render = vi.fn();
     const showAlert = vi.fn();
     const deps = {
+      i18n: EN_I18N,
       store,
       render,
       refs: {},
@@ -2498,6 +2507,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       selectSceneId: vi.fn(() => "scene-1"),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       projectService: {},

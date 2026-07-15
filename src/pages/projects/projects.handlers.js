@@ -230,6 +230,7 @@ const createProjectFromValues = async (deps, values = {}) => {
   try {
     const name = values.name ?? "";
     const description = values.description ?? "";
+    const language = values.language;
     const iconFile = values.iconFile;
     const template = values.template ?? "default";
     const resolution = values.resolution;
@@ -285,6 +286,7 @@ const createProjectFromValues = async (deps, values = {}) => {
     const newProject = await appService.createNewProject({
       name,
       description,
+      language,
       iconFile,
       projectPath,
       template,
@@ -927,15 +929,6 @@ export const handleDropdownMenuClose = (deps) => {
 };
 
 export const handleDeleteDialogClose = (deps) => {
-  const { store, render } = deps;
-  if (!store.selectIsDeleteDialogOpen()) {
-    return;
-  }
-  store.closeDeleteDialog();
-  render();
-};
-
-export const handleDeleteDialogCancel = (deps) => {
   const { store, render } = deps;
   if (!store.selectIsDeleteDialogOpen()) {
     return;

@@ -35,6 +35,7 @@ import {
 } from "../shared/projectRepositoryViews/shared.js";
 import { toBootstrappedDraftEvent } from "../shared/collab/clientStoreHistory.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
+import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -45,6 +46,7 @@ const normalizeProjectInfo = (projectInfo = {}) => ({
   nativeApplicationIdentifier: projectInfo.nativeApplicationIdentifier ?? "",
   name: projectInfo.name ?? "",
   description: projectInfo.description ?? "",
+  language: normalizeProjectLanguage(projectInfo.language),
   iconFileId: projectInfo.iconFileId ?? null,
 });
 

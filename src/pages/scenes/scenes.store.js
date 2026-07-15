@@ -6,6 +6,10 @@ import {
   formatSceneTextStatsLabel,
   normalizeSceneTextStats,
 } from "../../internal/ui/sceneTextStats.js";
+import {
+  DEFAULT_PROJECT_LANGUAGE,
+  normalizeProjectLanguage,
+} from "../../internal/projectLanguage.js";
 import { selectScenesPageCopy } from "./support/scenesPageCopy.js";
 import {
   getScenesPageDurationMs,
@@ -86,6 +90,7 @@ const localizeDropdownMenuItems = (items = [], copy = {}) => {
 export const createInitialState = () => ({
   scenesData: { tree: [], items: {} },
   layoutsData: { tree: [], items: {} },
+  projectLanguage: DEFAULT_PROJECT_LANGUAGE,
   sceneOverviewsById: {},
   selectedItemId: null,
   selectedFolderId: undefined,
@@ -133,6 +138,12 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };
+
+export const setProjectLanguage = ({ state }, { language } = {}) => {
+  state.projectLanguage = normalizeProjectLanguage(language);
+};
+
+export const selectProjectLanguage = ({ state }) => state.projectLanguage;
 
 export const selectIsTouchMode = ({ state }) => state.isTouchMode;
 
@@ -473,9 +484,11 @@ export const selectViewData = ({ state, i18n }) => {
     selectedItemName = selectedScene.name ?? "";
     selectedItemDescription = selectedScene.description ?? "";
     const selectedSceneTextStats = selectedScene.sections
-      ? buildSceneTextStats(selectedScene)
+      ? buildSceneTextStats(selectedScene, {
+          language: state.projectLanguage,
+        })
       : undefined;
-    if (normalizeSceneTextStats(selectedSceneTextStats).wordCount > 0) {
+    if (normalizeSceneTextStats(selectedSceneTextStats).count > 0) {
       selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
         selectedSceneTextStats,
         copy,

@@ -28,7 +28,8 @@ describe("sceneTextStats", () => {
 
     expect(getSceneTextForStats(scene)).not.toContain("Section name");
     expect(buildSceneTextStats(scene)).toEqual({
-      wordCount: 9,
+      count: 9,
+      countMode: "word",
     });
   });
 
@@ -53,7 +54,7 @@ describe("sceneTextStats", () => {
     };
 
     expect(getSceneTextForStats(scene)).toBe("Hello playerName");
-    expect(buildSceneTextStats(scene).wordCount).toBe(2);
+    expect(buildSceneTextStats(scene).count).toBe(2);
   });
 
   it("defaults to word count for mixed-script text", () => {
@@ -76,7 +77,60 @@ describe("sceneTextStats", () => {
     const stats = buildSceneTextStats(scene);
 
     expect(stats).toEqual({
-      wordCount: 3,
+      count: 3,
+      countMode: "word",
+    });
+  });
+
+  it("counts non-whitespace graphemes for Japanese projects", () => {
+    const scene = {
+      sections: [
+        {
+          lines: [
+            {
+              actions: {
+                dialogue: {
+                  content: [{ text: "春の雨。" }],
+                },
+                choice: {
+                  items: [{ content: "帰る" }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(buildSceneTextStats(scene, { language: "ja" })).toEqual({
+      count: 6,
+      countMode: "character",
+    });
+  });
+
+  it("counts punctuation as characters for Chinese projects", () => {
+    const scene = {
+      sections: [
+        {
+          lines: [
+            {
+              actions: {
+                dialogue: {
+                  content: [{ text: "你好，世界！" }],
+                },
+                choice: {
+                  items: [{ content: "回家" }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(buildSceneTextStats(scene, { language: "zh-hans" })).toEqual({
+      count: 8,
+      countMode: "character",
     });
   });
 
@@ -110,7 +164,8 @@ describe("sceneTextStats", () => {
 
     expect(getSceneTextForStats(scene)).toBe("Hello world\nGo home");
     expect(buildSceneTextStats(scene)).toEqual({
-      wordCount: 4,
+      count: 4,
+      countMode: "word",
     });
   });
 });

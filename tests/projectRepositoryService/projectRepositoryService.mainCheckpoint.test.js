@@ -671,6 +671,7 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       nativeApplicationIdentifier: "vn.routevn.player.native-1",
       name: "Project 1",
       description: "Description",
+      language: "en",
       iconFileId: "icon-1",
     });
   });

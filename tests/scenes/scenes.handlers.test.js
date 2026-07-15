@@ -32,6 +32,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
     i18n: EN_I18N,
     projectService: {
       ensureRepository: vi.fn(async () => {}),
+      getCurrentProjectInfo: vi.fn(async () => ({ language: "en" })),
       deleteSceneIfUnused: vi.fn(async () => ({
         deleted: true,
       })),
@@ -90,6 +91,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
         sceneOverviewRequestId = requestId;
       }),
       setWhiteboardItems: vi.fn(),
+      setProjectLanguage: vi.fn(),
       hideMapAddHint: vi.fn(),
       setSelectedItemId: vi.fn(),
       selectSelectedItemId: vi.fn(() => undefined),
@@ -155,6 +157,11 @@ describe("scenes.handlers config keys", () => {
     });
 
     await handleAfterMount(deps);
+
+    expect(deps.projectService.getCurrentProjectInfo).toHaveBeenCalledTimes(1);
+    expect(deps.store.setProjectLanguage).toHaveBeenCalledWith({
+      language: "en",
+    });
 
     expect(deps.appService.getUserConfig).toHaveBeenCalledWith(
       "scenesMap.viewportByProject.project-1.zoomLevel",

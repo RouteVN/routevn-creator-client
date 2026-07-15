@@ -1,3 +1,5 @@
+import { requireProjectLanguage } from "../../../internal/projectLanguage.js";
+
 const createEmptyProjectEntry = ({ id = "", source = "local" } = {}) => ({
   id,
   source,
@@ -373,6 +375,7 @@ export const createProjectEntriesService = ({
     async createNewProject(payload) {
       return platformAdapter.createNewProject({
         ...payload,
+        language: requireProjectLanguage(payload.language),
         addProjectEntry,
         projectService,
       });

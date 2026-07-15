@@ -1,23 +1,30 @@
 import { toFlatItems } from "../project/tree.js";
+import {
+  getProjectLanguageTextCountMode,
+  normalizeProjectLanguage,
+  PROJECT_TEXT_COUNT_MODE_CHARACTER,
+} from "../projectLanguage.js";
 import { formatI18nCopy } from "./i18nCopy.js";
 
 const TEXT_PART_SEPARATOR = "\n";
 const FALLBACK_WORD_PATTERN = /[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu;
 const EDITOR_CARET_TEXT = "\u200b";
 const REFERENCE_DISPLAY_TEXT_PROPERTY = "__displayText";
+const WHITESPACE_PATTERN = /^\s+$/u;
 
 const segmenters = new Map();
 
-const getSegmenter = (granularity) => {
+const getSegmenter = (language, granularity) => {
   if (typeof Intl === "undefined" || typeof Intl.Segmenter !== "function") {
     return undefined;
   }
 
-  if (!segmenters.has(granularity)) {
-    segmenters.set(granularity, new Intl.Segmenter(undefined, { granularity }));
+  const key = `${language}:${granularity}`;
+  if (!segmenters.has(key)) {
+    segmenters.set(key, new Intl.Segmenter(language, { granularity }));
   }
 
-  return segmenters.get(granularity);
+  return segmenters.get(key);
 };
 
 const normalizeTextPart = (value) =>
@@ -119,19 +126,48 @@ const countWordsWithFallback = (text) => {
   return count;
 };
 
-const countWords = (text) => {
-  const segmenter = getSegmenter("word");
+const countWords = (text, language) => {
+  const segmenter = getSegmenter(language, "word");
   return segmenter
     ? countWordsWithSegmenter(text, segmenter)
     : countWordsWithFallback(text);
 };
 
-export const createEmptySceneTextStats = () => ({
-  wordCount: 0,
+const countCharactersWithSegmenter = (text, segmenter) => {
+  let count = 0;
+
+  for (const segment of segmenter.segment(text)) {
+    if (!WHITESPACE_PATTERN.test(segment.segment)) {
+      count += 1;
+    }
+  }
+
+  return count;
+};
+
+const countCharactersWithFallback = (text) => {
+  return [...text].filter((character) => !WHITESPACE_PATTERN.test(character))
+    .length;
+};
+
+const countCharacters = (text, language) => {
+  const segmenter = getSegmenter(language, "grapheme");
+  return segmenter
+    ? countCharactersWithSegmenter(text, segmenter)
+    : countCharactersWithFallback(text);
+};
+
+export const createEmptySceneTextStats = ({ language } = {}) => ({
+  count: 0,
+  countMode: getProjectLanguageTextCountMode(language),
 });
 
 export const normalizeSceneTextStats = (stats = {}) => ({
-  wordCount: Math.max(0, Math.trunc(Number(stats.wordCount) || 0)),
+  count: Math.max(0, Math.trunc(Number(stats.count) || 0)),
+  countMode:
+    stats.countMode === PROJECT_TEXT_COUNT_MODE_CHARACTER
+      ? PROJECT_TEXT_COUNT_MODE_CHARACTER
+      : getProjectLanguageTextCountMode(),
 });
 
 const formatSceneTextStatsNumber = (value) => {
@@ -142,25 +178,39 @@ const formatSceneTextStatsNumber = (value) => {
 
 export const formatSceneTextStatsLabel = (stats = {}, copy = {}) => {
   const normalizedStats = normalizeSceneTextStats(stats);
-  const count = normalizedStats.wordCount;
-  const template =
-    count === 1
-      ? (copy.sceneTextStatsWordLabel ?? "{count} word")
-      : (copy.sceneTextStatsWordsLabel ?? "{count} words");
+  const { count, countMode } = normalizedStats;
+  let template;
+  if (countMode === PROJECT_TEXT_COUNT_MODE_CHARACTER) {
+    template =
+      count === 1
+        ? (copy.sceneTextStatsCharacterLabel ?? "{count} character")
+        : (copy.sceneTextStatsCharactersLabel ?? "{count} characters");
+  } else {
+    template =
+      count === 1
+        ? (copy.sceneTextStatsWordLabel ?? "{count} word")
+        : (copy.sceneTextStatsWordsLabel ?? "{count} words");
+  }
 
   return formatI18nCopy(template, {
     count: formatSceneTextStatsNumber(count),
   });
 };
 
-export const buildSceneTextStats = (scene = {}) => {
+export const buildSceneTextStats = (scene = {}, { language } = {}) => {
   const text = getSceneTextForStats(scene);
+  const normalizedLanguage = normalizeProjectLanguage(language);
+  const countMode = getProjectLanguageTextCountMode(normalizedLanguage);
 
   if (!text) {
-    return createEmptySceneTextStats();
+    return createEmptySceneTextStats({ language: normalizedLanguage });
   }
 
   return {
-    wordCount: countWords(text),
+    count:
+      countMode === PROJECT_TEXT_COUNT_MODE_CHARACTER
+        ? countCharacters(text, normalizedLanguage)
+        : countWords(text, normalizedLanguage),
+    countMode,
   };
 };

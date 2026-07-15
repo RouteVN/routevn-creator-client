@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   clearTemporaryPresentationState,
+  refreshSceneTextStats,
   selectEffectivePresentationState,
   selectViewData,
   selectSectionTransitionsDAG,
   setRepositoryState,
   setSceneId,
   setPresentationState,
+  setProjectLanguage,
   setSectionLineChangesBySectionId,
   setTemporaryPresentationState,
   showSectionDropdownMenu,
@@ -15,6 +17,55 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("sceneEditorLexical.store", () => {
+  it("uses the project language to select the scene text count mode", () => {
+    const state = createInitialState();
+    setProjectLanguage({ state }, { language: "zh-hans" });
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: {
+                  items: {
+                    "section-1": {
+                      id: "section-1",
+                      lines: {
+                        items: {
+                          "line-1": {
+                            id: "line-1",
+                            actions: {
+                              dialogue: {
+                                content: [{ text: "你好，世界！" }],
+                              },
+                            },
+                          },
+                        },
+                        tree: [{ id: "line-1" }],
+                      },
+                    },
+                  },
+                  tree: [{ id: "section-1" }],
+                },
+              },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        },
+      },
+    );
+    refreshSceneTextStats({ state });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.sceneTextStatsLabel).toBe("6 characters");
+  });
+
   it("presents text size as a select with full labels", () => {
     const state = createInitialState();
 

@@ -1706,14 +1706,17 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
+  const { projectService, appService, store, render } = deps;
   try {
     await initializeSceneEditorPage({
       ...deps,
       syncProjectState: syncStoreProjectState,
     });
+    const projectInfo = await projectService.getCurrentProjectInfo();
+    store.setProjectLanguage({ language: projectInfo.language });
     reconcileCurrentEditorSession(deps);
     refreshSceneTextStatsNow(deps, { render: false });
-    deps.render();
+    render();
     scrollEntrySelectionIntoView(deps);
   } catch (error) {
     if (!isMissingProjectResolutionError(error)) {
@@ -1721,12 +1724,12 @@ export const handleAfterMount = async (deps) => {
     }
 
     const copy = selectCopy(deps);
-    deps.appService?.showAlert({
+    appService?.showAlert({
       message:
         copy.missingProjectResolution ?? MISSING_PROJECT_RESOLUTION_MESSAGE,
       title: copy.errorTitle ?? "Error",
     });
-    deps.appService?.navigate("/projects");
+    appService?.navigate("/projects");
   }
 };
 

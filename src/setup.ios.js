@@ -137,6 +137,7 @@ if (window.__ROUTEVN_IOS_SMOKE_TEST__ === true) {
       const createdProject = await appService.createNewProject({
         name: projectName,
         description: "Created by the iOS smoke test.",
+        language: "en",
         template: "default",
         projectResolution: DEFAULT_PROJECT_RESOLUTION,
       });

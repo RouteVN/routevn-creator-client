@@ -975,6 +975,8 @@ export const handleAfterMount = async (deps) => {
 
   let phaseStartedAt = getScenesPageTimingNow();
   await projectService.ensureRepository();
+  const projectInfo = await projectService.getCurrentProjectInfo();
+  store.setProjectLanguage({ language: projectInfo.language });
   const ensureRepositoryMs = getScenesPageDurationMs(phaseStartedAt);
   logScenesPageTiming("after-mount.repository-ready", {
     traceId,

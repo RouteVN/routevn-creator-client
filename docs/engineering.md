@@ -787,7 +787,7 @@ Do not scatter platform conditionals through page handlers or domain code.
 
 ### Project Data Ownership
 
-Project `name`, `description`, and `iconFileId` are owned by the
+Project `name`, `description`, `language`, and `iconFileId` are owned by the
 project-specific DB `app` store as `projectInfo`, not repository state.
 
 That means:

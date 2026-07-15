@@ -232,8 +232,8 @@ describe("tauri project service adapters preflight reads", () => {
       fileAdapter.getFileContent({
         fileId: "../project.db",
         getCurrentReference: () => ({
-          projectPath: "/projects/dialune",
-          cacheKey: "/projects/dialune",
+          projectPath: "/projects/project-two",
+          cacheKey: "/projects/project-two",
         }),
       }),
     ).rejects.toThrow("Project file id is invalid.");
@@ -252,13 +252,13 @@ describe("tauri project service adapters preflight reads", () => {
       fileId: "video-1",
       fileMetadata: { mimeType: "video/mp4" },
       getCurrentReference: () => ({
-        projectPath: "/projects/dialune",
-        cacheKey: "/projects/dialune",
+        projectPath: "/projects/project-two",
+        cacheKey: "/projects/project-two",
       }),
     });
 
     expect(result).toEqual({
-      url: "http://127.0.0.1:42123/file.mp4?path=%2Fprojects%2Fdialune%2Ffiles%2Fvideo-1",
+      url: "http://127.0.0.1:42123/file.mp4?path=%2Fprojects%2Fproject-two%2Ffiles%2Fvideo-1",
       type: "video/mp4",
     });
     expect(mocked.convertFileSrc).not.toHaveBeenCalled();
@@ -278,16 +278,16 @@ describe("tauri project service adapters preflight reads", () => {
       fileId: "image-1",
       fileMetadata: { mimeType: "image/png" },
       getCurrentReference: () => ({
-        projectPath: "/projects/dialune",
-        cacheKey: "/projects/dialune",
+        projectPath: "/projects/project-two",
+        cacheKey: "/projects/project-two",
       }),
     });
 
     expect(result).toEqual({
-      url: "asset://localhost/%2Fprojects%2Fdialune%2Ffiles%2Fimage-1",
+      url: "asset://localhost/%2Fprojects%2Fproject-two%2Ffiles%2Fimage-1",
     });
     expect(mocked.convertFileSrc).toHaveBeenCalledWith(
-      "/projects/dialune/files/image-1",
+      "/projects/project-two/files/image-1",
     );
   });
 
@@ -539,13 +539,13 @@ describe("tauri project service adapters preflight reads", () => {
 
     const creatorVersion = await storageAdapter.readCreatorVersionByReference({
       reference: {
-        projectPath: "/projects/dialune",
+        projectPath: "/projects/project-two",
       },
     });
 
     expect(creatorVersion).toBe(1);
     expect(mocked.getManagedSqliteConnection).toHaveBeenCalledWith({
-      dbPath: "sqlite:/projects/dialune/project.db",
+      dbPath: "sqlite:/projects/project-two/project.db",
       busyTimeoutMs: 15000,
     });
   });
@@ -559,13 +559,14 @@ describe("tauri project service adapters preflight reads", () => {
 
     await storageAdapter.writeProjectInfoByReference({
       reference: {
-        projectPath: "/projects/dialune",
+        projectPath: "/projects/project-one",
       },
       projectInfo: {
         id: "project-1",
-        namespace: "dialune",
-        nativeApplicationIdentifier: "vn.routevn.player.dialune",
-        name: "Dialune",
+        namespace: "project-one",
+        nativeApplicationIdentifier: "vn.routevn.player.project-one",
+        name: "Project One",
+        language: "zh-hans",
       },
     });
 
@@ -575,10 +576,11 @@ describe("tauri project service adapters preflight reads", () => {
         "projectInfo",
         JSON.stringify({
           id: "project-1",
-          namespace: "dialune",
-          nativeApplicationIdentifier: "vn.routevn.player.dialune",
-          name: "Dialune",
+          namespace: "project-one",
+          nativeApplicationIdentifier: "vn.routevn.player.project-one",
+          name: "Project One",
           description: "",
+          language: "zh-hans",
           iconFileId: null,
         }),
       ],

@@ -39,6 +39,10 @@ import {
   formatSceneTextStatsLabel,
   normalizeSceneTextStats,
 } from "../../internal/ui/sceneTextStats.js";
+import {
+  DEFAULT_PROJECT_LANGUAGE,
+  normalizeProjectLanguage,
+} from "../../internal/projectLanguage.js";
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
@@ -682,6 +686,7 @@ export const createInitialState = () => ({
   repositoryState: {},
   repositoryRevision: 0,
   domainState: {},
+  projectLanguage: DEFAULT_PROJECT_LANGUAGE,
   draftSection: undefined,
   draftSections: {},
   draftSaveTimerId: undefined,
@@ -831,8 +836,14 @@ export const clearSceneTextStatsRefreshHandle = ({ state }, _payload = {}) => {
   state.sceneTextStatsRefreshHandle = undefined;
 };
 
+export const setProjectLanguage = ({ state }, { language } = {}) => {
+  state.projectLanguage = normalizeProjectLanguage(language);
+};
+
 export const refreshSceneTextStats = ({ state }, _payload = {}) => {
-  state.sceneTextStats = buildSceneTextStats(selectScene({ state }));
+  state.sceneTextStats = buildSceneTextStats(selectScene({ state }), {
+    language: state.projectLanguage,
+  });
 };
 
 export const setSceneTextStats = ({ state }, { stats } = {}) => {
@@ -1090,6 +1101,10 @@ export const selectDraftSaveTimerId = ({ state }) => {
 
 export const selectSceneTextStatsRefreshHandle = ({ state }) => {
   return state.sceneTextStatsRefreshHandle;
+};
+
+export const selectProjectLanguage = ({ state }) => {
+  return state.projectLanguage;
 };
 
 export const selectSceneTextStats = ({ state }) => {

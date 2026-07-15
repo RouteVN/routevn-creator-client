@@ -161,6 +161,7 @@ export const createAppService = (params) => {
     createNewProject: async ({
       name,
       description,
+      language,
       template,
       projectResolution,
       iconFile,
@@ -199,6 +200,7 @@ export const createAppService = (params) => {
           nativeApplicationIdentifier,
           name,
           description,
+          language,
           iconFileId,
         },
       });

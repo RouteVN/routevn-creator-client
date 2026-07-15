@@ -55,6 +55,7 @@ Current app-owned keys:
   - `namespace`
   - `name`
   - `description`
+  - `language`
   - `iconFileId`
 - `creatorVersion`
 
@@ -64,8 +65,8 @@ Important details:
 - `projectInfo.id` is the canonical folder/project id for new projects
 - `projectInfo.namespace` is the canonical browser-hosted bundle save namespace
   for new projects
-- repository state is not the source of truth for `name`, `description`, or
-  `iconFileId`
+- repository state is not the source of truth for `name`, `description`,
+  `language`, or `iconFileId`
 - committed event rows also store `project_id`
 - for new projects, app routing/list entries should follow the id stored in
   `projectInfo`

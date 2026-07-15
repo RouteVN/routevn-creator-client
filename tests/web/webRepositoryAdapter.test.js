@@ -362,6 +362,7 @@ describe("webRepositoryAdapter", () => {
       projectInfo: {
         id: projectId,
         name: "Browser Project",
+        language: "ja",
       },
       projectResolution: initialProjectData.project.resolution,
       creatorVersion: 21,
@@ -414,6 +415,7 @@ describe("webRepositoryAdapter", () => {
         namespace: "",
         name: "Browser Project",
         description: "",
+        language: "ja",
         iconFileId: null,
       },
       draftEvents: rawClientStore.getState().drafts,

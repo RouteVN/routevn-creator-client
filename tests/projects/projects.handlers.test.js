@@ -104,6 +104,7 @@ const createDeps = ({
         getValues: vi.fn(async () => ({
           name: "New Project",
           description: "",
+          language: "ja",
           iconFile: undefined,
           template: "default",
           resolution: "1920x1080",
@@ -343,6 +344,7 @@ describe("projects create dialog", () => {
     expect(deps.appService.createNewProject).toHaveBeenCalledWith({
       name: "New Project",
       description: "",
+      language: "ja",
       iconFile: undefined,
       projectPath: "/projects/new-project",
       template: "default",
@@ -654,12 +656,12 @@ describe("projects.handleOpenButtonClick", () => {
   it("reloads the project list and shows a toast after a successful import", async () => {
     const deps = createDeps();
     deps.appService.openFolderPicker.mockResolvedValue(
-      "/projects/DiaLune-migrated",
+      "/projects/project-two-migrated",
     );
     deps.appService.openExistingProject.mockResolvedValue({
       id: "project-2",
-      name: "DiaLune",
-      projectPath: "/projects/DiaLune-migrated",
+      name: "Project Two",
+      projectPath: "/projects/project-two-migrated",
     });
     deps.appService.loadAllProjects.mockResolvedValue([
       {
@@ -669,8 +671,8 @@ describe("projects.handleOpenButtonClick", () => {
       },
       {
         id: "project-2",
-        name: "DiaLune",
-        projectPath: "/projects/DiaLune-migrated",
+        name: "Project Two",
+        projectPath: "/projects/project-two-migrated",
       },
     ]);
 
@@ -685,13 +687,13 @@ describe("projects.handleOpenButtonClick", () => {
         },
         {
           id: "project-2",
-          name: "DiaLune",
-          projectPath: "/projects/DiaLune-migrated",
+          name: "Project Two",
+          projectPath: "/projects/project-two-migrated",
         },
       ],
     });
     expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: 'Project "DiaLune" imported.',
+      message: 'Project "Project Two" imported.',
     });
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });

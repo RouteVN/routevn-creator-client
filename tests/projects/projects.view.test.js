@@ -72,4 +72,15 @@ describe("projects view", () => {
       'rtgl-view w=f d=v ph=lg style="max-width: 1280px;"',
     );
   });
+
+  it("shows only the remove action in the project removal confirmation", () => {
+    const projectsView = readFileSync(
+      new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(projectsView).toContain("rtgl-button#deleteConfirmButton v=pr");
+    expect(projectsView).not.toContain("deleteCancelButton");
+    expect(projectsView).not.toContain("handleDeleteDialogCancel");
+  });
 });

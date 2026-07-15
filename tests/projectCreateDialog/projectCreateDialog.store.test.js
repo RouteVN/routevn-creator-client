@@ -22,4 +22,28 @@ describe("projectCreateDialog.store", () => {
       label: "1080x1920",
     });
   });
+
+  it("offers the supported project languages for writing count goals", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    const languageField = viewData.form.fields.find(
+      (field) => field.name === "language",
+    );
+
+    expect(languageField).toEqual({
+      name: "language",
+      type: "select",
+      label: "Project Language",
+      description:
+        "This language determines whether writing goals use word or character counts.",
+      required: true,
+      clearable: false,
+      options: [
+        { value: "en", label: "English" },
+        { value: "ja", label: "Japanese" },
+        { value: "zh-hans", label: "Chinese" },
+      ],
+    });
+    expect(viewData.defaultValues.language).toBe("en");
+  });
 });

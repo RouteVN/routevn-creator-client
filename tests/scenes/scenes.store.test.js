@@ -5,6 +5,7 @@ import {
   openMobileFileExplorer,
   selectIsMobileFileExplorerOpen,
   selectViewData,
+  setProjectLanguage,
   setShowSceneForm,
   setTouchMinimapReady,
   setUiConfig,
@@ -55,6 +56,37 @@ describe("scenes.store mobile layout", () => {
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.selectedSceneTextStatsLabel).toBe("4 words");
+  });
+
+  it("exposes a character-count label for Japanese projects", () => {
+    const state = createInitialState();
+    setProjectLanguage({ state }, { language: "ja" });
+    state.selectedItemId = "scene-1";
+    state.scenesData = {
+      items: {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          name: "Scene 1",
+          sections: [
+            {
+              lines: [
+                {
+                  actions: {
+                    dialogue: { content: [{ text: "春の雨。" }] },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+      tree: [{ id: "scene-1" }],
+    };
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.selectedSceneTextStatsLabel).toBe("4 characters");
   });
 
   it("hides the selected scene word-count label when scene content is not loaded", () => {
