@@ -247,7 +247,6 @@ versionsPage:
   macosApplicationExportCompletedMessage: "macOS application export completed.\nSaved to: {path}"
   macosApplicationInProgressMessage: "Please wait while the macOS application is being created..."
   macosApplicationInProgressTitle: "macOS export in progress"
-  macosApplicationProgressStatus: "Creating application..."
   nameLabel: "Name"
   noSelectionLabel: "No selection"
   noVersionsMessage: "No versions"

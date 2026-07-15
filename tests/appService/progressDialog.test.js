@@ -44,4 +44,28 @@ describe("progress dialog client", () => {
       dom.window.document.getElementById("routevn-progress-dialog"),
     ).toBeNull();
   });
+
+  it("does not render empty spacing when status copy is omitted", () => {
+    const dom = new JSDOM(
+      "<!doctype html><html><head></head><body></body></html>",
+    );
+    const progressDialog = createProgressDialog(
+      {
+        title: "macOS export in progress",
+        message: "Please wait while the application is being created...",
+      },
+      dom.window.document,
+    );
+    const dialog = dom.window.document.getElementById(
+      "routevn-progress-dialog",
+    );
+    const content = dialog?.querySelector('[slot="content"]');
+
+    expect(content?.children).toHaveLength(1);
+
+    progressDialog.update({ status: "Finishing..." });
+    expect(content?.children).toHaveLength(2);
+    progressDialog.update({ status: "" });
+    expect(content?.children).toHaveLength(1);
+  });
 });

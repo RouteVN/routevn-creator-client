@@ -735,7 +735,6 @@ describe("versions macOS export handlers", () => {
     expect(deps.projectService.createMacosApplicationToPath).toHaveBeenCalled();
     expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
       message: "Please wait while the macOS application is being created...",
-      status: "Creating application...",
       title: "macOS export in progress",
     });
     expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);

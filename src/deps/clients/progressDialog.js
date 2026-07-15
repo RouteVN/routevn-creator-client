@@ -19,12 +19,7 @@ const createRtglElement = (root, tagName, attributes = {}, textContent) => {
 };
 
 export const createProgressDialog = (
-  {
-    id = DEFAULT_PROGRESS_DIALOG_ID,
-    title = "",
-    message = "",
-    status = "",
-  } = {},
+  { id = DEFAULT_PROGRESS_DIALOG_ID, title = "", message = "", status } = {},
   root = typeof document === "undefined" ? undefined : document,
 ) => {
   if (!root?.body) {
@@ -66,8 +61,20 @@ export const createProgressDialog = (
     status,
   );
 
+  const setStatus = (value) => {
+    if (value === undefined || value === "") {
+      statusText.remove();
+      return;
+    }
+    statusText.textContent = value;
+    if (statusText.parentNode !== content) {
+      content.append(statusText);
+    }
+  };
+
   header.append(titleText, messageText);
-  content.append(header, statusText);
+  content.append(header);
+  setStatus(status);
   dialog.append(content);
   root.body.append(dialog);
 
@@ -84,7 +91,7 @@ export const createProgressDialog = (
         messageText.textContent = options.message;
       }
       if (options.status !== undefined) {
-        statusText.textContent = options.status;
+        setStatus(options.status);
       }
     },
   };

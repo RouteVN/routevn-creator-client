@@ -247,7 +247,6 @@ versionsPage:
   macosApplicationExportCompletedMessage: "macOS 应用导出完成。\n保存到：{path}"
   macosApplicationInProgressMessage: "正在创建 macOS 应用，请稍候..."
   macosApplicationInProgressTitle: "正在导出 macOS"
-  macosApplicationProgressStatus: "正在创建应用..."
   nameLabel: "名称"
   noSelectionLabel: "未选择"
   noVersionsMessage: "没有版本"

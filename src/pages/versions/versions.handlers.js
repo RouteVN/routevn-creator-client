@@ -1020,7 +1020,6 @@ export const handleDownloadMacosApplicationClick = async (deps, payload) => {
     message:
       copy.macosApplicationInProgressMessage ??
       "Please wait while the macOS application is being created...",
-    status: copy.macosApplicationProgressStatus ?? "Creating application...",
     title: copy.macosApplicationInProgressTitle ?? "macOS export in progress",
   });
 
