@@ -480,7 +480,10 @@ export const selectViewData = ({ state, i18n }) => {
     selectedItemName = selectedScene.name ?? "";
     selectedItemDescription = selectedScene.description ?? "";
     const selectedSceneTextStats = selectedSceneOverview?.textStats;
-    if (selectedSceneTextStats?.language === state.projectLanguage) {
+    if (
+      selectedSceneTextStats?.language === state.projectLanguage &&
+      selectedSceneTextStats.count > 0
+    ) {
       selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
         selectedSceneTextStats,
         copy,

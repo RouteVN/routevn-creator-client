@@ -267,13 +267,8 @@ steps:
     selector: "#whiteboard #itemRef1"
     steps:
       - action: click
-  - action: waitFor
-    selector: "#selectedSceneTextStats"
-    state: visible
-    timeoutMs: 10000
   - action: assert
-    type: text
+    type: hidden
     selector: "#selectedSceneTextStats"
-    value: "0 characters"
   - action: screenshot
 ---

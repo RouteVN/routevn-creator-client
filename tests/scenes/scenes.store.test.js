@@ -90,7 +90,7 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.selectedSceneTextStatsLabel).toBe("");
   });
 
-  it("shows a cached zero word count", () => {
+  it("hides a cached zero word count", () => {
     const state = createInitialState();
     state.selectedItemId = "scene-1";
     state.scenesData = {
@@ -115,7 +115,7 @@ describe("scenes.store mobile layout", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.selectedSceneTextStatsLabel).toBe("0 words");
+    expect(viewData.selectedSceneTextStatsLabel).toBe("");
   });
 
   it("hides a cached count after the project language changes", () => {
