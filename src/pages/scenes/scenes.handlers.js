@@ -14,6 +14,12 @@ import {
   SCENE_BOX_WIDTH,
 } from "../../internal/whiteboard/constants.js";
 import { selectScenesPageCopy } from "./support/scenesPageCopy.js";
+import {
+  createScenesPageTraceId,
+  getScenesPageDurationMs,
+  getScenesPageTimingNow,
+  logScenesPageTiming,
+} from "./support/scenesPageTiming.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
@@ -118,7 +124,9 @@ const buildSceneWhiteboardItems = ({
   repositoryState,
   sceneOverviewsById = {},
   currentWhiteboardItems = [],
+  traceId,
 }) => {
+  const startedAt = getScenesPageTimingNow();
   const domainScenes = domainState?.scenes || {};
   const initialSceneId = domainState?.story?.initialSceneId || null;
   const repositoryScenesById = repositoryState?.scenes?.items || {};
@@ -126,7 +134,7 @@ const buildSceneWhiteboardItems = ({
     (sceneId) => domainScenes[sceneId]?.type !== "folder",
   );
 
-  return orderedSceneIds.map((sceneId) => {
+  const items = orderedSceneIds.map((sceneId) => {
     const scene = domainScenes[sceneId] || {};
     const repositoryScene = repositoryScenesById[sceneId];
     const overview = sceneOverviewsById?.[sceneId];
@@ -157,26 +165,63 @@ const buildSceneWhiteboardItems = ({
         : [],
     };
   });
+
+  logScenesPageTiming("build-whiteboard-items.complete", {
+    traceId,
+    durationMs: getScenesPageDurationMs(startedAt),
+    orderedSceneCount: orderedSceneIds.length,
+    currentWhiteboardItemCount: currentWhiteboardItems.length,
+    overviewCount: Object.keys(sceneOverviewsById).length,
+  });
+
+  return items;
 };
 
 const buildScenesStateSnapshot = ({
   store,
   projectService,
   sceneOverviewsById = {},
+  traceId,
 } = {}) => {
+  const startedAt = getScenesPageTimingNow();
+
+  let phaseStartedAt = getScenesPageTimingNow();
   const repositoryState = projectService.getRepositoryState();
+  const repositoryStateMs = getScenesPageDurationMs(phaseStartedAt);
+
+  phaseStartedAt = getScenesPageTimingNow();
   const domainState = projectService.getDomainState();
+  const domainStateMs = getScenesPageDurationMs(phaseStartedAt);
+
+  phaseStartedAt = getScenesPageTimingNow();
   const sceneData = repositoryState?.scenes ?? { tree: [], items: {} };
   const layoutsData = repositoryState?.layouts ?? { tree: [], items: {} };
   const currentWhiteboardItems = store.selectWhiteboardItems() ?? [];
+  const selectCurrentItemsMs = getScenesPageDurationMs(phaseStartedAt);
+
+  phaseStartedAt = getScenesPageTimingNow();
   const orderedSceneIds = getOrderedSceneIds(domainState).filter(
     (sceneId) => domainState?.scenes?.[sceneId]?.type !== "folder",
   );
+  const orderScenesMs = getScenesPageDurationMs(phaseStartedAt);
+
   const sceneItems = buildSceneWhiteboardItems({
     domainState,
     repositoryState,
     sceneOverviewsById,
     currentWhiteboardItems,
+    traceId,
+  });
+
+  logScenesPageTiming("build-state-snapshot.complete", {
+    traceId,
+    durationMs: getScenesPageDurationMs(startedAt),
+    repositoryStateMs,
+    domainStateMs,
+    selectCurrentItemsMs,
+    orderScenesMs,
+    sceneCount: orderedSceneIds.length,
+    layoutCount: Object.keys(layoutsData?.items ?? {}).length,
   });
 
   return {
@@ -195,11 +240,35 @@ const applyScenesStateSnapshot = ({
   layoutsData,
   sceneOverviewsById,
   sceneItems,
+  traceId,
 } = {}) => {
+  const startedAt = getScenesPageTimingNow();
+
+  let phaseStartedAt = getScenesPageTimingNow();
   store.setItems({ scenesData: sceneData });
+  const setItemsMs = getScenesPageDurationMs(phaseStartedAt);
+
+  phaseStartedAt = getScenesPageTimingNow();
   store.setLayouts({ layoutsData });
+  const setLayoutsMs = getScenesPageDurationMs(phaseStartedAt);
+
+  phaseStartedAt = getScenesPageTimingNow();
   store.setSceneOverviews({ sceneOverviewsById });
+  const setSceneOverviewsMs = getScenesPageDurationMs(phaseStartedAt);
+
+  phaseStartedAt = getScenesPageTimingNow();
   store.setWhiteboardItems({ items: sceneItems });
+  const setWhiteboardItemsMs = getScenesPageDurationMs(phaseStartedAt);
+
+  logScenesPageTiming("apply-state-snapshot.complete", {
+    traceId,
+    durationMs: getScenesPageDurationMs(startedAt),
+    setItemsMs,
+    setLayoutsMs,
+    setSceneOverviewsMs,
+    setWhiteboardItemsMs,
+    sceneItemCount: sceneItems.length,
+  });
 };
 
 const resolveDetailItemId = (detail = {}) => {
@@ -505,13 +574,26 @@ const scheduleTouchMinimapHydration = ({ store, render } = {}) => {
     return;
   }
 
+  const traceId = createScenesPageTraceId("touch-minimap");
+  const scheduledAt = getScenesPageTimingNow();
+  logScenesPageTiming("touch-minimap.scheduled", {
+    traceId,
+    frameCount: TOUCH_MINIMAP_HYDRATION_FRAME_COUNT,
+  });
+
   scheduleAfterFrames({
     frameCount: TOUCH_MINIMAP_HYDRATION_FRAME_COUNT,
     setFrameId: (frameId) => store.setTouchMinimapFrameId?.({ frameId }),
     clearFrameId: () => store.clearTouchMinimapFrameId?.(),
     callback: () => {
       store.setTouchMinimapReady?.({ isReady: true });
+      const renderStartedAt = getScenesPageTimingNow();
       render?.();
+      logScenesPageTiming("touch-minimap.complete", {
+        traceId,
+        delayMs: getScenesPageDurationMs(scheduledAt),
+        renderMs: getScenesPageDurationMs(renderStartedAt),
+      });
     },
   });
 };
@@ -525,6 +607,13 @@ const scheduleWhiteboardConnectionsHydration = ({ store, render } = {}) => {
     return;
   }
 
+  const traceId = createScenesPageTraceId("whiteboard-connections");
+  const scheduledAt = getScenesPageTimingNow();
+  logScenesPageTiming("whiteboard-connections.scheduled", {
+    traceId,
+    frameCount: WHITEBOARD_CONNECTIONS_HYDRATION_FRAME_COUNT,
+  });
+
   scheduleAfterFrames({
     frameCount: WHITEBOARD_CONNECTIONS_HYDRATION_FRAME_COUNT,
     setFrameId: (frameId) =>
@@ -532,7 +621,13 @@ const scheduleWhiteboardConnectionsHydration = ({ store, render } = {}) => {
     clearFrameId: () => store.clearWhiteboardConnectionsFrameId?.(),
     callback: () => {
       store.setWhiteboardConnectionsReady?.({ isReady: true });
+      const renderStartedAt = getScenesPageTimingNow();
       render?.();
+      logScenesPageTiming("whiteboard-connections.complete", {
+        traceId,
+        delayMs: getScenesPageDurationMs(scheduledAt),
+        renderMs: getScenesPageDurationMs(renderStartedAt),
+      });
     },
   });
 };
@@ -552,21 +647,40 @@ const scheduleSceneOverviewRefresh = ({
     return;
   }
 
+  const traceId = `scene-overviews-${requestId}`;
+  const scheduledAt = getScenesPageTimingNow();
+  logScenesPageTiming("scene-overviews.scheduled", {
+    traceId,
+    requestId,
+    sceneCount: orderedSceneIds.length,
+    frameCount: SCENE_OVERVIEW_HYDRATION_FRAME_COUNT,
+    idleTimeoutMs: SCENE_OVERVIEW_IDLE_TIMEOUT_MS,
+  });
+
   scheduleAfterFrames({
     frameCount: SCENE_OVERVIEW_HYDRATION_FRAME_COUNT,
     setFrameId: (frameId) => store.setSceneOverviewFrameId?.({ frameId }),
     clearFrameId: () => store.clearSceneOverviewFrameId?.(),
     callback: () => {
+      logScenesPageTiming("scene-overviews.frames-complete", {
+        traceId,
+        delayMs: getScenesPageDurationMs(scheduledAt),
+      });
       scheduleIdleWork({
         setFrameId: (frameId) => store.setSceneOverviewFrameId?.({ frameId }),
         clearFrameId: () => store.clearSceneOverviewFrameId?.(),
         callback: () => {
+          logScenesPageTiming("scene-overviews.idle-start", {
+            traceId,
+            delayMs: getScenesPageDurationMs(scheduledAt),
+          });
           void refreshSceneOverviews({
             store,
             render,
             projectService,
             orderedSceneIds,
             requestId,
+            traceId,
           });
         },
       });
@@ -610,13 +724,19 @@ const hydrateDeferredWhiteboardWork = ({
   });
 };
 
-const selectFileExplorerItemAfterRender = ({ refs, itemId } = {}) => {
+const selectFileExplorerItemAfterRender = ({ refs, itemId, traceId } = {}) => {
   if (!itemId) {
     return;
   }
 
   const selectItem = () => {
+    const startedAt = getScenesPageTimingNow();
     refs.fileexplorer?.selectItem?.({ itemId });
+    logScenesPageTiming("file-explorer.restore-selection.complete", {
+      traceId,
+      durationMs: getScenesPageDurationMs(startedAt),
+      itemId,
+    });
   };
 
   if (typeof globalThis.requestAnimationFrame !== "function") {
@@ -632,11 +752,19 @@ const syncScenesState = ({
   render,
   projectService,
   shouldRender = true,
+  traceId = createScenesPageTraceId("sync"),
 } = {}) => {
+  const startedAt = getScenesPageTimingNow();
+  logScenesPageTiming("sync-state.start", {
+    traceId,
+    shouldRender,
+  });
+
   const baseSnapshot = buildScenesStateSnapshot({
     store,
     projectService,
     sceneOverviewsById: {},
+    traceId,
   });
 
   applyScenesStateSnapshot({
@@ -645,13 +773,25 @@ const syncScenesState = ({
     layoutsData: baseSnapshot.layoutsData,
     sceneOverviewsById: {},
     sceneItems: baseSnapshot.sceneItems,
+    traceId,
   });
 
   const requestId = store.selectSceneOverviewRequestId() + 1;
   store.setSceneOverviewRequestId({ requestId });
+  let renderMs = 0;
   if (shouldRender) {
+    const renderStartedAt = getScenesPageTimingNow();
     render?.();
+    renderMs = getScenesPageDurationMs(renderStartedAt);
   }
+
+  logScenesPageTiming("sync-state.complete", {
+    traceId,
+    durationMs: getScenesPageDurationMs(startedAt),
+    renderMs,
+    sceneCount: baseSnapshot.orderedSceneIds.length,
+    requestId,
+  });
 
   return {
     ...baseSnapshot,
@@ -665,34 +805,76 @@ const refreshSceneOverviews = async ({
   projectService,
   orderedSceneIds = [],
   requestId,
+  traceId = `scene-overviews-${requestId}`,
 } = {}) => {
   if (orderedSceneIds.length === 0) {
     return;
   }
 
+  const startedAt = getScenesPageTimingNow();
+  logScenesPageTiming("scene-overviews.refresh-start", {
+    traceId,
+    requestId,
+    sceneCount: orderedSceneIds.length,
+  });
+
   try {
+    let phaseStartedAt = getScenesPageTimingNow();
     const sceneOverviewsById = await projectService.loadSceneOverviews({
       sceneIds: orderedSceneIds,
     });
+    const loadOverviewsMs = getScenesPageDurationMs(phaseStartedAt);
     if (store.selectSceneOverviewRequestId() !== requestId) {
+      logScenesPageTiming("scene-overviews.refresh-stale", {
+        traceId,
+        durationMs: getScenesPageDurationMs(startedAt),
+        loadOverviewsMs,
+        requestId,
+        currentRequestId: store.selectSceneOverviewRequestId(),
+      });
       return;
     }
 
+    phaseStartedAt = getScenesPageTimingNow();
     const resolvedSnapshot = buildScenesStateSnapshot({
       store,
       projectService,
       sceneOverviewsById,
+      traceId,
     });
+    const buildSnapshotMs = getScenesPageDurationMs(phaseStartedAt);
 
+    phaseStartedAt = getScenesPageTimingNow();
     applyScenesStateSnapshot({
       store,
       sceneData: resolvedSnapshot.sceneData,
       layoutsData: resolvedSnapshot.layoutsData,
       sceneOverviewsById,
       sceneItems: resolvedSnapshot.sceneItems,
+      traceId,
     });
+    const applySnapshotMs = getScenesPageDurationMs(phaseStartedAt);
+
+    phaseStartedAt = getScenesPageTimingNow();
     render?.();
-  } catch {
+    const renderMs = getScenesPageDurationMs(phaseStartedAt);
+
+    logScenesPageTiming("scene-overviews.refresh-complete", {
+      traceId,
+      durationMs: getScenesPageDurationMs(startedAt),
+      loadOverviewsMs,
+      buildSnapshotMs,
+      applySnapshotMs,
+      renderMs,
+      sceneCount: orderedSceneIds.length,
+      overviewCount: Object.keys(sceneOverviewsById ?? {}).length,
+    });
+  } catch (error) {
+    logScenesPageTiming("scene-overviews.refresh-failed", {
+      traceId,
+      durationMs: getScenesPageDurationMs(startedAt),
+      error: error?.message ?? "unknown",
+    });
     return;
   }
 };
@@ -751,33 +933,67 @@ const openFolderEditDialogWithValues = ({ deps, folderId } = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
+  const traceId = createScenesPageTraceId("before-mount");
+  const startedAt = getScenesPageTimingNow();
   const { store, uiConfig } = deps;
+  logScenesPageTiming("before-mount.start", { traceId });
+
   store.setUiConfig({ uiConfig });
 
+  const subscriptionStartedAt = getScenesPageTimingNow();
   const subscription = createCollabRemoteRefreshStream({
     deps,
     matches: matchesRemoteTargets(["scenes", "layouts", "story"]),
     refresh: refreshScenesData,
   }).subscribe();
+  const subscribeMs = getScenesPageDurationMs(subscriptionStartedAt);
+
+  logScenesPageTiming("before-mount.complete", {
+    traceId,
+    durationMs: getScenesPageDurationMs(startedAt),
+    subscribeMs,
+    isTouchMode: store.selectIsTouchMode?.() === true,
+  });
 
   return () => {
+    const cleanupStartedAt = getScenesPageTimingNow();
     subscription.unsubscribe();
     cancelDeferredWhiteboardWork(store);
+    logScenesPageTiming("before-mount.cleanup", {
+      traceId,
+      durationMs: getScenesPageDurationMs(cleanupStartedAt),
+    });
   };
 };
 
 export const handleAfterMount = async (deps) => {
+  const traceId = createScenesPageTraceId("after-mount");
+  const startedAt = getScenesPageTimingNow();
   const { store, projectService, render, refs, appService } = deps;
+
+  logScenesPageTiming("after-mount.start", { traceId });
+
+  let phaseStartedAt = getScenesPageTimingNow();
   await projectService.ensureRepository();
+  const ensureRepositoryMs = getScenesPageDurationMs(phaseStartedAt);
+  logScenesPageTiming("after-mount.repository-ready", {
+    traceId,
+    ensureRepositoryMs,
+  });
+
+  phaseStartedAt = getScenesPageTimingNow();
   setInitialWhiteboardHydrationState({ store });
   const initialSnapshot = syncScenesState({
     store,
     render,
     projectService,
     shouldRender: false,
+    traceId: `${traceId}:initial-sync`,
   });
   const sceneItems = initialSnapshot?.sceneItems ?? [];
+  const initialStateMs = getScenesPageDurationMs(phaseStartedAt);
 
+  phaseStartedAt = getScenesPageTimingNow();
   const shouldHideMapAddHint =
     appService.getUserConfig("scenesMap.hideAddSceneHint") === true;
   if (shouldHideMapAddHint) {
@@ -800,14 +1016,17 @@ export const handleAfterMount = async (deps) => {
     appService,
     items: sceneItems,
   });
+  const restoreUiStateMs = getScenesPageDurationMs(phaseStartedAt);
 
   const { whiteboard } = refs;
 
+  phaseStartedAt = getScenesPageTimingNow();
   whiteboard.transformedHandlers.handleInitialZoomAndPanSetup({
     panX: initialViewport.panX,
     panY: initialViewport.panY,
     zoomLevel: initialViewport.zoomLevel,
   });
+  const setupViewportMs = getScenesPageDurationMs(phaseStartedAt);
 
   if (initialViewport.didReset) {
     persistViewport({
@@ -818,11 +1037,21 @@ export const handleAfterMount = async (deps) => {
     });
   }
 
+  phaseStartedAt = getScenesPageTimingNow();
   render();
+  const renderMs = getScenesPageDurationMs(phaseStartedAt);
+  logScenesPageTiming("after-mount.initial-render-complete", {
+    traceId,
+    renderMs,
+    sceneCount: sceneItems.length,
+    persistedSelection: Boolean(persistedSelectedSceneId),
+  });
+
   if (persistedSelectedSceneId && !store.selectIsTouchMode?.()) {
     selectFileExplorerItemAfterRender({
       refs,
       itemId: persistedSelectedSceneId,
+      traceId,
     });
   }
   hydrateDeferredWhiteboardWork({
@@ -832,7 +1061,22 @@ export const handleAfterMount = async (deps) => {
     orderedSceneIds: initialSnapshot?.orderedSceneIds ?? [],
     requestId: initialSnapshot?.requestId,
   });
+
+  phaseStartedAt = getScenesPageTimingNow();
   focusFileExplorerKeyboardScope(deps);
+  const focusKeyboardScopeMs = getScenesPageDurationMs(phaseStartedAt);
+
+  logScenesPageTiming("after-mount.complete", {
+    traceId,
+    durationMs: getScenesPageDurationMs(startedAt),
+    ensureRepositoryMs,
+    initialStateMs,
+    restoreUiStateMs,
+    setupViewportMs,
+    renderMs,
+    focusKeyboardScopeMs,
+    sceneCount: sceneItems.length,
+  });
 };
 
 export const handleSetInitialScene = async (sceneId, deps) => {
@@ -841,19 +1085,31 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 };
 
 const refreshScenesData = async (deps) => {
+  const traceId = createScenesPageTraceId("refresh");
+  const startedAt = getScenesPageTimingNow();
   const { store, render, projectService } = deps;
+  logScenesPageTiming("refresh.start", { traceId });
+
   cancelDeferredWhiteboardWork(store);
   setInitialWhiteboardHydrationState({ store });
   const snapshot = syncScenesState({
     store,
     render,
     projectService,
+    traceId: `${traceId}:sync`,
   });
   hydrateDeferredWhiteboardWork({
     store,
     render,
     projectService,
     orderedSceneIds: snapshot?.orderedSceneIds ?? [],
+    requestId: snapshot?.requestId,
+  });
+
+  logScenesPageTiming("refresh.complete", {
+    traceId,
+    durationMs: getScenesPageDurationMs(startedAt),
+    sceneCount: snapshot?.orderedSceneIds?.length ?? 0,
     requestId: snapshot?.requestId,
   });
 };
