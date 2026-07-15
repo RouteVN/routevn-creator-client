@@ -35,6 +35,7 @@
     "fs:allow-read-file",
     "fs:allow-write-file",
     "fs:allow-read-dir",
+    "fs:allow-resource-meta-recursive",
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",

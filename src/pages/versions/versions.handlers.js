@@ -214,6 +214,10 @@ const getMacosExportUnavailableMessage = (availability = {}) => {
     return getMacosExportErrorMessage(availability.capabilityCheckError);
   }
 
+  if (availability.templateCheckError) {
+    return `Unable to verify the bundled macOS player template: ${availability.templateCheckError}`;
+  }
+
   if (!availability.templateAvailable) {
     return "The macOS player template is not bundled with this Creator build.";
   }

@@ -637,6 +637,37 @@ describe("versions Windows export handlers", () => {
 });
 
 describe("versions macOS export handlers", () => {
+  it("reports template inspection errors instead of claiming the template is absent", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getMacosExportAvailability.mockResolvedValue({
+      application: false,
+      templateAvailable: false,
+      templateCheckError: "forbidden path: /resources/player-templates/macos",
+      hostSupported: true,
+    });
+
+    await handleDownloadMacosApplicationClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          "Unable to verify the bundled macOS player template: forbidden path",
+        ),
+      }),
+    );
+    expect(
+      deps.projectService.promptMacosApplicationPath,
+    ).not.toHaveBeenCalled();
+  });
+
   it("explains a stale native shell instead of opening the save dialog", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),

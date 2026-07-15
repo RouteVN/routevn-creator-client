@@ -399,6 +399,33 @@ describe("tauri project service adapters preflight reads", () => {
     });
   });
 
+  it("preserves macOS template inspection errors for user-facing diagnostics", async () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    mocked.resolveResource.mockResolvedValue(
+      "/resources/player-templates/macos/RouteVNPlayerTemplate.app.zip",
+    );
+    mocked.exists.mockRejectedValue(
+      "forbidden path: /resources/player-templates/macos/RouteVNPlayerTemplate.app.zip",
+    );
+    mocked.invoke.mockResolvedValue({
+      hostSupported: true,
+      available: true,
+    });
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await expect(
+      fileAdapter.getMacosExportAvailability(),
+    ).resolves.toMatchObject({
+      application: false,
+      templateAvailable: false,
+      templateCheckError:
+        "forbidden path: /resources/player-templates/macos/RouteVNPlayerTemplate.app.zip",
+    });
+  });
+
   it("reads creatorVersion from app_state without creating the project store", async () => {
     mocked.exists.mockResolvedValue(true);
     mocked.connection.select.mockResolvedValue([

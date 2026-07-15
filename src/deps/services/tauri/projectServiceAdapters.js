@@ -643,10 +643,13 @@ export const createTauriProjectServiceAdapters = ({
 
   const getMacosExportAvailability = async ({ options = {} } = {}) => {
     let templateAvailable = false;
+    let templateCheckError;
     try {
       const templatePath = await resolveMacosPlayerTemplatePath(options);
       templateAvailable = await exists(templatePath);
-    } catch {}
+    } catch (error) {
+      templateCheckError = String(error?.message ?? error);
+    }
 
     let hostCapabilities;
     let capabilityCheckError;
@@ -659,6 +662,7 @@ export const createTauriProjectServiceAdapters = ({
     return {
       application: templateAvailable && !!hostCapabilities?.available,
       templateAvailable,
+      templateCheckError,
       hostSupported: hostCapabilities
         ? !!hostCapabilities.hostSupported
         : isMacosHost(),
