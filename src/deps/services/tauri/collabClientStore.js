@@ -35,37 +35,8 @@ const WAL_CHECKPOINT_THROTTLE_MS = 10000;
 const WAL_CHECKPOINT_RETRY_MS = 10000;
 const ROUTEVN_CHECKPOINT_ENVELOPE_KEY = "__routevnCheckpoint";
 const ROUTEVN_CHECKPOINT_ENVELOPE_VERSION = 1;
-const PROJECT_STORE_PERF_PREFIX = "[rvn.project-store-perf]";
 export const loadRepositoryEvents = loadRepositoryEventsFromClientStore;
 export { toBootstrappedCommittedEvent } from "../shared/collab/clientStoreHistory.js";
-
-const getProjectStoreTimingNow = () => {
-  if (
-    typeof performance !== "undefined" &&
-    typeof performance.now === "function"
-  ) {
-    return performance.now();
-  }
-
-  return Date.now();
-};
-
-const getProjectStoreDurationMs = (startedAt) =>
-  Number((getProjectStoreTimingNow() - startedAt).toFixed(2));
-
-const logProjectStoreTiming = (event, data = {}) => {
-  const entry = {
-    event,
-    ts: Number(getProjectStoreTimingNow().toFixed(2)),
-    ...data,
-  };
-
-  try {
-    console.info(`${PROJECT_STORE_PERF_PREFIX} ${JSON.stringify(entry)}`);
-  } catch {
-    console.info(PROJECT_STORE_PERF_PREFIX, entry);
-  }
-};
 
 const isReadQuery = (sql) => {
   const normalized = String(sql ?? "")
@@ -511,53 +482,12 @@ export const createPersistedTauriProjectStore = async ({
     await db.init();
 
     let operationQueue = Promise.resolve();
-    let operationId = 0;
-    let lastQueuedOperation;
     const queueStoreOperation = async (labelOrOperation, maybeOperation) => {
-      const label =
-        typeof labelOrOperation === "string" ? labelOrOperation : "anonymous";
       const operation =
         typeof labelOrOperation === "function"
           ? labelOrOperation
           : maybeOperation;
-      const queuedAt = getProjectStoreTimingNow();
-      operationId += 1;
-      const currentOperation = {
-        id: operationId,
-        label,
-      };
-      const previousOperation = lastQueuedOperation;
-      lastQueuedOperation = currentOperation;
-      const nextOperation = operationQueue.then(async () => {
-        const startedAt = getProjectStoreTimingNow();
-        const queueWaitMs = Number((startedAt - queuedAt).toFixed(2));
-        let failed = false;
-
-        try {
-          return await operation();
-        } catch (error) {
-          failed = true;
-          throw error;
-        } finally {
-          const durationMs = getProjectStoreDurationMs(startedAt);
-          if (
-            label === "listCommittedAfter" ||
-            label === "listDraftsOrdered" ||
-            queueWaitMs >= 50 ||
-            durationMs >= 50
-          ) {
-            logProjectStoreTiming("operation.complete", {
-              operationId: currentOperation.id,
-              label,
-              previousOperationId: previousOperation?.id,
-              previousOperationLabel: previousOperation?.label,
-              queueWaitMs,
-              durationMs,
-              failed,
-            });
-          }
-        }
-      });
+      const nextOperation = operationQueue.then(operation);
       operationQueue = nextOperation.catch(() => {});
       return nextOperation;
     };

@@ -590,6 +590,10 @@
     });
 
     const handleKeyDown = (event) => {
+      if (event.defaultPrevented) {
+        return;
+      }
+
       if (event.key === "F11") {
         event.preventDefault();
         runWindowAction("Toggle fullscreen", toggleFullscreen);
