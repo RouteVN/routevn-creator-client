@@ -42,6 +42,7 @@ const CREATOR_VERSION_KEY = "creatorVersion";
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
   namespace: projectInfo.namespace ?? "",
+  nativeApplicationIdentifier: projectInfo.nativeApplicationIdentifier ?? "",
   name: projectInfo.name ?? "",
   description: projectInfo.description ?? "",
   iconFileId: projectInfo.iconFileId ?? null,
@@ -557,6 +558,13 @@ export const createIOSProjectServiceAdapters = ({
         projectId: reference.repositoryProjectId || reference.projectId,
       });
       return normalizeProjectInfo(await store.app.get(PROJECT_INFO_KEY));
+    },
+
+    writeProjectInfoByReference: async ({ reference, projectInfo }) => {
+      const store = await createPersistedIOSProjectStore({
+        projectId: reference.repositoryProjectId || reference.projectId,
+      });
+      await store.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));
     },
 
     createStore: async ({ reference }) => {

@@ -105,6 +105,10 @@ steps:
     selector: "#versionItemRef0"
     state: visible
     timeoutMs: 10000
+  - action: waitFor
+    selector: "#detailMacosApplicationBtn"
+    state: visible
+    timeoutMs: 5000
   - action: wait
     ms: 500
   - action: screenshot

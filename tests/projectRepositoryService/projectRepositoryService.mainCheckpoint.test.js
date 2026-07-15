@@ -632,6 +632,7 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       readProjectInfoByReference: vi.fn(async () => ({
         id: "project-1",
         namespace: "namespace-1",
+        nativeApplicationIdentifier: "vn.routevn.player.native-1",
         name: "Project 1",
         description: "Description",
         iconFileId: "icon-1",
@@ -667,9 +668,54 @@ describe("projectRepositoryService main checkpoint reuse", () => {
     expect(projectInfo).toEqual({
       id: "project-1",
       namespace: "namespace-1",
+      nativeApplicationIdentifier: "vn.routevn.player.native-1",
       name: "Project 1",
       description: "Description",
       iconFileId: "icon-1",
+    });
+  });
+
+  it("persists a native application identifier when reading a legacy project by path", async () => {
+    const writeProjectInfoByReference = vi.fn(async () => {});
+    const storageAdapter = {
+      readCreatorVersionByReference: vi.fn(async () => 1),
+      readProjectInfoByReference: vi.fn(async () => ({
+        id: "project-1",
+        namespace: "namespace-1",
+        name: "Project 1",
+      })),
+      writeProjectInfoByReference,
+      resolveProjectReferenceByPath: vi.fn(async ({ projectPath }) => ({
+        projectPath,
+        cacheKey: projectPath,
+        repositoryProjectId: projectPath,
+      })),
+    };
+    const service = createProjectRepositoryService({
+      router: {
+        getPayload: () => ({}),
+      },
+      db: {},
+      creatorVersion: 1,
+      idGenerator: () => "native-legacy",
+      storageAdapter,
+      collabAdapter: noopCollabAdapter,
+    });
+
+    const projectInfo = await service.getProjectInfoByPath("/tmp/project-1");
+
+    expect(projectInfo.nativeApplicationIdentifier).toBe(
+      "vn.routevn.player.native-legacy",
+    );
+    expect(writeProjectInfoByReference).toHaveBeenCalledWith({
+      reference: {
+        projectPath: "/tmp/project-1",
+        cacheKey: "/tmp/project-1",
+        projectId: "/tmp/project-1",
+        repositoryProjectId: "/tmp/project-1",
+      },
+      db: {},
+      projectInfo,
     });
   });
 });

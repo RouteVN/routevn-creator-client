@@ -18,4 +18,16 @@ describe("versions view export actions", () => {
       versionsView.match(/\$\{exportWindowsInstallerButton\}/g),
     ).toHaveLength(2);
   });
+
+  it("renders gated macOS application actions in desktop and mobile details", () => {
+    expect(versionsView.match(/\$if canExportMacosApplication:/g)).toHaveLength(
+      2,
+    );
+    expect(
+      versionsView.match(/rtgl-button#detailMacosApplicationBtn/g),
+    ).toHaveLength(2);
+    expect(
+      versionsView.match(/\$\{exportMacosApplicationButton\}/g),
+    ).toHaveLength(2);
+  });
 });

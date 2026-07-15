@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
+  handleDownloadMacosApplicationClick,
   handleDownloadWindowsExecutableClick,
   handleDownloadWindowsInstallerClick,
   handleDownloadZipClick,
@@ -21,6 +22,10 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
     actionIndex: 3,
     createdAt: "2026-01-01T00:00:00.000Z",
   };
+  const progressDialog = {
+    close: vi.fn(),
+    update: vi.fn(),
+  };
 
   return {
     appService: {
@@ -31,6 +36,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       })),
       getAppVersion: vi.fn(() => "1.0.0"),
       showAlert: vi.fn(),
+      showProgressDialog: vi.fn(() => progressDialog),
       closeAll: vi.fn(),
     },
     projectService: {
@@ -43,6 +49,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       addVersionToProject: vi.fn(async () => {}),
       getCurrentProjectInfo: vi.fn(async () => ({
         namespace: "project-one",
+        nativeApplicationIdentifier: "vn.routevn.player.project-one",
         name: "Project One",
         iconFileId: "icon-1",
         publisher: "Studio One",
@@ -52,11 +59,25 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       createDistributionZipStreamed: vi.fn(async () => "/tmp/export.zip"),
       promptWindowsExecutablePath: vi.fn(async () => "/tmp/export.exe"),
       promptWindowsInstallerPath: vi.fn(async () => "/tmp/export-setup.exe"),
+      promptMacosApplicationPath: vi.fn(async () => "/tmp/export.app.zip"),
+      getMacosExportAvailability: vi.fn(async () => ({
+        application: true,
+        templateAvailable: true,
+        hostSupported: true,
+        dittoAvailable: true,
+        codesignAvailable: true,
+        sipsAvailable: true,
+        iconutilAvailable: true,
+        lipoAvailable: true,
+      })),
       createWindowsPortableExecutableToPath: vi.fn(async () => ({
         outputPath: "/tmp/export.exe",
       })),
       createWindowsInstallerToPath: vi.fn(async () => ({
         outputPath: "/tmp/export-setup.exe",
+      })),
+      createMacosApplicationToPath: vi.fn(async () => ({
+        outputPath: "/tmp/export.app.zip",
       })),
     },
     store: {
@@ -70,6 +91,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       closeVersionDialog: vi.fn(),
       closeDropdownMenu: vi.fn(),
     },
+    progressDialog,
     render: vi.fn(),
   };
 };
@@ -95,6 +117,7 @@ describe("versions lifecycle", () => {
       store: {
         setUiConfig,
         setPlatform: vi.fn(),
+        setVisualTestMode: vi.fn(),
       },
       uiConfig: {
         id: "touch",
@@ -108,6 +131,9 @@ describe("versions lifecycle", () => {
       uiConfig: deps.uiConfig,
     });
     expect(deps.store.setPlatform).toHaveBeenCalledWith({ platform: "web" });
+    expect(deps.store.setVisualTestMode).toHaveBeenCalledWith({
+      enabled: false,
+    });
   });
 });
 
@@ -447,6 +473,12 @@ describe("versions Windows export handlers", () => {
     expect(
       deps.projectService.createWindowsPortableExecutableToPath,
     ).toHaveBeenCalled();
+    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
+      message: "Please wait while the Windows executable is being created...",
+      status: "Creating executable...",
+      title: "Windows export in progress",
+    });
+    expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     expect(
       deps.projectService.createWindowsPortableExecutableToPath.mock
         .calls[0][3],
@@ -480,6 +512,12 @@ describe("versions Windows export handlers", () => {
     );
 
     expect(deps.projectService.createWindowsInstallerToPath).toHaveBeenCalled();
+    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
+      message: "Please wait while the Windows installer is being created...",
+      status: "Creating installer...",
+      title: "Windows installer export",
+    });
+    expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     expect(
       deps.projectService.createWindowsInstallerToPath.mock.calls[0][3],
     ).toMatchObject({
@@ -566,6 +604,7 @@ describe("versions Windows export handlers", () => {
           windowsFileVersion: "1.0.0.3",
         }),
       );
+      expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     } finally {
       consoleError.mockRestore();
     }
@@ -613,5 +652,100 @@ describe("versions Windows export handlers", () => {
     } finally {
       consoleError.mockRestore();
     }
+  });
+});
+
+describe("versions macOS export handlers", () => {
+  it("reports template inspection errors instead of claiming the template is absent", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getMacosExportAvailability.mockResolvedValue({
+      application: false,
+      templateAvailable: false,
+      templateCheckError: "forbidden path: /resources/player-templates/macos",
+      hostSupported: true,
+    });
+
+    await handleDownloadMacosApplicationClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          "Unable to verify the bundled macOS player template: forbidden path",
+        ),
+      }),
+    );
+    expect(
+      deps.projectService.promptMacosApplicationPath,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("explains a stale native shell instead of opening the save dialog", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getMacosExportAvailability.mockResolvedValue({
+      application: false,
+      templateAvailable: true,
+      hostSupported: true,
+      capabilityCheckError:
+        "Command get_macos_export_host_capabilities not found",
+    });
+
+    await handleDownloadMacosApplicationClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          "Restart the Tauri dev process so the native shell rebuilds.",
+        ),
+      }),
+    );
+    expect(
+      deps.projectService.promptMacosApplicationPath,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("uses the release action index for bundle versions and the stable project identity", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+
+    await handleDownloadMacosApplicationClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.projectService.createMacosApplicationToPath).toHaveBeenCalled();
+    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
+      message: "Please wait while the macOS application is being created...",
+      title: "macOS export in progress",
+    });
+    expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
+    expect(
+      deps.projectService.createMacosApplicationToPath.mock.calls[0][3],
+    ).toEqual({
+      title: "Project One",
+      shortVersion: "1.0.3",
+      bundleVersion: "4",
+      applicationIdentifier: "vn.routevn.player.project-one",
+      iconFileId: "icon-1",
+    });
   });
 });

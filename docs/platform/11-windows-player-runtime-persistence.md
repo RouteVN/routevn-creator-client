@@ -76,11 +76,17 @@ Required behavior:
   identity
 - a different game must not reuse the same identifier
 
-The reusable template currently uses `vn.routevn.shell` for every export, so
-those exports share this database path until per-game identifier stamping is
-implemented. This is an accepted temporary packaging limitation. The later
-packaging change must assign each game a stable unique Tauri identifier; it
-must not add a namespace inside `runtime.db` as a substitute.
+The reusable Windows template currently uses `vn.routevn.shell` for every
+export, so Windows exports share this database path until per-game identifier
+stamping is implemented. This temporary limitation is specific to the Windows
+packaging path. The macOS exporter already stamps the stable
+`projectInfo.nativeApplicationIdentifier` and the macOS shell applies it to
+Tauri's runtime configuration before the SQL plugin initializes. The later
+Windows packaging change must use the same field; it must not add a namespace
+inside `runtime.db` as a substitute.
+
+For the macOS export and startup contract, see
+`13-macos-player-export.md`.
 
 `projectInfo.namespace` and `bundleMetadata.project.namespace` are not native
 Windows database keys. They remain relevant only to contracts such as a web

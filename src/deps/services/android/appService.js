@@ -3,6 +3,7 @@ import { callAndroidBridge } from "../../clients/android/bridge.js";
 import { getAndroidProjectFileUrl } from "./projectFileUrls.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
+import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 
 const normalizeFolderSelection = (selection) => {
   if (typeof selection === "string") {
@@ -168,6 +169,7 @@ export const createAppService = (params) => {
     }) => {
       const projectId = generateId();
       const namespace = generateId();
+      const nativeApplicationIdentifier = createNativeApplicationIdentifier();
 
       let iconFileId = null;
       if (iconFile) {
@@ -194,6 +196,7 @@ export const createAppService = (params) => {
         projectInfo: {
           id: projectId,
           namespace,
+          nativeApplicationIdentifier,
           name,
           description,
           iconFileId,

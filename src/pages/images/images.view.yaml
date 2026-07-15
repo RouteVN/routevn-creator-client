@@ -150,10 +150,6 @@ refs:
     eventListeners:
       click:
         handler: handleEditDialogImageClick
-  detailImage:
-    eventListeners:
-      click:
-        handler: handleFormExtraEvent
   detailHeader:
     eventListeners:
       click:
@@ -213,7 +209,8 @@ styles:
     box-shadow: 0 0 0 1px var(--border)
     border-radius: 6px
     overflow: hidden
-    cursor: pointer
+    cursor: default
+    pointer-events: none
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -243,7 +240,7 @@ template:
                                   - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
                                       - $if selectedItemId:
                                           - $if selectedPreviewFileId:
-                                              - 'div#detailImage.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
+                                              - 'div#detailImagePreview.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
                                                   - rvn-file-image fileId=${selectedPreviewFileId} w=f h=f: null
                                           - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                             $else:
