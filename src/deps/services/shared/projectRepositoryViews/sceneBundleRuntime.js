@@ -472,6 +472,40 @@ export const createSceneBundleRuntime = ({
     });
   };
 
+  const cacheSceneTextStats = async ({ sceneId, textStats } = {}) => {
+    if (
+      !isNonEmptyString(sceneId) ||
+      !textStats ||
+      typeof textStats !== "object"
+    ) {
+      return undefined;
+    }
+
+    const checkpoint = await loadSceneOverviewCheckpoint({ store, sceneId });
+    const latestRelevantRevision = await getLatestOverviewRevisionForScene(
+      sceneId,
+      checkpoint,
+    );
+    const overview = await ensureSceneOverviewWithCheckpoint({
+      sceneId,
+      checkpoint,
+      latestRelevantRevision,
+    });
+    if (!overview) {
+      return undefined;
+    }
+
+    overview.textStats = structuredClone(textStats);
+    queueSceneOverviewSave({
+      sceneId,
+      overview,
+      lastCommittedId: latestRelevantRevision,
+    });
+    await flushPendingOverviewWrites({ throwOnError: true });
+
+    return structuredClone(overview.textStats);
+  };
+
   const invalidateInactiveSceneOverviews = async () => {
     const activeSceneId = getActiveSceneId();
     const currentSceneIds = Object.keys(
@@ -574,6 +608,8 @@ export const createSceneBundleRuntime = ({
 
       return overviewsBySceneId;
     },
+
+    cacheSceneTextStats,
 
     async handleCommittedEvents(sourceEvents = []) {
       const committedEvents = Array.isArray(sourceEvents)

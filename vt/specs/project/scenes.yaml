@@ -245,4 +245,35 @@ steps:
   - action: wait
     ms: 150
   - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#vnPreview"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "#sidebar [data-item-id='scenes']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-scenes
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#whiteboard #itemRef1"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#whiteboard #itemRef1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#selectedSceneTextStats"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: text
+    selector: "#selectedSceneTextStats"
+    value: "0 characters"
+  - action: screenshot
 ---

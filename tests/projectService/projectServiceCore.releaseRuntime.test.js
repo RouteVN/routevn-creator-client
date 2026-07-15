@@ -212,6 +212,47 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     expect(repository.setActiveSceneId).toHaveBeenCalledWith("scene-1");
   });
 
+  it("caches scene text stats through the ensured repository contract", async () => {
+    const textStats = {
+      count: 12,
+      countMode: "word",
+      language: "en",
+    };
+    const repository = {
+      cacheSceneTextStats: vi.fn(async () => textStats),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await expect(
+      projectService.cacheSceneTextStats({
+        sceneId: "scene-1",
+        textStats,
+      }),
+    ).resolves.toEqual(textStats);
+
+    expect(repository.cacheSceneTextStats).toHaveBeenCalledWith({
+      sceneId: "scene-1",
+      textStats,
+    });
+  });
+
   it("upgrades old layout schema versions when ensuring the repository", async () => {
     const repository = {
       getState: vi.fn(() => ({

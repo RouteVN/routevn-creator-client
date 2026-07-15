@@ -120,6 +120,25 @@ const recomputeSceneTextStats = (deps, { render = true } = {}) => {
   }
 };
 
+const cacheCurrentSceneTextStats = async (deps) => {
+  const { store, projectService } = deps;
+  const sceneId = store.selectSceneId();
+  if (!sceneId) {
+    return;
+  }
+
+  const textStats = {
+    ...store.selectSceneTextStats(),
+    language: store.selectProjectLanguage(),
+  };
+
+  try {
+    await projectService.cacheSceneTextStats({ sceneId, textStats });
+  } catch (error) {
+    console.warn("Failed to cache scene text count:", error);
+  }
+};
+
 const refreshSceneTextStatsNow = (deps, options = {}) => {
   cancelSceneTextStatsRefresh(deps.store);
   recomputeSceneTextStats(deps, options);
@@ -802,6 +821,8 @@ export const syncSceneEditorRoutePayload = async (
 
   try {
     await flushSceneEditorDrafts(deps, { force: true });
+    refreshSceneTextStatsNow(deps, { render: false });
+    await cacheCurrentSceneTextStats(deps);
     if (!canContinue()) {
       return;
     }
@@ -844,6 +865,7 @@ export const syncSceneEditorRoutePayload = async (
     reconcileCurrentEditorSession(deps);
     await updateSceneEditorSectionChanges(deps);
     refreshSceneTextStatsNow(deps, { render: false });
+    await cacheCurrentSceneTextStats(deps);
     if (!canContinue()) {
       return;
     }
@@ -1700,6 +1722,8 @@ export const handleBeforeMount = (deps) => {
     cleanupBackgroundTransformEditorSubscriptions();
     cancelSceneTextStatsRefresh(store);
     await flushSceneEditorDrafts(deps, { force: true });
+    refreshSceneTextStatsNow(deps, { render: false });
+    await cacheCurrentSceneTextStats(deps);
     await projectService.clearActiveSceneId().catch(() => {});
     await resetSceneEditorRuntime(deps);
   };
@@ -1717,6 +1741,7 @@ export const handleAfterMount = async (deps) => {
     reconcileCurrentEditorSession(deps);
     refreshSceneTextStatsNow(deps, { render: false });
     render();
+    await cacheCurrentSceneTextStats(deps);
     scrollEntrySelectionIntoView(deps);
   } catch (error) {
     if (!isMissingProjectResolutionError(error)) {

@@ -23,34 +23,18 @@ describe("scenes.store mobile layout", () => {
           id: "scene-1",
           type: "scene",
           name: "Scene 1",
-          sections: {
-            items: {
-              "section-1": {
-                id: "section-1",
-                name: "Section 1",
-                lines: {
-                  items: {
-                    "line-1": {
-                      id: "line-1",
-                      actions: {
-                        dialogue: {
-                          content: [{ text: "Hello world" }],
-                        },
-                        choice: {
-                          items: [{ content: "Go home" }],
-                        },
-                      },
-                    },
-                  },
-                  tree: [{ id: "line-1" }],
-                },
-              },
-            },
-            tree: [{ id: "section-1" }],
-          },
         },
       },
       tree: [{ id: "scene-1" }],
+    };
+    state.sceneOverviewsById = {
+      "scene-1": {
+        textStats: {
+          count: 4,
+          countMode: "word",
+          language: "en",
+        },
+      },
     };
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
@@ -68,20 +52,18 @@ describe("scenes.store mobile layout", () => {
           id: "scene-1",
           type: "scene",
           name: "Scene 1",
-          sections: [
-            {
-              lines: [
-                {
-                  actions: {
-                    dialogue: { content: [{ text: "春の雨。" }] },
-                  },
-                },
-              ],
-            },
-          ],
         },
       },
       tree: [{ id: "scene-1" }],
+    };
+    state.sceneOverviewsById = {
+      "scene-1": {
+        textStats: {
+          count: 4,
+          countMode: "character",
+          language: "ja",
+        },
+      },
     };
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
@@ -89,7 +71,7 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.selectedSceneTextStatsLabel).toBe("4 characters");
   });
 
-  it("hides the selected scene word-count label when scene content is not loaded", () => {
+  it("hides the selected scene word-count label when no count is cached", () => {
     const state = createInitialState();
     state.selectedItemId = "scene-1";
     state.scenesData = {
@@ -108,7 +90,7 @@ describe("scenes.store mobile layout", () => {
     expect(viewData.selectedSceneTextStatsLabel).toBe("");
   });
 
-  it("hides the selected scene word-count label when loaded content has no words", () => {
+  it("shows a cached zero word count", () => {
     const state = createInitialState();
     state.selectedItemId = "scene-1";
     state.scenesData = {
@@ -117,31 +99,47 @@ describe("scenes.store mobile layout", () => {
           id: "scene-1",
           type: "scene",
           name: "Scene 1",
-          sections: {
-            items: {
-              "section-1": {
-                id: "section-1",
-                name: "Section 1",
-                lines: {
-                  items: {
-                    "line-1": {
-                      id: "line-1",
-                      actions: {
-                        dialogue: {
-                          content: [{ text: "" }],
-                        },
-                      },
-                    },
-                  },
-                  tree: [{ id: "line-1" }],
-                },
-              },
-            },
-            tree: [{ id: "section-1" }],
-          },
         },
       },
       tree: [{ id: "scene-1" }],
+    };
+    state.sceneOverviewsById = {
+      "scene-1": {
+        textStats: {
+          count: 0,
+          countMode: "word",
+          language: "en",
+        },
+      },
+    };
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.selectedSceneTextStatsLabel).toBe("0 words");
+  });
+
+  it("hides a cached count after the project language changes", () => {
+    const state = createInitialState();
+    setProjectLanguage({ state }, { language: "ja" });
+    state.selectedItemId = "scene-1";
+    state.scenesData = {
+      items: {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          name: "Scene 1",
+        },
+      },
+      tree: [{ id: "scene-1" }],
+    };
+    state.sceneOverviewsById = {
+      "scene-1": {
+        textStats: {
+          count: 4,
+          countMode: "word",
+          language: "en",
+        },
+      },
     };
 
     const viewData = selectViewData({ state, i18n: EN_I18N });

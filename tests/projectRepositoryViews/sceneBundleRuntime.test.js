@@ -168,6 +168,35 @@ describe("sceneBundleRuntime", () => {
     }
   });
 
+  it("persists editor-calculated text stats with the active scene overview", async () => {
+    const { runtime, store } = createRuntime({ events: [] });
+    const textStats = {
+      count: 12,
+      countMode: "word",
+      language: "en",
+    };
+
+    await expect(
+      runtime.cacheSceneTextStats({
+        sceneId: activeSceneId,
+        textStats,
+      }),
+    ).resolves.toEqual(textStats);
+
+    expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledTimes(1);
+    expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledWith({
+      viewName: SCENE_OVERVIEW_VIEW_NAME,
+      partition: scenePartitionFor(activeSceneId),
+      viewVersion: SCENE_OVERVIEW_VIEW_VERSION,
+      lastCommittedId: 0,
+      value: expect.objectContaining({
+        sceneId: activeSceneId,
+        textStats,
+      }),
+      updatedAt: expect.any(Number),
+    });
+  });
+
   it("does not invalidate scene overview checkpoints for image commands on the main partition", async () => {
     const imageEvent = createEvent({
       type: COMMAND_TYPES.IMAGE_CREATE,

@@ -1,11 +1,7 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
-import {
-  buildSceneTextStats,
-  formatSceneTextStatsLabel,
-  normalizeSceneTextStats,
-} from "../../internal/ui/sceneTextStats.js";
+import { formatSceneTextStatsLabel } from "../../internal/ui/sceneTextStats.js";
 import {
   DEFAULT_PROJECT_LANGUAGE,
   normalizeProjectLanguage,
@@ -483,12 +479,8 @@ export const selectViewData = ({ state, i18n }) => {
     const selectedSceneOverview = state.sceneOverviewsById?.[selectedScene.id];
     selectedItemName = selectedScene.name ?? "";
     selectedItemDescription = selectedScene.description ?? "";
-    const selectedSceneTextStats = selectedScene.sections
-      ? buildSceneTextStats(selectedScene, {
-          language: state.projectLanguage,
-        })
-      : undefined;
-    if (normalizeSceneTextStats(selectedSceneTextStats).count > 0) {
+    const selectedSceneTextStats = selectedSceneOverview?.textStats;
+    if (selectedSceneTextStats?.language === state.projectLanguage) {
       selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
         selectedSceneTextStats,
         copy,

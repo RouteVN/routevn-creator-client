@@ -153,6 +153,11 @@ export const createProjectServiceCore = ({
     return repository.getSceneOverview(sceneId);
   };
 
+  const cacheSceneTextStats = async (payload = {}) => {
+    const repository = await ensureRepository();
+    return repository.cacheSceneTextStats(payload);
+  };
+
   const getDomainState = () => {
     const repositoryState = getRepositoryState();
     const projectId = getCurrentProjectId() || "unknown-project";
@@ -285,6 +290,7 @@ export const createProjectServiceCore = ({
     deleteSceneIfUnused,
     loadSceneOverviews,
     getSceneOverview,
+    cacheSceneTextStats,
     getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
     updateCurrentProjectInfo: repositoryService.updateCurrentProjectInfo,
     updateProjectInfoById: repositoryService.updateProjectInfoByProjectId,

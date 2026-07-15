@@ -166,6 +166,12 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
       }),
       clearDraftSection: vi.fn(),
       setDraftSavePendingSinceAt: vi.fn(),
+      refreshSceneTextStats: vi.fn(),
+      selectSceneTextStats: vi.fn(() => ({
+        count: 4,
+        countMode: "word",
+      })),
+      selectProjectLanguage: vi.fn(() => "en"),
       selectRepositoryRevision: vi.fn(() => 7),
       setRepositoryState: vi.fn(),
       setDomainState: vi.fn(),
@@ -185,6 +191,7 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
     };
     const projectService = {
       setActiveSceneId: vi.fn(),
+      cacheSceneTextStats: vi.fn(),
       getRepositoryState: vi.fn(() => ({ scenes: { items: scenes } })),
       getDomainState: vi.fn(() => ({ scenes })),
       getRepositoryRevision: vi.fn(() => 7),
@@ -223,6 +230,22 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
     });
 
     expect(projectService.setActiveSceneId).toHaveBeenCalledWith("scene-2");
+    expect(projectService.cacheSceneTextStats).toHaveBeenNthCalledWith(1, {
+      sceneId: "scene-1",
+      textStats: {
+        count: 4,
+        countMode: "word",
+        language: "en",
+      },
+    });
+    expect(projectService.cacheSceneTextStats).toHaveBeenNthCalledWith(2, {
+      sceneId: "scene-2",
+      textStats: {
+        count: 4,
+        countMode: "word",
+        language: "en",
+      },
+    });
     expect(sceneId).toBe("scene-2");
     expect(selectedSectionId).toBe("new-section");
     expect(selectedLineId).toBeUndefined();
