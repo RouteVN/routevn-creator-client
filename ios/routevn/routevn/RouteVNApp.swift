@@ -1491,7 +1491,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         var entry: [String: Any] = [
             "id": projectId,
             "name": stringValue(projectInfo["name"]),
-            "description": stringValue(projectInfo["description"])
+            "description": stringValue(projectInfo["description"]),
+            "language": stringValue(projectInfo["language"])
         ]
         if let iconFileId = projectInfo["iconFileId"], !(iconFileId is NSNull) {
             entry["iconFileId"] = stringValue(iconFileId)

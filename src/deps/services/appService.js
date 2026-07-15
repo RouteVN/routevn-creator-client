@@ -6,6 +6,7 @@ import { generateId } from "../../internal/id.js";
 import { assertSafeProjectFileId } from "../../internal/projectFileIds.js";
 import { copyTextToClipboard } from "../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../internal/nativeApplicationIdentifier.js";
+import { normalizeProjectLanguage } from "../../internal/projectLanguage.js";
 import { createProgressDialog } from "../clients/progressDialog.js";
 
 const deriveProjectNameFromPath = (projectPath) => {
@@ -110,6 +111,7 @@ export const createAppService = (params) => {
         projectPath: folderPath,
         name: projectData.name,
         description: projectData.description,
+        language: normalizeProjectLanguage(projectData.language),
         iconFileId: projectData.iconFileId || null,
         createdAt: Date.now(),
         lastOpenedAt: null,
@@ -158,6 +160,7 @@ export const createAppService = (params) => {
         projectPath,
         name,
         description,
+        language,
         iconFileId,
         createdAt: Date.now(),
         lastOpenedAt: null,

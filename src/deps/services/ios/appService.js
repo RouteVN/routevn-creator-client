@@ -4,6 +4,7 @@ import { getIOSProjectFileUrl } from "./projectFileUrls.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
+import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 
 const normalizeFolderSelection = (selection) => {
   if (typeof selection === "string") {
@@ -40,6 +41,9 @@ const toIOSProjectEntry = ({ project, existingEntry } = {}) => {
     id: projectId,
     name: projectName || "Untitled Project",
     description: project.description ?? existingEntry?.description ?? "",
+    language: normalizeProjectLanguage(
+      project.language ?? existingEntry?.language,
+    ),
     iconFileId: project.iconFileId ?? null,
     createdAt: existingEntry?.createdAt ?? Date.now(),
     lastOpenedAt: existingEntry?.lastOpenedAt ?? null,
@@ -135,6 +139,7 @@ export const createAppService = (params) => {
         id: projectId,
         name: projectName,
         description: importedProject.description ?? "",
+        language: normalizeProjectLanguage(importedProject.language),
         iconFileId: importedProject.iconFileId ?? null,
         createdAt: Date.now(),
         lastOpenedAt: null,
@@ -185,6 +190,7 @@ export const createAppService = (params) => {
         id: projectId,
         name,
         description,
+        language,
         iconFileId,
         createdAt: Date.now(),
         lastOpenedAt: null,

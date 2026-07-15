@@ -59,6 +59,7 @@ describe("projectEntriesService", () => {
         projectPath: "/old/project-two-migrated",
         name: "Project Two",
         description: "old description",
+        language: "en",
         iconFileId: "icon-old",
         createdAt: 100,
         lastOpenedAt: 200,
@@ -70,6 +71,7 @@ describe("projectEntriesService", () => {
       projectPath: "/new/project-two-migrated",
       name: "Project Two",
       description: "new description",
+      language: "ja",
       iconFileId: "icon-new",
       createdAt: 300,
       lastOpenedAt: null,
@@ -81,6 +83,7 @@ describe("projectEntriesService", () => {
         projectPath: "/new/project-two-migrated",
         name: "Project Two",
         description: "new description",
+        language: "ja",
         iconFileId: "icon-new",
         createdAt: 100,
         lastOpenedAt: 200,
@@ -111,6 +114,7 @@ describe("projectEntriesService", () => {
       id: "project-1",
       name: "Project Two",
       description: "Recovered",
+      language: "ja",
       iconFileId: "icon-1",
       projectPath,
     }));
@@ -138,6 +142,7 @@ describe("projectEntriesService", () => {
         id: "project-1",
         name: "Project Two",
         description: "Recovered",
+        language: "ja",
         iconFileId: "icon-1",
         projectPath: "/projects/project-two-migrated",
       }),
@@ -148,6 +153,7 @@ describe("projectEntriesService", () => {
         projectPath: "/projects/project-two-migrated",
         name: "Project Two",
         description: "Recovered",
+        language: "ja",
         iconFileId: "icon-1",
       },
     ]);
@@ -158,6 +164,7 @@ describe("projectEntriesService", () => {
       id: "project-1",
       name: "Project Two",
       description: "Recovered",
+      language: "zh-hans",
       iconFileId: "icon-1",
     }));
     const { db, service } = createService(
@@ -198,7 +205,43 @@ describe("projectEntriesService", () => {
         projectPath: "/projects/working",
         name: "Project Two",
         description: "Recovered",
+        language: "zh-hans",
         iconFileId: "icon-1",
+      },
+    ]);
+  });
+
+  it("normalizes legacy cached project languages when loading projects", async () => {
+    const { db, service } = createService([
+      {
+        id: "project-1",
+        projectPath: "/projects/sample-project",
+        name: "Sample Project",
+        description: "",
+        iconFileId: null,
+        createdAt: 100,
+        lastOpenedAt: null,
+      },
+    ]);
+
+    const projects = await service.loadAllProjects();
+
+    expect(projects).toEqual([
+      expect.objectContaining({
+        id: "project-1",
+        language: "en",
+      }),
+    ]);
+    expect(db.set).toHaveBeenCalledWith("projectEntries", [
+      {
+        id: "project-1",
+        projectPath: "/projects/sample-project",
+        name: "Sample Project",
+        description: "",
+        language: "en",
+        iconFileId: null,
+        createdAt: 100,
+        lastOpenedAt: null,
       },
     ]);
   });

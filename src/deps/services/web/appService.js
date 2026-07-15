@@ -69,6 +69,7 @@ export const createAppService = (params) => {
         id: projectId,
         name,
         description,
+        language,
         iconFileId,
         createdAt: Date.now(),
         lastOpenedAt: null,

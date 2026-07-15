@@ -1568,6 +1568,7 @@ public class MainActivity extends Activity {
             result.put("id", projectId);
             result.put("name", projectInfo.optString("name", ""));
             result.put("description", projectInfo.optString("description", ""));
+            result.put("language", projectInfo.optString("language", ""));
             if (projectInfo.has("iconFileId") && !projectInfo.isNull("iconFileId")) {
                 result.put("iconFileId", projectInfo.optString("iconFileId", ""));
             } else {
@@ -1725,6 +1726,7 @@ public class MainActivity extends Activity {
                     "description",
                     projectInfo.optString("description", "")
                 );
+                project.put("language", projectInfo.optString("language", ""));
                 if (
                     projectInfo.has("iconFileId") &&
                     !projectInfo.isNull("iconFileId")

@@ -459,6 +459,7 @@ export const createProjectRepositoryService = ({
       ...entries[entryIndex],
       name: projectInfo.name,
       description: projectInfo.description,
+      language: normalizeProjectLanguage(projectInfo.language),
       iconFileId: projectInfo.iconFileId,
     };
     await db.set("projectEntries", entries);
