@@ -12,6 +12,7 @@ import {
 import { loadProjectionGap } from "./collab/projectionGapState.js";
 import { loadRepositoryEventsFromClientStore } from "./collab/clientStoreHistory.js";
 import { UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE } from "../../../internal/projectOpenErrors.js";
+import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 
 const flushRepositoryMainCheckpoint = async (repository) => {
   await repository.flushMainCheckpoint();
@@ -135,10 +136,42 @@ export const createProjectRepositoryService = ({
   const normalizeProjectInfo = (projectInfo) => ({
     id: projectInfo?.id ?? "",
     namespace: projectInfo?.namespace ?? "",
+    nativeApplicationIdentifier: projectInfo?.nativeApplicationIdentifier ?? "",
     name: projectInfo?.name ?? "",
     description: projectInfo?.description ?? "",
     iconFileId: projectInfo?.iconFileId ?? null,
   });
+
+  const ensureProjectInfoIdentity = (
+    projectInfo,
+    { fallbackProjectId } = {},
+  ) => {
+    const normalizedProjectInfo = normalizeProjectInfo(projectInfo);
+    const isComplete =
+      normalizedProjectInfo.id &&
+      normalizedProjectInfo.namespace &&
+      normalizedProjectInfo.nativeApplicationIdentifier;
+
+    if (isComplete) {
+      return {
+        projectInfo: normalizedProjectInfo,
+        changed: false,
+      };
+    }
+
+    const nextProjectInfo = normalizeProjectInfo(normalizedProjectInfo);
+    nextProjectInfo.id =
+      normalizedProjectInfo.id || fallbackProjectId || generateId();
+    nextProjectInfo.namespace = normalizedProjectInfo.namespace || generateId();
+    nextProjectInfo.nativeApplicationIdentifier =
+      normalizedProjectInfo.nativeApplicationIdentifier ||
+      createNativeApplicationIdentifier({ idGenerator: generateId });
+
+    return {
+      projectInfo: nextProjectInfo,
+      changed: true,
+    };
+  };
 
   const mergeProjectInfo = (currentProjectInfo, patch = {}) => {
     const nextProjectInfo = {
@@ -163,6 +196,11 @@ export const createProjectRepositoryService = ({
 
     if (Object.hasOwn(patch, "namespace")) {
       nextProjectInfo.namespace = patch.namespace ?? "";
+    }
+
+    if (Object.hasOwn(patch, "nativeApplicationIdentifier")) {
+      nextProjectInfo.nativeApplicationIdentifier =
+        patch.nativeApplicationIdentifier ?? "";
     }
 
     return normalizeProjectInfo(nextProjectInfo);
@@ -571,18 +609,13 @@ export const createProjectRepositoryService = ({
     { fallbackProjectId } = {},
   ) => {
     const storedProjectInfo = await store.app.get(PROJECT_INFO_KEY);
-    const normalizedProjectInfo = normalizeProjectInfo(storedProjectInfo);
-    if (normalizedProjectInfo.id && normalizedProjectInfo.namespace) {
-      return normalizedProjectInfo;
-    }
-
-    const nextProjectInfo = normalizeProjectInfo({
-      ...normalizedProjectInfo,
-      id: normalizedProjectInfo.id || fallbackProjectId || generateId(),
-      namespace: normalizedProjectInfo.namespace || generateId(),
+    const ensuredProjectInfo = ensureProjectInfoIdentity(storedProjectInfo, {
+      fallbackProjectId,
     });
-    await store.app.set(PROJECT_INFO_KEY, nextProjectInfo);
-    return nextProjectInfo;
+    if (ensuredProjectInfo.changed) {
+      await store.app.set(PROJECT_INFO_KEY, ensuredProjectInfo.projectInfo);
+    }
+    return ensuredProjectInfo.projectInfo;
   };
 
   const writeProjectInfoToStore = async ({ store, projectId, patch }) => {
@@ -815,12 +848,21 @@ export const createProjectRepositoryService = ({
   const getProjectInfoByPath = async (projectPath) => {
     const reference = await resolveProjectReferenceByPath(projectPath);
     await ensureCompatibleCreatorVersionForReference(reference);
-    return normalizeProjectInfo(
-      await storageAdapter.readProjectInfoByReference({
+    const storedProjectInfo = await storageAdapter.readProjectInfoByReference({
+      reference,
+      db,
+    });
+    const ensuredProjectInfo = ensureProjectInfoIdentity(storedProjectInfo);
+
+    if (ensuredProjectInfo.changed) {
+      await storageAdapter.writeProjectInfoByReference({
         reference,
         db,
-      }),
-    );
+        projectInfo: ensuredProjectInfo.projectInfo,
+      });
+    }
+
+    return ensuredProjectInfo.projectInfo;
   };
 
   const updateProjectInfoByPath = async (projectPath, patch) => {

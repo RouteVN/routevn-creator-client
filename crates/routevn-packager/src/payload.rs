@@ -79,6 +79,15 @@ pub struct AppendChunkedPayloadRequest<'a> {
 }
 
 #[derive(Debug)]
+pub struct WriteStandaloneChunkedPayloadRequest<'a> {
+    pub output_path: &'a Path,
+    pub payload: &'a [u8],
+    pub key: PayloadKey,
+    pub nonce: PayloadNonce,
+    pub chunk_size: usize,
+}
+
+#[derive(Debug)]
 pub struct AppendPayloadOutcome {
     pub output_path: PathBuf,
     pub footer: EmbeddedPayloadFooter,
@@ -183,25 +192,57 @@ pub fn append_encrypted_payload(request: AppendPayloadRequest<'_>) -> Result<App
 pub fn append_chunked_encrypted_payload(
     request: AppendChunkedPayloadRequest<'_>,
 ) -> Result<AppendChunkedPayloadOutcome> {
-    if request.chunk_size == 0 {
-        return Err(invalid_payload(
-            request.output_path,
-            "chunk size must be greater than zero",
-        ));
-    }
-
-    let mut output_bytes =
+    let prefix_bytes =
         fs::read(request.template_path).map_err(|source| PackagerError::ReadFile {
             path: request.template_path.to_path_buf(),
             source,
         })?;
-    let template_len = output_bytes.len();
-    let encrypted_offset = template_len as u64;
+
+    write_chunked_encrypted_payload(
+        prefix_bytes,
+        request.output_path,
+        request.payload,
+        request.key,
+        request.nonce,
+        request.chunk_size,
+    )
+}
+
+pub fn write_standalone_chunked_encrypted_payload(
+    request: WriteStandaloneChunkedPayloadRequest<'_>,
+) -> Result<AppendChunkedPayloadOutcome> {
+    write_chunked_encrypted_payload(
+        Vec::new(),
+        request.output_path,
+        request.payload,
+        request.key,
+        request.nonce,
+        request.chunk_size,
+    )
+}
+
+fn write_chunked_encrypted_payload(
+    mut output_bytes: Vec<u8>,
+    output_path: &Path,
+    payload: &[u8],
+    key: PayloadKey,
+    nonce: PayloadNonce,
+    chunk_size: usize,
+) -> Result<AppendChunkedPayloadOutcome> {
+    if chunk_size == 0 {
+        return Err(invalid_payload(
+            output_path,
+            "chunk size must be greater than zero",
+        ));
+    }
+
+    let prefix_len = output_bytes.len();
+    let encrypted_offset = prefix_len as u64;
     let mut table_entries = Vec::new();
 
-    for (segment_index, chunk) in request.payload.chunks(request.chunk_size).enumerate() {
-        let segment_nonce = derive_segment_nonce(request.nonce, segment_index as u64);
-        let encrypted_segment = encrypt_payload(chunk, request.key, segment_nonce)?;
+    for (segment_index, chunk) in payload.chunks(chunk_size).enumerate() {
+        let segment_nonce = derive_segment_nonce(nonce, segment_index as u64);
+        let encrypted_segment = encrypt_payload(chunk, key, segment_nonce)?;
         table_entries.push(ChunkedPayloadTableEntry {
             plaintext_len: chunk.len() as u64,
             encrypted_len: encrypted_segment.len() as u64,
@@ -219,29 +260,29 @@ pub fn append_chunked_encrypted_payload(
         encrypted_len: table_offset - encrypted_offset,
         table_offset,
         table_len: table_bytes.len() as u64,
-        plaintext_len: request.payload.len() as u64,
-        chunk_size: request.chunk_size as u64,
+        plaintext_len: payload.len() as u64,
+        chunk_size: chunk_size as u64,
         segment_count: table_entries.len() as u64,
-        nonce: request.nonce,
-        key_envelope: wrap_payload_key(&output_bytes[..template_len], request.key, request.nonce),
+        nonce,
+        key_envelope: wrap_payload_key(&output_bytes[..prefix_len], key, nonce),
     };
 
     output_bytes.extend_from_slice(&serialize_chunked_footer(&footer));
 
-    if let Some(parent) = request.output_path.parent() {
+    if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent).map_err(|source| PackagerError::CreateDir {
             path: parent.to_path_buf(),
             source,
         })?;
     }
 
-    fs::write(request.output_path, output_bytes).map_err(|source| PackagerError::WriteFile {
-        path: request.output_path.to_path_buf(),
+    fs::write(output_path, output_bytes).map_err(|source| PackagerError::WriteFile {
+        path: output_path.to_path_buf(),
         source,
     })?;
 
     Ok(AppendChunkedPayloadOutcome {
-        output_path: request.output_path.to_path_buf(),
+        output_path: output_path.to_path_buf(),
         footer,
     })
 }
@@ -839,14 +880,16 @@ fn parse_fixed_hex<const N: usize>(field: &str, value: &str) -> Result<[u8; N]> 
 
 #[cfg(test)]
 mod tests {
+    use sha2::{Digest, Sha256};
     use tempfile::tempdir;
 
     use super::{
         AppendChunkedPayloadRequest, AppendPayloadRequest, PayloadKey, PayloadNonce,
-        append_chunked_encrypted_payload, append_encrypted_payload, generate_payload_key_material,
-        parse_payload_key_hex, parse_payload_nonce_hex, read_embedded_payload,
-        read_self_contained_embedded_payload, read_self_contained_embedded_payload_metadata,
-        read_self_contained_embedded_payload_range,
+        WriteStandaloneChunkedPayloadRequest, append_chunked_encrypted_payload,
+        append_encrypted_payload, generate_payload_key_material, parse_payload_key_hex,
+        parse_payload_nonce_hex, read_embedded_payload, read_self_contained_embedded_payload,
+        read_self_contained_embedded_payload_metadata, read_self_contained_embedded_payload_range,
+        write_standalone_chunked_encrypted_payload,
     };
 
     fn fixture_key() -> PayloadKey {
@@ -972,6 +1015,11 @@ mod tests {
         assert_eq!(outcome.footer.segment_count, 5);
 
         let output_bytes = std::fs::read(&output_path).unwrap();
+        assert_eq!(
+            format!("{:x}", Sha256::digest(&output_bytes)),
+            "f3e98a011d95068e3f067f4b19f0aa68e114cb8617aa2e44642bb4b54632f3f4",
+            "the Windows appended payload fixture must remain byte-for-byte compatible",
+        );
         assert!(output_bytes.starts_with(template_bytes));
         assert!(
             !output_bytes
@@ -998,5 +1046,41 @@ mod tests {
         let empty_range =
             read_self_contained_embedded_payload_range(&output_path, 999, 10).unwrap();
         assert!(empty_range.is_empty());
+    }
+
+    #[test]
+    fn writes_and_reads_standalone_chunked_encrypted_payload_ranges() {
+        let temp = tempdir().unwrap();
+        let output_path = temp.path().join("routevn-package.bin");
+        let payload = b"standalone package.bin bytes across chunk boundaries";
+
+        let outcome =
+            write_standalone_chunked_encrypted_payload(WriteStandaloneChunkedPayloadRequest {
+                output_path: &output_path,
+                payload,
+                key: fixture_key(),
+                nonce: fixture_nonce(),
+                chunk_size: 11,
+            })
+            .unwrap();
+
+        assert_eq!(outcome.footer.encrypted_offset, 0);
+        assert_eq!(outcome.footer.plaintext_len, payload.len() as u64);
+        assert_eq!(outcome.footer.segment_count, 5);
+
+        let output_bytes = std::fs::read(&output_path).unwrap();
+        assert!(
+            !output_bytes
+                .windows(payload.len())
+                .any(|window| window == payload)
+        );
+
+        let metadata = read_self_contained_embedded_payload_metadata(&output_path).unwrap();
+        assert_eq!(metadata.plaintext_len, payload.len() as u64);
+        assert_eq!(metadata.chunk_size, 11);
+        assert_eq!(metadata.segment_count, 5);
+
+        let range = read_self_contained_embedded_payload_range(&output_path, 8, 29).unwrap();
+        assert_eq!(range, &payload[8..37]);
     }
 }

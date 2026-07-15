@@ -46,11 +46,14 @@ import {
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnectionManager.js";
 import { normalizeExportFileEntries } from "../shared/projectExportService.js";
+import { requireNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
 const WINDOWS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/windows/RouteVNPlayerTemplate.exe";
+const MACOS_PLAYER_TEMPLATE_RESOURCE =
+  "player-templates/macos/RouteVNPlayerTemplate.app.zip";
 const VIDEO_EXTENSION_BY_MIME_TYPE = {
   "video/mp4": "mp4",
   "video/x-m4v": "m4v",
@@ -69,6 +72,7 @@ const VIDEO_EXTENSION_BY_MIME_TYPE = {
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
   namespace: projectInfo.namespace ?? "",
+  nativeApplicationIdentifier: projectInfo.nativeApplicationIdentifier ?? "",
   name: projectInfo.name ?? "",
   description: projectInfo.description ?? "",
   iconFileId: projectInfo.iconFileId ?? null,
@@ -130,6 +134,42 @@ const normalizeWindowsExecutableMetadata = ({
       value: iconFileId,
       label: "Project icon",
     }),
+  };
+};
+
+const normalizeMacosApplicationMetadata = ({
+  title,
+  shortVersion,
+  bundleVersion,
+  applicationIdentifier,
+  iconFileId,
+}) => {
+  const normalizedTitle = title?.trim?.();
+  if (!normalizedTitle) {
+    throw new Error("Project title is required for macOS application export.");
+  }
+  if (!/^\d+\.\d+\.\d+$/.test(shortVersion ?? "")) {
+    throw new Error(
+      "The macOS short version must contain three numeric components.",
+    );
+  }
+  if (!/^[1-9]\d*$/.test(bundleVersion ?? "")) {
+    throw new Error("The macOS bundle version must be a positive integer.");
+  }
+
+  const normalizedIconFileId = iconFileId?.trim?.();
+  if (!normalizedIconFileId) {
+    throw new Error("Project icon is required for macOS application export.");
+  }
+
+  return {
+    title: normalizedTitle,
+    shortVersion,
+    bundleVersion,
+    applicationIdentifier: requireNativeApplicationIdentifier(
+      applicationIdentifier,
+    ),
+    iconFileId: normalizedIconFileId,
   };
 };
 
@@ -404,6 +444,30 @@ export const createTauriProjectServiceAdapters = ({
     }
   };
 
+  const writeProjectAppValueByReference = async ({ reference, key, value }) => {
+    const projectPath = reference?.projectPath;
+    if (!projectPath || !key) {
+      throw new Error("Project reference and app-state key are required.");
+    }
+
+    const dbFilePath = await join(projectPath, PROJECT_DB_NAME);
+    if (!(await exists(dbFilePath))) {
+      throw createProjectDatabaseOpenError();
+    }
+
+    const db = getManagedSqliteConnection({
+      dbPath: `sqlite:${dbFilePath}`,
+      busyTimeoutMs: SQLITE_BUSY_TIMEOUT_MS,
+    });
+    await db.init();
+    await withSqliteLockRetry(() =>
+      db.execute(
+        "INSERT OR REPLACE INTO app_state (key, value) VALUES ($1, $2)",
+        [key, JSON.stringify(value)],
+      ),
+    );
+  };
+
   const getReferenceFilesPath = async (reference) => {
     const projectPath = reference?.projectPath;
     if (!projectPath) {
@@ -457,6 +521,22 @@ export const createTauriProjectServiceAdapters = ({
     return Array.from(iconBytes);
   };
 
+  const readMacosApplicationIconPng = async ({
+    iconFileId,
+    getCurrentReference,
+  }) => {
+    const { filePath } = await resolveReferenceFilePath(
+      getCurrentReference(),
+      iconFileId,
+      { label: "Project icon file id" },
+    );
+    const iconBytes = await readFile(filePath);
+    if (!iconBytes?.byteLength) {
+      throw new Error("Project icon is required for macOS application export.");
+    }
+    return Array.from(iconBytes);
+  };
+
   const promptDistributionZipPath = async ({
     zipName,
     options = {},
@@ -493,6 +573,18 @@ export const createTauriProjectServiceAdapters = ({
     });
   };
 
+  const promptMacosApplicationPath = async ({
+    applicationName,
+    options = {},
+    filePicker,
+  }) => {
+    return filePicker.saveFilePicker({
+      title: options.title || "Save macOS Application",
+      defaultPath: `${applicationName}.app.zip`,
+      filters: [{ name: "macOS Application Archive", extensions: ["zip"] }],
+    });
+  };
+
   const resolveWindowsPlayerTemplatePath = async (options = {}) => {
     if (options.templatePath) {
       return options.templatePath;
@@ -503,6 +595,20 @@ export const createTauriProjectServiceAdapters = ({
     } catch {
       throw new Error(
         "Windows player template is not bundled with this Creator build.",
+      );
+    }
+  };
+
+  const resolveMacosPlayerTemplatePath = async (options = {}) => {
+    if (options.templatePath) {
+      return options.templatePath;
+    }
+
+    try {
+      return await resolveResource(MACOS_PLAYER_TEMPLATE_RESOURCE);
+    } catch {
+      throw new Error(
+        "macOS player template is not bundled with this Creator build.",
       );
     }
   };
@@ -531,6 +637,38 @@ export const createTauriProjectServiceAdapters = ({
       templateAvailable,
       installerHostSupported: !!hostCapabilities?.installerHostSupported,
       installerToolAvailable: !!hostCapabilities?.installerToolAvailable,
+    };
+  };
+
+  const getMacosExportAvailability = async ({ options = {} } = {}) => {
+    let templateAvailable = false;
+    try {
+      const templatePath = await resolveMacosPlayerTemplatePath(options);
+      templateAvailable = await exists(templatePath);
+    } catch {}
+
+    let hostCapabilities = {
+      hostSupported: false,
+      dittoAvailable: false,
+      codesignAvailable: false,
+      sipsAvailable: false,
+      iconutilAvailable: false,
+      lipoAvailable: false,
+      available: false,
+    };
+    try {
+      hostCapabilities = await invoke("get_macos_export_host_capabilities");
+    } catch {}
+
+    return {
+      application: templateAvailable && !!hostCapabilities?.available,
+      templateAvailable,
+      hostSupported: !!hostCapabilities?.hostSupported,
+      dittoAvailable: !!hostCapabilities?.dittoAvailable,
+      codesignAvailable: !!hostCapabilities?.codesignAvailable,
+      sipsAvailable: !!hostCapabilities?.sipsAvailable,
+      iconutilAvailable: !!hostCapabilities?.iconutilAvailable,
+      lipoAvailable: !!hostCapabilities?.lipoAvailable,
     };
   };
 
@@ -668,6 +806,49 @@ export const createTauriProjectServiceAdapters = ({
     });
   };
 
+  const createMacosApplicationToPath = async ({
+    projectData,
+    fileEntries,
+    outputPath,
+    title,
+    shortVersion,
+    bundleVersion,
+    applicationIdentifier,
+    iconFileId,
+    options = {},
+    getCurrentReference,
+  }) => {
+    const metadata = normalizeMacosApplicationMetadata({
+      title,
+      shortVersion,
+      bundleVersion,
+      applicationIdentifier,
+      iconFileId,
+    });
+    const iconPng = await readMacosApplicationIconPng({
+      iconFileId: metadata.iconFileId,
+      getCurrentReference,
+    });
+    const assets = await collectDistributionAssets({
+      fileEntries,
+      getCurrentReference,
+    });
+    const templatePath = await resolveMacosPlayerTemplatePath(options);
+    const result = await invoke("export_macos_application", {
+      templatePath,
+      outputPath,
+      assets,
+      instructionsJson: JSON.stringify(projectData),
+      title: metadata.title,
+      shortVersion: metadata.shortVersion,
+      bundleVersion: metadata.bundleVersion,
+      applicationIdentifier: metadata.applicationIdentifier,
+      iconPng,
+    });
+    logExportSizeStats(result?.stats);
+    return result;
+  };
+
   const storageAdapter = {
     resolveProjectReferenceByProjectId: async ({ db, projectId }) => {
       const projects = (await db.get("projectEntries")) || [];
@@ -704,6 +885,14 @@ export const createTauriProjectServiceAdapters = ({
           key: PROJECT_INFO_KEY,
         }),
       );
+    },
+
+    writeProjectInfoByReference: async ({ reference, projectInfo }) => {
+      await writeProjectAppValueByReference({
+        reference,
+        key: PROJECT_INFO_KEY,
+        value: normalizeProjectInfo(projectInfo),
+      });
     },
 
     createStore: async ({ reference }) => {
@@ -959,9 +1148,12 @@ export const createTauriProjectServiceAdapters = ({
     createDistributionZipStreamedToPath,
     promptWindowsExecutablePath,
     promptWindowsInstallerPath,
+    promptMacosApplicationPath,
     getWindowsExportAvailability,
+    getMacosExportAvailability,
     createWindowsPortableExecutableToPath,
     createWindowsInstallerToPath,
+    createMacosApplicationToPath,
   };
 
   const collabAdapter = {

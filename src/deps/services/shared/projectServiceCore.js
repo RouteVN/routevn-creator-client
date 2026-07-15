@@ -336,5 +336,8 @@ export const createProjectServiceCore = ({
     createWindowsPortableExecutableToPath:
       exportService.createWindowsPortableExecutableToPath,
     createWindowsInstallerToPath: exportService.createWindowsInstallerToPath,
+    promptMacosApplicationPath: exportService.promptMacosApplicationPath,
+    getMacosExportAvailability: exportService.getMacosExportAvailability,
+    createMacosApplicationToPath: exportService.createMacosApplicationToPath,
   };
 };

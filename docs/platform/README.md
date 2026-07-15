@@ -2,7 +2,7 @@
 
 This folder defines the current platform for RouteVN Creator.
 
-Date baseline: April 9, 2026.
+Date baseline: July 15, 2026.
 
 ## Scope
 
@@ -64,6 +64,7 @@ Bundle implementation points:
 8. `10-model-compatibility-and-upgrades.md`
 9. `11-windows-player-runtime-persistence.md`
 10. `12-windows-player-runtime-key-value-contract.md`
+11. `13-macos-player-export.md`
 
 ## Implementation Mapping
 

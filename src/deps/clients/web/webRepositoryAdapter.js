@@ -46,6 +46,7 @@ const createUnsupportedProjectStoreFormatError = ({
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
   namespace: projectInfo.namespace ?? "",
+  nativeApplicationIdentifier: projectInfo.nativeApplicationIdentifier ?? "",
   name: projectInfo.name ?? "",
   description: projectInfo.description ?? "",
   iconFileId: projectInfo.iconFileId ?? null,

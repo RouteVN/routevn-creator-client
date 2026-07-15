@@ -61,12 +61,18 @@ export const createInitialState = () => ({
   versions: [],
   selectedItemId: undefined,
   platform: "web",
+  visualTestMode: false,
   windowsExportAvailability: {
     portableExecutable: false,
     installer: false,
     templateAvailable: false,
     installerHostSupported: false,
     installerToolAvailable: false,
+  },
+  macosExportAvailability: {
+    application: false,
+    templateAvailable: false,
+    hostSupported: false,
   },
   ...createMobileResourcePageState(),
   isVersionDialogOpen: false,
@@ -112,6 +118,10 @@ export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform ?? "web";
 };
 
+export const setVisualTestMode = ({ state }, { enabled } = {}) => {
+  state.visualTestMode = !!enabled;
+};
+
 export const setWindowsExportAvailability = (
   { state },
   { availability } = {},
@@ -125,6 +135,16 @@ export const setWindowsExportAvailability = (
     !!availability?.installerHostSupported;
   state.windowsExportAvailability.installerToolAvailable =
     !!availability?.installerToolAvailable;
+};
+
+export const setMacosExportAvailability = (
+  { state },
+  { availability } = {},
+) => {
+  state.macosExportAvailability.application = !!availability?.application;
+  state.macosExportAvailability.templateAvailable =
+    !!availability?.templateAvailable;
+  state.macosExportAvailability.hostSupported = !!availability?.hostSupported;
 };
 
 export const openVersionDialog = ({ state }, { versionId } = {}) => {
@@ -233,9 +253,15 @@ export const selectViewData = ({ state, i18n }) => {
       copy.exportWindowsExecutableButton ?? "Export Windows EXE",
     exportWindowsInstallerButton:
       copy.exportWindowsInstallerButton ?? "Export Windows Installer",
+    exportMacosApplicationButton:
+      copy.exportMacosApplicationButton ?? "Export macOS App",
     canExportWindowsExecutable: state.platform === "tauri",
     canExportWindowsInstaller:
       state.platform === "tauri" && state.windowsExportAvailability.installer,
+    canExportMacosApplication:
+      (state.platform === "tauri" &&
+        state.macosExportAvailability.application) ||
+      state.visualTestMode,
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     resourceCategory: "releases",
     resourceType: "versions",

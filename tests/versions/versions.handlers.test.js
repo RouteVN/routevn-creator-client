@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
+  handleDownloadMacosApplicationClick,
   handleDownloadWindowsExecutableClick,
   handleDownloadWindowsInstallerClick,
   handleDownloadZipClick,
@@ -43,6 +44,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       addVersionToProject: vi.fn(async () => {}),
       getCurrentProjectInfo: vi.fn(async () => ({
         namespace: "project-one",
+        nativeApplicationIdentifier: "vn.routevn.player.project-one",
         name: "Project One",
         iconFileId: "icon-1",
         publisher: "Studio One",
@@ -52,11 +54,15 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       createDistributionZipStreamed: vi.fn(async () => "/tmp/export.zip"),
       promptWindowsExecutablePath: vi.fn(async () => "/tmp/export.exe"),
       promptWindowsInstallerPath: vi.fn(async () => "/tmp/export-setup.exe"),
+      promptMacosApplicationPath: vi.fn(async () => "/tmp/export.app.zip"),
       createWindowsPortableExecutableToPath: vi.fn(async () => ({
         outputPath: "/tmp/export.exe",
       })),
       createWindowsInstallerToPath: vi.fn(async () => ({
         outputPath: "/tmp/export-setup.exe",
+      })),
+      createMacosApplicationToPath: vi.fn(async () => ({
+        outputPath: "/tmp/export.app.zip",
       })),
     },
     store: {
@@ -95,6 +101,7 @@ describe("versions lifecycle", () => {
       store: {
         setUiConfig,
         setPlatform: vi.fn(),
+        setVisualTestMode: vi.fn(),
       },
       uiConfig: {
         id: "touch",
@@ -108,6 +115,9 @@ describe("versions lifecycle", () => {
       uiConfig: deps.uiConfig,
     });
     expect(deps.store.setPlatform).toHaveBeenCalledWith({ platform: "web" });
+    expect(deps.store.setVisualTestMode).toHaveBeenCalledWith({
+      enabled: false,
+    });
   });
 });
 
@@ -613,5 +623,32 @@ describe("versions Windows export handlers", () => {
     } finally {
       consoleError.mockRestore();
     }
+  });
+});
+
+describe("versions macOS export handlers", () => {
+  it("uses the release action index for bundle versions and the stable project identity", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+
+    await handleDownloadMacosApplicationClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.projectService.createMacosApplicationToPath).toHaveBeenCalled();
+    expect(
+      deps.projectService.createMacosApplicationToPath.mock.calls[0][3],
+    ).toEqual({
+      title: "Project One",
+      shortVersion: "1.0.3",
+      bundleVersion: "4",
+      applicationIdentifier: "vn.routevn.player.project-one",
+      iconFileId: "icon-1",
+    });
   });
 });
