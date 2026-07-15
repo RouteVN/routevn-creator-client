@@ -302,7 +302,7 @@ template:
   - $if showMobileDetailSheet:
       - rvn-mobile-sheet#mobileDetailSheet ?open=${showMobileDetailSheet}:
           - rtgl-view slot=content d=v w=f h=f:
-              - rtgl-view#detailHeader h=56 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+              - rtgl-view#detailHeader h=36 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bgc=su bwb=xs:
