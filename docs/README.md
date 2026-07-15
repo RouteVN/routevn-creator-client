@@ -14,6 +14,7 @@
 10. [Observability Proposal](./observability.md)
 11. [Android Development](./android.md)
 12. [iOS Development](./ios.md)
+13. [macOS Player Export Plan](./macos-player-export-plan.md)
 
 ## Runbooks
 
