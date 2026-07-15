@@ -472,6 +472,15 @@ const resolveDialogueActionForPreview = ({
   return authoredDialogue ?? presentationDialogue;
 };
 
+const isDisplayablePresentationDialogue = (dialogue, layoutsItems) => {
+  if (dialogue?.clear === true) {
+    return false;
+  }
+
+  const layoutId = dialogue?.ui?.resourceId ?? dialogue?.gui?.resourceId;
+  return Boolean(layoutsItems?.[layoutId]?.name);
+};
+
 const findSectionReference = (sceneItems = {}, sectionId) => {
   if (typeof sectionId !== "string" || sectionId.length === 0) {
     return {};
@@ -946,7 +955,12 @@ export const selectActionsData = ({ props, state, copy }) => {
     props,
   });
 
-  if (dialogueAction) {
+  const shouldShowDialogue =
+    dialogueAction &&
+    (props.actionType !== "presentation" ||
+      isDisplayablePresentationDialogue(dialogueAction, layoutsItems));
+
+  if (shouldShowDialogue) {
     actionsObject.dialogue = dialogueAction;
     const authoredDialogue = isPlainObject(actions.dialogue)
       ? actions.dialogue

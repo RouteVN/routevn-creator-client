@@ -1087,6 +1087,51 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("omits cleared dialogue from the presentation state preview", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actionType: "presentation",
+        actions: {
+          dialogue: {
+            clear: true,
+          },
+        },
+        presentationState: {
+          dialogue: {
+            clear: true,
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue).toBeUndefined();
+    expect(preview.dialogue).toBeUndefined();
+  });
+
+  it("omits layout-less dialogue from the presentation state preview", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actionType: "presentation",
+        actions: {},
+        presentationState: {
+          dialogue: {
+            mode: "adv",
+            content: [{ text: "Deleted dialogue" }],
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue).toBeUndefined();
+    expect(preview.dialogue).toBeUndefined();
+  });
+
   it("renders dialogue editor props from current component action state", () => {
     const state = createInitialState();
 
