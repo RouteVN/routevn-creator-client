@@ -1,5 +1,9 @@
 const SAVE_FORMAT_VERSION = 1;
 const SAVE_SLOT_KEY_PREFIX = "saveSlots:";
+const OPTIONAL_SAVE_CONTEXT_BGM_FIELDS = new Set([
+  "resourceId",
+  "startDelayMs",
+]);
 
 export const GLOBAL_DEVICE_VARIABLES_KEY = "globalDeviceVariables";
 export const GLOBAL_ACCOUNT_VARIABLES_KEY = "globalAccountVariables";
@@ -105,7 +109,25 @@ const requireSafeInteger = (value, label) => {
   return value;
 };
 
-const assertJsonValue = (value, label, ancestors = new WeakSet()) => {
+const isOptionalSaveContextBgmPath = (path) => {
+  const field = path.at(-1);
+  return (
+    path.length === 6 &&
+    OPTIONAL_SAVE_CONTEXT_BGM_FIELDS.has(field) &&
+    path.at(-2) === "bgm" &&
+    Number.isInteger(path.at(-3)) &&
+    path.at(-4) === "contexts" &&
+    path.at(-5) === "state"
+  );
+};
+
+const assertJsonValue = (
+  value,
+  label,
+  ancestors = new WeakSet(),
+  options = {},
+  path = [],
+) => {
   if (
     value === null ||
     typeof value === "string" ||
@@ -147,7 +169,13 @@ const assertJsonValue = (value, label, ancestors = new WeakSet()) => {
       if (!Object.hasOwn(descriptor, "value")) {
         throw new Error(`${label}[${index}] must be a JSON data property`);
       }
-      assertJsonValue(descriptor.value, `${label}[${index}]`, ancestors);
+      assertJsonValue(
+        descriptor.value,
+        `${label}[${index}]`,
+        ancestors,
+        options,
+        [...path, index],
+      );
     });
   } else {
     const propertyNames = Object.getOwnPropertyNames(value);
@@ -159,14 +187,31 @@ const assertJsonValue = (value, label, ancestors = new WeakSet()) => {
       if (!Object.hasOwn(descriptor, "value")) {
         throw new Error(`${label}.${field} must be a JSON data property`);
       }
-      assertJsonValue(descriptor.value, `${label}.${field}`, ancestors);
+      const nextPath = [...path, field];
+      if (
+        descriptor.value === undefined &&
+        options.allowUndefinedAtPath?.(nextPath)
+      ) {
+        return;
+      }
+      assertJsonValue(
+        descriptor.value,
+        `${label}.${field}`,
+        ancestors,
+        options,
+        nextPath,
+      );
     });
   }
   ancestors.delete(value);
 };
 
-export const cloneJsonValue = (value, label = "Persistence value") => {
-  assertJsonValue(value, label);
+export const cloneJsonValue = (
+  value,
+  label = "Persistence value",
+  options = {},
+) => {
+  assertJsonValue(value, label, new WeakSet(), options);
   return JSON.parse(JSON.stringify(value));
 };
 
@@ -633,7 +678,9 @@ export const snapshotPlayerPersistenceValue = (key, value) => {
 
 export const snapshotSaveSlots = (value) => {
   const label = "Player persistence saveSlots";
-  const snapshot = cloneJsonValue(value, label);
+  const snapshot = cloneJsonValue(value, label, {
+    allowUndefinedAtPath: isOptionalSaveContextBgmPath,
+  });
   const saveSlots = requirePlainObject(snapshot, label);
   Object.entries(saveSlots).forEach(([slotKey, saveSlot]) => {
     const key = saveSlotPersistenceKey(slotKey);
