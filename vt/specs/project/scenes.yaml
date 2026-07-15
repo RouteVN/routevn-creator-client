@@ -181,6 +181,23 @@ steps:
     ms: 1600
   - action: screenshot
   - action: select
+    selector: "#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions-dialog-surface rtgl-dialog[open][bare]"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-system-actions-dialog-surface rtgl-dialog[open]"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
     selector: "#sectionsOverview"
     steps:
       - action: click
