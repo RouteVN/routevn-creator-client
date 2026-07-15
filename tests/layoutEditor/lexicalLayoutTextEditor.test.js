@@ -343,6 +343,109 @@ describe("lexical layout text editor", () => {
     }
   });
 
+  it("deletes the final plain-text character on Backspace", async () => {
+    const { editorElement, rootElement, dispose } =
+      await createTextEditorHarness();
+
+    try {
+      editorElement.state.content = [{ text: "x" }];
+      editorElement.editor.update(
+        () => {
+          const root = $getRoot();
+          const paragraph = $createParagraphNode();
+          const textNode = $createTextNode("x");
+
+          paragraph.append(textNode);
+          root.clear();
+          root.append(paragraph);
+          textNode.selectEnd();
+        },
+        { discrete: true },
+      );
+
+      const textNode = rootElement.firstChild.firstChild;
+      const range = document.createRange();
+      range.setStart(textNode, 1);
+      range.collapse(true);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+
+      const event = {
+        key: "Backspace",
+        isComposing: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+      editorElement.handleEditorKeyDown(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+      expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+      expect(rootElement.textContent).toBe("");
+      expect(editorElement.getContent()).toEqual([{ text: "" }]);
+      expect(
+        editorElement.editor.getEditorState().read(() => {
+          return $getRoot().getTextContent();
+        }),
+      ).toBe("");
+    } finally {
+      dispose();
+    }
+  });
+
+  it("deletes the final plain-text character on beforeinput", async () => {
+    const { editorElement, rootElement, dispose } =
+      await createTextEditorHarness();
+
+    try {
+      editorElement.state.content = [{ text: "x" }];
+      editorElement.editor.update(
+        () => {
+          const root = $getRoot();
+          const paragraph = $createParagraphNode();
+          const textNode = $createTextNode("x");
+
+          paragraph.append(textNode);
+          root.clear();
+          root.append(paragraph);
+          textNode.selectEnd();
+        },
+        { discrete: true },
+      );
+
+      const textNode = rootElement.firstChild.firstChild;
+      const range = document.createRange();
+      range.setStart(textNode, 1);
+      range.collapse(true);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+
+      const event = {
+        inputType: "deleteContentBackward",
+        isComposing: false,
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+      editorElement.handleEditorBeforeInput(event);
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+      expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+      expect(rootElement.textContent).toBe("");
+      expect(editorElement.getContent()).toEqual([{ text: "" }]);
+    } finally {
+      dispose();
+    }
+  });
+
   it("selects a variable chip before Backspace removes it", async () => {
     const [
       { $createMentionNode },

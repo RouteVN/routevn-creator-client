@@ -1984,6 +1984,85 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     return this.handleReferenceDelete(event);
   }
 
+  handleFinalPlainTextDelete(event) {
+    const direction = this.getReferenceDeleteDirection(event);
+    if (
+      direction === 0 ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey
+    ) {
+      return false;
+    }
+
+    const content = normalizeLayoutTextContent(this.state.content);
+    const item = content[0];
+    if (
+      content.length !== 1 ||
+      getLayoutTextReferenceResourceId(item) ||
+      Array.from(item.text ?? "").length !== 1
+    ) {
+      return false;
+    }
+
+    const textLength = (item.text ?? "").length;
+    const nativeSelection = this.getNativeSelectionTextRange();
+    let shouldDelete = nativeSelection
+      ? (!nativeSelection.collapsed &&
+          nativeSelection.start === 0 &&
+          nativeSelection.end === textLength) ||
+        (nativeSelection.collapsed &&
+          ((direction < 0 && nativeSelection.start === textLength) ||
+            (direction > 0 && nativeSelection.start === 0)))
+      : false;
+
+    if (!nativeSelection) {
+      shouldDelete = this.editor.getEditorState().read(() => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) {
+          return false;
+        }
+
+        if (!selection.isCollapsed()) {
+          return true;
+        }
+
+        const { anchor } = selection;
+        if (anchor.type === "text") {
+          return direction < 0
+            ? anchor.offset === textLength
+            : anchor.offset === 0;
+        }
+
+        return direction < 0 ? anchor.offset > 0 : anchor.offset === 0;
+      });
+    }
+
+    if (!shouldDelete) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation?.();
+    event.stopImmediatePropagation?.();
+    this.editor.update(
+      () => {
+        const root = $getRoot();
+        const paragraph = $createParagraphNode();
+        paragraph.append($createTextNode(""));
+        root.clear();
+        root.append(paragraph);
+        paragraph.selectStart();
+      },
+      { discrete: true },
+    );
+    this.state.content = normalizeLayoutTextContent([]);
+    this.clearSelectedReferenceNodeKey();
+    this.closeMentionMenu("final-plain-text-delete");
+    return true;
+  }
+
   handleEditorFocus() {
     this.isEditorFocused = true;
   }
@@ -1998,7 +2077,10 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       event.inputType === "deleteContentBackward" ||
       event.inputType === "deleteContentForward"
     ) {
-      if (this.handleReferenceDelete(event)) {
+      if (
+        this.handleReferenceDelete(event) ||
+        this.handleFinalPlainTextDelete(event)
+      ) {
         return;
       }
     }
@@ -2061,7 +2143,10 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       return;
     }
 
-    if (this.handleReferenceDelete(event)) {
+    if (
+      this.handleReferenceDelete(event) ||
+      this.handleFinalPlainTextDelete(event)
+    ) {
       return;
     }
 
