@@ -1342,10 +1342,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           }
 
           event?.preventDefault?.();
-          this.closeMentionMenu({
-            shouldRender: true,
-            dismissCurrentTrigger: true,
-          });
+          this.handleMentionMenuClose();
           return true;
         },
         COMMAND_PRIORITY_HIGH,
@@ -2929,10 +2926,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.hideSelectionPopover();
 
     if (this.state.mentionMenu.isOpen) {
-      this.closeMentionMenu({
-        shouldRender: true,
-        dismissCurrentTrigger: true,
-      });
+      this.handleMentionMenuClose();
       return true;
     }
 
