@@ -70,6 +70,16 @@ const createClosedMentionMenuState = () => ({
 
 const TYPED_SLASH_MENTION_TRIGGER_WINDOW_MS = 1000;
 const isSlashText = (value) => String(value ?? "") === "/";
+const graphemeSegmenter = new Intl.Segmenter(undefined, {
+  granularity: "grapheme",
+});
+
+const isSingleGrapheme = (value) => {
+  const segments = graphemeSegmenter
+    .segment(String(value ?? ""))
+    [Symbol.iterator]();
+  return !segments.next().done && segments.next().done;
+};
 
 const getMentionTriggerMatchFromBeforeCaret = ({
   beforeCaret,
@@ -2001,7 +2011,7 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     if (
       content.length !== 1 ||
       getLayoutTextReferenceResourceId(item) ||
-      Array.from(item.text ?? "").length !== 1
+      !isSingleGrapheme(item.text)
     ) {
       return false;
     }
