@@ -765,6 +765,122 @@ export const createProjectRepositoryRuntime = async ({
       : [];
   };
 
+  const committedHistoryCount = Math.max(
+    0,
+    Math.floor(
+      Number(historyStats?.committedCount) ||
+        (hasDraftHistory ? 0 : currentRevision),
+    ),
+  );
+  const latestPersistedCommittedId = Math.max(
+    0,
+    Math.floor(Number(historyStats?.latestCommittedId) || 0),
+  );
+  let committedTailCache;
+
+  const loadCommittedSuffixFromStore = async (startIndex) => {
+    const remainingCount = Math.max(0, committedHistoryCount - startIndex);
+    if (remainingCount === 0) {
+      return [];
+    }
+
+    const loadFromBeginning = async () => {
+      const committedEvents = await listCommittedAfterFromStore({
+        sinceCommittedId: 0,
+        limit: committedHistoryCount,
+      });
+      return committedEvents.slice(startIndex, committedHistoryCount);
+    };
+
+    if (latestPersistedCommittedId <= 0) {
+      return loadFromBeginning();
+    }
+
+    const isExactSuffix = (committedEvents) => {
+      if (committedEvents.length !== remainingCount) {
+        return false;
+      }
+
+      return (
+        Number(committedEvents.at(-1)?.committedId) ===
+        latestPersistedCommittedId
+      );
+    };
+
+    const readAfterCursor = (persistedCursor) =>
+      listCommittedAfterFromStore({
+        sinceCommittedId: persistedCursor,
+        limit: remainingCount,
+      });
+
+    let windowSize = Math.max(1, remainingCount);
+    let upperCursor = latestPersistedCommittedId;
+
+    while (true) {
+      const candidateCursor = Math.max(
+        0,
+        latestPersistedCommittedId - windowSize,
+      );
+      const committedEvents = await readAfterCursor(candidateCursor);
+      if (isExactSuffix(committedEvents)) {
+        return committedEvents;
+      }
+
+      if (
+        committedEvents.length === remainingCount &&
+        Number(committedEvents.at(-1)?.committedId) < latestPersistedCommittedId
+      ) {
+        let lowerCursor = candidateCursor + 1;
+        let higherCursor = upperCursor - 1;
+
+        while (lowerCursor <= higherCursor) {
+          const midpointCursor = Math.floor((lowerCursor + higherCursor) / 2);
+          const midpointEvents = await readAfterCursor(midpointCursor);
+          if (isExactSuffix(midpointEvents)) {
+            return midpointEvents;
+          }
+
+          if (midpointEvents.length < remainingCount) {
+            higherCursor = midpointCursor - 1;
+          } else {
+            lowerCursor = midpointCursor + 1;
+          }
+        }
+
+        return loadFromBeginning();
+      }
+
+      if (candidateCursor === 0) {
+        return loadFromBeginning();
+      }
+
+      upperCursor = candidateCursor;
+      windowSize = Math.min(latestPersistedCommittedId, windowSize * 2);
+    }
+  };
+
+  const loadCommittedTailFromRepositoryOffset = async (startIndex) => {
+    if (committedTailCache && startIndex >= committedTailCache.startIndex) {
+      return committedTailCache.events.slice(
+        startIndex - committedTailCache.startIndex,
+      );
+    }
+
+    const persistedEvents = await loadCommittedSuffixFromStore(startIndex);
+    const normalizedEvents = persistedEvents.map((event, index) =>
+      toCommittedProjectEvent({
+        event,
+        committedId: startIndex + index + 1,
+        projectId,
+      }),
+    );
+    committedTailCache = {
+      startIndex,
+      events: normalizedEvents,
+    };
+    return normalizedEvents;
+  };
+
   let draftEventsPromise;
   const loadDraftEventsFromStore = async () => {
     if (draftEventsPromise) {
@@ -834,27 +950,17 @@ export const createProjectRepositoryRuntime = async ({
       return [];
     }
 
-    if (!hasLoadedEvents && !hasDraftHistory) {
-      return listCommittedAfterFromStore({
-        sinceCommittedId: startIndex,
-        limit: safeLimit,
-      });
-    }
-
     if (!hasLoadedEvents) {
-      const committedCount = Math.max(
-        0,
-        Math.floor(Number(historyStats?.committedCount) || 0),
-      );
       const tailEvents = [];
-      const remainingCommittedCount = Math.max(0, committedCount - startIndex);
+      const remainingCommittedCount = Math.max(
+        0,
+        committedHistoryCount - startIndex,
+      );
       const committedLimit = Math.min(safeLimit, remainingCommittedCount);
 
       if (committedLimit > 0) {
-        const committedEvents = await listCommittedAfterFromStore({
-          sinceCommittedId: startIndex,
-          limit: committedLimit,
-        });
+        const committedEvents =
+          await loadCommittedTailFromRepositoryOffset(startIndex);
         tailEvents.push(...committedEvents.slice(0, committedLimit));
         if (committedEvents.length < committedLimit) {
           return tailEvents;
@@ -863,7 +969,7 @@ export const createProjectRepositoryRuntime = async ({
 
       if (hasDraftHistory && tailEvents.length < safeLimit) {
         const drafts = await loadDraftEventsFromStore();
-        const draftStartIndex = Math.max(0, startIndex - committedCount);
+        const draftStartIndex = Math.max(0, startIndex - committedHistoryCount);
         const remainingLimit = safeLimit - tailEvents.length;
         tailEvents.push(
           ...drafts
@@ -871,7 +977,8 @@ export const createProjectRepositoryRuntime = async ({
             .map((draft, index) =>
               toCommittedProjectEvent({
                 event: draft,
-                committedId: committedCount + draftStartIndex + index + 1,
+                committedId:
+                  committedHistoryCount + draftStartIndex + index + 1,
                 projectId,
               }),
             ),

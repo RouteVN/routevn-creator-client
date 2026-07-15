@@ -1145,25 +1145,48 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
         tree: [{ id: sceneId }],
       },
     };
+    const irrelevantTailEvents = Array.from({ length: 500 }, (_, index) => ({
+      id: `image-create-${index + 1}`,
+      committedId: 205 + index * 2,
+      type: "image.create",
+      partition: "m",
+      payload: {
+        imageId: `image-${index + 1}`,
+        data: {
+          fileId: `file-${index + 1}`,
+        },
+      },
+    }));
     const committedEvents = [
       {
         id: "event-1",
-        committedId: 1,
+        committedId: 101,
         type: "project.create",
         partition: "m",
         payload: {
           state: structuredClone(mainState),
         },
       },
+      ...irrelevantTailEvents,
+      {
+        id: "event-502",
+        committedId: 5000,
+        type: "line.update",
+        partition: scenePartitionFor(sceneId),
+        payload: {
+          lineId: "line-1",
+          data: {},
+        },
+      },
     ];
     const loadEvents = vi.fn(async () => structuredClone(committedEvents));
     const listCommittedAfter = vi.fn(
       async ({ sinceCommittedId = 0, limit } = {}) => {
-        const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
         const normalizedLimit =
           Number.isInteger(limit) && limit > 0 ? limit : committedEvents.length;
         return committedEvents
-          .slice(startIndex, startIndex + normalizedLimit)
+          .filter((event) => event.committedId > Number(sinceCommittedId || 0))
+          .slice(0, normalizedLimit)
           .map((event) => structuredClone(event));
       },
     );
@@ -1180,20 +1203,20 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
               viewName,
               viewVersion: "1",
               partition,
-              lastCommittedId: 1,
+              lastCommittedId: committedEvents.length,
               value: structuredClone(mainState),
             };
           }
 
           if (
             viewName === SCENE_OVERVIEW_VIEW_NAME &&
-            partition === `s:${sceneId}`
+            partition === scenePartitionFor(sceneId)
           ) {
             return {
               viewName,
               viewVersion: "1",
               partition,
-              lastCommittedId: 0,
+              lastCommittedId: 1,
               value: {
                 sceneId,
                 name: "Stale Scene",
@@ -1212,7 +1235,13 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
         saveMaterializedViewCheckpoint: async () => {},
         deleteMaterializedViewCheckpoint: async () => {},
       },
-      initialRevision: 1,
+      initialRevision: committedEvents.length,
+      historyStats: {
+        committedCount: committedEvents.length,
+        latestCommittedId: 5000,
+        draftCount: 0,
+        latestDraftClock: 0,
+      },
       loadEvents,
       createInitialState: () => ({
         appliedCount: 0,
@@ -1221,10 +1250,16 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
       reduceEventsToState: createBatchedReducer(reduceEventToState),
     });
 
+    listCommittedAfter.mockClear();
+
     const overview = await repository.getSceneOverview(sceneId);
 
     expect(loadEvents).not.toHaveBeenCalled();
     expect(listCommittedAfter).toHaveBeenCalled();
+    expect(listCommittedAfter).toHaveBeenCalledWith({
+      sinceCommittedId: 4499,
+      limit: 501,
+    });
     expect(overview).toMatchObject({
       sceneId,
       name: "Fresh Scene",
@@ -1410,7 +1445,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
 
     await repository.loadSceneOverviews({ sceneIds });
 
-    expect(listCommittedAfter).toHaveBeenCalledTimes(1);
+    expect(listCommittedAfter).not.toHaveBeenCalled();
     expect(listDraftsOrdered).not.toHaveBeenCalled();
     expect(loadEvents).not.toHaveBeenCalled();
   });
