@@ -25,6 +25,16 @@ const mocked = vi.hoisted(() => ({
   createWebSocketTransport: vi.fn(),
   applyCommandToRepository: vi.fn(),
   commandToSyncEvent: vi.fn(),
+  fileTypeFromBuffer: vi.fn(),
+  getImageDimensions: vi.fn(),
+}));
+
+vi.mock("file-type", () => ({
+  fileTypeFromBuffer: mocked.fileTypeFromBuffer,
+}));
+
+vi.mock("../../src/deps/clients/web/fileProcessors.js", () => ({
+  getImageDimensions: mocked.getImageDimensions,
 }));
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
@@ -119,6 +129,25 @@ const createSessionMock = () => ({
   })),
 });
 
+const createMacosApplicationExportOptions = (overrides = {}) => {
+  const options = {
+    projectData: {},
+    fileEntries: [],
+    outputPath: "/exports/Game.app.zip",
+    title: "Game",
+    shortVersion: "1.0.3",
+    bundleVersion: "4",
+    applicationIdentifier: "vn.routevn.player.game",
+    iconFileId: "icon-1",
+    getCurrentReference: () => ({
+      projectPath: "/projects/demo",
+      cacheKey: "/projects/demo",
+    }),
+  };
+  Object.assign(options, overrides);
+  return options;
+};
+
 const createRemoteSceneCreateCommand = ({ schemaVersion = 1 } = {}) => ({
   id: "cmd-scene-1",
   partition: "m",
@@ -162,11 +191,18 @@ describe("tauri project service adapters preflight reads", () => {
     mocked.createWebSocketTransport.mockReset();
     mocked.applyCommandToRepository.mockReset();
     mocked.commandToSyncEvent.mockReset();
+    mocked.fileTypeFromBuffer.mockReset();
+    mocked.getImageDimensions.mockReset();
 
     mocked.join.mockImplementation(async (...parts) => parts.join("/"));
     mocked.getManagedSqliteConnection.mockReturnValue(mocked.connection);
     mocked.getTemplateFiles.mockResolvedValue([]);
     mocked.invoke.mockResolvedValue(undefined);
+    mocked.fileTypeFromBuffer.mockResolvedValue({
+      ext: "png",
+      mime: "image/png",
+    });
+    mocked.getImageDimensions.mockResolvedValue({ width: 512, height: 512 });
     mocked.createWebSocketTransport.mockReturnValue({
       kind: "transport",
     });
@@ -337,20 +373,12 @@ describe("tauri project service adapters preflight reads", () => {
       hostSupported: true,
     });
     await expect(
-      fileAdapter.createMacosApplicationToPath({
-        projectData: { bundleMetadata: { project: { namespace: "demo" } } },
-        fileEntries: [{ fileId: "image-1", mimeType: "image/png" }],
-        outputPath: "/exports/Game.app.zip",
-        title: "Game",
-        shortVersion: "1.0.3",
-        bundleVersion: "4",
-        applicationIdentifier: "vn.routevn.player.game",
-        iconFileId: "icon-1",
-        getCurrentReference: () => ({
-          projectPath: "/projects/demo",
-          cacheKey: "/projects/demo",
+      fileAdapter.createMacosApplicationToPath(
+        createMacosApplicationExportOptions({
+          projectData: { bundleMetadata: { project: { namespace: "demo" } } },
+          fileEntries: [{ fileId: "image-1", mimeType: "image/png" }],
         }),
-      }),
+      ),
     ).resolves.toMatchObject({ outputPath: "/exports/Game.app.zip" });
 
     expect(mocked.invoke).toHaveBeenCalledWith(
@@ -371,6 +399,76 @@ describe("tauri project service adapters preflight reads", () => {
           },
         ],
       }),
+    );
+  });
+
+  it("rejects unsupported project icon bytes before macOS export", async () => {
+    mocked.readFile.mockResolvedValue(Uint8Array.from([1, 2, 3]));
+    mocked.fileTypeFromBuffer.mockResolvedValue({
+      ext: "gif",
+      mime: "image/gif",
+    });
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await expect(
+      fileAdapter.createMacosApplicationToPath(
+        createMacosApplicationExportOptions(),
+      ),
+    ).rejects.toThrow(
+      "Project icon must be a PNG, JPEG, or WebP image for macOS application export.",
+    );
+
+    expect(mocked.getImageDimensions).not.toHaveBeenCalled();
+    expect(mocked.invoke).not.toHaveBeenCalledWith(
+      "export_macos_application",
+      expect.anything(),
+    );
+  });
+
+  it("rejects non-square project icons before macOS export", async () => {
+    mocked.readFile.mockResolvedValue(Uint8Array.from([1, 2, 3]));
+    mocked.getImageDimensions.mockResolvedValue({ width: 512, height: 256 });
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await expect(
+      fileAdapter.createMacosApplicationToPath(
+        createMacosApplicationExportOptions(),
+      ),
+    ).rejects.toThrow(
+      "Project icon must be square for macOS application export. Current size: 512x256.",
+    );
+
+    expect(mocked.invoke).not.toHaveBeenCalledWith(
+      "export_macos_application",
+      expect.anything(),
+    );
+  });
+
+  it("rejects project icons that cannot be decoded before macOS export", async () => {
+    mocked.readFile.mockResolvedValue(Uint8Array.from([1, 2, 3]));
+    mocked.getImageDimensions.mockResolvedValue(undefined);
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await expect(
+      fileAdapter.createMacosApplicationToPath(
+        createMacosApplicationExportOptions(),
+      ),
+    ).rejects.toThrow(
+      "Project icon could not be decoded for macOS application export.",
+    );
+
+    expect(mocked.invoke).not.toHaveBeenCalledWith(
+      "export_macos_application",
+      expect.anything(),
     );
   });
 

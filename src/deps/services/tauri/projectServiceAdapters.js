@@ -1,6 +1,7 @@
 import { mkdir, writeFile, readFile, exists } from "@tauri-apps/plugin-fs";
 import { join, resolveResource } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { fileTypeFromBuffer } from "file-type";
 import JSZip from "jszip";
 import {
   loadTemplate,
@@ -48,6 +49,7 @@ import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnection
 import { isMacosHost } from "../../clients/tauri/platform.js";
 import { normalizeExportFileEntries } from "../shared/projectExportService.js";
 import { requireNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
+import { getImageDimensions } from "../../clients/web/fileProcessors.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -55,6 +57,11 @@ const WINDOWS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/windows/RouteVNPlayerTemplate.exe";
 const MACOS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/macos/RouteVNPlayerTemplate.app.zip";
+const MACOS_ICON_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
 const VIDEO_EXTENSION_BY_MIME_TYPE = {
   "video/mp4": "mp4",
   "video/x-m4v": "m4v",
@@ -522,7 +529,7 @@ export const createTauriProjectServiceAdapters = ({
     return Array.from(iconBytes);
   };
 
-  const readMacosApplicationIconPng = async ({
+  const readMacosApplicationIconBytes = async ({
     iconFileId,
     getCurrentReference,
   }) => {
@@ -535,6 +542,36 @@ export const createTauriProjectServiceAdapters = ({
     if (!iconBytes?.byteLength) {
       throw new Error("Project icon is required for macOS application export.");
     }
+
+    const imageType = await fileTypeFromBuffer(iconBytes).catch(
+      () => undefined,
+    );
+    if (!MACOS_ICON_MIME_TYPES.has(imageType?.mime)) {
+      throw new Error(
+        "Project icon must be a PNG, JPEG, or WebP image for macOS application export.",
+      );
+    }
+
+    const iconBlob = new Blob([iconBytes], { type: imageType.mime });
+    const dimensions = await getImageDimensions(iconBlob).catch(
+      () => undefined,
+    );
+    if (
+      !Number.isFinite(dimensions?.width) ||
+      dimensions.width <= 0 ||
+      !Number.isFinite(dimensions?.height) ||
+      dimensions.height <= 0
+    ) {
+      throw new Error(
+        "Project icon could not be decoded for macOS application export.",
+      );
+    }
+    if (dimensions.width !== dimensions.height) {
+      throw new Error(
+        `Project icon must be square for macOS application export. Current size: ${dimensions.width}x${dimensions.height}.`,
+      );
+    }
+
     return Array.from(iconBytes);
   };
 
@@ -828,7 +865,7 @@ export const createTauriProjectServiceAdapters = ({
       applicationIdentifier,
       iconFileId,
     });
-    const iconPng = await readMacosApplicationIconPng({
+    const iconPng = await readMacosApplicationIconBytes({
       iconFileId: metadata.iconFileId,
       getCurrentReference,
     });
