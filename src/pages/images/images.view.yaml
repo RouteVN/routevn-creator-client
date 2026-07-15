@@ -240,7 +240,7 @@ template:
                                   - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
                                       - $if selectedItemId:
                                           - $if selectedPreviewFileId:
-                                              - 'div.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
+                                              - 'div#detailImagePreview.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
                                                   - rvn-file-image fileId=${selectedPreviewFileId} w=f h=f: null
                                           - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                             $else:
