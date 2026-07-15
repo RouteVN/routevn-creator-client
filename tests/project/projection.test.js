@@ -5,6 +5,7 @@ import {
   collectUsedResourcesForExport,
   constructProjectData,
   getSectionPresentation,
+  projectRepositoryStateToDomainState,
 } from "../../src/internal/project/projection.js";
 
 const createTreeCollection = (items = {}, tree = []) => ({
@@ -75,6 +76,52 @@ const selectRouteEngineRenderState = (projectData) => {
 
   return engine.selectRenderState();
 };
+
+describe("projectRepositoryStateToDomainState", () => {
+  it("keeps dialogue cleared when its editable content is preserved", () => {
+    const state = projectRepositoryStateToDomainState({
+      repositoryState: {
+        scenes: createTreeCollection(
+          {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              sections: createTreeCollection(
+                {
+                  "section-1": {
+                    id: "section-1",
+                    lines: createTreeCollection(
+                      {
+                        "line-1": {
+                          id: "line-1",
+                          actions: {
+                            dialogue: {
+                              clear: true,
+                              content: [{ text: "Keep writing" }],
+                            },
+                          },
+                        },
+                      },
+                      [{ id: "line-1" }],
+                    ),
+                  },
+                },
+                [{ id: "section-1" }],
+              ),
+            },
+          },
+          [{ id: "scene-1" }],
+        ),
+      },
+      projectId: "project-1",
+    });
+
+    expect(state.lines["line-1"].actions.dialogue).toEqual({
+      clear: true,
+      content: [{ text: "Keep writing" }],
+    });
+  });
+});
 
 describe("constructProjectData", () => {
   it("counts conditional branch targets when determining section presentation", () => {

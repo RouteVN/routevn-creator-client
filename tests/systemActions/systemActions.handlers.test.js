@@ -917,6 +917,7 @@ describe("systemActions.handlers", () => {
     expect(state.authoredDialogueWasCleared).toBe(true);
     expect(selectAction({ state })).toEqual({
       dialogue: {
+        clear: true,
         content: [{ text: "Keep writing" }],
       },
     });
