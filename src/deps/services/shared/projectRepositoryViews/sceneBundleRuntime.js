@@ -11,6 +11,7 @@ import {
   isNonEmptyString,
   OVERVIEW_CHECKPOINT_DEBOUNCE_MS,
   resolveSceneIdForPartition,
+  SCENE_OVERVIEW_VIEW_VERSION,
 } from "./shared.js";
 import { composeRepositoryState } from "./sceneStateView.js";
 import {
@@ -56,19 +57,41 @@ const logSceneOverviewTiming = (event, data = {}) => {
 export const createSceneBundleRuntime = ({
   store,
   listCommittedAfter,
+  listCommittedMetadataAfter = listCommittedAfter,
   now = () => Date.now(),
   getCurrentMainState,
+  getCurrentRevision = () => Number.MAX_SAFE_INTEGER,
   getActiveSceneId,
   getActiveSceneState,
   loadSceneProjection,
 }) => {
-  const getLatestOverviewRevisionForScene = async (sceneId) => {
+  const getCheckpointRevision = (checkpoint) => {
+    if (checkpoint?.viewVersion !== SCENE_OVERVIEW_VIEW_VERSION) {
+      return 0;
+    }
+
+    const checkpointRevision = Number(checkpoint.lastCommittedId);
+    const currentRevision = Number(getCurrentRevision());
+    if (
+      !Number.isFinite(checkpointRevision) ||
+      checkpointRevision < 0 ||
+      (Number.isFinite(currentRevision) && checkpointRevision > currentRevision)
+    ) {
+      return 0;
+    }
+
+    return Math.floor(checkpointRevision);
+  };
+
+  const getLatestOverviewRevisionForScene = async (sceneId, checkpoint) => {
     const scenePartition = scenePartitionFor(sceneId);
     const mainScenePartition = mainScenePartitionFor(sceneId);
-    let latestRelevantRevision = 0;
+    const sinceCommittedId = getCheckpointRevision(checkpoint);
+    let latestRelevantRevision = sinceCommittedId;
 
     for await (const committedBatch of iterateCommittedEventBatches({
-      listCommittedAfter,
+      listCommittedAfter: listCommittedMetadataAfter,
+      sinceCommittedId,
     })) {
       for (const event of committedBatch) {
         const partition = event?.partition;
@@ -91,11 +114,17 @@ export const createSceneBundleRuntime = ({
     return latestRelevantRevision;
   };
 
-  const getLatestOverviewRevisionsForScenes = async (sceneIds = []) => {
+  const getLatestOverviewRevisionsForScenes = async ({
+    sceneIds = [],
+    checkpointsBySceneId = new Map(),
+  } = {}) => {
     const startedAt = getSceneOverviewTimingNow();
     const normalizedSceneIds = sceneIds.filter(isNonEmptyString);
     const revisionsBySceneId = new Map(
-      normalizedSceneIds.map((sceneId) => [sceneId, 0]),
+      normalizedSceneIds.map((sceneId) => [
+        sceneId,
+        getCheckpointRevision(checkpointsBySceneId.get(sceneId)),
+      ]),
     );
     if (normalizedSceneIds.length === 0) {
       return revisionsBySceneId;
@@ -110,9 +139,14 @@ export const createSceneBundleRuntime = ({
     let latestRelevantMainRevision = 0;
     let committedBatchCount = 0;
     let committedEventCount = 0;
+    let sinceCommittedId = Number.MAX_SAFE_INTEGER;
+    for (const revision of revisionsBySceneId.values()) {
+      sinceCommittedId = Math.min(sinceCommittedId, revision);
+    }
 
     for await (const committedBatch of iterateCommittedEventBatches({
-      listCommittedAfter,
+      listCommittedAfter: listCommittedMetadataAfter,
+      sinceCommittedId,
     })) {
       committedBatchCount += 1;
       committedEventCount += committedBatch.length;
@@ -122,7 +156,10 @@ export const createSceneBundleRuntime = ({
         const sceneId = sceneIdByPartition.get(partition);
 
         if (sceneId) {
-          revisionsBySceneId.set(sceneId, revision);
+          revisionsBySceneId.set(
+            sceneId,
+            Math.max(revisionsBySceneId.get(sceneId) || 0, revision),
+          );
           continue;
         }
 
@@ -152,6 +189,7 @@ export const createSceneBundleRuntime = ({
       sceneCount: normalizedSceneIds.length,
       committedBatchCount,
       committedEventCount,
+      sinceCommittedId,
       latestRelevantMainRevision,
     });
 
@@ -312,7 +350,7 @@ export const createSceneBundleRuntime = ({
       overview,
       lastCommittedId: Number.isFinite(latestRelevantRevision)
         ? latestRelevantRevision
-        : await getLatestOverviewRevisionForScene(sceneId),
+        : await getLatestOverviewRevisionForScene(sceneId, checkpoint),
     });
     const queueSaveMs = getSceneOverviewDurationMs(phaseStartedAt);
 
@@ -366,7 +404,7 @@ export const createSceneBundleRuntime = ({
       latestRelevantRevision,
     )
       ? latestRelevantRevision
-      : await getLatestOverviewRevisionForScene(sceneId);
+      : await getLatestOverviewRevisionForScene(sceneId, checkpoint);
     if (
       isSceneOverviewCheckpointFresh({
         checkpoint,
@@ -426,7 +464,10 @@ export const createSceneBundleRuntime = ({
 
       phaseStartedAt = getSceneOverviewTimingNow();
       const latestRevisionsBySceneId =
-        await getLatestOverviewRevisionsForScenes(sceneIds);
+        await getLatestOverviewRevisionsForScenes({
+          sceneIds,
+          checkpointsBySceneId,
+        });
       const loadRevisionsMs = getSceneOverviewDurationMs(phaseStartedAt);
 
       const activeSceneId = getActiveSceneId();

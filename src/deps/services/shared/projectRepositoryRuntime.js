@@ -26,7 +26,9 @@ import {
   iterateCommittedEventBatches,
   isNonEmptyString,
   resolveSceneIdForPartition,
+  toCommittedEventMetadata,
   toCommittedProjectEvent,
+  toDraftEventMetadata,
 } from "./projectRepositoryViews/shared.js";
 
 const summarizeReplayEvent = (event, index) => ({
@@ -765,6 +767,48 @@ export const createProjectRepositoryRuntime = async ({
       : [];
   };
 
+  const listCommittedMetadataAfterFromStore = async ({
+    sinceCommittedId,
+    limit,
+  }) => {
+    const committedBatch =
+      typeof store.listCommittedMetadataAfter === "function"
+        ? await store.listCommittedMetadataAfter({
+            sinceCommittedId,
+            limit,
+          })
+        : await store.listCommittedAfter({
+            sinceCommittedId,
+            limit,
+          });
+
+    return Array.isArray(committedBatch)
+      ? committedBatch.map(toCommittedEventMetadata)
+      : [];
+  };
+
+  let draftEventMetadataPromise;
+  const loadDraftEventMetadataFromStore = async () => {
+    if (draftEventMetadataPromise) {
+      return draftEventMetadataPromise;
+    }
+
+    draftEventMetadataPromise = Promise.resolve(
+      typeof store.listDraftMetadataOrdered === "function"
+        ? store.listDraftMetadataOrdered()
+        : store.listDraftsOrdered(),
+    )
+      .then((drafts) =>
+        Array.isArray(drafts) ? drafts.map(toDraftEventMetadata) : [],
+      )
+      .catch((error) => {
+        draftEventMetadataPromise = undefined;
+        throw error;
+      });
+
+    return draftEventMetadataPromise;
+  };
+
   const listCommittedAfterFromRepository = async ({
     sinceCommittedId,
     limit,
@@ -784,7 +828,9 @@ export const createProjectRepositoryRuntime = async ({
         : 0,
     );
     const safeLimit =
-      Number.isInteger(limit) && limit > 0 ? limit : events.length;
+      Number.isInteger(limit) && limit > 0
+        ? limit
+        : Math.max(events.length, currentRevision);
     return events
       .slice(startIndex, startIndex + safeLimit)
       .map((event, index) =>
@@ -792,6 +838,82 @@ export const createProjectRepositoryRuntime = async ({
           event,
           committedId: startIndex + index + 1,
           projectId,
+        }),
+      );
+  };
+
+  const listCommittedMetadataAfterFromRepository = async ({
+    sinceCommittedId,
+    limit,
+  } = {}) => {
+    const startIndex = Math.max(
+      0,
+      Number.isFinite(Number(sinceCommittedId))
+        ? Math.floor(Number(sinceCommittedId))
+        : 0,
+    );
+    const safeLimit =
+      Number.isInteger(limit) && limit > 0
+        ? limit
+        : Math.max(events.length, currentRevision);
+
+    if (!hasLoadedEvents && !hasDraftHistory) {
+      return listCommittedMetadataAfterFromStore({
+        sinceCommittedId: startIndex,
+        limit: safeLimit,
+      });
+    }
+
+    if (!hasLoadedEvents) {
+      const committedCount = Math.max(
+        0,
+        Math.floor(Number(historyStats?.committedCount) || 0),
+      );
+      const metadata = [];
+      const remainingCommittedCount = Math.max(0, committedCount - startIndex);
+      const committedLimit = Math.min(safeLimit, remainingCommittedCount);
+
+      if (committedLimit > 0) {
+        const committedMetadata = await listCommittedMetadataAfterFromStore({
+          sinceCommittedId: startIndex,
+          limit: committedLimit,
+        });
+        metadata.push(...committedMetadata.slice(0, committedLimit));
+        if (committedMetadata.length < committedLimit) {
+          return metadata;
+        }
+      }
+
+      if (metadata.length < safeLimit) {
+        const draftMetadata = await loadDraftEventMetadataFromStore();
+        const draftStartIndex = Math.max(0, startIndex - committedCount);
+        const remainingLimit = safeLimit - metadata.length;
+        metadata.push(
+          ...draftMetadata
+            .slice(draftStartIndex, draftStartIndex + remainingLimit)
+            .map((draft, index) =>
+              toCommittedEventMetadata({
+                committedId: committedCount + draftStartIndex + index + 1,
+                partition: draft.partition,
+                type: draft.type,
+              }),
+            ),
+        );
+      }
+
+      return metadata;
+    }
+
+    await ensureEventHistoryLoaded();
+    return events
+      .slice(startIndex, startIndex + safeLimit)
+      .map((event, index) =>
+        toCommittedEventMetadata({
+          committedId: startIndex + index + 1,
+          partition: isNonEmptyString(event?.partition)
+            ? event.partition
+            : MAIN_PARTITION,
+          type: event?.type,
         }),
       );
   };
@@ -921,7 +1043,9 @@ export const createProjectRepositoryRuntime = async ({
   const sceneBundleRuntime = createSceneBundleRuntime({
     store,
     listCommittedAfter: listCommittedAfterFromRepository,
+    listCommittedMetadataAfter: listCommittedMetadataAfterFromRepository,
     getCurrentMainState: () => currentMainState,
+    getCurrentRevision: () => currentRevision,
     getActiveSceneId: () => activeSceneId,
     getActiveSceneState: () => activeSceneState,
     loadSceneProjection,

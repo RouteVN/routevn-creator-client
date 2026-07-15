@@ -316,6 +316,18 @@ describe("webRepositoryAdapter", () => {
         type: "project.create",
       }),
     ]);
+    await expect(
+      adapter.listCommittedMetadataAfter({
+        sinceCommittedId: 0,
+        limit: 1,
+      }),
+    ).resolves.toEqual([
+      {
+        committedId: 1,
+        partition: committedEvent.partition,
+        type: "project.create",
+      },
+    ]);
 
     const db = await openDatabase(projectId, 4);
     expect([...db.objectStoreNames]).not.toContain("events");

@@ -8,6 +8,10 @@ import {
   loadDraftEventsFromClientStore,
   normalizeRepositoryHistoryStats,
 } from "../shared/collab/clientStoreHistory.js";
+import {
+  toCommittedEventMetadata,
+  toDraftEventMetadata,
+} from "../shared/projectRepositoryViews/shared.js";
 
 export const PROJECT_DB_NAME = "project.db";
 
@@ -397,8 +401,36 @@ export const createPersistedIOSProjectStore = async ({
         return queueStoreOperation(() => store.listDraftsOrdered());
       },
 
+      async listDraftMetadataOrdered() {
+        return queueStoreOperation(async () => {
+          const rows = await runSelect(
+            `SELECT draft_clock, partition, type
+             FROM local_drafts
+             ORDER BY draft_clock ASC, id ASC`,
+          );
+          return Array.isArray(rows) ? rows.map(toDraftEventMetadata) : [];
+        });
+      },
+
       async listCommitted() {
         return queueStoreOperation(() => store.listCommitted());
+      },
+
+      async listCommittedMetadataAfter({
+        sinceCommittedId = 0,
+        limit = Number.MAX_SAFE_INTEGER,
+      } = {}) {
+        return queueStoreOperation(async () => {
+          const rows = await runSelect(
+            `SELECT committed_id, partition, type
+             FROM committed_events
+             WHERE committed_id > ?
+             ORDER BY committed_id ASC
+             LIMIT ?`,
+            [sinceCommittedId, limit],
+          );
+          return Array.isArray(rows) ? rows.map(toCommittedEventMetadata) : [];
+        });
       },
 
       async listCommittedAfter(payload = {}) {

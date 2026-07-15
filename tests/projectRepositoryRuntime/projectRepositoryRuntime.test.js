@@ -1231,7 +1231,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     });
   });
 
-  it("loads multiple fresh scene overviews with one committed-history scan", async () => {
+  it("loads fresh scene overviews from committed and draft metadata without hydrating history", async () => {
     const sceneIds = ["scene-1", "scene-2"];
     const mainState = {
       project: {},
@@ -1273,10 +1273,31 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
         projectId: "project-1",
         state: mainState,
       }),
+      {
+        id: "image-create-1",
+        projectId: "project-1",
+        partition: "m",
+        type: "image.create",
+        schemaVersion: 1,
+        payload: {
+          imageId: "image-1",
+          data: {
+            fileId: "file-1",
+          },
+        },
+      },
     ].map((event, index) => ({
       ...structuredClone(event),
       committedId: index + 1,
     }));
+    const draftMetadata = [
+      {
+        draftClock: 1,
+        partition: "m",
+        type: "image.create",
+      },
+    ];
+    const historyLength = committedEvents.length + draftMetadata.length;
     const checkpoints = Object.fromEntries(
       sceneIds.map((sceneId) => {
         const partition = scenePartitionFor(sceneId);
@@ -1286,7 +1307,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
             viewName: SCENE_OVERVIEW_VIEW_NAME,
             viewVersion: "1",
             partition,
-            lastCommittedId: committedEvents.length,
+            lastCommittedId: 1,
             value: {
               sceneId,
               name: mainState.scenes.items[sceneId].name,
@@ -1311,6 +1332,26 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
           .map((event) => structuredClone(event));
       },
     );
+    const listCommittedMetadataAfter = vi.fn(
+      async ({ sinceCommittedId = 0, limit } = {}) => {
+        const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
+        const normalizedLimit =
+          Number.isInteger(limit) && limit > 0 ? limit : committedEvents.length;
+        return committedEvents
+          .slice(startIndex, startIndex + normalizedLimit)
+          .map(({ committedId, partition, type }) => ({
+            committedId,
+            partition,
+            type,
+          }));
+      },
+    );
+    const listDraftMetadataOrdered = vi.fn(async () =>
+      structuredClone(draftMetadata),
+    );
+    const listDraftsOrdered = vi.fn(async () => {
+      throw new Error("full draft payloads should not be loaded");
+    });
     const saveMaterializedViewCheckpoint = vi.fn(async () => {});
     const reduceEventToState = ({ repositoryState, event }) =>
       event?.payload?.state
@@ -1321,13 +1362,16 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
       projectId: "project-1",
       store: {
         listCommittedAfter,
+        listCommittedMetadataAfter,
+        listDraftMetadataOrdered,
+        listDraftsOrdered,
         loadMaterializedViewCheckpoint: async ({ viewName, partition }) => {
           if (viewName === MAIN_VIEW_NAME && partition === "m") {
             return {
               viewName,
               viewVersion: "1",
               partition,
-              lastCommittedId: committedEvents.length,
+              lastCommittedId: historyLength,
               value: structuredClone(mainState),
             };
           }
@@ -1342,12 +1386,12 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
         saveMaterializedViewCheckpoint,
         deleteMaterializedViewCheckpoint: async () => {},
       },
-      initialRevision: committedEvents.length,
+      initialRevision: historyLength,
       historyStats: {
         committedCount: committedEvents.length,
         latestCommittedId: committedEvents.length,
-        draftCount: 0,
-        latestDraftClock: 0,
+        draftCount: draftMetadata.length,
+        latestDraftClock: 1,
       },
       loadEvents,
       createInitialState: () => ({
@@ -1361,14 +1405,21 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     });
 
     listCommittedAfter.mockClear();
+    listCommittedMetadataAfter.mockClear();
 
     const overviews = await repository.loadSceneOverviews({ sceneIds });
 
     expect(Object.keys(overviews)).toEqual(sceneIds);
-    expect(listCommittedAfter).toHaveBeenCalledTimes(2);
+    expect(loadEvents).not.toHaveBeenCalled();
+    expect(listCommittedAfter).not.toHaveBeenCalled();
+    expect(listCommittedMetadataAfter).toHaveBeenCalledTimes(1);
     expect(
-      listCommittedAfter.mock.calls.map(([call]) => call.sinceCommittedId),
-    ).toEqual([0, 1]);
+      listCommittedMetadataAfter.mock.calls.map(
+        ([call]) => call.sinceCommittedId,
+      ),
+    ).toEqual([1]);
+    expect(listDraftMetadataOrdered).toHaveBeenCalledTimes(1);
+    expect(listDraftsOrdered).not.toHaveBeenCalled();
     expect(saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
   });
 
