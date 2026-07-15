@@ -1227,6 +1227,14 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
                 outgoingSceneIds: [],
                 sections: [],
               },
+              meta: {
+                historyStats: {
+                  committedCount: 1,
+                  latestCommittedId: 101,
+                  draftCount: 0,
+                  latestDraftClock: 0,
+                },
+              },
             };
           }
 
@@ -1342,6 +1350,12 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
       },
     ];
     const historyLength = committedEvents.length + draftEvents.length;
+    const currentHistoryStats = {
+      committedCount: committedEvents.length,
+      latestCommittedId: committedEvents.length,
+      draftCount: draftEvents.length,
+      latestDraftClock: 1,
+    };
     const checkpoints = Object.fromEntries(
       sceneIds.map((sceneId) => {
         const partition = scenePartitionFor(sceneId);
@@ -1360,6 +1374,9 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
               ),
               outgoingSceneIds: [],
               sections: [],
+            },
+            meta: {
+              historyStats: structuredClone(currentHistoryStats),
             },
           },
         ];
@@ -1410,12 +1427,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
         deleteMaterializedViewCheckpoint: async () => {},
       },
       initialRevision: historyLength,
-      historyStats: {
-        committedCount: committedEvents.length,
-        latestCommittedId: committedEvents.length,
-        draftCount: draftEvents.length,
-        latestDraftClock: 1,
-      },
+      historyStats: currentHistoryStats,
       loadEvents,
       createInitialState: () => ({
         scenes: {

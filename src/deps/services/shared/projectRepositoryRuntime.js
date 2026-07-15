@@ -1126,6 +1126,7 @@ export const createProjectRepositoryRuntime = async ({
     listCommittedAfter: listSceneOverviewEventsAfterFromRepository,
     getCurrentMainState: () => currentMainState,
     getCurrentRevision: () => currentRevision,
+    getCurrentHistoryStats: () => historyStats,
     getActiveSceneId: () => activeSceneId,
     getActiveSceneState: () => activeSceneState,
     loadSceneProjection,

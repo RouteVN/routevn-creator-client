@@ -90,7 +90,7 @@ const createEvent = ({ type, payload }) =>
     },
   });
 
-const createRuntime = ({ events, checkpoints = {} }) => {
+const createRuntime = ({ events, checkpoints = {}, historyStats }) => {
   const store = {
     deleteMaterializedViewCheckpoint: vi.fn(async () => {}),
     saveMaterializedViewCheckpoint: vi.fn(async () => {}),
@@ -124,6 +124,7 @@ const createRuntime = ({ events, checkpoints = {} }) => {
     listCommittedAfter,
     getCurrentMainState: () => mainState,
     getCurrentRevision: () => events.length,
+    getCurrentHistoryStats: () => historyStats,
     getActiveSceneId: () => activeSceneId,
     getActiveSceneState: () => createSceneState(activeSceneId),
     loadSceneProjection,
@@ -303,5 +304,58 @@ describe("sceneBundleRuntime", () => {
     expect(
       listCommittedAfter.mock.calls.map(([call]) => call.sinceCommittedId),
     ).toEqual([2, 4]);
+  });
+
+  it("rebuilds a checkpoint when draft history changes at the same revision", async () => {
+    const events = [
+      createEvent({
+        type: COMMAND_TYPES.IMAGE_CREATE,
+        payload: { imageId: "image-1" },
+      }),
+      createEvent({
+        type: COMMAND_TYPES.IMAGE_CREATE,
+        payload: { imageId: "replacement-draft" },
+      }),
+    ];
+    const checkpointPartition = scenePartitionFor(inactiveSceneId);
+    const checkpointOverview = {
+      sceneId: inactiveSceneId,
+      name: "Stale Draft Scene",
+      position: { x: 0, y: 0 },
+      outgoingSceneIds: [activeSceneId],
+      sections: [],
+    };
+    const { runtime, loadSceneProjection } = createRuntime({
+      events,
+      checkpoints: {
+        [checkpointPartition]: {
+          partition: checkpointPartition,
+          viewVersion: SCENE_OVERVIEW_VIEW_VERSION,
+          lastCommittedId: 2,
+          value: checkpointOverview,
+          meta: {
+            historyStats: {
+              committedCount: 1,
+              latestCommittedId: 1,
+              draftCount: 1,
+              latestDraftClock: 1,
+            },
+          },
+        },
+      },
+      historyStats: {
+        committedCount: 1,
+        latestCommittedId: 1,
+        draftCount: 1,
+        latestDraftClock: 2,
+      },
+    });
+
+    const overviews = await runtime.loadSceneOverviews({
+      sceneIds: [inactiveSceneId],
+    });
+
+    expect(loadSceneProjection).toHaveBeenCalledWith(inactiveSceneId);
+    expect(overviews[inactiveSceneId]).not.toEqual(checkpointOverview);
   });
 });

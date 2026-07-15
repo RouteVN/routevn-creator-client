@@ -60,12 +60,63 @@ export const createSceneBundleRuntime = ({
   now = () => Date.now(),
   getCurrentMainState,
   getCurrentRevision = () => Number.MAX_SAFE_INTEGER,
+  getCurrentHistoryStats = () => undefined,
   getActiveSceneId,
   getActiveSceneState,
   loadSceneProjection,
 }) => {
+  const normalizeHistoryStat = (value) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue)
+      ? Math.max(0, Math.floor(numericValue))
+      : 0;
+  };
+
+  const normalizeHistoryStats = (stats) => ({
+    committedCount: normalizeHistoryStat(stats?.committedCount),
+    latestCommittedId: normalizeHistoryStat(stats?.latestCommittedId),
+    draftCount: normalizeHistoryStat(stats?.draftCount),
+    latestDraftClock: normalizeHistoryStat(stats?.latestDraftClock),
+  });
+
+  const isCheckpointHistoryCompatible = (checkpoint) => {
+    const currentHistoryStats = getCurrentHistoryStats();
+    if (!currentHistoryStats) {
+      return true;
+    }
+
+    const checkpointHistoryStats = checkpoint?.meta?.historyStats;
+    if (!checkpointHistoryStats) {
+      return false;
+    }
+
+    const current = normalizeHistoryStats(currentHistoryStats);
+    const saved = normalizeHistoryStats(checkpointHistoryStats);
+    if (saved.draftCount > 0) {
+      return (
+        saved.committedCount === current.committedCount &&
+        saved.latestCommittedId === current.latestCommittedId &&
+        saved.draftCount === current.draftCount &&
+        saved.latestDraftClock === current.latestDraftClock
+      );
+    }
+
+    if (current.committedCount < saved.committedCount) {
+      return false;
+    }
+
+    if (current.committedCount === saved.committedCount) {
+      return current.latestCommittedId === saved.latestCommittedId;
+    }
+
+    return current.latestCommittedId > saved.latestCommittedId;
+  };
+
   const getCheckpointRevision = (checkpoint) => {
-    if (checkpoint?.viewVersion !== SCENE_OVERVIEW_VIEW_VERSION) {
+    if (
+      checkpoint?.viewVersion !== SCENE_OVERVIEW_VIEW_VERSION ||
+      !isCheckpointHistoryCompatible(checkpoint)
+    ) {
       return 0;
     }
 
@@ -405,6 +456,7 @@ export const createSceneBundleRuntime = ({
       ? latestRelevantRevision
       : await getLatestOverviewRevisionForScene(sceneId, checkpoint);
     if (
+      isCheckpointHistoryCompatible(checkpoint) &&
       isSceneOverviewCheckpointFresh({
         checkpoint,
         latestRelevantRevision: resolvedLatestRelevantRevision,
@@ -479,6 +531,7 @@ export const createSceneBundleRuntime = ({
         const latestRelevantRevision = latestRevisionsBySceneId.get(sceneId);
         const usedFreshCheckpoint =
           sceneId !== activeSceneId &&
+          isCheckpointHistoryCompatible(checkpoint) &&
           isSceneOverviewCheckpointFresh({
             checkpoint,
             latestRelevantRevision,
