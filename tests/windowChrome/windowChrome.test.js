@@ -764,6 +764,43 @@ describe("standalone window chrome", () => {
     expect(harness.appWindow.isMaximized).toHaveBeenCalled();
   });
 
+  it("keeps fullscreen when a focused interaction consumes Escape", async () => {
+    const harness = createWindowHarness();
+    await flushTasks();
+
+    const { document } = harness.dom.window;
+    const chrome = document.querySelector("#rvn-window-chrome");
+    const fullscreenButton = chrome.querySelector(
+      '[data-window-action="fullscreen"]',
+    );
+    const editor = document.createElement("div");
+    editor.contentEditable = "true";
+    editor.addEventListener("keydown", (event) => {
+      event.preventDefault();
+    });
+    document.body.append(editor);
+
+    harness.dom.window.dispatchEvent(
+      new harness.dom.window.KeyboardEvent("keydown", { key: "F11" }),
+    );
+    await flushTasks();
+    expect(harness.appWindow.setFullscreen).toHaveBeenCalledOnce();
+    expect(harness.appWindow.setFullscreen).toHaveBeenLastCalledWith(true);
+
+    editor.dispatchEvent(
+      new harness.dom.window.KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "Escape",
+      }),
+    );
+    await flushTasks();
+
+    expect(harness.appWindow.setFullscreen).toHaveBeenCalledOnce();
+    expect(fullscreenButton.getAttribute("aria-pressed")).toBe("true");
+    expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("true");
+  });
+
   it("rechecks fullscreen after an external resize transition settles", async () => {
     vi.useFakeTimers();
     const harness = createWindowHarness();

@@ -7,11 +7,6 @@ import {
   normalizeProjectLanguage,
 } from "../../internal/projectLanguage.js";
 import { selectScenesPageCopy } from "./support/scenesPageCopy.js";
-import {
-  getScenesPageDurationMs,
-  getScenesPageTimingNow,
-  logScenesPageTiming,
-} from "./support/scenesPageTiming.js";
 
 const createContextMenuItems = (copy = {}) => [
   { label: copy.openMenuItem ?? "Open", type: "item", value: "open-item" },
@@ -431,25 +426,10 @@ export const selectSceneWhiteboardPosition = ({ state }) => {
 };
 
 export const selectViewData = ({ state, i18n }) => {
-  const startedAt = getScenesPageTimingNow();
-
-  let phaseStartedAt = getScenesPageTimingNow();
   const copy = selectScenesPageCopy(i18n);
-  const copyMs = getScenesPageDurationMs(phaseStartedAt);
-
-  phaseStartedAt = getScenesPageTimingNow();
   const flattenedItems = toFlatItems(state.scenesData);
-  const flattenItemsMs = getScenesPageDurationMs(phaseStartedAt);
-
-  phaseStartedAt = getScenesPageTimingNow();
   const flatItems = applyFolderRequiredRootDragOptions(flattenedItems);
-  const dragOptionsMs = getScenesPageDurationMs(phaseStartedAt);
-
-  phaseStartedAt = getScenesPageTimingNow();
   const flatGroups = toFlatGroups(state.scenesData);
-  const flattenGroupsMs = getScenesPageDurationMs(phaseStartedAt);
-
-  phaseStartedAt = getScenesPageTimingNow();
   const selectedScene = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
@@ -467,9 +447,7 @@ export const selectViewData = ({ state, i18n }) => {
   const selectedDetailItem = selectedScene ?? selectedFolder;
   const selectedDetailType = selectedDetailItem?.type;
   const selectedDetailId = selectedDetailItem?.id;
-  const selectionMs = getScenesPageDurationMs(phaseStartedAt);
 
-  phaseStartedAt = getScenesPageTimingNow();
   let selectedItemName = "";
   let selectedItemDescription = "";
   let selectedSceneTextStatsLabel = "";
@@ -528,9 +506,7 @@ export const selectViewData = ({ state, i18n }) => {
       },
     ];
   }
-  const selectedDetailMs = getScenesPageDurationMs(phaseStartedAt);
 
-  phaseStartedAt = getScenesPageTimingNow();
   // Get folder options for form
   const folderOptions = flatItems
     .filter((item) => item.type === "folder")
@@ -621,10 +597,8 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     },
   };
-  const formsMs = getScenesPageDurationMs(phaseStartedAt);
 
-  phaseStartedAt = getScenesPageTimingNow();
-  const viewData = {
+  return {
     flatItems,
     flatGroups,
     resourceCategory: "project",
@@ -686,24 +660,4 @@ export const selectViewData = ({ state, i18n }) => {
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     mapAddHint: copy.mapAddHint ?? "Right click in the map to add a scene",
   };
-  const resultMs = getScenesPageDurationMs(phaseStartedAt);
-
-  logScenesPageTiming("select-view-data.complete", {
-    durationMs: getScenesPageDurationMs(startedAt),
-    copyMs,
-    flattenItemsMs,
-    dragOptionsMs,
-    flattenGroupsMs,
-    selectionMs,
-    selectedDetailMs,
-    formsMs,
-    resultMs,
-    flatItemCount: flatItems.length,
-    flatGroupCount: flatGroups.length,
-    whiteboardItemCount: state.whiteboardItems.length,
-    selectedSectionCount: selectedSceneSections.length,
-    hasSelectedScene: selectedScene?.type === "scene",
-  });
-
-  return viewData;
 };
