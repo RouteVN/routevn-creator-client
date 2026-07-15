@@ -105,7 +105,7 @@ describe("systemActions.handlers", () => {
     expect(state.mode).toBe("dialogue");
   });
 
-  it("prevents action controls from stealing editor focus on mousedown", () => {
+  it("preserves the target line until the dialog-open event transfers focus", () => {
     const preventDefault = vi.fn();
 
     handleActionControlMouseDown(

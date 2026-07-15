@@ -539,6 +539,15 @@ const blurLinesEditorFocus = (refs) => {
   });
 };
 
+const prepareActionsDialogOpen = (deps, lineId) => {
+  const { appService, refs, store } = deps;
+  if (lineId) {
+    store.setActionTargetLineId({ lineId });
+  }
+  blurLinesEditorFocus(refs);
+  appService.blurActiveElement();
+};
+
 const shouldAnimateLineNavigation = (
   store,
   { previousLineId, nextLineId } = {},
@@ -2362,9 +2371,7 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
 export const handleAddActionsButtonClick = (deps) => {
   const { refs, render, store } = deps;
   const lineId = store.selectSelectedLineId();
-  if (lineId) {
-    store.setActionTargetLineId({ lineId });
-  }
+  prepareActionsDialogOpen(deps, lineId);
   refs.systemActions?.transformedHandlers?.open?.({
     mode: "actions",
   });
@@ -2373,11 +2380,9 @@ export const handleAddActionsButtonClick = (deps) => {
 
 export const handleSystemActionsDialogOpen = (deps, payload) => {
   const { store } = deps;
-  const detail = payload?._event?.detail || {};
-  const lineId = detail.selectedLineId || store.selectSelectedLineId();
-  if (lineId) {
-    store.setActionTargetLineId({ lineId });
-  }
+  const { selectedLineId } = payload._event.detail;
+  const lineId = selectedLineId ?? store.selectSelectedLineId();
+  prepareActionsDialogOpen(deps, lineId);
 };
 
 export const handleMobileKeyboardToolbarActionClick = (deps, payload) => {
