@@ -115,20 +115,6 @@ const createRuntime = ({ events, checkpoints = {} }) => {
         .map((event) => structuredClone(event));
     },
   );
-  const listCommittedMetadataAfter = vi.fn(
-    async ({ sinceCommittedId = 0, limit } = {}) => {
-      const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
-      const normalizedLimit =
-        Number.isInteger(limit) && limit > 0 ? limit : events.length;
-      return events
-        .slice(startIndex, startIndex + normalizedLimit)
-        .map(({ committedId, partition, type }) => ({
-          committedId,
-          partition,
-          type,
-        }));
-    },
-  );
   const loadSceneProjection = vi.fn(async (sceneId) =>
     createSceneState(sceneId),
   );
@@ -136,7 +122,6 @@ const createRuntime = ({ events, checkpoints = {} }) => {
   const runtime = createSceneBundleRuntime({
     store,
     listCommittedAfter,
-    listCommittedMetadataAfter,
     getCurrentMainState: () => mainState,
     getCurrentRevision: () => events.length,
     getActiveSceneId: () => activeSceneId,
@@ -148,7 +133,6 @@ const createRuntime = ({ events, checkpoints = {} }) => {
     runtime,
     store,
     listCommittedAfter,
-    listCommittedMetadataAfter,
     loadSceneProjection,
   };
 };
@@ -272,7 +256,7 @@ describe("sceneBundleRuntime", () => {
     ).toBe(2);
   });
 
-  it("checks fresh overviews using metadata after the checkpoint revision", async () => {
+  it("checks fresh overviews using full events after the checkpoint revision", async () => {
     const events = [
       createEvent({
         type: COMMAND_TYPES.IMAGE_CREATE,
@@ -299,29 +283,25 @@ describe("sceneBundleRuntime", () => {
       sections: [],
     };
     const checkpointPartition = scenePartitionFor(inactiveSceneId);
-    const { runtime, listCommittedAfter, listCommittedMetadataAfter } =
-      createRuntime({
-        events,
-        checkpoints: {
-          [checkpointPartition]: {
-            partition: checkpointPartition,
-            viewVersion: SCENE_OVERVIEW_VIEW_VERSION,
-            lastCommittedId: 2,
-            value: checkpointOverview,
-          },
+    const { runtime, listCommittedAfter } = createRuntime({
+      events,
+      checkpoints: {
+        [checkpointPartition]: {
+          partition: checkpointPartition,
+          viewVersion: SCENE_OVERVIEW_VIEW_VERSION,
+          lastCommittedId: 2,
+          value: checkpointOverview,
         },
-      });
+      },
+    });
 
     const overviews = await runtime.loadSceneOverviews({
       sceneIds: [inactiveSceneId],
     });
 
     expect(overviews[inactiveSceneId]).toEqual(checkpointOverview);
-    expect(listCommittedAfter).not.toHaveBeenCalled();
     expect(
-      listCommittedMetadataAfter.mock.calls.map(
-        ([call]) => call.sinceCommittedId,
-      ),
+      listCommittedAfter.mock.calls.map(([call]) => call.sinceCommittedId),
     ).toEqual([2, 4]);
   });
 });

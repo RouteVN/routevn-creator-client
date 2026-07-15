@@ -16,8 +16,6 @@ import {
   MAIN_PARTITION,
   MAIN_VIEW_NAME,
   MAIN_VIEW_VERSION,
-  toCommittedEventMetadata,
-  toDraftEventMetadata,
 } from "../../services/shared/projectRepositoryViews/shared.js";
 import {
   resolveProjectResolutionForWrite,
@@ -278,33 +276,9 @@ export const createInsiemeWebStoreAdapter = async (
       return Array.isArray(committed) ? committed : [];
     },
 
-    async listCommittedMetadataAfter({ sinceCommittedId, limit } = {}) {
-      const committed =
-        typeof rawClientStore.listCommittedMetadataAfter === "function"
-          ? await rawClientStore.listCommittedMetadataAfter({
-              sinceCommittedId,
-              limit,
-            })
-          : await rawClientStore.listCommittedAfter({
-              sinceCommittedId,
-              limit,
-            });
-      return Array.isArray(committed)
-        ? committed.map(toCommittedEventMetadata)
-        : [];
-    },
-
     async listDraftsOrdered() {
       const drafts = await rawClientStore.listDraftsOrdered();
       return Array.isArray(drafts) ? drafts : [];
-    },
-
-    async listDraftMetadataOrdered() {
-      const drafts =
-        typeof rawClientStore.listDraftMetadataOrdered === "function"
-          ? await rawClientStore.listDraftMetadataOrdered()
-          : await rawClientStore.listDraftsOrdered();
-      return Array.isArray(drafts) ? drafts.map(toDraftEventMetadata) : [];
     },
 
     async getCursor() {

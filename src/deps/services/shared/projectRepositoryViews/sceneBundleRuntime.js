@@ -57,7 +57,6 @@ const logSceneOverviewTiming = (event, data = {}) => {
 export const createSceneBundleRuntime = ({
   store,
   listCommittedAfter,
-  listCommittedMetadataAfter = listCommittedAfter,
   now = () => Date.now(),
   getCurrentMainState,
   getCurrentRevision = () => Number.MAX_SAFE_INTEGER,
@@ -90,7 +89,7 @@ export const createSceneBundleRuntime = ({
     let latestRelevantRevision = sinceCommittedId;
 
     for await (const committedBatch of iterateCommittedEventBatches({
-      listCommittedAfter: listCommittedMetadataAfter,
+      listCommittedAfter,
       sinceCommittedId,
     })) {
       for (const event of committedBatch) {
@@ -145,7 +144,7 @@ export const createSceneBundleRuntime = ({
     }
 
     for await (const committedBatch of iterateCommittedEventBatches({
-      listCommittedAfter: listCommittedMetadataAfter,
+      listCommittedAfter,
       sinceCommittedId,
     })) {
       committedBatchCount += 1;

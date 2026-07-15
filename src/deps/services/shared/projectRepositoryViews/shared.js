@@ -213,7 +213,8 @@ export const doesCommittedEventAffectSceneOverview = (event) => {
     return false;
   }
 
-  return SCENE_OVERVIEW_RELEVANT_MAIN_COMMAND_TYPES.has(event?.type);
+  const commandType = committedEventToCommand(event)?.type;
+  return SCENE_OVERVIEW_RELEVANT_MAIN_COMMAND_TYPES.has(commandType);
 };
 
 export const createMainProjectionState = (state) =>
@@ -252,18 +253,6 @@ export const getCommittedEventRevision = (event, fallbackCommittedId = 0) => {
 
   return 0;
 };
-
-export const toCommittedEventMetadata = (event = {}) => ({
-  committedId: Number(event.committedId ?? event.committed_id) || 0,
-  partition: event.partition,
-  type: event.type,
-});
-
-export const toDraftEventMetadata = (event = {}) => ({
-  draftClock: Number(event.draftClock ?? event.draft_clock) || 0,
-  partition: event.partition,
-  type: event.type,
-});
 
 const normalizeCommittedEvent = ({ event, committedId }) => {
   const normalizedEvent = structuredClone(event);

@@ -1231,7 +1231,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     });
   });
 
-  it("loads fresh scene overviews from committed and draft metadata without hydrating history", async () => {
+  it("loads fresh scene overviews from committed and draft tails without hydrating full history", async () => {
     const sceneIds = ["scene-1", "scene-2"];
     const mainState = {
       project: {},
@@ -1290,14 +1290,23 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
       ...structuredClone(event),
       committedId: index + 1,
     }));
-    const draftMetadata = [
+    const draftEvents = [
       {
+        id: "draft-image-create-1",
         draftClock: 1,
+        projectId: "project-1",
         partition: "m",
         type: "image.create",
+        schemaVersion: 1,
+        payload: {
+          imageId: "image-2",
+          data: {
+            fileId: "file-2",
+          },
+        },
       },
     ];
-    const historyLength = committedEvents.length + draftMetadata.length;
+    const historyLength = committedEvents.length + draftEvents.length;
     const checkpoints = Object.fromEntries(
       sceneIds.map((sceneId) => {
         const partition = scenePartitionFor(sceneId);
@@ -1332,26 +1341,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
           .map((event) => structuredClone(event));
       },
     );
-    const listCommittedMetadataAfter = vi.fn(
-      async ({ sinceCommittedId = 0, limit } = {}) => {
-        const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
-        const normalizedLimit =
-          Number.isInteger(limit) && limit > 0 ? limit : committedEvents.length;
-        return committedEvents
-          .slice(startIndex, startIndex + normalizedLimit)
-          .map(({ committedId, partition, type }) => ({
-            committedId,
-            partition,
-            type,
-          }));
-      },
-    );
-    const listDraftMetadataOrdered = vi.fn(async () =>
-      structuredClone(draftMetadata),
-    );
-    const listDraftsOrdered = vi.fn(async () => {
-      throw new Error("full draft payloads should not be loaded");
-    });
+    const listDraftsOrdered = vi.fn(async () => structuredClone(draftEvents));
     const saveMaterializedViewCheckpoint = vi.fn(async () => {});
     const reduceEventToState = ({ repositoryState, event }) =>
       event?.payload?.state
@@ -1362,8 +1352,6 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
       projectId: "project-1",
       store: {
         listCommittedAfter,
-        listCommittedMetadataAfter,
-        listDraftMetadataOrdered,
         listDraftsOrdered,
         loadMaterializedViewCheckpoint: async ({ viewName, partition }) => {
           if (viewName === MAIN_VIEW_NAME && partition === "m") {
@@ -1390,7 +1378,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
       historyStats: {
         committedCount: committedEvents.length,
         latestCommittedId: committedEvents.length,
-        draftCount: draftMetadata.length,
+        draftCount: draftEvents.length,
         latestDraftClock: 1,
       },
       loadEvents,
@@ -1405,22 +1393,26 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     });
 
     listCommittedAfter.mockClear();
-    listCommittedMetadataAfter.mockClear();
 
     const overviews = await repository.loadSceneOverviews({ sceneIds });
 
     expect(Object.keys(overviews)).toEqual(sceneIds);
     expect(loadEvents).not.toHaveBeenCalled();
-    expect(listCommittedAfter).not.toHaveBeenCalled();
-    expect(listCommittedMetadataAfter).toHaveBeenCalledTimes(1);
+    expect(listCommittedAfter).toHaveBeenCalledTimes(1);
     expect(
-      listCommittedMetadataAfter.mock.calls.map(
-        ([call]) => call.sinceCommittedId,
-      ),
+      listCommittedAfter.mock.calls.map(([call]) => call.sinceCommittedId),
     ).toEqual([1]);
-    expect(listDraftMetadataOrdered).toHaveBeenCalledTimes(1);
-    expect(listDraftsOrdered).not.toHaveBeenCalled();
+    expect(listDraftsOrdered).toHaveBeenCalledTimes(1);
     expect(saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
+
+    listCommittedAfter.mockClear();
+    listDraftsOrdered.mockClear();
+
+    await repository.loadSceneOverviews({ sceneIds });
+
+    expect(listCommittedAfter).toHaveBeenCalledTimes(1);
+    expect(listDraftsOrdered).not.toHaveBeenCalled();
+    expect(loadEvents).not.toHaveBeenCalled();
   });
 
   it("pages committed history when activating a scene on a checkpoint-backed repository without drafts", async () => {

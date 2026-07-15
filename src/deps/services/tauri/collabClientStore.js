@@ -20,8 +20,6 @@ import {
   MAIN_PARTITION,
   MAIN_VIEW_NAME,
   MAIN_VIEW_VERSION,
-  toCommittedEventMetadata,
-  toDraftEventMetadata,
 } from "../shared/projectRepositoryViews/shared.js";
 
 export const PROJECT_DB_NAME = "project.db";
@@ -543,7 +541,8 @@ export const createPersistedTauriProjectStore = async ({
         } finally {
           const durationMs = getProjectStoreDurationMs(startedAt);
           if (
-            label === "listCommittedMetadataAfter" ||
+            label === "listCommittedAfter" ||
+            label === "listDraftsOrdered" ||
             queueWaitMs >= 50 ||
             durationMs >= 50
           ) {
@@ -562,10 +561,9 @@ export const createPersistedTauriProjectStore = async ({
       operationQueue = nextOperation.catch(() => {});
       return nextOperation;
     };
-    const runSelect = (sql, args = [], options = {}) =>
-      withSqliteLockRetry(
-        () => db.select(sql, Array.isArray(args) ? args : []),
-        options,
+    const runSelect = (sql, args = []) =>
+      withSqliteLockRetry(() =>
+        db.select(sql, Array.isArray(args) ? args : []),
       );
     const runSelectNoRetry = (sql, args = []) =>
       db.select(sql, Array.isArray(args) ? args : []);
@@ -1031,55 +1029,10 @@ export const createPersistedTauriProjectStore = async ({
         );
       },
 
-      async listDraftMetadataOrdered() {
-        return queueStoreOperation("listDraftMetadataOrdered", async () => {
-          const rows = await runSelect(
-            `SELECT draft_clock, partition, type
-             FROM local_drafts
-             ORDER BY draft_clock ASC, id ASC`,
-          );
-          return Array.isArray(rows) ? rows.map(toDraftEventMetadata) : [];
-        });
-      },
-
       async listCommitted() {
         return queueStoreOperation("listCommitted", () =>
           store.listCommitted(),
         );
-      },
-
-      async listCommittedMetadataAfter({
-        sinceCommittedId = 0,
-        limit = Number.MAX_SAFE_INTEGER,
-      } = {}) {
-        return queueStoreOperation("listCommittedMetadataAfter", async () => {
-          const startedAt = getProjectStoreTimingNow();
-          let retryCount = 0;
-          const rows = await runSelect(
-            `SELECT committed_id, partition, type
-             FROM committed_events
-             WHERE committed_id > $1
-             ORDER BY committed_id ASC
-             LIMIT $2`,
-            [sinceCommittedId, limit],
-            {
-              onRetry: () => {
-                retryCount += 1;
-              },
-            },
-          );
-          const metadata = Array.isArray(rows)
-            ? rows.map(toCommittedEventMetadata)
-            : [];
-          logProjectStoreTiming("committed-metadata-select.complete", {
-            durationMs: getProjectStoreDurationMs(startedAt),
-            sinceCommittedId,
-            limit,
-            rowCount: metadata.length,
-            retryCount,
-          });
-          return metadata;
-        });
       },
 
       async listCommittedAfter(payload = {}) {

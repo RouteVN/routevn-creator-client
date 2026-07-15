@@ -26,9 +26,7 @@ import {
   iterateCommittedEventBatches,
   isNonEmptyString,
   resolveSceneIdForPartition,
-  toCommittedEventMetadata,
   toCommittedProjectEvent,
-  toDraftEventMetadata,
 } from "./projectRepositoryViews/shared.js";
 
 const summarizeReplayEvent = (event, index) => ({
@@ -767,46 +765,24 @@ export const createProjectRepositoryRuntime = async ({
       : [];
   };
 
-  const listCommittedMetadataAfterFromStore = async ({
-    sinceCommittedId,
-    limit,
-  }) => {
-    const committedBatch =
-      typeof store.listCommittedMetadataAfter === "function"
-        ? await store.listCommittedMetadataAfter({
-            sinceCommittedId,
-            limit,
-          })
-        : await store.listCommittedAfter({
-            sinceCommittedId,
-            limit,
-          });
-
-    return Array.isArray(committedBatch)
-      ? committedBatch.map(toCommittedEventMetadata)
-      : [];
-  };
-
-  let draftEventMetadataPromise;
-  const loadDraftEventMetadataFromStore = async () => {
-    if (draftEventMetadataPromise) {
-      return draftEventMetadataPromise;
+  let draftEventsPromise;
+  const loadDraftEventsFromStore = async () => {
+    if (draftEventsPromise) {
+      return draftEventsPromise;
     }
 
-    draftEventMetadataPromise = Promise.resolve(
-      typeof store.listDraftMetadataOrdered === "function"
-        ? store.listDraftMetadataOrdered()
-        : store.listDraftsOrdered(),
-    )
+    draftEventsPromise = Promise.resolve(store.listDraftsOrdered())
       .then((drafts) =>
-        Array.isArray(drafts) ? drafts.map(toDraftEventMetadata) : [],
+        Array.isArray(drafts)
+          ? drafts.map((draft) => structuredClone(draft))
+          : [],
       )
       .catch((error) => {
-        draftEventMetadataPromise = undefined;
+        draftEventsPromise = undefined;
         throw error;
       });
 
-    return draftEventMetadataPromise;
+    return draftEventsPromise;
   };
 
   const listCommittedAfterFromRepository = async ({
@@ -828,9 +804,7 @@ export const createProjectRepositoryRuntime = async ({
         : 0,
     );
     const safeLimit =
-      Number.isInteger(limit) && limit > 0
-        ? limit
-        : Math.max(events.length, currentRevision);
+      Number.isInteger(limit) && limit > 0 ? limit : events.length;
     return events
       .slice(startIndex, startIndex + safeLimit)
       .map((event, index) =>
@@ -842,7 +816,7 @@ export const createProjectRepositoryRuntime = async ({
       );
   };
 
-  const listCommittedMetadataAfterFromRepository = async ({
+  const listSceneOverviewEventsAfterFromRepository = async ({
     sinceCommittedId,
     limit,
   } = {}) => {
@@ -856,9 +830,12 @@ export const createProjectRepositoryRuntime = async ({
       Number.isInteger(limit) && limit > 0
         ? limit
         : Math.max(events.length, currentRevision);
+    if (startIndex >= currentRevision) {
+      return [];
+    }
 
     if (!hasLoadedEvents && !hasDraftHistory) {
-      return listCommittedMetadataAfterFromStore({
+      return listCommittedAfterFromStore({
         sinceCommittedId: startIndex,
         limit: safeLimit,
       });
@@ -869,51 +846,48 @@ export const createProjectRepositoryRuntime = async ({
         0,
         Math.floor(Number(historyStats?.committedCount) || 0),
       );
-      const metadata = [];
+      const tailEvents = [];
       const remainingCommittedCount = Math.max(0, committedCount - startIndex);
       const committedLimit = Math.min(safeLimit, remainingCommittedCount);
 
       if (committedLimit > 0) {
-        const committedMetadata = await listCommittedMetadataAfterFromStore({
+        const committedEvents = await listCommittedAfterFromStore({
           sinceCommittedId: startIndex,
           limit: committedLimit,
         });
-        metadata.push(...committedMetadata.slice(0, committedLimit));
-        if (committedMetadata.length < committedLimit) {
-          return metadata;
+        tailEvents.push(...committedEvents.slice(0, committedLimit));
+        if (committedEvents.length < committedLimit) {
+          return tailEvents;
         }
       }
 
-      if (metadata.length < safeLimit) {
-        const draftMetadata = await loadDraftEventMetadataFromStore();
+      if (hasDraftHistory && tailEvents.length < safeLimit) {
+        const drafts = await loadDraftEventsFromStore();
         const draftStartIndex = Math.max(0, startIndex - committedCount);
-        const remainingLimit = safeLimit - metadata.length;
-        metadata.push(
-          ...draftMetadata
+        const remainingLimit = safeLimit - tailEvents.length;
+        tailEvents.push(
+          ...drafts
             .slice(draftStartIndex, draftStartIndex + remainingLimit)
             .map((draft, index) =>
-              toCommittedEventMetadata({
+              toCommittedProjectEvent({
+                event: draft,
                 committedId: committedCount + draftStartIndex + index + 1,
-                partition: draft.partition,
-                type: draft.type,
+                projectId,
               }),
             ),
         );
       }
 
-      return metadata;
+      return tailEvents;
     }
 
-    await ensureEventHistoryLoaded();
     return events
       .slice(startIndex, startIndex + safeLimit)
       .map((event, index) =>
-        toCommittedEventMetadata({
+        toCommittedProjectEvent({
+          event,
           committedId: startIndex + index + 1,
-          partition: isNonEmptyString(event?.partition)
-            ? event.partition
-            : MAIN_PARTITION,
-          type: event?.type,
+          projectId,
         }),
       );
   };
@@ -1042,8 +1016,7 @@ export const createProjectRepositoryRuntime = async ({
 
   const sceneBundleRuntime = createSceneBundleRuntime({
     store,
-    listCommittedAfter: listCommittedAfterFromRepository,
-    listCommittedMetadataAfter: listCommittedMetadataAfterFromRepository,
+    listCommittedAfter: listSceneOverviewEventsAfterFromRepository,
     getCurrentMainState: () => currentMainState,
     getCurrentRevision: () => currentRevision,
     getActiveSceneId: () => activeSceneId,
