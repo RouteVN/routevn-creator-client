@@ -174,33 +174,14 @@ const resolveBackgroundPreviewAction = ({ actions, presentationState }) => {
     return effectiveBackground;
   }
 
-  const previewBackground = { ...actionBackground };
-  const hasAppearanceOnlyChange =
-    Object.hasOwn(actionBackground, "opacity") ||
-    Object.hasOwn(actionBackground, "blur");
-  if (
-    hasAppearanceOnlyChange &&
-    !previewBackground.resourceId &&
-    effectiveBackground?.resourceId
-  ) {
-    previewBackground.resourceId = effectiveBackground.resourceId;
-    previewBackground.animationName = effectiveBackground.animationName;
-  }
-  if (
-    hasAppearanceOnlyChange &&
-    !previewBackground.colorId &&
-    effectiveBackground?.colorId
-  ) {
-    previewBackground.colorId = effectiveBackground.colorId;
-  }
-  if (!previewBackground.resourceId && actionBackground.colorId) {
-    previewBackground.resourceId = effectiveBackground?.resourceId;
-  }
-  if (!previewBackground.colorId && actionBackground.resourceId) {
-    previewBackground.colorId = effectiveBackground?.colorId;
+  if (!effectiveBackground) {
+    return actionBackground;
   }
 
-  return previewBackground;
+  return {
+    ...effectiveBackground,
+    ...actionBackground,
+  };
 };
 
 export const selectViewData = ({ state, props, props: attrs, i18n }) => {
@@ -1172,10 +1153,10 @@ export const selectActionsData = ({ props, state, copy }) => {
   }
 
   // Visual
-  const visualAction = isPlainObject(actions.visual)
-    ? actions.visual
-    : isPlainObject(presentationState.visual)
-      ? presentationState.visual
+  const visualAction = isPlainObject(presentationState.visual)
+    ? presentationState.visual
+    : isPlainObject(actions.visual)
+      ? actions.visual
       : undefined;
   if (Array.isArray(visualAction?.items)) {
     actionsObject.visual = visualAction;

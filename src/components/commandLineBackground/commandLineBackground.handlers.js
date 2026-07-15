@@ -734,6 +734,7 @@ export const handleTabClick = (deps, payload) => {
   });
 
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSearchInput = (deps, payload) => {
