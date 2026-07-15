@@ -2274,6 +2274,67 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("consumes text-mode Escape from window capture before global shortcuts", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const editorNode = document.createElement("div");
+      const surfaceNode = document.createElement("div");
+      surfaceNode.append(editorNode);
+      document.body.append(surfaceNode);
+
+      editorElement.refs = {
+        editor: editorNode,
+        surface: surfaceNode,
+      };
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-2",
+        mentionMenu: {
+          isOpen: false,
+        },
+      };
+      editorElement.getActiveElement = vi.fn(() => editorNode);
+      editorElement.getSelectedLineIdSnapshot = vi.fn(() => "line-1");
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.enterBlockMode = vi.fn();
+
+      const globalShortcut = vi.fn();
+      const captureHandler =
+        editorElement.handleWindowKeyDownCapture.bind(editorElement);
+      window.addEventListener("keydown", captureHandler, true);
+      window.addEventListener("keydown", globalShortcut);
+
+      const event = new window.KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "Escape",
+      });
+
+      editorNode.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(globalShortcut).not.toHaveBeenCalled();
+      expect(editorElement.hideSelectionPopover).toHaveBeenCalledOnce();
+      expect(editorElement.enterBlockMode).toHaveBeenCalledWith({
+        focusSurface: true,
+        lineId: "line-2",
+        emitSelectionChange: true,
+      });
+
+      window.removeEventListener("keydown", captureHandler, true);
+      window.removeEventListener("keydown", globalShortcut);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("clears stale focus restore state when selected line is cleared", async () => {
     const restoreDomGlobals = installDomGlobals();
 

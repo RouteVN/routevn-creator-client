@@ -2888,6 +2888,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleWindowKeyDownCapture(event) {
+    if (this.handleTextModeWindowEscape(event)) {
+      return;
+    }
+
     if (this.handleBlockModeWindowShortcut(event)) {
       return;
     }
@@ -2897,6 +2901,47 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     this.handleBlockModeWindowEnter(event);
+  }
+
+  handleTextModeWindowEscape(event) {
+    if (
+      event.defaultPrevented ||
+      event.key !== "Escape" ||
+      event.isComposing ||
+      this.state.mode !== "text-editor"
+    ) {
+      return false;
+    }
+
+    const isTextModeTarget = isEditorOrSurfaceEventTarget({
+      activeElement: this.getActiveElement(),
+      event,
+      editorElement: this.refs.editor,
+      surfaceElement: this.refs.surface,
+    });
+    if (!isTextModeTarget) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    this.hideSelectionPopover();
+
+    if (this.state.mentionMenu.isOpen) {
+      this.closeMentionMenu({
+        shouldRender: true,
+        dismissCurrentTrigger: true,
+      });
+      return true;
+    }
+
+    this.enterBlockMode({
+      focusSurface: true,
+      lineId: this.state.selectedLineId || this.getSelectedLineIdSnapshot(),
+      emitSelectionChange: true,
+    });
+    return true;
   }
 
   handleBlockModeWindowShortcut(event) {
