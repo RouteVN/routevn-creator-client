@@ -7,6 +7,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 // Infra - Tauri
 import { createDb } from "./deps/clients/tauri/db";
 import { createTauriFilePicker } from "./deps/clients/tauri/filePicker";
+import { setupFileDropNavigationGuard } from "./deps/clients/tauri/fileDropNavigation";
 import createUpdater from "./deps/clients/tauri/updater";
 import { setupCloseListener } from "./deps/clients/tauri/windowClose";
 
@@ -24,6 +25,7 @@ import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectComp
 import { registerPrimitives } from "./primitives/registerPrimitives";
 
 registerPrimitives();
+setupFileDropNavigationGuard();
 
 const rawDistribution = import.meta.env?.VITE_ROUTEVN_DISTRIBUTION;
 const distribution = rawDistribution === "steam" ? rawDistribution : "direct";
