@@ -37,6 +37,32 @@ const createDeps = () => {
 };
 
 describe("appShellService", () => {
+  it("awaits registered work before navigation continues", async () => {
+    const deps = createDeps();
+    const service = createAppShellService(deps);
+    const calls = [];
+    let finishPreparation;
+    const unregister = service.registerBeforeNavigation(async ({ path }) => {
+      calls.push(`start:${path}`);
+      await new Promise((resolve) => {
+        finishPreparation = resolve;
+      });
+      calls.push(`end:${path}`);
+    });
+
+    const preparation = service.prepareNavigation({ path: "/project/scenes" });
+    await Promise.resolve();
+
+    expect(calls).toEqual(["start:/project/scenes"]);
+    finishPreparation();
+    await preparation;
+    expect(calls).toEqual(["start:/project/scenes", "end:/project/scenes"]);
+
+    unregister();
+    await service.prepareNavigation({ path: "/projects" });
+    expect(calls).toHaveLength(2);
+  });
+
   it("forwards alert dialogs through showAlert", async () => {
     const deps = createDeps();
     const service = createAppShellService(deps);

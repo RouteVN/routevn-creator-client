@@ -70,6 +70,45 @@ const createStore = ({
 };
 
 describe("scene editor lexical draft persistence", () => {
+  it("awaits post-save cache work before a draft flush completes", async () => {
+    const store = createStore();
+    let finishCache;
+    const onDidFlush = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finishCache = resolve;
+        }),
+    );
+    const controller = createSceneEditorDraftPersistence({
+      syncDraftSectionFromLiveEditor: (deps) => deps.store.selectDraftSection(),
+      syncStoreProjectState: () => {},
+      reconcileCurrentEditorSession: vi.fn(),
+      onDidFlush,
+    });
+    const deps = {
+      store,
+      projectService: {
+        syncSectionLinesSnapshot: vi.fn(async () => {}),
+      },
+      render: vi.fn(),
+      appService: {
+        showAlert: vi.fn(),
+      },
+    };
+    let didComplete = false;
+
+    const flush = controller.flushSceneEditorDrafts(deps, { force: true });
+    flush.then(() => {
+      didComplete = true;
+    });
+    await vi.waitFor(() => expect(onDidFlush).toHaveBeenCalledOnce());
+
+    expect(didComplete).toBe(false);
+    finishCache();
+    await flush;
+    expect(didComplete).toBe(true);
+  });
+
   it("throttles text save delay while respecting the max wait cap", () => {
     const throttledStore = createStore({
       lastDraftFlushStartedAt: 1000,

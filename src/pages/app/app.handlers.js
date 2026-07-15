@@ -237,7 +237,7 @@ const renderWithNavigationTiming = ({ render, timing, event }) => {
   markNavigationPaintTiming(timing, `${event}.paint`);
 };
 
-const createRouteTransitionRunner = (deps) => {
+export const createRouteTransitionRunner = (deps) => {
   let transitionToken = 0;
 
   return async ({
@@ -270,6 +270,16 @@ const createRouteTransitionRunner = (deps) => {
       requestedPath: path,
       canonicalPath,
     });
+
+    markNavigationTiming(routeTiming, "route.prepare-navigation.start");
+    await appService.prepareNavigation({
+      path: canonicalPath,
+      payload: nextPayload,
+    });
+    markNavigationTiming(routeTiming, "route.prepare-navigation.end");
+    if (currentTransitionToken !== transitionToken) {
+      return;
+    }
 
     if (routeHistoryMode === "push") {
       appService.redirect(canonicalPath, nextPayload, { state: historyState });

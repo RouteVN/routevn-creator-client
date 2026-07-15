@@ -11,9 +11,12 @@ export const MAIN_VIEW_NAME = "project_repository_main_state";
 export const SCENE_VIEW_NAME = "project_repository_scene_state";
 export const SCENE_OVERVIEW_VIEW_NAME =
   "project_repository_scene_overview_state";
+export const SCENE_TEXT_STATS_VIEW_NAME =
+  "project_repository_scene_text_stats_state";
 export const MAIN_VIEW_VERSION = "1";
 export const SCENE_VIEW_VERSION = "2";
 export const SCENE_OVERVIEW_VIEW_VERSION = "1";
+export const SCENE_TEXT_STATS_VIEW_VERSION = "1";
 export const COMMITTED_HISTORY_BATCH_LIMIT = 256;
 export const VIEW_CHECKPOINT = {
   mode: "debounce",
@@ -54,6 +57,14 @@ const SCENE_OVERVIEW_RELEVANT_MAIN_COMMAND_TYPES = new Set([
   COMMAND_TYPES.CONTROL_ELEMENT_UPDATE,
   COMMAND_TYPES.CONTROL_ELEMENT_MOVE,
   COMMAND_TYPES.CONTROL_ELEMENT_DELETE,
+]);
+
+const SCENE_TEXT_STATS_RELEVANT_COMMAND_TYPES = new Set([
+  COMMAND_TYPES.SCENE_DELETE,
+  COMMAND_TYPES.SECTION_DELETE,
+  COMMAND_TYPES.LINE_CREATE,
+  COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+  COMMAND_TYPES.LINE_DELETE,
 ]);
 
 export const isNonEmptyString = (value) =>
@@ -215,6 +226,11 @@ export const doesCommittedEventAffectSceneOverview = (event) => {
 
   const commandType = committedEventToCommand(event)?.type;
   return SCENE_OVERVIEW_RELEVANT_MAIN_COMMAND_TYPES.has(commandType);
+};
+
+export const doesCommittedEventAffectSceneTextStats = (event) => {
+  const commandType = committedEventToCommand(event)?.type;
+  return SCENE_TEXT_STATS_RELEVANT_COMMAND_TYPES.has(commandType);
 };
 
 export const createMainProjectionState = (state) =>

@@ -90,6 +90,7 @@ export const createAppShellService = ({
     ...updater,
   };
   let appCopyProvider = () => ({});
+  const beforeNavigationHandlers = new Set();
 
   const getAppCopy = () => {
     try {
@@ -110,6 +111,19 @@ export const createAppShellService = ({
     },
 
     getAppCopy,
+
+    registerBeforeNavigation(handler) {
+      beforeNavigationHandlers.add(handler);
+      return () => {
+        beforeNavigationHandlers.delete(handler);
+      };
+    },
+
+    async prepareNavigation(payload = {}) {
+      for (const handler of beforeNavigationHandlers) {
+        await handler(payload);
+      }
+    },
 
     navigate(path, payload, options = {}) {
       const timing =

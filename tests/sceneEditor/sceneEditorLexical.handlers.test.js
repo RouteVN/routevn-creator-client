@@ -19,10 +19,85 @@ import {
   handleSystemActionsActionDelete,
   handleSystemActionsDialogOpen,
   handleTemporaryPresentationStateChange,
+  prepareSceneEditorNavigation,
   scrollEntrySelectionIntoView,
   syncSceneEditorRoutePayload,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+
+describe("sceneEditorLexical.handlers navigation preparation", () => {
+  it("awaits the current text-stats cache before leaving the editor", async () => {
+    let finishCache;
+    const cacheSceneTextStats = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finishCache = resolve;
+        }),
+    );
+    const deps = {
+      store: {
+        selectSceneId: vi.fn(() => "scene-1"),
+        selectSelectedSectionId: vi.fn(() => undefined),
+        selectDraftSaveTimerId: vi.fn(() => undefined),
+        selectPendingDraftSections: vi.fn(() => []),
+        selectDraftSection: vi.fn(() => undefined),
+        setDraftSavePendingSinceAt: vi.fn(),
+        selectSceneTextStatsRefreshHandle: vi.fn(() => undefined),
+        refreshSceneTextStats: vi.fn(),
+        selectSceneTextStats: vi.fn(() => ({
+          count: 12,
+          countMode: "word",
+        })),
+        selectProjectLanguage: vi.fn(() => "en"),
+      },
+      projectService: {
+        cacheSceneTextStats,
+      },
+      refs: {},
+      render: vi.fn(),
+    };
+    let didComplete = false;
+
+    const preparation = prepareSceneEditorNavigation(deps, {
+      path: "/project/scenes",
+    });
+    preparation.then(() => {
+      didComplete = true;
+    });
+    await vi.waitFor(() => expect(cacheSceneTextStats).toHaveBeenCalledOnce());
+
+    expect(didComplete).toBe(false);
+    finishCache();
+    await preparation;
+    expect(cacheSceneTextStats).toHaveBeenCalledWith({
+      sceneId: "scene-1",
+      textStats: {
+        count: 12,
+        countMode: "word",
+        language: "en",
+      },
+    });
+    expect(didComplete).toBe(true);
+  });
+
+  it("does not flush when only the active scene-editor route changes", async () => {
+    const deps = {
+      store: {
+        refreshSceneTextStats: vi.fn(),
+      },
+      projectService: {
+        cacheSceneTextStats: vi.fn(),
+      },
+    };
+
+    await prepareSceneEditorNavigation(deps, {
+      path: "/project/scene-editor",
+    });
+
+    expect(deps.store.refreshSceneTextStats).not.toHaveBeenCalled();
+    expect(deps.projectService.cacheSceneTextStats).not.toHaveBeenCalled();
+  });
+});
 
 const installAnimationFrameQueue = () => {
   const previousRequestAnimationFrame = globalThis.requestAnimationFrame;

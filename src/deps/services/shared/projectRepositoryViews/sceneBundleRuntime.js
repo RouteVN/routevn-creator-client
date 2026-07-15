@@ -3,8 +3,10 @@ import {
   mainScenePartitionFor,
   scenePartitionFor,
 } from "../collab/partitions.js";
+import { committedEventToCommand } from "../collab/mappers.js";
 import {
   doesCommittedEventAffectSceneOverview,
+  doesCommittedEventAffectSceneTextStats,
   getCommittedEventRevision,
   iterateCommittedEventBatches,
   isMainPartition,
@@ -22,6 +24,11 @@ import {
   loadSceneOverviewCheckpoints,
   saveSceneOverviewCheckpoint,
 } from "./sceneOverviewStore.js";
+import {
+  deleteSceneTextStatsCheckpoint,
+  loadSceneTextStatsCheckpoints,
+  saveSceneTextStatsCheckpoint,
+} from "./sceneTextStatsStore.js";
 
 const SCENE_OVERVIEW_PERF_PREFIX = "[rvn.scene-overview-perf]";
 
@@ -481,29 +488,34 @@ export const createSceneBundleRuntime = ({
       return undefined;
     }
 
-    const checkpoint = await loadSceneOverviewCheckpoint({ store, sceneId });
-    const latestRelevantRevision = await getLatestOverviewRevisionForScene(
-      sceneId,
-      checkpoint,
-    );
-    const overview = await ensureSceneOverviewWithCheckpoint({
-      sceneId,
-      checkpoint,
-      latestRelevantRevision,
-    });
-    if (!overview) {
+    if (!getCurrentMainState()?.scenes?.items?.[sceneId]) {
       return undefined;
     }
 
-    overview.textStats = structuredClone(textStats);
-    queueSceneOverviewSave({
+    const cachedTextStats = structuredClone(textStats);
+    await saveSceneTextStatsCheckpoint({
+      store,
       sceneId,
-      overview,
-      lastCommittedId: latestRelevantRevision,
+      value: cachedTextStats,
+      lastCommittedId: getCurrentRevision(),
+      updatedAt: now(),
     });
-    await flushPendingOverviewWrites({ throwOnError: true });
 
-    return structuredClone(overview.textStats);
+    return cachedTextStats;
+  };
+
+  const loadSceneTextStats = async ({ sceneIds = [] } = {}) => {
+    const checkpointsBySceneId = await loadSceneTextStatsCheckpoints({
+      store,
+      sceneIds,
+    });
+
+    return Object.fromEntries(
+      [...checkpointsBySceneId].map(([sceneId, checkpoint]) => [
+        sceneId,
+        structuredClone(checkpoint.value),
+      ]),
+    );
   };
 
   const invalidateInactiveSceneOverviews = async () => {
@@ -610,6 +622,7 @@ export const createSceneBundleRuntime = ({
     },
 
     cacheSceneTextStats,
+    loadSceneTextStats,
 
     async handleCommittedEvents(sourceEvents = []) {
       const committedEvents = Array.isArray(sourceEvents)
@@ -622,12 +635,29 @@ export const createSceneBundleRuntime = ({
       const activeSceneId = getActiveSceneId();
       const scenesToRebuild = new Set();
       const inactivePartitionsToDelete = new Set();
+      const sceneTextStatsIdsToDelete = new Set();
       let sawMainEvent = false;
 
       for (const event of committedEvents) {
         const partition = event?.partition;
         if (!isNonEmptyString(partition)) {
           continue;
+        }
+
+        if (doesCommittedEventAffectSceneTextStats(event)) {
+          const command = committedEventToCommand(event);
+          const textStatsSceneId = resolveSceneIdForPartition(
+            getCurrentMainState(),
+            partition,
+          );
+          if (textStatsSceneId) {
+            sceneTextStatsIdsToDelete.add(textStatsSceneId);
+          }
+          for (const sceneId of command?.payload?.sceneIds ?? []) {
+            if (isNonEmptyString(sceneId)) {
+              sceneTextStatsIdsToDelete.add(sceneId);
+            }
+          }
         }
 
         if (isMainPartition(partition)) {
@@ -653,6 +683,10 @@ export const createSceneBundleRuntime = ({
         if (partition.startsWith("m:s:") || partition.startsWith("s:")) {
           inactivePartitionsToDelete.add(partition);
         }
+      }
+
+      for (const sceneId of sceneTextStatsIdsToDelete) {
+        await deleteSceneTextStatsCheckpoint({ store, sceneId });
       }
 
       if (sawMainEvent) {
@@ -685,7 +719,10 @@ export const createSceneBundleRuntime = ({
     async clearSceneOverview(sceneId) {
       pendingOverviewSavesBySceneId.delete(sceneId);
       pendingOverviewDeletes.delete(scenePartitionFor(sceneId));
-      await deleteSceneOverviewCheckpoint({ store, sceneId });
+      await Promise.all([
+        deleteSceneOverviewCheckpoint({ store, sceneId }),
+        deleteSceneTextStatsCheckpoint({ store, sceneId }),
+      ]);
     },
 
     async clearAllSceneOverviews() {
@@ -694,7 +731,10 @@ export const createSceneBundleRuntime = ({
       )) {
         pendingOverviewSavesBySceneId.delete(sceneId);
         pendingOverviewDeletes.delete(scenePartitionFor(sceneId));
-        await deleteSceneOverviewCheckpoint({ store, sceneId });
+        await Promise.all([
+          deleteSceneOverviewCheckpoint({ store, sceneId }),
+          deleteSceneTextStatsCheckpoint({ store, sceneId }),
+        ]);
       }
     },
   };

@@ -736,6 +736,10 @@ const {
   syncDraftSectionFromLiveEditor,
   syncStoreProjectState,
   reconcileCurrentEditorSession,
+  onDidFlush: async (deps) => {
+    refreshSceneTextStatsNow(deps, { render: false });
+    await cacheCurrentSceneTextStats(deps);
+  },
 });
 
 const refreshSceneEditorStateFromProject = async (deps) => {
@@ -744,6 +748,7 @@ const refreshSceneEditorStateFromProject = async (deps) => {
   reconcileCurrentEditorSession(deps);
   await updateSceneEditorSectionChanges(deps);
   refreshSceneTextStatsNow(deps, { render: false });
+  await cacheCurrentSceneTextStats(deps);
 };
 
 const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
@@ -777,6 +782,7 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   }
 
   refreshSceneTextStatsNow(deps, { render: false });
+  await cacheCurrentSceneTextStats(deps);
   render();
   subject.dispatch("sceneEditor.renderCanvas", {
     skipAnimations: true,
@@ -791,6 +797,17 @@ const getSceneEditorRoutePayload = (eventPayload = {}) => {
   }
 
   return eventPayload.payload || {};
+};
+
+export const prepareSceneEditorNavigation = async (deps, { path } = {}) => {
+  if (normalizeRoutePath(path) === "/project/scene-editor") {
+    return;
+  }
+
+  cancelSceneTextStatsRefresh(deps.store);
+  await flushSceneEditorDrafts(deps, { force: true });
+  refreshSceneTextStatsNow(deps, { render: false });
+  await cacheCurrentSceneTextStats(deps);
 };
 
 export const syncSceneEditorRoutePayload = async (
@@ -1680,6 +1697,9 @@ export const handleBeforeMount = (deps) => {
     isMuted,
     fontSize,
   });
+  const unregisterBeforeNavigation = appService.registerBeforeNavigation(
+    (payload) => prepareSceneEditorNavigation(deps, payload),
+  );
 
   const cleanupRuntimeSubscriptions = mountSceneEditorSubscriptions(deps);
   const cleanupBackgroundTransformEditorSubscriptions =
@@ -1716,14 +1736,13 @@ export const handleBeforeMount = (deps) => {
     .subscribe();
 
   return async () => {
+    unregisterBeforeNavigation();
     projectSubscription.unsubscribe();
     routeSubscription.unsubscribe();
     cleanupRuntimeSubscriptions();
     cleanupBackgroundTransformEditorSubscriptions();
     cancelSceneTextStatsRefresh(store);
     await flushSceneEditorDrafts(deps, { force: true });
-    refreshSceneTextStatsNow(deps, { render: false });
-    await cacheCurrentSceneTextStats(deps);
     await projectService.clearActiveSceneId().catch(() => {});
     await resetSceneEditorRuntime(deps);
   };
@@ -3710,9 +3729,8 @@ export const handlePreviewCurrentLineChanged = (deps, payload) => {
   });
 };
 
-export const handleBackClick = async (deps) => {
+export const handleBackClick = (deps) => {
   const { appService } = deps;
-  await flushSceneEditorDrafts(deps, { force: true });
   const { p } = appService.getPayload();
   appService.navigate("/project/scenes", { p }, { historyMode: "replace" });
 };

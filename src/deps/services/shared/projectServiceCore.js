@@ -145,7 +145,21 @@ export const createProjectServiceCore = ({
 
   const loadSceneOverviews = async ({ sceneIds = [] } = {}) => {
     const repository = await ensureRepository();
-    return repository.loadSceneOverviews({ sceneIds });
+    const [sceneOverviewsById, sceneTextStatsById] = await Promise.all([
+      repository.loadSceneOverviews({ sceneIds }),
+      repository.loadSceneTextStats({ sceneIds }),
+    ]);
+
+    for (const overview of Object.values(sceneOverviewsById)) {
+      delete overview.textStats;
+    }
+    for (const [sceneId, textStats] of Object.entries(sceneTextStatsById)) {
+      if (sceneOverviewsById[sceneId]) {
+        sceneOverviewsById[sceneId].textStats = textStats;
+      }
+    }
+
+    return sceneOverviewsById;
   };
 
   const getSceneOverview = async (sceneId) => {

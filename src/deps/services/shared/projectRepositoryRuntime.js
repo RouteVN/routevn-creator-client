@@ -1483,6 +1483,10 @@ export const createProjectRepositoryRuntime = async ({
       return sceneBundleRuntime.cacheSceneTextStats(payload);
     },
 
+    async loadSceneTextStats(payload = {}) {
+      return sceneBundleRuntime.loadSceneTextStats(payload);
+    },
+
     async addEvent(event) {
       if (!hasLoadedEvents) {
         await ensureEventHistoryLoaded();

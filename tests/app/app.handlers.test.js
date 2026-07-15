@@ -2,9 +2,63 @@ import { JSDOM } from "jsdom";
 import { NEVER } from "rxjs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  createRouteTransitionRunner,
   handleBeforeMount,
   maybePromptLinuxAppImageDesktopIntegration,
 } from "../../src/pages/app/app.handlers.js";
+
+describe("app route transitions", () => {
+  it("awaits page preparation before changing route history", async () => {
+    let finishPreparation;
+    const appService = {
+      prepareNavigation: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finishPreparation = resolve;
+          }),
+      ),
+      redirect: vi.fn(),
+      replace: vi.fn(),
+      getCurrentProjectId: vi.fn(() => ""),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "web"),
+    };
+    const deps = {
+      appService,
+      projectService: {
+        getEnsuredProjectId: vi.fn(() => undefined),
+      },
+      store: {
+        setCurrentRoute: vi.fn(),
+        closeMobileSheet: vi.fn(),
+        setRepositoryLoading: vi.fn(),
+      },
+      render: vi.fn(),
+      i18n: {},
+    };
+    const runRouteTransition = createRouteTransitionRunner(deps);
+
+    const transition = runRouteTransition({
+      path: "/projects",
+      payload: {},
+      historyMode: "push",
+    });
+    await vi.waitFor(() =>
+      expect(appService.prepareNavigation).toHaveBeenCalledOnce(),
+    );
+
+    expect(appService.redirect).not.toHaveBeenCalled();
+    finishPreparation();
+    await transition;
+    expect(appService.redirect).toHaveBeenCalledWith(
+      "/projects",
+      {},
+      {
+        state: undefined,
+      },
+    );
+  });
+});
 
 const createDeps = ({
   distribution = "direct",

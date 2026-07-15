@@ -253,6 +253,56 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     });
   });
 
+  it("merges separately cached text stats into loaded scene overviews", async () => {
+    const textStats = {
+      count: 12,
+      countMode: "word",
+      language: "en",
+    };
+    const repository = {
+      loadSceneOverviews: vi.fn(async () => ({
+        "scene-1": {
+          sceneId: "scene-1",
+          textStats: {
+            count: 99,
+            countMode: "word",
+            language: "en",
+          },
+        },
+      })),
+      loadSceneTextStats: vi.fn(async () => ({
+        "scene-1": textStats,
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await expect(
+      projectService.loadSceneOverviews({ sceneIds: ["scene-1"] }),
+    ).resolves.toEqual({
+      "scene-1": {
+        sceneId: "scene-1",
+        textStats,
+      },
+    });
+  });
+
   it("upgrades old layout schema versions when ensuring the repository", async () => {
     const repository = {
       getState: vi.fn(() => ({
@@ -482,6 +532,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     const repository = {
       getState: vi.fn(() => repositoryState),
       loadSceneOverviews: vi.fn(async () => ({})),
+      loadSceneTextStats: vi.fn(async () => ({})),
     };
     mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
     mocked.repositoryService.getCachedRepository.mockReturnValue(repository);
