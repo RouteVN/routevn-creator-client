@@ -669,58 +669,6 @@ export const handleFilesDropRejected = (deps, payload) => {
   showInvalidFormatToast(appService, copy);
 };
 
-export const handleFormExtraEvent = async (deps) => {
-  const { appService, projectService, store } = deps;
-  const copy = selectCopy(deps);
-  const selectedItem = store.selectSelectedItem();
-  if (!selectedItem) {
-    return;
-  }
-
-  const result = await pickAndUploadImage({ appService, projectService, copy });
-  if (result.cancelled) {
-    return;
-  }
-
-  if (result.errorType === "pick-failed") {
-    showResourcePageError({
-      appService,
-      errorOrResult: result.error,
-      fallbackMessage: copy.failedSelectFile,
-    });
-    return;
-  }
-
-  if (result.errorType === "validation-failed") {
-    return;
-  }
-
-  if (result.errorType === "upload-failed") {
-    appService.showAlert({
-      message: copy.failedUploadImage,
-      title: copy.errorTitle,
-    });
-    return;
-  }
-
-  const { uploadResult } = result;
-  const updateAttempt = await runResourcePageMutation({
-    appService,
-    fallbackMessage: copy.failedUpdateImage,
-    action: () =>
-      projectService.updateImage({
-        imageId: selectedItem.id,
-        fileRecords: uploadResult.fileRecords,
-        data: buildImageResourcePatchFromUploadResult(uploadResult),
-      }),
-  });
-  if (!updateAttempt.ok) {
-    return;
-  }
-
-  await handleDataChanged(deps);
-};
-
 export const handleImageItemPreview = (deps, payload) => {
   const { itemId, source } = payload._event.detail;
   openImagePreviewById({

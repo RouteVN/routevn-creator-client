@@ -95,12 +95,13 @@ const normalizeLayoutCollection = (layoutsValue) => {
 };
 
 const getResourceCollectionsFromDomainState = (domainState) => ({
-  images: domainState?.images || createEmptyCollection(),
+  images: domainState?.images ?? createEmptyCollection(),
+  spritesheets: domainState?.spritesheets ?? createEmptyCollection(),
   layouts: normalizeLayoutCollection(domainState?.layouts),
-  videos: domainState?.videos || createEmptyCollection(),
-  animations: domainState?.animations || createEmptyCollection(),
-  transforms: domainState?.transforms || createEmptyCollection(),
-  colors: domainState?.colors || createEmptyCollection(),
+  videos: domainState?.videos ?? createEmptyCollection(),
+  animations: domainState?.animations ?? createEmptyCollection(),
+  transforms: domainState?.transforms ?? createEmptyCollection(),
+  colors: domainState?.colors ?? createEmptyCollection(),
 });
 
 const getDomainStateFromProjectService = (projectService) => {
@@ -108,13 +109,6 @@ const getDomainStateFromProjectService = (projectService) => {
     return projectService.getDomainState();
   }
   return projectService.getState();
-};
-
-const getDomainStateFromRepository = (repository) => {
-  if (typeof repository?.getDomainState === "function") {
-    return repository.getDomainState();
-  }
-  return repository.getState();
 };
 
 const hasBackgroundInlineTransform = (background = {}) => {
@@ -148,6 +142,13 @@ const buildBackgroundDataFromState = (
   const backgroundData = {
     resourceId: selectedResource?.resourceId,
   };
+
+  if (
+    selectedResource?.resourceType === "spritesheet" &&
+    selectedResource.animationName
+  ) {
+    backgroundData.animationName = selectedResource.animationName;
+  }
 
   if (selectedColorId) {
     backgroundData.colorId = selectedColorId;
@@ -307,6 +308,7 @@ export const handleBeforeMount = (deps) => {
 
   const {
     resourceId,
+    animationName,
     colorId,
     opacity,
     blur,
@@ -322,7 +324,7 @@ export const handleBeforeMount = (deps) => {
   }
 
   if (resourceId) {
-    store.setPendingResourceId({ resourceId: resourceId });
+    store.setPendingResourceId({ resourceId, animationName });
   }
 
   if (opacity !== undefined) {
@@ -396,11 +398,19 @@ export const handleAfterMount = async (deps) => {
 
   await projectService.ensureRepository();
   const domainState = getDomainStateFromProjectService(projectService);
-  const { images, layouts, videos, animations, transforms, colors } =
-    getResourceCollectionsFromDomainState(domainState);
+  const {
+    images,
+    spritesheets,
+    layouts,
+    videos,
+    animations,
+    transforms,
+    colors,
+  } = getResourceCollectionsFromDomainState(domainState);
 
   store.setRepositoryState({
     images,
+    spritesheets,
     layouts,
     videos,
     animations,
@@ -411,16 +421,27 @@ export const handleAfterMount = async (deps) => {
   const pendingResourceId = store.selectPendingResourceId();
   if (pendingResourceId) {
     const flatImages = toFlatItems(images);
+    const flatSpritesheets = toFlatItems(spritesheets);
     const flatLayouts = toFlatItems(layouts);
     const flatVideos = toFlatItems(videos);
 
-    let resourceType = null;
-    let fileId = null;
+    let resourceType;
+    let fileId;
 
     const foundImage = flatImages.find((item) => item.id === pendingResourceId);
     if (foundImage) {
       resourceType = "image";
       fileId = foundImage.fileId;
+    }
+
+    if (!resourceType) {
+      const foundSpritesheet = flatSpritesheets.find(
+        (item) => item.id === pendingResourceId,
+      );
+      if (foundSpritesheet) {
+        resourceType = "spritesheet";
+        fileId = foundSpritesheet.fileId;
+      }
     }
 
     if (!resourceType) {
@@ -447,6 +468,7 @@ export const handleAfterMount = async (deps) => {
       store.setSelectedResource({
         resourceId: pendingResourceId,
         resourceType,
+        animationName: store.selectPendingSpritesheetAnimationName(),
         fileId,
       });
     }
@@ -530,6 +552,33 @@ export const handleImageDoubleClick = (deps, payload) => {
     resourceType: "image",
   });
   store.showFullImagePreview({ imageId });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleSpritesheetSelected = (deps, payload) => {
+  const { store, render } = deps;
+  const { resourceId, animationName } = payload._event.detail;
+
+  store.setTempSelectedResource({
+    resourceId,
+    resourceType: "spritesheet",
+    animationName,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleSpritesheetDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { resourceId, animationName } = payload._event.detail;
+
+  store.setTempSelectedResource({
+    resourceId,
+    resourceType: "spritesheet",
+    animationName,
+  });
+  store.showFullSpritesheetPreview({ resourceId, animationName });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };
@@ -662,11 +711,7 @@ export const handleFormInputChange = (deps, payload) => {
 
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const target = payload._event.currentTarget;
-  const resourceId =
-    target?.dataset?.resourceId ||
-    target?.id?.replace("resourceItem", "") ||
-    "";
+  const resourceId = payload._event.currentTarget.dataset.resourceId;
   const resourceType = store.selectTab();
 
   store.setTempSelectedResource({
@@ -683,8 +728,13 @@ export const handleTabClick = (deps, payload) => {
   store.setTab({
     tab: payload._event.detail.id,
   });
+  store.setTempSelectedResource({
+    resourceId: undefined,
+    resourceType: undefined,
+  });
 
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSearchInput = (deps, payload) => {
@@ -712,14 +762,20 @@ export const handleSubmitClick = (deps, payload) => {
 export const handleFileExplorerClickItem = (deps, payload) => {
   const { refs, store } = deps;
   const tab = store.selectTab();
+  const { itemId } = payload._event.detail;
 
-  // Only scroll to item when on image tab (image selector only exists there)
+  if (tab === "spritesheet") {
+    refs.spritesheetSelector?.transformedHandlers?.handleScrollToItem?.({
+      itemId,
+    });
+    return;
+  }
+
   if (tab !== "image") {
     return;
   }
 
-  const { itemId } = payload._event.detail;
-  const imageSelector = refs["rvnImageSelector"];
+  const imageSelector = refs.rvnImageSelector;
   if (imageSelector?.transformedHandlers?.handleScrollToItem) {
     imageSelector.transformedHandlers.handleScrollToItem({ itemId });
   }
@@ -732,6 +788,8 @@ export const handleBackgroundImageClick = (deps) => {
   if (selectedResource) {
     store.setTempSelectedResource({
       resourceId: selectedResource.resourceId,
+      resourceType: selectedResource.resourceType,
+      animationName: selectedResource.animationName,
     });
   }
 
@@ -760,41 +818,18 @@ export const handleBreadcumbActionsClick = (deps, payload) => {
   }
 };
 
-export const handleButtonSelectClick = async (deps) => {
-  const { store, render, projectService } = deps;
-  const repository = await projectService.getRepository();
-  const domainState = getDomainStateFromRepository(repository);
-  const { images, layouts, videos } =
-    getResourceCollectionsFromDomainState(domainState);
-  const tempSelectedResourceId = store.selectTempSelectedResourceId();
-  const tempSelectedResourceType = store.selectTab();
+export const handleButtonSelectClick = (deps) => {
+  const { store, render } = deps;
+  const tempSelectedResource = store.selectTempSelectedResource();
 
-  if (!tempSelectedResourceId || !tempSelectedResourceType) {
+  if (!tempSelectedResource) {
     return;
   }
 
-  let fileId;
-  const tempSelectedImage = toFlatItems(images).find(
-    (image) => image.id === tempSelectedResourceId,
-  );
-  fileId = tempSelectedImage?.fileId;
-  if (!fileId) {
-    const tempSelectedLayout = toFlatItems(layouts).find(
-      (layout) => layout.id === tempSelectedResourceId,
-    );
-    fileId = tempSelectedLayout?.thumbnailFileId;
-  }
-  if (!fileId) {
-    const tempSelectedVideo = toFlatItems(videos).find(
-      (video) => video.id === tempSelectedResourceId,
-    );
-    fileId = tempSelectedVideo?.fileId;
-  }
-
   store.setSelectedResource({
-    resourceId: tempSelectedResourceId,
-    resourceType: tempSelectedResourceType,
-    fileId: fileId,
+    resourceId: tempSelectedResource.resourceId,
+    resourceType: tempSelectedResource.resourceType,
+    animationName: tempSelectedResource.animationName,
   });
 
   store.setMode({

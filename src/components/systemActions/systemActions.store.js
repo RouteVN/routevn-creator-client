@@ -10,6 +10,10 @@ import {
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
 import {
+  getSpritesheetAnimationPreview,
+  toSpritesheetAnimationSelectionValue,
+} from "../../internal/spritesheets.js";
+import {
   formatCommandLineCopy,
   localizeCommandLineDropdownMenu,
   localizeCommandLineText,
@@ -19,6 +23,7 @@ import {
 export const createInitialState = () => ({
   mode: "actions",
   actions: {},
+  authoredDialogueWasCleared: false,
   isTouchMode: false,
   isActionsDialogOpen: false,
   suppressDialogClose: false,
@@ -124,6 +129,40 @@ const buildColorPreview = (colors, colorId) => {
   };
 };
 
+const buildSpritesheetPreview = (spritesheets, resourceId, animationName) => {
+  const spritesheet = spritesheets?.items?.[resourceId];
+  if (spritesheet?.type !== "spritesheet") {
+    return undefined;
+  }
+
+  const resolvedAnimationName =
+    animationName ?? Object.keys(spritesheet.animations ?? {})[0];
+  const spritesheetPreview = getSpritesheetAnimationPreview(
+    spritesheets,
+    resourceId,
+    resolvedAnimationName,
+  );
+  const selectionValue = toSpritesheetAnimationSelectionValue(
+    resourceId,
+    resolvedAnimationName,
+  );
+
+  return {
+    ...spritesheet,
+    type: "spritesheet",
+    name: resolvedAnimationName
+      ? `${spritesheet.name} / ${resolvedAnimationName}`
+      : spritesheet.name,
+    animationName: resolvedAnimationName,
+    spritesheetFileId: spritesheetPreview.fileId,
+    spritesheetAtlas: spritesheetPreview.atlas,
+    spritesheetAnimation: spritesheetPreview.animation,
+    spritesheetPreviewKey: selectionValue
+      ? `${selectionValue}:${spritesheetPreview.fileId ?? ""}`
+      : undefined,
+  };
+};
+
 const resolveBackgroundPreviewAction = ({ actions, presentationState }) => {
   const actionBackground = isPlainObject(actions.background)
     ? actions.background
@@ -136,32 +175,14 @@ const resolveBackgroundPreviewAction = ({ actions, presentationState }) => {
     return effectiveBackground;
   }
 
-  const previewBackground = { ...actionBackground };
-  const hasAppearanceOnlyChange =
-    Object.hasOwn(actionBackground, "opacity") ||
-    Object.hasOwn(actionBackground, "blur");
-  if (
-    hasAppearanceOnlyChange &&
-    !previewBackground.resourceId &&
-    effectiveBackground?.resourceId
-  ) {
-    previewBackground.resourceId = effectiveBackground.resourceId;
-  }
-  if (
-    hasAppearanceOnlyChange &&
-    !previewBackground.colorId &&
-    effectiveBackground?.colorId
-  ) {
-    previewBackground.colorId = effectiveBackground.colorId;
-  }
-  if (!previewBackground.resourceId && actionBackground.colorId) {
-    previewBackground.resourceId = effectiveBackground?.resourceId;
-  }
-  if (!previewBackground.colorId && actionBackground.resourceId) {
-    previewBackground.colorId = effectiveBackground?.colorId;
+  if (!effectiveBackground) {
+    return actionBackground;
   }
 
-  return previewBackground;
+  return {
+    ...effectiveBackground,
+    ...actionBackground,
+  };
 };
 
 export const selectViewData = ({ state, props, props: attrs, i18n }) => {
@@ -169,6 +190,8 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
   const displayActions = selectDisplayActions({ state });
   const actionProps = { ...props };
   actionProps.actions = selectAction({ state });
+  actionProps.authoredDialogueWasCleared =
+    state.authoredDialogueWasCleared === true;
   const { actions: actionsObject, preview } = selectActionsData({
     props: actionProps,
     state,
@@ -239,6 +262,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     displayActions,
     actions: actionsObject,
+    runtimeAction: actionsObject[state.mode] ?? {},
     preview,
     playingSound: state.playingSound,
     showAudioPlayer: state.showAudioPlayer,
@@ -335,6 +359,13 @@ export const updateActions = ({ state }, payload = {}) => {
   if (previousVoiceResourceId !== nextVoiceResourceId) {
     closeAudioPlayer({ state });
   }
+};
+
+export const setAuthoredDialogueWasCleared = (
+  { state },
+  { authoredDialogueWasCleared } = {},
+) => {
+  state.authoredDialogueWasCleared = authoredDialogueWasCleared === true;
 };
 
 export const showActionsDialog = ({ state }, _payload = {}) => {
@@ -451,6 +482,15 @@ const resolveDialogueActionForPreview = ({
   return authoredDialogue ?? presentationDialogue;
 };
 
+const isDisplayablePresentationDialogue = (dialogue, layoutsItems) => {
+  if (dialogue?.clear === true) {
+    return false;
+  }
+
+  const layoutId = dialogue?.ui?.resourceId ?? dialogue?.gui?.resourceId;
+  return Boolean(layoutsItems?.[layoutId]?.name);
+};
+
 const findSectionReference = (sceneItems = {}, sectionId) => {
   if (typeof sectionId !== "string" || sectionId.length === 0) {
     return {};
@@ -557,6 +597,7 @@ export const selectActionsData = ({ props, state, copy }) => {
   // Layouts: need full tree structure for toFlatItems() to search through nested folders
   const layoutsHierarchy = repositoryStateData.layouts || {};
   const layoutsItems = layoutsHierarchy.items || {};
+  const spritesheets = repositoryStateData.spritesheets ?? {};
   const controlsItems = repositoryStateData.controls?.items || {};
   const sceneItems = scenes.items || {};
 
@@ -572,6 +613,11 @@ export const selectActionsData = ({ props, state, copy }) => {
     const backgroundImage = images[backgroundAction.resourceId];
     const backgroundVideo = videos[backgroundAction.resourceId];
     const backgroundLayout = layoutsItems[backgroundAction.resourceId];
+    const backgroundSpritesheet = buildSpritesheetPreview(
+      spritesheets,
+      backgroundAction.resourceId,
+      backgroundAction.animationName,
+    );
     const colorPreview = buildColorPreview(colors, backgroundAction.colorId);
     actionsObject.background = backgroundAction;
     if (backgroundImage) {
@@ -579,6 +625,11 @@ export const selectActionsData = ({ props, state, copy }) => {
         ...backgroundImage,
         ...colorPreview,
         type: "image",
+      };
+    } else if (backgroundSpritesheet) {
+      preview.background = {
+        ...backgroundSpritesheet,
+        ...colorPreview,
       };
     } else if (backgroundVideo) {
       preview.background = {
@@ -913,8 +964,18 @@ export const selectActionsData = ({ props, state, copy }) => {
     presentationState,
     props,
   });
+  const authoredDialogueWasCleared =
+    props.actionType === "presentation" &&
+    (props.authoredDialogueWasCleared === true ||
+      props.actions?.dialogue?.clear === true);
 
-  if (dialogueAction) {
+  const shouldShowDialogue =
+    dialogueAction &&
+    !authoredDialogueWasCleared &&
+    (props.actionType !== "presentation" ||
+      isDisplayablePresentationDialogue(dialogueAction, layoutsItems));
+
+  if (shouldShowDialogue) {
     actionsObject.dialogue = dialogueAction;
     const authoredDialogue = isPlainObject(actions.dialogue)
       ? actions.dialogue
@@ -1121,20 +1182,53 @@ export const selectActionsData = ({ props, state, copy }) => {
   }
 
   // Visual
-  if (presentationState.visual?.items) {
-    actionsObject.visual = presentationState.visual;
+  const visualAction = isPlainObject(presentationState.visual)
+    ? presentationState.visual
+    : isPlainObject(actions.visual)
+      ? actions.visual
+      : undefined;
+  if (Array.isArray(visualAction?.items)) {
+    actionsObject.visual = visualAction;
     preview.visual = {
-      count: presentationState.visual.items.length,
-      items: presentationState.visual.items.map((item) => {
+      count: visualAction.items.length,
+      items: visualAction.items.map((item) => {
         const imageData = images[item.resourceId];
+        const spritesheetData = spritesheets.items?.[item.resourceId];
         const videoData = videos[item.resourceId];
         const layoutData = layoutsItems[item.resourceId];
-        const resource = imageData || videoData || layoutData;
+        const resourcesByType = {
+          image: imageData,
+          spritesheet: spritesheetData,
+          video: videoData,
+          layout: layoutData,
+        };
+        const resourceType = resourcesByType[item.resourceType]
+          ? item.resourceType
+          : imageData
+            ? "image"
+            : spritesheetData
+              ? "spritesheet"
+              : videoData
+                ? "video"
+                : "layout";
+        const resource = resourcesByType[resourceType];
+        const spritesheetPreview =
+          resourceType === "spritesheet"
+            ? buildSpritesheetPreview(
+                spritesheets,
+                item.resourceId,
+                item.animationName,
+              )
+            : undefined;
         return {
           ...item,
           resource,
-          previewFileId: resource?.thumbnailFileId || resource?.fileId,
-          resourceType: imageData ? "image" : videoData ? "video" : "layout",
+          previewFileId: resource?.thumbnailFileId ?? resource?.fileId,
+          resourceType,
+          spritesheetFileId: spritesheetPreview?.spritesheetFileId,
+          spritesheetAtlas: spritesheetPreview?.spritesheetAtlas,
+          spritesheetAnimation: spritesheetPreview?.spritesheetAnimation,
+          spritesheetPreviewKey: spritesheetPreview?.spritesheetPreviewKey,
         };
       }),
     };

@@ -87,6 +87,10 @@ const buildVisualItem = (visual = {}) => {
     item.resourceType = visual.resourceType;
   }
 
+  if (visual.resourceType === "spritesheet" && visual.animationName) {
+    item.animationName = visual.animationName;
+  }
+
   if (visual.opacity !== undefined) {
     item.opacity = visual.opacity;
   }
@@ -116,13 +120,14 @@ const buildVisualItemsFromState = (
 
   const tempSelectedResourceId = store.selectTempSelectedResourceId?.();
   const tempSelectedResourceType = store.selectTempSelectedResourceType?.();
+  const tempSelectedAnimationName = store.selectTempSelectedAnimationName();
   if (!tempSelectedResourceId || !tempSelectedResourceType) {
     return orderVisualItemsForSave(visualItems);
   }
 
   const selectedVisualIndex = store.selectSelectedVisualIndex?.();
   if (selectedVisualIndex === -1) {
-    visualItems.push({
+    const temporaryVisual = {
       id: getTemporaryVisualPreviewId({
         resourceType: tempSelectedResourceType,
       }),
@@ -132,7 +137,14 @@ const buildVisualItemsFromState = (
         store.selectPendingVisualTransformId?.() ??
         store.selectDefaultTransformId?.(),
       layer: store.selectPendingVisualLayer?.(),
-    });
+    };
+    if (
+      tempSelectedResourceType === "spritesheet" &&
+      tempSelectedAnimationName
+    ) {
+      temporaryVisual.animationName = tempSelectedAnimationName;
+    }
+    visualItems.push(temporaryVisual);
     return orderVisualItemsForSave(visualItems);
   }
 
@@ -151,6 +163,14 @@ const buildVisualItemsFromState = (
         visualId: currentVisualItem.id,
         resourceType: tempSelectedResourceType,
       });
+    }
+    if (
+      tempSelectedResourceType === "spritesheet" &&
+      tempSelectedAnimationName
+    ) {
+      nextVisualItem.animationName = tempSelectedAnimationName;
+    } else {
+      delete nextVisualItem.animationName;
     }
 
     visualItems[selectedVisualIndex] = {
@@ -193,23 +213,26 @@ const dispatchTemporaryPresentationStateChange = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
-  const { animations, images, videos, layouts, transforms } =
+  const { animations, images, spritesheets, videos, layouts, transforms } =
     projectService.getState();
 
   store.setImages({
-    images: images || { tree: [], items: {} },
+    images: images ?? { tree: [], items: {} },
+  });
+  store.setSpritesheets({
+    spritesheets: spritesheets ?? { tree: [], items: {} },
   });
   store.setVideos({
-    videos: videos || { tree: [], items: {} },
+    videos: videos ?? { tree: [], items: {} },
   });
   store.setLayouts({
-    layouts: layouts || { tree: [], items: {} },
+    layouts: layouts ?? { tree: [], items: {} },
   });
   store.setTransforms({
-    transforms: transforms || { tree: [], items: {} },
+    transforms: transforms ?? { tree: [], items: {} },
   });
   store.setAnimations({
-    animations: animations || { tree: [], items: {} },
+    animations: animations ?? { tree: [], items: {} },
   });
 
   // Use presentationState if available, otherwise fall back to visual prop
@@ -436,6 +459,13 @@ export const handleFileExplorerItemClick = (deps, payload) => {
     itemId,
   });
 
+  if (resourceType === "spritesheet") {
+    refs.spritesheetSelector?.transformedHandlers?.handleScrollToItem?.({
+      itemId: resourceId,
+    });
+    return;
+  }
+
   if (isFolder) {
     const groupElement = refs.galleryScroll?.querySelector(
       `[data-group-id="${itemId}"]`,
@@ -490,6 +520,33 @@ export const handleResourceItemDoubleClick = (deps, payload) => {
 
   store.setTempSelectedResourceId({ resourceId, resourceType });
   store.showFullImagePreview({ fileId: item.previewFileId });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleSpritesheetSelected = (deps, payload) => {
+  const { store, render } = deps;
+  const { resourceId, animationName } = payload._event.detail;
+
+  store.setTempSelectedResourceId({
+    resourceId,
+    resourceType: "spritesheet",
+    animationName,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleSpritesheetDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { resourceId, animationName } = payload._event.detail;
+
+  store.setTempSelectedResourceId({
+    resourceId,
+    resourceType: "spritesheet",
+    animationName,
+  });
+  store.showFullSpritesheetPreview({ resourceId, animationName });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };
@@ -590,6 +647,7 @@ export const handleButtonSelectClick = (deps) => {
   const selectedVisualIndex = store.selectSelectedVisualIndex();
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
   const tempSelectedResourceType = store.selectTempSelectedResourceType();
+  const tempSelectedAnimationName = store.selectTempSelectedAnimationName();
 
   if (mode === "resource-select") {
     if (!tempSelectedResourceId || !tempSelectedResourceType) {
@@ -605,6 +663,7 @@ export const handleButtonSelectClick = (deps) => {
       store.addVisual({
         resourceId: tempSelectedResourceId,
         resourceType: tempSelectedResourceType,
+        animationName: tempSelectedAnimationName,
         transformId:
           store.selectPendingVisualTransformId?.() ??
           store.selectDefaultTransformId?.(),
@@ -617,6 +676,7 @@ export const handleButtonSelectClick = (deps) => {
         index: selectedVisualIndex,
         resourceId: tempSelectedResourceId,
         resourceType: tempSelectedResourceType,
+        animationName: tempSelectedAnimationName,
       });
     }
 

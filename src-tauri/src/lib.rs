@@ -1,12 +1,14 @@
 #[cfg(debug_assertions)]
 use tauri::Manager;
 
+mod export_macos;
 mod export_windows;
 mod export_zip;
 mod linux_desktop_integration;
 mod project_file_protocol;
 mod project_media_server;
 mod static_web_server;
+mod windows_system_menu;
 
 #[cfg(target_os = "linux")]
 fn configure_linux_graphics_workarounds() {
@@ -50,6 +52,8 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_persisted_scope::init())
         .invoke_handler(tauri::generate_handler![
+            export_macos::export_macos_application,
+            export_macos::get_macos_export_host_capabilities,
             export_zip::create_distribution_zip_streamed,
             export_windows::export_windows_installer,
             export_windows::export_windows_installer_from_project,
@@ -62,7 +66,8 @@ pub fn run() {
             project_media_server::get_project_media_server_origin,
             static_web_server::start_static_web_server,
             static_web_server::stop_static_web_server,
-            static_web_server::list_static_web_servers
+            static_web_server::list_static_web_servers,
+            windows_system_menu::show_windows_system_menu
         ])
         .setup(|_app| {
             #[cfg(debug_assertions)]

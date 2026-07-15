@@ -2,12 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleCancelCustomTransformEditor,
   handleBeforeMount,
+  handleButtonSelectClick,
   handleCustomTransformButtonClick,
   handleCustomTransformDoneButtonClick,
   handleGetBackgroundTransformPreviewCanvasRoot,
   handleFormInputChange,
   handleResourceItemClick,
+  handleSpritesheetSelected,
   handleSubmitClick,
+  handleTabClick,
 } from "../../src/components/commandLineBackground/commandLineBackground.handlers.js";
 import {
   createInitialState,
@@ -17,6 +20,7 @@ import {
   selectCustomTransformEditorOpen,
   selectMode,
   selectPendingResourceId,
+  selectPendingSpritesheetAnimationName,
   selectSelectedAnimation,
   selectSelectedAnimationPlaybackContinuity,
   selectSelectedAnimationMode,
@@ -35,6 +39,7 @@ import {
   setCustomTransform,
   setCustomTransformEnabled,
   setMode,
+  setPendingResourceId,
   setRepositoryState,
   setSearchQuery,
   setSelectedAnimation,
@@ -65,6 +70,8 @@ const createStoreApi = (state) => ({
     selectCustomTransformEditorOpen({ state }),
   selectMode: () => selectMode({ state }),
   selectPendingResourceId: () => selectPendingResourceId({ state }),
+  selectPendingSpritesheetAnimationName: () =>
+    selectPendingSpritesheetAnimationName({ state }),
   selectSelectedAnimation: () => selectSelectedAnimation({ state }),
   selectSelectedAnimationPlaybackContinuity: () =>
     selectSelectedAnimationPlaybackContinuity({ state }),
@@ -88,9 +95,7 @@ const createStoreApi = (state) => ({
   setCustomTransformEnabled: (payload) =>
     setCustomTransformEnabled({ state }, payload),
   setMode: (payload) => setMode({ state }, payload),
-  setPendingResourceId: ({ resourceId }) => {
-    state.pendingResourceId = resourceId;
-  },
+  setPendingResourceId: (payload) => setPendingResourceId({ state }, payload),
   setSearchQuery: (payload) => setSearchQuery({ state }, payload),
   setSelectedAnimation: (payload) => setSelectedAnimation({ state }, payload),
   setSelectedAnimationPlaybackContinuity: (payload) =>
@@ -125,6 +130,30 @@ const setRepositoryCollections = (state) => {
           },
         },
         tree: [{ id: "bg-school" }],
+      },
+      spritesheets: {
+        items: {
+          "bg-spritesheet": {
+            id: "bg-spritesheet",
+            type: "spritesheet",
+            name: "Forest",
+            fileId: "file-forest-spritesheet",
+            jsonData: {
+              frames: {
+                "wind-0": {
+                  frame: { x: 0, y: 0, w: 128, h: 72 },
+                },
+              },
+            },
+            animations: {
+              wind: {
+                frames: ["wind-0"],
+                fps: 10,
+              },
+            },
+          },
+        },
+        tree: [{ id: "bg-spritesheet" }],
       },
       layouts: createEmptyCollection(),
       videos: createEmptyCollection(),
@@ -204,6 +233,23 @@ describe("commandLineBackground.handlers", () => {
     expect(selectSelectedAnimation({ state })).toBe("bg-fade");
     expect(selectSelectedAnimationPlaybackContinuity({ state })).toBe("render");
     expect(selectBackgroundLoop({ state })).toBe(true);
+  });
+
+  it("hydrates an existing spritesheet animation before repository setup", () => {
+    const state = createInitialState();
+
+    handleBeforeMount({
+      store: createStoreApi(state),
+      props: {
+        background: {
+          resourceId: "bg-spritesheet",
+          animationName: "wind",
+        },
+      },
+    });
+
+    expect(selectPendingResourceId({ state })).toBe("bg-spritesheet");
+    expect(selectPendingSpritesheetAnimationName({ state })).toBe("wind");
   });
 
   it("hydrates existing inline custom transform state before mount", () => {
@@ -933,6 +979,109 @@ describe("commandLineBackground.handlers", () => {
         },
       },
     });
+  });
+
+  it("includes spritesheet animation names in preview and submitted backgrounds", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setRepositoryCollections(state);
+    setMode({ state }, { mode: "gallery" });
+
+    handleSpritesheetSelected(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            resourceId: "bg-spritesheet",
+            animationName: "wind",
+          },
+        },
+      },
+    );
+
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-spritesheet",
+          animationName: "wind",
+        },
+      },
+    });
+
+    handleButtonSelectClick({ store, render, dispatchEvent });
+    handleSubmitClick({ store, dispatchEvent }, {});
+
+    expect(selectSelectedResource({ state })).toMatchObject({
+      resourceId: "bg-spritesheet",
+      resourceType: "spritesheet",
+      animationName: "wind",
+    });
+    expect(dispatchEvent.mock.calls[2][0].detail).toEqual({
+      background: {
+        resourceId: "bg-spritesheet",
+        animationName: "wind",
+      },
+    });
+  });
+
+  it("restores the selected background preview when a tab change clears the temporary resource", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setRepositoryCollections(state);
+    setMode({ state }, { mode: "gallery" });
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+
+    handleSpritesheetSelected(
+      { store, render, dispatchEvent },
+      {
+        _event: {
+          detail: {
+            resourceId: "bg-spritesheet",
+            animationName: "wind",
+          },
+        },
+      },
+    );
+    dispatchEvent.mockClear();
+    render.mockClear();
+
+    handleTabClick(
+      { store, render, dispatchEvent },
+      {
+        _event: {
+          detail: {
+            id: "image",
+          },
+        },
+      },
+    );
+
+    expect(selectTempSelectedResource({ state })).toBeNull();
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+        },
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(1);
   });
 
   it("submits playback continuity inside background animations", () => {

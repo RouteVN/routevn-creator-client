@@ -16,7 +16,23 @@ describe("normalizeLineActions", () => {
     });
   });
 
-  it("removes stale dialogue clear when dialogue data is present", () => {
+  it("keeps dialogue clear while editable content is present", () => {
+    expect(
+      normalizeLineActions({
+        dialogue: {
+          clear: true,
+          content: [{ text: "Keep writing" }],
+        },
+      }),
+    ).toEqual({
+      dialogue: {
+        clear: true,
+        content: [{ text: "Keep writing" }],
+      },
+    });
+  });
+
+  it("removes stale dialogue clear when presentation data is present", () => {
     expect(
       normalizeLineActions({
         dialogue: {

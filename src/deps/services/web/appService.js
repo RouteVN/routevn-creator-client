@@ -1,6 +1,7 @@
 import { createAppServiceCore } from "../shared/appServiceCore.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
+import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 
 export const createAppService = (params) => {
   const platformAdapter = {
@@ -53,6 +54,7 @@ export const createAppService = (params) => {
     }) => {
       const projectId = generateId();
       const namespace = generateId();
+      const nativeApplicationIdentifier = createNativeApplicationIdentifier();
       let iconFileId = null;
       if (iconFile) {
         const storedIcon = await projectService.storeFileForProject({
@@ -78,6 +80,7 @@ export const createAppService = (params) => {
         projectInfo: {
           id: projectId,
           namespace,
+          nativeApplicationIdentifier,
           name,
           description,
           iconFileId,

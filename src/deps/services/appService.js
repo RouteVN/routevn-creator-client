@@ -5,6 +5,8 @@ import { createAppServiceCore } from "./shared/appServiceCore.js";
 import { generateId } from "../../internal/id.js";
 import { assertSafeProjectFileId } from "../../internal/projectFileIds.js";
 import { copyTextToClipboard } from "../../internal/copyText.js";
+import { createNativeApplicationIdentifier } from "../../internal/nativeApplicationIdentifier.js";
+import { createProgressDialog } from "../clients/progressDialog.js";
 
 const deriveProjectNameFromPath = (projectPath) => {
   if (typeof projectPath !== "string" || projectPath.length === 0) {
@@ -149,6 +151,7 @@ export const createAppService = (params) => {
       let iconFileId = null;
       const projectId = generateId();
       const namespace = generateId();
+      const nativeApplicationIdentifier = createNativeApplicationIdentifier();
       const projectEntry = {
         id: projectId,
         projectPath,
@@ -167,6 +170,7 @@ export const createAppService = (params) => {
         projectInfo: {
           id: projectId,
           namespace,
+          nativeApplicationIdentifier,
           name,
           description,
           iconFileId: null,
@@ -241,6 +245,10 @@ export const createAppService = (params) => {
 
   return {
     ...appService,
+
+    showProgressDialog(options) {
+      return createProgressDialog(options);
+    },
 
     copyText(value) {
       return copyTextToClipboard(value);

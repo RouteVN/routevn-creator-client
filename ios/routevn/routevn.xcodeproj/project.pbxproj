@@ -256,7 +256,7 @@
 				INFOPLIST_FILE = routevn/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				MARKETING_VERSION = 1.8.1;
+				MARKETING_VERSION = 1.8.2;
 				OTHER_LDFLAGS = "-lsqlite3";
 				PRODUCT_BUNDLE_IDENTIFIER = com.routevn.creator;
 				PRODUCT_NAME = routevn;
@@ -279,7 +279,7 @@
 				INFOPLIST_FILE = routevn/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				MARKETING_VERSION = 1.8.1;
+				MARKETING_VERSION = 1.8.2;
 				OTHER_LDFLAGS = "-lsqlite3";
 				PRODUCT_BUNDLE_IDENTIFIER = com.routevn.creator;
 				PRODUCT_NAME = routevn;

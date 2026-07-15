@@ -3,6 +3,16 @@ import {
   createRuntimeActionSubmitDetail,
 } from "../../internal/runtimeActions.js";
 
+const syncFormValues = (deps) => {
+  const { refs, store } = deps;
+  const { mode, action } = store.selectSubmitData();
+
+  refs.form.reset();
+  refs.form.setValues({
+    values: createRuntimeActionDefaultValues(mode, action),
+  });
+};
+
 export const handleBeforeMount = (deps) => {
   const { props, store } = deps;
   store.setMode({ mode: props?.mode });
@@ -10,6 +20,10 @@ export const handleBeforeMount = (deps) => {
   store.setFormValues({
     values: undefined,
   });
+};
+
+export const handleAfterMount = (deps) => {
+  syncFormValues(deps);
 };
 
 export const handleOnUpdate = (deps, payload) => {
@@ -22,6 +36,7 @@ export const handleOnUpdate = (deps, payload) => {
     values: undefined,
   });
   render();
+  syncFormValues(deps);
 };
 
 export const handleFormChange = (deps, payload) => {

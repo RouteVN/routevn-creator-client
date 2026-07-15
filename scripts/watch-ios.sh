@@ -3,7 +3,14 @@
 set -e
 
 PORT="3001"
-RETTANGOLI_VERSION=$(node -p "require('./package.json').dependencies['@rettangoli/ui']" 2>/dev/null || echo "1.8.2")
+RETTANGOLI_VERSION=$(node -e '
+const version = require("./package.json").dependencies?.["@rettangoli/ui"];
+if (!version) {
+  console.error("Error: @rettangoli/ui is missing from package.json dependencies.");
+  process.exit(1);
+}
+process.stdout.write(version);
+')
 RETTANGOLI_VERSION="${RETTANGOLI_VERSION#^}"
 RETTANGOLI_VERSION="${RETTANGOLI_VERSION#~}"
 

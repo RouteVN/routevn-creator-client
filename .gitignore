@@ -11,6 +11,7 @@ vt/static/public/main.js.map
 static/public/rtgl-icons.js
 static/public/@rettangoli
 static/bundle/main.js
+static/bundle/player-runtime-persistence-host.js
 /task
 /keys
 /temp

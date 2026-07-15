@@ -18,12 +18,19 @@ const normalizeVolume = (volume, fallback = DEFAULT_AUDIO_VOLUME) => {
   return Math.max(0, Math.min(100, Math.round(nextVolume)));
 };
 
-const normalizeBgm = (bgm = {}) => ({
-  resourceId: bgm?.resourceId,
-  loop: bgm?.loop ?? true,
-  volume: normalizeVolume(bgm?.volume),
-  startDelayMs: bgm?.startDelayMs,
-});
+const normalizeBgm = (bgm = {}) => {
+  const normalizedBgm = {
+    loop: bgm?.loop ?? true,
+    volume: normalizeVolume(bgm?.volume),
+  };
+  if (bgm?.resourceId !== undefined) {
+    normalizedBgm.resourceId = bgm.resourceId;
+  }
+  if (bgm?.startDelayMs !== undefined) {
+    normalizedBgm.startDelayMs = bgm.startDelayMs;
+  }
+  return normalizedBgm;
+};
 
 const form = {
   fields: [
@@ -67,14 +74,15 @@ export const createInitialState = () => ({
 });
 
 export const setBgmAudio = ({ state }, { resourceId } = {}) => {
-  state.bgm = {
-    ...normalizeBgm(state.bgm),
-    resourceId,
-  };
+  const bgm = normalizeBgm(state.bgm);
+  if (resourceId !== undefined) {
+    bgm.resourceId = resourceId;
+  }
+  state.bgm = bgm;
 };
 
 export const clearBgmAudio = ({ state }, _payload = {}) => {
-  state.bgm.resourceId = undefined;
+  delete state.bgm.resourceId;
   state.tempSelectedResourceId = undefined;
 };
 

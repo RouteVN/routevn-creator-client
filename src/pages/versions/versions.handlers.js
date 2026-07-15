@@ -8,6 +8,8 @@ import {
 } from "../../internal/project/projection.js";
 import { createBundleInstructions } from "../../deps/services/shared/projectExportService.js";
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
+import { createMacosNativeVersion } from "../../internal/nativeApplicationVersion.js";
+import { isVisualTestMode } from "../../internal/visualTestMode.js";
 
 const getVersionDescription = (version) => {
   return version?.description ?? version?.notes ?? "";
@@ -59,6 +61,35 @@ const refreshWindowsExportAvailability = async (deps) => {
         templateAvailable: false,
         installerHostSupported: false,
         installerToolAvailable: false,
+      },
+    });
+  }
+};
+
+const refreshMacosExportAvailability = async (deps) => {
+  const { store, projectService, appService } = deps;
+
+  if (appService.getPlatform() !== "tauri") {
+    store.setMacosExportAvailability({
+      availability: {
+        application: false,
+        templateAvailable: false,
+        hostSupported: false,
+      },
+    });
+    return;
+  }
+
+  try {
+    store.setMacosExportAvailability({
+      availability: await projectService.getMacosExportAvailability(),
+    });
+  } catch {
+    store.setMacosExportAvailability({
+      availability: {
+        application: false,
+        templateAvailable: false,
+        hostSupported: false,
       },
     });
   }
@@ -126,6 +157,8 @@ const UNKNOWN_ERROR_MESSAGE =
   "Unknown error. Check the developer console for details.";
 const WINDOWS_EXPORT_COMMAND_RESTART_MESSAGE =
   "The running Tauri shell does not include Windows export commands. Restart the Tauri dev process so the native shell rebuilds.";
+const MACOS_EXPORT_COMMAND_RESTART_MESSAGE =
+  "The running Tauri shell does not include the macOS export command. Restart the Tauri dev process so the native shell rebuilds.";
 
 const getErrorMessage = (error, fallback = UNKNOWN_ERROR_MESSAGE) => {
   if (typeof error === "string") {
@@ -158,6 +191,52 @@ const getWindowsExportErrorMessage = (error) => {
   }
 
   return message;
+};
+
+const getMacosExportErrorMessage = (error) => {
+  const message = getErrorMessage(error);
+  if (
+    /^Command (get_macos_export_host_capabilities|export_macos_application) not found$/.test(
+      message,
+    )
+  ) {
+    return `${message}. ${MACOS_EXPORT_COMMAND_RESTART_MESSAGE}`;
+  }
+  return message;
+};
+
+const getMacosExportUnavailableMessage = (availability = {}) => {
+  if (!availability.hostSupported) {
+    return "macOS application export is supported only on macOS.";
+  }
+
+  if (availability.capabilityCheckError) {
+    return getMacosExportErrorMessage(availability.capabilityCheckError);
+  }
+
+  if (availability.templateCheckError) {
+    return `Unable to verify the bundled macOS player template: ${availability.templateCheckError}`;
+  }
+
+  if (!availability.templateAvailable) {
+    return "The macOS player template is not bundled with this Creator build.";
+  }
+
+  const missingTools = [
+    ["ditto", availability.dittoAvailable],
+    ["codesign", availability.codesignAvailable],
+    ["sips", availability.sipsAvailable],
+    ["iconutil", availability.iconutilAvailable],
+    ["lipo", availability.lipoAvailable],
+  ]
+    .filter(([, available]) => !available)
+    .map(([name]) => name);
+
+  if (missingTools.length > 0) {
+    return `macOS application export requires these system tools: ${missingTools.join(", ")}.`;
+  }
+
+  return "macOS application export is not available in this Creator build.";
 };
 
 const formatWindowsExportErrorCopy = ({ template, error }) =>
@@ -294,10 +373,14 @@ export const handleBeforeMount = (deps) => {
   const { appService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
   store.setPlatform({ platform: appService.getPlatform() });
+  store.setVisualTestMode({ enabled: isVisualTestMode() });
 };
 
 export const handleAfterMount = async (deps) => {
-  await refreshWindowsExportAvailability(deps);
+  await Promise.all([
+    refreshWindowsExportAvailability(deps),
+    refreshMacosExportAvailability(deps),
+  ]);
   await refreshVersionsData(deps);
 };
 
@@ -644,10 +727,11 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
     return;
   }
 
-  appService.showAlert({
+  const progressDialog = appService.showProgressDialog({
     message:
       copy.windowsExecutableInProgressMessage ??
       "Please wait while the Windows executable is being created...",
+    status: copy.windowsExecutableProgressStatus ?? "Creating executable...",
     title:
       copy.windowsExecutableInProgressTitle ?? "Windows export in progress",
   });
@@ -672,6 +756,7 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
     );
     const savedPath = result?.outputPath ?? outputPath;
 
+    progressDialog.close();
     appService.showAlert({
       message: formatI18nCopy(
         copy.windowsExecutableExportCompletedMessage ??
@@ -681,6 +766,7 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
       title: copy.exportCompletedTitle ?? "Export completed",
     });
   } catch (error) {
+    progressDialog.close();
     const replay = error?.details?.replay;
 
     logWindowsExportError({
@@ -778,10 +864,11 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
     return;
   }
 
-  appService.showAlert({
+  const progressDialog = appService.showProgressDialog({
     message:
       copy.windowsInstallerInProgressMessage ??
       "Please wait while the Windows installer is being created...",
+    status: copy.windowsInstallerProgressStatus ?? "Creating installer...",
     title: copy.windowsInstallerInProgressTitle ?? "Windows installer export",
   });
 
@@ -805,6 +892,7 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
     );
     const savedPath = result?.outputPath ?? outputPath;
 
+    progressDialog.close();
     appService.showAlert({
       message: formatI18nCopy(
         copy.windowsInstallerExportCompletedMessage ??
@@ -814,6 +902,7 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
       title: copy.exportCompletedTitle ?? "Export completed",
     });
   } catch (error) {
+    progressDialog.close();
     const replay = error?.details?.replay;
 
     logWindowsExportError({
@@ -835,6 +924,156 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
               "Failed to save Windows installer: {message}",
             error,
           }),
+      title: copy.errorTitle ?? "Error",
+    });
+  }
+};
+
+export const handleDownloadMacosApplicationClick = async (deps, payload) => {
+  const { store, render, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  payload._event.stopPropagation();
+
+  const projectId = appService.getPayload().p ?? "";
+  const versionId = resolveVersionIdFromPayload(payload);
+  const version = store.selectVersion(versionId);
+  if (!version) {
+    appService.showAlert({
+      message: copy.versionNotFound ?? "Version not found.",
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  store.closeDropdownMenu();
+  store.setSelectedItemId({ itemId: versionId });
+  render();
+
+  let availability;
+  try {
+    availability = await projectService.getMacosExportAvailability();
+  } catch (error) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedSaveMacosApplication ??
+          "Failed to save macOS application: {message}",
+        { message: getMacosExportErrorMessage(error) },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  if (!availability.application) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedSaveMacosApplication ??
+          "Failed to save macOS application: {message}",
+        { message: getMacosExportUnavailableMessage(availability) },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  let nativeVersion;
+  try {
+    nativeVersion = createMacosNativeVersion(version.actionIndex);
+  } catch (error) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedSaveMacosApplication ??
+          "Failed to save macOS application: {message}",
+        { message: getMacosExportErrorMessage(error) },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  const applicationName = getVersionZipName({
+    appService,
+    projectId,
+    version,
+  });
+  let outputPath;
+  try {
+    outputPath =
+      await projectService.promptMacosApplicationPath(applicationName);
+  } catch (error) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedOpenSaveDialog ?? "Failed to open save dialog: {message}",
+        { message: getMacosExportErrorMessage(error) },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  if (outputPath === null) {
+    appService.closeAll();
+    return;
+  }
+
+  const progressDialog = appService.showProgressDialog({
+    message:
+      copy.macosApplicationInProgressMessage ??
+      "Please wait while the macOS application is being created...",
+    title: copy.macosApplicationInProgressTitle ?? "macOS export in progress",
+  });
+
+  try {
+    const { projectInfo, transformedData, fileEntries } =
+      await createVersionExportData({
+        appService,
+        projectService,
+        version,
+      });
+    const result = await projectService.createMacosApplicationToPath(
+      transformedData,
+      fileEntries,
+      outputPath,
+      {
+        title: getProjectExportTitle({ projectInfo }),
+        shortVersion: nativeVersion.shortVersion,
+        bundleVersion: nativeVersion.bundleVersion,
+        applicationIdentifier: projectInfo.nativeApplicationIdentifier,
+        iconFileId: projectInfo.iconFileId,
+      },
+    );
+    const savedPath = result?.outputPath ?? outputPath;
+    progressDialog.close();
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.macosApplicationExportCompletedMessage ??
+          "macOS application export completed.\nSaved to: {path}",
+        { path: savedPath },
+      ),
+      title: copy.exportCompletedTitle ?? "Export completed",
+    });
+  } catch (error) {
+    progressDialog.close();
+    const replay = error?.details?.replay;
+    console.error("Version macOS application export failed", {
+      errorMessage: getMacosExportErrorMessage(error),
+      versionId,
+      versionName: version.name,
+      versionActionIndex: version.actionIndex,
+      outputPath,
+      shortVersion: nativeVersion.shortVersion,
+      bundleVersion: nativeVersion.bundleVersion,
+      replay,
+      error,
+    });
+    appService.showAlert({
+      message: replay
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error)}`
+        : formatI18nCopy(
+            copy.failedSaveMacosApplication ??
+              "Failed to save macOS application: {message}",
+            { message: getMacosExportErrorMessage(error) },
+          ),
       title: copy.errorTitle ?? "Error",
     });
   }

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  selectSelectedResource,
   selectSelectedBlurActionValue,
-  selectViewData,
+  selectTempSelectedResource,
+  selectViewData as selectViewDataBase,
   setRepositoryState,
   setCustomTransform,
   setCustomTransformEnabled,
@@ -10,8 +12,18 @@ import {
   setSelectedBlur,
   setSelectedOpacity,
   setSelectedResource,
+  setTempSelectedResource,
   setSelectedTransform,
 } from "../../src/components/commandLineBackground/commandLineBackground.store.js";
+
+const TEST_I18N = {
+  resourcePages: {},
+  sceneEditorPage: {},
+  commandLinePage: {},
+};
+
+const selectViewData = (deps) =>
+  selectViewDataBase({ ...deps, i18n: TEST_I18N });
 
 const createEmptyCollection = () => ({
   items: {},
@@ -461,5 +473,84 @@ describe("commandLineBackground.store", () => {
         rotation: "8.00",
       },
     });
+  });
+
+  it("selects a spritesheet animation and exposes its animated preview", () => {
+    const state = createInitialState();
+    const spritesheets = {
+      items: {
+        "bg-spritesheet": {
+          id: "bg-spritesheet",
+          type: "spritesheet",
+          name: "Forest",
+          fileId: "file-forest-spritesheet",
+          jsonData: {
+            frames: {
+              "wind-0": {
+                frame: { x: 0, y: 0, w: 128, h: 72 },
+              },
+            },
+          },
+          animations: {
+            wind: {
+              frames: ["wind-0"],
+              fps: 10,
+            },
+          },
+        },
+      },
+      tree: [{ id: "bg-spritesheet" }],
+    };
+
+    setRepositoryState(
+      { state },
+      {
+        images: createEmptyCollection(),
+        spritesheets,
+        layouts: createEmptyCollection(),
+        videos: createEmptyCollection(),
+        animations: createEmptyCollection(),
+        transforms: createEmptyCollection(),
+        colors: createEmptyCollection(),
+      },
+    );
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-spritesheet",
+        resourceType: "spritesheet",
+        animationName: "wind",
+      },
+    );
+    setTempSelectedResource(
+      { state },
+      {
+        resourceId: "bg-spritesheet",
+        resourceType: "spritesheet",
+        animationName: "wind",
+      },
+    );
+
+    expect(selectSelectedResource({ state })).toMatchObject({
+      resourceId: "bg-spritesheet",
+      resourceType: "spritesheet",
+      animationName: "wind",
+      name: "Forest / wind",
+      fileId: "file-forest-spritesheet",
+      spritesheetAnimation: {
+        frames: ["wind-0"],
+        fps: 10,
+      },
+    });
+    expect(selectTempSelectedResource({ state })).toMatchObject({
+      animationName: "wind",
+    });
+
+    const viewData = selectViewData({ state });
+    expect(viewData.tabs).toContainEqual({
+      id: "spritesheet",
+      label: "Spritesheets",
+    });
+    expect(viewData.tempSelectedSpritesheetValue).toBe("bg-spritesheet::wind");
   });
 });

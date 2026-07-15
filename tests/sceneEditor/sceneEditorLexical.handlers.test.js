@@ -4,6 +4,7 @@ import {
   applyBackgroundTransformResizeChange,
   handleActionsDialogClose,
   handleActionTransformCustomize,
+  handleAddActionsButtonClick,
   handleBackgroundTransformCustomize,
   handleBackgroundTransformEditorCancel,
   handleBackgroundTransformEditorCloseClick,
@@ -15,6 +16,7 @@ import {
   handlePreviewClick,
   handleSectionMoveSceneFormActionClick,
   handleSelectedLineChanged,
+  handleSystemActionsActionDelete,
   handleSystemActionsDialogOpen,
   handleTemporaryPresentationStateChange,
   scrollEntrySelectionIntoView,
@@ -471,16 +473,27 @@ describe("sceneEditorLexical.handlers transform editor resize", () => {
 });
 
 describe("sceneEditorLexical.handlers actions dialog", () => {
-  it("stores the system action dialog target line before the dialog opens", () => {
-    let actionTargetLineId;
+  it("captures the target and releases editor focus before an existing action opens", () => {
+    const calls = [];
+    const linesEditor = {
+      getLines: vi.fn(() => [{ id: "line-2" }]),
+      getSelectedLineId: vi.fn(() => "line-2"),
+      blurEditor: vi.fn(() => calls.push("editor-blur")),
+    };
 
     handleSystemActionsDialogOpen(
       {
+        refs: {
+          sectionEditor0: linesEditor,
+        },
         store: {
           selectSelectedLineId: vi.fn(() => "fallback-line"),
           setActionTargetLineId: vi.fn(({ lineId }) => {
-            actionTargetLineId = lineId;
+            calls.push(`target:${lineId}`);
           }),
+        },
+        appService: {
+          blurActiveElement: vi.fn(() => calls.push("app-blur")),
         },
       },
       {
@@ -493,7 +506,52 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       },
     );
 
-    expect(actionTargetLineId).toBe("line-2");
+    expect(linesEditor.blurEditor).toHaveBeenCalledWith({
+      lineId: "line-2",
+    });
+    expect(calls).toEqual(["target:line-2", "editor-blur", "app-blur"]);
+  });
+
+  it("releases editor focus before the Add Action entry point opens", () => {
+    const calls = [];
+    const linesEditor = {
+      getLines: vi.fn(() => [{ id: "line-1" }]),
+      getSelectedLineId: vi.fn(() => "line-1"),
+      blurEditor: vi.fn(() => calls.push("editor-blur")),
+    };
+    const deps = {
+      refs: {
+        sectionEditor0: linesEditor,
+        systemActions: {
+          transformedHandlers: {
+            open: vi.fn(() => calls.push("dialog-open")),
+          },
+        },
+      },
+      store: {
+        selectSelectedLineId: vi.fn(() => "line-1"),
+        setActionTargetLineId: vi.fn(({ lineId }) => {
+          calls.push(`target:${lineId}`);
+        }),
+      },
+      appService: {
+        blurActiveElement: vi.fn(() => calls.push("app-blur")),
+      },
+      render: vi.fn(() => calls.push("render")),
+    };
+
+    handleAddActionsButtonClick(deps);
+
+    expect(linesEditor.blurEditor).toHaveBeenCalledWith({
+      lineId: "line-1",
+    });
+    expect(calls).toEqual([
+      "target:line-1",
+      "editor-blur",
+      "app-blur",
+      "dialog-open",
+      "render",
+    ]);
   });
 
   it("opens the background transform editor from the predefined transform when stale inline fields are present", () => {
@@ -1327,6 +1385,130 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       lineId: "line-1",
       dialogue: {
         characterId: "character-2",
+      },
+      preserve: ["dialogue.content"],
+    });
+  });
+
+  it("preserves dialogue content behind a clear marker when deleting from presentation state", async () => {
+    const saveError = new Error("stop after assertion");
+    const updateLineDialogueAction = vi.fn(async () => {
+      throw saveError;
+    });
+    const store = {
+      selectSelectedLine: vi.fn(() => ({
+        id: "line-1",
+        actions: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            content: [{ text: "Keep writing" }],
+          },
+        },
+      })),
+      selectDraftSection: vi.fn(() => undefined),
+    };
+
+    await expect(
+      handleSystemActionsActionDelete(
+        {
+          store,
+          render: vi.fn(),
+          i18n: {
+            resourcePages: {},
+            scenesPage: {},
+            sceneEditorPage: {},
+            commandLinePage: {},
+          },
+          subject: {
+            dispatch: vi.fn(),
+          },
+          projectService: {
+            updateLineDialogueAction,
+          },
+        },
+        {
+          _event: {
+            detail: {
+              actionType: "dialogue",
+            },
+          },
+        },
+      ),
+    ).rejects.toThrow("stop after assertion");
+
+    expect(updateLineDialogueAction).toHaveBeenCalledWith({
+      lineId: "line-1",
+      dialogue: {
+        clear: true,
+      },
+      preserve: ["dialogue.content"],
+    });
+  });
+
+  it("preserves dialogue content behind a clear marker when deleting from the line menu", async () => {
+    const saveError = new Error("stop after assertion");
+    const updateLineDialogueAction = vi.fn(async () => {
+      throw saveError;
+    });
+    const store = {
+      selectDropdownMenu: vi.fn(() => ({
+        actionsType: "dialogue",
+        lineId: "line-1",
+      })),
+      selectSceneId: vi.fn(() => "scene-1"),
+      hideDropdownMenu: vi.fn(),
+      selectSelectedLineId: vi.fn(() => "line-1"),
+      selectSelectedSectionId: vi.fn(() => "section-1"),
+      selectSelectedLine: vi.fn(() => ({
+        id: "line-1",
+        actions: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            content: [{ text: "Keep writing" }],
+          },
+        },
+      })),
+      selectDraftSection: vi.fn(() => undefined),
+    };
+
+    await expect(
+      handleDropdownMenuClickItem(
+        {
+          store,
+          render: vi.fn(),
+          i18n: {
+            resourcePages: {},
+            scenesPage: {},
+            sceneEditorPage: {},
+            commandLinePage: {},
+          },
+          subject: {
+            dispatch: vi.fn(),
+          },
+          projectService: {
+            updateLineDialogueAction,
+          },
+        },
+        {
+          _event: {
+            detail: {
+              item: {
+                value: "delete-actions",
+              },
+            },
+          },
+        },
+      ),
+    ).rejects.toThrow("stop after assertion");
+
+    expect(updateLineDialogueAction).toHaveBeenCalledWith({
+      lineId: "line-1",
+      dialogue: {
+        clear: true,
       },
       preserve: ["dialogue.content"],
     });

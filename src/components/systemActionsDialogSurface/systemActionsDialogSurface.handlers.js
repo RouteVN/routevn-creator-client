@@ -38,22 +38,3 @@ export const handleOnUpdate = (deps, changes = {}) => {
     deps.store?.setSuppressClose?.({ suppressClose: false });
   }
 };
-
-export const handleDocumentKeyDown = (deps, payload = {}) => {
-  const { props } = deps;
-  const event = payload._event;
-
-  if (props.open !== true || event?.key !== "Escape") {
-    return;
-  }
-
-  event.preventDefault?.();
-  event.stopPropagation?.();
-
-  if (isCloseSuppressed(deps)) {
-    dispatchCloseRequest(deps);
-    return;
-  }
-
-  dispatchClose(deps);
-};

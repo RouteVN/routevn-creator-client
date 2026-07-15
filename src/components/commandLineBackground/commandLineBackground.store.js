@@ -1,5 +1,9 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  getSpritesheetAnimationPreview,
+  toSpritesheetAnimationSelectionValue,
+} from "../../internal/spritesheets.js";
+import {
   formatBackgroundTransformEditorMetric,
   normalizeBackgroundTransformEditorTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
@@ -16,6 +20,10 @@ const tabs = [
   {
     id: "image",
     label: "Images",
+  },
+  {
+    id: "spritesheet",
+    label: "Spritesheets",
   },
   {
     id: "layout",
@@ -155,6 +163,7 @@ export const createInitialState = () => ({
   mode: "current",
   tab: "image",
   imageItems: createEmptyCollection(),
+  spritesheetItems: createEmptyCollection(),
   layoutItems: createEmptyCollection(),
   videoItems: createEmptyCollection(),
   animationItems: createEmptyCollection(),
@@ -165,8 +174,10 @@ export const createInitialState = () => ({
   customTransformEditorOpen: false,
   selectedResourceId: undefined,
   selectedResourceType: undefined,
+  selectedSpritesheetAnimationName: undefined,
   tempSelectedResourceId: undefined,
   tempSelectedResourceType: undefined,
+  tempSelectedSpritesheetAnimationName: undefined,
   selectedTransformId: undefined,
   selectedColorId: undefined,
   selectedOpacity: undefined,
@@ -178,8 +189,14 @@ export const createInitialState = () => ({
   selectedAnimationPlaybackContinuity: "render",
   backgroundLoop: false,
   pendingResourceId: undefined,
+  pendingSpritesheetAnimationName: undefined,
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
+  fullSpritesheetPreviewVisible: false,
+  fullSpritesheetPreviewFileId: undefined,
+  fullSpritesheetPreviewAtlas: undefined,
+  fullSpritesheetPreviewAnimation: undefined,
+  fullSpritesheetPreviewKey: undefined,
   searchQuery: "",
   isTouchMode: false,
 });
@@ -200,7 +217,14 @@ export const selectTempSelectedResource = ({ state }) => {
     return null;
   }
 
-  return selectResourceById({ state }, { resourceId, resourceType });
+  return selectResourceById(
+    { state },
+    {
+      resourceId,
+      resourceType,
+      animationName: state.tempSelectedSpritesheetAnimationName,
+    },
+  );
 };
 
 export const setMode = ({ state }, { mode } = {}) => {
@@ -213,9 +237,18 @@ export const selectMode = ({ state }) => {
 
 export const setRepositoryState = (
   { state },
-  { images, layouts, videos, animations, transforms, colors } = {},
+  {
+    images,
+    spritesheets,
+    layouts,
+    videos,
+    animations,
+    transforms,
+    colors,
+  } = {},
 ) => {
   state.imageItems = normalizeResourceCollection(images);
+  state.spritesheetItems = normalizeResourceCollection(spritesheets);
   state.layoutItems = normalizeResourceCollection(layouts);
   state.videoItems = normalizeResourceCollection(videos);
   state.animationItems = normalizeResourceCollection(animations);
@@ -237,10 +270,12 @@ export const setTab = ({ state }, { tab } = {}) => {
 
 export const setSelectedResource = (
   { state },
-  { resourceId, resourceType } = {},
+  { resourceId, resourceType, animationName } = {},
 ) => {
   state.selectedResourceId = resourceId;
   state.selectedResourceType = resourceType;
+  state.selectedSpritesheetAnimationName =
+    resourceId && resourceType === "spritesheet" ? animationName : undefined;
 
   // Automatically set the tab based on resource type
   if (resourceType) {
@@ -250,22 +285,37 @@ export const setSelectedResource = (
 
 export const setTempSelectedResource = (
   { state },
-  { resourceId, resourceType } = {},
+  { resourceId, resourceType, animationName } = {},
 ) => {
   state.tempSelectedResourceId = resourceId;
-  state.tempSelectedResourceType = resourceType ?? state.tab;
+  state.tempSelectedResourceType = resourceId
+    ? (resourceType ?? state.tab)
+    : undefined;
+  state.tempSelectedSpritesheetAnimationName =
+    resourceId && (resourceType ?? state.tab) === "spritesheet"
+      ? animationName
+      : undefined;
 };
 
-export const setPendingResourceId = ({ state }, { resourceId } = {}) => {
+export const setPendingResourceId = (
+  { state },
+  { resourceId, animationName } = {},
+) => {
   state.pendingResourceId = resourceId;
+  state.pendingSpritesheetAnimationName = animationName;
 };
 
 export const selectPendingResourceId = ({ state }) => {
   return state.pendingResourceId;
 };
 
+export const selectPendingSpritesheetAnimationName = ({ state }) => {
+  return state.pendingSpritesheetAnimationName;
+};
+
 export const clearPendingResourceId = ({ state }, _payload = {}) => {
   state.pendingResourceId = undefined;
+  state.pendingSpritesheetAnimationName = undefined;
 };
 
 export const showFullImagePreview = ({ state }, { imageId } = {}) => {
@@ -276,11 +326,42 @@ export const showFullImagePreview = ({ state }, { imageId } = {}) => {
 
   state.fullImagePreviewVisible = true;
   state.fullImagePreviewFileId = item.fileId;
+  state.fullSpritesheetPreviewVisible = false;
+};
+
+export const showFullSpritesheetPreview = (
+  { state },
+  { resourceId, animationName } = {},
+) => {
+  const preview = getSpritesheetAnimationPreview(
+    state.spritesheetItems,
+    resourceId,
+    animationName,
+  );
+  if (!preview.fileId || !preview.atlas || !preview.animation) {
+    return;
+  }
+
+  const selectionValue = toSpritesheetAnimationSelectionValue(
+    resourceId,
+    animationName,
+  );
+  state.fullImagePreviewVisible = false;
+  state.fullSpritesheetPreviewVisible = true;
+  state.fullSpritesheetPreviewFileId = preview.fileId;
+  state.fullSpritesheetPreviewAtlas = preview.atlas;
+  state.fullSpritesheetPreviewAnimation = preview.animation;
+  state.fullSpritesheetPreviewKey = `${selectionValue}:${preview.fileId}`;
 };
 
 export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
+  state.fullSpritesheetPreviewVisible = false;
+  state.fullSpritesheetPreviewFileId = undefined;
+  state.fullSpritesheetPreviewAtlas = undefined;
+  state.fullSpritesheetPreviewAnimation = undefined;
+  state.fullSpritesheetPreviewKey = undefined;
 };
 
 export const setSearchQuery = ({ state }, { value } = {}) => {
@@ -498,13 +579,14 @@ export const selectSelectedResource = ({ state }) => {
     {
       resourceId: state.selectedResourceId,
       resourceType: state.selectedResourceType,
+      animationName: state.selectedSpritesheetAnimationName,
     },
   );
 };
 
 const selectResourceById = (
   { state, copy },
-  { resourceId, resourceType } = {},
+  { resourceId, resourceType, animationName } = {},
 ) => {
   if (!resourceId || !resourceType) {
     return null;
@@ -512,6 +594,7 @@ const selectResourceById = (
 
   const itemsMap = {
     image: state.imageItems,
+    spritesheet: state.spritesheetItems,
     layout: state.layoutItems,
     video: state.videoItems,
   };
@@ -535,14 +618,38 @@ const selectResourceById = (
   };
 
   const typeInfo = layoutTypeLabels[item.layoutType] ?? item.layoutType;
+  const spritesheetPreview =
+    resourceType === "spritesheet"
+      ? getSpritesheetAnimationPreview(
+          state.spritesheetItems,
+          resourceId,
+          animationName,
+        )
+      : {};
+  const spritesheetSelectionValue = toSpritesheetAnimationSelectionValue(
+    resourceId,
+    animationName,
+  );
 
   return {
     resourceId,
     resourceType,
-    fileId: item.thumbnailFileId ?? item.fileId,
+    animationName: resourceType === "spritesheet" ? animationName : undefined,
+    fileId:
+      resourceType === "spritesheet"
+        ? spritesheetPreview.fileId
+        : (item.thumbnailFileId ?? item.fileId),
+    spritesheetAtlas: spritesheetPreview.atlas,
+    spritesheetAnimation: spritesheetPreview.animation,
+    spritesheetPreviewKey: spritesheetSelectionValue
+      ? `${spritesheetSelectionValue}:${spritesheetPreview.fileId ?? ""}`
+      : undefined,
     previewAspectRatio: BACKGROUND_RESOURCE_CARD_ASPECT_RATIO,
     resourceCardStyle: "max-width: 100%; box-sizing: border-box;",
-    name: item.name,
+    name:
+      resourceType === "spritesheet" && animationName
+        ? `${item.name} / ${animationName}`
+        : item.name,
     itemBorderColor: "bo",
     itemHoverBorderColor: "ac",
     typeInfo,
@@ -599,6 +706,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const itemsMap = {
     image: state.imageItems,
+    spritesheet: state.spritesheetItems,
     layout: state.layoutItems,
     video: state.videoItems,
   };
@@ -669,6 +777,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     {
       resourceId: state.selectedResourceId,
       resourceType: state.selectedResourceType,
+      animationName: state.selectedSpritesheetAnimationName,
     },
   );
   const breadcrumb = selectBreadcrumb({ state });
@@ -854,6 +963,10 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     showImageSelectorFileExplorer: !state.isTouchMode,
     groups: flatGroups,
     tempSelectedResourceId: state.tempSelectedResourceId,
+    tempSelectedSpritesheetValue: toSpritesheetAnimationSelectionValue(
+      state.tempSelectedResourceId,
+      state.tempSelectedSpritesheetAnimationName,
+    ),
     selectedResource,
     customTransformDetails: createCustomTransformDetails({ state }).map(
       (item) => ({
@@ -863,6 +976,11 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     ),
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    fullSpritesheetPreviewVisible: state.fullSpritesheetPreviewVisible,
+    fullSpritesheetPreviewFileId: state.fullSpritesheetPreviewFileId,
+    fullSpritesheetPreviewAtlas: state.fullSpritesheetPreviewAtlas,
+    fullSpritesheetPreviewAnimation: state.fullSpritesheetPreviewAnimation,
+    fullSpritesheetPreviewKey: state.fullSpritesheetPreviewKey,
     backgroundTransformEditor: createBackgroundTransformEditorViewData({
       state,
       props,
@@ -873,6 +991,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       key: [
         selectedResource?.resourceType ?? "none",
         selectedResource?.resourceId ?? "none",
+        selectedResource?.animationName ?? "none",
         state.selectedColorId ?? "none",
         state.customTransformEnabled ? "custom-transform" : "preset-transform",
         state.selectedTransformId ?? "none",

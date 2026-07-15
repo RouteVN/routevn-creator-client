@@ -21,7 +21,7 @@
     "@lexical/selection": "0.22.0",
     "@lexical/utils": "0.22.0",
     "@rettangoli/fe": "1.2.0",
-    "@rettangoli/ui": "1.8.2",
+    "@rettangoli/ui": "1.10.0",
     "@rettangoli/vt": "1.0.5",
     "@routevn/creator-model": "1.9.0",
     "@tauri-apps/api": "2.11.0",
@@ -40,15 +40,15 @@
     "jszip": "3.10.1",
     "lexical": "0.22.0",
     "nanoid": "5.1.11",
-    "route-engine-js": "1.26.1",
-    "route-graphics": "1.24.2",
+    "route-engine-js": "1.29.0",
+    "route-graphics": "1.25.1",
     "rxjs": "7.8.2",
     "snabbdom": "3.6.3",
     "snabbdom-to-html": "7.1.0",
     "vite": "6.4.2"
   },
   "scripts": {
-    "build:bundle": "vite build --config scripts/vite.bundle.config.js",
+    "build:bundle": "vite build --config scripts/vite.bundle.config.js && vite build --config scripts/vite.player-runtime-host.config.js",
     "build:web": "./scripts/build.sh web",
     "build:tauri": "./scripts/build.sh tauri",
     "build:android": "./scripts/build.sh android",
@@ -56,7 +56,7 @@
     "build:ios": "./scripts/build.sh ios",
     "build:ios:assets": "node scripts/build-ios-assets.js",
     "watch:web": "rtgl fe watch -s src/setup.web.js",
-    "watch:tauri": "rtgl fe watch -s src/setup.tauri.js",
+    "watch:tauri": "./scripts/watch-tauri.sh",
     "watch:android": "./scripts/watch-android.sh",
     "watch:ios": "./scripts/watch-ios.sh",
     "android:install": "bun run build:android && cd android/routevn && ./gradlew installDebug",
@@ -97,7 +97,9 @@
     "tauri:build:linux:steam": "./scripts/tauri-build-linux-steam.sh",
     "player-template:prepare": "bun run build:bundle && node scripts/build-windows-player-template.js --prepare-only",
     "player-template:build:win": "bun run build:bundle && node scripts/build-windows-player-template.js",
-    "player-template:build:win:docker": "./scripts/build-windows-player-template-docker.sh"
+    "player-template:build:win:docker": "./scripts/build-windows-player-template-docker.sh",
+    "player-template:prepare:mac": "bun run build:bundle && node scripts/build-macos-player-template.js --prepare-only",
+    "player-template:build:mac": "bun run build:bundle && node scripts/build-macos-player-template.js"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.1",

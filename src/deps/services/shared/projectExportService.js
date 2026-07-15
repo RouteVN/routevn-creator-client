@@ -31,7 +31,8 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
         width: min(
           100vw,
           calc(
-            100vh * var(--project-screen-width) / var(--project-screen-height)
+            var(--rvn-app-viewport-height, 100vh) *
+              var(--project-screen-width) / var(--project-screen-height)
           )
         );
         aspect-ratio: var(--project-screen-width) / var(--project-screen-height);
@@ -287,6 +288,14 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
   <script src="./main.js" type="module"></script>
 </html>
 `;
+export const NATIVE_PLAYER_INDEX_HTML = BUNDLE_PLAYER_INDEX_HTML.replace(
+  '  <script src="./main.js" type="module"></script>',
+  '  <script src="./player-runtime-persistence-host.js"></script>\n  <script src="./main.js" type="module"></script>',
+);
+export const WINDOWS_PLAYER_INDEX_HTML = NATIVE_PLAYER_INDEX_HTML.replace(
+  '  <script src="./player-runtime-persistence-host.js"></script>',
+  '  <script src="./windowChrome.js" defer></script>\n  <script src="./player-runtime-persistence-host.js"></script>',
+);
 const BUNDLE_MANIFEST_CHUNKING = Object.freeze({
   algorithm: "none",
   mode: "whole-file-only",
@@ -1013,6 +1022,34 @@ export const createProjectExportService = ({
     });
   };
 
+  service.promptMacosApplicationPath = async (
+    applicationName,
+    options = {},
+  ) => {
+    return fileAdapter.promptMacosApplicationPath({
+      applicationName,
+      options,
+      filePicker,
+    });
+  };
+
+  service.getMacosExportAvailability = async (options = {}) => {
+    if (typeof fileAdapter.getMacosExportAvailability !== "function") {
+      return {
+        application: false,
+        templateAvailable: false,
+        hostSupported: false,
+        dittoAvailable: false,
+        codesignAvailable: false,
+        sipsAvailable: false,
+        iconutilAvailable: false,
+        lipoAvailable: false,
+      };
+    }
+
+    return fileAdapter.getMacosExportAvailability({ options });
+  };
+
   service.createWindowsPortableExecutableToPath = async (
     projectData,
     fileEntries,
@@ -1047,6 +1084,27 @@ export const createProjectExportService = ({
       title: metadata.title,
       version: metadata.version,
       publisher: metadata.publisher,
+      iconFileId: metadata.iconFileId,
+      options,
+      getCurrentReference,
+    });
+  };
+
+  service.createMacosApplicationToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) => {
+    return fileAdapter.createMacosApplicationToPath({
+      projectData,
+      fileEntries: normalizeExportFileEntries(fileEntries),
+      outputPath,
+      title: metadata.title,
+      shortVersion: metadata.shortVersion,
+      bundleVersion: metadata.bundleVersion,
+      applicationIdentifier: metadata.applicationIdentifier,
       iconFileId: metadata.iconFileId,
       options,
       getCurrentReference,

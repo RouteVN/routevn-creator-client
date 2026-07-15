@@ -10,7 +10,7 @@
         "@lexical/selection": "0.22.0",
         "@lexical/utils": "0.22.0",
         "@rettangoli/fe": "1.2.0",
-        "@rettangoli/ui": "1.8.2",
+        "@rettangoli/ui": "1.10.0",
         "@rettangoli/vt": "1.0.5",
         "@routevn/creator-model": "1.9.0",
         "@tauri-apps/api": "2.11.0",
@@ -29,8 +29,8 @@
         "jszip": "3.10.1",
         "lexical": "0.22.0",
         "nanoid": "5.1.11",
-        "route-engine-js": "1.26.1",
-        "route-graphics": "1.24.2",
+        "route-engine-js": "1.29.0",
+        "route-graphics": "1.25.1",
         "rxjs": "7.8.2",
         "snabbdom": "3.6.3",
         "snabbdom-to-html": "7.1.0",
@@ -313,7 +313,7 @@
 
     "@rettangoli/sites": ["@rettangoli/sites@1.2.0", "", { "dependencies": { "gray-matter": "^4.0.3", "jempl": "^0.3.1-rc1", "js-yaml": "^4.1.0", "markdown-it": "^14.1.0", "shiki": "^3.13.0", "ws": "^8.18.0", "yahtml": "0.0.4" } }, "sha512-taGLXClBbCL0Qbj7fFIZ0wW54yHNlKb43cJFZR1Poer2pxvo5GCnShvqZEvUfkPBqp/PKyvLfiOwMxGkbJxqyg=="],
 
-    "@rettangoli/ui": ["@rettangoli/ui@1.8.2", "", { "dependencies": { "@rettangoli/fe": "1.2.0", "jempl": "1.0.1" } }, "sha512-M/5R+E3FkQn0R9mmKQeDe1JzXTZYce8UfUlu9YfRtmLrKTKG4QWL569Wu3S0NKfIdCZxSusD02jlqW2bJsZJjQ=="],
+    "@rettangoli/ui": ["@rettangoli/ui@1.10.0", "", { "dependencies": { "@rettangoli/fe": "1.2.0", "jempl": "1.0.1" } }, "sha512-TJ4JbGngBcs9u4WpHtm5z7yhVqMBJRa2n5e+1p1lg+9H1CChXppCVmBThW9tDlFFg4N4p2y6kWCCGD9/OdQVvw=="],
 
     "@rettangoli/vt": ["@rettangoli/vt@1.0.5", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-YpZH5xQYj+x5Qy6gn+FUnMTUIQELrZkTA4qN8/U4n/1B4gpNHHPltJK/kVltZQVYVG0Tj676ZIKCMGN0ZAHdzg=="],
 
@@ -821,9 +821,9 @@
 
     "rollup": ["rollup@4.60.4", "", { "dependencies": { "@types/estree": "1.0.8" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.60.4", "@rollup/rollup-android-arm64": "4.60.4", "@rollup/rollup-darwin-arm64": "4.60.4", "@rollup/rollup-darwin-x64": "4.60.4", "@rollup/rollup-freebsd-arm64": "4.60.4", "@rollup/rollup-freebsd-x64": "4.60.4", "@rollup/rollup-linux-arm-gnueabihf": "4.60.4", "@rollup/rollup-linux-arm-musleabihf": "4.60.4", "@rollup/rollup-linux-arm64-gnu": "4.60.4", "@rollup/rollup-linux-arm64-musl": "4.60.4", "@rollup/rollup-linux-loong64-gnu": "4.60.4", "@rollup/rollup-linux-loong64-musl": "4.60.4", "@rollup/rollup-linux-ppc64-gnu": "4.60.4", "@rollup/rollup-linux-ppc64-musl": "4.60.4", "@rollup/rollup-linux-riscv64-gnu": "4.60.4", "@rollup/rollup-linux-riscv64-musl": "4.60.4", "@rollup/rollup-linux-s390x-gnu": "4.60.4", "@rollup/rollup-linux-x64-gnu": "4.60.4", "@rollup/rollup-linux-x64-musl": "4.60.4", "@rollup/rollup-openbsd-x64": "4.60.4", "@rollup/rollup-openharmony-arm64": "4.60.4", "@rollup/rollup-win32-arm64-msvc": "4.60.4", "@rollup/rollup-win32-ia32-msvc": "4.60.4", "@rollup/rollup-win32-x64-gnu": "4.60.4", "@rollup/rollup-win32-x64-msvc": "4.60.4", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-WHeFSbZYsPu3+bLoNRUuAO+wavNlocOPf3wSHTP7hcFKVnJeWsYlCDbr3mTS14FCizf9ccIxXA8sGL8zKeQN3g=="],
 
-    "route-engine-js": ["route-engine-js@1.26.1", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.1", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-azxqZKV8jxh+6WBm8tiLuW2hCNTjzKsS/a3EBJ5yuzToC+fIVyXz0KaQaGbXFBZu4Ha778d5dQlpwR2ZsZaUuA=="],
+    "route-engine-js": ["route-engine-js@1.29.0", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.1", "js-yaml": "^4.1.0", "puty": "^0.1.1", "unicode-segmenter": "^0.17.0" } }, "sha512-iVA7p6ftPPLqIkzNOphA+GdyXsRtaivg2tpPk3t7RvfSGsjr16pECXtRr6t3r9JJgQnqsXIXcJOSm40PyT9xlw=="],
 
-    "route-graphics": ["route-graphics@1.24.2", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "pixi.js": "^8.7.1", "playwright": "^1.44.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-HQw1oqw4R09OyUVHPlbvB6cu2XjvYhrBb2NB0eWS56yQe4GYPfIFPp3p7BL6FeHkpIOuhXSEtDymrhhzS6U0CQ=="],
+    "route-graphics": ["route-graphics@1.25.1", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "pixi.js": "^8.7.1", "playwright": "^1.44.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-bRd+OR+j2+Q+IS76kP8YT8gmGCdkhG9gI+z/HOygIm0AwwZbzEOkYVnKHk3OiZxqeCvR0+GyMEVgNqPktiPC1Q=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 
@@ -940,6 +940,8 @@
     "uc.micro": ["uc.micro@2.1.0", "", {}, "sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A=="],
 
     "uint8array-extras": ["uint8array-extras@1.5.0", "", {}, "sha512-rvKSBiC5zqCCiDZ9kAOszZcDvdAHwwIKJG33Ykj43OKcWsnmcBRL09YTU4nOeHZ8Y2a7l1MgTd08SBe9A8Qj6A=="],
+
+    "unicode-segmenter": ["unicode-segmenter@0.17.0", "", {}, "sha512-rN+u/LmZx2SISURhq2vy+JeQmmf+9lFVsdVgvFJHa6wL42h3ojnYaS/UK4Fgsjku9C2P23WB/JK5sQWeBaZt+A=="],
 
     "unist-util-is": ["unist-util-is@6.0.1", "", { "dependencies": { "@types/unist": "^3.0.0" } }, "sha512-LsiILbtBETkDz8I9p1dQ0uyRUWuaQzd/cuEeS1hoRSyW5E5XGmTzlwY1OrNzzakGowI9Dr/I8HVaw4hTtnxy8g=="],
 

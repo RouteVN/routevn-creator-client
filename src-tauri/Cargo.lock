@@ -4107,9 +4107,10 @@ dependencies = [
 
 [[package]]
 name = "routevn-creator"
-version = "1.8.1"
+version = "1.8.2"
 dependencies = [
  "log",
+ "plist",
  "routevn-exporter",
  "routevn-packager",
  "serde",
@@ -4127,6 +4128,7 @@ dependencies = [
  "tempfile",
  "url",
  "urlencoding",
+ "windows",
 ]
 
 [[package]]

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  handleDocumentKeyDown,
-  handleSurfaceClose,
-} from "../../src/components/systemActionsDialogSurface/systemActionsDialogSurface.handlers.js";
+import { handleSurfaceClose } from "../../src/components/systemActionsDialogSurface/systemActionsDialogSurface.handlers.js";
 
 describe("systemActionsDialogSurface.handlers", () => {
   it("emits close from overlay interactions", () => {
@@ -60,72 +57,5 @@ describe("systemActionsDialogSurface.handlers", () => {
     expect(preventDefaultCalled).toBe(true);
     expect(dispatchedEvents).toHaveLength(1);
     expect(dispatchedEvents[0].type).toBe("close-request");
-  });
-
-  it("closes on Escape only while open", () => {
-    const dispatchedEvents = [];
-    let preventDefaultCalled = false;
-    let stopPropagationCalled = false;
-
-    handleDocumentKeyDown(
-      {
-        props: {
-          open: true,
-        },
-        dispatchEvent: (event) => dispatchedEvents.push(event),
-      },
-      {
-        _event: {
-          key: "Escape",
-          preventDefault: () => {
-            preventDefaultCalled = true;
-          },
-          stopPropagation: () => {
-            stopPropagationCalled = true;
-          },
-        },
-      },
-    );
-
-    expect(preventDefaultCalled).toBe(true);
-    expect(stopPropagationCalled).toBe(true);
-    expect(dispatchedEvents).toHaveLength(1);
-    expect(dispatchedEvents[0].type).toBe("close");
-
-    handleDocumentKeyDown(
-      {
-        props: {
-          open: false,
-        },
-        dispatchEvent: (event) => dispatchedEvents.push(event),
-      },
-      {
-        _event: {
-          key: "Escape",
-        },
-      },
-    );
-
-    expect(dispatchedEvents).toHaveLength(1);
-
-    handleDocumentKeyDown(
-      {
-        props: {
-          open: true,
-          suppressClose: true,
-        },
-        dispatchEvent: (event) => dispatchedEvents.push(event),
-      },
-      {
-        _event: {
-          key: "Escape",
-          preventDefault: () => {},
-          stopPropagation: () => {},
-        },
-      },
-    );
-
-    expect(dispatchedEvents).toHaveLength(2);
-    expect(dispatchedEvents[1].type).toBe("close-request");
   });
 });

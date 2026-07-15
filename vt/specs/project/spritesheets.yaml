@@ -1,6 +1,6 @@
 ---
 title: Spritesheets Workflow
-description: Covers the spritesheets page create/import dialog, detail, preview dialog, filtered search, and empty search states.
+description: Covers spritesheet creation, browsing, and use in scene backgrounds and visuals.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -203,5 +203,177 @@ steps:
         value: zzzz vt spritesheet
   - action: wait
     ms: 350
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#tagFilterPopover"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "#sidebar [data-item-id='scenes']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-scenes
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#whiteboard #itemRef0"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#mapAddHintClose"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mapAddHintClose"
+    steps:
+      - action: click
+  - action: select
+    selector: "#whiteboard #itemRef0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: rvn-scene-editor-lexical
+    state: attached
+    timeoutMs: 20000
+  - action: wait
+    ms: 1200
+  - action: select
+    selector: "rvn-system-actions#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-actions#commandLineActions #action4"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions #action4"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground #backgroundImage"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground #backgroundImage"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground #tabs #tab1"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground #tabs #tab1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground #spritesheetItemRef0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground #spritesheetItemRef0x0"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground #buttonSelect"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground #backgroundImage"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground #submitButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions#systemActions #actionItemBackground"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-system-actions#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-actions#commandLineActions #action6"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions #action6"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-visual#commandLineVisual #addVisualButton"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual #addVisualButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-visual#commandLineVisual #addVisualPopover"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual #addVisualPopover rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-visual#commandLineVisual #tabs #tab1"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual #tabs #tab1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-visual#commandLineVisual #spritesheetItemRef0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual #spritesheetItemRef0x0"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual #buttonSelect"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-visual#commandLineVisual #visualItem0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual #submitButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions#systemActions #actionItemVisual"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
   - action: screenshot
 ---

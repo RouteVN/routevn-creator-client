@@ -303,6 +303,7 @@ export const handleEditIconCropDialogConfirm = async (deps) => {
 export const handleBackToProjects = async (deps) => {
   const { appService } = deps;
   appService.navigate("/projects", undefined, {
+    historyMode: "replace",
     historyState: { preserveProjectsEntryOnProjectOpen: true },
   });
 };

@@ -4,7 +4,9 @@ import {
   selectViewData,
   setSelectedItemId,
   setPlatform,
+  setMacosExportAvailability,
   setUiConfig,
+  setVisualTestMode,
   setVersions,
   setWindowsExportAvailability,
 } from "../../src/pages/versions/versions.store.js";
@@ -99,5 +101,54 @@ describe("versions store export actions", () => {
 
     expect(viewData.canExportWindowsExecutable).toBe(false);
     expect(viewData.canExportWindowsInstaller).toBe(false);
+  });
+
+  it("keeps macOS application export visible on a macOS host when preflight fails", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "tauri" });
+    setMacosExportAvailability(
+      { state },
+      {
+        availability: {
+          application: true,
+          templateAvailable: true,
+          hostSupported: true,
+        },
+      },
+    );
+
+    expect(selectViewData({ state }).canExportMacosApplication).toBe(true);
+
+    setMacosExportAvailability(
+      { state },
+      {
+        availability: {
+          application: false,
+          templateAvailable: false,
+          hostSupported: true,
+        },
+      },
+    );
+    expect(selectViewData({ state }).canExportMacosApplication).toBe(true);
+
+    setMacosExportAvailability(
+      { state },
+      {
+        availability: {
+          application: false,
+          templateAvailable: true,
+          hostSupported: false,
+        },
+      },
+    );
+    expect(selectViewData({ state }).canExportMacosApplication).toBe(false);
+  });
+
+  it("exposes the macOS action to the visual workflow without native tools", () => {
+    const state = createInitialState();
+
+    setVisualTestMode({ state }, { enabled: true });
+
+    expect(selectViewData({ state }).canExportMacosApplication).toBe(true);
   });
 });

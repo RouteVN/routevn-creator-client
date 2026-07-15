@@ -5,6 +5,12 @@ refs:
         handler: handleImageSelected
       image-dblclick:
         handler: handleImageDoubleClick
+  spritesheetSelector:
+    eventListeners:
+      spritesheet-selected:
+        handler: handleSpritesheetSelected
+      spritesheet-dblclick:
+        handler: handleSpritesheetDoubleClick
   resourceItem*:
     eventListeners:
       click:
@@ -97,6 +103,12 @@ template:
                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${selectedResource.name}
                                       - $if selectedResource.typeInfo:
                                           - rtgl-text s=xs c=mu-fg ellipsis w=f: ${selectedResource.typeInfo}
+                        $elif selectedResource.resourceType == 'spritesheet':
+                          - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=md:
+                              - 'rtgl-view br=md w=200 pos=rel overflow=hidden style="${selectedResource.resourceCardStyle}"':
+                                  - rvn-spritesheet-preview key=${selectedResource.spritesheetPreviewKey} previewKey=${selectedResource.spritesheetPreviewKey} fileId=${selectedResource.fileId} :atlas=${selectedResource.spritesheetAtlas} :animation=${selectedResource.spritesheetAnimation} w=f h=120 emptyLabel=${noThumbnailLabel}: null
+                                  - rtgl-view w=f p=md:
+                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${selectedResource.name}
                         $elif selectedResource.resourceType == 'video':
                           - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=md:
                               - 'rtgl-view br=md pos=rel w=200 overflow=hidden style="${selectedResource.resourceCardStyle}"':
@@ -154,6 +166,8 @@ template:
               - rtgl-view h=f w=2fg sv g=lg:
                   - $if tab == 'image':
                       - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery}: null
+                    $elif tab == 'spritesheet':
+                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery}: null
                     $elif tab == 'layout':
                       - $for group, i in groups:
                           - rtgl-view g=md:
@@ -193,9 +207,12 @@ template:
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
 
-  - $when: fullImagePreviewVisible
-    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
-      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
-      - $if fullImagePreviewFileId:
-          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
+  - $if fullImagePreviewVisible || fullSpritesheetPreviewVisible:
+      - rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
+          - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+          - $if fullSpritesheetPreviewVisible:
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                  - rvn-spritesheet-preview key=${fullSpritesheetPreviewKey} previewKey=${fullSpritesheetPreviewKey} fileId=${fullSpritesheetPreviewFileId} :atlas=${fullSpritesheetPreviewAtlas} :animation=${fullSpritesheetPreviewAnimation} w=80% h=80% br=md emptyLabel=${noThumbnailLabel}: null
+            $elif fullImagePreviewFileId:
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                  - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null

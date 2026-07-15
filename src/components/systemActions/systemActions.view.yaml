@@ -75,6 +75,12 @@ template:
                               - 'rtgl-view w=36 h=24 bw=xs bc=bo style="background-color: ${preview.background.colorHex}; flex-shrink: 0;"': null
                           - rvn-file-image fileId=${preview.background.fileId} w=50 h=35: null
                           - rtgl-text s=sm: ${preview.background.name}
+                        $elif preview.background.type == 'spritesheet':
+                          - rtgl-svg svg=image wh=24: null
+                          - $if preview.background.colorHex:
+                              - 'rtgl-view w=36 h=24 bw=xs bc=bo style="background-color: ${preview.background.colorHex}; flex-shrink: 0;"': null
+                          - 'rvn-spritesheet-preview key=${preview.background.spritesheetPreviewKey} previewKey=${preview.background.spritesheetPreviewKey} fileId=${preview.background.spritesheetFileId} :atlas=${preview.background.spritesheetAtlas} :animation=${preview.background.spritesheetAnimation} w=50 h=35 emptyLabel=""': null
+                          - rtgl-text s=sm: ${preview.background.name}
                         $elif preview.background.type == 'video':
                           - rtgl-svg svg=video wh=24: null
                           - $if preview.background.colorHex:
@@ -119,7 +125,9 @@ template:
                       - rtgl-svg svg=image wh=24: null
                       - rtgl-view d=h g=sm av=c:
                           - $for visualData, i in preview.visual.items:
-                              - $if visualData.previewFileId:
+                              - $if visualData.resourceType == 'spritesheet':
+                                  - 'rvn-spritesheet-preview key=${visualData.spritesheetPreviewKey} previewKey=${visualData.spritesheetPreviewKey} fileId=${visualData.spritesheetFileId} :atlas=${visualData.spritesheetAtlas} :animation=${visualData.spritesheetAnimation} w=32 h=32 emptyLabel=""': null
+                                $elif visualData.previewFileId:
                                   - rvn-file-image fileId=${visualData.previewFileId} w=32 h=32: null
               - $if preview.sectionTransition:
                   - rtgl-view#actionItemSectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
@@ -310,5 +318,5 @@ template:
                 $elif mode == "conditional":
                   - rvn-command-line-conditional#commandLineConditional :conditional=${actions.conditional} :hiddenModes=${hiddenModes}: null
                 $elif isRuntimeActionMode:
-                  - rvn-command-line-runtime-action#commandLineRuntimeAction :mode=${mode} :action=${actions[mode]}: null
+                  - rvn-command-line-runtime-action#commandLineRuntimeAction :mode=${mode} :action=${runtimeAction}: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

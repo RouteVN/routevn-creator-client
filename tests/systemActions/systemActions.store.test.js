@@ -4,11 +4,21 @@ import {
   createInitialState,
   openAudioPlayer,
   selectActionsData,
-  selectViewData,
+  selectViewData as selectViewDataBase,
+  setAuthoredDialogueWasCleared,
   setUiConfig,
   setRepositoryState,
   updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
+
+const TEST_I18N = {
+  resourcePages: {},
+  sceneEditorPage: {},
+  commandLinePage: {},
+};
+
+const selectViewData = (deps) =>
+  selectViewDataBase({ ...deps, i18n: TEST_I18N });
 
 describe("systemActions.store", () => {
   it("preserves explicit hidden modes for nested action pickers", () => {
@@ -118,6 +128,7 @@ describe("systemActions.store", () => {
       actionCount: 2,
       summary: "1 branch + default",
       actionsSummary: "2 nested actions",
+      title: "Conditional: 1 branch + default",
     });
   });
 
@@ -672,6 +683,230 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("previews spritesheet backgrounds and visuals with their selected animations", () => {
+    const state = createInitialState();
+    const atlas = {
+      frames: {
+        "idle-0": {
+          frame: { x: 0, y: 0, w: 64, h: 64 },
+        },
+      },
+    };
+    const animation = {
+      frames: ["idle-0"],
+      fps: 12,
+    };
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          spritesheets: {
+            items: {
+              "hero-sheet": {
+                id: "hero-sheet",
+                type: "spritesheet",
+                name: "Hero",
+                fileId: "file-hero-sheet",
+                jsonData: atlas,
+                animations: { idle: animation },
+              },
+            },
+            tree: [{ id: "hero-sheet" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          background: {
+            blur: null,
+          },
+          visual: {
+            items: [
+              {
+                resourceId: "hero-sheet",
+                resourceType: "spritesheet",
+                animationName: "idle",
+              },
+            ],
+          },
+        },
+        presentationState: {
+          background: {
+            resourceId: "hero-sheet",
+            animationName: "idle",
+          },
+        },
+      },
+    });
+
+    expect(actions.background).toEqual({
+      resourceId: "hero-sheet",
+      animationName: "idle",
+      blur: null,
+    });
+    expect(actions.visual).toEqual({
+      items: [
+        {
+          resourceId: "hero-sheet",
+          resourceType: "spritesheet",
+          animationName: "idle",
+        },
+      ],
+    });
+    expect(preview.background).toMatchObject({
+      id: "hero-sheet",
+      name: "Hero / idle",
+      type: "spritesheet",
+      animationName: "idle",
+      spritesheetFileId: "file-hero-sheet",
+      spritesheetAtlas: atlas,
+      spritesheetAnimation: animation,
+      spritesheetPreviewKey: "hero-sheet::idle:file-hero-sheet",
+    });
+    expect(preview.visual.items[0]).toMatchObject({
+      resourceId: "hero-sheet",
+      resourceType: "spritesheet",
+      animationName: "idle",
+      spritesheetFileId: "file-hero-sheet",
+      spritesheetAtlas: atlas,
+      spritesheetAnimation: animation,
+      spritesheetPreviewKey: "hero-sheet::idle:file-hero-sheet",
+    });
+  });
+
+  it("uses effective presentation resources for partial background and visual actions", () => {
+    const state = createInitialState();
+    const atlas = {
+      frames: {
+        "storm-0": {
+          frame: { x: 0, y: 0, w: 64, h: 64 },
+        },
+      },
+    };
+    const animation = {
+      frames: ["storm-0"],
+      fps: 12,
+    };
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          spritesheets: {
+            items: {
+              "weather-sheet": {
+                id: "weather-sheet",
+                type: "spritesheet",
+                name: "Weather",
+                fileId: "file-weather-sheet",
+                jsonData: atlas,
+                animations: { storm: animation },
+              },
+            },
+            tree: [{ id: "weather-sheet" }],
+          },
+        },
+      },
+    );
+
+    const partialAnimationResult = selectActionsData({
+      state,
+      props: {
+        actions: {
+          background: {
+            animationName: "storm",
+          },
+          visual: {
+            items: [
+              {
+                id: "weather-visual",
+                opacity: 0.5,
+              },
+            ],
+          },
+        },
+        presentationState: {
+          background: {
+            resourceId: "weather-sheet",
+            animationName: "storm",
+          },
+          visual: {
+            items: [
+              {
+                id: "weather-visual",
+                resourceId: "weather-sheet",
+                resourceType: "spritesheet",
+                animationName: "storm",
+                opacity: 0.5,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(partialAnimationResult.actions.background).toEqual({
+      resourceId: "weather-sheet",
+      animationName: "storm",
+    });
+    expect(partialAnimationResult.preview.background).toMatchObject({
+      id: "weather-sheet",
+      type: "spritesheet",
+      animationName: "storm",
+      spritesheetAnimation: animation,
+    });
+    expect(partialAnimationResult.actions.visual.items[0]).toEqual({
+      id: "weather-visual",
+      resourceId: "weather-sheet",
+      resourceType: "spritesheet",
+      animationName: "storm",
+      opacity: 0.5,
+    });
+    expect(partialAnimationResult.preview.visual.items[0]).toMatchObject({
+      id: "weather-visual",
+      resourceId: "weather-sheet",
+      resourceType: "spritesheet",
+      animationName: "storm",
+      spritesheetAnimation: animation,
+    });
+
+    const colorOnlyResult = selectActionsData({
+      state,
+      props: {
+        actions: {
+          background: {
+            colorId: "storm-tint",
+          },
+        },
+        presentationState: {
+          background: {
+            resourceId: "weather-sheet",
+            animationName: "storm",
+            colorId: "storm-tint",
+          },
+        },
+      },
+    });
+
+    expect(colorOnlyResult.actions.background).toEqual({
+      resourceId: "weather-sheet",
+      animationName: "storm",
+      colorId: "storm-tint",
+    });
+    expect(colorOnlyResult.preview.background).toMatchObject({
+      id: "weather-sheet",
+      type: "spritesheet",
+      animationName: "storm",
+      spritesheetAnimation: animation,
+      colorId: "storm-tint",
+    });
+  });
+
   it("includes custom character name and persist character labels in dialogue preview when a character is selected", () => {
     const state = createInitialState();
 
@@ -851,6 +1086,107 @@ describe("systemActions.store", () => {
       modeLabel: "ADV",
       appendLabel: "append",
     });
+  });
+
+  it("omits cleared dialogue from the presentation state preview", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actionType: "presentation",
+        actions: {
+          dialogue: {
+            clear: true,
+          },
+        },
+        presentationState: {
+          dialogue: {
+            clear: true,
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue).toBeUndefined();
+    expect(preview.dialogue).toBeUndefined();
+  });
+
+  it("keeps cleared dialogue hidden after its content is edited", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: {
+            items: {
+              "dialogue-layout": {
+                id: "dialogue-layout",
+                type: "layout",
+                name: "Main Dialogue",
+                layoutType: "dialogue-adv",
+              },
+            },
+            tree: [{ id: "dialogue-layout" }],
+          },
+        },
+      },
+    );
+
+    updateActions(
+      { state },
+      {
+        dialogue: {
+          content: [{ text: "Edited after deletion" }],
+        },
+      },
+    );
+    setAuthoredDialogueWasCleared(
+      { state },
+      { authoredDialogueWasCleared: true },
+    );
+
+    const { actions, preview } = selectViewData({
+      state,
+      props: {
+        actionType: "presentation",
+        actions: {},
+        presentationState: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            mode: "adv",
+            content: [{ text: "Edited after deletion" }],
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue).toBeUndefined();
+    expect(preview.dialogue).toBeUndefined();
+  });
+
+  it("omits layout-less dialogue from the presentation state preview", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actionType: "presentation",
+        actions: {},
+        presentationState: {
+          dialogue: {
+            mode: "adv",
+            content: [{ text: "Deleted dialogue" }],
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue).toBeUndefined();
+    expect(preview.dialogue).toBeUndefined();
   });
 
   it("renders dialogue editor props from current component action state", () => {

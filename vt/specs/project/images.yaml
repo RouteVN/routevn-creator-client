@@ -71,6 +71,44 @@ steps:
     value: /project/images
   - action: wait
     ms: 450
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { let active = document.activeElement; while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement; return active?.id; })()"
+    value: fileExplorerKeyboardScope
+  - action: keypress
+    key: g
+  - action: wait
+    ms: 120
+  - action: keypress
+    key: c
+  - action: wait
+    ms: 120
+  - action: keypress
+    key: h
+  - action: waitFor
+    selector: rvn-characters
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/characters
+  - action: keypress
+    key: g
+  - action: wait
+    ms: 120
+  - action: keypress
+    key: i
+  - action: waitFor
+    selector: rvn-images
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/images
+  - action: wait
+    ms: 450
   - action: screenshot
   - action: waitFor
     selector: "rvn-media-resources-view#groupview #itemRef0x0"
@@ -99,12 +137,12 @@ steps:
       - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return deepQuery(document, '#fileExplorerDetailKeyboardScope')?.tabIndex; })()"
     value: -1
   - action: screenshot
-  - action: select
-    selector: "#detailImage"
-    steps:
-      - action: click
-  - action: wait
-    ms: 200
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const preview = deepQuery(document, '#detailImagePreview'); return preview ? getComputedStyle(preview).pointerEvents : undefined; })()"
+    value: none
   - action: keypress
     key: j
   - action: wait

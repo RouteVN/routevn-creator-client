@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BUNDLE_FORMAT_VERSION_V4,
   BUNDLE_HEADER_SIZE,
+  BUNDLE_PLAYER_INDEX_HTML,
+  NATIVE_PLAYER_INDEX_HTML,
+  WINDOWS_PLAYER_INDEX_HTML,
   createBundleInstructions,
   createBundleResult,
   createProjectExportService,
@@ -14,6 +17,38 @@ const originalFetch = globalThis.fetch;
 describe("projectExportService", () => {
   afterEach(() => {
     globalThis.fetch = originalFetch;
+  });
+
+  it("loads persistence in native players and custom chrome only on Windows", () => {
+    expect(BUNDLE_PLAYER_INDEX_HTML).not.toContain("windowChrome.js");
+    expect(BUNDLE_PLAYER_INDEX_HTML).not.toContain(
+      "player-runtime-persistence-host.js",
+    );
+    expect(NATIVE_PLAYER_INDEX_HTML).not.toContain("windowChrome.js");
+    expect(NATIVE_PLAYER_INDEX_HTML).toContain(
+      '<script src="./player-runtime-persistence-host.js"></script>',
+    );
+    expect(
+      NATIVE_PLAYER_INDEX_HTML.indexOf("player-runtime-persistence-host.js"),
+    ).toBeLessThan(NATIVE_PLAYER_INDEX_HTML.indexOf("./main.js"));
+    expect(WINDOWS_PLAYER_INDEX_HTML).toContain(
+      '<script src="./windowChrome.js" defer></script>',
+    );
+    expect(WINDOWS_PLAYER_INDEX_HTML).toContain(
+      '<script src="./player-runtime-persistence-host.js"></script>',
+    );
+    expect(WINDOWS_PLAYER_INDEX_HTML.indexOf("windowChrome.js")).toBeLessThan(
+      WINDOWS_PLAYER_INDEX_HTML.indexOf("player-runtime-persistence-host.js"),
+    );
+    expect(
+      WINDOWS_PLAYER_INDEX_HTML.indexOf("player-runtime-persistence-host.js"),
+    ).toBeLessThan(WINDOWS_PLAYER_INDEX_HTML.indexOf("./main.js"));
+  });
+
+  it("sizes the player canvas within custom window chrome", () => {
+    expect(BUNDLE_PLAYER_INDEX_HTML).toContain(
+      "var(--rvn-app-viewport-height, 100vh)",
+    );
   });
 
   it("delegates promptDistributionZipPath through the stable file-adapter contract", async () => {
@@ -92,6 +127,66 @@ describe("projectExportService", () => {
       },
       getCurrentReference,
       getFileContent,
+    });
+  });
+
+  it("delegates macOS application exports through the stable file-adapter contract", async () => {
+    const promptMacosApplicationPath = vi.fn(async () => "/tmp/Game.app.zip");
+    const getMacosExportAvailability = vi.fn(async () => ({
+      application: true,
+      templateAvailable: true,
+      hostSupported: true,
+    }));
+    const createMacosApplicationToPath = vi.fn(async ({ outputPath }) => ({
+      outputPath,
+    }));
+    const getCurrentReference = vi.fn(() => ({
+      projectPath: "/tmp/project-1",
+    }));
+    const service = createProjectExportService({
+      fileAdapter: {
+        promptMacosApplicationPath,
+        getMacosExportAvailability,
+        createMacosApplicationToPath,
+      },
+      filePicker: {
+        saveFilePicker: vi.fn(),
+      },
+      getCurrentReference,
+      getFileContent: vi.fn(),
+    });
+
+    await expect(service.promptMacosApplicationPath("Game")).resolves.toBe(
+      "/tmp/Game.app.zip",
+    );
+    await expect(service.getMacosExportAvailability()).resolves.toMatchObject({
+      application: true,
+    });
+    await expect(
+      service.createMacosApplicationToPath(
+        { projectData: {} },
+        [{ fileId: "image-1", mimeType: "image/png" }],
+        "/tmp/Game.app.zip",
+        {
+          title: "Game",
+          shortVersion: "1.0.3",
+          bundleVersion: "4",
+          applicationIdentifier: "vn.routevn.player.game",
+          iconFileId: "icon-1",
+        },
+      ),
+    ).resolves.toEqual({ outputPath: "/tmp/Game.app.zip" });
+    expect(createMacosApplicationToPath).toHaveBeenCalledWith({
+      projectData: { projectData: {} },
+      fileEntries: [{ id: "image-1", mimeType: "image/png" }],
+      outputPath: "/tmp/Game.app.zip",
+      title: "Game",
+      shortVersion: "1.0.3",
+      bundleVersion: "4",
+      applicationIdentifier: "vn.routevn.player.game",
+      iconFileId: "icon-1",
+      options: {},
+      getCurrentReference,
     });
   });
 

@@ -610,6 +610,15 @@ const blurLinesEditorFocus = (refs) => {
   });
 };
 
+const prepareActionsDialogOpen = (deps, lineId) => {
+  const { appService, refs, store } = deps;
+  if (lineId) {
+    store.setActionTargetLineId({ lineId });
+  }
+  blurLinesEditorFocus(refs);
+  appService.blurActiveElement();
+};
+
 const shouldAnimateLineNavigation = (
   store,
   { previousLineId, nextLineId } = {},
@@ -2440,9 +2449,7 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
 export const handleAddActionsButtonClick = (deps) => {
   const { refs, render, store } = deps;
   const lineId = store.selectSelectedLineId();
-  if (lineId) {
-    store.setActionTargetLineId({ lineId });
-  }
+  prepareActionsDialogOpen(deps, lineId);
   refs.systemActions?.transformedHandlers?.open?.({
     mode: "actions",
   });
@@ -2451,11 +2458,9 @@ export const handleAddActionsButtonClick = (deps) => {
 
 export const handleSystemActionsDialogOpen = (deps, payload) => {
   const { store } = deps;
-  const detail = payload?._event?.detail || {};
-  const lineId = detail.selectedLineId || store.selectSelectedLineId();
-  if (lineId) {
-    store.setActionTargetLineId({ lineId });
-  }
+  const { selectedLineId } = payload._event.detail;
+  const lineId = selectedLineId ?? store.selectSelectedLineId();
+  prepareActionsDialogOpen(deps, lineId);
 };
 
 export const handleMobileKeyboardToolbarActionClick = (deps, payload) => {
@@ -3079,7 +3084,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     const selectedLine = store.selectSelectedLine();
 
     if (actionsType && selectedLineId && selectedSectionId) {
-      // Special handling for dialogue - keep content, remove only layoutId and characterId
+      // Keep editable content while clearing the dialogue presentation.
       if (actionsType === "dialogue") {
         const currentDialogue = selectedLine?.actions?.dialogue;
         if (currentDialogue) {
@@ -3088,7 +3093,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
             async () => {
               await projectService.updateLineDialogueAction({
                 lineId: selectedLineId,
-                dialogue: {},
+                dialogue: { clear: true },
                 preserve: ["dialogue.content"],
               });
             },
@@ -3696,9 +3701,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   // For inherited actions (visual, character, background), we set a "clear" value
   // to override inherited state. For non-inherited actions, we delete the key.
   const newActions = structuredClone(selectedLine.actions || {});
-  if (actionType === "dialogue") {
-    newActions.dialogue = { clear: true };
-  } else if (actionType === "visual") {
+  if (actionType === "visual") {
     // Clear visual by setting empty items array
     newActions.visual = { items: [] };
   } else if (actionType === "character") {
@@ -3719,6 +3722,15 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   await runSceneEditorPersistence(
     deps,
     async () => {
+      if (actionType === "dialogue") {
+        await projectService.updateLineDialogueAction({
+          lineId: selectedLine.id,
+          dialogue: { clear: true },
+          preserve: ["dialogue.content"],
+        });
+        return;
+      }
+
       await projectService.updateLineActions({
         lineId: selectedLine.id,
         data: newActions,

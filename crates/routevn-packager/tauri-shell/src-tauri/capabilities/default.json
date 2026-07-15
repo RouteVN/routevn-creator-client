@@ -5,8 +5,19 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-set-decorations",
+    "core:window:allow-set-fullscreen",
     "core:window:allow-set-title",
     "core:window:allow-set-icon",
-    "core:window:allow-show"
+    "core:window:allow-show",
+    "core:window:allow-start-dragging",
+    "core:window:allow-unmaximize",
+    "sql:default",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "sql:allow-select",
+    "sql:allow-close"
   ]
 }

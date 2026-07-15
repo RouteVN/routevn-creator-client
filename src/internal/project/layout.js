@@ -1217,7 +1217,14 @@ const getTextNodeContent = (node, context = {}) => {
     return `\${choice.items[${context.choiceItemIndex}].content}`;
   }
 
-  return TEXT_CONTENT_BY_TYPE[node.type] ?? node.text ?? "";
+  const referencedContent = TEXT_CONTENT_BY_TYPE[node.type];
+  if (referencedContent !== undefined) {
+    return referencedContent;
+  }
+
+  // The renderer's legacy string path drops fontWeight. Keep old persisted
+  // text nodes compatible by projecting them through the rich-text path.
+  return toRouteGraphicsLayoutTextContent([{ text: node.text ?? "" }]);
 };
 
 const toTextRevealingSegments = (content) => {

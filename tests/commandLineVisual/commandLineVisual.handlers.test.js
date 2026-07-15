@@ -8,9 +8,11 @@ import {
   handleBlurToggleChange,
   handleButtonSelectClick,
   handleDropdownMenuClickItem,
+  handleFileExplorerItemClick,
   handleLayerChange,
   handleOpacityInput,
   handleResourceItemClick,
+  handleSpritesheetSelected,
   handleSubmitClick,
   handleTabClick,
   handleVisualClick,
@@ -37,6 +39,7 @@ import {
   selectSelectedVisualIndex,
   selectTab,
   selectTempSelectedResourceId,
+  selectTempSelectedAnimationName,
   selectTempSelectedResourceType,
   setAnimations,
   setExistingVisuals,
@@ -55,6 +58,12 @@ import {
   updateVisualLayer,
   updateVisualOpacity,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
+
+const TEST_I18N = {
+  resourcePages: {},
+  sceneEditorPage: {},
+  commandLinePage: {},
+};
 
 const createStoreApi = (state) => ({
   addVisual: (payload) => addVisual({ state }, payload),
@@ -81,6 +90,8 @@ const createStoreApi = (state) => ({
   selectSelectedVisuals: () => selectSelectedVisuals({ state }),
   selectTab: () => selectTab({ state }),
   selectTempSelectedResourceId: () => selectTempSelectedResourceId({ state }),
+  selectTempSelectedAnimationName: () =>
+    selectTempSelectedAnimationName({ state }),
   selectTempSelectedResourceType: () =>
     selectTempSelectedResourceType({ state }),
   setMode: (payload) => setMode({ state }, payload),
@@ -302,6 +313,99 @@ describe("commandLineVisual.handlers animation controls", () => {
         },
       },
     });
+  });
+
+  it("includes the selected spritesheet animation in preview and saved visuals", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const appService = {
+      showAlert: vi.fn(),
+    };
+    const store = createStoreApi(state);
+
+    setMode({ state }, { mode: "resource-select" });
+    setSelectedVisualIndex({ state }, { index: -1 });
+
+    handleSpritesheetSelected(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            resourceId: "visual-spritesheet",
+            animationName: "idle",
+          },
+        },
+      },
+    );
+
+    expect(dispatchEvent.mock.calls[0][0].detail).toMatchObject({
+      presentationState: {
+        visual: {
+          items: [
+            {
+              resourceId: "visual-spritesheet",
+              resourceType: "spritesheet",
+              animationName: "idle",
+            },
+          ],
+        },
+      },
+    });
+
+    handleButtonSelectClick({
+      appService,
+      store,
+      render,
+      dispatchEvent,
+      i18n: TEST_I18N,
+    });
+
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      resourceId: "visual-spritesheet",
+      resourceType: "spritesheet",
+      animationName: "idle",
+    });
+  });
+
+  it("routes spritesheet explorer items through the animation selector", () => {
+    const handleScrollToItem = vi.fn();
+    const setTempSelectedResourceId = vi.fn();
+
+    handleFileExplorerItemClick(
+      {
+        refs: {
+          spritesheetSelector: {
+            transformedHandlers: { handleScrollToItem },
+          },
+        },
+        store: {
+          selectResourceExplorerTarget: () => ({
+            resourceId: "visual-spritesheet",
+            resourceType: "spritesheet",
+          }),
+          setTempSelectedResourceId,
+        },
+        render: vi.fn(),
+      },
+      {
+        _event: {
+          detail: {
+            itemId: "spritesheet:visual-spritesheet",
+            isFolder: false,
+          },
+        },
+      },
+    );
+
+    expect(handleScrollToItem).toHaveBeenCalledWith({
+      itemId: "visual-spritesheet",
+    });
+    expect(setTempSelectedResourceId).not.toHaveBeenCalled();
   });
 
   it("uses a temporary id when an existing visual changes resource type", () => {
@@ -786,6 +890,7 @@ describe("commandLineVisual.handlers animation controls", () => {
       store,
       render,
       dispatchEvent,
+      i18n: TEST_I18N,
     });
 
     expect(appService.showAlert).not.toHaveBeenCalled();
