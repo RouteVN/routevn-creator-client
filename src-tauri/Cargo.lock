@@ -4110,6 +4110,7 @@ name = "routevn-creator"
 version = "1.8.2"
 dependencies = [
  "log",
+ "plist",
  "routevn-exporter",
  "routevn-packager",
  "serde",

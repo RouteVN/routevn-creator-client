@@ -90,6 +90,10 @@ Current approved prefixed or composite shapes:
   - local collab actor client ids
 - `web-<projectPart>-<base58>`
   - web collab debug client ids
+- `vn.routevn.player.<base58>`
+  - persisted native application identifiers
+  - generated once per game with the default 12-character Base58 suffix
+  - remains stable across renames, moves, and release exports
 
 Default rule:
 

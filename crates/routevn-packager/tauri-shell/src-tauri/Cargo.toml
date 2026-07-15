@@ -25,6 +25,7 @@ tauri = { version = "=2.11.2", features = ["image-png"] }
 tauri-plugin-log = "=2.7.1"
 tauri-plugin-sql = { git = "https://github.com/han4wluc/plugins-workspace.git", rev = "4f9cdc691a68655688caf8d82f6c510cea793ce2", features = ["sqlite", "fs-scope-validation"] }
 routevn-packager = { path = "../.." }
+plist = "=1.8.0"
 
 # Keep the standalone player shell on Rust 1.85-compatible transitive versions.
 serde_with = "=3.15.1"

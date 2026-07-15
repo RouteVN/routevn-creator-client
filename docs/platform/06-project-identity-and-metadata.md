@@ -3,8 +3,8 @@
 Date baseline: July 10, 2026.
 
 This document defines the current ownership and behavior of project identity,
-project metadata, browser-hosted bundle save identity, and the native Windows
-player save-identity contract.
+project metadata, browser-hosted bundle save identity, and the native player
+save-identity contract.
 
 ## Summary
 
@@ -13,7 +13,7 @@ There are four separate concepts that are easy to confuse:
 1. app project entry id
 2. committed repository event `project_id`
 3. browser-hosted bundle save namespace
-4. native Windows player application identifier
+4. native player application identifier
 
 For new projects, the first and third come from `projectInfo` in the
 project-specific DB. The fourth is owned by the native player package.
@@ -27,6 +27,7 @@ Current fields:
 
 - `id`
 - `namespace`
+- `nativeApplicationIdentifier`
 - `name`
 - `description`
 - `iconFileId`
@@ -37,6 +38,8 @@ Important details:
 - `projectInfo.id` is the canonical project/folder id for new projects
 - `projectInfo.namespace` is the canonical browser-hosted bundle save namespace
   for new projects
+- `projectInfo.nativeApplicationIdentifier` is the stable native player
+  application identity shared by releases of the same game
 - `iconFileId` is stored in `projectInfo`, but the actual icon binary lives in
   the project `files/` folder
 
@@ -98,10 +101,10 @@ Implication:
 - two different exports should not collide just because they are hosted at the
   same path
 
-## Native Windows Player Identifier
+## Native Player Identifier
 
-An exported Windows player is a single-game native application. Its stable
-Tauri application identifier is its runtime save identity.
+An exported native player is a single-game application. Its stable Tauri
+application identifier is its runtime save identity.
 
 Important details:
 
@@ -109,12 +112,27 @@ Important details:
 - the identifier must stay stable across releases of that game
 - a different game must not reuse the identifier
 - the native player stores one unpartitioned `runtime.db` in its Tauri app
-  config directory; on Windows this is under `%APPDATA%`
+  config directory
 - the database does not use `projectInfo.namespace`, `projectInfo.id`, title,
   executable path, or release version as a partition key
 
-For the complete SQLite and adapter contract, see
-`11-windows-player-runtime-persistence.md`.
+For the shared SQLite and adapter contract, see
+`11-windows-player-runtime-persistence.md`. For macOS packaging and startup
+identity propagation, see `13-macos-player-export.md`.
+
+## Native Application Identifier
+
+New projects persist `projectInfo.nativeApplicationIdentifier` in the form
+`vn.routevn.player.<base58>`. Existing projects receive the field through one
+lazy persisted backfill when their project metadata is read.
+
+The exact value is stable across project renames, moves, restores, and release
+exports. A different game must receive a different value. Native exporters must
+not derive it from mutable display metadata or output paths.
+
+On macOS, the value is written to `CFBundleIdentifier` and loaded into Tauri's
+runtime `config.identifier` before plugins initialize. On Windows, the same
+field is the intended source for the future per-game runtime identity fix.
 
 ## Current Guidance
 
@@ -124,7 +142,7 @@ Use these rules when reasoning about identity:
 - for canonical project identity on new projects, use `projectInfo.id`
 - for browser-hosted bundle save identity on new projects, use
   `projectInfo.namespace`
-- for native Windows player save identity, use the stable Tauri application
+- for native player save identity, use the stable Tauri application
   identifier
 - for repository history semantics, reason about committed repository events
 - do not assume `state.project.id` came from repository state

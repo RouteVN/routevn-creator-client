@@ -72,6 +72,34 @@ describe("player runtime persistence key/value contract", () => {
     expect(saveSlotPersistenceKey("auto")).toBe("saveSlots:auto");
   });
 
+  it("omits undefined optional BGM fields from engine save-slot snapshots", () => {
+    const slot = createSaveSlot(1);
+    slot.state.contexts[0].bgm.resourceId = undefined;
+    slot.state.contexts[0].bgm.startDelayMs = undefined;
+
+    const snapshot = snapshotSaveSlots({ 1: slot });
+
+    expect(snapshot["1"].state.contexts[0].bgm).toEqual({});
+    expect(Object.hasOwn(slot.state.contexts[0].bgm, "resourceId")).toBe(true);
+    expect(Object.hasOwn(slot.state.contexts[0].bgm, "startDelayMs")).toBe(
+      true,
+    );
+  });
+
+  it("still rejects undefined values outside optional save-context BGM fields", () => {
+    const invalidBgm = createSaveSlot(1);
+    invalidBgm.state.contexts[0].bgm.loop = undefined;
+    expect(() => snapshotSaveSlots({ 1: invalidBgm })).toThrow(
+      ".bgm.loop must contain only JSON values",
+    );
+
+    const invalidVariables = createSaveSlot(1);
+    invalidVariables.state.contexts[0].variables.route = undefined;
+    expect(() => snapshotSaveSlots({ 1: invalidVariables })).toThrow(
+      ".variables.route must contain only JSON values",
+    );
+  });
+
   it("rejects unsupported or empty physical keys", () => {
     expect(() => validatePlayerPersistenceValue("saveSlots", {})).toThrow(
       "Unsupported runtime persistence key: saveSlots",

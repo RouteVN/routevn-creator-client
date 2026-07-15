@@ -40,6 +40,12 @@ const sounds = {
   ],
 };
 
+const i18n = {
+  resourcePages: {},
+  sceneEditorPage: {},
+  commandLinePage: {},
+};
+
 const createStoreDeps = (state) => ({
   selectBgm: () => selectBgm({ state }),
   setBgm: (payload) => setBgm({ state }, payload),
@@ -161,6 +167,7 @@ describe("commandLineBgm.handlers", () => {
         globalUI: {
           showDropdownMenu,
         },
+        i18n,
       },
       {
         _event: {

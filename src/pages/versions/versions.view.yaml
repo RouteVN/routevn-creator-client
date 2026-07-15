@@ -23,6 +23,10 @@ refs:
     eventListeners:
       click:
         handler: handleDownloadWindowsInstallerClick
+  detailMacosApplicationBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadMacosApplicationClick
   detailHeader:
     eventListeners:
       click:
@@ -90,6 +94,8 @@ template:
                                           - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
                                       - $if canExportWindowsInstaller:
                                           - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
+                                      - $if canExportMacosApplication:
+                                          - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
@@ -107,6 +113,8 @@ template:
                               - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
                           - $if canExportWindowsInstaller:
                               - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
+                          - $if canExportMacosApplication:
+                              - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
   - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md:
       - rtgl-view slot=content w=f:
           - rtgl-form#versionForm :form=${versionForm} w=f: null

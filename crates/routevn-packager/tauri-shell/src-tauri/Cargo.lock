@@ -3587,6 +3587,7 @@ dependencies = [
  "icu_properties_data",
  "icu_provider",
  "log",
+ "plist",
  "routevn-packager",
  "serde",
  "serde_with",
