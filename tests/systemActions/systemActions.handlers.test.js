@@ -5,6 +5,7 @@ import {
   openAudioPlayer,
   selectVoicePreview,
   selectAction,
+  setAuthoredDialogueWasCleared,
   setRepositoryState,
   updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
@@ -150,6 +151,8 @@ describe("systemActions.handlers", () => {
     const deps = {
       store: {
         selectAction: () => selectAction({ state }),
+        setAuthoredDialogueWasCleared: (payload) =>
+          setAuthoredDialogueWasCleared({ state }, payload),
         updateActions: (payload) => updateActions({ state }, payload),
         hideActionsDialog: () => {},
       },
@@ -195,6 +198,8 @@ describe("systemActions.handlers", () => {
     const deps = {
       store: {
         selectAction: () => selectAction({ state }),
+        setAuthoredDialogueWasCleared: (payload) =>
+          setAuthoredDialogueWasCleared({ state }, payload),
         updateActions: (payload) => updateActions({ state }, payload),
         hideActionsDialog: () => {},
       },
@@ -235,9 +240,16 @@ describe("systemActions.handlers", () => {
     const state = createInitialState();
     const dispatchedEvents = [];
 
+    setAuthoredDialogueWasCleared(
+      { state },
+      { authoredDialogueWasCleared: true },
+    );
+
     const deps = {
       store: {
         selectAction: () => selectAction({ state }),
+        setAuthoredDialogueWasCleared: (payload) =>
+          setAuthoredDialogueWasCleared({ state }, payload),
         updateActions: (payload) => updateActions({ state }, payload),
         hideActionsDialog: () => {},
       },
@@ -269,6 +281,7 @@ describe("systemActions.handlers", () => {
     });
 
     expect(dispatchedEvents).toHaveLength(1);
+    expect(state.authoredDialogueWasCleared).toBe(false);
     expect(dispatchedEvents[0].detail).toEqual({
       dialogue: {
         mode: "adv",
@@ -814,6 +827,8 @@ describe("systemActions.handlers", () => {
       },
       store: {
         updateActions: (payload) => updateActions({ state }, payload),
+        setAuthoredDialogueWasCleared: (payload) =>
+          setAuthoredDialogueWasCleared({ state }, payload),
         showActionsDialog: () => {},
         setMode: () => {},
       },
@@ -844,6 +859,8 @@ describe("systemActions.handlers", () => {
       },
       store: {
         updateActions: (payload) => updateActions({ state }, payload),
+        setAuthoredDialogueWasCleared: (payload) =>
+          setAuthoredDialogueWasCleared({ state }, payload),
         showActionsDialog: () => {},
         setMode: () => {},
       },
@@ -870,6 +887,38 @@ describe("systemActions.handlers", () => {
       updateVariable: {
         id: "updateVariable1",
         operations: [],
+      },
+    });
+  });
+
+  it("keeps an authored dialogue clear marker when syncing editable content", () => {
+    const state = createInitialState();
+    const deps = {
+      props: {
+        actions: {
+          dialogue: {
+            clear: true,
+            content: [{ text: "Keep writing" }],
+          },
+        },
+      },
+      store: {
+        updateActions: (payload) => updateActions({ state }, payload),
+        setAuthoredDialogueWasCleared: (payload) =>
+          setAuthoredDialogueWasCleared({ state }, payload),
+        showActionsDialog: () => {},
+        setMode: () => {},
+      },
+      render: () => {},
+    };
+
+    open(deps, { mode: "actions" });
+
+    expect(state.authoredDialogueWasCleared).toBe(true);
+    expect(selectAction({ state })).toEqual({
+      dialogue: {
+        clear: true,
+        content: [{ text: "Keep writing" }],
       },
     });
   });
@@ -1062,6 +1111,8 @@ describe("systemActions.handlers", () => {
         store: {
           setRepositoryState: (payload) =>
             setRepositoryState({ state }, payload),
+          setAuthoredDialogueWasCleared: (payload) =>
+            setAuthoredDialogueWasCleared({ state }, payload),
           updateActions: (payload) => updateActions({ state }, payload),
         },
         render,

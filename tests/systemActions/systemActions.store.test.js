@@ -5,6 +5,7 @@ import {
   openAudioPlayer,
   selectActionsData,
   selectViewData as selectViewDataBase,
+  setAuthoredDialogueWasCleared,
   setUiConfig,
   setRepositoryState,
   updateActions,
@@ -1085,6 +1086,107 @@ describe("systemActions.store", () => {
       modeLabel: "ADV",
       appendLabel: "append",
     });
+  });
+
+  it("omits cleared dialogue from the presentation state preview", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actionType: "presentation",
+        actions: {
+          dialogue: {
+            clear: true,
+          },
+        },
+        presentationState: {
+          dialogue: {
+            clear: true,
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue).toBeUndefined();
+    expect(preview.dialogue).toBeUndefined();
+  });
+
+  it("keeps cleared dialogue hidden after its content is edited", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: {
+            items: {
+              "dialogue-layout": {
+                id: "dialogue-layout",
+                type: "layout",
+                name: "Main Dialogue",
+                layoutType: "dialogue-adv",
+              },
+            },
+            tree: [{ id: "dialogue-layout" }],
+          },
+        },
+      },
+    );
+
+    updateActions(
+      { state },
+      {
+        dialogue: {
+          content: [{ text: "Edited after deletion" }],
+        },
+      },
+    );
+    setAuthoredDialogueWasCleared(
+      { state },
+      { authoredDialogueWasCleared: true },
+    );
+
+    const { actions, preview } = selectViewData({
+      state,
+      props: {
+        actionType: "presentation",
+        actions: {},
+        presentationState: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            mode: "adv",
+            content: [{ text: "Edited after deletion" }],
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue).toBeUndefined();
+    expect(preview.dialogue).toBeUndefined();
+  });
+
+  it("omits layout-less dialogue from the presentation state preview", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actionType: "presentation",
+        actions: {},
+        presentationState: {
+          dialogue: {
+            mode: "adv",
+            content: [{ text: "Deleted dialogue" }],
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue).toBeUndefined();
+    expect(preview.dialogue).toBeUndefined();
   });
 
   it("renders dialogue editor props from current component action state", () => {

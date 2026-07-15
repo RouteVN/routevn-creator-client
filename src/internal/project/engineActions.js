@@ -90,10 +90,10 @@ const normalizeDialogueAction = (dialogue = {}) => {
     normalizedDialogue.content = [{ text: normalizedDialogue.content }];
   }
 
-  const hasNonClearFields = Object.keys(normalizedDialogue).some(
-    (key) => key !== "clear",
+  const hasPresentationFields = Object.keys(normalizedDialogue).some(
+    (key) => key !== "clear" && key !== "content",
   );
-  if (normalizedDialogue.clear === true && hasNonClearFields) {
+  if (normalizedDialogue.clear === true && hasPresentationFields) {
     delete normalizedDialogue.clear;
   }
 

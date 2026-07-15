@@ -15,6 +15,7 @@ import {
   handlePreviewClick,
   handleSectionMoveSceneFormActionClick,
   handleSelectedLineChanged,
+  handleSystemActionsActionDelete,
   handleSystemActionsDialogOpen,
   handleTemporaryPresentationStateChange,
   scrollEntrySelectionIntoView,
@@ -1327,6 +1328,130 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       lineId: "line-1",
       dialogue: {
         characterId: "character-2",
+      },
+      preserve: ["dialogue.content"],
+    });
+  });
+
+  it("preserves dialogue content behind a clear marker when deleting from presentation state", async () => {
+    const saveError = new Error("stop after assertion");
+    const updateLineDialogueAction = vi.fn(async () => {
+      throw saveError;
+    });
+    const store = {
+      selectSelectedLine: vi.fn(() => ({
+        id: "line-1",
+        actions: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            content: [{ text: "Keep writing" }],
+          },
+        },
+      })),
+      selectDraftSection: vi.fn(() => undefined),
+    };
+
+    await expect(
+      handleSystemActionsActionDelete(
+        {
+          store,
+          render: vi.fn(),
+          i18n: {
+            resourcePages: {},
+            scenesPage: {},
+            sceneEditorPage: {},
+            commandLinePage: {},
+          },
+          subject: {
+            dispatch: vi.fn(),
+          },
+          projectService: {
+            updateLineDialogueAction,
+          },
+        },
+        {
+          _event: {
+            detail: {
+              actionType: "dialogue",
+            },
+          },
+        },
+      ),
+    ).rejects.toThrow("stop after assertion");
+
+    expect(updateLineDialogueAction).toHaveBeenCalledWith({
+      lineId: "line-1",
+      dialogue: {
+        clear: true,
+      },
+      preserve: ["dialogue.content"],
+    });
+  });
+
+  it("preserves dialogue content behind a clear marker when deleting from the line menu", async () => {
+    const saveError = new Error("stop after assertion");
+    const updateLineDialogueAction = vi.fn(async () => {
+      throw saveError;
+    });
+    const store = {
+      selectDropdownMenu: vi.fn(() => ({
+        actionsType: "dialogue",
+        lineId: "line-1",
+      })),
+      selectSceneId: vi.fn(() => "scene-1"),
+      hideDropdownMenu: vi.fn(),
+      selectSelectedLineId: vi.fn(() => "line-1"),
+      selectSelectedSectionId: vi.fn(() => "section-1"),
+      selectSelectedLine: vi.fn(() => ({
+        id: "line-1",
+        actions: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            content: [{ text: "Keep writing" }],
+          },
+        },
+      })),
+      selectDraftSection: vi.fn(() => undefined),
+    };
+
+    await expect(
+      handleDropdownMenuClickItem(
+        {
+          store,
+          render: vi.fn(),
+          i18n: {
+            resourcePages: {},
+            scenesPage: {},
+            sceneEditorPage: {},
+            commandLinePage: {},
+          },
+          subject: {
+            dispatch: vi.fn(),
+          },
+          projectService: {
+            updateLineDialogueAction,
+          },
+        },
+        {
+          _event: {
+            detail: {
+              item: {
+                value: "delete-actions",
+              },
+            },
+          },
+        },
+      ),
+    ).rejects.toThrow("stop after assertion");
+
+    expect(updateLineDialogueAction).toHaveBeenCalledWith({
+      lineId: "line-1",
+      dialogue: {
+        clear: true,
       },
       preserve: ["dialogue.content"],
     });
