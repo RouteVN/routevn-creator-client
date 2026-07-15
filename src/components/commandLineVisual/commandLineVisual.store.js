@@ -1,6 +1,10 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { generatePrefixedId } from "../../internal/id.js";
 import {
+  getSpritesheetAnimationPreview,
+  toSpritesheetAnimationSelectionValue,
+} from "../../internal/spritesheets.js";
+import {
   COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
@@ -31,6 +35,7 @@ import {
 
 const RESOURCE_TYPES = [
   { type: "image", label: "Images" },
+  { type: "spritesheet", label: "Spritesheets" },
   { type: "video", label: "Videos" },
   { type: "layout", label: "Layouts" },
 ];
@@ -328,6 +333,7 @@ const isSelectableVisualResource = (resourceType, item) => {
 const selectResourceCollection = (state, resourceType) => {
   const collections = {
     image: state.images,
+    spritesheet: state.spritesheets,
     video: state.videos,
     layout: state.layouts,
   };
@@ -456,6 +462,7 @@ export const createInitialState = () => ({
   mode: "current",
   tab: "image",
   images: createEmptyCollection(),
+  spritesheets: createEmptyCollection(),
   videos: createEmptyCollection(),
   layouts: createEmptyCollection(),
   transforms: createEmptyCollection(),
@@ -464,8 +471,9 @@ export const createInitialState = () => ({
    * Array of raw visual objects with the following structure:
    * {
    *   id: string,              // Unique visual ID
-   *   resourceId: string,      // Image/video/layout resource ID
-   *   resourceType: string,    // image/video/layout
+   *   resourceId: string,      // Image/spritesheet/video/layout resource ID
+   *   resourceType: string,    // image/spritesheet/video/layout
+   *   animationName: string,   // Required for spritesheet resources
    *   transformId: string,     // Transform ID
    *   layer: number,           // Required visual render layer
    *   animations: object,      // Optional animation selection with resourceId
@@ -474,12 +482,18 @@ export const createInitialState = () => ({
   selectedVisuals: [],
   tempSelectedResourceId: undefined,
   tempSelectedResourceType: undefined,
+  tempSelectedAnimationName: undefined,
   pendingVisualTransformId: undefined,
   pendingVisualLayer: undefined,
   selectedVisualIndex: undefined,
   searchQuery: "",
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
+  fullSpritesheetPreviewVisible: false,
+  fullSpritesheetPreviewFileId: undefined,
+  fullSpritesheetPreviewAtlas: undefined,
+  fullSpritesheetPreviewAnimation: undefined,
+  fullSpritesheetPreviewKey: undefined,
   customTransformEditorOpen: false,
   dropdownMenu: {
     isOpen: false,
@@ -501,6 +515,12 @@ export const setTab = ({ state }, { tab } = {}) => {
 
 export const setImages = ({ state }, { images } = {}) => {
   state.images = normalizeResourceCollection(images, { defaultType: "image" });
+};
+
+export const setSpritesheets = ({ state }, { spritesheets } = {}) => {
+  state.spritesheets = normalizeResourceCollection(spritesheets, {
+    defaultType: "spritesheet",
+  });
 };
 
 export const setVideos = ({ state }, { videos } = {}) => {
@@ -612,7 +632,7 @@ const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
 
 export const addVisual = (
   { state },
-  { resourceId, resourceType, transformId, layer } = {},
+  { resourceId, resourceType, animationName, transformId, layer } = {},
 ) => {
   const defaultTransform = getDefaultTransformId(state);
   const visual = {
@@ -625,6 +645,9 @@ export const addVisual = (
 
   if (resourceType) {
     visual.resourceType = resourceType;
+  }
+  if (resourceType === "spritesheet" && animationName) {
+    visual.animationName = animationName;
   }
 
   state.selectedVisuals.push(visual);
@@ -826,11 +849,17 @@ export const updateVisualBlurField = (
 
 export const updateVisualResource = (
   { state },
-  { index, resourceId, resourceType } = {},
+  { index, resourceId, resourceType, animationName } = {},
 ) => {
-  if (state.selectedVisuals[index]) {
-    state.selectedVisuals[index].resourceId = resourceId;
-    state.selectedVisuals[index].resourceType = resourceType;
+  const visual = state.selectedVisuals[index];
+  if (visual) {
+    visual.resourceId = resourceId;
+    visual.resourceType = resourceType;
+    if (resourceType === "spritesheet" && animationName) {
+      visual.animationName = animationName;
+    } else {
+      delete visual.animationName;
+    }
   }
 };
 
@@ -840,10 +869,12 @@ export const clearVisuals = ({ state }, _payload = {}) => {
 
 export const setTempSelectedResourceId = (
   { state },
-  { resourceId, resourceType } = {},
+  { resourceId, resourceType, animationName } = {},
 ) => {
   state.tempSelectedResourceId = resourceId;
   state.tempSelectedResourceType = resourceId ? resourceType : undefined;
+  state.tempSelectedAnimationName =
+    resourceId && resourceType === "spritesheet" ? animationName : undefined;
 };
 
 export const setPendingVisualLayer = ({ state }, { layer } = {}) => {
@@ -881,11 +912,42 @@ export const showFullImagePreview = ({ state }, { fileId } = {}) => {
 
   state.fullImagePreviewVisible = true;
   state.fullImagePreviewFileId = fileId;
+  state.fullSpritesheetPreviewVisible = false;
+};
+
+export const showFullSpritesheetPreview = (
+  { state },
+  { resourceId, animationName } = {},
+) => {
+  const preview = getSpritesheetAnimationPreview(
+    state.spritesheets,
+    resourceId,
+    animationName,
+  );
+  if (!preview.fileId || !preview.atlas || !preview.animation) {
+    return;
+  }
+
+  const selectionValue = toSpritesheetAnimationSelectionValue(
+    resourceId,
+    animationName,
+  );
+  state.fullImagePreviewVisible = false;
+  state.fullSpritesheetPreviewVisible = true;
+  state.fullSpritesheetPreviewFileId = preview.fileId;
+  state.fullSpritesheetPreviewAtlas = preview.atlas;
+  state.fullSpritesheetPreviewAnimation = preview.animation;
+  state.fullSpritesheetPreviewKey = `${selectionValue}:${preview.fileId}`;
 };
 
 export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
+  state.fullSpritesheetPreviewVisible = false;
+  state.fullSpritesheetPreviewFileId = undefined;
+  state.fullSpritesheetPreviewAtlas = undefined;
+  state.fullSpritesheetPreviewAnimation = undefined;
+  state.fullSpritesheetPreviewKey = undefined;
 };
 
 export const setSelectedVisualIndex = ({ state }, { index } = {}) => {
@@ -898,6 +960,10 @@ export const selectTempSelectedResourceId = ({ state }) => {
 
 export const selectTempSelectedResourceType = ({ state }) => {
   return state.tempSelectedResourceType;
+};
+
+export const selectTempSelectedAnimationName = ({ state }) => {
+  return state.tempSelectedAnimationName;
 };
 
 export const selectPendingVisualLayer = ({ state }) => {
@@ -1005,13 +1071,35 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
       resourceId: visual.resourceId,
       resourceType: visual.resourceType,
     });
+    const spritesheetPreview =
+      resource?.resourceType === "spritesheet"
+        ? getSpritesheetAnimationPreview(
+            state.spritesheets,
+            visual.resourceId,
+            visual.animationName,
+          )
+        : {};
+    const spritesheetSelectionValue = toSpritesheetAnimationSelectionValue(
+      visual.resourceId,
+      visual.animationName,
+    );
+    const resourceName = resource?.name ?? "Unknown Resource";
 
     return {
       ...visual,
       resource,
       resourceType: resource?.resourceType ?? visual.resourceType,
-      displayName: resource?.name || "Unknown Resource",
+      displayName:
+        resource?.resourceType === "spritesheet" && visual.animationName
+          ? `${resourceName} / ${visual.animationName}`
+          : resourceName,
       fileId: resource?.previewFileId,
+      spritesheetFileId: spritesheetPreview.fileId,
+      spritesheetAtlas: spritesheetPreview.atlas,
+      spritesheetAnimation: spritesheetPreview.animation,
+      spritesheetPreviewKey: spritesheetSelectionValue
+        ? `${spritesheetSelectionValue}:${spritesheetPreview.fileId ?? ""}`
+        : undefined,
     };
   });
 };
@@ -1044,7 +1132,9 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
           ? "Image"
           : resourceType === "video"
             ? "Video"
-            : "Layout",
+            : resourceType === "spritesheet"
+              ? "Spritesheet"
+              : "Layout",
         copy,
       ),
       previewFileId: child.thumbnailFileId || child.fileId,
@@ -1247,6 +1337,10 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     tabs: localizeCommandLineOptions(tabs, copy),
     resourceItems,
     resourceGroups,
+    tempSelectedSpritesheetValue: toSpritesheetAnimationSelectionValue(
+      state.tempSelectedResourceId,
+      state.tempSelectedAnimationName,
+    ),
     selectedVisuals: processedSelectedVisuals,
     transformOptions,
     animationOptions,
@@ -1255,6 +1349,11 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     searchPlaceholder: localizeCommandLineText("Search...", copy),
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    fullSpritesheetPreviewVisible: state.fullSpritesheetPreviewVisible,
+    fullSpritesheetPreviewFileId: state.fullSpritesheetPreviewFileId,
+    fullSpritesheetPreviewAtlas: state.fullSpritesheetPreviewAtlas,
+    fullSpritesheetPreviewAnimation: state.fullSpritesheetPreviewAnimation,
+    fullSpritesheetPreviewKey: state.fullSpritesheetPreviewKey,
     backgroundTransformEditor: createBackgroundTransformEditorViewData({
       state,
       props,

@@ -9,6 +9,8 @@ propsSchema:
       properties:
         resourceId:
           type: string
+        animationName:
+          type: string
         colorId:
           type: string
         opacity:

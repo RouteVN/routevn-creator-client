@@ -12,7 +12,7 @@ import {
   selectPendingVisualLayer,
   selectPendingVisualTransformId,
   selectSelectedVisuals,
-  selectViewData,
+  selectViewData as selectViewDataBase,
   setAnimations,
   setExistingVisuals,
   setImages,
@@ -20,6 +20,8 @@ import {
   setPendingVisualLayer,
   setPendingVisualTransformId,
   setTab,
+  setSpritesheets,
+  setTempSelectedResourceId,
   setTransforms,
   setVideos,
   showDropdownMenu,
@@ -30,7 +32,17 @@ import {
   updateVisualCustomTransformEnabled,
   updateVisualLayer,
   updateVisualOpacity,
+  updateVisualResource,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
+
+const TEST_I18N = {
+  resourcePages: {},
+  sceneEditorPage: {},
+  commandLinePage: {},
+};
+
+const selectViewData = (deps) =>
+  selectViewDataBase({ ...deps, i18n: TEST_I18N });
 
 const createEmptyCollection = () => ({
   items: {},
@@ -68,6 +80,35 @@ const setRepositoryCollections = (state) => {
           },
         },
         tree: [{ id: "visual-video" }],
+      },
+    },
+  );
+  setSpritesheets(
+    { state },
+    {
+      spritesheets: {
+        items: {
+          "visual-spritesheet": {
+            id: "visual-spritesheet",
+            type: "spritesheet",
+            name: "Hero",
+            fileId: "file-hero-spritesheet",
+            jsonData: {
+              frames: {
+                "idle-0": {
+                  frame: { x: 0, y: 0, w: 64, h: 64 },
+                },
+              },
+            },
+            animations: {
+              idle: {
+                frames: ["idle-0"],
+                fps: 12,
+              },
+            },
+          },
+        },
+        tree: [{ id: "visual-spritesheet" }],
       },
     },
   );
@@ -834,6 +875,7 @@ describe("commandLineVisual.store animation controls", () => {
     expect(viewData.tab).toBe("image");
     expect(viewData.tabs).toEqual([
       { id: "image", label: "Images" },
+      { id: "spritesheet", label: "Spritesheets" },
       { id: "video", label: "Videos" },
       { id: "layout", label: "Layouts" },
     ]);
@@ -852,6 +894,21 @@ describe("commandLineVisual.store animation controls", () => {
       ),
     ).toEqual(["visual-video"]);
 
+    setTab({ state }, { tab: "spritesheet" });
+    setTempSelectedResourceId(
+      { state },
+      {
+        resourceId: "visual-spritesheet",
+        resourceType: "spritesheet",
+        animationName: "idle",
+      },
+    );
+    viewData = selectViewData({ state });
+    expect(viewData.tab).toBe("spritesheet");
+    expect(viewData.tempSelectedSpritesheetValue).toBe(
+      "visual-spritesheet::idle",
+    );
+
     setTab({ state }, { tab: "layout" });
     viewData = selectViewData({ state });
     expect(viewData.tab).toBe("layout");
@@ -860,6 +917,47 @@ describe("commandLineVisual.store animation controls", () => {
         group.children.map((child) => child.id),
       ),
     ).toEqual(["visual-layout"]);
+  });
+
+  it("hydrates spritesheet animation previews and preserves animation names", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-hero-idle",
+            resourceId: "visual-spritesheet",
+            resourceType: "spritesheet",
+            animationName: "idle",
+          },
+        ],
+      },
+    );
+
+    const viewData = selectViewData({ state });
+    expect(viewData.defaultValues.visuals[0]).toMatchObject({
+      resourceId: "visual-spritesheet",
+      resourceType: "spritesheet",
+      animationName: "idle",
+      displayName: "Hero / idle",
+      spritesheetFileId: "file-hero-spritesheet",
+      spritesheetAnimation: {
+        frames: ["idle-0"],
+        fps: 12,
+      },
+    });
+
+    updateVisualResource(
+      { state },
+      {
+        index: 0,
+        resourceId: "visual-image",
+        resourceType: "image",
+      },
+    );
+    expect(selectSelectedVisuals({ state })[0].animationName).toBeUndefined();
   });
 });
 

@@ -31,6 +31,8 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "Search...": "searchPlaceholder",
   "Select a scene before adding voice audio.": "selectSceneBeforeVoiceAudio",
   "Select a voice audio file first.": "selectVoiceAudioFirst",
+  Spritesheet: "spritesheetLabel",
+  Spritesheets: "spritesheetsLabel",
   "The default branch must be the last branch.": "defaultBranchMustBeLast",
   "The selected input layout does not contain input fields.":
     "inputLayoutHasNoFields",
