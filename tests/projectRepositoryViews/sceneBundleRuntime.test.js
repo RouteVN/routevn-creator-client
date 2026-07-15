@@ -182,8 +182,8 @@ describe("sceneBundleRuntime", () => {
   it("persists editor-calculated text stats separately from scene overviews", async () => {
     const { runtime, store } = createRuntime({ events: [] });
     const textStats = {
-      count: 12,
-      countMode: "word",
+      wordCount: 12,
+      characterCount: 48,
       language: "en",
     };
 
@@ -207,8 +207,8 @@ describe("sceneBundleRuntime", () => {
 
   it("loads cached text stats without loading a scene projection", async () => {
     const textStats = {
-      count: 12,
-      countMode: "word",
+      wordCount: 12,
+      characterCount: 48,
       language: "en",
     };
     const partition = scenePartitionFor(inactiveSceneId);
@@ -230,6 +230,29 @@ describe("sceneBundleRuntime", () => {
       [inactiveSceneId]: textStats,
     });
     expect(loadSceneProjection).not.toHaveBeenCalled();
+  });
+
+  it("ignores cached text stats from the previous value shape", async () => {
+    const partition = scenePartitionFor(inactiveSceneId);
+    const { runtime } = createRuntime({
+      events: [],
+      textStatsCheckpoints: {
+        [partition]: {
+          partition,
+          viewVersion: "1",
+          lastCommittedId: 0,
+          value: {
+            count: 12,
+            countMode: "word",
+            language: "en",
+          },
+        },
+      },
+    });
+
+    await expect(
+      runtime.loadSceneTextStats({ sceneIds: [inactiveSceneId] }),
+    ).resolves.toEqual({});
   });
 
   it("does not invalidate scene overview checkpoints for image commands on the main partition", async () => {

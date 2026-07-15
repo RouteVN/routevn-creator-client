@@ -45,8 +45,8 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
         selectSceneTextStatsRefreshHandle: vi.fn(() => undefined),
         refreshSceneTextStats: vi.fn(),
         selectSceneTextStats: vi.fn(() => ({
-          count: 12,
-          countMode: "word",
+          wordCount: 12,
+          characterCount: 48,
         })),
         selectProjectLanguage: vi.fn(() => "en"),
       },
@@ -72,8 +72,8 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
     expect(cacheSceneTextStats).toHaveBeenCalledWith({
       sceneId: "scene-1",
       textStats: {
-        count: 12,
-        countMode: "word",
+        wordCount: 12,
+        characterCount: 48,
         language: "en",
       },
     });
@@ -243,8 +243,8 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
       setDraftSavePendingSinceAt: vi.fn(),
       refreshSceneTextStats: vi.fn(),
       selectSceneTextStats: vi.fn(() => ({
-        count: 4,
-        countMode: "word",
+        wordCount: 4,
+        characterCount: 16,
       })),
       selectProjectLanguage: vi.fn(() => "en"),
       selectRepositoryRevision: vi.fn(() => 7),
@@ -308,16 +308,16 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
     expect(projectService.cacheSceneTextStats).toHaveBeenNthCalledWith(1, {
       sceneId: "scene-1",
       textStats: {
-        count: 4,
-        countMode: "word",
+        wordCount: 4,
+        characterCount: 16,
         language: "en",
       },
     });
     expect(projectService.cacheSceneTextStats).toHaveBeenNthCalledWith(2, {
       sceneId: "scene-2",
       textStats: {
-        count: 4,
-        countMode: "word",
+        wordCount: 4,
+        characterCount: 16,
         language: "en",
       },
     });

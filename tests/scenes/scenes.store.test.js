@@ -30,8 +30,8 @@ describe("scenes.store mobile layout", () => {
     state.sceneOverviewsById = {
       "scene-1": {
         textStats: {
-          count: 4,
-          countMode: "word",
+          wordCount: 4,
+          characterCount: 18,
           language: "en",
         },
       },
@@ -59,8 +59,8 @@ describe("scenes.store mobile layout", () => {
     state.sceneOverviewsById = {
       "scene-1": {
         textStats: {
-          count: 4,
-          countMode: "character",
+          wordCount: 2,
+          characterCount: 4,
           language: "ja",
         },
       },
@@ -106,8 +106,8 @@ describe("scenes.store mobile layout", () => {
     state.sceneOverviewsById = {
       "scene-1": {
         textStats: {
-          count: 0,
-          countMode: "word",
+          wordCount: 0,
+          characterCount: 4,
           language: "en",
         },
       },
@@ -135,8 +135,8 @@ describe("scenes.store mobile layout", () => {
     state.sceneOverviewsById = {
       "scene-1": {
         textStats: {
-          count: 4,
-          countMode: "word",
+          wordCount: 4,
+          characterCount: 12,
           language: "en",
         },
       },

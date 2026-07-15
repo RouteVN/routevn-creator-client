@@ -1,7 +1,10 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
-import { formatSceneTextStatsLabel } from "../../internal/ui/sceneTextStats.js";
+import {
+  formatSceneTextStatsLabel,
+  getSceneTextStatsCount,
+} from "../../internal/ui/sceneTextStats.js";
 import {
   DEFAULT_PROJECT_LANGUAGE,
   normalizeProjectLanguage,
@@ -460,11 +463,16 @@ export const selectViewData = ({ state, i18n }) => {
     const selectedSceneTextStats = selectedSceneOverview?.textStats;
     if (
       selectedSceneTextStats?.language === state.projectLanguage &&
-      selectedSceneTextStats.count > 0
+      getSceneTextStatsCount(selectedSceneTextStats, {
+        language: state.projectLanguage,
+      }) > 0
     ) {
       selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
         selectedSceneTextStats,
-        copy,
+        {
+          language: state.projectLanguage,
+          copy,
+        },
       );
     }
     selectedSceneSections = Array.isArray(selectedSceneOverview?.sections)

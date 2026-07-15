@@ -1848,10 +1848,10 @@ export const selectViewData = ({ state, i18n }) => {
       isScenePageLoading: state.isScenePageLoading,
       isSceneAssetLoading: state.isSceneAssetLoading,
       deadEndTooltip: state.deadEndTooltip,
-      sceneTextStatsLabel: formatSceneTextStatsLabel(
-        state.sceneTextStats,
+      sceneTextStatsLabel: formatSceneTextStatsLabel(state.sceneTextStats, {
+        language: state.projectLanguage,
         copy,
-      ),
+      }),
       backgroundTransformEditor: selectBackgroundTransformEditorViewData({
         state,
       }),
@@ -2226,7 +2226,10 @@ export const selectViewData = ({ state, i18n }) => {
     isScenePageLoading: state.isScenePageLoading,
     isSceneAssetLoading: state.isSceneAssetLoading,
     deadEndTooltip: state.deadEndTooltip,
-    sceneTextStatsLabel: formatSceneTextStatsLabel(state.sceneTextStats, copy),
+    sceneTextStatsLabel: formatSceneTextStatsLabel(state.sceneTextStats, {
+      language: state.projectLanguage,
+      copy,
+    }),
     backgroundTransformEditor: selectBackgroundTransformEditorViewData({
       state,
     }),

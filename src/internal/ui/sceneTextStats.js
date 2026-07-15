@@ -157,17 +157,14 @@ const countCharacters = (text, language) => {
     : countCharactersWithFallback(text);
 };
 
-export const createEmptySceneTextStats = ({ language } = {}) => ({
-  count: 0,
-  countMode: getProjectLanguageTextCountMode(language),
+export const createEmptySceneTextStats = () => ({
+  wordCount: 0,
+  characterCount: 0,
 });
 
 export const normalizeSceneTextStats = (stats = {}) => ({
-  count: Math.max(0, Math.trunc(Number(stats.count) || 0)),
-  countMode:
-    stats.countMode === PROJECT_TEXT_COUNT_MODE_CHARACTER
-      ? PROJECT_TEXT_COUNT_MODE_CHARACTER
-      : getProjectLanguageTextCountMode(),
+  wordCount: Math.max(0, Math.trunc(Number(stats.wordCount) || 0)),
+  characterCount: Math.max(0, Math.trunc(Number(stats.characterCount) || 0)),
 });
 
 const formatSceneTextStatsNumber = (value) => {
@@ -176,9 +173,21 @@ const formatSceneTextStatsNumber = (value) => {
   return count.toLocaleString();
 };
 
-export const formatSceneTextStatsLabel = (stats = {}, copy = {}) => {
+export const getSceneTextStatsCount = (stats = {}, { language } = {}) => {
   const normalizedStats = normalizeSceneTextStats(stats);
-  const { count, countMode } = normalizedStats;
+  const countMode = getProjectLanguageTextCountMode(language);
+
+  return countMode === PROJECT_TEXT_COUNT_MODE_CHARACTER
+    ? normalizedStats.characterCount
+    : normalizedStats.wordCount;
+};
+
+export const formatSceneTextStatsLabel = (
+  stats = {},
+  { language, copy = {} } = {},
+) => {
+  const count = getSceneTextStatsCount(stats, { language });
+  const countMode = getProjectLanguageTextCountMode(language);
   let template;
   if (countMode === PROJECT_TEXT_COUNT_MODE_CHARACTER) {
     template =
@@ -200,17 +209,13 @@ export const formatSceneTextStatsLabel = (stats = {}, copy = {}) => {
 export const buildSceneTextStats = (scene = {}, { language } = {}) => {
   const text = getSceneTextForStats(scene);
   const normalizedLanguage = normalizeProjectLanguage(language);
-  const countMode = getProjectLanguageTextCountMode(normalizedLanguage);
 
   if (!text) {
-    return createEmptySceneTextStats({ language: normalizedLanguage });
+    return createEmptySceneTextStats();
   }
 
   return {
-    count:
-      countMode === PROJECT_TEXT_COUNT_MODE_CHARACTER
-        ? countCharacters(text, normalizedLanguage)
-        : countWords(text, normalizedLanguage),
-    countMode,
+    wordCount: countWords(text, normalizedLanguage),
+    characterCount: countCharacters(text, normalizedLanguage),
   };
 };

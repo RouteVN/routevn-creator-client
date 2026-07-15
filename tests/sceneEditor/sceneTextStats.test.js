@@ -28,8 +28,8 @@ describe("sceneTextStats", () => {
 
     expect(getSceneTextForStats(scene)).not.toContain("Section name");
     expect(buildSceneTextStats(scene)).toEqual({
-      count: 9,
-      countMode: "word",
+      wordCount: 9,
+      characterCount: 25,
     });
   });
 
@@ -54,7 +54,7 @@ describe("sceneTextStats", () => {
     };
 
     expect(getSceneTextForStats(scene)).toBe("Hello playerName");
-    expect(buildSceneTextStats(scene).count).toBe(2);
+    expect(buildSceneTextStats(scene).wordCount).toBe(2);
   });
 
   it("defaults to word count for mixed-script text", () => {
@@ -77,8 +77,8 @@ describe("sceneTextStats", () => {
     const stats = buildSceneTextStats(scene);
 
     expect(stats).toEqual({
-      count: 3,
-      countMode: "word",
+      wordCount: 3,
+      characterCount: 12,
     });
   });
 
@@ -103,8 +103,8 @@ describe("sceneTextStats", () => {
     };
 
     expect(buildSceneTextStats(scene, { language: "ja" })).toEqual({
-      count: 6,
-      countMode: "character",
+      wordCount: 3,
+      characterCount: 6,
     });
   });
 
@@ -129,8 +129,8 @@ describe("sceneTextStats", () => {
     };
 
     expect(buildSceneTextStats(scene, { language: "zh-hans" })).toEqual({
-      count: 8,
-      countMode: "character",
+      wordCount: 3,
+      characterCount: 8,
     });
   });
 
@@ -164,8 +164,8 @@ describe("sceneTextStats", () => {
 
     expect(getSceneTextForStats(scene)).toBe("Hello world\nGo home");
     expect(buildSceneTextStats(scene)).toEqual({
-      count: 4,
-      countMode: "word",
+      wordCount: 4,
+      characterCount: 16,
     });
   });
 });
