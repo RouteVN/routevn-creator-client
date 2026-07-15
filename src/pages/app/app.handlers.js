@@ -2,6 +2,8 @@ import {
   EMPTY,
   filter,
   fromEvent,
+  map,
+  of,
   share,
   switchMap,
   take,
@@ -220,18 +222,6 @@ const isEditableTarget = (event) => {
   }
 
   return false;
-};
-
-const isTextInputFocused = (appService) => {
-  if (typeof appService?.isInputFocused !== "function") {
-    return false;
-  }
-
-  try {
-    return appService.isInputFocused();
-  } catch {
-    return false;
-  }
 };
 
 const mountSubscriptions = (deps) => {
@@ -490,22 +480,34 @@ const createRouteTransitionRunner = (deps) => {
   };
 };
 
-const targetPathByKey = {
-  p: "/project",
+const targetPathBySequence = {
+  pr: "/project",
   i: "/project/images",
-  h: "/project/spritesheets",
-  c: "/project/characters",
-  o: "/project/colors",
+  sp: "/project/spritesheets",
+  ch: "/project/characters",
+  so: "/project/sounds",
+  tr: "/project/transforms",
+  an: "/project/animations",
+  pa: "/project/particles",
+  vi: "/project/videos",
+  co: "/project/colors",
   f: "/project/fonts",
-  y: "/project/text-styles",
+  ts: "/project/text-styles",
   l: "/project/layouts",
-  v: "/project/videos",
-  t: "/project/transforms",
-  s: "/project/sounds",
-  n: "/project/scenes",
-  r: "/project/releases",
-  a: "/project/about",
+  ct: "/project/controls",
+  va: "/project/variables",
+  sc: "/project/scenes",
+  r: "/project/releases/versions",
+  ws: "/project/releases/web-server",
+  ab: "/project/about",
+  ap: "/project/appearance",
 };
+
+const targetSequencePrefixes = new Set(
+  Object.keys(targetPathBySequence)
+    .filter((sequence) => sequence.length > 1)
+    .map((sequence) => sequence[0]),
+);
 
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
@@ -650,15 +652,47 @@ export const handleMobileSheetClose = (deps) => {
 const subscriptions = (deps) => {
   const { appService, subject } = deps;
   const runRouteTransition = createRouteTransitionRunner(deps);
-  const projectKeyDown$ = fromEvent(window, "keydown").pipe(
+  const projectKeyDown$ = fromEvent(window, "keydown", { capture: true }).pipe(
     filter(() => isProjectRoute(appService.getPath())),
     filter((event) => !event.defaultPrevented),
     filter((event) => !event.ctrlKey && !event.metaKey && !event.altKey),
     filter((event) => !event.repeat),
-    filter(() => !isTextInputFocused(appService)),
     filter((event) => !isEditableTarget(event)),
     share(),
   );
+  const waitForProjectKey = () =>
+    projectKeyDown$.pipe(
+      take(1),
+      timeout({
+        first: GLOBAL_NAV_TIMEOUT_MS,
+        with: () => EMPTY,
+      }),
+    );
+  const resolveNavigationTarget = (firstEvent) => {
+    const firstKey = String(firstEvent.key || "").toLowerCase();
+    const directTargetPath = targetPathBySequence[firstKey];
+    if (directTargetPath) {
+      return of({ event: firstEvent, targetPath: directTargetPath });
+    }
+
+    if (!targetSequencePrefixes.has(firstKey)) {
+      return EMPTY;
+    }
+
+    firstEvent.preventDefault();
+    firstEvent.stopPropagation();
+
+    return waitForProjectKey().pipe(
+      map((event) => ({
+        event,
+        targetPath:
+          targetPathBySequence[
+            `${firstKey}${String(event.key || "").toLowerCase()}`
+          ],
+      })),
+      filter(({ targetPath }) => Boolean(targetPath)),
+    );
+  };
 
   return [
     subject.pipe(
@@ -711,19 +745,9 @@ const subscriptions = (deps) => {
         event.stopPropagation();
       }),
       switchMap(() =>
-        projectKeyDown$.pipe(
-          take(1),
-          timeout({
-            first: GLOBAL_NAV_TIMEOUT_MS,
-            with: () => EMPTY,
-          }),
-          tap((event) => {
-            const key = String(event.key || "").toLowerCase();
-            const targetPath = targetPathByKey[key];
-            if (!targetPath) {
-              return;
-            }
-
+        waitForProjectKey().pipe(
+          switchMap(resolveNavigationTarget),
+          tap(({ event, targetPath }) => {
             event.preventDefault();
             event.stopPropagation();
             appService.navigate(
