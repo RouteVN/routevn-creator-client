@@ -7,27 +7,15 @@ const versionsView = readFileSync(
 );
 
 describe("versions view export actions", () => {
-  it("renders gated Windows installer actions in desktop and mobile details", () => {
-    expect(versionsView.match(/\$if canExportWindowsInstaller:/g)).toHaveLength(
-      2,
-    );
-    expect(
-      versionsView.match(/rtgl-button#detailWindowsInstallerBtn/g),
-    ).toHaveLength(2);
-    expect(
-      versionsView.match(/\$\{exportWindowsInstallerButton\}/g),
-    ).toHaveLength(2);
+  it("hides Windows export actions from all detail layouts", () => {
+    expect(versionsView).not.toContain("detailWindowsExeBtn");
+    expect(versionsView).not.toContain("detailWindowsInstallerBtn");
+    expect(versionsView).not.toContain("canExportWindowsExecutable");
+    expect(versionsView).not.toContain("canExportWindowsInstaller");
   });
 
-  it("renders gated macOS application actions in desktop and mobile details", () => {
-    expect(versionsView.match(/\$if canExportMacosApplication:/g)).toHaveLength(
-      2,
-    );
-    expect(
-      versionsView.match(/rtgl-button#detailMacosApplicationBtn/g),
-    ).toHaveLength(2);
-    expect(
-      versionsView.match(/\$\{exportMacosApplicationButton\}/g),
-    ).toHaveLength(2);
+  it("hides macOS export actions from all detail layouts", () => {
+    expect(versionsView).not.toContain("detailMacosApplicationBtn");
+    expect(versionsView).not.toContain("canExportMacosApplication");
   });
 });
