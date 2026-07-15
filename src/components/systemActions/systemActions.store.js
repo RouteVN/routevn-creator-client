@@ -10,6 +10,10 @@ import {
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
 import {
+  getSpritesheetAnimationPreview,
+  toSpritesheetAnimationSelectionValue,
+} from "../../internal/spritesheets.js";
+import {
   formatCommandLineCopy,
   localizeCommandLineDropdownMenu,
   localizeCommandLineText,
@@ -124,6 +128,40 @@ const buildColorPreview = (colors, colorId) => {
   };
 };
 
+const buildSpritesheetPreview = (spritesheets, resourceId, animationName) => {
+  const spritesheet = spritesheets?.items?.[resourceId];
+  if (spritesheet?.type !== "spritesheet") {
+    return undefined;
+  }
+
+  const resolvedAnimationName =
+    animationName ?? Object.keys(spritesheet.animations ?? {})[0];
+  const spritesheetPreview = getSpritesheetAnimationPreview(
+    spritesheets,
+    resourceId,
+    resolvedAnimationName,
+  );
+  const selectionValue = toSpritesheetAnimationSelectionValue(
+    resourceId,
+    resolvedAnimationName,
+  );
+
+  return {
+    ...spritesheet,
+    type: "spritesheet",
+    name: resolvedAnimationName
+      ? `${spritesheet.name} / ${resolvedAnimationName}`
+      : spritesheet.name,
+    animationName: resolvedAnimationName,
+    spritesheetFileId: spritesheetPreview.fileId,
+    spritesheetAtlas: spritesheetPreview.atlas,
+    spritesheetAnimation: spritesheetPreview.animation,
+    spritesheetPreviewKey: selectionValue
+      ? `${selectionValue}:${spritesheetPreview.fileId ?? ""}`
+      : undefined,
+  };
+};
+
 const resolveBackgroundPreviewAction = ({ actions, presentationState }) => {
   const actionBackground = isPlainObject(actions.background)
     ? actions.background
@@ -146,6 +184,7 @@ const resolveBackgroundPreviewAction = ({ actions, presentationState }) => {
     effectiveBackground?.resourceId
   ) {
     previewBackground.resourceId = effectiveBackground.resourceId;
+    previewBackground.animationName = effectiveBackground.animationName;
   }
   if (
     hasAppearanceOnlyChange &&
@@ -558,6 +597,7 @@ export const selectActionsData = ({ props, state, copy }) => {
   // Layouts: need full tree structure for toFlatItems() to search through nested folders
   const layoutsHierarchy = repositoryStateData.layouts || {};
   const layoutsItems = layoutsHierarchy.items || {};
+  const spritesheets = repositoryStateData.spritesheets ?? {};
   const controlsItems = repositoryStateData.controls?.items || {};
   const sceneItems = scenes.items || {};
 
@@ -573,6 +613,11 @@ export const selectActionsData = ({ props, state, copy }) => {
     const backgroundImage = images[backgroundAction.resourceId];
     const backgroundVideo = videos[backgroundAction.resourceId];
     const backgroundLayout = layoutsItems[backgroundAction.resourceId];
+    const backgroundSpritesheet = buildSpritesheetPreview(
+      spritesheets,
+      backgroundAction.resourceId,
+      backgroundAction.animationName,
+    );
     const colorPreview = buildColorPreview(colors, backgroundAction.colorId);
     actionsObject.background = backgroundAction;
     if (backgroundImage) {
@@ -580,6 +625,11 @@ export const selectActionsData = ({ props, state, copy }) => {
         ...backgroundImage,
         ...colorPreview,
         type: "image",
+      };
+    } else if (backgroundSpritesheet) {
+      preview.background = {
+        ...backgroundSpritesheet,
+        ...colorPreview,
       };
     } else if (backgroundVideo) {
       preview.background = {
@@ -1122,20 +1172,53 @@ export const selectActionsData = ({ props, state, copy }) => {
   }
 
   // Visual
-  if (presentationState.visual?.items) {
-    actionsObject.visual = presentationState.visual;
+  const visualAction = isPlainObject(actions.visual)
+    ? actions.visual
+    : isPlainObject(presentationState.visual)
+      ? presentationState.visual
+      : undefined;
+  if (Array.isArray(visualAction?.items)) {
+    actionsObject.visual = visualAction;
     preview.visual = {
-      count: presentationState.visual.items.length,
-      items: presentationState.visual.items.map((item) => {
+      count: visualAction.items.length,
+      items: visualAction.items.map((item) => {
         const imageData = images[item.resourceId];
+        const spritesheetData = spritesheets.items?.[item.resourceId];
         const videoData = videos[item.resourceId];
         const layoutData = layoutsItems[item.resourceId];
-        const resource = imageData || videoData || layoutData;
+        const resourcesByType = {
+          image: imageData,
+          spritesheet: spritesheetData,
+          video: videoData,
+          layout: layoutData,
+        };
+        const resourceType = resourcesByType[item.resourceType]
+          ? item.resourceType
+          : imageData
+            ? "image"
+            : spritesheetData
+              ? "spritesheet"
+              : videoData
+                ? "video"
+                : "layout";
+        const resource = resourcesByType[resourceType];
+        const spritesheetPreview =
+          resourceType === "spritesheet"
+            ? buildSpritesheetPreview(
+                spritesheets,
+                item.resourceId,
+                item.animationName,
+              )
+            : undefined;
         return {
           ...item,
           resource,
-          previewFileId: resource?.thumbnailFileId || resource?.fileId,
-          resourceType: imageData ? "image" : videoData ? "video" : "layout",
+          previewFileId: resource?.thumbnailFileId ?? resource?.fileId,
+          resourceType,
+          spritesheetFileId: spritesheetPreview?.spritesheetFileId,
+          spritesheetAtlas: spritesheetPreview?.spritesheetAtlas,
+          spritesheetAnimation: spritesheetPreview?.spritesheetAnimation,
+          spritesheetPreviewKey: spritesheetPreview?.spritesheetPreviewKey,
         };
       }),
     };

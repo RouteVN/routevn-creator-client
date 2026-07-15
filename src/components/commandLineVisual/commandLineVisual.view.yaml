@@ -33,6 +33,12 @@ refs:
     eventListeners:
       item-click:
         handler: handleFileExplorerItemClick
+  spritesheetSelector:
+    eventListeners:
+      spritesheet-selected:
+        handler: handleSpritesheetSelected
+      spritesheet-dblclick:
+        handler: handleSpritesheetDoubleClick
   galleryScroll: {}
   searchInput:
     eventListeners:
@@ -145,6 +151,8 @@ template:
                                                               - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
                                                       - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
                                                           - rtgl-icon icon=play s=xl c=fg: null
+                                                $elif visual.resourceType == 'spritesheet':
+                                                  - rvn-spritesheet-preview key=${visual.spritesheetPreviewKey} previewKey=${visual.spritesheetPreviewKey} fileId=${visual.spritesheetFileId} :atlas=${visual.spritesheetAtlas} :animation=${visual.spritesheetAnimation} w=200 h=120 emptyLabel=${noThumbnailLabel}: null
                                                 $elif visual.resourceType == 'layout':
                                                   - $if visual.fileId:
                                                       - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
@@ -210,36 +218,39 @@ template:
               - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=${resourceItems}: null
               - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
-                  - $for group, i in resourceGroups:
-                      - rtgl-view data-group-id=${group.groupId} g=md:
-                          - rtgl-view d=h av=c g=md:
-                              - rtgl-svg svg=folder wh=16: null
-                              - rtgl-text: ${group.fullLabel}
-                          - rtgl-view d=h w=f wrap g=lg:
-                              - $for item, j in group.children:
-                                  - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} data-resource-type=${item.resourceType} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
-                                      - rtgl-view p=md g=md br=md:
-                                          - $if item.resourceType == 'video':
-                                              - rtgl-view pos=rel w=200 h=120:
+                  - $if tab == 'spritesheet':
+                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery}: null
+                    $else:
+                      - $for group, i in resourceGroups:
+                          - rtgl-view data-group-id=${group.groupId} g=md:
+                              - rtgl-view d=h av=c g=md:
+                                  - rtgl-svg svg=folder wh=16: null
+                                  - rtgl-text: ${group.fullLabel}
+                              - rtgl-view d=h w=f wrap g=lg:
+                                  - $for item, j in group.children:
+                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} data-resource-type=${item.resourceType} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
+                                          - rtgl-view p=md g=md br=md:
+                                              - $if item.resourceType == 'video':
+                                                  - rtgl-view pos=rel w=200 h=120:
+                                                      - $if item.previewFileId:
+                                                          - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
+                                                        $else:
+                                                          - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                                              - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
+                                                      - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
+                                                          - rtgl-icon icon=play s=xl c=fg: null
+                                                $elif item.resourceType == 'layout':
                                                   - $if item.previewFileId:
                                                       - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
                                                     $else:
                                                       - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
                                                           - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
-                                                  - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
-                                                      - rtgl-icon icon=play s=xl c=fg: null
-                                            $elif item.resourceType == 'layout':
-                                              - $if item.previewFileId:
+                                                $elif item.previewFileId:
                                                   - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
                                                 $else:
                                                   - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                      - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
-                                            $elif item.previewFileId:
-                                              - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
-                                            $else:
-                                              - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                  - rtgl-text s=sm c=mu-fg: ${item.resourceTypeLabel}
-                                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
+                                                      - rtgl-text s=sm c=mu-fg: ${item.resourceTypeLabel}
+                                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
   - rtgl-popover#addVisualPopover ?open=${addVisualPopover.isOpen} x=${addVisualPopover.position.x} y=${addVisualPopover.position.y} place=bs:
@@ -266,9 +277,12 @@ template:
               - rtgl-view d=h av=c g=xs:
                   - rtgl-text s=xs c=mu-fg: scaleY
                   - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleY}
-  - $when: fullImagePreviewVisible
-    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
-      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
-      - $if fullImagePreviewFileId:
-          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
+  - $if fullImagePreviewVisible || fullSpritesheetPreviewVisible:
+      - rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
+          - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+          - $if fullSpritesheetPreviewVisible:
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                  - rvn-spritesheet-preview key=${fullSpritesheetPreviewKey} previewKey=${fullSpritesheetPreviewKey} fileId=${fullSpritesheetPreviewFileId} :atlas=${fullSpritesheetPreviewAtlas} :animation=${fullSpritesheetPreviewAnimation} w=80% h=80% br=md emptyLabel=${noThumbnailLabel}: null
+            $elif fullImagePreviewFileId:
+              - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+                  - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null

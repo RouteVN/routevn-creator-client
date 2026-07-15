@@ -18,6 +18,8 @@ propsSchema:
                 type: string
               resourceType:
                 type: string
+              animationName:
+                type: string
               transformId:
                 type: string
               x:

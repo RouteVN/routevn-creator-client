@@ -4,11 +4,20 @@ import {
   createInitialState,
   openAudioPlayer,
   selectActionsData,
-  selectViewData,
+  selectViewData as selectViewDataBase,
   setUiConfig,
   setRepositoryState,
   updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
+
+const TEST_I18N = {
+  resourcePages: {},
+  sceneEditorPage: {},
+  commandLinePage: {},
+};
+
+const selectViewData = (deps) =>
+  selectViewDataBase({ ...deps, i18n: TEST_I18N });
 
 describe("systemActions.store", () => {
   it("preserves explicit hidden modes for nested action pickers", () => {
@@ -118,6 +127,7 @@ describe("systemActions.store", () => {
       actionCount: 2,
       summary: "1 branch + default",
       actionsSummary: "2 nested actions",
+      title: "Conditional: 1 branch + default",
     });
   });
 
@@ -669,6 +679,102 @@ describe("systemActions.store", () => {
       id: "bg-school",
       name: "School",
       type: "image",
+    });
+  });
+
+  it("previews spritesheet backgrounds and visuals with their selected animations", () => {
+    const state = createInitialState();
+    const atlas = {
+      frames: {
+        "idle-0": {
+          frame: { x: 0, y: 0, w: 64, h: 64 },
+        },
+      },
+    };
+    const animation = {
+      frames: ["idle-0"],
+      fps: 12,
+    };
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          spritesheets: {
+            items: {
+              "hero-sheet": {
+                id: "hero-sheet",
+                type: "spritesheet",
+                name: "Hero",
+                fileId: "file-hero-sheet",
+                jsonData: atlas,
+                animations: { idle: animation },
+              },
+            },
+            tree: [{ id: "hero-sheet" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          background: {
+            blur: null,
+          },
+          visual: {
+            items: [
+              {
+                resourceId: "hero-sheet",
+                resourceType: "spritesheet",
+                animationName: "idle",
+              },
+            ],
+          },
+        },
+        presentationState: {
+          background: {
+            resourceId: "hero-sheet",
+            animationName: "idle",
+          },
+        },
+      },
+    });
+
+    expect(actions.background).toEqual({
+      resourceId: "hero-sheet",
+      animationName: "idle",
+      blur: null,
+    });
+    expect(actions.visual).toEqual({
+      items: [
+        {
+          resourceId: "hero-sheet",
+          resourceType: "spritesheet",
+          animationName: "idle",
+        },
+      ],
+    });
+    expect(preview.background).toMatchObject({
+      id: "hero-sheet",
+      name: "Hero / idle",
+      type: "spritesheet",
+      animationName: "idle",
+      spritesheetFileId: "file-hero-sheet",
+      spritesheetAtlas: atlas,
+      spritesheetAnimation: animation,
+      spritesheetPreviewKey: "hero-sheet::idle:file-hero-sheet",
+    });
+    expect(preview.visual.items[0]).toMatchObject({
+      resourceId: "hero-sheet",
+      resourceType: "spritesheet",
+      animationName: "idle",
+      spritesheetFileId: "file-hero-sheet",
+      spritesheetAtlas: atlas,
+      spritesheetAnimation: animation,
+      spritesheetPreviewKey: "hero-sheet::idle:file-hero-sheet",
     });
   });
 
