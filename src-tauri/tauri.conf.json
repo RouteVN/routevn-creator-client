@@ -83,7 +83,8 @@
     "shortDescription": "RouteVN Creator",
     "longDescription": "RouteVN Creator. Follow us on social media to stay updated.",
     "resources": {
-      "assets/player-templates/": "player-templates/"
+      "assets/player-templates/windows/RouteVNPlayerTemplate.exe": "player-templates/windows/RouteVNPlayerTemplate.exe",
+      "assets/player-templates/macos/RouteVNPlayerTemplate.app.zip": "player-templates/macos/RouteVNPlayerTemplate.app.zip"
     },
     "icon": [
       "icons/32x32.png",
