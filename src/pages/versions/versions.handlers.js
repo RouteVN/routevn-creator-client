@@ -727,10 +727,11 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
     return;
   }
 
-  appService.showAlert({
+  const progressDialog = appService.showProgressDialog({
     message:
       copy.windowsExecutableInProgressMessage ??
       "Please wait while the Windows executable is being created...",
+    status: copy.windowsExecutableProgressStatus ?? "Creating executable...",
     title:
       copy.windowsExecutableInProgressTitle ?? "Windows export in progress",
   });
@@ -755,6 +756,7 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
     );
     const savedPath = result?.outputPath ?? outputPath;
 
+    progressDialog.close();
     appService.showAlert({
       message: formatI18nCopy(
         copy.windowsExecutableExportCompletedMessage ??
@@ -764,6 +766,7 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
       title: copy.exportCompletedTitle ?? "Export completed",
     });
   } catch (error) {
+    progressDialog.close();
     const replay = error?.details?.replay;
 
     logWindowsExportError({
@@ -861,10 +864,11 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
     return;
   }
 
-  appService.showAlert({
+  const progressDialog = appService.showProgressDialog({
     message:
       copy.windowsInstallerInProgressMessage ??
       "Please wait while the Windows installer is being created...",
+    status: copy.windowsInstallerProgressStatus ?? "Creating installer...",
     title: copy.windowsInstallerInProgressTitle ?? "Windows installer export",
   });
 
@@ -888,6 +892,7 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
     );
     const savedPath = result?.outputPath ?? outputPath;
 
+    progressDialog.close();
     appService.showAlert({
       message: formatI18nCopy(
         copy.windowsInstallerExportCompletedMessage ??
@@ -897,6 +902,7 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
       title: copy.exportCompletedTitle ?? "Export completed",
     });
   } catch (error) {
+    progressDialog.close();
     const replay = error?.details?.replay;
 
     logWindowsExportError({
@@ -1010,10 +1016,11 @@ export const handleDownloadMacosApplicationClick = async (deps, payload) => {
     return;
   }
 
-  appService.showAlert({
+  const progressDialog = appService.showProgressDialog({
     message:
       copy.macosApplicationInProgressMessage ??
       "Please wait while the macOS application is being created...",
+    status: copy.macosApplicationProgressStatus ?? "Creating application...",
     title: copy.macosApplicationInProgressTitle ?? "macOS export in progress",
   });
 
@@ -1037,6 +1044,7 @@ export const handleDownloadMacosApplicationClick = async (deps, payload) => {
       },
     );
     const savedPath = result?.outputPath ?? outputPath;
+    progressDialog.close();
     appService.showAlert({
       message: formatI18nCopy(
         copy.macosApplicationExportCompletedMessage ??
@@ -1046,6 +1054,7 @@ export const handleDownloadMacosApplicationClick = async (deps, payload) => {
       title: copy.exportCompletedTitle ?? "Export completed",
     });
   } catch (error) {
+    progressDialog.close();
     const replay = error?.details?.replay;
     console.error("Version macOS application export failed", {
       errorMessage: getMacosExportErrorMessage(error),

@@ -22,6 +22,10 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
     actionIndex: 3,
     createdAt: "2026-01-01T00:00:00.000Z",
   };
+  const progressDialog = {
+    close: vi.fn(),
+    update: vi.fn(),
+  };
 
   return {
     appService: {
@@ -32,6 +36,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       })),
       getAppVersion: vi.fn(() => "1.0.0"),
       showAlert: vi.fn(),
+      showProgressDialog: vi.fn(() => progressDialog),
       closeAll: vi.fn(),
     },
     projectService: {
@@ -86,6 +91,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       closeVersionDialog: vi.fn(),
       closeDropdownMenu: vi.fn(),
     },
+    progressDialog,
     render: vi.fn(),
   };
 };
@@ -467,6 +473,12 @@ describe("versions Windows export handlers", () => {
     expect(
       deps.projectService.createWindowsPortableExecutableToPath,
     ).toHaveBeenCalled();
+    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
+      message: "Please wait while the Windows executable is being created...",
+      status: "Creating executable...",
+      title: "Windows export in progress",
+    });
+    expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     expect(
       deps.projectService.createWindowsPortableExecutableToPath.mock
         .calls[0][3],
@@ -500,6 +512,12 @@ describe("versions Windows export handlers", () => {
     );
 
     expect(deps.projectService.createWindowsInstallerToPath).toHaveBeenCalled();
+    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
+      message: "Please wait while the Windows installer is being created...",
+      status: "Creating installer...",
+      title: "Windows installer export",
+    });
+    expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     expect(
       deps.projectService.createWindowsInstallerToPath.mock.calls[0][3],
     ).toMatchObject({
@@ -586,6 +604,7 @@ describe("versions Windows export handlers", () => {
           windowsFileVersion: "1.0.0.3",
         }),
       );
+      expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     } finally {
       consoleError.mockRestore();
     }
@@ -714,6 +733,12 @@ describe("versions macOS export handlers", () => {
     );
 
     expect(deps.projectService.createMacosApplicationToPath).toHaveBeenCalled();
+    expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
+      message: "Please wait while the macOS application is being created...",
+      status: "Creating application...",
+      title: "macOS export in progress",
+    });
+    expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     expect(
       deps.projectService.createMacosApplicationToPath.mock.calls[0][3],
     ).toEqual({

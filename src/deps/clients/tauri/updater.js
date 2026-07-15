@@ -1,5 +1,6 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { createProgressDialog } from "../progressDialog.js";
 import { isMacosHost } from "./platform.js";
 
 const formatUpdaterCopy = (template, values = {}) => {
@@ -14,99 +15,42 @@ const resolveUpdaterCopy = (options = {}) => {
 
 const UPDATE_PROGRESS_DIALOG_ID = "routevn-update-progress-dialog";
 
-const createRtglElement = (root, tagName, attributes = {}, textContent) => {
-  const element = root.createElement(tagName);
-
-  Object.entries(attributes).forEach(([name, value]) => {
-    if (value === true) {
-      element.setAttribute(name, "");
-    } else if (value !== false && value !== undefined) {
-      element.setAttribute(name, value);
-    }
-  });
-
-  if (textContent !== undefined) {
-    element.textContent = textContent;
-  }
-
-  return element;
-};
-
 const createUpdateProgressDialog = (copy = {}) => {
-  const root = typeof document === "undefined" ? undefined : document;
-  if (!root?.body) {
-    return {
-      close: () => {},
-      update: () => {},
-    };
-  }
-
-  root.getElementById(UPDATE_PROGRESS_DIALOG_ID)?.remove();
-
-  const dialog = createRtglElement(root, "rtgl-dialog", {
+  const progressDialog = createProgressDialog({
     id: UPDATE_PROGRESS_DIALOG_ID,
-    open: true,
-    s: "sm",
-  });
-  dialog.addEventListener("close", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  });
-
-  const content = createRtglElement(root, "rtgl-view", {
-    slot: "content",
-    g: "lg",
-    p: "lg",
-  });
-
-  const header = createRtglElement(root, "rtgl-view", { g: "sm", w: "f" });
-  const title = createRtglElement(
-    root,
-    "rtgl-text",
-    { s: "lg" },
-    copy.updateDownloadTitle ?? "Downloading update",
-  );
-  const message = createRtglElement(
-    root,
-    "rtgl-text",
-    { c: "mu-fg" },
-    copy.updateDownloadMessage ??
+    title: copy.updateDownloadTitle ?? "Downloading update",
+    message:
+      copy.updateDownloadMessage ??
       "Keep RouteVN Creator open. It will restart when the update is ready.",
-  );
-  const statusText = createRtglElement(root, "rtgl-text", { c: "mu-fg" });
-
-  header.append(title, message);
-  content.append(header, statusText);
-  dialog.append(content);
-  root.body.append(dialog);
+    status: copy.updateDownloadProgressUnknown ?? "Downloading...",
+  });
 
   const update = ({ progress, installing = false } = {}) => {
     if (installing) {
-      statusText.textContent =
-        copy.updateInstallingMessage ?? "Installing update...";
+      progressDialog.update({
+        status: copy.updateInstallingMessage ?? "Installing update...",
+      });
       return;
     }
 
     if (Number.isFinite(progress)) {
       const percent = Math.max(0, Math.min(100, Math.round(progress)));
-      statusText.textContent = formatUpdaterCopy(
-        copy.updateDownloadProgressMessage ?? "{progress}% downloaded",
-        { progress: percent },
-      );
+      progressDialog.update({
+        status: formatUpdaterCopy(
+          copy.updateDownloadProgressMessage ?? "{progress}% downloaded",
+          { progress: percent },
+        ),
+      });
       return;
     }
 
-    statusText.textContent =
-      copy.updateDownloadProgressUnknown ?? "Downloading...";
+    progressDialog.update({
+      status: copy.updateDownloadProgressUnknown ?? "Downloading...",
+    });
   };
 
-  update();
-
   return {
-    close() {
-      dialog.removeAttribute("open");
-      dialog.remove();
-    },
+    close: progressDialog.close,
     update,
   };
 };
