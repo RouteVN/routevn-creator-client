@@ -103,7 +103,7 @@ describe("versions store export actions", () => {
     expect(viewData.canExportWindowsInstaller).toBe(false);
   });
 
-  it("shows macOS application export only when native preflight succeeds", () => {
+  it("keeps macOS application export visible on a macOS host when preflight fails", () => {
     const state = createInitialState();
     setPlatform({ state }, { platform: "tauri" });
     setMacosExportAvailability(
@@ -126,6 +126,18 @@ describe("versions store export actions", () => {
           application: false,
           templateAvailable: false,
           hostSupported: true,
+        },
+      },
+    );
+    expect(selectViewData({ state }).canExportMacosApplication).toBe(true);
+
+    setMacosExportAvailability(
+      { state },
+      {
+        availability: {
+          application: false,
+          templateAvailable: true,
+          hostSupported: false,
         },
       },
     );

@@ -55,6 +55,16 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       promptWindowsExecutablePath: vi.fn(async () => "/tmp/export.exe"),
       promptWindowsInstallerPath: vi.fn(async () => "/tmp/export-setup.exe"),
       promptMacosApplicationPath: vi.fn(async () => "/tmp/export.app.zip"),
+      getMacosExportAvailability: vi.fn(async () => ({
+        application: true,
+        templateAvailable: true,
+        hostSupported: true,
+        dittoAvailable: true,
+        codesignAvailable: true,
+        sipsAvailable: true,
+        iconutilAvailable: true,
+        lipoAvailable: true,
+      })),
       createWindowsPortableExecutableToPath: vi.fn(async () => ({
         outputPath: "/tmp/export.exe",
       })),
@@ -627,6 +637,38 @@ describe("versions Windows export handlers", () => {
 });
 
 describe("versions macOS export handlers", () => {
+  it("explains a stale native shell instead of opening the save dialog", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getMacosExportAvailability.mockResolvedValue({
+      application: false,
+      templateAvailable: true,
+      hostSupported: true,
+      capabilityCheckError:
+        "Command get_macos_export_host_capabilities not found",
+    });
+
+    await handleDownloadMacosApplicationClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          "Restart the Tauri dev process so the native shell rebuilds.",
+        ),
+      }),
+    );
+    expect(
+      deps.projectService.promptMacosApplicationPath,
+    ).not.toHaveBeenCalled();
+  });
+
   it("uses the release action index for bundle versions and the stable project identity", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),

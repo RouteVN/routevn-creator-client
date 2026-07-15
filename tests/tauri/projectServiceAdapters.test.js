@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
   exists: vi.fn(),
@@ -180,6 +180,10 @@ describe("tauri project service adapters preflight reads", () => {
       clientTs: command?.clientTs,
       meta: structuredClone(command?.meta ?? {}),
     }));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("rejects invalid project file ids before resolving tauri file paths", async () => {
@@ -368,6 +372,31 @@ describe("tauri project service adapters preflight reads", () => {
         ],
       }),
     );
+  });
+
+  it("keeps the macOS host visible when the running shell lacks preflight commands", async () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    mocked.exists.mockResolvedValue(true);
+    mocked.resolveResource.mockResolvedValue(
+      "/resources/player-templates/macos/RouteVNPlayerTemplate.app.zip",
+    );
+    mocked.invoke.mockRejectedValue(
+      "Command get_macos_export_host_capabilities not found",
+    );
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await expect(
+      fileAdapter.getMacosExportAvailability(),
+    ).resolves.toMatchObject({
+      application: false,
+      templateAvailable: true,
+      hostSupported: true,
+      capabilityCheckError:
+        "Command get_macos_export_host_capabilities not found",
+    });
   });
 
   it("reads creatorVersion from app_state without creating the project store", async () => {

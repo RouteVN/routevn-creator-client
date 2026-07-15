@@ -45,6 +45,7 @@ import {
 } from "../../../internal/sqliteLocking.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnectionManager.js";
+import { isMacosHost } from "../../clients/tauri/platform.js";
 import { normalizeExportFileEntries } from "../shared/projectExportService.js";
 import { requireNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 
@@ -647,28 +648,26 @@ export const createTauriProjectServiceAdapters = ({
       templateAvailable = await exists(templatePath);
     } catch {}
 
-    let hostCapabilities = {
-      hostSupported: false,
-      dittoAvailable: false,
-      codesignAvailable: false,
-      sipsAvailable: false,
-      iconutilAvailable: false,
-      lipoAvailable: false,
-      available: false,
-    };
+    let hostCapabilities;
+    let capabilityCheckError;
     try {
       hostCapabilities = await invoke("get_macos_export_host_capabilities");
-    } catch {}
+    } catch (error) {
+      capabilityCheckError = String(error?.message ?? error);
+    }
 
     return {
       application: templateAvailable && !!hostCapabilities?.available,
       templateAvailable,
-      hostSupported: !!hostCapabilities?.hostSupported,
+      hostSupported: hostCapabilities
+        ? !!hostCapabilities.hostSupported
+        : isMacosHost(),
       dittoAvailable: !!hostCapabilities?.dittoAvailable,
       codesignAvailable: !!hostCapabilities?.codesignAvailable,
       sipsAvailable: !!hostCapabilities?.sipsAvailable,
       iconutilAvailable: !!hostCapabilities?.iconutilAvailable,
       lipoAvailable: !!hostCapabilities?.lipoAvailable,
+      capabilityCheckError,
     };
   };
 

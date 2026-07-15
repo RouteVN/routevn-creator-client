@@ -260,7 +260,7 @@ export const selectViewData = ({ state, i18n }) => {
       state.platform === "tauri" && state.windowsExportAvailability.installer,
     canExportMacosApplication:
       (state.platform === "tauri" &&
-        state.macosExportAvailability.application) ||
+        state.macosExportAvailability.hostSupported) ||
       state.visualTestMode,
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     resourceCategory: "releases",

@@ -195,10 +195,44 @@ const getWindowsExportErrorMessage = (error) => {
 
 const getMacosExportErrorMessage = (error) => {
   const message = getErrorMessage(error);
-  if (message === "Command export_macos_application not found") {
+  if (
+    /^Command (get_macos_export_host_capabilities|export_macos_application) not found$/.test(
+      message,
+    )
+  ) {
     return `${message}. ${MACOS_EXPORT_COMMAND_RESTART_MESSAGE}`;
   }
   return message;
+};
+
+const getMacosExportUnavailableMessage = (availability = {}) => {
+  if (!availability.hostSupported) {
+    return "macOS application export is supported only on macOS.";
+  }
+
+  if (availability.capabilityCheckError) {
+    return getMacosExportErrorMessage(availability.capabilityCheckError);
+  }
+
+  if (!availability.templateAvailable) {
+    return "The macOS player template is not bundled with this Creator build.";
+  }
+
+  const missingTools = [
+    ["ditto", availability.dittoAvailable],
+    ["codesign", availability.codesignAvailable],
+    ["sips", availability.sipsAvailable],
+    ["iconutil", availability.iconutilAvailable],
+    ["lipo", availability.lipoAvailable],
+  ]
+    .filter(([, available]) => !available)
+    .map(([name]) => name);
+
+  if (missingTools.length > 0) {
+    return `macOS application export requires these system tools: ${missingTools.join(", ")}.`;
+  }
+
+  return "macOS application export is not available in this Creator build.";
 };
 
 const formatWindowsExportErrorCopy = ({ template, error }) =>
@@ -904,6 +938,33 @@ export const handleDownloadMacosApplicationClick = async (deps, payload) => {
   store.closeDropdownMenu();
   store.setSelectedItemId({ itemId: versionId });
   render();
+
+  let availability;
+  try {
+    availability = await projectService.getMacosExportAvailability();
+  } catch (error) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedSaveMacosApplication ??
+          "Failed to save macOS application: {message}",
+        { message: getMacosExportErrorMessage(error) },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  if (!availability.application) {
+    appService.showAlert({
+      message: formatI18nCopy(
+        copy.failedSaveMacosApplication ??
+          "Failed to save macOS application: {message}",
+        { message: getMacosExportUnavailableMessage(availability) },
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
 
   let nativeVersion;
   try {

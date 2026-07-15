@@ -1,18 +1,6 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-
-const isMacOs = () => {
-  if (typeof navigator === "undefined") {
-    return false;
-  }
-
-  const userAgentPlatform = navigator.userAgentData?.platform;
-  if (typeof userAgentPlatform === "string") {
-    return userAgentPlatform === "macOS";
-  }
-
-  return /Mac/.test(navigator.platform || "");
-};
+import { isMacosHost } from "./platform.js";
 
 const formatUpdaterCopy = (template, values = {}) => {
   return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
@@ -132,7 +120,7 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
     const copy = resolveUpdaterCopy(options);
     try {
       const update = await check(
-        isMacOs()
+        isMacosHost()
           ? {
               target: "macos-universal",
             }
