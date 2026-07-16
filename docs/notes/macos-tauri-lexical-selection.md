@@ -115,9 +115,10 @@ caret.
 
 The primitive handles this final commit before the general composing-event
 early return. It resolves only the event's committed text, prevents the native
-DOM mutation, maps the event target range to a line selection, and calls
-`insertPlainText` so the DOM, Lexical state, and serialized scene lines advance
-together. Ongoing composition events remain browser-managed.
+DOM mutation, maps the event target range to a line selection, clears Lexical's
+composition key, and calls `insertPlainText` so the DOM, Lexical state,
+serialized scene lines, and caret advance together. Ongoing composition events
+remain browser-managed.
 
 Regression coverage must include both the `insertFromComposition` commit and a
 following ordinary Space insertion. Checking only that the Chinese text appears

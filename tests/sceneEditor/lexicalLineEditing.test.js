@@ -3,6 +3,7 @@ import {
   $createTextNode,
   $getRoot,
   $getSelection,
+  $setCompositionKey,
   $setSelection,
   createEditor,
 } from "lexical";
@@ -4574,6 +4575,7 @@ describe("lexical scene document editor line editing", () => {
         1,
       );
       expect(insertPlainText).toHaveBeenCalledWith("发", {
+        endComposition: true,
         nativeSelection,
       });
     } finally {
@@ -4630,16 +4632,21 @@ describe("lexical scene document editor line editing", () => {
           const root = $getRoot();
           const line = $createParagraphNode();
 
-          line.append($createTextNode("ab"));
+          const textNode = $createTextNode("ab");
+          line.append(textNode);
           root.append(line);
           lineKey = line.getKey();
           editorElement.lineMetaByKey.set(lineKey, {
             id: "line-1",
           });
           editorElement.lineKeyById.set("line-1", lineKey);
+          textNode.select(1, 1);
+          $setCompositionKey(textNode.getKey());
         },
         { discrete: true },
       );
+
+      expect(editor.isComposing()).toBe(true);
 
       const compositionRange = document.createRange();
       const initialTextNode =
@@ -4658,21 +4665,27 @@ describe("lexical scene document editor line editing", () => {
         stopImmediatePropagation: vi.fn(),
       });
 
-      const spaceRange = document.createRange();
-      const committedTextNode =
-        editor.getElementByKey(lineKey).firstChild.firstChild;
-      spaceRange.setStart(committedTextNode, 2);
-      spaceRange.collapse(true);
+      const committedState = editor.getEditorState().read(() => {
+        const selection = $getSelection();
+        return {
+          text: $getRoot().getFirstChild().getTextContent(),
+          anchorOffset: selection?.anchor.offset,
+          focusOffset: selection?.focus.offset,
+        };
+      });
+      expect(editor.isComposing()).toBe(false);
+      expect(committedState).toEqual({
+        text: "a发b",
+        anchorOffset: 2,
+        focusOffset: 2,
+      });
 
-      editorElement.handleNativeBeforeInput({
-        inputType: "insertText",
-        data: " ",
-        isComposing: false,
-        defaultPrevented: false,
-        getTargetRanges: () => [spaceRange],
-        preventDefault: vi.fn(),
-        stopPropagation: vi.fn(),
-        stopImmediatePropagation: vi.fn(),
+      editorElement.insertPlainText(" ", {
+        nativeSelection: {
+          lineId: "line-1",
+          start: committedState.anchorOffset,
+          end: committedState.focusOffset,
+        },
       });
 
       const result = editor.getEditorState().read(() => {

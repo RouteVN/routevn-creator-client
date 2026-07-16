@@ -8,6 +8,7 @@ import {
   $isElementNode,
   $isRangeSelection,
   $isTextNode,
+  $setCompositionKey,
   COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_HIGH,
   KEY_ENTER_COMMAND,
@@ -4673,7 +4674,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     // Linux and macOS WebKit can apply an IME commit to the contenteditable
     // DOM without updating Lexical's editor state. The next controlled input
     // then reconciles from stale state and removes the committed characters.
-    // Commit through Lexical using the native target range as the caret source.
+    // End Lexical composition before inserting so its range selection advances
+    // past the committed text instead of retaining composing-node semantics.
     if (inputType === "insertFromComposition") {
       const inputText = this.resolveBeforeInputText(event, {
         allowKeyFallback: false,
@@ -4687,11 +4689,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       event.stopPropagation?.();
       event.stopImmediatePropagation?.();
       const nativeSelection = this.getInputLineSelectionContext(event);
-      if (nativeSelection) {
-        this.insertPlainText(inputText, { nativeSelection });
-      } else {
-        this.insertPlainText(inputText);
-      }
+      this.insertPlainText(inputText, {
+        nativeSelection,
+        endComposition: true,
+      });
       return;
     }
 
@@ -6266,13 +6267,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
-  insertPlainText(text, { nativeSelection } = {}) {
+  insertPlainText(text, { nativeSelection, endComposition = false } = {}) {
     const nextText = String(text ?? "").replace(/\r\n?/g, "\n");
     const resolvedNativeSelection =
       nativeSelection ?? this.getNativeLineSelectionContext();
 
     this.editor.update(
       () => {
+        if (endComposition) {
+          $setCompositionKey(null);
+        }
+
         if (resolvedNativeSelection?.lineId) {
           const lineKey = this.lineKeyById.get(resolvedNativeSelection.lineId);
           const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
