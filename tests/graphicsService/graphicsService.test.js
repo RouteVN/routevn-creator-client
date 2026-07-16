@@ -842,7 +842,7 @@ describe("graphicsService", () => {
     expect(routeGraphicsInstance.loadAssets).not.toHaveBeenCalled();
   });
 
-  it("waits for destination audio before rendering an animated engine state", async () => {
+  it("waits for destination channel audio before rendering an animated engine state", async () => {
     const bgmBuffer = new ArrayBuffer(8);
     const decodedAudioKeys = new Set();
     let resolveAudioLoad;
@@ -876,10 +876,17 @@ describe("graphicsService", () => {
       elements: [{ id: "story", type: "container", children: [] }],
       audio: [
         {
-          id: "bgm",
-          type: "sound",
-          src: "destination-bgm",
-          loop: true,
+          id: "channel:bgm",
+          type: "audio-channel",
+          volume: 100,
+          children: [
+            {
+              id: "bgm:default",
+              type: "sound",
+              src: "destination-bgm",
+              loop: true,
+            },
+          ],
         },
       ],
       animations: [
@@ -942,6 +949,118 @@ describe("graphicsService", () => {
     });
     expect(routeGraphicsInstance.render).toHaveBeenCalledWith(renderState);
     expect(selectRenderState).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds destination channel audio after rendering a static engine state", async () => {
+    const bgmBuffer = new ArrayBuffer(8);
+    const decodedAudioKeys = new Set();
+    let resolveAudioLoad;
+    const bufferManager = {
+      has: vi.fn(() => true),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({
+        "destination-bgm": {
+          buffer: bgmBuffer,
+          type: "audio/mpeg",
+        },
+      })),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+    audioAssetApi.getAsset = vi.fn((key) =>
+      decodedAudioKeys.has(key) ? { key } : undefined,
+    );
+    audioAssetApi.load = vi.fn(
+      (key) =>
+        new Promise((resolve) => {
+          resolveAudioLoad = () => {
+            decodedAudioKeys.add(key);
+            resolve({ key });
+          };
+        }),
+    );
+
+    const renderState = {
+      id: "render-static",
+      elements: [{ id: "story", type: "container", children: [] }],
+      audio: [
+        {
+          id: "channel:bgm",
+          type: "audio-channel",
+          volume: 100,
+          children: [
+            {
+              id: "bgm:default",
+              type: "sound",
+              src: "destination-bgm",
+              loop: true,
+            },
+          ],
+        },
+      ],
+      animations: [],
+    };
+    const selectRenderState = vi.fn(() => renderState);
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState,
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    service.engineRenderCurrentState();
+
+    await vi.waitFor(() => {
+      expect(audioAssetApi.load).toHaveBeenCalledWith(
+        "destination-bgm",
+        bgmBuffer,
+      );
+    });
+    expect(routeGraphicsInstance.render).toHaveBeenCalledTimes(1);
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith({
+      ...renderState,
+      audio: [
+        {
+          ...renderState.audio[0],
+          children: [],
+        },
+      ],
+    });
+
+    resolveAudioLoad();
+
+    await vi.waitFor(() => {
+      expect(routeGraphicsInstance.render).toHaveBeenCalledTimes(2);
+    });
+    expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith(renderState);
+    expect(selectRenderState).toHaveBeenCalledTimes(2);
   });
 
   it("does not render a stale deferred state when newer audio is not yet decodable", async () => {
@@ -1095,10 +1214,17 @@ describe("graphicsService", () => {
       elements: [{ id: "story", type: "container", children: [] }],
       audio: [
         {
-          id: "bgm",
-          type: "sound",
-          src: "rejected-bgm",
-          loop: true,
+          id: "channel:bgm",
+          type: "audio-channel",
+          volume: 100,
+          children: [
+            {
+              id: "bgm:default",
+              type: "sound",
+              src: "rejected-bgm",
+              loop: true,
+            },
+          ],
         },
       ],
       animations: [
@@ -1152,7 +1278,12 @@ describe("graphicsService", () => {
       await vi.waitFor(() => {
         expect(routeGraphicsInstance.render).toHaveBeenCalledWith({
           ...renderState,
-          audio: [],
+          audio: [
+            {
+              ...renderState.audio[0],
+              children: [],
+            },
+          ],
         });
       });
       expect(consoleError).toHaveBeenCalledWith(
