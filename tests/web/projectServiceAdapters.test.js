@@ -145,7 +145,7 @@ describe("web project service adapters", () => {
       creatorVersion: 2,
     });
 
-    await collabAdapter.createSessionForProject({
+    const createdSession = await collabAdapter.createSessionForProject({
       projectId: "project-1",
       token: "token-1",
       userId: "user-1",
@@ -164,6 +164,47 @@ describe("web project service adapters", () => {
     expect(session.submitEvent).toHaveBeenCalledTimes(1);
     expect(session.flushDrafts).toHaveBeenCalledTimes(1);
     expect(session.syncNow).toHaveBeenCalledTimes(2);
+    expect(createdSession.hasCompletedInitialRemoteSync()).toBe(true);
+  });
+
+  it("does not mark initial remote sync complete when synchronization fails", async () => {
+    const repository = {
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const adapter = {
+      listCommittedAfter: vi.fn(async () => []),
+      listDraftsOrdered: vi.fn(async () => []),
+      getCursor: vi.fn(async () => 0),
+      app: {
+        get: vi.fn(async () => undefined),
+        set: vi.fn(async () => {}),
+      },
+    };
+    const session = createSessionMock();
+    session.syncNow.mockRejectedValue(new Error("sync failed"));
+    mocked.createProjectCollabService.mockReturnValue(session);
+
+    const { collabAdapter } = createWebProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    const createdSession = await collabAdapter.createSessionForProject({
+      projectId: "project-1",
+      token: "token-1",
+      userId: "user-1",
+      clientId: "client-1",
+      endpointUrl: "ws://localhost:1234",
+      mode: "explicit",
+      getRepositoryByProject: async () => repository,
+      getStoreByProject: async () => adapter,
+      getProjectInfoByProjectId: async () => ({
+        name: "Project 1",
+        description: "",
+      }),
+    });
+
+    expect(createdSession.hasCompletedInitialRemoteSync()).toBe(false);
   });
 
   it("rejects distribution ZIP export outside the Tauri app", async () => {
@@ -172,9 +213,9 @@ describe("web project service adapters", () => {
       creatorVersion: 2,
     });
 
-    await expect(
-      fileAdapter.promptDistributionZipPath(),
-    ).rejects.toThrow("Distribution ZIP export is only supported");
+    await expect(fileAdapter.promptDistributionZipPath()).rejects.toThrow(
+      "Distribution ZIP export is only supported",
+    );
     await expect(fileAdapter.createDistributionZipStreamed()).rejects.toThrow(
       "Distribution ZIP export is only supported",
     );

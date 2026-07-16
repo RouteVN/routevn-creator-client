@@ -518,6 +518,53 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
   });
 
+  it("defers automatic content patches until the platform marks the project ready", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        textStyles: {
+          items: {},
+        },
+        layouts: {
+          items: {},
+        },
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+      shouldApplyProjectContentPatchesOnEnsure: () => false,
+    });
+
+    await projectService.ensureRepository();
+
+    expect(mocked.projectStore.app.get).not.toHaveBeenCalled();
+    expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
+
+    await projectService.ensureProjectContentPatches();
+
+    expect(mocked.projectStore.app.get).toHaveBeenCalledWith(
+      "contentPatch.defaultMenuTextStyles-1-9-1",
+    );
+    expect(mocked.projectStore.app.set).toHaveBeenCalledWith(
+      "contentPatch.defaultMenuTextStyles-1-9-1",
+      true,
+    );
+  });
+
   it("does not patch default menu values that no longer match the legacy values", async () => {
     const repository = {
       getState: vi.fn(() => ({

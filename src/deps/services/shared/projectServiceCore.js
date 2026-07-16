@@ -32,6 +32,7 @@ export const createProjectServiceCore = ({
   storageAdapter,
   fileAdapter,
   collabAdapter,
+  shouldApplyProjectContentPatchesOnEnsure = () => true,
 }) => {
   const repositoryService = createProjectRepositoryService({
     router,
@@ -217,10 +218,23 @@ export const createProjectServiceCore = ({
     }
   };
 
+  const ensureProjectContentPatches = async () => {
+    const repository = await repositoryService.ensureRepository();
+    await ensureLayoutSchemaVersion(repository);
+    await ensureDefaultMenuTextStylesPatch(repository);
+    return repository;
+  };
+
   const ensureRepository = async (options = {}) => {
     const repository = await repositoryService.ensureRepository(options);
     await ensureLayoutSchemaVersion(repository);
-    await ensureDefaultMenuTextStylesPatch(repository);
+    const shouldApplyContentPatches =
+      await shouldApplyProjectContentPatchesOnEnsure({
+        projectId: getCurrentProjectId(),
+      });
+    if (shouldApplyContentPatches) {
+      await ensureDefaultMenuTextStylesPatch(repository);
+    }
     return repository;
   };
 
@@ -364,6 +378,7 @@ export const createProjectServiceCore = ({
     releaseCurrentRepository: repositoryService.releaseCurrentRepository,
     releaseProjectRuntime,
     ensureRepository,
+    ensureProjectContentPatches,
     ensureProjectCompatibleById:
       repositoryService.ensureProjectCompatibleByProjectId,
     subscribeProjectState(listener, options) {

@@ -25,6 +25,7 @@ import {
 } from "./projectServiceCollabRuntime.js";
 import {
   clearProjectionGap,
+  loadProjectionGap,
   saveProjectionGap,
 } from "../shared/collab/projectionGapState.js";
 import { loadRepositoryEventsFromClientStore } from "../shared/collab/clientStoreHistory.js";
@@ -408,6 +409,7 @@ export const createWebProjectServiceAdapters = ({
       const clientStore = await getCollabClientStore(projectId);
       await ensureCommittedIdLoaded(projectId, getStoreByProject);
       const projectionTracker = createCommittedCommandProjectionTracker();
+      let initialRemoteSyncCompleted = false;
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,
         token,
@@ -608,6 +610,8 @@ export const createWebProjectServiceAdapters = ({
             }
           }),
       });
+      collabSession.hasCompletedInitialRemoteSync = () =>
+        initialRemoteSyncCompleted;
 
       await collabSession.start();
       collabLog("info", "session started", {
@@ -695,6 +699,8 @@ export const createWebProjectServiceAdapters = ({
             });
           }
 
+          const projectionGap = await loadProjectionGap(adapter);
+          initialRemoteSyncCompleted = !projectionGap;
           const syncDurationMs = Date.now() - syncStartedAt;
           collabLog("info", "initial remote sync completed", {
             projectId: resolvedProjectId,

@@ -2,6 +2,7 @@ import { createProjectService } from "./projectService.js";
 import {
   createCollabDebugLogger,
   createCollabConnectionRuntime,
+  isLocalProjectId,
   resolveCollabDebugEnabled,
 } from "./collab/connectionRuntime.js";
 import { createRemoteEventBridge } from "./collab/remoteEventBridge.js";
@@ -32,6 +33,8 @@ export const createWebProjectServiceWithCollab = async ({
     onRemoteEvent,
     db,
     creatorVersion,
+    shouldApplyProjectContentPatchesOnEnsure: ({ projectId }) =>
+      isLocalProjectId({ db, projectId }),
   });
 
   const collabConnectionRuntime = createCollabConnectionRuntime({

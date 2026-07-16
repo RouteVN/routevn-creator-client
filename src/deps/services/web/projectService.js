@@ -10,6 +10,7 @@ export const createProjectService = ({
   onRemoteEvent,
   db,
   creatorVersion,
+  shouldApplyProjectContentPatchesOnEnsure = () => false,
 }) => {
   const collabLog = (level, message, meta = {}) => {
     if (!ENABLE_VERBOSE_COLLAB_LOGS && level !== "warn" && level !== "error") {
@@ -43,5 +44,6 @@ export const createProjectService = ({
     storageAdapter,
     fileAdapter,
     collabAdapter,
+    shouldApplyProjectContentPatchesOnEnsure,
   });
 };
