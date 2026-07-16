@@ -145,6 +145,8 @@ Current keys:
 - `collab.lastCommittedId:<projectId>`
   - committed remote cursor watermark
   - currently used by the web collab path
+- `contentPatch.defaultMenuTextStyles-1-9-1`
+  - boolean completion marker for the one-time default menu text-style repair
 
 Important ownership rule:
 

@@ -27,10 +27,18 @@ const mocked = vi.hoisted(() => ({
     updateCurrentProjectInfo: vi.fn(),
     updateProjectInfoByProjectId: vi.fn(),
   },
+  projectStore: {
+    app: {
+      get: vi.fn(),
+      set: vi.fn(),
+    },
+  },
   collabService: {
     stopCollabSession: vi.fn(),
     commandApi: {
       upgradeLayoutSchemaVersion: vi.fn(),
+      updateTextStyle: vi.fn(),
+      updateLayoutElement: vi.fn(),
       deleteSceneItem: vi.fn(),
     },
     addVersionToProject: vi.fn(),
@@ -98,14 +106,25 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.importImageFile.mockReset();
     mocked.repositoryService.getEnsuredProjectId.mockReset();
     mocked.repositoryService.ensureRepository.mockReset();
+    mocked.repositoryService.getCachedStore.mockReset();
     mocked.repositoryService.getCachedRepository.mockReset();
     mocked.repositoryService.releaseCurrentRepository.mockReset();
     mocked.repositoryService.releaseRepositoryByProjectId.mockReset();
     mocked.collabService.stopCollabSession.mockReset();
     mocked.collabService.commandApi.upgradeLayoutSchemaVersion.mockReset();
+    mocked.collabService.commandApi.updateTextStyle.mockReset();
+    mocked.collabService.commandApi.updateLayoutElement.mockReset();
     mocked.collabService.commandApi.deleteSceneItem.mockReset();
+    mocked.projectStore.app.get.mockReset();
+    mocked.projectStore.app.set.mockReset();
     mocked.checkProjectResourceUsage.mockReset();
     mocked.checkSceneDeleteUsage.mockReset();
+
+    mocked.repositoryService.getCachedStore.mockReturnValue(
+      mocked.projectStore,
+    );
+    mocked.projectStore.app.get.mockResolvedValue(undefined);
+    mocked.projectStore.app.set.mockResolvedValue(undefined);
   });
 
   it("stops the ensured collab session before releasing that project runtime", async () => {
@@ -360,6 +379,308 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       layoutIds: ["layout-old"],
       targetSchemaVersion: 2,
     });
+  });
+
+  it("patches legacy default menu text styles before recording completion", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        textStyles: {
+          items: {
+            saV5A4pkvHRb: {
+              id: "saV5A4pkvHRb",
+              type: "textStyle",
+              fontWeight: "400",
+            },
+            e2WbW3vcPZR9: {
+              id: "e2WbW3vcPZR9",
+              type: "textStyle",
+            },
+          },
+        },
+        layouts: {
+          items: {
+            fKr5fa67MQWh: {
+              id: "fKr5fa67MQWh",
+              type: "layout",
+              layoutSchemaVersion: 2,
+              elements: {
+                items: {
+                  icn4dknq2kyp: {
+                    id: "icn4dknq2kyp",
+                    type: "text",
+                    textStyleId: "5rwEfyx2GBEi",
+                  },
+                },
+              },
+            },
+          },
+        },
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.collabService.commandApi.updateTextStyle.mockResolvedValue({
+      valid: true,
+    });
+    mocked.collabService.commandApi.updateLayoutElement.mockResolvedValue({
+      valid: true,
+    });
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await expect(projectService.ensureRepository()).resolves.toBe(repository);
+
+    expect(mocked.projectStore.app.get).toHaveBeenCalledWith(
+      "contentPatch.defaultMenuTextStyles-1-9-1",
+    );
+    expect(
+      mocked.collabService.commandApi.updateTextStyle,
+    ).toHaveBeenCalledWith({
+      textStyleId: "saV5A4pkvHRb",
+      data: {
+        fontWeight: "700",
+      },
+    });
+    expect(
+      mocked.collabService.commandApi.updateLayoutElement,
+    ).toHaveBeenCalledWith({
+      layoutId: "fKr5fa67MQWh",
+      elementId: "icn4dknq2kyp",
+      data: {
+        textStyleId: "e2WbW3vcPZR9",
+      },
+      replace: false,
+    });
+    expect(mocked.projectStore.app.set).toHaveBeenCalledWith(
+      "contentPatch.defaultMenuTextStyles-1-9-1",
+      true,
+    );
+    expect(
+      mocked.collabService.commandApi.updateTextStyle.mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(mocked.projectStore.app.set.mock.invocationCallOrder[0]);
+    expect(
+      mocked.collabService.commandApi.updateLayoutElement.mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(mocked.projectStore.app.set.mock.invocationCallOrder[0]);
+  });
+
+  it("skips the default menu text-style patch when already completed", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        layouts: {
+          items: {},
+        },
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.projectStore.app.get.mockResolvedValue(true);
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await projectService.ensureRepository();
+
+    expect(
+      mocked.collabService.commandApi.updateTextStyle,
+    ).not.toHaveBeenCalled();
+    expect(
+      mocked.collabService.commandApi.updateLayoutElement,
+    ).not.toHaveBeenCalled();
+    expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
+  });
+
+  it("does not patch default menu values that no longer match the legacy values", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        textStyles: {
+          items: {
+            saV5A4pkvHRb: {
+              id: "saV5A4pkvHRb",
+              type: "textStyle",
+              fontWeight: "500",
+            },
+            e2WbW3vcPZR9: {
+              id: "e2WbW3vcPZR9",
+              type: "textStyle",
+            },
+          },
+        },
+        layouts: {
+          items: {
+            fKr5fa67MQWh: {
+              id: "fKr5fa67MQWh",
+              type: "layout",
+              layoutSchemaVersion: 2,
+              elements: {
+                items: {
+                  icn4dknq2kyp: {
+                    id: "icn4dknq2kyp",
+                    type: "text",
+                    textStyleId: "custom-text-style",
+                  },
+                },
+              },
+            },
+          },
+        },
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await projectService.ensureRepository();
+
+    expect(
+      mocked.collabService.commandApi.updateTextStyle,
+    ).not.toHaveBeenCalled();
+    expect(
+      mocked.collabService.commandApi.updateLayoutElement,
+    ).not.toHaveBeenCalled();
+    expect(mocked.projectStore.app.set).toHaveBeenCalledWith(
+      "contentPatch.defaultMenuTextStyles-1-9-1",
+      true,
+    );
+  });
+
+  it("records completion without updates when the default menu ids are absent", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        textStyles: {
+          items: {},
+        },
+        layouts: {
+          items: {},
+        },
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await projectService.ensureRepository();
+
+    expect(
+      mocked.collabService.commandApi.updateTextStyle,
+    ).not.toHaveBeenCalled();
+    expect(
+      mocked.collabService.commandApi.updateLayoutElement,
+    ).not.toHaveBeenCalled();
+    expect(mocked.projectStore.app.set).toHaveBeenCalledWith(
+      "contentPatch.defaultMenuTextStyles-1-9-1",
+      true,
+    );
+  });
+
+  it("does not record completion when a default menu patch update fails", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        textStyles: {
+          items: {
+            saV5A4pkvHRb: {
+              id: "saV5A4pkvHRb",
+              type: "textStyle",
+              fontWeight: "400",
+            },
+          },
+        },
+        layouts: {
+          items: {},
+        },
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.collabService.commandApi.updateTextStyle.mockResolvedValue({
+      valid: false,
+      error: {
+        message: "Text style patch failed.",
+      },
+    });
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await expect(projectService.ensureRepository()).rejects.toThrow(
+      "Text style patch failed.",
+    );
+
+    expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
+    expect(
+      mocked.collabService.commandApi.updateLayoutElement,
+    ).not.toHaveBeenCalled();
   });
 
   it("loads historical repository state through the ensured repository contract", async () => {
