@@ -823,6 +823,17 @@ For the current full contract, see
 row value contract is in
 `docs/platform/12-windows-player-runtime-key-value-contract.md`.
 
+### Exceptional Project Content Patches
+
+Project content patches are narrowly scoped repairs for specific data written
+by a released RouteVN Creator template. They are not a general schema migration
+layer and must not bypass creator-model commands.
+
+The current marker, exact legacy-value predicates, no-op rules, remote-sync
+gate, failure semantics, implementation map, and checklist for any future patch
+are defined in `docs/platform/14-project-content-patches.md`. Treat that file as
+the required contract when touching content-patch behavior.
+
 ## Current Canonical Patterns
 
 These are the current patterns we want new work to align with. They are more

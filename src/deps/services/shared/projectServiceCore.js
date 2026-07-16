@@ -13,6 +13,17 @@ import {
   normalizeLayoutSchemaVersion,
 } from "../../../internal/project/layout.js";
 
+// Exceptional shipped-data repair. Keep its marker, legacy predicates,
+// collaboration gate, and lifecycle aligned with
+// docs/platform/14-project-content-patches.md.
+const DEFAULT_MENU_TEXT_STYLES_PATCH_KEY =
+  "contentPatch.defaultMenuTextStyles-1-9-1";
+const MENU_ITEM_TEXT_STYLE_ID = "e2WbW3vcPZR9";
+const MENU_ITEM_SELECTED_TEXT_STYLE_ID = "saV5A4pkvHRb";
+const MENU_PAGE_LAYOUT_ID = "fKr5fa67MQWh";
+const LOAD_MENU_ELEMENT_ID = "icn4dknq2kyp";
+const LEGACY_DIALOGUE_CONTENT_TEXT_STYLE_ID = "5rwEfyx2GBEi";
+
 export const createProjectServiceCore = ({
   router,
   db,
@@ -24,6 +35,7 @@ export const createProjectServiceCore = ({
   storageAdapter,
   fileAdapter,
   collabAdapter,
+  shouldApplyProjectContentPatchesOnEnsure = () => true,
 }) => {
   const repositoryService = createProjectRepositoryService({
     router,
@@ -79,6 +91,8 @@ export const createProjectServiceCore = ({
   const getCurrentProjectId = () =>
     repositoryService.getEnsuredProjectId() || router.getPayload()?.p;
 
+  const defaultMenuTextStylesPatchByProject = new Map();
+
   const getRepositoryState = () => {
     const repository = repositoryService.getCachedRepository();
     return repository.getState();
@@ -122,9 +136,108 @@ export const createProjectServiceCore = ({
     }
   };
 
+  const patchDefaultMenuItemSelectedTextStyle = async (repositoryState) => {
+    const selectedTextStyle =
+      repositoryState?.textStyles?.items?.[MENU_ITEM_SELECTED_TEXT_STYLE_ID];
+    if (selectedTextStyle?.fontWeight !== "400") {
+      return;
+    }
+
+    const result = await collabService.commandApi.updateTextStyle({
+      textStyleId: MENU_ITEM_SELECTED_TEXT_STYLE_ID,
+      data: {
+        fontWeight: "700",
+      },
+    });
+    if (result?.valid === false) {
+      throw new Error(
+        result.error?.message ||
+          "Failed to patch the default selected menu text style.",
+      );
+    }
+  };
+
+  const patchDefaultMenuLoadTextStyle = async (repositoryState) => {
+    const menuItemTextStyle =
+      repositoryState?.textStyles?.items?.[MENU_ITEM_TEXT_STYLE_ID];
+    const menuPage = repositoryState?.layouts?.items?.[MENU_PAGE_LAYOUT_ID];
+    const loadMenuElement = menuPage?.elements?.items?.[LOAD_MENU_ELEMENT_ID];
+
+    if (
+      !menuItemTextStyle ||
+      loadMenuElement?.textStyleId !== LEGACY_DIALOGUE_CONTENT_TEXT_STYLE_ID
+    ) {
+      return;
+    }
+
+    const result = await collabService.commandApi.updateLayoutElement({
+      layoutId: MENU_PAGE_LAYOUT_ID,
+      elementId: LOAD_MENU_ELEMENT_ID,
+      data: {
+        textStyleId: MENU_ITEM_TEXT_STYLE_ID,
+      },
+      replace: false,
+    });
+    if (result?.valid === false) {
+      throw new Error(
+        result.error?.message || "Failed to patch the default Load menu text.",
+      );
+    }
+  };
+
+  const applyDefaultMenuTextStylesPatch = async (repository) => {
+    if (typeof repository?.getState !== "function") {
+      return;
+    }
+
+    const store = repositoryService.getCachedStore();
+    const isApplied = await store.app.get(DEFAULT_MENU_TEXT_STYLES_PATCH_KEY);
+    if (isApplied === true) {
+      return;
+    }
+
+    const repositoryState = repository.getState();
+    await patchDefaultMenuItemSelectedTextStyle(repositoryState);
+    await patchDefaultMenuLoadTextStyle(repositoryState);
+    await store.app.set(DEFAULT_MENU_TEXT_STYLES_PATCH_KEY, true);
+  };
+
+  const ensureDefaultMenuTextStylesPatch = async (repository) => {
+    const projectId = getCurrentProjectId();
+    const existingPatch = defaultMenuTextStylesPatchByProject.get(projectId);
+    if (existingPatch) {
+      return existingPatch;
+    }
+
+    const patch = applyDefaultMenuTextStylesPatch(repository);
+    defaultMenuTextStylesPatchByProject.set(projectId, patch);
+
+    try {
+      await patch;
+    } finally {
+      if (defaultMenuTextStylesPatchByProject.get(projectId) === patch) {
+        defaultMenuTextStylesPatchByProject.delete(projectId);
+      }
+    }
+  };
+
+  const ensureProjectContentPatches = async () => {
+    const repository = await repositoryService.ensureRepository();
+    await ensureLayoutSchemaVersion(repository);
+    await ensureDefaultMenuTextStylesPatch(repository);
+    return repository;
+  };
+
   const ensureRepository = async (options = {}) => {
     const repository = await repositoryService.ensureRepository(options);
     await ensureLayoutSchemaVersion(repository);
+    const shouldApplyContentPatches =
+      await shouldApplyProjectContentPatchesOnEnsure({
+        projectId: getCurrentProjectId(),
+      });
+    if (shouldApplyContentPatches) {
+      await ensureDefaultMenuTextStylesPatch(repository);
+    }
     return repository;
   };
 
@@ -268,6 +381,7 @@ export const createProjectServiceCore = ({
     releaseCurrentRepository: repositoryService.releaseCurrentRepository,
     releaseProjectRuntime,
     ensureRepository,
+    ensureProjectContentPatches,
     ensureProjectCompatibleById:
       repositoryService.ensureProjectCompatibleByProjectId,
     subscribeProjectState(listener, options) {

@@ -43,7 +43,7 @@ const loadLocalProjectEntries = async ({ db } = {}) => {
   }
 };
 
-const isLocalProjectId = async ({ db, projectId } = {}) => {
+export const isLocalProjectId = async ({ db, projectId } = {}) => {
   if (!projectId) {
     return false;
   }
@@ -162,6 +162,26 @@ export const createCollabConnectionRuntime = ({
     return params.get("p");
   };
 
+  const ensureProjectContentPatches = async ({ projectId, reason } = {}) => {
+    if (!projectId || getCollabProjectId() !== projectId) {
+      return;
+    }
+
+    try {
+      await projectService.ensureProjectContentPatches();
+      collabDebugLog("info", "project content patches completed", {
+        projectId,
+        reason,
+      });
+    } catch (error) {
+      collabDebugLog("warn", "project content patches failed", {
+        projectId,
+        reason,
+        error: error?.message || "unknown",
+      });
+    }
+  };
+
   const connectCollabDebugSession = async ({
     endpointUrl = collabRuntime.endpointUrl || DEFAULT_WEB_COLLAB_ENDPOINT,
     userId = collabRuntime.userId || "web-debug-user",
@@ -195,6 +215,12 @@ export const createCollabConnectionRuntime = ({
           userId,
           clientId: resolvedClientId,
         });
+        if (session?.hasCompletedInitialRemoteSync?.() === true) {
+          await ensureProjectContentPatches({
+            projectId,
+            reason: "initial_remote_sync",
+          });
+        }
         collabRuntime.endpointUrl = candidateEndpointUrl;
         collabRuntime.userId = userId;
         collabRuntime.clientId = resolvedClientId;
@@ -363,6 +389,10 @@ export const createCollabConnectionRuntime = ({
         mode: autoConnectMode,
         projectId: projectId || undefined,
         isLocalProject: localProject,
+      });
+      await ensureProjectContentPatches({
+        projectId,
+        reason: "local_project",
       });
       return;
     }

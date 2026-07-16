@@ -106,7 +106,7 @@ describe("layout rich text projection", () => {
 
       expect(element.content).toEqual([{ text }]);
       expect(element.textStyle.fontWeight).toBe("700");
-      expect(element.hover.textStyle.fontWeight).toBe("400");
+      expect(element.hover.textStyle.fontWeight).toBe("700");
     }
   });
 });
