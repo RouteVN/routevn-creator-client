@@ -13,6 +13,9 @@ import {
   normalizeLayoutSchemaVersion,
 } from "../../../internal/project/layout.js";
 
+// Exceptional shipped-data repair. Keep its marker, legacy predicates,
+// collaboration gate, and lifecycle aligned with
+// docs/platform/14-project-content-patches.md.
 const DEFAULT_MENU_TEXT_STYLES_PATCH_KEY =
   "contentPatch.defaultMenuTextStyles-1-9-1";
 const MENU_ITEM_TEXT_STYLE_ID = "e2WbW3vcPZR9";

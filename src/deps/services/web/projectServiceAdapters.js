@@ -409,6 +409,9 @@ export const createWebProjectServiceAdapters = ({
       const clientStore = await getCollabClientStore(projectId);
       await ensureCommittedIdLoaded(projectId, getStoreByProject);
       const projectionTracker = createCommittedCommandProjectionTracker();
+      // Content patches may trust web repository state only after the initial
+      // remote sync is fully projected with no stored projection gap. See
+      // docs/platform/14-project-content-patches.md.
       let initialRemoteSyncCompleted = false;
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,
