@@ -25,6 +25,12 @@ const windowsPlayerIndexHtml = readFileSync(
   ),
   "utf8",
 );
+const tauriConfig = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL("../../src-tauri/tauri.conf.json", import.meta.url)),
+    "utf8",
+  ),
+);
 const tauriWindowsConfig = JSON.parse(
   readFileSync(
     fileURLToPath(
@@ -311,6 +317,15 @@ describe("standalone window chrome", () => {
     expect(defaultCapability.permissions).not.toContain(
       "core:window:allow-toggle-maximize",
     );
+  });
+
+  it("uses the same default size for Creator and exported player windows", () => {
+    for (const config of [tauriConfig, tauriWindowsConfig, playerShellConfig]) {
+      expect(config.app.windows[0]).toMatchObject({
+        width: 1600,
+        height: 930,
+      });
+    }
   });
 
   it("keeps the exported player native frame until custom chrome activates", () => {

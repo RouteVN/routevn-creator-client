@@ -1,4 +1,6 @@
 componentName: rvn-sidebar
 propsSchema:
   type: object
-  properties: {}
+  properties:
+    currentRoute:
+      type: string

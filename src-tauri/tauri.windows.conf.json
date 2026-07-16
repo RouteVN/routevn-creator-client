@@ -5,6 +5,8 @@
     "windows": [
       {
         "title": "RouteVN Creator",
+        "width": 1600,
+        "height": 930,
         "resizable": true,
         "fullscreen": false,
         "decorations": true,
