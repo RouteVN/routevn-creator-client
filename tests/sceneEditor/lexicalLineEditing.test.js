@@ -4527,6 +4527,163 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("commits WebKit insertFromComposition text through Lexical", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const preventDefault = vi.fn();
+      const stopPropagation = vi.fn();
+      const stopImmediatePropagation = vi.fn();
+      const insertPlainText = vi.fn();
+      const nativeSelection = {
+        lineId: "line-1",
+        start: 9,
+        end: 9,
+      };
+
+      editorElement.state = {
+        mode: "text-editor",
+      };
+      editorElement.isComposing = true;
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.clearPendingTextInputFallback = vi.fn();
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.getInputLineSelectionContext = vi.fn(() => nativeSelection);
+      editorElement.insertPlainText = insertPlainText;
+
+      editorElement.handleNativeBeforeInput({
+        inputType: "insertFromComposition",
+        data: "发",
+        isComposing: true,
+        defaultPrevented: false,
+        preventDefault,
+        stopPropagation,
+        stopImmediatePropagation,
+      });
+
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+      expect(stopPropagation).toHaveBeenCalledTimes(1);
+      expect(stopImmediatePropagation).toHaveBeenCalledTimes(1);
+      expect(editorElement.clearSelectedReferenceNodeKey).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(insertPlainText).toHaveBeenCalledWith("发", {
+        nativeSelection,
+      });
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("preserves a WebKit composition commit when the next input is Space", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-webkit-composition-commit-test",
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: {
+          isOpen: false,
+        },
+        mode: "text-editor",
+      };
+      editorElement.pendingTextInputFallback = undefined;
+      editorElement.lastCommittedTextInputFallback = undefined;
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+
+          line.append($createTextNode("ab"));
+          root.append(line);
+          lineKey = line.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+        },
+        { discrete: true },
+      );
+
+      const compositionRange = document.createRange();
+      const initialTextNode =
+        editor.getElementByKey(lineKey).firstChild.firstChild;
+      compositionRange.setStart(initialTextNode, 1);
+      compositionRange.collapse(true);
+
+      editorElement.handleNativeBeforeInput({
+        inputType: "insertFromComposition",
+        data: "发",
+        isComposing: true,
+        defaultPrevented: false,
+        getTargetRanges: () => [compositionRange],
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      });
+
+      const spaceRange = document.createRange();
+      const committedTextNode =
+        editor.getElementByKey(lineKey).firstChild.firstChild;
+      spaceRange.setStart(committedTextNode, 2);
+      spaceRange.collapse(true);
+
+      editorElement.handleNativeBeforeInput({
+        inputType: "insertText",
+        data: " ",
+        isComposing: false,
+        defaultPrevented: false,
+        getTargetRanges: () => [spaceRange],
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      });
+
+      const result = editor.getEditorState().read(() => {
+        return $getRoot().getFirstChild().getTextContent();
+      });
+      expect(result).toBe("a发 b");
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("uses printable keydown text when beforeinput insertText has no data", async () => {
     const restoreDomGlobals = installDomGlobals();
 

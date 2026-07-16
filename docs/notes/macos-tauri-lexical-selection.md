@@ -1,10 +1,13 @@
-# macOS Tauri Lexical Selection Notes
+# Tauri WebKit Lexical Selection and IME Notes
 
 ## Symptoms
 
 In the scene document Lexical editor on macOS Tauri, the editor can be focused
 and receive keyboard events while printable typing or Enter-based line splitting
 does not visibly update the document.
+
+On Linux and macOS, Chinese IME commits could also appear at the caret and then
+disappear when the user pressed Space or entered another ordinary character.
 
 Observed selection/focus behavior:
 
@@ -96,3 +99,26 @@ as the source of truth before selection-sensitive text edits:
   before native selection paints; double-click selects the trailing word and a
   third click selects the full line content, while regular word selection and
   final-line selection stay native
+- final `insertFromComposition` commits are prevented from mutating only the
+  contenteditable DOM and are inserted through Lexical at the native target
+  range instead
+
+## IME Composition Commits
+
+WebKitGTK and macOS WebKit can emit a final, cancelable `beforeinput` event with
+`inputType: "insertFromComposition"`, the committed text in `data`, and
+`isComposing: true`. In the failing path, WebKit inserted that text into the
+contenteditable DOM and advanced the native caret, but Lexical's editor state
+did not change. The next controlled `insertText` operation reconciled the DOM
+from stale Lexical state, which removed every untracked IME commit before the
+caret.
+
+The primitive handles this final commit before the general composing-event
+early return. It resolves only the event's committed text, prevents the native
+DOM mutation, maps the event target range to a line selection, and calls
+`insertPlainText` so the DOM, Lexical state, and serialized scene lines advance
+together. Ongoing composition events remain browser-managed.
+
+Regression coverage must include both the `insertFromComposition` commit and a
+following ordinary Space insertion. Checking only that the Chinese text appears
+in the DOM does not catch the stale-state failure.

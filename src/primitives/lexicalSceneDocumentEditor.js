@@ -4665,7 +4665,37 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    if (event.defaultPrevented || event.isComposing || this.isComposing) {
+    if (event.defaultPrevented) {
+      this.clearPendingTextInputFallback();
+      return;
+    }
+
+    // Linux and macOS WebKit can apply an IME commit to the contenteditable
+    // DOM without updating Lexical's editor state. The next controlled input
+    // then reconciles from stale state and removes the committed characters.
+    // Commit through Lexical using the native target range as the caret source.
+    if (inputType === "insertFromComposition") {
+      const inputText = this.resolveBeforeInputText(event, {
+        allowKeyFallback: false,
+      });
+      if (inputText === undefined) {
+        return;
+      }
+
+      this.clearSelectedReferenceNodeKey();
+      event.preventDefault();
+      event.stopPropagation?.();
+      event.stopImmediatePropagation?.();
+      const nativeSelection = this.getInputLineSelectionContext(event);
+      if (nativeSelection) {
+        this.insertPlainText(inputText, { nativeSelection });
+      } else {
+        this.insertPlainText(inputText);
+      }
+      return;
+    }
+
+    if (event.isComposing || this.isComposing) {
       this.clearPendingTextInputFallback();
       return;
     }
