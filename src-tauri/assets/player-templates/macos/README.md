@@ -26,3 +26,11 @@ player archive.
 
 The template is built locally and committed as a regular Git artifact. CI does
 not build or publish it.
+
+Public Creator builds do not bundle this archive directly. Running
+`bun run tauri:build:mac` automatically expands it, Developer-ID-signs the
+template with hardened runtime and a secure timestamp, verifies both universal
+slices, and writes a release-only copy under `.artifacts/`. Exported player apps
+have that release signature removed before customization, then are ad-hoc signed
+and checked for retained Developer ID certificate data. Users therefore receive
+neither an active RouteVN Developer ID signature nor its certificate payload.

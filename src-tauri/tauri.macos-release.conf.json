@@ -1,0 +1,8 @@
+{
+  "bundle": {
+    "resources": {
+      "assets/player-templates/macos/RouteVNPlayerTemplate.app.zip": null,
+      "../.artifacts/macos-player-template/RouteVNPlayerTemplate.app.zip": "player-templates/macos/RouteVNPlayerTemplate.app.zip"
+    }
+  }
+}

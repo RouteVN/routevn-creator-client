@@ -125,9 +125,12 @@ bundled universal player template ZIP
 ```
 
 The shipped template should itself be stored as an archive rather than as a
-nested `.app` resource inside RouteVN Creator. This avoids nested application
-signing problems and preserves the template's bundle layout and executable
-permissions.
+nested `.app` resource inside RouteVN Creator. This preserves the template's
+bundle layout and executable permissions, but it does not exempt the nested app
+from notarization checks. The public Creator release pipeline must sign the app
+inside the template archive with Developer ID, hardened runtime, and a secure
+timestamp before bundling it because Apple's notary service expands nested
+containers.
 
 Proposed resource path:
 
@@ -239,8 +242,9 @@ Only the outer `.app` directory and user-visible bundle metadata are renamed.
 Signing must be explicit rather than relying on `codesign --deep` to discover
 work. Sign known nested code from the deepest level outward, sign the top-level
 application last with the ad-hoc identity, and verify with
-`codesign --verify --strict --verbose=2`. The exporter must remove or
-replace stale template signatures as part of this process. Template
+`codesign --verify --strict --verbose=2`. The exporter must remove stale
+template signatures before customization, not merely overwrite them, so no
+Developer ID certificate payload remains in unused signature space. Template
 entitlements, if any are introduced, must be reviewed and applied deliberately;
 they must not be inherited accidentally from an unrelated Creator build.
 
