@@ -1,8 +1,5 @@
 import { filter, tap } from "rxjs";
-import {
-  createNavigationTiming,
-  markNavigationTiming,
-} from "../../internal/navigationTiming.js";
+import { createNavigationTiming } from "../../internal/navigationTiming.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -74,21 +71,12 @@ export const handleProjectImageUpdate = async (deps) => {
 };
 
 const subscriptions = (deps) => {
-  const { subject, render } = deps;
+  const { subject } = deps;
   return [
     subject.pipe(
       filter(({ action }) => action === "project-image-update"),
       tap(({ payload }) => {
         deps.handlers.handleProjectImageUpdate(deps, payload);
-      }),
-    ),
-    subject.pipe(
-      filter(({ action }) => action === "redirect"),
-      tap(({ payload }) => {
-        // Small delay to ensure route has changed
-        markNavigationTiming(payload?.timing, "sidebar.redirect.render.start");
-        render();
-        markNavigationTiming(payload?.timing, "sidebar.redirect.render.end");
       }),
     ),
   ];

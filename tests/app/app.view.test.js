@@ -2,6 +2,15 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("app view", () => {
+  it("passes the committed route to the sidebar", () => {
+    const appView = readFileSync(
+      new URL("../../src/pages/app/app.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(appView).toContain("rvn-sidebar :currentRoute=${currentRoute}");
+  });
+
   it("prevents mobile tab tap feedback from rendering over the sheet", () => {
     const appView = readFileSync(
       new URL("../../src/pages/app/app.view.yaml", import.meta.url),

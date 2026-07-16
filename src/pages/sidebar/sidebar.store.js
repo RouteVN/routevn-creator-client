@@ -90,10 +90,9 @@ export const setProjectImageUrl = ({ state }, { imageUrl } = {}) => {
   state.header.image.src = imageUrl;
 };
 
-export const selectViewData = ({ state, i18n }) => {
+export const selectViewData = ({ state, props = {}, i18n }) => {
   const copy = selectSidebarCopy(i18n);
-  const currentPath =
-    typeof window !== "undefined" ? window.location.pathname : "";
+  const currentPath = props.currentRoute ?? "";
 
   // Find the matching item based on path
   const findMatchingItem = () => {

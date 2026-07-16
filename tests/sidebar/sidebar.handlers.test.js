@@ -1,6 +1,8 @@
+import { Subject } from "rxjs";
 import { describe, expect, it, vi } from "vitest";
 import {
   handleAfterMount,
+  handleBeforeMount,
   handleItemClick,
   handleProjectImageUpdate,
 } from "../../src/pages/sidebar/sidebar.handlers.js";
@@ -73,25 +75,45 @@ describe("sidebar.handlers", () => {
     expect(deps.subject.dispatch).toHaveBeenCalledWith("redirect", {
       path: "/project/images",
       payload: { p: "project-1" },
+      historyMode: "replace",
       timing: undefined,
     });
   });
 
-  it("selects sidebar groups by item id for nested resource routes", () => {
-    const originalWindow = globalThis.window;
+  it("selects sidebar groups from consecutive committed route props", () => {
+    const state = createInitialState();
 
-    globalThis.window = {
-      location: {
-        pathname: "/project/images",
-      },
+    expect(
+      selectViewData({
+        state,
+        props: { currentRoute: "/project/images" },
+      }).selectedItemId,
+    ).toBe("assets");
+    expect(
+      selectViewData({
+        state,
+        props: { currentRoute: "/project/scenes" },
+      }).selectedItemId,
+    ).toBe("scenes");
+    expect(
+      selectViewData({
+        state,
+        props: { currentRoute: "/project/about" },
+      }).selectedItemId,
+    ).toBe("settings");
+  });
+
+  it("does not render from a redirect request before the route is committed", () => {
+    const deps = createDeps();
+    deps.subject = new Subject();
+    deps.handlers = {
+      handleProjectImageUpdate: vi.fn(),
     };
 
-    try {
-      const viewData = selectViewData({ state: createInitialState() });
+    const cleanup = handleBeforeMount(deps);
+    deps.subject.next({ action: "redirect" });
 
-      expect(viewData.selectedItemId).toBe("assets");
-    } finally {
-      globalThis.window = originalWindow;
-    }
+    expect(deps.render).not.toHaveBeenCalled();
+    cleanup();
   });
 });
