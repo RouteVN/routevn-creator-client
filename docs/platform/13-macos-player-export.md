@@ -30,6 +30,14 @@ containment, and archives the template with `ditto`. The exact archive is
 produced locally and committed as a regular Git file. CI does not build or
 publish the macOS player template.
 
+The public Creator release pipeline expands that source archive into a
+temporary directory, signs its nested code and app with the maintainer's
+Developer ID identity, hardened runtime, and a secure timestamp, and verifies
+both architecture slices. It then writes an ignored release-only archive under
+`.artifacts/` and overrides the Tauri resource source while preserving the
+runtime path above. Apple notarization inspects code inside nested archives, so
+signing only the outer Creator app is insufficient.
+
 The template executable name stays stable. Export changes only the outer app
 directory, top-level bundle metadata, resources, and signature.
 
@@ -79,13 +87,16 @@ The native exporter:
    project icon, and package bytes
 2. expands exactly `RouteVNPlayerTemplate.app` with `ditto`
 3. rejects unsafe or escaping symlinks and non-universal Mach-O files
-4. writes the encrypted standalone package resource
-5. stamps top-level plist metadata and installs the ICNS icon
-6. signs nested native code deepest-first and the application last
-7. verifies the strict signature, metadata, architectures, permissions, and
+4. removes all template code signatures before changing the application
+5. writes the encrypted standalone package resource
+6. stamps top-level plist metadata and installs the ICNS icon
+7. ad-hoc signs nested native code deepest-first and the application last
+8. verifies every architecture is exclusively ad-hoc signed and contains no
+   retained Developer ID certificate payload
+9. verifies the strict signature, metadata, architectures, permissions, and
    symlinks
-8. creates a sibling `.part` archive with `ditto`, expands and validates it,
-   then atomically renames it to the selected destination
+10. creates a sibling `.part` archive with `ditto`, expands and validates it,
+    then atomically renames it to the selected destination
 
 Icon assembly first builds the standard iconset and uses `iconutil`. A direct
 system `sips` ICNS conversion is retained as a compatibility fallback for
@@ -110,6 +121,7 @@ messages.
 ## Canonical Implementation Areas
 
 - template build: `scripts/build-macos-player-template.js`
+- release signing: `scripts/prepare-macos-player-template-release.js`
 - native exporter: `src-tauri/src/export_macos.rs`
 - shared payload: `crates/routevn-packager/src/payload.rs`
 - shared player shell:

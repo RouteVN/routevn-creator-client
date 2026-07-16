@@ -41,9 +41,11 @@ fi
 
 export VITE_ROUTEVN_DISTRIBUTION=steam
 
+node scripts/prepare-macos-player-template-release.js
 bun run build:tauri
 tauri build \
   --config src-tauri/tauri.steam.conf.json \
+  --config src-tauri/tauri.macos-release.conf.json \
   --target universal-apple-darwin \
   --bundles app
 

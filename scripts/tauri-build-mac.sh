@@ -65,8 +65,13 @@ else
   echo "Set APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID in .env."
 fi
 
+node scripts/prepare-macos-player-template-release.js
 bun run build:tauri
-tauri build --config src-tauri/tauri.prod.conf.json --target universal-apple-darwin --bundles app,dmg
+tauri build \
+  --config src-tauri/tauri.prod.conf.json \
+  --config src-tauri/tauri.macos-release.conf.json \
+  --target universal-apple-darwin \
+  --bundles app,dmg
 
 MACOS_BUNDLE_DIR="src-tauri/target/universal-apple-darwin/release/bundle/macos"
 DMG_DIR="src-tauri/target/universal-apple-darwin/release/bundle/dmg"

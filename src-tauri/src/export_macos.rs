@@ -194,6 +194,7 @@ mod macos {
         }
         validate_bundle_symlinks(&template_app_path)?;
         validate_universal_macho_files(&template_app_path)?;
+        strip_application_signatures_inside_out(&template_app_path)?;
 
         let application_name = sanitize_application_name(&metadata.title)?;
         let application_path = extract_directory.join(format!("{application_name}.app"));
@@ -580,7 +581,9 @@ mod macos {
         Ok(())
     }
 
-    fn sign_application_inside_out(application_path: &Path) -> Result<(), String> {
+    fn collect_nested_code_paths(
+        application_path: &Path,
+    ) -> Result<(Vec<PathBuf>, Vec<PathBuf>), String> {
         let main_executable = read_main_executable_path(application_path)?;
         let mut macho_files = Vec::new();
         let mut nested_bundles = Vec::new();
@@ -593,12 +596,38 @@ mod macos {
             }
             Ok(())
         })?;
-
         macho_files.sort_by_key(|path| std::cmp::Reverse(path.components().count()));
+        nested_bundles.sort_by_key(|path| std::cmp::Reverse(path.components().count()));
+        Ok((macho_files, nested_bundles))
+    }
+
+    fn strip_application_signatures_inside_out(application_path: &Path) -> Result<(), String> {
+        let (macho_files, nested_bundles) = collect_nested_code_paths(application_path)?;
+        for path in macho_files {
+            remove_signature(&path)?;
+        }
+        for path in nested_bundles {
+            remove_signature(&path)?;
+        }
+        remove_signature(application_path)
+    }
+
+    fn remove_signature(path: &Path) -> Result<(), String> {
+        run_tool(
+            "/usr/bin/codesign",
+            [
+                OsString::from("--remove-signature"),
+                path.as_os_str().to_os_string(),
+            ],
+            "remove the macOS player template signature",
+        )
+    }
+
+    fn sign_application_inside_out(application_path: &Path) -> Result<(), String> {
+        let (macho_files, nested_bundles) = collect_nested_code_paths(application_path)?;
         for path in macho_files {
             codesign(&path)?;
         }
-        nested_bundles.sort_by_key(|path| std::cmp::Reverse(path.components().count()));
         for path in nested_bundles {
             codesign(&path)?;
         }
@@ -643,12 +672,76 @@ mod macos {
             "/usr/bin/codesign",
             [
                 OsString::from("--verify"),
+                OsString::from("--all-architectures"),
                 OsString::from("--strict"),
                 OsString::from("--verbose=2"),
                 application_path.as_os_str().to_os_string(),
             ],
             "verify the macOS application signature",
-        )
+        )?;
+        verify_ad_hoc_signatures(application_path)
+    }
+
+    fn verify_ad_hoc_signatures(application_path: &Path) -> Result<(), String> {
+        const DEVELOPER_ID_MARKER: &[u8] = b"Developer ID Application:";
+
+        let mut macho_files = Vec::new();
+        visit_paths(application_path, &mut |path, file_type| {
+            if file_type.is_file() && is_macho_file(path)? {
+                macho_files.push(path.to_path_buf());
+            }
+            Ok(())
+        })?;
+
+        for path in macho_files {
+            let bytes = fs::read(&path).map_err(|error| {
+                format!(
+                    "Failed to inspect the exported macOS player signature {}: {error}",
+                    path.display()
+                )
+            })?;
+            if bytes
+                .windows(DEVELOPER_ID_MARKER.len())
+                .any(|window| window == DEVELOPER_ID_MARKER)
+            {
+                return Err(format!(
+                    "The exported macOS player retains Developer ID signature data: {}.",
+                    path.display()
+                ));
+            }
+
+            for architecture in ["x86_64", "arm64"] {
+                let output = run_tool_output(
+                    "/usr/bin/codesign",
+                    [
+                        OsString::from("-dvvv"),
+                        OsString::from("--arch"),
+                        OsString::from(architecture),
+                        path.as_os_str().to_os_string(),
+                    ],
+                    "inspect the exported macOS player signature",
+                )?;
+                let details = format!(
+                    "{}\n{}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                let is_ad_hoc = details.lines().any(|line| line.trim() == "Signature=adhoc");
+                let has_no_team = details
+                    .lines()
+                    .any(|line| line.trim() == "TeamIdentifier=not set");
+                let has_authority = details
+                    .lines()
+                    .any(|line| line.trim_start().starts_with("Authority="));
+                if !is_ad_hoc || !has_no_team || has_authority {
+                    return Err(format!(
+                        "The exported macOS player is not exclusively ad-hoc signed for {architecture}: {}.",
+                        path.display()
+                    ));
+                }
+            }
+        }
+        Ok(())
     }
 
     fn verify_info_plist(
@@ -809,7 +902,7 @@ mod macos {
 
     #[cfg(test)]
     mod tests {
-        use std::path::Path;
+        use std::path::{Path, PathBuf};
 
         use super::{
             MacosApplicationMetadata, export_macos_application_sync,
@@ -867,8 +960,12 @@ mod macos {
         #[test]
         fn exports_and_verifies_a_real_universal_application_archive() {
             let manifest_directory = Path::new(env!("CARGO_MANIFEST_DIR"));
-            let template_path = manifest_directory
-                .join("assets/player-templates/macos/RouteVNPlayerTemplate.app.zip");
+            let template_path = std::env::var_os("ROUTEVN_MACOS_TEST_TEMPLATE_PATH")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| {
+                    manifest_directory
+                        .join("assets/player-templates/macos/RouteVNPlayerTemplate.app.zip")
+                });
             assert!(template_path.is_file());
             let temp = tempfile::tempdir().unwrap();
             let output_path = temp.path().join("Acceptance Game.app.zip");

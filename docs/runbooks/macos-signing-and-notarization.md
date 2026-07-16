@@ -66,15 +66,31 @@ That command uses [`scripts/tauri-build-mac.sh`](../../scripts/tauri-build-mac.s
 The script does this:
 
 1. Loads local values from `.env`
-2. Builds the Tauri frontend bundle
-3. Builds the macOS app bundle
-4. Signs the `.app`
-5. Lets Tauri notarize and staple the `.app`
-6. Builds the final `.dmg`
-7. Signs the `.dmg`
-8. Submits the `.dmg` with `xcrun notarytool`
-9. Staples the notarization ticket to the `.dmg`
-10. Validates the stapled `.dmg`
+2. Expands the bundled macOS player template
+3. Signs its nested code and app with the configured Developer ID identity,
+   hardened runtime, and a secure timestamp
+4. Verifies both universal slices and writes an ignored release-only template
+   archive under `.artifacts/`
+5. Builds the Tauri frontend bundle
+6. Builds the macOS app bundle with the signed player template
+7. Signs the `.app`
+8. Lets Tauri notarize and staple the `.app`
+9. Builds the final `.dmg`
+10. Signs the `.dmg`
+11. Submits the `.dmg` with `xcrun notarytool`
+12. Staples the notarization ticket to the `.dmg`
+13. Validates the stapled `.dmg`
+
+The committed player template remains the source used by local export. Release
+signing writes a separate archive so secure timestamps do not dirty the Git
+worktree. The release-only Tauri config replaces the source resource with that
+signed archive at the same runtime resource path.
+
+When a user exports a player, Creator removes the release template's signatures
+before changing any content, ad-hoc signs the completed player, and rejects the
+export if any architecture retains a Developer ID authority, team identifier,
+or certificate payload. The maintainer's Developer ID signature is only an
+input required to notarize Creator; it is not passed through to user exports.
 
 ## Final Artifact
 
@@ -123,6 +139,13 @@ Expected results:
 
 - The `.dmg` was never submitted to notarization, or the stapling step failed.
 - Re-run `bun run tauri:build:mac` after confirming `.env` has all Apple values.
+
+`Archive contains critical validation errors` for `routevn-shell`
+
+- The nested player template in an older build was not Developer ID signed.
+- `bun run tauri:build:mac` now prepares and verifies a signed release-only
+  template automatically. Do not call `tauri build` directly for a public
+  macOS release.
 
 ## Security Rules
 
