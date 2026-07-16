@@ -12,12 +12,40 @@ import {
 
 describe("projectLanguage", () => {
   it("defines the supported project language contract", () => {
-    expect(PROJECT_LANGUAGES).toEqual(["en", "ja", "zh-hans"]);
+    expect(PROJECT_LANGUAGES).toEqual([
+      "en",
+      "ja",
+      "ko",
+      "zh-hans",
+      "zh-hant",
+      "ru",
+      "it",
+      "de",
+      "fr",
+      "es",
+      "nl",
+      "th",
+      "ms",
+      "id",
+      "pt",
+    ]);
     expect(DEFAULT_PROJECT_LANGUAGE).toBe("en");
     expect(PROJECT_LANGUAGE_TEXT_COUNT_MODES).toEqual({
       en: PROJECT_TEXT_COUNT_MODE_WORD,
       ja: PROJECT_TEXT_COUNT_MODE_CHARACTER,
+      ko: PROJECT_TEXT_COUNT_MODE_WORD,
       "zh-hans": PROJECT_TEXT_COUNT_MODE_CHARACTER,
+      "zh-hant": PROJECT_TEXT_COUNT_MODE_CHARACTER,
+      ru: PROJECT_TEXT_COUNT_MODE_WORD,
+      it: PROJECT_TEXT_COUNT_MODE_WORD,
+      de: PROJECT_TEXT_COUNT_MODE_WORD,
+      fr: PROJECT_TEXT_COUNT_MODE_WORD,
+      es: PROJECT_TEXT_COUNT_MODE_WORD,
+      nl: PROJECT_TEXT_COUNT_MODE_WORD,
+      th: PROJECT_TEXT_COUNT_MODE_WORD,
+      ms: PROJECT_TEXT_COUNT_MODE_WORD,
+      id: PROJECT_TEXT_COUNT_MODE_WORD,
+      pt: PROJECT_TEXT_COUNT_MODE_WORD,
     });
   });
 
@@ -25,6 +53,9 @@ describe("projectLanguage", () => {
     expect(getProjectLanguageTextCountMode("en")).toBe("word");
     expect(getProjectLanguageTextCountMode("ja")).toBe("character");
     expect(getProjectLanguageTextCountMode("zh-hans")).toBe("character");
+    expect(getProjectLanguageTextCountMode("zh-hant")).toBe("character");
+    expect(getProjectLanguageTextCountMode("ko")).toBe("word");
+    expect(getProjectLanguageTextCountMode("th")).toBe("word");
     expect(getProjectLanguageTextCountMode()).toBe("word");
   });
 

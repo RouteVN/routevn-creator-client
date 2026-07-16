@@ -6,7 +6,19 @@ import {
 const OPTION_KEY_BY_LANGUAGE = Object.freeze({
   en: "englishOption",
   ja: "japaneseOption",
-  "zh-hans": "chineseOption",
+  ko: "koreanOption",
+  "zh-hans": "simplifiedChineseOption",
+  "zh-hant": "traditionalChineseOption",
+  ru: "russianOption",
+  it: "italianOption",
+  de: "germanOption",
+  fr: "frenchOption",
+  es: "spanishOption",
+  nl: "dutchOption",
+  th: "thaiOption",
+  ms: "malayOption",
+  id: "indonesianOption",
+  pt: "portugueseOption",
 });
 
 export const selectProjectLanguageCopy = (i18n = {}) => {

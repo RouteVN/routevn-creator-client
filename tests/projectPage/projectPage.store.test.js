@@ -51,7 +51,19 @@ describe("project page store", () => {
       options: [
         { value: "en", label: "English" },
         { value: "ja", label: "Japanese" },
-        { value: "zh-hans", label: "Chinese" },
+        { value: "ko", label: "Korean" },
+        { value: "zh-hans", label: "Simplified Chinese" },
+        { value: "zh-hant", label: "Traditional Chinese" },
+        { value: "ru", label: "Russian" },
+        { value: "it", label: "Italian" },
+        { value: "de", label: "German" },
+        { value: "fr", label: "French" },
+        { value: "es", label: "Spanish" },
+        { value: "nl", label: "Dutch" },
+        { value: "th", label: "Thai" },
+        { value: "ms", label: "Bahasa Melayu" },
+        { value: "id", label: "Bahasa Indonesia" },
+        { value: "pt", label: "Portuguese" },
       ],
     });
     expect(viewData.editDefaultValues.language).toBe("ja");
