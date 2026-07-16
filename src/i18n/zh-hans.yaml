@@ -138,8 +138,8 @@ projectLanguage:
   polishOption: "波兰语"
   marathiOption: "马拉地语"
   ukrainianOption: "乌克兰语"
-  dutchOption: "荷兰语"
   malayOption: "马来语"
+  dutchOption: "荷兰语"
 projectPage:
   backToProjects: "返回项目列表"
   clickToUpload: "点击上传"
