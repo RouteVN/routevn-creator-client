@@ -2,7 +2,6 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WINDOWS_PLAYER_INDEX_HTML } from "../../src/deps/services/shared/projectExportService.js";
 
 const windowChromeSource = readFileSync(
   fileURLToPath(
@@ -15,6 +14,15 @@ const staticDirectory = fileURLToPath(
 );
 const testPermissionsHtml = readFileSync(
   fileURLToPath(new URL("../../static/test-permissions.html", import.meta.url)),
+  "utf8",
+);
+const windowsPlayerIndexHtml = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../scripts/player-templates/windows/index.html",
+      import.meta.url,
+    ),
+  ),
   "utf8",
 );
 const tauriWindowsConfig = JSON.parse(
@@ -272,11 +280,14 @@ describe("standalone window chrome", () => {
   });
 
   it("is staged and loaded by the exported Windows player shell", () => {
-    expect(WINDOWS_PLAYER_INDEX_HTML).toContain(
+    expect(windowsPlayerIndexHtml).toContain(
       '<script src="./windowChrome.js" defer></script>',
     );
-    expect(WINDOWS_PLAYER_INDEX_HTML.indexOf("windowChrome.js")).toBeLessThan(
-      WINDOWS_PLAYER_INDEX_HTML.indexOf("./main.js"),
+    expect(windowsPlayerIndexHtml.indexOf("windowChrome.js")).toBeLessThan(
+      windowsPlayerIndexHtml.indexOf("./main.js"),
+    );
+    expect(playerBuildScript).toContain(
+      '"scripts/player-templates/windows/index.html"',
     );
     expect(playerBuildScript).toContain('"static/public/windowChrome.js"');
     expect(playerBuildScript).toContain(
@@ -818,6 +829,43 @@ describe("standalone window chrome", () => {
     );
     await flushTasks();
 
+    expect(harness.appWindow.setFullscreen).toHaveBeenCalledOnce();
+    expect(fullscreenButton.getAttribute("aria-pressed")).toBe("true");
+    expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("true");
+  });
+
+  it("leaves Escape to an open dialog without exiting fullscreen", async () => {
+    const harness = createWindowHarness();
+    await flushTasks();
+
+    const { document } = harness.dom.window;
+    const chrome = document.querySelector("#rvn-window-chrome");
+    const fullscreenButton = chrome.querySelector(
+      '[data-window-action="fullscreen"]',
+    );
+    const dialog = document.createElement("rtgl-dialog");
+    const dialogButton = document.createElement("button");
+    dialog.setAttribute("open", "");
+    dialog.append(dialogButton);
+    document.body.append(dialog);
+
+    harness.dom.window.dispatchEvent(
+      new harness.dom.window.KeyboardEvent("keydown", { key: "F11" }),
+    );
+    await flushTasks();
+    expect(harness.appWindow.setFullscreen).toHaveBeenCalledOnce();
+    expect(harness.appWindow.setFullscreen).toHaveBeenLastCalledWith(true);
+
+    const escapeEvent = new harness.dom.window.KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      key: "Escape",
+    });
+    dialogButton.dispatchEvent(escapeEvent);
+    await flushTasks();
+
+    expect(escapeEvent.defaultPrevented).toBe(false);
     expect(harness.appWindow.setFullscreen).toHaveBeenCalledOnce();
     expect(fullscreenButton.getAttribute("aria-pressed")).toBe("true");
     expect(document.documentElement.dataset.rvnWindowFullscreen).toBe("true");

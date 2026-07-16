@@ -1,10 +1,10 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BUNDLE_FORMAT_VERSION_V4,
   BUNDLE_HEADER_SIZE,
   BUNDLE_PLAYER_INDEX_HTML,
-  NATIVE_PLAYER_INDEX_HTML,
-  WINDOWS_PLAYER_INDEX_HTML,
   createBundleInstructions,
   createBundleResult,
   createProjectExportService,
@@ -13,6 +13,21 @@ import {
 } from "../../src/deps/services/shared/projectExportService.js";
 
 const originalFetch = globalThis.fetch;
+const readRepositoryFile = (relativeUrl) =>
+  readFileSync(fileURLToPath(new URL(relativeUrl, import.meta.url)), "utf8");
+const webPlayerIndexHtml = readRepositoryFile("../../static/bundle/index.html");
+const macosPlayerIndexHtml = readRepositoryFile(
+  "../../scripts/player-templates/macos/index.html",
+);
+const windowsPlayerIndexHtml = readRepositoryFile(
+  "../../scripts/player-templates/windows/index.html",
+);
+const macosPlayerBuildScript = readRepositoryFile(
+  "../../scripts/build-macos-player-template.js",
+);
+const windowsPlayerBuildScript = readRepositoryFile(
+  "../../scripts/build-windows-player-template.js",
+);
 
 describe("projectExportService", () => {
   afterEach(() => {
@@ -24,25 +39,57 @@ describe("projectExportService", () => {
     expect(BUNDLE_PLAYER_INDEX_HTML).not.toContain(
       "player-runtime-persistence-host.js",
     );
-    expect(NATIVE_PLAYER_INDEX_HTML).not.toContain("windowChrome.js");
-    expect(NATIVE_PLAYER_INDEX_HTML).toContain(
+    expect(macosPlayerIndexHtml).not.toContain("windowChrome.js");
+    expect(macosPlayerIndexHtml).toContain(
       '<script src="./player-runtime-persistence-host.js"></script>',
     );
     expect(
-      NATIVE_PLAYER_INDEX_HTML.indexOf("player-runtime-persistence-host.js"),
-    ).toBeLessThan(NATIVE_PLAYER_INDEX_HTML.indexOf("./main.js"));
-    expect(WINDOWS_PLAYER_INDEX_HTML).toContain(
+      macosPlayerIndexHtml.indexOf("player-runtime-persistence-host.js"),
+    ).toBeLessThan(macosPlayerIndexHtml.indexOf("./main.js"));
+    expect(windowsPlayerIndexHtml).toContain(
       '<script src="./windowChrome.js" defer></script>',
     );
-    expect(WINDOWS_PLAYER_INDEX_HTML).toContain(
+    expect(windowsPlayerIndexHtml).toContain(
       '<script src="./player-runtime-persistence-host.js"></script>',
     );
-    expect(WINDOWS_PLAYER_INDEX_HTML.indexOf("windowChrome.js")).toBeLessThan(
-      WINDOWS_PLAYER_INDEX_HTML.indexOf("player-runtime-persistence-host.js"),
+    expect(windowsPlayerIndexHtml.indexOf("windowChrome.js")).toBeLessThan(
+      windowsPlayerIndexHtml.indexOf("player-runtime-persistence-host.js"),
     );
     expect(
-      WINDOWS_PLAYER_INDEX_HTML.indexOf("player-runtime-persistence-host.js"),
-    ).toBeLessThan(WINDOWS_PLAYER_INDEX_HTML.indexOf("./main.js"));
+      windowsPlayerIndexHtml.indexOf("player-runtime-persistence-host.js"),
+    ).toBeLessThan(windowsPlayerIndexHtml.indexOf("./main.js"));
+    expect(
+      windowsPlayerIndexHtml.replace(
+        '  <script src="./windowChrome.js" defer></script>\n',
+        "",
+      ),
+    ).toBe(macosPlayerIndexHtml);
+  });
+
+  it("stages dedicated desktop index documents instead of deriving the web document", () => {
+    expect(macosPlayerBuildScript).toContain(
+      '"scripts/player-templates/macos/index.html"',
+    );
+    expect(windowsPlayerBuildScript).toContain(
+      '"scripts/player-templates/windows/index.html"',
+    );
+    expect(macosPlayerBuildScript).not.toContain("BUNDLE_PLAYER_INDEX_HTML");
+    expect(windowsPlayerBuildScript).not.toContain("BUNDLE_PLAYER_INDEX_HTML");
+  });
+
+  it("keeps the loading and click-to-start surface only in the web player HTML", () => {
+    for (const html of [BUNDLE_PLAYER_INDEX_HTML, webPlayerIndexHtml]) {
+      expect(html).toContain('<body data-player-start="click">');
+      expect(html).toContain('<div id="loading">Loading...</div>');
+      expect(html).toContain("#loading.ready");
+    }
+
+    for (const html of [macosPlayerIndexHtml, windowsPlayerIndexHtml]) {
+      expect(html).toContain('<body data-player-start="automatic">');
+      expect(html).toContain('<div id="loading"></div>');
+      expect(html).not.toContain('<div id="loading">Loading...</div>');
+      expect(html).not.toContain("#loading.ready");
+    }
   });
 
   it("sizes the player canvas within custom window chrome", () => {
