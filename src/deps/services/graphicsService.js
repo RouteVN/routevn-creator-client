@@ -812,17 +812,31 @@ export const createGraphicsService = async ({
 
     audioElements.forEach((audioElement) => {
       const key = audioElement?.src;
-      if (typeof key !== "string" || !key) {
-        renderableAudio.push(audioElement);
+      if (typeof key === "string" && key) {
+        if (AudioAsset.getAsset?.(key)) {
+          renderableAudio.push(audioElement);
+          return;
+        }
+
+        missingAudioKeys.push(key);
         return;
       }
 
-      if (AudioAsset.getAsset?.(key)) {
-        renderableAudio.push(audioElement);
+      if (Array.isArray(audioElement?.children)) {
+        const splitChildren = splitRenderableAudio(audioElement.children);
+        missingAudioKeys.push(...splitChildren.missingAudioKeys);
+        renderableAudio.push(
+          splitChildren.missingAudioKeys.length > 0
+            ? {
+                ...audioElement,
+                children: splitChildren.renderableAudio,
+              }
+            : audioElement,
+        );
         return;
       }
 
-      missingAudioKeys.push(key);
+      renderableAudio.push(audioElement);
     });
 
     return {
