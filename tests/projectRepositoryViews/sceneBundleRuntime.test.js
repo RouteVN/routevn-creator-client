@@ -97,6 +97,7 @@ const createRuntime = ({
   checkpoints = {},
   textStatsCheckpoints = {},
   historyStats,
+  getCurrentHistoryStats = () => historyStats,
 }) => {
   const store = {
     deleteMaterializedViewCheckpoint: vi.fn(async () => {}),
@@ -135,7 +136,7 @@ const createRuntime = ({
     listCommittedAfter,
     getCurrentMainState: () => mainState,
     getCurrentRevision: () => events.length,
-    getCurrentHistoryStats: () => historyStats,
+    getCurrentHistoryStats,
     getActiveSceneId: () => activeSceneId,
     getActiveSceneState: () => createSceneState(activeSceneId),
     loadSceneProjection,
@@ -364,6 +365,54 @@ describe("sceneBundleRuntime", () => {
       viewName: SCENE_TEXT_STATS_VIEW_NAME,
       partition,
     });
+  });
+
+  it("validates cached text stats against live history after a draft edit", async () => {
+    const partition = scenePartitionFor(inactiveSceneId);
+    const textStats = {
+      lineCount: 2,
+      wordCount: 8,
+      characterCount: 32,
+      language: "en",
+    };
+    const liveHistoryStats = {
+      committedCount: 0,
+      latestCommittedId: 0,
+      draftCount: 1,
+      latestDraftClock: 2,
+    };
+    const getCurrentHistoryStats = vi.fn(async () =>
+      structuredClone(liveHistoryStats),
+    );
+    const { runtime, store } = createRuntime({
+      events: [],
+      textStatsCheckpoints: {
+        [partition]: {
+          partition,
+          viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+          lastCommittedId: 0,
+          value: textStats,
+          meta: {
+            historyStats: structuredClone(liveHistoryStats),
+          },
+        },
+      },
+      historyStats: {
+        committedCount: 0,
+        latestCommittedId: 0,
+        draftCount: 1,
+        latestDraftClock: 1,
+      },
+      getCurrentHistoryStats,
+    });
+
+    await expect(
+      runtime.loadSceneTextStats({ sceneIds: [inactiveSceneId] }),
+    ).resolves.toEqual({
+      [inactiveSceneId]: textStats,
+    });
+    expect(getCurrentHistoryStats).toHaveBeenCalledTimes(1);
+    expect(store.deleteMaterializedViewCheckpoint).not.toHaveBeenCalled();
   });
 
   it("ignores cached text stats without a line count", async () => {

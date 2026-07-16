@@ -56,8 +56,7 @@ export const createSceneBundleRuntime = ({
     latestDraftClock: normalizeHistoryStat(stats?.latestDraftClock),
   });
 
-  const isCheckpointHistoryCompatible = (checkpoint) => {
-    const currentHistoryStats = getCurrentHistoryStats();
+  const isCheckpointHistoryCompatible = (checkpoint, currentHistoryStats) => {
     if (!currentHistoryStats) {
       return true;
     }
@@ -89,10 +88,10 @@ export const createSceneBundleRuntime = ({
     return current.latestCommittedId > saved.latestCommittedId;
   };
 
-  const getCheckpointRevision = (checkpoint) => {
+  const getCheckpointRevision = (checkpoint, currentHistoryStats) => {
     if (
       checkpoint?.viewVersion !== SCENE_OVERVIEW_VIEW_VERSION ||
-      !isCheckpointHistoryCompatible(checkpoint)
+      !isCheckpointHistoryCompatible(checkpoint, currentHistoryStats)
     ) {
       return 0;
     }
@@ -110,10 +109,17 @@ export const createSceneBundleRuntime = ({
     return Math.floor(checkpointRevision);
   };
 
-  const getLatestOverviewRevisionForScene = async (sceneId, checkpoint) => {
+  const getLatestOverviewRevisionForScene = async (
+    sceneId,
+    checkpoint,
+    currentHistoryStats,
+  ) => {
     const scenePartition = scenePartitionFor(sceneId);
     const mainScenePartition = mainScenePartitionFor(sceneId);
-    const sinceCommittedId = getCheckpointRevision(checkpoint);
+    const sinceCommittedId = getCheckpointRevision(
+      checkpoint,
+      currentHistoryStats,
+    );
     let latestRelevantRevision = sinceCommittedId;
 
     for await (const committedBatch of iterateCommittedEventBatches({
@@ -144,12 +150,16 @@ export const createSceneBundleRuntime = ({
   const getLatestOverviewRevisionsForScenes = async ({
     sceneIds = [],
     checkpointsBySceneId = new Map(),
+    currentHistoryStats,
   } = {}) => {
     const normalizedSceneIds = sceneIds.filter(isNonEmptyString);
     const revisionsBySceneId = new Map(
       normalizedSceneIds.map((sceneId) => [
         sceneId,
-        getCheckpointRevision(checkpointsBySceneId.get(sceneId)),
+        getCheckpointRevision(
+          checkpointsBySceneId.get(sceneId),
+          currentHistoryStats,
+        ),
       ]),
     );
     if (normalizedSceneIds.length === 0) {
@@ -209,8 +219,8 @@ export const createSceneBundleRuntime = ({
     return revisionsBySceneId;
   };
 
-  const getTextStatsCheckpointRevision = (checkpoint) => {
-    if (!isCheckpointHistoryCompatible(checkpoint)) {
+  const getTextStatsCheckpointRevision = (checkpoint, currentHistoryStats) => {
+    if (!isCheckpointHistoryCompatible(checkpoint, currentHistoryStats)) {
       return 0;
     }
 
@@ -229,6 +239,7 @@ export const createSceneBundleRuntime = ({
 
   const getLatestTextStatsRevisionsForScenes = async ({
     checkpointsBySceneId = new Map(),
+    currentHistoryStats,
   } = {}) => {
     const normalizedSceneIds = [...checkpointsBySceneId.keys()].filter(
       isNonEmptyString,
@@ -236,7 +247,10 @@ export const createSceneBundleRuntime = ({
     const revisionsBySceneId = new Map(
       normalizedSceneIds.map((sceneId) => [
         sceneId,
-        getTextStatsCheckpointRevision(checkpointsBySceneId.get(sceneId)),
+        getTextStatsCheckpointRevision(
+          checkpointsBySceneId.get(sceneId),
+          currentHistoryStats,
+        ),
       ]),
     );
     if (normalizedSceneIds.length === 0) {
@@ -390,6 +404,7 @@ export const createSceneBundleRuntime = ({
     sceneId,
     checkpoint = null,
     latestRelevantRevision,
+    currentHistoryStats,
   }) => {
     if (!isNonEmptyString(sceneId)) {
       return undefined;
@@ -427,7 +442,11 @@ export const createSceneBundleRuntime = ({
       overview,
       lastCommittedId: Number.isFinite(latestRelevantRevision)
         ? latestRelevantRevision
-        : await getLatestOverviewRevisionForScene(sceneId, checkpoint),
+        : await getLatestOverviewRevisionForScene(
+            sceneId,
+            checkpoint,
+            currentHistoryStats,
+          ),
     });
 
     return structuredClone(overview);
@@ -437,6 +456,7 @@ export const createSceneBundleRuntime = ({
     sceneId,
     checkpoint = null,
     latestRelevantRevision,
+    currentHistoryStats,
   }) => {
     if (!isNonEmptyString(sceneId)) {
       return undefined;
@@ -456,6 +476,7 @@ export const createSceneBundleRuntime = ({
         sceneId,
         checkpoint,
         latestRelevantRevision,
+        currentHistoryStats,
       });
     }
 
@@ -463,9 +484,13 @@ export const createSceneBundleRuntime = ({
       latestRelevantRevision,
     )
       ? latestRelevantRevision
-      : await getLatestOverviewRevisionForScene(sceneId, checkpoint);
+      : await getLatestOverviewRevisionForScene(
+          sceneId,
+          checkpoint,
+          currentHistoryStats,
+        );
     if (
-      isCheckpointHistoryCompatible(checkpoint) &&
+      isCheckpointHistoryCompatible(checkpoint, currentHistoryStats) &&
       isSceneOverviewCheckpointFresh({
         checkpoint,
         latestRelevantRevision: resolvedLatestRelevantRevision,
@@ -478,6 +503,7 @@ export const createSceneBundleRuntime = ({
       sceneId,
       checkpoint,
       latestRelevantRevision: resolvedLatestRelevantRevision,
+      currentHistoryStats,
     });
   };
 
@@ -507,6 +533,7 @@ export const createSceneBundleRuntime = ({
   };
 
   const loadSceneTextStats = async ({ sceneIds = [] } = {}) => {
+    const currentHistoryStats = await getCurrentHistoryStats();
     const checkpointsBySceneId = await loadSceneTextStatsCheckpoints({
       store,
       sceneIds,
@@ -515,6 +542,7 @@ export const createSceneBundleRuntime = ({
     const latestRevisionsBySceneId = await getLatestTextStatsRevisionsForScenes(
       {
         checkpointsBySceneId,
+        currentHistoryStats,
       },
     );
 
@@ -522,7 +550,7 @@ export const createSceneBundleRuntime = ({
     const staleSceneIds = [];
     for (const [sceneId, checkpoint] of checkpointsBySceneId) {
       if (
-        isCheckpointHistoryCompatible(checkpoint) &&
+        isCheckpointHistoryCompatible(checkpoint, currentHistoryStats) &&
         isSceneTextStatsCheckpointFresh({
           checkpoint,
           latestRelevantRevision: latestRevisionsBySceneId.get(sceneId),
@@ -564,14 +592,17 @@ export const createSceneBundleRuntime = ({
     },
 
     async ensureSceneBundle(sceneId) {
+      const currentHistoryStats = await getCurrentHistoryStats();
       return ensureSceneOverviewWithCheckpoint({
         sceneId,
         checkpoint: await loadSceneOverviewCheckpoint({ store, sceneId }),
+        currentHistoryStats,
       });
     },
 
     async loadSceneOverviews({ sceneIds = [] } = {}) {
       const overviewsBySceneId = {};
+      const currentHistoryStats = await getCurrentHistoryStats();
 
       const checkpointsBySceneId = await loadSceneOverviewCheckpoints({
         store,
@@ -582,6 +613,7 @@ export const createSceneBundleRuntime = ({
         await getLatestOverviewRevisionsForScenes({
           sceneIds,
           checkpointsBySceneId,
+          currentHistoryStats,
         });
 
       for (const sceneId of sceneIds) {
@@ -592,6 +624,7 @@ export const createSceneBundleRuntime = ({
           sceneId,
           checkpoint,
           latestRelevantRevision,
+          currentHistoryStats,
         });
         if (overview) {
           overviewsBySceneId[sceneId] = overview;
