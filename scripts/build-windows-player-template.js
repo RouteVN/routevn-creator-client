@@ -1,12 +1,14 @@
-import { copyFile, mkdir, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { WINDOWS_PLAYER_INDEX_HTML } from "../src/deps/services/shared/projectExportService.js";
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
+const playerIndexPath = path.join(
+  rootDir,
+  "scripts/player-templates/windows/index.html",
+);
 const shellDir = path.join(rootDir, "crates/routevn-packager/tauri-shell");
 const shellDistDir = path.join(shellDir, "dist");
 const creatorTemplateDir = path.join(
@@ -106,6 +108,7 @@ const stagePlayerFrontend = async () => {
   const windowChromePath = path.join(rootDir, "static/public/windowChrome.js");
 
   if (
+    !(await pathExists(playerIndexPath)) ||
     !(await pathExists(bundleMainJsPath)) ||
     !(await pathExists(persistenceHostPath)) ||
     !(await pathExists(windowChromePath))
@@ -116,10 +119,7 @@ const stagePlayerFrontend = async () => {
   }
 
   await mkdir(shellDistDir, { recursive: true });
-  await writeFile(
-    path.join(shellDistDir, "index.html"),
-    WINDOWS_PLAYER_INDEX_HTML,
-  );
+  await copyFile(playerIndexPath, path.join(shellDistDir, "index.html"));
   await copyFile(bundleMainJsPath, path.join(shellDistDir, "main.js"));
   await copyFile(
     persistenceHostPath,

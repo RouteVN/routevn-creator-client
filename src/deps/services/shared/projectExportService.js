@@ -56,8 +56,14 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
         padding: 24px;
         color: #fff;
         background: #000;
+        font: 600 24px/1.2 sans-serif;
+        letter-spacing: 0.02em;
         z-index: 10;
         user-select: none;
+      }
+
+      #loading.ready {
+        cursor: pointer;
       }
 
       #loading.error {
@@ -101,8 +107,8 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
       }
     </style>
   </head>
-  <body>
-    <div id="loading"></div>
+  <body data-player-start="click">
+    <div id="loading">Loading...</div>
     <div id="canvas"></div>
   </body>
   <script>
@@ -288,14 +294,6 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
   <script src="./main.js" type="module"></script>
 </html>
 `;
-export const NATIVE_PLAYER_INDEX_HTML = BUNDLE_PLAYER_INDEX_HTML.replace(
-  '  <script src="./main.js" type="module"></script>',
-  '  <script src="./player-runtime-persistence-host.js"></script>\n  <script src="./main.js" type="module"></script>',
-);
-export const WINDOWS_PLAYER_INDEX_HTML = NATIVE_PLAYER_INDEX_HTML.replace(
-  '  <script src="./player-runtime-persistence-host.js"></script>',
-  '  <script src="./windowChrome.js" defer></script>\n  <script src="./player-runtime-persistence-host.js"></script>',
-);
 const BUNDLE_MANIFEST_CHUNKING = Object.freeze({
   algorithm: "none",
   mode: "whole-file-only",

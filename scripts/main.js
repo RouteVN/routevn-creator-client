@@ -18,6 +18,7 @@ import {
 } from "../src/internal/runtime/graphicsEngineRuntime.js";
 import { resolveBundleAssetMimeType } from "../src/internal/bundleRuntimeAssets.js";
 import { createBundleRangeReader as createPackageBinRangeReader } from "../src/deps/services/shared/projectExportService.js";
+import { waitForPlayerStart } from "./playerStartGate.js";
 
 const MAX_DIAGNOSTIC_EVENTS = 24;
 const MAX_DIAGNOSTIC_TEXT_LENGTH = 12_000;
@@ -914,6 +915,10 @@ const bootstrap = async () => {
   try {
     const preloadedData = await preloadBundleData();
     const engineRuntime = await prepareEngine(preloadedData);
+    await waitForPlayerStart({
+      loadingElement: document.getElementById("loading"),
+      startMode: document.body?.dataset.playerStart,
+    });
     engineRuntime.startEngine();
     await engineRuntime.waitForFirstRender();
     hideLoadingOverlay();

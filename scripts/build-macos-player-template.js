@@ -10,7 +10,6 @@ import {
   rename,
   rm,
   stat,
-  writeFile,
 } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import os from "node:os";
@@ -18,10 +17,12 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { NATIVE_PLAYER_INDEX_HTML } from "../src/deps/services/shared/projectExportService.js";
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
+const playerIndexPath = path.join(
+  rootDir,
+  "scripts/player-templates/macos/index.html",
+);
 const shellDir = path.join(rootDir, "crates/routevn-packager/tauri-shell");
 const shellDistDir = path.join(shellDir, "dist");
 const templateDir = path.join(
@@ -91,6 +92,7 @@ const stagePlayerFrontend = async () => {
     "static/bundle/player-runtime-persistence-host.js",
   );
   if (
+    !(await pathExists(playerIndexPath)) ||
     !(await pathExists(bundleMainJsPath)) ||
     !(await pathExists(persistenceHostPath))
   ) {
@@ -100,10 +102,7 @@ const stagePlayerFrontend = async () => {
   }
 
   await mkdir(shellDistDir, { recursive: true });
-  await writeFile(
-    path.join(shellDistDir, "index.html"),
-    NATIVE_PLAYER_INDEX_HTML,
-  );
+  await copyFile(playerIndexPath, path.join(shellDistDir, "index.html"));
   await copyFile(bundleMainJsPath, path.join(shellDistDir, "main.js"));
   await copyFile(
     persistenceHostPath,

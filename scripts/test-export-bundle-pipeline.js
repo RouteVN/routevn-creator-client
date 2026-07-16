@@ -310,7 +310,8 @@ try {
         const { bundle } = await createBundleResult(projectData, files);
         const zip = new JSZip();
         zip.file("package.bin", bundle);
-        if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
+        if (staticFiles.indexHtml)
+          zip.file("index.html", staticFiles.indexHtml);
         if (staticFiles.mainJs) zip.file("main.js", staticFiles.mainJs);
 
         const zipBlob = await zip.generateAsync({
@@ -365,6 +366,9 @@ try {
   const indexHtml = await zip.file("index.html").async("string");
   assert.ok(!indexHtml.includes("/@vite/client"));
   assert.ok(!indexHtml.includes("player-runtime-persistence-host.js"));
+  assert.ok(indexHtml.includes('<body data-player-start="click">'));
+  assert.ok(indexHtml.includes('<div id="loading">Loading...</div>'));
+  assert.ok(indexHtml.includes("#loading.ready"));
 
   const packageBin = await zip.file("package.bin").async("arraybuffer");
   const parsed = await parseBundle(packageBin);

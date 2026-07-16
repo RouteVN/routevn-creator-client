@@ -1,0 +1,281 @@
+<html>
+  <head>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+      }
+
+      #canvas {
+        --project-screen-width: 16;
+        --project-screen-height: 9;
+        width: min(
+          100vw,
+          calc(
+            var(--rvn-app-viewport-height, 100vh) *
+              var(--project-screen-width) / var(--project-screen-height)
+          )
+        );
+        aspect-ratio: var(--project-screen-width) / var(--project-screen-height);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #canvas canvas {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+      }
+
+      #loading {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        box-sizing: border-box;
+        padding: 24px;
+        color: #fff;
+        background: #000;
+        z-index: 10;
+        user-select: none;
+      }
+
+      #loading.error {
+        cursor: default;
+        text-align: left;
+        user-select: text;
+      }
+
+      #loading.hidden {
+        display: none;
+      }
+
+      #loading .loading-error {
+        width: min(760px, calc(100vw - 32px));
+      }
+
+      #loading .loading-error-title {
+        margin: 0 0 8px;
+        font: 700 24px/1.2 sans-serif;
+      }
+
+      #loading .loading-error-summary {
+        margin: 0 0 16px;
+        color: #f1f5f9;
+        font: 500 15px/1.45 sans-serif;
+      }
+
+      #loading .loading-error-details {
+        box-sizing: border-box;
+        width: 100%;
+        max-height: min(58vh, 520px);
+        margin: 0;
+        overflow: auto;
+        padding: 12px;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        background: #0f172a;
+        color: #e2e8f0;
+        font:
+          12px/1.45 ui-monospace,
+          SFMono-Regular,
+          Consolas,
+          monospace;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body data-player-start="automatic">
+    <div id="loading"></div>
+    <div id="canvas"></div>
+  </body>
+  <script>
+    (() => {
+      const originalFetch = window.fetch.bind(window);
+      const embeddedPackageChunkSize = 1024 * 1024;
+
+      const getHeaderValue = (headers, name) => {
+        if (!headers) {
+          return "";
+        }
+
+        const normalizedName = name.toLowerCase();
+
+        if (typeof headers.get === "function") {
+          return headers.get(name) || headers.get(normalizedName) || "";
+        }
+
+        if (Array.isArray(headers)) {
+          const entry = headers.find(
+            ([key]) => String(key).toLowerCase() === normalizedName,
+          );
+          return entry?.[1] || "";
+        }
+
+        if (typeof headers === "object") {
+          const entry = Object.entries(headers).find(
+            ([key]) => String(key).toLowerCase() === normalizedName,
+          );
+          return entry?.[1] || "";
+        }
+
+        return "";
+      };
+
+      const getRangeHeader = (input, init) => {
+        return (
+          getHeaderValue(init?.headers, "range") ||
+          getHeaderValue(input?.headers, "range")
+        );
+      };
+
+      const parseRangeHeader = (rangeHeader, totalLength) => {
+        if (!rangeHeader) {
+          return undefined;
+        }
+
+        const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+        if (!match || totalLength === 0) {
+          return { invalid: true };
+        }
+
+        let start;
+        let end;
+
+        if (match[1] === "") {
+          const suffixLength = Number(match[2]);
+          if (!Number.isFinite(suffixLength) || suffixLength <= 0) {
+            return { invalid: true };
+          }
+          start = Math.max(totalLength - suffixLength, 0);
+          end = totalLength - 1;
+        } else {
+          start = Number(match[1]);
+          end = match[2] === "" ? totalLength - 1 : Number(match[2]);
+        }
+
+        if (
+          !Number.isSafeInteger(start) ||
+          !Number.isSafeInteger(end) ||
+          start < 0 ||
+          end < start ||
+          start >= totalLength
+        ) {
+          return { invalid: true };
+        }
+
+        return {
+          start,
+          end: Math.min(end, totalLength - 1),
+        };
+      };
+
+      const createEmbeddedPackageResponse = async ({ invoke, rangeHeader }) => {
+        const info = await invoke("get_embedded_package_info");
+        const totalLength = Number(info?.byteLength || 0);
+        if (!rangeHeader) {
+          return new Response(null, {
+            status: 416,
+            headers: {
+              "accept-ranges": "bytes",
+              "content-range": "bytes */" + totalLength,
+            },
+          });
+        }
+
+        const parsedRange = parseRangeHeader(rangeHeader, totalLength);
+
+        if (parsedRange?.invalid) {
+          return new Response(null, {
+            status: 416,
+            headers: {
+              "accept-ranges": "bytes",
+              "content-range": "bytes */" + totalLength,
+            },
+          });
+        }
+
+        const start = parsedRange?.start ?? 0;
+        const end = parsedRange?.end ?? totalLength - 1;
+        const contentLength = Math.max(end - start + 1, 0);
+        let cursor = start;
+
+        const stream = new ReadableStream({
+          async pull(controller) {
+            if (cursor > end || contentLength === 0) {
+              controller.close();
+              return;
+            }
+
+            const length = Math.min(embeddedPackageChunkSize, end - cursor + 1);
+            const bytes = await invoke("read_embedded_package_range", {
+              offset: cursor,
+              length,
+            });
+            const normalizedBytes =
+              bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+
+            if (normalizedBytes.byteLength === 0) {
+              controller.close();
+              return;
+            }
+
+            cursor += normalizedBytes.byteLength;
+            controller.enqueue(normalizedBytes);
+          },
+        });
+
+        const headers = {
+          "accept-ranges": "bytes",
+          "content-length": String(contentLength),
+          "content-type": "application/octet-stream",
+        };
+        if (parsedRange) {
+          headers["content-range"] =
+            "bytes " + start + "-" + end + "/" + totalLength;
+        }
+
+        return new Response(stream, {
+          status: parsedRange ? 206 : 200,
+          headers,
+        });
+      };
+
+      window.fetch = async (input, init) => {
+        const rawUrl = typeof input === "string" ? input : input?.url;
+
+        if (rawUrl) {
+          try {
+            const resolvedUrl = new URL(rawUrl, window.location.href);
+            const invoke = window.__TAURI__?.core?.invoke;
+
+            if (resolvedUrl.pathname.endsWith("/package.bin") && invoke) {
+              try {
+                return await createEmbeddedPackageResponse({
+                  invoke,
+                  rangeHeader: getRangeHeader(input, init),
+                });
+              } catch (error) {
+                console.warn("Falling back to package.bin fetch.", error);
+              }
+            }
+          } catch {}
+        }
+
+        return originalFetch(input, init);
+      };
+    })();
+  </script>
+  <script src="./player-runtime-persistence-host.js"></script>
+  <script src="./main.js" type="module"></script>
+</html>

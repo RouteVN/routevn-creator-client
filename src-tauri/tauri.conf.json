@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "RouteVN Creator",
   "mainBinaryName": "routevn-creator",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "identifier": "com.routevn.creator",
   "build": {
     "frontendDist": "../_site",
