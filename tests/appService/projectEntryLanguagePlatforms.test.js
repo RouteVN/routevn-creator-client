@@ -124,7 +124,7 @@ describe("project-entry language platform propagation", () => {
         id: "project-1",
         name: "Sample Project",
         description: "Sample description",
-        language: "zh-hans",
+        language: "zh-Hans",
         iconFileId: null,
       })),
     };
@@ -136,9 +136,9 @@ describe("project-entry language platform propagation", () => {
       "/imports/sample-project",
     );
 
-    expect(project.language).toBe("zh-hans");
+    expect(project.language).toBe("zh-Hans");
     await expect(db.get("projectEntries")).resolves.toEqual([
-      expect.objectContaining({ language: "zh-hans" }),
+      expect.objectContaining({ language: "zh-Hans" }),
     ]);
   });
 
@@ -153,7 +153,7 @@ describe("project-entry language platform propagation", () => {
           id: "project-1",
           name: "Sample Project",
           description: "Sample description",
-          language: "zh-hans",
+          language: "zh-Hans",
           iconFileId: null,
         },
       ]);
@@ -163,7 +163,7 @@ describe("project-entry language platform propagation", () => {
             id: "project-1",
             name: "Sample Project",
             description: "Sample description",
-            language: "zh-hans",
+            language: "zh-Hans",
             iconFileId: null,
           },
         ]);
@@ -178,11 +178,11 @@ describe("project-entry language platform propagation", () => {
       expect(projects).toEqual([
         expect.objectContaining({
           id: "project-1",
-          language: "zh-hans",
+          language: "zh-Hans",
         }),
       ]);
       await expect(db.get("projectEntries")).resolves.toEqual([
-        expect.objectContaining({ language: "zh-hans" }),
+        expect.objectContaining({ language: "zh-Hans" }),
       ]);
     },
   );

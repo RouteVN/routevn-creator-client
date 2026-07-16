@@ -164,7 +164,7 @@ describe("projectEntriesService", () => {
       id: "project-1",
       name: "Project Two",
       description: "Recovered",
-      language: "zh-hans",
+      language: "zh-Hans",
       iconFileId: "icon-1",
     }));
     const { db, service } = createService(
@@ -205,7 +205,7 @@ describe("projectEntriesService", () => {
         projectPath: "/projects/working",
         name: "Project Two",
         description: "Recovered",
-        language: "zh-hans",
+        language: "zh-Hans",
         iconFileId: "icon-1",
       },
     ]);

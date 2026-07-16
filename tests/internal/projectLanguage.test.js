@@ -14,46 +14,59 @@ describe("projectLanguage", () => {
   it("defines the supported project language contract", () => {
     expect(PROJECT_LANGUAGES).toEqual([
       "en",
-      "ja",
-      "ko",
-      "zh-hans",
-      "zh-hant",
-      "ru",
-      "it",
-      "de",
-      "fr",
+      "te",
       "es",
-      "nl",
-      "th",
-      "ms",
-      "id",
+      "tr",
+      "zh-Hans",
+      "ta",
+      "zh-Hant",
+      "vi",
+      "hi",
+      "ko",
+      "ar",
+      "fa",
+      "fr",
+      "it",
       "pt",
+      "sw",
+      "bn",
+      "ha",
+      "ru",
+      "pa-Guru",
+      "ur",
+      "gu",
+      "id",
+      "th",
+      "de",
+      "fil",
+      "ja",
+      "pl",
+      "mr",
+      "uk",
+      "nl",
+      "ms",
     ]);
     expect(DEFAULT_PROJECT_LANGUAGE).toBe("en");
-    expect(PROJECT_LANGUAGE_TEXT_COUNT_MODES).toEqual({
-      en: PROJECT_TEXT_COUNT_MODE_WORD,
-      ja: PROJECT_TEXT_COUNT_MODE_CHARACTER,
-      ko: PROJECT_TEXT_COUNT_MODE_WORD,
-      "zh-hans": PROJECT_TEXT_COUNT_MODE_CHARACTER,
-      "zh-hant": PROJECT_TEXT_COUNT_MODE_CHARACTER,
-      ru: PROJECT_TEXT_COUNT_MODE_WORD,
-      it: PROJECT_TEXT_COUNT_MODE_WORD,
-      de: PROJECT_TEXT_COUNT_MODE_WORD,
-      fr: PROJECT_TEXT_COUNT_MODE_WORD,
-      es: PROJECT_TEXT_COUNT_MODE_WORD,
-      nl: PROJECT_TEXT_COUNT_MODE_WORD,
-      th: PROJECT_TEXT_COUNT_MODE_WORD,
-      ms: PROJECT_TEXT_COUNT_MODE_WORD,
-      id: PROJECT_TEXT_COUNT_MODE_WORD,
-      pt: PROJECT_TEXT_COUNT_MODE_WORD,
-    });
+    expect(Object.keys(PROJECT_LANGUAGE_TEXT_COUNT_MODES)).toEqual(
+      PROJECT_LANGUAGES,
+    );
+    expect(
+      PROJECT_LANGUAGES.filter(
+        (language) =>
+          PROJECT_LANGUAGE_TEXT_COUNT_MODES[language] ===
+          PROJECT_TEXT_COUNT_MODE_CHARACTER,
+      ),
+    ).toEqual(["zh-Hans", "zh-Hant", "ja"]);
+    expect(PROJECT_LANGUAGE_TEXT_COUNT_MODES.en).toBe(
+      PROJECT_TEXT_COUNT_MODE_WORD,
+    );
   });
 
   it("selects the writing count mode from the project language", () => {
     expect(getProjectLanguageTextCountMode("en")).toBe("word");
     expect(getProjectLanguageTextCountMode("ja")).toBe("character");
-    expect(getProjectLanguageTextCountMode("zh-hans")).toBe("character");
-    expect(getProjectLanguageTextCountMode("zh-hant")).toBe("character");
+    expect(getProjectLanguageTextCountMode("zh-Hans")).toBe("character");
+    expect(getProjectLanguageTextCountMode("zh-Hant")).toBe("character");
     expect(getProjectLanguageTextCountMode("ko")).toBe("word");
     expect(getProjectLanguageTextCountMode("th")).toBe("word");
     expect(getProjectLanguageTextCountMode()).toBe("word");

@@ -131,7 +131,7 @@ describe("sceneTextStats", () => {
       ],
     };
 
-    expect(buildSceneTextStats(scene, { language: "zh-hans" })).toEqual({
+    expect(buildSceneTextStats(scene, { language: "zh-Hans" })).toEqual({
       lineCount: 1,
       wordCount: 3,
       characterCount: 8,

@@ -19,7 +19,7 @@ import { EN_I18N } from "../support/i18n.js";
 describe("sceneEditorLexical.store", () => {
   it("uses the project language to select the scene text count mode", () => {
     const state = createInitialState();
-    setProjectLanguage({ state }, { language: "zh-hans" });
+    setProjectLanguage({ state }, { language: "zh-Hans" });
     setSceneId({ state }, { sceneId: "scene-1" });
     setRepositoryState(
       { state },

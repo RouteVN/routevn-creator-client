@@ -566,7 +566,7 @@ describe("tauri project service adapters preflight reads", () => {
         namespace: "project-one",
         nativeApplicationIdentifier: "vn.routevn.player.project-one",
         name: "Project One",
-        language: "zh-hans",
+        language: "zh-Hans",
       },
     });
 
@@ -580,7 +580,7 @@ describe("tauri project service adapters preflight reads", () => {
           nativeApplicationIdentifier: "vn.routevn.player.project-one",
           name: "Project One",
           description: "",
-          language: "zh-hans",
+          language: "zh-Hans",
           iconFileId: null,
         }),
       ],
