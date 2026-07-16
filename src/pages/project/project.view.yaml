@@ -7,6 +7,10 @@ refs:
     eventListeners:
       click:
         handler: handleEditButtonClick
+  projectLanguage:
+    eventListeners:
+      click:
+        handler: handleEditButtonClick
   projectImage:
     eventListeners:
       click:
@@ -62,6 +66,8 @@ template:
                   - rtgl-text s=h3: ${projectName}
               - rtgl-view#projectDescription slot=project-description cur=pointer:
                   - rtgl-text c=mu-fg: ${projectDescription}
+              - rtgl-view#projectLanguage slot=project-language cur=pointer:
+                  - rtgl-text: ${projectLanguage}
               - $if projectIconFileId:
                   - rvn-file-image#projectImage slot=project-icon fileId=${projectIconFileId} w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
                 $else:

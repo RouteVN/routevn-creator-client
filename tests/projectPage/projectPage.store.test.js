@@ -1,35 +1,42 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  openEditDialog,
   selectViewData,
-} from "../../src/components/projectCreateDialog/projectCreateDialog.store.js";
+  setCurrentProject,
+} from "../../src/pages/project/project.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
-describe("projectCreateDialog.store", () => {
-  it("does not expose portrait resolution in the create project form", () => {
+describe("project page store", () => {
+  it("shows project language in detail and the edit form", () => {
     const state = createInitialState();
-    const viewData = selectViewData({ state, i18n: EN_I18N });
-    const resolutionField = viewData.form.fields.find(
-      (field) => field.name === "resolution",
+    setCurrentProject(
+      { state },
+      {
+        project: {
+          name: "Project One",
+          description: "Project description",
+          language: "ja",
+          resolution: { width: 1920, height: 1080 },
+        },
+      },
     );
+    openEditDialog({ state });
 
-    expect(resolutionField.options).toContainEqual({
-      value: "1920x1080",
-      label: "1920x1080",
-    });
-    expect(resolutionField.options).not.toContainEqual({
-      value: "1080x1920",
-      label: "1080x1920",
-    });
-  });
-
-  it("offers the supported project languages for writing count goals", () => {
-    const state = createInitialState();
     const viewData = selectViewData({ state, i18n: EN_I18N });
-    const languageField = viewData.form.fields.find(
+    const languageDetail = viewData.detailFields.find(
+      (field) => field.label === "Project Language",
+    );
+    const languageField = viewData.editForm.fields.find(
       (field) => field.name === "language",
     );
 
+    expect(languageDetail).toEqual({
+      type: "slot",
+      slot: "project-language",
+      label: "Project Language",
+    });
+    expect(viewData.projectLanguage).toBe("Japanese");
     expect(languageField).toEqual({
       name: "language",
       type: "select",
@@ -76,6 +83,6 @@ describe("projectCreateDialog.store", () => {
         { value: "nl", label: "Dutch" },
       ],
     });
-    expect(viewData.defaultValues.language).toBe("en");
+    expect(viewData.editDefaultValues.language).toBe("ja");
   });
 });

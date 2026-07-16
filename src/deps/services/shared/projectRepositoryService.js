@@ -13,6 +13,7 @@ import { loadProjectionGap } from "./collab/projectionGapState.js";
 import { loadRepositoryEventsFromClientStore } from "./collab/clientStoreHistory.js";
 import { UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE } from "../../../internal/projectOpenErrors.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
+import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 
 const flushRepositoryMainCheckpoint = async (repository) => {
   await repository.flushMainCheckpoint();
@@ -139,6 +140,7 @@ export const createProjectRepositoryService = ({
     nativeApplicationIdentifier: projectInfo?.nativeApplicationIdentifier ?? "",
     name: projectInfo?.name ?? "",
     description: projectInfo?.description ?? "",
+    language: normalizeProjectLanguage(projectInfo?.language),
     iconFileId: projectInfo?.iconFileId ?? null,
   });
 
@@ -184,6 +186,10 @@ export const createProjectRepositoryService = ({
 
     if (Object.hasOwn(patch, "description")) {
       nextProjectInfo.description = patch.description ?? "";
+    }
+
+    if (Object.hasOwn(patch, "language")) {
+      nextProjectInfo.language = normalizeProjectLanguage(patch.language);
     }
 
     if (Object.hasOwn(patch, "iconFileId")) {
@@ -453,6 +459,7 @@ export const createProjectRepositoryService = ({
       ...entries[entryIndex],
       name: projectInfo.name,
       description: projectInfo.description,
+      language: normalizeProjectLanguage(projectInfo.language),
       iconFileId: projectInfo.iconFileId,
     };
     await db.set("projectEntries", entries);

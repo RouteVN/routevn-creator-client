@@ -4,6 +4,11 @@ import {
   DEFAULT_PROJECT_RESOLUTION_PRESET,
   PROJECT_RESOLUTION_OPTIONS,
 } from "../../internal/projectResolution.js";
+import { DEFAULT_PROJECT_LANGUAGE } from "../../internal/projectLanguage.js";
+import {
+  createProjectLanguageOptions,
+  selectProjectLanguageCopy,
+} from "../../internal/ui/projectLanguage.js";
 
 const CREATE_PROJECT_RESOLUTION_OPTIONS = PROJECT_RESOLUTION_OPTIONS.filter(
   ({ value }) =>
@@ -19,6 +24,7 @@ const createCreateProjectDefaultValues = (values = {}) => {
   const nextValues = {
     name: values.name ?? "",
     description: values.description ?? "",
+    language: values.language ?? DEFAULT_PROJECT_LANGUAGE,
     projectPath: values.projectPath ?? "",
     template: values.template ?? "default",
     ...createProjectResolutionFormValues(preset),
@@ -55,6 +61,16 @@ const form = {
       type: "input-text",
       label: "Description",
       testId: "project-description-input",
+    },
+    {
+      name: "language",
+      type: "select",
+      label: "Project Language",
+      description:
+        "This language determines whether writing goals use word or character counts.",
+      required: true,
+      clearable: false,
+      options: [],
     },
     {
       name: "projectIcon",
@@ -109,7 +125,7 @@ const selectCopy = (i18n = {}) => {
   return i18n.projectsPage;
 };
 
-const createLocalizedForm = (copy = {}) => ({
+const createLocalizedForm = (copy = {}, projectLanguageCopy, i18n) => ({
   ...form,
   title: copy.createProjectTitle,
   fields: form.fields.map((field) => {
@@ -130,6 +146,18 @@ const createLocalizedForm = (copy = {}) => ({
       return {
         ...field,
         label: copy.descriptionLabel,
+      };
+    }
+
+    if (field.name === "language") {
+      return {
+        ...field,
+        label: projectLanguageCopy.label,
+        description: projectLanguageCopy.description,
+        searchable: true,
+        searchPlaceholder: projectLanguageCopy.searchPlaceholder,
+        emptySearchLabel: projectLanguageCopy.emptySearchLabel,
+        options: createProjectLanguageOptions(i18n),
       };
     }
 
@@ -269,9 +297,10 @@ export const selectIsIconCropDialogOpen = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCopy(i18n);
+  const projectLanguageCopy = selectProjectLanguageCopy(i18n);
   return {
     platform: state.platform,
-    form: createLocalizedForm(copy),
+    form: createLocalizedForm(copy, projectLanguageCopy, i18n),
     formKey: `${state.formKey}-${state.defaultValues.resolution}`,
     defaultValues: state.defaultValues,
     projectPathDisplay:

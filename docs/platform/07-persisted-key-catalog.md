@@ -34,6 +34,7 @@ Current keys:
     - `projectPath` on desktop
     - `name`
     - `description`
+    - `language`
     - `iconFileId`
     - `createdAt`
     - `lastOpenedAt`

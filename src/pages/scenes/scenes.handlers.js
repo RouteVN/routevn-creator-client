@@ -773,6 +773,8 @@ export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
 
   await projectService.ensureRepository();
+  const projectInfo = await projectService.getCurrentProjectInfo();
+  store.setProjectLanguage({ language: projectInfo.language });
 
   setInitialWhiteboardHydrationState({ store });
   const initialSnapshot = syncScenesState({

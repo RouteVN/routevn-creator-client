@@ -2,13 +2,36 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   openMobileSheet,
+  selectCurrentRoute,
+  selectCurrentRoutePayload,
   selectViewData,
+  setCurrentRoute,
   setPlatform,
   setRepositoryLoading,
   setRepositoryLoadingPhase,
   setRepositoryLoadingProgress,
   setUiConfig,
 } from "../../src/pages/app/app.store.js";
+
+describe("app.store route context", () => {
+  it("stores the rendered route payload for navigation preparation", () => {
+    const state = createInitialState();
+
+    setCurrentRoute(
+      { state },
+      {
+        route: "/project/scene-editor",
+        payload: { p: "project-1", s: "scene-1" },
+      },
+    );
+
+    expect(selectCurrentRoute({ state })).toBe("/project/scene-editor");
+    expect(selectCurrentRoutePayload({ state })).toEqual({
+      p: "project-1",
+      s: "scene-1",
+    });
+  });
+});
 
 const selectMobileTab = ({ state, tabId }) => {
   return selectViewData({ state }).mobileTabBarItems.find(

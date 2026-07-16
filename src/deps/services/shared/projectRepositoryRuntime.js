@@ -1126,7 +1126,8 @@ export const createProjectRepositoryRuntime = async ({
     listCommittedAfter: listSceneOverviewEventsAfterFromRepository,
     getCurrentMainState: () => currentMainState,
     getCurrentRevision: () => currentRevision,
-    getCurrentHistoryStats: () => historyStats,
+    getCurrentHistoryStats: () =>
+      store.getRepositoryHistoryStats?.() ?? historyStats,
     getActiveSceneId: () => activeSceneId,
     getActiveSceneState: () => activeSceneState,
     loadSceneProjection,
@@ -1477,6 +1478,14 @@ export const createProjectRepositoryRuntime = async ({
 
     async loadSceneOverviews({ sceneIds = [] } = {}) {
       return sceneBundleRuntime.loadSceneOverviews({ sceneIds });
+    },
+
+    async cacheSceneTextStats(payload = {}) {
+      return sceneBundleRuntime.cacheSceneTextStats(payload);
+    },
+
+    async loadSceneTextStats(payload = {}) {
+      return sceneBundleRuntime.loadSceneTextStats(payload);
     },
 
     async addEvent(event) {

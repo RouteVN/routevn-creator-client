@@ -19,9 +19,124 @@ import {
   handleSystemActionsActionDelete,
   handleSystemActionsDialogOpen,
   handleTemporaryPresentationStateChange,
+  prepareSceneEditorNavigation,
   scrollEntrySelectionIntoView,
   syncSceneEditorRoutePayload,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
+
+describe("sceneEditorLexical.handlers navigation preparation", () => {
+  it("awaits the current text-stats cache before leaving the editor", async () => {
+    let finishCache;
+    const cacheSceneTextStats = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finishCache = resolve;
+        }),
+    );
+    const deps = {
+      store: {
+        selectSceneId: vi.fn(() => "scene-1"),
+        selectSelectedSectionId: vi.fn(() => undefined),
+        selectDraftSaveTimerId: vi.fn(() => undefined),
+        selectPendingDraftSections: vi.fn(() => []),
+        selectDraftSection: vi.fn(() => undefined),
+        setDraftSavePendingSinceAt: vi.fn(),
+        selectSceneTextStatsRefreshHandle: vi.fn(() => undefined),
+        refreshSceneTextStats: vi.fn(),
+        selectSceneTextStats: vi.fn(() => ({
+          lineCount: 3,
+          wordCount: 12,
+          characterCount: 48,
+        })),
+        selectProjectLanguage: vi.fn(() => "en"),
+      },
+      projectService: {
+        cacheSceneTextStats,
+      },
+      refs: {},
+      render: vi.fn(),
+    };
+    let didComplete = false;
+
+    const preparation = prepareSceneEditorNavigation(deps, {
+      path: "/project/scenes",
+    });
+    preparation.then(() => {
+      didComplete = true;
+    });
+    await vi.waitFor(() => expect(cacheSceneTextStats).toHaveBeenCalledOnce());
+
+    expect(didComplete).toBe(false);
+    finishCache();
+    await preparation;
+    expect(cacheSceneTextStats).toHaveBeenCalledWith({
+      sceneId: "scene-1",
+      textStats: {
+        lineCount: 3,
+        wordCount: 12,
+        characterCount: 48,
+        language: "en",
+      },
+    });
+    expect(didComplete).toBe(true);
+  });
+
+  it("does not flush when only the active scene-editor route changes", async () => {
+    const deps = {
+      store: {
+        refreshSceneTextStats: vi.fn(),
+      },
+      projectService: {
+        cacheSceneTextStats: vi.fn(),
+        getEnsuredProjectId: vi.fn(() => "project-1"),
+      },
+    };
+
+    await prepareSceneEditorNavigation(deps, {
+      path: "/project/scene-editor",
+      payload: { p: "project-1", s: "scene-2" },
+    });
+
+    expect(deps.store.refreshSceneTextStats).not.toHaveBeenCalled();
+    expect(deps.projectService.cacheSceneTextStats).not.toHaveBeenCalled();
+  });
+
+  it("flushes before the scene-editor route switches projects", async () => {
+    const deps = {
+      store: {
+        selectSceneId: vi.fn(() => "scene-1"),
+        selectSelectedSectionId: vi.fn(() => undefined),
+        selectDraftSaveTimerId: vi.fn(() => undefined),
+        selectPendingDraftSections: vi.fn(() => []),
+        selectDraftSection: vi.fn(() => undefined),
+        setDraftSavePendingSinceAt: vi.fn(),
+        selectSceneTextStatsRefreshHandle: vi.fn(() => undefined),
+        refreshSceneTextStats: vi.fn(),
+        selectSceneTextStats: vi.fn(() => ({
+          lineCount: 3,
+          wordCount: 12,
+          characterCount: 48,
+        })),
+        selectProjectLanguage: vi.fn(() => "en"),
+      },
+      projectService: {
+        cacheSceneTextStats: vi.fn(async () => {}),
+        getEnsuredProjectId: vi.fn(() => "project-1"),
+      },
+      refs: {},
+      render: vi.fn(),
+    };
+
+    await prepareSceneEditorNavigation(deps, {
+      path: "/project/scene-editor",
+      payload: { p: "project-2", s: "scene-2" },
+    });
+
+    expect(deps.store.selectPendingDraftSections).toHaveBeenCalled();
+    expect(deps.projectService.cacheSceneTextStats).toHaveBeenCalledOnce();
+  });
+});
 
 const installAnimationFrameQueue = () => {
   const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
@@ -81,6 +196,7 @@ describe("sceneEditorLexical.handlers preview", () => {
       setRepositoryRevision: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       refs: {
         sectionEditor0: linesEditor,
@@ -164,6 +280,13 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
       }),
       clearDraftSection: vi.fn(),
       setDraftSavePendingSinceAt: vi.fn(),
+      refreshSceneTextStats: vi.fn(),
+      selectSceneTextStats: vi.fn(() => ({
+        lineCount: 1,
+        wordCount: 4,
+        characterCount: 16,
+      })),
+      selectProjectLanguage: vi.fn(() => "en"),
       selectRepositoryRevision: vi.fn(() => 7),
       setRepositoryState: vi.fn(),
       setDomainState: vi.fn(),
@@ -183,6 +306,7 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
     };
     const projectService = {
       setActiveSceneId: vi.fn(),
+      cacheSceneTextStats: vi.fn(),
       getRepositoryState: vi.fn(() => ({ scenes: { items: scenes } })),
       getDomainState: vi.fn(() => ({ scenes })),
       getRepositoryRevision: vi.fn(() => 7),
@@ -221,6 +345,24 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
     });
 
     expect(projectService.setActiveSceneId).toHaveBeenCalledWith("scene-2");
+    expect(projectService.cacheSceneTextStats).toHaveBeenNthCalledWith(1, {
+      sceneId: "scene-1",
+      textStats: {
+        lineCount: 1,
+        wordCount: 4,
+        characterCount: 16,
+        language: "en",
+      },
+    });
+    expect(projectService.cacheSceneTextStats).toHaveBeenNthCalledWith(2, {
+      sceneId: "scene-2",
+      textStats: {
+        lineCount: 1,
+        wordCount: 4,
+        characterCount: 16,
+        language: "en",
+      },
+    });
     expect(sceneId).toBe("scene-2");
     expect(selectedSectionId).toBe("new-section");
     expect(selectedLineId).toBeUndefined();
@@ -786,6 +928,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       clearTemporaryPresentationState: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -811,6 +954,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       clearTemporaryPresentationState: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -1267,6 +1411,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       clearTemporaryPresentationState: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -1302,6 +1447,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       clearTemporaryPresentationState: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -1356,6 +1502,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       clearTemporaryPresentationState: vi.fn(),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -1775,6 +1922,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     };
     const moveSectionItem = vi.fn();
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       subject: {
@@ -2439,6 +2587,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     const render = vi.fn();
     const showAlert = vi.fn();
     const deps = {
+      i18n: EN_I18N,
       store,
       render,
       refs: {},
@@ -2498,6 +2647,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       selectSceneId: vi.fn(() => "scene-1"),
     };
     const deps = {
+      i18n: EN_I18N,
       store,
       render: vi.fn(),
       projectService: {},

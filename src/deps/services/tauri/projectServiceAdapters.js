@@ -49,6 +49,7 @@ import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnection
 import { isMacosHost } from "../../clients/tauri/platform.js";
 import { normalizeExportFileEntries } from "../shared/projectExportService.js";
 import { requireNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
+import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import { getImageDimensions } from "../../clients/web/fileProcessors.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
@@ -83,6 +84,7 @@ const normalizeProjectInfo = (projectInfo = {}) => ({
   nativeApplicationIdentifier: projectInfo.nativeApplicationIdentifier ?? "",
   name: projectInfo.name ?? "",
   description: projectInfo.description ?? "",
+  language: normalizeProjectLanguage(projectInfo.language),
   iconFileId: projectInfo.iconFileId ?? null,
 });
 

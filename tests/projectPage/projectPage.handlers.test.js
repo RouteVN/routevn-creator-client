@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleBackButtonKeyDown,
+  handleEditFormAction,
   handleProjectActionMenuClickItem,
 } from "../../src/pages/project/project.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -104,5 +105,69 @@ describe("project page handlers", () => {
         title: EN_I18N.projectPage.exportCompleteTitle,
       }),
     );
+  });
+
+  it("persists project language from the edit form", async () => {
+    const nextProjectInfo = {
+      name: "Project One Updated",
+      description: "Updated description",
+      language: "zh-Hans",
+      iconFileId: "icon-1",
+    };
+    const deps = {
+      appService: {
+        getCurrentProjectEntry: vi.fn(() => ({
+          id: "project-1",
+          source: "local",
+        })),
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        updateCurrentProjectInfo: vi.fn(async () => nextProjectInfo),
+      },
+      store: {
+        selectEditIconFileId: vi.fn(() => "icon-1"),
+        selectCurrentProject: vi.fn(() => ({
+          name: "Project One",
+          description: "Description",
+          language: "en",
+        })),
+        setCurrentProject: vi.fn(),
+        closeEditDialog: vi.fn(),
+      },
+      subject: {
+        dispatch: vi.fn(),
+      },
+      render: vi.fn(),
+      i18n: EN_I18N,
+    };
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Project One Updated",
+            description: "Updated description",
+            language: "zh-Hans",
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.updateCurrentProjectInfo).toHaveBeenCalledWith({
+      name: "Project One Updated",
+      description: "Updated description",
+      language: "zh-Hans",
+      iconFileId: "icon-1",
+    });
+    expect(deps.store.setCurrentProject).toHaveBeenCalledWith({
+      project: {
+        name: "Project One Updated",
+        description: "Updated description",
+        language: "zh-Hans",
+        iconFileId: "icon-1",
+      },
+    });
   });
 });

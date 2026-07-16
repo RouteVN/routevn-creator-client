@@ -3,8 +3,10 @@ import {
   mainScenePartitionFor,
   scenePartitionFor,
 } from "../collab/partitions.js";
+import { committedEventToCommand } from "../collab/mappers.js";
 import {
   doesCommittedEventAffectSceneOverview,
+  doesCommittedEventAffectSceneTextStats,
   getCommittedEventRevision,
   iterateCommittedEventBatches,
   isMainPartition,
@@ -22,6 +24,12 @@ import {
   loadSceneOverviewCheckpoints,
   saveSceneOverviewCheckpoint,
 } from "./sceneOverviewStore.js";
+import {
+  deleteSceneTextStatsCheckpoint,
+  isSceneTextStatsCheckpointFresh,
+  loadSceneTextStatsCheckpoints,
+  saveSceneTextStatsCheckpoint,
+} from "./sceneTextStatsStore.js";
 
 export const createSceneBundleRuntime = ({
   store,
@@ -48,8 +56,7 @@ export const createSceneBundleRuntime = ({
     latestDraftClock: normalizeHistoryStat(stats?.latestDraftClock),
   });
 
-  const isCheckpointHistoryCompatible = (checkpoint) => {
-    const currentHistoryStats = getCurrentHistoryStats();
+  const isCheckpointHistoryCompatible = (checkpoint, currentHistoryStats) => {
     if (!currentHistoryStats) {
       return true;
     }
@@ -81,10 +88,10 @@ export const createSceneBundleRuntime = ({
     return current.latestCommittedId > saved.latestCommittedId;
   };
 
-  const getCheckpointRevision = (checkpoint) => {
+  const getCheckpointRevision = (checkpoint, currentHistoryStats) => {
     if (
       checkpoint?.viewVersion !== SCENE_OVERVIEW_VIEW_VERSION ||
-      !isCheckpointHistoryCompatible(checkpoint)
+      !isCheckpointHistoryCompatible(checkpoint, currentHistoryStats)
     ) {
       return 0;
     }
@@ -102,10 +109,17 @@ export const createSceneBundleRuntime = ({
     return Math.floor(checkpointRevision);
   };
 
-  const getLatestOverviewRevisionForScene = async (sceneId, checkpoint) => {
+  const getLatestOverviewRevisionForScene = async (
+    sceneId,
+    checkpoint,
+    currentHistoryStats,
+  ) => {
     const scenePartition = scenePartitionFor(sceneId);
     const mainScenePartition = mainScenePartitionFor(sceneId);
-    const sinceCommittedId = getCheckpointRevision(checkpoint);
+    const sinceCommittedId = getCheckpointRevision(
+      checkpoint,
+      currentHistoryStats,
+    );
     let latestRelevantRevision = sinceCommittedId;
 
     for await (const committedBatch of iterateCommittedEventBatches({
@@ -136,12 +150,16 @@ export const createSceneBundleRuntime = ({
   const getLatestOverviewRevisionsForScenes = async ({
     sceneIds = [],
     checkpointsBySceneId = new Map(),
+    currentHistoryStats,
   } = {}) => {
     const normalizedSceneIds = sceneIds.filter(isNonEmptyString);
     const revisionsBySceneId = new Map(
       normalizedSceneIds.map((sceneId) => [
         sceneId,
-        getCheckpointRevision(checkpointsBySceneId.get(sceneId)),
+        getCheckpointRevision(
+          checkpointsBySceneId.get(sceneId),
+          currentHistoryStats,
+        ),
       ]),
     );
     if (normalizedSceneIds.length === 0) {
@@ -195,6 +213,90 @@ export const createSceneBundleRuntime = ({
             latestRelevantMainRevision,
           ),
         );
+      }
+    }
+
+    return revisionsBySceneId;
+  };
+
+  const getTextStatsCheckpointRevision = (checkpoint, currentHistoryStats) => {
+    if (!isCheckpointHistoryCompatible(checkpoint, currentHistoryStats)) {
+      return 0;
+    }
+
+    const checkpointRevision = Number(checkpoint?.lastCommittedId);
+    const currentRevision = Number(getCurrentRevision());
+    if (
+      !Number.isFinite(checkpointRevision) ||
+      checkpointRevision < 0 ||
+      (Number.isFinite(currentRevision) && checkpointRevision > currentRevision)
+    ) {
+      return 0;
+    }
+
+    return Math.floor(checkpointRevision);
+  };
+
+  const getLatestTextStatsRevisionsForScenes = async ({
+    checkpointsBySceneId = new Map(),
+    currentHistoryStats,
+  } = {}) => {
+    const normalizedSceneIds = [...checkpointsBySceneId.keys()].filter(
+      isNonEmptyString,
+    );
+    const revisionsBySceneId = new Map(
+      normalizedSceneIds.map((sceneId) => [
+        sceneId,
+        getTextStatsCheckpointRevision(
+          checkpointsBySceneId.get(sceneId),
+          currentHistoryStats,
+        ),
+      ]),
+    );
+    if (normalizedSceneIds.length === 0) {
+      return revisionsBySceneId;
+    }
+
+    const requestedSceneIds = new Set(normalizedSceneIds);
+    const sceneIdByPartition = new Map();
+    for (const sceneId of normalizedSceneIds) {
+      sceneIdByPartition.set(scenePartitionFor(sceneId), sceneId);
+      sceneIdByPartition.set(mainScenePartitionFor(sceneId), sceneId);
+    }
+
+    let sinceCommittedId = Number.MAX_SAFE_INTEGER;
+    for (const revision of revisionsBySceneId.values()) {
+      sinceCommittedId = Math.min(sinceCommittedId, revision);
+    }
+
+    for await (const committedBatch of iterateCommittedEventBatches({
+      listCommittedAfter,
+      sinceCommittedId,
+    })) {
+      for (const event of committedBatch) {
+        if (!doesCommittedEventAffectSceneTextStats(event)) {
+          continue;
+        }
+
+        const revision = getCommittedEventRevision(event);
+        const partitionSceneId = sceneIdByPartition.get(event?.partition);
+        if (partitionSceneId) {
+          revisionsBySceneId.set(
+            partitionSceneId,
+            Math.max(revisionsBySceneId.get(partitionSceneId) || 0, revision),
+          );
+        }
+
+        const command = committedEventToCommand(event);
+        for (const sceneId of command?.payload?.sceneIds ?? []) {
+          if (!requestedSceneIds.has(sceneId)) {
+            continue;
+          }
+          revisionsBySceneId.set(
+            sceneId,
+            Math.max(revisionsBySceneId.get(sceneId) || 0, revision),
+          );
+        }
       }
     }
 
@@ -302,6 +404,7 @@ export const createSceneBundleRuntime = ({
     sceneId,
     checkpoint = null,
     latestRelevantRevision,
+    currentHistoryStats,
   }) => {
     if (!isNonEmptyString(sceneId)) {
       return undefined;
@@ -339,7 +442,11 @@ export const createSceneBundleRuntime = ({
       overview,
       lastCommittedId: Number.isFinite(latestRelevantRevision)
         ? latestRelevantRevision
-        : await getLatestOverviewRevisionForScene(sceneId, checkpoint),
+        : await getLatestOverviewRevisionForScene(
+            sceneId,
+            checkpoint,
+            currentHistoryStats,
+          ),
     });
 
     return structuredClone(overview);
@@ -349,6 +456,7 @@ export const createSceneBundleRuntime = ({
     sceneId,
     checkpoint = null,
     latestRelevantRevision,
+    currentHistoryStats,
   }) => {
     if (!isNonEmptyString(sceneId)) {
       return undefined;
@@ -368,6 +476,7 @@ export const createSceneBundleRuntime = ({
         sceneId,
         checkpoint,
         latestRelevantRevision,
+        currentHistoryStats,
       });
     }
 
@@ -375,9 +484,13 @@ export const createSceneBundleRuntime = ({
       latestRelevantRevision,
     )
       ? latestRelevantRevision
-      : await getLatestOverviewRevisionForScene(sceneId, checkpoint);
+      : await getLatestOverviewRevisionForScene(
+          sceneId,
+          checkpoint,
+          currentHistoryStats,
+        );
     if (
-      isCheckpointHistoryCompatible(checkpoint) &&
+      isCheckpointHistoryCompatible(checkpoint, currentHistoryStats) &&
       isSceneOverviewCheckpointFresh({
         checkpoint,
         latestRelevantRevision: resolvedLatestRelevantRevision,
@@ -390,7 +503,73 @@ export const createSceneBundleRuntime = ({
       sceneId,
       checkpoint,
       latestRelevantRevision: resolvedLatestRelevantRevision,
+      currentHistoryStats,
     });
+  };
+
+  const cacheSceneTextStats = async ({ sceneId, textStats } = {}) => {
+    if (
+      !isNonEmptyString(sceneId) ||
+      !textStats ||
+      typeof textStats !== "object"
+    ) {
+      return undefined;
+    }
+
+    if (!getCurrentMainState()?.scenes?.items?.[sceneId]) {
+      return undefined;
+    }
+
+    const cachedTextStats = structuredClone(textStats);
+    await saveSceneTextStatsCheckpoint({
+      store,
+      sceneId,
+      value: cachedTextStats,
+      lastCommittedId: getCurrentRevision(),
+      updatedAt: now(),
+    });
+
+    return cachedTextStats;
+  };
+
+  const loadSceneTextStats = async ({ sceneIds = [] } = {}) => {
+    const currentHistoryStats = await getCurrentHistoryStats();
+    const checkpointsBySceneId = await loadSceneTextStatsCheckpoints({
+      store,
+      sceneIds,
+    });
+
+    const latestRevisionsBySceneId = await getLatestTextStatsRevisionsForScenes(
+      {
+        checkpointsBySceneId,
+        currentHistoryStats,
+      },
+    );
+
+    const textStatsBySceneId = {};
+    const staleSceneIds = [];
+    for (const [sceneId, checkpoint] of checkpointsBySceneId) {
+      if (
+        isCheckpointHistoryCompatible(checkpoint, currentHistoryStats) &&
+        isSceneTextStatsCheckpointFresh({
+          checkpoint,
+          latestRelevantRevision: latestRevisionsBySceneId.get(sceneId),
+        })
+      ) {
+        textStatsBySceneId[sceneId] = structuredClone(checkpoint.value);
+        continue;
+      }
+
+      staleSceneIds.push(sceneId);
+    }
+
+    await Promise.all(
+      staleSceneIds.map((sceneId) =>
+        deleteSceneTextStatsCheckpoint({ store, sceneId }),
+      ),
+    );
+
+    return textStatsBySceneId;
   };
 
   const invalidateInactiveSceneOverviews = async () => {
@@ -413,14 +592,17 @@ export const createSceneBundleRuntime = ({
     },
 
     async ensureSceneBundle(sceneId) {
+      const currentHistoryStats = await getCurrentHistoryStats();
       return ensureSceneOverviewWithCheckpoint({
         sceneId,
         checkpoint: await loadSceneOverviewCheckpoint({ store, sceneId }),
+        currentHistoryStats,
       });
     },
 
     async loadSceneOverviews({ sceneIds = [] } = {}) {
       const overviewsBySceneId = {};
+      const currentHistoryStats = await getCurrentHistoryStats();
 
       const checkpointsBySceneId = await loadSceneOverviewCheckpoints({
         store,
@@ -431,6 +613,7 @@ export const createSceneBundleRuntime = ({
         await getLatestOverviewRevisionsForScenes({
           sceneIds,
           checkpointsBySceneId,
+          currentHistoryStats,
         });
 
       for (const sceneId of sceneIds) {
@@ -441,6 +624,7 @@ export const createSceneBundleRuntime = ({
           sceneId,
           checkpoint,
           latestRelevantRevision,
+          currentHistoryStats,
         });
         if (overview) {
           overviewsBySceneId[sceneId] = overview;
@@ -449,6 +633,9 @@ export const createSceneBundleRuntime = ({
 
       return overviewsBySceneId;
     },
+
+    cacheSceneTextStats,
+    loadSceneTextStats,
 
     async handleCommittedEvents(sourceEvents = []) {
       const committedEvents = Array.isArray(sourceEvents)
@@ -461,12 +648,29 @@ export const createSceneBundleRuntime = ({
       const activeSceneId = getActiveSceneId();
       const scenesToRebuild = new Set();
       const inactivePartitionsToDelete = new Set();
+      const sceneTextStatsIdsToDelete = new Set();
       let sawMainEvent = false;
 
       for (const event of committedEvents) {
         const partition = event?.partition;
         if (!isNonEmptyString(partition)) {
           continue;
+        }
+
+        if (doesCommittedEventAffectSceneTextStats(event)) {
+          const command = committedEventToCommand(event);
+          const textStatsSceneId = resolveSceneIdForPartition(
+            getCurrentMainState(),
+            partition,
+          );
+          if (textStatsSceneId) {
+            sceneTextStatsIdsToDelete.add(textStatsSceneId);
+          }
+          for (const sceneId of command?.payload?.sceneIds ?? []) {
+            if (isNonEmptyString(sceneId)) {
+              sceneTextStatsIdsToDelete.add(sceneId);
+            }
+          }
         }
 
         if (isMainPartition(partition)) {
@@ -492,6 +696,10 @@ export const createSceneBundleRuntime = ({
         if (partition.startsWith("m:s:") || partition.startsWith("s:")) {
           inactivePartitionsToDelete.add(partition);
         }
+      }
+
+      for (const sceneId of sceneTextStatsIdsToDelete) {
+        await deleteSceneTextStatsCheckpoint({ store, sceneId });
       }
 
       if (sawMainEvent) {
@@ -524,7 +732,10 @@ export const createSceneBundleRuntime = ({
     async clearSceneOverview(sceneId) {
       pendingOverviewSavesBySceneId.delete(sceneId);
       pendingOverviewDeletes.delete(scenePartitionFor(sceneId));
-      await deleteSceneOverviewCheckpoint({ store, sceneId });
+      await Promise.all([
+        deleteSceneOverviewCheckpoint({ store, sceneId }),
+        deleteSceneTextStatsCheckpoint({ store, sceneId }),
+      ]);
     },
 
     async clearAllSceneOverviews() {
@@ -533,7 +744,10 @@ export const createSceneBundleRuntime = ({
       )) {
         pendingOverviewSavesBySceneId.delete(sceneId);
         pendingOverviewDeletes.delete(scenePartitionFor(sceneId));
-        await deleteSceneOverviewCheckpoint({ store, sceneId });
+        await Promise.all([
+          deleteSceneOverviewCheckpoint({ store, sceneId }),
+          deleteSceneTextStatsCheckpoint({ store, sceneId }),
+        ]);
       }
     },
   };

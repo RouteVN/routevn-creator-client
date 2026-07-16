@@ -2,9 +2,145 @@ import { JSDOM } from "jsdom";
 import { NEVER } from "rxjs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  createRouteTransitionRunner,
   handleBeforeMount,
+  handleWindowPop,
   maybePromptLinuxAppImageDesktopIntegration,
 } from "../../src/pages/app/app.handlers.js";
+
+describe("app route transitions", () => {
+  it("awaits page preparation before changing route history", async () => {
+    let finishPreparation;
+    const appService = {
+      prepareNavigation: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finishPreparation = resolve;
+          }),
+      ),
+      redirect: vi.fn(),
+      replace: vi.fn(),
+      getCurrentProjectId: vi.fn(() => ""),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "web"),
+    };
+    const deps = {
+      appService,
+      projectService: {
+        getEnsuredProjectId: vi.fn(() => undefined),
+      },
+      store: {
+        setCurrentRoute: vi.fn(),
+        closeMobileSheet: vi.fn(),
+        setRepositoryLoading: vi.fn(),
+      },
+      render: vi.fn(),
+      i18n: {},
+    };
+    const runRouteTransition = createRouteTransitionRunner(deps);
+
+    const transition = runRouteTransition({
+      path: "/projects",
+      payload: {},
+      historyMode: "push",
+    });
+    await vi.waitFor(() =>
+      expect(appService.prepareNavigation).toHaveBeenCalledOnce(),
+    );
+
+    expect(appService.redirect).not.toHaveBeenCalled();
+    finishPreparation();
+    await transition;
+    expect(appService.redirect).toHaveBeenCalledWith(
+      "/projects",
+      {},
+      {
+        state: undefined,
+      },
+    );
+  });
+
+  it("does not prepare a route twice when back navigation was prepared", async () => {
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      redirect: vi.fn(),
+      replace: vi.fn(),
+      getCurrentProjectId: vi.fn(() => ""),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "web"),
+    };
+    const deps = {
+      appService,
+      projectService: {
+        getEnsuredProjectId: vi.fn(() => undefined),
+      },
+      store: {
+        setCurrentRoute: vi.fn(),
+        closeMobileSheet: vi.fn(),
+        setRepositoryLoading: vi.fn(),
+      },
+      render: vi.fn(),
+      i18n: {},
+    };
+
+    await createRouteTransitionRunner(deps)({
+      path: "/projects",
+      payload: {},
+      navigationPrepared: true,
+    });
+
+    expect(appService.prepareNavigation).not.toHaveBeenCalled();
+  });
+
+  it("prepares browser back navigation in the rendered route context", async () => {
+    let currentPath = "/projects";
+    let currentPayload = {};
+    const calls = [];
+    const appService = {
+      getPath: vi.fn(() => currentPath),
+      getPayload: vi.fn(() => ({ ...currentPayload })),
+      getHistoryState: vi.fn(() => ({ entry: "destination" })),
+      replace: vi.fn((path, payload) => {
+        currentPath = path;
+        currentPayload = { ...payload };
+        calls.push(`replace:${path}:${payload?.p ?? "none"}`);
+      }),
+      prepareNavigation: vi.fn(async () => {
+        calls.push(`prepare:${currentPath}:${currentPayload.p}`);
+      }),
+      showToast: vi.fn(),
+    };
+    const subject = {
+      dispatch: vi.fn(() => calls.push("dispatch")),
+    };
+    const deps = {
+      appService,
+      store: {
+        selectCurrentRoute: vi.fn(() => "/project/scene-editor"),
+        selectCurrentRoutePayload: vi.fn(() => ({
+          p: "project-1",
+          s: "scene-1",
+        })),
+      },
+      subject,
+    };
+
+    await handleWindowPop(deps);
+
+    expect(calls).toEqual([
+      "replace:/project/scene-editor:project-1",
+      "prepare:/project/scene-editor:project-1",
+      "replace:/projects:none",
+      "dispatch",
+    ]);
+    expect(subject.dispatch).toHaveBeenCalledWith("app.route.request", {
+      path: "/projects",
+      payload: {},
+      navigationPrepared: true,
+      shouldUpdateHistory: false,
+    });
+  });
+});
 
 const createDeps = ({
   distribution = "direct",

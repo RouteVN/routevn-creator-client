@@ -10,6 +10,8 @@ import {
   OVERVIEW_CHECKPOINT_DEBOUNCE_MS,
   SCENE_OVERVIEW_VIEW_NAME,
   SCENE_OVERVIEW_VIEW_VERSION,
+  SCENE_TEXT_STATS_VIEW_NAME,
+  SCENE_TEXT_STATS_VIEW_VERSION,
 } from "../../src/deps/services/shared/projectRepositoryViews/shared.js";
 import { COMMAND_TYPES } from "../../src/internal/project/commands.js";
 
@@ -73,12 +75,12 @@ const createSceneState = (sceneId) => ({
   },
 });
 
-const createEvent = ({ type, payload }) =>
+const createEvent = ({ type, payload, partition = mainPartition }) =>
   createRepositoryCommandEvent({
     command: {
       id: `${type}-1`,
       projectId,
-      partition: mainPartition,
+      partition,
       type,
       payload,
       actor: {
@@ -90,19 +92,29 @@ const createEvent = ({ type, payload }) =>
     },
   });
 
-const createRuntime = ({ events, checkpoints = {}, historyStats }) => {
+const createRuntime = ({
+  events,
+  checkpoints = {},
+  textStatsCheckpoints = {},
+  historyStats,
+  getCurrentHistoryStats = () => historyStats,
+}) => {
   const store = {
     deleteMaterializedViewCheckpoint: vi.fn(async () => {}),
     saveMaterializedViewCheckpoint: vi.fn(async () => {}),
     loadMaterializedViewCheckpoint: vi.fn(
       async ({ partition }) => checkpoints[partition],
     ),
-    loadMaterializedViewCheckpoints: vi.fn(async ({ partitions }) =>
-      partitions
-        .map((partition) => checkpoints[partition])
+    loadMaterializedViewCheckpoints: vi.fn(async ({ viewName, partitions }) => {
+      const sourceCheckpoints =
+        viewName === SCENE_TEXT_STATS_VIEW_NAME
+          ? textStatsCheckpoints
+          : checkpoints;
+      return partitions
+        .map((partition) => sourceCheckpoints[partition])
         .filter(Boolean)
-        .map((checkpoint) => structuredClone(checkpoint)),
-    ),
+        .map((checkpoint) => structuredClone(checkpoint));
+    }),
   };
   const mainState = createMainState();
   const listCommittedAfter = vi.fn(
@@ -124,7 +136,7 @@ const createRuntime = ({ events, checkpoints = {}, historyStats }) => {
     listCommittedAfter,
     getCurrentMainState: () => mainState,
     getCurrentRevision: () => events.length,
-    getCurrentHistoryStats: () => historyStats,
+    getCurrentHistoryStats,
     getActiveSceneId: () => activeSceneId,
     getActiveSceneState: () => createSceneState(activeSceneId),
     loadSceneProjection,
@@ -166,6 +178,264 @@ describe("sceneBundleRuntime", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("persists editor-calculated text stats separately from scene overviews", async () => {
+    const { runtime, store } = createRuntime({ events: [] });
+    const textStats = {
+      lineCount: 3,
+      wordCount: 12,
+      characterCount: 48,
+      language: "en",
+    };
+
+    await expect(
+      runtime.cacheSceneTextStats({
+        sceneId: activeSceneId,
+        textStats,
+      }),
+    ).resolves.toEqual(textStats);
+
+    expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledTimes(1);
+    expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledWith({
+      viewName: SCENE_TEXT_STATS_VIEW_NAME,
+      partition: scenePartitionFor(activeSceneId),
+      viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+      lastCommittedId: 0,
+      value: textStats,
+      updatedAt: expect.any(Number),
+    });
+  });
+
+  it("loads cached text stats without loading a scene projection", async () => {
+    const textStats = {
+      lineCount: 3,
+      wordCount: 12,
+      characterCount: 48,
+      language: "en",
+    };
+    const partition = scenePartitionFor(inactiveSceneId);
+    const { runtime, loadSceneProjection } = createRuntime({
+      events: [],
+      textStatsCheckpoints: {
+        [partition]: {
+          partition,
+          viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+          lastCommittedId: 0,
+          value: textStats,
+        },
+      },
+    });
+
+    await expect(
+      runtime.loadSceneTextStats({ sceneIds: [inactiveSceneId] }),
+    ).resolves.toEqual({
+      [inactiveSceneId]: textStats,
+    });
+    expect(loadSceneProjection).not.toHaveBeenCalled();
+  });
+
+  it("does not scan scene history when no text stats are cached", async () => {
+    const { runtime, listCommittedAfter } = createRuntime({
+      events: [
+        createEvent({
+          type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+          payload: { lineIds: ["line-2"], data: {} },
+          partition: scenePartitionFor(inactiveSceneId),
+        }),
+      ],
+    });
+
+    await expect(
+      runtime.loadSceneTextStats({ sceneIds: [inactiveSceneId] }),
+    ).resolves.toEqual({});
+    expect(listCommittedAfter).not.toHaveBeenCalled();
+  });
+
+  it("rejects cached text stats after a later text-changing event", async () => {
+    const partition = scenePartitionFor(inactiveSceneId);
+    const textEvent = createEvent({
+      type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+      payload: {
+        lineIds: ["line-2"],
+        data: {
+          dialogue: {
+            content: [{ text: "Updated text" }],
+          },
+        },
+      },
+      partition,
+    });
+    const { runtime, store } = createRuntime({
+      events: [textEvent],
+      textStatsCheckpoints: {
+        [partition]: {
+          partition,
+          viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+          lastCommittedId: 0,
+          value: {
+            lineCount: 1,
+            wordCount: 2,
+            characterCount: 11,
+            language: "en",
+          },
+        },
+      },
+    });
+
+    await expect(
+      runtime.loadSceneTextStats({ sceneIds: [inactiveSceneId] }),
+    ).resolves.toEqual({});
+    expect(store.deleteMaterializedViewCheckpoint).toHaveBeenCalledWith({
+      viewName: SCENE_TEXT_STATS_VIEW_NAME,
+      partition,
+    });
+  });
+
+  it("keeps cached text stats after unrelated history advances", async () => {
+    const partition = scenePartitionFor(inactiveSceneId);
+    const textStats = {
+      lineCount: 1,
+      wordCount: 2,
+      characterCount: 11,
+      language: "en",
+    };
+    const { runtime, store } = createRuntime({
+      events: [
+        createEvent({
+          type: COMMAND_TYPES.IMAGE_CREATE,
+          payload: { imageId: "image-1" },
+        }),
+      ],
+      textStatsCheckpoints: {
+        [partition]: {
+          partition,
+          viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+          lastCommittedId: 0,
+          value: textStats,
+        },
+      },
+    });
+
+    await expect(
+      runtime.loadSceneTextStats({ sceneIds: [inactiveSceneId] }),
+    ).resolves.toEqual({
+      [inactiveSceneId]: textStats,
+    });
+    expect(store.deleteMaterializedViewCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it("rejects cached text stats after history is replaced", async () => {
+    const partition = scenePartitionFor(inactiveSceneId);
+    const { runtime, store } = createRuntime({
+      events: [],
+      textStatsCheckpoints: {
+        [partition]: {
+          partition,
+          viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+          lastCommittedId: 0,
+          value: {
+            lineCount: 1,
+            wordCount: 2,
+            characterCount: 11,
+            language: "en",
+          },
+          meta: {
+            historyStats: {
+              committedCount: 0,
+              latestCommittedId: 0,
+              draftCount: 1,
+              latestDraftClock: 1,
+            },
+          },
+        },
+      },
+      historyStats: {
+        committedCount: 0,
+        latestCommittedId: 0,
+        draftCount: 1,
+        latestDraftClock: 2,
+      },
+    });
+
+    await expect(
+      runtime.loadSceneTextStats({ sceneIds: [inactiveSceneId] }),
+    ).resolves.toEqual({});
+    expect(store.deleteMaterializedViewCheckpoint).toHaveBeenCalledWith({
+      viewName: SCENE_TEXT_STATS_VIEW_NAME,
+      partition,
+    });
+  });
+
+  it("validates cached text stats against live history after a draft edit", async () => {
+    const partition = scenePartitionFor(inactiveSceneId);
+    const textStats = {
+      lineCount: 2,
+      wordCount: 8,
+      characterCount: 32,
+      language: "en",
+    };
+    const liveHistoryStats = {
+      committedCount: 0,
+      latestCommittedId: 0,
+      draftCount: 1,
+      latestDraftClock: 2,
+    };
+    const getCurrentHistoryStats = vi.fn(async () =>
+      structuredClone(liveHistoryStats),
+    );
+    const { runtime, store } = createRuntime({
+      events: [],
+      textStatsCheckpoints: {
+        [partition]: {
+          partition,
+          viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+          lastCommittedId: 0,
+          value: textStats,
+          meta: {
+            historyStats: structuredClone(liveHistoryStats),
+          },
+        },
+      },
+      historyStats: {
+        committedCount: 0,
+        latestCommittedId: 0,
+        draftCount: 1,
+        latestDraftClock: 1,
+      },
+      getCurrentHistoryStats,
+    });
+
+    await expect(
+      runtime.loadSceneTextStats({ sceneIds: [inactiveSceneId] }),
+    ).resolves.toEqual({
+      [inactiveSceneId]: textStats,
+    });
+    expect(getCurrentHistoryStats).toHaveBeenCalledTimes(1);
+    expect(store.deleteMaterializedViewCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it("ignores cached text stats without a line count", async () => {
+    const partition = scenePartitionFor(inactiveSceneId);
+    const { runtime } = createRuntime({
+      events: [],
+      textStatsCheckpoints: {
+        [partition]: {
+          partition,
+          viewVersion: "2",
+          lastCommittedId: 0,
+          value: {
+            wordCount: 12,
+            characterCount: 48,
+            language: "en",
+          },
+        },
+      },
+    });
+
+    await expect(
+      runtime.loadSceneTextStats({ sceneIds: [inactiveSceneId] }),
+    ).resolves.toEqual({});
   });
 
   it("does not invalidate scene overview checkpoints for image commands on the main partition", async () => {
@@ -217,10 +487,38 @@ describe("sceneBundleRuntime", () => {
         viewName: SCENE_OVERVIEW_VIEW_NAME,
         partition: scenePartitionFor(inactiveSceneId),
       });
+      expect(store.deleteMaterializedViewCheckpoint).not.toHaveBeenCalledWith({
+        viewName: SCENE_TEXT_STATS_VIEW_NAME,
+        partition: scenePartitionFor(inactiveSceneId),
+      });
       expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("invalidates cached text stats when scene text changes", async () => {
+    const lineEvent = createEvent({
+      partition: scenePartitionFor(activeSceneId),
+      type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+      payload: {
+        lineId: "line-1",
+        data: {
+          dialogue: {
+            content: [{ text: "Updated text" }],
+          },
+        },
+      },
+    });
+    const { runtime, store } = createRuntime({ events: [lineEvent] });
+
+    await runtime.handleCommittedEvents([lineEvent]);
+
+    expect(store.deleteMaterializedViewCheckpoint).toHaveBeenCalledWith({
+      viewName: SCENE_TEXT_STATS_VIEW_NAME,
+      partition: scenePartitionFor(activeSceneId),
+    });
+    await runtime.flushSceneOverviews();
   });
 
   it("ignores unrelated main events when calculating scene overview freshness", () => {

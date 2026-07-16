@@ -159,6 +159,7 @@ export const createSceneEditorDraftPersistence = ({
   syncDraftSectionFromLiveEditor = (deps) => deps.store.selectDraftSection(),
   syncStoreProjectState = () => {},
   reconcileCurrentEditorSession = () => {},
+  onDidFlush = async () => {},
   nowMs = defaultNowMs,
   timing = DEFAULT_SCENE_EDITOR_DRAFT_SAVE_TIMING,
 } = {}) => {
@@ -419,6 +420,8 @@ export const createSceneEditorDraftPersistence = ({
               });
               return;
             }
+
+            await onDidFlush(deps);
 
             const renderStartedAt = getSceneEditorTimingNow();
             deps.render();

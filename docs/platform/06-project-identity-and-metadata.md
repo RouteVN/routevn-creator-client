@@ -30,6 +30,7 @@ Current fields:
 - `nativeApplicationIdentifier`
 - `name`
 - `description`
+- `language`
 - `iconFileId`
 
 Important details:
@@ -40,6 +41,9 @@ Important details:
   for new projects
 - `projectInfo.nativeApplicationIdentifier` is the stable native player
   application identity shared by releases of the same game
+- `projectInfo.language` selects the language-specific writing count mode
+  - English uses word-based counts
+  - Japanese and Chinese use character-based counts
 - `iconFileId` is stored in `projectInfo`, but the actual icon binary lives in
   the project `files/` folder
 

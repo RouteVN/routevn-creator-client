@@ -1,6 +1,14 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import {
+  formatSceneTextStatsLabel,
+  hasSceneTextStats,
+} from "../../internal/ui/sceneTextStats.js";
+import {
+  DEFAULT_PROJECT_LANGUAGE,
+  normalizeProjectLanguage,
+} from "../../internal/projectLanguage.js";
 import { selectScenesPageCopy } from "./support/scenesPageCopy.js";
 
 const createContextMenuItems = (copy = {}) => [
@@ -76,6 +84,7 @@ const localizeDropdownMenuItems = (items = [], copy = {}) => {
 export const createInitialState = () => ({
   scenesData: { tree: [], items: {} },
   layoutsData: { tree: [], items: {} },
+  projectLanguage: DEFAULT_PROJECT_LANGUAGE,
   sceneOverviewsById: {},
   selectedItemId: null,
   selectedFolderId: undefined,
@@ -123,6 +132,12 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };
+
+export const setProjectLanguage = ({ state }, { language } = {}) => {
+  state.projectLanguage = normalizeProjectLanguage(language);
+};
+
+export const selectProjectLanguage = ({ state }) => state.projectLanguage;
 
 export const selectIsTouchMode = ({ state }) => state.isTouchMode;
 
@@ -438,12 +453,28 @@ export const selectViewData = ({ state, i18n }) => {
 
   let selectedItemName = "";
   let selectedItemDescription = "";
+  let selectedSceneTextStatsLabel = "";
   let selectedSceneSections = [];
   let detailFields = [];
   if (selectedScene?.type === "scene") {
     const selectedSceneOverview = state.sceneOverviewsById?.[selectedScene.id];
     selectedItemName = selectedScene.name ?? "";
     selectedItemDescription = selectedScene.description ?? "";
+    const selectedSceneTextStats = selectedSceneOverview?.textStats;
+    if (
+      selectedSceneTextStats?.language === state.projectLanguage &&
+      hasSceneTextStats(selectedSceneTextStats, {
+        language: state.projectLanguage,
+      })
+    ) {
+      selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
+        selectedSceneTextStats,
+        {
+          language: state.projectLanguage,
+          copy,
+        },
+      );
+    }
     selectedSceneSections = Array.isArray(selectedSceneOverview?.sections)
       ? selectedSceneOverview.sections.map((section, index) => ({
           id: section.sectionId || section.id,
@@ -612,6 +643,7 @@ export const selectViewData = ({ state, i18n }) => {
     showMapAddHint: state.showMapAddHint,
     sectionsListOpen: state.sectionsListOpen,
     selectedSceneSections,
+    selectedSceneTextStatsLabel,
     selectedItemName,
     detailFields,
     deadEndTooltip: state.deadEndTooltip,

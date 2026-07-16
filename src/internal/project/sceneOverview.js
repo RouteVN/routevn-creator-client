@@ -249,7 +249,6 @@ export const buildSceneOverview = ({ repositoryState, sceneId }) => {
         repositoryState,
       }),
     );
-
   return {
     sceneId,
     name: scene?.name || `Scene ${sceneId}`,

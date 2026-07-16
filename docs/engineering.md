@@ -375,6 +375,7 @@ Preferred flow:
 ```text
 route change
 -> app-level route orchestration resolves path + payload
+-> registered page preparation finishes before route history or UI changes
 -> if the route needs a project repository, projectService ensures it
 -> target page mounts
 -> project-backed pages subscribe to project state
@@ -383,6 +384,10 @@ route change
 ```
 
 Page handlers should not repeat route-level repository boot logic.
+Pages that must persist local work before leaving should register that work with
+`appService.registerBeforeNavigation(...)` during mount and unregister it during
+cleanup. Do not rely on asynchronous page cleanup for data required by the
+destination page.
 
 ### Project-Backed Page Rendering
 
@@ -517,6 +522,7 @@ UI handlers should normally talk only to:
 Handler-facing facade for:
 
 - navigation
+- awaited pre-navigation preparation
 - dialogs and toasts
 - dropdowns
 - user config
@@ -787,7 +793,7 @@ Do not scatter platform conditionals through page handlers or domain code.
 
 ### Project Data Ownership
 
-Project `name`, `description`, and `iconFileId` are owned by the
+Project `name`, `description`, `language`, and `iconFileId` are owned by the
 project-specific DB `app` store as `projectInfo`, not repository state.
 
 That means:

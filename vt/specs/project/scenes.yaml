@@ -34,6 +34,18 @@ steps:
       - action: clear
       - action: write
         value: Covers scenes map, previews, and scene editor.
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-select#field2 [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-form#createProjectForm rtgl-select#field2 #option1"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-select#field2 #option1"
+    steps:
+      - action: click
   - action: wait
     ms: 250
   - action: select
@@ -179,6 +191,10 @@ steps:
     value: /project/scene-editor
   - action: wait
     ms: 1600
+  - action: assert
+    type: text
+    selector: "#sceneTextStats"
+    value: "0 characters"
   - action: screenshot
   - action: select
     selector: "#systemActions #addActionButton"
@@ -228,5 +244,31 @@ steps:
     timeoutMs: 10000
   - action: wait
     ms: 150
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#vnPreview"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "#sidebar [data-item-id='scenes']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-scenes
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#whiteboard #itemRef1"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#whiteboard #itemRef1"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#selectedSceneTextStats"
   - action: screenshot
 ---

@@ -1,4 +1,5 @@
 import { requireProjectResolution } from "../../internal/projectResolution.js";
+import { requireProjectLanguage } from "../../internal/projectLanguage.js";
 import {
   formatProjectPageCopy,
   selectProjectPageCopy,
@@ -206,6 +207,7 @@ export const handleEditFormAction = async (deps, payload) => {
   const patch = {
     name,
     description: values?.description ?? "",
+    language: requireProjectLanguage(values?.language),
     iconFileId: store.selectEditIconFileId(),
   };
 

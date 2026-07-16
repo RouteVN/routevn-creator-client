@@ -34,6 +34,18 @@ steps:
       - action: clear
       - action: write
         value: Covers project overview detail and edit submit.
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-select#field2 [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-form#createProjectForm rtgl-select#field2 #option1"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-select#field2 #option1"
+    steps:
+      - action: click
   - action: wait
     ms: 250
   - action: select
@@ -61,7 +73,7 @@ steps:
     ms: 500
   - action: screenshot
   - action: select
-    selector: "#projectTitle"
+    selector: "#projectLanguage"
     steps:
       - action: click
   - action: waitFor
@@ -83,6 +95,18 @@ steps:
       - action: clear
       - action: write
         value: Updated by the page-based VT workflow.
+  - action: select
+    selector: "#editDialog rtgl-select#field2 [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog rtgl-select#field2 #option2"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#editDialog rtgl-select#field2 #option2"
+    steps:
+      - action: click
   - action: screenshot
   - action: select
     selector: "#editDialog rtgl-button[data-action-id='submit']"

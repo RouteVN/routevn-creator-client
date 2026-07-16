@@ -10,6 +10,8 @@ import {
 import {
   MAIN_VIEW_NAME,
   SCENE_OVERVIEW_VIEW_NAME,
+  SCENE_TEXT_STATS_VIEW_NAME,
+  SCENE_TEXT_STATS_VIEW_VERSION,
   createMainProjectionState,
 } from "../../src/deps/services/shared/projectRepositoryViews/shared.js";
 import {
@@ -1460,6 +1462,89 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     expect(listCommittedAfter).not.toHaveBeenCalled();
     expect(listDraftsOrdered).not.toHaveBeenCalled();
     expect(loadEvents).not.toHaveBeenCalled();
+  });
+
+  it("reads live history stats when loading cached scene text stats", async () => {
+    const sceneId = "scene-1";
+    const repositoryState = createSceneRepositoryState({ sceneId });
+    const partition = scenePartitionFor(sceneId);
+    const textStats = {
+      lineCount: 2,
+      wordCount: 8,
+      characterCount: 32,
+      language: "en",
+    };
+    const initialHistoryStats = {
+      committedCount: 0,
+      latestCommittedId: 0,
+      draftCount: 1,
+      latestDraftClock: 1,
+    };
+    const liveHistoryStats = {
+      ...initialHistoryStats,
+      latestDraftClock: 2,
+    };
+    const deleteMaterializedViewCheckpoint = vi.fn(async () => {});
+    const getRepositoryHistoryStats = vi.fn(async () =>
+      structuredClone(liveHistoryStats),
+    );
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        getRepositoryHistoryStats,
+        listCommittedAfter: async () => [],
+        loadMaterializedViewCheckpoint: async ({ viewName, partition }) => {
+          if (viewName === MAIN_VIEW_NAME && partition === "m") {
+            return {
+              viewName,
+              viewVersion: "1",
+              partition,
+              lastCommittedId: 0,
+              value: createMainProjectionState(repositoryState),
+            };
+          }
+
+          return undefined;
+        },
+        loadMaterializedViewCheckpoints: async ({ viewName, partitions }) => {
+          if (
+            viewName !== SCENE_TEXT_STATS_VIEW_NAME ||
+            !partitions.includes(partition)
+          ) {
+            return [];
+          }
+
+          return [
+            {
+              viewName,
+              viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+              partition,
+              lastCommittedId: 0,
+              value: structuredClone(textStats),
+              meta: {
+                historyStats: structuredClone(liveHistoryStats),
+              },
+            },
+          ];
+        },
+        saveMaterializedViewCheckpoint: async () => {},
+        deleteMaterializedViewCheckpoint,
+      },
+      events: [],
+      initialRevision: 0,
+      historyStats: initialHistoryStats,
+      createInitialState: () => structuredClone(repositoryState),
+      reduceEventToState: ({ repositoryState: currentState }) => currentState,
+      reduceEventsToState: ({ repositoryState: currentState }) => currentState,
+    });
+
+    await expect(
+      repository.loadSceneTextStats({ sceneIds: [sceneId] }),
+    ).resolves.toEqual({
+      [sceneId]: textStats,
+    });
+    expect(getRepositoryHistoryStats).toHaveBeenCalledTimes(1);
+    expect(deleteMaterializedViewCheckpoint).not.toHaveBeenCalled();
   });
 
   it("pages committed history when activating a scene on a checkpoint-backed repository without drafts", async () => {

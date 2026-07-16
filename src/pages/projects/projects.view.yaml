@@ -133,10 +133,6 @@ refs:
     eventListeners:
       close:
         handler: handleAddMemberDialogClose
-  deleteCancelButton:
-    eventListeners:
-      click:
-        handler: handleDeleteDialogCancel
   deleteConfirmButton:
     eventListeners:
       click:
@@ -227,7 +223,6 @@ template:
               - rtgl-text s=lg: ${deleteDialogTitle}
               - rtgl-text c=mu-fg: ${deleteDialogMessage}
           - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#deleteCancelButton v=se: ${i18n.projectsPage.cancelButton}
               - rtgl-button#deleteConfirmButton v=pr: ${deleteDialogConfirmLabel}
   - rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md:
       - rtgl-view slot=content w=f p=lg g=lg:

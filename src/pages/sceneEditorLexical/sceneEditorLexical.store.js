@@ -33,6 +33,16 @@ import {
   localizeSceneEditorForm,
   selectSceneEditorCopy,
 } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
+import {
+  buildSceneTextStats,
+  createEmptySceneTextStats,
+  formatSceneTextStatsLabel,
+  normalizeSceneTextStats,
+} from "../../internal/ui/sceneTextStats.js";
+import {
+  DEFAULT_PROJECT_LANGUAGE,
+  normalizeProjectLanguage,
+} from "../../internal/projectLanguage.js";
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
@@ -676,9 +686,12 @@ export const createInitialState = () => ({
   repositoryState: {},
   repositoryRevision: 0,
   domainState: {},
+  projectLanguage: DEFAULT_PROJECT_LANGUAGE,
   draftSection: undefined,
   draftSections: {},
   draftSaveTimerId: undefined,
+  sceneTextStats: createEmptySceneTextStats(),
+  sceneTextStatsRefreshHandle: undefined,
   lastDraftFlushStartedAt: 0,
   draftSavePendingSinceAt: 0,
   draftFlushInFlight: false,
@@ -813,6 +826,28 @@ export const setDraftSaveTimerId = ({ state }, { timerId } = {}) => {
 
 export const clearDraftSaveTimer = ({ state }, _payload = {}) => {
   state.draftSaveTimerId = undefined;
+};
+
+export const setSceneTextStatsRefreshHandle = ({ state }, { handle } = {}) => {
+  state.sceneTextStatsRefreshHandle = handle;
+};
+
+export const clearSceneTextStatsRefreshHandle = ({ state }, _payload = {}) => {
+  state.sceneTextStatsRefreshHandle = undefined;
+};
+
+export const setProjectLanguage = ({ state }, { language } = {}) => {
+  state.projectLanguage = normalizeProjectLanguage(language);
+};
+
+export const refreshSceneTextStats = ({ state }, _payload = {}) => {
+  state.sceneTextStats = buildSceneTextStats(selectScene({ state }), {
+    language: state.projectLanguage,
+  });
+};
+
+export const setSceneTextStats = ({ state }, { stats } = {}) => {
+  state.sceneTextStats = normalizeSceneTextStats(stats);
 };
 
 export const setLastDraftFlushStartedAt = ({ state }, { timestamp } = {}) => {
@@ -1062,6 +1097,18 @@ export const selectPendingDraftSections = ({ state }) => {
 
 export const selectDraftSaveTimerId = ({ state }) => {
   return state.draftSaveTimerId;
+};
+
+export const selectSceneTextStatsRefreshHandle = ({ state }) => {
+  return state.sceneTextStatsRefreshHandle;
+};
+
+export const selectProjectLanguage = ({ state }) => {
+  return state.projectLanguage;
+};
+
+export const selectSceneTextStats = ({ state }) => {
+  return normalizeSceneTextStats(state.sceneTextStats);
 };
 
 export const selectLastDraftFlushStartedAt = ({ state }) => {
@@ -1801,6 +1848,10 @@ export const selectViewData = ({ state, i18n }) => {
       isScenePageLoading: state.isScenePageLoading,
       isSceneAssetLoading: state.isSceneAssetLoading,
       deadEndTooltip: state.deadEndTooltip,
+      sceneTextStatsLabel: formatSceneTextStatsLabel(state.sceneTextStats, {
+        language: state.projectLanguage,
+        copy,
+      }),
       backgroundTransformEditor: selectBackgroundTransformEditorViewData({
         state,
       }),
@@ -2175,6 +2226,10 @@ export const selectViewData = ({ state, i18n }) => {
     isScenePageLoading: state.isScenePageLoading,
     isSceneAssetLoading: state.isSceneAssetLoading,
     deadEndTooltip: state.deadEndTooltip,
+    sceneTextStatsLabel: formatSceneTextStatsLabel(state.sceneTextStats, {
+      language: state.projectLanguage,
+      copy,
+    }),
     backgroundTransformEditor: selectBackgroundTransformEditorViewData({
       state,
     }),

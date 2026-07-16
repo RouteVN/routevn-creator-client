@@ -21,6 +21,7 @@ import {
   resolveProjectResolutionForWrite,
   scaleTemplateProjectStateForResolution,
 } from "../../../internal/projectResolution.js";
+import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -49,6 +50,7 @@ const normalizeProjectInfo = (projectInfo = {}) => ({
   nativeApplicationIdentifier: projectInfo.nativeApplicationIdentifier ?? "",
   name: projectInfo.name ?? "",
   description: projectInfo.description ?? "",
+  language: normalizeProjectLanguage(projectInfo.language),
   iconFileId: projectInfo.iconFileId ?? null,
 });
 

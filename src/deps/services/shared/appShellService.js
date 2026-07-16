@@ -90,6 +90,7 @@ export const createAppShellService = ({
     ...updater,
   };
   let appCopyProvider = () => ({});
+  const beforeNavigationHandlers = new Set();
 
   const getAppCopy = () => {
     try {
@@ -103,6 +104,12 @@ export const createAppShellService = ({
     return router.getPayload()?.p ?? "";
   };
 
+  const prepareNavigation = async (payload = {}) => {
+    for (const handler of beforeNavigationHandlers) {
+      await handler(payload);
+    }
+  };
+
   return {
     setAppCopyProvider(provider) {
       appCopyProvider =
@@ -110,6 +117,15 @@ export const createAppShellService = ({
     },
 
     getAppCopy,
+
+    registerBeforeNavigation(handler) {
+      beforeNavigationHandlers.add(handler);
+      return () => {
+        beforeNavigationHandlers.delete(handler);
+      };
+    },
+
+    prepareNavigation,
 
     navigate(path, payload, options = {}) {
       const timing =
@@ -160,8 +176,16 @@ export const createAppShellService = ({
       router.setPayload(payload, options);
     },
 
-    back() {
-      router.back();
+    async back() {
+      const target = router.getBackTarget?.();
+      if (target) {
+        await prepareNavigation(target);
+      }
+      return router.back();
+    },
+
+    canGoBack() {
+      return router.canGoBack?.() ?? true;
     },
 
     async openUrl(url) {

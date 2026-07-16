@@ -159,6 +159,19 @@ export default class AndroidRouter {
     return true;
   };
 
+  getBackTarget = () => {
+    if (!this.canGoBack()) {
+      return undefined;
+    }
+
+    const entry = this.stackEntries[this.stackEntries.length - 2];
+    return {
+      path: entry.path,
+      payload: { ...entry.payload },
+      historyState: { ...entry.state },
+    };
+  };
+
   canGoBack = () => {
     return this.stackEntries.length > 1;
   };

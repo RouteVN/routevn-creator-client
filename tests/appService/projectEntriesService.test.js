@@ -56,9 +56,10 @@ describe("projectEntriesService", () => {
     const { service } = createService([
       {
         id: "project-1",
-        projectPath: "/old/DiaLune-migrated",
-        name: "DiaLune",
+        projectPath: "/old/project-two-migrated",
+        name: "Project Two",
         description: "old description",
+        language: "en",
         iconFileId: "icon-old",
         createdAt: 100,
         lastOpenedAt: 200,
@@ -67,9 +68,10 @@ describe("projectEntriesService", () => {
 
     const entries = await service.addProjectEntry({
       id: "project-1",
-      projectPath: "/new/DiaLune-migrated",
-      name: "DiaLune",
+      projectPath: "/new/project-two-migrated",
+      name: "Project Two",
       description: "new description",
+      language: "ja",
       iconFileId: "icon-new",
       createdAt: 300,
       lastOpenedAt: null,
@@ -78,9 +80,10 @@ describe("projectEntriesService", () => {
     expect(entries).toEqual([
       {
         id: "project-1",
-        projectPath: "/new/DiaLune-migrated",
-        name: "DiaLune",
+        projectPath: "/new/project-two-migrated",
+        name: "Project Two",
         description: "new description",
+        language: "ja",
         iconFileId: "icon-new",
         createdAt: 100,
         lastOpenedAt: 200,
@@ -92,15 +95,15 @@ describe("projectEntriesService", () => {
     const { service } = createService([
       {
         id: "project-1",
-        projectPath: "/projects/DiaLune-migrated",
-        name: "DiaLune",
+        projectPath: "/projects/project-two-migrated",
+        name: "Project Two",
       },
     ]);
 
     await expect(
       service.addProjectEntry({
         id: "project-2",
-        projectPath: "/projects/DiaLune-migrated",
+        projectPath: "/projects/project-two-migrated",
         name: "Another Project",
       }),
     ).rejects.toThrow("This project has already been added.");
@@ -109,8 +112,9 @@ describe("projectEntriesService", () => {
   it("repairs missing local project ids from the project path on load", async () => {
     const getProjectInfoByPath = vi.fn(async (projectPath) => ({
       id: "project-1",
-      name: "DiaLune",
+      name: "Project Two",
       description: "Recovered",
+      language: "ja",
       iconFileId: "icon-1",
       projectPath,
     }));
@@ -118,7 +122,7 @@ describe("projectEntriesService", () => {
       [
         {
           id: "",
-          projectPath: "/projects/DiaLune-migrated",
+          projectPath: "/projects/project-two-migrated",
           name: "",
           description: "",
           iconFileId: null,
@@ -136,18 +140,20 @@ describe("projectEntriesService", () => {
     expect(projects).toEqual([
       expect.objectContaining({
         id: "project-1",
-        name: "DiaLune",
+        name: "Project Two",
         description: "Recovered",
+        language: "ja",
         iconFileId: "icon-1",
-        projectPath: "/projects/DiaLune-migrated",
+        projectPath: "/projects/project-two-migrated",
       }),
     ]);
     expect(db.set).toHaveBeenCalledWith("projectEntries", [
       {
         id: "project-1",
-        projectPath: "/projects/DiaLune-migrated",
-        name: "DiaLune",
+        projectPath: "/projects/project-two-migrated",
+        name: "Project Two",
         description: "Recovered",
+        language: "ja",
         iconFileId: "icon-1",
       },
     ]);
@@ -156,8 +162,9 @@ describe("projectEntriesService", () => {
   it("preserves the working path when duplicate repaired entries merge by project id", async () => {
     const getProjectInfoByPath = vi.fn(async () => ({
       id: "project-1",
-      name: "DiaLune",
+      name: "Project Two",
       description: "Recovered",
+      language: "zh-Hans",
       iconFileId: "icon-1",
     }));
     const { db, service } = createService(
@@ -165,7 +172,7 @@ describe("projectEntriesService", () => {
         {
           id: "project-1",
           projectPath: "/projects/working",
-          name: "DiaLune",
+          name: "Project Two",
           description: "Working",
           iconFileId: "icon-working",
         },
@@ -196,9 +203,45 @@ describe("projectEntriesService", () => {
       {
         id: "project-1",
         projectPath: "/projects/working",
-        name: "DiaLune",
+        name: "Project Two",
         description: "Recovered",
+        language: "zh-Hans",
         iconFileId: "icon-1",
+      },
+    ]);
+  });
+
+  it("normalizes legacy cached project languages when loading projects", async () => {
+    const { db, service } = createService([
+      {
+        id: "project-1",
+        projectPath: "/projects/sample-project",
+        name: "Sample Project",
+        description: "",
+        iconFileId: null,
+        createdAt: 100,
+        lastOpenedAt: null,
+      },
+    ]);
+
+    const projects = await service.loadAllProjects();
+
+    expect(projects).toEqual([
+      expect.objectContaining({
+        id: "project-1",
+        language: "en",
+      }),
+    ]);
+    expect(db.set).toHaveBeenCalledWith("projectEntries", [
+      {
+        id: "project-1",
+        projectPath: "/projects/sample-project",
+        name: "Sample Project",
+        description: "",
+        language: "en",
+        iconFileId: null,
+        createdAt: 100,
+        lastOpenedAt: null,
       },
     ]);
   });
@@ -207,13 +250,13 @@ describe("projectEntriesService", () => {
     const { service } = createService([
       {
         id: "",
-        projectPath: "/projects/DiaLune-migrated",
-        name: "Broken DiaLune",
+        projectPath: "/projects/project-two-migrated",
+        name: "Broken Project Two",
       },
     ]);
 
     const entries = await service.removeProjectEntryByPath(
-      "/projects/DiaLune-migrated",
+      "/projects/project-two-migrated",
     );
 
     expect(entries).toEqual([]);

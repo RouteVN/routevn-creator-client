@@ -1,13 +1,24 @@
+import {
+  normalizeProjectLanguage,
+  requireProjectLanguage,
+} from "../../../internal/projectLanguage.js";
+
+const normalizeCachedProjectEntry = (entry = {}) => ({
+  ...entry,
+  language: normalizeProjectLanguage(entry.language),
+});
+
 const createEmptyProjectEntry = ({ id = "", source = "local" } = {}) => ({
   id,
   source,
   name: "",
   description: "",
+  language: normalizeProjectLanguage(),
   iconFileId: null,
 });
 
 const normalizeLocalProjectEntry = (entry) => ({
-  ...entry,
+  ...normalizeCachedProjectEntry(entry),
   source: "local",
   name: entry?.name ?? "",
   description: entry?.description ?? "",
@@ -130,21 +141,23 @@ export const createProjectEntriesService = ({
   };
 
   const addProjectEntry = async (entry) => {
+    const normalizedEntry = normalizeCachedProjectEntry(entry);
     const entries = await getProjectEntries();
     const existingEntryIndex = entries.findIndex(
-      (candidate) => candidate?.id && candidate.id === entry?.id,
+      (candidate) => candidate?.id && candidate.id === normalizedEntry.id,
     );
     if (existingEntryIndex !== -1) {
       const existingEntry = entries[existingEntryIndex] || {};
       entries[existingEntryIndex] = {
         ...existingEntry,
-        ...entry,
-        createdAt: existingEntry.createdAt ?? entry?.createdAt,
-        lastOpenedAt: existingEntry.lastOpenedAt ?? entry?.lastOpenedAt,
+        ...normalizedEntry,
+        createdAt: existingEntry.createdAt ?? normalizedEntry.createdAt,
+        lastOpenedAt:
+          existingEntry.lastOpenedAt ?? normalizedEntry.lastOpenedAt,
       };
       await db.set("projectEntries", entries);
       projectEntriesCache = structuredClone(entries);
-      if (entry?.id === getCurrentProjectId()) {
+      if (normalizedEntry.id === getCurrentProjectId()) {
         currentProjectEntry = normalizeLocalProjectEntry(
           entries[existingEntryIndex],
         );
@@ -154,17 +167,17 @@ export const createProjectEntriesService = ({
 
     const isDuplicate = platformAdapter.isDuplicateProjectEntry?.({
       entries,
-      entry,
+      entry: normalizedEntry,
     });
     if (isDuplicate) {
       throw new Error("This project has already been added.");
     }
 
-    entries.push(entry);
+    entries.push(normalizedEntry);
     await db.set("projectEntries", entries);
     projectEntriesCache = structuredClone(entries);
-    if (entry?.id === getCurrentProjectId()) {
-      currentProjectEntry = normalizeLocalProjectEntry(entry);
+    if (normalizedEntry.id === getCurrentProjectId()) {
+      currentProjectEntry = normalizeLocalProjectEntry(normalizedEntry);
     }
     return entries;
   };
@@ -191,7 +204,10 @@ export const createProjectEntriesService = ({
     const entries = await getProjectEntries();
     const index = entries.findIndex((entry) => entry.id === projectId);
     if (index !== -1) {
-      entries[index] = { ...entries[index], ...updates };
+      entries[index] = normalizeCachedProjectEntry({
+        ...entries[index],
+        ...updates,
+      });
       await db.set("projectEntries", entries);
       projectEntriesCache = structuredClone(entries);
       if (
@@ -235,7 +251,10 @@ export const createProjectEntriesService = ({
     const nextEntries = [];
 
     for (const entry of entries) {
-      let nextEntry = structuredClone(entry);
+      let nextEntry = normalizeCachedProjectEntry(structuredClone(entry));
+      if (nextEntry.language !== entry?.language) {
+        didChange = true;
+      }
 
       if (!nextEntry?.id && nextEntry?.projectPath) {
         try {
@@ -247,6 +266,7 @@ export const createProjectEntriesService = ({
             nextEntry.name = projectInfo.name ?? nextEntry.name ?? "";
             nextEntry.description =
               projectInfo.description ?? nextEntry.description ?? "";
+            nextEntry.language = normalizeProjectLanguage(projectInfo.language);
             nextEntry.iconFileId =
               projectInfo.iconFileId ?? nextEntry.iconFileId ?? null;
             didChange = true;
@@ -321,6 +341,7 @@ export const createProjectEntriesService = ({
             id: entry.id,
             name: entry.name || "Untitled Project",
             description: entry.description || "",
+            language: normalizeProjectLanguage(entry.language),
             iconFileId: entry.iconFileId || null,
             createdAt: entry.createdAt,
             lastOpenedAt: entry.lastOpenedAt,
@@ -373,6 +394,7 @@ export const createProjectEntriesService = ({
     async createNewProject(payload) {
       return platformAdapter.createNewProject({
         ...payload,
+        language: requireProjectLanguage(payload.language),
         addProjectEntry,
         projectService,
       });

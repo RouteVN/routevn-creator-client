@@ -48,6 +48,8 @@ bun run test:puty
 Notes:
 
 - `bun run test:puty` runs the YAML-based Puty storage suite in `tests/puty/`.
+- Use neutral fixture names such as `Project One` in tests. Do not use real
+  project or product names.
 - Run a single Puty scenario with `bunx vitest run tests/puty/<file>.spec.yaml`.
 - The Puty suite is the preferred place for SQLite-backed storage assertions:
   input commands live in YAML `in`, expected committed rows live in YAML `out`.
@@ -184,7 +186,7 @@ If you need deeper or broader Rettangoli framework reference material, use
 
 ## Project Data Ownership
 
-- Project `name`, `description`, and `iconFileId` are owned by the project-specific DB `app` store as `projectInfo`, not repository/insieme state.
+- Project `name`, `description`, `language`, and `iconFileId` are owned by the project-specific DB `app` store as `projectInfo`, not repository/insieme state.
 - Global app-level `projectEntries` keep duplicated cached values for project listing and discovery, not source-of-truth ownership.
 - For an opened project, read and write those fields through `projectService` (`getCurrentProjectInfo`, `updateCurrentProjectInfo`), not `appService.getCurrentProjectEntry()`.
 
