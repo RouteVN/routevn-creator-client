@@ -48,7 +48,7 @@
       overflow: hidden;
       border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.1));
       background: #202020;
-      color: var(--foreground, #f5f5f5);
+      color: #f5f5f5;
       font-family: Roboto, "Segoe UI Variable", "Segoe UI", sans-serif;
       font-size: 12px;
       line-height: 1;
@@ -86,7 +86,7 @@
     #${WINDOW_CHROME_ID}[data-focused="false"] {
       color: color-mix(
         in srgb,
-        var(--foreground, #f5f5f5) 62%,
+        #f5f5f5 62%,
         transparent
       );
     }
@@ -187,7 +187,7 @@
       transition-duration: 0ms;
       background-color: color-mix(
         in srgb,
-        var(--foreground, #f5f5f5) 18%,
+        #f5f5f5 18%,
         transparent
       );
     }
@@ -288,7 +288,7 @@
         aria-label="Minimize"
       >
         <svg viewBox="0 0 12 12" aria-hidden="true">
-          <path d="M1.5 6h9" />
+          <path d="M1.5 6.5h9" />
         </svg>
       </button>
       <button

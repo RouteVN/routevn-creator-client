@@ -499,16 +499,28 @@ describe("standalone window chrome", () => {
     expect(document.documentElement.dataset.rvnWindowMaximized).toBe("false");
   });
 
-  it("uses centered Windows-style window control icons", async () => {
+  it("uses centered, theme-independent Windows-style window control icons", async () => {
     const harness = createWindowHarness();
     await flushTasks();
 
-    const chrome =
-      harness.dom.window.document.querySelector("#rvn-window-chrome");
-    const controlIconRule = [
-      ...harness.dom.window.document.querySelector("#rvn-window-chrome-styles")
-        .sheet.cssRules,
-    ].find(
+    const { document } = harness.dom.window;
+    const chrome = document.querySelector("#rvn-window-chrome");
+    const rules = [
+      ...document.querySelector("#rvn-window-chrome-styles").sheet.cssRules,
+    ];
+    const chromeRule = rules.find(
+      (rule) => rule.selectorText === "#rvn-window-chrome",
+    );
+    const unfocusedChromeRule = rules.find(
+      (rule) =>
+        rule.selectorText === '#rvn-window-chrome[data-focused="false"]',
+    );
+    const controlActiveRule = rules.find(
+      (rule) =>
+        rule.selectorText ===
+        "#rvn-window-chrome .rvn-window-chrome-control:active",
+    );
+    const controlIconRule = rules.find(
       (rule) =>
         rule.selectorText ===
         "#rvn-window-chrome .rvn-window-chrome-control svg",
@@ -528,8 +540,18 @@ describe("standalone window chrome", () => {
     );
 
     expect(appMenuButton.hasAttribute("data-tauri-drag-region")).toBe(false);
+    expect(chromeRule.style.getPropertyValue("color")).toBe("#f5f5f5");
+    expect(unfocusedChromeRule.style.getPropertyValue("color")).not.toContain(
+      "--foreground",
+    );
+    expect(
+      controlActiveRule.style.getPropertyValue("background-color"),
+    ).not.toContain("--foreground");
+    expect(controlIconRule.style.getPropertyValue("stroke")).toBe(
+      "currentColor",
+    );
     expect(controlIconRule.style.getPropertyValue("stroke-width")).toBe("1");
-    expect(minimizePath.getAttribute("d")).toBe("M1.5 6h9");
+    expect(minimizePath.getAttribute("d")).toBe("M1.5 6.5h9");
     expect(
       ["x", "y", "width", "height", "rx"].map((attribute) =>
         enterFullscreenRect.getAttribute(attribute),
