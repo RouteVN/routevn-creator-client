@@ -51,7 +51,7 @@ projectsPage:
   invalidProjectEntryImportAgain: "该项目条目无效。请从列表中移除后重新导入项目。"
   invalidProjectEntryRefresh: "该项目条目无效。请刷新项目页面后重试。"
   languageLabel: "语言"
-  languageMenuItem: "语言"
+  languageMenuItem: "语言（Beta）"
   languageTitle: "语言"
   lightThemeName: "浅色"
   localEmptyDescription: "创建本地项目，或导入现有项目开始使用"

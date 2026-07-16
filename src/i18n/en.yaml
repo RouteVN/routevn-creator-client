@@ -51,7 +51,7 @@ projectsPage:
   invalidProjectEntryImportAgain: "This project entry is invalid. Remove it from the list and import the project again."
   invalidProjectEntryRefresh: "This project entry is invalid. Refresh the projects page and try again."
   languageLabel: "Language"
-  languageMenuItem: "Language"
+  languageMenuItem: "Language (Beta)"
   languageTitle: "Language"
   lightThemeName: "Light"
   localEmptyDescription: "Create or open a local project to get started"

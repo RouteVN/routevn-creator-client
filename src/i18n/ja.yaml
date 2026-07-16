@@ -51,7 +51,7 @@ projectsPage:
   invalidProjectEntryImportAgain: "このプロジェクト項目は無効です。一覧から削除して、もう一度プロジェクトを取り込んでください。"
   invalidProjectEntryRefresh: "このプロジェクト項目は無効です。プロジェクトページを更新して、もう一度お試しください。"
   languageLabel: "言語"
-  languageMenuItem: "言語"
+  languageMenuItem: "言語（ベータ版）"
   languageTitle: "言語"
   lightThemeName: "ライト"
   localEmptyDescription: "ローカルプロジェクトを作成するか、既存のプロジェクトを取り込んで始めましょう"

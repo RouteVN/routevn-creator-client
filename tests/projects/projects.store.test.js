@@ -55,6 +55,7 @@ describe("projects.store addProject", () => {
 
   it("opens the app version menu with a check update action", () => {
     const state = createInitialState();
+    expect(EN_I18N.projectsPage.languageMenuItem).toBe("Language (Beta)");
     const items = [
       {
         label: EN_I18N.projectsPage.checkUpdateMenuItem,
