@@ -181,6 +181,9 @@ export const selectViewData = ({ state, i18n }) => {
         description: projectLanguageCopy.description,
         required: true,
         clearable: false,
+        searchable: true,
+        searchPlaceholder: projectLanguageCopy.searchPlaceholder,
+        emptySearchLabel: projectLanguageCopy.emptySearchLabel,
         options: createProjectLanguageOptions(i18n),
       },
       {

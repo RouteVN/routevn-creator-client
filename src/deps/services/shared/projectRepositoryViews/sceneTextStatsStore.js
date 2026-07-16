@@ -73,3 +73,10 @@ export const deleteSceneTextStatsCheckpoint = async ({ store, sceneId }) => {
     partition: getSceneTextStatsPartition(sceneId),
   });
 };
+
+export const isSceneTextStatsCheckpointFresh = ({
+  checkpoint,
+  latestRelevantRevision,
+}) =>
+  checkpoint?.viewVersion === SCENE_TEXT_STATS_VIEW_VERSION &&
+  Number(checkpoint?.lastCommittedId || 0) === latestRelevantRevision;

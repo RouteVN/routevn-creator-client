@@ -799,8 +799,17 @@ const getSceneEditorRoutePayload = (eventPayload = {}) => {
   return eventPayload.payload || {};
 };
 
-export const prepareSceneEditorNavigation = async (deps, { path } = {}) => {
-  if (normalizeRoutePath(path) === "/project/scene-editor") {
+export const prepareSceneEditorNavigation = async (
+  deps,
+  { path, payload } = {},
+) => {
+  const currentProjectId =
+    deps.projectService.getEnsuredProjectId?.() ??
+    deps.appService?.getCurrentProjectId?.();
+  if (
+    normalizeRoutePath(path) === "/project/scene-editor" &&
+    payload?.p === currentProjectId
+  ) {
     return;
   }
 

@@ -30,6 +30,7 @@ describe("scenes.store mobile layout", () => {
     state.sceneOverviewsById = {
       "scene-1": {
         textStats: {
+          lineCount: 3,
           wordCount: 4,
           characterCount: 18,
           language: "en",
@@ -39,7 +40,7 @@ describe("scenes.store mobile layout", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.selectedSceneTextStatsLabel).toBe("4 words");
+    expect(viewData.selectedSceneTextStatsLabel).toBe("3 lines 4 words");
   });
 
   it("exposes a character-count label for Japanese projects", () => {
@@ -59,6 +60,7 @@ describe("scenes.store mobile layout", () => {
     state.sceneOverviewsById = {
       "scene-1": {
         textStats: {
+          lineCount: 1,
           wordCount: 2,
           characterCount: 4,
           language: "ja",
@@ -68,7 +70,7 @@ describe("scenes.store mobile layout", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.selectedSceneTextStatsLabel).toBe("4 characters");
+    expect(viewData.selectedSceneTextStatsLabel).toBe("1 line 4 characters");
   });
 
   it("hides the selected scene word-count label when no count is cached", () => {
@@ -106,6 +108,7 @@ describe("scenes.store mobile layout", () => {
     state.sceneOverviewsById = {
       "scene-1": {
         textStats: {
+          lineCount: 0,
           wordCount: 0,
           characterCount: 4,
           language: "en",
@@ -116,6 +119,35 @@ describe("scenes.store mobile layout", () => {
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.selectedSceneTextStatsLabel).toBe("");
+  });
+
+  it("shows a cached line count when the scene has no text", () => {
+    const state = createInitialState();
+    state.selectedItemId = "scene-1";
+    state.scenesData = {
+      items: {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          name: "Scene 1",
+        },
+      },
+      tree: [{ id: "scene-1" }],
+    };
+    state.sceneOverviewsById = {
+      "scene-1": {
+        textStats: {
+          lineCount: 2,
+          wordCount: 0,
+          characterCount: 0,
+          language: "en",
+        },
+      },
+    };
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.selectedSceneTextStatsLabel).toBe("2 lines 0 words");
   });
 
   it("hides a cached count after the project language changes", () => {
@@ -135,6 +167,7 @@ describe("scenes.store mobile layout", () => {
     state.sceneOverviewsById = {
       "scene-1": {
         textStats: {
+          lineCount: 2,
           wordCount: 4,
           characterCount: 12,
           language: "en",

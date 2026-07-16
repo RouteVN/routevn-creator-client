@@ -154,6 +154,9 @@ const createLocalizedForm = (copy = {}, projectLanguageCopy, i18n) => ({
         ...field,
         label: projectLanguageCopy.label,
         description: projectLanguageCopy.description,
+        searchable: true,
+        searchPlaceholder: projectLanguageCopy.searchPlaceholder,
+        emptySearchLabel: projectLanguageCopy.emptySearchLabel,
         options: createProjectLanguageOptions(i18n),
       };
     }

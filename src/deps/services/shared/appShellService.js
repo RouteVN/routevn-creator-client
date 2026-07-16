@@ -104,6 +104,12 @@ export const createAppShellService = ({
     return router.getPayload()?.p ?? "";
   };
 
+  const prepareNavigation = async (payload = {}) => {
+    for (const handler of beforeNavigationHandlers) {
+      await handler(payload);
+    }
+  };
+
   return {
     setAppCopyProvider(provider) {
       appCopyProvider =
@@ -119,11 +125,7 @@ export const createAppShellService = ({
       };
     },
 
-    async prepareNavigation(payload = {}) {
-      for (const handler of beforeNavigationHandlers) {
-        await handler(payload);
-      }
-    },
+    prepareNavigation,
 
     navigate(path, payload, options = {}) {
       const timing =
@@ -174,8 +176,16 @@ export const createAppShellService = ({
       router.setPayload(payload, options);
     },
 
-    back() {
-      router.back();
+    async back() {
+      const target = router.getBackTarget?.();
+      if (target) {
+        await prepareNavigation(target);
+      }
+      return router.back();
+    },
+
+    canGoBack() {
+      return router.canGoBack?.() ?? true;
     },
 
     async openUrl(url) {

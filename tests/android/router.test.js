@@ -71,6 +71,25 @@ describe("android router", () => {
     expect(reloadedRouter.stack).toEqual(["/projects", "/project?p=project-1"]);
   });
 
+  it("returns the previous route without changing the stack", () => {
+    const storage = createStorageMock();
+    installStorage(storage);
+    const router = new AndroidRouter({ initialPath: "/projects" });
+    router.redirect("/project", { p: "project-1" });
+    router.redirect(
+      "/project/scene-editor",
+      { p: "project-1", s: "scene-1" },
+      { state: { source: "scene-map" } },
+    );
+
+    expect(router.getBackTarget()).toEqual({
+      path: "/project",
+      payload: { p: "project-1" },
+      historyState: {},
+    });
+    expect(router.getPathName()).toBe("/project/scene-editor");
+  });
+
   it("ignores invalid persisted stacks", () => {
     const storage = createStorageMock();
     storage.setItem(ROUTER_STACK_STORAGE_KEY, JSON.stringify([]));

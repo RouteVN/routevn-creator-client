@@ -63,6 +63,32 @@ describe("appShellService", () => {
     expect(calls).toHaveLength(2);
   });
 
+  it("prepares the previous route before changing the router stack", async () => {
+    const deps = createDeps();
+    const target = {
+      path: "/project/scene-editor",
+      payload: { p: "project-1", s: "scene-1" },
+      historyState: {},
+    };
+    deps.router.getBackTarget = vi.fn(() => target);
+    deps.router.back.mockImplementation(() => {
+      expect(preparationFinished).toBe(true);
+      return true;
+    });
+    const service = createAppShellService(deps);
+    let preparationFinished = false;
+    service.registerBeforeNavigation(async (payload) => {
+      expect(payload).toEqual(target);
+      await Promise.resolve();
+      preparationFinished = true;
+    });
+
+    await expect(service.back()).resolves.toBe(true);
+
+    expect(deps.router.getBackTarget).toHaveBeenCalledOnce();
+    expect(deps.router.back).toHaveBeenCalledOnce();
+  });
+
   it("forwards alert dialogs through showAlert", async () => {
     const deps = createDeps();
     const service = createAppShellService(deps);

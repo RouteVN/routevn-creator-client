@@ -45,6 +45,7 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
         selectSceneTextStatsRefreshHandle: vi.fn(() => undefined),
         refreshSceneTextStats: vi.fn(),
         selectSceneTextStats: vi.fn(() => ({
+          lineCount: 3,
           wordCount: 12,
           characterCount: 48,
         })),
@@ -72,6 +73,7 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
     expect(cacheSceneTextStats).toHaveBeenCalledWith({
       sceneId: "scene-1",
       textStats: {
+        lineCount: 3,
         wordCount: 12,
         characterCount: 48,
         language: "en",
@@ -87,15 +89,52 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
       },
       projectService: {
         cacheSceneTextStats: vi.fn(),
+        getEnsuredProjectId: vi.fn(() => "project-1"),
       },
     };
 
     await prepareSceneEditorNavigation(deps, {
       path: "/project/scene-editor",
+      payload: { p: "project-1", s: "scene-2" },
     });
 
     expect(deps.store.refreshSceneTextStats).not.toHaveBeenCalled();
     expect(deps.projectService.cacheSceneTextStats).not.toHaveBeenCalled();
+  });
+
+  it("flushes before the scene-editor route switches projects", async () => {
+    const deps = {
+      store: {
+        selectSceneId: vi.fn(() => "scene-1"),
+        selectSelectedSectionId: vi.fn(() => undefined),
+        selectDraftSaveTimerId: vi.fn(() => undefined),
+        selectPendingDraftSections: vi.fn(() => []),
+        selectDraftSection: vi.fn(() => undefined),
+        setDraftSavePendingSinceAt: vi.fn(),
+        selectSceneTextStatsRefreshHandle: vi.fn(() => undefined),
+        refreshSceneTextStats: vi.fn(),
+        selectSceneTextStats: vi.fn(() => ({
+          lineCount: 3,
+          wordCount: 12,
+          characterCount: 48,
+        })),
+        selectProjectLanguage: vi.fn(() => "en"),
+      },
+      projectService: {
+        cacheSceneTextStats: vi.fn(async () => {}),
+        getEnsuredProjectId: vi.fn(() => "project-1"),
+      },
+      refs: {},
+      render: vi.fn(),
+    };
+
+    await prepareSceneEditorNavigation(deps, {
+      path: "/project/scene-editor",
+      payload: { p: "project-2", s: "scene-2" },
+    });
+
+    expect(deps.store.selectPendingDraftSections).toHaveBeenCalled();
+    expect(deps.projectService.cacheSceneTextStats).toHaveBeenCalledOnce();
   });
 });
 
@@ -243,6 +282,7 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
       setDraftSavePendingSinceAt: vi.fn(),
       refreshSceneTextStats: vi.fn(),
       selectSceneTextStats: vi.fn(() => ({
+        lineCount: 1,
         wordCount: 4,
         characterCount: 16,
       })),
@@ -308,6 +348,7 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
     expect(projectService.cacheSceneTextStats).toHaveBeenNthCalledWith(1, {
       sceneId: "scene-1",
       textStats: {
+        lineCount: 1,
         wordCount: 4,
         characterCount: 16,
         language: "en",
@@ -316,6 +357,7 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
     expect(projectService.cacheSceneTextStats).toHaveBeenNthCalledWith(2, {
       sceneId: "scene-2",
       textStats: {
+        lineCount: 1,
         wordCount: 4,
         characterCount: 16,
         language: "en",

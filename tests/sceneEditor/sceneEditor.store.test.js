@@ -63,7 +63,7 @@ describe("sceneEditorLexical.store", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.sceneTextStatsLabel).toBe("6 characters");
+    expect(viewData.sceneTextStatsLabel).toBe("1 line 6 characters");
   });
 
   it("presents text size as a select with full labels", () => {

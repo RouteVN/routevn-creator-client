@@ -45,6 +45,9 @@ describe("project page store", () => {
         "This language determines whether writing goals use word or character counts.",
       required: true,
       clearable: false,
+      searchable: true,
+      searchPlaceholder: "Search languages...",
+      emptySearchLabel: "No languages found",
       options: [
         { value: "en", label: "English" },
         { value: "ja", label: "Japanese" },

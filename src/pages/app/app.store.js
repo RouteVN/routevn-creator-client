@@ -1,6 +1,7 @@
 export const createInitialState = () => ({
   platform: "web",
   currentRoute: "/projects",
+  currentRoutePayload: {},
   isTouchMode: false,
   isMobileSheetOpen: false,
   mobileSheetVariant: undefined,
@@ -173,9 +174,16 @@ export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform ?? "web";
 };
 
-export const setCurrentRoute = ({ state }, { route } = {}) => {
+export const setCurrentRoute = ({ state }, { route, payload } = {}) => {
   state.currentRoute = route;
+  state.currentRoutePayload = { ...payload };
 };
+
+export const selectCurrentRoute = ({ state }) => state.currentRoute;
+
+export const selectCurrentRoutePayload = ({ state }) => ({
+  ...state.currentRoutePayload,
+});
 
 export const openMobileSheet = ({ state }, { variant } = {}) => {
   state.isMobileSheetOpen = true;

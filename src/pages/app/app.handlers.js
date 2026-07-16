@@ -245,6 +245,7 @@ export const createRouteTransitionRunner = (deps) => {
     payload,
     historyMode,
     historyState,
+    navigationPrepared = false,
     shouldUpdateHistory = false,
     timing,
   } = {}) => {
@@ -271,12 +272,14 @@ export const createRouteTransitionRunner = (deps) => {
       canonicalPath,
     });
 
-    markNavigationTiming(routeTiming, "route.prepare-navigation.start");
-    await appService.prepareNavigation({
-      path: canonicalPath,
-      payload: nextPayload,
-    });
-    markNavigationTiming(routeTiming, "route.prepare-navigation.end");
+    if (!navigationPrepared) {
+      markNavigationTiming(routeTiming, "route.prepare-navigation.start");
+      await appService.prepareNavigation({
+        path: canonicalPath,
+        payload: nextPayload,
+      });
+      markNavigationTiming(routeTiming, "route.prepare-navigation.end");
+    }
     if (currentTransitionToken !== transitionToken) {
       return;
     }
@@ -293,7 +296,7 @@ export const createRouteTransitionRunner = (deps) => {
     if (isProjectRoute(canonicalPath) && !currentProjectId) {
       markNavigationTiming(routeTiming, "route.missing-project.redirect");
       appService.replace("/projects");
-      store.setCurrentRoute({ route: "/projects" });
+      store.setCurrentRoute({ route: "/projects", payload: {} });
       store.setRepositoryLoading({ isLoading: false });
       renderWithNavigationTiming({
         render,
@@ -330,7 +333,7 @@ export const createRouteTransitionRunner = (deps) => {
       isAlreadyEnsured,
       shouldReleaseEnsuredRepository,
     });
-    store.setCurrentRoute({ route: canonicalPath });
+    store.setCurrentRoute({ route: canonicalPath, payload: nextPayload });
     store.closeMobileSheet();
     store.setRepositoryLoading({
       isLoading: needsRepository && !isAlreadyEnsured,
@@ -476,7 +479,7 @@ export const createRouteTransitionRunner = (deps) => {
         appService.showAlert({ message: getProjectOpenErrorMessage(error) });
       }
       appService.redirect("/projects");
-      store.setCurrentRoute({ route: "/projects" });
+      store.setCurrentRoute({ route: "/projects", payload: {} });
       renderWithNavigationTiming({
         render,
         timing: routeTiming,
@@ -563,11 +566,41 @@ export const handleAfterMount = (deps) => {
     });
 };
 
-export const handleWindowPop = (deps) => {
-  const { appService } = deps;
-  deps.subject.dispatch("app.route.request", {
-    path: appService.getPath(),
-    payload: appService.getPayload(),
+export const handleWindowPop = async (deps) => {
+  const { appService, store, subject } = deps;
+  const copy = selectAppCopy(deps.i18n);
+  const destinationPath = appService.getPath();
+  const destinationPayload = appService.getPayload();
+  const destinationHistoryState = appService.getHistoryState();
+  const sourcePath = store.selectCurrentRoute();
+  const sourcePayload = store.selectCurrentRoutePayload();
+
+  appService.replace(sourcePath, sourcePayload, {
+    state: destinationHistoryState,
+  });
+
+  try {
+    await appService.prepareNavigation({
+      path: destinationPath,
+      payload: destinationPayload,
+    });
+  } catch (error) {
+    console.error("Failed to prepare back navigation:", error);
+    appService.showToast({
+      title: copy.errorTitle ?? "Error",
+      message: copy.navigationFailed ?? "Could not navigate. Please try again.",
+      status: "error",
+    });
+    return;
+  }
+
+  appService.replace(destinationPath, destinationPayload, {
+    state: destinationHistoryState,
+  });
+  subject.dispatch("app.route.request", {
+    path: destinationPath,
+    payload: destinationPayload,
+    navigationPrepared: true,
     shouldUpdateHistory: false,
   });
 };
@@ -739,6 +772,7 @@ const subscriptions = (deps) => {
           payload: nextPayload,
           historyMode,
           historyState: payload?.historyState,
+          navigationPrepared: payload?.navigationPrepared === true,
           timing,
         }).catch((error) => {
           markNavigationTiming(timing, "route.subscription.error", {

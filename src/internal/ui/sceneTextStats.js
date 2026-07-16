@@ -92,17 +92,26 @@ const collectLineTextParts = (line = {}, parts) => {
   });
 };
 
-export const getSceneTextForStats = (scene = {}) => {
+const collectSceneTextStatsInput = (scene = {}) => {
   const parts = [];
+  let lineCount = 0;
 
   toOrderedItems(scene?.sections).forEach((section) => {
-    toOrderedItems(section?.lines).forEach((line) => {
+    const lines = toOrderedItems(section?.lines);
+    lineCount += lines.length;
+    lines.forEach((line) => {
       collectLineTextParts(line, parts);
     });
   });
 
-  return parts.join(TEXT_PART_SEPARATOR);
+  return {
+    lineCount,
+    text: parts.join(TEXT_PART_SEPARATOR),
+  };
 };
+
+export const getSceneTextForStats = (scene = {}) =>
+  collectSceneTextStatsInput(scene).text;
 
 const countWordsWithSegmenter = (text, segmenter) => {
   let count = 0;
@@ -158,11 +167,13 @@ const countCharacters = (text, language) => {
 };
 
 export const createEmptySceneTextStats = () => ({
+  lineCount: 0,
   wordCount: 0,
   characterCount: 0,
 });
 
 export const normalizeSceneTextStats = (stats = {}) => ({
+  lineCount: Math.max(0, Math.trunc(Number(stats.lineCount) || 0)),
   wordCount: Math.max(0, Math.trunc(Number(stats.wordCount) || 0)),
   characterCount: Math.max(0, Math.trunc(Number(stats.characterCount) || 0)),
 });
@@ -182,12 +193,25 @@ export const getSceneTextStatsCount = (stats = {}, { language } = {}) => {
     : normalizedStats.wordCount;
 };
 
+export const hasSceneTextStats = (stats = {}, { language } = {}) => {
+  const normalizedStats = normalizeSceneTextStats(stats);
+  return (
+    normalizedStats.lineCount > 0 ||
+    getSceneTextStatsCount(normalizedStats, { language }) > 0
+  );
+};
+
 export const formatSceneTextStatsLabel = (
   stats = {},
   { language, copy = {} } = {},
 ) => {
+  const { lineCount } = normalizeSceneTextStats(stats);
   const count = getSceneTextStatsCount(stats, { language });
   const countMode = getProjectLanguageTextCountMode(language);
+  const lineTemplate =
+    lineCount === 1
+      ? (copy.sceneTextStatsLineLabel ?? "{count} line")
+      : (copy.sceneTextStatsLinesLabel ?? "{count} lines");
   let template;
   if (countMode === PROJECT_TEXT_COUNT_MODE_CHARACTER) {
     template =
@@ -201,20 +225,30 @@ export const formatSceneTextStatsLabel = (
         : (copy.sceneTextStatsWordsLabel ?? "{count} words");
   }
 
-  return formatI18nCopy(template, {
+  const lineLabel = formatI18nCopy(lineTemplate, {
+    count: formatSceneTextStatsNumber(lineCount),
+  });
+  const textCountLabel = formatI18nCopy(template, {
     count: formatSceneTextStatsNumber(count),
   });
+
+  return `${lineLabel} ${textCountLabel}`;
 };
 
 export const buildSceneTextStats = (scene = {}, { language } = {}) => {
-  const text = getSceneTextForStats(scene);
+  const { lineCount, text } = collectSceneTextStatsInput(scene);
   const normalizedLanguage = normalizeProjectLanguage(language);
 
   if (!text) {
-    return createEmptySceneTextStats();
+    return {
+      lineCount,
+      wordCount: 0,
+      characterCount: 0,
+    };
   }
 
   return {
+    lineCount,
     wordCount: countWords(text, normalizedLanguage),
     characterCount: countCharacters(text, normalizedLanguage),
   };

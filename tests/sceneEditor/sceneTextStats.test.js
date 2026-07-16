@@ -28,6 +28,7 @@ describe("sceneTextStats", () => {
 
     expect(getSceneTextForStats(scene)).not.toContain("Section name");
     expect(buildSceneTextStats(scene)).toEqual({
+      lineCount: 1,
       wordCount: 9,
       characterCount: 25,
     });
@@ -77,6 +78,7 @@ describe("sceneTextStats", () => {
     const stats = buildSceneTextStats(scene);
 
     expect(stats).toEqual({
+      lineCount: 1,
       wordCount: 3,
       characterCount: 12,
     });
@@ -103,6 +105,7 @@ describe("sceneTextStats", () => {
     };
 
     expect(buildSceneTextStats(scene, { language: "ja" })).toEqual({
+      lineCount: 1,
       wordCount: 3,
       characterCount: 6,
     });
@@ -129,6 +132,7 @@ describe("sceneTextStats", () => {
     };
 
     expect(buildSceneTextStats(scene, { language: "zh-hans" })).toEqual({
+      lineCount: 1,
       wordCount: 3,
       characterCount: 8,
     });
@@ -164,8 +168,25 @@ describe("sceneTextStats", () => {
 
     expect(getSceneTextForStats(scene)).toBe("Hello world\nGo home");
     expect(buildSceneTextStats(scene)).toEqual({
+      lineCount: 1,
       wordCount: 4,
       characterCount: 16,
+    });
+  });
+
+  it("counts line records that have no dialogue or choice text", () => {
+    const scene = {
+      sections: [
+        {
+          lines: [{ actions: {} }, { actions: { visual: { items: [] } } }],
+        },
+      ],
+    };
+
+    expect(buildSceneTextStats(scene)).toEqual({
+      lineCount: 2,
+      wordCount: 0,
+      characterCount: 0,
     });
   });
 });

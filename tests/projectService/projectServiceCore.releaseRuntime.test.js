@@ -214,6 +214,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
 
   it("caches scene text stats through the ensured repository contract", async () => {
     const textStats = {
+      lineCount: 3,
       wordCount: 12,
       characterCount: 48,
       language: "en",
@@ -255,6 +256,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
 
   it("merges separately cached text stats into loaded scene overviews", async () => {
     const textStats = {
+      lineCount: 3,
       wordCount: 12,
       characterCount: 48,
       language: "en",
@@ -264,6 +266,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
         "scene-1": {
           sceneId: "scene-1",
           textStats: {
+            lineCount: 24,
             wordCount: 99,
             characterCount: 396,
             language: "en",

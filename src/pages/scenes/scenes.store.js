@@ -3,7 +3,7 @@ import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerD
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   formatSceneTextStatsLabel,
-  getSceneTextStatsCount,
+  hasSceneTextStats,
 } from "../../internal/ui/sceneTextStats.js";
 import {
   DEFAULT_PROJECT_LANGUAGE,
@@ -463,9 +463,9 @@ export const selectViewData = ({ state, i18n }) => {
     const selectedSceneTextStats = selectedSceneOverview?.textStats;
     if (
       selectedSceneTextStats?.language === state.projectLanguage &&
-      getSceneTextStatsCount(selectedSceneTextStats, {
+      hasSceneTextStats(selectedSceneTextStats, {
         language: state.projectLanguage,
-      }) > 0
+      })
     ) {
       selectedSceneTextStatsLabel = formatSceneTextStatsLabel(
         selectedSceneTextStats,

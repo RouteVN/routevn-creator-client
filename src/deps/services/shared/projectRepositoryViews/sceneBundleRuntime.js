@@ -26,6 +26,7 @@ import {
 } from "./sceneOverviewStore.js";
 import {
   deleteSceneTextStatsCheckpoint,
+  isSceneTextStatsCheckpointFresh,
   loadSceneTextStatsCheckpoints,
   saveSceneTextStatsCheckpoint,
 } from "./sceneTextStatsStore.js";
@@ -202,6 +203,86 @@ export const createSceneBundleRuntime = ({
             latestRelevantMainRevision,
           ),
         );
+      }
+    }
+
+    return revisionsBySceneId;
+  };
+
+  const getTextStatsCheckpointRevision = (checkpoint) => {
+    if (!isCheckpointHistoryCompatible(checkpoint)) {
+      return 0;
+    }
+
+    const checkpointRevision = Number(checkpoint?.lastCommittedId);
+    const currentRevision = Number(getCurrentRevision());
+    if (
+      !Number.isFinite(checkpointRevision) ||
+      checkpointRevision < 0 ||
+      (Number.isFinite(currentRevision) && checkpointRevision > currentRevision)
+    ) {
+      return 0;
+    }
+
+    return Math.floor(checkpointRevision);
+  };
+
+  const getLatestTextStatsRevisionsForScenes = async ({
+    checkpointsBySceneId = new Map(),
+  } = {}) => {
+    const normalizedSceneIds = [...checkpointsBySceneId.keys()].filter(
+      isNonEmptyString,
+    );
+    const revisionsBySceneId = new Map(
+      normalizedSceneIds.map((sceneId) => [
+        sceneId,
+        getTextStatsCheckpointRevision(checkpointsBySceneId.get(sceneId)),
+      ]),
+    );
+    if (normalizedSceneIds.length === 0) {
+      return revisionsBySceneId;
+    }
+
+    const requestedSceneIds = new Set(normalizedSceneIds);
+    const sceneIdByPartition = new Map();
+    for (const sceneId of normalizedSceneIds) {
+      sceneIdByPartition.set(scenePartitionFor(sceneId), sceneId);
+      sceneIdByPartition.set(mainScenePartitionFor(sceneId), sceneId);
+    }
+
+    let sinceCommittedId = Number.MAX_SAFE_INTEGER;
+    for (const revision of revisionsBySceneId.values()) {
+      sinceCommittedId = Math.min(sinceCommittedId, revision);
+    }
+
+    for await (const committedBatch of iterateCommittedEventBatches({
+      listCommittedAfter,
+      sinceCommittedId,
+    })) {
+      for (const event of committedBatch) {
+        if (!doesCommittedEventAffectSceneTextStats(event)) {
+          continue;
+        }
+
+        const revision = getCommittedEventRevision(event);
+        const partitionSceneId = sceneIdByPartition.get(event?.partition);
+        if (partitionSceneId) {
+          revisionsBySceneId.set(
+            partitionSceneId,
+            Math.max(revisionsBySceneId.get(partitionSceneId) || 0, revision),
+          );
+        }
+
+        const command = committedEventToCommand(event);
+        for (const sceneId of command?.payload?.sceneIds ?? []) {
+          if (!requestedSceneIds.has(sceneId)) {
+            continue;
+          }
+          revisionsBySceneId.set(
+            sceneId,
+            Math.max(revisionsBySceneId.get(sceneId) || 0, revision),
+          );
+        }
       }
     }
 
@@ -431,12 +512,36 @@ export const createSceneBundleRuntime = ({
       sceneIds,
     });
 
-    return Object.fromEntries(
-      [...checkpointsBySceneId].map(([sceneId, checkpoint]) => [
-        sceneId,
-        structuredClone(checkpoint.value),
-      ]),
+    const latestRevisionsBySceneId = await getLatestTextStatsRevisionsForScenes(
+      {
+        checkpointsBySceneId,
+      },
     );
+
+    const textStatsBySceneId = {};
+    const staleSceneIds = [];
+    for (const [sceneId, checkpoint] of checkpointsBySceneId) {
+      if (
+        isCheckpointHistoryCompatible(checkpoint) &&
+        isSceneTextStatsCheckpointFresh({
+          checkpoint,
+          latestRelevantRevision: latestRevisionsBySceneId.get(sceneId),
+        })
+      ) {
+        textStatsBySceneId[sceneId] = structuredClone(checkpoint.value);
+        continue;
+      }
+
+      staleSceneIds.push(sceneId);
+    }
+
+    await Promise.all(
+      staleSceneIds.map((sceneId) =>
+        deleteSceneTextStatsCheckpoint({ store, sceneId }),
+      ),
+    );
+
+    return textStatsBySceneId;
   };
 
   const invalidateInactiveSceneOverviews = async () => {

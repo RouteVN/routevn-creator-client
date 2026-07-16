@@ -64,6 +64,7 @@ const updater = {
 };
 
 const subject = new Subject();
+let nativeBackInFlight = false;
 
 const notifyIOSBackState = () => {
   callIOSBridge("updateBackState", {
@@ -88,16 +89,47 @@ window.routeVNNativeBack = () => {
     return true;
   }
 
-  const didGoBack = router.back();
-  if (didGoBack) {
-    subject.dispatch("app.route.request", {
-      path: router.getPathName(),
-      payload: router.getPayload(),
-      shouldUpdateHistory: false,
-    });
+  if (!appService.canGoBack()) {
+    notifyIOSBackState();
+    return false;
   }
-  notifyIOSBackState();
-  return didGoBack;
+
+  if (nativeBackInFlight) {
+    return true;
+  }
+
+  nativeBackInFlight = true;
+  void appService
+    .back()
+    .then((didGoBack) => {
+      if (!didGoBack) {
+        return;
+      }
+
+      subject.dispatch("app.route.request", {
+        path: router.getPathName(),
+        payload: router.getPayload(),
+        historyState: router.getHistoryState(),
+        navigationPrepared: true,
+        shouldUpdateHistory: false,
+      });
+    })
+    .catch((error) => {
+      console.error("Failed to prepare iOS back navigation:", error);
+      const copy = appService.getAppCopy();
+      appService.showToast({
+        title: copy.errorTitle ?? "Error",
+        message:
+          copy.navigationFailed ?? "Could not go back. Please try again.",
+        status: "error",
+      });
+    })
+    .finally(() => {
+      nativeBackInFlight = false;
+      notifyIOSBackState();
+    });
+
+  return true;
 };
 
 const projectService = createProjectService({
