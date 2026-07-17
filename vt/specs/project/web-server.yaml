@@ -1,0 +1,73 @@
+---
+title: Project Web Server Page
+description: Covers the web server release route and its web-platform empty state.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: VT Project Web Server Page
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field1 input
+    steps:
+      - action: clear
+      - action: write
+        value: Covers the project web server page.
+  - action: wait
+    ms: 250
+  - action: select
+    selector: "#createProjectSubmitButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  - action: wait
+    ms: 500
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/releases/web-server
+  - action: waitFor
+    selector: rvn-web-server
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/releases/web-server
+  - action: wait
+    ms: 450
+  - action: screenshot
+---

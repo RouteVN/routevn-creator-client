@@ -8,7 +8,9 @@ Current target: one broader spec per page, with responsive coverage folded into 
 - Projects page responsive states on wide, laptop, tablet, and mobile viewports in one spec.
 - Project overview page with edit submit coverage.
 - About page route coverage.
+- Appearance page route, theme cards, and theme switching coverage.
 - Versions page empty, create, and edit coverage.
+- Web server release route and web-platform empty state coverage.
 - Scenes page map creation, preview, scene editor, and sections overview coverage.
 
 ## Images

@@ -56,12 +56,10 @@ steps:
     timeoutMs: 10000
   - action: wait
     ms: 500
-  - action: keypress
-    key: g
-  - action: wait
-    ms: 120
-  - action: keypress
-    key: c
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/characters
   - action: waitFor
     selector: rvn-characters
     state: attached
@@ -191,7 +189,9 @@ steps:
   - action: select
     selector: "#previewOverlay"
     steps:
-      - action: click
+      - action: focus
+  - action: keypress
+    key: Escape
   - action: waitFor
     selector: "#previewOverlay"
     state: hidden

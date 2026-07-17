@@ -192,7 +192,9 @@ steps:
   - action: select
     selector: "#previewOverlay"
     steps:
-      - action: click
+      - action: focus
+  - action: keypress
+    key: Escape
   - action: waitFor
     selector: "#previewOverlay"
     state: hidden
@@ -335,7 +337,9 @@ steps:
   - action: select
     selector: "#previewOverlay"
     steps:
-      - action: click
+      - action: focus
+  - action: keypress
+    key: Escape
   - action: waitFor
     selector: "#previewOverlay"
     state: hidden

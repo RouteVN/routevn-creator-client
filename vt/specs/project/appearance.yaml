@@ -1,6 +1,6 @@
 ---
-title: Text Styles Workflow
-description: Covers the text styles page detail, edit dialog, and empty search state.
+title: Project Appearance Page
+description: Covers the appearance page route, theme cards, and theme switching.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -27,13 +27,13 @@ steps:
     steps:
       - action: clear
       - action: write
-        value: VT Text Styles Workflow
+        value: VT Project Appearance Page
   - action: select
     selector: rtgl-form#createProjectForm rtgl-input#field1 input
     steps:
       - action: clear
       - action: write
-        value: Covers the text styles page.
+        value: Covers the project appearance page.
   - action: wait
     ms: 250
   - action: select
@@ -59,64 +59,26 @@ steps:
   - action: customEvent
     name: routevn:vt:navigate
     detail:
-      path: /project/text-styles
+      path: /project/appearance
   - action: waitFor
-    selector: rvn-text-styles
+    selector: rvn-appearance
     state: attached
     timeoutMs: 10000
   - action: assert
     type: url
-    value: /project/text-styles
+    value: /project/appearance
+  - action: waitFor
+    selector: "#themeCard1"
+    state: visible
+    timeoutMs: 5000
   - action: wait
     ms: 450
   - action: screenshot
-  - action: waitFor
-    selector: "#typographyView #itemRef0x0"
-    state: visible
-    timeoutMs: 20000
   - action: select
-    selector: "#typographyView #itemRef0x0"
+    selector: "#themeCard1"
     steps:
       - action: click
-  - action: waitFor
-    selector: "#detailView"
-    state: attached
-    timeoutMs: 5000
   - action: wait
-    ms: 300
-  - action: screenshot
-  - action: select
-    selector: "#typographyView #itemRef0x0"
-    steps:
-      - action: dblclick
-  - action: waitFor
-    selector: "#addTypographyDialog"
-    state: visible
-    timeoutMs: 5000
-  - action: wait
-    ms: 400
-  - action: screenshot
-  - action: keypress
-    key: Escape
-  - action: waitFor
-    selector: "#addTypographyDialog"
-    state: hidden
-    timeoutMs: 10000
-  - action: select
-    selector: "#tagFilterButton"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "#tagFilterPopover[open]"
-    state: attached
-    timeoutMs: 5000
-  - action: select
-    selector: "#tagFilterPopover rtgl-input#searchInput"
-    steps:
-      - action: clear
-      - action: write
-        value: zzzz vt text style
-  - action: wait
-    ms: 350
+    ms: 450
   - action: screenshot
 ---
