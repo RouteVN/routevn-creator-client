@@ -163,7 +163,7 @@ export const createFileExplorerKeyboardScopeHandlers = ({
       return;
     }
 
-    if (isBackShortcut && typeof onBackKey === "function") {
+    if (isBackShortcut && !event.repeat && typeof onBackKey === "function") {
       event.preventDefault();
       event.stopPropagation();
       onBackKey({ deps, event });

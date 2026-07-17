@@ -12,20 +12,25 @@ const createWindowMock = () => {
     pathname: "/project/scene-editor",
     search: "?p=project-1",
   };
+  const history = {
+    state: {},
+    replaceState: vi.fn((state, _title, path) => {
+      history.state = state;
+      setLocationFromPath(location, path);
+    }),
+    pushState: vi.fn((state, _title, path) => {
+      history.state = state;
+      setLocationFromPath(location, path);
+    }),
+    back: vi.fn(),
+    go: vi.fn(),
+  };
 
   return {
     addEventListener: vi.fn(),
     location,
     removeEventListener: vi.fn(),
-    history: {
-      replaceState: vi.fn((_state, _title, path) => {
-        setLocationFromPath(location, path);
-      }),
-      pushState: vi.fn((_state, _title, path) => {
-        setLocationFromPath(location, path);
-      }),
-      back: vi.fn(),
-    },
+    history,
   };
 };
 
@@ -52,18 +57,63 @@ describe("web router payload updates", () => {
     const listener = vi.fn();
 
     const unsubscribe = router.subscribePopState(listener);
+    const popStateHandler = windowMock.addEventListener.mock.calls[0][1];
 
     expect(windowMock.addEventListener).toHaveBeenCalledWith(
       "popstate",
-      listener,
+      popStateHandler,
     );
+
+    popStateHandler({ type: "popstate" });
+    expect(listener).toHaveBeenCalledWith({ type: "popstate" });
 
     unsubscribe();
 
     expect(windowMock.removeEventListener).toHaveBeenCalledWith(
       "popstate",
-      listener,
+      popStateHandler,
     );
+  });
+
+  it("restores a failed pop without dispatching another route pop", () => {
+    const windowMock = createWindowMock();
+    vi.stubGlobal("window", windowMock);
+    const router = new WebRouter();
+    const listener = vi.fn();
+    router.subscribePopState(listener);
+    const popStateHandler = windowMock.addEventListener.mock.calls[0][1];
+    const destinationState = { ...windowMock.history.state };
+    router.redirect("/projects", {});
+    popStateHandler({ state: destinationState, type: "popstate" });
+    listener.mockClear();
+
+    router.restoreAfterFailedPop();
+    popStateHandler({ state: windowMock.history.state, type: "popstate" });
+
+    expect(windowMock.history.go).toHaveBeenCalledWith(1);
+    expect(listener).not.toHaveBeenCalled();
+
+    popStateHandler({ type: "popstate" });
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("restores across multiple pending pop entries", () => {
+    const windowMock = createWindowMock();
+    vi.stubGlobal("window", windowMock);
+    const router = new WebRouter();
+    router.subscribePopState(vi.fn());
+    const popStateHandler = windowMock.addEventListener.mock.calls[0][1];
+    const oldestState = { ...windowMock.history.state };
+    router.redirect("/project/characters", { p: "project-1" });
+    router.redirect("/project/character-sprites", {
+      characterId: "character-1",
+      p: "project-1",
+    });
+
+    popStateHandler({ state: oldestState, type: "popstate" });
+    router.restoreAfterFailedPop();
+
+    expect(windowMock.history.go).toHaveBeenCalledWith(2);
   });
 
   it("coalesces throttled payload writes and exposes the pending payload", () => {

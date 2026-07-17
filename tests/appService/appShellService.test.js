@@ -87,6 +87,23 @@ describe("appShellService", () => {
 
     expect(deps.router.getBackTarget).toHaveBeenCalledOnce();
     expect(deps.router.back).toHaveBeenCalledOnce();
+    expect(deps.subject.dispatch).toHaveBeenCalledWith("app.route.request", {
+      path: "/projects",
+      payload: { p: "project-1" },
+      historyState: {},
+      navigationPrepared: true,
+      shouldUpdateHistory: false,
+    });
+  });
+
+  it("leaves web history route updates to popstate", async () => {
+    const deps = createDeps();
+    deps.router.back.mockReturnValue(undefined);
+    const service = createAppShellService(deps);
+
+    await expect(service.back()).resolves.toBeUndefined();
+
+    expect(deps.subject.dispatch).not.toHaveBeenCalled();
   });
 
   it("forwards alert dialogs through showAlert", async () => {

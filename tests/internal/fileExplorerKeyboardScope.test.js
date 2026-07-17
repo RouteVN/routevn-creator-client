@@ -337,6 +337,22 @@ describe("fileExplorerKeyboardScope", () => {
     expect(event.stopPropagation).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores repeated Shift+H keydowns", () => {
+    const onBackKey = vi.fn();
+    const deps = createDeps();
+    const { handleKeyboardScopeKeyDown } =
+      createFileExplorerKeyboardScopeHandlers({ onBackKey });
+    const event = createKeyEvent("H", { repeat: true, shiftKey: true });
+
+    handleKeyboardScopeKeyDown(deps, {
+      _event: event,
+    });
+
+    expect(onBackKey).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(event.stopPropagation).not.toHaveBeenCalled();
+  });
+
   it("runs the edit handler for the selected explorer item when e is pressed", () => {
     const onEditKey = vi.fn();
     const fileExplorer = {

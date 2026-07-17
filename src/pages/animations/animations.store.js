@@ -11,6 +11,10 @@ import {
   formatAnimationDurationLabel,
   toAnimationDisplayItem,
 } from "../../internal/animationDisplay.js";
+import {
+  createDefaultInitialValuesByProperty,
+  createPropertyFieldConfig,
+} from "../../internal/animationPreview.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { selectAnimationsPageCopy } from "./support/animationsPageCopy.js";
 
@@ -254,11 +258,14 @@ const createAnimationCenterItemContextMenuItems = (copy = {}) => [
   },
 ];
 
-const buildCatalogItem = (item, { copy = {} } = {}) => {
+const buildCatalogItem = (item, { copy = {}, state } = {}) => {
   const displayItem = toAnimationDisplayItem(item);
   return {
     ...displayItem,
     animationTypeLabel: getAnimationTypeLabel(displayItem.animationType, copy),
+    timelineDefaultValues: createDefaultInitialValuesByProperty(
+      createPropertyFieldConfig(state.projectResolution),
+    ),
   };
 };
 

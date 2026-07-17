@@ -199,12 +199,12 @@ template:
                                                           - rvn-keyframe-timeline w=f ?showRuler=true ?showTracks=false timelineDuration=${item.transitionTimelineDuration}: null
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: Out
-                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties}: null
+                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties} :defaultValues=${item.timelineDefaultValues}: null
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: In
-                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties}: null
+                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties} :defaultValues=${item.timelineDefaultValues}: null
                                                     $else:
-                                                      - rvn-keyframe-timeline w=f ?showRuler=true :properties=${item.updateProperties}: null
+                                                      - rvn-keyframe-timeline w=f ?showRuler=true :properties=${item.updateProperties} :defaultValues=${item.timelineDefaultValues}: null
                                             $else:
                                               - rtgl-view w=${item.catalogTextWidth} h=152 d=v ah=c av=c br=md p=md g=sm:
                                                   - rtgl-text s=md ellipsis w=f: ${item.name}

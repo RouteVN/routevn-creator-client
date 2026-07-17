@@ -93,22 +93,17 @@ describe("app route transitions", () => {
     expect(appService.prepareNavigation).not.toHaveBeenCalled();
   });
 
-  it("prepares browser back navigation in the rendered route context", async () => {
-    let currentPath = "/projects";
-    let currentPayload = {};
+  it("prepares browser back navigation without rewriting the popped entry", async () => {
+    const currentPath = "/projects";
+    const currentPayload = {};
     const calls = [];
     const appService = {
       getPath: vi.fn(() => currentPath),
       getPayload: vi.fn(() => ({ ...currentPayload })),
-      getHistoryState: vi.fn(() => ({ entry: "destination" })),
-      replace: vi.fn((path, payload) => {
-        currentPath = path;
-        currentPayload = { ...payload };
-        calls.push(`replace:${path}:${payload?.p ?? "none"}`);
-      }),
       prepareNavigation: vi.fn(async () => {
         calls.push(`prepare:${currentPath}:${currentPayload.p}`);
       }),
+      acceptCurrentHistoryEntry: vi.fn(),
       showToast: vi.fn(),
     };
     const subject = {
@@ -128,18 +123,72 @@ describe("app route transitions", () => {
 
     await handleWindowPop(deps);
 
-    expect(calls).toEqual([
-      "replace:/project/scene-editor:project-1",
-      "prepare:/project/scene-editor:project-1",
-      "replace:/projects:none",
-      "dispatch",
-    ]);
+    expect(calls).toEqual(["prepare:/projects:undefined", "dispatch"]);
     expect(subject.dispatch).toHaveBeenCalledWith("app.route.request", {
       path: "/projects",
       payload: {},
       navigationPrepared: true,
       shouldUpdateHistory: false,
     });
+  });
+
+  it("restores browser history after current pop preparation fails", async () => {
+    const error = new Error("draft flush failed");
+    const appService = {
+      getPath: vi.fn(() => "/projects"),
+      getPayload: vi.fn(() => ({})),
+      prepareNavigation: vi.fn(async () => {
+        throw error;
+      }),
+      restoreAfterFailedHistoryPop: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const subject = {
+      dispatch: vi.fn(),
+    };
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    await handleWindowPop({ appService, i18n: {}, subject });
+
+    expect(appService.restoreAfterFailedHistoryPop).toHaveBeenCalledOnce();
+    expect(appService.showToast).toHaveBeenCalledWith({
+      title: "Error",
+      message: "Could not navigate. Please try again.",
+      status: "error",
+    });
+    expect(subject.dispatch).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("discards stale pop preparation completions", async () => {
+    let finishPreparation;
+    let isCurrent = true;
+    const appService = {
+      getPath: vi.fn(() => "/projects"),
+      getPayload: vi.fn(() => ({})),
+      prepareNavigation: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finishPreparation = resolve;
+          }),
+      ),
+      showToast: vi.fn(),
+    };
+    const subject = {
+      dispatch: vi.fn(),
+    };
+    const transition = handleWindowPop(
+      { appService, i18n: {}, subject },
+      { shouldContinue: () => isCurrent },
+    );
+
+    isCurrent = false;
+    finishPreparation();
+    await transition;
+
+    expect(subject.dispatch).not.toHaveBeenCalled();
   });
 
   it("routes popstate subject actions through the app transition", async () => {
@@ -164,6 +213,7 @@ describe("app route transitions", () => {
       getPlatform: vi.fn(() => "web"),
       prepareNavigation: vi.fn(async () => {}),
       refreshCurrentProjectEntry: vi.fn(async () => {}),
+      acceptCurrentHistoryEntry: vi.fn(),
       replace: vi.fn((path, payload) => {
         currentPath = path;
         currentPayload = { ...payload };

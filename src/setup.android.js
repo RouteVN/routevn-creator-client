@@ -89,19 +89,6 @@ window.routeVNNativeBack = () => {
   nativeBackInFlight = true;
   void appService
     .back()
-    .then((didGoBack) => {
-      if (!didGoBack) {
-        return;
-      }
-
-      subject.dispatch("app.route.request", {
-        path: router.getPathName(),
-        payload: router.getPayload(),
-        historyState: router.getHistoryState(),
-        navigationPrepared: true,
-        shouldUpdateHistory: false,
-      });
-    })
     .catch((error) => {
       console.error("Failed to prepare Android back navigation:", error);
       const copy = appService.getAppCopy();
