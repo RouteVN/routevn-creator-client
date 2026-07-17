@@ -4,9 +4,8 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { fileTypeFromBuffer } from "file-type";
 import JSZip from "jszip";
 import {
-  getTemplateFiles,
-  getTemplateFileSourceName,
   loadTemplate,
+  getTemplateFiles,
 } from "../../clients/web/templateLoader.js";
 import {
   PROJECT_DB_NAME,
@@ -390,17 +389,13 @@ const createLocalOnlyProjectCollabSession = ({
   };
 };
 
-async function copyTemplateFiles(templateId, templateData, targetPath) {
+async function copyTemplateFiles(templateId, targetPath) {
   const templateFilesPath = `/templates/${templateId}/files/`;
   const filesToCopy = await getTemplateFiles(templateId);
 
   for (const fileId of filesToCopy) {
     try {
-      const sourceFileName = getTemplateFileSourceName({
-        fileId,
-        templateData,
-      });
-      const sourcePath = templateFilesPath + sourceFileName;
+      const sourcePath = templateFilesPath + fileId;
       const targetFilePath = await join(targetPath, fileId);
 
       const response = await fetch(sourcePath);
@@ -984,7 +979,7 @@ export const createTauriProjectServiceAdapters = ({
         loadedTemplateData,
         resolvedProjectResolution,
       );
-      await copyTemplateFiles(template, loadedTemplateData, filesPath);
+      await copyTemplateFiles(template, filesPath);
 
       assertSupportedProjectState(templateData);
 

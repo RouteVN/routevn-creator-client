@@ -1,7 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { BASE58_ALPHABET, DEFAULT_ID_LENGTH } from "../../src/internal/id.js";
-import { getTemplateFileSourceName } from "../../src/deps/clients/web/templateLoader.js";
 
 const defaultRepositoryTemplate = JSON.parse(
   readFileSync(
@@ -72,14 +71,7 @@ describe("default template id format", () => {
   });
 
   it("keeps the template file manifest aligned with on-disk files", () => {
-    const sourceFileNames = defaultTemplateFiles.files.map((fileId) =>
-      getTemplateFileSourceName({
-        fileId,
-        templateData: defaultRepositoryTemplate,
-      }),
-    );
-
-    expect(sourceFileNames.sort()).toEqual(
+    expect([...defaultTemplateFiles.files].sort()).toEqual(
       [...defaultTemplateFileNames].sort(),
     );
   });

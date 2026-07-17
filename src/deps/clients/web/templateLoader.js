@@ -1,19 +1,3 @@
-const TEMPLATE_FILE_EXTENSION_BY_MIME_TYPE = {
-  "font/ttf": "ttf",
-  "image/jpeg": "jpg",
-  "image/png": "png",
-};
-
-export const getTemplateFileSourceName = ({ fileId, templateData }) => {
-  const mimeType = templateData.files.items[fileId].mimeType;
-  const extension = TEMPLATE_FILE_EXTENSION_BY_MIME_TYPE[mimeType];
-  if (!extension) {
-    throw new Error(`Unsupported template file MIME type: ${mimeType}`);
-  }
-
-  return `${fileId}.${extension}`;
-};
-
 export async function loadTemplate(templateId = "default") {
   try {
     const response = await fetch(`/templates/${templateId}/repository.json`);

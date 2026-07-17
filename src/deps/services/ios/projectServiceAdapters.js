@@ -1,8 +1,7 @@
 import JSZip from "jszip";
 import {
-  getTemplateFiles,
-  getTemplateFileSourceName,
   loadTemplate,
+  getTemplateFiles,
 } from "../../clients/web/templateLoader.js";
 import {
   base64ToUint8Array,
@@ -391,11 +390,7 @@ const copyTemplateFiles = async ({ templateId, projectId, templateData }) => {
 
   for (const fileId of filesToCopy) {
     try {
-      const sourceFileName = getTemplateFileSourceName({
-        fileId,
-        templateData,
-      });
-      const sourcePath = templateFilesPath + sourceFileName;
+      const sourcePath = templateFilesPath + fileId;
       const response = await fetch(sourcePath);
       if (response.ok) {
         const blob = await response.blob();

@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
-  getTemplateFileSourceName: vi.fn(),
   getTemplateFiles: vi.fn(),
   loadTemplate: vi.fn(),
   resolveProjectResolutionForWrite: vi.fn(),
@@ -9,7 +8,6 @@ const mocked = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/deps/clients/web/templateLoader.js", () => ({
-  getTemplateFileSourceName: mocked.getTemplateFileSourceName,
   getTemplateFiles: mocked.getTemplateFiles,
   loadTemplate: mocked.loadTemplate,
 }));
@@ -278,7 +276,6 @@ const createRawClientStoreStub = ({
 describe("webRepositoryAdapter", () => {
   beforeEach(async () => {
     globalThis.indexedDB = createIndexedDbStub();
-    mocked.getTemplateFileSourceName.mockReset();
     mocked.getTemplateFiles.mockReset();
     mocked.loadTemplate.mockReset();
     mocked.resolveProjectResolutionForWrite.mockReset();
@@ -442,23 +439,35 @@ describe("webRepositoryAdapter", () => {
     ).resolves.toBe(21);
   });
 
-  it("copies template assets from extension-bearing source URLs into extensionless project file ids", async () => {
+  it("copies extensionless template assets without requesting Vite raw modules", async () => {
     const projectId = "web-template-file-project";
     const rawClientStore = createRawClientStoreStub();
-    const fontBlob = new Blob([new Uint8Array([0, 1, 0, 0])], {
-      type: "font/ttf",
+    const templateState = structuredClone(initialProjectData);
+    templateState.files = {
+      items: {
+        "font-file-id": {
+          id: "font-file-id",
+          type: "font",
+          mimeType: "font/ttf",
+          size: 4,
+          sha256: "font-sha",
+        },
+      },
+      tree: [{ id: "font-file-id" }],
+    };
+    const sourceBlob = new Blob([new Uint8Array([0, 1, 0, 0])], {
+      type: "application/octet-stream",
     });
     const fetchTemplateFile = vi.fn(async () => ({
       ok: true,
-      blob: async () => fontBlob,
+      blob: async () => sourceBlob,
     }));
     vi.stubGlobal("fetch", fetchTemplateFile);
 
     mocked.getTemplateFiles.mockResolvedValue(["font-file-id"]);
-    mocked.getTemplateFileSourceName.mockReturnValue("font-file-id.ttf");
-    mocked.loadTemplate.mockResolvedValue(structuredClone(initialProjectData));
+    mocked.loadTemplate.mockResolvedValue(templateState);
     mocked.resolveProjectResolutionForWrite.mockReturnValue(
-      structuredClone(initialProjectData.project.resolution),
+      structuredClone(templateState.project.resolution),
     );
     mocked.scaleTemplateProjectStateForResolution.mockImplementation(
       (templateData) => templateData,
@@ -471,13 +480,13 @@ describe("webRepositoryAdapter", () => {
         id: projectId,
         name: "Browser Project",
       },
-      projectResolution: initialProjectData.project.resolution,
+      projectResolution: templateState.project.resolution,
       creatorVersion: 21,
       rawClientStore,
     });
 
     expect(fetchTemplateFile).toHaveBeenCalledWith(
-      "/templates/blank/files/font-file-id.ttf",
+      "/templates/blank/files/font-file-id",
     );
     const adapter = await createInsiemeWebStoreAdapter(projectId, {
       rawClientStore,
@@ -485,7 +494,7 @@ describe("webRepositoryAdapter", () => {
     const storedFont = await adapter.getFile("font-file-id");
     expect(storedFont.type).toBe("font/ttf");
     expect(new Uint8Array(await storedFont.arrayBuffer())).toEqual(
-      new Uint8Array(await fontBlob.arrayBuffer()),
+      new Uint8Array(await sourceBlob.arrayBuffer()),
     );
   });
 

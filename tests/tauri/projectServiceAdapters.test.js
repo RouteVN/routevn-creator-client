@@ -17,7 +17,6 @@ const mocked = vi.hoisted(() => ({
   getManagedSqliteConnection: vi.fn(),
   createPersistedTauriProjectStore: vi.fn(),
   loadTemplate: vi.fn(),
-  getTemplateFileSourceName: vi.fn(),
   getTemplateFiles: vi.fn(async () => []),
   resolveProjectResolutionForWrite: vi.fn(),
   scaleTemplateProjectStateForResolution: vi.fn(),
@@ -99,7 +98,6 @@ vi.mock("../../src/deps/services/shared/projectRepository.js", async () => {
 
 vi.mock("../../src/deps/clients/web/templateLoader.js", () => ({
   loadTemplate: mocked.loadTemplate,
-  getTemplateFileSourceName: mocked.getTemplateFileSourceName,
   getTemplateFiles: mocked.getTemplateFiles,
 }));
 
@@ -185,7 +183,6 @@ describe("tauri project service adapters preflight reads", () => {
     mocked.getManagedSqliteConnection.mockReset();
     mocked.createPersistedTauriProjectStore.mockReset();
     mocked.loadTemplate.mockReset();
-    mocked.getTemplateFileSourceName.mockReset();
     mocked.getTemplateFiles.mockReset();
     mocked.resolveProjectResolutionForWrite.mockReset();
     mocked.scaleTemplateProjectStateForResolution.mockReset();

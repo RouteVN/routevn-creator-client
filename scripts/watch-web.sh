@@ -9,7 +9,7 @@ if [ ! -x "${RTGL_BIN}" ]; then
   exit 1
 fi
 
-echo "Preparing Tauri watch static assets..."
+echo "Preparing web watch static assets..."
 ./scripts/prepare-watch-static-assets.sh
 
-exec "${RTGL_BIN}" fe watch -s src/setup.tauri.js
+exec "${RTGL_BIN}" fe watch -s src/setup.web.js

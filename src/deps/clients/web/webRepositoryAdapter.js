@@ -1,8 +1,4 @@
-import {
-  getTemplateFiles,
-  getTemplateFileSourceName,
-  loadTemplate,
-} from "./templateLoader.js";
+import { loadTemplate, getTemplateFiles } from "./templateLoader.js";
 import {
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
@@ -112,16 +108,14 @@ async function copyTemplateFiles(templateId, templateData, adapter) {
 
   for (const fileId of filesToCopy) {
     try {
-      const sourceFileName = getTemplateFileSourceName({
-        fileId,
-        templateData,
-      });
-      const sourcePath = templateFilesPath + sourceFileName;
+      const sourcePath = templateFilesPath + fileId;
 
       // Fetch from the web server and save to IndexedDB
       const response = await fetch(sourcePath);
       if (response.ok) {
-        const blob = await response.blob();
+        const sourceBlob = await response.blob();
+        const mimeType = templateData.files.items[fileId].mimeType;
+        const blob = new Blob([sourceBlob], { type: mimeType });
         await adapter.setFile(fileId, blob);
       }
     } catch (error) {
