@@ -475,6 +475,7 @@ describe("standalone window chrome", () => {
     const controlActiveRule = rules.get(
       "#rvn-window-chrome .rvn-window-chrome-control:active",
     );
+    const customRootRule = rules.get(':root[data-rvn-window-chrome="custom"]');
     const windowedRootRule = rules.get(
       ':root[data-rvn-window-chrome="custom"][data-rvn-window-fullscreen="false"][data-rvn-window-maximized="false"]',
     );
@@ -513,6 +514,12 @@ describe("standalone window chrome", () => {
     expect(
       windowedRootRule.getPropertyValue("--rvn-window-content-offset"),
     ).toBe("var(--rvn-window-chrome-height)");
+    expect(customRootRule.getPropertyValue("--rvn-app-viewport-height")).toBe(
+      "100vh",
+    );
+    expect(windowedRootRule.getPropertyValue("--rvn-app-viewport-height")).toBe(
+      "calc(\n        100vh - var(--rvn-window-chrome-height)\n      )",
+    );
     expect(bodyRule.getPropertyValue("top")).toBe(
       "var(--rvn-window-content-offset)",
     );

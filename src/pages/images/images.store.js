@@ -235,8 +235,11 @@ const {
   },
   hiddenMobileDetailSlots: ["image-file-id"],
   extendViewData: ({ state, baseViewData, copy }) => {
-    const selectedItemId = state.selectedItemId;
-    const previewImage = state.data?.items?.[selectedItemId];
+    const previewItemId = state.fullImagePreviewItemId ?? state.selectedItemId;
+    const previewImage = state.data?.items?.[previewItemId];
+    const previewFlatItem = baseViewData.flatItems.find(
+      (item) => item.id === previewItemId,
+    );
     const projectResolution = requireProjectResolution(
       state.projectResolution,
       copy.projectResolutionLabel,
@@ -245,17 +248,17 @@ const {
       mediaGroups: baseViewData.mediaGroups,
       items: state.data?.items,
     });
-    const previousItemId = selectedItemId
+    const previousItemId = previewItemId
       ? resolveAdjacentImageItemId({
           visibleImageIds,
-          itemId: selectedItemId,
+          itemId: previewItemId,
           direction: "previous",
         })
       : undefined;
-    const nextItemId = selectedItemId
+    const nextItemId = previewItemId
       ? resolveAdjacentImageItemId({
           visibleImageIds,
-          itemId: selectedItemId,
+          itemId: previewItemId,
           direction: "next",
         })
       : undefined;
@@ -269,6 +272,7 @@ const {
         projectResolution,
         previousItemId,
         nextItemId,
+        breadcrumb: previewFlatItem?.fullLabel ?? previewImage?.name,
         copy,
       }),
     );
@@ -293,6 +297,7 @@ const {
 export const createInitialState = () => ({
   ...createMediaInitialState(),
   fullImagePreviewVisible: false,
+  fullImagePreviewItemId: undefined,
   fullImagePreviewFileId: undefined,
   fullImagePreviewDisplayMode: IMAGE_PREVIEW_DISPLAY_MODE_CANVAS,
   fullImagePreviewTouchStartPoint: undefined,
@@ -369,6 +374,7 @@ export const showFullImagePreview = ({ state }, { itemId } = {}) => {
     state.fullImagePreviewDisplayMode = IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
   }
   state.fullImagePreviewVisible = true;
+  state.fullImagePreviewItemId = itemId;
   state.fullImagePreviewFileId = item.fileId;
   state.fullImagePreviewTouchStartPoint = undefined;
   state.fullImagePreviewSuppressNextClick = false;
@@ -376,6 +382,7 @@ export const showFullImagePreview = ({ state }, { itemId } = {}) => {
 
 export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
+  state.fullImagePreviewItemId = undefined;
   state.fullImagePreviewFileId = undefined;
   state.fullImagePreviewTouchStartPoint = undefined;
   state.fullImagePreviewSuppressNextClick = false;

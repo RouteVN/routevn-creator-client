@@ -174,6 +174,34 @@ describe("images view", () => {
     expect(overlayRefs).toContain("handler: handlePreviewOverlayTouchCancel");
   });
 
+  it("aligns the full preview breadcrumb with the image and mode controls", () => {
+    const imagesView = readFileSync(
+      new URL("../../src/pages/images/images.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    const layoutStyleStart = imagesView.indexOf("fullImagePreviewLayoutStyle");
+    const breadcrumbStyleStart = imagesView.indexOf(
+      "fullImagePreviewTopBarStyle",
+      layoutStyleStart,
+    );
+    const breadcrumbStart = imagesView.indexOf(
+      "fullImagePreviewBreadcrumb",
+      breadcrumbStyleStart,
+    );
+    const frameStart = imagesView.indexOf(
+      "previewImageFrame",
+      breadcrumbStyleStart,
+    );
+
+    expect(layoutStyleStart).toBeGreaterThan(-1);
+    expect(breadcrumbStyleStart).toBeGreaterThan(layoutStyleStart);
+    expect(breadcrumbStart).toBeGreaterThan(breadcrumbStyleStart);
+    expect(frameStart).toBeGreaterThan(breadcrumbStart);
+    expect(imagesView).toContain("rtgl-text#previewBreadcrumb");
+    expect(imagesView).toContain("rtgl-view#previewModeControls");
+  });
+
   it("shows preview and delete actions in the mobile detail sheet", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),

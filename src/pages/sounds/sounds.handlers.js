@@ -181,6 +181,64 @@ const syncSoundPageData = ({ store, repositoryState } = {}) => {
   });
 };
 
+const openSoundPreviewById = ({
+  deps,
+  itemId,
+  syncExplorer = false,
+  suppressMobileDetailSheet = false,
+} = {}) => {
+  const { appService, refs, store, render } = deps;
+  if (!itemId) {
+    return;
+  }
+
+  const soundItem = store.selectSoundItemById({ itemId });
+  if (!soundItem?.fileId) {
+    return;
+  }
+
+  void appService
+    .getAudioService?.()
+    ?.unlock?.()
+    ?.catch?.(() => {});
+
+  store.setSelectedItemId({
+    itemId,
+    suppressMobileDetailSheet,
+  });
+
+  if (syncExplorer) {
+    refs.fileExplorer?.selectItem?.({ itemId });
+  }
+
+  store.openAudioPlayer({
+    fileId: soundItem.fileId,
+    fileName: soundItem.name,
+  });
+  render();
+};
+
+const toggleSoundPreviewById = ({ deps, itemId } = {}) => {
+  const { appService, store } = deps;
+  const soundItem = store.selectSoundItemById({ itemId });
+  if (!soundItem?.fileId) {
+    return;
+  }
+
+  if (store.selectPlayingSoundFileId() !== soundItem.fileId) {
+    openSoundPreviewById({ deps, itemId, syncExplorer: true });
+    return;
+  }
+
+  const audioService = appService.getAudioService?.();
+  if (audioService?.isPlaying?.()) {
+    audioService.pause();
+    return;
+  }
+
+  void audioService?.play?.();
+};
+
 const {
   openEditDialogWithValues,
   openFolderNameDialogWithValues,
@@ -231,6 +289,9 @@ const {
     tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.waveformDataFileId,
+  onEnterKey: ({ deps, selectedItemId }) => {
+    toggleSoundPreviewById({ deps, itemId: selectedItemId });
+  },
   copy: ({ i18n }) => selectSoundsPageCopy(i18n),
   tagging: {
     scopeKey: SOUND_TAG_SCOPE_KEY,
@@ -324,43 +385,6 @@ export const handleCenterGroupCollapseChange = (deps, payload) => {
     folderId: groupId,
     collapsed,
   });
-};
-
-const openSoundPreviewById = ({
-  deps,
-  itemId,
-  syncExplorer = false,
-  suppressMobileDetailSheet = false,
-} = {}) => {
-  const { appService, refs, store, render } = deps;
-  if (!itemId) {
-    return;
-  }
-
-  const soundItem = store.selectSoundItemById({ itemId });
-  if (!soundItem?.fileId) {
-    return;
-  }
-
-  void appService
-    .getAudioService?.()
-    ?.unlock?.()
-    ?.catch?.(() => {});
-
-  store.setSelectedItemId({
-    itemId,
-    suppressMobileDetailSheet,
-  });
-
-  if (syncExplorer) {
-    refs.fileExplorer?.selectItem?.({ itemId });
-  }
-
-  store.openAudioPlayer({
-    fileId: soundItem.fileId,
-    fileName: soundItem.name,
-  });
-  render();
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -535,60 +559,6 @@ export const handleFilesDropRejected = (deps, payload) => {
   }
 
   showUnsupportedFormatToast(appService, copy);
-};
-
-export const handleFormExtraEvent = async (deps) => {
-  const { appService, projectService, store } = deps;
-  const copy = selectCopy(deps);
-  const selectedItem = store.selectSelectedItem();
-  if (!selectedItem) {
-    return;
-  }
-
-  const result = await pickAndUploadSound({ appService, projectService, copy });
-  if (result.cancelled) {
-    return;
-  }
-
-  if (result.errorType === "pick-failed") {
-    showResourcePageError({
-      appService,
-      errorOrResult: result.error,
-      fallbackMessage: copy.failedSelectFile,
-    });
-    return;
-  }
-
-  if (result.errorType === "validation-failed") {
-    return;
-  }
-
-  if (result.errorType === "upload-failed") {
-    showUnsupportedFormatToast(
-      appService,
-      copy,
-      getResourcePageErrorMessage(result.error, copy.unsupportedFormatMessage),
-    );
-    return;
-  }
-
-  const { uploadResult } = result;
-  const updateAttempt = await runResourcePageMutation({
-    appService,
-    fallbackMessage: copy.failedUpdateSound,
-    action: () =>
-      projectService.updateSound({
-        soundId: selectedItem.id,
-        fileRecords: uploadResult.fileRecords,
-        data: buildSoundResourcePatchFromUploadResult(uploadResult),
-      }),
-  });
-
-  if (!updateAttempt.ok) {
-    return;
-  }
-
-  await handleDataChanged(deps);
 };
 
 export const handleEditDialogClose = (deps) => {

@@ -126,7 +126,6 @@ const {
   setUiConfig,
   openMobileFileExplorer,
   closeMobileFileExplorer,
-  selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
   selectEditItemId,
@@ -222,7 +221,6 @@ export {
   setUiConfig,
   openMobileFileExplorer,
   closeMobileFileExplorer,
-  selectSelectedItem,
   selectFolderById,
   selectSelectedFolderId,
   selectFolderNameDialogItemId,
@@ -244,6 +242,9 @@ export {
 };
 
 export const selectSoundItemById = selectItemById;
+
+export const selectPlayingSoundFileId = ({ state }) =>
+  state.playingSound.fileId;
 
 export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
   state.playingSound.fileId = fileId;
