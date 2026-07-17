@@ -110,6 +110,7 @@ export const createFileExplorerKeyboardScopeHandlers = ({
   keyboardScopeRefName = "fileExplorerKeyboardScope",
   isNavigationBlocked = () => false,
   onEnterKey,
+  onEditKey,
   resolveSelectedItemId = ({ selectedExplorerItem }) => {
     return selectedExplorerItem?.isFolder
       ? undefined
@@ -196,6 +197,23 @@ export const createFileExplorerKeyboardScopeHandlers = ({
         deps,
         event,
         selectedItemId,
+        selectedExplorerItem,
+      });
+      return;
+    }
+
+    if (String(event.key ?? "").toLowerCase() === "e") {
+      const editTargetId = selectedExplorerItem?.itemId ?? selectedItemId;
+      if (!editTargetId || typeof onEditKey !== "function") {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      onEditKey({
+        deps,
+        event,
+        selectedItemId: editTargetId,
         selectedExplorerItem,
       });
       return;

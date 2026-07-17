@@ -167,13 +167,33 @@ const logInvalidLocalDraftDuringProjectLoad = ({
   failedDraft,
   error,
 } = {}) => {
-  console.warn("Skipping invalid local draft during project load", {
+  console.warn("Ignoring invalid local draft during project load", {
     projectId,
     draftId: failedDraft?.id,
     draftType: failedDraft?.type,
-    code: error?.code || "validation_failed",
-    message: error?.message || "Invalid local draft",
+    code: error?.code ?? "validation_failed",
+    message: error?.message ?? "Invalid local draft",
+    preservedInStore: true,
   });
+};
+
+const assertDraftCanBeIgnoredDuringLoad = ({
+  projectId,
+  failedDraft,
+  error,
+}) => {
+  if (failedDraft?.type !== "project.create") {
+    return;
+  }
+
+  console.error("Refusing to ignore invalid project bootstrap draft", {
+    projectId,
+    draftId: failedDraft.id,
+    draftType: failedDraft.type,
+    code: error?.code ?? "validation_failed",
+    message: error?.message ?? "Invalid project bootstrap draft",
+  });
+  throw error;
 };
 
 const logMissingProjectBootstrapEvent = ({
@@ -210,34 +230,6 @@ const finalizeLoadedRepositoryEvents = ({
     drafts,
   });
   return events;
-};
-
-const discardInvalidLocalDraftDuringProjectLoad = async ({
-  store,
-  failedDraft,
-} = {}) => {
-  if (
-    !store ||
-    typeof store.applySubmitResult !== "function" ||
-    typeof failedDraft?.id !== "string" ||
-    failedDraft.id.length === 0
-  ) {
-    return;
-  }
-
-  try {
-    await store.applySubmitResult({
-      result: {
-        id: failedDraft.id,
-        status: "rejected",
-      },
-    });
-  } catch (error) {
-    console.warn("Failed to discard invalid local draft during project load", {
-      draftId: failedDraft.id,
-      message: error?.message || "Unknown error",
-    });
-  }
 };
 
 export const loadCommittedEventsFromClientStore = async (store) => {
@@ -410,6 +402,11 @@ export const loadRepositoryEventsFromClientStore = async ({
         }
 
         const failedDraft = remainingDraftEvents[resolvedFailedDraftIndex];
+        assertDraftCanBeIgnoredDuringLoad({
+          projectId,
+          failedDraft,
+          error,
+        });
         processedEventCount += 1;
         reportProgress({ force: true });
         await yieldForUiPaint();
@@ -417,10 +414,6 @@ export const loadRepositoryEventsFromClientStore = async ({
           projectId,
           failedDraft,
           error,
-        });
-        await discardInvalidLocalDraftDuringProjectLoad({
-          store,
-          failedDraft,
         });
         remainingDraftEvents = remainingDraftEvents.slice(
           resolvedFailedDraftIndex + 1,
@@ -488,6 +481,11 @@ export const loadRepositoryEventsFromClientStore = async ({
       }
 
       const failedDraft = remainingDraftEvents[resolvedFailedDraftIndex];
+      assertDraftCanBeIgnoredDuringLoad({
+        projectId,
+        failedDraft,
+        error,
+      });
       processedEventCount += 1;
       reportProgress({ force: true });
       await yieldForUiPaint();
@@ -495,10 +493,6 @@ export const loadRepositoryEventsFromClientStore = async ({
         projectId,
         failedDraft,
         error,
-      });
-      await discardInvalidLocalDraftDuringProjectLoad({
-        store,
-        failedDraft,
       });
       remainingDraftEvents = remainingDraftEvents.slice(
         resolvedFailedDraftIndex + 1,

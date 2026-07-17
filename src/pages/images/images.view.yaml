@@ -59,18 +59,14 @@ refs:
         handler: handleMobileDetailDeleteClick
         preventDefault: true
         stopPropagation: true
-  mobileDeleteDialog:
+  deleteDialog:
     eventListeners:
       close:
-        handler: handleMobileDeleteDialogClose
-  mobileDeleteCancelButton:
+        handler: handleDeleteDialogClose
+  deleteConfirmButton:
     eventListeners:
       click:
-        handler: handleMobileDeleteDialogCancel
-  mobileDeleteConfirmButton:
-    eventListeners:
-      click:
-        handler: handleMobileDeleteDialogConfirm
+        handler: handleDeleteDialogConfirm
   fileExplorerKeyboardScope:
     eventListeners:
       click:
@@ -265,15 +261,14 @@ template:
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
-  - $if mobileDeleteDialogOpen:
-      - rtgl-dialog#mobileDeleteDialog ?open=${mobileDeleteDialogOpen} s=sm:
+  - $if deleteDialogOpen:
+      - rtgl-dialog#deleteDialog ?open=${deleteDialogOpen} s=sm:
           - rtgl-view slot=content g=lg p=lg:
               - rtgl-view d=v g=md:
-                  - rtgl-text s=lg: ${mobileDeleteDialogTitle}
-                  - rtgl-text c=mu-fg: ${mobileDeleteDialogMessage}
+                  - rtgl-text s=lg: ${deleteDialogTitle}
+                  - rtgl-text c=mu-fg: ${deleteDialogMessage}
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#mobileDeleteCancelButton v=se: ${cancelButton}
-                  - rtgl-button#mobileDeleteConfirmButton v=pr pre=trash: ${mobileDeleteDialogConfirmLabel}
+                  - rtgl-button#deleteConfirmButton v=de: ${deleteDialogConfirmLabel}
   - $if isEditDialogOpen:
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
           - rtgl-view slot=content g=md:

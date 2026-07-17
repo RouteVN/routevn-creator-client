@@ -138,9 +138,10 @@ const {
   handleBeforeMount: handleMediaBeforeMount,
   handleAfterMount,
   handleFileExplorerSelectionChanged: handleBaseFileExplorerSelectionChanged,
-  handleFileExplorerAction,
+  handleFileExplorerAction: handleBaseFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
+  handleEditDialogClose,
   handleSearchInput,
   handleItemClick: handleBaseImageItemClick,
   handleItemEdit: handleImageItemEdit,
@@ -189,6 +190,31 @@ const {
   },
 });
 
+const openImageDeleteDialog = (deps, { itemId } = {}) => {
+  const { store, render } = deps;
+  if (!itemId) {
+    return;
+  }
+
+  store.openDeleteDialog({ itemId });
+  render();
+};
+
+const handleFileExplorerAction = async (deps, payload) => {
+  const { item, itemId, value } = payload._event.detail;
+  const action = item?.value ?? value;
+  const targetItem = itemId
+    ? deps.store.selectImageItemById({ itemId })
+    : undefined;
+
+  if (action === "delete-item" && targetItem?.type === "image") {
+    openImageDeleteDialog(deps, { itemId });
+    return;
+  }
+
+  await handleBaseFileExplorerAction(deps, payload);
+};
+
 const handleFileExplorerSelectionChanged = (deps, payload) => {
   handleBaseFileExplorerSelectionChanged(deps, payload);
 
@@ -211,6 +237,7 @@ export {
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
+  handleEditDialogClose,
   handleDataChanged,
   handleSearchInput,
   handleImageItemEdit,
@@ -288,45 +315,34 @@ export const handleMobileDetailDeleteClick = (deps, payload) => {
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();
 
-  const { store, render } = deps;
+  const { store } = deps;
   const selectedItemId = store.selectSelectedItemId();
   if (!selectedItemId) {
     return;
   }
 
-  store.openMobileDeleteDialog({ itemId: selectedItemId });
-  render();
+  openImageDeleteDialog(deps, { itemId: selectedItemId });
 };
 
-export const handleMobileDeleteDialogClose = (deps) => {
+export const handleDeleteDialogClose = (deps) => {
   const { store, render } = deps;
 
-  store.closeMobileDeleteDialog();
+  store.closeDeleteDialog();
   render();
+  focusGroupView(deps);
 };
 
-export const handleMobileDeleteDialogCancel = (deps) => {
-  handleMobileDeleteDialogClose(deps);
-};
+export const handleDeleteDialogConfirm = async (deps) => {
+  const { store } = deps;
+  const itemId = store.selectDeleteDialogItemId();
 
-export const handleMobileDeleteDialogConfirm = async (deps) => {
-  const { store, render } = deps;
-  const itemId = store.selectMobileDeleteDialogItemId();
-
-  store.closeMobileDeleteDialog();
-  render();
+  handleDeleteDialogClose(deps);
 
   if (!itemId) {
     return;
   }
 
-  await handleItemDelete(deps, {
-    _event: {
-      detail: {
-        itemId,
-      },
-    },
-  });
+  await deleteImage(deps, { itemId });
 };
 
 const {
@@ -336,6 +352,14 @@ const {
   isNavigationBlocked: ({ deps }) => deps.store.selectFullImagePreviewVisible(),
   onEnterKey: ({ deps, selectedItemId }) => {
     openImagePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
+  },
+  onEditKey: ({ deps, selectedItemId, selectedExplorerItem }) => {
+    if (selectedExplorerItem?.isFolder) {
+      openFolderNameDialogWithValues({ deps, folderId: selectedItemId });
+      return;
+    }
+
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
   },
   resolveSelectedItemId: ({ deps, selectedExplorerItem }) => {
     return selectedExplorerItem?.isFolder
@@ -830,12 +854,6 @@ export const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
   handleBaseFileExplorerKeyboardScopeKeyDown(deps, payload);
 };
 
-export const handleEditDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.closeEditDialog();
-  render();
-};
-
 export const handleEditDialogImageClick = async (deps) => {
   const { appService, projectService, store, render } = deps;
   const copy = selectCopy(deps);
@@ -875,7 +893,7 @@ export const handleEditDialogImageClick = async (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store } = deps;
   const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
@@ -893,8 +911,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const editItemId = store.selectEditItemId();
   if (!editItemId) {
-    store.closeEditDialog();
-    render();
+    handleEditDialogClose(deps);
     return;
   }
 
@@ -923,17 +940,16 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  store.closeEditDialog();
+  handleEditDialogClose(deps);
   await handleDataChanged(deps);
 };
 
-export const handleItemDelete = async (deps, payload) => {
+const deleteImage = async (deps, { itemId } = {}) => {
   const { projectService, appService, render, store } = deps;
   const copy = selectCopy(deps);
-  const { itemId } = payload._event.detail;
   const result = await projectService.deleteImageIfUnused({
     imageId: itemId,
-    checkTargets: ["scenes", "layouts"],
+    checkTargets: ["scenes", "layouts", "controls"],
   });
 
   if (!result.deleted) {
@@ -951,4 +967,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   await handleDataChanged(deps);
+};
+
+export const handleItemDelete = (deps, payload) => {
+  const { itemId } = payload._event.detail;
+  openImageDeleteDialog(deps, { itemId });
 };

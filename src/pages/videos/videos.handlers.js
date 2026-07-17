@@ -220,6 +220,7 @@ const {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleEditDialogClose,
   handleSearchInput,
   handleItemClick: handleVideoItemClick,
   handleItemEdit: handleVideoItemEdit,
@@ -247,6 +248,9 @@ const {
   }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId,
   copy: ({ i18n }) => selectVideosPageCopy(i18n),
+  onEnterKey: ({ deps, selectedItemId }) => {
+    void openVideoPreviewById({ deps, itemId: selectedItemId });
+  },
   tagging: {
     scopeKey: VIDEO_TAG_SCOPE_KEY,
     updateItemTagIds: ({ deps, itemId, tagIds }) =>
@@ -280,6 +284,7 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleEditDialogClose,
   handleSearchInput,
   handleVideoItemClick,
   handleVideoItemEdit,
@@ -482,69 +487,9 @@ export const handleFilesDropRejected = (deps, payload) => {
   showInvalidFormatToast(appService, copy);
 };
 
-export const handleFormExtraEvent = async (deps) => {
-  const { appService, projectService, store } = deps;
-  const copy = selectCopy(deps);
-  const selectedItem = store.selectSelectedItem();
-  if (!selectedItem) {
-    return;
-  }
-
-  const result = await pickAndUploadVideo({ appService, projectService, copy });
-  if (result.cancelled) {
-    return;
-  }
-
-  if (result.errorType === "pick-failed") {
-    showResourcePageError({
-      appService,
-      errorOrResult: result.error,
-      fallbackMessage: copy.failedSelectFile,
-    });
-    return;
-  }
-
-  if (result.errorType === "validation-failed") {
-    return;
-  }
-
-  if (result.errorType === "upload-failed") {
-    showResourcePageError({
-      appService,
-      errorOrResult: result.error,
-      fallbackMessage: copy.failedUploadVideo,
-    });
-    return;
-  }
-
-  const { uploadResult } = result;
-  const updateAttempt = await runResourcePageMutation({
-    appService,
-    fallbackMessage: copy.failedUpdateVideo,
-    action: () =>
-      projectService.updateVideo({
-        videoId: selectedItem.id,
-        fileRecords: uploadResult.fileRecords,
-        data: buildVideoResourcePatchFromUploadResult(uploadResult),
-      }),
-  });
-
-  if (!updateAttempt.ok) {
-    return;
-  }
-
-  await handleDataChanged(deps);
-};
-
 export const handleOutsideVideoClick = (deps) => {
   const { store, render } = deps;
   store.setVideoNotVisible();
-  render();
-};
-
-export const handleEditDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.closeEditDialog();
   render();
 };
 
@@ -587,7 +532,7 @@ export const handleEditDialogVideoClick = async (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store } = deps;
   const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
@@ -606,8 +551,7 @@ export const handleEditFormAction = async (deps, payload) => {
   const editItemId = store.selectEditItemId();
   const editUploadResult = store.selectEditUploadResult();
   if (!editItemId) {
-    store.closeEditDialog();
-    render();
+    handleEditDialogClose(deps);
     return;
   }
 
@@ -635,7 +579,7 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  store.closeEditDialog();
+  handleEditDialogClose(deps);
   await handleDataChanged(deps);
 };
 

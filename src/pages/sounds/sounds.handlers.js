@@ -251,6 +251,7 @@ const {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleEditDialogClose,
   handleSearchInput,
   handleItemClick: handleSoundItemClick,
   handleItemEdit: handleSoundItemEdit,
@@ -343,6 +344,7 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleEditDialogClose,
   handleSearchInput,
   handleSoundItemClick,
   handleSoundItemEdit,
@@ -561,12 +563,6 @@ export const handleFilesDropRejected = (deps, payload) => {
   showUnsupportedFormatToast(appService, copy);
 };
 
-export const handleEditDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.closeEditDialog();
-  render();
-};
-
 export const handleEditDialogSoundClick = async (deps) => {
   const { appService, projectService, store, render } = deps;
   const copy = selectCopy(deps);
@@ -606,7 +602,7 @@ export const handleEditDialogSoundClick = async (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store } = deps;
   const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
@@ -625,8 +621,7 @@ export const handleEditFormAction = async (deps, payload) => {
   const editItemId = store.selectEditItemId();
   const editUploadResult = store.selectEditUploadResult();
   if (!editItemId) {
-    store.closeEditDialog();
-    render();
+    handleEditDialogClose(deps);
     return;
   }
 
@@ -654,7 +649,7 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  store.closeEditDialog();
+  handleEditDialogClose(deps);
   await handleDataChanged(deps);
 };
 

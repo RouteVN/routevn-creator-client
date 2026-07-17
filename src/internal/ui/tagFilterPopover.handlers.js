@@ -1,4 +1,4 @@
-const resolveTagFilterButtonPosition = (element) => {
+const resolveTagFilterButtonPosition = (element, { alignEnd = false } = {}) => {
   if (!element?.getBoundingClientRect) {
     return {
       x: 0,
@@ -9,17 +9,23 @@ const resolveTagFilterButtonPosition = (element) => {
   const rect = element.getBoundingClientRect();
 
   return {
-    x: Math.round(rect.left),
+    x: Math.round(alignEnd ? rect.right : rect.left),
     y: Math.round(rect.bottom),
   };
 };
 
-export const openTagFilterPopoverFromButton = (deps, payload) => {
+export const openTagFilterPopoverFromButton = (
+  deps,
+  payload,
+  { alignEnd = false } = {},
+) => {
   const { refs, props, store, render } = deps;
   payload?._event?.stopPropagation?.();
 
   store.openTagFilterPopover({
-    position: resolveTagFilterButtonPosition(refs.tagFilterButton),
+    position: resolveTagFilterButtonPosition(refs.tagFilterButton, {
+      alignEnd,
+    }),
     tagIds: props.selectedTagFilterValues ?? [],
   });
   render();

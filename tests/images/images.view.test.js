@@ -222,18 +222,21 @@ describe("images view", () => {
     expect(imagesView).toContain("handler: handleMobileDetailDeleteClick");
   });
 
-  it("shows a confirmation dialog for mobile detail deletes", () => {
+  it("shows a confirmation dialog for image deletes", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),
       "utf8",
     );
 
     expect(imagesView).toContain(
-      "rtgl-dialog#mobileDeleteDialog ?open=${mobileDeleteDialogOpen}",
+      "rtgl-dialog#deleteDialog ?open=${deleteDialogOpen}",
     );
-    expect(imagesView).toContain("handler: handleMobileDeleteDialogClose");
-    expect(imagesView).toContain("handler: handleMobileDeleteDialogCancel");
-    expect(imagesView).toContain("handler: handleMobileDeleteDialogConfirm");
-    expect(imagesView).toContain("mobileDeleteDialogMessage");
+    expect(imagesView).toContain("handler: handleDeleteDialogClose");
+    expect(imagesView).toContain("handler: handleDeleteDialogConfirm");
+    expect(imagesView).toContain("deleteDialogMessage");
+    expect(imagesView).not.toContain("deleteCancelButton");
+    expect(imagesView).toContain(
+      "rtgl-button#deleteConfirmButton v=de: ${deleteDialogConfirmLabel}",
+    );
   });
 });

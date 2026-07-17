@@ -358,7 +358,6 @@ export const selectViewData = ({ state, props }) => {
   const hasActiveSearch = searchQuery.trim().length > 0;
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
-  const hasSelectedItem = Boolean(props.selectedItemId);
   const tagFilterPopoverViewData = buildTagFilterPopoverViewData({
     state,
     props,
@@ -489,9 +488,7 @@ export const selectViewData = ({ state, props }) => {
             ? "pr"
             : !isInteractive
               ? defaultBorderColor
-              : hasSelectedItem
-                ? defaultBorderColor
-                : "ac",
+              : "ac",
           showPreviewIcon: Boolean(
             isInteractive && item.canPreview && item.id === state.hoveredItemId,
           ),

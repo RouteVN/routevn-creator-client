@@ -276,19 +276,19 @@ const {
         copy,
       }),
     );
-    const deleteDialogItem = state.mobileDeleteDialogItemId
-      ? state.data?.items?.[state.mobileDeleteDialogItemId]
+    const deleteDialogItem = state.deleteDialogItemId
+      ? state.data?.items?.[state.deleteDialogItemId]
       : undefined;
     const deleteDialogItemName = deleteDialogItem?.name
       ? `"${deleteDialogItem.name}"`
       : copy.deleteTargetFallback;
-    viewData.mobileDeleteDialogOpen = state.mobileDeleteDialogOpen;
-    viewData.mobileDeleteDialogTitle = copy.deleteTitle;
-    viewData.mobileDeleteDialogMessage = copy.deleteMessage.replace(
+    viewData.deleteDialogOpen = state.deleteDialogOpen;
+    viewData.deleteDialogTitle = copy.deleteTitle;
+    viewData.deleteDialogMessage = copy.deleteMessage.replace(
       "{itemName}",
       deleteDialogItemName,
     );
-    viewData.mobileDeleteDialogConfirmLabel = copy.deleteButton;
+    viewData.deleteDialogConfirmLabel = copy.deleteButton;
 
     return viewData;
   },
@@ -302,8 +302,8 @@ export const createInitialState = () => ({
   fullImagePreviewDisplayMode: IMAGE_PREVIEW_DISPLAY_MODE_CANVAS,
   fullImagePreviewTouchStartPoint: undefined,
   fullImagePreviewSuppressNextClick: false,
-  mobileDeleteDialogOpen: false,
-  mobileDeleteDialogItemId: undefined,
+  deleteDialogOpen: false,
+  deleteDialogItemId: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
 });
 
@@ -423,22 +423,21 @@ export const setFullImagePreviewDisplayMode = (
   state.fullImagePreviewDisplayMode = displayMode;
 };
 
-export const openMobileDeleteDialog = ({ state }, { itemId } = {}) => {
+export const openDeleteDialog = ({ state }, { itemId } = {}) => {
   if (!itemId) {
     return;
   }
 
-  state.mobileDeleteDialogOpen = true;
-  state.mobileDeleteDialogItemId = itemId;
+  state.deleteDialogOpen = true;
+  state.deleteDialogItemId = itemId;
 };
 
-export const closeMobileDeleteDialog = ({ state }) => {
-  state.mobileDeleteDialogOpen = false;
-  state.mobileDeleteDialogItemId = undefined;
+export const closeDeleteDialog = ({ state }) => {
+  state.deleteDialogOpen = false;
+  state.deleteDialogItemId = undefined;
 };
 
-export const selectMobileDeleteDialogItemId = ({ state }) =>
-  state.mobileDeleteDialogItemId;
+export const selectDeleteDialogItemId = ({ state }) => state.deleteDialogItemId;
 
 export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
   state.projectResolution = requireProjectResolution(

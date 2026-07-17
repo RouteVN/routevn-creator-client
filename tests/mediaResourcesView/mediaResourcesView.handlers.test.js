@@ -3,6 +3,8 @@ import {
   handleBeforeMount,
   handleItemContextMenu,
   handleItemDoubleClick,
+  handleTagFilterButtonClick,
+  handleZoomButtonClick,
   handleZoomOut,
 } from "../../src/components/mediaResourcesView/mediaResourcesView.handlers.js";
 
@@ -14,6 +16,48 @@ const createMobileColumnZoomProps = () => ({
 });
 
 describe("mediaResourcesView.handlers", () => {
+  it.each([
+    ["filter", handleTagFilterButtonClick, "openTagFilterPopover"],
+    ["zoom", handleZoomButtonClick, "openZoomPopover"],
+  ])(
+    "anchors the %s popover below the button and aligns it to the left",
+    (_label, handler, storeMethod) => {
+      const openPopover = vi.fn();
+      const stopPropagation = vi.fn();
+      const deps = {
+        props: {
+          selectedTagFilterValues: [],
+        },
+        refs: {
+          tagFilterButton: {
+            getBoundingClientRect: () => ({ right: 940, bottom: 48 }),
+          },
+          zoomButton: {
+            getBoundingClientRect: () => ({ right: 940, bottom: 48 }),
+          },
+        },
+        store: {
+          [storeMethod]: openPopover,
+        },
+        render: vi.fn(),
+      };
+
+      handler(deps, {
+        _event: {
+          stopPropagation,
+        },
+      });
+
+      expect(openPopover).toHaveBeenCalledWith(
+        expect.objectContaining({
+          position: { x: 940, y: 48 },
+        }),
+      );
+      expect(stopPropagation).toHaveBeenCalledOnce();
+      expect(deps.render).toHaveBeenCalledOnce();
+    },
+  );
+
   it("ignores mobile item double clicks", () => {
     const dispatchEvent = vi.fn();
 

@@ -18,6 +18,9 @@ export const createAudioService = () => {
 
   // Timer
   let updateTimer = null;
+  let activeOwnerCount = 0;
+  let loadRequestId = 0;
+  let loadAbortController;
 
   // Event listeners
   const listeners = new Map();
@@ -78,6 +81,32 @@ export const createAudioService = () => {
     }, 100);
   };
 
+  const shutdown = () => {
+    loadRequestId += 1;
+    loadAbortController?.abort();
+    loadAbortController = undefined;
+    stopSourceNode();
+    stopTimeUpdate();
+
+    playing = false;
+    currentTime = 0;
+    duration = 0;
+    startTime = 0;
+    pauseTime = 0;
+    timeOffset = 0;
+    audioBuffer = null;
+
+    const context = audioContext;
+    audioContext = null;
+    gainNode = null;
+
+    if (context && context.state !== "closed") {
+      try {
+        void context.close();
+      } catch {}
+    }
+  };
+
   const service = {
     init() {
       if (audioContext) return;
@@ -90,6 +119,24 @@ export const createAudioService = () => {
       gainNode.connect(audioContext.destination);
     },
 
+    acquire() {
+      service.init();
+      activeOwnerCount += 1;
+      let released = false;
+
+      return () => {
+        if (released) {
+          return;
+        }
+
+        released = true;
+        activeOwnerCount = Math.max(0, activeOwnerCount - 1);
+        if (activeOwnerCount === 0) {
+          shutdown();
+        }
+      };
+    },
+
     async unlock() {
       service.init();
 
@@ -99,25 +146,47 @@ export const createAudioService = () => {
     },
 
     cleanup() {
-      if (audioContext && audioContext.state !== "closed") {
-        audioContext.close();
-      }
-
-      audioContext = null;
-      gainNode = null;
-      audioBuffer = null;
+      activeOwnerCount = 0;
+      shutdown();
     },
 
     async loadAudio(url) {
+      if (activeOwnerCount === 0) {
+        return undefined;
+      }
+
+      service.init();
+      const context = audioContext;
+      const requestId = ++loadRequestId;
+      loadAbortController?.abort();
+      const abortController = new AbortController();
+      loadAbortController = abortController;
+      const isActiveRequest = () =>
+        activeOwnerCount > 0 &&
+        requestId === loadRequestId &&
+        context === audioContext &&
+        !abortController.signal.aborted;
+
       try {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          signal: abortController.signal,
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch audio: ${response.status}`);
         }
 
         const arrayBuffer = await response.arrayBuffer();
-        audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        duration = audioBuffer.duration;
+        if (!isActiveRequest()) {
+          return undefined;
+        }
+
+        const decodedAudioBuffer = await context.decodeAudioData(arrayBuffer);
+        if (!isActiveRequest()) {
+          return undefined;
+        }
+
+        audioBuffer = decodedAudioBuffer;
+        duration = decodedAudioBuffer.duration;
 
         currentTime = 0;
         pauseTime = 0;
@@ -127,23 +196,43 @@ export const createAudioService = () => {
 
         return audioInfo;
       } catch (error) {
+        if (!isActiveRequest()) {
+          return undefined;
+        }
+
         emit("error", error);
         throw error;
+      } finally {
+        if (loadAbortController === abortController) {
+          loadAbortController = undefined;
+        }
       }
     },
 
     async play(fromTime = null) {
-      if (!audioBuffer || playing) return;
+      const context = audioContext;
+      const outputGainNode = gainNode;
+      const buffer = audioBuffer;
+      if (!buffer || playing || !context || !outputGainNode) return;
 
-      if (audioContext.state === "suspended") {
-        await audioContext.resume();
+      if (context.state === "suspended") {
+        await context.resume();
+      }
+
+      if (
+        context !== audioContext ||
+        outputGainNode !== gainNode ||
+        buffer !== audioBuffer ||
+        playing
+      ) {
+        return;
       }
 
       stopSourceNode();
 
-      sourceNode = audioContext.createBufferSource();
-      sourceNode.buffer = audioBuffer;
-      sourceNode.connect(gainNode);
+      sourceNode = context.createBufferSource();
+      sourceNode.buffer = buffer;
+      sourceNode.connect(outputGainNode);
 
       sourceNode.onended = () => {
         if (playing) {
@@ -152,7 +241,7 @@ export const createAudioService = () => {
       };
 
       const startOffset = fromTime !== null ? fromTime : pauseTime;
-      startTime = audioContext.currentTime;
+      startTime = context.currentTime;
       timeOffset = startOffset;
 
       sourceNode.start(0, startOffset);
@@ -190,7 +279,9 @@ export const createAudioService = () => {
     },
 
     async seek(time) {
-      if (!audioBuffer || !duration) return;
+      const context = audioContext;
+      const outputGainNode = gainNode;
+      if (!audioBuffer || !duration || !context || !outputGainNode) return;
 
       const seekTime = Math.max(0, Math.min(time, duration));
       const wasPlaying = playing;
@@ -199,16 +290,20 @@ export const createAudioService = () => {
       pauseTime = seekTime;
 
       if (wasPlaying) {
-        if (audioContext.state === "suspended") {
-          await audioContext.resume();
+        if (context.state === "suspended") {
+          await context.resume();
+        }
+
+        if (context !== audioContext || outputGainNode !== gainNode) {
+          return;
         }
 
         stopSourceNode();
         stopTimeUpdate();
 
-        sourceNode = audioContext.createBufferSource();
+        sourceNode = context.createBufferSource();
         sourceNode.buffer = audioBuffer;
-        sourceNode.connect(gainNode);
+        sourceNode.connect(outputGainNode);
 
         sourceNode.onended = () => {
           if (playing) {
@@ -216,7 +311,7 @@ export const createAudioService = () => {
           }
         };
 
-        startTime = audioContext.currentTime;
+        startTime = context.currentTime;
         timeOffset = seekTime;
         sourceNode.start(0, seekTime);
 

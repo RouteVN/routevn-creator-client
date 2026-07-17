@@ -149,9 +149,27 @@ steps:
     state: hidden
     timeoutMs: 5000
   - action: select
-    selector: "#detailHeader"
+    selector: "#fileExplorerKeyboardScope"
     steps:
-      - action: click
+      - action: focus
+  - action: keypress
+    key: e
+  - action: waitFor
+    selector: "#editDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#editDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: keypress
+    key: j
+  - action: keypress
+    key: k
+  - action: keypress
+    key: e
   - action: waitFor
     selector: "#editDialog[open]"
     state: attached

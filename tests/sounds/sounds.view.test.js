@@ -51,13 +51,27 @@ describe("sounds view", () => {
       new URL("../../src/pages/sounds/sounds.view.yaml", import.meta.url),
       "utf8",
     );
+    const detailFrameStyleStart = soundsView.indexOf(
+      '".soundDetailPreviewFrame":',
+    );
+    const detailFrameStyles = soundsView.slice(
+      detailFrameStyleStart,
+      soundsView.indexOf("\ntemplate:", detailFrameStyleStart),
+    );
 
-    expect(soundsView).toContain('".soundDetailPreviewFrame":');
+    expect(detailFrameStyleStart).toBeGreaterThan(-1);
     expect(soundsView).toContain("#detailSoundPreview");
-    expect(soundsView).toContain("cursor: default");
-    expect(soundsView).toContain("pointer-events: none");
+    expect(detailFrameStyles).toContain("width: 100%");
+    expect(detailFrameStyles).toContain("aspect-ratio: 16 / 9");
+    expect(detailFrameStyles).toContain("cursor: default");
+    expect(detailFrameStyles).toContain("pointer-events: none");
+    expect(detailFrameStyles).not.toContain("padding:");
+    expect(detailFrameStyles).not.toContain("box-shadow:");
     expect(soundsView).toContain(
       'div#detailSoundPreview.soundDetailPreviewFrame slot="sound-waveform"',
+    );
+    expect(soundsView).toContain(
+      "rvn-waveform-visualizer waveformDataFileId=${selectedPreviewFileId} w=f h=f",
     );
     expect(soundsView).not.toContain("detailWaveform:");
     expect(soundsView).not.toContain("detailWaveformPlaceholder");

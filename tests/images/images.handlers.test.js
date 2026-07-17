@@ -22,10 +22,11 @@ import {
   handleCreateTagDialogClose,
   handleDetailTagAddOptionClick,
   handleDetailTagValueChange,
+  handleDeleteDialogConfirm,
+  handleFileExplorerAction,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleFileExplorerSelectionChanged,
   handleImageItemPreview,
-  handleMobileDeleteDialogCancel,
-  handleMobileDeleteDialogConfirm,
   handleMobileDetailDeleteClick,
   handleMobileDetailPreviewClick,
   handlePreviewCanvasModeClick,
@@ -48,6 +49,115 @@ describe("images handlers", () => {
 
   afterEach(() => {
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
+  it("opens the selected image edit dialog when e is pressed", () => {
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const deps = {
+      store: {
+        selectFullImagePreviewVisible: vi.fn(() => false),
+        selectImageItemById: vi.fn(() => ({
+          id: "image-1",
+          name: "Background",
+          description: "Scene background",
+          tagIds: ["tag-1"],
+          thumbnailFileId: "thumbnail-1",
+          fileId: "image-file-1",
+        })),
+        setSelectedItemId: vi.fn(),
+        openEditDialog: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          getSelectedItem: vi.fn(() => ({
+            itemId: "image-1",
+            isFolder: false,
+          })),
+          selectItem: vi.fn(),
+        },
+        editForm: {
+          reset: vi.fn(),
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, {
+      _event: {
+        key: "e",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(deps.store.openEditDialog).toHaveBeenCalledWith({
+      itemId: "image-1",
+      defaultValues: {
+        name: "Background",
+        description: "Scene background",
+        tagIds: ["tag-1"],
+      },
+      previewFileId: "thumbnail-1",
+    });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledOnce();
+  });
+
+  it("opens the selected image folder dialog when e is pressed", () => {
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const deps = {
+      store: {
+        selectFullImagePreviewVisible: vi.fn(() => false),
+        selectFolderById: vi.fn(() => ({
+          id: "folder-1",
+          name: "Backgrounds",
+          description: "Scene backgrounds",
+        })),
+        setSelectedFolderId: vi.fn(),
+        openFolderNameDialog: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          getSelectedItem: vi.fn(() => ({
+            itemId: "folder-1",
+            isFolder: true,
+          })),
+          selectItem: vi.fn(),
+        },
+        folderNameForm: {
+          reset: vi.fn(),
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, {
+      _event: {
+        key: "e",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(deps.store.openFolderNameDialog).toHaveBeenCalledWith({
+      folderId: "folder-1",
+      defaultValues: {
+        name: "Backgrounds",
+        description: "Scene backgrounds",
+      },
+    });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledOnce();
   });
 
   it("jumps from the mobile file explorer without opening the detail sheet", () => {
@@ -210,7 +320,7 @@ describe("images handlers", () => {
       i18n: EN_I18N,
       store: {
         selectSelectedItemId: vi.fn(() => "image-1"),
-        openMobileDeleteDialog: vi.fn(),
+        openDeleteDialog: vi.fn(),
       },
       render: vi.fn(),
     };
@@ -224,32 +334,67 @@ describe("images handlers", () => {
 
     expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(stopPropagation).toHaveBeenCalledTimes(1);
-    expect(deps.store.openMobileDeleteDialog).toHaveBeenCalledWith({
+    expect(deps.store.openDeleteDialog).toHaveBeenCalledWith({
       itemId: "image-1",
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
-  it("cancels selected mobile detail image deletes without deleting", () => {
+  it("opens a confirmation dialog instead of deleting an image directly", () => {
     const deps = {
-      i18n: EN_I18N,
       projectService: {
         deleteImageIfUnused: vi.fn(),
       },
       store: {
-        closeMobileDeleteDialog: vi.fn(),
+        openDeleteDialog: vi.fn(),
       },
       render: vi.fn(),
     };
 
-    handleMobileDeleteDialogCancel(deps);
+    handleItemDelete(deps, {
+      _event: {
+        detail: {
+          itemId: "image-1",
+        },
+      },
+    });
 
-    expect(deps.store.closeMobileDeleteDialog).toHaveBeenCalledTimes(1);
+    expect(deps.store.openDeleteDialog).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
     expect(deps.render).toHaveBeenCalledTimes(1);
     expect(deps.projectService.deleteImageIfUnused).not.toHaveBeenCalled();
   });
 
-  it("deletes confirmed mobile detail images and clears the selection", async () => {
+  it("opens the same confirmation dialog for file explorer image deletes", async () => {
+    const deps = {
+      store: {
+        selectImageItemById: vi.fn(() => ({
+          id: "image-1",
+          type: "image",
+        })),
+        openDeleteDialog: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    await handleFileExplorerAction(deps, {
+      _event: {
+        detail: {
+          item: { value: "delete-item" },
+          itemId: "image-1",
+        },
+      },
+    });
+
+    expect(deps.store.openDeleteDialog).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("deletes confirmed images and clears the selection", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
     const repositoryState = {
       images: {
         tree: [],
@@ -280,8 +425,8 @@ describe("images handlers", () => {
         showAlert: vi.fn(),
       },
       store: {
-        selectMobileDeleteDialogItemId: vi.fn(() => "image-1"),
-        closeMobileDeleteDialog: vi.fn(),
+        selectDeleteDialogItemId: vi.fn(() => "image-1"),
+        closeDeleteDialog: vi.fn(),
         selectSelectedItemId: vi.fn(() => selectedItemId),
         setSelectedItemId: vi.fn(({ itemId }) => {
           selectedItemId = itemId;
@@ -294,12 +439,12 @@ describe("images handlers", () => {
       refs: {},
     };
 
-    await handleMobileDeleteDialogConfirm(deps);
+    await handleDeleteDialogConfirm(deps);
 
-    expect(deps.store.closeMobileDeleteDialog).toHaveBeenCalledTimes(1);
+    expect(deps.store.closeDeleteDialog).toHaveBeenCalledTimes(1);
     expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledWith({
       imageId: "image-1",
-      checkTargets: ["scenes", "layouts"],
+      checkTargets: ["scenes", "layouts", "controls"],
     });
     expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: undefined,
@@ -309,6 +454,7 @@ describe("images handlers", () => {
   });
 
   it("shows a failure alert when deleteImageIfUnused fails without usage", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
     const deps = {
       i18n: EN_I18N,
       projectService: {
@@ -322,20 +468,18 @@ describe("images handlers", () => {
       appService: {
         showAlert: vi.fn(),
       },
+      store: {
+        selectDeleteDialogItemId: vi.fn(() => "image-1"),
+        closeDeleteDialog: vi.fn(),
+      },
       render: vi.fn(),
     };
 
-    await handleItemDelete(deps, {
-      _event: {
-        detail: {
-          itemId: "image-1",
-        },
-      },
-    });
+    await handleDeleteDialogConfirm(deps);
 
     expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledWith({
       imageId: "image-1",
-      checkTargets: ["scenes", "layouts"],
+      checkTargets: ["scenes", "layouts", "controls"],
     });
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "Failed to delete resource.",

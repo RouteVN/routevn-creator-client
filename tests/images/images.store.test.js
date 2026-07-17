@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   clearFullImagePreviewSuppressNextClick,
   clearFullImagePreviewTouchStartPoint,
-  closeMobileDeleteDialog,
+  closeDeleteDialog,
   commitDetailTagIds,
   createInitialState,
   hideFullImagePreview,
-  openMobileDeleteDialog,
+  openDeleteDialog,
   selectAdjacentImageItemId,
   selectFullImagePreviewSuppressNextClick,
   selectFullImagePreviewTouchStartPoint,
-  selectMobileDeleteDialogItemId,
+  selectDeleteDialogItemId,
   selectViewData,
   setFullImagePreviewDisplayMode,
   setFullImagePreviewTouchStartPoint,
@@ -155,7 +155,7 @@ describe("images store detail tag draft", () => {
   });
 });
 
-describe("images store mobile delete dialog", () => {
+describe("images store delete dialog", () => {
   it("tracks the selected image for delete confirmation", () => {
     const context = createContext();
 
@@ -172,23 +172,23 @@ describe("images store mobile delete dialog", () => {
       },
     });
 
-    openMobileDeleteDialog(context, {
+    openDeleteDialog(context, {
       itemId: "image-1",
     });
 
     const viewData = selectViewData(context);
-    expect(viewData.mobileDeleteDialogOpen).toBe(true);
-    expect(viewData.mobileDeleteDialogTitle).toBe("Delete Image");
-    expect(viewData.mobileDeleteDialogMessage).toBe(
+    expect(viewData.deleteDialogOpen).toBe(true);
+    expect(viewData.deleteDialogTitle).toBe("Delete Image");
+    expect(viewData.deleteDialogMessage).toBe(
       'Delete "Hero"? This cannot be undone.',
     );
-    expect(viewData.mobileDeleteDialogConfirmLabel).toBe("Delete");
-    expect(selectMobileDeleteDialogItemId(context)).toBe("image-1");
+    expect(viewData.deleteDialogConfirmLabel).toBe("Delete");
+    expect(selectDeleteDialogItemId(context)).toBe("image-1");
 
-    closeMobileDeleteDialog(context);
+    closeDeleteDialog(context);
 
-    expect(selectMobileDeleteDialogItemId(context)).toBeUndefined();
-    expect(selectViewData(context).mobileDeleteDialogOpen).toBe(false);
+    expect(selectDeleteDialogItemId(context)).toBeUndefined();
+    expect(selectViewData(context).deleteDialogOpen).toBe(false);
   });
 });
 
