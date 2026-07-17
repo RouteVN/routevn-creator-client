@@ -394,6 +394,90 @@ describe("renderSceneEditorState", () => {
     ).toBe("temporary");
   });
 
+  it("keeps section presentation changes based on committed data during temporary background previews", async () => {
+    const projectData = createProjectData();
+    projectData.resources.colors = {
+      "background-committed": {
+        id: "background-committed",
+        hex: "#111111",
+      },
+      "background-temporary": {
+        id: "background-temporary",
+        hex: "#eeeeee",
+      },
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[1].actions.background = {
+      colorId: "background-committed",
+    };
+    const graphicsService = createGraphicsService();
+    let temporaryPresentationState = {
+      background: {
+        colorId: "background-temporary",
+      },
+    };
+    const store = {
+      selectIsScenePageLoading: () => false,
+      selectPreviewScene: () => ({
+        previewVisible: false,
+      }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectTemporaryPresentationState: () => temporaryPresentationState,
+      selectScene: () => ({
+        sections: [{ id: "section-1" }],
+      }),
+      selectIsMuted: () => false,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      setSectionLineChanges: ({ changes }) => {
+        store.sectionLineChanges = changes;
+      },
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      graphicsService,
+      refs: {
+        previewCanvasHost: {
+          getCanvasRoot: () => ({
+            isConnected: true,
+          }),
+        },
+      },
+    };
+
+    await renderSceneEditorCanvas(deps, {
+      skipAnimations: true,
+    });
+
+    const selectedLineChange = store.sectionLineChanges.lines.find(
+      (line) => line.id === "line-2",
+    );
+    expect(selectedLineChange.presentationState.background.colorId).toBe(
+      "background-committed",
+    );
+    expect(
+      graphicsService.engineSelectPresentationState()?.background?.colorId,
+    ).toBe("background-temporary");
+
+    temporaryPresentationState = {};
+    await renderSceneEditorCanvas(deps, {
+      skipAnimations: true,
+    });
+
+    expect(store.presentationState.background.colorId).toBe(
+      "background-committed",
+    );
+    expect(
+      graphicsService.engineSelectPresentationState()?.background?.colorId,
+    ).toBe("background-committed");
+  });
+
   it("can warm route-engine state without drawing the canvas", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();
