@@ -2,7 +2,6 @@
 title: Fonts Workflow
 description: Covers the fonts page detail, glyph preview dialog, edit dialog, and empty search state.
 url: /projects
-diffThreshold: 3.5
 skipInitialScreenshot: true
 viewport:
   id: wide

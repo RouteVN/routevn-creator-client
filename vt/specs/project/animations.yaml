@@ -82,6 +82,17 @@ steps:
     selector: "#detailHeader"
     state: attached
     timeoutMs: 5000
+  - action: waitFor
+    selector: '#detailCanvas[style*="opacity: 1"] canvas'
+    state: attached
+    timeoutMs: 20000
+  # The preview loops continuously; hide only its canvas so surrounding UI remains testable.
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const canvas = deepQuery(document, '#detailCanvas canvas'); canvas.style.visibility = 'hidden'; return getComputedStyle(canvas).visibility; })()"
+    value: hidden
   - action: wait
     ms: 300
   - action: screenshot

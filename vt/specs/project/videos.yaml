@@ -56,12 +56,10 @@ steps:
     timeoutMs: 10000
   - action: wait
     ms: 500
-  - action: keypress
-    key: g
-  - action: wait
-    ms: 120
-  - action: keypress
-    key: v
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/videos
   - action: waitFor
     selector: rvn-videos
     state: attached

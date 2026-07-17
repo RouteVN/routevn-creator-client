@@ -85,6 +85,8 @@ const desktopTemplate = readText("src-tauri/assets/linux-desktop.desktop.hbs");
 const appImageDockerBuildScript = readText(
   "scripts/tauri-build-appimage-docker.sh",
 );
+const appImageBuildScript = readText("scripts/tauri-build-appimage.sh");
+const appImageDockerfile = readText("docker/appimage/ubuntu-22.04.Dockerfile");
 const readme = readText("README.md");
 const linuxReleaseRunbook = readText("docs/runbooks/linux-release.md");
 const expectedAppImageDockerOutput =
@@ -155,6 +157,18 @@ expect(
 expect(
   !appImageDockerBuildScript.includes("dist/appimage"),
   "Docker AppImage output must not use dist/appimage",
+);
+for (const inputMethodPackage of ["fcitx5-frontend-gtk3", "ibus-gtk3"]) {
+  expect(
+    appImageDockerfile.includes(inputMethodPackage),
+    `AppImage Docker image must install ${inputMethodPackage}`,
+  );
+}
+expect(
+  appImageBuildScript.includes(
+    'node scripts/validate-linux-appimage-ime.js "${appdir}"',
+  ),
+  "AppImage build must validate bundled GTK input-method modules before repacking",
 );
 expect(
   readme.includes(expectedAppImageDockerOutput),

@@ -184,6 +184,7 @@ repack_appimage() {
 
   remove_bundled_graphics_stack "${appdir}"
   fix_appimage_desktop_metadata "${appdir}"
+  node scripts/validate-linux-appimage-ime.js "${appdir}"
   rm -f \
     "${source_appimage_path}" \
     "${source_appimage_path}.sig" \
