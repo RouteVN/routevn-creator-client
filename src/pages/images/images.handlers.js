@@ -141,6 +141,7 @@ const {
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
+  handleEditDialogClose,
   handleSearchInput,
   handleItemClick: handleBaseImageItemClick,
   handleItemEdit: handleImageItemEdit,
@@ -211,6 +212,7 @@ export {
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
+  handleEditDialogClose,
   handleDataChanged,
   handleSearchInput,
   handleImageItemEdit,
@@ -336,6 +338,14 @@ const {
   isNavigationBlocked: ({ deps }) => deps.store.selectFullImagePreviewVisible(),
   onEnterKey: ({ deps, selectedItemId }) => {
     openImagePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
+  },
+  onEditKey: ({ deps, selectedItemId, selectedExplorerItem }) => {
+    if (selectedExplorerItem?.isFolder) {
+      openFolderNameDialogWithValues({ deps, folderId: selectedItemId });
+      return;
+    }
+
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
   },
   resolveSelectedItemId: ({ deps, selectedExplorerItem }) => {
     return selectedExplorerItem?.isFolder
@@ -828,12 +838,6 @@ export const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
   }
 
   handleBaseFileExplorerKeyboardScopeKeyDown(deps, payload);
-};
-
-export const handleEditDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.closeEditDialog();
-  render();
 };
 
 export const handleEditDialogImageClick = async (deps) => {

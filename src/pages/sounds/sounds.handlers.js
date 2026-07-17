@@ -251,6 +251,7 @@ const {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleEditDialogClose,
   handleSearchInput,
   handleItemClick: handleSoundItemClick,
   handleItemEdit: handleSoundItemEdit,
@@ -343,6 +344,7 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleEditDialogClose,
   handleSearchInput,
   handleSoundItemClick,
   handleSoundItemEdit,
@@ -559,12 +561,6 @@ export const handleFilesDropRejected = (deps, payload) => {
   }
 
   showUnsupportedFormatToast(appService, copy);
-};
-
-export const handleEditDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.closeEditDialog();
-  render();
 };
 
 export const handleEditDialogSoundClick = async (deps) => {

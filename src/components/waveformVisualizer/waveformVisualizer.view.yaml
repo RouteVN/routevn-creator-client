@@ -1,9 +1,8 @@
 onMount:
   handler: handleAfterMount
 refs:
-  canvas:
-    selector: canvas
+  waveformContainer: {}
 template:
-  - rtgl-view w=${w} h=${h}:
+  - rtgl-view#waveformContainer w=${w} h=${h}:
       - $if waveformData:
-          - rtgl-waveform :waveformData=${waveformData} w=${w} h=${h}: null
+          - rtgl-waveform id=${waveformRenderKey} :waveformData=${waveformData} w=${w} h=${h}: null

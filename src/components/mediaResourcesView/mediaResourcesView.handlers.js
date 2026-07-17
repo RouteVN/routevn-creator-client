@@ -29,7 +29,7 @@ const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
 };
 
-const resolvePopoverButtonPosition = (element) => {
+const resolvePopoverButtonPosition = (element, { alignEnd = false } = {}) => {
   if (!element?.getBoundingClientRect) {
     return {
       x: 0,
@@ -40,7 +40,7 @@ const resolvePopoverButtonPosition = (element) => {
   const rect = element.getBoundingClientRect();
 
   return {
-    x: Math.round(rect.left),
+    x: Math.round(alignEnd ? rect.right : rect.left),
     y: Math.round(rect.bottom),
   };
 };
@@ -149,7 +149,9 @@ const persistItemsPerRow = ({ appService, props, store } = {}) => {
   );
 };
 
-export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
+export const handleTagFilterButtonClick = (deps, payload) => {
+  openTagFilterPopoverFromButton(deps, payload, { alignEnd: true });
+};
 export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
 export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
 export const handleTagFilterClearClick = (deps, payload) => {
@@ -178,7 +180,9 @@ export const handleZoomButtonClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
 
   store.openZoomPopover({
-    position: resolvePopoverButtonPosition(refs.zoomButton),
+    position: resolvePopoverButtonPosition(refs.zoomButton, {
+      alignEnd: true,
+    }),
   });
   render();
 };

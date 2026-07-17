@@ -205,6 +205,7 @@ describe("sounds handlers", () => {
         getAudioService: vi.fn(() => audioService),
       },
       store: {
+        selectSelectedItemId: vi.fn(() => selectedItemId),
         selectSoundItemById: vi.fn(({ itemId }) => ({
           id: itemId,
           name: itemId === "sound-1" ? "Theme" : "Ambience",
@@ -269,6 +270,62 @@ describe("sounds handlers", () => {
     });
     expect(preventDefault).toHaveBeenCalledTimes(4);
     expect(stopPropagation).toHaveBeenCalledTimes(4);
+  });
+
+  it("opens the selected sound edit dialog when e is pressed", () => {
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "sound-1"),
+        selectSoundItemById: vi.fn(() => ({
+          id: "sound-1",
+          name: "Theme",
+          description: "Opening theme",
+          tagIds: ["tag-1"],
+          waveformDataFileId: "waveform-1",
+        })),
+        setSelectedItemId: vi.fn(),
+        openEditDialog: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          getSelectedItem: vi.fn(() => ({
+            itemId: "sound-1",
+            isFolder: false,
+          })),
+          selectItem: vi.fn(),
+        },
+        editForm: {
+          reset: vi.fn(),
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, {
+      _event: {
+        key: "e",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(deps.store.openEditDialog).toHaveBeenCalledWith({
+      itemId: "sound-1",
+      defaultValues: {
+        name: "Theme",
+        description: "Opening theme",
+        tagIds: ["tag-1"],
+      },
+      previewFileId: "waveform-1",
+    });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledOnce();
   });
 
   it("opens a confirmation dialog for selected mobile detail sound deletes", () => {

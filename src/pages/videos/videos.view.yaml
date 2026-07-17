@@ -78,14 +78,6 @@ refs:
     eventListeners:
       close:
         handler: handleOutsideVideoClick
-  detailThumbnail:
-    eventListeners:
-      click:
-        handler: handleFormExtraEvent
-  detailThumbnailPlaceholder:
-    eventListeners:
-      click:
-        handler: handleFormExtraEvent
   detailHeader:
     eventListeners:
       click:
@@ -134,6 +126,15 @@ refs:
     eventListeners:
       form-action:
         handler: handleCreateTagFormAction
+styles:
+  ".videoDetailPreviewFrame":
+    display: block
+    width: 100%
+    aspect-ratio: 16 / 9
+    border-radius: 6px
+    overflow: hidden
+    cursor: default
+    pointer-events: none
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -162,10 +163,8 @@ template:
                                   - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
                                       - $if selectedItemId:
                                           - $if selectedPreviewFileId:
-                                              - rvn-file-image#detailThumbnail slot="video-thumbnail-file-id" fileId=${selectedPreviewFileId} h=135 bw=xs bc=bo br=md cur=pointer: null
-                                            $else:
-                                              - rtgl-view#detailThumbnailPlaceholder slot="video-thumbnail-file-id" w=f h=135 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                                                  - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
+                                              - 'div#detailVideoPreview.videoDetailPreviewFrame slot="video-thumbnail-file-id"':
+                                                  - rvn-file-image fileId=${selectedPreviewFileId} w=f h=f: null
                                           - rtgl-tag-select#detailTagSelect slot="video-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:

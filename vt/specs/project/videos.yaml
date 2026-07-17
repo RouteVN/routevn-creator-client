@@ -1,6 +1,6 @@
 ---
 title: Videos Workflow
-description: Covers the videos page upload, detail, preview dialog, edit submit, and filtered search states.
+description: Covers the videos page upload, detail, keyboard preview, edit submit, and filtered search states.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -106,29 +106,6 @@ steps:
     ms: 500
   - action: screenshot
   - action: select
-    selector: "#groupview #itemRef0x0[data-item-id]:not([data-item-id=''])"
-    steps:
-      - action: dblclick
-  - action: waitFor
-    selector: "#videoPreviewDialog"
-    state: visible
-    timeoutMs: 10000
-  - action: waitFor
-    selector: "#videoPreviewDialog [data-preview-ready='true']"
-    state: attached
-    timeoutMs: 10000
-  - action: wait
-    ms: 150
-  - action: screenshot
-  - action: keypress
-    key: Escape
-  - action: waitFor
-    selector: "#videoPreviewDialog"
-    state: hidden
-    timeoutMs: 10000
-  - action: wait
-    ms: 250
-  - action: select
     selector: "#detailHeader"
     steps:
       - action: click
@@ -156,6 +133,31 @@ steps:
   - action: wait
     ms: 500
   - action: screenshot
+  - action: select
+    selector: "#groupview #itemRef0x0[data-item-id]:not([data-item-id=''])"
+    steps:
+      - action: click
+  - action: keypress
+    key: Enter
+  - action: waitFor
+    selector: "#videoPreviewDialog"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#videoPreviewDialog [data-preview-ready='true']"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 150
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#videoPreviewDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: wait
+    ms: 250
   - action: select
     selector: "#tagFilterButton"
     steps:

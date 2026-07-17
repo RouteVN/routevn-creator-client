@@ -9,8 +9,8 @@ const createDeps = () => ({
     showAlert: vi.fn(),
   },
   audioService: {
-    cleanup: vi.fn(),
-    init: vi.fn(),
+    acquire: vi.fn(() => vi.fn()),
+    off: vi.fn(),
     on: vi.fn(),
     stop: vi.fn(),
   },
@@ -81,7 +81,10 @@ describe("audio player handlers", () => {
       keyDownHandler,
       true,
     );
-    expect(deps.audioService.cleanup).toHaveBeenCalledTimes(1);
+    expect(deps.audioService.off).toHaveBeenCalledTimes(6);
+    expect(
+      deps.audioService.acquire.mock.results[0].value,
+    ).toHaveBeenCalledOnce();
   });
 
   it("leaves Escape to an open dialog", () => {

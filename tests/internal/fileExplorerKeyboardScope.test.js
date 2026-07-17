@@ -321,6 +321,66 @@ describe("fileExplorerKeyboardScope", () => {
     expect(event.stopPropagation).toHaveBeenCalledTimes(1);
   });
 
+  it("runs the edit handler for the selected explorer item when e is pressed", () => {
+    const onEditKey = vi.fn();
+    const fileExplorer = {
+      getSelectedItem: vi.fn(() => ({
+        itemId: "item-1",
+        isFolder: false,
+      })),
+    };
+    const deps = createDeps({ fileExplorer });
+    const { handleKeyboardScopeKeyDown } =
+      createFileExplorerKeyboardScopeHandlers({ onEditKey });
+    const event = createKeyEvent("e");
+
+    handleKeyboardScopeKeyDown(deps, {
+      _event: event,
+    });
+
+    expect(onEditKey).toHaveBeenCalledWith({
+      deps,
+      event,
+      selectedItemId: "item-1",
+      selectedExplorerItem: {
+        itemId: "item-1",
+        isFolder: false,
+      },
+    });
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
+  });
+
+  it("runs the edit handler for the selected explorer folder when e is pressed", () => {
+    const onEditKey = vi.fn();
+    const fileExplorer = {
+      getSelectedItem: vi.fn(() => ({
+        itemId: "folder-1",
+        isFolder: true,
+      })),
+    };
+    const deps = createDeps({ fileExplorer });
+    const { handleKeyboardScopeKeyDown } =
+      createFileExplorerKeyboardScopeHandlers({ onEditKey });
+    const event = createKeyEvent("e");
+
+    handleKeyboardScopeKeyDown(deps, {
+      _event: event,
+    });
+
+    expect(onEditKey).toHaveBeenCalledWith({
+      deps,
+      event,
+      selectedItemId: "folder-1",
+      selectedExplorerItem: {
+        itemId: "folder-1",
+        isFolder: true,
+      },
+    });
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
+  });
+
   it("ignores blocked or text-entry key events", () => {
     const fileExplorer = {
       navigateSelection: vi.fn(),

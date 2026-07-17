@@ -139,9 +139,7 @@ styles:
   ".soundDetailPreviewFrame":
     display: block
     width: 100%
-    padding: 8px
-    box-sizing: border-box
-    box-shadow: 0 0 0 1px var(--border)
+    aspect-ratio: 16 / 9
     border-radius: 6px
     overflow: hidden
     cursor: default
@@ -175,7 +173,7 @@ template:
                                       - $if selectedItemId:
                                           - $if selectedPreviewFileId:
                                               - 'div#detailSoundPreview.soundDetailPreviewFrame slot="sound-waveform"':
-                                                  - rvn-waveform-visualizer waveformDataFileId=${selectedPreviewFileId} w=220 h=100: null
+                                                  - rvn-waveform-visualizer waveformDataFileId=${selectedPreviewFileId} w=f h=f: null
                                           - rtgl-tag-select#detailTagSelect slot="sound-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:

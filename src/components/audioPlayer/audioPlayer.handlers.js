@@ -41,7 +41,7 @@ export const handleBeforeMount = (deps) => {
     return;
   }
 
-  audioService.init();
+  const releaseAudioService = audioService.acquire();
 
   const handleTimeUpdate = (currentTime) => {
     store.setCurrentTime({ currentTime: currentTime });
@@ -96,7 +96,13 @@ export const handleBeforeMount = (deps) => {
 
   return () => {
     window.removeEventListener("keydown", handleWindowKeyDown, true);
-    audioService.cleanup();
+    audioService.off("timeupdate", handleTimeUpdate);
+    audioService.off("play", handlePlay);
+    audioService.off("pause", handlePause);
+    audioService.off("ended", handleEnded);
+    audioService.off("loaded", handleLoaded);
+    audioService.off("error", handleError);
+    releaseAudioService();
   };
 };
 
@@ -108,7 +114,10 @@ export const handleAfterMount = async (deps) => {
     render();
 
     const { url } = await projectService.getFileContent(fileId);
-    await audioService.loadAudio(url);
+    const audioInfo = await audioService.loadAudio(url);
+    if (!audioInfo) {
+      return;
+    }
 
     if (autoPlay) {
       await audioService.play();
@@ -136,7 +145,10 @@ export const handleOnUpdate = async (deps, changes) => {
     audioService.stop();
 
     const { url } = await projectService.getFileContent(fileId);
-    await audioService.loadAudio(url);
+    const audioInfo = await audioService.loadAudio(url);
+    if (!audioInfo) {
+      return;
+    }
 
     if (autoPlay) {
       await audioService.play();

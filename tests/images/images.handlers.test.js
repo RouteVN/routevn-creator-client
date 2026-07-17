@@ -22,6 +22,7 @@ import {
   handleCreateTagDialogClose,
   handleDetailTagAddOptionClick,
   handleDetailTagValueChange,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleFileExplorerSelectionChanged,
   handleImageItemPreview,
   handleMobileDeleteDialogCancel,
@@ -48,6 +49,115 @@ describe("images handlers", () => {
 
   afterEach(() => {
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
+  it("opens the selected image edit dialog when e is pressed", () => {
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const deps = {
+      store: {
+        selectFullImagePreviewVisible: vi.fn(() => false),
+        selectImageItemById: vi.fn(() => ({
+          id: "image-1",
+          name: "Background",
+          description: "Scene background",
+          tagIds: ["tag-1"],
+          thumbnailFileId: "thumbnail-1",
+          fileId: "image-file-1",
+        })),
+        setSelectedItemId: vi.fn(),
+        openEditDialog: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          getSelectedItem: vi.fn(() => ({
+            itemId: "image-1",
+            isFolder: false,
+          })),
+          selectItem: vi.fn(),
+        },
+        editForm: {
+          reset: vi.fn(),
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, {
+      _event: {
+        key: "e",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(deps.store.openEditDialog).toHaveBeenCalledWith({
+      itemId: "image-1",
+      defaultValues: {
+        name: "Background",
+        description: "Scene background",
+        tagIds: ["tag-1"],
+      },
+      previewFileId: "thumbnail-1",
+    });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledOnce();
+  });
+
+  it("opens the selected image folder dialog when e is pressed", () => {
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const deps = {
+      store: {
+        selectFullImagePreviewVisible: vi.fn(() => false),
+        selectFolderById: vi.fn(() => ({
+          id: "folder-1",
+          name: "Backgrounds",
+          description: "Scene backgrounds",
+        })),
+        setSelectedFolderId: vi.fn(),
+        openFolderNameDialog: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          getSelectedItem: vi.fn(() => ({
+            itemId: "folder-1",
+            isFolder: true,
+          })),
+          selectItem: vi.fn(),
+        },
+        folderNameForm: {
+          reset: vi.fn(),
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, {
+      _event: {
+        key: "e",
+        altKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(deps.store.openFolderNameDialog).toHaveBeenCalledWith({
+      folderId: "folder-1",
+      defaultValues: {
+        name: "Backgrounds",
+        description: "Scene backgrounds",
+      },
+    });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledOnce();
   });
 
   it("jumps from the mobile file explorer without opening the detail sheet", () => {

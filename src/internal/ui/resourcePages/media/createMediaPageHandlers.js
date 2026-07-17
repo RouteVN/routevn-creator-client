@@ -26,6 +26,7 @@ export const createMediaPageHandlers = ({
   }),
   getEditPreviewFileId = () => undefined,
   onEnterKey,
+  onEditKey,
   tagging,
   copy,
 }) => {
@@ -260,6 +261,22 @@ export const createMediaPageHandlers = ({
     openEditDialogWithValues({ deps, itemId });
   };
 
+  const handleEditKey = ({ deps, selectedItemId, selectedExplorerItem }) => {
+    const selectedStoreItemId = deps.store.selectSelectedItemId();
+    const isFolder =
+      selectedStoreItemId === selectedItemId
+        ? false
+        : (selectedExplorerItem?.isFolder ??
+          deps.store.selectSelectedFolderId() === selectedItemId);
+
+    if (isFolder) {
+      openFolderNameDialogWithValues({ deps, folderId: selectedItemId });
+      return;
+    }
+
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+  };
+
   const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
     createResourceFileExplorerHandlers({
       resourceType,
@@ -270,7 +287,14 @@ export const createMediaPageHandlers = ({
     focusKeyboardScope,
     handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
     handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
-  } = createFileExplorerKeyboardScopeHandlers({ onEnterKey });
+  } = createFileExplorerKeyboardScopeHandlers({
+    onEnterKey,
+    onEditKey: onEditKey ?? handleEditKey,
+    resolveSelectedItemId: ({ deps, selectedExplorerItem }) =>
+      deps.store.selectSelectedItemId() ??
+      selectedExplorerItem?.itemId ??
+      deps.store.selectSelectedFolderId(),
+  });
 
   const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
     if (handleResourceZoomShortcutKeyDown(deps, payload)) {
@@ -278,6 +302,14 @@ export const createMediaPageHandlers = ({
     }
 
     handleBaseFileExplorerKeyboardScopeKeyDown(deps, payload);
+  };
+
+  const handleEditDialogClose = (deps) => {
+    const { store, render } = deps;
+
+    store.closeEditDialog();
+    render();
+    focusKeyboardScope(deps);
   };
 
   const handleItemClick = (deps, payload) => {
@@ -340,6 +372,7 @@ export const createMediaPageHandlers = ({
     const { store, render } = deps;
     store.closeFolderNameDialog();
     render();
+    focusKeyboardScope(deps);
   };
 
   const handleFolderNameFormAction = async (deps, payload) => {
@@ -429,6 +462,7 @@ export const createMediaPageHandlers = ({
     handleFileExplorerTargetChanged,
     handleFileExplorerKeyboardScopeClick,
     handleFileExplorerKeyboardScopeKeyDown,
+    handleEditDialogClose,
     handleItemClick,
     handleItemDoubleClick,
     handleItemEdit,
