@@ -524,7 +524,7 @@ describe("webRepositoryAdapter", () => {
     });
   });
 
-  it("rejects and discards invalid local drafts during project load", async () => {
+  it("ignores invalid local drafts without deleting them during project load", async () => {
     const projectId = "web-invalid-draft-project";
     const committedEvent = {
       ...createProjectCreateRepositoryEvent({
@@ -594,11 +594,6 @@ describe("webRepositoryAdapter", () => {
       }),
     ]);
 
-    expect(rawClientStore.getState().submitResults).toEqual([
-      {
-        id: "tag-draft-duplicate",
-        status: "rejected",
-      },
-    ]);
+    expect(rawClientStore.getState().submitResults).toEqual([]);
   });
 });

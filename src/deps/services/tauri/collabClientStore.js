@@ -330,6 +330,54 @@ const createLibsqlLikeClient = ({ runSelect, runExecute }) => {
 const isBootstrapRepositoryEvent = (event) =>
   event?.type === PROJECT_CREATE_COMMAND_TYPE;
 
+const summarizeStoredEventHeader = (event) => ({
+  id: event?.id,
+  type: event?.type,
+  partition: event?.partition,
+  committedId: Number.isFinite(Number(event?.committedId))
+    ? Number(event.committedId)
+    : undefined,
+  draftClock: Number.isFinite(Number(event?.draftClock))
+    ? Number(event.draftClock)
+    : undefined,
+});
+
+const summarizeHistoryEdges = (events = []) => ({
+  first: events.slice(0, 3).map(summarizeStoredEventHeader),
+  last: events.slice(-3).map(summarizeStoredEventHeader),
+});
+
+const summarizeCheckpointCollections = (value = {}) => {
+  const counts = {};
+  for (const [key, collection] of Object.entries(value)) {
+    if (
+      collection &&
+      typeof collection === "object" &&
+      !Array.isArray(collection) &&
+      collection.items &&
+      typeof collection.items === "object" &&
+      !Array.isArray(collection.items)
+    ) {
+      counts[key] = Object.keys(collection.items).length;
+    }
+  }
+  return counts;
+};
+
+const summarizeMainCheckpoint = (checkpoint) => {
+  if (!checkpoint) {
+    return undefined;
+  }
+
+  return {
+    viewVersion: checkpoint.viewVersion,
+    lastCommittedId: checkpoint.lastCommittedId,
+    updatedAt: checkpoint.updatedAt,
+    historyStats: checkpoint.meta?.historyStats,
+    collectionCounts: summarizeCheckpointCollections(checkpoint.value),
+  };
+};
+
 export const inspectBootstrapHistorySupport = ({
   committedEvents = [],
   draftEvents = [],
@@ -692,18 +740,25 @@ export const createPersistedTauriProjectStore = async ({
             return support;
           }
 
+          let checkpoint;
           if (
             support.reason === "missing_bootstrap_event" &&
-            Number(currentHistoryStats?.committedCount || 0) === 0 &&
-            Number(currentHistoryStats?.draftCount || 0) > 0
+            Number(currentHistoryStats?.committedCount ?? 0) === 0 &&
+            Number(currentHistoryStats?.draftCount ?? 0) > 0
           ) {
-            const checkpoint = await loadMainCheckpoint();
+            checkpoint = await loadMainCheckpoint();
             if (
               isCurrentMainCheckpointCompatibleWithHistory({
                 checkpoint,
                 historyStats: currentHistoryStats,
               })
             ) {
+              console.warn("Using checkpoint-backed project history", {
+                projectId,
+                reason: support.reason,
+                currentHistoryStats,
+                checkpoint: summarizeMainCheckpoint(checkpoint),
+              });
               return {
                 supported: true,
                 reason: "history_valid_from_current_main_checkpoint",
@@ -711,11 +766,17 @@ export const createPersistedTauriProjectStore = async ({
             }
           }
 
+          checkpoint ??= await loadMainCheckpoint();
+
           console.warn("Unsupported project bootstrap history", {
             projectId,
             reason: support.reason,
             committedEventCountBefore: committedEvents.length,
             draftEventCountBefore: draftEvents.length,
+            currentHistoryStats,
+            committedHistory: summarizeHistoryEdges(committedEvents),
+            draftHistory: summarizeHistoryEdges(draftEvents),
+            checkpoint: summarizeMainCheckpoint(checkpoint),
           });
           throw createUnsupportedProjectHistoryError({
             projectId,

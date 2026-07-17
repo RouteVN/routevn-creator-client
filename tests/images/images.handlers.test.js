@@ -22,11 +22,11 @@ import {
   handleCreateTagDialogClose,
   handleDetailTagAddOptionClick,
   handleDetailTagValueChange,
+  handleDeleteDialogConfirm,
+  handleFileExplorerAction,
   handleFileExplorerKeyboardScopeKeyDown,
   handleFileExplorerSelectionChanged,
   handleImageItemPreview,
-  handleMobileDeleteDialogCancel,
-  handleMobileDeleteDialogConfirm,
   handleMobileDetailDeleteClick,
   handleMobileDetailPreviewClick,
   handlePreviewCanvasModeClick,
@@ -320,7 +320,7 @@ describe("images handlers", () => {
       i18n: EN_I18N,
       store: {
         selectSelectedItemId: vi.fn(() => "image-1"),
-        openMobileDeleteDialog: vi.fn(),
+        openDeleteDialog: vi.fn(),
       },
       render: vi.fn(),
     };
@@ -334,32 +334,67 @@ describe("images handlers", () => {
 
     expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(stopPropagation).toHaveBeenCalledTimes(1);
-    expect(deps.store.openMobileDeleteDialog).toHaveBeenCalledWith({
+    expect(deps.store.openDeleteDialog).toHaveBeenCalledWith({
       itemId: "image-1",
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
-  it("cancels selected mobile detail image deletes without deleting", () => {
+  it("opens a confirmation dialog instead of deleting an image directly", () => {
     const deps = {
-      i18n: EN_I18N,
       projectService: {
         deleteImageIfUnused: vi.fn(),
       },
       store: {
-        closeMobileDeleteDialog: vi.fn(),
+        openDeleteDialog: vi.fn(),
       },
       render: vi.fn(),
     };
 
-    handleMobileDeleteDialogCancel(deps);
+    handleItemDelete(deps, {
+      _event: {
+        detail: {
+          itemId: "image-1",
+        },
+      },
+    });
 
-    expect(deps.store.closeMobileDeleteDialog).toHaveBeenCalledTimes(1);
+    expect(deps.store.openDeleteDialog).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
     expect(deps.render).toHaveBeenCalledTimes(1);
     expect(deps.projectService.deleteImageIfUnused).not.toHaveBeenCalled();
   });
 
-  it("deletes confirmed mobile detail images and clears the selection", async () => {
+  it("opens the same confirmation dialog for file explorer image deletes", async () => {
+    const deps = {
+      store: {
+        selectImageItemById: vi.fn(() => ({
+          id: "image-1",
+          type: "image",
+        })),
+        openDeleteDialog: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    await handleFileExplorerAction(deps, {
+      _event: {
+        detail: {
+          item: { value: "delete-item" },
+          itemId: "image-1",
+        },
+      },
+    });
+
+    expect(deps.store.openDeleteDialog).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("deletes confirmed images and clears the selection", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
     const repositoryState = {
       images: {
         tree: [],
@@ -390,8 +425,8 @@ describe("images handlers", () => {
         showAlert: vi.fn(),
       },
       store: {
-        selectMobileDeleteDialogItemId: vi.fn(() => "image-1"),
-        closeMobileDeleteDialog: vi.fn(),
+        selectDeleteDialogItemId: vi.fn(() => "image-1"),
+        closeDeleteDialog: vi.fn(),
         selectSelectedItemId: vi.fn(() => selectedItemId),
         setSelectedItemId: vi.fn(({ itemId }) => {
           selectedItemId = itemId;
@@ -404,9 +439,9 @@ describe("images handlers", () => {
       refs: {},
     };
 
-    await handleMobileDeleteDialogConfirm(deps);
+    await handleDeleteDialogConfirm(deps);
 
-    expect(deps.store.closeMobileDeleteDialog).toHaveBeenCalledTimes(1);
+    expect(deps.store.closeDeleteDialog).toHaveBeenCalledTimes(1);
     expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledWith({
       imageId: "image-1",
       checkTargets: ["scenes", "layouts"],
@@ -419,6 +454,7 @@ describe("images handlers", () => {
   });
 
   it("shows a failure alert when deleteImageIfUnused fails without usage", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
     const deps = {
       i18n: EN_I18N,
       projectService: {
@@ -432,16 +468,14 @@ describe("images handlers", () => {
       appService: {
         showAlert: vi.fn(),
       },
+      store: {
+        selectDeleteDialogItemId: vi.fn(() => "image-1"),
+        closeDeleteDialog: vi.fn(),
+      },
       render: vi.fn(),
     };
 
-    await handleItemDelete(deps, {
-      _event: {
-        detail: {
-          itemId: "image-1",
-        },
-      },
-    });
+    await handleDeleteDialogConfirm(deps);
 
     expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledWith({
       imageId: "image-1",
