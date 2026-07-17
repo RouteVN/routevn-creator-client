@@ -532,7 +532,7 @@ export const handleEditDialogVideoClick = async (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store } = deps;
   const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
@@ -551,8 +551,7 @@ export const handleEditFormAction = async (deps, payload) => {
   const editItemId = store.selectEditItemId();
   const editUploadResult = store.selectEditUploadResult();
   if (!editItemId) {
-    store.closeEditDialog();
-    render();
+    handleEditDialogClose(deps);
     return;
   }
 
@@ -580,7 +579,7 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  store.closeEditDialog();
+  handleEditDialogClose(deps);
   await handleDataChanged(deps);
 };
 

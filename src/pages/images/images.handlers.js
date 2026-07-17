@@ -893,7 +893,7 @@ export const handleEditDialogImageClick = async (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store } = deps;
   const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
@@ -911,8 +911,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const editItemId = store.selectEditItemId();
   if (!editItemId) {
-    store.closeEditDialog();
-    render();
+    handleEditDialogClose(deps);
     return;
   }
 
@@ -941,7 +940,7 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  store.closeEditDialog();
+  handleEditDialogClose(deps);
   await handleDataChanged(deps);
 };
 
@@ -950,7 +949,7 @@ const deleteImage = async (deps, { itemId } = {}) => {
   const copy = selectCopy(deps);
   const result = await projectService.deleteImageIfUnused({
     imageId: itemId,
-    checkTargets: ["scenes", "layouts"],
+    checkTargets: ["scenes", "layouts", "controls"],
   });
 
   if (!result.deleted) {

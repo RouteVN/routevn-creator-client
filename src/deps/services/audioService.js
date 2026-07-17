@@ -20,6 +20,7 @@ export const createAudioService = () => {
   let updateTimer = null;
   let activeOwnerCount = 0;
   let loadRequestId = 0;
+  let loadAbortController;
 
   // Event listeners
   const listeners = new Map();
@@ -82,6 +83,8 @@ export const createAudioService = () => {
 
   const shutdown = () => {
     loadRequestId += 1;
+    loadAbortController?.abort();
+    loadAbortController = undefined;
     stopSourceNode();
     stopTimeUpdate();
 
@@ -148,23 +151,37 @@ export const createAudioService = () => {
     },
 
     async loadAudio(url) {
+      if (activeOwnerCount === 0) {
+        return undefined;
+      }
+
       service.init();
       const context = audioContext;
       const requestId = ++loadRequestId;
+      loadAbortController?.abort();
+      const abortController = new AbortController();
+      loadAbortController = abortController;
+      const isActiveRequest = () =>
+        activeOwnerCount > 0 &&
+        requestId === loadRequestId &&
+        context === audioContext &&
+        !abortController.signal.aborted;
 
       try {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          signal: abortController.signal,
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch audio: ${response.status}`);
         }
 
         const arrayBuffer = await response.arrayBuffer();
-        if (requestId !== loadRequestId || context !== audioContext) {
+        if (!isActiveRequest()) {
           return undefined;
         }
 
         const decodedAudioBuffer = await context.decodeAudioData(arrayBuffer);
-        if (requestId !== loadRequestId || context !== audioContext) {
+        if (!isActiveRequest()) {
           return undefined;
         }
 
@@ -179,12 +196,16 @@ export const createAudioService = () => {
 
         return audioInfo;
       } catch (error) {
-        if (requestId !== loadRequestId || context !== audioContext) {
+        if (!isActiveRequest()) {
           return undefined;
         }
 
         emit("error", error);
         throw error;
+      } finally {
+        if (loadAbortController === abortController) {
+          loadAbortController = undefined;
+        }
       }
     },
 

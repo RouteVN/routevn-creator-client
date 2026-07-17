@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EN_I18N } from "../support/i18n.js";
 
 const { generateIdMock, processPendingUploadsMock } = vi.hoisted(() => ({
   generateIdMock: vi.fn(() => "font-123"),
@@ -114,6 +115,7 @@ describe("fonts handlers", () => {
     );
 
     const deps = {
+      i18n: EN_I18N,
       appService: {
         pickFiles: vi.fn(async () => [file]),
         showAlert: vi.fn(),

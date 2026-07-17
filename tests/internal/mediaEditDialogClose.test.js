@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMediaPageHandlers } from "../../src/internal/ui/resourcePages/media/createMediaPageHandlers.js";
+import { handleEditFormAction as handleFontEditFormAction } from "../../src/pages/fonts/fonts.handlers.js";
+import { handleEditFormAction as handleImageEditFormAction } from "../../src/pages/images/images.handlers.js";
+import { handleEditFormAction as handleSoundEditFormAction } from "../../src/pages/sounds/sounds.handlers.js";
+import { handleEditFormAction as handleVideoEditFormAction } from "../../src/pages/videos/videos.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
 
@@ -61,6 +66,148 @@ describe("media edit dialog close", () => {
     expect(deps.render).toHaveBeenCalledOnce();
     expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledOnce();
   });
+
+  it("restores the media keyboard scope after submitting the folder dialog", async () => {
+    globalThis.requestAnimationFrame = (callback) => {
+      callback();
+      return 1;
+    };
+    const repositoryState = {
+      images: {
+        tree: [{ id: "folder-1" }],
+        items: {
+          "folder-1": {
+            id: "folder-1",
+            type: "folder",
+            name: "Renamed",
+          },
+        },
+      },
+    };
+    const { handleFolderNameFormAction } = createMediaPageHandlers({
+      resourceType: "images",
+      syncData: vi.fn(),
+    });
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        ensureRepository: vi.fn(),
+        getState: vi.fn(() => repositoryState),
+        getRepositoryState: vi.fn(() => repositoryState),
+        updateImage: vi.fn(async () => ({ valid: true })),
+      },
+      store: {
+        selectFolderNameDialogItemId: vi.fn(() => "folder-1"),
+        closeFolderNameDialog: vi.fn(),
+        setSelectedFolderId: vi.fn(),
+      },
+      refs: {
+        fileExplorerKeyboardScope: {
+          focus: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    await handleFolderNameFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Renamed",
+            description: "Updated folder",
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.updateImage).toHaveBeenCalledWith({
+      imageId: "folder-1",
+      data: {
+        name: "Renamed",
+        description: "Updated folder",
+      },
+    });
+    expect(deps.store.closeFolderNameDialog).toHaveBeenCalledOnce();
+    expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["fonts", "font", handleFontEditFormAction, "updateFont"],
+    ["images", "image", handleImageEditFormAction, "updateImage"],
+    ["sounds", "sound", handleSoundEditFormAction, "updateSound"],
+    ["videos", "video", handleVideoEditFormAction, "updateVideo"],
+  ])(
+    "restores the media keyboard scope after submitting the %s edit dialog",
+    async (resourceType, itemType, handleEditFormAction, updateMethod) => {
+      globalThis.requestAnimationFrame = (callback) => {
+        callback();
+        return 1;
+      };
+      const itemId = `${itemType}-1`;
+      const repositoryState = {
+        files: {
+          tree: [],
+          items: {},
+        },
+        [resourceType]: {
+          tree: [{ id: itemId }],
+          items: {
+            [itemId]: {
+              id: itemId,
+              type: itemType,
+              name: "Renamed",
+            },
+          },
+        },
+      };
+      const updateResource = vi.fn(async () => ({ valid: true }));
+      const deps = {
+        i18n: EN_I18N,
+        appService: {
+          showAlert: vi.fn(),
+        },
+        projectService: {
+          [updateMethod]: updateResource,
+          getState: vi.fn(() => repositoryState),
+          getRepositoryState: vi.fn(() => repositoryState),
+        },
+        store: {
+          selectEditItemId: vi.fn(() => itemId),
+          selectEditUploadResult: vi.fn(() => undefined),
+          closeEditDialog: vi.fn(),
+          setItems: vi.fn(),
+          setProjectResolution: vi.fn(),
+          setTagsData: vi.fn(),
+        },
+        refs: {
+          fileExplorerKeyboardScope: {
+            focus: vi.fn(),
+          },
+        },
+        render: vi.fn(),
+      };
+
+      await handleEditFormAction(deps, {
+        _event: {
+          detail: {
+            actionId: "submit",
+            values: {
+              name: "Renamed",
+              description: "Updated resource",
+              tagIds: [],
+            },
+          },
+        },
+      });
+
+      expect(updateResource).toHaveBeenCalledOnce();
+      expect(deps.store.closeEditDialog).toHaveBeenCalledOnce();
+      expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledOnce();
+    },
+  );
 
   it("opens the selected folder dialog when e is pressed", () => {
     const { handleFileExplorerKeyboardScopeKeyDown } = createMediaPageHandlers({

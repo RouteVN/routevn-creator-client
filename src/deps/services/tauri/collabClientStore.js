@@ -349,6 +349,10 @@ const summarizeHistoryEdges = (events = []) => ({
 
 const summarizeCheckpointCollections = (value = {}) => {
   const counts = {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return counts;
+  }
+
   for (const [key, collection] of Object.entries(value)) {
     if (
       collection &&

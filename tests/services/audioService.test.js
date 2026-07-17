@@ -91,4 +91,55 @@ describe("audio service", () => {
 
     releasePlayer();
   });
+
+  it("does not start a delayed load after the last owner releases", async () => {
+    const { contexts, MockAudioContext } = createAudioContextHarness();
+    globalThis.window = { AudioContext: MockAudioContext };
+    globalThis.fetch = vi.fn(async () => createAudioResponse());
+    const audioService = createAudioService();
+    const releasePlayer = audioService.acquire();
+    let resolveFileContent;
+    const fileContent = new Promise((resolve) => {
+      resolveFileContent = resolve;
+    });
+    const delayedLoad = (async () => {
+      const { url } = await fileContent;
+      return audioService.loadAudio(url);
+    })();
+
+    releasePlayer();
+    resolveFileContent({ url: "blob:released" });
+
+    await expect(delayedLoad).resolves.toBeUndefined();
+    expect(contexts).toHaveLength(1);
+    expect(contexts[0].close).toHaveBeenCalledOnce();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("aborts an in-flight load after the last owner releases", async () => {
+    const { contexts, MockAudioContext } = createAudioContextHarness();
+    globalThis.window = { AudioContext: MockAudioContext };
+    let fetchSignal;
+    globalThis.fetch = vi.fn(
+      (_url, { signal }) =>
+        new Promise((_resolve, reject) => {
+          fetchSignal = signal;
+          signal.addEventListener("abort", () => {
+            const error = new Error("Aborted");
+            error.name = "AbortError";
+            reject(error);
+          });
+        }),
+    );
+    const audioService = createAudioService();
+    const releasePlayer = audioService.acquire();
+    const pendingLoad = audioService.loadAudio("blob:pending");
+
+    releasePlayer();
+
+    await expect(pendingLoad).resolves.toBeUndefined();
+    expect(fetchSignal.aborted).toBe(true);
+    expect(contexts).toHaveLength(1);
+    expect(contexts[0].close).toHaveBeenCalledOnce();
+  });
 });

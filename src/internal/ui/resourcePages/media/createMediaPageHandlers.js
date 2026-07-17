@@ -376,7 +376,7 @@ export const createMediaPageHandlers = ({
   };
 
   const handleFolderNameFormAction = async (deps, payload) => {
-    const { appService, store, render } = deps;
+    const { appService, store } = deps;
     const resolvedCopy = resolveCopy(deps);
     const { actionId, values } = payload._event.detail;
     if (actionId !== "submit") {
@@ -396,8 +396,7 @@ export const createMediaPageHandlers = ({
 
     const folderId = store.selectFolderNameDialogItemId();
     if (!folderId) {
-      store.closeFolderNameDialog();
-      render();
+      handleFolderNameDialogClose(deps);
       return;
     }
 
@@ -411,8 +410,7 @@ export const createMediaPageHandlers = ({
         },
       },
     });
-    store.closeFolderNameDialog();
-    render();
+    handleFolderNameDialogClose(deps);
   };
 
   const handleSearchInput = (deps, payload) => {

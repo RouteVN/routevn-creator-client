@@ -209,6 +209,7 @@ const {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleEditDialogClose,
   handleSearchInput,
   handleItemClick: handleBaseFontItemClick,
   handleItemEdit: handleFontItemEdit,
@@ -266,6 +267,7 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleEditDialogClose,
 };
 
 export {
@@ -373,12 +375,6 @@ export const handleEditFormAddOptionClick = (deps) => {
   });
 };
 
-export const handleEditDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.closeEditDialog();
-  render();
-};
-
 export const handleEditDialogFontClick = async (deps) => {
   const { appService, projectService, store, render } = deps;
   const copy = selectCopy(deps);
@@ -418,7 +414,7 @@ export const handleEditDialogFontClick = async (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store } = deps;
   const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
@@ -436,8 +432,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const editItemId = store.selectEditItemId();
   if (!editItemId) {
-    store.closeEditDialog();
-    render();
+    handleEditDialogClose(deps);
     return;
   }
 
@@ -468,7 +463,7 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  store.closeEditDialog();
+  handleEditDialogClose(deps);
   await handleDataChanged(deps);
 };
 

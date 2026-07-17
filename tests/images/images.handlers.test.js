@@ -444,7 +444,7 @@ describe("images handlers", () => {
     expect(deps.store.closeDeleteDialog).toHaveBeenCalledTimes(1);
     expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledWith({
       imageId: "image-1",
-      checkTargets: ["scenes", "layouts"],
+      checkTargets: ["scenes", "layouts", "controls"],
     });
     expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: undefined,
@@ -479,7 +479,7 @@ describe("images handlers", () => {
 
     expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledWith({
       imageId: "image-1",
-      checkTargets: ["scenes", "layouts"],
+      checkTargets: ["scenes", "layouts", "controls"],
     });
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "Failed to delete resource.",

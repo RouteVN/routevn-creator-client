@@ -498,6 +498,74 @@ describe("tauri collab client store locking", () => {
     expect(checkpointModes.at(-1)).toBe("TRUNCATE");
   });
 
+  it("accepts compatible draft history when the checkpoint value is null", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const draftEvent = {
+      id: "draft-1",
+      partition: "m",
+      type: "scene.create",
+      schemaVersion: 1,
+      payload: {},
+      clientTs: 1,
+      createdAt: 1,
+    };
+    const fakeDb = {
+      execute: vi.fn(async () => ({ rowsAffected: 1 })),
+      select: vi.fn(async (sql) => {
+        const statement = String(sql);
+        if (statement === "SELECT DRAFTS") {
+          return [draftEvent];
+        }
+        if (statement === "SELECT COMMITTED") {
+          return [];
+        }
+        if (statement.includes("COUNT(*) AS committedCount")) {
+          return [{ committedCount: 0, latestCommittedId: 0 }];
+        }
+        if (statement.includes("COUNT(*) AS draftCount")) {
+          return [{ draftCount: 1, latestDraftClock: 1 }];
+        }
+        if (statement.includes("FROM materialized_view_state")) {
+          return [
+            {
+              view_version: "1",
+              last_committed_id: 1,
+              value: "null",
+              updated_at: 1,
+            },
+          ];
+        }
+        if (statement.includes("wal_checkpoint")) {
+          return [{ busy: 0, log: 0, checkpointed: 0 }];
+        }
+        return [];
+      }),
+      close: vi.fn(async () => {}),
+    };
+    loadMock.mockResolvedValue(fakeDb);
+    createLibsqlClientStoreMock.mockImplementation(createStoreMockFactory());
+
+    const { createPersistedTauriProjectStore } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+    const store = await createPersistedTauriProjectStore({
+      projectPath: "/projects/null-checkpoint",
+      projectId: "project-null-checkpoint",
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Using checkpoint-backed project history",
+      expect.objectContaining({
+        checkpoint: expect.objectContaining({
+          collectionCounts: {},
+        }),
+      }),
+    );
+
+    await store.close();
+    warnSpy.mockRestore();
+  });
+
   it("uses sequential single draft inserts instead of insertDrafts batching", async () => {
     const fakeDb = {
       execute: vi.fn(async (_sql, args = []) => ({
