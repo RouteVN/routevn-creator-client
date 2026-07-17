@@ -1087,6 +1087,12 @@ export const handleDialogPreviewBackgroundImageClick = (deps) => {
   render();
 };
 
+export const handleDialogTextureImageClick = (deps) => {
+  const { render, store } = deps;
+  store.showTextureImageSelectorDialog();
+  render();
+};
+
 export const handleDialogPreviewBackgroundImageContextMenu = async (
   deps,
   payload,
@@ -1128,6 +1134,30 @@ const applyDialogPreviewBackgroundImage = async (deps, imageId) => {
   await renderCurrentDialogPreview(deps);
 };
 
+const applyDialogTextureImage = async (deps, imageId) => {
+  const { refs, render, store } = deps;
+  store.setDialogTextureImage({
+    imageId,
+  });
+  store.hidePreviewImageSelectorDialog();
+  render();
+  refs.particleForm.setValues({
+    values: store.selectDialogFormValues(),
+  });
+  await renderCurrentDialogPreview(deps);
+};
+
+const applySelectedDialogImage = async (deps, imageId) => {
+  const { store } = deps;
+  const imageSelectorDialog = store.selectPreviewImageSelectorDialog();
+  if (imageSelectorDialog.target === "texture") {
+    await applyDialogTextureImage(deps, imageId);
+    return;
+  }
+
+  await applyDialogPreviewBackgroundImage(deps, imageId);
+};
+
 export const handlePreviewImageSelected = (deps, payload) => {
   const { render, store } = deps;
   store.setPreviewImageSelectorSelectedImageId({
@@ -1142,7 +1172,7 @@ export const handlePreviewImageDoubleClick = async (deps, payload) => {
     return;
   }
 
-  await applyDialogPreviewBackgroundImage(deps, imageId);
+  await applySelectedDialogImage(deps, imageId);
 };
 
 export const handlePreviewImageFileExplorerClickItem = (deps, payload) => {
@@ -1165,10 +1195,7 @@ export {
 export const handleConfirmPreviewImageSelection = async (deps) => {
   const { store } = deps;
   const imageSelectorDialog = store.selectPreviewImageSelectorDialog();
-  await applyDialogPreviewBackgroundImage(
-    deps,
-    imageSelectorDialog.selectedImageId,
-  );
+  await applySelectedDialogImage(deps, imageSelectorDialog.selectedImageId);
 };
 
 export const handleCancelPreviewImageSelection = (deps) => {

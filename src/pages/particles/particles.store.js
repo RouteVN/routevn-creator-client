@@ -23,7 +23,6 @@ import {
 } from "./support/particleForm.js";
 import { DEFAULT_PARTICLE_PRESET_ID } from "./support/particlePresets.js";
 import { formatParticleAspectRatio } from "./support/particlePreview.js";
-import { toParticleTextureImageOptions } from "../../internal/particles.js";
 import { selectParticlesPageCopy } from "./support/particlesPageCopy.js";
 
 const EMPTY_TREE = {
@@ -42,8 +41,12 @@ const CREATE_TAG_DEFAULT_VALUES = Object.freeze({
 
 const createInitialPreviewImageSelectorDialogState = () => ({
   open: false,
+  target: undefined,
   selectedImageId: undefined,
 });
+
+const PREVIEW_BACKGROUND_IMAGE_TARGET = "preview-background";
+const TEXTURE_IMAGE_TARGET = "texture";
 
 const getImageItems = (state) => state.imagesData?.items ?? {};
 
@@ -62,8 +65,7 @@ const resolveImageAspectRatio = (item) => {
   return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
 };
 
-const buildDialogPreviewBackgroundImage = (state) => {
-  const imageId = state.dialogPreviewBackgroundImageId;
+const buildDialogImageCard = (state, imageId) => {
   const imageItem = getImageItemById(state, imageId);
 
   if (!imageId || !imageItem?.fileId) {
@@ -78,6 +80,10 @@ const buildDialogPreviewBackgroundImage = (state) => {
     itemBorderColor: "bo",
     itemHoverBorderColor: "ac",
   };
+};
+
+const buildDialogPreviewBackgroundImage = (state) => {
+  return buildDialogImageCard(state, state.dialogPreviewBackgroundImageId);
 };
 
 const createTagForm = (copy = {}) => ({
@@ -104,27 +110,23 @@ const createTagForm = (copy = {}) => ({
 
 const createDialogForm = ({
   editMode = false,
-  imagesData = EMPTY_TREE,
   tagsData = createEmptyTagCollection(),
   activeTab = DEFAULT_PARTICLE_FORM_TAB,
   dialogStep = PARTICLE_EDITOR_STEP,
   copy = {},
 } = {}) => {
-  const imageOptions = toParticleTextureImageOptions(imagesData);
   const tagOptions = buildTagFilterOptions({
     tagsCollection: tagsData,
   });
 
   if (!editMode && dialogStep === CREATE_PARTICLE_SETUP_STEP) {
     return createParticleCreateSetupForm({
-      imageOptions,
       copy,
     });
   }
 
   return createParticleForm({
     editMode,
-    imageOptions,
     tagOptions,
     activeTab,
     copy,
@@ -230,7 +232,6 @@ const {
       particleFormKey: `particle-form-${state.dialogStep}-${state.dialogFormTab}`,
       particleForm: createDialogForm({
         editMode: state.editMode,
-        imagesData: state.imagesData,
         tagsData: state.tagsData,
         activeTab: state.dialogFormTab,
         dialogStep: state.dialogStep,
@@ -239,6 +240,10 @@ const {
       dialogFormValues: state.dialogFormValues,
       dialogPreviewAspectRatio: state.dialogPreviewAspectRatio,
       dialogPreviewBackgroundImage: buildDialogPreviewBackgroundImage(state),
+      dialogTextureImage: buildDialogImageCard(
+        state,
+        state.dialogFormValues.textureImageId,
+      ),
       previewImageSelectorDialog: state.previewImageSelectorDialog,
       showImageSelectorFileExplorer: !state.isTouchMode,
       imageFolderItems: toFlatItems(state.imagesData).filter(
@@ -252,7 +257,8 @@ const {
       createTagForm: createTagForm(copy),
       selectedItem,
       addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
-      backgroundImageLabel: copy.backgroundImageLabel ?? "Background Image",
+      backgroundImageLabel:
+        copy.backgroundImageLabel ?? "Preview background image",
       cancelButton: copy.cancelButton ?? "Cancel",
       confirmButton: copy.confirmButton ?? "OK",
       deleteButton: copy.deleteButton ?? "Delete",
@@ -261,6 +267,13 @@ const {
       previewButton: copy.previewMenuItem ?? "Preview",
       removeMenuItem: copy.removeMenuItem ?? "Remove",
       selectImageLabel: copy.selectImageOption ?? "Select image",
+      textureImageDescription:
+        state.dialogStep === CREATE_PARTICLE_SETUP_STEP
+          ? (copy.setupTextureImageDescription ??
+            "Choose the image used for each spawned particle.")
+          : (copy.textureImageDescription ??
+            "Choose the image used to draw each particle sprite."),
+      textureImageLabel: copy.textureImageLabel ?? "Texture Image",
     };
   },
 });
@@ -349,7 +362,6 @@ export const setTagsData = ({ state }, { tagsData } = {}) => {
   );
   state.particleForm = createDialogForm({
     editMode: state.editMode,
-    imagesData: state.imagesData,
     tagsData: state.tagsData,
     activeTab: state.dialogFormTab,
     dialogStep: state.dialogStep,
@@ -489,7 +501,6 @@ const setDialogState = (state, options = {}) => {
   });
   state.particleForm = createDialogForm({
     editMode,
-    imagesData: state.imagesData,
     tagsData: state.tagsData,
     activeTab: state.dialogFormTab,
     dialogStep: state.dialogStep,
@@ -531,7 +542,6 @@ export const closeParticleDialog = ({ state }, _payload = {}) => {
   state.previewImageSelectorDialog =
     createInitialPreviewImageSelectorDialogState();
   state.particleForm = createDialogForm({
-    imagesData: state.imagesData,
     tagsData: state.tagsData,
     activeTab: state.dialogFormTab,
     dialogStep: state.dialogStep,
@@ -573,7 +583,6 @@ export const setImagesData = ({ state }, { imagesData } = {}) => {
   }
   state.particleForm = createDialogForm({
     editMode: state.editMode,
-    imagesData: state.imagesData,
     tagsData: state.tagsData,
     activeTab: state.dialogFormTab,
     dialogStep: state.dialogStep,
@@ -588,7 +597,6 @@ export const setDialogFormTab = ({ state }, { tab } = {}) => {
   state.dialogFormTab = tab ?? DEFAULT_PARTICLE_FORM_TAB;
   state.particleForm = createDialogForm({
     editMode: state.editMode,
-    imagesData: state.imagesData,
     tagsData: state.tagsData,
     activeTab: state.dialogFormTab,
     dialogStep: state.dialogStep,
@@ -599,7 +607,6 @@ export const setDialogStep = ({ state }, { step } = {}) => {
   state.dialogStep = step ?? CREATE_PARTICLE_SETUP_STEP;
   state.particleForm = createDialogForm({
     editMode: state.editMode,
-    imagesData: state.imagesData,
     tagsData: state.tagsData,
     activeTab: state.dialogFormTab,
     dialogStep: state.dialogStep,
@@ -634,8 +641,18 @@ export const clearDialogPreviewBackgroundImage = ({ state }, _payload = {}) => {
 
 export const showPreviewImageSelectorDialog = ({ state }, _payload = {}) => {
   state.previewImageSelectorDialog.open = true;
+  state.previewImageSelectorDialog.target = PREVIEW_BACKGROUND_IMAGE_TARGET;
   state.previewImageSelectorDialog.selectedImageId =
     state.dialogPreviewBackgroundImageId;
+};
+
+export const showTextureImageSelectorDialog = ({ state }, _payload = {}) => {
+  const imageId = state.dialogFormValues.textureImageId;
+  state.previewImageSelectorDialog.open = true;
+  state.previewImageSelectorDialog.target = TEXTURE_IMAGE_TARGET;
+  state.previewImageSelectorDialog.selectedImageId = imageId
+    ? imageId
+    : undefined;
 };
 
 export const hidePreviewImageSelectorDialog = ({ state }, _payload = {}) => {
@@ -648,6 +665,10 @@ export const setPreviewImageSelectorSelectedImageId = (
   { imageId } = {},
 ) => {
   state.previewImageSelectorDialog.selectedImageId = imageId ?? undefined;
+};
+
+export const setDialogTextureImage = ({ state }, { imageId } = {}) => {
+  state.dialogFormValues.textureImageId = imageId ?? "";
 };
 
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;

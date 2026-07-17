@@ -797,7 +797,7 @@ particlesPage:
   addParticleButton: "Add Particle"
   addParticleTitle: "Add Particle"
   appearanceTab: "Appearance"
-  backgroundImageLabel: "Background Image"
+  backgroundImageLabel: "Preview background image"
   basicsHelpText: "Pick a texture image and adjust the main emitter fields. Preset values were applied before opening this form."
   basicsTab: "Basics"
   burstCountDescription: "How many particles spawn each time a burst is emitted."
