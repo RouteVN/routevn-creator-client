@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
+  getTemplateFileSourceName: vi.fn(),
   getTemplateFiles: vi.fn(),
   loadTemplate: vi.fn(),
   resolveProjectResolutionForWrite: vi.fn(),
@@ -8,6 +9,7 @@ const mocked = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/deps/clients/web/templateLoader.js", () => ({
+  getTemplateFileSourceName: mocked.getTemplateFileSourceName,
   getTemplateFiles: mocked.getTemplateFiles,
   loadTemplate: mocked.loadTemplate,
 }));
@@ -276,6 +278,7 @@ const createRawClientStoreStub = ({
 describe("webRepositoryAdapter", () => {
   beforeEach(async () => {
     globalThis.indexedDB = createIndexedDbStub();
+    mocked.getTemplateFileSourceName.mockReset();
     mocked.getTemplateFiles.mockReset();
     mocked.loadTemplate.mockReset();
     mocked.resolveProjectResolutionForWrite.mockReset();
@@ -283,6 +286,11 @@ describe("webRepositoryAdapter", () => {
 
     await deleteDatabase("web-adapter-project");
     await deleteDatabase("web-init-project");
+    await deleteDatabase("web-template-file-project");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("reads repository events from the browser client store and removes the legacy events store", async () => {
@@ -432,6 +440,53 @@ describe("webRepositoryAdapter", () => {
         key: "creatorVersion",
       }),
     ).resolves.toBe(21);
+  });
+
+  it("copies template assets from extension-bearing source URLs into extensionless project file ids", async () => {
+    const projectId = "web-template-file-project";
+    const rawClientStore = createRawClientStoreStub();
+    const fontBlob = new Blob([new Uint8Array([0, 1, 0, 0])], {
+      type: "font/ttf",
+    });
+    const fetchTemplateFile = vi.fn(async () => ({
+      ok: true,
+      blob: async () => fontBlob,
+    }));
+    vi.stubGlobal("fetch", fetchTemplateFile);
+
+    mocked.getTemplateFiles.mockResolvedValue(["font-file-id"]);
+    mocked.getTemplateFileSourceName.mockReturnValue("font-file-id.ttf");
+    mocked.loadTemplate.mockResolvedValue(structuredClone(initialProjectData));
+    mocked.resolveProjectResolutionForWrite.mockReturnValue(
+      structuredClone(initialProjectData.project.resolution),
+    );
+    mocked.scaleTemplateProjectStateForResolution.mockImplementation(
+      (templateData) => templateData,
+    );
+
+    await initializeProject({
+      projectId,
+      template: "blank",
+      projectInfo: {
+        id: projectId,
+        name: "Browser Project",
+      },
+      projectResolution: initialProjectData.project.resolution,
+      creatorVersion: 21,
+      rawClientStore,
+    });
+
+    expect(fetchTemplateFile).toHaveBeenCalledWith(
+      "/templates/blank/files/font-file-id.ttf",
+    );
+    const adapter = await createInsiemeWebStoreAdapter(projectId, {
+      rawClientStore,
+    });
+    const storedFont = await adapter.getFile("font-file-id");
+    expect(storedFont.type).toBe("font/ttf");
+    expect(new Uint8Array(await storedFont.arrayBuffer())).toEqual(
+      new Uint8Array(await fontBlob.arrayBuffer()),
+    );
   });
 
   it("can replay an initialized project from history after checkpoint loss and later local edits", async () => {

@@ -4,8 +4,9 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { fileTypeFromBuffer } from "file-type";
 import JSZip from "jszip";
 import {
-  loadTemplate,
   getTemplateFiles,
+  getTemplateFileSourceName,
+  loadTemplate,
 } from "../../clients/web/templateLoader.js";
 import {
   PROJECT_DB_NAME,
@@ -389,16 +390,20 @@ const createLocalOnlyProjectCollabSession = ({
   };
 };
 
-async function copyTemplateFiles(templateId, targetPath) {
+async function copyTemplateFiles(templateId, templateData, targetPath) {
   const templateFilesPath = `/templates/${templateId}/files/`;
   const filesToCopy = await getTemplateFiles(templateId);
 
-  for (const fileName of filesToCopy) {
+  for (const fileId of filesToCopy) {
     try {
-      const sourcePath = templateFilesPath + fileName;
-      const targetFilePath = await join(targetPath, fileName);
+      const sourceFileName = getTemplateFileSourceName({
+        fileId,
+        templateData,
+      });
+      const sourcePath = templateFilesPath + sourceFileName;
+      const targetFilePath = await join(targetPath, fileId);
 
-      const response = await fetch(sourcePath + "?raw");
+      const response = await fetch(sourcePath);
       if (response.ok) {
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
@@ -406,7 +411,7 @@ async function copyTemplateFiles(templateId, targetPath) {
         await writeFile(targetFilePath, uint8Array);
       }
     } catch (error) {
-      console.error(`Failed to copy template file ${fileName}:`, error);
+      console.error(`Failed to copy template file ${fileId}:`, error);
     }
   }
 }
@@ -979,7 +984,7 @@ export const createTauriProjectServiceAdapters = ({
         loadedTemplateData,
         resolvedProjectResolution,
       );
-      await copyTemplateFiles(template, filesPath);
+      await copyTemplateFiles(template, loadedTemplateData, filesPath);
 
       assertSupportedProjectState(templateData);
 

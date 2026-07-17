@@ -1,4 +1,8 @@
-import { loadTemplate, getTemplateFiles } from "./templateLoader.js";
+import {
+  getTemplateFiles,
+  getTemplateFileSourceName,
+  loadTemplate,
+} from "./templateLoader.js";
 import {
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
@@ -102,22 +106,26 @@ export const readProjectAppValue = async ({ projectId, key }) => {
   }
 };
 
-async function copyTemplateFiles(templateId, adapter) {
+async function copyTemplateFiles(templateId, templateData, adapter) {
   const templateFilesPath = `/templates/${templateId}/files/`;
   const filesToCopy = await getTemplateFiles(templateId);
 
-  for (const fileName of filesToCopy) {
+  for (const fileId of filesToCopy) {
     try {
-      const sourcePath = templateFilesPath + fileName;
+      const sourceFileName = getTemplateFileSourceName({
+        fileId,
+        templateData,
+      });
+      const sourcePath = templateFilesPath + sourceFileName;
 
       // Fetch from the web server and save to IndexedDB
-      const response = await fetch(sourcePath + "?raw");
+      const response = await fetch(sourcePath);
       if (response.ok) {
         const blob = await response.blob();
-        await adapter.setFile(fileName, blob);
+        await adapter.setFile(fileId, blob);
       }
     } catch (error) {
-      console.error(`Failed to copy template file ${fileName}:`, error);
+      console.error(`Failed to copy template file ${fileId}:`, error);
     }
   }
 }
@@ -170,7 +178,7 @@ export const initializeProject = async ({
   );
 
   // Copy template files to project's IndexedDB
-  await copyTemplateFiles(template, adapter);
+  await copyTemplateFiles(template, loadedTemplateData, adapter);
 
   assertSupportedProjectState(templateData);
 
