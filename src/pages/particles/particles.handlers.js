@@ -1093,6 +1093,16 @@ export const handleDialogTextureImageClick = (deps) => {
   render();
 };
 
+export const handleDialogTextureImageKeyDown = (deps, payload) => {
+  const { _event } = payload;
+  if (_event.key !== "Enter" && _event.key !== " ") {
+    return;
+  }
+
+  _event.preventDefault();
+  handleDialogTextureImageClick(deps);
+};
+
 export const handleDialogPreviewBackgroundImageContextMenu = async (
   deps,
   payload,

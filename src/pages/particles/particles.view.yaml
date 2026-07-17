@@ -115,6 +115,8 @@ refs:
     eventListeners:
       click:
         handler: handleDialogTextureImageClick
+      keydown:
+        handler: handleDialogTextureImageKeyDown
   previewImageSelectorDialog:
     eventListeners:
       close:
@@ -225,13 +227,13 @@ template:
                                       - rtgl-text s=sm c=mu-fg: ${textureImageDescription}
                                   - 'rtgl-view h=8 style="flex-shrink: 0;"': null
                                   - $if dialogTextureImage:
-                                      - 'rtgl-view#dialogTextureImageButton cur=pointer bw=xs bc=${dialogTextureImage.itemBorderColor} h-bc=${dialogTextureImage.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                                      - 'rtgl-view#dialogTextureImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="${textureImageLabel}" cur=pointer bw=xs bc=${dialogTextureImage.itemBorderColor} h-bc=${dialogTextureImage.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
                                           - 'rtgl-view w=f style="aspect-ratio: ${dialogTextureImage.previewAspectRatio}; overflow: hidden;"':
                                               - rvn-file-image w=f h=f fileId=${dialogTextureImage.previewFileId}: null
                                           - rtgl-view w=f p=md:
                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${dialogTextureImage.name}
                                     $else:
-                                      - 'rtgl-view#dialogTextureImageButton w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
+                                      - 'rtgl-view#dialogTextureImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="${textureImageLabel}" w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
                                           - rtgl-text c=mu-fg s=sm: ${selectImageLabel}
               - 'rtgl-view w=6fg lg-w=f d=v av=c g=md h=f style="min-width: 0; min-height: 0; overflow-y: auto;"':
                   - 'rtgl-view w=f pos=rel br=md bw=xs bc=bo style="aspect-ratio: ${dialogPreviewAspectRatio}; overflow: hidden; background: #000;"':
