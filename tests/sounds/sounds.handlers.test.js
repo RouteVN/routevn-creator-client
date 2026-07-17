@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
 import {
   handleDataChanged,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleItemDelete,
   handleMobileDeleteDialogCancel,
   handleMobileDeleteDialogConfirm,
@@ -179,6 +180,95 @@ describe("sounds handlers", () => {
     expect(unlock.mock.invocationCallOrder[0]).toBeLessThan(
       deps.store.openAudioPlayer.mock.invocationCallOrder[0],
     );
+  });
+
+  it("plays, pauses, resumes, and switches selected sounds with Enter", () => {
+    let selectedItemId = "sound-1";
+    let playingFileId;
+    let isPlaying = false;
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const audioService = {
+      unlock: vi.fn(() => Promise.resolve()),
+      isPlaying: vi.fn(() => isPlaying),
+      pause: vi.fn(() => {
+        isPlaying = false;
+      }),
+      play: vi.fn(() => {
+        isPlaying = true;
+        return Promise.resolve();
+      }),
+    };
+    const deps = {
+      i18n: EN_I18N,
+      appService: {
+        getAudioService: vi.fn(() => audioService),
+      },
+      store: {
+        selectSoundItemById: vi.fn(({ itemId }) => ({
+          id: itemId,
+          name: itemId === "sound-1" ? "Theme" : "Ambience",
+          fileId: itemId === "sound-1" ? "file-1" : "file-2",
+        })),
+        selectPlayingSoundFileId: vi.fn(() => playingFileId),
+        setSelectedItemId: vi.fn(),
+        openAudioPlayer: vi.fn(({ fileId }) => {
+          playingFileId = fileId;
+          isPlaying = true;
+        }),
+      },
+      refs: {
+        fileExplorer: {
+          getSelectedItem: vi.fn(() => ({
+            itemId: selectedItemId,
+            isFolder: false,
+          })),
+          selectItem: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+    const pressEnter = () => {
+      handleFileExplorerKeyboardScopeKeyDown(deps, {
+        _event: {
+          key: "Enter",
+          altKey: false,
+          ctrlKey: false,
+          metaKey: false,
+          preventDefault,
+          stopPropagation,
+        },
+      });
+    };
+
+    pressEnter();
+
+    expect(deps.store.openAudioPlayer).toHaveBeenNthCalledWith(1, {
+      fileId: "file-1",
+      fileName: "Theme",
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "sound-1",
+    });
+
+    pressEnter();
+
+    expect(audioService.pause).toHaveBeenCalledTimes(1);
+    expect(deps.store.openAudioPlayer).toHaveBeenCalledTimes(1);
+
+    pressEnter();
+
+    expect(audioService.play).toHaveBeenCalledTimes(1);
+
+    selectedItemId = "sound-2";
+    pressEnter();
+
+    expect(deps.store.openAudioPlayer).toHaveBeenNthCalledWith(2, {
+      fileId: "file-2",
+      fileName: "Ambience",
+    });
+    expect(preventDefault).toHaveBeenCalledTimes(4);
+    expect(stopPropagation).toHaveBeenCalledTimes(4);
   });
 
   it("opens a confirmation dialog for selected mobile detail sound deletes", () => {

@@ -1,6 +1,6 @@
 ---
 title: Sounds Workflow
-description: Covers the sounds page upload, detail, audio preview, edit submit, and filtered search states.
+description: Covers the sounds page upload, detail, keyboard audio preview, edit submit, and filtered search states.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -104,18 +104,50 @@ steps:
     timeoutMs: 5000
   - action: wait
     ms: 400
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const preview = deepQuery(document, '#detailSoundPreview'); return preview ? getComputedStyle(preview).pointerEvents : undefined; })()"
+    value: none
   - action: screenshot
-  - action: select
-    selector: "#groupview #itemRef0x0[data-item-id]:not([data-item-id=''])"
-    steps:
-      - action: dblclick
+  - action: keypress
+    key: Enter
   - action: waitFor
     selector: "#rvnAudioPlayer"
     state: attached
     timeoutMs: 10000
+  - action: waitFor
+    selector: "#rvnAudioPlayer #playPauseBtn rtgl-svg[svg='pause']"
+    state: attached
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const player = deepQuery(document, '#rvnAudioPlayer'); const progressTrack = deepQuery(player?.shadowRoot, '#progressBar'); const playerBody = deepQuery(player?.shadowRoot, 'rtgl-view[bgc=\"mu\"]'); return Boolean(progressTrack && playerBody && getComputedStyle(progressTrack).backgroundColor !== getComputedStyle(playerBody).backgroundColor); })()"
+    value: true
+  - action: keypress
+    key: Enter
+  - action: waitFor
+    selector: "#rvnAudioPlayer #playPauseBtn rtgl-svg[svg='play']"
+    state: attached
+    timeoutMs: 5000
+  - action: keypress
+    key: Enter
+  - action: waitFor
+    selector: "#rvnAudioPlayer #playPauseBtn rtgl-svg[svg='pause']"
+    state: attached
+    timeoutMs: 5000
   - action: wait
-    ms: 500
+    ms: 700
   - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#rvnAudioPlayer"
+    state: hidden
+    timeoutMs: 5000
   - action: select
     selector: "#detailHeader"
     steps:

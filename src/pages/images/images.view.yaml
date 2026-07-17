@@ -294,10 +294,12 @@ template:
   - $when: fullImagePreviewVisible
     'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none; background-color: rgba(0, 0, 0, 0.9);"':
       - $if fullImagePreviewFileId:
-          - 'rtgl-view pos=fix z=3002 d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="top: 8px; left: 50%; transform: translateX(-50%); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
-              - 'rtgl-button#previewCanvasModeButton sq pre=canvas-scale v=${fullImagePreviewCanvasModeButton.variant} aria-label="${fullImagePreviewCanvasModeLabel}" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="${fullImagePreviewCanvasModeLabel}"': null
-              - 'rtgl-button#previewFitModeButton sq pre=fit-to-frame v=${fullImagePreviewFitModeButton.variant} aria-label="${fullImagePreviewFitModeLabel}" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="${fullImagePreviewFitModeLabel}"': null
-          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+          - 'div style="${fullImagePreviewLayoutStyle}"':
+              - 'div style="${fullImagePreviewTopBarStyle}"':
+                  - 'rtgl-text#previewBreadcrumb s=sm ellipsis=true style="color: white; min-width: 0; max-width: 100%;"': ${fullImagePreviewBreadcrumb}
+                  - 'rtgl-view#previewModeControls d=h g=xs bgc=bg bw=xs bc=bo br=md p=xs style="box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);"':
+                      - 'rtgl-button#previewCanvasModeButton sq pre=canvas-scale v=${fullImagePreviewCanvasModeButton.variant} aria-label="${fullImagePreviewCanvasModeLabel}" aria-pressed="${fullImagePreviewCanvasModeButton.selected}" title="${fullImagePreviewCanvasModeLabel}"': null
+                      - 'rtgl-button#previewFitModeButton sq pre=fit-to-frame v=${fullImagePreviewFitModeButton.variant} aria-label="${fullImagePreviewFitModeLabel}" aria-pressed="${fullImagePreviewFitModeButton.selected}" title="${fullImagePreviewFitModeLabel}"': null
               - 'div#previewImageFrame.imagePreviewFrame.imagePreviewTransparencyGrid style="${fullImagePreviewFrameStyle}"':
                   - 'div style="${fullImagePreviewImageWrapperStyle}"':
                       - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null

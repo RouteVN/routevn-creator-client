@@ -285,7 +285,48 @@ describe("images store preview navigation", () => {
     });
 
     expect(context.state.fullImagePreviewVisible).toBe(true);
+    expect(context.state.fullImagePreviewItemId).toBe("image-1");
     expect(context.state.fullImagePreviewFileId).toBe("original-file");
+  });
+
+  it("shows the preview folder and item names as a breadcrumb", () => {
+    const context = createContext();
+
+    setItems(context, {
+      data: {
+        tree: [
+          {
+            id: "backgrounds",
+            children: [{ id: "image-1" }],
+          },
+        ],
+        items: {
+          backgrounds: {
+            id: "backgrounds",
+            type: "folder",
+            name: "Backgrounds",
+          },
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "School",
+            fileId: "school-file",
+          },
+        },
+      },
+    });
+
+    showFullImagePreview(context, {
+      itemId: "image-1",
+    });
+
+    expect(selectViewData(context).fullImagePreviewBreadcrumb).toBe(
+      "Backgrounds > School",
+    );
+
+    hideFullImagePreview(context);
+
+    expect(context.state.fullImagePreviewItemId).toBeUndefined();
   });
 
   it("can show the full preview image at project canvas scale", () => {
@@ -390,7 +431,7 @@ describe("images store preview navigation", () => {
       "aspect-ratio: 1920 / 1080",
     );
     expect(viewData.fullImagePreviewFrameStyle).toContain(
-      "width: min(88vw, calc((100vh - 120px) * (1920 / 1080)))",
+      "width: min(88vw, calc((var(--rvn-app-viewport-height, 100vh) - 120px) * (1920 / 1080)))",
     );
   });
 

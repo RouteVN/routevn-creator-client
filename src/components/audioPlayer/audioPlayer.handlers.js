@@ -3,8 +3,34 @@ const calculateSeekPosition = (clickX, progressBarWidth, duration) => {
   return percentage * duration;
 };
 
+const OPEN_DIALOG_SELECTOR = "dialog[open], rtgl-dialog[open]";
+
+const isEscapeFromOpenDialog = (event) =>
+  event
+    .composedPath?.()
+    ?.some((target) => target?.matches?.(OPEN_DIALOG_SELECTOR)) ?? false;
+
+const closeAudioPlayer = ({ dispatchEvent, audioService }) => {
+  audioService.stop();
+
+  dispatchEvent(
+    new CustomEvent("audio-player-close", {
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleBeforeMount = (deps) => {
-  const { store, props: attrs, render, audioService, appService, i18n } = deps;
+  const {
+    store,
+    props: attrs,
+    render,
+    audioService,
+    appService,
+    dispatchEvent,
+    i18n,
+  } = deps;
   const copy = i18n?.audioPlayerPage ?? {};
 
   if (!attrs) {
@@ -55,7 +81,23 @@ export const handleBeforeMount = (deps) => {
     render();
   };
   audioService.on("error", handleError);
-  return audioService.cleanup;
+
+  const handleWindowKeyDown = (event) => {
+    if (event.key !== "Escape" || isEscapeFromOpenDialog(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    closeAudioPlayer({ dispatchEvent, audioService });
+  };
+  window.addEventListener("keydown", handleWindowKeyDown, true);
+
+  return () => {
+    window.removeEventListener("keydown", handleWindowKeyDown, true);
+    audioService.cleanup();
+  };
 };
 
 export const handleAfterMount = async (deps) => {
@@ -134,12 +176,5 @@ export const handleClose = (deps, payload) => {
   payload._event.preventDefault();
   const { dispatchEvent, audioService } = deps;
 
-  audioService.stop();
-
-  dispatchEvent(
-    new CustomEvent("audio-player-close", {
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  closeAudioPlayer({ dispatchEvent, audioService });
 };

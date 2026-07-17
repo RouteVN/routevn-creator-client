@@ -14,12 +14,15 @@ refs:
 template:
   - rtgl-view w=f h=f bgc=mu:
       - $if isLoading:
-          - rtgl-view w=f av=c p=md h=f:
-              - rtgl-text c=mu-fg: Loading audio...
+          - 'rtgl-view w=f h=f d=v bgc=mu style="min-height: 0;"':
+              - 'rtgl-view w=f style="flex: 0 0 6px;"':
+                  - 'rtgl-view#loadingProgressBar w=f h=6 br=full pos=rel bgc=su style="overflow: hidden; background-color: var(--surface);"': null
+              - rtgl-view w=f av=c p=md h=1fg:
+                  - rtgl-text c=mu-fg: Loading audio...
         $else:
           - 'rtgl-view w=f h=f d=v bgc=mu style="min-height: 0;"':
               - 'rtgl-view w=f style="flex: 0 0 6px;"':
-                  - 'rtgl-view#progressBar w=f h=6 br=full cur=pointer pos=rel bgc=su style="overflow: hidden;"':
+                  - 'rtgl-view#progressBar w=f h=6 br=full cur=pointer pos=rel bgc=su style="overflow: hidden; background-color: var(--surface);"':
                       - 'rtgl-view h=f bgc=ac br=full style="width: ${progressPercentage}%; transition: width 0.1s ease;"': null
               - $if mobileLayout:
                   - 'rtgl-view d=h av=c w=f h=1fg p=md g=md style="min-width: 0; min-height: 0; box-sizing: border-box;"':

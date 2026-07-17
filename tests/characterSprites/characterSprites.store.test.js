@@ -531,7 +531,7 @@ describe("characterSprites store", () => {
       "aspect-ratio: 1920 / 1080",
     );
     expect(viewData.fullImagePreviewFrameStyle).toContain(
-      "width: min(88vw, calc((100vh - 120px) * (1920 / 1080)))",
+      "width: min(88vw, calc((var(--rvn-app-viewport-height, 100vh) - 120px) * (1920 / 1080)))",
     );
     expect(viewData.fullImagePreviewImageWrapperStyle).toContain("width: 2.5%");
     expect(viewData.fullImagePreviewImageWrapperStyle).toContain(

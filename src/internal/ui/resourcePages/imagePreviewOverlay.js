@@ -3,6 +3,9 @@ import { formatProjectResolutionAspectRatio } from "../../projectResolution.js";
 export const IMAGE_PREVIEW_DISPLAY_MODE_FIT = "fit";
 export const IMAGE_PREVIEW_DISPLAY_MODE_CANVAS = "canvas";
 
+const APP_VIEWPORT_HEIGHT = "var(--rvn-app-viewport-height, 100vh)";
+const APP_VIEWPORT_TOP = "var(--rvn-window-content-offset, 0px)";
+
 export const isImagePreviewDisplayMode = (displayMode) =>
   displayMode === IMAGE_PREVIEW_DISPLAY_MODE_FIT ||
   displayMode === IMAGE_PREVIEW_DISPLAY_MODE_CANVAS;
@@ -11,10 +14,36 @@ export const createImagePreviewFrameStyle = (projectResolution) => {
   const aspectRatio = formatProjectResolutionAspectRatio(projectResolution);
 
   return [
-    `width: min(88vw, calc((100vh - 120px) * (${aspectRatio})))`,
+    `width: min(88vw, calc((${APP_VIEWPORT_HEIGHT} - 120px) * (${aspectRatio})))`,
     `aspect-ratio: ${aspectRatio}`,
     "max-width: 88vw",
-    "max-height: calc(100vh - 120px)",
+    `max-height: calc(${APP_VIEWPORT_HEIGHT} - 120px)`,
+  ].join("; ");
+};
+
+export const createImagePreviewLayoutStyle = (projectResolution) => {
+  const aspectRatio = formatProjectResolutionAspectRatio(projectResolution);
+
+  return [
+    `width: min(88vw, calc((${APP_VIEWPORT_HEIGHT} - 120px) * (${aspectRatio})))`,
+    "max-width: 88vw",
+    "position: fixed",
+    `top: calc(${APP_VIEWPORT_TOP} + (${APP_VIEWPORT_HEIGHT} / 2))`,
+    "left: 50%",
+    "transform: translate(-50%, -50%)",
+    "z-index: 3001",
+  ].join("; ");
+};
+
+export const createImagePreviewTopBarStyle = () => {
+  return [
+    "position: absolute",
+    "left: 0",
+    "right: 0",
+    "bottom: calc(100% + 8px)",
+    "display: grid",
+    "grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)",
+    "align-items: center",
   ].join("; ");
 };
 
@@ -74,10 +103,14 @@ export const createImagePreviewOverlayViewData = ({
   projectResolution,
   previousItemId,
   nextItemId,
+  breadcrumb,
   copy,
 } = {}) => ({
   fullImagePreviewVisible: state.fullImagePreviewVisible,
   fullImagePreviewFileId: state.fullImagePreviewFileId,
+  fullImagePreviewBreadcrumb: breadcrumb ?? "",
+  fullImagePreviewLayoutStyle: createImagePreviewLayoutStyle(projectResolution),
+  fullImagePreviewTopBarStyle: createImagePreviewTopBarStyle(),
   fullImagePreviewFrameStyle: createImagePreviewFrameStyle(projectResolution),
   fullImagePreviewImageWrapperStyle: createImagePreviewImageWrapperStyle({
     image,

@@ -46,6 +46,24 @@ describe("sounds view", () => {
     expect(soundsView).toContain("handler: handleMobileDetailDeleteClick");
   });
 
+  it("keeps the desktop detail waveform display-only", () => {
+    const soundsView = readFileSync(
+      new URL("../../src/pages/sounds/sounds.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(soundsView).toContain('".soundDetailPreviewFrame":');
+    expect(soundsView).toContain("#detailSoundPreview");
+    expect(soundsView).toContain("cursor: default");
+    expect(soundsView).toContain("pointer-events: none");
+    expect(soundsView).toContain(
+      'div#detailSoundPreview.soundDetailPreviewFrame slot="sound-waveform"',
+    );
+    expect(soundsView).not.toContain("detailWaveform:");
+    expect(soundsView).not.toContain("detailWaveformPlaceholder");
+    expect(soundsView).not.toContain("handler: handleFormExtraEvent");
+  });
+
   it("shows a confirmation dialog for mobile detail deletes", () => {
     const soundsView = readFileSync(
       new URL("../../src/pages/sounds/sounds.view.yaml", import.meta.url),

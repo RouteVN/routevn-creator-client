@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   IMAGE_PREVIEW_DISPLAY_MODE_CANVAS,
   IMAGE_PREVIEW_DISPLAY_MODE_FIT,
+  createImagePreviewFrameStyle,
+  createImagePreviewLayoutStyle,
+  createImagePreviewTopBarStyle,
   createImagePreviewImageWrapperStyle,
   createImagePreviewModeButtonViewData,
   createImagePreviewOverlayViewData,
@@ -18,6 +21,38 @@ const createKeyEvent = (key, overrides = {}) => ({
 });
 
 describe("imagePreviewOverlay", () => {
+  it("centers the preview frame in the usable app viewport", () => {
+    const projectResolution = {
+      width: 1920,
+      height: 1080,
+    };
+    const style = createImagePreviewLayoutStyle(projectResolution);
+    const frameStyle = createImagePreviewFrameStyle(projectResolution);
+
+    expect(style).toContain(
+      "width: min(88vw, calc((var(--rvn-app-viewport-height, 100vh) - 120px) * (1920 / 1080)))",
+    );
+    expect(frameStyle).toContain(
+      "max-height: calc(var(--rvn-app-viewport-height, 100vh) - 120px)",
+    );
+    expect(style).toContain(
+      "top: calc(var(--rvn-window-content-offset, 0px) + (var(--rvn-app-viewport-height, 100vh) / 2))",
+    );
+    expect(style).toContain("transform: translate(-50%, -50%)");
+  });
+
+  it("positions the centered top bar above the preview frame", () => {
+    const style = createImagePreviewTopBarStyle();
+
+    expect(style).toContain("position: absolute");
+    expect(style).toContain("bottom: calc(100% + 8px)");
+    expect(style).toContain("display: grid");
+    expect(style).toContain(
+      "grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)",
+    );
+    expect(style).toContain("align-items: center");
+  });
+
   it("builds canvas-scale wrapper styles for images with dimensions", () => {
     const style = createImagePreviewImageWrapperStyle({
       image: {
@@ -79,6 +114,7 @@ describe("imagePreviewOverlay", () => {
       },
       previousItemId: "image-0",
       nextItemId: "image-2",
+      breadcrumb: "Backgrounds > School",
       copy: {
         previewCanvasModeLabel: "Canvas scale",
         previewFitModeLabel: "Fit to frame",
@@ -95,6 +131,7 @@ describe("imagePreviewOverlay", () => {
     expect(viewData.fullImagePreviewFitModeButton.selected).toBe(false);
     expect(viewData.fullImagePreviewPreviousVisible).toBe(true);
     expect(viewData.fullImagePreviewNextVisible).toBe(true);
+    expect(viewData.fullImagePreviewBreadcrumb).toBe("Backgrounds > School");
     expect(viewData.fullImagePreviewCanvasModeLabel).toBe("Canvas scale");
   });
 

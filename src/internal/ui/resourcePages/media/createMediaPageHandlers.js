@@ -25,6 +25,7 @@ export const createMediaPageHandlers = ({
     description: item?.description ?? "",
   }),
   getEditPreviewFileId = () => undefined,
+  onEnterKey,
   tagging,
   copy,
 }) => {
@@ -269,7 +270,7 @@ export const createMediaPageHandlers = ({
     focusKeyboardScope,
     handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
     handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
-  } = createFileExplorerKeyboardScopeHandlers();
+  } = createFileExplorerKeyboardScopeHandlers({ onEnterKey });
 
   const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
     if (handleResourceZoomShortcutKeyDown(deps, payload)) {

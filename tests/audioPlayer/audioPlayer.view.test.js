@@ -2,6 +2,34 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("audio player view", () => {
+  it("shows the unseeked progress color while audio is loading", () => {
+    const audioPlayerView = readFileSync(
+      new URL(
+        "../../src/components/audioPlayer/audioPlayer.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const loadingBranchStart = audioPlayerView.indexOf("$if isLoading");
+    const loadedBranchStart = audioPlayerView.indexOf(
+      "\n        $else:",
+      loadingBranchStart,
+    );
+    const loadingBranch = audioPlayerView.slice(
+      loadingBranchStart,
+      loadedBranchStart,
+    );
+
+    expect(loadedBranchStart).toBeGreaterThan(-1);
+    expect(loadingBranch).toContain(
+      'rtgl-view#loadingProgressBar w=f h=6 br=full pos=rel bgc=su style="overflow: hidden; background-color: var(--surface);"',
+    );
+    expect(loadingBranch).not.toContain("#progressBar");
+
+    const unseekedTrackStyle = "background-color: var(--surface)";
+    expect(audioPlayerView.split(unseekedTrackStyle)).toHaveLength(3);
+  });
+
   it("fills the player height without pushing controls below center", () => {
     const audioPlayerView = readFileSync(
       new URL(
@@ -14,9 +42,7 @@ describe("audio player view", () => {
     expect(audioPlayerView).toContain(
       'rtgl-view w=f h=f d=v bgc=mu style="min-height: 0;"',
     );
-    expect(audioPlayerView).toContain(
-      'rtgl-view w=f style="flex: 0 0 6px;"',
-    );
+    expect(audioPlayerView).toContain('rtgl-view w=f style="flex: 0 0 6px;"');
     expect(audioPlayerView).toContain(
       'rtgl-view d=h av=c w=f h=1fg p=md g=md style="min-width: 0; min-height: 0; box-sizing: border-box;"',
     );
