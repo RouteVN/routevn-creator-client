@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
 import {
   handleEditDialogImageClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleUploadClick,
   handlePreviewCanvasModeClick,
   handlePreviewFitModeClick,
@@ -57,6 +58,27 @@ const createEvent = (key, overrides = {}) => ({
   preventDefault: vi.fn(),
   stopPropagation: vi.fn(),
   ...overrides,
+});
+
+describe("characterSprites keyboard navigation", () => {
+  it("goes back one browser-history entry with Shift+H", () => {
+    const deps = {
+      appService: {
+        back: vi.fn(() => Promise.resolve(true)),
+      },
+      store: {
+        selectFullImagePreviewVisible: vi.fn(() => false),
+      },
+      refs: {},
+    };
+    const event = createEvent("H", { shiftKey: true });
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, { _event: event });
+
+    expect(deps.appService.back).toHaveBeenCalledTimes(1);
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("characterSprites preview handlers", () => {

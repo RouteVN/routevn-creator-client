@@ -739,6 +739,12 @@ const subscriptions = (deps) => {
 
   return [
     subject.pipe(
+      filter(({ action }) => action === "routePop"),
+      tap(() => {
+        void handleWindowPop(deps);
+      }),
+    ),
+    subject.pipe(
       filter(
         ({ action }) => action === "redirect" || action === "app.route.request",
       ),

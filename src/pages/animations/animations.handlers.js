@@ -539,6 +539,9 @@ const {
 } = createCatalogPageHandlers({
   resourceType: "animations",
   copy: ({ i18n }) => selectAnimationsPageCopy(i18n),
+  onEditKey: ({ deps, selectedItemId }) => {
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+  },
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(
       repositoryState,

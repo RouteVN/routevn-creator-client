@@ -1,6 +1,7 @@
 import { JSDOM } from "jsdom";
 import { NEVER } from "rxjs";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import Subject from "../../src/deps/subject.js";
 import {
   createRouteTransitionRunner,
   handleBeforeMount,
@@ -139,6 +140,83 @@ describe("app route transitions", () => {
       navigationPrepared: true,
       shouldUpdateHistory: false,
     });
+  });
+
+  it("routes popstate subject actions through the app transition", async () => {
+    const dom = new JSDOM("<!doctype html><body></body>");
+    vi.stubGlobal("window", dom.window);
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("Element", dom.window.Element);
+
+    let currentPath = "/project/character-sprites";
+    let currentPayload = {
+      characterId: "character-1",
+      p: "project-1",
+    };
+    let renderedRoute = currentPath;
+    let renderedPayload = { ...currentPayload };
+    const subject = new Subject();
+    const appService = {
+      getCurrentProjectId: vi.fn(() => currentPayload.p ?? ""),
+      getHistoryState: vi.fn(() => ({})),
+      getPath: vi.fn(() => currentPath),
+      getPayload: vi.fn(() => ({ ...currentPayload })),
+      getPlatform: vi.fn(() => "web"),
+      prepareNavigation: vi.fn(async () => {}),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      replace: vi.fn((path, payload) => {
+        currentPath = path;
+        currentPayload = { ...payload };
+      }),
+      setAppCopyProvider: vi.fn(),
+    };
+    const store = {
+      closeMobileSheet: vi.fn(),
+      selectCurrentRoute: vi.fn(() => renderedRoute),
+      selectCurrentRoutePayload: vi.fn(() => ({ ...renderedPayload })),
+      setCurrentRoute: vi.fn(({ route, payload }) => {
+        renderedRoute = route;
+        renderedPayload = { ...payload };
+      }),
+      setPlatform: vi.fn(),
+      setRepositoryLoading: vi.fn(),
+      setUiConfig: vi.fn(),
+    };
+    const deps = {
+      appService,
+      i18n: {},
+      projectService: {
+        ensureRepository: vi.fn(async () => {}),
+        getEnsuredProjectId: vi.fn(() => "project-1"),
+      },
+      render: vi.fn(),
+      store,
+      subject,
+      uiConfig: {},
+    };
+    const cleanup = handleBeforeMount(deps);
+    await vi.waitFor(() =>
+      expect(store.setCurrentRoute).toHaveBeenCalledWith({
+        route: "/project/character-sprites",
+        payload: {
+          characterId: "character-1",
+          p: "project-1",
+        },
+      }),
+    );
+
+    currentPath = "/project/characters";
+    currentPayload = { p: "project-1" };
+    subject.dispatch("routePop");
+
+    await vi.waitFor(() =>
+      expect(store.setCurrentRoute).toHaveBeenCalledWith({
+        route: "/project/characters",
+        payload: { p: "project-1" },
+      }),
+    );
+
+    cleanup();
   });
 });
 

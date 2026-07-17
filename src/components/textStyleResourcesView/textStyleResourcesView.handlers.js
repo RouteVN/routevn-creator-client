@@ -30,7 +30,7 @@ const resolvePopoverButtonPosition = (element) => {
   const rect = element.getBoundingClientRect();
 
   return {
-    x: Math.round(rect.left),
+    x: Math.round(rect.right),
     y: Math.round(rect.bottom),
   };
 };
@@ -513,6 +513,13 @@ export const handleItemContextMenu = (deps, payload) => {
 
   if (parseBooleanProp(props.mobileLayout)) {
     dispatchEvent(
+      new CustomEvent("item-click", {
+        detail: { itemId, source: "context-menu" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    dispatchEvent(
       new CustomEvent("item-dblclick", {
         detail: {
           itemId,
@@ -531,6 +538,13 @@ export const handleItemContextMenu = (deps, payload) => {
     y: payload._event.clientY,
   });
   render();
+  dispatchEvent(
+    new CustomEvent("item-click", {
+      detail: { itemId, source: "context-menu" },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleZoomChange = (deps, payload) => {

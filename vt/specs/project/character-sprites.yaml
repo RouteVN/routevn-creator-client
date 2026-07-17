@@ -232,4 +232,21 @@ steps:
   - action: wait
     ms: 350
   - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: select
+    selector: "#fileExplorerKeyboardScope"
+    steps:
+      - action: focus
+  - action: keypress
+    key: Shift+H
+  - action: wait
+    ms: 1000
+  - action: assert
+    type: url
+    value: /project/characters
+  - action: waitFor
+    selector: rvn-characters
+    state: attached
+    timeoutMs: 10000
 ---

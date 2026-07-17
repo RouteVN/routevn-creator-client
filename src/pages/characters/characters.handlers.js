@@ -270,6 +270,18 @@ const readSpriteGroupTarget = (payload) =>
 const readSpriteGroupIndex = (payload) =>
   Number.parseInt(payload?._event?.currentTarget?.dataset?.index ?? "", 10);
 
+const navigateToCharacterSprites = ({ deps, characterId } = {}) => {
+  const { appService, render } = deps;
+  const { p } = appService.getPayload();
+
+  appService.navigate("/project/character-sprites", {
+    characterId,
+    p,
+  });
+
+  render();
+};
+
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   createResourceFileExplorerHandlers({
     resourceType: "characters",
@@ -280,7 +292,26 @@ const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
   handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
   handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
-} = createFileExplorerKeyboardScopeHandlers();
+} = createFileExplorerKeyboardScopeHandlers({
+  onBackKey: ({ deps }) => {
+    void deps.appService.back();
+  },
+  onEnterKey: ({ deps, selectedItemId }) => {
+    navigateToCharacterSprites({ deps, characterId: selectedItemId });
+  },
+  onEditKey: ({ deps, selectedItemId, selectedExplorerItem }) => {
+    if (selectedExplorerItem?.isFolder) {
+      openFolderNameDialogWithValues({ deps, folderId: selectedItemId });
+      return;
+    }
+
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+  },
+  resolveSelectedItemId: ({ deps, selectedExplorerItem }) =>
+    selectedExplorerItem?.isFolder
+      ? undefined
+      : (selectedExplorerItem?.itemId ?? deps.store.selectSelectedItemId()),
+});
 
 export {
   handleFileExplorerAction,
@@ -319,14 +350,14 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   focusFileExplorerKeyboardScope(deps);
 };
 
-export const handleCharacterItemClick = async (deps, payload) => {
+export const handleCharacterItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
   const { itemId } = payload._event.detail;
   if (!itemId) {
     return;
   }
 
-  store.setSelectedItemId({ itemId: itemId });
+  store.setSelectedItemId({ itemId });
 
   const { fileExplorer } = refs;
   fileExplorer?.selectItem?.({ itemId });
@@ -512,17 +543,8 @@ export const handleCharacterCreated = async (deps, payload) => {
 };
 
 export const handleSpritesButtonClick = (deps, payload) => {
-  const { appService, render } = deps;
   const { itemId } = payload._event.detail;
-  const { p } = appService.getPayload();
-
-  // Navigate to character sprites page
-  appService.navigate("/project/character-sprites", {
-    characterId: itemId,
-    p: p,
-  });
-
-  render();
+  navigateToCharacterSprites({ deps, characterId: itemId });
 };
 
 export const handleSearchInput = (deps, payload) => {

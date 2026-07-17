@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
 import {
   handleAddCharacterClick,
+  handleCharacterItemClick,
   handleCloseDialog,
   handleDialogFormActionClick,
   handleEditFormAction,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleSpriteGroupAddClick,
   handleSpriteGroupCardClick,
   handleSpriteGroupDropdownMenuItemClick,
@@ -30,6 +32,156 @@ const createDeps = () => {
     },
   };
 };
+
+describe("characters item selection", () => {
+  it("selects a character without opening its sprites page", () => {
+    const deps = {
+      appService: {
+        navigate: vi.fn(),
+      },
+      store: {
+        setSelectedItemId: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleCharacterItemClick(deps, {
+      _event: {
+        detail: {
+          itemId: "character-1",
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "character-1",
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "character-1",
+    });
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the selected character's sprites page with Enter", () => {
+    const deps = {
+      appService: {
+        getPayload: vi.fn(() => ({ p: "project-1" })),
+        navigate: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          getSelectedItem: vi.fn(() => ({
+            isFolder: false,
+            itemId: "character-1",
+          })),
+        },
+      },
+      render: vi.fn(),
+    };
+    const event = {
+      key: "Enter",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, { _event: event });
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project/character-sprites",
+      {
+        characterId: "character-1",
+        p: "project-1",
+      },
+    );
+  });
+
+  it("opens the selected character edit dialog when e is pressed", () => {
+    const character = {
+      id: "character-1",
+      name: "Hero",
+      description: "Main character",
+      spriteGroups: [],
+      tagIds: [],
+    };
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "character-1"),
+        selectCharacterItemById: vi.fn(() => character),
+        setSelectedItemId: vi.fn(),
+        openEditDialog: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          getSelectedItem: vi.fn(() => ({
+            isFolder: false,
+            itemId: "character-1",
+          })),
+          selectItem: vi.fn(),
+        },
+        editForm: {
+          reset: vi.fn(),
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+    const event = {
+      key: "e",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, { _event: event });
+
+    expect(deps.store.openEditDialog).toHaveBeenCalledWith({
+      itemId: "character-1",
+      spriteGroups: [],
+    });
+    expect(deps.refs.editForm.setValues).toHaveBeenCalledWith({
+      values: {
+        name: "Hero",
+        nameVariableId: "",
+        description: "Main character",
+        shortcut: "",
+        tagIds: [],
+      },
+    });
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+  });
+
+  it("goes back one browser-history entry with Shift+H", () => {
+    const deps = {
+      appService: {
+        back: vi.fn(() => Promise.resolve(true)),
+      },
+      refs: {},
+    };
+    const event = {
+      altKey: false,
+      ctrlKey: false,
+      key: "H",
+      metaKey: false,
+      shiftKey: true,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, { _event: event });
+
+    expect(deps.appService.back).toHaveBeenCalledTimes(1);
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("characters add dialog form reset", () => {
   it("resets the add form each time the add dialog opens", () => {

@@ -125,6 +125,13 @@ export default class WebRouter {
     return {};
   };
 
+  subscribePopState = (listener) => {
+    window.addEventListener("popstate", listener);
+    return () => {
+      window.removeEventListener("popstate", listener);
+    };
+  };
+
   redirect = (path, payload, options = {}) => {
     this.clearPendingPayload();
     const finalPath = createPathWithPayload(path, payload);

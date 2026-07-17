@@ -74,6 +74,9 @@ const {
 } = createCatalogPageHandlers({
   resourceType: "colors",
   copy: ({ i18n }) => selectColorsPageCopy(i18n),
+  onEditKey: ({ deps, selectedItemId }) => {
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+  },
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(repositoryState, COLOR_TAG_SCOPE_KEY);
 

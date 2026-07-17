@@ -67,6 +67,9 @@ const {
 } = createCatalogPageHandlers({
   resourceType: "controls",
   copy: selectCopy,
+  onEditKey: ({ deps, selectedItemId }) => {
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+  },
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(repositoryState, CONTROL_TAG_SCOPE_KEY);
 

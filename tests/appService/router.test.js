@@ -14,7 +14,9 @@ const createWindowMock = () => {
   };
 
   return {
+    addEventListener: vi.fn(),
     location,
+    removeEventListener: vi.fn(),
     history: {
       replaceState: vi.fn((_state, _title, path) => {
         setLocationFromPath(location, path);
@@ -41,6 +43,27 @@ describe("web router payload updates", () => {
     router.setPayload({ p: "project-1" });
 
     expect(windowMock.history.replaceState).not.toHaveBeenCalled();
+  });
+
+  it("subscribes the app shell to browser history changes", () => {
+    const windowMock = createWindowMock();
+    vi.stubGlobal("window", windowMock);
+    const router = new WebRouter();
+    const listener = vi.fn();
+
+    const unsubscribe = router.subscribePopState(listener);
+
+    expect(windowMock.addEventListener).toHaveBeenCalledWith(
+      "popstate",
+      listener,
+    );
+
+    unsubscribe();
+
+    expect(windowMock.removeEventListener).toHaveBeenCalledWith(
+      "popstate",
+      listener,
+    );
   });
 
   it("coalesces throttled payload writes and exposes the pending payload", () => {

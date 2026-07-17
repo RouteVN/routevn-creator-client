@@ -116,6 +116,9 @@ const {
 } = createCatalogPageHandlers({
   resourceType: "layouts",
   copy: ({ i18n }) => selectLayoutsPageCopy(i18n),
+  onEditKey: ({ deps, selectedItemId }) => {
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+  },
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(repositoryState, LAYOUT_TAG_SCOPE_KEY);
 
