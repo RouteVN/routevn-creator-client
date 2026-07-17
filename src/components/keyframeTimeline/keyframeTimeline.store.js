@@ -1,3 +1,5 @@
+import { createKeyframeValueCurvePath } from "./keyframeTimeline.easing.js";
+
 export const createInitialState = () => ({
   hoverTarget: undefined,
   hoverIndicatorLeftPercent: undefined,
@@ -281,6 +283,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
 
       nextProperty.auto = {
         ...property.auto,
+        easingLabel: formatEasingLabel(property.auto.easing),
         label: `Auto ${propertyDuration}ms ${formatEasingLabel(property.auto.easing)}`,
         widthPercent: autoWidthPercent.toFixed(2),
       };
@@ -305,6 +308,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       };
 
       if (resolvedTimelineDuration > 0) {
+        const propertyConfig = props.properties?.[property.name] ?? {};
         const propertyTotalDuration = property.keyframes.reduce(
           (sum, keyframe) => sum + (parseFloat(keyframe.duration) || 1000),
           0,
@@ -330,9 +334,17 @@ export const selectViewData = ({ state, props, props: attrs }) => {
           }
           return {
             ...keyframe,
+            easing: keyframe.easing ?? "linear",
+            easingLabel: formatEasingLabel(keyframe.easing ?? "linear"),
             value: displayValue,
             widthPercent: widthPercent.toFixed(2),
           };
+        });
+        nextProperty.valueCurvePath = createKeyframeValueCurvePath({
+          defaultValue: props.defaultValues?.[property.name],
+          initialValue: propertyConfig.initialValue,
+          keyframes: property.keyframes,
+          timelineDuration: resolvedTimelineDuration,
         });
         nextProperty.propertyWidthPercent = propertyWidthPercent.toFixed(2);
         nextProperty.fillerWidthPercent = (100 - propertyWidthPercent).toFixed(

@@ -621,6 +621,21 @@ const {
 } = createCatalogPageHandlers({
   resourceType: "particles",
   copy: ({ i18n }) => selectParticlesPageCopy(i18n),
+  onEditKey: ({ deps, selectedItemId }) => {
+    const itemData = deps.store.selectParticleItemById({
+      itemId: selectedItemId,
+    });
+    if (!itemData) {
+      return;
+    }
+
+    void openParticleDialog({
+      deps,
+      editMode: true,
+      itemId: selectedItemId,
+      itemData,
+    });
+  },
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(repositoryState, PARTICLE_TAG_SCOPE_KEY);
 

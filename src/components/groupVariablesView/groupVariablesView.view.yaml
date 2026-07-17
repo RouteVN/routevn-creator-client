@@ -204,7 +204,7 @@ template:
       - rtgl-popover#enumValuePopover ?open=${enumValuePopover.isOpen} x=${enumValuePopover.x} y=${enumValuePopover.y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
           - rtgl-form#enumValueForm key=${enumValuePopover.key} :defaultValues=${enumValueDefaultValues} :form=${enumValueForm} w=f: null
       - rtgl-dropdown-menu#enumValueMenu :items=${enumValueMenu.items} ?open=${enumValueMenu.isOpen} x=${enumValueMenu.x} y=${enumValueMenu.y}: null
-  - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
+  - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=be content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
       - $if showFilterPopoverSearch:
           - rtgl-text s=md: ${filterLabel}
           - rtgl-input#searchInput s=sm placeholder="${searchPlaceholder}" value=${searchQuery} w=f: null

@@ -566,18 +566,14 @@ export const handleAfterMount = (deps) => {
     });
 };
 
-export const handleWindowPop = async (deps) => {
-  const { appService, store, subject } = deps;
+export const handleWindowPop = async (
+  deps,
+  { shouldContinue = () => true } = {},
+) => {
+  const { appService, subject } = deps;
   const copy = selectAppCopy(deps.i18n);
   const destinationPath = appService.getPath();
   const destinationPayload = appService.getPayload();
-  const destinationHistoryState = appService.getHistoryState();
-  const sourcePath = store.selectCurrentRoute();
-  const sourcePayload = store.selectCurrentRoutePayload();
-
-  appService.replace(sourcePath, sourcePayload, {
-    state: destinationHistoryState,
-  });
 
   try {
     await appService.prepareNavigation({
@@ -585,7 +581,12 @@ export const handleWindowPop = async (deps) => {
       payload: destinationPayload,
     });
   } catch (error) {
+    if (!shouldContinue()) {
+      return;
+    }
+
     console.error("Failed to prepare back navigation:", error);
+    appService.restoreAfterFailedHistoryPop();
     appService.showToast({
       title: copy.errorTitle ?? "Error",
       message: copy.navigationFailed ?? "Could not navigate. Please try again.",
@@ -594,9 +595,11 @@ export const handleWindowPop = async (deps) => {
     return;
   }
 
-  appService.replace(destinationPath, destinationPayload, {
-    state: destinationHistoryState,
-  });
+  if (!shouldContinue()) {
+    return;
+  }
+
+  appService.acceptCurrentHistoryEntry();
   subject.dispatch("app.route.request", {
     path: destinationPath,
     payload: destinationPayload,
@@ -695,6 +698,7 @@ export const handleMobileSheetClose = (deps) => {
 const subscriptions = (deps) => {
   const { appService, subject } = deps;
   const runRouteTransition = createRouteTransitionRunner(deps);
+  let navigationRequestSequence = 0;
   const projectKeyDown$ = fromEvent(window, "keydown", { capture: true }).pipe(
     filter(() => isProjectRoute(appService.getPath())),
     filter((event) => !event.defaultPrevented),
@@ -739,10 +743,20 @@ const subscriptions = (deps) => {
 
   return [
     subject.pipe(
+      filter(({ action }) => action === "routePop"),
+      tap(() => {
+        const requestSequence = ++navigationRequestSequence;
+        void handleWindowPop(deps, {
+          shouldContinue: () => requestSequence === navigationRequestSequence,
+        });
+      }),
+    ),
+    subject.pipe(
       filter(
         ({ action }) => action === "redirect" || action === "app.route.request",
       ),
       tap(({ action, payload }) => {
+        navigationRequestSequence += 1;
         const shouldUpdateHistory = action === "redirect";
         const path = shouldUpdateHistory ? payload.path : payload?.path;
         const nextPayload = shouldUpdateHistory

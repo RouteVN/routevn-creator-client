@@ -207,6 +207,9 @@ const {
   handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
 } = createFileExplorerKeyboardScopeHandlers({
   isNavigationBlocked: ({ deps }) => deps.store.selectFullImagePreviewVisible(),
+  onBackKey: ({ deps }) => {
+    void deps.appService.back();
+  },
   onEnterKey: ({ deps, selectedItemId }) => {
     const item = deps.store.selectSpriteItemById({ itemId: selectedItemId });
     if (item?.type === "spritesheet") {
@@ -219,6 +222,20 @@ const {
     }
 
     openSpritePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
+  },
+  onEditKey: ({ deps, selectedItemId, selectedExplorerItem }) => {
+    if (selectedExplorerItem?.isFolder) {
+      openFolderNameDialogForFolder({ deps, folderId: selectedItemId });
+      return;
+    }
+
+    const item = deps.store.selectSpriteItemById({ itemId: selectedItemId });
+    if (item?.type === "spritesheet") {
+      openSpritesheetEditDialogForItem({ deps, itemId: selectedItemId });
+      return;
+    }
+
+    openEditDialogForSprite({ deps, itemId: selectedItemId });
   },
   resolveSelectedItemId: ({ deps, selectedExplorerItem }) => {
     return selectedExplorerItem?.isFolder

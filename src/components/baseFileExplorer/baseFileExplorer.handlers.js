@@ -1422,7 +1422,10 @@ export const handleItemContextMenu = (deps, payload) => {
     folderContextMenuItems,
     itemContextMenuItems,
   });
+  store.clearPendingDrag();
+  store.setSelectedItemId({ itemId });
   render();
+  emitItemClick({ dispatchEvent: deps.dispatchEvent, item });
 };
 
 export const handleItemClick = (deps, payload) => {

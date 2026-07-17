@@ -746,6 +746,7 @@ export const handleRowContextMenu = (deps, payload) => {
 
   store.showContextMenu({ itemId, x, y });
   render();
+  handleRowClick(deps, payload);
 };
 
 export const handleContextMenuClickItem = (deps, payload) => {

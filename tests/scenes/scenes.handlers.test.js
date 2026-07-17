@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   handleAfterMount,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleFileExplorerSelectionChanged,
   handleMobileFileExplorerClose,
   handleMobileFileExplorerOpen,
@@ -296,6 +297,58 @@ describe("scenes.handlers config keys", () => {
       durationMs: 160,
     });
     expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("opens the selected scene edit dialog when e is pressed", () => {
+    const deps = createDeps();
+    deps.store.selectSelectedItemId.mockReturnValue("scene-1");
+    deps.store.selectScenesData = vi.fn(() => ({
+      items: {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          name: "Opening",
+          description: "The opening scene",
+        },
+      },
+      tree: [{ id: "scene-1" }],
+    }));
+    deps.store.openEditDialog = vi.fn();
+    deps.refs.fileexplorer.getSelectedItem = vi.fn(() => ({
+      itemId: "scene-1",
+      isFolder: false,
+    }));
+    deps.refs.editForm = {
+      reset: vi.fn(),
+      setValues: vi.fn(),
+    };
+    const event = {
+      key: "e",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    handleFileExplorerKeyboardScopeKeyDown(deps, { _event: event });
+
+    expect(deps.store.openEditDialog).toHaveBeenCalledWith({
+      itemId: "scene-1",
+      itemType: "scene",
+      defaultValues: {
+        name: "Opening",
+        description: "The opening scene",
+      },
+    });
+    expect(deps.refs.editForm.setValues).toHaveBeenCalledWith({
+      values: {
+        name: "Opening",
+        description: "The opening scene",
+      },
+    });
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
   });
 
   it("closes the mobile file explorer after selecting a scene", () => {

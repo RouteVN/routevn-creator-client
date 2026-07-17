@@ -109,6 +109,7 @@ export const createFileExplorerKeyboardScopeHandlers = ({
   fileExplorerRefName = "fileExplorer",
   keyboardScopeRefName = "fileExplorerKeyboardScope",
   isNavigationBlocked = () => false,
+  onBackKey,
   onEnterKey,
   onEditKey,
   resolveSelectedItemId = ({ selectedExplorerItem }) => {
@@ -150,12 +151,22 @@ export const createFileExplorerKeyboardScopeHandlers = ({
       return;
     }
 
+    const isBackShortcut =
+      event.shiftKey && String(event.key ?? "").toLowerCase() === "h";
+
     if (isTextEntryKeyEvent(event)) {
       return;
     }
 
     const jumpDirection = resolveJumpDirection(event);
     if (event.altKey || event.metaKey || (event.ctrlKey && !jumpDirection)) {
+      return;
+    }
+
+    if (isBackShortcut && !event.repeat && typeof onBackKey === "function") {
+      event.preventDefault();
+      event.stopPropagation();
+      onBackKey({ deps, event });
       return;
     }
 

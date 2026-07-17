@@ -7,6 +7,7 @@ import {
   setAnimationPreviewVisible,
   setImagesData,
   setItems,
+  setProjectResolution,
   setSelectedItemId,
 } from "../../src/pages/animations/animations.store.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -142,5 +143,49 @@ describe("animations.store", () => {
     expect(imageFolderField.options).toEqual([
       { value: "folder-image", label: "Image Folder" },
     ]);
+  });
+
+  it("supplies resolution-aware defaults to catalog timelines", () => {
+    const state = createInitialState();
+    setProjectResolution(
+      { state },
+      { projectResolution: { width: 1280, height: 720 } },
+    );
+    setItems(
+      { state },
+      {
+        data: {
+          items: {
+            fade: {
+              id: "fade",
+              type: "animation",
+              name: "Fade",
+              animation: {
+                type: "update",
+                tween: {
+                  alpha: {
+                    keyframes: [{ duration: 1000, value: 0 }],
+                  },
+                },
+              },
+            },
+          },
+          tree: [{ id: "fade" }],
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    const animationItem = viewData.catalogGroups
+      .flatMap((group) => group.children)
+      .find((item) => item.id === "fade");
+
+    expect(animationItem.timelineDefaultValues).toMatchObject({
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      x: 640,
+      y: 360,
+    });
   });
 });

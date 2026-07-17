@@ -181,7 +181,25 @@ export const createAppShellService = ({
       if (target) {
         await prepareNavigation(target);
       }
-      return router.back();
+      const didGoBack = router.back();
+      if (didGoBack === true) {
+        subject.dispatch("app.route.request", {
+          path: router.getPathName(),
+          payload: router.getPayload(),
+          historyState: router.getHistoryState?.() ?? {},
+          navigationPrepared: true,
+          shouldUpdateHistory: false,
+        });
+      }
+      return didGoBack;
+    },
+
+    restoreAfterFailedHistoryPop() {
+      router.restoreAfterFailedPop?.();
+    },
+
+    acceptCurrentHistoryEntry() {
+      router.acceptCurrentHistoryEntry?.();
     },
 
     canGoBack() {

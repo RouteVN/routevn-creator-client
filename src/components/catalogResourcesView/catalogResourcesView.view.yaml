@@ -199,12 +199,12 @@ template:
                                                           - rvn-keyframe-timeline w=f ?showRuler=true ?showTracks=false timelineDuration=${item.transitionTimelineDuration}: null
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: Out
-                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties}: null
+                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties} :defaultValues=${item.timelineDefaultValues}: null
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: In
-                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties}: null
+                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties} :defaultValues=${item.timelineDefaultValues}: null
                                                     $else:
-                                                      - rvn-keyframe-timeline w=f ?showRuler=true :properties=${item.updateProperties}: null
+                                                      - rvn-keyframe-timeline w=f ?showRuler=true :properties=${item.updateProperties} :defaultValues=${item.timelineDefaultValues}: null
                                             $else:
                                               - rtgl-view w=${item.catalogTextWidth} h=152 d=v ah=c av=c br=md p=md g=sm:
                                                   - rtgl-text s=md ellipsis w=f: ${item.name}
@@ -223,7 +223,7 @@ template:
                   - rtgl-text s=lg c=mu-fg: No data
           - $if groups.length > 0:
               - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
-  - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
+  - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=be content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
       - $if showFilterPopoverSearch:
           - rtgl-text s=md: Filter
           - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} w=f: null
@@ -240,7 +240,7 @@ template:
           - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: Clear
           - rtgl-button#tagFilterApply v=pr s=sm: Save
   - $if showZoomControls:
-      - rtgl-popover#zoomPopover ?open=${zoomPopover.isOpen} x=${zoomPopover.position.x} y=${zoomPopover.position.y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
+      - rtgl-popover#zoomPopover ?open=${zoomPopover.isOpen} x=${zoomPopover.position.x} y=${zoomPopover.position.y} place=be content-w=260 content-g=sm content-ph=md content-pv=md:
           - rtgl-text s=md: Zoom
           - rtgl-view d=h av=c g=sm w=f:
               - rtgl-button#zoomOut sq v=ol: '-'

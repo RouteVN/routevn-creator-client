@@ -95,6 +95,45 @@ describe("groupVariablesView.handlers", () => {
     expect(store.showContextMenu).not.toHaveBeenCalled();
   });
 
+  it("selects the row when opening its desktop context menu", () => {
+    const dispatchEvent = vi.fn();
+    const showContextMenu = vi.fn();
+
+    handleRowContextMenu(
+      {
+        props: {
+          mobileLayout: false,
+        },
+        dispatchEvent,
+        store: {
+          showContextMenu,
+        },
+        render: vi.fn(),
+      },
+      {
+        _event: {
+          ...createRowEvent("variable-1"),
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+          clientX: 10,
+          clientY: 20,
+        },
+      },
+    );
+
+    expect(showContextMenu).toHaveBeenCalledWith({
+      itemId: "variable-1",
+      x: 10,
+      y: 20,
+    });
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "variable-item-click",
+        detail: { itemId: "variable-1" },
+      }),
+    );
+  });
+
   it("ignores placeholder row events with empty data ids", () => {
     const dispatchEvent = vi.fn();
 

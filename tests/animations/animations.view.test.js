@@ -2,6 +2,19 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("animations view", () => {
+  it("passes property defaults to every catalog timeline with curves", () => {
+    const catalogView = readFileSync(
+      new URL(
+        "../../src/components/catalogResourcesView/catalogResourcesView.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    expect(
+      catalogView.match(/:defaultValues=\$\{item\.timelineDefaultValues\}/g),
+    ).toHaveLength(3);
+  });
+
   it("uses edit, duplicate, and delete icons in the mobile detail sheet", () => {
     const animationsView = readFileSync(
       new URL(

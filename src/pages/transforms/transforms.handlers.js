@@ -797,6 +797,9 @@ const {
 } = createCatalogPageHandlers({
   resourceType: "transforms",
   copy: ({ i18n }) => selectTransformsPageCopy(i18n),
+  onEditKey: ({ deps, selectedItemId }) => {
+    void openTransformEditDialog({ deps, itemId: selectedItemId });
+  },
   selectData: (repositoryState) => {
     const tagsData = getTagsCollection(
       repositoryState,

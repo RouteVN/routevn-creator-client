@@ -706,5 +706,12 @@ describe("baseFileExplorer handlers", () => {
     handleItemContextMenu(desktopDeps, { _event: mouseContextMenuEvent });
 
     expect(desktopDeps.store.selectDropdownMenuItemId()).toBe("item-1");
+    expect(desktopDeps.store.selectSelectedItemId()).toBe("item-1");
+    expect(desktopDeps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-click",
+        detail: expect.objectContaining({ itemId: "item-1" }),
+      }),
+    );
   });
 });

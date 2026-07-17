@@ -486,7 +486,20 @@ const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
   handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
   handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
-} = createFileExplorerKeyboardScopeHandlers();
+} = createFileExplorerKeyboardScopeHandlers({
+  onEditKey: ({ deps, selectedItemId, selectedExplorerItem }) => {
+    if (selectedExplorerItem?.isFolder) {
+      openFolderNameDialogForFolder({ deps, folderId: selectedItemId });
+      return;
+    }
+
+    openEditDialogForItem({ deps, itemId: selectedItemId });
+  },
+  resolveSelectedItemId: ({ deps, selectedExplorerItem }) =>
+    selectedExplorerItem?.isFolder
+      ? undefined
+      : (selectedExplorerItem?.itemId ?? deps.store.selectSelectedItemId()),
+});
 
 export {
   handleFileExplorerAction,

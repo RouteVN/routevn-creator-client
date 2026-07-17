@@ -881,6 +881,18 @@ const {
   handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
 } = createFileExplorerKeyboardScopeHandlers({
   fileExplorerRefName: "fileexplorer",
+  onEditKey: ({ deps, selectedItemId, selectedExplorerItem }) => {
+    if (selectedExplorerItem?.isFolder) {
+      openFolderEditDialogWithValues({ deps, folderId: selectedItemId });
+      return;
+    }
+
+    openEditDialogWithValues({ deps, sceneId: selectedItemId });
+  },
+  resolveSelectedItemId: ({ deps, selectedExplorerItem }) =>
+    selectedExplorerItem?.isFolder
+      ? undefined
+      : (selectedExplorerItem?.itemId ?? deps.store.selectSelectedItemId()),
 });
 
 export {

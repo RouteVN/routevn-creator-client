@@ -407,7 +407,7 @@ export const createCatalogPageStore = ({
         return {
           ...group,
           children: filteredChildren.map((item) =>
-            buildCatalogItem(item, { copy }),
+            buildCatalogItem(item, { copy, state }),
           ),
           hasChildFolders: folderIdsWithChildFolders.has(group.id),
           hasChildren: filteredChildren.length > 0,

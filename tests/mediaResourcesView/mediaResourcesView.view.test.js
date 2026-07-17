@@ -16,7 +16,7 @@ describe("mediaResourcesView view", () => {
     );
   });
 
-  it("places filter and zoom popovers below and left-aligned to their buttons", () => {
+  it("places filter and zoom popovers below and right-aligned to their buttons", () => {
     const view = readFileSync(
       new URL(
         "../../src/components/mediaResourcesView/mediaResourcesView.view.yaml",

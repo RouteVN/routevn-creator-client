@@ -98,6 +98,47 @@ describe("charactersResourcesView.handlers", () => {
     expect(render).not.toHaveBeenCalled();
   });
 
+  it("selects the item when opening its desktop context menu", () => {
+    const dispatchEvent = vi.fn();
+    const showContextMenu = vi.fn();
+
+    handleItemContextMenu(
+      {
+        props: {
+          mobileLayout: false,
+        },
+        dispatchEvent,
+        store: {
+          showContextMenu,
+        },
+        render: vi.fn(),
+      },
+      {
+        _event: {
+          ...createItemEvent("character-1"),
+          preventDefault: vi.fn(),
+          clientX: 10,
+          clientY: 20,
+        },
+      },
+    );
+
+    expect(showContextMenu).toHaveBeenCalledWith({
+      itemId: "character-1",
+      x: 10,
+      y: 20,
+    });
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-click",
+        detail: {
+          itemId: "character-1",
+          source: "context-menu",
+        },
+      }),
+    );
+  });
+
   it("progressively renders character cards after the first batch", () => {
     const frameCallbacks = [];
     vi.stubGlobal(

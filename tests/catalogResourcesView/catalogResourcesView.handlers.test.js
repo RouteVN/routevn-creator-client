@@ -113,6 +113,45 @@ describe("catalogResourcesView.handlers", () => {
     expect(render).not.toHaveBeenCalled();
   });
 
+  it("selects the item when opening its desktop context menu", () => {
+    const dispatchEvent = vi.fn();
+    const showContextMenu = vi.fn();
+    const render = vi.fn();
+
+    handleItemContextMenu(
+      {
+        props: {
+          mobileLayout: false,
+        },
+        dispatchEvent,
+        store: {
+          showContextMenu,
+        },
+        render,
+      },
+      {
+        _event: {
+          ...createItemEvent("color-1"),
+          preventDefault: vi.fn(),
+          clientX: 10,
+          clientY: 20,
+        },
+      },
+    );
+
+    expect(showContextMenu).toHaveBeenCalledWith({
+      itemId: "color-1",
+      x: 10,
+      y: 20,
+    });
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-click",
+        detail: { itemId: "color-1", source: "context-menu" },
+      }),
+    );
+  });
+
   it("uses the mobile column default instead of restoring desktop column counts", () => {
     const getUserConfig = vi.fn((key) =>
       key === "groupControlsView.itemsPerRow" ? 8 : undefined,

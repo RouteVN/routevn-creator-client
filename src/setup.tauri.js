@@ -56,6 +56,7 @@ const updater = updatesEnabled
 
 // Create subject for inter-component communication
 const subject = new Subject();
+router.subscribePopState(subject.dispatchCall("routePop"));
 
 const projectMediaOrigin =
   (await invoke("get_project_media_server_origin").catch(() => undefined)) ??

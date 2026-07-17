@@ -19,6 +19,7 @@ describe("createCatalogPageHandlers", () => {
     });
     const deps = {
       store: {
+        selectSelectedItemId: vi.fn(() => undefined),
         setSelectedItemId: vi.fn(),
       },
       refs: {
@@ -64,5 +65,48 @@ describe("createCatalogPageHandlers", () => {
     handlers.handleAfterMount(deps);
 
     expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs the page edit handler for the selected catalog item", () => {
+    const onEditKey = vi.fn();
+    const handlers = createCatalogPageHandlers({
+      resourceType: "colors",
+      onEditKey,
+    });
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "color-1"),
+        selectSelectedFolderId: vi.fn(() => undefined),
+      },
+      refs: {
+        fileExplorer: {
+          getSelectedItem: vi.fn(() => ({
+            itemId: "color-1",
+            isFolder: false,
+          })),
+        },
+      },
+    };
+    const event = {
+      key: "e",
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    handlers.handleFileExplorerKeyboardScopeKeyDown(deps, { _event: event });
+
+    expect(onEditKey).toHaveBeenCalledWith({
+      deps,
+      selectedItemId: "color-1",
+      selectedExplorerItem: {
+        itemId: "color-1",
+        isFolder: false,
+      },
+    });
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
   });
 });

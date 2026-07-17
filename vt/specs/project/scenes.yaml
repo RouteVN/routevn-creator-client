@@ -140,6 +140,22 @@ steps:
     ms: 350
   - action: screenshot
   - action: select
+    selector: "#fileExplorerDetailKeyboardScope"
+    steps:
+      - action: focus
+  - action: keypress
+    key: e
+  - action: waitFor
+    selector: "#editDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#editDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
     selector: "#sectionsListToggle"
     steps:
       - action: click
@@ -194,7 +210,7 @@ steps:
   - action: assert
     type: text
     selector: "#sceneTextStats"
-    value: "0 characters"
+    value: "0 lines 0 words"
   - action: screenshot
   - action: select
     selector: "#systemActions #addActionButton"

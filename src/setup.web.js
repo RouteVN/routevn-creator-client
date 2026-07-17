@@ -71,6 +71,7 @@ const updater = {
 
 // Create subject for inter-component communication
 const subject = new Subject();
+router.subscribePopState(subject.dispatchCall("routePop"));
 installVtBridge({ subject, router });
 const collabConfig = {
   endpointUrl: "ws://127.0.0.1:8787/sync",

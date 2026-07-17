@@ -109,7 +109,20 @@ const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
   handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
   handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
-} = createFileExplorerKeyboardScopeHandlers();
+} = createFileExplorerKeyboardScopeHandlers({
+  onEditKey: ({ deps, selectedItemId, selectedExplorerItem }) => {
+    if (selectedExplorerItem?.isFolder) {
+      openFolderNameDialogWithValues({ deps, folderId: selectedItemId });
+      return;
+    }
+
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+  },
+  resolveSelectedItemId: ({ deps, selectedExplorerItem }) =>
+    selectedExplorerItem?.isFolder
+      ? undefined
+      : (selectedExplorerItem?.itemId ?? deps.store.selectSelectedItemId()),
+});
 
 const {
   openCreateTagDialogForMode,

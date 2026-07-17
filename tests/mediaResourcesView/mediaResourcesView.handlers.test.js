@@ -161,13 +161,14 @@ describe("mediaResourcesView.handlers", () => {
   it("keeps the context menu on desktop contextmenu gestures", () => {
     const showContextMenu = vi.fn();
     const render = vi.fn();
+    const dispatchEvent = vi.fn();
 
     handleItemContextMenu(
       {
         props: {
           mobileLayout: false,
         },
-        dispatchEvent: vi.fn(),
+        dispatchEvent,
         store: {
           showContextMenu,
         },
@@ -193,6 +194,12 @@ describe("mediaResourcesView.handlers", () => {
       y: 20,
     });
     expect(render).toHaveBeenCalled();
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-click",
+        detail: { itemId: "image-1", source: "context-menu" },
+      }),
+    );
   });
 
   it("clamps restored mobile column counts to six", () => {

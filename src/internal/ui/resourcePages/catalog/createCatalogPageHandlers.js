@@ -17,6 +17,7 @@ export const createCatalogPageHandlers = ({
   selectData = (repositoryState) =>
     repositoryState?.[resourceType] ?? EMPTY_TREE,
   onProjectStateChanged = () => {},
+  onEditKey,
   createExplorerHandlers = ({ refresh }) =>
     createResourceFileExplorerHandlers({
       resourceType,
@@ -147,11 +148,32 @@ export const createCatalogPageHandlers = ({
 
   const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
     createExplorerHandlers({ refresh: refreshData, copy: resolveCopy });
+  const handleEditKey = ({ deps, selectedItemId, selectedExplorerItem }) => {
+    const selectedStoreItemId = deps.store.selectSelectedItemId();
+    const isFolder =
+      selectedStoreItemId === selectedItemId
+        ? false
+        : (selectedExplorerItem?.isFolder ??
+          deps.store.selectSelectedFolderId?.() === selectedItemId);
+
+    if (isFolder) {
+      openFolderNameDialogWithValues({ deps, folderId: selectedItemId });
+      return;
+    }
+
+    onEditKey?.({ deps, selectedItemId, selectedExplorerItem });
+  };
   const {
     focusKeyboardScope,
     handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
     handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
-  } = createFileExplorerKeyboardScopeHandlers();
+  } = createFileExplorerKeyboardScopeHandlers({
+    onEditKey: handleEditKey,
+    resolveSelectedItemId: ({ deps, selectedExplorerItem }) =>
+      deps.store.selectSelectedItemId() ??
+      selectedExplorerItem?.itemId ??
+      deps.store.selectSelectedFolderId?.(),
+  });
 
   const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
     if (handleResourceZoomShortcutKeyDown(deps, payload)) {

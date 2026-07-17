@@ -1,4 +1,4 @@
-const resolveTagFilterButtonPosition = (element, { alignEnd = false } = {}) => {
+const resolveTagFilterButtonPosition = (element, { alignEnd = true } = {}) => {
   if (!element?.getBoundingClientRect) {
     return {
       x: 0,
@@ -17,7 +17,7 @@ const resolveTagFilterButtonPosition = (element, { alignEnd = false } = {}) => {
 export const openTagFilterPopoverFromButton = (
   deps,
   payload,
-  { alignEnd = false } = {},
+  { alignEnd = true } = {},
 ) => {
   const { refs, props, store, render } = deps;
   payload?._event?.stopPropagation?.();
