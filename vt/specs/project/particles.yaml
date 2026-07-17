@@ -82,21 +82,33 @@ steps:
     ms: 700
   - action: screenshot
   - action: waitFor
-    selector: "#particleDialog rtgl-select#field1 [data-testid='select-button']"
+    selector: "#dialogTextureImageButton"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#particleDialog rtgl-select#field1 [data-testid='select-button']"
+    selector: "#dialogTextureImageButton"
     steps:
       - action: click
   - action: waitFor
-    selector: "#particleDialog rtgl-select#field1 #option1"
+    selector: "#previewImageSelectorDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#previewImageSelectorDialog [role='option'][data-item-id]"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#particleDialog rtgl-select#field1 #option1"
+    selector: "#previewImageSelectorDialog [role='option'][data-item-id]"
     steps:
       - action: click
+  - action: select
+    selector: "#confirmPreviewImageSelection"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#previewImageSelectorDialog"
+    state: hidden
+    timeoutMs: 5000
   - action: wait
     ms: 300
   - action: screenshot

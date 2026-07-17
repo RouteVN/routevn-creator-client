@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
   selectPreviewImageSelectorDialog,
@@ -12,6 +12,7 @@ import {
   createParticleCreateSetupForm,
   createParticleForm,
 } from "../../src/pages/particles/support/particleForm.js";
+import { handleDialogTextureImageKeyDown } from "../../src/pages/particles/particles.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const IMAGE_ID = "image-one";
@@ -86,4 +87,32 @@ describe("particle texture image selector", () => {
 
     expect(state.dialogFormValues.textureImageId).toBe(IMAGE_ID);
   });
+
+  it.each(["Enter", " "])(
+    "opens the texture image selector with the %s key",
+    (key) => {
+      const preventDefault = vi.fn();
+      const render = vi.fn();
+      const showTextureImageSelectorDialog = vi.fn();
+
+      handleDialogTextureImageKeyDown(
+        {
+          render,
+          store: {
+            showTextureImageSelectorDialog,
+          },
+        },
+        {
+          _event: {
+            key,
+            preventDefault,
+          },
+        },
+      );
+
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+      expect(showTextureImageSelectorDialog).toHaveBeenCalledTimes(1);
+      expect(render).toHaveBeenCalledTimes(1);
+    },
+  );
 });

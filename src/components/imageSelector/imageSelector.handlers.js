@@ -30,10 +30,7 @@ export const handleOnUpdate = (deps, payload) => {
 
 export const handleImageItemClick = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
-
-  const id =
-    payload._event.currentTarget?.dataset?.itemId ||
-    payload._event.currentTarget?.id?.replace("imageItem", "");
+  const id = payload._event.currentTarget.dataset.itemId;
 
   store.setSelectedImageId({
     imageId: id,
@@ -48,6 +45,47 @@ export const handleImageItemClick = (deps, payload) => {
   );
 
   render();
+};
+
+const focusImageItem = (deps, currentTarget, targetIndex) => {
+  const imageItems = Array.from(
+    deps.refs.container.querySelectorAll('[role="option"]'),
+  );
+  if (imageItems.length === 0) {
+    return;
+  }
+
+  const currentIndex = imageItems.indexOf(currentTarget);
+  const normalizedTargetIndex = Math.max(
+    0,
+    Math.min(imageItems.length - 1, targetIndex(currentIndex, imageItems)),
+  );
+  imageItems[normalizedTargetIndex].focus();
+};
+
+export const handleImageItemKeyDown = (deps, payload) => {
+  const { _event } = payload;
+  if (_event.key === "Enter" || _event.key === " ") {
+    _event.preventDefault();
+    handleImageItemClick(deps, payload);
+    return;
+  }
+
+  const focusTargets = {
+    ArrowDown: (currentIndex) => currentIndex + 1,
+    ArrowLeft: (currentIndex) => currentIndex - 1,
+    ArrowRight: (currentIndex) => currentIndex + 1,
+    ArrowUp: (currentIndex) => currentIndex - 1,
+    End: (_currentIndex, imageItems) => imageItems.length - 1,
+    Home: () => 0,
+  };
+  const targetIndex = focusTargets[_event.key];
+  if (!targetIndex) {
+    return;
+  }
+
+  _event.preventDefault();
+  focusImageItem(deps, _event.currentTarget, targetIndex);
 };
 
 export const handleImageItemDoubleClick = () => {};

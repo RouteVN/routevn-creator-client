@@ -31,7 +31,7 @@ const matchesSearch = (item, searchQuery) => {
   return name.includes(searchQuery) || description.includes(searchQuery);
 };
 
-export const selectViewData = ({ state, props = {} }) => {
+export const selectViewData = ({ state, props = {}, i18n = {} }) => {
   const images = state.images ?? { items: {}, tree: [] };
   const selectedImageId = state.selectedImageId;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
@@ -51,6 +51,7 @@ export const selectViewData = ({ state, props = {} }) => {
 
           return {
             ...child,
+            isSelected,
             itemBorderColor,
             itemHoverBorderColor,
             imageCardStyle,
@@ -69,6 +70,7 @@ export const selectViewData = ({ state, props = {} }) => {
 
   return {
     groups,
+    imageSelectorLabel: i18n.imagesPage?.title ?? "Images",
     selectedImageId,
   };
 };
