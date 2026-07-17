@@ -91,6 +91,7 @@ describe("ios project service adapters", () => {
       staticFiles: {
         indexHtml: "<!doctype html>",
         mainJs: "console.log('routevn');",
+        manifestJson: '{"name":"Project One"}',
       },
       getCurrentReference: () => ({
         projectId: "project-1",
@@ -112,6 +113,7 @@ describe("ios project service adapters", () => {
       usePartFile: true,
       indexHtml: "<!doctype html>",
       mainJs: "console.log('routevn');",
+      manifestJson: '{"name":"Project One"}',
     });
   });
 
@@ -158,6 +160,7 @@ describe("ios project service adapters", () => {
       staticFiles: {
         indexHtml: "<!doctype html>",
         mainJs: "console.log('routevn');",
+        manifestJson: '{"name":"Project One"}',
       },
       getCurrentReference: () => ({
         projectId: "project-1",
@@ -175,6 +178,9 @@ describe("ios project service adapters", () => {
     );
     expect(await zip.file("main.js").async("string")).toBe(
       "console.log('routevn');",
+    );
+    expect(await zip.file("manifest.webmanifest").async("string")).toBe(
+      '{"name":"Project One"}',
     );
     const packageBytes = new Uint8Array(
       await zip.file("package.bin").async("arraybuffer"),

@@ -1,6 +1,6 @@
+use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::jstring;
-use jni::JNIEnv;
 use routevn_exporter::{ZipAssetInput, ZipExportStats};
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +12,7 @@ struct NativeExportRequest {
     instructions_json: String,
     index_html: Option<String>,
     main_js: Option<String>,
+    manifest_json: Option<String>,
     use_part_file: Option<bool>,
 }
 
@@ -61,6 +62,7 @@ fn run_native_export(payload_json: String) -> Result<ZipExportStats, String> {
         request.instructions_json,
         request.index_html,
         request.main_js,
+        request.manifest_json,
         request.use_part_file.unwrap_or(true),
     )
 }

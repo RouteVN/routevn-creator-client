@@ -57,14 +57,29 @@ Current app-owned keys:
   - `description`
   - `language`
   - `iconFileId`
+- `releaseInfo.web`
+  - platform application name and icon plus Web short name, description, and
+    references to project colors for theme and startup background
+- `releaseInfo.windows`
+  - platform application name, icon, and identifier plus publisher,
+    description, and copyright
+- `releaseInfo.macos`
+  - platform application name, icon, and identifier plus publisher,
+    description, copyright, and category
 - `creatorVersion`
 
 Important details:
 
+- release metadata is read from these app-store records at export time; Web
+  values are written to the exported HTML and Web manifest, Windows values to
+  executable/installer version metadata, and macOS values to `Info.plist`
 - `projectInfo` is the source of truth for project display metadata
 - `projectInfo.id` is the canonical folder/project id for new projects
 - `projectInfo.namespace` is the canonical browser-hosted bundle save namespace
   for new projects
+- platform release keys do not exist until the user adds the corresponding
+  platform and submits its prefilled create form; cancelling does not write a
+  key, and created platform keys can be edited but not deleted
 - repository state is not the source of truth for `name`, `description`,
   `language`, or `iconFileId`
 - committed event rows also store `project_id`

@@ -35,7 +35,10 @@ pub struct WindowsExportHostCapabilities {
 struct WindowsExecutableMetadata {
     title: String,
     version: String,
+    application_identifier: Option<String>,
     publisher: Option<String>,
+    description: Option<String>,
+    copyright: Option<String>,
 }
 
 #[tauri::command]
@@ -53,13 +56,17 @@ pub fn get_windows_export_host_capabilities() -> WindowsExportHostCapabilities {
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn stamp_windows_executable(
     template_path: String,
     payload_path: String,
     output_path: String,
     title: String,
     version: String,
+    application_identifier: Option<String>,
     publisher: Option<String>,
+    description: Option<String>,
+    copyright: Option<String>,
     icon_png: Vec<u8>,
     key_hex: Option<String>,
     nonce_hex: Option<String>,
@@ -71,7 +78,10 @@ pub async fn stamp_windows_executable(
             output_path,
             title,
             version,
+            application_identifier,
             publisher,
+            description,
+            copyright,
             icon_png,
             key_hex,
             nonce_hex,
@@ -82,6 +92,7 @@ pub async fn stamp_windows_executable(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn export_windows_portable_executable(
     template_path: String,
     output_path: String,
@@ -89,7 +100,10 @@ pub async fn export_windows_portable_executable(
     instructions_json: String,
     title: String,
     version: String,
+    application_identifier: Option<String>,
     publisher: Option<String>,
+    description: Option<String>,
+    copyright: Option<String>,
     icon_png: Vec<u8>,
 ) -> Result<ExportWindowsPortableExecutableResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
@@ -100,7 +114,10 @@ pub async fn export_windows_portable_executable(
             instructions_json,
             title,
             version,
+            application_identifier,
             publisher,
+            description,
+            copyright,
             icon_png,
         )
     })
@@ -109,12 +126,16 @@ pub async fn export_windows_portable_executable(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn export_windows_installer(
     exe_path: String,
     output_path: String,
     title: String,
     version: String,
+    application_identifier: Option<String>,
     publisher: Option<String>,
+    description: Option<String>,
+    copyright: Option<String>,
     makensis_path: Option<String>,
 ) -> Result<ExportWindowsInstallerResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
@@ -123,7 +144,10 @@ pub async fn export_windows_installer(
             output_path,
             title,
             version,
+            application_identifier,
             publisher,
+            description,
+            copyright,
             makensis_path,
         )
     })
@@ -132,6 +156,7 @@ pub async fn export_windows_installer(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn export_windows_installer_from_project(
     template_path: String,
     output_path: String,
@@ -139,7 +164,10 @@ pub async fn export_windows_installer_from_project(
     instructions_json: String,
     title: String,
     version: String,
+    application_identifier: Option<String>,
     publisher: Option<String>,
+    description: Option<String>,
+    copyright: Option<String>,
     icon_png: Vec<u8>,
     makensis_path: Option<String>,
 ) -> Result<ExportWindowsInstallerResult, String> {
@@ -151,7 +179,10 @@ pub async fn export_windows_installer_from_project(
             instructions_json,
             title,
             version,
+            application_identifier,
             publisher,
+            description,
+            copyright,
             icon_png,
             makensis_path,
         )
@@ -166,7 +197,10 @@ fn stamp_windows_executable_sync(
     output_path: String,
     title: String,
     version: String,
+    application_identifier: Option<String>,
     publisher: Option<String>,
+    description: Option<String>,
+    copyright: Option<String>,
     icon_png: Vec<u8>,
     key_hex: Option<String>,
     nonce_hex: Option<String>,
@@ -174,7 +208,10 @@ fn stamp_windows_executable_sync(
     let metadata = WindowsExecutableMetadata {
         title,
         version,
+        application_identifier,
         publisher,
+        description,
+        copyright,
     };
     validate_windows_executable_metadata(&metadata)?;
     let payload =
@@ -209,13 +246,19 @@ fn export_windows_portable_executable_sync(
     instructions_json: String,
     title: String,
     version: String,
+    application_identifier: Option<String>,
     publisher: Option<String>,
+    description: Option<String>,
+    copyright: Option<String>,
     icon_png: Vec<u8>,
 ) -> Result<ExportWindowsPortableExecutableResult, String> {
     let metadata = WindowsExecutableMetadata {
         title,
         version,
+        application_identifier,
         publisher,
+        description,
+        copyright,
     };
     validate_windows_executable_metadata(&metadata)?;
     let temp = tempfile::tempdir().map_err(|error| {
@@ -252,13 +295,19 @@ fn export_windows_installer_sync(
     output_path: String,
     title: String,
     version: String,
+    application_identifier: Option<String>,
     publisher: Option<String>,
+    description: Option<String>,
+    copyright: Option<String>,
     makensis_path: Option<String>,
 ) -> Result<ExportWindowsInstallerResult, String> {
     let metadata = WindowsExecutableMetadata {
         title,
         version,
+        application_identifier,
         publisher,
+        description,
+        copyright,
     };
     validate_windows_executable_metadata(&metadata)?;
     let makensis_path = resolve_makensis_path(makensis_path)?;
@@ -268,7 +317,10 @@ fn export_windows_installer_sync(
             output_path: Path::new(&output_path),
             title: &metadata.title,
             version: &metadata.version,
+            application_identifier: metadata.application_identifier.as_deref(),
             publisher: metadata.publisher.as_deref(),
+            description: metadata.description.as_deref(),
+            copyright: metadata.copyright.as_deref(),
             makensis_path: makensis_path.as_deref(),
         },
     )
@@ -286,7 +338,10 @@ fn export_windows_installer_from_project_sync(
     instructions_json: String,
     title: String,
     version: String,
+    application_identifier: Option<String>,
     publisher: Option<String>,
+    description: Option<String>,
+    copyright: Option<String>,
     icon_png: Vec<u8>,
     makensis_path: Option<String>,
 ) -> Result<ExportWindowsInstallerResult, String> {
@@ -300,7 +355,10 @@ fn export_windows_installer_from_project_sync(
     let metadata = WindowsExecutableMetadata {
         title,
         version,
+        application_identifier,
         publisher,
+        description,
+        copyright,
     };
     validate_windows_executable_metadata(&metadata)?;
     let makensis_path = resolve_makensis_path(makensis_path)?;
@@ -336,7 +394,10 @@ fn export_windows_installer_from_project_sync(
             output_path: Path::new(&output_path),
             title: &metadata.title,
             version: &metadata.version,
+            application_identifier: metadata.application_identifier.as_deref(),
             publisher: metadata.publisher.as_deref(),
+            description: metadata.description.as_deref(),
+            copyright: metadata.copyright.as_deref(),
             makensis_path: makensis_path.as_deref(),
         },
     )
@@ -491,7 +552,10 @@ fn stamp_branded_windows_template(
             metadata: routevn_packager::windows_resources::WindowsResourceMetadata {
                 title: &metadata.title,
                 version: &metadata.version,
+                application_identifier: metadata.application_identifier.as_deref(),
                 publisher: metadata.publisher.as_deref(),
+                description: metadata.description.as_deref(),
+                copyright: metadata.copyright.as_deref(),
                 original_filename,
             },
             icon_png,

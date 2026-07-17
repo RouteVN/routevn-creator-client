@@ -92,6 +92,12 @@ const systemItems = [
 
 const releaseItems = [
   {
+    id: "releaseInfo",
+    label: "Release Info",
+    path: "/project/releases/info",
+    icon: "info",
+  },
+  {
     id: "versions",
     label: "Versions",
     path: "/project/releases/versions",
@@ -257,7 +263,9 @@ const selectCurrentResourceId = () => {
     const releaseMatch = window.location.pathname.match(
       /^\/project\/releases\/([^/?]+)/,
     );
-    return releaseMatch?.[1] ?? resourceParentMapping.releases;
+    const releaseResourceId =
+      releaseMatch?.[1] ?? resourceParentMapping.releases;
+    return releaseResourceId === "info" ? "releaseInfo" : releaseResourceId;
   }
 
   if (match[1] === "scenes") {

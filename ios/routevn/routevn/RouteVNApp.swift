@@ -762,6 +762,9 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             if let mainJs = optionalString(payload, key: "mainJs") {
                 try writer.addDataEntry(name: "main.js", data: Data(mainJs.utf8))
             }
+            if let manifestJson = optionalString(payload, key: "manifestJson") {
+                try writer.addDataEntry(name: "manifest.webmanifest", data: Data(manifestJson.utf8))
+            }
             let zipBytes = try writer.finalize()
 
             if usePartFile {

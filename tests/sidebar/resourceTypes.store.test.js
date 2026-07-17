@@ -50,4 +50,30 @@ describe("resource type navigation", () => {
       ),
     ).toEqual(["project", "about", "appearance"]);
   });
+
+  it("shows release info in desktop and mobile release menus", () => {
+    const desktopViewData = selectDesktopResourceTypesViewData({
+      props: {
+        resourceCategory: "releases",
+        selectedResourceId: "releaseInfo",
+      },
+    });
+    const mobileSidebarViewData = selectMobileSidebarViewData({
+      state: createMobileSidebarInitialState(),
+      props: {
+        variant: "release",
+      },
+    });
+
+    expect(desktopViewData.items.map((item) => item.id)).toEqual([
+      "releaseInfo",
+      "versions",
+      "webServer",
+    ]);
+    expect(
+      mobileSidebarViewData.sections.flatMap((section) =>
+        section.items.map((item) => item.id),
+      ),
+    ).toEqual(["releaseInfo", "versions"]);
+  });
 });

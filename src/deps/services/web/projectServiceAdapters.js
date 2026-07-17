@@ -293,6 +293,8 @@ export const createWebProjectServiceAdapters = ({
       zip.file("package.bin", bundle);
       if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
       if (staticFiles.mainJs) zip.file("main.js", staticFiles.mainJs);
+      if (staticFiles.manifestJson)
+        zip.file("manifest.webmanifest", staticFiles.manifestJson);
 
       const zipBlob = await zip.generateAsync({
         type: "blob",

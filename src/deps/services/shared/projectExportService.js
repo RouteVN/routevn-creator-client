@@ -8,8 +8,17 @@ export const BUNDLE_FORMAT_VERSION_V4 = 4;
 export const BUNDLE_FORMAT_VERSION = BUNDLE_FORMAT_VERSION_V4;
 export const BUNDLE_HEADER_SIZE = 16;
 export const BUNDLE_APP_NAME = "routevn-creator-client";
-export const BUNDLE_PLAYER_INDEX_HTML = `<html>
+const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
+<html>
   <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="__ROUTEVN_WEB_DESCRIPTION__" />
+    <meta name="theme-color" content="__ROUTEVN_WEB_THEME_COLOR__" />
+    <meta name="application-name" content="__ROUTEVN_WEB_SHORT_NAME__" />
+    <meta name="apple-mobile-web-app-title" content="__ROUTEVN_WEB_SHORT_NAME__" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <title>__ROUTEVN_WEB_TITLE__</title>
     <style>
       html,
       body {
@@ -17,7 +26,7 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
         height: 100%;
         margin: 0;
         overflow: hidden;
-        background: #000;
+        background: __ROUTEVN_WEB_BACKGROUND_COLOR__;
       }
 
       body {
@@ -55,7 +64,7 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
         box-sizing: border-box;
         padding: 24px;
         color: #fff;
-        background: #000;
+        background: __ROUTEVN_WEB_BACKGROUND_COLOR__;
         font: 600 24px/1.2 sans-serif;
         letter-spacing: 0.02em;
         z-index: 10;
@@ -294,6 +303,77 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
   <script src="./main.js" type="module"></script>
 </html>
 `;
+
+const normalizeWebApplicationMetadata = (web = {}) => {
+  const title = web.title?.trim() || "RouteVN Player";
+  return {
+    title,
+    shortName: web.shortName?.trim() || title,
+    description: web.description?.trim() ?? "",
+    themeColor: web.themeColor?.trim() || "#000000",
+    backgroundColor: web.backgroundColor?.trim() || "#000000",
+  };
+};
+
+const escapeHtmlAttribute = (value) =>
+  String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
+const replaceTemplateToken = (template, token, value) =>
+  template.split(token).join(value);
+
+export const createBundlePlayerIndexHtml = (web = {}) => {
+  const metadata = normalizeWebApplicationMetadata(web);
+  let html = BUNDLE_PLAYER_INDEX_HTML_TEMPLATE;
+  html = replaceTemplateToken(
+    html,
+    "__ROUTEVN_WEB_TITLE__",
+    escapeHtmlAttribute(metadata.title),
+  );
+  html = replaceTemplateToken(
+    html,
+    "__ROUTEVN_WEB_SHORT_NAME__",
+    escapeHtmlAttribute(metadata.shortName),
+  );
+  html = replaceTemplateToken(
+    html,
+    "__ROUTEVN_WEB_DESCRIPTION__",
+    escapeHtmlAttribute(metadata.description),
+  );
+  html = replaceTemplateToken(
+    html,
+    "__ROUTEVN_WEB_THEME_COLOR__",
+    escapeHtmlAttribute(metadata.themeColor),
+  );
+  return replaceTemplateToken(
+    html,
+    "__ROUTEVN_WEB_BACKGROUND_COLOR__",
+    escapeHtmlAttribute(metadata.backgroundColor),
+  );
+};
+
+export const createBundleWebManifest = (web = {}) => {
+  const metadata = normalizeWebApplicationMetadata(web);
+  return JSON.stringify(
+    {
+      name: metadata.title,
+      short_name: metadata.shortName,
+      description: metadata.description,
+      start_url: "./",
+      scope: "./",
+      display: "standalone",
+      theme_color: metadata.themeColor,
+      background_color: metadata.backgroundColor,
+    },
+    undefined,
+    2,
+  );
+};
+
+export const BUNDLE_PLAYER_INDEX_HTML = createBundlePlayerIndexHtml();
 const BUNDLE_MANIFEST_CHUNKING = Object.freeze({
   algorithm: "none",
   mode: "whole-file-only",
@@ -442,6 +522,19 @@ const buildChunkManifest = async (instructions, assets = {}) => {
 
 export const createBundleInstructions = ({ projectData, bundler, project }) => {
   const projectTitle = project?.title ?? project?.name ?? "";
+  const projectMetadata = {
+    namespace: project?.namespace ?? "",
+    title: projectTitle,
+    iconFileId: project?.iconFileId ?? "",
+  };
+  if (project?.web) {
+    projectMetadata.web = {
+      shortName: project.web.shortName ?? "",
+      description: project.web.description ?? "",
+      themeColor: project.web.themeColor ?? "",
+      backgroundColor: project.web.backgroundColor ?? "",
+    };
+  }
 
   return {
     projectData,
@@ -450,11 +543,7 @@ export const createBundleInstructions = ({ projectData, bundler, project }) => {
         appName: bundler?.appName ?? BUNDLE_APP_NAME,
         appVersion: bundler?.appVersion ?? "",
       },
-      project: {
-        namespace: project?.namespace ?? "",
-        title: projectTitle,
-        iconFileId: project?.iconFileId ?? "",
-      },
+      project: projectMetadata,
     },
   };
 };
@@ -918,7 +1007,7 @@ export const createBundleRangeReader = async ({
   };
 };
 
-const getBundleStaticFiles = async () => {
+const getBundleStaticFiles = async (projectData) => {
   let mainJs;
 
   try {
@@ -933,8 +1022,17 @@ const getBundleStaticFiles = async () => {
   // Export must not depend on HTML transformed by an active Vite dev server.
   // Fetching /bundle/index.html in dev injects /@vite/client, which breaks
   // the exported standalone player.
+  const projectMetadata = projectData?.bundleMetadata?.project ?? {};
+  const webMetadata = {
+    title: projectMetadata.title,
+    shortName: projectMetadata.web?.shortName,
+    description: projectMetadata.web?.description,
+    themeColor: projectMetadata.web?.themeColor,
+    backgroundColor: projectMetadata.web?.backgroundColor,
+  };
   return {
-    indexHtml: BUNDLE_PLAYER_INDEX_HTML,
+    indexHtml: createBundlePlayerIndexHtml(webMetadata),
+    manifestJson: createBundleWebManifest(webMetadata),
     mainJs,
   };
 };
@@ -958,7 +1056,7 @@ export const createProjectExportService = ({
         zipName,
         options,
         filePicker,
-        staticFiles: await getBundleStaticFiles(),
+        staticFiles: await getBundleStaticFiles(projectData),
         getCurrentReference,
         getFileContent,
       });
@@ -982,7 +1080,7 @@ export const createProjectExportService = ({
       projectData,
       fileEntries: normalizeExportFileEntries(fileEntries),
       outputPath,
-      staticFiles: await getBundleStaticFiles(),
+      staticFiles: await getBundleStaticFiles(projectData),
       getCurrentReference,
       getFileContent,
     });
@@ -1061,7 +1159,10 @@ export const createProjectExportService = ({
       outputPath,
       title: metadata.title,
       version: metadata.version,
+      applicationIdentifier: metadata.applicationIdentifier,
       publisher: metadata.publisher,
+      description: metadata.description,
+      copyright: metadata.copyright,
       iconFileId: metadata.iconFileId,
       options,
       getCurrentReference,
@@ -1081,7 +1182,10 @@ export const createProjectExportService = ({
       outputPath,
       title: metadata.title,
       version: metadata.version,
+      applicationIdentifier: metadata.applicationIdentifier,
       publisher: metadata.publisher,
+      description: metadata.description,
+      copyright: metadata.copyright,
       iconFileId: metadata.iconFileId,
       options,
       getCurrentReference,
@@ -1103,6 +1207,10 @@ export const createProjectExportService = ({
       shortVersion: metadata.shortVersion,
       bundleVersion: metadata.bundleVersion,
       applicationIdentifier: metadata.applicationIdentifier,
+      publisher: metadata.publisher,
+      description: metadata.description,
+      copyright: metadata.copyright,
+      category: metadata.category,
       iconFileId: metadata.iconFileId,
       options,
       getCurrentReference,

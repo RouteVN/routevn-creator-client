@@ -796,6 +796,23 @@ Do not scatter platform conditionals through page handlers or domain code.
 Project `name`, `description`, `language`, and `iconFileId` are owned by the
 project-specific DB `app` store as `projectInfo`, not repository state.
 
+Release packaging metadata is stored independently under `releaseInfo.web`,
+`releaseInfo.windows`, and `releaseInfo.macos` in the project-specific DB
+`app` store. No platform record exists until the user explicitly adds that
+platform from Release Info and submits its prefilled create form. Opening or
+cancelling the form does not persist a record. Form defaults copy the project
+name and icon, while Windows and macOS identifiers start blank. A later project
+icon update fills an existing platform icon only while that platform icon
+remains empty. The records otherwise have no cross-platform synchronization or
+delete flow. Platform exports validate the matching record and show its values
+in a read-only confirmation dialog before opening a save picker or starting
+the export. Web metadata is emitted into `index.html`,
+`manifest.webmanifest`, and the bundle instructions. Windows metadata is
+stamped into the portable executable's version resources and the NSIS
+installer's version keys. macOS metadata is stamped into `Info.plist` using
+`CFBundleGetInfoString`, `NSHumanReadableCopyright`,
+`LSApplicationCategoryType`, and the app-owned `RouteVNPublisher` key.
+
 That means:
 
 - use `projectService` project-info helpers for those fields when a project is

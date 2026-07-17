@@ -81,6 +81,8 @@ template:
                   - rvn-versions: []
                 $elif currentRoutePattern == "/project/releases/versions":
                   - rvn-versions: []
+                $elif currentRoutePattern == "/project/releases/info":
+                  - rvn-release-info: []
                 $elif currentRoutePattern == "/project/releases/web-server":
                   - rvn-web-server: []
       - $if showMobileTabBar:

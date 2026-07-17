@@ -15,6 +15,18 @@ refs:
     eventListeners:
       click:
         handler: handleDownloadZipClick
+  detailWindowsExeBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadWindowsExecutableClick
+  detailWindowsInstallerBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadWindowsInstallerClick
+  detailMacosApplicationBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadMacosApplicationClick
   detailHeader:
     eventListeners:
       click:
@@ -31,6 +43,18 @@ refs:
     eventListeners:
       close:
         handler: handleVersionFormClose
+  exportConfirmationDialog:
+    eventListeners:
+      close:
+        handler: handleExportConfirmationClose
+  exportConfirmationCancelButton:
+    eventListeners:
+      click:
+        handler: handleExportConfirmationClose
+  exportConfirmationConfirmButton:
+    eventListeners:
+      click:
+        handler: handleExportConfirmationConfirm
   dropdownMenu:
     eventListeners:
       close:
@@ -78,6 +102,12 @@ template:
                               - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                                   - rtgl-view slot=actions d=v g=sm w=f:
                                       - rtgl-button#detailDownloadBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
+                                      - $if canExportWindowsExecutable:
+                                          - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
+                                      - $if canExportWindowsInstaller:
+                                          - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
+                                      - $if canExportMacosApplication:
+                                          - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
@@ -91,7 +121,28 @@ template:
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-view slot=actions d=v g=sm w=f:
                           - rtgl-button#detailDownloadBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
+                          - $if canExportWindowsExecutable:
+                              - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
+                          - $if canExportWindowsInstaller:
+                              - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
+                          - $if canExportMacosApplication:
+                              - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
   - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md:
       - rtgl-view slot=content w=f:
           - rtgl-form#versionForm :form=${versionForm} w=f: null
+  - $if isExportConfirmationOpen:
+      - rtgl-dialog#exportConfirmationDialog ?open=${isExportConfirmationOpen} s=md:
+          - rtgl-view slot=content w=f p=lg g=lg:
+              - rtgl-view d=v g=xs:
+                  - rtgl-text s=lg: ${exportConfirmationTitle}
+                  - rtgl-text c=mu-fg: ${exportConfirmationMessage}
+              - 'rtgl-view w=f sv style="max-height: 60vh;"':
+                  - rvn-detail-view#exportConfirmationDetail key=${exportConfirmationKey} w=f :fields=${exportConfirmationFields} :fillHeight=${false}:
+                      - $if exportConfirmationIconFileId:
+                          - rvn-file-image slot=export-confirmation-icon fileId=${exportConfirmationIconFileId} w=96 h=96 bw=xs bc=bo br=md: null
+                        $else:
+                          - rtgl-image slot=export-confirmation-icon src="/public/project_logo_placeholder.png" w=96 h=96 bw=xs bc=bo br=md: null
+              - rtgl-view d=h ah=e av=c g=sm:
+                  - rtgl-button#exportConfirmationCancelButton v=se: ${exportConfirmationCancelLabel}
+                  - rtgl-button#exportConfirmationConfirmButton v=pr pre=download: ${exportConfirmationConfirmLabel}
   - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=${dropdownMenu.items}: null

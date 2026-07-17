@@ -1,0 +1,4 @@
+componentName: rvn-release-info
+propsSchema:
+  type: object
+  properties: {}

@@ -7,6 +7,7 @@ pub async fn create_distribution_zip_streamed(
     instructions_json: String,
     index_html: Option<String>,
     main_js: Option<String>,
+    manifest_json: Option<String>,
     use_part_file: Option<bool>,
 ) -> Result<ZipExportStats, String> {
     let use_part_file = use_part_file.unwrap_or(true);
@@ -18,6 +19,7 @@ pub async fn create_distribution_zip_streamed(
             instructions_json,
             index_html,
             main_js,
+            manifest_json,
             use_part_file,
         )
     })

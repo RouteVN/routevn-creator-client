@@ -6,7 +6,9 @@ import {
   BUNDLE_HEADER_SIZE,
   BUNDLE_PLAYER_INDEX_HTML,
   createBundleInstructions,
+  createBundlePlayerIndexHtml,
   createBundleResult,
+  createBundleWebManifest,
   createProjectExportService,
   normalizeExportFileEntries,
   parseBundle,
@@ -170,6 +172,7 @@ describe("projectExportService", () => {
       outputPath: "/tmp/export.zip",
       staticFiles: {
         indexHtml: expect.any(String),
+        manifestJson: expect.any(String),
         mainJs: undefined,
       },
       getCurrentReference,
@@ -219,6 +222,10 @@ describe("projectExportService", () => {
           shortVersion: "1.0.3",
           bundleVersion: "4",
           applicationIdentifier: "vn.routevn.player.game",
+          publisher: "Studio One",
+          description: "A visual novel",
+          copyright: "Copyright © 2026 Studio One",
+          category: "public.app-category.games",
           iconFileId: "icon-1",
         },
       ),
@@ -231,10 +238,72 @@ describe("projectExportService", () => {
       shortVersion: "1.0.3",
       bundleVersion: "4",
       applicationIdentifier: "vn.routevn.player.game",
+      publisher: "Studio One",
+      description: "A visual novel",
+      copyright: "Copyright © 2026 Studio One",
+      category: "public.app-category.games",
       iconFileId: "icon-1",
       options: {},
       getCurrentReference,
     });
+  });
+
+  it("delegates all Windows release metadata through the stable file-adapter contract", async () => {
+    const createWindowsPortableExecutableToPath = vi.fn(async () => ({
+      outputPath: "/tmp/Game.exe",
+    }));
+    const createWindowsInstallerToPath = vi.fn(async () => ({
+      outputPath: "/tmp/Game Setup.exe",
+    }));
+    const getCurrentReference = vi.fn(() => ({
+      projectPath: "/tmp/project-1",
+    }));
+    const service = createProjectExportService({
+      fileAdapter: {
+        createWindowsPortableExecutableToPath,
+        createWindowsInstallerToPath,
+      },
+      filePicker: {
+        saveFilePicker: vi.fn(),
+      },
+      getCurrentReference,
+      getFileContent: vi.fn(),
+    });
+    const metadata = {
+      title: "Game",
+      version: "1.0.0.4",
+      applicationIdentifier: "vn.routevn.player.game",
+      publisher: "Studio One",
+      description: "A visual novel",
+      copyright: "Copyright © 2026 Studio One",
+      iconFileId: "icon-1",
+    };
+
+    await service.createWindowsPortableExecutableToPath(
+      { projectData: {} },
+      [{ fileId: "image-1", mimeType: "image/png" }],
+      "/tmp/Game.exe",
+      metadata,
+    );
+    await service.createWindowsInstallerToPath(
+      { projectData: {} },
+      [{ fileId: "image-1", mimeType: "image/png" }],
+      "/tmp/Game Setup.exe",
+      metadata,
+    );
+
+    const expectedPayload = {
+      projectData: { projectData: {} },
+      fileEntries: [{ id: "image-1", mimeType: "image/png" }],
+      outputPath: expect.any(String),
+      ...metadata,
+      options: {},
+      getCurrentReference,
+    };
+    expect(createWindowsPortableExecutableToPath).toHaveBeenCalledWith(
+      expectedPayload,
+    );
+    expect(createWindowsInstallerToPath).toHaveBeenCalledWith(expectedPayload);
   });
 
   it("normalizes export file entries into stable id/mime objects", () => {
@@ -266,6 +335,54 @@ describe("projectExportService", () => {
       namespace: "project-one",
       title: "Project One",
       iconFileId: "icon-1",
+    });
+  });
+
+  it("stores Web release metadata and renders it into Web export files", () => {
+    const project = {
+      namespace: "project-one",
+      title: "Project One",
+      iconFileId: "icon-1",
+      web: {
+        shortName: "Project",
+        description: 'A visual novel about <friends> & "adventure".',
+        themeColor: "#112233",
+        backgroundColor: "#000000",
+      },
+    };
+    const instructions = createBundleInstructions({ projectData: {}, project });
+
+    expect(instructions.bundleMetadata.project.web).toEqual(project.web);
+
+    const indexHtml = createBundlePlayerIndexHtml({
+      title: project.title,
+      ...project.web,
+    });
+    expect(indexHtml).toContain("<title>Project One</title>");
+    expect(indexHtml).toContain(
+      '<meta name="application-name" content="Project" />',
+    );
+    expect(indexHtml).toContain(
+      'content="A visual novel about &lt;friends&gt; &amp; &quot;adventure&quot;."',
+    );
+    expect(indexHtml).toContain(
+      '<meta name="theme-color" content="#112233" />',
+    );
+    expect(indexHtml).toContain("background: #000000;");
+
+    expect(
+      JSON.parse(
+        createBundleWebManifest({
+          title: project.title,
+          ...project.web,
+        }),
+      ),
+    ).toMatchObject({
+      name: "Project One",
+      short_name: "Project",
+      description: project.web.description,
+      theme_color: "#112233",
+      background_color: "#000000",
     });
   });
 

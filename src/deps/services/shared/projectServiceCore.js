@@ -23,6 +23,7 @@ const MENU_ITEM_SELECTED_TEXT_STYLE_ID = "saV5A4pkvHRb";
 const MENU_PAGE_LAYOUT_ID = "fKr5fa67MQWh";
 const LOAD_MENU_ELEMENT_ID = "icn4dknq2kyp";
 const LEGACY_DIALOGUE_CONTENT_TEXT_STYLE_ID = "5rwEfyx2GBEi";
+const RELEASE_PLATFORM_IDS = ["web", "windows", "macos"];
 
 export const createProjectServiceCore = ({
   router,
@@ -294,18 +295,68 @@ export const createProjectServiceCore = ({
     });
   };
 
+  const checkReleaseInfoImageUsage = async ({ itemId, repository } = {}) => {
+    const image = repository.getState()?.images?.items?.[itemId];
+    if (image?.type !== "image" || !image.fileId) {
+      return {
+        inProps: {},
+        isUsed: false,
+        count: 0,
+      };
+    }
+
+    const releaseInfoByPlatform = await Promise.all(
+      RELEASE_PLATFORM_IDS.map(async (platform) => ({
+        platform,
+        applicationInfo:
+          await repositoryService.getCurrentPlatformReleaseInfo(platform),
+      })),
+    );
+    const usages = releaseInfoByPlatform
+      .filter(
+        ({ applicationInfo }) => applicationInfo?.iconFileId === image.fileId,
+      )
+      .map(({ platform }) => ({
+        property: `${platform}.iconFileId`,
+      }));
+
+    return {
+      inProps: usages.length > 0 ? { releaseInfo: usages } : {},
+      isUsed: usages.length > 0,
+      count: usages.length,
+    };
+  };
+
   const checkResourceUsage = async ({ itemId, checkTargets = [] } = {}) => {
     const repository = await ensureRepository();
     const store = repositoryService.getCachedStore();
     const projectId = getCurrentProjectId() || "unknown-project";
 
-    return checkProjectResourceUsage({
+    const projectUsage = await checkProjectResourceUsage({
       repository,
       store,
       projectId,
       itemId,
       checkTargets,
     });
+    if (projectUsage.isUsed) {
+      return projectUsage;
+    }
+
+    return checkReleaseInfoImageUsage({ itemId, repository });
+  };
+
+  const deleteImageIfUnused = async ({ imageId, checkTargets = [] } = {}) => {
+    const repository = await ensureRepository();
+    const releaseInfoUsage = await checkReleaseInfoImageUsage({
+      itemId: imageId,
+      repository,
+    });
+    if (releaseInfoUsage.isUsed) {
+      return { deleted: false, usage: releaseInfoUsage };
+    }
+
+    return collabService.deleteImageIfUnused({ imageId, checkTargets });
   };
 
   const checkSceneDeletionUsage = async ({ sceneId } = {}) => {
@@ -422,10 +473,18 @@ export const createProjectServiceCore = ({
     getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
     updateCurrentProjectInfo: repositoryService.updateCurrentProjectInfo,
     updateProjectInfoById: repositoryService.updateProjectInfoByProjectId,
+    getCurrentPlatformReleaseInfo:
+      repositoryService.getCurrentPlatformReleaseInfo,
+    getCurrentPlatformReleaseInfoDefaults:
+      repositoryService.getCurrentPlatformReleaseInfoDefaults,
+    createCurrentPlatformReleaseInfo:
+      repositoryService.createCurrentPlatformReleaseInfo,
+    updateCurrentPlatformReleaseInfo:
+      repositoryService.updateCurrentPlatformReleaseInfo,
     addVersionToProject: collabService.addVersionToProject,
     updateVersionInProject: collabService.updateVersionInProject,
     deleteVersionFromProject: collabService.deleteVersionFromProject,
-    deleteImageIfUnused: collabService.deleteImageIfUnused,
+    deleteImageIfUnused,
     deleteSoundIfUnused: collabService.deleteSoundIfUnused,
     deleteVideoIfUnused: collabService.deleteVideoIfUnused,
     async initializeProject(payload) {
