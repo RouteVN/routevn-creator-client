@@ -30,6 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdg-utils \
     libfuse2 \
     libgtk-3-bin \
+    fcitx5-frontend-gtk3 \
+    ibus-gtk3 \
     libglib2.0-bin \
     libgdk-pixbuf2.0-bin \
     webp-pixbuf-loader \
