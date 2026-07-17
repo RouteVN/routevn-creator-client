@@ -797,7 +797,7 @@ particlesPage:
   addParticleButton: "添加粒子"
   addParticleTitle: "添加粒子"
   appearanceTab: "外观"
-  backgroundImageLabel: "背景图像"
+  backgroundImageLabel: "预览背景图像"
   basicsHelpText: "选择纹理图像并调整主要发射器字段。预设值已在打开此表单前应用。"
   basicsTab: "基本"
   burstCountDescription: "每次发射一组粒子时生成的粒子数量。"

@@ -797,7 +797,7 @@ particlesPage:
   addParticleButton: "パーティクルを追加"
   addParticleTitle: "パーティクルを追加"
   appearanceTab: "外観"
-  backgroundImageLabel: "背景画像"
+  backgroundImageLabel: "プレビュー背景画像"
   basicsHelpText: "テクスチャ画像を選び、主要なエミッター項目を調整します。プリセット値はこのフォームを開く前に適用されています。"
   basicsTab: "基本"
   burstCountDescription: "バーストが発生するたびに生成されるパーティクル数です。"

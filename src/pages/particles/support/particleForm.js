@@ -60,18 +60,6 @@ const createParticleTagField = (copy = {}, tagOptions = []) => ({
   required: false,
 });
 
-const resolveTextureImageOptions = (imageOptions = [], copy = {}) => [
-  {
-    id: "",
-    label:
-      imageOptions.length > 0
-        ? (copy.selectImageOption ?? "Select image")
-        : (copy.noImagesAvailableOption ?? "No images available"),
-    value: "",
-  },
-  ...imageOptions,
-];
-
 const toTextValue = (value) => {
   if (value === undefined || value === null) {
     return "";
@@ -383,10 +371,7 @@ const withFieldTooltips = (fields = []) =>
     };
   });
 
-export const createParticleCreateSetupForm = ({
-  imageOptions = [],
-  copy = {},
-} = {}) => ({
+export const createParticleCreateSetupForm = ({ copy = {} } = {}) => ({
   title: copy.createParticleTitle ?? "Create Particle",
   description:
     copy.createSetupDescription ??
@@ -404,25 +389,12 @@ export const createParticleCreateSetupForm = ({
       options: createParticlePresetOptions(copy),
     },
     {
-      name: "textureImageId",
-      type: "select",
-      label: copy.textureImageLabel ?? "Texture Image",
-      description:
-        copy.setupTextureImageDescription ??
-        "Choose the image used for each spawned particle.",
-      options: resolveTextureImageOptions(imageOptions, copy),
-      required: true,
-      clearable: false,
+      type: "slot",
+      slot: "particle-texture-image",
     },
   ]),
   actions: {
     buttons: [
-      {
-        id: "cancel",
-        variant: "se",
-        label: copy.cancelButton ?? "Cancel",
-        align: "left",
-      },
       {
         id: "submit",
         variant: "pr",
@@ -453,11 +425,7 @@ const PARTICLE_FORM_TAB_IDS = new Set(
   PARTICLE_FORM_TABS.map((item) => item.id),
 );
 
-const createParticleFieldsByTab = ({
-  imageOptions = [],
-  tagOptions = [],
-  copy = {},
-} = {}) => {
+const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
   const fieldsByTab = {
     basics: [
       {
@@ -807,14 +775,8 @@ const createParticleFieldsByTab = ({
     ],
     appearance: [
       {
-        name: "textureImageId",
-        type: "select",
-        label: copy.textureImageLabel ?? "Texture Image",
-        description:
-          copy.textureImageDescription ??
-          "Choose the image used to draw each particle sprite.",
-        options: resolveTextureImageOptions(imageOptions, copy),
-        required: true,
+        type: "slot",
+        slot: "particle-texture-image",
       },
       {
         name: "scaleMin",
@@ -851,7 +813,6 @@ const createParticleFieldsByTab = ({
 
 export const createParticleForm = ({
   editMode = false,
-  imageOptions = [],
   tagOptions = [],
   activeTab = "basics",
   copy = {},
@@ -865,7 +826,6 @@ export const createParticleForm = ({
       slot: "particle-form-tabs",
     },
     ...createParticleFieldsByTab({
-      imageOptions,
       tagOptions,
       copy,
     })[PARTICLE_FORM_TAB_IDS.has(activeTab) ? activeTab : "basics"],
