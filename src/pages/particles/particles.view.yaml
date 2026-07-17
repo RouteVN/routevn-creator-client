@@ -141,10 +141,6 @@ refs:
     eventListeners:
       click:
         handler: handleConfirmPreviewImageSelection
-  cancelPreviewImageSelection:
-    eventListeners:
-      click:
-        handler: handleCancelPreviewImageSelection
   detailCanvas: {}
   dialogCanvas: {}
 template:
@@ -265,5 +261,4 @@ template:
                   - 'rtgl-view#imageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
                       - rvn-image-selector#imageSelector selectedImageId=${previewImageSelectorDialog.selectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelPreviewImageSelection variant=se: ${cancelButton}
-                  - rtgl-button#confirmPreviewImageSelection variant=pr: ${confirmButton}
+                  - rtgl-button#confirmPreviewImageSelection variant=pr: ${selectButton}
