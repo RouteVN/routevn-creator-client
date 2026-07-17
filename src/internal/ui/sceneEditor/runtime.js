@@ -1084,6 +1084,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     preserveAnimationPlayback = false,
     skipAnimations = true,
     skipCanvasPaint = false,
+    syncCommittedSectionChanges = false,
   } = payload;
   const perfEnabled = isDebugEnabled(SCENE_EDITOR_PERF_SCOPE);
   const timingEnabled = shouldMeasureSceneEditorTiming();
@@ -1136,6 +1137,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   const presentationStateDurationMs = shouldMeasure
     ? getDebugDurationMs(presentationStateStartedAt)
     : undefined;
+  if (syncCommittedSectionChanges) {
+    await updateSceneEditorSectionChanges(deps);
+  }
   const temporaryPresentationState = selectTemporaryPresentationState(store);
   const temporaryPresentationStateStartedAt = shouldMeasure ? getDebugNow() : 0;
   let renderProjectData = await prepareTemporaryPresentationProjectData(
@@ -1631,14 +1635,12 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
   void preloadDirectTransitionScenes(deps, projectData, sceneIdsToLoad);
 
   const renderSceneStateStartedAt = shouldMeasure ? getDebugNow() : 0;
-  await renderSceneEditorState(deps, payload);
+  await renderSceneEditorState(deps, {
+    ...payload,
+    syncCommittedSectionChanges: true,
+  });
   const renderSceneStateDurationMs = shouldMeasure
     ? getDebugDurationMs(renderSceneStateStartedAt)
-    : undefined;
-  const sectionChangesStartedAt = shouldMeasure ? getDebugNow() : 0;
-  await updateSceneEditorSectionChanges(deps);
-  const sectionChangesDurationMs = shouldMeasure
-    ? getDebugDurationMs(sectionChangesStartedAt)
     : undefined;
 
   let uiRenderDurationMs = 0;
@@ -1667,7 +1669,6 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
       projectDataDurationMs,
       sceneAssetLoadDurationMs,
       renderSceneStateDurationMs,
-      sectionChangesDurationMs,
       uiRenderDurationMs,
       sceneIdsToLoad,
     });
@@ -1686,7 +1687,6 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
       projectDataDurationMs,
       sceneAssetLoadDurationMs,
       renderSceneStateDurationMs,
-      sectionChangesDurationMs,
       uiRenderDurationMs,
       sceneIdsToLoad,
     });
