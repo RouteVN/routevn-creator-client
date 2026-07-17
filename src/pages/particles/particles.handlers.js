@@ -1208,12 +1208,6 @@ export const handleConfirmPreviewImageSelection = async (deps) => {
   await applySelectedDialogImage(deps, imageSelectorDialog.selectedImageId);
 };
 
-export const handleCancelPreviewImageSelection = (deps) => {
-  const { render, store } = deps;
-  store.hidePreviewImageSelectorDialog();
-  render();
-};
-
 export const handleClosePreviewImageSelectorDialog = (deps) => {
   const { render, store } = deps;
   store.hidePreviewImageSelectorDialog();

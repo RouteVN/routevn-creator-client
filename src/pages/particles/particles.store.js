@@ -259,8 +259,7 @@ const {
       addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
       backgroundImageLabel:
         copy.backgroundImageLabel ?? "Preview background image",
-      cancelButton: copy.cancelButton ?? "Cancel",
-      confirmButton: copy.confirmButton ?? "OK",
+      selectButton: copy.selectButton ?? "Select",
       deleteButton: copy.deleteButton ?? "Delete",
       filesLabel: copy.filesLabel ?? "Files",
       noSelectionLabel: copy.noSelectionLabel ?? "No selection",

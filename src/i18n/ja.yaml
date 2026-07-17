@@ -880,6 +880,7 @@ particlesPage:
   scaleMinLabel: "スケール 最小"
   seedDescription: "固定ランダムシードを使い、エフェクトを毎回同じように再生します。"
   seedLabel: "シード"
+  selectButton: "選択"
   selectImageOption: "画像を選択"
   selectValidTextureImage: "有効なパーティクル用テクスチャ画像を選択してください。"
   selectorLabel: "セレクター"

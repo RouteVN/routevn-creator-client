@@ -880,6 +880,7 @@ particlesPage:
   scaleMinLabel: "Scale Min"
   seedDescription: "Use a fixed random seed to make the effect replay consistently."
   seedLabel: "Seed"
+  selectButton: "Select"
   selectImageOption: "Select image"
   selectValidTextureImage: "Select a valid particle texture image."
   selectorLabel: "selector"
