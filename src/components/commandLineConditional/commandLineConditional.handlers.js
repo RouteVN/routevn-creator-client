@@ -401,6 +401,38 @@ export const handleBranchContextMenu = (deps, payload) => {
   render();
 };
 
+export const handleBranchMenuButtonClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store, render } = deps;
+  const branchId = payload._event.currentTarget.dataset.branchId;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+
+  store.showDropdownMenu({
+    position: { x: rect.right, y: rect.bottom },
+    branchId,
+  });
+  render();
+};
+
+export const handleBranchMenuButtonKeyDown = (deps, payload) => {
+  const directionByKey = {
+    ArrowUp: "up",
+    ArrowDown: "down",
+  };
+  const direction = directionByKey[payload._event.key];
+  if (!direction) {
+    return;
+  }
+
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
+  const { store, render } = deps;
+  const branchId = payload._event.currentTarget.dataset.branchId;
+
+  store.moveBranch({ branchId, direction });
+  render();
+};
+
 export const handleVariableSelectChange = (deps, payload) => {
   const { store, render } = deps;
   const variableId =

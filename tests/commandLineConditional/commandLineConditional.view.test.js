@@ -22,5 +22,10 @@ describe("commandLineConditional view", () => {
     expect(view).not.toContain("pre=trash");
     expect(view).toContain("handler: handleAddOneOfValueClick");
     expect(view).toContain("handler: handleRemoveOneOfValueClick");
+    expect(view).toContain("handler: handleBranchMenuButtonClick");
+    expect(view).toContain("handler: handleBranchMenuButtonKeyDown");
+    expect(view).toContain("rtgl-button#branchMenuButton${i}");
+    expect(view).toContain("aria-haspopup=menu");
+    expect(view).toContain('aria-keyshortcuts="${branch.menuKeyShortcuts}"');
   });
 });

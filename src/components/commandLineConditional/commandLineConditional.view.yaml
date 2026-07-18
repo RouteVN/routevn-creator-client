@@ -23,6 +23,12 @@ refs:
         handler: handleBranchClick
       contextmenu:
         handler: handleBranchContextMenu
+  branchMenuButton*:
+    eventListeners:
+      click:
+        handler: handleBranchMenuButtonClick
+      keydown:
+        handler: handleBranchMenuButtonKeyDown
   variableSelect:
     eventListeners:
       value-change:
@@ -97,6 +103,7 @@ template:
                           - rtgl-view d=v w=1fg:
                               - rtgl-text s=sm: ${branch.summary}
                               - rtgl-text s=xs c=mu-fg: ${branch.actionsSummary}
+                          - 'rtgl-button#branchMenuButton${i} data-branch-id=${branch.id} sq s=sm v=gh pre=ellipsis title="${branchMenuButtonLabel}" aria-label="${branchMenuButtonLabel}" aria-haspopup=menu aria-keyshortcuts="${branch.menuKeyShortcuts}"': null
                   - rtgl-button#addBranchButton v=ol w=f mt=md: ${addBranchButton}
                   - rtgl-text s=sm c=mu-fg mt=md: ${defaultBranchLabel}
                   - $if hasDefaultBranch:
@@ -104,6 +111,7 @@ template:
                           - rtgl-view d=v w=1fg:
                               - rtgl-text s=sm: ${defaultBranch.summary}
                               - rtgl-text s=xs c=mu-fg: ${defaultBranch.actionsSummary}
+                          - 'rtgl-button#branchMenuButtonDefault data-branch-id=${defaultBranch.id} sq s=sm v=gh pre=ellipsis title="${branchMenuButtonLabel}" aria-label="${branchMenuButtonLabel}" aria-haspopup=menu': null
                   - $if !hasDefaultBranch:
                       - rtgl-button#addDefaultButton v=ol w=f: ${addDefaultBranchButton}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':

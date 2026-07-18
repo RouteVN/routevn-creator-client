@@ -24,6 +24,8 @@ import {
   handleAddOneOfValueClick,
   handleAddDefaultClick,
   handleBranchClick,
+  handleBranchMenuButtonClick,
+  handleBranchMenuButtonKeyDown,
   handleDropdownMenuClickItem,
   handleEnumValueSelectChange,
   handleOneOfValueChange,
@@ -869,5 +871,70 @@ describe("commandLineConditional.handlers", () => {
     expect(state.branches.map((branch) => branch.id)).toEqual(expectedIds);
     expect(state.dropdownMenu.isOpen).toBe(false);
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens and operates the branch menu from its keyboard trigger", () => {
+    const state = createInitialState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const stopPropagation = vi.fn();
+    const preventDefault = vi.fn();
+    const createConditionBranch = (id) => ({
+      id,
+      when: {
+        eq: [{ var: "variables.trust" }, id],
+      },
+      actions: {},
+    });
+
+    setBranches(
+      { state },
+      {
+        branches: [
+          createConditionBranch("branch-1"),
+          createConditionBranch("branch-2"),
+        ],
+      },
+    );
+    const currentTarget = {
+      dataset: { branchId: "branch-2" },
+      getBoundingClientRect: () => ({ right: 320, bottom: 240 }),
+    };
+
+    handleBranchMenuButtonClick(
+      { store, render },
+      {
+        _event: {
+          currentTarget,
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(state.dropdownMenu).toMatchObject({
+      isOpen: true,
+      branchId: "branch-2",
+      position: { x: 320, y: 240 },
+    });
+
+    handleBranchMenuButtonKeyDown(
+      { store, render },
+      {
+        _event: {
+          key: "ArrowUp",
+          currentTarget,
+          preventDefault,
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(state.branches.map((branch) => branch.id)).toEqual([
+      "branch-2",
+      "branch-1",
+    ]);
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledTimes(2);
+    expect(render).toHaveBeenCalledTimes(2);
   });
 });

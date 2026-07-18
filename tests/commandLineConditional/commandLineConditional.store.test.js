@@ -9,7 +9,7 @@ import {
   showDropdownMenu,
   updateBranch,
 } from "../../src/components/commandLineConditional/commandLineConditional.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
 describe("commandLineConditional.store", () => {
   it("summarizes conditional branches and the default branch separately", () => {
@@ -215,6 +215,13 @@ describe("commandLineConditional.store", () => {
     expect(viewData.oneOfValues).toEqual(["happy", "neutral"]);
     expect(viewData.oneOfRemoveButtonStyle).toBe("");
     expect(viewData.addValueButton).toBe("Add Value");
+    expect(viewData.branchMenuButtonLabel).toBe("Branch Menu");
+    const jaViewData = selectViewData({ state, i18n: JA_I18N });
+    expect(jaViewData.addValueButton).toBe("値を追加");
+    expect(jaViewData.branchMenuButtonLabel).toBe("分岐メニュー");
+    const zhHansViewData = selectViewData({ state, i18n: ZH_HANS_I18N });
+    expect(zhHansViewData.addValueButton).toBe("添加值");
+    expect(zhHansViewData.branchMenuButtonLabel).toBe("分支菜单");
     expect(viewData.canSaveBranch).toBe(true);
 
     setTempBranch({ state }, { value: ["happy"] });
@@ -381,6 +388,14 @@ describe("commandLineConditional.store", () => {
         ],
       },
     );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.branches.map((branch) => branch.menuKeyShortcuts)).toEqual([
+      "ArrowDown",
+      "ArrowUp ArrowDown",
+      "ArrowUp",
+    ]);
+    expect(viewData.defaultBranch.menuKeyShortcuts).toBe("");
 
     showDropdownMenu(
       { state },

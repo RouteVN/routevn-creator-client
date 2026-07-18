@@ -1626,6 +1626,7 @@ sceneEditorPage:
   upLabel: "上"
   warningTitle: "警告"
 commandLinePage:
+  addValueButton: "添加值"
   "+ Add Branch": "+ 添加分支"
   "+ Add Character": "+ 添加角色"
   "+ Add Default Branch": "+ 添加默认分支"
@@ -1657,6 +1658,7 @@ commandLinePage:
   "Blur X": "X 轴模糊"
   "Blur Y": "Y 轴模糊"
   "Branch": "分支"
+  "Branch Menu": "分支菜单"
   "Branches": "分支"
   "Cancel": "取消"
   "Cancel Actions": "取消动作"
