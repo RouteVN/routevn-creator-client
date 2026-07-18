@@ -148,8 +148,7 @@ Current keys:
     - `description`
     - `copyright`
 - `platformDetails.macos`
-  - independently customizable macOS release metadata except for the stable
-    application identifier inherited from `projectInfo`
+  - independently customizable macOS release metadata
   - current fields:
     - `applicationName`
     - `iconFileId`
@@ -163,9 +162,8 @@ Current keys:
   - the create form is prefilled from the current project name and icon;
     cancelling it does not persist a record
   - the Windows identifier starts blank and is optional; the macOS identifier
-    is copied from `projectInfo.nativeApplicationIdentifier`, cannot be edited
-    in Platform Details, and is migrated back to that stable value when read; Web
-    does not store an application identifier
+    starts blank, is required and editable, and controls the exported app and
+    save-data identity; Web does not store an application identifier
   - platform export is blocked until the corresponding platform record exists
     and passes validation; Web export also checks that selected project colors
     still exist

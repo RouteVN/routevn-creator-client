@@ -184,13 +184,8 @@ export const createProjectRepositoryService = ({
       iconFileId: sourceInfo?.iconFileId ?? null,
     };
 
-    if (platform === "windows") {
+    if (platform === "windows" || platform === "macos") {
       platformDetails.applicationIdentifier = "";
-    }
-
-    if (platform === "macos") {
-      platformDetails.applicationIdentifier =
-        sourceInfo?.nativeApplicationIdentifier ?? "";
     }
 
     if (platform === "web") {
@@ -769,17 +764,6 @@ export const createProjectRepositoryService = ({
       platform,
       storedPlatformDetails,
     );
-    if (platform === "macos") {
-      const projectInfo = await readProjectInfoFromStore(store);
-      if (
-        platformDetails.applicationIdentifier !==
-        projectInfo.nativeApplicationIdentifier
-      ) {
-        platformDetails.applicationIdentifier =
-          projectInfo.nativeApplicationIdentifier;
-        shouldPersist = true;
-      }
-    }
 
     if (shouldPersist) {
       await store.app.set(key, platformDetails);
@@ -888,7 +872,6 @@ export const createProjectRepositoryService = ({
     return createPlatformDetails(platform, {
       applicationName: projectInfo.name,
       iconFileId: projectInfo.iconFileId,
-      nativeApplicationIdentifier: projectInfo.nativeApplicationIdentifier,
     });
   };
 
@@ -913,13 +896,8 @@ export const createProjectRepositoryService = ({
     const defaults = createPlatformDetails(platform, {
       applicationName: projectInfo.name,
       iconFileId: projectInfo.iconFileId,
-      nativeApplicationIdentifier: projectInfo.nativeApplicationIdentifier,
     });
     const platformDetails = mergePlatformDetails(platform, defaults, patch);
-    if (platform === "macos") {
-      platformDetails.applicationIdentifier =
-        projectInfo.nativeApplicationIdentifier;
-    }
     await store.app.set(getPlatformDetailsKey(platform), platformDetails);
     return platformDetails;
   };
@@ -943,10 +921,6 @@ export const createProjectRepositoryService = ({
       currentPlatformDetails,
       patch,
     );
-    if (platform === "macos") {
-      nextPlatformDetails.applicationIdentifier =
-        currentPlatformDetails.applicationIdentifier;
-    }
     await store.app.set(getPlatformDetailsKey(platform), nextPlatformDetails);
     return nextPlatformDetails;
   };

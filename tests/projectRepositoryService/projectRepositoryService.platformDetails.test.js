@@ -140,7 +140,7 @@ describe("projectRepositoryService platform details", () => {
     await expect(
       harness.service.getCurrentPlatformDetailsDefaults("macos"),
     ).resolves.toMatchObject({
-      applicationIdentifier: "vn.routevn.player.project-one",
+      applicationIdentifier: "",
     });
     expect(harness.getPlatformDetails("web")).toBeUndefined();
 
@@ -172,7 +172,7 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toEqual({
       applicationName: "Project One",
       iconFileId: "project-icon-1",
-      applicationIdentifier: "vn.routevn.player.project-one",
+      applicationIdentifier: "",
       publisher: "",
       description: "",
       copyright: "",
@@ -238,7 +238,7 @@ describe("projectRepositoryService platform details", () => {
     );
   });
 
-  it("migrates and locks macOS platform details to the stable project identity", async () => {
+  it("preserves and updates the editable macOS application identifier", async () => {
     const harness = createHarness({
       platformDetails: {
         macos: {
@@ -256,10 +256,10 @@ describe("projectRepositoryService platform details", () => {
     await expect(
       harness.service.getCurrentPlatformDetails("macos"),
     ).resolves.toMatchObject({
-      applicationIdentifier: "vn.routevn.player.project-one",
+      applicationIdentifier: "com.changed.mac-project",
     });
     expect(harness.getPlatformDetails("macos")).toMatchObject({
-      applicationIdentifier: "vn.routevn.player.project-one",
+      applicationIdentifier: "com.changed.mac-project",
     });
 
     await harness.service.updateCurrentPlatformDetails("macos", {
@@ -267,7 +267,7 @@ describe("projectRepositoryService platform details", () => {
       description: "Updated Mac release",
     });
     expect(harness.getPlatformDetails("macos")).toMatchObject({
-      applicationIdentifier: "vn.routevn.player.project-one",
+      applicationIdentifier: "com.another.changed-identity",
       description: "Updated Mac release",
     });
   });

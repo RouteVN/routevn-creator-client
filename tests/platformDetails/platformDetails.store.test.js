@@ -124,15 +124,16 @@ describe("platformDetails.store", () => {
       label: "Bundle Identifier",
       value: "com.example.macos-project",
     });
-    expect(viewData.platformEditForm.fields).toContainEqual(
-      expect.objectContaining({
-        name: "applicationIdentifier",
-        label: "Bundle Identifier",
-        disabled: true,
-        description:
-          EN_I18N.platformDetailsPage.macosApplicationIdentifierDescription,
-      }),
+    const applicationIdentifierField = viewData.platformEditForm.fields.find(
+      (field) => field.name === "applicationIdentifier",
     );
+    expect(applicationIdentifierField).toMatchObject({
+      name: "applicationIdentifier",
+      label: "Bundle Identifier",
+      description:
+        EN_I18N.platformDetailsPage.macosApplicationIdentifierDescription,
+    });
+    expect(applicationIdentifierField.disabled).toBeUndefined();
   });
 
   it("prefills platform edit state independently", () => {

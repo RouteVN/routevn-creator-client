@@ -74,9 +74,9 @@ Important details:
   values and icon are written to the exported HTML, Web manifest, and
   `app-icon.png`, Windows values to executable/installer version metadata, and
   macOS values to `Info.plist`
-- the macOS `applicationIdentifier` mirrors the stable
-  `projectInfo.nativeApplicationIdentifier`; reads migrate differing legacy
-  platform records and Platform Details does not allow editing it
+- the macOS `applicationIdentifier` starts blank, is required and editable,
+  and controls both the exported app identity and save-data location; builds
+  using different identifiers do not share saves
 - `projectInfo` is the source of truth for project display metadata
 - `projectInfo.id` is the canonical folder/project id for new projects
 - `projectInfo.namespace` is the canonical browser-hosted bundle save namespace

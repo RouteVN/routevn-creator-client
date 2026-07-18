@@ -159,8 +159,11 @@ const getValidationMessage = (copy, code) => {
   if (code === "application-name-required") {
     return copy.applicationNameRequired;
   }
-  if (code === "native-icon-required") {
-    return copy.nativeIconRequired;
+  if (code === "windows-icon-required") {
+    return copy.windowsIconRequired;
+  }
+  if (code === "macos-icon-required") {
+    return copy.macosIconRequired;
   }
   if (code === "theme-color-not-found") {
     return copy.webThemeColorNotFound;

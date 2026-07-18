@@ -644,7 +644,7 @@ describe("versions Windows export handlers", () => {
 
     expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.versionsPage.platformDetailsNativeIconRequired,
+      message: EN_I18N.versionsPage.platformDetailsWindowsIconRequired,
       title: EN_I18N.versionsPage.warningTitle,
     });
   });
@@ -887,6 +887,34 @@ describe("versions Windows export handlers", () => {
 });
 
 describe("versions macOS export handlers", () => {
+  it("requires a macOS icon before opening export confirmation", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Mac Edition",
+      iconFileId: "",
+      applicationIdentifier: "com.example.mac-edition",
+      publisher: "Release Studio",
+      description: "macOS release",
+      copyright: "",
+      category: "public.app-category.games",
+    });
+
+    await handleDownloadMacosApplicationClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.platformDetailsMacosIconRequired,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+  });
+
   it("reports template inspection errors instead of claiming the template is absent", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
@@ -944,7 +972,7 @@ describe("versions macOS export handlers", () => {
     ).not.toHaveBeenCalled();
   });
 
-  it("uses the release action index for bundle versions and the stable project identity", async () => {
+  it("uses the release action index and configured macOS application identifier", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
       loadEvents: vi.fn(async () => []),
@@ -978,7 +1006,7 @@ describe("versions macOS export handlers", () => {
       title: "Mac Edition",
       shortVersion: "1.0.3",
       bundleVersion: "4",
-      applicationIdentifier: "vn.routevn.player.project-one",
+      applicationIdentifier: "com.example.mac-edition",
       publisher: "Release Studio",
       description: "macOS release",
       copyright: "Copyright © 2026 Release Studio",

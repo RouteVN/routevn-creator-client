@@ -281,10 +281,16 @@ const getPlatformDetailsValidationMessage = (code, copy) => {
       "Application name is required in Platform Details before export."
     );
   }
-  if (code === "native-icon-required") {
+  if (code === "windows-icon-required") {
     return (
-      copy.platformDetailsNativeIconRequired ??
-      "Add an application icon in Platform Details before exporting this native application."
+      copy.platformDetailsWindowsIconRequired ??
+      "Add a Windows application icon in Platform Details before exporting."
+    );
+  }
+  if (code === "macos-icon-required") {
+    return (
+      copy.platformDetailsMacosIconRequired ??
+      "Add a macOS application icon in Platform Details before exporting."
     );
   }
   if (code === "theme-color-not-found") {
@@ -1310,7 +1316,7 @@ const runMacosApplicationExport = async (deps, confirmation) => {
         title: getProjectExportTitle({ projectInfo, applicationInfo }),
         shortVersion: nativeVersion.shortVersion,
         bundleVersion: nativeVersion.bundleVersion,
-        applicationIdentifier: projectInfo.nativeApplicationIdentifier,
+        applicationIdentifier: applicationInfo.applicationIdentifier,
         publisher: applicationInfo.publisher,
         description: applicationInfo.description,
         copyright: applicationInfo.copyright,

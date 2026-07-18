@@ -801,10 +801,10 @@ Release packaging metadata is stored independently under `platformDetails.web`,
 `app` store. No platform record exists until the user explicitly adds that
 platform from Platform Details and submits its prefilled create form. Opening or
 cancelling the form does not persist a record. Form defaults copy the project
-name and icon, while the Windows identifier starts blank. The macOS identifier
-is inherited from `projectInfo.nativeApplicationIdentifier`, is read-only in
-Platform Details, and is migrated back to that stable identity if an older
-platform record differs. Preview records stored under the former
+name and icon, while the Windows and macOS identifiers start blank. The macOS
+identifier is required and editable; changing it changes the exported app and
+save-data identity, so builds using different identifiers do not share saves.
+Preview records stored under the former
 `releaseInfo.<platform>` keys are copied into the `platformDetails.<platform>`
 namespace when read. A later project icon update fills an existing platform icon
 only while that platform icon remains empty. The records otherwise have no

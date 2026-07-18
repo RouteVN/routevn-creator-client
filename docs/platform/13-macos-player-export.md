@@ -43,16 +43,20 @@ directory, top-level bundle metadata, resources, and signature.
 
 ## Identity And Versioning
 
-Every project owns a stable `projectInfo.nativeApplicationIdentifier`. The
-exporter writes it to `CFBundleIdentifier`. Before plugins initialize, the
-player shell reads that value from its stamped `Info.plist`, validates it, and
-assigns it to Tauri's runtime `config.identifier`.
+The editable `platformDetails.macos.applicationIdentifier` is written to
+`CFBundleIdentifier`. Before plugins initialize, the player shell reads that
+value from its stamped `Info.plist`, validates it, and assigns it to Tauri's
+runtime `config.identifier`. New macOS Platform Details start with this field
+blank, and export requires the user to enter a valid reverse-domain identifier.
 
 This makes the bundle identifier and the native SQLite location agree:
 
 ```text
-~/Library/Application Support/<nativeApplicationIdentifier>/runtime.db
+~/Library/Application Support/<applicationIdentifier>/runtime.db
 ```
+
+The user must keep the identifier stable across releases that should share
+saves. Changing it intentionally creates a different app/save identity.
 
 Native versions are derived deterministically from the selected version's
 non-negative `actionIndex`:

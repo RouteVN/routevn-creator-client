@@ -57,7 +57,7 @@ describe("platform details validation", () => {
           applicationIdentifier: "",
         },
       }),
-    ).toEqual({ valid: false, code: "native-icon-required" });
+    ).toEqual({ valid: false, code: "windows-icon-required" });
     expect(
       validatePlatformDetails({
         platform: "macos",
@@ -67,7 +67,7 @@ describe("platform details validation", () => {
           category: "",
         },
       }),
-    ).toEqual({ valid: false, code: "native-icon-required" });
+    ).toEqual({ valid: false, code: "macos-icon-required" });
     expect(
       validatePlatformDetails({
         platform: "web",

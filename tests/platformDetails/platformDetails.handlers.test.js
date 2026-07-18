@@ -228,11 +228,44 @@ describe("platformDetails handlers", () => {
     });
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.platformDetailsPage.nativeIconRequired,
+      message: EN_I18N.platformDetailsPage.windowsIconRequired,
       title: EN_I18N.platformDetailsPage.warningTitle,
     });
     expect(
       deps.projectService.updateCurrentPlatformDetails,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("names macOS when its required application icon is missing", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "create",
+      platform: "macos",
+    });
+    deps.store.selectPlatformEditIconFileId.mockReturnValue(undefined);
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "macOS Project",
+            applicationIdentifier: "com.example.macos-project",
+            publisher: "Example Publisher",
+            description: "macOS description",
+            copyright: "Copyright Example Publisher",
+            category: "public.app-category.games",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.platformDetailsPage.macosIconRequired,
+      title: EN_I18N.platformDetailsPage.warningTitle,
+    });
+    expect(
+      deps.projectService.createCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
   });
 

@@ -20,11 +20,11 @@ export const validatePlatformDetails = ({
     return { valid: false, code: "application-name-required" };
   }
 
-  if (
-    (platform === "windows" || platform === "macos") &&
-    !applicationInfo.iconFileId
-  ) {
-    return { valid: false, code: "native-icon-required" };
+  if (platform === "windows" && !applicationInfo.iconFileId) {
+    return { valid: false, code: "windows-icon-required" };
+  }
+  if (platform === "macos" && !applicationInfo.iconFileId) {
+    return { valid: false, code: "macos-icon-required" };
   }
 
   if (platform === "web") {
