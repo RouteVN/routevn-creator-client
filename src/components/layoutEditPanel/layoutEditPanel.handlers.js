@@ -1657,6 +1657,17 @@ const getConditionalOverrideRules = (store) => {
   return Array.isArray(currentRules) ? [...currentRules] : [];
 };
 
+const getConditionalOverrideRuleIdentity = (rule) => ({
+  target: rule?.when?.target,
+  op: rule?.when?.op,
+  value: rule?.when?.value,
+});
+
+const hasConditionalOverrideRuleIdentity = (rule, identity) =>
+  rule?.when?.target === identity.target &&
+  rule?.when?.op === identity.op &&
+  Object.is(rule?.when?.value, identity.value);
+
 export const handleConditionalOverrideConditionClick = (deps, payload) => {
   const { render, store } = deps;
   const index = Number.parseInt(
@@ -1696,6 +1707,8 @@ export const handleConditionalOverrideContextMenu = async (deps, payload) => {
     return;
   }
 
+  const ruleIdentity = getConditionalOverrideRuleIdentity(rules[index]);
+
   const result = await appService.showDropdownMenu({
     items: [
       {
@@ -1724,7 +1737,19 @@ export const handleConditionalOverrideContextMenu = async (deps, payload) => {
     return;
   }
 
-  const nextRules = rules.filter((_rule, ruleIndex) => ruleIndex !== index);
+  const currentRules = getConditionalOverrideRules(store);
+  const matchingIndexes = currentRules.flatMap((rule, ruleIndex) =>
+    hasConditionalOverrideRuleIdentity(rule, ruleIdentity) ? [ruleIndex] : [],
+  );
+
+  if (matchingIndexes.length !== 1) {
+    return;
+  }
+
+  const matchingIndex = matchingIndexes[0];
+  const nextRules = currentRules.filter(
+    (_rule, ruleIndex) => ruleIndex !== matchingIndex,
+  );
   applyPanelValueUpdate(deps, {
     name: "conditionalOverrides",
     value: nextRules.length > 0 ? nextRules : undefined,

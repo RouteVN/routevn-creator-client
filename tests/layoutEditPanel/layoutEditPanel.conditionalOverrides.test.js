@@ -102,6 +102,31 @@ describe("layoutEditPanel conditional overrides", () => {
     expect(confirmedDeps.dispatchEvent).toHaveBeenCalledOnce();
   });
 
+  it("preserves collaborative condition changes made before deletion is confirmed", async () => {
+    const deps = createDeps({ confirmed: true });
+    const addedRule = {
+      when: { target: "variables['name']", op: "eq", value: "Ada" },
+      set: { visible: false },
+    };
+    const updatedRule = {
+      ...RULES[1],
+      set: { opacity: 0.75 },
+    };
+    deps.appService.showDialog.mockImplementationOnce(async () => {
+      deps.values.conditionalOverrides = [
+        addedRule,
+        structuredClone(RULES[0]),
+        updatedRule,
+      ];
+      return true;
+    });
+
+    await handleConditionalOverrideContextMenu(deps, createPayload());
+
+    expect(deps.values.conditionalOverrides).toEqual([addedRule, updatedRule]);
+    expect(deps.dispatchEvent).toHaveBeenCalledOnce();
+  });
+
   it("opens the image browser and stores its selection in the attribute dialog", () => {
     const store = {
       selectConditionalOverrideAttributeDialog: vi.fn(() => ({
