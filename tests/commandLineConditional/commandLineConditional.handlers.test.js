@@ -5,6 +5,9 @@ import {
   resetTempBranch,
   selectBranches,
   selectDefaultBranch,
+  selectSaveBranchDraft,
+  selectVariableItemById,
+  selectVariablesData,
   setBranches,
   setCurrentBranchId,
   setMode,
@@ -20,6 +23,7 @@ import {
   handleSubmitClick,
   handleVariableSelectChange,
 } from "../../src/components/commandLineConditional/commandLineConditional.handlers.js";
+import { EN_I18N as i18n } from "../support/i18n.js";
 
 const createStore = (state) => ({
   createDefaultBranchDraft: (payload) =>
@@ -28,6 +32,10 @@ const createStore = (state) => ({
   resetTempBranch: (payload) => resetTempBranch({ state }, payload),
   selectBranches: () => selectBranches({ state }),
   selectDefaultBranch: () => selectDefaultBranch({ state }),
+  selectSaveBranchDraft: () => selectSaveBranchDraft({ state }),
+  selectVariableItemById: (payload) =>
+    selectVariableItemById({ state }, payload),
+  selectVariablesData: () => selectVariablesData({ state }),
   setCurrentBranchId: (payload) => setCurrentBranchId({ state }, payload),
   setMode: (payload) => setMode({ state }, payload),
   setTempBranch: (payload) => setTempBranch({ state }, payload),
@@ -74,6 +82,7 @@ describe("commandLineConditional.handlers", () => {
     handleSaveBranchClick(
       {
         appService,
+        i18n,
         store: createStore(state),
         render: () => {},
       },
@@ -86,6 +95,7 @@ describe("commandLineConditional.handlers", () => {
     handleSubmitClick(
       {
         appService,
+        i18n,
         store: createStore(state),
         dispatchEvent: (event) => {
           dispatchedEvents.push(event);
@@ -113,6 +123,127 @@ describe("commandLineConditional.handlers", () => {
           },
         ],
       },
+    });
+  });
+
+  it.each(["gt", "gte", "lt", "lte"])(
+    "saves the %s operator for number variables",
+    (op) => {
+      const state = createInitialState();
+      const appService = {
+        showAlert: vi.fn(),
+      };
+
+      setVariablesData(
+        { state },
+        {
+          variables: {
+            items: {
+              trust: {
+                id: "trust",
+                name: "Trust",
+                type: "variable",
+                variableType: "number",
+              },
+            },
+            tree: [{ id: "trust" }],
+          },
+        },
+      );
+      setTempBranch(
+        { state },
+        {
+          conditionKind: "variable",
+          variableId: "trust",
+          op,
+          value: "70.5",
+          actions: {
+            nextLine: {},
+          },
+        },
+      );
+
+      handleSaveBranchClick(
+        {
+          appService,
+          i18n,
+          store: createStore(state),
+          render: () => {},
+        },
+        {
+          _event: {
+            stopPropagation: () => {},
+          },
+        },
+      );
+
+      expect(appService.showAlert).not.toHaveBeenCalled();
+      expect(state.branches[0]).toMatchObject({
+        when: {
+          [op]: [{ var: "variables.trust" }, 70.5],
+        },
+      });
+    },
+  );
+
+  it("loads a saved number ordering condition for editing", () => {
+    const state = createInitialState();
+    const store = createStore(state);
+
+    setVariablesData(
+      { state },
+      {
+        variables: {
+          items: {
+            trust: {
+              id: "trust",
+              name: "Trust",
+              type: "variable",
+              variableType: "number",
+            },
+          },
+          tree: [{ id: "trust" }],
+        },
+      },
+    );
+    setBranches(
+      { state },
+      {
+        branches: [
+          {
+            id: "branch-gte",
+            when: {
+              gte: [{ var: "variables.trust" }, 70],
+            },
+            actions: {
+              nextLine: {},
+            },
+          },
+        ],
+      },
+    );
+
+    handleBranchClick(
+      {
+        store,
+        render: () => {},
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              branchId: "branch-gte",
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.tempBranch).toMatchObject({
+      conditionKind: "variable",
+      variableId: "trust",
+      op: "gte",
+      value: 70,
     });
   });
 
@@ -146,6 +277,7 @@ describe("commandLineConditional.handlers", () => {
     handleSaveBranchClick(
       {
         appService,
+        i18n,
         store,
         render: () => {},
       },
@@ -158,6 +290,7 @@ describe("commandLineConditional.handlers", () => {
     handleSubmitClick(
       {
         appService,
+        i18n,
         store,
         dispatchEvent: (event) => {
           dispatchedEvents.push(event);
@@ -191,7 +324,11 @@ describe("commandLineConditional.handlers", () => {
     };
     const store = createStore(state);
     const unsupportedWhen = {
-      gt: [{ var: "variables.trust" }, 70],
+      all: [
+        {
+          gt: [{ var: "variables.trust" }, 70],
+        },
+      ],
     };
 
     setBranches(
@@ -238,6 +375,7 @@ describe("commandLineConditional.handlers", () => {
     handleSaveBranchClick(
       {
         appService,
+        i18n,
         store,
         render: () => {},
       },
@@ -250,6 +388,7 @@ describe("commandLineConditional.handlers", () => {
     handleSubmitClick(
       {
         appService,
+        i18n,
         store,
         dispatchEvent: (event) => {
           dispatchedEvents.push(event);
@@ -341,6 +480,7 @@ describe("commandLineConditional.handlers", () => {
     handleSaveBranchClick(
       {
         appService,
+        i18n,
         store,
         render: () => {},
       },
@@ -353,6 +493,7 @@ describe("commandLineConditional.handlers", () => {
     handleSubmitClick(
       {
         appService,
+        i18n,
         store,
         dispatchEvent: (event) => {
           dispatchedEvents.push(event);
@@ -382,17 +523,33 @@ describe("commandLineConditional.handlers", () => {
     });
   });
 
-  it("rejects unsupported operators", () => {
+  it("rejects number ordering operators for non-number variables", () => {
     const state = createInitialState();
     const appService = {
       showAlert: vi.fn(),
     };
 
+    setVariablesData(
+      { state },
+      {
+        variables: {
+          items: {
+            route: {
+              id: "route",
+              name: "Route",
+              type: "variable",
+              variableType: "string",
+            },
+          },
+          tree: [{ id: "route" }],
+        },
+      },
+    );
     setTempBranch(
       { state },
       {
         conditionKind: "variable",
-        variableId: "trust",
+        variableId: "route",
         op: "gte",
         value: "70",
         actions: {
@@ -404,6 +561,7 @@ describe("commandLineConditional.handlers", () => {
     handleSaveBranchClick(
       {
         appService,
+        i18n,
         store: createStore(state),
         render: () => {},
       },
@@ -457,6 +615,7 @@ describe("commandLineConditional.handlers", () => {
     handleSubmitClick(
       {
         appService,
+        i18n,
         store: createStore(state),
         dispatchEvent: (event) => {
           dispatchedEvents.push(event);

@@ -4,6 +4,10 @@ import {
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import {
+  isConditionOperator,
+  isConditionOperatorAllowed,
+} from "../../internal/ui/sceneEditor/commandLineConditionOperators.js";
+import {
   isVariableEnumEnabled,
   normalizeVariableEnumValues,
 } from "../../internal/variableEnums.js";
@@ -84,7 +88,7 @@ const getSimpleCondition = (when = {}) => {
   }
 
   const [[operator, operands]] = entries;
-  if (!["eq", "neq"].includes(operator)) {
+  if (!isConditionOperator(operator)) {
     return undefined;
   }
 
@@ -111,7 +115,7 @@ const getSimpleCondition = (when = {}) => {
   };
 };
 
-const createTempBranchFromBranch = (branch = {}) => {
+const createTempBranchFromBranch = (branch = {}, variablesData = {}) => {
   const actions = toPlainObject(branch.actions);
   const hasCondition = Object.hasOwn(toPlainObject(branch), "when");
 
@@ -137,7 +141,13 @@ const createTempBranchFromBranch = (branch = {}) => {
   }
 
   const simpleCondition = getSimpleCondition(branch.when);
-  if (simpleCondition) {
+  if (
+    simpleCondition &&
+    isConditionOperatorAllowed(
+      simpleCondition.op,
+      getVariableType(variablesData, simpleCondition.variableId),
+    )
+  ) {
     return {
       conditionKind: "variable",
       variableId: simpleCondition.variableId,
@@ -207,7 +217,8 @@ const createBranchFromTemp = ({
     return undefined;
   }
 
-  if (!["eq", "neq"].includes(tempBranch.op)) {
+  const variableType = getVariableType(variablesData, tempBranch.variableId);
+  if (!isConditionOperatorAllowed(tempBranch.op, variableType)) {
     appService.showAlert({
       message: localizeCommandLineText(
         "Condition operator is unsupported.",
@@ -233,7 +244,6 @@ const createBranchFromTemp = ({
     }
   }
 
-  const variableType = getVariableType(variablesData, tempBranch.variableId);
   const value = normalizeComparisonValue({
     value: tempBranch.value,
     variableType,
@@ -313,7 +323,9 @@ export const handleBranchClick = (deps, payload) => {
   }
 
   store.setCurrentBranchId({ branchId });
-  store.setTempBranch(createTempBranchFromBranch(branch));
+  store.setTempBranch(
+    createTempBranchFromBranch(branch, store.selectVariablesData()),
+  );
   store.setMode({ mode: "editBranch" });
   render();
 };

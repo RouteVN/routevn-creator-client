@@ -7,6 +7,7 @@ import {
   setVariablesData,
   updateBranch,
 } from "../../src/components/commandLineConditional/commandLineConditional.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("commandLineConditional.store", () => {
   it("summarizes conditional branches and the default branch separately", () => {
@@ -35,7 +36,7 @@ describe("commandLineConditional.store", () => {
           {
             id: "branch-1",
             when: {
-              eq: [{ var: "variables.trust" }, 70],
+              gte: [{ var: "variables.trust" }, 70],
             },
             actions: {
               nextLine: {},
@@ -53,13 +54,14 @@ describe("commandLineConditional.store", () => {
         ],
       },
     );
+    setTempBranch({ state }, { variableId: "trust", value: 70 });
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.branches).toMatchObject([
       {
         id: "branch-1",
-        summary: "Trust Equals 70",
+        summary: "Trust Greater Than or Equal 70",
         actionsSummary: "1 action",
       },
     ]);
@@ -71,6 +73,10 @@ describe("commandLineConditional.store", () => {
     expect(viewData.operatorOptions.map((option) => option.value)).toEqual([
       "eq",
       "neq",
+      "gt",
+      "gte",
+      "lt",
+      "lte",
     ]);
     expect(viewData.variableOptions).toEqual([
       {
@@ -86,6 +92,7 @@ describe("commandLineConditional.store", () => {
 
     const viewData = selectViewData({
       state,
+      i18n: EN_I18N,
       props: {
         hiddenModes: ["showConfirmDialog", "", 42, "hideConfirmDialog"],
       },
@@ -131,14 +138,22 @@ describe("commandLineConditional.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.showEnumValueSelect).toBe(true);
     expect(viewData.enumValueOptions).toEqual([
       { value: "happy", label: "happy" },
       { value: "sad", label: "sad" },
     ]);
+    expect(viewData.operatorOptions.map((option) => option.value)).toEqual([
+      "eq",
+      "neq",
+    ]);
     expect(viewData.canSaveBranch).toBe(true);
+
+    setTempBranch({ state }, { op: "gt" });
+
+    expect(selectViewData({ state, i18n: EN_I18N }).canSaveBranch).toBe(false);
   });
 
   it("allows unsupported condition drafts to save without variable controls", () => {
@@ -161,7 +176,7 @@ describe("commandLineConditional.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.isEditingUnsupportedCondition).toBe(true);
     expect(viewData.showValueField).toBe(false);
