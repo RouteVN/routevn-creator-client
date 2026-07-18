@@ -309,6 +309,24 @@ describe("versions.handleDownloadZipClick", () => {
     });
   });
 
+  it("revokes the temporary icon URL after export preflight", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    const revoke = vi.fn();
+    deps.projectService.getFileContent.mockResolvedValue({
+      url: "blob:platform-icon",
+      revoke,
+    });
+
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+
+    expect(revoke).toHaveBeenCalledTimes(1);
+    expect(deps.store.openExportConfirmation).toHaveBeenCalledTimes(1);
+  });
+
   it("uses repository.loadState when available instead of forcing full history load", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
@@ -604,6 +622,62 @@ describe("versions.handleDownloadZipClick", () => {
 });
 
 describe("versions Windows export handlers", () => {
+  it("requires a Windows icon before opening export confirmation", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Windows Edition",
+      iconFileId: "",
+      applicationIdentifier: "com.example.windows-edition",
+      publisher: "Release Studio",
+      description: "Windows release",
+      copyright: "",
+    });
+
+    await handleDownloadWindowsExecutableClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.platformDetailsNativeIconRequired,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+  });
+
+  it("sanitizes artifact filenames without changing embedded titles", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Story: Part/Two\\Final",
+      iconFileId: "windows-icon",
+      applicationIdentifier: "com.example.story",
+      publisher: "Release Studio",
+      description: "Windows release",
+      copyright: "",
+    });
+
+    await chooseAndConfirmExport(handleDownloadWindowsExecutableClick, deps);
+
+    expect(
+      deps.projectService.promptWindowsExecutablePath,
+    ).toHaveBeenCalledWith("Story- Part-Two-Final_Version 1");
+    expect(
+      deps.projectService.createWindowsPortableExecutableToPath.mock
+        .calls[0][3],
+    ).toMatchObject({
+      title: "Story: Part/Two\\Final",
+    });
+  });
+
   it("uses a numeric Windows file version instead of the release display name for EXE export", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),

@@ -208,6 +208,34 @@ describe("platformDetails handlers", () => {
     expect(deps.store.closePlatformEditDialog).toHaveBeenCalledTimes(1);
   });
 
+  it("requires an icon before saving native platform details", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformEditIconFileId.mockReturnValue(undefined);
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Windows Project",
+            applicationIdentifier: "com.example.windows-project",
+            publisher: "Example Publisher",
+            description: "Windows description",
+            copyright: "Copyright Example Publisher",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.platformDetailsPage.nativeIconRequired,
+      title: EN_I18N.platformDetailsPage.warningTitle,
+    });
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).not.toHaveBeenCalled();
+  });
+
   it("creates Web platform details from the submitted draft", async () => {
     const deps = createDeps();
     deps.store.selectPlatformDialogState.mockReturnValue({

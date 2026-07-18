@@ -20,6 +20,13 @@ export const validatePlatformDetails = ({
     return { valid: false, code: "application-name-required" };
   }
 
+  if (
+    (platform === "windows" || platform === "macos") &&
+    !applicationInfo.iconFileId
+  ) {
+    return { valid: false, code: "native-icon-required" };
+  }
+
   if (platform === "web") {
     if (!hasColor(availableColorIds, applicationInfo.themeColorId)) {
       return { valid: false, code: "theme-color-not-found" };

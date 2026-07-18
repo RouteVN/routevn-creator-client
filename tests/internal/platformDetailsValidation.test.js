@@ -31,6 +31,7 @@ describe("platform details validation", () => {
         platform: "windows",
         applicationInfo: {
           applicationName: "Project One",
+          iconFileId: "windows-icon",
           applicationIdentifier: "",
         },
       }),
@@ -40,10 +41,39 @@ describe("platform details validation", () => {
         platform: "windows",
         applicationInfo: {
           applicationName: "Project One",
+          iconFileId: "windows-icon",
           applicationIdentifier: "Project One",
         },
       }),
     ).toEqual({ valid: false, code: "windows-identifier-invalid" });
+  });
+
+  it("requires icons for native platforms but keeps the Web icon optional", () => {
+    expect(
+      validatePlatformDetails({
+        platform: "windows",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "",
+        },
+      }),
+    ).toEqual({ valid: false, code: "native-icon-required" });
+    expect(
+      validatePlatformDetails({
+        platform: "macos",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "com.example.game",
+          category: "",
+        },
+      }),
+    ).toEqual({ valid: false, code: "native-icon-required" });
+    expect(
+      validatePlatformDetails({
+        platform: "web",
+        applicationInfo: { applicationName: "Project One" },
+      }),
+    ).toEqual({ valid: true });
   });
 
   it("requires a valid macOS identifier and validates an optional category", () => {
@@ -52,6 +82,7 @@ describe("platform details validation", () => {
         platform: "macos",
         applicationInfo: {
           applicationName: "Project One",
+          iconFileId: "mac-icon",
           applicationIdentifier: "",
           category: "",
         },
@@ -62,6 +93,7 @@ describe("platform details validation", () => {
         platform: "macos",
         applicationInfo: {
           applicationName: "Project One",
+          iconFileId: "mac-icon",
           applicationIdentifier: "com.example.game",
           category: "games",
         },
@@ -72,6 +104,7 @@ describe("platform details validation", () => {
         platform: "macos",
         applicationInfo: {
           applicationName: "Project One",
+          iconFileId: "mac-icon",
           applicationIdentifier: "com.example.game",
           category: "public.app-category.games",
         },

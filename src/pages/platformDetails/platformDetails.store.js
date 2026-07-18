@@ -305,6 +305,7 @@ const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
   buttons.push({
     id: "submit",
     variant: "pr",
+    validate: true,
     label:
       mode === "create"
         ? copy.createPlatformButtonLabel

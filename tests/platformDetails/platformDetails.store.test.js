@@ -71,6 +71,7 @@ describe("platformDetails.store", () => {
       {
         id: "submit",
         variant: "pr",
+        validate: true,
         label: "Add Platform",
       },
     ]);
@@ -218,6 +219,7 @@ describe("platformDetails.store", () => {
       {
         id: "submit",
         variant: "pr",
+        validate: true,
         label: "Save Changes",
       },
     ]);

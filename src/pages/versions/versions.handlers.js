@@ -8,6 +8,7 @@ import {
 } from "../../internal/project/projection.js";
 import { createBundleInstructions } from "../../deps/services/shared/projectExportService.js";
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
+import { sanitizeArtifactFileName } from "../../internal/artifactFileName.js";
 import { createMacosNativeVersion } from "../../internal/nativeApplicationVersion.js";
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
 import { validatePlatformDetails } from "../../internal/platformDetailsValidation.js";
@@ -152,7 +153,9 @@ const getVersionZipName = ({
       : "";
   const projectName = applicationName?.trim() || entryName || "project";
 
-  return `${projectName}_${version?.name ?? "version"}`;
+  return sanitizeArtifactFileName(
+    `${projectName}_${version?.name ?? "version"}`,
+  );
 };
 
 const getProjectExportTitle = ({ projectInfo, applicationInfo } = {}) => {
@@ -278,6 +281,12 @@ const getPlatformDetailsValidationMessage = (code, copy) => {
       "Application name is required in Platform Details before export."
     );
   }
+  if (code === "native-icon-required") {
+    return (
+      copy.platformDetailsNativeIconRequired ??
+      "Add an application icon in Platform Details before exporting this native application."
+    );
+  }
   if (code === "theme-color-not-found") {
     return (
       copy.platformDetailsThemeColorNotFound ??
@@ -399,10 +408,9 @@ const requirePlatformDetailsForExport = async ({
   }
 
   if (applicationInfo.iconFileId) {
+    let icon;
     try {
-      const icon = await projectService.getFileContent(
-        applicationInfo.iconFileId,
-      );
+      icon = await projectService.getFileContent(applicationInfo.iconFileId);
       if (!icon) {
         throw new Error("Release icon not found");
       }
@@ -414,6 +422,8 @@ const requirePlatformDetailsForExport = async ({
         title: copy.warningTitle ?? "Warning",
       });
       return undefined;
+    } finally {
+      icon?.revoke?.();
     }
   }
 
