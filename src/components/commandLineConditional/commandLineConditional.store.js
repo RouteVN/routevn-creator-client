@@ -11,15 +11,11 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
-
-const CONDITION_OPERATOR_OPTIONS = [
-  { value: "eq", label: "Equals" },
-  { value: "neq", label: "Does Not Equal" },
-];
-
-const CONDITION_OPERATOR_LABELS = Object.fromEntries(
-  CONDITION_OPERATOR_OPTIONS.map((option) => [option.value, option.label]),
-);
+import {
+  CONDITION_OPERATOR_LABELS,
+  getConditionOperatorOptions,
+  isConditionOperatorAllowed,
+} from "../../internal/ui/sceneEditor/commandLineConditionOperators.js";
 
 const DEFAULT_BRANCH_LABEL = "Default branch";
 
@@ -57,10 +53,6 @@ const createDefaultTempBranch = (actions = {}) => ({
 
 const getVariableType = (variable) => {
   return (variable?.variableType || "string").toLowerCase();
-};
-
-const getConditionOperatorOptions = () => {
-  return CONDITION_OPERATOR_OPTIONS;
 };
 
 const getSimpleCondition = (when = {}) => {
@@ -125,6 +117,11 @@ const getBranchSummary = (branch, variablesData = {}, copy = {}) => {
   const simpleCondition = getSimpleCondition(branch.when);
   if (simpleCondition) {
     const variable = variablesData.items?.[simpleCondition.variableId];
+    const variableType = getVariableType(variable);
+    if (!isConditionOperatorAllowed(simpleCondition.op, variableType)) {
+      return localizeCommandLineText("Unsupported condition", copy);
+    }
+
     const variableName = variable?.name ?? simpleCondition.variableId;
     const operatorLabel = localizeCommandLineText(
       CONDITION_OPERATOR_LABELS[simpleCondition.op] ?? simpleCondition.op,
@@ -284,6 +281,8 @@ export const selectVariableItemById = ({ state }, { variableId } = {}) => {
   return state.variablesData?.items?.[variableId];
 };
 
+export const selectVariablesData = ({ state }) => state.variablesData;
+
 export const selectTempBranchActions = ({ state }) => state.tempBranch.actions;
 
 export const selectSaveBranchDraft = ({ state }) => ({
@@ -314,7 +313,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     selectedType === "string" &&
     selectedEnumValues.length > 0 &&
     state.tempBranch.conditionKind === "variable";
-  const operatorOptions = getConditionOperatorOptions();
+  const operatorOptions = getConditionOperatorOptions(selectedType);
   const showValueField =
     state.tempBranch.conditionKind === "variable" &&
     Boolean(state.tempBranch.variableId);
@@ -375,7 +374,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       Object.hasOwn(toPlainObject(state.tempBranch), "when")) ||
     (state.tempBranch.conditionKind === "variable" &&
       state.tempBranch.variableId &&
-      Object.hasOwn(CONDITION_OPERATOR_LABELS, state.tempBranch.op) &&
+      isConditionOperatorAllowed(state.tempBranch.op, selectedType) &&
       (!showEnumValueSelect ||
         selectedEnumValues.includes(state.tempBranch.value)));
 
