@@ -10,6 +10,7 @@ if [ ! -x "${RTGL_BIN}" ]; then
 fi
 
 echo "Preparing Tauri watch static assets..."
-./scripts/prepare-watch-static-assets.sh
+mkdir -p _site
+cp -rf static/. _site/
 
 exec "${RTGL_BIN}" fe watch -s src/setup.tauri.js

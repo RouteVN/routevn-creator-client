@@ -48,7 +48,8 @@ if [ ! -f "${RETTANGOLI_FILE}" ]; then
 fi
 
 rm -rf _site
-./scripts/prepare-watch-static-assets.sh
+mkdir -p _site
+cp -rf static/* _site/
 
 "${RTGL_BIN}" ui build-svg
 mkdir -p _site/public

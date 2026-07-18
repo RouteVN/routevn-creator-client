@@ -20,8 +20,8 @@
     "@lexical/rich-text": "0.22.0",
     "@lexical/selection": "0.22.0",
     "@lexical/utils": "0.22.0",
-    "@rettangoli/fe": "1.2.1",
-    "@rettangoli/ui": "1.10.0",
+    "@rettangoli/fe": "1.2.2",
+    "@rettangoli/ui": "1.10.1",
     "@rettangoli/vt": "1.0.5",
     "@routevn/creator-model": "1.9.0",
     "@tauri-apps/api": "2.11.0",
@@ -55,7 +55,7 @@
     "build:android:assets": "node scripts/build-android-assets.js",
     "build:ios": "./scripts/build.sh ios",
     "build:ios:assets": "node scripts/build-ios-assets.js",
-    "watch:web": "./scripts/watch-web.sh",
+    "watch:web": "rtgl fe watch -s src/setup.web.js",
     "watch:tauri": "./scripts/watch-tauri.sh",
     "watch:android": "./scripts/watch-android.sh",
     "watch:ios": "./scripts/watch-ios.sh",
@@ -109,7 +109,7 @@
     "oxlint": "1.65.0",
     "prettier": "3.6.2",
     "puty": "0.1.2",
-    "rtgl": "2.0.1",
+    "rtgl": "2.0.2",
     "vitest": "3.2.4"
   },
   "overrides": {
