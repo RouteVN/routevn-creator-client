@@ -55,6 +55,16 @@ export const createProjectRepositoryService = ({
   const CURRENT_CREATOR_VERSION = creatorVersion;
   const CREATOR_VERSION_KEY = "creatorVersion";
   const PROJECT_INFO_KEY = "projectInfo";
+  const PLATFORM_DETAILS_KEYS = {
+    web: "platformDetails.web",
+    windows: "platformDetails.windows",
+    macos: "platformDetails.macos",
+  };
+  const LEGACY_PLATFORM_DETAILS_KEYS = {
+    web: "releaseInfo.web",
+    windows: "releaseInfo.windows",
+    macos: "releaseInfo.macos",
+  };
   const repositoriesByCacheKey = new Map();
   const storesByCacheKey = new Map();
   const storesByProject = new Map();
@@ -144,6 +154,94 @@ export const createProjectRepositoryService = ({
     iconFileId: projectInfo?.iconFileId ?? null,
   });
 
+  const hasStoredPlatformDetails = (platformDetails) => {
+    if (
+      !platformDetails ||
+      typeof platformDetails !== "object" ||
+      Array.isArray(platformDetails)
+    ) {
+      return false;
+    }
+
+    return (
+      Object.hasOwn(platformDetails, "applicationName") ||
+      Object.hasOwn(platformDetails, "iconFileId") ||
+      Object.hasOwn(platformDetails, "applicationIdentifier")
+    );
+  };
+
+  const getPlatformDetailsKey = (platform) => {
+    const key = PLATFORM_DETAILS_KEYS[platform];
+    if (!key) {
+      throw new Error(`Unsupported release platform '${platform}'`);
+    }
+    return key;
+  };
+
+  const createPlatformDetails = (platform, sourceInfo) => {
+    const platformDetails = {
+      applicationName: sourceInfo?.applicationName ?? "",
+      iconFileId: sourceInfo?.iconFileId ?? null,
+    };
+
+    if (platform === "windows" || platform === "macos") {
+      platformDetails.applicationIdentifier = "";
+    }
+
+    if (platform === "web") {
+      platformDetails.shortName = "";
+      platformDetails.description = "";
+      platformDetails.themeColorId = "";
+      platformDetails.backgroundColorId = "";
+    }
+
+    if (platform === "windows") {
+      platformDetails.publisher = "";
+      platformDetails.description = "";
+      platformDetails.copyright = "";
+    }
+
+    if (platform === "macos") {
+      platformDetails.publisher = "";
+      platformDetails.description = "";
+      platformDetails.copyright = "";
+      platformDetails.category = "";
+    }
+
+    return platformDetails;
+  };
+
+  const normalizePlatformDetails = (platform, platformDetails) => {
+    const normalized = createPlatformDetails(platform, platformDetails);
+
+    if (platform !== "web") {
+      normalized.applicationIdentifier =
+        platformDetails?.applicationIdentifier ?? "";
+    }
+
+    if (platform === "web") {
+      normalized.shortName = platformDetails?.shortName ?? "";
+      normalized.description = platformDetails?.description ?? "";
+      normalized.themeColorId = platformDetails?.themeColorId ?? "";
+      normalized.backgroundColorId = platformDetails?.backgroundColorId ?? "";
+    }
+
+    if (platform === "windows") {
+      normalized.publisher = platformDetails?.publisher ?? "";
+      normalized.description = platformDetails?.description ?? "";
+      normalized.copyright = platformDetails?.copyright ?? "";
+    }
+
+    if (platform === "macos") {
+      normalized.publisher = platformDetails?.publisher ?? "";
+      normalized.description = platformDetails?.description ?? "";
+      normalized.copyright = platformDetails?.copyright ?? "";
+      normalized.category = platformDetails?.category ?? "";
+    }
+
+    return normalized;
+  };
+
   const ensureProjectInfoIdentity = (
     projectInfo,
     { fallbackProjectId } = {},
@@ -210,6 +308,27 @@ export const createProjectRepositoryService = ({
     }
 
     return normalizeProjectInfo(nextProjectInfo);
+  };
+
+  const mergePlatformDetails = (
+    platform,
+    currentPlatformDetails,
+    patch = {},
+  ) => {
+    const nextPlatformDetails = normalizePlatformDetails(
+      platform,
+      currentPlatformDetails,
+    );
+
+    for (const key of Object.keys(nextPlatformDetails)) {
+      if (!Object.hasOwn(patch, key)) {
+        continue;
+      }
+      nextPlatformDetails[key] =
+        key === "iconFileId" ? (patch[key] ?? null) : (patch[key] ?? "");
+    }
+
+    return normalizePlatformDetails(platform, nextPlatformDetails);
   };
 
   const getCurrentProjectId = () => {
@@ -625,6 +744,58 @@ export const createProjectRepositoryService = ({
     return ensuredProjectInfo.projectInfo;
   };
 
+  const readPlatformDetailsFromStore = async (store, platform) => {
+    const key = getPlatformDetailsKey(platform);
+    let storedPlatformDetails = await store.app.get(key);
+    let shouldPersist = false;
+
+    if (!hasStoredPlatformDetails(storedPlatformDetails)) {
+      storedPlatformDetails = await store.app.get(
+        LEGACY_PLATFORM_DETAILS_KEYS[platform],
+      );
+      shouldPersist = hasStoredPlatformDetails(storedPlatformDetails);
+    }
+
+    if (!hasStoredPlatformDetails(storedPlatformDetails)) {
+      return undefined;
+    }
+
+    const platformDetails = normalizePlatformDetails(
+      platform,
+      storedPlatformDetails,
+    );
+
+    if (shouldPersist) {
+      await store.app.set(key, platformDetails);
+    }
+
+    return platformDetails;
+  };
+
+  const syncMissingPlatformDetailsIcons = async ({ store, projectInfo }) => {
+    if (!projectInfo.iconFileId) {
+      return;
+    }
+
+    for (const platform of Object.keys(PLATFORM_DETAILS_KEYS)) {
+      const key = getPlatformDetailsKey(platform);
+      const platformDetails = await readPlatformDetailsFromStore(
+        store,
+        platform,
+      );
+      if (!platformDetails) {
+        continue;
+      }
+
+      if (platformDetails.iconFileId) {
+        continue;
+      }
+
+      platformDetails.iconFileId = projectInfo.iconFileId;
+      await store.app.set(key, platformDetails);
+    }
+  };
+
   const writeProjectInfoToStore = async ({ store, projectId, patch }) => {
     const currentProjectInfo = await readProjectInfoFromStore(store, {
       fallbackProjectId: projectId,
@@ -632,6 +803,13 @@ export const createProjectRepositoryService = ({
     const nextProjectInfo = mergeProjectInfo(currentProjectInfo, patch);
 
     await store.app.set(PROJECT_INFO_KEY, nextProjectInfo);
+
+    if (Object.hasOwn(patch, "iconFileId")) {
+      await syncMissingPlatformDetailsIcons({
+        store,
+        projectInfo: nextProjectInfo,
+      });
+    }
 
     if (projectId) {
       await syncProjectEntryProjectInfo(projectId, nextProjectInfo);
@@ -677,6 +855,110 @@ export const createProjectRepositoryService = ({
     }
 
     return updateProjectInfoByProjectId(projectId, patch);
+  };
+
+  const getPlatformDetailsByProjectId = async (projectId, platform) => {
+    const store = await getStoreByProject(projectId);
+    await ensureCompatibleCreatorVersion(store);
+    return readPlatformDetailsFromStore(store, platform);
+  };
+
+  const getPlatformDetailsDefaultsByProjectId = async (projectId, platform) => {
+    const store = await getStoreByProject(projectId);
+    await ensureCompatibleCreatorVersion(store);
+    const projectInfo = await readProjectInfoFromStore(store, {
+      fallbackProjectId: projectId,
+    });
+    return createPlatformDetails(platform, {
+      applicationName: projectInfo.name,
+      iconFileId: projectInfo.iconFileId,
+    });
+  };
+
+  const createPlatformDetailsByProjectId = async (
+    projectId,
+    platform,
+    patch,
+  ) => {
+    const store = await getStoreByProject(projectId);
+    await ensureStoreOpenCompatible(store);
+    const existingPlatformDetails = await readPlatformDetailsFromStore(
+      store,
+      platform,
+    );
+    if (existingPlatformDetails) {
+      throw new Error(`Platform details for '${platform}' already exist`);
+    }
+
+    const projectInfo = await readProjectInfoFromStore(store, {
+      fallbackProjectId: projectId,
+    });
+    const defaults = createPlatformDetails(platform, {
+      applicationName: projectInfo.name,
+      iconFileId: projectInfo.iconFileId,
+    });
+    const platformDetails = mergePlatformDetails(platform, defaults, patch);
+    await store.app.set(getPlatformDetailsKey(platform), platformDetails);
+    return platformDetails;
+  };
+
+  const updatePlatformDetailsByProjectId = async (
+    projectId,
+    platform,
+    patch,
+  ) => {
+    const store = await getStoreByProject(projectId);
+    await ensureStoreOpenCompatible(store);
+    const currentPlatformDetails = await readPlatformDetailsFromStore(
+      store,
+      platform,
+    );
+    if (!currentPlatformDetails) {
+      throw new Error(`Platform details for '${platform}' do not exist`);
+    }
+    const nextPlatformDetails = mergePlatformDetails(
+      platform,
+      currentPlatformDetails,
+      patch,
+    );
+    await store.app.set(getPlatformDetailsKey(platform), nextPlatformDetails);
+    return nextPlatformDetails;
+  };
+
+  const getCurrentPlatformDetails = async (platform) => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+
+    return getPlatformDetailsByProjectId(projectId, platform);
+  };
+
+  const getCurrentPlatformDetailsDefaults = async (platform) => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+
+    return getPlatformDetailsDefaultsByProjectId(projectId, platform);
+  };
+
+  const createCurrentPlatformDetails = async (platform, patch) => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+
+    return createPlatformDetailsByProjectId(projectId, platform, patch);
+  };
+
+  const updateCurrentPlatformDetails = async (platform, patch) => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+
+    return updatePlatformDetailsByProjectId(projectId, platform, patch);
   };
 
   const getRepositoryByReference = async (
@@ -1010,6 +1292,14 @@ export const createProjectRepositoryService = ({
     getCurrentProjectInfo,
     updateCurrentProjectInfo,
     updateProjectInfoByProjectId,
+    getCurrentPlatformDetails,
+    getCurrentPlatformDetailsDefaults,
+    createCurrentPlatformDetails,
+    updateCurrentPlatformDetails,
+    getPlatformDetailsByProjectId,
+    getPlatformDetailsDefaultsByProjectId,
+    createPlatformDetailsByProjectId,
+    updatePlatformDetailsByProjectId,
     resolveProjectReferenceByProjectId,
     getStoreByProject,
     getStoreByProjectSync(projectId) {

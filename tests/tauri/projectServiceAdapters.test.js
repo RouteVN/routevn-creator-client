@@ -138,6 +138,10 @@ const createMacosApplicationExportOptions = (overrides = {}) => {
     shortVersion: "1.0.3",
     bundleVersion: "4",
     applicationIdentifier: "vn.routevn.player.game",
+    publisher: "Studio One",
+    description: "A visual novel",
+    copyright: "Copyright © 2026 Studio One",
+    category: "public.app-category.games",
     iconFileId: "icon-1",
     getCurrentReference: () => ({
       projectPath: "/projects/demo",
@@ -242,6 +246,7 @@ describe("tauri project service adapters preflight reads", () => {
   });
 
   it("serves video file content through the project media server when available", async () => {
+    mocked.exists.mockResolvedValue(true);
     const { fileAdapter } = createTauriProjectServiceAdapters({
       collabLog: () => {},
       creatorVersion: 2,
@@ -265,6 +270,7 @@ describe("tauri project service adapters preflight reads", () => {
   });
 
   it("continues to serve non-video file content through Tauri asset URLs", async () => {
+    mocked.exists.mockResolvedValue(true);
     mocked.convertFileSrc.mockImplementation((filePath) => {
       return `asset://localhost/${encodeURIComponent(filePath)}`;
     });
@@ -291,6 +297,27 @@ describe("tauri project service adapters preflight reads", () => {
     );
   });
 
+  it("rejects missing project files before returning a Tauri asset URL", async () => {
+    mocked.exists.mockResolvedValue(false);
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await expect(
+      fileAdapter.getFileContent({
+        fileId: "missing-icon",
+        fileMetadata: { mimeType: "image/png" },
+        getCurrentReference: () => ({
+          projectPath: "/projects/project-two",
+          cacheKey: "/projects/project-two",
+        }),
+      }),
+    ).rejects.toThrow("File not found: missing-icon");
+
+    expect(mocked.convertFileSrc).not.toHaveBeenCalled();
+  });
+
   it("passes repository mime metadata into streamed native ZIP export", async () => {
     mocked.exists.mockResolvedValue(true);
     mocked.invoke.mockResolvedValue({
@@ -309,9 +336,15 @@ describe("tauri project service adapters preflight reads", () => {
     await expect(
       fileAdapter.createDistributionZipStreamedToPath({
         projectData: { bundleMetadata: { project: { namespace: "demo" } } },
-        fileEntries: [{ fileId: "font-1", mimeType: "font/ttf" }],
+        fileEntries: [
+          { fileId: "font-1", mimeType: "font/ttf" },
+          { fileId: "icon-1", mimeType: "image/png" },
+        ],
         outputPath: "/exports/demo.zip",
-        staticFiles: {},
+        staticFiles: {
+          manifestJson: '{"name":"Demo"}',
+          webIconFileId: "icon-1",
+        },
         getCurrentReference: () => ({
           projectPath: "/projects/demo",
           cacheKey: "/projects/demo",
@@ -323,14 +356,71 @@ describe("tauri project service adapters preflight reads", () => {
       "create_distribution_zip_streamed",
       expect.objectContaining({
         outputPath: "/exports/demo.zip",
+        manifestJson: '{"name":"Demo"}',
+        webIconFileId: "icon-1",
         assets: [
           {
             id: "font-1",
             path: "/projects/demo/files/font-1",
             mime: "font/ttf",
           },
+          {
+            id: "icon-1",
+            path: "/projects/demo/files/icon-1",
+            mime: "image/png",
+          },
         ],
       }),
+    );
+  });
+
+  it("forwards all Windows release metadata to portable and installer exports", async () => {
+    mocked.exists.mockResolvedValue(true);
+    mocked.resolveResource.mockResolvedValue(
+      "/resources/player-templates/windows/RouteVNPlayerTemplate.exe",
+    );
+    mocked.readFile.mockResolvedValue(Uint8Array.from([1, 2, 3]));
+    mocked.invoke.mockResolvedValue({ outputPath: "/exports/Game.exe" });
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const options = {
+      projectData: { bundleMetadata: { project: { namespace: "demo" } } },
+      fileEntries: [{ fileId: "image-1", mimeType: "image/png" }],
+      outputPath: "/exports/Game.exe",
+      title: "Game",
+      version: "1.0.0.4",
+      applicationIdentifier: "vn.routevn.player.game",
+      publisher: "Studio One",
+      description: "A visual novel",
+      copyright: "Copyright © 2026 Studio One",
+      iconFileId: "icon-1",
+      getCurrentReference: () => ({
+        projectPath: "/projects/demo",
+        cacheKey: "/projects/demo",
+      }),
+    };
+
+    await fileAdapter.createWindowsPortableExecutableToPath(options);
+    await fileAdapter.createWindowsInstallerToPath({
+      ...options,
+      outputPath: "/exports/Game Setup.exe",
+    });
+
+    const expectedMetadata = expect.objectContaining({
+      applicationIdentifier: "vn.routevn.player.game",
+      publisher: "Studio One",
+      description: "A visual novel",
+      copyright: "Copyright © 2026 Studio One",
+    });
+    expect(mocked.invoke).toHaveBeenCalledWith(
+      "export_windows_portable_executable",
+      expectedMetadata,
+    );
+    expect(mocked.invoke).toHaveBeenCalledWith(
+      "export_windows_installer_from_project",
+      expectedMetadata,
     );
   });
 
@@ -390,6 +480,10 @@ describe("tauri project service adapters preflight reads", () => {
         shortVersion: "1.0.3",
         bundleVersion: "4",
         applicationIdentifier: "vn.routevn.player.game",
+        publisher: "Studio One",
+        description: "A visual novel",
+        copyright: "Copyright © 2026 Studio One",
+        category: "public.app-category.games",
         iconPng: [1, 2, 3],
         assets: [
           {

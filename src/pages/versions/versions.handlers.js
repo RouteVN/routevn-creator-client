@@ -8,8 +8,10 @@ import {
 } from "../../internal/project/projection.js";
 import { createBundleInstructions } from "../../deps/services/shared/projectExportService.js";
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
+import { sanitizeArtifactFileName } from "../../internal/artifactFileName.js";
 import { createMacosNativeVersion } from "../../internal/nativeApplicationVersion.js";
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
+import { validatePlatformDetails } from "../../internal/platformDetailsValidation.js";
 
 const getVersionDescription = (version) => {
   return version?.description ?? version?.notes ?? "";
@@ -138,19 +140,28 @@ const resolveVersionIdFromPayload = (payload = {}) => {
   return payload?._event?.currentTarget?.dataset?.versionId ?? "";
 };
 
-const getVersionZipName = ({ appService, projectId, version } = {}) => {
+const getVersionZipName = ({
+  appService,
+  projectId,
+  version,
+  applicationName,
+} = {}) => {
   const currentProjectEntry = appService.getCurrentProjectEntry();
   const entryName =
     currentProjectEntry?.id === projectId
       ? currentProjectEntry?.name?.trim?.()
       : "";
-  const projectName = entryName || "project";
+  const projectName = applicationName?.trim() || entryName || "project";
 
-  return `${projectName}_${version?.name ?? "version"}`;
+  return sanitizeArtifactFileName(
+    `${projectName}_${version?.name ?? "version"}`,
+  );
 };
 
-const getProjectExportTitle = ({ projectInfo } = {}) => {
-  return projectInfo?.name?.trim?.();
+const getProjectExportTitle = ({ projectInfo, applicationInfo } = {}) => {
+  return (
+    applicationInfo?.applicationName?.trim() || projectInfo?.name?.trim?.()
+  );
 };
 
 const UNKNOWN_ERROR_MESSAGE =
@@ -244,6 +255,187 @@ const formatWindowsExportErrorCopy = ({ template, error }) =>
     message: getWindowsExportErrorMessage(error),
   });
 
+const getMissingPlatformDetailsMessage = (platform, copy) => {
+  if (platform === "windows") {
+    return (
+      copy.windowsPlatformDetailsRequired ??
+      "Add Windows platform details before exporting. Open Platform Details, click +, and add Windows."
+    );
+  }
+  if (platform === "macos") {
+    return (
+      copy.macosPlatformDetailsRequired ??
+      "Add macOS platform details before exporting. Open Platform Details, click +, and add macOS."
+    );
+  }
+  return (
+    copy.webPlatformDetailsRequired ??
+    "Add Web platform details before exporting. Open Platform Details, click +, and add Web."
+  );
+};
+
+const getPlatformDetailsValidationMessage = (code, copy) => {
+  if (code === "application-name-required") {
+    return (
+      copy.platformDetailsApplicationNameRequired ??
+      "Application name is required in Platform Details before export."
+    );
+  }
+  if (code === "windows-icon-required") {
+    return (
+      copy.platformDetailsWindowsIconRequired ??
+      "Add a Windows application icon in Platform Details before exporting."
+    );
+  }
+  if (code === "macos-icon-required") {
+    return (
+      copy.platformDetailsMacosIconRequired ??
+      "Add a macOS application icon in Platform Details before exporting."
+    );
+  }
+  if (code === "theme-color-not-found") {
+    return (
+      copy.platformDetailsThemeColorNotFound ??
+      "The theme color selected in Web Platform Details no longer exists. Update it before exporting."
+    );
+  }
+  if (code === "background-color-not-found") {
+    return (
+      copy.platformDetailsBackgroundColorNotFound ??
+      "The background color selected in Web Platform Details no longer exists. Update it before exporting."
+    );
+  }
+  if (code === "windows-identifier-invalid") {
+    return (
+      copy.platformDetailsWindowsIdentifierInvalid ??
+      "The Windows application identifier is invalid. Update it in Platform Details before exporting."
+    );
+  }
+  if (code === "macos-identifier-required") {
+    return (
+      copy.platformDetailsMacosIdentifierRequired ??
+      "Add a macOS bundle identifier in Platform Details before exporting."
+    );
+  }
+  if (code === "macos-identifier-invalid") {
+    return (
+      copy.platformDetailsMacosIdentifierInvalid ??
+      "The macOS bundle identifier is invalid. Update it in Platform Details before exporting."
+    );
+  }
+  return (
+    copy.platformDetailsMacosCategoryInvalid ??
+    "The macOS application category is invalid. Update it in Platform Details before exporting."
+  );
+};
+
+const getCurrentColorIds = (projectService) => {
+  const colors = projectService.getRepositoryState()?.colors?.items ?? {};
+  return new Set(
+    Object.values(colors)
+      .filter((color) => color?.type === "color")
+      .map((color) => color.id),
+  );
+};
+
+const getPlatformDetailsColor = (projectService, colorId) => {
+  if (!colorId) {
+    return undefined;
+  }
+
+  const color = projectService.getRepositoryState()?.colors?.items?.[colorId];
+  return color?.type === "color" ? color : undefined;
+};
+
+const getPlatformDetailsColorLabel = (projectService, colorId) => {
+  const color = getPlatformDetailsColor(projectService, colorId);
+  if (!color) {
+    return "";
+  }
+
+  const name = color.name?.trim();
+  const hex = color.hex?.trim();
+  if (name && hex) {
+    return `${name} (${hex})`;
+  }
+  return name || hex || "";
+};
+
+const requirePlatformDetailsForExport = async ({
+  appService,
+  copy,
+  platform,
+  projectService,
+} = {}) => {
+  let applicationInfo;
+  try {
+    applicationInfo = await projectService.getCurrentPlatformDetails(platform);
+  } catch {
+    appService.showAlert({
+      message:
+        copy.platformDetailsLoadFailed ??
+        "Platform details could not be checked. Try again before exporting.",
+      title: copy.errorTitle ?? "Error",
+    });
+    return undefined;
+  }
+
+  if (!applicationInfo) {
+    appService.showAlert({
+      message: getMissingPlatformDetailsMessage(platform, copy),
+      title: copy.warningTitle ?? "Warning",
+    });
+    return undefined;
+  }
+
+  let validation;
+  try {
+    validation = validatePlatformDetails({
+      platform,
+      applicationInfo,
+      availableColorIds:
+        platform === "web" ? getCurrentColorIds(projectService) : undefined,
+    });
+  } catch {
+    appService.showAlert({
+      message:
+        copy.platformDetailsLoadFailed ??
+        "Platform details could not be checked. Try again before exporting.",
+      title: copy.errorTitle ?? "Error",
+    });
+    return undefined;
+  }
+  if (!validation.valid) {
+    appService.showAlert({
+      message: getPlatformDetailsValidationMessage(validation.code, copy),
+      title: copy.warningTitle ?? "Warning",
+    });
+    return undefined;
+  }
+
+  if (applicationInfo.iconFileId) {
+    let icon;
+    try {
+      icon = await projectService.getFileContent(applicationInfo.iconFileId);
+      if (!icon) {
+        throw new Error("Release icon not found");
+      }
+    } catch {
+      appService.showAlert({
+        message:
+          copy.platformDetailsIconNotFound ??
+          "The icon selected in Platform Details is no longer available. Update it before exporting.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return undefined;
+    } finally {
+      icon?.revoke?.();
+    }
+  }
+
+  return applicationInfo;
+};
+
 const logWindowsExportError = ({
   exportType,
   error,
@@ -313,6 +505,8 @@ const formatReplayFailureMessage = ({ replay, copy = {} } = {}) => {
 
 const createVersionExportData = async ({
   appService,
+  applicationInfo,
+  platform,
   projectService,
   version,
 } = {}) => {
@@ -340,14 +534,34 @@ const createVersionExportData = async ({
     return entry;
   });
 
-  if (
-    projectInfo.iconFileId &&
-    !fileEntries.some((entry) => entry.fileId === projectInfo.iconFileId)
-  ) {
+  const iconFileId = applicationInfo
+    ? applicationInfo.iconFileId
+    : projectInfo.iconFileId;
+  if (iconFileId && !fileEntries.some((entry) => entry.fileId === iconFileId)) {
     fileEntries.push({
-      fileId: projectInfo.iconFileId,
+      fileId: iconFileId,
       mimeType: "image/png",
     });
+  }
+
+  const projectMetadata = {
+    namespace: projectInfo.namespace,
+    title: getProjectExportTitle({ projectInfo, applicationInfo }),
+    iconFileId,
+  };
+  if (platform === "web") {
+    projectMetadata.web = {
+      shortName: applicationInfo.shortName,
+      description: applicationInfo.description,
+      themeColor:
+        getPlatformDetailsColor(projectService, applicationInfo.themeColorId)
+          ?.hex ?? "",
+      backgroundColor:
+        getPlatformDetailsColor(
+          projectService,
+          applicationInfo.backgroundColorId,
+        )?.hex ?? "",
+    };
   }
 
   const transformedData = createBundleInstructions({
@@ -355,11 +569,7 @@ const createVersionExportData = async ({
     bundler: {
       appVersion: appService.getAppVersion(),
     },
-    project: {
-      namespace: projectInfo.namespace,
-      title: getProjectExportTitle({ projectInfo }),
-      iconFileId: projectInfo.iconFileId,
-    },
+    project: projectMetadata,
   });
 
   return {
@@ -545,17 +755,16 @@ export const handleDropdownMenuClose = (deps) => {
   render();
 };
 
-export const handleDownloadZipClick = async (deps, payload) => {
+const prepareExportConfirmation = async (
+  deps,
+  payload,
+  { exportType, platform },
+) => {
   const { store, render, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
   payload._event.stopPropagation();
-
-  const currentPayload = appService.getPayload();
-  const projectId = currentPayload.p ?? "";
-
   const versionId = resolveVersionIdFromPayload(payload);
   const version = store.selectVersion(versionId);
-
   if (!version) {
     appService.showAlert({
       message: copy.versionNotFound ?? "Version not found.",
@@ -564,14 +773,91 @@ export const handleDownloadZipClick = async (deps, payload) => {
     return;
   }
 
+  const applicationInfo = await requirePlatformDetailsForExport({
+    appService,
+    copy,
+    platform,
+    projectService,
+  });
+  if (!applicationInfo) {
+    return;
+  }
+
   store.closeDropdownMenu();
   store.setSelectedItemId({ itemId: versionId });
+  store.openExportConfirmation({
+    exportType,
+    platform,
+    versionId,
+    versionName: version.name ?? "",
+    applicationInfo,
+    themeColor:
+      platform === "web"
+        ? getPlatformDetailsColorLabel(
+            projectService,
+            applicationInfo.themeColorId,
+          )
+        : "",
+    backgroundColor:
+      platform === "web"
+        ? getPlatformDetailsColorLabel(
+            projectService,
+            applicationInfo.backgroundColorId,
+          )
+        : "",
+  });
   render();
+};
+
+export const handleDownloadZipClick = (deps, payload) =>
+  prepareExportConfirmation(deps, payload, {
+    exportType: "web",
+    platform: "web",
+  });
+
+export const handleDownloadWindowsExecutableClick = (deps, payload) =>
+  prepareExportConfirmation(deps, payload, {
+    exportType: "windows-executable",
+    platform: "windows",
+  });
+
+export const handleDownloadWindowsInstallerClick = (deps, payload) =>
+  prepareExportConfirmation(deps, payload, {
+    exportType: "windows-installer",
+    platform: "windows",
+  });
+
+export const handleDownloadMacosApplicationClick = (deps, payload) =>
+  prepareExportConfirmation(deps, payload, {
+    exportType: "macos-application",
+    platform: "macos",
+  });
+
+export const handleExportConfirmationClose = (deps) => {
+  const { store, render } = deps;
+  store.closeExportConfirmation();
+  render();
+};
+
+const runWebExport = async (deps, confirmation) => {
+  const { store, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  const { versionId, applicationInfo } = confirmation;
+  const projectId = appService.getPayload().p ?? "";
+  const version = store.selectVersion(versionId);
+  if (!version) {
+    appService.showAlert({
+      message: copy.versionNotFound ?? "Version not found.",
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
 
   const zipName = getVersionZipName({
     appService,
     projectId,
     version,
+    applicationName: applicationInfo.applicationName,
   });
   let outputPath;
 
@@ -603,6 +889,8 @@ export const handleDownloadZipClick = async (deps, payload) => {
   try {
     const { transformedData, fileEntries } = await createVersionExportData({
       appService,
+      applicationInfo,
+      platform: "web",
       projectService,
       version,
     });
@@ -656,16 +944,12 @@ export const handleDownloadZipClick = async (deps, payload) => {
   }
 };
 
-export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
-  const { store, render, projectService, appService, i18n } = deps;
+const runWindowsExecutableExport = async (deps, confirmation) => {
+  const { store, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
-  payload._event.stopPropagation();
-
-  const currentPayload = appService.getPayload();
-  const projectId = currentPayload.p ?? "";
-  const versionId = resolveVersionIdFromPayload(payload);
+  const { versionId, applicationInfo } = confirmation;
+  const projectId = appService.getPayload().p ?? "";
   const version = store.selectVersion(versionId);
-
   if (!version) {
     appService.showAlert({
       message: copy.versionNotFound ?? "Version not found.",
@@ -673,10 +957,6 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
     });
     return;
   }
-
-  store.closeDropdownMenu();
-  store.setSelectedItemId({ itemId: versionId });
-  render();
 
   let windowsFileVersion;
   try {
@@ -698,6 +978,7 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
     appService,
     projectId,
     version,
+    applicationName: applicationInfo.applicationName,
   });
   let outputPath;
 
@@ -740,6 +1021,7 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
     const { projectInfo, transformedData, fileEntries } =
       await createVersionExportData({
         appService,
+        applicationInfo,
         projectService,
         version,
       });
@@ -748,10 +1030,13 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
       fileEntries,
       outputPath,
       {
-        title: getProjectExportTitle({ projectInfo }),
+        title: getProjectExportTitle({ projectInfo, applicationInfo }),
         version: windowsFileVersion,
-        publisher: projectInfo?.publisher,
-        iconFileId: projectInfo?.iconFileId,
+        applicationIdentifier: applicationInfo.applicationIdentifier,
+        publisher: applicationInfo.publisher,
+        description: applicationInfo.description,
+        copyright: applicationInfo.copyright,
+        iconFileId: applicationInfo.iconFileId,
       },
     );
     const savedPath = result?.outputPath ?? outputPath;
@@ -793,16 +1078,12 @@ export const handleDownloadWindowsExecutableClick = async (deps, payload) => {
   }
 };
 
-export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
-  const { store, render, projectService, appService, i18n } = deps;
+const runWindowsInstallerExport = async (deps, confirmation) => {
+  const { store, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
-  payload._event.stopPropagation();
-
-  const currentPayload = appService.getPayload();
-  const projectId = currentPayload.p ?? "";
-  const versionId = resolveVersionIdFromPayload(payload);
+  const { versionId, applicationInfo } = confirmation;
+  const projectId = appService.getPayload().p ?? "";
   const version = store.selectVersion(versionId);
-
   if (!version) {
     appService.showAlert({
       message: copy.versionNotFound ?? "Version not found.",
@@ -810,10 +1091,6 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
     });
     return;
   }
-
-  store.closeDropdownMenu();
-  store.setSelectedItemId({ itemId: versionId });
-  render();
 
   let windowsFileVersion;
   try {
@@ -835,6 +1112,7 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
     appService,
     projectId,
     version,
+    applicationName: applicationInfo.applicationName,
   });
   let outputPath;
 
@@ -876,6 +1154,7 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
     const { projectInfo, transformedData, fileEntries } =
       await createVersionExportData({
         appService,
+        applicationInfo,
         projectService,
         version,
       });
@@ -884,10 +1163,13 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
       fileEntries,
       outputPath,
       {
-        title: getProjectExportTitle({ projectInfo }),
+        title: getProjectExportTitle({ projectInfo, applicationInfo }),
         version: windowsFileVersion,
-        publisher: projectInfo?.publisher,
-        iconFileId: projectInfo?.iconFileId,
+        applicationIdentifier: applicationInfo.applicationIdentifier,
+        publisher: applicationInfo.publisher,
+        description: applicationInfo.description,
+        copyright: applicationInfo.copyright,
+        iconFileId: applicationInfo.iconFileId,
       },
     );
     const savedPath = result?.outputPath ?? outputPath;
@@ -929,13 +1211,11 @@ export const handleDownloadWindowsInstallerClick = async (deps, payload) => {
   }
 };
 
-export const handleDownloadMacosApplicationClick = async (deps, payload) => {
-  const { store, render, projectService, appService, i18n } = deps;
+const runMacosApplicationExport = async (deps, confirmation) => {
+  const { store, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
-  payload._event.stopPropagation();
-
+  const { versionId, applicationInfo } = confirmation;
   const projectId = appService.getPayload().p ?? "";
-  const versionId = resolveVersionIdFromPayload(payload);
   const version = store.selectVersion(versionId);
   if (!version) {
     appService.showAlert({
@@ -944,10 +1224,6 @@ export const handleDownloadMacosApplicationClick = async (deps, payload) => {
     });
     return;
   }
-
-  store.closeDropdownMenu();
-  store.setSelectedItemId({ itemId: versionId });
-  render();
 
   let availability;
   try {
@@ -995,6 +1271,7 @@ export const handleDownloadMacosApplicationClick = async (deps, payload) => {
     appService,
     projectId,
     version,
+    applicationName: applicationInfo.applicationName,
   });
   let outputPath;
   try {
@@ -1027,6 +1304,7 @@ export const handleDownloadMacosApplicationClick = async (deps, payload) => {
     const { projectInfo, transformedData, fileEntries } =
       await createVersionExportData({
         appService,
+        applicationInfo,
         projectService,
         version,
       });
@@ -1035,11 +1313,15 @@ export const handleDownloadMacosApplicationClick = async (deps, payload) => {
       fileEntries,
       outputPath,
       {
-        title: getProjectExportTitle({ projectInfo }),
+        title: getProjectExportTitle({ projectInfo, applicationInfo }),
         shortVersion: nativeVersion.shortVersion,
         bundleVersion: nativeVersion.bundleVersion,
-        applicationIdentifier: projectInfo.nativeApplicationIdentifier,
-        iconFileId: projectInfo.iconFileId,
+        applicationIdentifier: applicationInfo.applicationIdentifier,
+        publisher: applicationInfo.publisher,
+        description: applicationInfo.description,
+        copyright: applicationInfo.copyright,
+        category: applicationInfo.category,
+        iconFileId: applicationInfo.iconFileId,
       },
     );
     const savedPath = result?.outputPath ?? outputPath;
@@ -1076,6 +1358,29 @@ export const handleDownloadMacosApplicationClick = async (deps, payload) => {
           ),
       title: copy.errorTitle ?? "Error",
     });
+  }
+};
+
+export const handleExportConfirmationConfirm = async (deps) => {
+  const { store, render } = deps;
+  const confirmation = store.selectExportConfirmation();
+  store.closeExportConfirmation();
+  render();
+
+  if (confirmation.exportType === "web") {
+    await runWebExport(deps, confirmation);
+    return;
+  }
+  if (confirmation.exportType === "windows-executable") {
+    await runWindowsExecutableExport(deps, confirmation);
+    return;
+  }
+  if (confirmation.exportType === "windows-installer") {
+    await runWindowsInstallerExport(deps, confirmation);
+    return;
+  }
+  if (confirmation.exportType === "macos-application") {
+    await runMacosApplicationExport(deps, confirmation);
   }
 };
 

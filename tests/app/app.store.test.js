@@ -58,6 +58,15 @@ describe("app.store repository loading progress", () => {
     );
   });
 
+  it("resolves the platform details route", () => {
+    const state = createInitialState();
+    state.currentRoute = "/project/releases/platform-details";
+
+    expect(selectViewData({ state }).currentRoutePattern).toBe(
+      "/project/releases/platform-details",
+    );
+  });
+
   it("derives a percentage-based loading message and bar width", () => {
     const state = createInitialState();
 

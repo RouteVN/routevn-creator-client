@@ -98,6 +98,9 @@ describe("android project service adapters", () => {
       staticFiles: {
         indexHtml: "<!doctype html>",
         mainJs: "console.log('routevn');",
+        manifestJson: '{"name":"Project One"}',
+        webIconFileId: "file-1",
+        webIconFileName: "app-icon.png",
       },
       getCurrentReference: () => ({
         projectId: "project-1",
@@ -116,6 +119,12 @@ describe("android project service adapters", () => {
     expect(await zip.file("main.js").async("string")).toBe(
       "console.log('routevn');",
     );
+    expect(await zip.file("manifest.webmanifest").async("string")).toBe(
+      '{"name":"Project One"}',
+    );
+    expect(
+      Array.from(await zip.file("app-icon.png").async("uint8array")),
+    ).toEqual([1, 2, 3]);
     const packageBytes = new Uint8Array(
       await zip.file("package.bin").async("arraybuffer"),
     );

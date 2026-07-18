@@ -7,15 +7,42 @@ const versionsView = readFileSync(
 );
 
 describe("versions view export actions", () => {
-  it("hides Windows export actions from all detail layouts", () => {
-    expect(versionsView).not.toContain("detailWindowsExeBtn");
-    expect(versionsView).not.toContain("detailWindowsInstallerBtn");
-    expect(versionsView).not.toContain("canExportWindowsExecutable");
-    expect(versionsView).not.toContain("canExportWindowsInstaller");
+  it("renders a read-only confirmation dialog before exporting", () => {
+    expect(versionsView).toContain(
+      "rtgl-dialog#exportConfirmationDialog ?open=${isExportConfirmationOpen}",
+    );
+    expect(versionsView).toContain("rvn-detail-view#exportConfirmationDetail");
+    expect(versionsView).toContain(
+      "rtgl-button#exportConfirmationCancelButton",
+    );
+    expect(versionsView).toContain(
+      "rtgl-button#exportConfirmationConfirmButton",
+    );
+    expect(versionsView).toContain("handler: handleExportConfirmationClose");
+    expect(versionsView).toContain("handler: handleExportConfirmationConfirm");
   });
 
-  it("hides macOS export actions from all detail layouts", () => {
-    expect(versionsView).not.toContain("detailMacosApplicationBtn");
-    expect(versionsView).not.toContain("canExportMacosApplication");
+  it("renders gated Windows export actions in desktop and mobile details", () => {
+    expect(
+      versionsView.match(/\$if canExportWindowsExecutable:/g),
+    ).toHaveLength(2);
+    expect(versionsView.match(/rtgl-button#detailWindowsExeBtn/g)).toHaveLength(
+      2,
+    );
+    expect(versionsView.match(/\$if canExportWindowsInstaller:/g)).toHaveLength(
+      2,
+    );
+    expect(
+      versionsView.match(/rtgl-button#detailWindowsInstallerBtn/g),
+    ).toHaveLength(2);
+  });
+
+  it("renders gated macOS application actions in desktop and mobile details", () => {
+    expect(versionsView.match(/\$if canExportMacosApplication:/g)).toHaveLength(
+      2,
+    );
+    expect(
+      versionsView.match(/rtgl-button#detailMacosApplicationBtn/g),
+    ).toHaveLength(2);
   });
 });

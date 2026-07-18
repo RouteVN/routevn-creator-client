@@ -39,8 +39,9 @@ Important details:
 - `projectInfo.id` is the canonical project/folder id for new projects
 - `projectInfo.namespace` is the canonical browser-hosted bundle save namespace
   for new projects
-- `projectInfo.nativeApplicationIdentifier` is the stable native player
-  application identity shared by releases of the same game
+- `projectInfo.nativeApplicationIdentifier` is retained as app-owned project
+  identity metadata; Platform Details does not inherit it as a platform export
+  default
 - `projectInfo.language` selects the language-specific writing count mode
   - English uses word-based counts
   - Japanese and Chinese use character-based counts
@@ -130,13 +131,15 @@ New projects persist `projectInfo.nativeApplicationIdentifier` in the form
 `vn.routevn.player.<base58>`. Existing projects receive the field through one
 lazy persisted backfill when their project metadata is read.
 
-The exact value is stable across project renames, moves, restores, and release
-exports. A different game must receive a different value. Native exporters must
-not derive it from mutable display metadata or output paths.
+The exact value is stable across project renames, moves, and restores. A
+different game must receive a different value. It is not used as the default
+for new platform export records.
 
-On macOS, the value is written to `CFBundleIdentifier` and loaded into Tauri's
-runtime `config.identifier` before plugins initialize. On Windows, the same
-field is the intended source for the future per-game runtime identity fix.
+On macOS, the user-managed `platformDetails.macos.applicationIdentifier` is
+written to `CFBundleIdentifier` and loaded into Tauri's runtime
+`config.identifier` before plugins initialize. It starts blank and should stay
+stable across releases that need to share saves. Windows still needs a future
+per-game runtime identity fix.
 
 ## Current Guidance
 

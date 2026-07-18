@@ -2,7 +2,7 @@ use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder, ImageFormat};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sprite_dicing::{dice, Pivot, Pixel, Prefs, SourceSprite, Texture};
+use sprite_dicing::{Pivot, Pixel, Prefs, SourceSprite, Texture, dice};
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
 use std::fs::{self, File};
@@ -13,6 +13,7 @@ use zip::{CompressionMethod, ZipWriter};
 
 const BUNDLE_VERSION: u8 = 4;
 const BUNDLE_HEADER_SIZE: usize = 16;
+const WEB_ICON_FILE_NAME: &str = "app-icon.png";
 const DICING_ELIGIBLE_MIME_TYPES: [&str; 3] = ["image/png", "image/jpeg", "image/webp"];
 const DICING_UNIT_SIZE: u32 = 64;
 const DICING_PADDING: u32 = 0;
@@ -809,6 +810,8 @@ fn write_distribution_zip(
     instructions_json: &str,
     index_html: Option<&str>,
     main_js: Option<&str>,
+    manifest_json: Option<&str>,
+    web_icon_file_id: Option<&str>,
 ) -> Result<ZipExportStats, String> {
     let file = File::create(work_path)
         .map_err(|e| format!("Failed to create zip file {}: {e}", work_path.display()))?;
@@ -834,6 +837,26 @@ fn write_distribution_zip(
             .map_err(|e| format!("Failed to create main.js zip entry: {e}"))?;
         zip.write_all(main_js.as_bytes())
             .map_err(|e| format!("Failed to write main.js content: {e}"))?;
+    }
+
+    if let Some(manifest_json) = manifest_json {
+        zip.start_file("manifest.webmanifest", options)
+            .map_err(|e| format!("Failed to create manifest.webmanifest zip entry: {e}"))?;
+        zip.write_all(manifest_json.as_bytes())
+            .map_err(|e| format!("Failed to write manifest.webmanifest content: {e}"))?;
+    }
+
+    if let Some(web_icon_file_id) = web_icon_file_id {
+        let icon_asset = assets
+            .iter()
+            .find(|asset| asset.id == web_icon_file_id)
+            .ok_or_else(|| "The Web application icon could not be exported.".to_string())?;
+        let mut icon_file = File::open(&icon_asset.path)
+            .map_err(|e| format!("Failed to open the Web application icon: {e}"))?;
+        zip.start_file(WEB_ICON_FILE_NAME, options)
+            .map_err(|e| format!("Failed to create {WEB_ICON_FILE_NAME} zip entry: {e}"))?;
+        std::io::copy(&mut icon_file, &mut zip)
+            .map_err(|e| format!("Failed to write the Web application icon: {e}"))?;
     }
 
     let mut writer = zip
@@ -869,6 +892,8 @@ pub fn create_distribution_zip_streamed_sync(
     instructions_json: String,
     index_html: Option<String>,
     main_js: Option<String>,
+    manifest_json: Option<String>,
+    web_icon_file_id: Option<String>,
     use_part_file: bool,
 ) -> Result<ZipExportStats, String> {
     let final_path = PathBuf::from(output_path);
@@ -893,6 +918,8 @@ pub fn create_distribution_zip_streamed_sync(
         &instructions_json,
         index_html.as_deref(),
         main_js.as_deref(),
+        manifest_json.as_deref(),
+        web_icon_file_id.as_deref(),
     );
 
     let stats = match write_result {
@@ -1089,6 +1116,8 @@ mod tests {
                 .to_string(),
             Some("<!doctype html><html></html>".to_string()),
             Some("console.log('bundle');".to_string()),
+            None,
+            None,
             false,
         )
         .expect("streamed zip export should succeed");
@@ -1132,10 +1161,12 @@ mod tests {
                 .len()
                 >= 6
         );
-        assert!(manifest["atlases"]
-            .as_object()
-            .expect("atlas map")
-            .contains_key("diced-atlas-0-0"));
+        assert!(
+            manifest["atlases"]
+                .as_object()
+                .expect("atlas map")
+                .contains_key("diced-atlas-0-0")
+        );
 
         fs::remove_dir_all(test_dir).expect("remove temp test dir");
     }
@@ -1171,6 +1202,8 @@ mod tests {
             instructions_json.clone(),
             Some("<!doctype html><html></html>".to_string()),
             Some("console.log('bundle');".to_string()),
+            Some(r#"{"name":"Game"}"#.to_string()),
+            Some("file-a".to_string()),
             false,
         )
         .expect("streamed zip export should succeed");
@@ -1194,6 +1227,20 @@ mod tests {
             .expect("package.bin entry")
             .read_to_end(&mut package_bin)
             .expect("read package.bin");
+        let mut web_manifest = String::new();
+        archive
+            .by_name("manifest.webmanifest")
+            .expect("manifest.webmanifest entry")
+            .read_to_string(&mut web_manifest)
+            .expect("read manifest.webmanifest");
+        assert_eq!(web_manifest, r#"{"name":"Game"}"#);
+        let mut web_icon = Vec::new();
+        archive
+            .by_name(WEB_ICON_FILE_NAME)
+            .expect("Web icon entry")
+            .read_to_end(&mut web_icon)
+            .expect("read Web icon");
+        assert_eq!(web_icon, asset_bytes);
         let direct_package = create_package_bin(
             vec![
                 ZipAssetInput {
@@ -1212,7 +1259,10 @@ mod tests {
         .expect("direct package bin export should succeed");
         assert_eq!(direct_package.package_bin, package_bin);
         assert_eq!(direct_package.stats.asset_count, 2);
-        assert_eq!(direct_package.stats.package_bin_bytes, package_bin.len() as u64);
+        assert_eq!(
+            direct_package.stats.package_bin_bytes,
+            package_bin.len() as u64
+        );
 
         let (version, manifest) = parse_bundle_manifest(&package_bin);
         assert_eq!(version, BUNDLE_VERSION);
@@ -1272,6 +1322,8 @@ mod tests {
                 .to_string(),
             Some("<!doctype html><html></html>".to_string()),
             Some("console.log('bundle');".to_string()),
+            None,
+            None,
             false,
         )
         .expect("streamed zip export should succeed");
@@ -1322,6 +1374,8 @@ mod tests {
                 .to_string(),
             Some("<!doctype html><html></html>".to_string()),
             Some("console.log('bundle');".to_string()),
+            None,
+            None,
             false,
         )
         .expect("streamed zip export should succeed");

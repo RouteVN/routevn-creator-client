@@ -1,0 +1,110 @@
+---
+title: Project Platform Details Page
+description: Covers platform-specific release metadata tabs and dialogs.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: VT Project Platform Details
+  - action: select
+    selector: "#createProjectSubmitButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  - action: wait
+    ms: 500
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/releases/platform-details
+  - action: waitFor
+    selector: rvn-platform-details
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/releases/platform-details
+  - action: wait
+    ms: 450
+  - action: screenshot
+  - action: select
+    selector: "#addPlatformButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-global-ui rtgl-dropdown-menu#addPlatformMenu #option0"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-global-ui rtgl-dropdown-menu#addPlatformMenu #option0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#platformEditDialog"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "#platformEditDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#platformEditDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#platformEditButton"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "#platformEditButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#platformEditDialog"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: screenshot
+---

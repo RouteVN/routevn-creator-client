@@ -13,7 +13,10 @@ pub struct InstallerRequest<'a> {
     pub output_path: &'a Path,
     pub title: &'a str,
     pub version: &'a str,
+    pub application_identifier: Option<&'a str>,
     pub publisher: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub copyright: Option<&'a str>,
     pub makensis_path: Option<&'a Path>,
 }
 
@@ -112,6 +115,28 @@ pub fn create_nsis_script(request: &InstallerRequest<'_>) -> Result<String> {
             )
         })
         .unwrap_or_default();
+    let internal_name = request
+        .application_identifier
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(request.title);
+    let description = request
+        .description
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("{} Setup", request.title));
+    let copyright_version_key = request
+        .copyright
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|copyright| {
+            format!(
+                "VIAddVersionKey \"LegalCopyright\" \"{}\"\n",
+                escape_nsis_string(copyright)
+            )
+        })
+        .unwrap_or_default();
     let product_version = format_nsis_product_version(request.output_path, request.version)?;
 
     Ok(format!(
@@ -123,7 +148,9 @@ InstallDir "{install_dir}"
 VIProductVersion "{product_version}"
 VIAddVersionKey "ProductName" "{title}"
 {company_version_key}
-VIAddVersionKey "FileDescription" "{title} Setup"
+VIAddVersionKey "InternalName" "{internal_name}"
+VIAddVersionKey "FileDescription" "{description}"
+{copyright_version_key}
 VIAddVersionKey "FileVersion" "{file_version}"
 VIAddVersionKey "ProductVersion" "{file_version}"
 ShowInstDetails show
@@ -148,6 +175,9 @@ SectionEnd
         install_dir = install_dir,
         product_version = product_version,
         company_version_key = company_version_key,
+        internal_name = escape_nsis_string(internal_name),
+        description = escape_nsis_string(&description),
+        copyright_version_key = copyright_version_key,
         file_version = escape_nsis_string(request.version),
         exe_name = escape_nsis_string(exe_name),
         exe_path = escape_nsis_string(&request.exe_path.display().to_string()),
@@ -206,7 +236,10 @@ mod tests {
             output_path: Path::new("/dist/My Game Setup.exe"),
             title: "My Game",
             version: "1.2.3",
+            application_identifier: Some("com.example.my-game"),
             publisher: Some("Studio Name"),
+            description: Some("A visual novel installer"),
+            copyright: Some("Copyright 2026 Studio Name"),
             makensis_path: None,
         };
         let script = create_nsis_script(&request).unwrap();
@@ -216,6 +249,13 @@ mod tests {
         assert!(script.contains("InstallDir \"$LOCALAPPDATA\\Studio Name\\My Game\""));
         assert!(script.contains("VIProductVersion \"1.2.3.0\""));
         assert!(script.contains("VIAddVersionKey \"CompanyName\" \"Studio Name\""));
+        assert!(script.contains("VIAddVersionKey \"InternalName\" \"com.example.my-game\""));
+        assert!(
+            script.contains("VIAddVersionKey \"FileDescription\" \"A visual novel installer\"")
+        );
+        assert!(
+            script.contains("VIAddVersionKey \"LegalCopyright\" \"Copyright 2026 Studio Name\"")
+        );
         assert!(script.contains("File \"/oname=My Game.exe\" \"/build/My Game.exe\""));
         assert!(script.contains("CreateShortcut \"$SMPROGRAMS\\My Game.lnk\""));
         assert!(script.contains("WriteUninstaller \"$INSTDIR\\Uninstall.exe\""));
@@ -228,7 +268,10 @@ mod tests {
             output_path: Path::new("/dist/Game Setup.exe"),
             title: "Bad:/Name",
             version: "2.5",
+            application_identifier: None,
             publisher: None,
+            description: None,
+            copyright: None,
             makensis_path: None,
         };
         let script = create_nsis_script(&request).unwrap();
@@ -245,7 +288,10 @@ mod tests {
             output_path: Path::new("/dist/Game Setup.exe"),
             title: "Game",
             version: "2.5-beta",
+            application_identifier: None,
             publisher: Some("Studio"),
+            description: None,
+            copyright: None,
             makensis_path: None,
         };
 

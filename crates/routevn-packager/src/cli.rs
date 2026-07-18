@@ -164,7 +164,10 @@ fn run_stamp_exe(args: StampExeArgs) -> Result<()> {
         metadata: WindowsResourceMetadata {
             title: &args.title,
             version: &args.version,
+            application_identifier: None,
             publisher: args.publisher.as_deref(),
+            description: None,
+            copyright: None,
             original_filename,
         },
         icon_png: &icon_png,
@@ -194,7 +197,10 @@ fn run_build_installer(args: BuildInstallerArgs) -> Result<()> {
         output_path: &args.out,
         title: &args.title,
         version: &args.version,
+        application_identifier: None,
         publisher: args.publisher.as_deref(),
+        description: None,
+        copyright: None,
         makensis_path: args.makensis.as_deref(),
     })?;
 

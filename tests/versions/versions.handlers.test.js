@@ -5,10 +5,13 @@ import {
   handleDownloadWindowsExecutableClick,
   handleDownloadWindowsInstallerClick,
   handleDownloadZipClick,
+  handleExportConfirmationClose,
+  handleExportConfirmationConfirm,
   handleMobileDetailSheetClose,
   handleVersionFormAction,
 } from "../../src/pages/versions/versions.handlers.js";
 import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const createTreeCollection = (items = {}, tree = []) => ({
   items,
@@ -26,6 +29,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
     close: vi.fn(),
     update: vi.fn(),
   };
+  let exportConfirmation;
 
   return {
     appService: {
@@ -54,6 +58,37 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
         iconFileId: "icon-1",
         publisher: "Studio One",
       })),
+      getCurrentPlatformDetails: vi.fn(async (platform) => {
+        const applicationInfo = {
+          applicationName: "Project One",
+          iconFileId: "icon-1",
+        };
+        if (platform === "web") {
+          applicationInfo.shortName = "";
+          applicationInfo.description = "";
+          applicationInfo.themeColorId = "";
+          applicationInfo.backgroundColorId = "";
+        }
+        if (platform === "windows") {
+          applicationInfo.applicationIdentifier = "";
+          applicationInfo.publisher = "Studio One";
+          applicationInfo.description = "Project description";
+          applicationInfo.copyright = "";
+        }
+        if (platform === "macos") {
+          applicationInfo.applicationIdentifier =
+            "vn.routevn.player.project-one";
+          applicationInfo.publisher = "Studio One";
+          applicationInfo.description = "Project description";
+          applicationInfo.copyright = "";
+          applicationInfo.category = "public.app-category.games";
+        }
+        return applicationInfo;
+      }),
+      getFileContent: vi.fn(async () => new Uint8Array([1])),
+      getRepositoryState: vi.fn(
+        () => repository?.getState?.() ?? structuredClone(initialProjectData),
+      ),
       promptDistributionZipPath: vi.fn(async () => undefined),
       createDistributionZipStreamedToPath: vi.fn(async () => "/tmp/export.zip"),
       createDistributionZipStreamed: vi.fn(async () => "/tmp/export.zip"),
@@ -80,6 +115,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
         outputPath: "/tmp/export.app.zip",
       })),
     },
+    i18n: EN_I18N,
     store: {
       selectEditingVersionId: vi.fn(() => editingVersionId),
       selectVersion: vi.fn((versionId) =>
@@ -90,6 +126,11 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       setSelectedItemId: vi.fn(),
       closeVersionDialog: vi.fn(),
       closeDropdownMenu: vi.fn(),
+      openExportConfirmation: vi.fn((confirmation) => {
+        exportConfirmation = confirmation;
+      }),
+      selectExportConfirmation: vi.fn(() => exportConfirmation),
+      closeExportConfirmation: vi.fn(),
     },
     progressDialog,
     render: vi.fn(),
@@ -106,6 +147,11 @@ const createVersionClickPayload = (versionId = "version-1") => ({
     },
   },
 });
+
+const chooseAndConfirmExport = async (handler, deps) => {
+  await handler(deps, createVersionClickPayload());
+  await handleExportConfirmationConfirm(deps);
+};
 
 describe("versions lifecycle", () => {
   it("syncs touch UI config before mount", () => {
@@ -195,6 +241,92 @@ describe("versions.handleMobileDetailSheetClose", () => {
 });
 
 describe("versions.handleDownloadZipClick", () => {
+  it("cancels the confirmation without opening the save dialog", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+    handleExportConfirmationClose(deps);
+
+    expect(deps.store.closeExportConfirmation).toHaveBeenCalledTimes(1);
+    expect(
+      deps.projectService.promptDistributionZipPath,
+    ).not.toHaveBeenCalled();
+    expect(deps.projectService.loadRepositoryState).not.toHaveBeenCalled();
+  });
+
+  it("stops before the save dialog when Web platform details has not been added", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(
+      undefined,
+    );
+
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+
+    expect(
+      deps.projectService.getCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("web");
+    expect(
+      deps.projectService.promptDistributionZipPath,
+    ).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.webPlatformDetailsRequired,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+  });
+
+  it("stops before the save dialog when Web platform details uses a removed color", async () => {
+    const repositoryState = structuredClone(initialProjectData);
+    const repository = {
+      loadState: vi.fn(async () => repositoryState),
+      getState: vi.fn(() => repositoryState),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Project One",
+      iconFileId: "icon-1",
+      shortName: "",
+      description: "",
+      themeColorId: "color-removed",
+      backgroundColorId: "",
+    });
+
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+
+    expect(
+      deps.projectService.promptDistributionZipPath,
+    ).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.platformDetailsThemeColorNotFound,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+  });
+
+  it("revokes the temporary icon URL after export preflight", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    const revoke = vi.fn();
+    deps.projectService.getFileContent.mockResolvedValue({
+      url: "blob:platform-icon",
+      revoke,
+    });
+
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+
+    expect(revoke).toHaveBeenCalledTimes(1);
+    expect(deps.store.openExportConfirmation).toHaveBeenCalledTimes(1);
+  });
+
   it("uses repository.loadState when available instead of forcing full history load", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
@@ -205,16 +337,21 @@ describe("versions.handleDownloadZipClick", () => {
       repository,
     });
 
-    await handleDownloadZipClick(deps, {
-      _event: {
-        stopPropagation: vi.fn(),
-        currentTarget: {
-          dataset: {
-            versionId: "version-1",
-          },
-        },
-      },
-    });
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+
+    expect(deps.store.openExportConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        exportType: "web",
+        platform: "web",
+        versionId: "version-1",
+        versionName: "Version 1",
+      }),
+    );
+    expect(
+      deps.projectService.promptDistributionZipPath,
+    ).not.toHaveBeenCalled();
+
+    await handleExportConfirmationConfirm(deps);
 
     expect(deps.projectService.loadRepositoryState).toHaveBeenCalledWith(3);
     expect(repository.loadEvents).not.toHaveBeenCalled();
@@ -294,16 +431,7 @@ describe("versions.handleDownloadZipClick", () => {
       repository,
     });
 
-    await handleDownloadZipClick(deps, {
-      _event: {
-        stopPropagation: vi.fn(),
-        currentTarget: {
-          dataset: {
-            versionId: "version-1",
-          },
-        },
-      },
-    });
+    await chooseAndConfirmExport(handleDownloadZipClick, deps);
 
     expect(
       deps.projectService.createDistributionZipStreamed,
@@ -322,6 +450,60 @@ describe("versions.handleDownloadZipClick", () => {
       { fileId: "file-1", mimeType: "image/png" },
       { fileId: "icon-1", mimeType: "image/png" },
     ]);
+  });
+
+  it("uses Web release metadata in the exported bundle", async () => {
+    const repositoryState = structuredClone(initialProjectData);
+    repositoryState.colors = createTreeCollection(
+      {
+        "color-theme": {
+          id: "color-theme",
+          type: "color",
+          name: "Ocean Blue",
+          hex: "#112233",
+        },
+        "color-background": {
+          id: "color-background",
+          type: "color",
+          name: "Night",
+          hex: "#000000",
+        },
+      },
+      [{ id: "color-theme" }, { id: "color-background" }],
+    );
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(repositoryState)),
+      getState: vi.fn(() => structuredClone(repositoryState)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Web Edition",
+      iconFileId: "web-icon",
+      shortName: "Web",
+      description: "Web release",
+      themeColorId: "color-theme",
+      backgroundColorId: "color-background",
+    });
+
+    await chooseAndConfirmExport(handleDownloadZipClick, deps);
+
+    expect(
+      deps.projectService.createDistributionZipStreamed.mock.calls[0][0]
+        .bundleMetadata.project,
+    ).toMatchObject({
+      namespace: "project-one",
+      title: "Web Edition",
+      iconFileId: "web-icon",
+      web: {
+        shortName: "Web",
+        description: "Web release",
+        themeColor: "#112233",
+        backgroundColor: "#000000",
+      },
+    });
+    expect(
+      deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
+    ).toContainEqual({ fileId: "web-icon", mimeType: "image/png" });
   });
 
   it("drops invalid font mime metadata before export", async () => {
@@ -425,16 +607,7 @@ describe("versions.handleDownloadZipClick", () => {
       repository,
     });
 
-    await handleDownloadZipClick(deps, {
-      _event: {
-        stopPropagation: vi.fn(),
-        currentTarget: {
-          dataset: {
-            versionId: "version-1",
-          },
-        },
-      },
-    });
+    await chooseAndConfirmExport(handleDownloadZipClick, deps);
 
     expect(
       deps.projectService.createDistributionZipStreamed,
@@ -449,6 +622,62 @@ describe("versions.handleDownloadZipClick", () => {
 });
 
 describe("versions Windows export handlers", () => {
+  it("requires a Windows icon before opening export confirmation", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Windows Edition",
+      iconFileId: "",
+      applicationIdentifier: "com.example.windows-edition",
+      publisher: "Release Studio",
+      description: "Windows release",
+      copyright: "",
+    });
+
+    await handleDownloadWindowsExecutableClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.platformDetailsWindowsIconRequired,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+  });
+
+  it("sanitizes artifact filenames without changing embedded titles", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Story: Part/Two\\Final",
+      iconFileId: "windows-icon",
+      applicationIdentifier: "com.example.story",
+      publisher: "Release Studio",
+      description: "Windows release",
+      copyright: "",
+    });
+
+    await chooseAndConfirmExport(handleDownloadWindowsExecutableClick, deps);
+
+    expect(
+      deps.projectService.promptWindowsExecutablePath,
+    ).toHaveBeenCalledWith("Story- Part-Two-Final_Version 1");
+    expect(
+      deps.projectService.createWindowsPortableExecutableToPath.mock
+        .calls[0][3],
+    ).toMatchObject({
+      title: "Story: Part/Two\\Final",
+    });
+  });
+
   it("uses a numeric Windows file version instead of the release display name for EXE export", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
@@ -464,11 +693,16 @@ describe("versions Windows export handlers", () => {
         createdAt: "2026-01-01T00:00:00.000Z",
       },
     });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Windows Edition",
+      iconFileId: "windows-icon",
+      applicationIdentifier: "com.example.windows-edition",
+      publisher: "Release Studio",
+      description: "Windows release",
+      copyright: "Copyright © 2026 Release Studio",
+    });
 
-    await handleDownloadWindowsExecutableClick(
-      deps,
-      createVersionClickPayload(),
-    );
+    await chooseAndConfirmExport(handleDownloadWindowsExecutableClick, deps);
 
     expect(
       deps.projectService.createWindowsPortableExecutableToPath,
@@ -480,13 +714,19 @@ describe("versions Windows export handlers", () => {
     });
     expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     expect(
+      deps.projectService.promptWindowsExecutablePath,
+    ).toHaveBeenCalledWith("Windows Edition_Version 1");
+    expect(
       deps.projectService.createWindowsPortableExecutableToPath.mock
         .calls[0][3],
     ).toMatchObject({
-      title: "Project One",
+      title: "Windows Edition",
       version: "1.0.0.3",
-      publisher: "Studio One",
-      iconFileId: "icon-1",
+      applicationIdentifier: "com.example.windows-edition",
+      publisher: "Release Studio",
+      description: "Windows release",
+      copyright: "Copyright © 2026 Release Studio",
+      iconFileId: "windows-icon",
     });
   });
 
@@ -506,10 +746,7 @@ describe("versions Windows export handlers", () => {
       },
     });
 
-    await handleDownloadWindowsInstallerClick(
-      deps,
-      createVersionClickPayload(),
-    );
+    await chooseAndConfirmExport(handleDownloadWindowsInstallerClick, deps);
 
     expect(deps.projectService.createWindowsInstallerToPath).toHaveBeenCalled();
     expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
@@ -523,7 +760,10 @@ describe("versions Windows export handlers", () => {
     ).toMatchObject({
       title: "Project One",
       version: "1.0.1.0",
+      applicationIdentifier: "",
       publisher: "Studio One",
+      description: "Project description",
+      copyright: "",
       iconFileId: "icon-1",
     });
   });
@@ -543,10 +783,7 @@ describe("versions Windows export handlers", () => {
       },
     });
 
-    await handleDownloadWindowsExecutableClick(
-      deps,
-      createVersionClickPayload(),
-    );
+    await chooseAndConfirmExport(handleDownloadWindowsExecutableClick, deps);
 
     expect(
       deps.projectService.promptWindowsExecutablePath,
@@ -582,10 +819,7 @@ describe("versions Windows export handlers", () => {
     );
 
     try {
-      await handleDownloadWindowsExecutableClick(
-        deps,
-        createVersionClickPayload(),
-      );
+      await chooseAndConfirmExport(handleDownloadWindowsExecutableClick, deps);
 
       expect(deps.appService.showAlert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -629,10 +863,7 @@ describe("versions Windows export handlers", () => {
     );
 
     try {
-      await handleDownloadWindowsExecutableClick(
-        deps,
-        createVersionClickPayload(),
-      );
+      await chooseAndConfirmExport(handleDownloadWindowsExecutableClick, deps);
 
       expect(deps.appService.showAlert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -656,6 +887,34 @@ describe("versions Windows export handlers", () => {
 });
 
 describe("versions macOS export handlers", () => {
+  it("requires a macOS icon before opening export confirmation", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Mac Edition",
+      iconFileId: "",
+      applicationIdentifier: "com.example.mac-edition",
+      publisher: "Release Studio",
+      description: "macOS release",
+      copyright: "",
+      category: "public.app-category.games",
+    });
+
+    await handleDownloadMacosApplicationClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.platformDetailsMacosIconRequired,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+  });
+
   it("reports template inspection errors instead of claiming the template is absent", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
@@ -670,10 +929,7 @@ describe("versions macOS export handlers", () => {
       hostSupported: true,
     });
 
-    await handleDownloadMacosApplicationClick(
-      deps,
-      createVersionClickPayload(),
-    );
+    await chooseAndConfirmExport(handleDownloadMacosApplicationClick, deps);
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -702,10 +958,7 @@ describe("versions macOS export handlers", () => {
         "Command get_macos_export_host_capabilities not found",
     });
 
-    await handleDownloadMacosApplicationClick(
-      deps,
-      createVersionClickPayload(),
-    );
+    await chooseAndConfirmExport(handleDownloadMacosApplicationClick, deps);
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -719,18 +972,24 @@ describe("versions macOS export handlers", () => {
     ).not.toHaveBeenCalled();
   });
 
-  it("uses the release action index for bundle versions and the stable project identity", async () => {
+  it("uses the release action index and configured macOS application identifier", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
       loadEvents: vi.fn(async () => []),
       getState: vi.fn(() => structuredClone(initialProjectData)),
     };
     const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Mac Edition",
+      iconFileId: "mac-icon",
+      applicationIdentifier: "com.example.mac-edition",
+      publisher: "Release Studio",
+      description: "macOS release",
+      copyright: "Copyright © 2026 Release Studio",
+      category: "public.app-category.games",
+    });
 
-    await handleDownloadMacosApplicationClick(
-      deps,
-      createVersionClickPayload(),
-    );
+    await chooseAndConfirmExport(handleDownloadMacosApplicationClick, deps);
 
     expect(deps.projectService.createMacosApplicationToPath).toHaveBeenCalled();
     expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
@@ -738,14 +997,21 @@ describe("versions macOS export handlers", () => {
       title: "macOS export in progress",
     });
     expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
+    expect(deps.projectService.promptMacosApplicationPath).toHaveBeenCalledWith(
+      "Mac Edition_Version 1",
+    );
     expect(
       deps.projectService.createMacosApplicationToPath.mock.calls[0][3],
     ).toEqual({
-      title: "Project One",
+      title: "Mac Edition",
       shortVersion: "1.0.3",
       bundleVersion: "4",
-      applicationIdentifier: "vn.routevn.player.project-one",
-      iconFileId: "icon-1",
+      applicationIdentifier: "com.example.mac-edition",
+      publisher: "Release Studio",
+      description: "macOS release",
+      copyright: "Copyright © 2026 Release Studio",
+      category: "public.app-category.games",
+      iconFileId: "mac-icon",
     });
   });
 });

@@ -105,6 +105,11 @@ const releaseItems = [
     path: "/project/releases/versions",
   },
   {
+    id: "platformDetails",
+    name: "Platform Details",
+    path: "/project/releases/platform-details",
+  },
+  {
     id: "webServer",
     name: "Web Server",
     path: "/project/releases/web-server",

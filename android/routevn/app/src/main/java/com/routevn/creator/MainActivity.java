@@ -1363,6 +1363,16 @@ public class MainActivity extends Activity {
                 nativePayload.put("mainJs", mainJs);
             }
 
+            String manifestJson = optionalJsonString(payload, "manifestJson");
+            if (manifestJson != null) {
+                nativePayload.put("manifestJson", manifestJson);
+            }
+
+            String webIconFileId = optionalJsonString(payload, "webIconFileId");
+            if (webIconFileId != null) {
+                nativePayload.put("webIconFileId", webIconFileId);
+            }
+
             JSONObject stats = NativeExporter.createDistributionZipStreamed(
                 nativePayload
             );

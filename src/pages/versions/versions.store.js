@@ -57,6 +57,146 @@ const createDropdownMenuItems = (copy = {}) => [
   { label: copy.deleteMenuItem ?? "Delete", type: "item", value: "delete" },
 ];
 
+const formatConfirmationValue = (value, copy) => {
+  const normalized = String(value ?? "").trim();
+  return normalized || (copy.notSetLabel ?? "Not set");
+};
+
+const getExportConfirmationTitle = (exportType, copy) => {
+  if (exportType === "windows-executable") {
+    return (
+      copy.confirmWindowsExecutableExportTitle ?? "Confirm Windows EXE Export"
+    );
+  }
+  if (exportType === "windows-installer") {
+    return (
+      copy.confirmWindowsInstallerExportTitle ??
+      "Confirm Windows Installer Export"
+    );
+  }
+  if (exportType === "macos-application") {
+    return copy.confirmMacosExportTitle ?? "Confirm macOS App Export";
+  }
+  return copy.confirmWebExportTitle ?? "Confirm Web Export";
+};
+
+const getExportConfirmationButtonLabel = (exportType, copy) => {
+  if (exportType === "windows-executable") {
+    return copy.exportWindowsExecutableButton ?? "Export Windows EXE";
+  }
+  if (exportType === "windows-installer") {
+    return copy.exportWindowsInstallerButton ?? "Export Windows Installer";
+  }
+  if (exportType === "macos-application") {
+    return copy.exportMacosApplicationButton ?? "Export macOS App";
+  }
+  return copy.exportWebButton ?? "Export Web";
+};
+
+const buildExportConfirmationFields = (
+  confirmation,
+  copy,
+  platformDetailsCopy,
+) => {
+  const applicationInfo = confirmation.applicationInfo ?? {};
+  const fields = [
+    {
+      type: "text",
+      label: copy.releaseVersionLabel ?? "Release Version",
+      value: formatConfirmationValue(confirmation.versionName, copy),
+    },
+    {
+      type: "text",
+      label: platformDetailsCopy.applicationNameLabel ?? "Application Name",
+      value: formatConfirmationValue(applicationInfo.applicationName, copy),
+    },
+    {
+      type: "slot",
+      slot: "export-confirmation-icon",
+      label: platformDetailsCopy.iconLabel ?? "Icon",
+    },
+  ];
+
+  if (confirmation.platform !== "web") {
+    fields.push({
+      type: "text",
+      label:
+        confirmation.platform === "macos"
+          ? (platformDetailsCopy.macosApplicationIdentifierLabel ??
+            "Bundle Identifier")
+          : (platformDetailsCopy.applicationIdentifierLabel ??
+            "Application Identifier"),
+      value: formatConfirmationValue(
+        applicationInfo.applicationIdentifier,
+        copy,
+      ),
+    });
+  }
+
+  if (confirmation.platform === "web") {
+    fields.push(
+      {
+        type: "text",
+        label: platformDetailsCopy.shortNameLabel ?? "Short Name",
+        value: formatConfirmationValue(applicationInfo.shortName, copy),
+      },
+      {
+        type: "text",
+        label: platformDetailsCopy.descriptionLabel ?? "Description",
+        value: formatConfirmationValue(applicationInfo.description, copy),
+      },
+      {
+        type: "text",
+        label: platformDetailsCopy.themeColorLabel ?? "Theme Color",
+        value: formatConfirmationValue(confirmation.themeColor, copy),
+      },
+      {
+        type: "text",
+        label: platformDetailsCopy.backgroundColorLabel ?? "Background Color",
+        value: formatConfirmationValue(confirmation.backgroundColor, copy),
+      },
+    );
+  }
+
+  if (
+    confirmation.platform === "windows" ||
+    confirmation.platform === "macos"
+  ) {
+    fields.push(
+      {
+        type: "text",
+        label:
+          confirmation.platform === "windows"
+            ? (platformDetailsCopy.windowsPublisherLabel ??
+              "Company / Publisher")
+            : (platformDetailsCopy.macosPublisherLabel ??
+              "Developer / Publisher"),
+        value: formatConfirmationValue(applicationInfo.publisher, copy),
+      },
+      {
+        type: "text",
+        label: platformDetailsCopy.descriptionLabel ?? "Description",
+        value: formatConfirmationValue(applicationInfo.description, copy),
+      },
+      {
+        type: "text",
+        label: platformDetailsCopy.copyrightLabel ?? "Copyright",
+        value: formatConfirmationValue(applicationInfo.copyright, copy),
+      },
+    );
+  }
+
+  if (confirmation.platform === "macos") {
+    fields.push({
+      type: "text",
+      label: platformDetailsCopy.categoryLabel ?? "Application Category",
+      value: formatConfirmationValue(applicationInfo.category, copy),
+    });
+  }
+
+  return fields;
+};
+
 export const createInitialState = () => ({
   versions: [],
   selectedItemId: undefined,
@@ -83,6 +223,16 @@ export const createInitialState = () => ({
     y: 0,
     targetVersionId: undefined,
     items: [],
+  },
+  exportConfirmation: {
+    isOpen: false,
+    exportType: undefined,
+    platform: undefined,
+    versionId: undefined,
+    versionName: "",
+    applicationInfo: undefined,
+    themeColor: "",
+    backgroundColor: "",
   },
 });
 
@@ -157,6 +307,39 @@ export const closeVersionDialog = ({ state }, _payload = {}) => {
   state.editingVersionId = undefined;
 };
 
+export const openExportConfirmation = (
+  { state },
+  {
+    exportType,
+    platform,
+    versionId,
+    versionName,
+    applicationInfo,
+    themeColor,
+    backgroundColor,
+  } = {},
+) => {
+  state.exportConfirmation.isOpen = true;
+  state.exportConfirmation.exportType = exportType;
+  state.exportConfirmation.platform = platform;
+  state.exportConfirmation.versionId = versionId;
+  state.exportConfirmation.versionName = versionName ?? "";
+  state.exportConfirmation.applicationInfo = applicationInfo;
+  state.exportConfirmation.themeColor = themeColor ?? "";
+  state.exportConfirmation.backgroundColor = backgroundColor ?? "";
+};
+
+export const closeExportConfirmation = ({ state }, _payload = {}) => {
+  state.exportConfirmation.isOpen = false;
+  state.exportConfirmation.exportType = undefined;
+  state.exportConfirmation.platform = undefined;
+  state.exportConfirmation.versionId = undefined;
+  state.exportConfirmation.versionName = "";
+  state.exportConfirmation.applicationInfo = undefined;
+  state.exportConfirmation.themeColor = "";
+  state.exportConfirmation.backgroundColor = "";
+};
+
 export const selectDropdownMenuTargetVersionId = ({ state }) => {
   return state.dropdownMenu.targetVersionId;
 };
@@ -169,6 +352,17 @@ export const selectEditingVersionId = ({ state }) => {
   return state.editingVersionId;
 };
 
+export const selectExportConfirmation = ({ state }) => {
+  return {
+    exportType: state.exportConfirmation.exportType,
+    platform: state.exportConfirmation.platform,
+    versionId: state.exportConfirmation.versionId,
+    applicationInfo: state.exportConfirmation.applicationInfo,
+    themeColor: state.exportConfirmation.themeColor,
+    backgroundColor: state.exportConfirmation.backgroundColor,
+  };
+};
+
 export const selectVersions = ({ state }) => {
   return state.versions;
 };
@@ -179,6 +373,7 @@ export const selectVersion = ({ state }, versionId) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectVersionsPageCopy(i18n);
+  const platformDetailsCopy = i18n?.platformDetailsPage ?? {};
   const selectedVersion = findVersionById(state.versions, state.selectedItemId);
   const isEditing = !!state.editingVersionId;
   const detailDescription = getVersionDescription(selectedVersion);
@@ -245,6 +440,29 @@ export const selectViewData = ({ state, i18n }) => {
     isVersionDialogOpen: state.isVersionDialogOpen,
     versionForm: createVersionForm({ isEditing, copy }),
     dropdownMenu: state.dropdownMenu,
+    isExportConfirmationOpen: state.exportConfirmation.isOpen,
+    exportConfirmationTitle: getExportConfirmationTitle(
+      state.exportConfirmation.exportType,
+      copy,
+    ),
+    exportConfirmationMessage:
+      copy.exportConfirmationMessage ??
+      "Review the build information before exporting.",
+    exportConfirmationFields: state.exportConfirmation.isOpen
+      ? buildExportConfirmationFields(
+          state.exportConfirmation,
+          copy,
+          platformDetailsCopy,
+        )
+      : [],
+    exportConfirmationIconFileId:
+      state.exportConfirmation.applicationInfo?.iconFileId,
+    exportConfirmationConfirmLabel: getExportConfirmationButtonLabel(
+      state.exportConfirmation.exportType,
+      copy,
+    ),
+    exportConfirmationCancelLabel: copy.cancelButton ?? "Cancel",
+    exportConfirmationKey: `${state.exportConfirmation.exportType ?? "none"}-${state.exportConfirmation.versionId ?? "none"}`,
     title: copy.title ?? "Versions",
     addButton: copy.addButton ?? "Add",
     noVersionsMessage: copy.noVersionsMessage ?? "No versions",

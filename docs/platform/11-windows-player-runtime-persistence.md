@@ -79,11 +79,12 @@ Required behavior:
 The reusable Windows template currently uses `vn.routevn.shell` for every
 export, so Windows exports share this database path until per-game identifier
 stamping is implemented. This temporary limitation is specific to the Windows
-packaging path. The macOS exporter already stamps the stable
-`projectInfo.nativeApplicationIdentifier` and the macOS shell applies it to
-Tauri's runtime configuration before the SQL plugin initializes. The later
-Windows packaging change must use the same field; it must not add a namespace
-inside `runtime.db` as a substitute.
+packaging path. The macOS exporter stamps the editable
+`platformDetails.macos.applicationIdentifier`, and the macOS shell applies it
+to Tauri's runtime configuration before the SQL plugin initializes. Users must
+keep that value stable across builds that should share saves. The later Windows
+packaging change must use a per-game platform identifier; it must not add a
+namespace inside `runtime.db` as a substitute.
 
 For the macOS export and startup contract, see
 `13-macos-player-export.md`.

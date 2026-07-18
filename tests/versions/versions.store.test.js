@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  closeExportConfirmation,
+  openExportConfirmation,
+  selectExportConfirmation,
   selectViewData,
   setSelectedItemId,
   setPlatform,
@@ -64,6 +67,97 @@ describe("versions store mobile view data", () => {
 });
 
 describe("versions store export actions", () => {
+  it("builds read-only Web export confirmation fields", () => {
+    const state = createInitialState();
+
+    openExportConfirmation(
+      { state },
+      {
+        exportType: "web",
+        platform: "web",
+        versionId: "version-1",
+        versionName: "Version 1",
+        applicationInfo: {
+          applicationName: "Web Edition",
+          iconFileId: "web-icon",
+          shortName: "Web",
+          description: "Browser release",
+          themeColorId: "color-theme",
+          backgroundColorId: "color-background",
+        },
+        themeColor: "Accent (#112233)",
+        backgroundColor: "Dark (#000000)",
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.isExportConfirmationOpen).toBe(true);
+    expect(viewData.exportConfirmationTitle).toBe("Confirm Web Export");
+    expect(viewData.exportConfirmationIconFileId).toBe("web-icon");
+    expect(viewData.exportConfirmationFields).toEqual(
+      expect.arrayContaining([
+        { type: "text", label: "Release Version", value: "Version 1" },
+        { type: "text", label: "Application Name", value: "Web Edition" },
+        { type: "text", label: "Theme Color", value: "Accent (#112233)" },
+        {
+          type: "text",
+          label: "Background Color",
+          value: "Dark (#000000)",
+        },
+      ]),
+    );
+    expect(selectExportConfirmation({ state })).toMatchObject({
+      exportType: "web",
+      platform: "web",
+      versionId: "version-1",
+    });
+
+    closeExportConfirmation({ state });
+
+    expect(selectViewData({ state }).exportConfirmationFields).toEqual([]);
+  });
+
+  it("shows macOS-specific metadata in the export confirmation", () => {
+    const state = createInitialState();
+
+    openExportConfirmation(
+      { state },
+      {
+        exportType: "macos-application",
+        platform: "macos",
+        versionId: "version-1",
+        versionName: "Version 1",
+        applicationInfo: {
+          applicationName: "Mac Edition",
+          applicationIdentifier: "com.example.mac-edition",
+          publisher: "Example Studio",
+          description: "Mac release",
+          copyright: "Copyright © 2026 Example Studio",
+          category: "public.app-category.games",
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.exportConfirmationTitle).toBe("Confirm macOS App Export");
+    expect(viewData.exportConfirmationFields).toEqual(
+      expect.arrayContaining([
+        {
+          type: "text",
+          label: "Bundle Identifier",
+          value: "com.example.mac-edition",
+        },
+        {
+          type: "text",
+          label: "Application Category",
+          value: "public.app-category.games",
+        },
+      ]),
+    );
+  });
+
   it("shows Windows EXE export in Tauri without hiding it behind resource preflight", () => {
     const state = createInitialState();
 

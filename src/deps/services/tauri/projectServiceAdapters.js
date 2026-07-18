@@ -128,18 +128,22 @@ const normalizeWindowsExecutableVersion = (value) => {
 const normalizeWindowsExecutableMetadata = ({
   title,
   version,
+  applicationIdentifier,
   publisher,
+  description,
+  copyright,
   iconFileId,
 }) => {
-  const normalizedPublisher = publisher?.trim?.();
-
   return {
     title: requireWindowsExecutableMetadataValue({
       value: title,
       label: "Project title",
     }),
     version: normalizeWindowsExecutableVersion(version),
-    publisher: normalizedPublisher ? normalizedPublisher : null,
+    applicationIdentifier: applicationIdentifier?.trim() || null,
+    publisher: publisher?.trim() || null,
+    description: description?.trim() || null,
+    copyright: copyright?.trim() || null,
     iconFileId: requireWindowsExecutableMetadataValue({
       value: iconFileId,
       label: "Project icon",
@@ -152,6 +156,10 @@ const normalizeMacosApplicationMetadata = ({
   shortVersion,
   bundleVersion,
   applicationIdentifier,
+  publisher,
+  description,
+  copyright,
+  category,
   iconFileId,
 }) => {
   const normalizedTitle = title?.trim?.();
@@ -179,6 +187,10 @@ const normalizeMacosApplicationMetadata = ({
     applicationIdentifier: requireNativeApplicationIdentifier(
       applicationIdentifier,
     ),
+    publisher: publisher?.trim() || null,
+    description: description?.trim() || null,
+    copyright: copyright?.trim() || null,
+    category: category?.trim() || null,
     iconFileId: normalizedIconFileId,
   };
 };
@@ -760,6 +772,8 @@ export const createTauriProjectServiceAdapters = ({
       instructionsJson: JSON.stringify(projectData),
       indexHtml: staticFiles.indexHtml || null,
       mainJs: staticFiles.mainJs || null,
+      manifestJson: staticFiles.manifestJson || null,
+      webIconFileId: staticFiles.webIconFileId || null,
       usePartFile: options.usePartFile ?? true,
     });
     logExportSizeStats(stats);
@@ -773,7 +787,10 @@ export const createTauriProjectServiceAdapters = ({
     outputPath,
     title,
     version,
+    applicationIdentifier,
     publisher,
+    description,
+    copyright,
     iconFileId,
     options = {},
     getCurrentReference,
@@ -781,7 +798,10 @@ export const createTauriProjectServiceAdapters = ({
     const metadata = normalizeWindowsExecutableMetadata({
       title,
       version,
+      applicationIdentifier,
       publisher,
+      description,
+      copyright,
       iconFileId,
     });
     const iconPng = await readWindowsExecutableIconPng({
@@ -800,7 +820,10 @@ export const createTauriProjectServiceAdapters = ({
       instructionsJson: JSON.stringify(projectData),
       title: metadata.title,
       version: metadata.version,
+      applicationIdentifier: metadata.applicationIdentifier,
       publisher: metadata.publisher,
+      description: metadata.description,
+      copyright: metadata.copyright,
       iconPng,
     });
 
@@ -814,7 +837,10 @@ export const createTauriProjectServiceAdapters = ({
     outputPath,
     title,
     version,
+    applicationIdentifier,
     publisher,
+    description,
+    copyright,
     iconFileId,
     options = {},
     getCurrentReference,
@@ -822,7 +848,10 @@ export const createTauriProjectServiceAdapters = ({
     const metadata = normalizeWindowsExecutableMetadata({
       title,
       version,
+      applicationIdentifier,
       publisher,
+      description,
+      copyright,
       iconFileId,
     });
     const iconPng = await readWindowsExecutableIconPng({
@@ -842,7 +871,10 @@ export const createTauriProjectServiceAdapters = ({
       instructionsJson: JSON.stringify(projectData),
       title: metadata.title,
       version: metadata.version,
+      applicationIdentifier: metadata.applicationIdentifier,
       publisher: metadata.publisher,
+      description: metadata.description,
+      copyright: metadata.copyright,
       iconPng,
       makensisPath: options.makensisPath || null,
     });
@@ -856,6 +888,10 @@ export const createTauriProjectServiceAdapters = ({
     shortVersion,
     bundleVersion,
     applicationIdentifier,
+    publisher,
+    description,
+    copyright,
+    category,
     iconFileId,
     options = {},
     getCurrentReference,
@@ -865,6 +901,10 @@ export const createTauriProjectServiceAdapters = ({
       shortVersion,
       bundleVersion,
       applicationIdentifier,
+      publisher,
+      description,
+      copyright,
+      category,
       iconFileId,
     });
     const iconPng = await readMacosApplicationIconBytes({
@@ -885,6 +925,10 @@ export const createTauriProjectServiceAdapters = ({
       shortVersion: metadata.shortVersion,
       bundleVersion: metadata.bundleVersion,
       applicationIdentifier: metadata.applicationIdentifier,
+      publisher: metadata.publisher,
+      description: metadata.description,
+      copyright: metadata.copyright,
+      category: metadata.category,
       iconPng,
     });
     logExportSizeStats(result?.stats);
@@ -1057,6 +1101,9 @@ export const createTauriProjectServiceAdapters = ({
         reference,
         safeFileId,
       );
+      if (!(await exists(filePath))) {
+        throw new Error(`File not found: ${safeFileId}`);
+      }
       const mediaUrl = getMediaServerVideoUrl({
         projectMediaOrigin,
         filePath,
@@ -1119,6 +1166,8 @@ export const createTauriProjectServiceAdapters = ({
         if (staticFiles.indexHtml)
           zip.file("index.html", staticFiles.indexHtml);
         if (staticFiles.mainJs) zip.file("main.js", staticFiles.mainJs);
+        if (staticFiles.manifestJson)
+          zip.file("manifest.webmanifest", staticFiles.manifestJson);
 
         const zipBlob = await zip.generateAsync({
           type: "uint8array",

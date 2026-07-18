@@ -58,6 +58,10 @@ pub async fn export_macos_application(
     short_version: String,
     bundle_version: String,
     application_identifier: String,
+    publisher: Option<String>,
+    description: Option<String>,
+    copyright: Option<String>,
+    category: Option<String>,
     icon_png: Vec<u8>,
 ) -> Result<ExportMacosApplicationResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
@@ -70,6 +74,10 @@ pub async fn export_macos_application(
             short_version,
             bundle_version,
             application_identifier,
+            publisher,
+            description,
+            copyright,
+            category,
             icon_png,
         )
     })
@@ -88,6 +96,10 @@ fn export_macos_application_sync(
     _short_version: String,
     _bundle_version: String,
     _application_identifier: String,
+    _publisher: Option<String>,
+    _description: Option<String>,
+    _copyright: Option<String>,
+    _category: Option<String>,
     _icon_png: Vec<u8>,
 ) -> Result<ExportMacosApplicationResult, String> {
     Err(format!(
@@ -117,6 +129,10 @@ mod macos {
         short_version: String,
         bundle_version: String,
         application_identifier: String,
+        publisher: Option<String>,
+        description: Option<String>,
+        copyright: Option<String>,
+        category: Option<String>,
     }
 
     pub(super) fn export_macos_application_sync(
@@ -128,6 +144,10 @@ mod macos {
         short_version: String,
         bundle_version: String,
         application_identifier: String,
+        publisher: Option<String>,
+        description: Option<String>,
+        copyright: Option<String>,
+        category: Option<String>,
         icon_png: Vec<u8>,
     ) -> Result<ExportMacosApplicationResult, String> {
         let metadata = MacosApplicationMetadata {
@@ -135,6 +155,10 @@ mod macos {
             short_version,
             bundle_version,
             application_identifier,
+            publisher,
+            description,
+            copyright,
+            category,
         };
         validate_metadata(&metadata)?;
         ensure_required_tools()?;
@@ -286,6 +310,18 @@ mod macos {
         }
         if !is_numeric_version(&metadata.bundle_version, 1) {
             return Err("The macOS bundle version must be a positive integer.".to_string());
+        }
+        if metadata
+            .category
+            .as_deref()
+            .map(str::trim)
+            .is_some_and(|category| {
+                !category.is_empty() && !category.starts_with("public.app-category.")
+            })
+        {
+            return Err(
+                "The macOS application category must start with public.app-category.".to_string(),
+            );
         }
         Ok(())
     }
@@ -464,8 +500,40 @@ mod macos {
             "CFBundleIconFile".to_string(),
             plist::Value::String(ICON_RESOURCE_NAME.to_string()),
         );
+        stamp_optional_info_value(
+            dictionary,
+            "RouteVNPublisher",
+            metadata.publisher.as_deref(),
+        );
+        stamp_optional_info_value(
+            dictionary,
+            "CFBundleGetInfoString",
+            metadata.description.as_deref(),
+        );
+        stamp_optional_info_value(
+            dictionary,
+            "NSHumanReadableCopyright",
+            metadata.copyright.as_deref(),
+        );
+        stamp_optional_info_value(
+            dictionary,
+            "LSApplicationCategoryType",
+            metadata.category.as_deref(),
+        );
         info.to_file_xml(&info_path)
             .map_err(|error| format!("Failed to write the macOS player Info.plist: {error}"))
+    }
+
+    fn stamp_optional_info_value(
+        dictionary: &mut plist::Dictionary,
+        key: &str,
+        value: Option<&str>,
+    ) {
+        if let Some(value) = value.map(str::trim).filter(|value| !value.is_empty()) {
+            dictionary.insert(key.to_string(), plist::Value::String(value.to_string()));
+        } else {
+            dictionary.remove(key);
+        }
     }
 
     fn stamp_icon(
@@ -771,6 +839,21 @@ mod macos {
                 return Err(format!("The exported macOS player has an invalid {key}."));
             }
         }
+        let optional_expected = [
+            ("RouteVNPublisher", metadata.publisher.as_deref()),
+            ("CFBundleGetInfoString", metadata.description.as_deref()),
+            ("NSHumanReadableCopyright", metadata.copyright.as_deref()),
+            ("LSApplicationCategoryType", metadata.category.as_deref()),
+        ];
+        for (key, expected_value) in optional_expected {
+            let expected_value = expected_value
+                .map(str::trim)
+                .filter(|value| !value.is_empty());
+            let value = dictionary.get(key).and_then(plist::Value::as_string);
+            if value != expected_value {
+                return Err(format!("The exported macOS player has an invalid {key}."));
+            }
+        }
         Ok(())
     }
 
@@ -935,6 +1018,10 @@ mod macos {
                     short_version: "1.0.7".to_string(),
                     bundle_version: "8".to_string(),
                     application_identifier: "vn.routevn.player.abc".to_string(),
+                    publisher: Some("Studio".to_string()),
+                    description: Some("A visual novel".to_string()),
+                    copyright: Some("Copyright 2026 Studio".to_string()),
+                    category: Some("public.app-category.games".to_string()),
                 })
                 .is_ok()
             );
@@ -982,6 +1069,10 @@ mod macos {
                 "1.0.7".to_string(),
                 "8".to_string(),
                 application_identifier.clone(),
+                Some("Acceptance Studio".to_string()),
+                Some("Acceptance description".to_string()),
+                Some("Copyright 2026 Acceptance Studio".to_string()),
+                Some("public.app-category.games".to_string()),
                 icon_png,
             )
             .unwrap();
@@ -1009,6 +1100,31 @@ mod macos {
                 .and_then(plist::Value::as_string)
                 .unwrap();
             assert_eq!(identifier, application_identifier);
+            let dictionary = info.as_dictionary().unwrap();
+            assert_eq!(
+                dictionary
+                    .get("RouteVNPublisher")
+                    .and_then(plist::Value::as_string),
+                Some("Acceptance Studio")
+            );
+            assert_eq!(
+                dictionary
+                    .get("CFBundleGetInfoString")
+                    .and_then(plist::Value::as_string),
+                Some("Acceptance description")
+            );
+            assert_eq!(
+                dictionary
+                    .get("NSHumanReadableCopyright")
+                    .and_then(plist::Value::as_string),
+                Some("Copyright 2026 Acceptance Studio")
+            );
+            assert_eq!(
+                dictionary
+                    .get("LSApplicationCategoryType")
+                    .and_then(plist::Value::as_string),
+                Some("public.app-category.games")
+            );
             let mut launcher = std::process::Command::new("/usr/bin/open")
                 .args(["-W", "-n"])
                 .arg(&application_path)

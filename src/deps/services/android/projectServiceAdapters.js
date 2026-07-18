@@ -476,6 +476,15 @@ const createDistributionZipBytes = async ({
   zip.file("package.bin", bundle);
   if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
   if (staticFiles.mainJs) zip.file("main.js", staticFiles.mainJs);
+  if (staticFiles.manifestJson)
+    zip.file("manifest.webmanifest", staticFiles.manifestJson);
+  if (staticFiles.webIconFileId) {
+    const iconAsset = assets[staticFiles.webIconFileId];
+    if (!iconAsset?.buffer) {
+      throw new Error("The Web application icon could not be exported.");
+    }
+    zip.file(staticFiles.webIconFileName, iconAsset.buffer);
+  }
   const zipBytes = await zip.generateAsync({
     type: "uint8array",
     compression: "DEFLATE",
@@ -521,6 +530,12 @@ const createNativeDistributionZipStreamedToPath = async ({
   }
   if (staticFiles.mainJs) {
     payload.mainJs = staticFiles.mainJs;
+  }
+  if (staticFiles.manifestJson) {
+    payload.manifestJson = staticFiles.manifestJson;
+  }
+  if (staticFiles.webIconFileId) {
+    payload.webIconFileId = staticFiles.webIconFileId;
   }
 
   const result = callAndroidBridge(
@@ -749,6 +764,8 @@ export const createAndroidProjectServiceAdapters = ({
       zip.file("package.bin", bundle);
       if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
       if (staticFiles.mainJs) zip.file("main.js", staticFiles.mainJs);
+      if (staticFiles.manifestJson)
+        zip.file("manifest.webmanifest", staticFiles.manifestJson);
       const zipBytes = await zip.generateAsync({
         type: "uint8array",
         compression: "DEFLATE",

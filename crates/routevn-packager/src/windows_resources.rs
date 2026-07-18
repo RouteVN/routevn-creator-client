@@ -39,7 +39,10 @@ const WINDOWS_COMMON_CONTROLS_MANIFEST: &[u8] = br#"<?xml version="1.0" encoding
 pub struct WindowsResourceMetadata<'a> {
     pub title: &'a str,
     pub version: &'a str,
+    pub application_identifier: Option<&'a str>,
     pub publisher: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub copyright: Option<&'a str>,
     pub original_filename: &'a str,
 }
 
@@ -632,10 +635,20 @@ fn create_group_icon_resource(
 fn create_version_info(path: &Path, metadata: WindowsResourceMetadata<'_>) -> Result<Vec<u8>> {
     let version_parts = parse_windows_version_parts(path, metadata.version)?;
     let fixed = create_fixed_file_info(version_parts);
+    let description = metadata
+        .description
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(metadata.title);
+    let internal_name = metadata
+        .application_identifier
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(metadata.title);
     let mut strings = vec![
-        version_string_block(path, "FileDescription", metadata.title)?,
+        version_string_block(path, "FileDescription", description)?,
         version_string_block(path, "FileVersion", metadata.version)?,
-        version_string_block(path, "InternalName", metadata.title)?,
+        version_string_block(path, "InternalName", internal_name)?,
         version_string_block(path, "OriginalFilename", metadata.original_filename)?,
         version_string_block(path, "ProductName", metadata.title)?,
         version_string_block(path, "ProductVersion", metadata.version)?,
@@ -647,6 +660,13 @@ fn create_version_info(path: &Path, metadata: WindowsResourceMetadata<'_>) -> Re
         .filter(|value| !value.is_empty())
     {
         strings.push(version_string_block(path, "CompanyName", publisher)?);
+    }
+    if let Some(copyright) = metadata
+        .copyright
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        strings.push(version_string_block(path, "LegalCopyright", copyright)?);
     }
 
     let string_table = version_block(path, "040904B0", 1, 0, &[], &[concat_blocks(strings)])?;
@@ -889,7 +909,10 @@ mod tests {
             metadata: WindowsResourceMetadata {
                 title: "My Game",
                 version: "1.2.3",
+                application_identifier: Some("com.example.my-game"),
                 publisher: Some("Studio"),
+                description: Some("A visual novel"),
+                copyright: Some("Copyright 2026 Studio"),
                 original_filename: "My Game.exe",
             },
             icon_png: PNG_64,
@@ -926,6 +949,18 @@ mod tests {
                 .windows(title_marker.len())
                 .any(|window| window == title_marker.as_slice())
         );
+        for value in [
+            "com.example.my-game",
+            "A visual novel",
+            "Copyright 2026 Studio",
+        ] {
+            let marker = utf16le(value);
+            assert!(
+                stamped
+                    .windows(marker.len())
+                    .any(|window| window == marker.as_slice())
+            );
+        }
     }
 
     fn minimal_pe() -> Vec<u8> {
