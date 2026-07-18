@@ -256,6 +256,45 @@ describe("platformDetails handlers", () => {
     });
   });
 
+  it("clears optional Web colors when the form omits their values", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "edit",
+      platform: "web",
+    });
+    deps.store.selectPlatformEditIconFileId.mockReturnValue("web-icon-1");
+    deps.projectService.updateCurrentPlatformDetails.mockImplementation(
+      async (_platform, patch) => patch,
+    );
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Web Project",
+            shortName: "Project",
+            description: "Web description",
+            themeColorId: undefined,
+            backgroundColorId: undefined,
+          },
+        },
+      },
+    });
+
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("web", {
+      applicationName: "Web Project",
+      iconFileId: "web-icon-1",
+      shortName: "Project",
+      description: "Web description",
+      themeColorId: "",
+      backgroundColorId: "",
+    });
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
   it("cancels a platform draft without creating it", async () => {
     const deps = createDeps();
 

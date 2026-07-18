@@ -74,9 +74,10 @@ template:
       - $if isPlatformEditDialogOpen:
           - rtgl-view slot=content:
               - rtgl-form#platformEditForm key=${platformDialogKey} :defaultValues=${platformEditDefaultValues} :form=${platformEditForm} w=f:
-                  - $if platformEditIconFileId:
-                      - rvn-file-image#platformEditDialogIcon fileId=${platformEditIconFileId} w=120 h=120 slot=platform-application-icon-edit bw=xs bc=bo br=md cur=pointer: null
-                    $else:
-                      - rtgl-view#platformEditDialogIcon slot=platform-application-icon-edit w=120 h=120 ah=c av=c bw=xs bc=bo br=md cur=pointer:
-                          - rtgl-text c=mu-fg ta=c: ${clickToUploadLabel}
+                  - 'button#platformEditDialogIcon type=button slot=platform-application-icon-edit aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="width: 120px; height: 120px; padding: 0; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;"':
+                      - $if platformEditIconFileId:
+                          - rvn-file-image fileId=${platformEditIconFileId} w=120 h=120 bw=xs bc=bo br=md: null
+                        $else:
+                          - rtgl-view w=120 h=120 ah=c av=c bw=xs bc=bo br=md:
+                              - rtgl-text c=mu-fg ta=c: ${clickToUploadLabel}
   - rvn-square-image-crop-dialog#platformEditIconCropDialog :open=${isPlatformEditIconCropDialogOpen} :file=${platformEditIconCropFile}: null
