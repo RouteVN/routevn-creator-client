@@ -3,6 +3,8 @@ const EQUALITY_OPERATOR_OPTIONS = [
   { value: "neq", label: "Does Not Equal" },
 ];
 
+const MEMBERSHIP_OPERATOR_OPTIONS = [{ value: "in", label: "One Of" }];
+
 const NUMBER_ORDERING_OPERATOR_OPTIONS = [
   { value: "gt", label: "Greater Than" },
   { value: "gte", label: "Greater Than or Equal" },
@@ -12,7 +14,13 @@ const NUMBER_ORDERING_OPERATOR_OPTIONS = [
 
 const CONDITION_OPERATOR_OPTIONS = [
   ...EQUALITY_OPERATOR_OPTIONS,
+  ...MEMBERSHIP_OPERATOR_OPTIONS,
   ...NUMBER_ORDERING_OPERATOR_OPTIONS,
+];
+
+const BASE_OPERATOR_OPTIONS = [
+  ...EQUALITY_OPERATOR_OPTIONS,
+  ...MEMBERSHIP_OPERATOR_OPTIONS,
 ];
 
 export const CONDITION_OPERATOR_LABELS = Object.fromEntries(
@@ -22,7 +30,7 @@ export const CONDITION_OPERATOR_LABELS = Object.fromEntries(
 export const getConditionOperatorOptions = (variableType) => {
   return variableType === "number"
     ? CONDITION_OPERATOR_OPTIONS
-    : EQUALITY_OPERATOR_OPTIONS;
+    : BASE_OPERATOR_OPTIONS;
 };
 
 export const isConditionOperator = (operator) => {

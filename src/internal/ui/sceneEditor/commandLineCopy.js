@@ -2,6 +2,7 @@ import { formatI18nCopy, selectI18nCopy } from "../i18nCopy.js";
 
 const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "A resource is required.": "resourceRequiredMessage",
+  "Add Value": "addValueButton",
   "Choose a control...": "chooseControlPlaceholder",
   "Choose a layout...": "chooseLayoutPlaceholder",
   "Choose a speaker...": "chooseSpeakerPlaceholder",

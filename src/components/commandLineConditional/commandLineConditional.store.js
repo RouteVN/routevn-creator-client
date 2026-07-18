@@ -55,6 +55,57 @@ const getVariableType = (variable) => {
   return (variable?.variableType || "string").toLowerCase();
 };
 
+const normalizeDraftComparisonValue = (value, variableType) => {
+  if (variableType === "number") {
+    if (value === undefined || value === null || value === "") {
+      return undefined;
+    }
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : undefined;
+  }
+
+  if (variableType === "boolean") {
+    if (value === true || value === "true") {
+      return true;
+    }
+
+    if (value === false || value === "false") {
+      return false;
+    }
+
+    return undefined;
+  }
+
+  return String(value ?? "");
+};
+
+const isComparisonDraftValid = ({ tempBranch, variableType, enumValues }) => {
+  const values = tempBranch.op === "in" ? tempBranch.value : [tempBranch.value];
+  if (!Array.isArray(values) || values.length === 0) {
+    return false;
+  }
+
+  const normalizedValues = values.map((value) =>
+    normalizeDraftComparisonValue(value, variableType),
+  );
+  if (normalizedValues.some((value) => value === undefined)) {
+    return false;
+  }
+
+  if (
+    tempBranch.op === "in" &&
+    new Set(normalizedValues).size !== normalizedValues.length
+  ) {
+    return false;
+  }
+
+  return (
+    enumValues.length === 0 ||
+    normalizedValues.every((value) => enumValues.includes(value))
+  );
+};
+
 const getSimpleCondition = (when = {}) => {
   if (!when || typeof when !== "object" || Array.isArray(when)) {
     return undefined;
@@ -74,6 +125,20 @@ const getSimpleCondition = (when = {}) => {
     return undefined;
   }
 
+  let value = operands[1];
+  if (operator === "in") {
+    const literal = toPlainObject(operands[1]);
+    if (
+      Object.keys(literal).length !== 1 ||
+      !Object.hasOwn(literal, "literal") ||
+      !Array.isArray(literal.literal)
+    ) {
+      return undefined;
+    }
+
+    value = literal.literal;
+  }
+
   const left = operands[0];
   const variablePath =
     left && typeof left === "object" && !Array.isArray(left)
@@ -89,11 +154,15 @@ const getSimpleCondition = (when = {}) => {
   return {
     variableId: variablePath.slice("variables.".length),
     op: operator,
-    value: operands[1],
+    value,
   };
 };
 
 const formatConditionValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(formatConditionValue).join(", ");
+  }
+
   if (typeof value === "string") {
     return value;
   }
@@ -135,6 +204,25 @@ const getBranchSummary = (branch, variablesData = {}, copy = {}) => {
 
 const hasBranchCondition = (branch) => {
   return Object.hasOwn(toPlainObject(branch), "when");
+};
+
+const getBranchDropdownMenuItems = (branches = [], branchId) => {
+  const conditionBranches = branches.filter(hasBranchCondition);
+  const branchIndex = conditionBranches.findIndex(
+    (branch) => branch.id === branchId,
+  );
+  const items = [];
+
+  if (branchIndex > 0) {
+    items.push({ label: "Move Up", type: "item", value: "move-up" });
+  }
+
+  if (branchIndex >= 0 && branchIndex < conditionBranches.length - 1) {
+    items.push({ label: "Move Down", type: "item", value: "move-down" });
+  }
+
+  items.push({ label: "Delete", type: "item", value: "delete" });
+  return items;
 };
 
 const getHiddenModes = (attrs = {}) => {
@@ -250,10 +338,40 @@ export const deleteBranch = ({ state }, { branchId } = {}) => {
   }
 };
 
+export const moveBranch = ({ state }, { branchId, direction } = {}) => {
+  const conditionBranchIndexes = state.branches
+    .map((branch, index) => (hasBranchCondition(branch) ? index : undefined))
+    .filter((index) => index !== undefined);
+  const branchIndex = state.branches.findIndex(
+    (branch) => branch.id === branchId && hasBranchCondition(branch),
+  );
+  const conditionBranchIndex = conditionBranchIndexes.indexOf(branchIndex);
+  const offset = direction === "up" ? -1 : direction === "down" ? 1 : 0;
+  const targetConditionBranchIndex = conditionBranchIndex + offset;
+
+  if (
+    conditionBranchIndex < 0 ||
+    offset === 0 ||
+    targetConditionBranchIndex < 0 ||
+    targetConditionBranchIndex >= conditionBranchIndexes.length
+  ) {
+    return;
+  }
+
+  const targetBranchIndex = conditionBranchIndexes[targetConditionBranchIndex];
+  const branch = state.branches[branchIndex];
+  state.branches[branchIndex] = state.branches[targetBranchIndex];
+  state.branches[targetBranchIndex] = branch;
+};
+
 export const showDropdownMenu = ({ state }, { position, branchId } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.position = position;
   state.dropdownMenu.branchId = branchId;
+  state.dropdownMenu.items = getBranchDropdownMenuItems(
+    state.branches,
+    branchId,
+  );
 };
 
 export const hideDropdownMenu = ({ state }, _payload = {}) => {
@@ -316,7 +434,17 @@ export const selectViewData = ({ state, props, i18n }) => {
   const operatorOptions = getConditionOperatorOptions(selectedType);
   const showValueField =
     state.tempBranch.conditionKind === "variable" &&
-    Boolean(state.tempBranch.variableId);
+    Boolean(state.tempBranch.variableId) &&
+    state.tempBranch.op !== "in";
+  const showOneOfValueFields =
+    state.tempBranch.conditionKind === "variable" &&
+    Boolean(state.tempBranch.variableId) &&
+    state.tempBranch.op === "in";
+  const oneOfValues = Array.isArray(state.tempBranch.value)
+    ? state.tempBranch.value
+    : [];
+  const oneOfRemoveButtonStyle =
+    oneOfValues.length === 1 ? "visibility: hidden;" : "";
   const isEditingUnsupportedCondition =
     state.tempBranch.conditionKind === "unsupported";
   const actionCount = countActions(state.tempBranch.actions);
@@ -324,6 +452,10 @@ export const selectViewData = ({ state, props, i18n }) => {
   const booleanOptions = [
     { value: "true", label: "true" },
     { value: "false", label: "false" },
+  ];
+  const booleanOneOfOptions = [
+    { value: true, label: "true" },
+    { value: false, label: "false" },
   ];
   const booleanValue =
     state.tempBranch.value === true
@@ -375,8 +507,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     (state.tempBranch.conditionKind === "variable" &&
       state.tempBranch.variableId &&
       isConditionOperatorAllowed(state.tempBranch.op, selectedType) &&
-      (!showEnumValueSelect ||
-        selectedEnumValues.includes(state.tempBranch.value)));
+      isComparisonDraftValid({
+        tempBranch: state.tempBranch,
+        variableType: selectedType,
+        enumValues: selectedEnumValues,
+      }));
 
   return {
     initiated: state.initiated,
@@ -392,9 +527,13 @@ export const selectViewData = ({ state, props, i18n }) => {
     variableOptions,
     operatorOptions: localizeCommandLineOptions(operatorOptions, copy),
     booleanOptions: localizeCommandLineOptions(booleanOptions, copy),
+    booleanOneOfOptions: localizeCommandLineOptions(booleanOneOfOptions, copy),
     enumValueOptions: buildVariableEnumOptions(selectedEnumValues),
     showEnumValueSelect,
     showValueField,
+    showOneOfValueFields,
+    oneOfValues,
+    oneOfRemoveButtonStyle,
     valueInputType: selectedType,
     branchActions: state.tempBranch.actions,
     branchActionsSummary:
@@ -417,6 +556,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     actionsLabel: localizeCommandLineText("Actions", copy),
     addBranchButton: localizeCommandLineText("+ Add Branch", copy),
+    addValueButton: localizeCommandLineText("Add Value", copy),
     addDefaultBranchButton: localizeCommandLineText(
       "+ Add Default Branch",
       copy,
@@ -425,6 +565,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     conditionLabel: localizeCommandLineText("Condition", copy),
     defaultBranchLabel: localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy),
     operatorLabel: localizeCommandLineText("Operator", copy),
+    removeValueButton: localizeCommandLineText("Remove Value", copy),
     saveButtonPrefix: localizeCommandLineText("Save", copy),
     submitButton: localizeCommandLineText("Submit", copy),
     unsupportedConditionLabel: localizeCommandLineText(

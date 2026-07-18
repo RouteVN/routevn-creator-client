@@ -43,6 +43,26 @@ refs:
     eventListeners:
       value-change:
         handler: handleEnumValueSelectChange
+  oneOfValueInput*:
+    eventListeners:
+      value-input:
+        handler: handleOneOfValueChange
+  oneOfBooleanSelect*:
+    eventListeners:
+      value-change:
+        handler: handleOneOfValueChange
+  oneOfEnumValueSelect*:
+    eventListeners:
+      value-change:
+        handler: handleOneOfValueChange
+  addOneOfValueButton:
+    eventListeners:
+      click:
+        handler: handleAddOneOfValueClick
+  removeOneOfValueButton*:
+    eventListeners:
+      click:
+        handler: handleRemoveOneOfValueClick
   branchActionsEditor:
     eventListeners:
       actions-change:
@@ -105,7 +125,7 @@ template:
                                   - rtgl-select#operatorSelect w=f :selectedValue=${tempBranch.op} :options=${operatorOptions}: null
                               - $if showValueField && valueInputType == 'number':
                                   - rtgl-text s=sm c=mu-fg mt=md: ${valueLabel}
-                                  - rtgl-input#valueInput type=number w=f placeholder="${valueNumberPlaceholder}" value=${tempBranch.value}: null
+                                  - rtgl-input-number#valueInput w=f placeholder="${valueNumberPlaceholder}" value=${tempBranch.value}: null
                               - $if showValueField && valueInputType == 'boolean':
                                   - rtgl-text s=sm c=mu-fg mt=md: ${valueLabel}
                                   - rtgl-select#booleanSelect w=f :selectedValue=${tempBranch.booleanValue} :options=${booleanOptions}: null
@@ -115,6 +135,25 @@ template:
                               - $if showValueField && valueInputType == 'string' && !showEnumValueSelect:
                                   - rtgl-text s=sm c=mu-fg mt=md: ${valueLabel}
                                   - rtgl-input#valueInput w=f placeholder="${valueTextPlaceholder}" value=${tempBranch.value}: null
+                              - $if showOneOfValueFields:
+                                  - rtgl-text s=sm c=mu-fg mt=md: ${valueLabel}
+                                  - rtgl-view g=sm w=f:
+                                      - $for oneOfValue, i in oneOfValues:
+                                          - rtgl-view d=h av=c g=sm w=f:
+                                              - $if valueInputType == 'number':
+                                                  - rtgl-view w=1fg:
+                                                      - rtgl-input-number#oneOfValueInput${i} data-index=${i} w=f placeholder="${valueNumberPlaceholder}" value=${oneOfValue}: null
+                                              - $if valueInputType == 'boolean':
+                                                  - rtgl-view w=1fg:
+                                                      - rtgl-select#oneOfBooleanSelect${i} data-index=${i} w=f :selectedValue=${oneOfValue} :options=${booleanOneOfOptions}: null
+                                              - $if showEnumValueSelect:
+                                                  - rtgl-view w=1fg:
+                                                      - rtgl-select#oneOfEnumValueSelect${i} data-index=${i} w=f :selectedValue=${oneOfValue} :options=${enumValueOptions} placeholder="${valueSelectPlaceholder}": null
+                                              - $if valueInputType == 'string' && !showEnumValueSelect:
+                                                  - rtgl-view w=1fg:
+                                                      - rtgl-input#oneOfValueInput${i} data-index=${i} w=f placeholder="${valueTextPlaceholder}" value=${oneOfValue}: null
+                                              - 'rtgl-button#removeOneOfValueButton${i} data-index=${i} sq s=sm v=gh pre=x ?disabled=${oneOfValues.length == 1} style="${oneOfRemoveButtonStyle}" title="${removeValueButton}" aria-label="${removeValueButton}"': null
+                                      - rtgl-button#addOneOfValueButton s=sm v=se pre=plus w=f: ${addValueButton}
                       - rtgl-view w=f h=1 bgc=mu mt=lg mb=sm: null
                   - rtgl-view g=md w=f:
                       - rtgl-text s=sm c=mu-fg: ${actionsLabel}

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  moveBranch,
   selectViewData,
   setBranches,
   setTempBranch,
   setVariablesData,
+  showDropdownMenu,
   updateBranch,
 } from "../../src/components/commandLineConditional/commandLineConditional.store.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -73,6 +75,7 @@ describe("commandLineConditional.store", () => {
     expect(viewData.operatorOptions.map((option) => option.value)).toEqual([
       "eq",
       "neq",
+      "in",
       "gt",
       "gte",
       "lt",
@@ -148,11 +151,81 @@ describe("commandLineConditional.store", () => {
     expect(viewData.operatorOptions.map((option) => option.value)).toEqual([
       "eq",
       "neq",
+      "in",
     ]);
     expect(viewData.canSaveBranch).toBe(true);
 
     setTempBranch({ state }, { op: "gt" });
 
+    expect(selectViewData({ state, i18n: EN_I18N }).canSaveBranch).toBe(false);
+  });
+
+  it("edits and summarizes one-of conditions with type-valid values", () => {
+    const state = createInitialState();
+
+    setVariablesData(
+      { state },
+      {
+        variables: {
+          items: {
+            mood: {
+              id: "mood",
+              name: "Mood",
+              type: "variable",
+              variableType: "string",
+              isEnum: true,
+              enumValues: ["happy", "neutral", "sad"],
+            },
+          },
+          tree: [{ id: "mood" }],
+        },
+      },
+    );
+    setBranches(
+      { state },
+      {
+        branches: [
+          {
+            id: "branch-mood",
+            when: {
+              in: [
+                { var: "variables.mood" },
+                { literal: ["happy", "neutral"] },
+              ],
+            },
+            actions: {},
+          },
+        ],
+      },
+    );
+    setTempBranch(
+      { state },
+      {
+        variableId: "mood",
+        op: "in",
+        value: ["happy", "neutral"],
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.branches[0].summary).toBe("Mood One Of happy, neutral");
+    expect(viewData.showValueField).toBe(false);
+    expect(viewData.showOneOfValueFields).toBe(true);
+    expect(viewData.oneOfValues).toEqual(["happy", "neutral"]);
+    expect(viewData.oneOfRemoveButtonStyle).toBe("");
+    expect(viewData.addValueButton).toBe("Add Value");
+    expect(viewData.canSaveBranch).toBe(true);
+
+    setTempBranch({ state }, { value: ["happy"] });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).oneOfRemoveButtonStyle,
+    ).toBe("visibility: hidden;");
+
+    setTempBranch({ state }, { value: ["happy", "happy"] });
+    expect(selectViewData({ state, i18n: EN_I18N }).canSaveBranch).toBe(false);
+
+    setTempBranch({ state }, { value: ["happy", "unknown"] });
     expect(selectViewData({ state, i18n: EN_I18N }).canSaveBranch).toBe(false);
   });
 
@@ -284,6 +357,72 @@ describe("commandLineConditional.store", () => {
           },
         },
       },
+    ]);
+  });
+
+  it("moves conditional branches and exposes only available move actions", () => {
+    const state = createInitialState();
+    const createConditionBranch = (id) => ({
+      id,
+      when: {
+        eq: [{ var: "variables.trust" }, id],
+      },
+      actions: {},
+    });
+
+    setBranches(
+      { state },
+      {
+        branches: [
+          createConditionBranch("branch-1"),
+          createConditionBranch("branch-2"),
+          createConditionBranch("branch-3"),
+          { id: "branch-default", actions: {} },
+        ],
+      },
+    );
+
+    showDropdownMenu(
+      { state },
+      { branchId: "branch-1", position: { x: 10, y: 20 } },
+    );
+    expect(state.dropdownMenu.items.map((item) => item.value)).toEqual([
+      "move-down",
+      "delete",
+    ]);
+
+    showDropdownMenu(
+      { state },
+      { branchId: "branch-2", position: { x: 10, y: 20 } },
+    );
+    expect(state.dropdownMenu.items.map((item) => item.value)).toEqual([
+      "move-up",
+      "move-down",
+      "delete",
+    ]);
+
+    moveBranch({ state }, { branchId: "branch-2", direction: "up" });
+    expect(state.branches.map((branch) => branch.id)).toEqual([
+      "branch-2",
+      "branch-1",
+      "branch-3",
+      "branch-default",
+    ]);
+
+    showDropdownMenu(
+      { state },
+      { branchId: "branch-default", position: { x: 10, y: 20 } },
+    );
+    expect(state.dropdownMenu.items.map((item) => item.value)).toEqual([
+      "delete",
+    ]);
+
+    moveBranch({ state }, { branchId: "branch-default", direction: "up" });
+    expect(state.branches.map((branch) => branch.id)).toEqual([
+      "branch-2",
+      "branch-1",
+      "branch-3",
+      "branch-default",
     ]);
   });
 });
