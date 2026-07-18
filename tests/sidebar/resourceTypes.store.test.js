@@ -66,14 +66,14 @@ describe("resource type navigation", () => {
     });
 
     expect(desktopViewData.items.map((item) => item.id)).toEqual([
-      "platformDetails",
       "versions",
+      "platformDetails",
       "webServer",
     ]);
     expect(
       mobileSidebarViewData.sections.flatMap((section) =>
         section.items.map((item) => item.id),
       ),
-    ).toEqual(["platformDetails", "versions"]);
+    ).toEqual(["versions", "platformDetails"]);
   });
 });

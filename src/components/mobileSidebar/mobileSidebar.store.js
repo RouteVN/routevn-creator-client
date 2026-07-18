@@ -92,16 +92,16 @@ const systemItems = [
 
 const releaseItems = [
   {
-    id: "platformDetails",
-    label: "Platform Details",
-    path: "/project/releases/platform-details",
-    icon: "info",
-  },
-  {
     id: "versions",
     label: "Versions",
     path: "/project/releases/versions",
     icon: "rocket",
+  },
+  {
+    id: "platformDetails",
+    label: "Platform Details",
+    path: "/project/releases/platform-details",
+    icon: "info",
   },
 ];
 
