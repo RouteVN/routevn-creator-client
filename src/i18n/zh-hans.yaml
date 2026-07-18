@@ -169,6 +169,7 @@ projectPage:
 appPage:
   assetsTab: "素材"
   buildingProjectState: "正在构建项目状态..."
+  discordPresenceMakingVisualNovel: "正在制作视觉小说"
   errorTitle: "错误"
   failedCheckUpdatesMessage: "无法检查更新：{message}"
   failedInstallUpdateMessage: "无法安装更新：{message}"

@@ -169,6 +169,7 @@ projectPage:
 appPage:
   assetsTab: "素材"
   buildingProjectState: "プロジェクト状態を構築しています..."
+  discordPresenceMakingVisualNovel: "ノベルゲームを制作中"
   errorTitle: "エラー"
   failedCheckUpdatesMessage: "アップデートを確認できませんでした: {message}"
   failedInstallUpdateMessage: "アップデートをインストールできませんでした: {message}"

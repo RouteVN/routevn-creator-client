@@ -169,6 +169,7 @@ projectPage:
 appPage:
   assetsTab: "Assets"
   buildingProjectState: "Building project state..."
+  discordPresenceMakingVisualNovel: "Making a visual novel"
   errorTitle: "Error"
   failedCheckUpdatesMessage: "Failed to check for updates: {message}"
   failedInstallUpdateMessage: "Failed to install update: {message}"

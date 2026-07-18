@@ -1,6 +1,15 @@
 #[cfg(debug_assertions)]
 use tauri::Manager;
 
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod discord_presence;
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+mod discord_presence {
+    #[tauri::command]
+    pub fn set_discord_presence_details(_details: String) -> Result<(), String> {
+        Err("Discord presence is unavailable on this platform.".to_string())
+    }
+}
 mod export_macos;
 mod export_windows;
 mod export_zip;
@@ -40,10 +49,15 @@ pub fn run() {
         }
     }
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .manage(project_media_server::ProjectMediaServerState::new())
         .manage(static_web_server::StaticWebServerState::new())
-        .register_uri_scheme_protocol("project-file", project_file_protocol::handle)
+        .register_uri_scheme_protocol("project-file", project_file_protocol::handle);
+
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    let builder = builder.manage(discord_presence::DiscordPresenceState::new());
+
+    builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
@@ -64,6 +78,7 @@ pub fn run() {
             linux_desktop_integration::install_linux_appimage_desktop_integration,
             linux_desktop_integration::restart_linux_appimage_from_desktop_integration,
             project_media_server::get_project_media_server_origin,
+            discord_presence::set_discord_presence_details,
             static_web_server::start_static_web_server,
             static_web_server::stop_static_web_server,
             static_web_server::list_static_web_servers,

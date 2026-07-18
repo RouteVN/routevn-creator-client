@@ -33,6 +33,16 @@ const normalizeRouteHistoryMode = (historyMode, fallback = "none") =>
 
 const selectAppCopy = (i18n = {}) => i18n.appPage ?? {};
 
+const syncDiscordPresenceDetails = ({ appService, i18n }) => {
+  void appService
+    .setDiscordPresenceDetails({
+      details: selectAppCopy(i18n).discordPresenceMakingVisualNovel,
+    })
+    .catch((error) => {
+      console.warn("Failed to update Discord presence details:", error);
+    });
+};
+
 const formatCopy = (template, values = {}) => {
   return String(template || "").replace(/\{([A-Za-z0-9_]+)\}/g, (match, key) =>
     values[key] === undefined ? match : String(values[key]),
@@ -525,6 +535,13 @@ const targetSequencePrefixes = new Set(
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
   const { appService, store, subject, uiConfig } = deps;
+  let cleanupDiscordPresenceLocaleSubscription = () => {};
+  if (appService.getPlatform() === "tauri") {
+    syncDiscordPresenceDetails(deps);
+    cleanupDiscordPresenceLocaleSubscription = deps.locale.subscribe(() =>
+      syncDiscordPresenceDetails(deps),
+    );
+  }
   const currentPath = appService.getPath();
   const initialPath = currentPath === "/" ? "/projects" : currentPath;
 
@@ -539,6 +556,7 @@ export const handleBeforeMount = (deps) => {
 
   return () => {
     cleanupSubscriptions();
+    cleanupDiscordPresenceLocaleSubscription();
   };
 };
 

@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/RouteVN/routevn-creator-client"
 homepage = "https://routevn.com"
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.97.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -37,6 +37,9 @@ routevn-exporter = { path = "../crates/routevn-exporter" }
 routevn-packager = { path = "../crates/routevn-packager" }
 tempfile = "3"
 plist = "=1.8.0"
+
+[target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]
+discord-rich-presence = "=1.1.0"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "=0.61.3", features = [
