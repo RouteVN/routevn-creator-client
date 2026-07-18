@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleConditionalOverrideAttributeFormAction,
   handleConditionalOverrideAttributeImageClick,
+  handleConditionalOverrideAttributeImageKeyDown,
   handleConditionalOverrideContextMenu,
+  handleConditionalOverrideDeleteClick,
   handleImageSelectorSubmit,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -41,12 +43,12 @@ const createDeps = ({ confirmed } = {}) => {
   };
 };
 
-const createPayload = () => ({
+const createPayload = (index = 0) => ({
   _event: {
     preventDefault: vi.fn(),
     clientX: 40,
     clientY: 60,
-    currentTarget: { dataset: { index: "0" } },
+    currentTarget: { dataset: { index: String(index) } },
   },
 });
 
@@ -71,7 +73,10 @@ describe("layoutEditPanel conditional overrides", () => {
       "bgc=bg br=md bw=xs bc=bo h-bc=ac cur=context-menu",
     );
     expect(conditionalBlock).not.toContain("h-bgc=");
-    expect(conditionalBlock).not.toContain("conditionalOverrideDelete");
+    expect(conditionalBlock).toContain(
+      "conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: ${deleteButton}",
+    );
+    expect(view).toContain("handler: handleConditionalOverrideDeleteClick");
     expect(conditionalBlock).toContain(
       "conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh w=f",
     );
@@ -127,6 +132,39 @@ describe("layoutEditPanel conditional overrides", () => {
     expect(deps.dispatchEvent).toHaveBeenCalledOnce();
   });
 
+  it("deletes the selected rule when predicates are duplicated", async () => {
+    const deps = createDeps({ confirmed: true });
+    const duplicatedPredicate = structuredClone(RULES[0].when);
+    const selectedRule = {
+      when: duplicatedPredicate,
+      set: { visible: true },
+    };
+    const remainingRule = {
+      when: structuredClone(duplicatedPredicate),
+      set: { opacity: 0.5 },
+    };
+    deps.values.conditionalOverrides = [selectedRule, remainingRule];
+
+    await handleConditionalOverrideContextMenu(deps, createPayload(0));
+
+    expect(deps.values.conditionalOverrides).toEqual([remainingRule]);
+    expect(deps.dispatchEvent).toHaveBeenCalledOnce();
+  });
+
+  it("deletes a condition through its explicit button", async () => {
+    const deps = createDeps({ confirmed: true });
+    const payload = createPayload(1);
+    payload._event.stopPropagation = vi.fn();
+
+    await handleConditionalOverrideDeleteClick(deps, payload);
+
+    expect(payload._event.preventDefault).toHaveBeenCalledOnce();
+    expect(payload._event.stopPropagation).toHaveBeenCalledOnce();
+    expect(deps.appService.showDropdownMenu).not.toHaveBeenCalled();
+    expect(deps.values.conditionalOverrides).toEqual([RULES[0]]);
+    expect(deps.dispatchEvent).toHaveBeenCalledOnce();
+  });
+
   it("opens the image browser and stores its selection in the attribute dialog", () => {
     const store = {
       selectConditionalOverrideAttributeDialog: vi.fn(() => ({
@@ -153,6 +191,30 @@ describe("layoutEditPanel conditional overrides", () => {
       store.setConditionalOverrideAttributeDialogImage,
     ).toHaveBeenCalledWith({ imageId: "image-after" });
     expect(store.closeImageSelectorDialog).toHaveBeenCalledOnce();
+  });
+
+  it("stops Enter before opening the attribute image browser", () => {
+    const store = {
+      selectConditionalOverrideAttributeDialog: vi.fn(() => ({
+        selectedImageId: "image-before",
+      })),
+      openImageSelectorDialog: vi.fn(),
+    };
+    const deps = { store, render: vi.fn() };
+    const event = {
+      key: "Enter",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    handleConditionalOverrideAttributeImageKeyDown(deps, { _event: event });
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
+    expect(store.openImageSelectorDialog).toHaveBeenCalledWith({
+      selectedImageId: "image-before",
+      source: "conditionalOverrideAttribute",
+    });
   });
 
   it("uses the particle texture image card", () => {

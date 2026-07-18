@@ -13,7 +13,9 @@ import {
 } from "../../internal/runtimeFields.js";
 import {
   buildConditionalOverrideSetUpdate,
+  createConditionalOverrideRuleLocator,
   deleteConditionalOverrideSetField,
+  findConditionalOverrideRuleIndex,
   getAvailableChildInteractionItems,
   getConditionalOverrideAttributeOptions,
 } from "./support/layoutEditPanelFeatures.js";
@@ -1657,16 +1659,38 @@ const getConditionalOverrideRules = (store) => {
   return Array.isArray(currentRules) ? [...currentRules] : [];
 };
 
-const getConditionalOverrideRuleIdentity = (rule) => ({
-  target: rule?.when?.target,
-  op: rule?.when?.op,
-  value: rule?.when?.value,
-});
+const confirmConditionalOverrideDelete = async (deps, ruleLocator) => {
+  const { appService, store } = deps;
+  const copy = selectCopy(deps);
+  const confirmed = await appService.showDialog({
+    title: copy.deleteConditionTitle ?? "Delete Condition?",
+    message:
+      copy.deleteConditionMessage ??
+      "Delete this condition? This cannot be undone.",
+    confirmText: copy.deleteButton ?? "Delete",
+    cancelText: copy.cancelButton ?? "Cancel",
+  });
+  if (!confirmed) {
+    return;
+  }
 
-const hasConditionalOverrideRuleIdentity = (rule, identity) =>
-  rule?.when?.target === identity.target &&
-  rule?.when?.op === identity.op &&
-  Object.is(rule?.when?.value, identity.value);
+  const currentRules = getConditionalOverrideRules(store);
+  const matchingIndex = findConditionalOverrideRuleIndex({
+    rules: currentRules,
+    locator: ruleLocator,
+  });
+  if (!Number.isInteger(matchingIndex)) {
+    return;
+  }
+
+  const nextRules = currentRules.filter(
+    (_rule, ruleIndex) => ruleIndex !== matchingIndex,
+  );
+  applyPanelValueUpdate(deps, {
+    name: "conditionalOverrides",
+    value: nextRules.length > 0 ? nextRules : undefined,
+  });
+};
 
 export const handleConditionalOverrideConditionClick = (deps, payload) => {
   const { render, store } = deps;
@@ -1707,7 +1731,7 @@ export const handleConditionalOverrideContextMenu = async (deps, payload) => {
     return;
   }
 
-  const ruleIdentity = getConditionalOverrideRuleIdentity(rules[index]);
+  const ruleLocator = createConditionalOverrideRuleLocator({ rules, index });
 
   const result = await appService.showDropdownMenu({
     items: [
@@ -1725,35 +1749,23 @@ export const handleConditionalOverrideContextMenu = async (deps, payload) => {
     return;
   }
 
-  const confirmed = await appService.showDialog({
-    title: copy.deleteConditionTitle ?? "Delete Condition?",
-    message:
-      copy.deleteConditionMessage ??
-      "Delete this condition? This cannot be undone.",
-    confirmText: copy.deleteButton ?? "Delete",
-    cancelText: copy.cancelButton ?? "Cancel",
-  });
-  if (!confirmed) {
+  await confirmConditionalOverrideDelete(deps, ruleLocator);
+};
+
+export const handleConditionalOverrideDeleteClick = async (deps, payload) => {
+  const { store } = deps;
+  const event = payload._event;
+  event.preventDefault();
+  event.stopPropagation();
+
+  const index = Number.parseInt(event.currentTarget.dataset.index, 10);
+  const rules = getConditionalOverrideRules(store);
+  if (!Number.isInteger(index) || index < 0 || index >= rules.length) {
     return;
   }
 
-  const currentRules = getConditionalOverrideRules(store);
-  const matchingIndexes = currentRules.flatMap((rule, ruleIndex) =>
-    hasConditionalOverrideRuleIdentity(rule, ruleIdentity) ? [ruleIndex] : [],
-  );
-
-  if (matchingIndexes.length !== 1) {
-    return;
-  }
-
-  const matchingIndex = matchingIndexes[0];
-  const nextRules = currentRules.filter(
-    (_rule, ruleIndex) => ruleIndex !== matchingIndex,
-  );
-  applyPanelValueUpdate(deps, {
-    name: "conditionalOverrides",
-    value: nextRules.length > 0 ? nextRules : undefined,
-  });
+  const ruleLocator = createConditionalOverrideRuleLocator({ rules, index });
+  await confirmConditionalOverrideDelete(deps, ruleLocator);
 };
 
 export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
@@ -1833,6 +1845,7 @@ export const handleConditionalOverrideAttributeImageKeyDown = (
   }
 
   payload._event.preventDefault();
+  payload._event.stopPropagation();
   handleConditionalOverrideAttributeImageClick(deps);
 };
 

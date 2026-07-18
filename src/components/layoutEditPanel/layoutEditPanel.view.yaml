@@ -139,6 +139,10 @@ refs:
     eventListeners:
       contextmenu:
         handler: handleConditionalOverrideContextMenu
+  conditionalOverrideDelete*:
+    eventListeners:
+      click:
+        handler: handleConditionalOverrideDeleteClick
   conditionalOverrideAddAttribute*:
     eventListeners:
       click:
@@ -348,6 +352,7 @@ template:
                                   - rtgl-view d=h g=sm av=c w=f:
                                       - rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
                                           - rtgl-text s=sm: ${conditionalItem.summary}
+                                      - rtgl-button#conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: ${deleteButton}
                                   - $if conditionalItem.attributeItems.length > 0:
                                       - $for attributeItem, m in conditionalItem.attributeItems:
                                           - rtgl-view key=${attributeItem.viewKey} d=h g=sm av=c w=f:

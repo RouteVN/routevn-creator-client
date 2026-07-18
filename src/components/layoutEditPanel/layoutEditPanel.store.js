@@ -1827,6 +1827,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     addAttributeButton: copy.addAttributeButton ?? "Add Attribute",
     cancelButton: copy.cancelButton ?? "Cancel",
+    deleteButton: copy.deleteButton ?? "Delete",
     imageLabel: copy.imageLabel ?? "Image",
     noAttributesYet: copy.noAttributesYet ?? "No attributes yet",
     noPreviewLabel: copy.noPreviewLabel ?? "No preview",

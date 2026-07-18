@@ -214,6 +214,43 @@ export const normalizeConditionalOverrideRules = (value) => {
     }));
 };
 
+const createConditionalOverrideRuleSignature = (rule) =>
+  JSON.stringify(normalizeConditionalOverrideRules([rule])[0]);
+
+export const createConditionalOverrideRuleLocator = ({ rules, index }) => {
+  const reference = rules[index];
+  const signature = createConditionalOverrideRuleSignature(reference);
+  const occurrence = rules
+    .slice(0, index)
+    .filter(
+      (candidate) =>
+        createConditionalOverrideRuleSignature(candidate) === signature,
+    ).length;
+
+  return { index, occurrence, reference, signature };
+};
+
+export const findConditionalOverrideRuleIndex = ({ rules, locator }) => {
+  const referenceIndex = rules.indexOf(locator.reference);
+  if (referenceIndex >= 0) {
+    return referenceIndex;
+  }
+
+  if (
+    createConditionalOverrideRuleSignature(rules[locator.index]) ===
+    locator.signature
+  ) {
+    return locator.index;
+  }
+
+  const matchingIndexes = rules.flatMap((rule, ruleIndex) =>
+    createConditionalOverrideRuleSignature(rule) === locator.signature
+      ? [ruleIndex]
+      : [],
+  );
+  return matchingIndexes[locator.occurrence];
+};
+
 export const getConditionalOverrideSummary = (
   rule,
   variablesData = {},
