@@ -235,9 +235,9 @@
       "Rp37wKfpY5os": {
         "id": "Rp37wKfpY5os",
         "type": "font",
-        "mimeType": "font/ttf",
-        "size": 569208,
-        "sha256": "b85c38ecea8a7cfb39c24e395a4007474fa5a4fc864f6ee33309eb4948d232d5"
+        "mimeType": "font/woff2",
+        "size": 604616,
+        "sha256": "7b5e95e5312ee3bfe3ad3410ade5d2c71e69ce25055810c17e010ee320557e7d"
       },
       "Yecv5u5nK9YT": {
         "id": "Yecv5u5nK9YT",
@@ -922,8 +922,8 @@
       "7m7oC7i8JTEE": {
         "id": "7m7oC7i8JTEE",
         "type": "font",
-        "name": "Noto Sans",
-        "fontFamily": "Noto Sans",
+        "name": "Noto Sans SC",
+        "fontFamily": "Noto Sans SC",
         "fileId": "Rp37wKfpY5os"
       }
     },
