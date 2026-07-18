@@ -765,6 +765,20 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             if let manifestJson = optionalString(payload, key: "manifestJson") {
                 try writer.addDataEntry(name: "manifest.webmanifest", data: Data(manifestJson.utf8))
             }
+            if let requestedWebIconFileId = optionalString(payload, key: "webIconFileId") {
+                let webIconFileId = try storage.safePathSegment(requestedWebIconFileId)
+                let webIconURL = try storage.projectFilePath(
+                    projectId: projectId,
+                    fileId: webIconFileId
+                )
+                guard FileManager.default.fileExists(atPath: webIconURL.path) else {
+                    throw RouteVNError.message("The Web application icon could not be exported.")
+                }
+                try writer.addDataEntry(
+                    name: "app-icon.png",
+                    data: try Data(contentsOf: webIconURL)
+                )
+            }
             let zipBytes = try writer.finalize()
 
             if usePartFile {

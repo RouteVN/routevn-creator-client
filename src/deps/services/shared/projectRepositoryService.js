@@ -179,8 +179,13 @@ export const createProjectRepositoryService = ({
       iconFileId: sourceInfo?.iconFileId ?? null,
     };
 
-    if (platform !== "web") {
+    if (platform === "windows") {
       platformReleaseInfo.applicationIdentifier = "";
+    }
+
+    if (platform === "macos") {
+      platformReleaseInfo.applicationIdentifier =
+        sourceInfo?.nativeApplicationIdentifier ?? "";
     }
 
     if (platform === "web") {
@@ -744,7 +749,22 @@ export const createProjectRepositoryService = ({
     const key = getPlatformReleaseInfoKey(platform);
     const storedPlatformReleaseInfo = await store.app.get(key);
     if (hasStoredPlatformReleaseInfo(storedPlatformReleaseInfo)) {
-      return normalizePlatformReleaseInfo(platform, storedPlatformReleaseInfo);
+      const platformReleaseInfo = normalizePlatformReleaseInfo(
+        platform,
+        storedPlatformReleaseInfo,
+      );
+      if (platform === "macos") {
+        const projectInfo = await readProjectInfoFromStore(store);
+        if (
+          platformReleaseInfo.applicationIdentifier !==
+          projectInfo.nativeApplicationIdentifier
+        ) {
+          platformReleaseInfo.applicationIdentifier =
+            projectInfo.nativeApplicationIdentifier;
+          await store.app.set(key, platformReleaseInfo);
+        }
+      }
+      return platformReleaseInfo;
     }
 
     return undefined;
@@ -854,6 +874,7 @@ export const createProjectRepositoryService = ({
     return createPlatformReleaseInfo(platform, {
       applicationName: projectInfo.name,
       iconFileId: projectInfo.iconFileId,
+      nativeApplicationIdentifier: projectInfo.nativeApplicationIdentifier,
     });
   };
 
@@ -878,12 +899,17 @@ export const createProjectRepositoryService = ({
     const defaults = createPlatformReleaseInfo(platform, {
       applicationName: projectInfo.name,
       iconFileId: projectInfo.iconFileId,
+      nativeApplicationIdentifier: projectInfo.nativeApplicationIdentifier,
     });
     const platformReleaseInfo = mergePlatformReleaseInfo(
       platform,
       defaults,
       patch,
     );
+    if (platform === "macos") {
+      platformReleaseInfo.applicationIdentifier =
+        projectInfo.nativeApplicationIdentifier;
+    }
     await store.app.set(
       getPlatformReleaseInfoKey(platform),
       platformReleaseInfo,
@@ -910,6 +936,10 @@ export const createProjectRepositoryService = ({
       currentPlatformReleaseInfo,
       patch,
     );
+    if (platform === "macos") {
+      nextPlatformReleaseInfo.applicationIdentifier =
+        currentPlatformReleaseInfo.applicationIdentifier;
+    }
     await store.app.set(
       getPlatformReleaseInfoKey(platform),
       nextPlatformReleaseInfo,

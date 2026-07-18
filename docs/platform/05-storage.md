@@ -71,8 +71,12 @@ Current app-owned keys:
 Important details:
 
 - release metadata is read from these app-store records at export time; Web
-  values are written to the exported HTML and Web manifest, Windows values to
-  executable/installer version metadata, and macOS values to `Info.plist`
+  values and icon are written to the exported HTML, Web manifest, and
+  `app-icon.png`, Windows values to executable/installer version metadata, and
+  macOS values to `Info.plist`
+- the macOS `applicationIdentifier` mirrors the stable
+  `projectInfo.nativeApplicationIdentifier`; reads migrate differing legacy
+  release records and Release Info does not allow editing it
 - `projectInfo` is the source of truth for project display metadata
 - `projectInfo.id` is the canonical folder/project id for new projects
 - `projectInfo.namespace` is the canonical browser-hosted bundle save namespace

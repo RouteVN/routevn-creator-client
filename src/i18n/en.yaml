@@ -281,7 +281,7 @@ releaseInfoPage:
   failedUploadIcon: "Failed to upload the application icon."
   iconLabel: "Icon"
   iconCropNotReady: "Application icon crop is not ready."
-  macosApplicationIdentifierDescription: "Stable reverse-domain bundle identifier used by macOS, signing, and App Store Connect, for example com.example.game."
+  macosApplicationIdentifierDescription: "Stable bundle identifier inherited from the project. It cannot be changed here because changing it would disconnect existing macOS saves."
   macosApplicationIdentifierInvalid: "Bundle identifier must use reverse-domain notation with only letters, numbers, hyphens, and periods."
   macosApplicationIdentifierLabel: "Bundle Identifier"
   macosApplicationIdentifierRequired: "Bundle identifier is required for macOS."

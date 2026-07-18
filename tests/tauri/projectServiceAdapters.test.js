@@ -336,10 +336,14 @@ describe("tauri project service adapters preflight reads", () => {
     await expect(
       fileAdapter.createDistributionZipStreamedToPath({
         projectData: { bundleMetadata: { project: { namespace: "demo" } } },
-        fileEntries: [{ fileId: "font-1", mimeType: "font/ttf" }],
+        fileEntries: [
+          { fileId: "font-1", mimeType: "font/ttf" },
+          { fileId: "icon-1", mimeType: "image/png" },
+        ],
         outputPath: "/exports/demo.zip",
         staticFiles: {
           manifestJson: '{"name":"Demo"}',
+          webIconFileId: "icon-1",
         },
         getCurrentReference: () => ({
           projectPath: "/projects/demo",
@@ -353,11 +357,17 @@ describe("tauri project service adapters preflight reads", () => {
       expect.objectContaining({
         outputPath: "/exports/demo.zip",
         manifestJson: '{"name":"Demo"}',
+        webIconFileId: "icon-1",
         assets: [
           {
             id: "font-1",
             path: "/projects/demo/files/font-1",
             mime: "font/ttf",
+          },
+          {
+            id: "icon-1",
+            path: "/projects/demo/files/icon-1",
+            mime: "image/png",
           },
         ],
       }),

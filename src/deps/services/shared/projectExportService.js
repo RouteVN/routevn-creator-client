@@ -8,6 +8,7 @@ export const BUNDLE_FORMAT_VERSION_V4 = 4;
 export const BUNDLE_FORMAT_VERSION = BUNDLE_FORMAT_VERSION_V4;
 export const BUNDLE_HEADER_SIZE = 16;
 export const BUNDLE_APP_NAME = "routevn-creator-client";
+export const BUNDLE_WEB_ICON_FILE_NAME = "app-icon.png";
 const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
 <html>
   <head>
@@ -18,6 +19,7 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
     <meta name="application-name" content="__ROUTEVN_WEB_SHORT_NAME__" />
     <meta name="apple-mobile-web-app-title" content="__ROUTEVN_WEB_SHORT_NAME__" />
     <link rel="manifest" href="./manifest.webmanifest" />
+    __ROUTEVN_WEB_ICON_LINK__
     <title>__ROUTEVN_WEB_TITLE__</title>
     <style>
       html,
@@ -312,6 +314,7 @@ const normalizeWebApplicationMetadata = (web = {}) => {
     description: web.description?.trim() ?? "",
     themeColor: web.themeColor?.trim() || "#000000",
     backgroundColor: web.backgroundColor?.trim() || "#000000",
+    iconFileName: web.iconFileName?.trim() ?? "",
   };
 };
 
@@ -348,6 +351,13 @@ export const createBundlePlayerIndexHtml = (web = {}) => {
     "__ROUTEVN_WEB_THEME_COLOR__",
     escapeHtmlAttribute(metadata.themeColor),
   );
+  html = replaceTemplateToken(
+    html,
+    "__ROUTEVN_WEB_ICON_LINK__",
+    metadata.iconFileName
+      ? `<link rel="icon" href="./${escapeHtmlAttribute(metadata.iconFileName)}" />`
+      : "",
+  );
   return replaceTemplateToken(
     html,
     "__ROUTEVN_WEB_BACKGROUND_COLOR__",
@@ -357,20 +367,26 @@ export const createBundlePlayerIndexHtml = (web = {}) => {
 
 export const createBundleWebManifest = (web = {}) => {
   const metadata = normalizeWebApplicationMetadata(web);
-  return JSON.stringify(
-    {
-      name: metadata.title,
-      short_name: metadata.shortName,
-      description: metadata.description,
-      start_url: "./",
-      scope: "./",
-      display: "standalone",
-      theme_color: metadata.themeColor,
-      background_color: metadata.backgroundColor,
-    },
-    undefined,
-    2,
-  );
+  const manifest = {
+    name: metadata.title,
+    short_name: metadata.shortName,
+    description: metadata.description,
+    start_url: "./",
+    scope: "./",
+    display: "standalone",
+    theme_color: metadata.themeColor,
+    background_color: metadata.backgroundColor,
+  };
+  if (metadata.iconFileName) {
+    manifest.icons = [
+      {
+        src: `./${metadata.iconFileName}`,
+        type: "image/png",
+        purpose: "any",
+      },
+    ];
+  }
+  return JSON.stringify(manifest, undefined, 2);
 };
 
 export const BUNDLE_PLAYER_INDEX_HTML = createBundlePlayerIndexHtml();
@@ -1029,12 +1045,20 @@ const getBundleStaticFiles = async (projectData) => {
     description: projectMetadata.web?.description,
     themeColor: projectMetadata.web?.themeColor,
     backgroundColor: projectMetadata.web?.backgroundColor,
+    iconFileName: projectMetadata.iconFileId
+      ? BUNDLE_WEB_ICON_FILE_NAME
+      : undefined,
   };
-  return {
+  const staticFiles = {
     indexHtml: createBundlePlayerIndexHtml(webMetadata),
     manifestJson: createBundleWebManifest(webMetadata),
     mainJs,
   };
+  if (projectMetadata.iconFileId) {
+    staticFiles.webIconFileId = projectMetadata.iconFileId;
+    staticFiles.webIconFileName = BUNDLE_WEB_ICON_FILE_NAME;
+  }
+  return staticFiles;
 };
 
 export const createProjectExportService = ({

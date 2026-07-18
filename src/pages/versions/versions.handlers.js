@@ -1296,7 +1296,7 @@ const runMacosApplicationExport = async (deps, confirmation) => {
         title: getProjectExportTitle({ projectInfo, applicationInfo }),
         shortVersion: nativeVersion.shortVersion,
         bundleVersion: nativeVersion.bundleVersion,
-        applicationIdentifier: applicationInfo.applicationIdentifier,
+        applicationIdentifier: projectInfo.nativeApplicationIdentifier,
         publisher: applicationInfo.publisher,
         description: applicationInfo.description,
         copyright: applicationInfo.copyright,

@@ -281,7 +281,7 @@ releaseInfoPage:
   failedUploadIcon: "アプリケーションアイコンをアップロードできませんでした。"
   iconLabel: "アイコン"
   iconCropNotReady: "アプリケーションアイコンのトリミング準備ができていません。"
-  macosApplicationIdentifierDescription: "macOS、コード署名、App Store Connect で使用する安定した逆ドメイン形式のバンドル識別子です（例: com.example.game）。"
+  macosApplicationIdentifierDescription: "プロジェクトから継承される安定したバンドル識別子です。変更すると既存の macOS セーブデータにアクセスできなくなるため、ここでは変更できません。"
   macosApplicationIdentifierInvalid: "バンドル識別子は、英字、数字、ハイフン、ピリオドのみを使用した逆ドメイン形式で入力してください。"
   macosApplicationIdentifierLabel: "バンドル識別子"
   macosApplicationIdentifierRequired: "macOS ではバンドル識別子が必須です。"

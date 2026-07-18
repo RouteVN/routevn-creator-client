@@ -213,6 +213,7 @@ const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
           ? copy.macosApplicationIdentifierLabel
           : copy.applicationIdentifierLabel,
       description: copy[`${platform}ApplicationIdentifierDescription`],
+      disabled: platform === "macos",
       required: platform === "macos",
     });
   }

@@ -904,7 +904,7 @@ describe("versions macOS export handlers", () => {
       title: "Mac Edition",
       shortVersion: "1.0.3",
       bundleVersion: "4",
-      applicationIdentifier: "com.example.mac-edition",
+      applicationIdentifier: "vn.routevn.player.project-one",
       publisher: "Release Studio",
       description: "macOS release",
       copyright: "Copyright © 2026 Release Studio",

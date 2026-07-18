@@ -122,6 +122,11 @@ describe("projectRepositoryService release info", () => {
       themeColorId: "",
       backgroundColorId: "",
     });
+    await expect(
+      harness.service.getCurrentPlatformReleaseInfoDefaults("macos"),
+    ).resolves.toMatchObject({
+      applicationIdentifier: "vn.routevn.player.project-one",
+    });
     expect(harness.getPlatformReleaseInfo("web")).toBeUndefined();
 
     await expect(
@@ -152,7 +157,7 @@ describe("projectRepositoryService release info", () => {
     ).resolves.toEqual({
       applicationName: "Project One",
       iconFileId: "project-icon-1",
-      applicationIdentifier: "",
+      applicationIdentifier: "vn.routevn.player.project-one",
       publisher: "",
       description: "",
       copyright: "",
@@ -184,6 +189,40 @@ describe("projectRepositoryService release info", () => {
       "releaseInfo",
       expect.anything(),
     );
+  });
+
+  it("migrates and locks macOS release info to the stable project identity", async () => {
+    const harness = createHarness({
+      platformReleaseInfo: {
+        macos: {
+          applicationName: "Mac Project",
+          iconFileId: "mac-icon-1",
+          applicationIdentifier: "com.changed.mac-project",
+          publisher: "Studio One",
+          description: "Mac release",
+          copyright: "Copyright Studio One",
+          category: "public.app-category.games",
+        },
+      },
+    });
+
+    await expect(
+      harness.service.getCurrentPlatformReleaseInfo("macos"),
+    ).resolves.toMatchObject({
+      applicationIdentifier: "vn.routevn.player.project-one",
+    });
+    expect(harness.getPlatformReleaseInfo("macos")).toMatchObject({
+      applicationIdentifier: "vn.routevn.player.project-one",
+    });
+
+    await harness.service.updateCurrentPlatformReleaseInfo("macos", {
+      applicationIdentifier: "com.another.changed-identity",
+      description: "Updated Mac release",
+    });
+    expect(harness.getPlatformReleaseInfo("macos")).toMatchObject({
+      applicationIdentifier: "vn.routevn.player.project-one",
+      description: "Updated Mac release",
+    });
   });
 
   it("fills empty platform icons from the next project icon upload only", async () => {

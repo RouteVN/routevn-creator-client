@@ -281,7 +281,7 @@ releaseInfoPage:
   failedUploadIcon: "无法上传应用图标。"
   iconLabel: "图标"
   iconCropNotReady: "应用图标裁剪尚未准备好。"
-  macosApplicationIdentifierDescription: "供 macOS、代码签名和 App Store Connect 使用的稳定反向域名捆绑包标识符，例如 com.example.game。"
+  macosApplicationIdentifierDescription: "从项目继承的稳定捆绑包标识符。更改它会导致现有 macOS 存档无法访问，因此不能在此修改。"
   macosApplicationIdentifierInvalid: "捆绑包标识符必须使用反向域名格式，并且只能包含字母、数字、连字符和句点。"
   macosApplicationIdentifierLabel: "捆绑包标识符"
   macosApplicationIdentifierRequired: "macOS 必须填写捆绑包标识符。"

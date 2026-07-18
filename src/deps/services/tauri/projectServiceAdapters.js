@@ -773,6 +773,7 @@ export const createTauriProjectServiceAdapters = ({
       indexHtml: staticFiles.indexHtml || null,
       mainJs: staticFiles.mainJs || null,
       manifestJson: staticFiles.manifestJson || null,
+      webIconFileId: staticFiles.webIconFileId || null,
       usePartFile: options.usePartFile ?? true,
     });
     logExportSizeStats(stats);

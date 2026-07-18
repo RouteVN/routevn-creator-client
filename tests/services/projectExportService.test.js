@@ -5,6 +5,7 @@ import {
   BUNDLE_FORMAT_VERSION_V4,
   BUNDLE_HEADER_SIZE,
   BUNDLE_PLAYER_INDEX_HTML,
+  BUNDLE_WEB_ICON_FILE_NAME,
   createBundleInstructions,
   createBundlePlayerIndexHtml,
   createBundleResult,
@@ -157,15 +158,25 @@ describe("projectExportService", () => {
 
     await expect(
       service.createDistributionZipStreamedToPath(
-        { project: { namespace: "project-one" } },
+        {
+          bundleMetadata: {
+            project: {
+              namespace: "project-one",
+              iconFileId: "icon-1",
+            },
+          },
+        },
         [{ fileId: "file-1", mimeType: "image/png" }],
         "/tmp/export.zip",
       ),
     ).resolves.toBe("/tmp/export.zip");
     expect(createDistributionZipStreamedToPath).toHaveBeenCalledWith({
       projectData: {
-        project: {
-          namespace: "project-one",
+        bundleMetadata: {
+          project: {
+            namespace: "project-one",
+            iconFileId: "icon-1",
+          },
         },
       },
       fileEntries: [{ id: "file-1", mimeType: "image/png" }],
@@ -174,6 +185,8 @@ describe("projectExportService", () => {
         indexHtml: expect.any(String),
         manifestJson: expect.any(String),
         mainJs: undefined,
+        webIconFileId: "icon-1",
+        webIconFileName: BUNDLE_WEB_ICON_FILE_NAME,
       },
       getCurrentReference,
       getFileContent,
@@ -357,6 +370,7 @@ describe("projectExportService", () => {
     const indexHtml = createBundlePlayerIndexHtml({
       title: project.title,
       ...project.web,
+      iconFileName: BUNDLE_WEB_ICON_FILE_NAME,
     });
     expect(indexHtml).toContain("<title>Project One</title>");
     expect(indexHtml).toContain(
@@ -369,12 +383,16 @@ describe("projectExportService", () => {
       '<meta name="theme-color" content="#112233" />',
     );
     expect(indexHtml).toContain("background: #000000;");
+    expect(indexHtml).toContain(
+      `<link rel="icon" href="./${BUNDLE_WEB_ICON_FILE_NAME}" />`,
+    );
 
     expect(
       JSON.parse(
         createBundleWebManifest({
           title: project.title,
           ...project.web,
+          iconFileName: BUNDLE_WEB_ICON_FILE_NAME,
         }),
       ),
     ).toMatchObject({
@@ -383,6 +401,13 @@ describe("projectExportService", () => {
       description: project.web.description,
       theme_color: "#112233",
       background_color: "#000000",
+      icons: [
+        {
+          src: `./${BUNDLE_WEB_ICON_FILE_NAME}`,
+          type: "image/png",
+          purpose: "any",
+        },
+      ],
     });
   });
 

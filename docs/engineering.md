@@ -801,13 +801,18 @@ Release packaging metadata is stored independently under `releaseInfo.web`,
 `app` store. No platform record exists until the user explicitly adds that
 platform from Release Info and submits its prefilled create form. Opening or
 cancelling the form does not persist a record. Form defaults copy the project
-name and icon, while Windows and macOS identifiers start blank. A later project
-icon update fills an existing platform icon only while that platform icon
-remains empty. The records otherwise have no cross-platform synchronization or
-delete flow. Platform exports validate the matching record and show its values
+name and icon, while the Windows identifier starts blank. The macOS identifier
+is inherited from `projectInfo.nativeApplicationIdentifier`, is read-only in
+Release Info, and is migrated back to that stable identity if an older release
+record differs. A later project icon update fills an existing platform icon
+only while that platform icon remains empty. The records otherwise have no
+cross-platform synchronization or delete flow. Platform exports validate the
+matching record and show its values
 in a read-only confirmation dialog before opening a save picker or starting
 the export. Web metadata is emitted into `index.html`,
-`manifest.webmanifest`, and the bundle instructions. Windows metadata is
+`manifest.webmanifest`, and the bundle instructions; the selected Web icon is
+also emitted as `app-icon.png` and referenced by both HTML and the manifest.
+Windows metadata is
 stamped into the portable executable's version resources and the NSIS
 installer's version keys. macOS metadata is stamped into `Info.plist` using
 `CFBundleGetInfoString`, `NSHumanReadableCopyright`,

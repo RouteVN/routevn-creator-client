@@ -92,6 +92,8 @@ describe("ios project service adapters", () => {
         indexHtml: "<!doctype html>",
         mainJs: "console.log('routevn');",
         manifestJson: '{"name":"Project One"}',
+        webIconFileId: "file-1",
+        webIconFileName: "app-icon.png",
       },
       getCurrentReference: () => ({
         projectId: "project-1",
@@ -114,6 +116,7 @@ describe("ios project service adapters", () => {
       indexHtml: "<!doctype html>",
       mainJs: "console.log('routevn');",
       manifestJson: '{"name":"Project One"}',
+      webIconFileId: "file-1",
     });
   });
 
@@ -161,6 +164,8 @@ describe("ios project service adapters", () => {
         indexHtml: "<!doctype html>",
         mainJs: "console.log('routevn');",
         manifestJson: '{"name":"Project One"}',
+        webIconFileId: "file-1",
+        webIconFileName: "app-icon.png",
       },
       getCurrentReference: () => ({
         projectId: "project-1",
@@ -182,6 +187,9 @@ describe("ios project service adapters", () => {
     expect(await zip.file("manifest.webmanifest").async("string")).toBe(
       '{"name":"Project One"}',
     );
+    expect(
+      Array.from(await zip.file("app-icon.png").async("uint8array")),
+    ).toEqual([1, 2, 3]);
     const packageBytes = new Uint8Array(
       await zip.file("package.bin").async("arraybuffer"),
     );

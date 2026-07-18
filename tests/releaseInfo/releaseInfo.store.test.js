@@ -132,6 +132,7 @@ describe("releaseInfo.store", () => {
       expect.objectContaining({
         name: "applicationIdentifier",
         label: "Bundle Identifier",
+        disabled: true,
         description:
           EN_I18N.releaseInfoPage.macosApplicationIdentifierDescription,
       }),

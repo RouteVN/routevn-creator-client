@@ -148,7 +148,8 @@ Current keys:
     - `description`
     - `copyright`
 - `releaseInfo.macos`
-  - independently customizable macOS release metadata
+  - independently customizable macOS release metadata except for the stable
+    application identifier inherited from `projectInfo`
   - current fields:
     - `applicationName`
     - `iconFileId`
@@ -161,9 +162,10 @@ Current keys:
     Info and submits its create form
   - the create form is prefilled from the current project name and icon;
     cancelling it does not persist a record
-  - Windows and macOS identifier fields start blank; the Windows identifier is
-    optional, while a valid reverse-domain macOS bundle identifier is required
-    to submit the form; Web does not store an application identifier
+  - the Windows identifier starts blank and is optional; the macOS identifier
+    is copied from `projectInfo.nativeApplicationIdentifier`, cannot be edited
+    in Release Info, and is migrated back to that stable value when read; Web
+    does not store an application identifier
   - platform export is blocked until the corresponding platform record exists
     and passes validation; Web export also checks that selected project colors
     still exist
@@ -173,8 +175,8 @@ Current keys:
   - image deletion treats each platform `iconFileId` as a live reference and
     is blocked while the image file is used by any platform release record
   - exports materialize the matching record into platform artifacts: Web HTML,
-    manifest, and bundle metadata; Windows PE/NSIS version metadata; or macOS
-    `Info.plist`
+    manifest, standalone `app-icon.png`, and bundle metadata; Windows PE/NSIS
+    version metadata; or macOS `Info.plist`
   - a later project-icon update fills an existing platform icon only while
     that platform icon is empty
   - after creation, each platform record is edited and persisted independently
