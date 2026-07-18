@@ -69,11 +69,6 @@ describe("platformDetails.store", () => {
     expect(viewData.platformEditForm.title).toBe("Add Web Platform Details");
     expect(viewData.platformEditForm.actions.buttons).toEqual([
       {
-        id: "cancel",
-        variant: "se",
-        label: "Cancel",
-      },
-      {
         id: "submit",
         variant: "pr",
         label: "Add Platform",
@@ -214,6 +209,18 @@ describe("platformDetails.store", () => {
       label: "Theme Color",
       value: "Ocean Blue",
     });
+    expect(viewData.platformEditForm.actions.buttons).toEqual([
+      {
+        id: "cancel",
+        variant: "se",
+        label: "Cancel",
+      },
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Save Changes",
+      },
+    ]);
 
     setPlatformEditIconFileId({ state }, { iconFileId: "web-icon-2" });
     expect(state.platformEditIconFileId).toBe("web-icon-2");

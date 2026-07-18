@@ -294,6 +294,23 @@ const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
     });
   }
 
+  const buttons = [];
+  if (mode !== "create") {
+    buttons.push({
+      id: "cancel",
+      variant: "se",
+      label: copy.cancelButtonLabel,
+    });
+  }
+  buttons.push({
+    id: "submit",
+    variant: "pr",
+    label:
+      mode === "create"
+        ? copy.createPlatformButtonLabel
+        : copy.saveChangesButton,
+  });
+
   return {
     title:
       mode === "create"
@@ -302,21 +319,7 @@ const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
     fields,
     actions: {
       layout: "",
-      buttons: [
-        {
-          id: "cancel",
-          variant: "se",
-          label: copy.cancelButtonLabel,
-        },
-        {
-          id: "submit",
-          variant: "pr",
-          label:
-            mode === "create"
-              ? copy.createPlatformButtonLabel
-              : copy.saveChangesButton,
-        },
-      ],
+      buttons,
     },
   };
 };
