@@ -1320,6 +1320,7 @@ layoutEditPanel:
   scrollDownLabel: "下スクロール"
   scrollSection: "スクロール"
   scrollUpLabel: "上スクロール"
+  selectButton: "選択"
   selectImageLabel: "画像を選択"
   selectSpritesheetAnimationLabel: "スプライトシートアニメーションを選択"
   selectVisualLabel: "表示素材を選択"

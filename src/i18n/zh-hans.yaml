@@ -1320,6 +1320,7 @@ layoutEditPanel:
   scrollDownLabel: "向下滚动"
   scrollSection: "滚动"
   scrollUpLabel: "向上滚动"
+  selectButton: "选择"
   selectImageLabel: "选择图像"
   selectSpritesheetAnimationLabel: "选择精灵图集动画"
   selectVisualLabel: "选择视觉素材"

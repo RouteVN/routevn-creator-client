@@ -459,7 +459,7 @@ template:
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                       - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#confirmImageSelection variant=pr: ${okButton}
+                  - rtgl-button#confirmImageSelection variant=pr: ${selectButton}
   - rtgl-dialog#soundSelectorDialog ?open=${soundSelectorDialog.open} s=lg:
       - $if soundSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:

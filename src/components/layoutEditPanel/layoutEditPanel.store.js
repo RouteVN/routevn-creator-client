@@ -1833,6 +1833,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     notSetLabel: copy.notSetLabel ?? "Not set",
     okButton: copy.okButton ?? "OK",
     removeButton: copy.removeButton ?? "Remove",
+    selectButton: copy.selectButton ?? "Select",
     selectSpritesheetAnimationLabel:
       copy.selectSpritesheetAnimationLabel ?? "Select a spritesheet animation",
     selectImageLabel: copy.selectImageLabel ?? "Select image",

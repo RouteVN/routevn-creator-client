@@ -1320,6 +1320,7 @@ layoutEditPanel:
   scrollDownLabel: "Scroll Down"
   scrollSection: "Scroll"
   scrollUpLabel: "Scroll Up"
+  selectButton: "Select"
   selectImageLabel: "Select image"
   selectSpritesheetAnimationLabel: "Select a spritesheet animation"
   selectVisualLabel: "Select visual"

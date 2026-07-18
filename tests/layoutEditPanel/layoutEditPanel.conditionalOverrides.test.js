@@ -180,7 +180,9 @@ describe("layoutEditPanel conditional overrides", () => {
       view.indexOf("rtgl-dialog#soundSelectorDialog"),
     );
 
-    expect(imageSelectorDialog).toContain("rtgl-button#confirmImageSelection");
+    expect(imageSelectorDialog).toContain(
+      "rtgl-button#confirmImageSelection variant=pr: ${selectButton}",
+    );
     expect(imageSelectorDialog).not.toContain("cancelImageSelection");
   });
 
