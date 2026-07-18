@@ -100,9 +100,9 @@ const settingsItems = [
 
 const releaseItems = [
   {
-    id: "releaseInfo",
-    name: "Release Info",
-    path: "/project/releases/info",
+    id: "platformDetails",
+    name: "Platform Details",
+    path: "/project/releases/platform-details",
   },
   {
     id: "versions",

@@ -1,5 +1,5 @@
 import { toFlatItems } from "../../internal/project/tree.js";
-import { selectReleaseInfoPageCopy } from "./support/releaseInfoPageCopy.js";
+import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
 const PLATFORM_IDS = ["web", "windows", "macos"];
 
@@ -48,32 +48,32 @@ const createPlatformEditDefaultValues = () => ({
 
 const getPlatformTitle = (platform, copy) => {
   if (platform === "windows") {
-    return copy.windowsReleaseInfoTitle;
+    return copy.windowsPlatformDetailsTitle;
   }
   if (platform === "macos") {
-    return copy.macosReleaseInfoTitle;
+    return copy.macosPlatformDetailsTitle;
   }
-  return copy.webReleaseInfoTitle;
+  return copy.webPlatformDetailsTitle;
 };
 
 const getPlatformEditTitle = (platform, copy) => {
   if (platform === "windows") {
-    return copy.editWindowsReleaseInfoTitle;
+    return copy.editWindowsPlatformDetailsTitle;
   }
   if (platform === "macos") {
-    return copy.editMacosReleaseInfoTitle;
+    return copy.editMacosPlatformDetailsTitle;
   }
-  return copy.editWebReleaseInfoTitle;
+  return copy.editWebPlatformDetailsTitle;
 };
 
 const getPlatformCreateTitle = (platform, copy) => {
   if (platform === "windows") {
-    return copy.createWindowsReleaseInfoTitle;
+    return copy.createWindowsPlatformDetailsTitle;
   }
   if (platform === "macos") {
-    return copy.createMacosReleaseInfoTitle;
+    return copy.createMacosPlatformDetailsTitle;
   }
-  return copy.createWebReleaseInfoTitle;
+  return copy.createWebPlatformDetailsTitle;
 };
 
 const getPlatformTabLabel = (platform, copy) => {
@@ -373,7 +373,7 @@ export const selectIsPlatformEditIconCropDialogOpen = ({ state }) => {
 };
 
 export const selectViewData = ({ state, i18n }) => {
-  const copy = selectReleaseInfoPageCopy(i18n);
+  const copy = selectPlatformDetailsPageCopy(i18n);
   const colorOptions = buildColorOptions(state.colorsData);
   const createdPlatforms = PLATFORM_IDS.filter(
     (platform) => state.platformApplicationInfo[platform],
@@ -392,7 +392,7 @@ export const selectViewData = ({ state, i18n }) => {
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
     detailFillHeight: false,
     emptyPlatformsMessage: copy.emptyPlatformsMessage,
-    hasPlatformReleaseInfo: Boolean(selectedPlatformInfo),
+    hasPlatformDetails: Boolean(selectedPlatformInfo),
     platformTabs: createdPlatforms.map((platform) => ({
       id: platform,
       label: getPlatformTabLabel(platform, copy),
@@ -410,7 +410,7 @@ export const selectViewData = ({ state, i18n }) => {
         )
       : [],
     platformApplicationIconFileId: selectedPlatformInfo?.iconFileId,
-    platformEditButtonLabel: copy.editPlatformReleaseInfoButtonLabel,
+    platformEditButtonLabel: copy.editPlatformDetailsButtonLabel,
     platformEditDefaultValues: state.platformEditDefaultValues,
     platformEditForm: formPlatform
       ? createPlatformEditForm(formPlatform, formMode, colorOptions, copy)
@@ -421,7 +421,7 @@ export const selectViewData = ({ state, i18n }) => {
     isPlatformEditDialogOpen: state.isPlatformEditDialogOpen,
     isPlatformEditIconCropDialogOpen: state.isPlatformEditIconCropDialogOpen,
     resourceCategory: "releases",
-    selectedResourceId: "releaseInfo",
+    selectedResourceId: "platformDetails",
     showExplorerPanel: !state.isTouchMode,
     title: copy.title,
   };
@@ -489,7 +489,7 @@ export const setSelectedPlatform = ({ state }, { platform } = {}) => {
 };
 
 export const openAddPlatformMenu = ({ state, i18n }, { x, y } = {}) => {
-  const copy = selectReleaseInfoPageCopy(i18n);
+  const copy = selectPlatformDetailsPageCopy(i18n);
   state.addPlatformMenu.isOpen = true;
   state.addPlatformMenu.x = x ?? 0;
   state.addPlatformMenu.y = y ?? 0;

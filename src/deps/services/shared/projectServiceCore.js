@@ -295,7 +295,10 @@ export const createProjectServiceCore = ({
     });
   };
 
-  const checkReleaseInfoImageUsage = async ({ itemId, repository } = {}) => {
+  const checkPlatformDetailsImageUsage = async ({
+    itemId,
+    repository,
+  } = {}) => {
     const image = repository.getState()?.images?.items?.[itemId];
     if (image?.type !== "image" || !image.fileId) {
       return {
@@ -305,14 +308,14 @@ export const createProjectServiceCore = ({
       };
     }
 
-    const releaseInfoByPlatform = await Promise.all(
+    const platformDetailsByPlatform = await Promise.all(
       RELEASE_PLATFORM_IDS.map(async (platform) => ({
         platform,
         applicationInfo:
-          await repositoryService.getCurrentPlatformReleaseInfo(platform),
+          await repositoryService.getCurrentPlatformDetails(platform),
       })),
     );
-    const usages = releaseInfoByPlatform
+    const usages = platformDetailsByPlatform
       .filter(
         ({ applicationInfo }) => applicationInfo?.iconFileId === image.fileId,
       )
@@ -321,7 +324,7 @@ export const createProjectServiceCore = ({
       }));
 
     return {
-      inProps: usages.length > 0 ? { releaseInfo: usages } : {},
+      inProps: usages.length > 0 ? { platformDetails: usages } : {},
       isUsed: usages.length > 0,
       count: usages.length,
     };
@@ -343,17 +346,17 @@ export const createProjectServiceCore = ({
       return projectUsage;
     }
 
-    return checkReleaseInfoImageUsage({ itemId, repository });
+    return checkPlatformDetailsImageUsage({ itemId, repository });
   };
 
   const deleteImageIfUnused = async ({ imageId, checkTargets = [] } = {}) => {
     const repository = await ensureRepository();
-    const releaseInfoUsage = await checkReleaseInfoImageUsage({
+    const platformDetailsUsage = await checkPlatformDetailsImageUsage({
       itemId: imageId,
       repository,
     });
-    if (releaseInfoUsage.isUsed) {
-      return { deleted: false, usage: releaseInfoUsage };
+    if (platformDetailsUsage.isUsed) {
+      return { deleted: false, usage: platformDetailsUsage };
     }
 
     return collabService.deleteImageIfUnused({ imageId, checkTargets });
@@ -473,14 +476,13 @@ export const createProjectServiceCore = ({
     getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
     updateCurrentProjectInfo: repositoryService.updateCurrentProjectInfo,
     updateProjectInfoById: repositoryService.updateProjectInfoByProjectId,
-    getCurrentPlatformReleaseInfo:
-      repositoryService.getCurrentPlatformReleaseInfo,
-    getCurrentPlatformReleaseInfoDefaults:
-      repositoryService.getCurrentPlatformReleaseInfoDefaults,
-    createCurrentPlatformReleaseInfo:
-      repositoryService.createCurrentPlatformReleaseInfo,
-    updateCurrentPlatformReleaseInfo:
-      repositoryService.updateCurrentPlatformReleaseInfo,
+    getCurrentPlatformDetails: repositoryService.getCurrentPlatformDetails,
+    getCurrentPlatformDetailsDefaults:
+      repositoryService.getCurrentPlatformDetailsDefaults,
+    createCurrentPlatformDetails:
+      repositoryService.createCurrentPlatformDetails,
+    updateCurrentPlatformDetails:
+      repositoryService.updateCurrentPlatformDetails,
     addVersionToProject: collabService.addVersionToProject,
     updateVersionInProject: collabService.updateVersionInProject,
     deleteVersionFromProject: collabService.deleteVersionFromProject,

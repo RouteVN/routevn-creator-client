@@ -10,17 +10,17 @@ import {
   setPlatformApplicationInfo,
   setPlatformEditIconFileId,
   setSelectedPlatform,
-} from "../../src/pages/releaseInfo/releaseInfo.store.js";
+} from "../../src/pages/platformDetails/platformDetails.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
-describe("releaseInfo.store", () => {
+describe("platformDetails.store", () => {
   it("starts empty and offers every uncreated platform", () => {
     const state = createInitialState();
 
     let viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData).toMatchObject({
       canAddPlatform: true,
-      hasPlatformReleaseInfo: false,
+      hasPlatformDetails: false,
       platformTabs: [],
       selectedPlatform: undefined,
     });
@@ -58,7 +58,7 @@ describe("releaseInfo.store", () => {
 
     let viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData).toMatchObject({
-      hasPlatformReleaseInfo: false,
+      hasPlatformDetails: false,
       isPlatformEditDialogOpen: true,
       platformDialogKey: "create-web",
       platformEditDefaultValues: {
@@ -66,7 +66,7 @@ describe("releaseInfo.store", () => {
       },
       platformTabs: [],
     });
-    expect(viewData.platformEditForm.title).toBe("Add Web Release Info");
+    expect(viewData.platformEditForm.title).toBe("Add Web Platform Details");
     expect(viewData.platformEditForm.actions.buttons).toEqual([
       {
         id: "cancel",
@@ -83,13 +83,13 @@ describe("releaseInfo.store", () => {
     closePlatformEditDialog({ state });
     viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData).toMatchObject({
-      hasPlatformReleaseInfo: false,
+      hasPlatformDetails: false,
       isPlatformEditDialogOpen: false,
       platformTabs: [],
     });
   });
 
-  it("shows independently selected platform release info", () => {
+  it("shows independently selected platform details", () => {
     const state = createInitialState();
     setPlatformApplicationInfo(
       { state },
@@ -111,12 +111,12 @@ describe("releaseInfo.store", () => {
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData).toMatchObject({
-      hasPlatformReleaseInfo: true,
+      hasPlatformDetails: true,
       platformTabs: [{ id: "macos", label: "macOS" }],
       selectedPlatform: "macos",
-      selectedPlatformTitle: "macOS Release Info",
+      selectedPlatformTitle: "macOS Platform Details",
       platformApplicationIconFileId: "macos-icon-1",
-      selectedResourceId: "releaseInfo",
+      selectedResourceId: "platformDetails",
     });
     expect(viewData.platformDetailFields).toContainEqual({
       type: "text",
@@ -134,7 +134,7 @@ describe("releaseInfo.store", () => {
         label: "Bundle Identifier",
         disabled: true,
         description:
-          EN_I18N.releaseInfoPage.macosApplicationIdentifierDescription,
+          EN_I18N.platformDetailsPage.macosApplicationIdentifierDescription,
       }),
     );
   });

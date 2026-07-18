@@ -26,10 +26,10 @@ const mocked = vi.hoisted(() => ({
     getCurrentProjectInfo: vi.fn(),
     updateCurrentProjectInfo: vi.fn(),
     updateProjectInfoByProjectId: vi.fn(),
-    getCurrentPlatformReleaseInfo: vi.fn(),
-    getCurrentPlatformReleaseInfoDefaults: vi.fn(),
-    createCurrentPlatformReleaseInfo: vi.fn(),
-    updateCurrentPlatformReleaseInfo: vi.fn(),
+    getCurrentPlatformDetails: vi.fn(),
+    getCurrentPlatformDetailsDefaults: vi.fn(),
+    createCurrentPlatformDetails: vi.fn(),
+    updateCurrentPlatformDetails: vi.fn(),
   },
   projectStore: {
     app: {
@@ -114,7 +114,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.repositoryService.getCachedRepository.mockReset();
     mocked.repositoryService.releaseCurrentRepository.mockReset();
     mocked.repositoryService.releaseRepositoryByProjectId.mockReset();
-    mocked.repositoryService.getCurrentPlatformReleaseInfo.mockReset();
+    mocked.repositoryService.getCurrentPlatformDetails.mockReset();
     mocked.collabService.stopCollabSession.mockReset();
     mocked.collabService.deleteImageIfUnused.mockReset();
     mocked.collabService.commandApi.upgradeLayoutSchemaVersion.mockReset();
@@ -131,7 +131,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     );
     mocked.projectStore.app.get.mockResolvedValue(undefined);
     mocked.projectStore.app.set.mockResolvedValue(undefined);
-    mocked.repositoryService.getCurrentPlatformReleaseInfo.mockResolvedValue(
+    mocked.repositoryService.getCurrentPlatformDetails.mockResolvedValue(
       undefined,
     );
   });
@@ -157,7 +157,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       isUsed: false,
       count: 0,
     });
-    mocked.repositoryService.getCurrentPlatformReleaseInfo.mockImplementation(
+    mocked.repositoryService.getCurrentPlatformDetails.mockImplementation(
       async (platform) => {
         if (platform === "web" || platform === "macos") {
           return { iconFileId: "file-icon-1" };
@@ -190,7 +190,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       }),
     ).resolves.toEqual({
       inProps: {
-        releaseInfo: [
+        platformDetails: [
           { property: "web.iconFileId" },
           { property: "macos.iconFileId" },
         ],
@@ -200,7 +200,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     });
   });
 
-  it("blocks direct image deletion when a release icon uses its file", async () => {
+  it("blocks direct image deletion when a Platform Details icon uses its file", async () => {
     const repository = {
       getState: vi.fn(() => ({
         images: {
@@ -216,7 +216,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       })),
     };
     mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
-    mocked.repositoryService.getCurrentPlatformReleaseInfo.mockImplementation(
+    mocked.repositoryService.getCurrentPlatformDetails.mockImplementation(
       async (platform) =>
         platform === "windows" ? { iconFileId: "file-icon-1" } : undefined,
     );
@@ -247,7 +247,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       deleted: false,
       usage: {
         inProps: {
-          releaseInfo: [{ property: "windows.iconFileId" }],
+          platformDetails: [{ property: "windows.iconFileId" }],
         },
         isUsed: true,
         count: 1,
@@ -256,7 +256,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     expect(mocked.collabService.deleteImageIfUnused).not.toHaveBeenCalled();
   });
 
-  it("delegates image deletion when release info does not use its file", async () => {
+  it("delegates image deletion when platform details does not use its file", async () => {
     const repository = {
       getState: vi.fn(() => ({
         images: {

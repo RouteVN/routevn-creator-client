@@ -1,5 +1,5 @@
 ---
-title: Project Release Info Page
+title: Project Platform Details Page
 description: Covers platform-specific release metadata tabs and dialogs.
 url: /projects
 skipInitialScreenshot: true
@@ -27,7 +27,7 @@ steps:
     steps:
       - action: clear
       - action: write
-        value: VT Project Release Info
+        value: VT Project Platform Details
   - action: select
     selector: "#createProjectSubmitButton"
     steps:
@@ -51,14 +51,14 @@ steps:
   - action: customEvent
     name: routevn:vt:navigate
     detail:
-      path: /project/releases/info
+      path: /project/releases/platform-details
   - action: waitFor
-    selector: rvn-release-info
+    selector: rvn-platform-details
     state: attached
     timeoutMs: 10000
   - action: assert
     type: url
-    value: /project/releases/info
+    value: /project/releases/platform-details
   - action: wait
     ms: 450
   - action: screenshot

@@ -34,7 +34,7 @@ const mobileTabIdByRoutePattern = {
   "/project/scene-editor": "scene-map",
   "/project/releases": "release",
   "/project/releases/versions": "release",
-  "/project/releases/info": "release",
+  "/project/releases/platform-details": "release",
   "/project/releases/web-server": "release",
   "/project": "settings",
   "/project/about": "settings",
@@ -98,7 +98,7 @@ export const selectCurrentRoutePattern = ({ state }) => {
     "/project/layout-editor",
     "/project/releases",
     "/project/releases/versions",
-    "/project/releases/info",
+    "/project/releases/platform-details",
     "/project/releases/web-server",
   ];
   const currentRoute = state.currentRoute;

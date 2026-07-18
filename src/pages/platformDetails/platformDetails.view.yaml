@@ -53,7 +53,7 @@ template:
                       - $if canAddPlatform:
                           - 'rtgl-button#addPlatformButton v=pr sq pre=plus title="${addPlatformButtonLabel}" aria-label="${addPlatformButtonLabel}"': null
               - 'rtgl-view w=f h=1fg pt=md sv style="min-width: 0; min-height: 0;"':
-                  - $if hasPlatformReleaseInfo:
+                  - $if hasPlatformDetails:
                       - rtgl-view w=f d=v g=md:
                           - rtgl-view w=f ph=md:
                               - rtgl-tabs#platformTabs selected-tab=${selectedPlatform} :items=${platformTabs}: null

@@ -92,9 +92,9 @@ const systemItems = [
 
 const releaseItems = [
   {
-    id: "releaseInfo",
-    label: "Release Info",
-    path: "/project/releases/info",
+    id: "platformDetails",
+    label: "Platform Details",
+    path: "/project/releases/platform-details",
     icon: "info",
   },
   {
@@ -265,7 +265,9 @@ const selectCurrentResourceId = () => {
     );
     const releaseResourceId =
       releaseMatch?.[1] ?? resourceParentMapping.releases;
-    return releaseResourceId === "info" ? "releaseInfo" : releaseResourceId;
+    return releaseResourceId === "platform-details"
+      ? "platformDetails"
+      : releaseResourceId;
   }
 
   if (match[1] === "scenes") {

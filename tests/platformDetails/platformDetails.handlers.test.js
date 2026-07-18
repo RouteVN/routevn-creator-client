@@ -5,7 +5,7 @@ import {
   handleBeforeMount,
   handlePlatformEditFormAction,
   handlePlatformEditIconCropDialogConfirm,
-} from "../../src/pages/releaseInfo/releaseInfo.handlers.js";
+} from "../../src/pages/platformDetails/platformDetails.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const createDeps = () => ({
@@ -15,11 +15,11 @@ const createDeps = () => ({
   },
   i18n: EN_I18N,
   projectService: {
-    createCurrentPlatformReleaseInfo: vi.fn(),
-    getCurrentPlatformReleaseInfo: vi.fn(),
-    getCurrentPlatformReleaseInfoDefaults: vi.fn(),
+    createCurrentPlatformDetails: vi.fn(),
+    getCurrentPlatformDetails: vi.fn(),
+    getCurrentPlatformDetailsDefaults: vi.fn(),
     subscribeProjectState: vi.fn(),
-    updateCurrentPlatformReleaseInfo: vi.fn(),
+    updateCurrentPlatformDetails: vi.fn(),
     uploadFiles: vi.fn(),
   },
   refs: {
@@ -55,7 +55,7 @@ const createDeps = () => ({
   },
 });
 
-describe("releaseInfo handlers", () => {
+describe("platformDetails handlers", () => {
   it("keeps project color choices synchronized", () => {
     const deps = createDeps();
     const colorsData = {
@@ -86,22 +86,22 @@ describe("releaseInfo handlers", () => {
 
   it("keeps the page empty when no platform has been created", async () => {
     const deps = createDeps();
-    deps.projectService.getCurrentPlatformReleaseInfo.mockResolvedValue(
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(
       undefined,
     );
 
     await handleAfterMount(deps);
 
     expect(
-      deps.projectService.getCurrentPlatformReleaseInfo,
+      deps.projectService.getCurrentPlatformDetails,
     ).toHaveBeenCalledTimes(3);
     expect(deps.store.setPlatformApplicationInfo).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
-  it("loads only platform release info that already exists", async () => {
+  it("loads only platform details that already exists", async () => {
     const deps = createDeps();
-    deps.projectService.getCurrentPlatformReleaseInfo.mockImplementation(
+    deps.projectService.getCurrentPlatformDetails.mockImplementation(
       async (platform) => {
         if (platform !== "web") {
           return undefined;
@@ -117,7 +117,7 @@ describe("releaseInfo handlers", () => {
     await handleAfterMount(deps);
 
     expect(
-      deps.projectService.getCurrentPlatformReleaseInfo,
+      deps.projectService.getCurrentPlatformDetails,
     ).toHaveBeenCalledTimes(3);
     expect(deps.store.setPlatformApplicationInfo).toHaveBeenCalledWith({
       platform: "web",
@@ -139,7 +139,7 @@ describe("releaseInfo handlers", () => {
       themeColorId: "",
       backgroundColorId: "",
     };
-    deps.projectService.getCurrentPlatformReleaseInfoDefaults.mockResolvedValue(
+    deps.projectService.getCurrentPlatformDetailsDefaults.mockResolvedValue(
       applicationInfo,
     );
 
@@ -153,14 +153,14 @@ describe("releaseInfo handlers", () => {
 
     expect(deps.store.closeAddPlatformMenu).toHaveBeenCalledTimes(1);
     expect(
-      deps.projectService.getCurrentPlatformReleaseInfoDefaults,
+      deps.projectService.getCurrentPlatformDetailsDefaults,
     ).toHaveBeenCalledWith("web");
     expect(deps.store.openPlatformCreateDialog).toHaveBeenCalledWith({
       platform: "web",
       applicationInfo,
     });
     expect(
-      deps.projectService.createCurrentPlatformReleaseInfo,
+      deps.projectService.createCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
     expect(deps.store.setPlatformApplicationInfo).not.toHaveBeenCalled();
     expect(deps.refs.platformEditForm.reset).toHaveBeenCalledTimes(1);
@@ -169,7 +169,7 @@ describe("releaseInfo handlers", () => {
     });
   });
 
-  it("persists independently customized Windows release info", async () => {
+  it("persists independently customized Windows platform details", async () => {
     const deps = createDeps();
     const applicationInfo = {
       applicationName: "Windows Project",
@@ -179,7 +179,7 @@ describe("releaseInfo handlers", () => {
       description: "Windows description",
       copyright: "Copyright Example Publisher",
     };
-    deps.projectService.updateCurrentPlatformReleaseInfo.mockResolvedValue(
+    deps.projectService.updateCurrentPlatformDetails.mockResolvedValue(
       applicationInfo,
     );
 
@@ -199,7 +199,7 @@ describe("releaseInfo handlers", () => {
     });
 
     expect(
-      deps.projectService.updateCurrentPlatformReleaseInfo,
+      deps.projectService.updateCurrentPlatformDetails,
     ).toHaveBeenCalledWith("windows", applicationInfo);
     expect(deps.store.setPlatformApplicationInfo).toHaveBeenCalledWith({
       platform: "windows",
@@ -208,7 +208,7 @@ describe("releaseInfo handlers", () => {
     expect(deps.store.closePlatformEditDialog).toHaveBeenCalledTimes(1);
   });
 
-  it("creates Web release info from the submitted draft", async () => {
+  it("creates Web platform details from the submitted draft", async () => {
     const deps = createDeps();
     deps.store.selectPlatformDialogState.mockReturnValue({
       mode: "create",
@@ -223,7 +223,7 @@ describe("releaseInfo handlers", () => {
       themeColorId: "color-theme",
       backgroundColorId: "color-background",
     };
-    deps.projectService.createCurrentPlatformReleaseInfo.mockResolvedValue(
+    deps.projectService.createCurrentPlatformDetails.mockResolvedValue(
       applicationInfo,
     );
 
@@ -243,16 +243,16 @@ describe("releaseInfo handlers", () => {
     });
 
     expect(
-      deps.projectService.createCurrentPlatformReleaseInfo,
+      deps.projectService.createCurrentPlatformDetails,
     ).toHaveBeenCalledWith("web", applicationInfo);
     expect(
-      deps.projectService.updateCurrentPlatformReleaseInfo,
+      deps.projectService.updateCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
     expect(deps.store.setSelectedPlatform).toHaveBeenCalledWith({
       platform: "web",
     });
     expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: EN_I18N.releaseInfoPage.platformReleaseInfoCreatedMessage,
+      message: EN_I18N.platformDetailsPage.platformDetailsCreatedMessage,
     });
   });
 
@@ -269,14 +269,14 @@ describe("releaseInfo handlers", () => {
 
     expect(deps.store.closePlatformEditDialog).toHaveBeenCalledTimes(1);
     expect(
-      deps.projectService.createCurrentPlatformReleaseInfo,
+      deps.projectService.createCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
     expect(
-      deps.projectService.updateCurrentPlatformReleaseInfo,
+      deps.projectService.updateCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
   });
 
-  it("does not create macOS release info without a bundle identifier", async () => {
+  it("does not create macOS platform details without a bundle identifier", async () => {
     const deps = createDeps();
     deps.store.selectPlatformDialogState.mockReturnValue({
       mode: "create",
@@ -300,15 +300,15 @@ describe("releaseInfo handlers", () => {
     });
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.releaseInfoPage.macosApplicationIdentifierRequired,
-      title: EN_I18N.releaseInfoPage.warningTitle,
+      message: EN_I18N.platformDetailsPage.macosApplicationIdentifierRequired,
+      title: EN_I18N.platformDetailsPage.warningTitle,
     });
     expect(
-      deps.projectService.createCurrentPlatformReleaseInfo,
+      deps.projectService.createCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
   });
 
-  it("does not save Web release info with a removed project color", async () => {
+  it("does not save Web platform details with a removed project color", async () => {
     const deps = createDeps();
     deps.store.selectPlatformDialogState.mockReturnValue({
       mode: "edit",
@@ -332,11 +332,11 @@ describe("releaseInfo handlers", () => {
     });
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.releaseInfoPage.webThemeColorNotFound,
-      title: EN_I18N.releaseInfoPage.warningTitle,
+      message: EN_I18N.platformDetailsPage.webThemeColorNotFound,
+      title: EN_I18N.platformDetailsPage.warningTitle,
     });
     expect(
-      deps.projectService.updateCurrentPlatformReleaseInfo,
+      deps.projectService.updateCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
   });
 

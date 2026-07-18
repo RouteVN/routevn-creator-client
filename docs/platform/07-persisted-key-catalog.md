@@ -129,7 +129,7 @@ Current keys:
     - `name`
     - `description`
     - `iconFileId`
-- `releaseInfo.web`
+- `platformDetails.web`
   - independently customizable Web release metadata
   - current fields:
     - `applicationName`
@@ -138,7 +138,7 @@ Current keys:
     - `description`
     - `themeColorId`
     - `backgroundColorId`
-- `releaseInfo.windows`
+- `platformDetails.windows`
   - independently customizable Windows release metadata
   - current fields:
     - `applicationName`
@@ -147,7 +147,7 @@ Current keys:
     - `publisher`
     - `description`
     - `copyright`
-- `releaseInfo.macos`
+- `platformDetails.macos`
   - independently customizable macOS release metadata except for the stable
     application identifier inherited from `projectInfo`
   - current fields:
@@ -158,13 +158,13 @@ Current keys:
     - `description`
     - `copyright`
     - `category`
-  - no platform record exists until the user adds that platform from Release
-    Info and submits its create form
+  - no platform record exists until the user adds that platform from Platform
+    Details and submits its create form
   - the create form is prefilled from the current project name and icon;
     cancelling it does not persist a record
   - the Windows identifier starts blank and is optional; the macOS identifier
     is copied from `projectInfo.nativeApplicationIdentifier`, cannot be edited
-    in Release Info, and is migrated back to that stable value when read; Web
+    in Platform Details, and is migrated back to that stable value when read; Web
     does not store an application identifier
   - platform export is blocked until the corresponding platform record exists
     and passes validation; Web export also checks that selected project colors
@@ -173,7 +173,7 @@ Current keys:
     platform record in a read-only confirmation dialog; save-path selection
     and bundle creation start only after the user confirms
   - image deletion treats each platform `iconFileId` as a live reference and
-    is blocked while the image file is used by any platform release record
+    is blocked while the image file is used by any platform details record
   - exports materialize the matching record into platform artifacts: Web HTML,
     manifest, standalone `app-icon.png`, and bundle metadata; Windows PE/NSIS
     version metadata; or macOS `Info.plist`
@@ -181,6 +181,9 @@ Current keys:
     that platform icon is empty
   - after creation, each platform record is edited and persisted independently
   - created platform records cannot be deleted
+  - preview data under `releaseInfo.web`, `releaseInfo.windows`, or
+    `releaseInfo.macos` is copied to the matching `platformDetails.*` key when
+    first read
 - `creatorVersion`
   - stored project format version gate for compatibility checks
 - `versions`

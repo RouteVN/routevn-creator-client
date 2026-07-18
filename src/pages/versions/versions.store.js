@@ -93,7 +93,11 @@ const getExportConfirmationButtonLabel = (exportType, copy) => {
   return copy.exportWebButton ?? "Export Web";
 };
 
-const buildExportConfirmationFields = (confirmation, copy, releaseCopy) => {
+const buildExportConfirmationFields = (
+  confirmation,
+  copy,
+  platformDetailsCopy,
+) => {
   const applicationInfo = confirmation.applicationInfo ?? {};
   const fields = [
     {
@@ -103,13 +107,13 @@ const buildExportConfirmationFields = (confirmation, copy, releaseCopy) => {
     },
     {
       type: "text",
-      label: releaseCopy.applicationNameLabel ?? "Application Name",
+      label: platformDetailsCopy.applicationNameLabel ?? "Application Name",
       value: formatConfirmationValue(applicationInfo.applicationName, copy),
     },
     {
       type: "slot",
       slot: "export-confirmation-icon",
-      label: releaseCopy.iconLabel ?? "Icon",
+      label: platformDetailsCopy.iconLabel ?? "Icon",
     },
   ];
 
@@ -118,8 +122,9 @@ const buildExportConfirmationFields = (confirmation, copy, releaseCopy) => {
       type: "text",
       label:
         confirmation.platform === "macos"
-          ? (releaseCopy.macosApplicationIdentifierLabel ?? "Bundle Identifier")
-          : (releaseCopy.applicationIdentifierLabel ??
+          ? (platformDetailsCopy.macosApplicationIdentifierLabel ??
+            "Bundle Identifier")
+          : (platformDetailsCopy.applicationIdentifierLabel ??
             "Application Identifier"),
       value: formatConfirmationValue(
         applicationInfo.applicationIdentifier,
@@ -132,22 +137,22 @@ const buildExportConfirmationFields = (confirmation, copy, releaseCopy) => {
     fields.push(
       {
         type: "text",
-        label: releaseCopy.shortNameLabel ?? "Short Name",
+        label: platformDetailsCopy.shortNameLabel ?? "Short Name",
         value: formatConfirmationValue(applicationInfo.shortName, copy),
       },
       {
         type: "text",
-        label: releaseCopy.descriptionLabel ?? "Description",
+        label: platformDetailsCopy.descriptionLabel ?? "Description",
         value: formatConfirmationValue(applicationInfo.description, copy),
       },
       {
         type: "text",
-        label: releaseCopy.themeColorLabel ?? "Theme Color",
+        label: platformDetailsCopy.themeColorLabel ?? "Theme Color",
         value: formatConfirmationValue(confirmation.themeColor, copy),
       },
       {
         type: "text",
-        label: releaseCopy.backgroundColorLabel ?? "Background Color",
+        label: platformDetailsCopy.backgroundColorLabel ?? "Background Color",
         value: formatConfirmationValue(confirmation.backgroundColor, copy),
       },
     );
@@ -162,18 +167,20 @@ const buildExportConfirmationFields = (confirmation, copy, releaseCopy) => {
         type: "text",
         label:
           confirmation.platform === "windows"
-            ? (releaseCopy.windowsPublisherLabel ?? "Company / Publisher")
-            : (releaseCopy.macosPublisherLabel ?? "Developer / Publisher"),
+            ? (platformDetailsCopy.windowsPublisherLabel ??
+              "Company / Publisher")
+            : (platformDetailsCopy.macosPublisherLabel ??
+              "Developer / Publisher"),
         value: formatConfirmationValue(applicationInfo.publisher, copy),
       },
       {
         type: "text",
-        label: releaseCopy.descriptionLabel ?? "Description",
+        label: platformDetailsCopy.descriptionLabel ?? "Description",
         value: formatConfirmationValue(applicationInfo.description, copy),
       },
       {
         type: "text",
-        label: releaseCopy.copyrightLabel ?? "Copyright",
+        label: platformDetailsCopy.copyrightLabel ?? "Copyright",
         value: formatConfirmationValue(applicationInfo.copyright, copy),
       },
     );
@@ -182,7 +189,7 @@ const buildExportConfirmationFields = (confirmation, copy, releaseCopy) => {
   if (confirmation.platform === "macos") {
     fields.push({
       type: "text",
-      label: releaseCopy.categoryLabel ?? "Application Category",
+      label: platformDetailsCopy.categoryLabel ?? "Application Category",
       value: formatConfirmationValue(applicationInfo.category, copy),
     });
   }
@@ -366,7 +373,7 @@ export const selectVersion = ({ state }, versionId) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectVersionsPageCopy(i18n);
-  const releaseCopy = i18n?.releaseInfoPage ?? {};
+  const platformDetailsCopy = i18n?.platformDetailsPage ?? {};
   const selectedVersion = findVersionById(state.versions, state.selectedItemId);
   const isEditing = !!state.editingVersionId;
   const detailDescription = getVersionDescription(selectedVersion);
@@ -445,7 +452,7 @@ export const selectViewData = ({ state, i18n }) => {
       ? buildExportConfirmationFields(
           state.exportConfirmation,
           copy,
-          releaseCopy,
+          platformDetailsCopy,
         )
       : [],
     exportConfirmationIconFileId:

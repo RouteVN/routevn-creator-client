@@ -58,7 +58,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
         iconFileId: "icon-1",
         publisher: "Studio One",
       })),
-      getCurrentPlatformReleaseInfo: vi.fn(async (platform) => {
+      getCurrentPlatformDetails: vi.fn(async (platform) => {
         const applicationInfo = {
           applicationName: "Project One",
           iconFileId: "icon-1",
@@ -258,38 +258,38 @@ describe("versions.handleDownloadZipClick", () => {
     expect(deps.projectService.loadRepositoryState).not.toHaveBeenCalled();
   });
 
-  it("stops before the save dialog when Web release info has not been added", async () => {
+  it("stops before the save dialog when Web platform details has not been added", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
       getState: vi.fn(() => structuredClone(initialProjectData)),
     };
     const deps = createDeps({ repository });
-    deps.projectService.getCurrentPlatformReleaseInfo.mockResolvedValue(
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(
       undefined,
     );
 
     await handleDownloadZipClick(deps, createVersionClickPayload());
 
     expect(
-      deps.projectService.getCurrentPlatformReleaseInfo,
+      deps.projectService.getCurrentPlatformDetails,
     ).toHaveBeenCalledWith("web");
     expect(
       deps.projectService.promptDistributionZipPath,
     ).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.versionsPage.webReleaseInfoRequired,
+      message: EN_I18N.versionsPage.webPlatformDetailsRequired,
       title: EN_I18N.versionsPage.warningTitle,
     });
   });
 
-  it("stops before the save dialog when Web release info uses a removed color", async () => {
+  it("stops before the save dialog when Web platform details uses a removed color", async () => {
     const repositoryState = structuredClone(initialProjectData);
     const repository = {
       loadState: vi.fn(async () => repositoryState),
       getState: vi.fn(() => repositoryState),
     };
     const deps = createDeps({ repository });
-    deps.projectService.getCurrentPlatformReleaseInfo.mockResolvedValue({
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
       applicationName: "Project One",
       iconFileId: "icon-1",
       shortName: "",
@@ -304,7 +304,7 @@ describe("versions.handleDownloadZipClick", () => {
       deps.projectService.promptDistributionZipPath,
     ).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.versionsPage.releaseInfoThemeColorNotFound,
+      message: EN_I18N.versionsPage.platformDetailsThemeColorNotFound,
       title: EN_I18N.versionsPage.warningTitle,
     });
   });
@@ -458,7 +458,7 @@ describe("versions.handleDownloadZipClick", () => {
       getState: vi.fn(() => structuredClone(repositoryState)),
     };
     const deps = createDeps({ repository });
-    deps.projectService.getCurrentPlatformReleaseInfo.mockResolvedValue({
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
       applicationName: "Web Edition",
       iconFileId: "web-icon",
       shortName: "Web",
@@ -619,7 +619,7 @@ describe("versions Windows export handlers", () => {
         createdAt: "2026-01-01T00:00:00.000Z",
       },
     });
-    deps.projectService.getCurrentPlatformReleaseInfo.mockResolvedValue({
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
       applicationName: "Windows Edition",
       iconFileId: "windows-icon",
       applicationIdentifier: "com.example.windows-edition",
@@ -877,7 +877,7 @@ describe("versions macOS export handlers", () => {
       getState: vi.fn(() => structuredClone(initialProjectData)),
     };
     const deps = createDeps({ repository });
-    deps.projectService.getCurrentPlatformReleaseInfo.mockResolvedValue({
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
       applicationName: "Mac Edition",
       iconFileId: "mac-icon",
       applicationIdentifier: "com.example.mac-edition",

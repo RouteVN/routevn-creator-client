@@ -10,7 +10,7 @@ import { createBundleInstructions } from "../../deps/services/shared/projectExpo
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
 import { createMacosNativeVersion } from "../../internal/nativeApplicationVersion.js";
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
-import { validatePlatformReleaseInfo } from "../../internal/releaseInfoValidation.js";
+import { validatePlatformDetails } from "../../internal/platformDetailsValidation.js";
 
 const getVersionDescription = (version) => {
   return version?.description ?? version?.notes ?? "";
@@ -252,65 +252,65 @@ const formatWindowsExportErrorCopy = ({ template, error }) =>
     message: getWindowsExportErrorMessage(error),
   });
 
-const getMissingReleaseInfoMessage = (platform, copy) => {
+const getMissingPlatformDetailsMessage = (platform, copy) => {
   if (platform === "windows") {
     return (
-      copy.windowsReleaseInfoRequired ??
-      "Add Windows release info before exporting. Open Release Info, click +, and add Windows."
+      copy.windowsPlatformDetailsRequired ??
+      "Add Windows platform details before exporting. Open Platform Details, click +, and add Windows."
     );
   }
   if (platform === "macos") {
     return (
-      copy.macosReleaseInfoRequired ??
-      "Add macOS release info before exporting. Open Release Info, click +, and add macOS."
+      copy.macosPlatformDetailsRequired ??
+      "Add macOS platform details before exporting. Open Platform Details, click +, and add macOS."
     );
   }
   return (
-    copy.webReleaseInfoRequired ??
-    "Add Web release info before exporting. Open Release Info, click +, and add Web."
+    copy.webPlatformDetailsRequired ??
+    "Add Web platform details before exporting. Open Platform Details, click +, and add Web."
   );
 };
 
-const getReleaseInfoValidationMessage = (code, copy) => {
+const getPlatformDetailsValidationMessage = (code, copy) => {
   if (code === "application-name-required") {
     return (
-      copy.releaseInfoApplicationNameRequired ??
-      "The platform release information needs an application name before export."
+      copy.platformDetailsApplicationNameRequired ??
+      "Application name is required in Platform Details before export."
     );
   }
   if (code === "theme-color-not-found") {
     return (
-      copy.releaseInfoThemeColorNotFound ??
-      "The Web release information references a theme color that no longer exists. Update it in Release Info before exporting."
+      copy.platformDetailsThemeColorNotFound ??
+      "The theme color selected in Web Platform Details no longer exists. Update it before exporting."
     );
   }
   if (code === "background-color-not-found") {
     return (
-      copy.releaseInfoBackgroundColorNotFound ??
-      "The Web release information references a background color that no longer exists. Update it in Release Info before exporting."
+      copy.platformDetailsBackgroundColorNotFound ??
+      "The background color selected in Web Platform Details no longer exists. Update it before exporting."
     );
   }
   if (code === "windows-identifier-invalid") {
     return (
-      copy.releaseInfoWindowsIdentifierInvalid ??
-      "The Windows application identifier is invalid. Update it in Release Info before exporting."
+      copy.platformDetailsWindowsIdentifierInvalid ??
+      "The Windows application identifier is invalid. Update it in Platform Details before exporting."
     );
   }
   if (code === "macos-identifier-required") {
     return (
-      copy.releaseInfoMacosIdentifierRequired ??
-      "Add a macOS bundle identifier in Release Info before exporting."
+      copy.platformDetailsMacosIdentifierRequired ??
+      "Add a macOS bundle identifier in Platform Details before exporting."
     );
   }
   if (code === "macos-identifier-invalid") {
     return (
-      copy.releaseInfoMacosIdentifierInvalid ??
-      "The macOS bundle identifier is invalid. Update it in Release Info before exporting."
+      copy.platformDetailsMacosIdentifierInvalid ??
+      "The macOS bundle identifier is invalid. Update it in Platform Details before exporting."
     );
   }
   return (
-    copy.releaseInfoMacosCategoryInvalid ??
-    "The macOS application category is invalid. Update it in Release Info before exporting."
+    copy.platformDetailsMacosCategoryInvalid ??
+    "The macOS application category is invalid. Update it in Platform Details before exporting."
   );
 };
 
@@ -323,7 +323,7 @@ const getCurrentColorIds = (projectService) => {
   );
 };
 
-const getReleaseInfoColor = (projectService, colorId) => {
+const getPlatformDetailsColor = (projectService, colorId) => {
   if (!colorId) {
     return undefined;
   }
@@ -332,8 +332,8 @@ const getReleaseInfoColor = (projectService, colorId) => {
   return color?.type === "color" ? color : undefined;
 };
 
-const getReleaseInfoColorLabel = (projectService, colorId) => {
-  const color = getReleaseInfoColor(projectService, colorId);
+const getPlatformDetailsColorLabel = (projectService, colorId) => {
+  const color = getPlatformDetailsColor(projectService, colorId);
   if (!color) {
     return "";
   }
@@ -346,7 +346,7 @@ const getReleaseInfoColorLabel = (projectService, colorId) => {
   return name || hex || "";
 };
 
-const requirePlatformReleaseInfoForExport = async ({
+const requirePlatformDetailsForExport = async ({
   appService,
   copy,
   platform,
@@ -354,13 +354,12 @@ const requirePlatformReleaseInfoForExport = async ({
 } = {}) => {
   let applicationInfo;
   try {
-    applicationInfo =
-      await projectService.getCurrentPlatformReleaseInfo(platform);
+    applicationInfo = await projectService.getCurrentPlatformDetails(platform);
   } catch {
     appService.showAlert({
       message:
-        copy.releaseInfoLoadFailed ??
-        "Release information could not be checked. Try again before exporting.",
+        copy.platformDetailsLoadFailed ??
+        "Platform details could not be checked. Try again before exporting.",
       title: copy.errorTitle ?? "Error",
     });
     return undefined;
@@ -368,7 +367,7 @@ const requirePlatformReleaseInfoForExport = async ({
 
   if (!applicationInfo) {
     appService.showAlert({
-      message: getMissingReleaseInfoMessage(platform, copy),
+      message: getMissingPlatformDetailsMessage(platform, copy),
       title: copy.warningTitle ?? "Warning",
     });
     return undefined;
@@ -376,7 +375,7 @@ const requirePlatformReleaseInfoForExport = async ({
 
   let validation;
   try {
-    validation = validatePlatformReleaseInfo({
+    validation = validatePlatformDetails({
       platform,
       applicationInfo,
       availableColorIds:
@@ -385,15 +384,15 @@ const requirePlatformReleaseInfoForExport = async ({
   } catch {
     appService.showAlert({
       message:
-        copy.releaseInfoLoadFailed ??
-        "Release information could not be checked. Try again before exporting.",
+        copy.platformDetailsLoadFailed ??
+        "Platform details could not be checked. Try again before exporting.",
       title: copy.errorTitle ?? "Error",
     });
     return undefined;
   }
   if (!validation.valid) {
     appService.showAlert({
-      message: getReleaseInfoValidationMessage(validation.code, copy),
+      message: getPlatformDetailsValidationMessage(validation.code, copy),
       title: copy.warningTitle ?? "Warning",
     });
     return undefined;
@@ -410,8 +409,8 @@ const requirePlatformReleaseInfoForExport = async ({
     } catch {
       appService.showAlert({
         message:
-          copy.releaseInfoIconNotFound ??
-          "The platform release information references an icon that is no longer available. Update it in Release Info before exporting.",
+          copy.platformDetailsIconNotFound ??
+          "The icon selected in Platform Details is no longer available. Update it before exporting.",
         title: copy.warningTitle ?? "Warning",
       });
       return undefined;
@@ -539,11 +538,13 @@ const createVersionExportData = async ({
       shortName: applicationInfo.shortName,
       description: applicationInfo.description,
       themeColor:
-        getReleaseInfoColor(projectService, applicationInfo.themeColorId)
+        getPlatformDetailsColor(projectService, applicationInfo.themeColorId)
           ?.hex ?? "",
       backgroundColor:
-        getReleaseInfoColor(projectService, applicationInfo.backgroundColorId)
-          ?.hex ?? "",
+        getPlatformDetailsColor(
+          projectService,
+          applicationInfo.backgroundColorId,
+        )?.hex ?? "",
     };
   }
 
@@ -756,7 +757,7 @@ const prepareExportConfirmation = async (
     return;
   }
 
-  const applicationInfo = await requirePlatformReleaseInfoForExport({
+  const applicationInfo = await requirePlatformDetailsForExport({
     appService,
     copy,
     platform,
@@ -776,11 +777,14 @@ const prepareExportConfirmation = async (
     applicationInfo,
     themeColor:
       platform === "web"
-        ? getReleaseInfoColorLabel(projectService, applicationInfo.themeColorId)
+        ? getPlatformDetailsColorLabel(
+            projectService,
+            applicationInfo.themeColorId,
+          )
         : "",
     backgroundColor:
       platform === "web"
-        ? getReleaseInfoColorLabel(
+        ? getPlatformDetailsColorLabel(
             projectService,
             applicationInfo.backgroundColorId,
           )

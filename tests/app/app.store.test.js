@@ -58,12 +58,12 @@ describe("app.store repository loading progress", () => {
     );
   });
 
-  it("resolves the release info route", () => {
+  it("resolves the platform details route", () => {
     const state = createInitialState();
-    state.currentRoute = "/project/releases/info";
+    state.currentRoute = "/project/releases/platform-details";
 
     expect(selectViewData({ state }).currentRoutePattern).toBe(
-      "/project/releases/info",
+      "/project/releases/platform-details",
     );
   });
 

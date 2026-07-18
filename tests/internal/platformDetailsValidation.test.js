@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { validatePlatformReleaseInfo } from "../../src/internal/releaseInfoValidation.js";
+import { validatePlatformDetails } from "../../src/internal/platformDetailsValidation.js";
 
-describe("release info validation", () => {
+describe("platform details validation", () => {
   it("requires an application name for every platform", () => {
     expect(
-      validatePlatformReleaseInfo({
+      validatePlatformDetails({
         platform: "web",
         applicationInfo: { applicationName: "   " },
       }),
@@ -13,7 +13,7 @@ describe("release info validation", () => {
 
   it("rejects Web colors that no longer exist", () => {
     expect(
-      validatePlatformReleaseInfo({
+      validatePlatformDetails({
         platform: "web",
         applicationInfo: {
           applicationName: "Project One",
@@ -27,7 +27,7 @@ describe("release info validation", () => {
 
   it("allows an empty Windows identifier and validates one when provided", () => {
     expect(
-      validatePlatformReleaseInfo({
+      validatePlatformDetails({
         platform: "windows",
         applicationInfo: {
           applicationName: "Project One",
@@ -36,7 +36,7 @@ describe("release info validation", () => {
       }),
     ).toEqual({ valid: true });
     expect(
-      validatePlatformReleaseInfo({
+      validatePlatformDetails({
         platform: "windows",
         applicationInfo: {
           applicationName: "Project One",
@@ -48,7 +48,7 @@ describe("release info validation", () => {
 
   it("requires a valid macOS identifier and validates an optional category", () => {
     expect(
-      validatePlatformReleaseInfo({
+      validatePlatformDetails({
         platform: "macos",
         applicationInfo: {
           applicationName: "Project One",
@@ -58,7 +58,7 @@ describe("release info validation", () => {
       }),
     ).toEqual({ valid: false, code: "macos-identifier-required" });
     expect(
-      validatePlatformReleaseInfo({
+      validatePlatformDetails({
         platform: "macos",
         applicationInfo: {
           applicationName: "Project One",
@@ -68,7 +68,7 @@ describe("release info validation", () => {
       }),
     ).toEqual({ valid: false, code: "macos-category-invalid" });
     expect(
-      validatePlatformReleaseInfo({
+      validatePlatformDetails({
         platform: "macos",
         applicationInfo: {
           applicationName: "Project One",

@@ -51,11 +51,11 @@ describe("resource type navigation", () => {
     ).toEqual(["project", "about", "appearance"]);
   });
 
-  it("shows release info in desktop and mobile release menus", () => {
+  it("shows platform details in desktop and mobile release menus", () => {
     const desktopViewData = selectDesktopResourceTypesViewData({
       props: {
         resourceCategory: "releases",
-        selectedResourceId: "releaseInfo",
+        selectedResourceId: "platformDetails",
       },
     });
     const mobileSidebarViewData = selectMobileSidebarViewData({
@@ -66,7 +66,7 @@ describe("resource type navigation", () => {
     });
 
     expect(desktopViewData.items.map((item) => item.id)).toEqual([
-      "releaseInfo",
+      "platformDetails",
       "versions",
       "webServer",
     ]);
@@ -74,6 +74,6 @@ describe("resource type navigation", () => {
       mobileSidebarViewData.sections.flatMap((section) =>
         section.items.map((item) => item.id),
       ),
-    ).toEqual(["releaseInfo", "versions"]);
+    ).toEqual(["platformDetails", "versions"]);
   });
 });

@@ -1,7 +1,7 @@
 import { tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
-import { validatePlatformReleaseInfo } from "../../internal/releaseInfoValidation.js";
-import { selectReleaseInfoPageCopy } from "./support/releaseInfoPageCopy.js";
+import { validatePlatformDetails } from "../../internal/platformDetailsValidation.js";
+import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
 const ICON_VALIDATIONS = [
   {
@@ -31,21 +31,21 @@ export const handleBeforeMount = (deps) => {
 
 export const handleAfterMount = async (deps) => {
   const { appService, i18n, projectService, render, store } = deps;
-  const copy = selectReleaseInfoPageCopy(i18n);
+  const copy = selectPlatformDetailsPageCopy(i18n);
 
   try {
-    const [webReleaseInfo, windowsReleaseInfo, macosReleaseInfo] =
+    const [webPlatformDetails, windowsPlatformDetails, macosPlatformDetails] =
       await Promise.all([
-        projectService.getCurrentPlatformReleaseInfo("web"),
-        projectService.getCurrentPlatformReleaseInfo("windows"),
-        projectService.getCurrentPlatformReleaseInfo("macos"),
+        projectService.getCurrentPlatformDetails("web"),
+        projectService.getCurrentPlatformDetails("windows"),
+        projectService.getCurrentPlatformDetails("macos"),
       ]);
-    const platformReleaseInfo = [
-      ["web", webReleaseInfo],
-      ["windows", windowsReleaseInfo],
-      ["macos", macosReleaseInfo],
+    const platformDetails = [
+      ["web", webPlatformDetails],
+      ["windows", windowsPlatformDetails],
+      ["macos", macosPlatformDetails],
     ];
-    for (const [platform, applicationInfo] of platformReleaseInfo) {
+    for (const [platform, applicationInfo] of platformDetails) {
       if (applicationInfo) {
         store.setPlatformApplicationInfo({ platform, applicationInfo });
       }
@@ -84,12 +84,12 @@ export const handleAddPlatformMenuItemClick = async (deps, payload) => {
   const { appService, i18n, projectService, refs, render, store } = deps;
   const { item } = payload._event.detail;
   const platform = item.value;
-  const copy = selectReleaseInfoPageCopy(i18n);
+  const copy = selectPlatformDetailsPageCopy(i18n);
   store.closeAddPlatformMenu();
 
   try {
     const applicationInfo =
-      await projectService.getCurrentPlatformReleaseInfoDefaults(platform);
+      await projectService.getCurrentPlatformDetailsDefaults(platform);
     store.openPlatformCreateDialog({ platform, applicationInfo });
     render();
 
@@ -125,7 +125,7 @@ export const handlePlatformEditDialogClose = (deps) => {
   render();
 };
 
-const createPlatformReleaseInfoPatch = ({ platform, values, iconFileId }) => {
+const createPlatformDetailsPatch = ({ platform, values, iconFileId }) => {
   const patch = {
     applicationName: values.applicationName.trim(),
     iconFileId,
@@ -189,14 +189,14 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
     return;
   }
 
-  const copy = selectReleaseInfoPageCopy(i18n);
+  const copy = selectPlatformDetailsPageCopy(i18n);
   const { mode, platform } = store.selectPlatformDialogState();
-  const patch = createPlatformReleaseInfoPatch({
+  const patch = createPlatformDetailsPatch({
     platform,
     values,
     iconFileId: store.selectPlatformEditIconFileId(),
   });
-  const validation = validatePlatformReleaseInfo({
+  const validation = validatePlatformDetails({
     platform,
     applicationInfo: patch,
     availableColorIds: platform === "web" ? store.selectColorIds() : undefined,
@@ -212,11 +212,8 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
   try {
     const applicationInfo =
       mode === "create"
-        ? await projectService.createCurrentPlatformReleaseInfo(platform, patch)
-        : await projectService.updateCurrentPlatformReleaseInfo(
-            platform,
-            patch,
-          );
+        ? await projectService.createCurrentPlatformDetails(platform, patch)
+        : await projectService.updateCurrentPlatformDetails(platform, patch);
     store.setPlatformApplicationInfo({ platform, applicationInfo });
     if (mode === "create") {
       store.setSelectedPlatform({ platform });
@@ -226,8 +223,8 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
     appService.showToast({
       message:
         mode === "create"
-          ? copy.platformReleaseInfoCreatedMessage
-          : copy.platformReleaseInfoSavedMessage,
+          ? copy.platformDetailsCreatedMessage
+          : copy.platformDetailsSavedMessage,
     });
   } catch {
     appService.showAlert({
@@ -242,7 +239,7 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
 
 export const handlePlatformEditDialogIconClick = async (deps) => {
   const { appService, i18n, render, store } = deps;
-  const copy = selectReleaseInfoPageCopy(i18n);
+  const copy = selectPlatformDetailsPageCopy(i18n);
   let file;
 
   try {
@@ -279,7 +276,7 @@ export const handlePlatformEditIconCropDialogClose = (deps) => {
 
 export const handlePlatformEditIconCropDialogConfirm = async (deps) => {
   const { appService, i18n, projectService, refs, render, store } = deps;
-  const copy = selectReleaseInfoPageCopy(i18n);
+  const copy = selectPlatformDetailsPageCopy(i18n);
 
   let croppedFile;
   try {

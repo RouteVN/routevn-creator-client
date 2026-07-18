@@ -1,4 +1,4 @@
-componentName: rvn-release-info
+componentName: rvn-platform-details
 propsSchema:
   type: object
   properties: {}

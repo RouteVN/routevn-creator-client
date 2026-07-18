@@ -11,7 +11,7 @@ const hasColor = (availableColorIds, colorId) => {
   return availableColorIds.has(colorId);
 };
 
-export const validatePlatformReleaseInfo = ({
+export const validatePlatformDetails = ({
   platform,
   applicationInfo,
   availableColorIds,
