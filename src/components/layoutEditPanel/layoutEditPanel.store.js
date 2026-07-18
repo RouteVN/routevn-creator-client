@@ -24,6 +24,7 @@ import {
   createChildInteractionForm,
   createConditionalOverrideAttributeDefaults,
   createConditionalOverrideAttributeForm,
+  createConditionalOverrideAttributeImagePreview,
   createConditionalOverrideConditionDefaults,
   createConditionalOverrideConditionForm,
   createSaveLoadPaginationDialogDefaults,
@@ -40,6 +41,7 @@ import {
   getVisibilityConditionSummary,
   normalizeConditionalOverrideRules,
   toConditionalOverrideAttributeItems,
+  toSectionedVisibilityConditionTargetOptions,
   toVisibilityConditionTargetOptions,
 } from "./support/layoutEditPanelFeatures.js";
 import {
@@ -55,7 +57,6 @@ import {
   getLayoutEditPanelSections,
   getLayoutInteractionActions,
   selectLayoutEditPanelFieldPopoverForm,
-  toImageOptions,
   toInspectorValues,
   toSoundOptions,
   toTextStyleOptions,
@@ -715,6 +716,8 @@ const resetSelectionUiState = (state) => {
     key: 0,
     editingIndex: undefined,
     fieldName: undefined,
+    selectedImageId: undefined,
+    validationErrors: {},
   };
   state.selectedElementMetrics = undefined;
   state.activeInteractionType = "click";
@@ -1031,12 +1034,14 @@ export const setConditionalOverrideConditionDialogSelectedVariableType = (
 
 export const openConditionalOverrideAttributeDialog = (
   { state },
-  { editingIndex, fieldName } = {},
+  { editingIndex, fieldName, selectedImageId } = {},
 ) => {
   state.conditionalOverrideAttributeDialog.open = true;
   state.conditionalOverrideAttributeDialog.key += 1;
   state.conditionalOverrideAttributeDialog.editingIndex = editingIndex;
   state.conditionalOverrideAttributeDialog.fieldName = fieldName;
+  state.conditionalOverrideAttributeDialog.selectedImageId = selectedImageId;
+  state.conditionalOverrideAttributeDialog.validationErrors = {};
 };
 
 export const closeConditionalOverrideAttributeDialog = (
@@ -1046,6 +1051,24 @@ export const closeConditionalOverrideAttributeDialog = (
   state.conditionalOverrideAttributeDialog.open = false;
   state.conditionalOverrideAttributeDialog.editingIndex = undefined;
   state.conditionalOverrideAttributeDialog.fieldName = undefined;
+  state.conditionalOverrideAttributeDialog.selectedImageId = undefined;
+  state.conditionalOverrideAttributeDialog.validationErrors = {};
+};
+
+export const setConditionalOverrideAttributeDialogImage = (
+  { state },
+  { imageId } = {},
+) => {
+  state.conditionalOverrideAttributeDialog.selectedImageId = imageId;
+  delete state.conditionalOverrideAttributeDialog.validationErrors
+    .selectedImageId;
+};
+
+export const setConditionalOverrideAttributeDialogValidationErrors = (
+  { state },
+  { errors } = {},
+) => {
+  state.conditionalOverrideAttributeDialog.validationErrors = errors ?? {};
 };
 
 export const selectFieldPopoverForm = (
@@ -1408,7 +1431,6 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
   const copy = selectLayoutEditPanelCopy(i18n);
   const textStyleItems = toTextStyleOptions(state.textStylesData);
   const soundItems = toSoundOptions(state.soundsData);
-  const imageItems = toImageOptions(state.imagesData);
   const spritesheetSelectionItems = toSpritesheetAnimationSelectionItems(
     state.spritesheetsData,
   );
@@ -1445,11 +1467,18 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
   const visibilityConditionOptions = {
     includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
     charactersData: props.charactersData,
+    systemSectionLabel: copy.systemSection ?? "System",
+    variablesSectionLabel: copy.variablesSection ?? "Variables",
   };
   const visibilityConditionTargetOptions = toVisibilityConditionTargetOptions(
     state.variablesData,
     visibilityConditionOptions,
   );
+  const conditionalOverrideConditionTargetOptions =
+    toSectionedVisibilityConditionTargetOptions(
+      state.variablesData,
+      visibilityConditionOptions,
+    );
   const visibilityConditionTargetTypeByTarget =
     toVisibilityConditionTargetTypeByTarget(
       state.variablesData,
@@ -1643,6 +1672,11 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       state.conditionalOverrideAttributeDialog.fieldName,
       conditionalOverrideAttributeOptions,
     );
+  const conditionalOverrideAttributeImagePreview =
+    createConditionalOverrideAttributeImagePreview(
+      state.imagesData,
+      state.conditionalOverrideAttributeDialog.selectedImageId,
+    );
   const selectedVisibilityConditionVariableType =
     state.visibilityConditionDialog.selectedVariableType ??
     visibilityConditionDialogDefaults.selectedVariableType;
@@ -1753,7 +1787,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     conditionalOverrideItems,
     conditionalOverrideConditionDefaults,
     conditionalOverrideConditionForm: createConditionalOverrideConditionForm({
-      targetOptions: visibilityConditionTargetOptions,
+      targetOptions: conditionalOverrideConditionTargetOptions,
       submitLabel: editingConditionalOverrideRule
         ? (copy.saveButton ?? "Save")
         : (copy.createButton ?? "Create"),
@@ -1766,11 +1800,11 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     },
     conditionalOverrideAttributeDialog:
       state.conditionalOverrideAttributeDialog,
+    conditionalOverrideAttributeImagePreview,
     conditionalOverrideAttributeDefaults,
     conditionalOverrideAttributeForm: createConditionalOverrideAttributeForm({
       attributeOptions: conditionalOverrideAttributeOptions,
       textStyleOptions: textStyleItems,
-      imageOptions: imageItems,
       submitLabel: state.conditionalOverrideAttributeDialog.fieldName
         ? (copy.saveButton ?? "Save")
         : (copy.addButton ?? "Add"),
@@ -1793,7 +1827,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     addAttributeButton: copy.addAttributeButton ?? "Add Attribute",
     cancelButton: copy.cancelButton ?? "Cancel",
-    deleteButton: copy.deleteButton ?? "Delete",
+    imageLabel: copy.imageLabel ?? "Image",
     noAttributesYet: copy.noAttributesYet ?? "No attributes yet",
     noPreviewLabel: copy.noPreviewLabel ?? "No preview",
     notSetLabel: copy.notSetLabel ?? "Not set",
@@ -1801,6 +1835,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     removeButton: copy.removeButton ?? "Remove",
     selectSpritesheetAnimationLabel:
       copy.selectSpritesheetAnimationLabel ?? "Select a spritesheet animation",
+    selectImageLabel: copy.selectImageLabel ?? "Select image",
     selectVisualLabel: copy.selectVisualLabel ?? "Select visual",
   };
 };

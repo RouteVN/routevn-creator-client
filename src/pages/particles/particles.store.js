@@ -54,17 +54,6 @@ const getImageItemById = (state, imageId) => {
   return imageId ? getImageItems(state)?.[imageId] : undefined;
 };
 
-const resolveImageAspectRatio = (item) => {
-  const width = Number(item?.width);
-  const height = Number(item?.height);
-
-  if (!Number.isFinite(width) || !Number.isFinite(height) || height <= 0) {
-    return "16 / 9";
-  }
-
-  return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
-};
-
 const buildDialogImageCard = (state, imageId) => {
   const imageItem = getImageItemById(state, imageId);
 
@@ -75,7 +64,7 @@ const buildDialogImageCard = (state, imageId) => {
   return {
     imageId,
     previewFileId: imageItem.thumbnailFileId ?? imageItem.fileId,
-    previewAspectRatio: resolveImageAspectRatio(imageItem),
+    previewAspectRatio: "16 / 9",
     name: imageItem.name ?? imageId,
     itemBorderColor: "bo",
     itemHoverBorderColor: "ac",

@@ -281,6 +281,10 @@ export const createConditionalOverrideConditionForm = ({
         label: copy.targetLabel ?? "Target",
         required: true,
         clearable: false,
+        searchable: true,
+        searchPlaceholder:
+          copy.conditionTargetSearchPlaceholder ?? "Search targets...",
+        emptySearchLabel: copy.noConditionTargetsFound ?? "No targets found",
         options: targetOptions,
       },
       {
@@ -328,11 +332,6 @@ export const createConditionalOverrideConditionForm = ({
     actions: {
       layout: "",
       buttons: [
-        {
-          id: "cancel",
-          variant: "se",
-          label: copy.cancelButton ?? "Cancel",
-        },
         {
           id: "submit",
           variant: "pr",
@@ -416,10 +415,32 @@ export const createConditionalOverrideAttributeDefaults = (
   };
 };
 
+export const createConditionalOverrideAttributeImagePreview = (
+  imagesData,
+  imageId,
+) => {
+  if (!imageId) {
+    return undefined;
+  }
+
+  const imageItem = imagesData?.items?.[imageId];
+  if (!imageItem?.fileId) {
+    return undefined;
+  }
+
+  return {
+    imageId,
+    previewFileId: imageItem.thumbnailFileId ?? imageItem.fileId,
+    previewAspectRatio: "16 / 9",
+    name: imageItem.name ?? imageId,
+    itemBorderColor: "bo",
+    itemHoverBorderColor: "ac",
+  };
+};
+
 export const createConditionalOverrideAttributeForm = ({
   attributeOptions,
   textStyleOptions,
-  imageOptions,
   submitLabel = "Save",
   copy = {},
 } = {}) => {
@@ -447,12 +468,9 @@ export const createConditionalOverrideAttributeForm = ({
       {
         $when:
           "fieldName == 'imageId' || fieldName == 'hoverImageId' || fieldName == 'clickImageId'",
-        name: "selectedImageId",
-        type: "select",
+        type: "slot",
+        slot: "conditional-override-image",
         label: copy.imageLabel ?? "Image",
-        required: true,
-        clearable: false,
-        options: imageOptions,
       },
       {
         $when: "fieldName == 'opacity'",

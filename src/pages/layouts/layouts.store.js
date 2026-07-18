@@ -261,7 +261,7 @@ const {
     ...baseViewData,
     itemContextMenuItems: createLayoutExplorerItemContextMenuItems(copy),
     centerItemContextMenuItems: createLayoutCenterItemContextMenuItems(copy),
-    openLayoutEditorButton: copy.openLayoutEditorButton ?? "Open Layout Editor",
+    openLayoutEditorButton: copy.openLayoutEditorButton ?? "Layout Editor",
     isAddDialogOpen: state.isAddDialogOpen,
     layoutForm: createLayoutForm(copy),
     layoutFormDefaults: {
