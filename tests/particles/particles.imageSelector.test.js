@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
@@ -33,6 +34,32 @@ const createImagesData = () => ({
 });
 
 describe("particle texture image selector", () => {
+  it("uses the same no-padding image card for texture and preview background", () => {
+    const view = readFileSync(
+      new URL("../../src/pages/particles/particles.view.yaml", import.meta.url),
+      "utf8",
+    );
+    const previewBackgroundBlock = view.slice(
+      view.indexOf("$if dialogPreviewBackgroundImage:"),
+      view.indexOf("rtgl-dialog#createTagDialog"),
+    );
+    const textureCard = `                                      - 'rtgl-view#dialogTextureImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="\${textureImageLabel}" cur=pointer bw=xs bc=\${dialogTextureImage.itemBorderColor} h-bc=\${dialogTextureImage.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                                          - 'div.particleImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: \${dialogTextureImage.previewAspectRatio}; overflow: hidden;"':
+                                              - rvn-file-image w=f h=f fileId=\${dialogTextureImage.previewFileId}: null
+                                          - rtgl-view w=f p=md:`;
+
+    expect(view).toContain(textureCard);
+    expect(previewBackgroundBlock).toContain(
+      "dialogPreviewBackgroundImageButton cur=pointer",
+    );
+    expect(previewBackgroundBlock).toContain("w=160 overflow=hidden");
+    expect(previewBackgroundBlock).toContain(
+      'div.particleImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${dialogPreviewBackgroundImage.previewAspectRatio}; overflow: hidden;"',
+    );
+    expect(previewBackgroundBlock).toContain("rtgl-view w=f p=md");
+    expect(previewBackgroundBlock).not.toContain("rtgl-view p=md g=md br=md");
+  });
+
   it("uses the image selector slot in setup and appearance forms", () => {
     const setupForm = createParticleCreateSetupForm();
     const appearanceForm = createParticleForm({ activeTab: "appearance" });
@@ -72,7 +99,7 @@ describe("particle texture image selector", () => {
       {
         imageId: IMAGE_ID,
         previewFileId: "thumbnail-one",
-        previewAspectRatio: "64 / 32",
+        previewAspectRatio: "16 / 9",
         name: "Image One",
         itemBorderColor: "bo",
         itemHoverBorderColor: "ac",

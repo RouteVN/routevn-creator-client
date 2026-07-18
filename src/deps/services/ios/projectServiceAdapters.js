@@ -388,24 +388,23 @@ const copyTemplateFiles = async ({ templateId, projectId, templateData }) => {
   const templateFilesPath = `/templates/${templateId}/files/`;
   const filesToCopy = await getTemplateFiles(templateId);
 
-  for (const fileName of filesToCopy) {
+  for (const fileId of filesToCopy) {
     try {
-      const sourcePath = templateFilesPath + fileName;
-      const response = await fetch(sourcePath + "?raw");
+      const sourcePath = templateFilesPath + fileId;
+      const response = await fetch(sourcePath);
       if (response.ok) {
         const blob = await response.blob();
         const bytes = new Uint8Array(await blob.arrayBuffer());
-        const templateMimeType =
-          templateData?.files?.items?.[fileName]?.mimeType;
+        const templateMimeType = templateData.files.items[fileId].mimeType;
         await writeIOSProjectFile({
           projectId,
-          fileId: assertSafeProjectFileId(fileName),
+          fileId: assertSafeProjectFileId(fileId),
           bytes,
           mimeType: templateMimeType ?? blob.type,
         });
       }
     } catch (error) {
-      console.error(`Failed to copy template file ${fileName}:`, error);
+      console.error(`Failed to copy template file ${fileId}:`, error);
     }
   }
 };

@@ -214,6 +214,43 @@ export const normalizeConditionalOverrideRules = (value) => {
     }));
 };
 
+const createConditionalOverrideRuleSignature = (rule) =>
+  JSON.stringify(normalizeConditionalOverrideRules([rule])[0]);
+
+export const createConditionalOverrideRuleLocator = ({ rules, index }) => {
+  const reference = rules[index];
+  const signature = createConditionalOverrideRuleSignature(reference);
+  const occurrence = rules
+    .slice(0, index)
+    .filter(
+      (candidate) =>
+        createConditionalOverrideRuleSignature(candidate) === signature,
+    ).length;
+
+  return { index, occurrence, reference, signature };
+};
+
+export const findConditionalOverrideRuleIndex = ({ rules, locator }) => {
+  const referenceIndex = rules.indexOf(locator.reference);
+  if (referenceIndex >= 0) {
+    return referenceIndex;
+  }
+
+  if (
+    createConditionalOverrideRuleSignature(rules[locator.index]) ===
+    locator.signature
+  ) {
+    return locator.index;
+  }
+
+  const matchingIndexes = rules.flatMap((rule, ruleIndex) =>
+    createConditionalOverrideRuleSignature(rule) === locator.signature
+      ? [ruleIndex]
+      : [],
+  );
+  return matchingIndexes[locator.occurrence];
+};
+
 export const getConditionalOverrideSummary = (
   rule,
   variablesData = {},
@@ -281,6 +318,10 @@ export const createConditionalOverrideConditionForm = ({
         label: copy.targetLabel ?? "Target",
         required: true,
         clearable: false,
+        searchable: true,
+        searchPlaceholder:
+          copy.conditionTargetSearchPlaceholder ?? "Search targets...",
+        emptySearchLabel: copy.noConditionTargetsFound ?? "No targets found",
         options: targetOptions,
       },
       {
@@ -328,11 +369,6 @@ export const createConditionalOverrideConditionForm = ({
     actions: {
       layout: "",
       buttons: [
-        {
-          id: "cancel",
-          variant: "se",
-          label: copy.cancelButton ?? "Cancel",
-        },
         {
           id: "submit",
           variant: "pr",
@@ -416,10 +452,32 @@ export const createConditionalOverrideAttributeDefaults = (
   };
 };
 
+export const createConditionalOverrideAttributeImagePreview = (
+  imagesData,
+  imageId,
+) => {
+  if (!imageId) {
+    return undefined;
+  }
+
+  const imageItem = imagesData?.items?.[imageId];
+  if (!imageItem?.fileId) {
+    return undefined;
+  }
+
+  return {
+    imageId,
+    previewFileId: imageItem.thumbnailFileId ?? imageItem.fileId,
+    previewAspectRatio: "16 / 9",
+    name: imageItem.name ?? imageId,
+    itemBorderColor: "bo",
+    itemHoverBorderColor: "ac",
+  };
+};
+
 export const createConditionalOverrideAttributeForm = ({
   attributeOptions,
   textStyleOptions,
-  imageOptions,
   submitLabel = "Save",
   copy = {},
 } = {}) => {
@@ -447,12 +505,9 @@ export const createConditionalOverrideAttributeForm = ({
       {
         $when:
           "fieldName == 'imageId' || fieldName == 'hoverImageId' || fieldName == 'clickImageId'",
-        name: "selectedImageId",
-        type: "select",
+        type: "slot",
+        slot: "conditional-override-image",
         label: copy.imageLabel ?? "Image",
-        required: true,
-        clearable: false,
-        options: imageOptions,
       },
       {
         $when: "fieldName == 'opacity'",
@@ -498,11 +553,6 @@ export const createConditionalOverrideAttributeForm = ({
     actions: {
       layout: "",
       buttons: [
-        {
-          id: "cancel",
-          variant: "se",
-          label: copy.cancelButton ?? "Cancel",
-        },
         {
           id: "submit",
           variant: "pr",

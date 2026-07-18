@@ -168,6 +168,13 @@ refs:
       form-action:
         handler: handleCreateTagFormAction
   canvas: {}
+styles:
+  ".transformImageThumbnailTransparencyGrid":
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
+    background-repeat: repeat
+    background-size: 12px 12px
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -262,14 +269,14 @@ template:
                               - rtgl-view d=v w=160 lg-w=f g=xs:
                                   - rtgl-text s=sm c=mu-fg: ${item.label}
                                   - $if item.image:
-                                      - 'rtgl-view#transformPreviewImageButton${i} data-target=${item.target} cur=pointer bw=xs bc=${item.image.itemBorderColor} h-bc=${item.image.itemHoverBorderColor} br=md w=160 style="max-width: 100%; box-sizing: border-box;"':
-                                          - 'rtgl-view p=md g=md br=md w=f style="max-width: 100%; box-sizing: border-box;"':
-                                              - $if item.image.previewFileId:
-                                                  - 'rtgl-view w=f br=md style="aspect-ratio: ${item.image.previewAspectRatio}; overflow: hidden;"':
-                                                      - rvn-file-image w=f h=f fileId=${item.image.previewFileId}: null
-                                                $else:
-                                                  - rtgl-view w=f h=90 br=md bw=xs bc=bo av=c ah=c:
-                                                      - rtgl-text s=xs c=mu-fg: ${noPreviewLabel}
+                                      - 'rtgl-view#transformPreviewImageButton${i} data-target=${item.target} cur=pointer bw=xs bc=${item.image.itemBorderColor} h-bc=${item.image.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                                          - $if item.image.previewFileId:
+                                              - 'div.transformImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.image.previewAspectRatio}; overflow: hidden;"':
+                                                  - rvn-file-image w=f h=f fileId=${item.image.previewFileId}: null
+                                            $else:
+                                              - 'rtgl-view w=f av=c ah=c style="aspect-ratio: ${item.image.previewAspectRatio}; overflow: hidden;"':
+                                                  - rtgl-text s=xs c=mu-fg: ${noPreviewLabel}
+                                          - rtgl-view w=f p=md:
                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.image.name}
                                     $else:
                                       - 'rtgl-view#transformPreviewImageButton${i} data-target=${item.target} w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':

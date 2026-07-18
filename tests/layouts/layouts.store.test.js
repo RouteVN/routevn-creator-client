@@ -7,6 +7,14 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("layouts.store", () => {
+  it("labels the detail action as Layout Editor", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.openLayoutEditorButton).toBe("Layout Editor");
+  });
+
   it("uses a select for layout type selection", () => {
     const state = createInitialState();
 

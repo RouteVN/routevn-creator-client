@@ -148,7 +148,7 @@ template:
                                       - rtgl-svg svg=edit wh=16: null
                                   - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
                                       - $if selectedItemId:
-                                          - rtgl-button#openLayoutEditorButton slot="actions" data-layout-id="${selectedItemId}" w=f: ${openLayoutEditorButton}
+                                          - rtgl-button#openLayoutEditorButton slot="actions" data-layout-id="${selectedItemId}" v=se: ${openLayoutEditorButton}
                                           - rtgl-tag-select#detailTagSelect slot="layout-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:

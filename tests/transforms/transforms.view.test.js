@@ -73,4 +73,28 @@ describe("transforms view", () => {
       "rtgl-button#cancelTransformPreviewImageSelection",
     );
   });
+
+  it("uses fixed-width image cards for both transform preview images", () => {
+    const transformsView = readFileSync(
+      new URL(
+        "../../src/pages/transforms/transforms.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const previewCards = transformsView.slice(
+      transformsView.indexOf("$for item, i in previewPanel.items"),
+      transformsView.indexOf("rtgl-dropdown-menu#transformPreviewImageMenu"),
+    );
+
+    expect(previewCards).toContain(
+      "transformPreviewImageButton${i} data-target=${item.target}",
+    );
+    expect(previewCards).toContain("br=md w=160 overflow=hidden");
+    expect(previewCards).toContain(
+      'div.transformImageThumbnailTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${item.image.previewAspectRatio}; overflow: hidden;"',
+    );
+    expect(previewCards).toContain("rtgl-view w=f p=md");
+    expect(previewCards).not.toContain("rtgl-view p=md g=md br=md");
+  });
 });

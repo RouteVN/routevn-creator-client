@@ -125,14 +125,24 @@ refs:
     eventListeners:
       form-action:
         handler: handleConditionalOverrideAttributeFormAction
+  conditionalOverrideAttributeImage:
+    eventListeners:
+      click:
+        handler: handleConditionalOverrideAttributeImageClick
+      keydown:
+        handler: handleConditionalOverrideAttributeImageKeyDown
   conditionalOverrideCondition*:
     eventListeners:
       click:
         handler: handleConditionalOverrideConditionClick
+  conditionalOverrideItem*:
+    eventListeners:
+      contextmenu:
+        handler: handleConditionalOverrideContextMenu
   conditionalOverrideDelete*:
     eventListeners:
       click:
-        handler: handleConditionalOverrideConditionDeleteClick
+        handler: handleConditionalOverrideDeleteClick
   conditionalOverrideAddAttribute*:
     eventListeners:
       click:
@@ -175,10 +185,6 @@ refs:
     eventListeners:
       click:
         handler: handleImageSelectorSubmit
-  cancelImageSelection:
-    eventListeners:
-      click:
-        handler: handleImageSelectorCancel
   soundSelectorDialog:
     eventListeners:
       close:
@@ -342,7 +348,7 @@ template:
                     $elif item.type == 'conditional-override-list':
                       - $if item.items.length > 0:
                           - $for conditionalItem, k in item.items:
-                              - rtgl-view key=${conditionalItem.viewKey} w=f g=sm p=md bgc=mu br=md bw=xs bc=bg:
+                              - rtgl-view#conditionalOverrideItem${i}x${j}x${k} key=${conditionalItem.viewKey} data-index=${conditionalItem.index} w=f g=sm p=md bgc=bg br=md bw=xs bc=bo h-bc=ac cur=context-menu:
                                   - rtgl-view d=h g=sm av=c w=f:
                                       - rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
                                           - rtgl-text s=sm: ${conditionalItem.summary}
@@ -355,8 +361,8 @@ template:
                                               - rtgl-button#conditionalOverrideAttributeDelete${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} variant=se s=sm: ${removeButton}
                                     $else:
                                       - rtgl-text s=xs c=mu-fg: ${noAttributesYet}
-                                  - rtgl-view d=h w=f ah=e:
-                                      - rtgl-button#conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh: ${addAttributeButton}
+                                  - rtgl-view d=h w=f:
+                                      - rtgl-button#conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh w=f: ${addAttributeButton}
                     $elif item.type == 'pagination-summary':
                       - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                           - rtgl-text s=sm: ${item.value}
@@ -435,7 +441,19 @@ template:
   - rtgl-dialog#conditionalOverrideAttributeDialog ?open=${conditionalOverrideAttributeDialog.open} s=md:
       - $if conditionalOverrideAttributeDialog.open:
           - rtgl-view slot=content g=md:
-              - rtgl-form#conditionalOverrideAttributeForm key=${conditionalOverrideAttributeDialog.key} :form=${conditionalOverrideAttributeForm} :defaultValues=${conditionalOverrideAttributeDefaults} :context=${conditionalOverrideAttributeDialogContext} w=f: null
+              - rtgl-form#conditionalOverrideAttributeForm key=${conditionalOverrideAttributeDialog.key} :form=${conditionalOverrideAttributeForm} :defaultValues=${conditionalOverrideAttributeDefaults} :context=${conditionalOverrideAttributeDialogContext} w=f:
+                  - rtgl-view slot=conditional-override-image d=v w=f:
+                      - $if conditionalOverrideAttributeImagePreview:
+                          - 'rtgl-view#conditionalOverrideAttributeImage role=button tabindex=0 aria-haspopup=dialog aria-label="${imageLabel}" cur=pointer bw=xs bc=${conditionalOverrideAttributeImagePreview.itemBorderColor} h-bc=${conditionalOverrideAttributeImagePreview.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                              - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; aspect-ratio: ${conditionalOverrideAttributeImagePreview.previewAspectRatio}; overflow: hidden;"':
+                                  - rvn-file-image w=f h=f fileId=${conditionalOverrideAttributeImagePreview.previewFileId}: null
+                              - rtgl-view w=f p=md:
+                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${conditionalOverrideAttributeImagePreview.name}
+                        $else:
+                          - 'rtgl-view#conditionalOverrideAttributeImage role=button tabindex=0 aria-haspopup=dialog aria-label="${imageLabel}" w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
+                              - rtgl-text c=mu-fg s=sm: ${selectImageLabel}
+                      - $if conditionalOverrideAttributeDialog.validationErrors.selectedImageId:
+                          - rtgl-text s=sm c=de: ${conditionalOverrideAttributeDialog.validationErrors.selectedImageId}
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
       - $if imageSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
@@ -446,8 +464,7 @@ template:
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                       - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelImageSelection variant=se: ${cancelButton}
-                  - rtgl-button#confirmImageSelection variant=pr: ${okButton}
+                  - rtgl-button#confirmImageSelection variant=pr: ${selectButton}
   - rtgl-dialog#soundSelectorDialog ?open=${soundSelectorDialog.open} s=lg:
       - $if soundSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:

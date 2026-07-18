@@ -9,6 +9,7 @@ import {
   getCharacterOptionLabel,
   toCharacterSelectOptions,
 } from "../../../internal/characterOptions.js";
+import { toFlatGroups } from "../../../internal/project/tree.js";
 
 const createVisibilityConditionOpOptions = (copy = {}) => [
   { label: copy.equalsOption ?? "Equals", value: "eq" },
@@ -36,12 +37,30 @@ const isVisibleVisibilityTarget = (target) => {
   return typeof target === "string" && !HIDDEN_VISIBILITY_TARGETS.has(target);
 };
 
-const getConditionTargetValueKind = (item = {}) => {
+const getConditionTargetType = (item = {}) => {
   if (item.type === "variable") {
-    return String(item.variableType || "string").toLowerCase();
+    return String(item.variableType ?? "string").toLowerCase();
   }
 
-  return String(item.valueKind || item.type || "string").toLowerCase();
+  return String(item.type ?? "string").toLowerCase();
+};
+
+const toConditionTargetOption = (target, item) => ({
+  label: item.name,
+  value: target,
+  suffixText: getConditionTargetValueKind(item),
+});
+
+const toConditionTargetSection = (label, items) => {
+  if (items.length === 0) {
+    return [];
+  }
+
+  return [{ type: "section", label }, ...items];
+};
+
+const getConditionTargetValueKind = (item = {}) => {
+  return String(item.valueKind ?? getConditionTargetType(item)).toLowerCase();
 };
 
 export const getScalarConditionTargetItems = (
@@ -52,16 +71,14 @@ export const getScalarConditionTargetItems = (
     .filter(
       ([, item]) =>
         item?.type === "variable" &&
-        SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(
-          getConditionTargetValueKind(item),
-        ),
+        SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(getConditionTargetType(item)),
     )
     .map(([variableId, item]) => [toVariableConditionTarget(variableId), item])
     .filter(([target]) => typeof target === "string" && target.length > 0);
   const specialTargets = Object.entries(
     getSpecialLayoutConditionItems(options),
   ).filter(([, item]) =>
-    SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(getConditionTargetValueKind(item)),
+    SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(getConditionTargetType(item)),
   );
 
   return Object.fromEntries([...projectVariables, ...specialTargets]);
@@ -73,12 +90,65 @@ export const toVisibilityConditionTargetOptions = (
 ) => {
   return Object.entries(getScalarConditionTargetItems(variablesData, options))
     .filter(([target]) => isVisibleVisibilityTarget(target))
-    .map(([target, variable]) => ({
-      label: variable.name,
-      value: target,
-      suffixText: getConditionTargetValueKind(variable),
-    }))
+    .map(([target, item]) => toConditionTargetOption(target, item))
     .sort((left, right) => left.label.localeCompare(right.label));
+};
+
+export const toSectionedVisibilityConditionTargetOptions = (
+  variablesData = {},
+  options = {},
+) => {
+  const specialTargetOptions = Object.entries(
+    getSpecialLayoutConditionItems(options),
+  )
+    .filter(([, item]) =>
+      SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(getConditionTargetType(item)),
+    )
+    .filter(([target]) => isVisibleVisibilityTarget(target))
+    .map(([target, item]) => toConditionTargetOption(target, item))
+    .sort((left, right) => left.label.localeCompare(right.label));
+
+  const groupedVariableIds = new Set();
+  const folderOptions = toFlatGroups(variablesData).flatMap((folder) => {
+    const variableOptions = folder.children
+      .filter((item) => {
+        if (item.type !== "variable") {
+          return false;
+        }
+
+        groupedVariableIds.add(item.id);
+        return SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(
+          getConditionTargetType(item),
+        );
+      })
+      .map((item) =>
+        toConditionTargetOption(toVariableConditionTarget(item.id), item),
+      );
+
+    return toConditionTargetSection(folder.name, variableOptions);
+  });
+  const ungroupedVariableOptions = Object.entries(variablesData?.items ?? {})
+    .filter(
+      ([variableId, item]) =>
+        !groupedVariableIds.has(variableId) &&
+        item?.type === "variable" &&
+        SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(getConditionTargetType(item)),
+    )
+    .map(([variableId, item]) =>
+      toConditionTargetOption(toVariableConditionTarget(variableId), item),
+    );
+
+  return [
+    ...toConditionTargetSection(
+      options.systemSectionLabel ?? "System",
+      specialTargetOptions,
+    ),
+    ...folderOptions,
+    ...toConditionTargetSection(
+      options.variablesSectionLabel ?? "Variables",
+      ungroupedVariableOptions,
+    ),
+  ];
 };
 
 export const toVisibilityConditionTargetTypeByTarget = (
@@ -87,7 +157,7 @@ export const toVisibilityConditionTargetTypeByTarget = (
 ) => {
   return Object.fromEntries(
     Object.entries(getScalarConditionTargetItems(variablesData, options)).map(
-      ([target, variable]) => [target, getConditionTargetValueKind(variable)],
+      ([target, variable]) => [target, getConditionTargetType(variable)],
     ),
   );
 };

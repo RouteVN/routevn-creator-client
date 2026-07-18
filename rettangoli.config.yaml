@@ -10,6 +10,7 @@ fe:
   dirs: ["src/components", "src/pages"] # directories that contain components
   setup: "src/setup.web.js" # path to setup file
   outfile: "_site/public/main.js" # output this is separate from rettangoli file
+  publicDir: "static"
   i18n:
     dir: "src/i18n"
     defaultLocale: "en"

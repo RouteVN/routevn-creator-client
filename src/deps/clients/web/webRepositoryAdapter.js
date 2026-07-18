@@ -102,22 +102,24 @@ export const readProjectAppValue = async ({ projectId, key }) => {
   }
 };
 
-async function copyTemplateFiles(templateId, adapter) {
+async function copyTemplateFiles(templateId, templateData, adapter) {
   const templateFilesPath = `/templates/${templateId}/files/`;
   const filesToCopy = await getTemplateFiles(templateId);
 
-  for (const fileName of filesToCopy) {
+  for (const fileId of filesToCopy) {
     try {
-      const sourcePath = templateFilesPath + fileName;
+      const sourcePath = templateFilesPath + fileId;
 
       // Fetch from the web server and save to IndexedDB
-      const response = await fetch(sourcePath + "?raw");
+      const response = await fetch(sourcePath);
       if (response.ok) {
-        const blob = await response.blob();
-        await adapter.setFile(fileName, blob);
+        const sourceBlob = await response.blob();
+        const mimeType = templateData.files.items[fileId].mimeType;
+        const blob = new Blob([sourceBlob], { type: mimeType });
+        await adapter.setFile(fileId, blob);
       }
     } catch (error) {
-      console.error(`Failed to copy template file ${fileName}:`, error);
+      console.error(`Failed to copy template file ${fileId}:`, error);
     }
   }
 }
@@ -170,7 +172,7 @@ export const initializeProject = async ({
   );
 
   // Copy template files to project's IndexedDB
-  await copyTemplateFiles(template, adapter);
+  await copyTemplateFiles(template, loadedTemplateData, adapter);
 
   assertSupportedProjectState(templateData);
 

@@ -405,12 +405,12 @@ async function copyTemplateFiles(templateId, targetPath) {
   const templateFilesPath = `/templates/${templateId}/files/`;
   const filesToCopy = await getTemplateFiles(templateId);
 
-  for (const fileName of filesToCopy) {
+  for (const fileId of filesToCopy) {
     try {
-      const sourcePath = templateFilesPath + fileName;
-      const targetFilePath = await join(targetPath, fileName);
+      const sourcePath = templateFilesPath + fileId;
+      const targetFilePath = await join(targetPath, fileId);
 
-      const response = await fetch(sourcePath + "?raw");
+      const response = await fetch(sourcePath);
       if (response.ok) {
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
@@ -418,7 +418,7 @@ async function copyTemplateFiles(templateId, targetPath) {
         await writeFile(targetFilePath, uint8Array);
       }
     } catch (error) {
-      console.error(`Failed to copy template file ${fileName}:`, error);
+      console.error(`Failed to copy template file ${fileId}:`, error);
     }
   }
 }

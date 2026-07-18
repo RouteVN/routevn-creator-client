@@ -13,7 +13,9 @@ import {
 } from "../../internal/runtimeFields.js";
 import {
   buildConditionalOverrideSetUpdate,
+  createConditionalOverrideRuleLocator,
   deleteConditionalOverrideSetField,
+  findConditionalOverrideRuleIndex,
   getAvailableChildInteractionItems,
   getConditionalOverrideAttributeOptions,
 } from "./support/layoutEditPanelFeatures.js";
@@ -64,6 +66,11 @@ const SOUND_ID_FIELDS = new Set([
   "revealSoundId",
 ]);
 const SIZE_FIELDS = new Set(["width", "height"]);
+const CONDITIONAL_OVERRIDE_IMAGE_FIELDS = new Set([
+  "imageId",
+  "hoverImageId",
+  "clickImageId",
+]);
 const WHEEL_INCREMENT_FIELD_CONFIG = {
   x: { step: 1, fastStep: 10 },
   y: { step: 1, fastStep: 10 },
@@ -1027,7 +1034,7 @@ export const handleContextMenuClickItem = (deps, payload) => {
 };
 
 export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
-  const { render, store } = deps;
+  const { refs, render, store } = deps;
   const values = payload._event.detail?.values ?? {};
   const targetTypeByTarget =
     store.selectVisibilityConditionTargetTypeByTarget();
@@ -1042,11 +1049,31 @@ export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
       "string")
     : undefined;
 
+  const shouldDefaultOperation = values.target && values.op === undefined;
+  const shouldDefaultBooleanValue =
+    values.target &&
+    selectedVariableType === "boolean" &&
+    values.booleanValue === undefined;
+
   store.setConditionalOverrideConditionDialogSelectedVariableType({
     selectedVariableType,
     selectedValueKind,
   });
   render();
+
+  if (shouldDefaultOperation || shouldDefaultBooleanValue) {
+    const nextValues = { ...values };
+    if (shouldDefaultOperation) {
+      nextValues.op = "eq";
+    }
+    if (shouldDefaultBooleanValue) {
+      nextValues.booleanValue = true;
+    }
+
+    refs.conditionalOverrideConditionForm.setValues({
+      values: nextValues,
+    });
+  }
 };
 
 export const handleOptionSelected = (deps, payload) => {
@@ -1632,6 +1659,39 @@ const getConditionalOverrideRules = (store) => {
   return Array.isArray(currentRules) ? [...currentRules] : [];
 };
 
+const confirmConditionalOverrideDelete = async (deps, ruleLocator) => {
+  const { appService, store } = deps;
+  const copy = selectCopy(deps);
+  const confirmed = await appService.showDialog({
+    title: copy.deleteConditionTitle ?? "Delete Condition?",
+    message:
+      copy.deleteConditionMessage ??
+      "Delete this condition? This cannot be undone.",
+    confirmText: copy.deleteButton ?? "Delete",
+    cancelText: copy.cancelButton ?? "Cancel",
+  });
+  if (!confirmed) {
+    return;
+  }
+
+  const currentRules = getConditionalOverrideRules(store);
+  const matchingIndex = findConditionalOverrideRuleIndex({
+    rules: currentRules,
+    locator: ruleLocator,
+  });
+  if (!Number.isInteger(matchingIndex)) {
+    return;
+  }
+
+  const nextRules = currentRules.filter(
+    (_rule, ruleIndex) => ruleIndex !== matchingIndex,
+  );
+  applyPanelValueUpdate(deps, {
+    name: "conditionalOverrides",
+    value: nextRules.length > 0 ? nextRules : undefined,
+  });
+};
+
 export const handleConditionalOverrideConditionClick = (deps, payload) => {
   const { render, store } = deps;
   const index = Number.parseInt(
@@ -1659,27 +1719,53 @@ export const handleConditionalOverrideConditionClick = (deps, payload) => {
   render();
 };
 
-export const handleConditionalOverrideConditionDeleteClick = (
-  deps,
-  payload,
-) => {
-  const { render, store } = deps;
-  const index = Number.parseInt(
-    payload._event.currentTarget?.dataset?.index,
-    10,
-  );
+export const handleConditionalOverrideContextMenu = async (deps, payload) => {
+  const { appService, store } = deps;
+  const copy = selectCopy(deps);
+  const event = payload._event;
+  event.preventDefault();
+  const index = Number.parseInt(event.currentTarget.dataset.index, 10);
   const rules = getConditionalOverrideRules(store);
 
   if (!Number.isInteger(index) || index < 0 || index >= rules.length) {
     return;
   }
 
-  const nextRules = rules.filter((_rule, ruleIndex) => ruleIndex !== index);
-  applyPanelValueUpdate(deps, {
-    name: "conditionalOverrides",
-    value: nextRules.length > 0 ? nextRules : undefined,
+  const ruleLocator = createConditionalOverrideRuleLocator({ rules, index });
+
+  const result = await appService.showDropdownMenu({
+    items: [
+      {
+        type: "item",
+        label: copy.deleteMenuItem ?? "Delete",
+        key: "delete",
+      },
+    ],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
   });
-  render();
+  if (result?.item?.key !== "delete") {
+    return;
+  }
+
+  await confirmConditionalOverrideDelete(deps, ruleLocator);
+};
+
+export const handleConditionalOverrideDeleteClick = async (deps, payload) => {
+  const { store } = deps;
+  const event = payload._event;
+  event.preventDefault();
+  event.stopPropagation();
+
+  const index = Number.parseInt(event.currentTarget.dataset.index, 10);
+  const rules = getConditionalOverrideRules(store);
+  if (!Number.isInteger(index) || index < 0 || index >= rules.length) {
+    return;
+  }
+
+  const ruleLocator = createConditionalOverrideRuleLocator({ rules, index });
+  await confirmConditionalOverrideDelete(deps, ruleLocator);
 };
 
 export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
@@ -1725,12 +1811,42 @@ export const handleConditionalOverrideAttributeClick = (deps, payload) => {
     10,
   );
   const fieldName = payload._event.currentTarget?.dataset?.fieldName;
+  const rules = getConditionalOverrideRules(store);
+  const selectedImageId =
+    Number.isInteger(index) && CONDITIONAL_OVERRIDE_IMAGE_FIELDS.has(fieldName)
+      ? rules[index]?.set?.[fieldName]
+      : undefined;
 
   store.openConditionalOverrideAttributeDialog({
     editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
     fieldName,
+    selectedImageId,
   });
   render();
+};
+
+export const handleConditionalOverrideAttributeImageClick = (deps) => {
+  const { render, store } = deps;
+  const dialog = store.selectConditionalOverrideAttributeDialog();
+
+  store.openImageSelectorDialog({
+    selectedImageId: dialog.selectedImageId,
+    source: "conditionalOverrideAttribute",
+  });
+  render();
+};
+
+export const handleConditionalOverrideAttributeImageKeyDown = (
+  deps,
+  payload,
+) => {
+  if (payload._event.key !== "Enter" && payload._event.key !== " ") {
+    return;
+  }
+
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
+  handleConditionalOverrideAttributeImageClick(deps);
 };
 
 export const handleConditionalOverrideAttributeDeleteClick = (
@@ -1858,6 +1974,20 @@ export const handleConditionalOverrideAttributeFormAction = (deps, payload) => {
   }
 
   const dialog = store.selectConditionalOverrideAttributeDialog();
+  const isImageAttribute = CONDITIONAL_OVERRIDE_IMAGE_FIELDS.has(
+    values.fieldName,
+  );
+  if (isImageAttribute && !dialog.selectedImageId) {
+    const copy = selectCopy(deps);
+    store.setConditionalOverrideAttributeDialogValidationErrors({
+      errors: {
+        selectedImageId: copy.imageRequired ?? "Image is required.",
+      },
+    });
+    render();
+    return;
+  }
+
   const rules = getConditionalOverrideRules(store);
   const editingIndex = dialog.editingIndex;
   if (
@@ -1871,10 +2001,10 @@ export const handleConditionalOverrideAttributeFormAction = (deps, payload) => {
   const nextRules = [...rules];
   nextRules[editingIndex] = {
     ...nextRules[editingIndex],
-    set: buildConditionalOverrideSetUpdate(
-      nextRules[editingIndex]?.set,
-      values,
-    ),
+    set: buildConditionalOverrideSetUpdate(nextRules[editingIndex]?.set, {
+      ...values,
+      selectedImageId: dialog.selectedImageId,
+    }),
   };
 
   applyPanelValueUpdate(deps, {
@@ -2168,6 +2298,13 @@ export const handleImageSelectorSubmit = (deps) => {
     setTextRevealIndicatorDialogImage(deps, {
       imageId,
     });
+    store.closeImageSelectorDialog();
+    render();
+    return;
+  }
+
+  if (source === "conditionalOverrideAttribute") {
+    store.setConditionalOverrideAttributeDialogImage({ imageId });
     store.closeImageSelectorDialog();
     render();
     return;

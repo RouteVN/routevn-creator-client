@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
   getTemplateFiles: vi.fn(),
@@ -283,6 +283,11 @@ describe("webRepositoryAdapter", () => {
 
     await deleteDatabase("web-adapter-project");
     await deleteDatabase("web-init-project");
+    await deleteDatabase("web-template-file-project");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("reads repository events from the browser client store and removes the legacy events store", async () => {
@@ -432,6 +437,65 @@ describe("webRepositoryAdapter", () => {
         key: "creatorVersion",
       }),
     ).resolves.toBe(21);
+  });
+
+  it("copies extensionless template assets without requesting Vite raw modules", async () => {
+    const projectId = "web-template-file-project";
+    const rawClientStore = createRawClientStoreStub();
+    const templateState = structuredClone(initialProjectData);
+    templateState.files = {
+      items: {
+        "font-file-id": {
+          id: "font-file-id",
+          type: "font",
+          mimeType: "font/ttf",
+          size: 4,
+          sha256: "font-sha",
+        },
+      },
+      tree: [{ id: "font-file-id" }],
+    };
+    const sourceBlob = new Blob([new Uint8Array([0, 1, 0, 0])], {
+      type: "application/octet-stream",
+    });
+    const fetchTemplateFile = vi.fn(async () => ({
+      ok: true,
+      blob: async () => sourceBlob,
+    }));
+    vi.stubGlobal("fetch", fetchTemplateFile);
+
+    mocked.getTemplateFiles.mockResolvedValue(["font-file-id"]);
+    mocked.loadTemplate.mockResolvedValue(templateState);
+    mocked.resolveProjectResolutionForWrite.mockReturnValue(
+      structuredClone(templateState.project.resolution),
+    );
+    mocked.scaleTemplateProjectStateForResolution.mockImplementation(
+      (templateData) => templateData,
+    );
+
+    await initializeProject({
+      projectId,
+      template: "blank",
+      projectInfo: {
+        id: projectId,
+        name: "Browser Project",
+      },
+      projectResolution: templateState.project.resolution,
+      creatorVersion: 21,
+      rawClientStore,
+    });
+
+    expect(fetchTemplateFile).toHaveBeenCalledWith(
+      "/templates/blank/files/font-file-id",
+    );
+    const adapter = await createInsiemeWebStoreAdapter(projectId, {
+      rawClientStore,
+    });
+    const storedFont = await adapter.getFile("font-file-id");
+    expect(storedFont.type).toBe("font/ttf");
+    expect(new Uint8Array(await storedFont.arrayBuffer())).toEqual(
+      new Uint8Array(await sourceBlob.arrayBuffer()),
+    );
   });
 
   it("can replay an initialized project from history after checkpoint loss and later local edits", async () => {
