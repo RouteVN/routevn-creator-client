@@ -257,7 +257,6 @@ platformDetailsPage:
   applicationNameLabel: "アプリケーション名"
   applicationNameRequired: "アプリケーション名は必須です。"
   backgroundColorLabel: "背景色"
-  cancelButtonLabel: "キャンセル"
   categoryLabel: "アプリケーションカテゴリ"
   chooseProjectColorPlaceholder: "プロジェクトカラーを選択"
   clickToUpload: "クリックしてアップロード"

@@ -212,11 +212,6 @@ describe("platformDetails.store", () => {
     });
     expect(viewData.platformEditForm.actions.buttons).toEqual([
       {
-        id: "cancel",
-        variant: "se",
-        label: "Cancel",
-      },
-      {
         id: "submit",
         variant: "pr",
         validate: true,

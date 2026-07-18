@@ -323,26 +323,6 @@ describe("platformDetails handlers", () => {
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
 
-  it("cancels a platform draft without creating it", async () => {
-    const deps = createDeps();
-
-    await handlePlatformEditFormAction(deps, {
-      _event: {
-        detail: {
-          actionId: "cancel",
-        },
-      },
-    });
-
-    expect(deps.store.closePlatformEditDialog).toHaveBeenCalledTimes(1);
-    expect(
-      deps.projectService.createCurrentPlatformDetails,
-    ).not.toHaveBeenCalled();
-    expect(
-      deps.projectService.updateCurrentPlatformDetails,
-    ).not.toHaveBeenCalled();
-  });
-
   it("does not create macOS platform details without a bundle identifier", async () => {
     const deps = createDeps();
     deps.store.selectPlatformDialogState.mockReturnValue({

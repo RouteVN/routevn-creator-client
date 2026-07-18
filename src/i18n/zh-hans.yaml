@@ -257,7 +257,6 @@ platformDetailsPage:
   applicationNameLabel: "应用名称"
   applicationNameRequired: "应用名称为必填项。"
   backgroundColorLabel: "背景颜色"
-  cancelButtonLabel: "取消"
   categoryLabel: "应用类别"
   chooseProjectColorPlaceholder: "选择项目颜色"
   clickToUpload: "点击上传"

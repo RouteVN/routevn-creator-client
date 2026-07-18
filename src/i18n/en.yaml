@@ -257,7 +257,6 @@ platformDetailsPage:
   applicationNameLabel: "Application Name"
   applicationNameRequired: "Application name is required."
   backgroundColorLabel: "Background Color"
-  cancelButtonLabel: "Cancel"
   categoryLabel: "Application Category"
   chooseProjectColorPlaceholder: "Choose a project color"
   clickToUpload: "Click to upload"

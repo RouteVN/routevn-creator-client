@@ -183,11 +183,6 @@ const getValidationMessage = (copy, code) => {
 export const handlePlatformEditFormAction = async (deps, payload = {}) => {
   const { appService, i18n, projectService, render, store } = deps;
   const { actionId, values } = payload._event.detail;
-  if (actionId === "cancel") {
-    store.closePlatformEditDialog();
-    render();
-    return;
-  }
   if (actionId !== "submit") {
     return;
   }
