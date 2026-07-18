@@ -204,6 +204,13 @@ describe("layoutEditPanel condition forms", () => {
     expect(form.fields.find((field) => field.name === "visible")?.type).toBe(
       "segmented-control",
     );
+    expect(form.actions.buttons).toEqual([
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Save",
+      },
+    ]);
   });
 
   it("uses the image selector slot for override image attributes", () => {

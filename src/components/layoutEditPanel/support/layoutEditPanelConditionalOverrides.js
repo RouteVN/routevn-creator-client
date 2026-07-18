@@ -517,11 +517,6 @@ export const createConditionalOverrideAttributeForm = ({
       layout: "",
       buttons: [
         {
-          id: "cancel",
-          variant: "se",
-          label: copy.cancelButton ?? "Cancel",
-        },
-        {
           id: "submit",
           variant: "pr",
           label: submitLabel,

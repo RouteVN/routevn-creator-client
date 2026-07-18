@@ -167,6 +167,23 @@ describe("layoutEditPanel conditional overrides", () => {
     );
   });
 
+  it("omits the cancel button from the image selector dialog", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const imageSelectorDialog = view.slice(
+      view.indexOf("rtgl-dialog#imageSelectorDialog"),
+      view.indexOf("rtgl-dialog#soundSelectorDialog"),
+    );
+
+    expect(imageSelectorDialog).toContain("rtgl-button#confirmImageSelection");
+    expect(imageSelectorDialog).not.toContain("cancelImageSelection");
+  });
+
   it("saves the selected browser image as the conditional attribute", () => {
     const values = {
       conditionalOverrides: [

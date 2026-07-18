@@ -181,10 +181,6 @@ refs:
     eventListeners:
       click:
         handler: handleImageSelectorSubmit
-  cancelImageSelection:
-    eventListeners:
-      click:
-        handler: handleImageSelectorCancel
   soundSelectorDialog:
     eventListeners:
       close:
@@ -463,7 +459,6 @@ template:
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                       - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelImageSelection variant=se: ${cancelButton}
                   - rtgl-button#confirmImageSelection variant=pr: ${okButton}
   - rtgl-dialog#soundSelectorDialog ?open=${soundSelectorDialog.open} s=lg:
       - $if soundSelectorDialog.open:
