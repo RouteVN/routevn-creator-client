@@ -133,13 +133,14 @@ const createGraphicsService = () => {
 };
 
 describe("renderSceneEditorState", () => {
-  it("resolves scene entry from the target section and ignores stale line payload", () => {
+  it("resolves the configured target-section entry and ignores stale line payload", () => {
     const scene = {
       initialSectionId: "section-2",
       sections: [
         {
           id: "section-1",
-          lines: [{ id: "line-1" }, { id: "line-stale" }],
+          initialLineId: "line-entry",
+          lines: [{ id: "line-1" }, { id: "line-entry" }, { id: "line-stale" }],
         },
         {
           id: "section-2",
@@ -155,7 +156,7 @@ describe("renderSceneEditorState", () => {
       }),
     ).toEqual({
       sectionId: "section-1",
-      lineId: "line-1",
+      lineId: "line-entry",
     });
   });
 
@@ -170,13 +171,14 @@ describe("renderSceneEditorState", () => {
           },
           {
             id: "section-2",
-            lines: [{ id: "line-2" }],
+            initialLineId: "line-2b",
+            lines: [{ id: "line-2a" }, { id: "line-2b" }],
           },
         ],
       }),
     ).toEqual({
       sectionId: "section-2",
-      lineId: "line-2",
+      lineId: "line-2b",
     });
 
     expect(
@@ -185,6 +187,7 @@ describe("renderSceneEditorState", () => {
         sections: [
           {
             id: "section-1",
+            initialLineId: "missing-line",
             lines: [{ id: "line-1" }],
           },
         ],

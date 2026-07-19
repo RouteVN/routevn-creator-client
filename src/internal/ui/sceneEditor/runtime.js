@@ -1342,10 +1342,14 @@ export const resolveSceneEditorEntrySelection = (scene, { sectionId } = {}) => {
     sections.find((section) => section.id === sectionId) ||
     sections.find((section) => section.id === scene?.initialSectionId) ||
     sections[0];
+  const selectedLine =
+    selectedSection?.lines?.find(
+      (line) => line.id === selectedSection.initialLineId,
+    ) ?? selectedSection?.lines?.[0];
 
   return {
     sectionId: selectedSection?.id,
-    lineId: selectedSection?.lines?.[0]?.id,
+    lineId: selectedLine?.id,
   };
 };
 
