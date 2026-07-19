@@ -24,8 +24,14 @@ describe("commandLineConditional view", () => {
     expect(view).toContain("handler: handleRemoveOneOfValueClick");
     expect(view).toContain("handler: handleBranchMenuButtonClick");
     expect(view).toContain("handler: handleBranchMenuButtonKeyDown");
-    expect(view).toContain("rtgl-button#branchMenuButton${i}");
+    expect(view).toContain("rtgl-view#conditionalBranch${branch.id}");
+    expect(view).toContain("rtgl-button#branchMenuButton${branch.id}");
+    expect(view).not.toContain("rtgl-view#conditionalBranch${i}");
+    expect(view).not.toContain("rtgl-button#branchMenuButton${i}");
     expect(view).toContain("aria-haspopup=menu");
     expect(view).toContain('aria-keyshortcuts="${branch.menuKeyShortcuts}"');
+    expect(view).toContain(
+      'aria-keyshortcuts="${defaultBranch.menuKeyShortcuts}"',
+    );
   });
 });

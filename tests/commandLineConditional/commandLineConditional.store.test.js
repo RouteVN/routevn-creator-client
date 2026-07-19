@@ -391,11 +391,11 @@ describe("commandLineConditional.store", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.branches.map((branch) => branch.menuKeyShortcuts)).toEqual([
-      "ArrowDown",
-      "ArrowUp ArrowDown",
-      "ArrowUp",
+      "ArrowDown Delete",
+      "ArrowUp ArrowDown Delete",
+      "ArrowUp Delete",
     ]);
-    expect(viewData.defaultBranch.menuKeyShortcuts).toBe("");
+    expect(viewData.defaultBranch.menuKeyShortcuts).toBe("Delete");
 
     showDropdownMenu(
       { state },

@@ -873,12 +873,11 @@ describe("commandLineConditional.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("opens and operates the branch menu from its keyboard trigger", () => {
+  it("opens the branch menu from its button", () => {
     const state = createInitialState();
     const store = createStore(state);
     const render = vi.fn();
     const stopPropagation = vi.fn();
-    const preventDefault = vi.fn();
     const createConditionBranch = (id) => ({
       id,
       when: {
@@ -916,25 +915,111 @@ describe("commandLineConditional.handlers", () => {
       branchId: "branch-2",
       position: { x: 320, y: 240 },
     });
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("repeatedly moves and deletes the same branch with keyboard shortcuts", () => {
+    const state = createInitialState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const stopPropagation = vi.fn();
+    const preventDefault = vi.fn();
+    const createConditionBranch = (id) => ({
+      id,
+      when: {
+        eq: [{ var: "variables.trust" }, id],
+      },
+      actions: {},
+    });
+
+    setBranches(
+      { state },
+      {
+        branches: [
+          createConditionBranch("branch-1"),
+          createConditionBranch("branch-2"),
+          createConditionBranch("branch-3"),
+        ],
+      },
+    );
+    const currentTarget = {
+      dataset: { branchId: "branch-3" },
+    };
+    const pressShortcut = (key) => {
+      handleBranchMenuButtonKeyDown(
+        { store, render },
+        {
+          _event: {
+            key,
+            currentTarget,
+            preventDefault,
+            stopPropagation,
+          },
+        },
+      );
+    };
+
+    pressShortcut("ArrowUp");
+    pressShortcut("ArrowUp");
+
+    expect(state.branches.map((branch) => branch.id)).toEqual([
+      "branch-3",
+      "branch-1",
+      "branch-2",
+    ]);
+
+    pressShortcut("Delete");
+
+    expect(state.branches.map((branch) => branch.id)).toEqual([
+      "branch-1",
+      "branch-2",
+    ]);
+    expect(preventDefault).toHaveBeenCalledTimes(3);
+    expect(stopPropagation).toHaveBeenCalledTimes(3);
+    expect(render).toHaveBeenCalledTimes(3);
+  });
+
+  it("deletes the default branch with its keyboard shortcut", () => {
+    const state = createInitialState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const stopPropagation = vi.fn();
+    const preventDefault = vi.fn();
+
+    setBranches(
+      { state },
+      {
+        branches: [
+          {
+            id: "branch-1",
+            when: {
+              eq: [{ var: "variables.trust" }, 70],
+            },
+            actions: {},
+          },
+          { id: "branch-default", actions: {} },
+        ],
+      },
+    );
 
     handleBranchMenuButtonKeyDown(
       { store, render },
       {
         _event: {
-          key: "ArrowUp",
-          currentTarget,
+          key: "Delete",
+          currentTarget: {
+            dataset: { branchId: "branch-default" },
+          },
           preventDefault,
           stopPropagation,
         },
       },
     );
 
-    expect(state.branches.map((branch) => branch.id)).toEqual([
-      "branch-2",
-      "branch-1",
-    ]);
+    expect(state.branches.map((branch) => branch.id)).toEqual(["branch-1"]);
     expect(preventDefault).toHaveBeenCalledOnce();
-    expect(stopPropagation).toHaveBeenCalledTimes(2);
-    expect(render).toHaveBeenCalledTimes(2);
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
   });
 });

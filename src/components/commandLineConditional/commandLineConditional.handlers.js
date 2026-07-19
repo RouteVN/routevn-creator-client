@@ -415,12 +415,14 @@ export const handleBranchMenuButtonClick = (deps, payload) => {
 };
 
 export const handleBranchMenuButtonKeyDown = (deps, payload) => {
+  const key = payload._event.key;
   const directionByKey = {
     ArrowUp: "up",
     ArrowDown: "down",
   };
-  const direction = directionByKey[payload._event.key];
-  if (!direction) {
+  const direction = directionByKey[key];
+  const shouldDelete = key === "Delete";
+  if (!direction && !shouldDelete) {
     return;
   }
 
@@ -429,7 +431,11 @@ export const handleBranchMenuButtonKeyDown = (deps, payload) => {
   const { store, render } = deps;
   const branchId = payload._event.currentTarget.dataset.branchId;
 
-  store.moveBranch({ branchId, direction });
+  if (shouldDelete) {
+    store.deleteBranch({ branchId });
+  } else {
+    store.moveBranch({ branchId, direction });
+  }
   render();
 };
 
