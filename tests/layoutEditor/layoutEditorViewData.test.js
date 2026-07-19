@@ -395,4 +395,81 @@ describe("layoutEditorViewData", () => {
 
     expect(item.svg).toBe("spritesheets");
   });
+
+  it("uses the same combined special icons for add actions and explorer items", () => {
+    const createTypes = [
+      "container",
+      "sprite",
+      "spritesheet-animation",
+      "particle",
+      "text",
+      "slider",
+      "input",
+      "form-submit-button",
+      "fragment-ref",
+      "container-confirm-dialog-ok",
+      "container-confirm-dialog-cancel",
+      "text-dialogue-content",
+      "text-character-name",
+      "container-dialogue-line",
+      "text-dialogue-line-character-name",
+      "text-dialogue-line-content",
+      "container-history-line",
+      "text-history-line-character-name",
+      "text-history-line-content",
+      "container-choice-item",
+      "container-choice-single-item",
+      "container-save-load-slot",
+      "sprite-save-load-slot-image",
+      "text-save-load-slot-date",
+      "text-choice-item-content",
+      "rect",
+    ];
+    const menuItems = toLayoutEditorContextMenuItems(
+      createTypes.map((createType) => ({
+        label: createType,
+        type: "item",
+        createType,
+      })),
+    );
+    const explorerItems = toLayoutEditorExplorerItems(
+      menuItems.map((menuItem, index) => ({
+        id: `element-${index}`,
+        ...menuItem.value,
+      })),
+    );
+
+    expect(menuItems.map((item) => item.icon)).toEqual(
+      explorerItems.map((item) => item.svg),
+    );
+    expect(explorerItems.every((item) => !item.iconCornerBadge)).toBe(true);
+    expect(menuItems.map((item) => item.icon)).toEqual([
+      "container",
+      "sprite",
+      "spritesheets",
+      "particles",
+      "text",
+      "slider",
+      "input",
+      "container",
+      "fragment-special",
+      "container-special",
+      "container-special",
+      "text-special",
+      "text-special",
+      "container-special",
+      "text-special",
+      "text-special",
+      "container-special",
+      "text-special",
+      "text-special",
+      "container-special",
+      "container-special",
+      "container-special",
+      "sprite-special",
+      "text-special",
+      "text-special",
+      "rect",
+    ]);
+  });
 });
