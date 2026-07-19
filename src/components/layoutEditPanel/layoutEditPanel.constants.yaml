@@ -196,6 +196,7 @@ layoutSections:
   - "$when": "supportsChildInteractionInheritance"
     id: childInteraction
     label: Child Interaction
+    tooltip: Inherit child event from parent
     "$if canAddChildInteractionInheritance":
       labelAction: plus
     items:

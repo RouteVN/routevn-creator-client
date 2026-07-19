@@ -692,6 +692,12 @@ const resetSelectionUiState = (state) => {
     targetName: undefined,
     items: [],
   };
+  state.sectionTooltip = {
+    open: false,
+    x: 0,
+    y: 0,
+    content: "",
+  };
   state.saveLoadPaginationDialog = {
     open: false,
     key: 0,
@@ -901,6 +907,17 @@ export const hideContextMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.y = 0;
   state.dropdownMenu.targetName = undefined;
   state.dropdownMenu.items = [];
+};
+
+export const showSectionTooltip = ({ state }, { x, y, content } = {}) => {
+  state.sectionTooltip.open = true;
+  state.sectionTooltip.x = x;
+  state.sectionTooltip.y = y;
+  state.sectionTooltip.content = content;
+};
+
+export const hideSectionTooltip = ({ state }, _payload = {}) => {
+  state.sectionTooltip.open = false;
 };
 
 export const openSaveLoadPaginationDialog = ({ state }, _payload = {}) => {
@@ -1763,6 +1780,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     popover: state.popover,
     visibilityConditionDialog: state.visibilityConditionDialog,
     dropdownMenu: state.dropdownMenu,
+    sectionTooltip: state.sectionTooltip,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
       targetOptions: visibilityConditionTargetOptions,

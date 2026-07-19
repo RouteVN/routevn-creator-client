@@ -1376,6 +1376,25 @@ export const handleSectionActionClick = async (deps, payload) => {
   }
 };
 
+export const handleSectionTooltipMouseEnter = (deps, payload) => {
+  const { render, store } = deps;
+  const target = payload._event.currentTarget;
+  const rect = target.getBoundingClientRect();
+
+  store.showSectionTooltip({
+    x: rect.left + rect.width / 2,
+    y: rect.top - 8,
+    content: target.dataset.tooltip,
+  });
+  render();
+};
+
+export const handleSectionTooltipMouseLeave = (deps) => {
+  const { render, store } = deps;
+  store.hideSectionTooltip();
+  render();
+};
+
 export const handleFormActions = (deps, payload) => {
   const { store } = deps;
   const { _event } = payload;

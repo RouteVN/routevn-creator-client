@@ -163,6 +163,16 @@ refs:
     eventListeners:
       click:
         handler: handleSectionActionClick
+  sectionTooltip*:
+    eventListeners:
+      mouseenter:
+        handler: handleSectionTooltipMouseEnter
+      mouseleave:
+        handler: handleSectionTooltipMouseLeave
+      focus:
+        handler: handleSectionTooltipMouseEnter
+      blur:
+        handler: handleSectionTooltipMouseLeave
   systemActions:
     eventListeners:
       actions-change:
@@ -273,18 +283,40 @@ styles:
     cursor: pointer
     user-select: none
     "-webkit-user-select": none
+  ".layoutEditPanelSectionTooltipTrigger":
+    align-items: center
+    appearance: none
+    background: transparent
+    border: "1px solid var(--muted-foreground)"
+    border-radius: 50%
+    box-sizing: border-box
+    color: var(--muted-foreground)
+    cursor: help
+    display: flex
+    font-family: inherit
+    font-size: 11px
+    font-weight: 600
+    height: 16px
+    justify-content: center
+    line-height: 1
+    margin: 0
+    padding: 0
+    width: 16px
+  ".layoutEditPanelSectionTooltipTrigger:focus-visible":
+    outline: "2px solid var(--ring)"
+    outline-offset: 2px
 template:
   - $for section, i in config.sections:
       - $if i > 0:
           - rtgl-view h=1 w=f bgc=mu mv=lg: null
       - rtgl-view key=${section.viewKey} w=f g=md ph=md:
-          - $if section.labelAction:
-              - rtgl-view d=h w=f av=c:
-                  - rtgl-text s=sm: ${section.label}
+          - rtgl-view d=h w=f av=c g=sm:
+              - rtgl-text s=sm: ${section.label}
+              - $if section.tooltip:
+                  - 'button#sectionTooltip${i}.layoutEditPanelSectionTooltipTrigger type=button aria-label="${section.tooltip}" data-tooltip="${section.tooltip}"': "?"
+              - $if section.labelAction:
                   - rtgl-view w=1fg: null
                   - rtgl-button#sectionAction${i} data-id=${section.id} pre=${section.labelAction} sq s=sm v=gh: null
-            $else:
-              - rtgl-text s=sm: ${section.label}
           - $for item, j in section.items:
               - rtgl-view key=${item.viewKey} w=f:
                   - $if item.type == 'group':
@@ -409,6 +441,7 @@ template:
       - $if visibilityConditionDialog.open:
           - rtgl-view slot=content g=md:
               - rtgl-form#visibilityConditionForm key=${visibilityConditionDialog.key} :form=${visibilityConditionDialogForm} :defaultValues=${visibilityConditionDialogDefaults} :context=${visibilityConditionDialogContext} w=f: null
+  - rtgl-tooltip ?open=${sectionTooltip.open} x=${sectionTooltip.x} y=${sectionTooltip.y} place="t" content="${sectionTooltip.content}": null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
   - rtgl-dialog#saveLoadPaginationDialog ?open=${saveLoadPaginationDialog.open} s=md:
       - $if saveLoadPaginationDialog.open:
