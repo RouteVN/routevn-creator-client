@@ -5,13 +5,14 @@ use discord_rich_presence::{
 use std::{
     sync::mpsc::{self, Receiver, RecvTimeoutError, Sender},
     thread::{self, JoinHandle},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::State;
 
 const DISCORD_APPLICATION_ID: &str = "1528049917627732018";
 const DISCORD_RECONNECT_INTERVAL: Duration = Duration::from_secs(15);
-const DISCORD_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
+const DISCORD_SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(250);
+const DISCORD_SHUTDOWN_POLL_INTERVAL: Duration = Duration::from_millis(10);
 
 pub struct DiscordPresenceState {
     command_tx: Option<Sender<DiscordPresenceCommand>>,
@@ -59,10 +60,27 @@ impl Drop for DiscordPresenceState {
         if let Some(command_tx) = self.command_tx.take() {
             let _ = command_tx.send(DiscordPresenceCommand::Shutdown);
         }
-        if let Some(worker) = self.worker.take() {
-            let _ = worker.join();
+        if let Some(worker) = self.worker.take()
+            && !join_worker_with_timeout(worker, DISCORD_SHUTDOWN_TIMEOUT)
+        {
+            eprintln!("[discord_presence] worker did not stop before shutdown timeout");
         }
     }
+}
+
+fn join_worker_with_timeout(worker: JoinHandle<()>, timeout: Duration) -> bool {
+    let deadline = Instant::now() + timeout;
+    while !worker.is_finished() {
+        let now = Instant::now();
+        if now >= deadline {
+            return false;
+        }
+
+        thread::sleep(DISCORD_SHUTDOWN_POLL_INTERVAL.min(deadline - now));
+    }
+
+    let _ = worker.join();
+    true
 }
 
 #[tauri::command]
@@ -81,14 +99,17 @@ fn run_discord_presence(command_rx: Receiver<DiscordPresenceCommand>) {
     let mut client = DiscordIpcClient::new(DISCORD_APPLICATION_ID);
     let mut connected = false;
     let mut details = None;
+    let mut activity_dirty = false;
 
     loop {
         if details.is_some() && !connected {
             connected = client.connect().is_ok();
+            activity_dirty = connected;
         }
 
         if let Some(details) = details.as_deref()
             && connected
+            && activity_dirty
             && client
                 .set_activity(create_activity(started_at, details))
                 .is_err()
@@ -97,17 +118,30 @@ fn run_discord_presence(command_rx: Receiver<DiscordPresenceCommand>) {
             connected = false;
         }
 
-        let wait_duration = if connected || details.is_none() {
-            DISCORD_REFRESH_INTERVAL
-        } else {
-            DISCORD_RECONNECT_INTERVAL
-        };
-        match command_rx.recv_timeout(wait_duration) {
-            Ok(DiscordPresenceCommand::SetDetails(next_details)) => {
-                details = Some(next_details);
+        if connected {
+            activity_dirty = false;
+        }
+
+        let command = if connected || details.is_none() {
+            match command_rx.recv() {
+                Ok(command) => Some(command),
+                Err(_) => break,
             }
-            Ok(DiscordPresenceCommand::Shutdown) | Err(RecvTimeoutError::Disconnected) => break,
-            Err(RecvTimeoutError::Timeout) => {}
+        } else {
+            match command_rx.recv_timeout(DISCORD_RECONNECT_INTERVAL) {
+                Ok(command) => Some(command),
+                Err(RecvTimeoutError::Timeout) => None,
+                Err(RecvTimeoutError::Disconnected) => break,
+            }
+        };
+
+        match command {
+            Some(DiscordPresenceCommand::SetDetails(next_details)) => {
+                details = Some(next_details);
+                activity_dirty = true;
+            }
+            Some(DiscordPresenceCommand::Shutdown) => break,
+            None => {}
         }
     }
 
@@ -137,5 +171,23 @@ mod tests {
         assert_eq!(activity["details"], "Localized presence details");
         assert!(activity.get("state").is_none());
         assert_eq!(activity["timestamps"]["start"], 1_234);
+    }
+
+    #[test]
+    fn bounded_join_returns_for_a_stuck_worker() {
+        let (release_tx, release_rx) = mpsc::channel();
+        let worker = thread::spawn(move || {
+            let _ = release_rx.recv();
+        });
+
+        assert!(!join_worker_with_timeout(worker, Duration::from_millis(20)));
+        let _ = release_tx.send(());
+    }
+
+    #[test]
+    fn bounded_join_reaps_a_finished_worker() {
+        let worker = thread::spawn(|| {});
+
+        assert!(join_worker_with_timeout(worker, Duration::from_secs(1)));
     }
 }
