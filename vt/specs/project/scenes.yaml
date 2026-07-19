@@ -207,6 +207,10 @@ steps:
     value: /project/scene-editor
   - action: wait
     ms: 1600
+  - action: waitFor
+    selector: 'rvn-lexical-scene-document-editor .editor-paragraph[data-selected="true"][data-mode="block"]'
+    state: visible
+    timeoutMs: 5000
   - action: assert
     type: text
     selector: "#sceneTextStats"

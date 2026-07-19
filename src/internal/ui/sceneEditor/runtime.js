@@ -1431,7 +1431,7 @@ export const initializeSceneEditorPage = async (deps) => {
     store.setSelectedSectionId({
       selectedSectionId: entrySelection.sectionId,
     });
-    store.setSelectedLineId({ selectedLineId: undefined });
+    store.setSelectedLineId({ selectedLineId: entrySelection.lineId });
     const nextPayload = {
       ...appService.getPayload(),
       s: sceneId,
@@ -1442,7 +1442,11 @@ export const initializeSceneEditorPage = async (deps) => {
     } else {
       delete nextPayload.sectionId;
     }
-    delete nextPayload.lineId;
+    if (entrySelection.lineId) {
+      nextPayload.lineId = entrySelection.lineId;
+    } else {
+      delete nextPayload.lineId;
+    }
     appService.setPayload?.(nextPayload);
   }
 
