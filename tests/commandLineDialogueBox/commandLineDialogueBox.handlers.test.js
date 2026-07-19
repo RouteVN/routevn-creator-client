@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
   handleAfterMount,
@@ -5,6 +6,8 @@ import {
   handleButtonSelectClick,
   handleCharacterItemClick,
   handleFormChange,
+  handleSpeakerSpriteTooltipMouseEnter,
+  handleSpeakerSpriteTooltipMouseLeave,
   handleSpriteGroupTabClick,
   handleSpriteItemClick,
   handleSubmitClick,
@@ -13,6 +16,7 @@ import {
   clearCharacterSprite,
   clearTempSelectedSpriteIds,
   createInitialState,
+  hideSpeakerSpriteTooltip,
   setAppendDialogue,
   setCharacterSpriteEnabled,
   setCharacterName,
@@ -34,7 +38,16 @@ import {
   setTempSelectedSpriteIds,
   setCustomizeTextSpeed,
   setTextSpeed,
+  selectDialogueBuildState,
+  selectDialogueFormChangeState,
+  selectDialogueFormState,
+  selectMode,
+  selectSelectedSpriteGroupId,
+  selectSpriteCharacterId,
+  selectSpriteSelectionConfirmState,
+  selectSpriteSelectionState,
   showFullImagePreview,
+  showSpeakerSpriteTooltip,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.store.js";
 
 const layouts = [
@@ -109,6 +122,16 @@ const animations = {
 
 const createStore = (state) => ({
   getState: () => state,
+  selectDialogueBuildState: () => selectDialogueBuildState({ state }),
+  selectDialogueFormChangeState: () => selectDialogueFormChangeState({ state }),
+  selectDialogueFormState: () => selectDialogueFormState({ state }),
+  selectMode: () => selectMode({ state }),
+  selectSelectedSpriteGroupId: () =>
+    selectSelectedSpriteGroupId({ state, props: { characters } }),
+  selectSpriteCharacterId: () => selectSpriteCharacterId({ state }),
+  selectSpriteSelectionConfirmState: () =>
+    selectSpriteSelectionConfirmState({ state }),
+  selectSpriteSelectionState: () => selectSpriteSelectionState({ state }),
   setSelectedMode: (payload) => setSelectedMode({ state }, payload),
   setSelectedResource: (payload) => setSelectedResource({ state }, payload),
   setSelectedCharacterId: (payload) =>
@@ -133,14 +156,17 @@ const createStore = (state) => ({
   setSearchQuery: (payload) => setSearchQuery({ state }, payload),
   setMode: (payload) => setMode({ state }, payload),
   showFullImagePreview: (payload) => showFullImagePreview({ state }, payload),
+  showSpeakerSpriteTooltip: (payload) =>
+    showSpeakerSpriteTooltip({ state }, payload),
+  hideSpeakerSpriteTooltip: (payload) =>
+    hideSpeakerSpriteTooltip({ state }, payload),
   setSpriteAnimationMode: (payload) =>
     setSpriteAnimationMode({ state }, payload),
   setSpriteAnimationId: (payload) => setSpriteAnimationId({ state }, payload),
   setAppendDialogue: (payload) => setAppendDialogue({ state }, payload),
   setPersistCharacter: (payload) => setPersistCharacter({ state }, payload),
   setClearPage: (payload) => setClearPage({ state }, payload),
-  setCustomizeTextSpeed: (payload) =>
-    setCustomizeTextSpeed({ state }, payload),
+  setCustomizeTextSpeed: (payload) => setCustomizeTextSpeed({ state }, payload),
   setTextSpeed: (payload) => setTextSpeed({ state }, payload),
 });
 
@@ -152,6 +178,58 @@ const createFormRefs = () => ({
 });
 
 describe("commandLineDialogueBox.handlers", () => {
+  it("renders an accessible speaker sprite tooltip trigger", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/commandLineDialogueBox/commandLineDialogueBox.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain(
+      "button#speakerSpriteTooltip.commandLineDialogueBoxTooltipTrigger",
+    );
+    expect(view).toContain(
+      'aria-label="${speakerSpriteTooltipContent}"\': "?"',
+    );
+    expect(view).toContain("handler: handleSpeakerSpriteTooltipMouseEnter");
+    expect(view).toContain("handler: handleSpeakerSpriteTooltipMouseLeave");
+    expect(view).toContain("rtgl-tooltip ?open=${speakerSpriteTooltip.open}");
+  });
+
+  it("shows and hides the speaker sprite tooltip", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const deps = {
+      store: createStore(state),
+      render,
+    };
+
+    handleSpeakerSpriteTooltipMouseEnter(deps, {
+      _event: {
+        currentTarget: {
+          getBoundingClientRect: () => ({
+            left: 100,
+            top: 80,
+            width: 16,
+          }),
+        },
+      },
+    });
+
+    expect(state.speakerSpriteTooltip).toEqual({
+      open: true,
+      x: 108,
+      y: 72,
+    });
+
+    handleSpeakerSpriteTooltipMouseLeave(deps);
+
+    expect(state.speakerSpriteTooltip.open).toBe(false);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
   it("hydrates persistCharacter and custom character name from props into the form state", () => {
     const state = createInitialState();
     const reset = vi.fn();

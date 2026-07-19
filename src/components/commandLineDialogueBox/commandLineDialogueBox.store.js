@@ -31,6 +31,9 @@ const ANIMATION_MODE_OPTIONS = [
 const DEFAULT_TEXT_SPEED = 75;
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
+const SPEAKER_SPRITE_LABEL = "Speaker sprite";
+const SPEAKER_SPRITE_TOOLTIP =
+  "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action";
 const UNGROUPED_CHARACTER_GROUP_ID = "__ungrouped_dialogue_characters__";
 const UNGROUPED_SPRITE_GROUP_ID = "__ungrouped_dialogue_sprites__";
 const UNGROUPED_GROUP_LABEL = "Ungrouped";
@@ -339,6 +342,11 @@ export const createInitialState = () => ({
   fullImagePreviewAtlas: undefined,
   fullImagePreviewAnimation: undefined,
   fullImagePreviewKey: undefined,
+  speakerSpriteTooltip: {
+    open: false,
+    x: 0,
+    y: 0,
+  },
 
   defaultValues: {
     mode: "adv",
@@ -410,7 +418,6 @@ export const createInitialState = () => ({
       {
         type: "slot",
         slot: "characterSprite",
-        label: "Character Sprite",
       },
       {
         name: "customizeTextSpeed",
@@ -651,6 +658,16 @@ export const hideFullImagePreview = ({ state }) => {
   state.fullImagePreviewAtlas = undefined;
   state.fullImagePreviewAnimation = undefined;
   state.fullImagePreviewKey = undefined;
+};
+
+export const showSpeakerSpriteTooltip = ({ state }, { x, y } = {}) => {
+  state.speakerSpriteTooltip.open = true;
+  state.speakerSpriteTooltip.x = x;
+  state.speakerSpriteTooltip.y = y;
+};
+
+export const hideSpeakerSpriteTooltip = ({ state }) => {
+  state.speakerSpriteTooltip.open = false;
 };
 
 export const setSelectedMode = ({ state }, { mode } = {}) => {
@@ -1114,6 +1131,12 @@ export const selectViewData = ({ state, props, i18n }) => {
     clearButtonLabel: localizeCommandLineText("Clear", copy),
     animationLabel: localizeCommandLineText("Animation", copy),
     spriteGroupsLabel: localizeCommandLineText("Sprite Groups", copy),
+    speakerSpriteLabel: localizeCommandLineText(SPEAKER_SPRITE_LABEL, copy),
+    speakerSpriteTooltip: state.speakerSpriteTooltip,
+    speakerSpriteTooltipContent: localizeCommandLineText(
+      SPEAKER_SPRITE_TOOLTIP,
+      copy,
+    ),
     submitButtonLabel: localizeCommandLineText("Submit", copy),
     selectButtonLabel: localizeCommandLineText("Select", copy),
     fullImagePreviewVisible: state.fullImagePreviewVisible,

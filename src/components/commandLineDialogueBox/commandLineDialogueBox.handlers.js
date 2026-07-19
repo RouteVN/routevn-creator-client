@@ -775,6 +775,24 @@ export const handleCharacterSpriteBoxClick = (deps) => {
   render();
 };
 
+export const handleSpeakerSpriteTooltipMouseEnter = (deps, payload) => {
+  const { store, render } = deps;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+
+  store.showSpeakerSpriteTooltip({
+    x: rect.left + rect.width / 2,
+    y: rect.top - 8,
+  });
+  render();
+};
+
+export const handleSpeakerSpriteTooltipMouseLeave = (deps) => {
+  const { store, render } = deps;
+
+  store.hideSpeakerSpriteTooltip();
+  render();
+};
+
 export const handleCharacterSpriteGroupBoxClick = (deps, payload) => {
   const { store, render } = deps;
   const spriteGroupId = payload?._event?.currentTarget?.dataset?.spriteGroupId;
