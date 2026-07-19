@@ -48,6 +48,57 @@ const LAYOUT_EDITOR_CONSTANTS = yaml.load(
 );
 
 describe("layoutEditor.store", () => {
+  it("marks selected descendants of hidden parents as effectively hidden", () => {
+    const state = createInitialState();
+
+    syncRepositoryState(
+      { state },
+      {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId: "layout-1",
+        layout: {
+          id: "layout-1",
+          layoutType: "general",
+        },
+        layoutData: {
+          items: {
+            "folder-1": {
+              type: "folder",
+              name: "Group",
+              hidden: true,
+            },
+            "text-1": {
+              type: "text",
+              name: "Title",
+            },
+          },
+          tree: [
+            {
+              id: "folder-1",
+              children: [{ id: "text-1" }],
+            },
+          ],
+        },
+      },
+    );
+    setSelectedItemId({ state }, { itemId: "text-1" });
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.selectedItemIsEffectivelyHidden).toBe(true);
+    expect(
+      viewData.flatItems.find((item) => item.id === "text-1"),
+    ).toMatchObject({
+      hidden: false,
+      effectivelyHidden: true,
+      textColor: "mu-fg",
+    });
+  });
+
   it("normalizes a legacy save layout to save-load", () => {
     const state = createInitialState();
 

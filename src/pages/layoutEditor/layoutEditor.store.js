@@ -398,7 +398,7 @@ export const selectSelectedItem = ({ state }) => {
   return selectLayoutEditorSelectedItem({ state });
 };
 
-const selectItemDataById = ({ state }, { itemId } = {}) => {
+export const selectItemDataById = ({ state }, { itemId } = {}) => {
   if (!itemId) {
     return undefined;
   }
@@ -502,6 +502,8 @@ export const selectViewData = ({ state, constants, i18n }) => {
   const flatLayoutItems = toFlatItems(state.layoutData);
   const flatItems = toLayoutEditorExplorerItems(flatLayoutItems, {
     contextMenuItems,
+    copy,
+    alwaysShowVisibilityToggle: state.isTouchMode,
   });
   const parentIdById = Object.fromEntries(
     flatItems.map((flatItem) => [flatItem.id, flatItem.parentId]),
@@ -534,6 +536,9 @@ export const selectViewData = ({ state, constants, i18n }) => {
       parentIdById,
       itemId: selectedItem?.id,
     });
+  const selectedItemIsEffectivelyHidden =
+    flatItems.find((flatItem) => flatItem.id === selectedItem?.id)
+      ?.effectivelyHidden === true;
   const detailPanelIsInsideSaveLoadSlot =
     item?.id === selectedItem?.id
       ? selectedItemIsInsideSaveLoadSlot
@@ -592,6 +597,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
     selectedElementMetrics: state.selectedElementMetrics,
     selectedItemIsInsideSaveLoadSlot,
     selectedItemIsInsideDirectedContainer,
+    selectedItemIsEffectivelyHidden,
     isInsideSaveLoadSlot: detailPanelIsInsideSaveLoadSlot,
     isInsideDirectedContainer: detailPanelIsInsideDirectedContainer,
     isTouchMode: state.isTouchMode,

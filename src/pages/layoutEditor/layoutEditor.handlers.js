@@ -127,6 +127,9 @@ const getLayoutEditorOwnerConfig = (
     updateItem: isControls
       ? projectService.updateControlItem.bind(projectService)
       : projectService.updateLayoutItem.bind(projectService),
+    updateElement: isControls
+      ? projectService.updateControlElement.bind(projectService)
+      : projectService.updateLayoutElement.bind(projectService),
   };
 };
 
@@ -636,6 +639,104 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   scheduleDetailPanelSelectionRender(deps, {
     itemId,
   });
+};
+
+export const handleFileExplorerVisibilityToggle = async (deps, payload) => {
+  const { appService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
+  const { itemId, hidden } = payload?._event?.detail ?? {};
+  const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
+
+  if (!itemId || !layoutId || typeof hidden !== "boolean") {
+    return;
+  }
+
+  const flushResult = await flushQueuedLayoutEditorUpdates(deps);
+  if (flushResult.ok === false) {
+    return;
+  }
+
+  const currentItem = store.selectItemDataById({ itemId });
+  if (!currentItem || currentItem.hidden === hidden) {
+    return;
+  }
+
+  const updatedItem = {
+    ...currentItem,
+    hidden,
+  };
+  store.updateSelectedItem({
+    itemId,
+    updatedItem,
+  });
+  render();
+
+  const { ownerPayloadKey, updateElement } = getLayoutEditorOwnerConfig(
+    resourceType,
+    projectService,
+    copy,
+  );
+
+  const rollback = () => {
+    store.updateSelectedItem({
+      itemId,
+      updatedItem: currentItem,
+    });
+    render();
+  };
+  const showError = (error) => {
+    appService.showAlert({
+      message: isSqliteLockError(error)
+        ? (copy.databaseBusyUpdateElementVisibility ??
+          "The project database is busy. RouteVN couldn't update element visibility. Please wait a moment and try again.")
+        : (copy.failedUpdateElementVisibility ??
+          "Failed to update element visibility."),
+      title: copy.errorTitle ?? "Error",
+    });
+  };
+
+  try {
+    await projectService.ensureRepository();
+    const persistenceResult = await runLayoutEditorPersistence(
+      deps,
+      async () => {
+        const updateResult = await updateElement({
+          [ownerPayloadKey]: layoutId,
+          elementId: itemId,
+          data: {
+            hidden,
+          },
+          replace: false,
+        });
+
+        return {
+          ok: updateResult?.valid !== false,
+          updateResult,
+        };
+      },
+    );
+
+    if (persistenceResult.ok === false) {
+      console.error("[layoutEditor] Element visibility update was rejected", {
+        error: persistenceResult.updateResult?.error,
+        itemId,
+        layoutId,
+        resourceType,
+      });
+      rollback();
+      showError(persistenceResult.updateResult?.error);
+    }
+  } catch (error) {
+    console.error("[layoutEditor] Failed to update element visibility", {
+      error,
+      itemId,
+      layoutId,
+      resourceType,
+    });
+    rollback();
+    showError(error);
+  }
 };
 
 export const handleNodeButtonClick = (deps) => {

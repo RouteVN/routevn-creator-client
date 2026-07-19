@@ -489,6 +489,10 @@ export const handleCaptureThumbnailImage = async (deps) => {
 };
 
 const handleKeyboardMove = async (deps, event) => {
+  if (deps.props.disableInteraction === true) {
+    return;
+  }
+
   const pendingUpdatedItem = deps.store.selectPendingUpdatedItem();
   const currentItem = getSelectedItem(deps.props, pendingUpdatedItem);
   if (!currentItem) {
@@ -519,6 +523,10 @@ const handleKeyboardMove = async (deps, event) => {
 };
 
 const handleBorderDragStart = (deps, payload = {}) => {
+  if (deps.props.disableInteraction === true) {
+    return;
+  }
+
   const currentItem = getSelectedItem(
     deps.props,
     deps.store.selectPendingUpdatedItem(),
@@ -717,6 +725,7 @@ export const handleOnUpdate = async (deps, changes) => {
     oldProps.selectedItemId !== newProps.selectedItemId ||
     oldProps.previewData !== newProps.previewData ||
     oldProps.disableMoveDrag !== newProps.disableMoveDrag ||
+    oldProps.disableInteraction !== newProps.disableInteraction ||
     !areCanvasLayoutStatesEquivalent(
       oldProps.layoutState,
       newProps.layoutState,

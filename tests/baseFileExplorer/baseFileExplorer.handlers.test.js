@@ -3,6 +3,7 @@ import {
   handleItemContextMenu,
   handleItemPointerDown,
   handleItemTouchStart,
+  handleVisibilityToggleClick,
   handleNavigateSelection,
   handleWindowMouseUp,
   handleWindowPointerMove,
@@ -205,6 +206,50 @@ describe("baseFileExplorer handlers", () => {
   afterEach(() => {
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     vi.useRealTimers();
+  });
+
+  it("emits visibility changes without selecting or dragging the row", () => {
+    const { deps } = createDragDeps({ itemCount: 1 });
+    deps.props.items[0].visibilityToggle = true;
+    deps.props.items[0].hidden = false;
+    const actionTarget = {
+      closest: (selector) =>
+        selector === "[data-file-explorer-action]" ? actionTarget : undefined,
+    };
+    const event = {
+      currentTarget: {
+        getAttribute: (name) =>
+          name === "data-item-id" ? "item-1" : undefined,
+      },
+      target: actionTarget,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    handleItemPointerDown(deps, {
+      _event: {
+        ...createPointerEvent({
+          currentTarget: deps.refs.itemRef0,
+          target: actionTarget,
+          x: 10,
+          y: 16,
+        }),
+      },
+    });
+    handleVisibilityToggleClick(deps, { _event: event });
+
+    expect(deps.store.selectPendingDrag()).toBeNull();
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "item-visibility-toggle",
+        detail: expect.objectContaining({
+          itemId: "item-1",
+          hidden: true,
+        }),
+      }),
+    );
   });
 
   it("jumps selection by distance and clamps to the visible list bounds", () => {

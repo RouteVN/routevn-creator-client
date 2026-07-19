@@ -4,6 +4,7 @@ import {
   getLayoutEditorElementDefinition,
 } from "../../../internal/layoutEditorElementRegistry.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "../../../internal/projectResolution.js";
+import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
 
 const CHOICE_CONTENT_PARENT_TYPES = new Set([
   "container-ref-choice-item",
@@ -122,9 +123,24 @@ const toContainerContextMenuItems = (items = [], parentItem = {}) => {
 
 export const toLayoutEditorExplorerItems = (
   items = [],
-  { contextMenuItems } = {},
+  { contextMenuItems, copy = {}, alwaysShowVisibilityToggle = false } = {},
 ) => {
   const leafItemContextMenuItems = toLeafItemContextMenuItems(contextMenuItems);
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const effectivelyHiddenById = new Map();
+
+  const resolveEffectivelyHidden = (item) => {
+    if (effectivelyHiddenById.has(item.id)) {
+      return effectivelyHiddenById.get(item.id);
+    }
+
+    const parentItem = item.parentId ? itemById.get(item.parentId) : undefined;
+    const effectivelyHidden =
+      item.hidden === true ||
+      (parentItem ? resolveEffectivelyHidden(parentItem) : false);
+    effectivelyHiddenById.set(item.id, effectivelyHidden);
+    return effectivelyHidden;
+  };
 
   return (items ?? []).map((item) => {
     const definition = getLayoutEditorElementDefinition(item.type);
@@ -134,6 +150,16 @@ export const toLayoutEditorExplorerItems = (
       Object.keys(definition.previewDependencies).length > 0;
     const svg =
       item.type === "spritesheet-animation" ? "spritesheets" : item.svg;
+    const hidden = item.hidden === true;
+    const effectivelyHidden = resolveEffectivelyHidden(item);
+    const visibilityLabel = formatI18nCopy(
+      hidden
+        ? (copy.showElementLabel ?? "Show {elementName}")
+        : (copy.hideElementLabel ?? "Hide {elementName}"),
+      {
+        elementName: item.name,
+      },
+    );
 
     return {
       ...item,
@@ -143,6 +169,18 @@ export const toLayoutEditorExplorerItems = (
           ? toContainerContextMenuItems(contextMenuItems, item)
           : leafItemContextMenuItems,
       iconCornerBadge: hasPreviewDependencies,
+      visibilityToggle: true,
+      visibilityToggleAlwaysVisible:
+        alwaysShowVisibilityToggle === true || hidden,
+      visibilityIcon: hidden ? "eyeClosed" : "eye",
+      visibilityLabel,
+      hidden,
+      effectivelyHidden,
+      iconColor: effectivelyHidden ? "mu-fg" : "fg",
+      iconCssColor: effectivelyHidden
+        ? "var(--muted-foreground)"
+        : "var(--foreground)",
+      textColor: effectivelyHidden ? "mu-fg" : "fg",
       dragOptions: {
         ...item.dragOptions,
         canReceiveChildren,

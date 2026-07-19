@@ -877,13 +877,15 @@ const resolveFragmentChildren = ({ node, imageItems, context }) => {
   };
 
   return prefixElementIds(
-    orderedFragmentNodes.map((child) =>
-      mapLayoutNode({
-        node: child,
-        imageItems,
-        context: fragmentContext,
-      }),
-    ),
+    orderedFragmentNodes
+      .map((child) =>
+        mapLayoutNode({
+          node: child,
+          imageItems,
+          context: fragmentContext,
+        }),
+      )
+      .filter(Boolean),
     node.id,
   );
 };
@@ -1668,6 +1670,10 @@ const applyContainerNode = ({ element, node }) => {
 };
 
 const mapLayoutNode = ({ node, imageItems, context }) => {
+  if (node.hidden === true) {
+    return undefined;
+  }
+
   const effectiveNode = node;
   const nodeContext =
     effectiveNode.type === "container-ref-save-load-slot"
@@ -1732,13 +1738,15 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
           context: childContext,
         })
       : effectiveNode.children?.length > 0
-        ? effectiveNode.children.map((child) =>
-            mapLayoutNode({
-              node: child,
-              imageItems,
-              context: childContext,
-            }),
-          )
+        ? effectiveNode.children
+            .map((child) =>
+              mapLayoutNode({
+                node: child,
+                imageItems,
+                context: childContext,
+              }),
+            )
+            .filter(Boolean)
         : [];
 
   if (resolvedChildren.length > 0) {
@@ -1911,13 +1919,15 @@ export const buildLayoutElements = (
     layoutSchemaVersion,
   });
 
-  const elements = orderedLayout.map((node) =>
-    mapLayoutNode({
-      node,
-      imageItems,
-      context,
-    }),
-  );
+  const elements = orderedLayout
+    .map((node) =>
+      mapLayoutNode({
+        node,
+        imageItems,
+        context,
+      }),
+    )
+    .filter(Boolean);
 
   return {
     elements,

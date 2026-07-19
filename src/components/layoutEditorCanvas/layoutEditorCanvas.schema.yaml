@@ -17,3 +17,5 @@ propsSchema:
       type: object
     disableMoveDrag:
       type: boolean
+    disableInteraction:
+      type: boolean

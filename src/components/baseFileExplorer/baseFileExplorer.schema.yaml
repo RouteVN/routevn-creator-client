@@ -13,6 +13,24 @@ propsSchema:
             type: string
           iconCornerBadge:
             type: boolean
+          iconColor:
+            type: string
+          iconCssColor:
+            type: string
+          textColor:
+            type: string
+          visibilityToggle:
+            type: boolean
+          hidden:
+            type: boolean
+          effectivelyHidden:
+            type: boolean
+          visibilityToggleAlwaysVisible:
+            type: boolean
+          visibilityIcon:
+            type: string
+          visibilityLabel:
+            type: string
           contextMenuItems:
             type: array
           level:
