@@ -1881,6 +1881,9 @@ describe("lexical scene document editor line editing", () => {
         selectedLineId: "line-1",
         selectionActive: false,
       };
+      editorElement.markPointerDownInsideEditor = vi.fn();
+      editorElement.getReferenceSnapshotFromContextEvent = vi.fn();
+      editorElement.suppressNativeLineBoundaryDoubleClick = vi.fn(() => false);
       editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
       editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
       editorElement.getLineOffsetFromPointerEvent = vi.fn(() => 3);
@@ -1894,11 +1897,11 @@ describe("lexical scene document editor line editing", () => {
       editorElement.scheduleRender = vi.fn();
       editorElement.dispatchSelectedLineChanged = vi.fn();
 
-      const didEnter = editorElement.enterTextModeFromBlockModePointer({
+      editorElement.handleNativeMouseDown({
+        button: 0,
         target: lineElement,
       });
 
-      expect(didEnter).toBe(true);
       expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
         "line-1",
         {
@@ -1908,6 +1911,67 @@ describe("lexical scene document editor line editing", () => {
         },
       );
     } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("reports activation when an inactive editor clicks a reference on its already-selected line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const animationFrames = installAnimationFrameQueue();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lineElement = document.createElement("p");
+
+      editorElement.state = {
+        mode: "block",
+        selectedLineId: "line-1",
+        selectionActive: false,
+      };
+      editorElement.markPointerDownInsideEditor = vi.fn();
+      editorElement.getReferenceSnapshotFromContextEvent = vi.fn(() => ({
+        nodeKey: "reference-1",
+      }));
+      editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
+      editorElement.getLineOffsetFromPointerEvent = vi.fn(() => 3);
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.setMode = vi.fn((mode) => {
+        editorElement.state.mode = mode;
+      });
+      editorElement.focus = vi.fn();
+      editorElement.selectReferenceByNodeKey = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      const event = {
+        button: 0,
+        target: lineElement,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+
+      editorElement.handleNativeMouseDown(event);
+
+      expect(editorElement.selectReferenceByNodeKey).toHaveBeenCalledWith(
+        "reference-1",
+      );
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-1",
+        {
+          cursorPosition: 3,
+          isCollapsed: false,
+          mode: "text-editor",
+        },
+      );
+    } finally {
+      animationFrames.restore();
       restoreDomGlobals();
     }
   });
