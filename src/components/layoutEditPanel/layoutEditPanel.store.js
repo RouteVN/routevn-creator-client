@@ -22,6 +22,7 @@ import {
 import {
   createChildInteractionDialogDefaults,
   createChildInteractionForm,
+  createConditionalOverrideAnchorOptions,
   createConditionalOverrideAttributeDefaults,
   createConditionalOverrideAttributeForm,
   createConditionalOverrideAttributeImagePreview,
@@ -691,6 +692,12 @@ const resetSelectionUiState = (state) => {
     targetName: undefined,
     items: [],
   };
+  state.sectionTooltip = {
+    open: false,
+    x: 0,
+    y: 0,
+    content: "",
+  };
   state.saveLoadPaginationDialog = {
     open: false,
     key: 0,
@@ -730,6 +737,7 @@ const resetSelectionUiState = (state) => {
     editingIndex: undefined,
     fieldName: undefined,
     selectedImageId: undefined,
+    selectedAnchor: undefined,
     validationErrors: {},
   };
   state.selectedElementMetrics = undefined;
@@ -901,6 +909,17 @@ export const hideContextMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.items = [];
 };
 
+export const showSectionTooltip = ({ state }, { x, y, content } = {}) => {
+  state.sectionTooltip.open = true;
+  state.sectionTooltip.x = x;
+  state.sectionTooltip.y = y;
+  state.sectionTooltip.content = content;
+};
+
+export const hideSectionTooltip = ({ state }, _payload = {}) => {
+  state.sectionTooltip.open = false;
+};
+
 export const openSaveLoadPaginationDialog = ({ state }, _payload = {}) => {
   state.saveLoadPaginationDialog.open = true;
   state.saveLoadPaginationDialog.key += 1;
@@ -1047,13 +1066,14 @@ export const setConditionalOverrideConditionDialogSelectedVariableType = (
 
 export const openConditionalOverrideAttributeDialog = (
   { state },
-  { editingIndex, fieldName, selectedImageId } = {},
+  { editingIndex, fieldName, selectedImageId, selectedAnchor } = {},
 ) => {
   state.conditionalOverrideAttributeDialog.open = true;
   state.conditionalOverrideAttributeDialog.key += 1;
   state.conditionalOverrideAttributeDialog.editingIndex = editingIndex;
   state.conditionalOverrideAttributeDialog.fieldName = fieldName;
   state.conditionalOverrideAttributeDialog.selectedImageId = selectedImageId;
+  state.conditionalOverrideAttributeDialog.selectedAnchor = selectedAnchor;
   state.conditionalOverrideAttributeDialog.validationErrors = {};
 };
 
@@ -1065,6 +1085,7 @@ export const closeConditionalOverrideAttributeDialog = (
   state.conditionalOverrideAttributeDialog.editingIndex = undefined;
   state.conditionalOverrideAttributeDialog.fieldName = undefined;
   state.conditionalOverrideAttributeDialog.selectedImageId = undefined;
+  state.conditionalOverrideAttributeDialog.selectedAnchor = undefined;
   state.conditionalOverrideAttributeDialog.validationErrors = {};
 };
 
@@ -1075,6 +1096,13 @@ export const setConditionalOverrideAttributeDialogImage = (
   state.conditionalOverrideAttributeDialog.selectedImageId = imageId;
   delete state.conditionalOverrideAttributeDialog.validationErrors
     .selectedImageId;
+};
+
+export const setConditionalOverrideAttributeDialogAnchor = (
+  { state },
+  { anchor } = {},
+) => {
+  state.conditionalOverrideAttributeDialog.selectedAnchor = anchor;
 };
 
 export const setConditionalOverrideAttributeDialogValidationErrors = (
@@ -1685,6 +1713,8 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       state.conditionalOverrideAttributeDialog.fieldName,
       conditionalOverrideAttributeOptions,
     );
+  const conditionalOverrideAnchorOptions =
+    createConditionalOverrideAnchorOptions(copy);
   const conditionalOverrideAttributeImagePreview =
     createConditionalOverrideAttributeImagePreview(
       state.imagesData,
@@ -1750,6 +1780,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     popover: state.popover,
     visibilityConditionDialog: state.visibilityConditionDialog,
     dropdownMenu: state.dropdownMenu,
+    sectionTooltip: state.sectionTooltip,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
       targetOptions: visibilityConditionTargetOptions,
@@ -1813,6 +1844,11 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     },
     conditionalOverrideAttributeDialog:
       state.conditionalOverrideAttributeDialog,
+    conditionalOverrideAnchorLabel: copy.anchorLabel ?? "Anchor",
+    conditionalOverrideAnchorOptions,
+    conditionalOverrideAnchorValue:
+      state.conditionalOverrideAttributeDialog.selectedAnchor ??
+      conditionalOverrideAnchorOptions[0].value,
     conditionalOverrideAttributeImagePreview,
     conditionalOverrideAttributeDefaults,
     conditionalOverrideAttributeForm: createConditionalOverrideAttributeForm({

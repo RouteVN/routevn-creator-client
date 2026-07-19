@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleConditionalOverrideAnchorChange,
+  handleConditionalOverrideAttributeClick,
   handleConditionalOverrideAttributeFormAction,
   handleConditionalOverrideAttributeImageClick,
   handleConditionalOverrideAttributeImageKeyDown,
@@ -8,6 +10,10 @@ import {
   handleConditionalOverrideDeleteClick,
   handleImageSelectorSubmit,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+import {
+  createConditionalOverrideAnchorOptions,
+  createConditionalOverrideAttributeForm,
+} from "../../src/components/layoutEditPanel/support/layoutEditPanelConditionalOverrides.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const RULES = [
@@ -53,6 +59,96 @@ const createPayload = (index = 0) => ({
 });
 
 describe("layoutEditPanel conditional overrides", () => {
+  it("uses the nine-cell selector for conditional anchor overrides", () => {
+    const form = createConditionalOverrideAttributeForm({
+      attributeOptions: [{ label: "Anchor", value: "anchor" }],
+      textStyleOptions: [],
+      submitLabel: "Save",
+      copy: {},
+    });
+    const anchorField = form.fields.find(
+      (field) => field.$when === "fieldName == 'anchor'",
+    );
+    const options = createConditionalOverrideAnchorOptions({});
+    const view = readFileSync(
+      new URL(
+        "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(anchorField).toEqual({
+      $when: "fieldName == 'anchor'",
+      type: "slot",
+      slot: "conditional-override-anchor",
+      label: "Anchor",
+    });
+    expect(options).toHaveLength(9);
+    expect(options[4]).toEqual({
+      label: "Center",
+      value: { x: 0.5, y: 0.5 },
+    });
+    expect(view).toContain(
+      "rvn-layout-anchor-grid#conditionalOverrideAnchor slot=conditional-override-anchor",
+    );
+  });
+
+  it("tracks the selected conditional anchor", () => {
+    const store = {
+      setConditionalOverrideAttributeDialogAnchor: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleConditionalOverrideAnchorChange(
+      { store, render },
+      {
+        _event: {
+          detail: { value: { x: 1, y: 0.5 } },
+        },
+      },
+    );
+
+    expect(
+      store.setConditionalOverrideAttributeDialogAnchor,
+    ).toHaveBeenCalledWith({ anchor: { x: 1, y: 0.5 } });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("prefills the grid when editing a conditional anchor", () => {
+    const store = {
+      selectValues: vi.fn(() => ({
+        conditionalOverrides: [
+          {
+            when: { target: "variables['enabled']", op: "eq", value: true },
+            set: { anchorX: 0.5, anchorY: 1 },
+          },
+        ],
+      })),
+      openConditionalOverrideAttributeDialog: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleConditionalOverrideAttributeClick(
+      { store, render },
+      {
+        _event: {
+          currentTarget: {
+            dataset: { index: "0", fieldName: "anchor" },
+          },
+        },
+      },
+    );
+
+    expect(store.openConditionalOverrideAttributeDialog).toHaveBeenCalledWith({
+      editingIndex: 0,
+      fieldName: "anchor",
+      selectedImageId: undefined,
+      selectedAnchor: { x: 0.5, y: 1 },
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
   it("uses a border-only card hover and a full-width add attribute button", () => {
     const view = readFileSync(
       new URL(
@@ -311,6 +407,52 @@ describe("layoutEditPanel conditional overrides", () => {
 
     expect(values.conditionalOverrides[0].set).toEqual({
       imageId: "image-selected",
+    });
+    expect(
+      store.closeConditionalOverrideAttributeDialog,
+    ).toHaveBeenCalledOnce();
+  });
+
+  it("saves the selected grid cell as a conditional anchor", () => {
+    const values = {
+      conditionalOverrides: [
+        {
+          when: { target: "variables['enabled']", op: "eq", value: true },
+          set: { visible: true },
+        },
+      ],
+    };
+    const store = {
+      selectConditionalOverrideAttributeDialog: vi.fn(() => ({
+        editingIndex: 0,
+        selectedAnchor: { x: 0.5, y: 1 },
+      })),
+      selectValues: vi.fn(() => values),
+      updateValueProperty: vi.fn(({ name, value }) => {
+        values[name] = value;
+      }),
+      closeConditionalOverrideAttributeDialog: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+      i18n: EN_I18N,
+    };
+
+    handleConditionalOverrideAttributeFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: { fieldName: "anchor" },
+        },
+      },
+    });
+
+    expect(values.conditionalOverrides[0].set).toEqual({
+      visible: true,
+      anchorX: 0.5,
+      anchorY: 1,
     });
     expect(
       store.closeConditionalOverrideAttributeDialog,

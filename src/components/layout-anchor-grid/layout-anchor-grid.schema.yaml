@@ -1,0 +1,25 @@
+componentName: rvn-layout-anchor-grid
+description: Selects one of nine anchor positions in a three-by-three grid.
+propsSchema:
+  type: object
+  properties:
+    value:
+      type: object
+      description: Selected anchor coordinates.
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+    options:
+      type: array
+      description: Localized anchor position options.
+      items:
+        type: object
+    label:
+      type: string
+      description: Accessible label for the anchor grid.
+      default: Anchor
+events:
+  value-change:
+    type: object
