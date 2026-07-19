@@ -365,11 +365,12 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
     });
     expect(sceneId).toBe("scene-2");
     expect(selectedSectionId).toBe("new-section");
-    expect(selectedLineId).toBeUndefined();
+    expect(selectedLineId).toBe("new-line");
     expect(appService.setPayload).toHaveBeenCalledWith({
       p: "project-1",
       s: "scene-2",
       sectionId: "new-section",
+      lineId: "new-line",
     });
     expect(deps.subject.dispatch).toHaveBeenCalledWith(
       "sceneEditor.renderCanvas",

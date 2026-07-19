@@ -872,7 +872,7 @@ export const syncSceneEditorRoutePayload = async (
     store.setSelectedSectionId({
       selectedSectionId: entrySelection.sectionId,
     });
-    store.setSelectedLineId({ selectedLineId: undefined });
+    store.setSelectedLineId({ selectedLineId: entrySelection.lineId });
 
     const nextPayload = {
       ...appService.getPayload(),
@@ -885,7 +885,11 @@ export const syncSceneEditorRoutePayload = async (
     } else {
       delete nextPayload.sectionId;
     }
-    delete nextPayload.lineId;
+    if (entrySelection.lineId) {
+      nextPayload.lineId = entrySelection.lineId;
+    } else {
+      delete nextPayload.lineId;
+    }
     appService.setPayload?.(nextPayload);
 
     reconcileCurrentEditorSession(deps);
