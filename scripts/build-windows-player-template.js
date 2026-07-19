@@ -94,7 +94,7 @@ const ensureBuildTooling = async () => {
     throw new Error(
       `Missing Windows template build tool(s): ${missing.join(
         ", ",
-      )}. Install the Rust target with \`rustup target add ${windowsTarget}\`, install cargo-xwin with \`cargo install cargo-xwin --version 0.19.2 --locked\` for Rust 1.85, and install LLVM/Clang so \`llvm-rc\` and \`clang-cl\` are on PATH.`,
+      )}. Install the Rust target with \`rustup target add ${windowsTarget}\`, install cargo-xwin with \`cargo install cargo-xwin --version 0.19.2 --locked\`, and install LLVM/Clang so \`llvm-rc\` and \`clang-cl\` are on PATH.`,
     );
   }
 };

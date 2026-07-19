@@ -10,6 +10,64 @@ import {
 } from "../../src/pages/app/app.handlers.js";
 
 describe("app route transitions", () => {
+  it("updates Discord presence after the active locale changes", () => {
+    const dom = new JSDOM("<!doctype html><body></body>");
+    vi.stubGlobal("window", dom.window);
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("Element", dom.window.Element);
+
+    let localeListener;
+    let presenceDetails = "Making a visual novel";
+    const unsubscribeLocale = vi.fn();
+    const appService = {
+      getPath: vi.fn(() => "/"),
+      getPayload: vi.fn(() => ({})),
+      getPlatform: vi.fn(() => "tauri"),
+      setAppCopyProvider: vi.fn(),
+      setDiscordPresenceDetails: vi.fn(async () => {}),
+    };
+    const deps = {
+      appService,
+      locale: {
+        subscribe: vi.fn((listener) => {
+          localeListener = listener;
+          return unsubscribeLocale;
+        }),
+      },
+      store: {
+        setPlatform: vi.fn(),
+        setUiConfig: vi.fn(),
+      },
+      subject: {
+        dispatch: vi.fn(),
+        pipe: vi.fn(() => NEVER),
+      },
+      uiConfig: {},
+    };
+    Object.defineProperty(deps, "i18n", {
+      get: () => ({
+        appPage: {
+          discordPresenceMakingVisualNovel: presenceDetails,
+        },
+      }),
+    });
+
+    const cleanup = handleBeforeMount(deps);
+    expect(appService.setDiscordPresenceDetails).toHaveBeenLastCalledWith({
+      details: "Making a visual novel",
+    });
+
+    presenceDetails = "正在制作视觉小说";
+    localeListener("zh-hans");
+
+    expect(appService.setDiscordPresenceDetails).toHaveBeenLastCalledWith({
+      details: "正在制作视觉小说",
+    });
+
+    cleanup();
+    expect(unsubscribeLocale).toHaveBeenCalledOnce();
+  });
+
   it("awaits page preparation before changing route history", async () => {
     let finishPreparation;
     const appService = {

@@ -2,7 +2,7 @@
 name = "routevn-packager"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.97.1"
 
 [dependencies]
 chacha20poly1305 = "0.10.1"

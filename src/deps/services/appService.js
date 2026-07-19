@@ -8,6 +8,7 @@ import { copyTextToClipboard } from "../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../internal/projectLanguage.js";
 import { createProgressDialog } from "../clients/progressDialog.js";
+import { setDiscordPresenceDetails as setDiscordPresenceDetailsClient } from "../clients/tauri/discordPresence.js";
 
 const deriveProjectNameFromPath = (projectPath) => {
   if (typeof projectPath !== "string" || projectPath.length === 0) {
@@ -257,6 +258,10 @@ export const createAppService = (params) => {
 
     copyText(value) {
       return copyTextToClipboard(value);
+    },
+
+    setDiscordPresenceDetails(options) {
+      return setDiscordPresenceDetailsClient(options);
     },
 
     async startStaticWebServer({ rootPath } = {}) {
