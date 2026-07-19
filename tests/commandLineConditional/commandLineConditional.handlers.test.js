@@ -2,9 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createDefaultBranchDraft,
   createInitialState,
+  deleteBranch,
+  hideDropdownMenu,
+  moveBranch,
   resetTempBranch,
   selectBranches,
   selectDefaultBranch,
+  selectDropdownMenuBranchId,
   selectSaveBranchDraft,
   selectVariableItemById,
   selectVariablesData,
@@ -13,12 +17,20 @@ import {
   setMode,
   setTempBranch,
   setVariablesData,
+  showDropdownMenu,
   updateBranch,
 } from "../../src/components/commandLineConditional/commandLineConditional.store.js";
 import {
+  handleAddOneOfValueClick,
   handleAddDefaultClick,
   handleBranchClick,
+  handleBranchMenuButtonClick,
+  handleBranchMenuButtonKeyDown,
+  handleDropdownMenuClickItem,
   handleEnumValueSelectChange,
+  handleOneOfValueChange,
+  handleOperatorSelectChange,
+  handleRemoveOneOfValueClick,
   handleSaveBranchClick,
   handleSubmitClick,
   handleVariableSelectChange,
@@ -28,10 +40,14 @@ import { EN_I18N as i18n } from "../support/i18n.js";
 const createStore = (state) => ({
   createDefaultBranchDraft: (payload) =>
     createDefaultBranchDraft({ state }, payload),
+  deleteBranch: (payload) => deleteBranch({ state }, payload),
   getState: () => state,
+  hideDropdownMenu: (payload) => hideDropdownMenu({ state }, payload),
+  moveBranch: (payload) => moveBranch({ state }, payload),
   resetTempBranch: (payload) => resetTempBranch({ state }, payload),
   selectBranches: () => selectBranches({ state }),
   selectDefaultBranch: () => selectDefaultBranch({ state }),
+  selectDropdownMenuBranchId: () => selectDropdownMenuBranchId({ state }),
   selectSaveBranchDraft: () => selectSaveBranchDraft({ state }),
   selectVariableItemById: (payload) =>
     selectVariableItemById({ state }, payload),
@@ -39,6 +55,7 @@ const createStore = (state) => ({
   setCurrentBranchId: (payload) => setCurrentBranchId({ state }, payload),
   setMode: (payload) => setMode({ state }, payload),
   setTempBranch: (payload) => setTempBranch({ state }, payload),
+  showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
   updateBranch: (payload) => updateBranch({ state }, payload),
 });
 
@@ -185,6 +202,181 @@ describe("commandLineConditional.handlers", () => {
       });
     },
   );
+
+  it.each([
+    ["string", ["north", "south"], ["north", "south"]],
+    ["number", ["1.5", 2], [1.5, 2]],
+    ["boolean", [true, false], [true, false]],
+  ])(
+    "saves one-of conditions for %s variables",
+    (variableType, values, expectedValues) => {
+      const state = createInitialState();
+      const appService = {
+        showAlert: vi.fn(),
+      };
+
+      setVariablesData(
+        { state },
+        {
+          variables: {
+            items: {
+              route: {
+                id: "route",
+                name: "Route",
+                type: "variable",
+                variableType,
+              },
+            },
+            tree: [{ id: "route" }],
+          },
+        },
+      );
+      setTempBranch(
+        { state },
+        {
+          conditionKind: "variable",
+          variableId: "route",
+          op: "in",
+          value: values,
+          actions: {
+            nextLine: {},
+          },
+        },
+      );
+
+      handleSaveBranchClick(
+        {
+          appService,
+          i18n,
+          store: createStore(state),
+          render: () => {},
+        },
+        {
+          _event: {
+            stopPropagation: () => {},
+          },
+        },
+      );
+
+      expect(appService.showAlert).not.toHaveBeenCalled();
+      expect(state.branches[0]).toMatchObject({
+        when: {
+          in: [{ var: "variables.route" }, { literal: expectedValues }],
+        },
+      });
+    },
+  );
+
+  it("loads a saved one-of condition for editing", () => {
+    const state = createInitialState();
+    const store = createStore(state);
+
+    setVariablesData(
+      { state },
+      {
+        variables: {
+          items: {
+            route: {
+              id: "route",
+              name: "Route",
+              type: "variable",
+              variableType: "string",
+            },
+          },
+          tree: [{ id: "route" }],
+        },
+      },
+    );
+    setBranches(
+      { state },
+      {
+        branches: [
+          {
+            id: "branch-route",
+            when: {
+              in: [{ var: "variables.route" }, { literal: ["north", "south"] }],
+            },
+            actions: {
+              nextLine: {},
+            },
+          },
+        ],
+      },
+    );
+
+    handleBranchClick(
+      { store, render: () => {} },
+      {
+        _event: {
+          currentTarget: {
+            dataset: { branchId: "branch-route" },
+          },
+        },
+      },
+    );
+
+    expect(state.tempBranch).toMatchObject({
+      conditionKind: "variable",
+      variableId: "route",
+      op: "in",
+      value: ["north", "south"],
+    });
+  });
+
+  it("adds, edits, and removes one-of values", () => {
+    const state = createInitialState();
+    const store = createStore(state);
+
+    setVariablesData(
+      { state },
+      {
+        variables: {
+          items: {
+            trust: {
+              id: "trust",
+              name: "Trust",
+              type: "variable",
+              variableType: "number",
+            },
+          },
+          tree: [{ id: "trust" }],
+        },
+      },
+    );
+    setTempBranch({ state }, { variableId: "trust", value: 1 });
+
+    handleOperatorSelectChange(
+      { store, render: () => {} },
+      { _event: { detail: { value: "in" } } },
+    );
+    handleAddOneOfValueClick(
+      { store, render: () => {} },
+      { _event: { stopPropagation: () => {} } },
+    );
+    handleOneOfValueChange(
+      { store, render: () => {} },
+      {
+        _event: {
+          currentTarget: { dataset: { index: "1" } },
+          detail: { value: 2 },
+        },
+      },
+    );
+    handleRemoveOneOfValueClick(
+      { store, render: () => {} },
+      {
+        _event: {
+          stopPropagation: () => {},
+          currentTarget: { dataset: { index: "0" } },
+        },
+      },
+    );
+
+    expect(state.tempBranch).toMatchObject({
+      op: "in",
+      value: [2],
+    });
+  });
 
   it("loads a saved number ordering condition for editing", () => {
     const state = createInitialState();
@@ -633,5 +825,116 @@ describe("commandLineConditional.handlers", () => {
       title: "Warning",
     });
     expect(dispatchedEvents).toEqual([]);
+  });
+
+  it.each([
+    ["move-up", ["branch-2", "branch-1", "branch-3", "branch-default"]],
+    ["move-down", ["branch-1", "branch-3", "branch-2", "branch-default"]],
+  ])("handles the %s branch menu action", (menuAction, expectedIds) => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const createConditionBranch = (id) => ({
+      id,
+      when: {
+        eq: [{ var: "variables.trust" }, id],
+      },
+      actions: {},
+    });
+
+    setBranches(
+      { state },
+      {
+        branches: [
+          createConditionBranch("branch-1"),
+          createConditionBranch("branch-2"),
+          createConditionBranch("branch-3"),
+          { id: "branch-default", actions: {} },
+        ],
+      },
+    );
+    showDropdownMenu(
+      { state },
+      { branchId: "branch-2", position: { x: 10, y: 20 } },
+    );
+
+    handleDropdownMenuClickItem(
+      { store: createStore(state), render },
+      {
+        _event: {
+          detail: {
+            item: { value: menuAction },
+          },
+        },
+      },
+    );
+
+    expect(state.branches.map((branch) => branch.id)).toEqual(expectedIds);
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens and operates the branch menu from its keyboard trigger", () => {
+    const state = createInitialState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const stopPropagation = vi.fn();
+    const preventDefault = vi.fn();
+    const createConditionBranch = (id) => ({
+      id,
+      when: {
+        eq: [{ var: "variables.trust" }, id],
+      },
+      actions: {},
+    });
+
+    setBranches(
+      { state },
+      {
+        branches: [
+          createConditionBranch("branch-1"),
+          createConditionBranch("branch-2"),
+        ],
+      },
+    );
+    const currentTarget = {
+      dataset: { branchId: "branch-2" },
+      getBoundingClientRect: () => ({ right: 320, bottom: 240 }),
+    };
+
+    handleBranchMenuButtonClick(
+      { store, render },
+      {
+        _event: {
+          currentTarget,
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(state.dropdownMenu).toMatchObject({
+      isOpen: true,
+      branchId: "branch-2",
+      position: { x: 320, y: 240 },
+    });
+
+    handleBranchMenuButtonKeyDown(
+      { store, render },
+      {
+        _event: {
+          key: "ArrowUp",
+          currentTarget,
+          preventDefault,
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(state.branches.map((branch) => branch.id)).toEqual([
+      "branch-2",
+      "branch-1",
+    ]);
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledTimes(2);
+    expect(render).toHaveBeenCalledTimes(2);
   });
 });
