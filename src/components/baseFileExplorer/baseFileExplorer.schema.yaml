@@ -11,8 +11,8 @@ propsSchema:
             type: string
           id:
             type: string
-          trailingSvg:
-            type: string
+          iconCornerBadge:
+            type: boolean
           contextMenuItems:
             type: array
           level:
