@@ -1873,6 +1873,8 @@ commandLinePage:
   "Sound Effects": "音效"
   "Speaker": "说话者"
   "Speaker Name": "说话者名称"
+  "Speaker sprite": "说话者立绘"
+  speakerSpriteTooltip: "显示在对话框上方的说话者面部图像。全身立绘请使用“角色”动作。"
   "Sprite Animation": "立绘动画"
   "Sprite Groups": "立绘组"
   "Sprite Selection": "立绘选择"

@@ -1873,6 +1873,8 @@ commandLinePage:
   "Sound Effects": "効果音"
   "Speaker": "話者"
   "Speaker Name": "話者名"
+  "Speaker sprite": "話者スプライト"
+  speakerSpriteTooltip: "会話ボックスの上に表示される話者の顔です。全身の立ち絵には「キャラクター」アクションを使用してください。"
   "Sprite Animation": "立ち絵アニメーション"
   "Sprite Groups": "立ち絵グループ"
   "Sprite Selection": "立ち絵選択"

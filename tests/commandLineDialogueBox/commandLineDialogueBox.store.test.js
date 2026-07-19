@@ -15,6 +15,10 @@ import {
   setCustomizeTextSpeed,
   setTextSpeed,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.store.js";
+import { EN_I18N } from "../support/i18n.js";
+
+const selectTestViewData = ({ state, props }) =>
+  selectViewData({ state, props, i18n: EN_I18N });
 
 const isFieldVisible = ({ field, values }) => {
   const rendered = parseAndRender(
@@ -60,7 +64,7 @@ describe("commandLineDialogueBox.store", () => {
       },
     );
 
-    const viewData = selectViewData({
+    const viewData = selectTestViewData({
       state,
       props: {
         layouts: [
@@ -114,8 +118,12 @@ describe("commandLineDialogueBox.store", () => {
     expect(
       viewData.form.fields.find((field) => field.slot === "characterSprite"),
     ).toMatchObject({
-      label: "Character Sprite",
+      label: "Speaker sprite",
       type: "slot",
+      tooltip: {
+        content:
+          "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action",
+      },
     });
     expect(
       viewData.form.fields.find((field) => field.name === "append"),
@@ -143,7 +151,7 @@ describe("commandLineDialogueBox.store", () => {
   it("uses one layout label for every dialogue mode", () => {
     const state = createInitialState();
 
-    const viewData = selectViewData({
+    const viewData = selectTestViewData({
       state,
       props: {
         layouts: [
@@ -164,7 +172,7 @@ describe("commandLineDialogueBox.store", () => {
     });
 
     state.selectedMode = "nvl";
-    const nvlViewData = selectViewData({
+    const nvlViewData = selectTestViewData({
       state,
       props: {
         layouts: [
@@ -195,7 +203,7 @@ describe("commandLineDialogueBox.store", () => {
       },
     );
 
-    const viewData = selectViewData({
+    const viewData = selectTestViewData({
       state,
       props: {
         layouts: [
@@ -223,7 +231,7 @@ describe("commandLineDialogueBox.store", () => {
   it("exposes optional text speed controls with no override by default", () => {
     const state = createInitialState();
 
-    const viewData = selectViewData({
+    const viewData = selectTestViewData({
       state,
       props: {
         layouts: [
@@ -293,7 +301,9 @@ describe("commandLineDialogueBox.store", () => {
     setTextSpeed({ state }, { textSpeed: 150 });
 
     expect(state.textSpeed).toBe(100);
-    expect(selectViewData({ state, props: { layouts: [], characters: [] } }))
+    expect(
+      selectTestViewData({ state, props: { layouts: [], characters: [] } }),
+    )
       .toMatchObject({
         defaultValues: {
           customizeTextSpeed: true,
@@ -304,7 +314,7 @@ describe("commandLineDialogueBox.store", () => {
 
   it("shows persistCharacter only for selected characters or enabled custom naming", () => {
     const state = createInitialState();
-    const viewData = selectViewData({
+    const viewData = selectTestViewData({
       state,
       props: {
         layouts: [
@@ -410,7 +420,7 @@ describe("commandLineDialogueBox.store", () => {
       },
     );
 
-    const viewData = selectViewData({
+    const viewData = selectTestViewData({
       state,
       props: {
         layouts: [
@@ -476,8 +486,12 @@ describe("commandLineDialogueBox.store", () => {
     expect(
       viewData.form.fields.find((field) => field.slot === "characterSprite"),
     ).toMatchObject({
-      label: "Character Sprite",
+      label: "Speaker sprite",
       type: "slot",
+      tooltip: {
+        content:
+          "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action",
+      },
     });
     expect(viewData.hasSpriteCharacter).toBe(true);
     expect(viewData.characterSpriteEnabled).toBe(true);

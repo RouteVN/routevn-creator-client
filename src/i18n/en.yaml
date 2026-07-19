@@ -1873,6 +1873,8 @@ commandLinePage:
   "Sound Effects": "Sound Effects"
   "Speaker": "Speaker"
   "Speaker Name": "Speaker Name"
+  "Speaker sprite": "Speaker sprite"
+  speakerSpriteTooltip: "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action"
   "Sprite Animation": "Sprite Animation"
   "Sprite Groups": "Sprite Groups"
   "Sprite Selection": "Sprite Selection"

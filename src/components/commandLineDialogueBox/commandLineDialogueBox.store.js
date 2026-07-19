@@ -410,7 +410,11 @@ export const createInitialState = () => ({
       {
         type: "slot",
         slot: "characterSprite",
-        label: "Character Sprite",
+        label: "Speaker sprite",
+        tooltip: {
+          content:
+            "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action",
+        },
       },
       {
         name: "customizeTextSpeed",
