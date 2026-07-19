@@ -10,9 +10,24 @@ const createVisibilityOptions = (copy = {}) => [
   { label: copy.hiddenOption ?? "Hidden", value: false },
 ];
 const createTextAlignmentOptions = (copy = {}) => [
-  { label: copy.leftOption ?? "Left", value: "left" },
-  { label: copy.centerOption ?? "Center", value: "center" },
-  { label: copy.rightOption ?? "Right", value: "right" },
+  {
+    label: copy.leftOption ?? "Left",
+    svg: "text-align-left",
+    ariaLabel: copy.leftOption ?? "Left",
+    value: "left",
+  },
+  {
+    label: copy.centerOption ?? "Center",
+    svg: "text-align-center",
+    ariaLabel: copy.centerOption ?? "Center",
+    value: "center",
+  },
+  {
+    label: copy.rightOption ?? "Right",
+    svg: "text-align-right",
+    ariaLabel: copy.rightOption ?? "Right",
+    value: "right",
+  },
 ];
 const ANCHOR_OPTIONS = [
   { label: "Top Left", value: "topLeft", x: 0, y: 0 },

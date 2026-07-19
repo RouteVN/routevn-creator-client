@@ -523,6 +523,18 @@ const TYPE_FAMILIES = {
   rect: "rect",
 };
 
+const ICONS_BY_FAMILY = {
+  container: "container",
+  fragment: "fragment",
+  sprite: "sprite",
+  particle: "particles",
+  spritesheetAnimation: "spritesheets",
+  text: "text",
+  input: "input",
+  slider: "slider",
+  rect: "rect",
+};
+
 const DEFAULT_CAPABILITIES = {
   supportsSize: true,
   supportsHeight: true,
@@ -990,8 +1002,11 @@ export const getLayoutEditorTypeRules = (itemType) => {
 };
 
 export const getLayoutEditorElementDefinition = (itemType) => {
+  const family = TYPE_FAMILIES[itemType];
+
   return {
     type: itemType,
+    icon: ICONS_BY_FAMILY[family] ?? itemType,
     capabilities: getLayoutEditorItemCapabilities(itemType),
     typeRules: getLayoutEditorTypeRules(itemType),
     panelFeatures: PANEL_FEATURES_BY_TYPE[itemType] ?? DEFAULT_PANEL_FEATURES,

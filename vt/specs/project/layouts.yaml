@@ -149,4 +149,15 @@ steps:
   - action: wait
     ms: 1200
   - action: screenshot
+  - action: select
+    selector: "#fileExplorer #itemRef1"
+    steps:
+      - action: rclick
+  - action: waitFor
+    selector: "#fileExplorer #dropdownMenu[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: screenshot
 ---

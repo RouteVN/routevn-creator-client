@@ -201,6 +201,28 @@ describe("layoutEditPanel condition forms", () => {
     expect(form.fields.find((field) => field.name === "align")?.type).toBe(
       "segmented-control",
     );
+    expect(
+      form.fields.find((field) => field.name === "align")?.options,
+    ).toEqual([
+      {
+        label: "Left",
+        svg: "text-align-left",
+        ariaLabel: "Left",
+        value: "left",
+      },
+      {
+        label: "Center",
+        svg: "text-align-center",
+        ariaLabel: "Center",
+        value: "center",
+      },
+      {
+        label: "Right",
+        svg: "text-align-right",
+        ariaLabel: "Right",
+        value: "right",
+      },
+    ]);
     expect(form.fields.find((field) => field.name === "visible")?.type).toBe(
       "segmented-control",
     );

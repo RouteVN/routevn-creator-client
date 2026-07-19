@@ -11,6 +11,25 @@ const CHOICE_CONTENT_PARENT_TYPES = new Set([
   "container-ref-choice-single-item",
 ]);
 
+const SPECIAL_ICONS = Object.freeze({
+  container: "container-special",
+  fragment: "fragment-special",
+  sprite: "sprite-special",
+  text: "text-special",
+});
+
+const hasPreviewDependencies = (definition) => {
+  return Object.keys(definition.previewDependencies).length > 0;
+};
+
+const getElementIcon = (definition) => {
+  if (hasPreviewDependencies(definition)) {
+    return SPECIAL_ICONS[definition.icon] ?? definition.icon;
+  }
+
+  return definition.icon;
+};
+
 export const toLayoutEditorContextMenuItems = (
   items = [],
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
@@ -28,6 +47,7 @@ export const toLayoutEditorContextMenuItems = (
 
       return {
         ...nextItem,
+        icon: getElementIcon(createDefinition),
         value: {
           action: "new-child-item",
           ...createDefinition.template,
@@ -146,10 +166,6 @@ export const toLayoutEditorExplorerItems = (
     const definition = getLayoutEditorElementDefinition(item.type);
     const canReceiveChildren =
       item.type === "folder" || definition.isContainer === true;
-    const hasPreviewDependencies =
-      Object.keys(definition.previewDependencies).length > 0;
-    const svg =
-      item.type === "spritesheet-animation" ? "spritesheets" : item.svg;
     const hidden = item.hidden === true;
     const effectivelyHidden = resolveEffectivelyHidden(item);
     const visibilityLabel = formatI18nCopy(
@@ -163,12 +179,12 @@ export const toLayoutEditorExplorerItems = (
 
     return {
       ...item,
-      svg,
+      svg: item.svg ?? getElementIcon(definition),
       contextMenuItems:
         canReceiveChildren === true
           ? toContainerContextMenuItems(contextMenuItems, item)
           : leafItemContextMenuItems,
-      iconCornerBadge: hasPreviewDependencies,
+      iconCornerBadge: false,
       visibilityToggle: true,
       visibilityToggleAlwaysVisible:
         alwaysShowVisibilityToggle === true || hidden,

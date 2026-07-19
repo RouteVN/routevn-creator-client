@@ -335,10 +335,11 @@ layoutSections:
   - "$when": "supportsTextRevealEffect"
     label: Revealing
     items:
-      - type: reveal-effect-select
+      - type: select
         label: Effect
         name: revealEffect
         value: "${values.revealEffect}"
+        options: "${revealEffectOptions}"
   - "$when": "supportsTextRevealIndicator"
     id: textRevealIndicator
     label: Indicator
@@ -395,10 +396,16 @@ layoutSections:
         value: "${values.textStyle.align}"
         options:
           - label: Left
+            svg: text-align-left
+            ariaLabel: Left
             value: left
           - label: Center
+            svg: text-align-center
+            ariaLabel: Center
             value: center
           - label: Right
+            svg: text-align-right
+            ariaLabel: Right
             value: right
   - id: visibilityCondition
     label: Visibility

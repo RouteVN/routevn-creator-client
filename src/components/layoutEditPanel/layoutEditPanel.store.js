@@ -160,14 +160,22 @@ const localizeOptions = (options, copy = {}) => {
     return options;
   }
 
-  return options.map((option) =>
-    typeof option?.label === "string"
-      ? {
-          ...option,
-          label: localizeStaticLabel(option.label, copy),
-        }
-      : option,
-  );
+  return options.map((option) => {
+    if (!option || typeof option !== "object") {
+      return option;
+    }
+
+    const nextOption = {
+      ...option,
+    };
+    if (typeof nextOption.label === "string") {
+      nextOption.label = localizeStaticLabel(nextOption.label, copy);
+    }
+    if (typeof nextOption.ariaLabel === "string") {
+      nextOption.ariaLabel = localizeStaticLabel(nextOption.ariaLabel, copy);
+    }
+    return nextOption;
+  });
 };
 const localizeForm = (form, copy = {}) => {
   if (!form || typeof form !== "object") {
@@ -1504,6 +1512,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     { label: copy.manualOption ?? "Manual", value: "" },
     ...getRuntimeNumberFieldOptions(),
   ];
+  const revealEffectOptions = createRevealEffectOptions(copy);
   const fragmentLayoutOptions = getFragmentLayoutOptions(props.layoutsData);
   const visibilityConditionOptions = {
     includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
@@ -1622,6 +1631,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       spritesheetSelectionItems,
       particleSelectionItems,
       sliderValueOptions,
+      revealEffectOptions,
       spritesheetSelectionValue,
       selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
       selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,
@@ -1775,8 +1785,6 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     config: {
       sections,
     },
-    revealEffectOptions: createRevealEffectOptions(copy),
-    revealEffectValue: values.revealEffect,
     popover: state.popover,
     visibilityConditionDialog: state.visibilityConditionDialog,
     dropdownMenu: state.dropdownMenu,
