@@ -1460,7 +1460,7 @@ describe("constructProjectData", () => {
     ]);
   });
 
-  it("keeps text style outline color references in filtered export state", () => {
+  it("keeps text style effect colors and shadow in export state", () => {
     const repositoryState = {
       project: {
         resolution: {
@@ -1483,8 +1483,13 @@ describe("constructProjectData", () => {
             type: "color",
             hex: "#112233",
           },
+          shadow: {
+            id: "shadow",
+            type: "color",
+            hex: "#445566",
+          },
         },
-        tree: [{ id: "fill" }, { id: "stroke" }],
+        tree: [{ id: "fill" }, { id: "stroke" }, { id: "shadow" }],
       },
       fonts: {
         items: {
@@ -1508,6 +1513,13 @@ describe("constructProjectData", () => {
             lineHeight: 1.2,
             strokeColorId: "stroke",
             strokeWidth: 4,
+            shadow: {
+              colorId: "shadow",
+              alpha: 0.75,
+              blur: 6,
+              offsetX: -2,
+              offsetY: 3,
+            },
           },
         },
         tree: [{ id: "style-1" }],
@@ -1582,7 +1594,7 @@ describe("constructProjectData", () => {
     const usage = collectUsedResourcesForExport(repositoryState);
 
     expect(usage.usedIds.colors).toEqual(
-      expect.arrayContaining(["fill", "stroke"]),
+      expect.arrayContaining(["fill", "stroke", "shadow"]),
     );
 
     const filteredState = buildFilteredStateForExport(repositoryState, usage);
@@ -1596,6 +1608,15 @@ describe("constructProjectData", () => {
 
     expect(projectData.resources.colors.stroke).toEqual({
       hex: "#112233",
+    });
+    expect(projectData.resources.textStyles["style-1"]).toMatchObject({
+      shadow: {
+        colorId: "shadow",
+        alpha: 0.75,
+        blur: 6,
+        offsetX: -2,
+        offsetY: 3,
+      },
     });
     expect(resolvedElements[0].textStyle).toEqual(
       expect.objectContaining({

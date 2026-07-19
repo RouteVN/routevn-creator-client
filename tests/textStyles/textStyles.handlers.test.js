@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleDesktopTextStyleFormKeyDown,
+  handleDesktopTextStyleSubmitClick,
   handleFormActionClick,
   handleItemDuplicate,
   handleMobileDetailEditClick,
@@ -39,6 +41,7 @@ describe("textStyles.handlers", () => {
         },
       }),
       selectDialogState: vi.fn(() => dialogState),
+      selectIsTouchMode: vi.fn(() => false),
       selectCurrentPreviewText: vi.fn(() => "Preview"),
       resetFormValues: vi.fn(),
       clearEditMode: vi.fn(),
@@ -58,6 +61,11 @@ describe("textStyles.handlers", () => {
     appService: {
       showAlert: vi.fn(),
     },
+    refs: {
+      textStyleForm: {
+        getValues: vi.fn(() => createSubmitPayload()._event.detail.values),
+      },
+    },
     render: vi.fn(),
   });
 
@@ -72,10 +80,15 @@ describe("textStyles.handlers", () => {
           fontSize: 24,
           lineHeight: 1.5,
           fontColor: "color-1",
-          fontStyle: "font-1",
+          fontId: "font-1",
           fontWeight: "400",
           strokeColor: "",
           strokeWidth: 0,
+          shadowColor: "",
+          shadowAlpha: 1,
+          shadowBlur: 0,
+          shadowOffsetX: 2,
+          shadowOffsetY: 2,
           ...values,
         },
       },
@@ -110,9 +123,83 @@ describe("textStyles.handlers", () => {
         textStyleId: "text-style-1",
         data: expect.objectContaining({
           tagIds: [],
+          clearShadow: true,
         }),
       }),
     );
+  });
+
+  it("persists shadow settings", async () => {
+    const createTextStyle = vi.fn(async () => "text-style-new");
+    const deps = createFormDeps({ createTextStyle });
+
+    await handleFormActionClick(
+      deps,
+      createSubmitPayload({
+        shadowColor: "color-shadow",
+        shadowAlpha: 0.75,
+        shadowBlur: 6,
+        shadowOffsetX: -2,
+        shadowOffsetY: 3,
+      }),
+    );
+
+    expect(createTextStyle.mock.calls[0][0].data).toMatchObject({
+      fontId: "font-1",
+      shadow: {
+        colorId: "color-shadow",
+        alpha: 0.75,
+        blur: 6,
+        offsetX: -2,
+        offsetY: 3,
+      },
+    });
+  });
+
+  it("submits the desktop form through the fixed action button", async () => {
+    const createTextStyle = vi.fn(async () => "text-style-new");
+    const deps = createFormDeps({ createTextStyle });
+
+    await handleDesktopTextStyleSubmitClick(deps);
+
+    expect(deps.refs.textStyleForm.getValues).toHaveBeenCalledOnce();
+    expect(createTextStyle).toHaveBeenCalledOnce();
+  });
+
+  it("submits with Enter outside textareas in the desktop form", async () => {
+    const createTextStyle = vi.fn(async () => "text-style-new");
+    const deps = createFormDeps({ createTextStyle });
+    const preventDefault = vi.fn();
+
+    await handleDesktopTextStyleFormKeyDown(deps, {
+      _event: {
+        key: "Enter",
+        shiftKey: false,
+        preventDefault,
+        composedPath: () => [{ tagName: "RTGL-INPUT" }],
+      },
+    });
+
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(createTextStyle).toHaveBeenCalledOnce();
+  });
+
+  it("keeps Enter available for multiline text in the desktop form", async () => {
+    const createTextStyle = vi.fn(async () => "text-style-new");
+    const deps = createFormDeps({ createTextStyle });
+    const preventDefault = vi.fn();
+
+    await handleDesktopTextStyleFormKeyDown(deps, {
+      _event: {
+        key: "Enter",
+        shiftKey: false,
+        preventDefault,
+        composedPath: () => [{ tagName: "TEXTAREA" }],
+      },
+    });
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(createTextStyle).not.toHaveBeenCalled();
   });
 
   it("duplicates a text style and selects the duplicate", async () => {

@@ -283,15 +283,22 @@ const buildTextStyleData = ({
   fontSize,
   lineHeight,
   fontColor,
-  fontStyle,
+  fontId,
   fontWeight,
   previewText,
   strokeColor,
   strokeWidth,
+  shadowColor,
+  shadowAlpha,
+  shadowBlur,
+  shadowOffsetX,
+  shadowOffsetY,
   includeEmptyTagIds = true,
   clearOutlineColor = false,
+  clearShadow = false,
 } = {}) => {
   const hasStrokeColor = Boolean(strokeColor);
+  const hasShadowColor = Boolean(shadowColor);
   const normalizedTagIds = Array.isArray(tagIds) ? tagIds : [];
   const textStyleData = {
     name,
@@ -299,7 +306,7 @@ const buildTextStyleData = ({
     fontSize: Number(fontSize ?? 16),
     lineHeight: Number(lineHeight ?? 1.5),
     colorId: fontColor,
-    fontId: fontStyle,
+    fontId,
     fontWeight: String(fontWeight ?? "400"),
     previewText: previewText ?? "",
     strokeWidth: hasStrokeColor ? Number(strokeWidth ?? 0) : 0,
@@ -313,6 +320,18 @@ const buildTextStyleData = ({
     textStyleData.strokeColorId = strokeColor;
   } else if (clearOutlineColor) {
     textStyleData.strokeColorId = undefined;
+  }
+
+  if (hasShadowColor) {
+    textStyleData.shadow = {
+      colorId: shadowColor,
+      alpha: Number(shadowAlpha ?? 1),
+      blur: Number(shadowBlur ?? 0),
+      offsetX: Number(shadowOffsetX ?? 2),
+      offsetY: Number(shadowOffsetY ?? 2),
+    };
+  } else if (clearShadow) {
+    textStyleData.clearShadow = true;
   }
 
   return textStyleData;
@@ -329,11 +348,16 @@ const handleTextStyleCreated = async (deps, payload) => {
     fontSize,
     lineHeight,
     fontColor,
-    fontStyle,
+    fontId,
     fontWeight,
     previewText,
     strokeColor,
     strokeWidth,
+    shadowColor,
+    shadowAlpha,
+    shadowBlur,
+    shadowOffsetX,
+    shadowOffsetY,
   } = payload._event.detail;
 
   const createAttempt = await runResourcePageMutation({
@@ -352,11 +376,16 @@ const handleTextStyleCreated = async (deps, payload) => {
             fontSize,
             lineHeight,
             fontColor,
-            fontStyle,
+            fontId,
             fontWeight,
             previewText,
             strokeColor,
             strokeWidth,
+            shadowColor,
+            shadowAlpha,
+            shadowBlur,
+            shadowOffsetX,
+            shadowOffsetY,
             includeEmptyTagIds: false,
           }),
         },
@@ -384,11 +413,16 @@ const handleTextStyleUpdated = async (deps, payload) => {
     fontSize,
     lineHeight,
     fontColor,
-    fontStyle,
+    fontId,
     fontWeight,
     previewText,
     strokeColor,
     strokeWidth,
+    shadowColor,
+    shadowAlpha,
+    shadowBlur,
+    shadowOffsetX,
+    shadowOffsetY,
   } = payload._event.detail;
 
   const updateAttempt = await runResourcePageMutation({
@@ -405,12 +439,18 @@ const handleTextStyleUpdated = async (deps, payload) => {
           fontSize,
           lineHeight,
           fontColor,
-          fontStyle,
+          fontId,
           fontWeight,
           previewText,
           strokeColor,
           strokeWidth,
+          shadowColor,
+          shadowAlpha,
+          shadowBlur,
+          shadowOffsetX,
+          shadowOffsetY,
           clearOutlineColor: true,
+          clearShadow: true,
         }),
       }),
   });
@@ -618,7 +658,8 @@ export const handleFormActionClick = async (deps, payload) => {
   if (
     actionId === "select-options-add" &&
     (payload._event.detail.name === "fontColor" ||
-      payload._event.detail.name === "strokeColor")
+      payload._event.detail.name === "strokeColor" ||
+      payload._event.detail.name === "shadowColor")
   ) {
     // Open the add color dialog
     store.openAddColorDialog();
@@ -629,7 +670,7 @@ export const handleFormActionClick = async (deps, payload) => {
   // Handle add option for font selector
   if (
     actionId === "select-options-add" &&
-    payload._event.detail.name === "fontStyle"
+    payload._event.detail.name === "fontId"
   ) {
     // Open the add font dialog
     store.openAddFontDialog();
@@ -653,7 +694,7 @@ export const handleFormActionClick = async (deps, payload) => {
       !formData.name ||
       !formData.fontSize ||
       !formData.fontColor ||
-      !formData.fontStyle ||
+      !formData.fontId ||
       !formData.fontWeight
     ) {
       appService.showAlert({
@@ -676,11 +717,37 @@ export const handleFormActionClick = async (deps, payload) => {
     }
 
     const strokeWidth = Number(formData.strokeWidth ?? 0);
-    if (Number.isNaN(strokeWidth) || strokeWidth < 0) {
+    if (
+      formData.strokeColor &&
+      (Number.isNaN(strokeWidth) || strokeWidth < 0)
+    ) {
       appService.showAlert({
         message:
           copy.outlineThicknessInvalid ??
           "Please enter a valid outline thickness (0 or greater)",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const shadowAlpha = Number(formData.shadowAlpha ?? 1);
+    const shadowBlur = Number(formData.shadowBlur ?? 0);
+    const shadowOffsetX = Number(formData.shadowOffsetX ?? 2);
+    const shadowOffsetY = Number(formData.shadowOffsetY ?? 2);
+    if (
+      formData.shadowColor &&
+      (!Number.isFinite(shadowAlpha) ||
+        shadowAlpha < 0 ||
+        shadowAlpha > 1 ||
+        !Number.isFinite(shadowBlur) ||
+        shadowBlur < 0 ||
+        !Number.isFinite(shadowOffsetX) ||
+        !Number.isFinite(shadowOffsetY))
+    ) {
+      appService.showAlert({
+        message:
+          copy.shadowInvalid ??
+          "Please enter valid shadow opacity, blur, and offset values",
         title: copy.warningTitle ?? "Warning",
       });
       return;
@@ -700,11 +767,16 @@ export const handleFormActionClick = async (deps, payload) => {
             fontSize: formData.fontSize,
             lineHeight: formData.lineHeight,
             fontColor: formData.fontColor,
-            fontStyle: formData.fontStyle,
+            fontId: formData.fontId,
             fontWeight: formData.fontWeight,
             previewText: formData.previewText,
             strokeColor: formData.strokeColor,
             strokeWidth: formData.strokeWidth,
+            shadowColor: formData.shadowColor,
+            shadowAlpha: formData.shadowAlpha,
+            shadowBlur: formData.shadowBlur,
+            shadowOffsetX: formData.shadowOffsetX,
+            shadowOffsetY: formData.shadowOffsetY,
           },
         },
       });
@@ -720,11 +792,16 @@ export const handleFormActionClick = async (deps, payload) => {
             fontSize: formData.fontSize,
             lineHeight: formData.lineHeight,
             fontColor: formData.fontColor,
-            fontStyle: formData.fontStyle,
+            fontId: formData.fontId,
             fontWeight: formData.fontWeight,
             previewText: formData.previewText,
             strokeColor: formData.strokeColor,
             strokeWidth: formData.strokeWidth,
+            shadowColor: formData.shadowColor,
+            shadowAlpha: formData.shadowAlpha,
+            shadowBlur: formData.shadowBlur,
+            shadowOffsetX: formData.shadowOffsetX,
+            shadowOffsetY: formData.shadowOffsetY,
           },
         },
       });
@@ -740,6 +817,45 @@ export const handleFormActionClick = async (deps, payload) => {
     store.toggleDialog();
     render();
   }
+};
+
+const submitDesktopTextStyleForm = async (deps) => {
+  const { refs } = deps;
+  const values = refs.textStyleForm.getValues();
+
+  await handleFormActionClick(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values,
+      },
+    },
+  });
+};
+
+export const handleDesktopTextStyleSubmitClick = async (deps) => {
+  await submitDesktopTextStyleForm(deps);
+};
+
+export const handleDesktopTextStyleFormKeyDown = async (deps, payload) => {
+  const { store } = deps;
+  const event = payload._event;
+  if (store.selectIsTouchMode() || event.key !== "Enter" || event.shiftKey) {
+    return;
+  }
+
+  const isTextarea = event
+    .composedPath()
+    .some(
+      (element) =>
+        element.tagName === "TEXTAREA" || element.tagName === "RTGL-TEXTAREA",
+    );
+  if (isTextarea) {
+    return;
+  }
+
+  event.preventDefault();
+  await submitDesktopTextStyleForm(deps);
 };
 
 // Add color dialog handlers

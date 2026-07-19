@@ -74,4 +74,37 @@ describe("textStyles view", () => {
     expect(mobileBranch).not.toContain("100vw");
     expect(mobileBranch).not.toContain("calc(100vw");
   });
+
+  it("keeps the desktop submit action outside the scrollable form content", () => {
+    const textStylesView = readFileSync(
+      new URL(
+        "../../src/pages/textStyles/textStyles.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    const desktopPreviewStart = textStylesView.indexOf(
+      "$if showDialogPreviewCanvas",
+    );
+    const mobileBranchStart = textStylesView.indexOf(
+      "$else:",
+      desktopPreviewStart,
+    );
+    const desktopBranch = textStylesView.slice(
+      desktopPreviewStart,
+      mobileBranchStart,
+    );
+
+    expect(desktopBranch).toContain("w=800 h=70vh");
+    expect(desktopBranch).toContain("textStyleFormScroll w=f h=1fg sv");
+    expect(desktopBranch).toContain(":form=${desktopDialogForm}");
+    expect(desktopBranch).toContain("desktopTextStyleSubmitButton");
+    expect(
+      desktopBranch.indexOf("desktopTextStyleSubmitButton"),
+    ).toBeGreaterThan(desktopBranch.indexOf(":form=${desktopDialogForm}"));
+    expect(textStylesView).toContain(
+      "handler: handleDesktopTextStyleSubmitClick",
+    );
+  });
 });

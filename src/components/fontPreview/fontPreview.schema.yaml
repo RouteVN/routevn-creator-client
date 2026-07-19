@@ -35,6 +35,26 @@ propsSchema:
       type: string
       description: Text outline width in pixels
       default: '0'
+    shadowColor:
+      type: string
+      description: Text shadow color
+      default: transparent
+    shadowAlpha:
+      type: string
+      description: Text shadow opacity
+      default: '1'
+    shadowBlur:
+      type: string
+      description: Text shadow blur radius in pixels
+      default: '0'
+    shadowOffsetX:
+      type: string
+      description: Horizontal text shadow offset in pixels
+      default: '2'
+    shadowOffsetY:
+      type: string
+      description: Vertical text shadow offset in pixels
+      default: '2'
     width:
       type: string
       description: Preview container width
@@ -67,3 +87,8 @@ propsSchema:
       type: string
       description: Whether to show border around preview
       default: 'true'
+    mode:
+      type: string
+      description: Use a live Route Graphics canvas or a generated thumbnail
+      enum: [live, thumbnail]
+      default: thumbnail
