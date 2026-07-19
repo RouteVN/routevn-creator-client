@@ -22,6 +22,10 @@ refs:
     eventListeners:
       click:
         handler: handleArrowClick
+  visibility*:
+    eventListeners:
+      click:
+        handler: handleVisibilityToggleClick
   emptyMessage:
     eventListeners:
       click:
@@ -48,6 +52,25 @@ styles:
     '-moz-user-select': none
     '-ms-user-select': none
     user-select: none
+  ".visibilityAction":
+    align-items: center
+    background: transparent
+    border: "0"
+    box-sizing: border-box
+    color: inherit
+    cursor: pointer
+    display: flex
+    flex: "0 0 20px"
+    height: 20px
+    justify-content: center
+    margin: "0"
+    opacity: "0"
+    outline-offset: 1px
+    padding: "0"
+    transition: opacity 120ms ease
+    width: 20px
+  "[data-file-explorer-item='true']:hover .visibilityAction, .visibilityAction:focus-visible, .visibilityAction[data-always-visible='true']":
+    opacity: "1"
 template:
   - 'rtgl-view#root w=f h=f d=v sv style="min-width: 0; overflow-x: hidden;"':
       - 'rtgl-view w=f h=1fg d=v g=sm pos=rel style="min-height: 0;"':
@@ -57,20 +80,23 @@ template:
             $else:
               - rtgl-view w=f:
                   - $for item, i in items:
-                      - 'rtgl-view#itemRef${i} data-item-id=${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px; min-width: 0; box-sizing: border-box; touch-action: ${item.touchAction}; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
+                      - 'rtgl-view#itemRef${i} data-item-id=${item.id} data-file-explorer-item=true h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px; min-width: 0; box-sizing: border-box; touch-action: ${item.touchAction}; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
                           - $if shrinkable && item.hasChildren:
                               - rtgl-view d=h av=c ah=c w=16 h=16 min-w=16:
                                   - rtgl-svg#arrowRef${i} data-item-id=${item.id} data-file-explorer-arrow=true svg=${item.arrowIcon} wh=16 cur=pointer: null
                             $else:
                               - rtgl-view d=h av=c ah=c w=16 h=16 min-w=16: null
                           - 'rtgl-view d=h g=md av=c w=1fg style="min-width: 0; overflow: hidden;"':
-                              - rtgl-view d=h av=c ah=c w=16 h=16 min-w=16 pos=rel:
-                                  - rtgl-svg svg=${item.svg} wh=16: null
+                              - 'rtgl-view d=h av=c ah=c w=16 h=16 min-w=16 pos=rel style="color: ${item.iconCssColor};"':
+                                  - rtgl-svg svg=${item.svg} wh=16 c=${item.iconColor}: null
                                   - $if item.iconCornerBadge:
                                       - 'svg.iconCornerBadge aria-hidden=true viewBox="0 0 9 9" style="position: absolute; right: -1px; bottom: -1px; width: 9px; height: 9px; overflow: visible; pointer-events: none;"':
-                                          - 'polygon points="9 0, 9 9, 0 9" fill="var(--foreground)" stroke="var(--background)" stroke-width="1.5" stroke-linejoin="round"': null
+                                          - 'polygon points="9 0, 9 9, 0 9" fill="currentColor" stroke="var(--background)" stroke-width="1.5" stroke-linejoin="round"': null
                               - 'rtgl-view w=1fg style="min-width: 0; overflow: hidden;"':
-                                  - 'rtgl-text s=sm ellipsis=true w=f style="min-width: 0;"': ${item.name}
+                                  - 'rtgl-text s=sm c=${item.textColor} ellipsis=true w=f style="min-width: 0;"': ${item.name}
+                              - $if item.visibilityToggle:
+                                  - 'button#visibilityRef${i}.visibilityAction type=button data-item-id=${item.id} data-file-explorer-action=true data-always-visible="${item.visibilityToggleAlwaysVisible}" aria-label="${item.visibilityLabel}" title="${item.visibilityLabel}" style="color: ${item.iconCssColor};"':
+                                      - rtgl-svg svg=${item.visibilityIcon} wh=16 c=${item.iconColor} aria-hidden=true: null
                   - 'div#container style="width: 100%; height: ${bottomEmptySpaceHeight}; min-height: ${bottomEmptySpaceHeight}; flex: 0 0 ${bottomEmptySpaceHeight}; pointer-events: none;"': null
           - $if targetDragIndex != -2 && targetDropPosition != 'inside':
               - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"': null

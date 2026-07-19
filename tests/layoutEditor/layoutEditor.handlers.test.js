@@ -4,6 +4,7 @@ import {
   handleBackClick,
   handleFileExplorerAction,
   handleFileExplorerItemClick,
+  handleFileExplorerVisibilityToggle,
   handleLayoutEditorCanvasDragUpdate,
   handleLayoutEditorCanvasMetricsChange,
   handleLayoutEditPanelUpdateHandler,
@@ -15,7 +16,10 @@ import { enqueueLayoutEditorPersistence } from "../../src/pages/layoutEditor/sup
 const createLayoutEditorDeps = ({
   pendingPersistPayload,
   updateLayoutElement = vi.fn(async () => ({ valid: true })),
+  updateControlElement = vi.fn(async () => ({ valid: true })),
   updateLayoutItem = vi.fn(async () => ({ valid: true })),
+  updateControlItem = vi.fn(async () => ({ valid: true })),
+  resourceType = "layouts",
   previewData = {
     backgroundImageId: "image-preview",
   },
@@ -42,9 +46,16 @@ const createLayoutEditorDeps = ({
     setLastPersistErrorAt: vi.fn(),
     syncRepositoryState: vi.fn(),
     selectLayoutId: vi.fn(() => "layout-1"),
-    selectLayoutResourceType: vi.fn(() => "layouts"),
+    selectLayoutResourceType: vi.fn(() => resourceType),
     selectPreviewData: vi.fn(() => previewData),
     selectSelectedItemId: vi.fn(() => undefined),
+    selectItemDataById: vi.fn(({ itemId } = {}) => ({
+      id: itemId,
+      type: "container",
+      name: "Container",
+      x: 0,
+      y: 0,
+    })),
     updateSelectedItem: vi.fn(),
   };
 
@@ -91,7 +102,9 @@ const createLayoutEditorDeps = ({
     })),
     ensureRepository: vi.fn(async () => {}),
     updateLayoutElement,
+    updateControlElement,
     updateLayoutItem,
+    updateControlItem,
     storeFile: vi.fn(async () => ({
       fileId: "file-layout-thumb",
       fileRecords: [{ id: "file-layout-thumb" }],
@@ -114,6 +127,199 @@ const createLayoutEditorDeps = ({
     i18n: EN_I18N,
   };
 };
+
+describe("layoutEditor.handleFileExplorerVisibilityToggle", () => {
+  it("optimistically updates and persists element visibility", async () => {
+    const updateLayoutElement = vi.fn(async () => ({ valid: true }));
+    const deps = createLayoutEditorDeps({ updateLayoutElement });
+
+    await handleFileExplorerVisibilityToggle(deps, {
+      _event: {
+        detail: {
+          itemId: "item-1",
+          hidden: true,
+        },
+      },
+    });
+
+    expect(deps.store.updateSelectedItem).toHaveBeenCalledWith({
+      itemId: "item-1",
+      updatedItem: {
+        id: "item-1",
+        type: "container",
+        name: "Container",
+        x: 0,
+        y: 0,
+        hidden: true,
+      },
+    });
+    expect(updateLayoutElement).toHaveBeenCalledWith({
+      layoutId: "layout-1",
+      elementId: "item-1",
+      data: {
+        hidden: true,
+      },
+      replace: false,
+    });
+    expect(deps.render).toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("rolls back the optimistic state when visibility persistence fails", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const updateLayoutElement = vi.fn(async () => ({
+      valid: false,
+      error: {
+        message: "model rejected update",
+      },
+    }));
+    const deps = createLayoutEditorDeps({ updateLayoutElement });
+
+    await handleFileExplorerVisibilityToggle(deps, {
+      _event: {
+        detail: {
+          itemId: "item-1",
+          hidden: true,
+        },
+      },
+    });
+
+    expect(deps.store.updateSelectedItem).toHaveBeenLastCalledWith({
+      itemId: "item-1",
+      updatedItem: {
+        id: "item-1",
+        type: "container",
+        name: "Container",
+        x: 0,
+        y: 0,
+      },
+    });
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Failed to update element visibility.",
+      title: "Error",
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "[layoutEditor] Element visibility update was rejected",
+      expect.objectContaining({
+        itemId: "item-1",
+        layoutId: "layout-1",
+      }),
+    );
+    consoleError.mockRestore();
+  });
+
+  it("persists visibility through the control element command", async () => {
+    const updateControlElement = vi.fn(async () => ({ valid: true }));
+    const deps = createLayoutEditorDeps({
+      resourceType: "controls",
+      updateControlElement,
+    });
+
+    await handleFileExplorerVisibilityToggle(deps, {
+      _event: {
+        detail: {
+          itemId: "item-1",
+          hidden: true,
+        },
+      },
+    });
+
+    expect(updateControlElement).toHaveBeenCalledWith({
+      controlId: "layout-1",
+      elementId: "item-1",
+      data: {
+        hidden: true,
+      },
+      replace: false,
+    });
+  });
+
+  it("flushes edits queued during an in-flight save before visibility", async () => {
+    let releaseFirstPersist;
+    const firstPersistReleased = new Promise((resolve) => {
+      releaseFirstPersist = resolve;
+    });
+    let markFirstPersistStarted;
+    const firstPersistStarted = new Promise((resolve) => {
+      markFirstPersistStarted = resolve;
+    });
+    const updateLayoutElement = vi.fn(async () => {
+      if (updateLayoutElement.mock.calls.length === 1) {
+        markFirstPersistStarted();
+        await firstPersistReleased;
+      }
+      return { valid: true };
+    });
+    const deps = createLayoutEditorDeps({
+      pendingPersistPayload: {
+        layoutId: "layout-1",
+        resourceType: "layouts",
+        selectedItemId: "item-1",
+        updatedItem: {
+          id: "item-1",
+          type: "container",
+          x: 12,
+          y: 0,
+        },
+        persistenceRequestId: "persist-before-visibility",
+      },
+      updateLayoutElement,
+    });
+
+    const visibilityPromise = handleFileExplorerVisibilityToggle(deps, {
+      _event: {
+        detail: {
+          itemId: "item-1",
+          hidden: true,
+        },
+      },
+    });
+    await firstPersistStarted;
+
+    handleLayoutEditorCanvasDragUpdate(deps, {
+      _event: {
+        detail: {
+          itemId: "item-1",
+          updatedItem: {
+            id: "item-1",
+            type: "container",
+            x: 24,
+            y: 0,
+          },
+        },
+      },
+    });
+    releaseFirstPersist();
+    await visibilityPromise;
+
+    expect(updateLayoutElement).toHaveBeenNthCalledWith(1, {
+      layoutId: "layout-1",
+      elementId: "item-1",
+      data: {
+        x: 12,
+      },
+      replace: false,
+    });
+    expect(updateLayoutElement).toHaveBeenNthCalledWith(2, {
+      layoutId: "layout-1",
+      elementId: "item-1",
+      data: {
+        x: 24,
+      },
+      replace: false,
+    });
+    expect(updateLayoutElement).toHaveBeenNthCalledWith(3, {
+      layoutId: "layout-1",
+      elementId: "item-1",
+      data: {
+        hidden: true,
+      },
+      replace: false,
+    });
+  });
+});
 
 describe("layoutEditor.handleBackClick", () => {
   it("flushes a pending debounced change before navigating back", async () => {
@@ -147,9 +353,15 @@ describe("layoutEditor.handleBackClick", () => {
     expect(deps.store.clearPendingPersistPayload).toHaveBeenCalledWith({
       persistenceRequestId: "persist-1",
     });
-    expect(deps.appService.navigate).toHaveBeenCalledWith("/project/layouts", {
-      p: "project-1",
-    });
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project/layouts",
+      {
+        p: "project-1",
+      },
+      {
+        historyMode: "replace",
+      },
+    );
   });
 
   it("does not navigate when the pending flush fails", async () => {
@@ -229,9 +441,15 @@ describe("layoutEditor.handleBackClick", () => {
       },
       replace: false,
     });
-    expect(deps.appService.navigate).toHaveBeenCalledWith("/project/layouts", {
-      p: "project-1",
-    });
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project/layouts",
+      {
+        p: "project-1",
+      },
+      {
+        historyMode: "replace",
+      },
+    );
   });
 
   it("does not navigate when an in-flight immediate save fails", async () => {

@@ -8,6 +8,8 @@ refs:
         handler: handleFileExplorerTargetChanged
       item-click:
         handler: handleFileExplorerItemClick
+      item-visibility-toggle:
+        handler: handleFileExplorerVisibilityToggle
   groupview:
     eventListeners:
       layout-add-click:
@@ -72,7 +74,7 @@ template:
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
               - 'rtgl-view w=f style="min-width: 0;"':
                   - 'div style="position: relative; width: ${layoutEditorCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
-                      - 'rvn-layout-editor-canvas#layoutEditorCanvas style="display: block; width: 100%;" :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${selectedItemIsInsideDirectedContainer}': null
+                      - 'rvn-layout-editor-canvas#layoutEditorCanvas style="display: block; width: 100%;" :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${selectedItemIsInsideDirectedContainer} :disableInteraction=${selectedItemIsEffectivelyHidden}': null
               - 'rtgl-view h=1fg w=f sv style="min-height: 0; ${previewPanelVisibilityStyle}"':
                   - $if showMobilePreviewHeader:
                       - 'rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':

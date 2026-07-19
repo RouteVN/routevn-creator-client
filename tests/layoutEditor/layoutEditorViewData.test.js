@@ -5,6 +5,71 @@ import {
 } from "../../src/pages/layoutEditor/support/layoutEditorViewData.js";
 
 describe("layoutEditorViewData", () => {
+  it("derives own and inherited hidden explorer presentation", () => {
+    const items = toLayoutEditorExplorerItems(
+      [
+        {
+          id: "folder-1",
+          type: "folder",
+          name: "Group",
+          hidden: true,
+          parentId: null,
+        },
+        {
+          id: "text-1",
+          type: "text",
+          name: "Title",
+          parentId: "folder-1",
+        },
+      ],
+      {
+        copy: {
+          hideElementLabel: "Hide {elementName}",
+          showElementLabel: "Show {elementName}",
+        },
+      },
+    );
+
+    expect(items[0]).toMatchObject({
+      hidden: true,
+      effectivelyHidden: true,
+      visibilityIcon: "eyeClosed",
+      visibilityLabel: "Show Group",
+      visibilityToggleAlwaysVisible: true,
+      iconColor: "mu-fg",
+      iconCssColor: "var(--muted-foreground)",
+      textColor: "mu-fg",
+    });
+    expect(items[1]).toMatchObject({
+      hidden: false,
+      effectivelyHidden: true,
+      visibilityIcon: "eye",
+      visibilityLabel: "Hide Title",
+      visibilityToggleAlwaysVisible: false,
+      iconColor: "mu-fg",
+      iconCssColor: "var(--muted-foreground)",
+      textColor: "mu-fg",
+    });
+  });
+
+  it("always exposes visibility actions in touch mode", () => {
+    const [item] = toLayoutEditorExplorerItems(
+      [
+        {
+          id: "text-1",
+          type: "text",
+          name: "Title",
+          parentId: null,
+        },
+      ],
+      {
+        alwaysShowVisibilityToggle: true,
+      },
+    );
+
+    expect(item.visibilityToggleAlwaysVisible).toBe(true);
+  });
+
   it("builds container create actions with absolute direction", () => {
     const [containerItem] = toLayoutEditorContextMenuItems([
       {

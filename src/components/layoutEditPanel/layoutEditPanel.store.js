@@ -384,6 +384,16 @@ const annotatePanelItems = (items = [], { sectionKey } = {}) => {
   });
 };
 
+const PANEL_LIST_ITEM_TYPES = new Set([
+  "list-item",
+  "list-bar",
+  "conditional-override-list",
+  "child-interaction-list",
+]);
+
+const rendersPanelItemContent = (item) =>
+  !PANEL_LIST_ITEM_TYPES.has(item.type) || item.items.length > 0;
+
 const annotatePanelSections = (sections = []) => {
   return sections.map((section, index) => {
     const nextSection = {
@@ -394,9 +404,12 @@ const annotatePanelSections = (sections = []) => {
       `section-${index}`,
     );
     nextSection.viewKey = createPanelViewKey(sectionKeyPart);
-    nextSection.items = annotatePanelItems(section?.items ?? [], {
-      sectionKey: nextSection.viewKey,
-    });
+    nextSection.items = annotatePanelItems(
+      (section?.items ?? []).filter(rendersPanelItemContent),
+      {
+        sectionKey: nextSection.viewKey,
+      },
+    );
     return nextSection;
   });
 };

@@ -107,5 +107,21 @@ describe("commandApi layout condition targets", () => {
         },
       ],
     });
+
+    const updateResult = await api.updateLayoutElement({
+      layoutId,
+      elementId,
+      data: {
+        hidden: true,
+      },
+      replace: false,
+    });
+
+    expect(updateResult).toMatchObject({ valid: true });
+    expect(
+      repository.getState().layouts.items["layout-1"].elements.items["text-1"],
+    ).toMatchObject({
+      hidden: true,
+    });
   });
 });

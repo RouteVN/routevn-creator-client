@@ -47,6 +47,25 @@ describe("baseFileExplorer view", () => {
     expect(view).toContain('viewBox="0 0 9 9"');
     expect(view).toContain('points="9 0, 9 9, 0 9"');
     expect(view).toContain('stroke="var(--background)"');
+    expect(view).toContain('fill="currentColor"');
     expect(view).not.toContain("item.trailingSvg");
+  });
+
+  it("renders hover and persistent visibility actions", () => {
+    const view = readView();
+
+    expect(view).toContain("visibility*:");
+    expect(view).toContain("handler: handleVisibilityToggleClick");
+    expect(view).toContain("button#visibilityRef${i}.visibilityAction");
+    expect(view).toContain("data-file-explorer-item=true");
+    expect(view).toContain("data-file-explorer-action=true");
+    expect(view).toContain("$if item.visibilityToggle");
+    expect(view).toContain("c=${item.iconColor}");
+    expect(view).toContain('aria-label="${item.visibilityLabel}"');
+    expect(view).not.toContain("aria-pressed");
+    expect(view).toContain(
+      "[data-file-explorer-item='true']:hover .visibilityAction",
+    );
+    expect(view).toContain("data-always-visible='true'");
   });
 });

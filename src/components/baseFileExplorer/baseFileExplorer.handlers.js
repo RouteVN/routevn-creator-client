@@ -78,10 +78,13 @@ const isDragEnabledForAttrs = (attrs) => {
   );
 };
 
-const isFolderArrowEvent = (event) => {
+const isFileExplorerControlEvent = (event) => {
   return (
     typeof event?.target?.closest === "function" &&
-    Boolean(event.target.closest("[data-file-explorer-arrow]"))
+    Boolean(
+      event.target.closest("[data-file-explorer-arrow]") ||
+        event.target.closest("[data-file-explorer-action]"),
+    )
   );
 };
 
@@ -866,7 +869,7 @@ export const handleItemMouseDown = (deps, payload) => {
   }
 
   // Drag should start only on primary button.
-  if (event?.button !== 0 || isFolderArrowEvent(event)) {
+  if (event?.button !== 0 || isFileExplorerControlEvent(event)) {
     return;
   }
 
@@ -885,7 +888,7 @@ export const handleItemPointerDown = (deps, payload) => {
     return;
   }
 
-  if (isFolderArrowEvent(event)) {
+  if (isFileExplorerControlEvent(event)) {
     return;
   }
 
@@ -921,7 +924,7 @@ export const handleItemTouchStart = (deps, payload) => {
     return;
   }
 
-  if (isFolderArrowEvent(event)) {
+  if (isFileExplorerControlEvent(event)) {
     return;
   }
 
@@ -1430,6 +1433,10 @@ export const handleItemContextMenu = (deps, payload) => {
 
 export const handleItemClick = (deps, payload) => {
   const { store, render, props } = deps;
+  if (isFileExplorerControlEvent(payload?._event)) {
+    return;
+  }
+
   if (store.selectSuppressNextClick()) {
     payload?._event?.preventDefault?.();
     payload?._event?.stopPropagation?.();
@@ -1453,6 +1460,10 @@ export const handleItemClick = (deps, payload) => {
 
 export const handleItemDblClick = (deps, payload) => {
   const { dispatchEvent, props } = deps;
+  if (isFileExplorerControlEvent(payload?._event)) {
+    return;
+  }
+
   const itemId = getItemIdFromEvent(payload._event);
   if (!itemId) {
     return;
@@ -1620,6 +1631,31 @@ export const handleArrowClick = (deps, payload) => {
     folderId,
     collapsed: store.selectCollapsedIds().includes(folderId),
   });
+};
+
+export const handleVisibilityToggleClick = (deps, payload) => {
+  const { dispatchEvent, props } = deps;
+  const event = payload?._event;
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+
+  const itemId = getItemIdFromEvent(event);
+  const item = props.items?.find((entry) => entry.id === itemId);
+  if (!item?.visibilityToggle) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("item-visibility-toggle", {
+      detail: {
+        itemId,
+        hidden: item.hidden !== true,
+        item,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleSetFolderCollapsed = (deps, payload) => {

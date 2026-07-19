@@ -473,6 +473,9 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       hBgc,
       bgc,
       touchAction,
+      iconColor: item.iconColor ?? "fg",
+      iconCssColor: item.iconCssColor ?? "var(--foreground)",
+      textColor: item.textColor ?? "fg",
     };
   });
 
