@@ -11,6 +11,16 @@ refs:
     eventListeners:
       click:
         handler: handleCharacterSpriteBoxClick
+  speakerSpriteTooltip:
+    eventListeners:
+      mouseenter:
+        handler: handleSpeakerSpriteTooltipMouseEnter
+      mouseleave:
+        handler: handleSpeakerSpriteTooltipMouseLeave
+      focus:
+        handler: handleSpeakerSpriteTooltipMouseEnter
+      blur:
+        handler: handleSpeakerSpriteTooltipMouseLeave
   clearCharacterSpriteButton:
     eventListeners:
       click:
@@ -70,6 +80,29 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
+styles:
+  ".commandLineDialogueBoxTooltipTrigger":
+    align-items: center
+    appearance: none
+    background: transparent
+    border: "1px solid var(--muted-foreground)"
+    border-radius: 50%
+    box-sizing: border-box
+    color: var(--muted-foreground)
+    cursor: help
+    display: flex
+    font-family: inherit
+    font-size: 11px
+    font-weight: 600
+    height: 16px
+    justify-content: center
+    line-height: 1
+    margin: 0
+    padding: 0
+    width: 16px
+  ".commandLineDialogueBoxTooltipTrigger:focus-visible":
+    outline: "2px solid var(--ring)"
+    outline-offset: 2px
 template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == 'current':
@@ -77,6 +110,9 @@ template:
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
               - rtgl-form#dialogueForm :defaultValues=${defaultValues} :form=${form} :context=${context} w=f:
                   - rtgl-view slot=characterSprite g=md w=f:
+                      - rtgl-view d=h g=md av=c:
+                          - rtgl-text: ${speakerSpriteLabel}
+                          - 'button#speakerSpriteTooltip.commandLineDialogueBoxTooltipTrigger type=button aria-label="${speakerSpriteTooltipContent}"': "?"
                       - rtgl-view d=h g=md av=t pv=md br=md w=f:
                           - rtgl-view#characterSpriteBox cur=pointer bw=xs bc=bo h-bc=ac br=sm:
                               - rtgl-view p=md g=md br=md:
@@ -167,3 +203,4 @@ template:
                       - 'rvn-spritesheet-preview key=${fullImagePreviewKey} previewKey=${fullImagePreviewKey} fileId=${fullImagePreviewFileId} :atlas=${fullImagePreviewAtlas} :animation=${fullImagePreviewAnimation} w=80% h=80% emptyLabel="${noPreviewLabel}"': null
                     $else:
                       - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
+  - rtgl-tooltip ?open=${speakerSpriteTooltip.open} x=${speakerSpriteTooltip.x} y=${speakerSpriteTooltip.y} place="t" content="${speakerSpriteTooltipContent}": null

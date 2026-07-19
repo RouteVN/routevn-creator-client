@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseAndRender } from "jempl";
 import {
   createInitialState,
+  hideSpeakerSpriteTooltip,
   setAppendDialogue,
   setCharacterName,
   setCustomCharacterName,
@@ -14,6 +15,7 @@ import {
   setSpriteTransformId,
   setCustomizeTextSpeed,
   setTextSpeed,
+  showSpeakerSpriteTooltip,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -117,13 +119,19 @@ describe("commandLineDialogueBox.store", () => {
     });
     expect(
       viewData.form.fields.find((field) => field.slot === "characterSprite"),
-    ).toMatchObject({
-      label: "Speaker sprite",
+    ).toEqual({
+      slot: "characterSprite",
       type: "slot",
-      tooltip: {
-        content:
-          "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action",
+    });
+    expect(viewData).toMatchObject({
+      speakerSpriteLabel: "Speaker sprite",
+      speakerSpriteTooltip: {
+        open: false,
+        x: 0,
+        y: 0,
       },
+      speakerSpriteTooltipContent:
+        "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action",
     });
     expect(
       viewData.form.fields.find((field) => field.name === "append"),
@@ -303,13 +311,12 @@ describe("commandLineDialogueBox.store", () => {
     expect(state.textSpeed).toBe(100);
     expect(
       selectTestViewData({ state, props: { layouts: [], characters: [] } }),
-    )
-      .toMatchObject({
-        defaultValues: {
-          customizeTextSpeed: true,
-          textSpeed: 100,
-        },
-      });
+    ).toMatchObject({
+      defaultValues: {
+        customizeTextSpeed: true,
+        textSpeed: 100,
+      },
+    });
   });
 
   it("shows persistCharacter only for selected characters or enabled custom naming", () => {
@@ -485,13 +492,9 @@ describe("commandLineDialogueBox.store", () => {
 
     expect(
       viewData.form.fields.find((field) => field.slot === "characterSprite"),
-    ).toMatchObject({
-      label: "Speaker sprite",
+    ).toEqual({
+      slot: "characterSprite",
       type: "slot",
-      tooltip: {
-        content:
-          "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action",
-      },
     });
     expect(viewData.hasSpriteCharacter).toBe(true);
     expect(viewData.characterSpriteEnabled).toBe(true);
@@ -535,5 +538,21 @@ describe("commandLineDialogueBox.store", () => {
 
     expect(state.spriteAnimationMode).toBe("transition");
     expect(state.spriteAnimationId).toBe("");
+  });
+
+  it("tracks the speaker sprite tooltip position and visibility", () => {
+    const state = createInitialState();
+
+    showSpeakerSpriteTooltip({ state }, { x: 120, y: 64 });
+
+    expect(state.speakerSpriteTooltip).toEqual({
+      open: true,
+      x: 120,
+      y: 64,
+    });
+
+    hideSpeakerSpriteTooltip({ state });
+
+    expect(state.speakerSpriteTooltip.open).toBe(false);
   });
 });
