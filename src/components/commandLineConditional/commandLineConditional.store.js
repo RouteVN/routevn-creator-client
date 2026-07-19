@@ -469,7 +469,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     return {
       ...branch,
       index,
-      menuKeyShortcuts: "",
+      menuKeyShortcuts: "Delete",
       summary: getBranchSummary(branch, state.variablesData, copy),
       actionsSummary:
         branchActionCount > 0
@@ -491,6 +491,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     if (index < conditionBranchItems.length - 1) {
       menuKeyShortcuts.push("ArrowDown");
     }
+    menuKeyShortcuts.push("Delete");
 
     return {
       ...createBranchViewData(branch, index),
