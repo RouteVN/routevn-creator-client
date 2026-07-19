@@ -212,7 +212,7 @@ template:
                           - rtgl-button#desktopTextStyleSubmitButton v=${dialogSubmitButton.variant}: ${dialogSubmitButton.label}
                   - 'rtgl-view w=1fg h=f p=md d=v g=md style="min-width: 0; min-height: 0;"':
                       - rtgl-text s=lg fw=b: ${previewLabel}
-                      - 'rtgl-view w=f style="aspect-ratio: 16 / 9; min-width: 0; overflow: hidden;"':
+                      - 'rtgl-view w=f style="aspect-ratio: 32 / 9; min-width: 0; overflow: hidden;"':
                           - rvn-font-preview mode=live h=f fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} strokeColor=${previewStrokeColor} strokeWidth=${previewStrokeWidth} fontWeight=${previewFontWeight} shadowColor=${previewShadowColor} shadowAlpha=${previewShadowAlpha} shadowBlur=${previewShadowBlur} shadowOffsetX=${previewShadowOffsetX} shadowOffsetY=${previewShadowOffsetY} width=f padding=8 showBorder=true: null
                       - rtgl-view d=v g=sm w=f:
                           - rtgl-text: ${previewTextLabel}

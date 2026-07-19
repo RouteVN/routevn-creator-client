@@ -62,6 +62,7 @@ describe("textStyles view", () => {
     const mobileBranch = textStylesView.slice(mobileBranchStart, dialogEnd);
 
     expect(desktopBranch).toContain("rvn-font-preview");
+    expect(desktopBranch).toContain("aspect-ratio: 32 / 9");
     expect(desktopBranch).toContain("previewTextInput");
     expect(mobileBranch).toContain("$if isDialogOpen");
     expect(mobileBranch).toContain("rtgl-form#textStyleForm");
