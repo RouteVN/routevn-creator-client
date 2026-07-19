@@ -246,7 +246,11 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
         sections: [
           {
             id: "new-section",
-            lines: [{ id: "new-line", actions: {} }],
+            initialLineId: "new-entry-line",
+            lines: [
+              { id: "new-line", actions: {} },
+              { id: "new-entry-line", actions: {} },
+            ],
           },
         ],
       },
@@ -365,12 +369,12 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
     });
     expect(sceneId).toBe("scene-2");
     expect(selectedSectionId).toBe("new-section");
-    expect(selectedLineId).toBe("new-line");
+    expect(selectedLineId).toBe("new-entry-line");
     expect(appService.setPayload).toHaveBeenCalledWith({
       p: "project-1",
       s: "scene-2",
       sectionId: "new-section",
-      lineId: "new-line",
+      lineId: "new-entry-line",
     });
     expect(deps.subject.dispatch).toHaveBeenCalledWith(
       "sceneEditor.renderCanvas",

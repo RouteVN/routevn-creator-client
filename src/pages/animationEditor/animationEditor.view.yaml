@@ -478,12 +478,13 @@ template:
                       - rtgl-view d=v g=xs w=f:
                           - rtgl-text s=sm c=mu-fg: ${imageLabel}
                           - $if maskEditorPanel.singleImage:
-                              - rtgl-view#singleMaskImageButton w=f cur=pointer bw=xs bc=${maskEditorPanel.singleImage.itemBorderColor} h-bc=${maskEditorPanel.singleImage.itemHoverBorderColor} br=sm:
-                                  - rtgl-view p=md g=md br=md w=f:
-                                      - rvn-file-image w=f h=120 imageId=${maskEditorPanel.singleImage.imageId} source="thumbnail": null
+                              - 'rtgl-view#singleMaskImageButton w=160 cur=pointer bw=xs bc=${maskEditorPanel.singleImage.itemBorderColor} h-bc=${maskEditorPanel.singleImage.itemHoverBorderColor} br=sm style="max-width: 100%; box-sizing: border-box;"':
+                                  - 'rtgl-view p=md g=md br=md w=f style="max-width: 100%; box-sizing: border-box;"':
+                                      - 'rtgl-view w=f br=md style="aspect-ratio: 16 / 9; overflow: hidden;"':
+                                          - rvn-file-image w=f h=f imageId=${maskEditorPanel.singleImage.imageId} source="thumbnail": null
                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${maskEditorPanel.singleImage.name}
                             $else:
-                              - rtgl-view#singleMaskImageButton w=f h=96 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                              - 'rtgl-view#singleMaskImageButton w=160 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="aspect-ratio: 16 / 9; max-width: 100%; box-sizing: border-box;"':
                                   - rtgl-text c=mu-fg: ${selectImageLabel}
                       - rtgl-view d=v g=xs w=f:
                           - rtgl-text s=sm c=mu-fg: ${progressDurationLabel}

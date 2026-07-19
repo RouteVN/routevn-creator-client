@@ -39,4 +39,30 @@ describe("animationEditor view", () => {
     expect(view).not.toContain("$if popover.mode == 'addKeyframe'");
     expect(view).not.toContain("$if popover.mode == 'editKeyframe'");
   });
+
+  it("keeps the mask image selector compact with a fixed preview ratio", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/pages/animationEditor/animationEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    const selectorStart = view.indexOf("$if maskEditorPanel.singleImage");
+    const selectorEnd = view.indexOf(
+      "rtgl-text s=sm c=mu-fg: ${progressDurationLabel}",
+      selectorStart,
+    );
+    const selectorBranch = view.slice(selectorStart, selectorEnd);
+
+    expect(
+      selectorBranch.match(/rtgl-view#singleMaskImageButton w=160/g),
+    ).toHaveLength(2);
+    expect(selectorBranch.match(/aspect-ratio: 16 \/ 9;/g)).toHaveLength(2);
+    expect(selectorBranch).toContain("max-width: 100%;");
+    expect(selectorBranch).not.toContain("singleMaskImageButton w=f");
+    expect(selectorBranch).not.toContain("h=120");
+    expect(selectorBranch).not.toContain("h=96");
+  });
 });
