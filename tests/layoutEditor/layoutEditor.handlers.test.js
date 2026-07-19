@@ -235,6 +235,90 @@ describe("layoutEditor.handleFileExplorerVisibilityToggle", () => {
       replace: false,
     });
   });
+
+  it("flushes edits queued during an in-flight save before visibility", async () => {
+    let releaseFirstPersist;
+    const firstPersistReleased = new Promise((resolve) => {
+      releaseFirstPersist = resolve;
+    });
+    let markFirstPersistStarted;
+    const firstPersistStarted = new Promise((resolve) => {
+      markFirstPersistStarted = resolve;
+    });
+    const updateLayoutElement = vi.fn(async () => {
+      if (updateLayoutElement.mock.calls.length === 1) {
+        markFirstPersistStarted();
+        await firstPersistReleased;
+      }
+      return { valid: true };
+    });
+    const deps = createLayoutEditorDeps({
+      pendingPersistPayload: {
+        layoutId: "layout-1",
+        resourceType: "layouts",
+        selectedItemId: "item-1",
+        updatedItem: {
+          id: "item-1",
+          type: "container",
+          x: 12,
+          y: 0,
+        },
+        persistenceRequestId: "persist-before-visibility",
+      },
+      updateLayoutElement,
+    });
+
+    const visibilityPromise = handleFileExplorerVisibilityToggle(deps, {
+      _event: {
+        detail: {
+          itemId: "item-1",
+          hidden: true,
+        },
+      },
+    });
+    await firstPersistStarted;
+
+    handleLayoutEditorCanvasDragUpdate(deps, {
+      _event: {
+        detail: {
+          itemId: "item-1",
+          updatedItem: {
+            id: "item-1",
+            type: "container",
+            x: 24,
+            y: 0,
+          },
+        },
+      },
+    });
+    releaseFirstPersist();
+    await visibilityPromise;
+
+    expect(updateLayoutElement).toHaveBeenNthCalledWith(1, {
+      layoutId: "layout-1",
+      elementId: "item-1",
+      data: {
+        x: 12,
+      },
+      replace: false,
+    });
+    expect(updateLayoutElement).toHaveBeenNthCalledWith(2, {
+      layoutId: "layout-1",
+      elementId: "item-1",
+      data: {
+        x: 24,
+      },
+      replace: false,
+    });
+    expect(updateLayoutElement).toHaveBeenNthCalledWith(3, {
+      layoutId: "layout-1",
+      elementId: "item-1",
+      data: {
+        hidden: true,
+      },
+      replace: false,
+    });
+  });
 });
 
 describe("layoutEditor.handleBackClick", () => {

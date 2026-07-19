@@ -61,6 +61,8 @@ describe("baseFileExplorer view", () => {
     expect(view).toContain("data-file-explorer-action=true");
     expect(view).toContain("$if item.visibilityToggle");
     expect(view).toContain("c=${item.iconColor}");
+    expect(view).toContain('aria-label="${item.visibilityLabel}"');
+    expect(view).not.toContain("aria-pressed");
     expect(view).toContain(
       "[data-file-explorer-item='true']:hover .visibilityAction",
     );

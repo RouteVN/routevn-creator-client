@@ -419,28 +419,31 @@ const queuePendingLayoutEditorPersist = (
 
 const flushQueuedLayoutEditorUpdates = async (deps) => {
   const { projectService, store } = deps;
-  const pendingPayload = store.selectPendingPersistPayload();
-
   let flushResult = {
     ok: true,
   };
-  if (pendingPayload) {
-    flushResult = await handleDebouncedUpdate(deps, pendingPayload);
+
+  while (true) {
+    const pendingPayload = store.selectPendingPersistPayload();
+    if (pendingPayload) {
+      flushResult = await handleDebouncedUpdate(deps, pendingPayload);
+      if (flushResult.ok === false) {
+        return flushResult;
+      }
+      continue;
+    }
+
+    const idleResult = await waitForLayoutEditorPersistenceIdle({
+      owner: projectService,
+    });
+    if (idleResult?.ok === false) {
+      return idleResult;
+    }
+
+    if (!store.selectPendingPersistPayload()) {
+      return idleResult ?? flushResult;
+    }
   }
-
-  const idleResult = await waitForLayoutEditorPersistenceIdle({
-    owner: projectService,
-  });
-
-  if (flushResult.ok === false) {
-    return flushResult;
-  }
-
-  if (idleResult?.ok === false) {
-    return idleResult;
-  }
-
-  return flushResult;
 };
 
 export const handleBeforeMount = (deps) => {

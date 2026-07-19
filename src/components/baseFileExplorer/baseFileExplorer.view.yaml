@@ -95,7 +95,7 @@ template:
                               - 'rtgl-view w=1fg style="min-width: 0; overflow: hidden;"':
                                   - 'rtgl-text s=sm c=${item.textColor} ellipsis=true w=f style="min-width: 0;"': ${item.name}
                               - $if item.visibilityToggle:
-                                  - 'button#visibilityRef${i}.visibilityAction type=button data-item-id=${item.id} data-file-explorer-action=true data-always-visible="${item.visibilityToggleAlwaysVisible}" aria-label="${item.visibilityLabel}" title="${item.visibilityLabel}" aria-pressed="${item.hidden}" style="color: ${item.iconCssColor};"':
+                                  - 'button#visibilityRef${i}.visibilityAction type=button data-item-id=${item.id} data-file-explorer-action=true data-always-visible="${item.visibilityToggleAlwaysVisible}" aria-label="${item.visibilityLabel}" title="${item.visibilityLabel}" style="color: ${item.iconCssColor};"':
                                       - rtgl-svg svg=${item.visibilityIcon} wh=16 c=${item.iconColor} aria-hidden=true: null
                   - 'div#container style="width: 100%; height: ${bottomEmptySpaceHeight}; min-height: ${bottomEmptySpaceHeight}; flex: 0 0 ${bottomEmptySpaceHeight}; pointer-events: none;"': null
           - $if targetDragIndex != -2 && targetDropPosition != 'inside':
