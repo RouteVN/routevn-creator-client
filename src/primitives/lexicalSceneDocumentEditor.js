@@ -3294,6 +3294,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    const shouldActivateReferenceLine = this.state.mode === "block";
+    const referenceLineElement = shouldActivateReferenceLine
+      ? this.getLineElementFromEvent(event)
+      : undefined;
+    const referenceLineId = shouldActivateReferenceLine
+      ? this.getLineIdFromLineElement(referenceLineElement)
+      : undefined;
+    const referenceCursorPosition = referenceLineId
+      ? this.getLineOffsetFromPointerEvent(event, referenceLineElement)
+      : undefined;
+
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation?.();
@@ -3302,6 +3313,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.setMode("text-editor");
     this.focus({ preventScroll: true });
     this.selectReferenceByNodeKey(referenceSnapshot.nodeKey);
+    if (referenceLineId) {
+      this.state.selectedLineId = referenceLineId;
+      this.dispatchSelectedLineChanged(referenceLineId, {
+        cursorPosition:
+          referenceCursorPosition >= 0 ? referenceCursorPosition : undefined,
+        isCollapsed: false,
+        mode: "text-editor",
+      });
+    }
     requestAnimationFrame(() => {
       if (!this.isConnected) {
         return;
@@ -3371,7 +3391,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return false;
     }
 
-    const previousSelectedLineId = this.state.selectedLineId;
     const cursorPosition = this.getLineOffsetFromPointerEvent(
       event,
       lineElement,
@@ -3386,13 +3405,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.awaitingCharacterShortcut = false;
     this.clearDeleteShortcutState();
     this.scheduleRender();
-    if (previousSelectedLineId !== lineId) {
-      this.dispatchSelectedLineChanged(lineId, {
-        cursorPosition: cursorPosition >= 0 ? cursorPosition : undefined,
-        isCollapsed: true,
-        mode: "text-editor",
-      });
-    }
+    this.dispatchSelectedLineChanged(lineId, {
+      cursorPosition: cursorPosition >= 0 ? cursorPosition : undefined,
+      isCollapsed: true,
+      mode: "text-editor",
+    });
     return true;
   }
 
