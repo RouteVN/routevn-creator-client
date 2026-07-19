@@ -177,7 +177,7 @@ describe("layoutEditor.store", () => {
     expect(emptyMenuLabels).not.toContain("Text (Choice Content)");
   });
 
-  it("adds the component badge to special layout editor items", () => {
+  it("adds an icon corner badge to special layout editor items", () => {
     const state = createInitialState();
 
     syncRepositoryState(
@@ -199,8 +199,16 @@ describe("layoutEditor.store", () => {
               type: "text",
               name: "Text",
             },
+            "choice-container": {
+              type: "container-ref-choice-item",
+              name: "Choice Item",
+            },
           },
-          tree: [{ id: "text-bound" }, { id: "text-free" }],
+          tree: [
+            { id: "text-bound" },
+            { id: "text-free" },
+            { id: "choice-container" },
+          ],
         },
       },
     );
@@ -212,11 +220,17 @@ describe("layoutEditor.store", () => {
     });
 
     expect(
-      viewData.flatItems.find((item) => item.id === "text-bound")?.trailingSvg,
-    ).toBe("component");
+      viewData.flatItems.find((item) => item.id === "text-bound")
+        ?.iconCornerBadge,
+    ).toBe(true);
     expect(
-      viewData.flatItems.find((item) => item.id === "text-free")?.trailingSvg,
-    ).toBeUndefined();
+      viewData.flatItems.find((item) => item.id === "text-free")
+        ?.iconCornerBadge,
+    ).toBe(false);
+    expect(
+      viewData.flatItems.find((item) => item.id === "choice-container")
+        ?.iconCornerBadge,
+    ).toBe(true);
   });
 
   it("keeps child creation actions only on container items", () => {

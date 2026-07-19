@@ -142,7 +142,7 @@ export const toLayoutEditorExplorerItems = (
         canReceiveChildren === true
           ? toContainerContextMenuItems(contextMenuItems, item)
           : leafItemContextMenuItems,
-      trailingSvg: hasPreviewDependencies ? "component" : undefined,
+      iconCornerBadge: hasPreviewDependencies,
       dragOptions: {
         ...item.dragOptions,
         canReceiveChildren,

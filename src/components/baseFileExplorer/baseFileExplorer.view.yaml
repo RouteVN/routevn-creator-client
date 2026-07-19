@@ -64,13 +64,13 @@ template:
                             $else:
                               - rtgl-view d=h av=c ah=c w=16 h=16 min-w=16: null
                           - 'rtgl-view d=h g=md av=c w=1fg style="min-width: 0; overflow: hidden;"':
-                              - rtgl-view d=h av=c ah=c w=16 h=16 min-w=16:
+                              - rtgl-view d=h av=c ah=c w=16 h=16 min-w=16 pos=rel:
                                   - rtgl-svg svg=${item.svg} wh=16: null
+                                  - $if item.iconCornerBadge:
+                                      - 'svg.iconCornerBadge aria-hidden=true viewBox="0 0 9 9" style="position: absolute; right: -1px; bottom: -1px; width: 9px; height: 9px; overflow: visible; pointer-events: none;"':
+                                          - 'polygon points="9 0, 9 9, 0 9" fill="var(--foreground)" stroke="var(--background)" stroke-width="1.5" stroke-linejoin="round"': null
                               - 'rtgl-view w=1fg style="min-width: 0; overflow: hidden;"':
                                   - 'rtgl-text s=sm ellipsis=true w=f style="min-width: 0;"': ${item.name}
-                              - $if item.trailingSvg:
-                                  - rtgl-view d=h av=c ah=c w=14 h=14 min-w=14:
-                                      - rtgl-svg svg=${item.trailingSvg} wh=12 c=mu-fg: null
                   - 'div#container style="width: 100%; height: ${bottomEmptySpaceHeight}; min-height: ${bottomEmptySpaceHeight}; flex: 0 0 ${bottomEmptySpaceHeight}; pointer-events: none;"': null
           - $if targetDragIndex != -2 && targetDropPosition != 'inside':
               - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"': null

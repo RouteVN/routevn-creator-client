@@ -38,4 +38,15 @@ describe("baseFileExplorer view", () => {
     expect(view).toContain("touch-action: ${item.touchAction};");
     expect(view).toContain("data-file-explorer-arrow=true");
   });
+
+  it("renders special-item badges in the bottom-right corner of the item icon", () => {
+    const view = readView();
+
+    expect(view).toContain("$if item.iconCornerBadge");
+    expect(view).toContain("svg.iconCornerBadge");
+    expect(view).toContain('viewBox="0 0 9 9"');
+    expect(view).toContain('points="9 0, 9 9, 0 9"');
+    expect(view).toContain('stroke="var(--background)"');
+    expect(view).not.toContain("item.trailingSvg");
+  });
 });
