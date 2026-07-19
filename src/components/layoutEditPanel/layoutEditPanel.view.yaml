@@ -125,6 +125,10 @@ refs:
     eventListeners:
       form-action:
         handler: handleConditionalOverrideAttributeFormAction
+  conditionalOverrideAnchor:
+    eventListeners:
+      value-change:
+        handler: handleConditionalOverrideAnchorChange
   conditionalOverrideAttributeImage:
     eventListeners:
       click:
@@ -300,6 +304,11 @@ template:
                           - rtgl-text s=xs w=65: ${item.label}
                           - 'rtgl-view style="width: calc(100% - 65px);"':
                               - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
+                    $elif item.type == 'anchor-grid':
+                      - rtgl-view d=h w=f:
+                          - 'rtgl-text s=xs w=65 style="padding-top: 4px;"': ${item.label}
+                          - 'rtgl-view style="width: calc(100% - 65px);"':
+                              - 'rvn-layout-anchor-grid#selectItem${i}x${j} data-name=${item.name} label="${item.label}" :value=${item.value} :options=${item.options}': null
                     $elif item.type == 'segmented-control':
                       - rtgl-view d=h av=c w=f:
                           - rtgl-text s=xs w=65: ${item.label}
@@ -442,6 +451,7 @@ template:
       - $if conditionalOverrideAttributeDialog.open:
           - rtgl-view slot=content g=md:
               - rtgl-form#conditionalOverrideAttributeForm key=${conditionalOverrideAttributeDialog.key} :form=${conditionalOverrideAttributeForm} :defaultValues=${conditionalOverrideAttributeDefaults} :context=${conditionalOverrideAttributeDialogContext} w=f:
+                  - 'rvn-layout-anchor-grid#conditionalOverrideAnchor slot=conditional-override-anchor label="${conditionalOverrideAnchorLabel}" :value=${conditionalOverrideAnchorValue} :options=${conditionalOverrideAnchorOptions}': null
                   - rtgl-view slot=conditional-override-image d=v w=f:
                       - $if conditionalOverrideAttributeImagePreview:
                           - 'rtgl-view#conditionalOverrideAttributeImage role=button tabindex=0 aria-haspopup=dialog aria-label="${imageLabel}" cur=pointer bw=xs bc=${conditionalOverrideAttributeImagePreview.itemBorderColor} h-bc=${conditionalOverrideAttributeImagePreview.itemHoverBorderColor} br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':

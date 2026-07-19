@@ -94,6 +94,13 @@ const normalizeOpacity = (value) => {
 };
 
 const normalizeAnchorValue = (value) => {
+  if (Number.isFinite(value?.x) && Number.isFinite(value?.y)) {
+    return {
+      anchorX: value.x,
+      anchorY: value.y,
+    };
+  }
+
   const option = ANCHOR_OPTIONS.find((item) => item.value === value);
   if (!option) {
     return undefined;
@@ -420,6 +427,13 @@ export const getConditionalOverrideAttributeOptions = ({
   }));
 };
 
+export const createConditionalOverrideAnchorOptions = (copy = {}) => {
+  return ANCHOR_OPTIONS.map(({ value, x, y }) => ({
+    label: getAnchorOptionLabel(value, copy),
+    value: { x, y },
+  }));
+};
+
 export const createConditionalOverrideAttributeDefaults = (
   rule,
   fieldName,
@@ -521,15 +535,9 @@ export const createConditionalOverrideAttributeForm = ({
       },
       {
         $when: "fieldName == 'anchor'",
-        name: "anchor",
-        type: "select",
+        type: "slot",
+        slot: "conditional-override-anchor",
         label: copy.anchorLabel ?? "Anchor",
-        required: true,
-        clearable: false,
-        options: ANCHOR_OPTIONS.map(({ value }) => ({
-          label: getAnchorOptionLabel(value, copy),
-          value,
-        })),
       },
       {
         $when: "fieldName == 'textStyle.align'",

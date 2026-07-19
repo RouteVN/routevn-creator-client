@@ -1,0 +1,54 @@
+refs:
+  anchorCell*:
+    eventListeners:
+      click:
+        handler: handleAnchorCellClick
+      keydown:
+        handler: handleAnchorCellKeyDown
+styles:
+  ".layoutAnchorGrid":
+    display: grid
+    grid-template-columns: "repeat(3, 36px)"
+    gap: 4px
+    width: max-content
+  ".layoutAnchorGridCell":
+    align-items: center
+    appearance: none
+    background: var(--muted)
+    border: "1px solid var(--border)"
+    border-radius: var(--border-radius-md)
+    box-sizing: border-box
+    color: var(--muted-foreground)
+    cursor: pointer
+    display: flex
+    height: 36px
+    justify-content: center
+    margin: 0
+    padding: 0
+    transition: "background-color 120ms ease, border-color 120ms ease, color 120ms ease"
+    width: 36px
+  ".layoutAnchorGridCell:hover":
+    background: var(--accent)
+    border-color: var(--foreground)
+    color: var(--accent-foreground)
+  ".layoutAnchorGridCell[data-selected='true']":
+    background: var(--accent)
+    border-color: var(--foreground)
+    color: var(--accent-foreground)
+  ".layoutAnchorGridCell:focus-visible":
+    outline: "2px solid var(--ring)"
+    outline-offset: 2px
+  ".layoutAnchorGridDot":
+    background: currentColor
+    border-radius: 50%
+    height: 7px
+    transition: "height 120ms ease, width 120ms ease"
+    width: 7px
+  ".layoutAnchorGridCell[data-selected='true'] .layoutAnchorGridDot":
+    height: 11px
+    width: 11px
+template:
+  - 'div#anchorGrid.layoutAnchorGrid role=radiogroup aria-label="${label}"':
+      - $for cell, i in cells:
+          - 'button#anchorCell${i}.layoutAnchorGridCell key=${cell.index} type=button role=radio aria-label="${cell.label}" aria-checked="${cell.isSelected}" tabindex=${cell.tabIndex} title="${cell.label}" data-anchor-index=${cell.index} data-selected="${cell.isSelected}"':
+              - span.layoutAnchorGridDot aria-hidden=true: null

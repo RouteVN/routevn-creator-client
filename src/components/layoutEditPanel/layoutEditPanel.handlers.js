@@ -1800,6 +1800,7 @@ export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
   store.openConditionalOverrideAttributeDialog({
     editingIndex: index,
     fieldName: undefined,
+    selectedAnchor: { x: 0, y: 0 },
   });
   render();
 };
@@ -1816,12 +1817,30 @@ export const handleConditionalOverrideAttributeClick = (deps, payload) => {
     Number.isInteger(index) && CONDITIONAL_OVERRIDE_IMAGE_FIELDS.has(fieldName)
       ? rules[index]?.set?.[fieldName]
       : undefined;
+  const selectedRule = Number.isInteger(index) ? rules[index] : undefined;
+  const selectedAnchor = {
+    x: Number.isFinite(selectedRule?.set?.anchorX)
+      ? selectedRule.set.anchorX
+      : 0,
+    y: Number.isFinite(selectedRule?.set?.anchorY)
+      ? selectedRule.set.anchorY
+      : 0,
+  };
 
   store.openConditionalOverrideAttributeDialog({
     editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
     fieldName,
     selectedImageId,
+    selectedAnchor,
   });
+  render();
+};
+
+export const handleConditionalOverrideAnchorChange = (deps, payload) => {
+  const { render, store } = deps;
+  const { value } = payload._event.detail;
+
+  store.setConditionalOverrideAttributeDialogAnchor({ anchor: value });
   render();
 };
 
@@ -1999,12 +2018,18 @@ export const handleConditionalOverrideAttributeFormAction = (deps, payload) => {
   }
 
   const nextRules = [...rules];
+  const attributeValues = { ...values };
+  attributeValues.selectedImageId = dialog.selectedImageId;
+  if (values.fieldName === "anchor") {
+    attributeValues.anchor = dialog.selectedAnchor;
+  }
+
   nextRules[editingIndex] = {
     ...nextRules[editingIndex],
-    set: buildConditionalOverrideSetUpdate(nextRules[editingIndex]?.set, {
-      ...values,
-      selectedImageId: dialog.selectedImageId,
-    }),
+    set: buildConditionalOverrideSetUpdate(
+      nextRules[editingIndex]?.set,
+      attributeValues,
+    ),
   };
 
   applyPanelValueUpdate(deps, {
