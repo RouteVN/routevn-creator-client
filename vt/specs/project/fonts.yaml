@@ -71,11 +71,15 @@ steps:
     value: /project/fonts
   - action: wait
     ms: 450
-  - action: screenshot
   - action: waitFor
     selector: "#groupview #itemRef0x0"
     state: visible
     timeoutMs: 20000
+  - action: waitFor
+    selector: "#groupview #itemRef0x0 [data-preview-status='ready']"
+    state: attached
+    timeoutMs: 10000
+  - action: screenshot
   - action: select
     selector: "#groupview #itemRef0x0"
     steps:

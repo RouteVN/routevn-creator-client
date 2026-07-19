@@ -125,6 +125,11 @@ const scaleTextStyleOverrides = (textStyle, scale) => {
   scaleObjectField(nextTextStyle, "strokeWidth", scale.uniform);
   scaleObjectField(nextTextStyle, "dropShadowDistance", scale.uniform);
   scaleObjectField(nextTextStyle, "padding", scale.uniform);
+  if (nextTextStyle.shadow) {
+    scaleObjectField(nextTextStyle.shadow, "blur", scale.uniform);
+    scaleObjectField(nextTextStyle.shadow, "offsetX", scale.uniform);
+    scaleObjectField(nextTextStyle.shadow, "offsetY", scale.uniform);
+  }
 
   return nextTextStyle;
 };
@@ -156,6 +161,11 @@ const scaleTextStyleResource = (textStyle, scale) => {
   const nextTextStyle = structuredClone(textStyle);
   scaleObjectField(nextTextStyle, "fontSize", scale.uniform);
   scaleObjectField(nextTextStyle, "strokeWidth", scale.uniform);
+  if (nextTextStyle.shadow) {
+    scaleObjectField(nextTextStyle.shadow, "blur", scale.uniform);
+    scaleObjectField(nextTextStyle.shadow, "offsetX", scale.uniform);
+    scaleObjectField(nextTextStyle.shadow, "offsetY", scale.uniform);
+  }
   return nextTextStyle;
 };
 

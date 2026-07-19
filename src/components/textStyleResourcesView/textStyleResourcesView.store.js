@@ -305,7 +305,7 @@ export const selectViewData = ({ state, props }) => {
               : "",
           previewWidth: mobileLayout || useColumnZoomControl ? "f" : 328,
           useFullWidthPreview: mobileLayout || useColumnZoomControl,
-          previewAspectRatio: "16 / 9",
+          previewAspectRatio: "32 / 9",
           itemBorderColor: isSelected ? "pr" : "bo",
           itemHoverBorderColor: isPlaceholder ? "bo" : isSelected ? "pr" : "ac",
           placeholderPreviewHeight: 96,

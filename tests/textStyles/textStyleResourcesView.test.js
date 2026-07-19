@@ -279,6 +279,7 @@ describe("textStyleResourcesView", () => {
       expect.objectContaining({
         itemContainerStyle: "width: 100%; box-sizing: border-box;",
         itemWidth: "f",
+        previewAspectRatio: "32 / 9",
       }),
     );
   });

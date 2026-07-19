@@ -97,6 +97,12 @@ refs:
         handler: handleDialogFormChange
       add-option-click:
         handler: handleTextStyleFormAddOptionClick
+      keydown:
+        handler: handleDesktopTextStyleFormKeyDown
+  desktopTextStyleSubmitButton:
+    eventListeners:
+      click:
+        handler: handleDesktopTextStyleSubmitClick
   previewTextInput:
     eventListeners:
       value-input:
@@ -168,7 +174,7 @@ template:
                                   - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
                                       - $if selectedItemId:
                                           - 'rtgl-view#detailTextStylePreview slot="text-style-preview" w=f bw=xs bc=bo br=md cur=pointer style="aspect-ratio: 16 / 9; min-width: 0; overflow: hidden;"':
-                                              - rvn-font-preview h=f fontFamily=${detailPreviewFontFamily} previewText="${detailPreviewText}" fileId=${detailPreviewFontFileId} fontSize=${detailPreviewFontSize} lineHeight=${detailPreviewLineHeight} color=${detailPreviewColor} strokeColor=${detailPreviewStrokeColor} strokeWidth=${detailPreviewStrokeWidth} fontWeight=${detailPreviewFontWeight} width=f padding=8 showBorder=false: null
+                                              - rvn-font-preview mode=thumbnail h=f fontFamily=${detailPreviewFontFamily} previewText="${detailPreviewText}" fileId=${detailPreviewFontFileId} fontSize=${detailPreviewFontSize} lineHeight=${detailPreviewLineHeight} color=${detailPreviewColor} strokeColor=${detailPreviewStrokeColor} strokeWidth=${detailPreviewStrokeWidth} fontWeight=${detailPreviewFontWeight} shadowColor=${detailPreviewShadowColor} shadowAlpha=${detailPreviewShadowAlpha} shadowBlur=${detailPreviewShadowBlur} shadowOffsetX=${detailPreviewShadowOffsetX} shadowOffsetY=${detailPreviewShadowOffsetY} width=f padding=8 showBorder=false: null
                                           - rtgl-tag-select#detailTagSelect slot="text-style-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
@@ -198,13 +204,16 @@ template:
   - $if showDialogPreviewCanvas:
       - $if isDialogOpen:
           - rtgl-dialog#addTypographyDialog ?open=${isDialogOpen}:
-              - rtgl-view slot=content d=h g=md w=800:
-                  - rtgl-view w=1fg:
-                      - rtgl-form#textStyleForm key=${formKey} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f: null
-                  - rtgl-view w=1fg p=md d=v g=md:
+              - 'rtgl-view slot=content d=h g=md w=800 h=70vh style="min-width: 0; min-height: 0; overflow: hidden;"':
+                  - 'rtgl-view w=1fg h=f d=v style="min-width: 0; min-height: 0; overflow: hidden;"':
+                      - 'rtgl-view#textStyleFormScroll w=f h=1fg sv style="min-height: 0;"':
+                          - rtgl-form#textStyleForm key=${formKey} :defaultValues=${dialogDefaultValues} :form=${desktopDialogForm} w=f: null
+                      - 'rtgl-view w=f d=h ah=e bgc=bg ph=md pt=lg pb=md style="flex-shrink: 0;"':
+                          - rtgl-button#desktopTextStyleSubmitButton v=${dialogSubmitButton.variant}: ${dialogSubmitButton.label}
+                  - 'rtgl-view w=1fg h=f p=md d=v g=md style="min-width: 0; min-height: 0;"':
                       - rtgl-text s=lg fw=b: ${previewLabel}
-                      - 'rtgl-view w=f style="aspect-ratio: 16 / 9; min-width: 0; overflow: hidden;"':
-                          - rvn-font-preview h=f fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} strokeColor=${previewStrokeColor} strokeWidth=${previewStrokeWidth} fontWeight=${previewFontWeight} width=f padding=8 showBorder=true: null
+                      - 'rtgl-view w=f style="aspect-ratio: 32 / 9; min-width: 0; overflow: hidden;"':
+                          - rvn-font-preview mode=live h=f fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} strokeColor=${previewStrokeColor} strokeWidth=${previewStrokeWidth} fontWeight=${previewFontWeight} shadowColor=${previewShadowColor} shadowAlpha=${previewShadowAlpha} shadowBlur=${previewShadowBlur} shadowOffsetX=${previewShadowOffsetX} shadowOffsetY=${previewShadowOffsetY} width=f padding=8 showBorder=true: null
                       - rtgl-view d=v g=sm w=f:
                           - rtgl-text: ${previewTextLabel}
                           - rtgl-input#previewTextInput key=${formKey} w=f value="${previewTextInputValue}": null

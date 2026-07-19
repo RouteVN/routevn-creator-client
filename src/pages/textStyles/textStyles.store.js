@@ -286,11 +286,16 @@ export const createInitialState = () => ({
     tagIds: [],
     fontColor: "",
     strokeColor: "",
-    fontStyle: "",
+    shadowColor: "",
+    fontId: "",
     fontSize: 16,
     lineHeight: 1.5,
     fontWeight: "400",
     strokeWidth: 0,
+    shadowAlpha: 1,
+    shadowBlur: 0,
+    shadowOffsetX: 2,
+    shadowOffsetY: 2,
     previewText: "",
   },
 
@@ -300,11 +305,16 @@ export const createInitialState = () => ({
     tagIds: [],
     fontColor: "",
     strokeColor: "",
-    fontStyle: "",
+    shadowColor: "",
+    fontId: "",
     fontSize: 16,
     lineHeight: 1.5,
     fontWeight: "400",
     strokeWidth: 0,
+    shadowAlpha: 1,
+    shadowBlur: 0,
+    shadowOffsetX: 2,
+    shadowOffsetY: 2,
     previewText: "",
   },
 
@@ -522,11 +532,16 @@ export const resetFormValues = ({ state }, _payload = {}) => {
     tagIds: [],
     fontColor: "",
     strokeColor: "",
-    fontStyle: "",
+    shadowColor: "",
+    fontId: "",
     fontSize: 16,
     lineHeight: 1.5,
     fontWeight: "400",
     strokeWidth: 0,
+    shadowAlpha: 1,
+    shadowBlur: 0,
+    shadowOffsetX: 2,
+    shadowOffsetY: 2,
     previewText: "",
   };
 };
@@ -541,11 +556,16 @@ export const setFormValuesFromItem = ({ state }, { item } = {}) => {
     tagIds: item.tagIds ?? [],
     fontColor: item.colorId ?? "",
     strokeColor: item.strokeColorId ?? "",
-    fontStyle: item.fontId ?? "",
+    shadowColor: item.shadow?.colorId ?? "",
+    fontId: item.fontId ?? "",
     fontSize: item.fontSize,
     lineHeight: item.lineHeight,
     fontWeight: item.fontWeight,
     strokeWidth: item.strokeWidth ?? 0,
+    shadowAlpha: item.shadow?.alpha ?? 1,
+    shadowBlur: item.shadow?.blur ?? 0,
+    shadowOffsetX: item.shadow?.offsetX ?? 2,
+    shadowOffsetY: item.shadow?.offsetY ?? 2,
     previewText: item.previewText ?? "",
   };
 };
@@ -741,11 +761,18 @@ export const selectViewData = ({ state, i18n }) => {
       const fontData = getFontData(item.fontId);
       return {
         ...item,
-        fontStyle: fontData.fontFamily,
+        fontFamily: fontData.fontFamily,
         fontFileId: fontData.fileId,
         color: getColorHex(item.colorId),
         strokeColor: item.strokeColorId ? getColorHex(item.strokeColorId) : "",
         strokeWidth: item.strokeColorId ? (item.strokeWidth ?? 0) : 0,
+        shadowColor: item.shadow?.colorId
+          ? getColorHex(item.shadow.colorId)
+          : "",
+        shadowAlpha: item.shadow?.alpha ?? 1,
+        shadowBlur: item.shadow?.blur ?? 0,
+        shadowOffsetX: item.shadow?.offsetX ?? 2,
+        shadowOffsetY: item.shadow?.offsetY ?? 2,
         previewText: getPreviewTextValue(item),
         selectedStyle:
           item.id === state.selectedItemId
@@ -845,6 +872,35 @@ export const selectViewData = ({ state, i18n }) => {
         value: String(selectedItem.fontWeight ?? ""),
       },
     ];
+    if (selectedItem.shadow) {
+      detailFields.push(
+        {
+          type: "text",
+          label: copy.shadowColorLabel ?? "Shadow Color",
+          value: getColorName(selectedItem.shadow.colorId),
+        },
+        {
+          type: "text",
+          label: copy.shadowOpacityLabel ?? "Shadow Opacity",
+          value: String(selectedItem.shadow.alpha ?? 1),
+        },
+        {
+          type: "text",
+          label: copy.shadowBlurLabel ?? "Shadow Blur",
+          value: String(selectedItem.shadow.blur ?? 0),
+        },
+        {
+          type: "text",
+          label: copy.shadowOffsetXLabel ?? "Shadow Offset X",
+          value: String(selectedItem.shadow.offsetX ?? 2),
+        },
+        {
+          type: "text",
+          label: copy.shadowOffsetYLabel ?? "Shadow Offset Y",
+          value: String(selectedItem.shadow.offsetY ?? 2),
+        },
+      );
+    }
   } else if (selectedFolder?.type === "folder") {
     detailFields = [
       {
@@ -910,122 +966,188 @@ export const selectViewData = ({ state, i18n }) => {
         )
       : undefined;
 
+  const dialogFields = [
+    {
+      name: "name",
+      type: "input-text",
+      label: copy.nameLabel ?? "Name",
+      required: true,
+    },
+    {
+      name: "description",
+      type: "input-textarea",
+      label: copy.descriptionLabel ?? "Description",
+      required: false,
+    },
+    createTagField({
+      label: copy.tagsLabel,
+      placeholder: copy.selectTagsPlaceholder,
+      addOptionLabel: copy.addTagOption,
+    }),
+    {
+      name: "fontId",
+      type: "select",
+      label: copy.fontLabel ?? "Font",
+      placeholder: copy.chooseFontPlaceholder ?? "Choose a font",
+      options: fontOptions,
+      addOption: { label: copy.addNewFontOption ?? "Add new font" },
+      required: true,
+    },
+    {
+      name: "fontSize",
+      type: "slider-with-input",
+      label: copy.fontSizeLabel ?? "Font Size",
+      min: 8,
+      max: 72,
+      step: 1,
+      unit: "px",
+      required: true,
+    },
+    {
+      name: "lineHeight",
+      type: "slider-with-input",
+      label: copy.lineHeightLabel ?? "Line Height",
+      min: 0.8,
+      max: 3.0,
+      step: 0.1,
+      required: true,
+    },
+    {
+      name: "fontWeight",
+      type: "select",
+      label: copy.fontWeightLabel ?? "Font Weight",
+      placeholder: copy.chooseFontWeightPlaceholder ?? "Choose font weight",
+      options: [
+        { label: copy.weight100Thin ?? "100 - Thin", value: "100" },
+        {
+          label: copy.weight200ExtraLight ?? "200 - Extra Light",
+          value: "200",
+        },
+        { label: copy.weight300Light ?? "300 - Light", value: "300" },
+        { label: copy.weight400Normal ?? "400 - Normal", value: "400" },
+        { label: copy.weight500Medium ?? "500 - Medium", value: "500" },
+        { label: copy.weight600SemiBold ?? "600 - Semi Bold", value: "600" },
+        { label: copy.weight700Bold ?? "700 - Bold", value: "700" },
+        {
+          label: copy.weight800ExtraBold ?? "800 - Extra Bold",
+          value: "800",
+        },
+        { label: copy.weight900Black ?? "900 - Black", value: "900" },
+      ],
+      required: true,
+    },
+    {
+      name: "fontColor",
+      type: "select",
+      label: copy.colorLabel ?? "Color",
+      placeholder: copy.chooseColorPlaceholder ?? "Choose a color",
+      options: colorOptions,
+      addOption: { label: copy.addNewColorOption ?? "Add new color" },
+      required: true,
+    },
+    {
+      name: "strokeColor",
+      type: "select",
+      label: copy.outlineColorLabel ?? "Outline Color",
+      placeholder:
+        copy.chooseOutlineColorPlaceholder ?? "Choose an outline color",
+      options: colorOptions,
+      addOption: { label: copy.addNewColorOption ?? "Add new color" },
+      required: false,
+    },
+  ];
+
+  if (state.currentFormValues.strokeColor) {
+    dialogFields.push({
+      name: "strokeWidth",
+      type: "slider-with-input",
+      label: copy.outlineThicknessLabel ?? "Outline Thickness",
+      min: 0,
+      max: 12,
+      step: 0.5,
+      unit: "px",
+      required: false,
+    });
+  }
+
+  dialogFields.push({
+    name: "shadowColor",
+    type: "select",
+    label: copy.shadowColorLabel ?? "Shadow Color",
+    placeholder: copy.chooseShadowColorPlaceholder ?? "Choose a shadow color",
+    options: colorOptions,
+    addOption: { label: copy.addNewColorOption ?? "Add new color" },
+    required: false,
+  });
+
+  if (state.currentFormValues.shadowColor) {
+    dialogFields.push(
+      {
+        name: "shadowAlpha",
+        type: "slider-with-input",
+        label: copy.shadowOpacityLabel ?? "Shadow Opacity",
+        min: 0,
+        max: 1,
+        step: 0.05,
+        required: false,
+      },
+      {
+        name: "shadowBlur",
+        type: "slider-with-input",
+        label: copy.shadowBlurLabel ?? "Shadow Blur",
+        min: 0,
+        max: 32,
+        step: 1,
+        unit: "px",
+        required: false,
+      },
+      {
+        name: "shadowOffsetX",
+        type: "slider-with-input",
+        label: copy.shadowOffsetXLabel ?? "Shadow Offset X",
+        min: -32,
+        max: 32,
+        step: 1,
+        unit: "px",
+        required: false,
+      },
+      {
+        name: "shadowOffsetY",
+        type: "slider-with-input",
+        label: copy.shadowOffsetYLabel ?? "Shadow Offset Y",
+        min: -32,
+        max: 32,
+        step: 1,
+        unit: "px",
+        required: false,
+      },
+    );
+  }
+
   // Generate dynamic dialog form with dropdown options
+  const dialogSubmitButton = {
+    id: "submit",
+    variant: "pr",
+    label: state.editMode
+      ? (copy.updateTextStyleButton ?? "Update Text Style")
+      : (copy.addTextStyleButton ?? "Add Text Style"),
+  };
   const dialogForm = {
     title: state.editMode
       ? (copy.editTextStyleTitle ?? "Edit Text Style")
       : (copy.addTextStyleTitle ?? "Add Text Style"),
-    fields: [
-      {
-        name: "name",
-        type: "input-text",
-        label: copy.nameLabel ?? "Name",
-        required: true,
-      },
-      {
-        name: "description",
-        type: "input-textarea",
-        label: copy.descriptionLabel ?? "Description",
-        required: false,
-      },
-      createTagField({
-        label: copy.tagsLabel,
-        placeholder: copy.selectTagsPlaceholder,
-        addOptionLabel: copy.addTagOption,
-      }),
-      {
-        name: "fontColor",
-        type: "select",
-        label: copy.colorLabel ?? "Color",
-        placeholder: copy.chooseColorPlaceholder ?? "Choose a color",
-        options: colorOptions,
-        addOption: { label: copy.addNewColorOption ?? "Add new color" },
-        required: true,
-      },
-      {
-        name: "strokeColor",
-        type: "select",
-        label: copy.outlineColorLabel ?? "Outline Color",
-        placeholder:
-          copy.chooseOutlineColorPlaceholder ?? "Choose an outline color",
-        options: colorOptions,
-        addOption: { label: copy.addNewColorOption ?? "Add new color" },
-        required: false,
-      },
-      {
-        name: "strokeWidth",
-        type: "slider-with-input",
-        label: copy.outlineThicknessLabel ?? "Outline Thickness",
-        min: 0,
-        max: 12,
-        step: 0.5,
-        unit: "px",
-        required: false,
-      },
-      {
-        name: "fontStyle",
-        type: "select",
-        label: copy.fontStyleLabel ?? "Font Style",
-        placeholder: copy.chooseFontPlaceholder ?? "Choose a font",
-        options: fontOptions,
-        addOption: { label: copy.addNewFontOption ?? "Add new font" },
-        required: true,
-      },
-      {
-        name: "fontSize",
-        type: "slider-with-input",
-        label: copy.fontSizeLabel ?? "Font Size",
-        min: 8,
-        max: 72,
-        step: 1,
-        unit: "px",
-        required: true,
-      },
-      {
-        name: "lineHeight",
-        type: "slider-with-input",
-        label: copy.lineHeightLabel ?? "Line Height",
-        min: 0.8,
-        max: 3.0,
-        step: 0.1,
-        required: true,
-      },
-      {
-        name: "fontWeight",
-        type: "select",
-        label: copy.fontWeightLabel ?? "Font Weight",
-        placeholder: copy.chooseFontWeightPlaceholder ?? "Choose font weight",
-        options: [
-          { label: copy.weight100Thin ?? "100 - Thin", value: "100" },
-          {
-            label: copy.weight200ExtraLight ?? "200 - Extra Light",
-            value: "200",
-          },
-          { label: copy.weight300Light ?? "300 - Light", value: "300" },
-          { label: copy.weight400Normal ?? "400 - Normal", value: "400" },
-          { label: copy.weight500Medium ?? "500 - Medium", value: "500" },
-          { label: copy.weight600SemiBold ?? "600 - Semi Bold", value: "600" },
-          { label: copy.weight700Bold ?? "700 - Bold", value: "700" },
-          {
-            label: copy.weight800ExtraBold ?? "800 - Extra Bold",
-            value: "800",
-          },
-          { label: copy.weight900Black ?? "900 - Black", value: "900" },
-        ],
-        required: true,
-      },
-    ],
+    fields: dialogFields,
     actions: {
       layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: state.editMode
-            ? (copy.updateTextStyleButton ?? "Update Text Style")
-            : (copy.addTextStyleButton ?? "Add Text Style"),
-        },
-      ],
+      buttons: [dialogSubmitButton],
+    },
+  };
+  const desktopDialogForm = {
+    title: dialogForm.title,
+    fields: dialogForm.fields,
+    actions: {
+      layout: "",
+      buttons: [],
     },
   };
 
@@ -1038,11 +1160,16 @@ export const selectViewData = ({ state, i18n }) => {
           tagIds: editingItem.tagIds ?? [],
           fontColor: editingItem.colorId || "",
           strokeColor: editingItem.strokeColorId || "",
-          fontStyle: editingItem.fontId || "",
+          shadowColor: editingItem.shadow?.colorId ?? "",
+          fontId: editingItem.fontId || "",
           fontSize: editingItem.fontSize,
           lineHeight: editingItem.lineHeight,
           fontWeight: editingItem.fontWeight,
           strokeWidth: editingItem.strokeWidth ?? 0,
+          shadowAlpha: editingItem.shadow?.alpha ?? 1,
+          shadowBlur: editingItem.shadow?.blur ?? 0,
+          shadowOffsetX: editingItem.shadow?.offsetX ?? 2,
+          shadowOffsetY: editingItem.shadow?.offsetY ?? 2,
           previewText: editingItem.previewText ?? "",
         }
       : state.defaultValues;
@@ -1066,7 +1193,7 @@ export const selectViewData = ({ state, i18n }) => {
   };
 
   const getPreviewFontData = () => {
-    const fontId = state.currentFormValues.fontStyle;
+    const fontId = state.currentFormValues.fontId;
     if (!fontId) return { fontFamily: undefined, fileId: undefined };
     try {
       return getFontData(fontId);
@@ -1107,6 +1234,13 @@ export const selectViewData = ({ state, i18n }) => {
     detailPreviewStrokeWidth: selectedItem?.strokeColorId
       ? (selectedItem?.strokeWidth ?? 0)
       : 0,
+    detailPreviewShadowColor: selectedItem?.shadow?.colorId
+      ? getColorHex(selectedItem.shadow.colorId)
+      : undefined,
+    detailPreviewShadowAlpha: selectedItem?.shadow?.alpha ?? 1,
+    detailPreviewShadowBlur: selectedItem?.shadow?.blur ?? 0,
+    detailPreviewShadowOffsetX: selectedItem?.shadow?.offsetX ?? 2,
+    detailPreviewShadowOffsetY: selectedItem?.shadow?.offsetY ?? 2,
     detailPreviewFontFamily: detailPreviewFontData.fontFamily,
     detailPreviewFontFileId: detailPreviewFontData.fileId,
     title: copy.title ?? "Text Styles",
@@ -1134,6 +1268,8 @@ export const selectViewData = ({ state, i18n }) => {
     // Dialog-related data
     isDialogOpen: state.isDialogOpen,
     dialogForm: dialogForm,
+    desktopDialogForm,
+    dialogSubmitButton,
     dialogDefaultValues,
     showDialogPreviewCanvas: !state.isTouchMode,
     formKey: `${state.selectedItemId}-${state.isDialogOpen || state.isAddFontDialogOpen}`,
@@ -1175,6 +1311,13 @@ export const selectViewData = ({ state, i18n }) => {
     previewStrokeWidth: state.currentFormValues.strokeColor
       ? (state.currentFormValues.strokeWidth ?? 0)
       : 0,
+    previewShadowColor: state.currentFormValues.shadowColor
+      ? getColorHex(state.currentFormValues.shadowColor)
+      : undefined,
+    previewShadowAlpha: state.currentFormValues.shadowAlpha ?? 1,
+    previewShadowBlur: state.currentFormValues.shadowBlur ?? 0,
+    previewShadowOffsetX: state.currentFormValues.shadowOffsetX ?? 2,
+    previewShadowOffsetY: state.currentFormValues.shadowOffsetY ?? 2,
     previewFontFamily: previewFontData.fontFamily,
     previewFontFileId: previewFontData.fileId,
     searchQuery: state.searchQuery,

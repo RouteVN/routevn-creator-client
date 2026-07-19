@@ -1,3 +1,4 @@
 template:
-  - 'rtgl-view#main av=${av} ah=${ah} data-preview-status="${status}" style="${widthStyle} ${heightStyle} padding: ${padding}px; box-sizing: border-box; background-color: ${backgroundColor}; overflow: hidden;"':
-      - 'rtgl-text style="font-family: ${fontFamily}, sans-serif; font-size: ${fontSize}px; line-height: ${lineHeight}; font-weight: ${fontWeight}; color: ${color}; text-align: ${textAlign}; -webkit-text-stroke: ${strokeWidth}px ${strokeColor}; paint-order: stroke fill;"': ${previewText}
+  - 'rtgl-view#main data-preview-status="${status}" style="${widthStyle} ${heightStyle} min-width: 0; min-height: 0; overflow: hidden;"':
+      - $if isReady:
+          - 'rvn-route-graphics-text-preview :preview=${routeGraphicsPreview}': null

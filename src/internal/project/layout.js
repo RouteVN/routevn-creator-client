@@ -513,6 +513,15 @@ const normalizeTextStyleResource = (textStyleData) => {
   if (textStyleData.strokeWidth !== undefined) {
     textStyle.strokeWidth = textStyleData.strokeWidth;
   }
+  if (textStyleData.shadow?.colorId) {
+    textStyle.shadow = {
+      colorId: textStyleData.shadow.colorId,
+      alpha: toFiniteNumber(textStyleData.shadow.alpha, 1),
+      blur: toFiniteNumber(textStyleData.shadow.blur, 0),
+      offsetX: toFiniteNumber(textStyleData.shadow.offsetX, 2),
+      offsetY: toFiniteNumber(textStyleData.shadow.offsetY, 2),
+    };
+  }
 
   return textStyle;
 };

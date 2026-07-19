@@ -1,32 +1,53 @@
-export const handleAfterMount = async (deps) => {
-  const { props: attrs = {}, projectService, render, store } = deps;
-  const { fontFamily, fileId } = attrs;
+const getFontLoadKey = (attrs = {}) => {
+  const { fileId, fontFamily } = attrs;
+  if (fileId && fileId !== "undefined") {
+    return fileId;
+  }
 
-  store.setStatus({ status: "loading" });
+  return fontFamily ?? "sans-serif";
+};
+
+const loadPreviewFont = async (deps, attrs = {}) => {
+  const { projectService, render, store } = deps;
+  const { fileId } = attrs;
+  const key = getFontLoadKey(attrs);
+
+  store.startFontLoad({ key });
   render();
 
-  // Only load font if fontFamily and fileId are provided and not a generic fallback
-  if (
-    fontFamily &&
-    fileId &&
-    fileId !== "undefined" &&
-    fontFamily !== "sans-serif" &&
-    fontFamily !== "serif" &&
-    fontFamily !== "monospace"
-  ) {
+  if (fileId && fileId !== "undefined") {
     try {
-      await projectService.loadFontFile({
-        fontName: fontFamily,
-        fileId: fileId,
+      const result = await projectService.loadFontFile({
+        fontName: fileId,
+        fileId,
       });
+      if (result?.success === false) {
+        throw new Error("Unable to load preview font");
+      }
     } catch (error) {
-      store.setStatus({ status: "error" });
+      store.finishFontLoad({ key, status: "error" });
       render();
-      console.warn(`Failed to load font: ${fontFamily}`, error);
+      console.warn(`Failed to load font preview: ${fileId}`, error);
       return;
     }
   }
 
-  store.setStatus({ status: "ready" });
+  store.finishFontLoad({ key, status: "ready" });
   render();
+};
+
+export const handleAfterMount = async (deps) => {
+  await loadPreviewFont(deps, deps.props ?? {});
+};
+
+export const handleOnUpdate = async (deps, changes = {}) => {
+  const oldKey = getFontLoadKey(changes.oldProps);
+  const newKey = getFontLoadKey(changes.newProps);
+
+  if (oldKey !== newKey || deps.store.selectFontLoadKey() !== newKey) {
+    await loadPreviewFont(deps, changes.newProps);
+    return;
+  }
+
+  deps.render();
 };

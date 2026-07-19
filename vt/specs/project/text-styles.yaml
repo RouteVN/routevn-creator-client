@@ -96,6 +96,58 @@ steps:
   - action: wait
     ms: 400
   - action: screenshot
+  - action: select
+    selector: "#textStyleFormScroll"
+    steps:
+      - action: hover
+      - action: scroll
+        deltaX: 0
+        deltaY: 900
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "#textStyleForm rtgl-select#field10 [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#textStyleForm rtgl-select#field10 #option1"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#textStyleForm rtgl-select#field10 #option1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#textStyleForm rtgl-slider-input#field11 rtgl-input-number#input input"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#textStyleForm rtgl-slider-input#field11 rtgl-input-number#input input"
+    steps:
+      - action: clear
+      - action: write
+        value: "1"
+  - action: waitFor
+    selector: "#textStyleForm rtgl-slider-input#field12 rtgl-input-number#input input"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#textStyleForm rtgl-slider-input#field12 rtgl-input-number#input input"
+    steps:
+      - action: clear
+      - action: write
+        value: "8"
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "#textStyleForm rtgl-select#field8 [data-testid='select-clear-button'] svg"
+    steps:
+      - action: click
+  - action: wait
+    ms: 250
+  - action: screenshot
   - action: keypress
     key: Escape
   - action: waitFor

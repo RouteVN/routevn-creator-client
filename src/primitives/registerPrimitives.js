@@ -6,6 +6,10 @@ import {
   LexicalLayoutTextEditorElement,
   LEXICAL_LAYOUT_TEXT_EDITOR_TAG_NAME,
 } from "./lexicalLayoutTextEditor.js";
+import {
+  RouteGraphicsTextPreviewElement,
+  ROUTE_GRAPHICS_TEXT_PREVIEW_TAG_NAME,
+} from "./routeGraphicsTextPreview.js";
 
 export const registerPrimitives = () => {
   if (!customElements.get(LEXICAL_SCENE_DOCUMENT_EDITOR_TAG_NAME)) {
@@ -18,6 +22,12 @@ export const registerPrimitives = () => {
     customElements.define(
       LEXICAL_LAYOUT_TEXT_EDITOR_TAG_NAME,
       LexicalLayoutTextEditorElement,
+    );
+  }
+  if (!customElements.get(ROUTE_GRAPHICS_TEXT_PREVIEW_TAG_NAME)) {
+    customElements.define(
+      ROUTE_GRAPHICS_TEXT_PREVIEW_TAG_NAME,
+      RouteGraphicsTextPreviewElement,
     );
   }
 };
