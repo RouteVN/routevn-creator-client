@@ -1864,6 +1864,54 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("reports activation when an inactive editor clicks its already-selected line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lineElement = document.createElement("p");
+
+      editorElement.state = {
+        mode: "block",
+        selectedLineId: "line-1",
+        selectionActive: false,
+      };
+      editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
+      editorElement.getLineOffsetFromPointerEvent = vi.fn(() => 3);
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.applyModeState = vi.fn((mode) => {
+        editorElement.state.mode = mode;
+      });
+      editorElement.clearDeleteShortcutState = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      const didEnter = editorElement.enterTextModeFromBlockModePointer({
+        target: lineElement,
+      });
+
+      expect(didEnter).toBe(true);
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-1",
+        {
+          cursorPosition: 3,
+          isCollapsed: true,
+          mode: "text-editor",
+        },
+      );
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("enters block mode for the clicked line from the left gutter", async () => {
     const restoreDomGlobals = installDomGlobals();
 
