@@ -16,8 +16,8 @@ There are four separate concepts that are easy to confuse:
 4. native player application identifier
 
 For new projects, the first comes from `projectInfo` in the project-specific
-DB. The third is owned by Web Platform Details and initially seeded from
-`projectInfo.namespace`. The fourth is owned by the native player package.
+DB. The third is entered in Web Platform Details. The fourth is owned by the
+native player package.
 
 ## Project Metadata
 
@@ -38,8 +38,8 @@ Important details:
 
 - this metadata is not owned by repository state
 - `projectInfo.id` is the canonical project/folder id for new projects
-- `projectInfo.namespace` seeds the Web application identifier and backfills
-  older Web platform records that do not have one
+- `projectInfo.namespace` backfills older stored Web platform records that do
+  not have an application identifier
 - `projectInfo.nativeApplicationIdentifier` is retained as app-owned project
   identity metadata; Platform Details does not inherit it as a platform export
   default
@@ -92,8 +92,9 @@ Bundle metadata now carries:
 
 Important details:
 
-- new Web platform records default `applicationIdentifier` from
-  `projectInfo.namespace`
+- new Web platform records start with an empty `applicationIdentifier`
+- Web identifiers accept only letters, numbers, hyphens, and periods, for
+  example `com.yourteam.yourvn`
 - existing Web records without `applicationIdentifier` are backfilled once
   from `projectInfo.namespace` and persisted, preserving their existing save
   bucket
@@ -157,8 +158,8 @@ Use these rules when reasoning about identity:
 - for canonical project identity on new projects, use `projectInfo.id`
 - for browser-hosted bundle save identity, use
   `platformDetails.web.applicationIdentifier`
-- use `projectInfo.namespace` only as the default and compatibility backfill
-  for that Web identifier
+- use `projectInfo.namespace` only as the compatibility backfill for older
+  stored Web records
 - for native player save identity, use the stable Tauri application
   identifier
 - for repository history semantics, reason about committed repository events

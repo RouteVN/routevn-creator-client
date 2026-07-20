@@ -870,14 +870,10 @@ export const createProjectRepositoryService = ({
     const projectInfo = await readProjectInfoFromStore(store, {
       fallbackProjectId: projectId,
     });
-    const sourceInfo = {
+    return createPlatformDetails(platform, {
       applicationName: projectInfo.name,
       iconFileId: projectInfo.iconFileId,
-    };
-    if (platform === "web") {
-      sourceInfo.applicationIdentifier = projectInfo.namespace;
-    }
-    return createPlatformDetails(platform, sourceInfo);
+    });
   };
 
   const createPlatformDetailsByProjectId = async (
@@ -898,14 +894,10 @@ export const createProjectRepositoryService = ({
     const projectInfo = await readProjectInfoFromStore(store, {
       fallbackProjectId: projectId,
     });
-    const sourceInfo = {
+    const defaults = createPlatformDetails(platform, {
       applicationName: projectInfo.name,
       iconFileId: projectInfo.iconFileId,
-    };
-    if (platform === "web") {
-      sourceInfo.applicationIdentifier = projectInfo.namespace;
-    }
-    const defaults = createPlatformDetails(platform, sourceInfo);
+    });
     const platformDetails = mergePlatformDetails(platform, defaults, patch);
     await store.app.set(getPlatformDetailsKey(platform), platformDetails);
     return platformDetails;

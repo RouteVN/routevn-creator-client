@@ -131,7 +131,7 @@ describe("projectRepositoryService platform details", () => {
       harness.service.getCurrentPlatformDetailsDefaults("web"),
     ).resolves.toEqual({
       applicationName: "Project One",
-      applicationIdentifier: "namespace-1",
+      applicationIdentifier: "",
       iconFileId: "project-icon-1",
       shortName: "",
       description: "",
@@ -152,7 +152,7 @@ describe("projectRepositoryService platform details", () => {
       }),
     ).resolves.toEqual({
       applicationName: "Web Release",
-      applicationIdentifier: "namespace-1",
+      applicationIdentifier: "",
       iconFileId: "project-icon-1",
       shortName: "Release",
       description: "",

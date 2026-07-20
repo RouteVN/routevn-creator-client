@@ -92,6 +92,27 @@ describe("platform details validation", () => {
     ).toEqual({ valid: false, code: "web-identifier-required" });
   });
 
+  it("allows only letters, numbers, hyphens, and periods in a Web identifier", () => {
+    expect(
+      validatePlatformDetails({
+        platform: "web",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "com.yourteam.yourvn",
+        },
+      }),
+    ).toEqual({ valid: true });
+    expect(
+      validatePlatformDetails({
+        platform: "web",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "com.yourteam/yourvn",
+        },
+      }),
+    ).toEqual({ valid: false, code: "web-identifier-invalid" });
+  });
+
   it("requires a valid macOS identifier and validates an optional category", () => {
     expect(
       validatePlatformDetails({

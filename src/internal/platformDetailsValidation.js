@@ -2,6 +2,7 @@ import { isValidNativeApplicationIdentifier } from "./nativeApplicationIdentifie
 
 const MACOS_CATEGORY_PATTERN =
   /^public\.app-category\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+const WEB_APPLICATION_IDENTIFIER_PATTERN = /^(?=.*[A-Za-z0-9])[A-Za-z0-9.-]+$/;
 
 const hasColor = (availableColorIds, colorId) => {
   if (!colorId || availableColorIds === undefined) {
@@ -30,6 +31,15 @@ export const validatePlatformDetails = ({
   if (platform === "web") {
     if (!applicationInfo.applicationIdentifier?.trim()) {
       return { valid: false, code: "web-identifier-required" };
+    }
+    if (
+      applicationInfo.applicationIdentifier !==
+        applicationInfo.applicationIdentifier.trim() ||
+      !WEB_APPLICATION_IDENTIFIER_PATTERN.test(
+        applicationInfo.applicationIdentifier,
+      )
+    ) {
+      return { valid: false, code: "web-identifier-invalid" };
     }
     if (!hasColor(availableColorIds, applicationInfo.themeColorId)) {
       return { valid: false, code: "theme-color-not-found" };

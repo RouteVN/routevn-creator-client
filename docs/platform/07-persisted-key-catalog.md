@@ -162,9 +162,9 @@ Current keys:
     Details and submits its create form
   - the create form is prefilled from the current project name and icon;
     cancelling it does not persist a record
-  - the Web identifier defaults from `projectInfo.namespace`, is required and
-    editable, and controls browser save-data identity; older Web records are
-    backfilled once from that namespace
+  - the Web identifier starts blank, is required and editable, and controls
+    browser save-data identity; older stored Web records are backfilled once
+    from `projectInfo.namespace`
   - the Windows identifier starts blank and is optional; the macOS identifier
     starts blank, is required and editable, and controls the exported app and
     save-data identity
@@ -213,7 +213,8 @@ Important ownership rule:
   projects
 - `platformDetails.web.applicationIdentifier` is the source of truth for
   browser-hosted bundle save identity
-- `projectInfo.namespace` seeds and backfills the Web identifier
+- `projectInfo.namespace` backfills older stored Web records that do not have
+  an identifier
 - `projectId` must not be exported into the bundle just to drive runtime save
   identity
 

@@ -575,8 +575,8 @@ and native save-identity concepts:
 - browser-hosted bundle save namespace
   - source of truth is
     `platformDetails.web.applicationIdentifier` in the project-specific DB
-  - new and legacy Web platform records initially receive
-    `projectInfo.namespace` to preserve existing save identity
+  - older stored Web platform records without an identifier receive
+    `projectInfo.namespace` once to preserve existing save identity
   - exported into bundle metadata as `bundleMetadata.project.namespace`
   - browser runtime should use that namespace for IndexedDB/save identity
   - `projectId` must not be exposed into the exported bundle for this purpose
@@ -804,10 +804,10 @@ Release packaging metadata is stored independently under `platformDetails.web`,
 `app` store. No platform record exists until the user explicitly adds that
 platform from Platform Details and submits its prefilled create form. Opening or
 cancelling the form does not persist a record. Form defaults copy the project
-name and icon. The Web identifier defaults from `projectInfo.namespace`, is
-required and editable, and controls browser save-data identity; older Web
-records are backfilled once from that namespace. The Windows and macOS
-identifiers start blank. The macOS identifier is required and editable;
+name and icon. The Web identifier starts blank, is required and editable, and
+controls browser save-data identity; older stored Web records are backfilled
+once from `projectInfo.namespace`. The Windows and macOS identifiers start
+blank. The macOS identifier is required and editable;
 changing it changes the exported app and save-data identity, so builds using
 different identifiers do not share saves.
 Preview records stored under the former
@@ -845,7 +845,8 @@ Project identity has an important split:
   per committed row
 - browser-hosted bundle save identity uses
   `platformDetails.web.applicationIdentifier`
-- `projectInfo.namespace` seeds and backfills that Web identifier
+- `projectInfo.namespace` backfills older stored Web records without that
+  identifier
 - native Windows player save identity uses the stable Tauri application
   identifier and one unpartitioned `runtime.db`
 

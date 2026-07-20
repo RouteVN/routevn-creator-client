@@ -412,6 +412,34 @@ describe("versions.handleDownloadZipClick", () => {
     });
   });
 
+  it("stops before the save dialog when Web application identifier is invalid", async () => {
+    const repositoryState = structuredClone(initialProjectData);
+    const repository = {
+      loadState: vi.fn(async () => repositoryState),
+      getState: vi.fn(() => repositoryState),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Project One",
+      applicationIdentifier: "com.yourteam/yourvn",
+      iconFileId: "icon-1",
+      shortName: "",
+      description: "",
+      themeColorId: "",
+      backgroundColorId: "",
+    });
+
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+
+    expect(
+      deps.projectService.promptDistributionZipPath,
+    ).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.platformDetailsWebIdentifierInvalid,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+  });
+
   it("revokes the temporary icon URL after export preflight", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),

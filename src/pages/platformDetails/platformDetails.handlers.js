@@ -172,6 +172,9 @@ const getValidationMessage = (copy, code) => {
   if (code === "web-identifier-required") {
     return copy.webApplicationIdentifierRequired;
   }
+  if (code === "web-identifier-invalid") {
+    return copy.webApplicationIdentifierInvalid;
+  }
   if (code === "windows-identifier-invalid") {
     return copy.windowsApplicationIdentifierInvalid;
   }

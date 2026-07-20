@@ -78,13 +78,13 @@ Important details:
 - the macOS `applicationIdentifier` starts blank, is required and editable,
   and controls both the exported app identity and save-data location; builds
   using different identifiers do not share saves
-- the Web `applicationIdentifier` is required and editable, defaults to the
-  existing project namespace, and controls the exported browser save-data
-  identity; changing it selects a different save bucket
+- the Web `applicationIdentifier` starts blank, is required and editable, and
+  controls the exported browser save-data identity; changing it selects a
+  different save bucket
 - `projectInfo` is the source of truth for project display metadata
 - `projectInfo.id` is the canonical folder/project id for new projects
-- `projectInfo.namespace` seeds the Web application identifier and backfills
-  older Web platform records that do not have one
+- `projectInfo.namespace` backfills older stored Web platform records that do
+  not have an application identifier
 - platform detail keys do not exist until the user adds the corresponding
   platform and submits its prefilled create form; cancelling does not write a
   key, and created platform keys can be edited but not deleted

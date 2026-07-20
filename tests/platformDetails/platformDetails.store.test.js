@@ -43,7 +43,7 @@ describe("platformDetails.store", () => {
         platform: "web",
         applicationInfo: {
           applicationName: "Project One",
-          applicationIdentifier: "namespace-1",
+          applicationIdentifier: "",
           iconFileId: "project-icon-1",
           shortName: "",
           description: "",
@@ -60,7 +60,7 @@ describe("platformDetails.store", () => {
       platformDialogKey: "create-web",
       platformEditDefaultValues: {
         applicationName: "Project One",
-        applicationIdentifier: "namespace-1",
+        applicationIdentifier: "",
       },
       platformTabs: [],
     });

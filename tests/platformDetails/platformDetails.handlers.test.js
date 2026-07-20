@@ -133,7 +133,7 @@ describe("platformDetails handlers", () => {
     const deps = createDeps();
     const applicationInfo = {
       applicationName: "Project One",
-      applicationIdentifier: "namespace-1",
+      applicationIdentifier: "",
       iconFileId: "project-icon-1",
       shortName: "",
       description: "",
@@ -418,6 +418,38 @@ describe("platformDetails handlers", () => {
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: EN_I18N.platformDetailsPage.webApplicationIdentifierRequired,
+      title: EN_I18N.platformDetailsPage.warningTitle,
+    });
+    expect(
+      deps.projectService.createCurrentPlatformDetails,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("does not create Web platform details with an invalid application identifier", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "create",
+      platform: "web",
+    });
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Project One",
+            applicationIdentifier: "com.yourteam/yourvn",
+            shortName: "",
+            description: "",
+            themeColorId: "",
+            backgroundColorId: "",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.platformDetailsPage.webApplicationIdentifierInvalid,
       title: EN_I18N.platformDetailsPage.warningTitle,
     });
     expect(
