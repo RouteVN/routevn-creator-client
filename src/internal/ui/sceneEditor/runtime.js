@@ -1,4 +1,5 @@
 import {
+  debounce,
   debounceTime,
   EMPTY,
   filter,
@@ -7,6 +8,7 @@ import {
   switchMap,
   tap,
   throttleTime,
+  timer,
 } from "rxjs";
 import {
   extractFileIdsFromRenderState,
@@ -44,6 +46,7 @@ import {
 
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
+const SCENE_EDITOR_CANVAS_RENDER_DEBOUNCE_MS = 50;
 const CANVAS_RUNTIME_LINE_SYNC_WINDOW_MS = 1200;
 const FAILED_SCENE_ASSET_RETRY_DELAY_MS = 60000;
 
@@ -2025,7 +2028,9 @@ export const mountSceneEditorSubscriptions = (deps) => {
           syncPresentationState: payload?.syncPresentationState === true,
         });
       }),
-      debounceTime(50),
+      debounce(({ payload }) =>
+        timer(payload?.debounceMs ?? SCENE_EDITOR_CANVAS_RENDER_DEBOUNCE_MS),
+      ),
       tap(async ({ payload }) => {
         const queueStartedAt = getDebugNow();
         await queueRenderCanvas(payload);

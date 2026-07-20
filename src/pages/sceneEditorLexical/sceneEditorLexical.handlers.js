@@ -61,6 +61,7 @@ const MIN_BACKGROUND_TRANSFORM_SCALE = 0.01;
 const BACKGROUND_TRANSFORM_KEYBOARD_NUDGE = 1;
 const BACKGROUND_TRANSFORM_KEYBOARD_LARGE_NUDGE = 10;
 const SCENE_EDITOR_SELECTION_URL_SYNC_THROTTLE_MS = 250;
+const SCENE_EDITOR_TEXT_CANVAS_RENDER_DEBOUNCE_MS = 100;
 const SCENE_TEXT_STATS_REFRESH_DEBOUNCE_MS = 400;
 const SCENE_TEXT_STATS_IDLE_TIMEOUT_MS = 1500;
 
@@ -2224,6 +2225,7 @@ export const handleEditorDataChanged = async (deps, payload) => {
 
   const canvasDispatchStartedAt = getSceneEditorTimingNow();
   subject.dispatch("sceneEditor.renderCanvas", {
+    debounceMs: SCENE_EDITOR_TEXT_CANVAS_RENDER_DEBOUNCE_MS,
     skipRender: true,
     syncPresentationState: true,
     skipAnimations: true,

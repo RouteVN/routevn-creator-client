@@ -401,6 +401,7 @@ describe("sceneEditorLexical.handlers editor changes", () => {
       expect(deps.subject.dispatch).toHaveBeenCalledWith(
         "sceneEditor.renderCanvas",
         {
+          debounceMs: 100,
           preserveAnimationPlayback: true,
           skipAnimations: true,
           skipRender: true,

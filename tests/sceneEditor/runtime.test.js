@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { Subject } from "rxjs";
 import createRouteEngine from "route-engine-js";
 import {
   createSceneEditorRenderQueue,
+  mountSceneEditorSubscriptions,
   renderSceneEditorCanvas,
   renderSceneEditorState,
   resolveSceneEditorEntrySelection,
@@ -286,6 +288,45 @@ describe("renderSceneEditorState", () => {
     await Promise.resolve();
 
     expect(renderCanvas).toHaveBeenCalledTimes(2);
+  });
+
+  it("supports a longer canvas debounce for typing without slowing other renders", async () => {
+    vi.useFakeTimers();
+    const subject = new Subject();
+    const selectIsScenePageLoading = vi.fn(() => true);
+    const unmount = mountSceneEditorSubscriptions({
+      subject,
+      store: {
+        selectIsScenePageLoading,
+      },
+    });
+
+    try {
+      subject.next({
+        action: "sceneEditor.renderCanvas",
+        payload: { debounceMs: 100 },
+      });
+
+      await vi.advanceTimersByTimeAsync(99);
+      expect(selectIsScenePageLoading).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(selectIsScenePageLoading).toHaveBeenCalledOnce();
+
+      selectIsScenePageLoading.mockClear();
+      subject.next({
+        action: "sceneEditor.renderCanvas",
+        payload: {},
+      });
+
+      await vi.advanceTimersByTimeAsync(49);
+      expect(selectIsScenePageLoading).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(selectIsScenePageLoading).toHaveBeenCalledOnce();
+    } finally {
+      unmount();
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
   });
 
   it("skips inline canvas renders while full-screen preview is visible", async () => {
