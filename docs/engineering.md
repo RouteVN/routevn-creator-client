@@ -818,8 +818,9 @@ cross-platform synchronization or delete flow. Platform exports validate the
 matching record and show its values
 in a read-only confirmation dialog before opening a save picker or starting
 the export. Web metadata is emitted into `index.html`,
-`manifest.webmanifest`, and the bundle instructions; the selected Web icon is
-also emitted as `app-icon.png` and referenced by both HTML and the manifest.
+`manifest.webmanifest`, and the bundle instructions; Web export uses the
+project-owned name and icon. The icon is emitted as 192px and 512px PNGs. HTML
+uses the 512px PNG as its favicon, and the manifest references both sizes.
 Windows metadata is
 stamped into the portable executable's version resources and the NSIS
 installer's version keys. macOS metadata is stamped into `Info.plist` using

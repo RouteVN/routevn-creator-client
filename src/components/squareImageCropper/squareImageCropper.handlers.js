@@ -213,6 +213,6 @@ export const handleGetCroppedFile = async (deps) => {
     sourceX: cropSelection.sourceX,
     sourceY: cropSelection.sourceY,
     sourceSize: cropSelection.sourceSize,
-    outputSize: cropSelection.outputSize,
+    outputSize: deps.props.outputSize ?? cropSelection.outputSize,
   });
 };

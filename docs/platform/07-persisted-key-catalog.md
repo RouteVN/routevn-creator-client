@@ -176,9 +176,10 @@ Current keys:
     and bundle creation start only after the user confirms
   - image deletion treats each platform `iconFileId` as a live reference and
     is blocked while the image file is used by any platform details record
-  - exports materialize the matching record into platform artifacts: Web HTML,
-    manifest, standalone `app-icon.png`, and bundle metadata; Windows PE/NSIS
-    version metadata; or macOS `Info.plist`
+  - exports materialize platform metadata into platform artifacts: Web HTML,
+    manifest, generated `app-icon-192.png`/`app-icon-512.png` files based on the
+    project icon, and bundle metadata; Windows PE/NSIS version metadata; or
+    macOS `Info.plist`
   - a later project-icon update fills an existing platform icon only while
     that platform icon is empty
   - after creation, each platform record is edited and persisted independently

@@ -72,9 +72,10 @@ Current app-owned keys:
 Important details:
 
 - release metadata is read from these app-store records at export time; Web
-  values and icon are written to the exported HTML, Web manifest, and
-  `app-icon.png`, Windows values to executable/installer version metadata, and
-  macOS values to `Info.plist`
+  values and the project-owned name/icon are written to the exported HTML, Web
+  manifest, and generated `app-icon-192.png`/`app-icon-512.png` files, Windows
+  values to executable/installer version metadata, and macOS values to
+  `Info.plist`
 - the macOS `applicationIdentifier` starts blank, is required and editable,
   and controls both the exported app identity and save-data location; builds
   using different identifiers do not share saves

@@ -458,6 +458,36 @@ describe("versions.handleDownloadZipClick", () => {
     expect(deps.store.openExportConfirmation).toHaveBeenCalledTimes(1);
   });
 
+  it("uses Project Info branding in Web export confirmation", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Web Edition",
+      applicationIdentifier: "com.example.web-edition",
+      iconFileId: "web-icon",
+      shortName: "Web",
+      description: "Web release",
+      themeColorId: "",
+      backgroundColorId: "",
+    });
+
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+
+    expect(deps.projectService.getFileContent).toHaveBeenCalledWith("icon-1");
+    expect(deps.store.openExportConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicationInfo: expect.objectContaining({
+          applicationName: "Project One",
+          iconFileId: "icon-1",
+          applicationIdentifier: "com.example.web-edition",
+        }),
+      }),
+    );
+  });
+
   it("uses repository.loadState when available instead of forcing full history load", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
@@ -624,8 +654,8 @@ describe("versions.handleDownloadZipClick", () => {
         .bundleMetadata.project,
     ).toMatchObject({
       namespace: "com.example.web-edition",
-      title: "Web Edition",
-      iconFileId: "web-icon",
+      title: "Project One",
+      iconFileId: "icon-1",
       web: {
         shortName: "Web",
         description: "Web release",
@@ -635,7 +665,7 @@ describe("versions.handleDownloadZipClick", () => {
     });
     expect(
       deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
-    ).toContainEqual({ fileId: "web-icon", mimeType: "image/png" });
+    ).toContainEqual({ fileId: "icon-1", mimeType: "image/png" });
   });
 
   it("drops invalid font mime metadata before export", async () => {

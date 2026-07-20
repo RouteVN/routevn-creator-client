@@ -36,6 +36,7 @@ import {
 import { toBootstrappedDraftEvent } from "../shared/collab/clientStoreHistory.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
+import { createWebIconAssets } from "../../clients/web/webIconAssets.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -482,7 +483,13 @@ const createDistributionZipBytes = async ({
     if (!iconAsset?.buffer) {
       throw new Error("The Web application icon could not be exported.");
     }
-    zip.file(staticFiles.webIconFileName, iconAsset.buffer);
+    const webIconAssets = await createWebIconAssets({
+      sourceBytes: iconAsset.buffer,
+      variants: staticFiles.webIconFiles,
+    });
+    webIconAssets.forEach(({ fileName, bytes }) => {
+      zip.file(fileName, bytes);
+    });
   }
   const zipBytes = await zip.generateAsync({
     type: "uint8array",

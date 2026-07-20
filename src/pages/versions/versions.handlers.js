@@ -389,6 +389,16 @@ const requirePlatformDetailsForExport = async ({
   let applicationInfo;
   try {
     applicationInfo = await projectService.getCurrentPlatformDetails(platform);
+    if (platform === "web" && applicationInfo) {
+      const projectInfo = await projectService.getCurrentProjectInfo();
+      // TODO: Restore Web-specific name and icon overrides if separate Web
+      // branding returns. Web currently uses project-owned branding.
+      applicationInfo = {
+        ...applicationInfo,
+        applicationName: projectInfo.name,
+        iconFileId: projectInfo.iconFileId,
+      };
+    }
   } catch {
     appService.showAlert({
       message:
@@ -553,9 +563,10 @@ const createVersionExportData = async ({
     return entry;
   });
 
-  const iconFileId = applicationInfo
-    ? applicationInfo.iconFileId
-    : projectInfo.iconFileId;
+  const usesProjectBranding = platform === "web";
+  const iconFileId = usesProjectBranding
+    ? projectInfo.iconFileId
+    : (applicationInfo?.iconFileId ?? projectInfo.iconFileId);
   if (iconFileId && !fileEntries.some((entry) => entry.fileId === iconFileId)) {
     fileEntries.push({
       fileId: iconFileId,
@@ -568,7 +579,9 @@ const createVersionExportData = async ({
       platform === "web"
         ? applicationInfo.applicationIdentifier
         : projectInfo.namespace,
-    title: getProjectExportTitle({ projectInfo, applicationInfo }),
+    title: usesProjectBranding
+      ? projectInfo.name
+      : getProjectExportTitle({ projectInfo, applicationInfo }),
     iconFileId,
   };
   if (platform === "web") {

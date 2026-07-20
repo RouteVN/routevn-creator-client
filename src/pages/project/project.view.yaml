@@ -81,7 +81,7 @@ template:
                   - rtgl-view#editDialogIcon slot=project-icon-edit w=120 h=120 ah=c av=c bw=xs bc=bo br=md cur=pointer:
                       - rtgl-text c=mu-fg ta=c: ${i18n.projectPage.clickToUpload}
   - rtgl-dropdown-menu#projectActionMenu :items=${projectActionMenu.items} x=${projectActionMenu.x} y=${projectActionMenu.y} ?open=${projectActionMenu.isOpen}: null
-  - rvn-square-image-crop-dialog#editIconCropDialog :open=${isEditIconCropDialogOpen} :file=${editIconCropFile}: null
+  - rvn-square-image-crop-dialog#editIconCropDialog :open=${isEditIconCropDialogOpen} :file=${editIconCropFile} :outputSize=${512}: null
   - $if isProjectExportLoading:
       - 'rtgl-view pos=fix edge=f z=2050 d=v ah=c av=c g=sm style="min-width: 0; min-height: 0; pointer-events: auto; background: rgba(0, 0, 0, 0.42);"':
           - rtgl-view bgc=su bc=bo bw=xs br=md shadow=md ph=lg pv=md:

@@ -8,6 +8,9 @@ propsSchema:
     file:
       type: object
       description: The selected source image file to crop
+    outputSize:
+      type: number
+      description: Optional fixed pixel size for the cropped square output
     title:
       type: string
       description: Optional title to display above the cropper

@@ -17,6 +17,6 @@ template:
           - rtgl-view g=xs:
               - rtgl-text s=md: ${title}
               - rtgl-text s=sm c=mu-fg: ${description}
-          - rvn-square-image-cropper#cropper :file=${file}: null
+          - rvn-square-image-cropper#cropper :file=${file} :outputSize=${outputSize}: null
           - rtgl-view d=h w=f ah=e:
               - rtgl-button#confirmButton v=pr ?disabled=${!isCropReady}: ${confirmLabel}

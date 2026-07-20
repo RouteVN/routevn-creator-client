@@ -5,7 +5,9 @@ import {
   BUNDLE_FORMAT_VERSION_V4,
   BUNDLE_HEADER_SIZE,
   BUNDLE_PLAYER_INDEX_HTML,
-  BUNDLE_WEB_ICON_FILE_NAME,
+  BUNDLE_WEB_ICON_192_FILE_NAME,
+  BUNDLE_WEB_ICON_512_FILE_NAME,
+  BUNDLE_WEB_ICON_FILES,
   createBundleInstructions,
   createBundlePlayerIndexHtml,
   createBundleResult,
@@ -186,7 +188,7 @@ describe("projectExportService", () => {
         manifestJson: expect.any(String),
         mainJs: undefined,
         webIconFileId: "icon-1",
-        webIconFileName: BUNDLE_WEB_ICON_FILE_NAME,
+        webIconFiles: BUNDLE_WEB_ICON_FILES,
       },
       getCurrentReference,
       getFileContent,
@@ -370,7 +372,7 @@ describe("projectExportService", () => {
     const indexHtml = createBundlePlayerIndexHtml({
       title: project.title,
       ...project.web,
-      iconFileName: BUNDLE_WEB_ICON_FILE_NAME,
+      iconFileName512: BUNDLE_WEB_ICON_512_FILE_NAME,
     });
     expect(indexHtml).toContain("<title>Project One</title>");
     expect(indexHtml).toContain(
@@ -384,7 +386,7 @@ describe("projectExportService", () => {
     );
     expect(indexHtml).toContain("background: #000000;");
     expect(indexHtml).toContain(
-      `<link rel="icon" href="./${BUNDLE_WEB_ICON_FILE_NAME}" />`,
+      `<link rel="icon" href="./${BUNDLE_WEB_ICON_512_FILE_NAME}" />`,
     );
 
     expect(
@@ -392,7 +394,8 @@ describe("projectExportService", () => {
         createBundleWebManifest({
           title: project.title,
           ...project.web,
-          iconFileName: BUNDLE_WEB_ICON_FILE_NAME,
+          iconFileName192: BUNDLE_WEB_ICON_192_FILE_NAME,
+          iconFileName512: BUNDLE_WEB_ICON_512_FILE_NAME,
         }),
       ),
     ).toMatchObject({
@@ -403,7 +406,14 @@ describe("projectExportService", () => {
       background_color: "#000000",
       icons: [
         {
-          src: `./${BUNDLE_WEB_ICON_FILE_NAME}`,
+          src: `./${BUNDLE_WEB_ICON_192_FILE_NAME}`,
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: `./${BUNDLE_WEB_ICON_512_FILE_NAME}`,
+          sizes: "512x512",
           type: "image/png",
           purpose: "any",
         },
