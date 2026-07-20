@@ -11,21 +11,6 @@ describe("platform details validation", () => {
     ).toEqual({ valid: false, code: "application-name-required" });
   });
 
-  it("rejects Web colors that no longer exist", () => {
-    expect(
-      validatePlatformDetails({
-        platform: "web",
-        applicationInfo: {
-          applicationName: "Project One",
-          applicationIdentifier: "namespace-1",
-          themeColorId: "color-missing",
-          backgroundColorId: "",
-        },
-        availableColorIds: new Set(["color-theme"]),
-      }),
-    ).toEqual({ valid: false, code: "theme-color-not-found" });
-  });
-
   it("allows an empty Windows identifier and validates one when provided", () => {
     expect(
       validatePlatformDetails({

@@ -133,8 +133,6 @@ describe("projectRepositoryService platform details", () => {
       applicationName: "Project One",
       applicationIdentifier: "",
       iconFileId: "project-icon-1",
-      themeColorId: "",
-      backgroundColorId: "",
     });
     await expect(
       harness.service.getCurrentPlatformDetailsDefaults("macos"),
@@ -151,8 +149,6 @@ describe("projectRepositoryService platform details", () => {
       applicationName: "Web Release",
       applicationIdentifier: "",
       iconFileId: "project-icon-1",
-      themeColorId: "",
-      backgroundColorId: "",
     });
     await expect(
       harness.service.createCurrentPlatformDetails("windows"),
@@ -230,6 +226,12 @@ describe("projectRepositoryService platform details", () => {
     });
     expect(harness.getPlatformDetails("web")).not.toHaveProperty("shortName");
     expect(harness.getPlatformDetails("web")).not.toHaveProperty("description");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty(
+      "themeColorId",
+    );
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty(
+      "backgroundColorId",
+    );
     expect(harness.store.app.set).toHaveBeenCalledWith(
       "platformDetails.web",
       expect.objectContaining({
@@ -246,8 +248,8 @@ describe("projectRepositoryService platform details", () => {
           applicationName: "Web Project",
           applicationIdentifier: "com.example.web-project",
           iconFileId: "web-icon-1",
-          themeColorId: "",
-          backgroundColorId: "",
+          themeColorId: "theme-color-1",
+          backgroundColorId: "background-color-1",
         },
       },
     });
@@ -259,6 +261,12 @@ describe("projectRepositoryService platform details", () => {
     });
     expect(harness.getPlatformDetails("web")).not.toHaveProperty("shortName");
     expect(harness.getPlatformDetails("web")).not.toHaveProperty("description");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty(
+      "themeColorId",
+    );
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty(
+      "backgroundColorId",
+    );
 
     await harness.service.updateCurrentPlatformDetails("web", {
       applicationIdentifier: "com.example.web-project-two",
@@ -361,8 +369,7 @@ describe("projectRepositoryService platform details", () => {
     ]);
 
     await harness.service.updateCurrentPlatformDetails("web", {
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
+      applicationName: "Web Project",
     });
 
     await harness.service.updateCurrentPlatformDetails("windows", {
@@ -383,12 +390,8 @@ describe("projectRepositoryService platform details", () => {
       copyright: "Copyright Example Publisher",
     });
     expect(harness.getPlatformDetails("web").applicationName).toBe(
-      "Project One",
+      "Web Project",
     );
-    expect(harness.getPlatformDetails("web")).toMatchObject({
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
-    });
     expect(harness.getPlatformDetails("macos").applicationName).toBe(
       "Project One",
     );

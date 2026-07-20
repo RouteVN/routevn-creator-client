@@ -185,11 +185,6 @@ export const createProjectRepositoryService = ({
       iconFileId: sourceInfo?.iconFileId ?? null,
     };
 
-    if (platform === "web") {
-      platformDetails.themeColorId = "";
-      platformDetails.backgroundColorId = "";
-    }
-
     if (platform === "windows") {
       platformDetails.publisher = "";
       platformDetails.description = "";
@@ -208,11 +203,6 @@ export const createProjectRepositoryService = ({
 
   const normalizePlatformDetails = (platform, platformDetails) => {
     const normalized = createPlatformDetails(platform, platformDetails);
-
-    if (platform === "web") {
-      normalized.themeColorId = platformDetails?.themeColorId ?? "";
-      normalized.backgroundColorId = platformDetails?.backgroundColorId ?? "";
-    }
 
     if (platform === "windows") {
       normalized.publisher = platformDetails?.publisher ?? "";
@@ -765,7 +755,9 @@ export const createProjectRepositoryService = ({
     if (
       platform === "web" &&
       (Object.hasOwn(storedPlatformDetails, "shortName") ||
-        Object.hasOwn(storedPlatformDetails, "description"))
+        Object.hasOwn(storedPlatformDetails, "description") ||
+        Object.hasOwn(storedPlatformDetails, "themeColorId") ||
+        Object.hasOwn(storedPlatformDetails, "backgroundColorId"))
     ) {
       shouldPersist = true;
     }

@@ -66,8 +66,6 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
         };
         if (platform === "web") {
           applicationInfo.applicationIdentifier = "web-project-one";
-          applicationInfo.themeColorId = "";
-          applicationInfo.backgroundColorId = "";
         }
         if (platform === "windows") {
           applicationInfo.applicationIdentifier = "";
@@ -354,32 +352,6 @@ describe("versions.handleDownloadZipClick", () => {
     });
   });
 
-  it("stops before the save dialog when Web platform details uses a removed color", async () => {
-    const repositoryState = structuredClone(initialProjectData);
-    const repository = {
-      loadState: vi.fn(async () => repositoryState),
-      getState: vi.fn(() => repositoryState),
-    };
-    const deps = createDeps({ repository });
-    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
-      applicationName: "Project One",
-      applicationIdentifier: "web-project-one",
-      iconFileId: "icon-1",
-      themeColorId: "color-removed",
-      backgroundColorId: "",
-    });
-
-    await handleDownloadZipClick(deps, createVersionClickPayload());
-
-    expect(
-      deps.projectService.promptDistributionZipPath,
-    ).not.toHaveBeenCalled();
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.versionsPage.platformDetailsThemeColorNotFound,
-      title: EN_I18N.versionsPage.warningTitle,
-    });
-  });
-
   it("stops before the save dialog when Web application identifier is missing", async () => {
     const repositoryState = structuredClone(initialProjectData);
     const repository = {
@@ -391,8 +363,6 @@ describe("versions.handleDownloadZipClick", () => {
       applicationName: "Project One",
       applicationIdentifier: "",
       iconFileId: "icon-1",
-      themeColorId: "",
-      backgroundColorId: "",
     });
 
     await handleDownloadZipClick(deps, createVersionClickPayload());
@@ -417,8 +387,6 @@ describe("versions.handleDownloadZipClick", () => {
       applicationName: "Project One",
       applicationIdentifier: "com.yourteam/yourvn",
       iconFileId: "icon-1",
-      themeColorId: "",
-      backgroundColorId: "",
     });
 
     await handleDownloadZipClick(deps, createVersionClickPayload());
@@ -460,8 +428,6 @@ describe("versions.handleDownloadZipClick", () => {
       applicationName: "Web Edition",
       applicationIdentifier: "com.example.web-edition",
       iconFileId: "web-icon",
-      themeColorId: "",
-      backgroundColorId: "",
     });
 
     await handleDownloadZipClick(deps, createVersionClickPayload());
@@ -603,25 +569,8 @@ describe("versions.handleDownloadZipClick", () => {
     ]);
   });
 
-  it("uses Web release metadata in the exported bundle", async () => {
+  it("uses Web application metadata in the exported bundle", async () => {
     const repositoryState = structuredClone(initialProjectData);
-    repositoryState.colors = createTreeCollection(
-      {
-        "color-theme": {
-          id: "color-theme",
-          type: "color",
-          name: "Ocean Blue",
-          hex: "#112233",
-        },
-        "color-background": {
-          id: "color-background",
-          type: "color",
-          name: "Night",
-          hex: "#000000",
-        },
-      },
-      [{ id: "color-theme" }, { id: "color-background" }],
-    );
     const repository = {
       loadState: vi.fn(async () => structuredClone(repositoryState)),
       getState: vi.fn(() => structuredClone(repositoryState)),
@@ -631,8 +580,6 @@ describe("versions.handleDownloadZipClick", () => {
       applicationName: "Web Edition",
       applicationIdentifier: "com.example.web-edition",
       iconFileId: "web-icon",
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
     });
 
     await chooseAndConfirmExport(handleDownloadZipClick, deps);
@@ -644,10 +591,6 @@ describe("versions.handleDownloadZipClick", () => {
       namespace: "com.example.web-edition",
       title: "Web Edition",
       iconFileId: "icon-1",
-      web: {
-        themeColor: "#112233",
-        backgroundColor: "#000000",
-      },
     });
     expect(
       deps.projectService.createDistributionZipStreamed.mock.calls[0][1],

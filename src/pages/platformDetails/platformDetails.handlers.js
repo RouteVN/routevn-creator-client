@@ -1,5 +1,3 @@
-import { tap } from "rxjs";
-import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { validatePlatformDetails } from "../../internal/platformDetailsValidation.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
@@ -12,21 +10,8 @@ const ICON_VALIDATIONS = [
 ];
 
 export const handleBeforeMount = (deps) => {
-  const { projectService, render, store, uiConfig } = deps;
+  const { store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
-
-  const subscription = createProjectStateStream({ projectService })
-    .pipe(
-      tap(({ repositoryState }) => {
-        store.setColorsData({ colorsData: repositoryState?.colors });
-        render();
-      }),
-    )
-    .subscribe();
-
-  return () => {
-    subscription.unsubscribe();
-  };
 };
 
 export const handleAfterMount = async (deps) => {
@@ -133,11 +118,6 @@ const createPlatformDetailsPatch = ({ platform, values, iconFileId }) => {
 
   patch.applicationIdentifier = values.applicationIdentifier.trim();
 
-  if (platform === "web") {
-    patch.themeColorId = (values.themeColorId ?? "").trim();
-    patch.backgroundColorId = (values.backgroundColorId ?? "").trim();
-  }
-
   if (platform === "windows" || platform === "macos") {
     patch.publisher = values.publisher.trim();
     patch.description = values.description.trim();
@@ -160,12 +140,6 @@ const getValidationMessage = (copy, code) => {
   }
   if (code === "macos-icon-required") {
     return copy.macosIconRequired;
-  }
-  if (code === "theme-color-not-found") {
-    return copy.webThemeColorNotFound;
-  }
-  if (code === "background-color-not-found") {
-    return copy.webBackgroundColorNotFound;
   }
   if (code === "web-identifier-required") {
     return copy.webApplicationIdentifierRequired;
@@ -202,7 +176,6 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
   const validation = validatePlatformDetails({
     platform,
     applicationInfo: patch,
-    availableColorIds: platform === "web" ? store.selectColorIds() : undefined,
   });
   if (!validation.valid) {
     appService.showAlert({

@@ -353,23 +353,18 @@ describe("projectExportService", () => {
     });
   });
 
-  it("stores Web release metadata and renders it into Web export files", () => {
+  it("renders Web application metadata with fixed colors", () => {
     const project = {
       namespace: "project-one",
       title: "Project One",
       iconFileId: "icon-1",
-      web: {
-        themeColor: "#112233",
-        backgroundColor: "#000000",
-      },
     };
     const instructions = createBundleInstructions({ projectData: {}, project });
 
-    expect(instructions.bundleMetadata.project.web).toEqual(project.web);
+    expect(instructions.bundleMetadata.project).toEqual(project);
 
     const indexHtml = createBundlePlayerIndexHtml({
       title: project.title,
-      ...project.web,
       iconFileName512: BUNDLE_WEB_ICON_512_FILE_NAME,
     });
     expect(indexHtml).toContain("<title>Project One</title>");
@@ -378,7 +373,7 @@ describe("projectExportService", () => {
     );
     expect(indexHtml).not.toContain('<meta name="description"');
     expect(indexHtml).toContain(
-      '<meta name="theme-color" content="#112233" />',
+      '<meta name="theme-color" content="#000000" />',
     );
     expect(indexHtml).toContain("background: #000000;");
     expect(indexHtml).toContain(
@@ -388,7 +383,6 @@ describe("projectExportService", () => {
     const manifest = JSON.parse(
       createBundleWebManifest({
         title: project.title,
-        ...project.web,
         iconFileName192: BUNDLE_WEB_ICON_192_FILE_NAME,
         iconFileName512: BUNDLE_WEB_ICON_512_FILE_NAME,
       }),
@@ -396,7 +390,7 @@ describe("projectExportService", () => {
     expect(manifest).toMatchObject({
       name: "Project One",
       short_name: "Project One",
-      theme_color: "#112233",
+      theme_color: "#000000",
       background_color: "#000000",
       icons: [
         {

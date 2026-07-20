@@ -314,8 +314,8 @@ const normalizeWebApplicationMetadata = (web = {}) => {
   const title = web.title?.trim() || "RouteVN Player";
   return {
     title,
-    themeColor: web.themeColor?.trim() || "#000000",
-    backgroundColor: web.backgroundColor?.trim() || "#000000",
+    themeColor: "#000000",
+    backgroundColor: "#000000",
     iconFileName192: web.iconFileName192?.trim() ?? "",
     iconFileName512:
       web.iconFileName512?.trim() || web.iconFileName?.trim() || "",
@@ -556,13 +556,6 @@ export const createBundleInstructions = ({ projectData, bundler, project }) => {
     title: projectTitle,
     iconFileId: project?.iconFileId ?? "",
   };
-  if (project?.web) {
-    projectMetadata.web = {
-      themeColor: project.web.themeColor ?? "",
-      backgroundColor: project.web.backgroundColor ?? "",
-    };
-  }
-
   return {
     projectData,
     bundleMetadata: {
@@ -1052,8 +1045,6 @@ const getBundleStaticFiles = async (projectData) => {
   const projectMetadata = projectData?.bundleMetadata?.project ?? {};
   const webMetadata = {
     title: projectMetadata.title,
-    themeColor: projectMetadata.web?.themeColor,
-    backgroundColor: projectMetadata.web?.backgroundColor,
     iconFileName192: projectMetadata.iconFileId
       ? BUNDLE_WEB_ICON_192_FILE_NAME
       : undefined,

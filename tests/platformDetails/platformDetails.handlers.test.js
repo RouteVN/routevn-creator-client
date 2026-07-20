@@ -18,7 +18,6 @@ const createDeps = () => ({
     createCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetailsDefaults: vi.fn(),
-    subscribeProjectState: vi.fn(),
     updateCurrentPlatformDetails: vi.fn(),
     uploadFiles: vi.fn(),
   },
@@ -41,47 +40,28 @@ const createDeps = () => ({
       mode: "edit",
       platform: "windows",
     })),
-    selectColorIds: vi.fn(() => new Set(["color-theme", "color-background"])),
     selectPlatformEditDefaultValues: vi.fn(() => ({
       applicationName: "Project One",
     })),
     selectPlatformEditIconFileId: vi.fn(() => "windows-icon-1"),
     selectSelectedPlatform: vi.fn(() => "windows"),
-    setColorsData: vi.fn(),
     setPlatformApplicationInfo: vi.fn(),
     setPlatformEditIconFileId: vi.fn(),
     setSelectedPlatform: vi.fn(),
     setUiConfig: vi.fn(),
   },
+  uiConfig: { id: "touch" },
 });
 
 describe("platformDetails handlers", () => {
-  it("keeps project color choices synchronized", () => {
+  it("configures the page before mount", () => {
     const deps = createDeps();
-    const colorsData = {
-      items: {
-        "color-theme": {
-          id: "color-theme",
-          type: "color",
-          name: "Ocean Blue",
-          hex: "#112233",
-        },
-      },
-      tree: [{ id: "color-theme" }],
-    };
-    const unsubscribe = vi.fn();
-    deps.projectService.subscribeProjectState.mockImplementation((listener) => {
-      listener({ repositoryState: { colors: colorsData } });
-      return unsubscribe;
+
+    handleBeforeMount(deps);
+
+    expect(deps.store.setUiConfig).toHaveBeenCalledWith({
+      uiConfig: { id: "touch" },
     });
-
-    const cleanup = handleBeforeMount(deps);
-
-    expect(deps.store.setColorsData).toHaveBeenCalledWith({ colorsData });
-    expect(deps.render).toHaveBeenCalledTimes(1);
-
-    cleanup();
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the page empty when no platform has been created", async () => {
@@ -133,8 +113,6 @@ describe("platformDetails handlers", () => {
       applicationName: "Project One",
       applicationIdentifier: "",
       iconFileId: "project-icon-1",
-      themeColorId: "",
-      backgroundColorId: "",
     };
     deps.projectService.getCurrentPlatformDetailsDefaults.mockResolvedValue(
       applicationInfo,
@@ -277,8 +255,6 @@ describe("platformDetails handlers", () => {
       applicationName: "Web Project",
       applicationIdentifier: "com.example.web-project",
       iconFileId: "web-icon-1",
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
     };
     deps.projectService.createCurrentPlatformDetails.mockResolvedValue(
       applicationInfo,
@@ -291,8 +267,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: " Web Project ",
             applicationIdentifier: " com.example.web-project ",
-            themeColorId: " color-theme ",
-            backgroundColorId: " color-background ",
           },
         },
       },
@@ -310,43 +284,6 @@ describe("platformDetails handlers", () => {
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: EN_I18N.platformDetailsPage.platformDetailsCreatedMessage,
     });
-  });
-
-  it("clears optional Web colors when the form omits their values", async () => {
-    const deps = createDeps();
-    deps.store.selectPlatformDialogState.mockReturnValue({
-      mode: "edit",
-      platform: "web",
-    });
-    deps.store.selectPlatformEditIconFileId.mockReturnValue("web-icon-1");
-    deps.projectService.updateCurrentPlatformDetails.mockImplementation(
-      async (_platform, patch) => patch,
-    );
-
-    await handlePlatformEditFormAction(deps, {
-      _event: {
-        detail: {
-          actionId: "submit",
-          values: {
-            applicationName: "Web Project",
-            applicationIdentifier: "com.example.web-project",
-            themeColorId: undefined,
-            backgroundColorId: undefined,
-          },
-        },
-      },
-    });
-
-    expect(
-      deps.projectService.updateCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", {
-      applicationName: "Web Project",
-      applicationIdentifier: "com.example.web-project",
-      iconFileId: "web-icon-1",
-      themeColorId: "",
-      backgroundColorId: "",
-    });
-    expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
 
   it("does not create macOS platform details without a bundle identifier", async () => {
@@ -395,8 +332,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: "Project One",
             applicationIdentifier: "",
-            themeColorId: "",
-            backgroundColorId: "",
           },
         },
       },
@@ -425,8 +360,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: "Project One",
             applicationIdentifier: "com.yourteam/yourvn",
-            themeColorId: "",
-            backgroundColorId: "",
           },
         },
       },
@@ -438,37 +371,6 @@ describe("platformDetails handlers", () => {
     });
     expect(
       deps.projectService.createCurrentPlatformDetails,
-    ).not.toHaveBeenCalled();
-  });
-
-  it("does not save Web platform details with a removed project color", async () => {
-    const deps = createDeps();
-    deps.store.selectPlatformDialogState.mockReturnValue({
-      mode: "edit",
-      platform: "web",
-    });
-    deps.store.selectColorIds.mockReturnValue(new Set());
-
-    await handlePlatformEditFormAction(deps, {
-      _event: {
-        detail: {
-          actionId: "submit",
-          values: {
-            applicationName: "Project One",
-            applicationIdentifier: "com.example.web-project",
-            themeColorId: "color-removed",
-            backgroundColorId: "",
-          },
-        },
-      },
-    });
-
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.platformDetailsPage.webThemeColorNotFound,
-      title: EN_I18N.platformDetailsPage.warningTitle,
-    });
-    expect(
-      deps.projectService.updateCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
   });
 

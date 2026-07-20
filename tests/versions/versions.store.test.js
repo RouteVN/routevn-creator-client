@@ -101,11 +101,7 @@ describe("versions store export actions", () => {
           applicationName: "Web Edition",
           applicationIdentifier: "com.example.web-edition",
           iconFileId: "web-icon",
-          themeColorId: "color-theme",
-          backgroundColorId: "color-background",
         },
-        themeColor: "Accent (#112233)",
-        backgroundColor: "Dark (#000000)",
       },
     );
 
@@ -122,12 +118,6 @@ describe("versions store export actions", () => {
           type: "text",
           label: "Application Identifier",
           value: "com.example.web-edition",
-        },
-        { type: "text", label: "Theme Color", value: "Accent (#112233)" },
-        {
-          type: "text",
-          label: "Background Color",
-          value: "Dark (#000000)",
         },
       ]),
     );
