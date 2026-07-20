@@ -79,9 +79,9 @@ const getPlatformTabLabel = (platform, copy) => {
 const buildPlatformDetailFields = (platform, applicationInfo, copy) => {
   const fields = [
     {
-      type: "text",
+      type: "slot",
+      slot: "platform-application-name",
       label: copy.applicationNameLabel,
-      value: applicationInfo.applicationName,
     },
     {
       type: "slot",
@@ -91,12 +91,12 @@ const buildPlatformDetailFields = (platform, applicationInfo, copy) => {
   ];
 
   fields.push({
-    type: "text",
+    type: "slot",
+    slot: "platform-application-identifier",
     label:
       platform === "macos"
         ? copy.macosApplicationIdentifierLabel
         : copy.applicationIdentifierLabel,
-    value: applicationInfo.applicationIdentifier,
   });
 
   if (platform === "windows" || platform === "macos") {
@@ -301,6 +301,9 @@ export const selectViewData = ({ state, i18n }) => {
         )
       : [],
     platformApplicationIconFileId: selectedPlatformInfo?.iconFileId,
+    platformApplicationIdentifier:
+      selectedPlatformInfo?.applicationIdentifier ?? "",
+    platformApplicationName: selectedPlatformInfo?.applicationName ?? "",
     platformEditButtonLabel: copy.editPlatformDetailsButtonLabel,
     platformEditDefaultValues: state.platformEditDefaultValues,
     platformEditForm: formPlatform

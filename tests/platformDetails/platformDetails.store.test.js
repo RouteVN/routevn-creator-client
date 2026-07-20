@@ -144,10 +144,23 @@ describe("platformDetails.store", () => {
           EN_I18N.platformDetailsPage.webApplicationIdentifierDescription,
       }),
     );
-    expect(viewData.platformDetailFields).toContainEqual({
-      type: "text",
-      label: "Application Identifier",
-      value: "com.example.web-project",
+    expect(viewData.platformDetailFields).toEqual(
+      expect.arrayContaining([
+        {
+          type: "slot",
+          slot: "platform-application-name",
+          label: "Application Name",
+        },
+        {
+          type: "slot",
+          slot: "platform-application-identifier",
+          label: "Application Identifier",
+        },
+      ]),
+    );
+    expect(viewData).toMatchObject({
+      platformApplicationName: "Web Project",
+      platformApplicationIdentifier: "com.example.web-project",
     });
     expect(viewData.platformEditForm.fields).toHaveLength(3);
     expect(viewData.platformEditForm.actions.buttons).toEqual([

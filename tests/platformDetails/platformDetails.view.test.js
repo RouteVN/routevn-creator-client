@@ -11,9 +11,7 @@ const platformDetailsView = readFileSync(
 
 describe("platformDetails view", () => {
   it("shows the Add Platform label in the add button", () => {
-    expect(platformDetailsView).toContain(
-      "': ${addPlatformButtonLabel}",
-    );
+    expect(platformDetailsView).toContain("': ${addPlatformButtonLabel}");
     expect(platformDetailsView).not.toContain(
       "rtgl-button#addPlatformButton v=pr sq",
     );
@@ -23,8 +21,21 @@ describe("platformDetails view", () => {
     expect(platformDetailsView).toContain(
       "button#platformEditDialogIcon type=button",
     );
+    expect(platformDetailsView).toContain('aria-label="${clickToUploadLabel}"');
+  });
+
+  it("opens editing from the application name and identifier details", () => {
     expect(platformDetailsView).toContain(
-      'aria-label="${clickToUploadLabel}"',
+      "rtgl-view#platformApplicationName slot=platform-application-name cur=pointer",
+    );
+    expect(platformDetailsView).toContain(
+      "rtgl-view#platformApplicationIdentifier slot=platform-application-identifier cur=pointer",
+    );
+    expect(platformDetailsView).toContain(
+      "platformApplicationName:\n    eventListeners:\n      click:\n        handler: handlePlatformEditButtonClick",
+    );
+    expect(platformDetailsView).toContain(
+      "platformApplicationIdentifier:\n    eventListeners:\n      click:\n        handler: handlePlatformEditButtonClick",
     );
   });
 });
