@@ -298,6 +298,10 @@ describe("layoutEditor.store", () => {
         "text-ref-dialogue-line-character-name",
         "NVL Line Speaker Name",
       ],
+      "nvl-line-text-legacy": [
+        "text-ref-dialogue-line-content",
+        "NVL Line Text",
+      ],
       "nvl-line-text": ["text-revealing", "NVL Line Text"],
       "save-item": ["container-ref-save-load-slot", "Save Item"],
       "save-item-date": ["text-ref-save-load-slot-date", "Save Item Date"],

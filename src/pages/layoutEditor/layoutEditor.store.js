@@ -107,6 +107,10 @@ const ITEM_ROLE_LABELS = Object.freeze({
     copyKey: "nvlLineSpeakerNameElementLabel",
     fallback: "NVL Line Speaker Name",
   },
+  "text-ref-dialogue-line-content": {
+    copyKey: "nvlLineTextElementLabel",
+    fallback: "NVL Line Text",
+  },
   "text-ref-save-load-slot-date": {
     copyKey: "saveItemDateElementLabel",
     fallback: "Save Item Date",
