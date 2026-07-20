@@ -1029,11 +1029,12 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
 };
 
 export const handleWhiteboardItemSelected = (deps, payload) => {
-  const { store, render, appService } = deps;
+  const { store, render, refs, appService } = deps;
   const { itemId } = payload._event.detail;
 
-  // Update selected item for detail panel
+  store.setSelectedFolderId({ folderId: undefined });
   setSelectedScene({ store, appService, sceneId: itemId });
+  refs.fileexplorer?.selectItem?.({ itemId });
   render();
 };
 
@@ -1059,7 +1060,7 @@ export const handleAddSceneClick = (deps) => {
 };
 
 export const handleWhiteboardClick = (deps, payload) => {
-  const { store } = deps;
+  const { store, render, refs, appService } = deps;
   const isWaitingForTransform = store.selectIsWaitingForTransform();
 
   if (isWaitingForTransform) {
@@ -1071,7 +1072,14 @@ export const handleWhiteboardClick = (deps, payload) => {
       whiteboardPosition: { x: whiteboardX, y: whiteboardY },
       isWaitingForTransform: false,
     });
+    return;
   }
+
+  store.setSelectedFolderId({ folderId: undefined });
+  setSelectedScene({ store, appService, sceneId: undefined });
+  refs.fileexplorer?.clearSelection?.();
+  render();
+  focusFileExplorerKeyboardScope(deps);
 };
 
 export const handleWhiteboardCanvasContextMenu = (deps, payload) => {

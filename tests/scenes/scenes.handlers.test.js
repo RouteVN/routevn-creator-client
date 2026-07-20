@@ -6,8 +6,10 @@ import {
   handleMobileFileExplorerClose,
   handleMobileFileExplorerOpen,
   handleSceneFormAction,
+  handleWhiteboardClick,
   handleWhiteboardItemDelete,
   handleWhiteboardItemDoubleClick,
+  handleWhiteboardItemSelected,
   handleWhiteboardPanChanged,
   handleWhiteboardZoomChanged,
 } from "../../src/pages/scenes/scenes.handlers.js";
@@ -101,6 +103,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       openMobileFileExplorer: vi.fn(),
       closeMobileFileExplorer: vi.fn(),
       selectIsMobileFileExplorerOpen: vi.fn(() => false),
+      selectIsWaitingForTransform: vi.fn(() => false),
       selectShowSceneForm: vi.fn(() => true),
       resetSceneForm: vi.fn(),
       addWhiteboardItem: vi.fn(),
@@ -120,6 +123,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
         },
       },
       fileexplorer: {
+        clearSelection: vi.fn(),
         selectItem: vi.fn(),
       },
     },
@@ -323,6 +327,61 @@ describe("scenes.handlers config keys", () => {
       undefined,
     );
     expect(deps.refs.whiteboard.ensureItemVisible).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("syncs file explorer selection after clicking a whiteboard scene", () => {
+    const deps = createDeps();
+
+    handleWhiteboardItemSelected(deps, {
+      _event: {
+        detail: {
+          itemId: "scene-1",
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedFolderId).toHaveBeenCalledWith({
+      folderId: undefined,
+    });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "scene-1",
+    });
+    expect(deps.appService.setUserConfig).toHaveBeenCalledWith(
+      "scenesMap.selectedSceneIdByProject.project-1",
+      "scene-1",
+    );
+    expect(deps.refs.fileexplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "scene-1",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears scene and explorer selection after clicking empty whiteboard space", () => {
+    const deps = createDeps();
+
+    handleWhiteboardClick(deps, {
+      _event: {
+        detail: {
+          formX: 100,
+          formY: 200,
+          whiteboardX: 300,
+          whiteboardY: 400,
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedFolderId).toHaveBeenCalledWith({
+      folderId: undefined,
+    });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(deps.appService.setUserConfig).toHaveBeenCalledWith(
+      "scenesMap.selectedSceneIdByProject.project-1",
+      undefined,
+    );
+    expect(deps.refs.fileexplorer.clearSelection).toHaveBeenCalledTimes(1);
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
