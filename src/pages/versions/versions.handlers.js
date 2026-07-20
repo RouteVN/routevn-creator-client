@@ -24,13 +24,21 @@ const syncVersionFormValues = ({ deps, values } = {}) => {
 };
 
 const refreshVersionsData = async (deps) => {
-  const { store, render, projectService, appService } = deps;
+  const { store, render, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
   const { p: projectId } = appService.getPayload();
 
-  await projectService.ensureRepository();
-  const versions = await projectService.loadVersionsFromProject(projectId);
+  try {
+    await projectService.ensureRepository();
+    const versions = await projectService.loadVersionsFromProject(projectId);
 
-  store.setVersions({ versions });
+    store.setVersions({ versions });
+  } catch {
+    store.setVersionsLoading({ loading: false });
+    appService.showToast({
+      message: copy.failedLoadVersions ?? "Failed to load versions.",
+    });
+  }
   render();
 };
 

@@ -130,6 +130,10 @@ export const setProjects = ({ state }, { projects } = {}) => {
   state.isProjectsLoading = false;
 };
 
+export const setProjectsLoading = ({ state }, { loading } = {}) => {
+  state.isProjectsLoading = loading;
+};
+
 export const addProject = ({ state }, { project } = {}) => {
   if (!project?.id) {
     return;

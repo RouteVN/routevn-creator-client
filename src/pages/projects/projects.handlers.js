@@ -146,8 +146,15 @@ export const handleAfterMount = async (deps) => {
         })
       : Promise.resolve();
 
-  const projects = await projectsPromise;
-  store.setProjects({ projects: projects });
+  try {
+    const projects = await projectsPromise;
+    store.setProjects({ projects });
+  } catch {
+    store.setProjectsLoading({ loading: false });
+    appService.showToast({
+      message: copy.failedLoadProjects,
+    });
+  }
   await cloudProjectsPromise;
   render();
 };

@@ -23,6 +23,7 @@ const createDb = (initialEntries = []) => {
 const createService = (
   initialEntries = [],
   {
+    getCurrentProjectId = () => "",
     projectService = {
       getProjectInfoByPath: vi.fn(async () => {
         throw new Error("unexpected getProjectInfoByPath call");
@@ -43,7 +44,7 @@ const createService = (
   const db = createDb(initialEntries);
   const service = createProjectEntriesService({
     db,
-    getCurrentProjectId: () => "",
+    getCurrentProjectId,
     projectService,
     platformAdapter,
   });
@@ -101,6 +102,49 @@ describe("projectEntriesService", () => {
         name: "Project One Updated",
       }),
     ]);
+  });
+
+  it("keeps cached project icons alive when refreshing the current project entry", async () => {
+    const cachedIconCleanup = vi.fn();
+    const currentIconCleanup = vi.fn();
+    const loadProjectIcon = vi
+      .fn()
+      .mockResolvedValueOnce({
+        url: "blob:cached-icon",
+        cleanup: cachedIconCleanup,
+      })
+      .mockResolvedValueOnce({
+        url: "blob:current-icon",
+        cleanup: currentIconCleanup,
+      });
+    const { service } = createService(
+      [
+        {
+          id: "project-1",
+          projectPath: "/projects/project-one",
+          name: "Project One",
+          language: "en",
+          iconFileId: "icon-1",
+        },
+      ],
+      {
+        getCurrentProjectId: () => "project-1",
+        platformAdapter: {
+          mapProjectEntryToProject: (entry) => ({
+            projectPath: entry.projectPath,
+          }),
+          loadProjectIcon,
+        },
+      },
+    );
+
+    await service.loadAllProjects();
+    const currentProject = await service.refreshCurrentProjectEntry();
+
+    expect(currentProject.iconUrl).toBe("blob:current-icon");
+    expect(service.getCachedProjects()[0].iconUrl).toBe("blob:cached-icon");
+    expect(cachedIconCleanup).not.toHaveBeenCalled();
+    expect(currentIconCleanup).not.toHaveBeenCalled();
   });
 
   it("updates project metadata caches without writing the source database again", async () => {

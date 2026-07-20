@@ -503,6 +503,10 @@ export const setVersions = ({ state }, { versions } = {}) => {
   }
 };
 
+export const setVersionsLoading = ({ state }, { loading } = {}) => {
+  state.isVersionsLoading = loading;
+};
+
 export const addVersion = ({ state }, { version } = {}) => {
   state.versions = [version, ...state.versions];
 };

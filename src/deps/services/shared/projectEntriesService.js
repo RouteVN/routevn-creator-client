@@ -54,11 +54,27 @@ export const createProjectEntriesService = ({
   let currentProjectEntry = createEmptyProjectEntry();
   let projectEntriesCache = [];
   let projectsCache;
-  const iconCleanupByProjectId = new Map();
+  const cachedIconCleanupByProjectId = new Map();
+  let currentProjectIconCleanup;
+
+  const invalidateCachedProjectIcon = (projectId) => {
+    const cachedProject = projectsCache?.find(
+      (project) => project.id === projectId,
+    );
+    if (cachedProject) {
+      delete cachedProject.iconUrl;
+    }
+  };
 
   const clearCachedProjectIcon = (projectId) => {
-    iconCleanupByProjectId.get(projectId)?.();
-    iconCleanupByProjectId.delete(projectId);
+    cachedIconCleanupByProjectId.get(projectId)?.();
+    cachedIconCleanupByProjectId.delete(projectId);
+    invalidateCachedProjectIcon(projectId);
+  };
+
+  const clearCurrentProjectIcon = () => {
+    currentProjectIconCleanup?.();
+    currentProjectIconCleanup = undefined;
   };
 
   const mapProjectEntryToProject = (entry) => ({
@@ -98,7 +114,7 @@ export const createProjectEntriesService = ({
     });
 
     const projectIds = new Set(projects.map((project) => project.id));
-    for (const projectId of iconCleanupByProjectId.keys()) {
+    for (const projectId of cachedIconCleanupByProjectId.keys()) {
       if (!projectIds.has(projectId)) {
         clearCachedProjectIcon(projectId);
       }
@@ -148,10 +164,18 @@ export const createProjectEntriesService = ({
       currentProjectEntry.id === projectId &&
       currentProjectEntry.source === "local"
     ) {
-      currentProjectEntry = normalizeLocalProjectEntry({
+      const didCurrentIconChange =
+        Object.hasOwn(normalizedUpdates, "iconFileId") &&
+        normalizedUpdates.iconFileId !== currentProjectEntry.iconFileId;
+      const nextCurrentProjectEntry = normalizeLocalProjectEntry({
         ...currentProjectEntry,
         ...normalizedUpdates,
       });
+      if (didCurrentIconChange) {
+        clearCurrentProjectIcon();
+        delete nextCurrentProjectEntry.iconUrl;
+      }
+      currentProjectEntry = nextCurrentProjectEntry;
     }
 
     if (projectsCache === undefined) {
@@ -182,12 +206,10 @@ export const createProjectEntriesService = ({
     return structuredClone(project);
   };
 
-  const setProjectIcon = ({ project, iconResult }) => {
+  const setProjectIcon = ({ project, iconResult, setCleanup }) => {
     if (!project?.id) {
       return project;
     }
-
-    clearCachedProjectIcon(project.id);
 
     if (!iconResult) {
       return project;
@@ -201,16 +223,38 @@ export const createProjectEntriesService = ({
     if (iconResult?.url) {
       project.iconUrl = iconResult.url;
       if (typeof iconResult.cleanup === "function") {
-        iconCleanupByProjectId.set(project.id, iconResult.cleanup);
+        setCleanup(iconResult.cleanup);
       }
     }
 
     return project;
   };
 
+  const setCachedProjectIcon = ({ project, iconResult }) => {
+    clearCachedProjectIcon(project?.id);
+    return setProjectIcon({
+      project,
+      iconResult,
+      setCleanup: (cleanup) => {
+        cachedIconCleanupByProjectId.set(project.id, cleanup);
+      },
+    });
+  };
+
+  const setCurrentProjectIcon = ({ project, iconResult }) => {
+    clearCurrentProjectIcon();
+    return setProjectIcon({
+      project,
+      iconResult,
+      setCleanup: (cleanup) => {
+        currentProjectIconCleanup = cleanup;
+      },
+    });
+  };
+
   const pruneIconCleanup = (projects = []) => {
     const activeIds = new Set(projects.map((project) => project.id));
-    for (const projectId of iconCleanupByProjectId.keys()) {
+    for (const projectId of cachedIconCleanupByProjectId.keys()) {
       if (activeIds.has(projectId)) {
         continue;
       }
@@ -237,7 +281,7 @@ export const createProjectEntriesService = ({
           entry: project,
           projectService,
         });
-        return setProjectIcon({ project, iconResult });
+        return setCurrentProjectIcon({ project, iconResult });
       }
 
       return createEmptyProjectEntry({
@@ -469,7 +513,7 @@ export const createProjectEntriesService = ({
             entry,
             projectService,
           });
-          return setProjectIcon({ project, iconResult });
+          return setCachedProjectIcon({ project, iconResult });
         }),
       );
 
@@ -489,6 +533,7 @@ export const createProjectEntriesService = ({
     },
 
     setCurrentProjectEntry(entry) {
+      clearCurrentProjectIcon();
       if (!entry?.id) {
         currentProjectEntry = createEmptyProjectEntry();
         return currentProjectEntry;

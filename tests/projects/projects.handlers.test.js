@@ -13,6 +13,7 @@ import {
   handleLanguageDialogClose,
   handleLanguageFormAction,
   handleOpenButtonClick,
+  handleAfterMount,
   handleBeforeMount,
   handleProjectContextMenu,
   handleProjectsClick,
@@ -27,6 +28,7 @@ const createDeps = ({
 } = {}) => {
   const appService = {
     getPlatform: vi.fn(() => platform),
+    getAppVersion: vi.fn(() => "1.0.0"),
     openFolderPicker: vi.fn(),
     openExistingProject: vi.fn(),
     loadAllProjects: vi.fn(async () => []),
@@ -62,7 +64,13 @@ const createDeps = ({
         ],
       })),
       setProjects: vi.fn(),
+      setProjectsLoading: vi.fn(),
       setUiConfig: vi.fn(),
+      setPlatform: vi.fn(),
+      setAppVersion: vi.fn(),
+      setAuthUser: vi.fn(),
+      setCloudProjects: vi.fn(),
+      selectShowCloudProjects: vi.fn(() => false),
       selectProjects: vi.fn(() => [
         {
           id: "project-1",
@@ -94,6 +102,7 @@ const createDeps = ({
     updaterService: {
       checkForUpdates: vi.fn(async () => {}),
     },
+    apiService: {},
     i18n: EN_I18N,
     locale: {
       available: vi.fn(() => ["en", "ja", "zh-hans"]),
@@ -154,6 +163,24 @@ describe("projects lifecycle", () => {
     handleBeforeMount(deps);
 
     expect(deps.store.setProjects).not.toHaveBeenCalled();
+  });
+
+  it("settles loading and shows feedback when local projects fail to load", async () => {
+    const deps = createDeps();
+    deps.appService.loadAllProjects.mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    );
+
+    await handleAfterMount(deps);
+
+    expect(deps.store.setProjectsLoading).toHaveBeenCalledWith({
+      loading: false,
+    });
+    expect(deps.store.setProjects).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "Failed to load projects. Please try again.",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 });
 

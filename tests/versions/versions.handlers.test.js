@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
+  handleDataChanged,
   handleDownloadMacosApplicationClick,
   handleDownloadWindowsExecutableClick,
   handleDownloadWindowsInstallerClick,
@@ -222,6 +223,38 @@ describe("versions lifecycle", () => {
       "project-1",
     );
     expect(deps.store.setVersions).toHaveBeenCalledWith({ versions });
+  });
+
+  it("settles loading and shows feedback when versions fail to load", async () => {
+    const deps = {
+      appService: {
+        getPayload: vi.fn(() => ({ p: "project-1" })),
+        showToast: vi.fn(),
+      },
+      projectService: {
+        ensureRepository: vi.fn(async () => {}),
+        loadVersionsFromProject: vi.fn(async () => {
+          throw new Error("storage unavailable");
+        }),
+      },
+      store: {
+        setVersions: vi.fn(),
+        setVersionsLoading: vi.fn(),
+      },
+      i18n: EN_I18N,
+      render: vi.fn(),
+    };
+
+    await handleDataChanged(deps);
+
+    expect(deps.store.setVersionsLoading).toHaveBeenCalledWith({
+      loading: false,
+    });
+    expect(deps.store.setVersions).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "Failed to load versions. Please try again.",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 });
 
