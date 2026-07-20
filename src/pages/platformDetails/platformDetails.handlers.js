@@ -134,8 +134,6 @@ const createPlatformDetailsPatch = ({ platform, values, iconFileId }) => {
   patch.applicationIdentifier = values.applicationIdentifier.trim();
 
   if (platform === "web") {
-    patch.shortName = values.shortName.trim();
-    patch.description = values.description.trim();
     patch.themeColorId = (values.themeColorId ?? "").trim();
     patch.backgroundColorId = (values.backgroundColorId ?? "").trim();
   }

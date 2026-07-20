@@ -101,8 +101,6 @@ describe("versions store export actions", () => {
           applicationName: "Web Edition",
           applicationIdentifier: "com.example.web-edition",
           iconFileId: "web-icon",
-          shortName: "Web",
-          description: "Browser release",
           themeColorId: "color-theme",
           backgroundColorId: "color-background",
         },

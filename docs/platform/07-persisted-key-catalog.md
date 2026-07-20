@@ -135,8 +135,6 @@ Current keys:
     - `applicationName`
     - `iconFileId`
     - `applicationIdentifier`
-    - `shortName`
-    - `description`
     - `themeColorId`
     - `backgroundColorId`
 - `platformDetails.windows`

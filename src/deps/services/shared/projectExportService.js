@@ -19,10 +19,9 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="__ROUTEVN_WEB_DESCRIPTION__" />
     <meta name="theme-color" content="__ROUTEVN_WEB_THEME_COLOR__" />
-    <meta name="application-name" content="__ROUTEVN_WEB_SHORT_NAME__" />
-    <meta name="apple-mobile-web-app-title" content="__ROUTEVN_WEB_SHORT_NAME__" />
+    <meta name="application-name" content="__ROUTEVN_WEB_APPLICATION_NAME__" />
+    <meta name="apple-mobile-web-app-title" content="__ROUTEVN_WEB_APPLICATION_NAME__" />
     <link rel="manifest" href="./manifest.webmanifest" />
     __ROUTEVN_WEB_ICON_LINK__
     <title>__ROUTEVN_WEB_TITLE__</title>
@@ -315,8 +314,6 @@ const normalizeWebApplicationMetadata = (web = {}) => {
   const title = web.title?.trim() || "RouteVN Player";
   return {
     title,
-    shortName: web.shortName?.trim() || title,
-    description: web.description?.trim() ?? "",
     themeColor: web.themeColor?.trim() || "#000000",
     backgroundColor: web.backgroundColor?.trim() || "#000000",
     iconFileName192: web.iconFileName192?.trim() ?? "",
@@ -345,13 +342,8 @@ export const createBundlePlayerIndexHtml = (web = {}) => {
   );
   html = replaceTemplateToken(
     html,
-    "__ROUTEVN_WEB_SHORT_NAME__",
-    escapeHtmlAttribute(metadata.shortName),
-  );
-  html = replaceTemplateToken(
-    html,
-    "__ROUTEVN_WEB_DESCRIPTION__",
-    escapeHtmlAttribute(metadata.description),
+    "__ROUTEVN_WEB_APPLICATION_NAME__",
+    escapeHtmlAttribute(metadata.title),
   );
   html = replaceTemplateToken(
     html,
@@ -376,8 +368,7 @@ export const createBundleWebManifest = (web = {}) => {
   const metadata = normalizeWebApplicationMetadata(web);
   const manifest = {
     name: metadata.title,
-    short_name: metadata.shortName,
-    description: metadata.description,
+    short_name: metadata.title,
     start_url: "./",
     scope: "./",
     display: "standalone",
@@ -567,8 +558,6 @@ export const createBundleInstructions = ({ projectData, bundler, project }) => {
   };
   if (project?.web) {
     projectMetadata.web = {
-      shortName: project.web.shortName ?? "",
-      description: project.web.description ?? "",
       themeColor: project.web.themeColor ?? "",
       backgroundColor: project.web.backgroundColor ?? "",
     };
@@ -1063,8 +1052,6 @@ const getBundleStaticFiles = async (projectData) => {
   const projectMetadata = projectData?.bundleMetadata?.project ?? {};
   const webMetadata = {
     title: projectMetadata.title,
-    shortName: projectMetadata.web?.shortName,
-    description: projectMetadata.web?.description,
     themeColor: projectMetadata.web?.themeColor,
     backgroundColor: projectMetadata.web?.backgroundColor,
     iconFileName192: projectMetadata.iconFileId

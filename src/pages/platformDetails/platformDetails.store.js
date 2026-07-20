@@ -13,8 +13,6 @@ const createPlatformApplicationInfo = (platform) => {
   };
 
   if (platform === "web") {
-    applicationInfo.shortName = "";
-    applicationInfo.description = "";
     applicationInfo.themeColorId = "";
     applicationInfo.backgroundColorId = "";
   }
@@ -38,7 +36,6 @@ const createPlatformApplicationInfo = (platform) => {
 const createPlatformEditDefaultValues = () => ({
   applicationName: "",
   applicationIdentifier: "",
-  shortName: "",
   description: "",
   themeColorId: "",
   backgroundColorId: "",
@@ -131,16 +128,6 @@ const buildPlatformDetailFields = (
     fields.push(
       {
         type: "text",
-        label: copy.shortNameLabel,
-        value: applicationInfo.shortName,
-      },
-      {
-        type: "text",
-        label: copy.descriptionLabel,
-        value: applicationInfo.description,
-      },
-      {
-        type: "text",
         label: copy.themeColorLabel,
         value: getColorName(colorOptions, applicationInfo.themeColorId),
       },
@@ -216,20 +203,6 @@ const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
 
   if (platform === "web") {
     fields.push(
-      {
-        name: "shortName",
-        type: "input-text",
-        label: copy.shortNameLabel,
-        description: copy.webShortNameDescription,
-        required: false,
-      },
-      {
-        name: "description",
-        type: "input-textarea",
-        label: copy.descriptionLabel,
-        description: copy.webDescriptionDescription,
-        required: false,
-      },
       {
         name: "themeColorId",
         type: "select",
@@ -442,8 +415,6 @@ export const setPlatformApplicationInfo = (
   target.iconFileId = applicationInfo?.iconFileId ?? undefined;
 
   if (platform === "web") {
-    target.shortName = applicationInfo?.shortName ?? "";
-    target.description = applicationInfo?.description ?? "";
     target.themeColorId = applicationInfo?.themeColorId ?? "";
     target.backgroundColorId = applicationInfo?.backgroundColorId ?? "";
   }
@@ -503,7 +474,6 @@ const setPlatformDialogDefaults = (state, applicationInfo) => {
     applicationInfo.applicationName;
   state.platformEditDefaultValues.applicationIdentifier =
     applicationInfo.applicationIdentifier ?? "";
-  state.platformEditDefaultValues.shortName = applicationInfo.shortName ?? "";
   state.platformEditDefaultValues.description =
     applicationInfo.description ?? "";
   state.platformEditDefaultValues.themeColorId =

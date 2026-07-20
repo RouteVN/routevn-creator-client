@@ -135,16 +135,6 @@ const buildExportConfirmationFields = (
     fields.push(
       {
         type: "text",
-        label: platformDetailsCopy.shortNameLabel ?? "Short Name",
-        value: formatConfirmationValue(applicationInfo.shortName, copy),
-      },
-      {
-        type: "text",
-        label: platformDetailsCopy.descriptionLabel ?? "Description",
-        value: formatConfirmationValue(applicationInfo.description, copy),
-      },
-      {
-        type: "text",
         label: platformDetailsCopy.themeColorLabel ?? "Theme Color",
         value: formatConfirmationValue(confirmation.themeColor, copy),
       },

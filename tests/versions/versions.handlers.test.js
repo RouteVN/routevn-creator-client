@@ -66,8 +66,6 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
         };
         if (platform === "web") {
           applicationInfo.applicationIdentifier = "web-project-one";
-          applicationInfo.shortName = "";
-          applicationInfo.description = "";
           applicationInfo.themeColorId = "";
           applicationInfo.backgroundColorId = "";
         }
@@ -367,8 +365,6 @@ describe("versions.handleDownloadZipClick", () => {
       applicationName: "Project One",
       applicationIdentifier: "web-project-one",
       iconFileId: "icon-1",
-      shortName: "",
-      description: "",
       themeColorId: "color-removed",
       backgroundColorId: "",
     });
@@ -395,8 +391,6 @@ describe("versions.handleDownloadZipClick", () => {
       applicationName: "Project One",
       applicationIdentifier: "",
       iconFileId: "icon-1",
-      shortName: "",
-      description: "",
       themeColorId: "",
       backgroundColorId: "",
     });
@@ -423,8 +417,6 @@ describe("versions.handleDownloadZipClick", () => {
       applicationName: "Project One",
       applicationIdentifier: "com.yourteam/yourvn",
       iconFileId: "icon-1",
-      shortName: "",
-      description: "",
       themeColorId: "",
       backgroundColorId: "",
     });
@@ -458,7 +450,7 @@ describe("versions.handleDownloadZipClick", () => {
     expect(deps.store.openExportConfirmation).toHaveBeenCalledTimes(1);
   });
 
-  it("uses Project Info branding in Web export confirmation", async () => {
+  it("uses the Web Application Name and Project Info icon in export confirmation", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
       getState: vi.fn(() => structuredClone(initialProjectData)),
@@ -468,8 +460,6 @@ describe("versions.handleDownloadZipClick", () => {
       applicationName: "Web Edition",
       applicationIdentifier: "com.example.web-edition",
       iconFileId: "web-icon",
-      shortName: "Web",
-      description: "Web release",
       themeColorId: "",
       backgroundColorId: "",
     });
@@ -480,7 +470,7 @@ describe("versions.handleDownloadZipClick", () => {
     expect(deps.store.openExportConfirmation).toHaveBeenCalledWith(
       expect.objectContaining({
         applicationInfo: expect.objectContaining({
-          applicationName: "Project One",
+          applicationName: "Web Edition",
           iconFileId: "icon-1",
           applicationIdentifier: "com.example.web-edition",
         }),
@@ -641,8 +631,6 @@ describe("versions.handleDownloadZipClick", () => {
       applicationName: "Web Edition",
       applicationIdentifier: "com.example.web-edition",
       iconFileId: "web-icon",
-      shortName: "Web",
-      description: "Web release",
       themeColorId: "color-theme",
       backgroundColorId: "color-background",
     });
@@ -654,11 +642,9 @@ describe("versions.handleDownloadZipClick", () => {
         .bundleMetadata.project,
     ).toMatchObject({
       namespace: "com.example.web-edition",
-      title: "Project One",
+      title: "Web Edition",
       iconFileId: "icon-1",
       web: {
-        shortName: "Web",
-        description: "Web release",
         themeColor: "#112233",
         backgroundColor: "#000000",
       },

@@ -58,9 +58,8 @@ Current app-owned keys:
   - `language`
   - `iconFileId`
 - `platformDetails.web`
-  - platform application name, icon, and identifier plus Web short name,
-    description, and references to project colors for theme and startup
-    background
+  - platform application name, icon, and identifier plus references to project
+    colors for theme and startup background
 - `platformDetails.windows`
   - platform application name, icon, and identifier plus publisher,
     description, and copyright
@@ -71,8 +70,8 @@ Current app-owned keys:
 
 Important details:
 
-- release metadata is read from these app-store records at export time; Web
-  values and the project-owned name/icon are written to the exported HTML, Web
+- release metadata is read from these app-store records at export time; the Web
+  Application Name, Web values, and project-owned icon are written to the exported HTML, Web
   manifest, and generated `app-icon-192.png`/`app-icon-512.png` files, Windows
   values to executable/installer version metadata, and macOS values to
   `Info.plist`

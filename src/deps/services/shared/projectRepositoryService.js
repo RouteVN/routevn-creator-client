@@ -186,8 +186,6 @@ export const createProjectRepositoryService = ({
     };
 
     if (platform === "web") {
-      platformDetails.shortName = "";
-      platformDetails.description = "";
       platformDetails.themeColorId = "";
       platformDetails.backgroundColorId = "";
     }
@@ -212,8 +210,6 @@ export const createProjectRepositoryService = ({
     const normalized = createPlatformDetails(platform, platformDetails);
 
     if (platform === "web") {
-      normalized.shortName = platformDetails?.shortName ?? "";
-      normalized.description = platformDetails?.description ?? "";
       normalized.themeColorId = platformDetails?.themeColorId ?? "";
       normalized.backgroundColorId = platformDetails?.backgroundColorId ?? "";
     }
@@ -763,6 +759,14 @@ export const createProjectRepositoryService = ({
     ) {
       const projectInfo = await readProjectInfoFromStore(store);
       platformDetails.applicationIdentifier = projectInfo.namespace;
+      shouldPersist = true;
+    }
+
+    if (
+      platform === "web" &&
+      (Object.hasOwn(storedPlatformDetails, "shortName") ||
+        Object.hasOwn(storedPlatformDetails, "description"))
+    ) {
       shouldPersist = true;
     }
 

@@ -45,8 +45,6 @@ describe("platformDetails.store", () => {
           applicationName: "Project One",
           applicationIdentifier: "",
           iconFileId: "project-icon-1",
-          shortName: "",
-          description: "",
           themeColorId: "",
           backgroundColorId: "",
         },
@@ -148,8 +146,6 @@ describe("platformDetails.store", () => {
           applicationName: "Web Project",
           applicationIdentifier: "com.example.web-project",
           iconFileId: "web-icon-1",
-          shortName: "Project",
-          description: "Web description",
           themeColorId: "color-theme",
           backgroundColorId: "color-background",
         },
@@ -161,8 +157,6 @@ describe("platformDetails.store", () => {
     expect(state.platformEditDefaultValues).toMatchObject({
       applicationName: "Web Project",
       applicationIdentifier: "com.example.web-project",
-      shortName: "Project",
-      description: "Web description",
       themeColorId: "color-theme",
       backgroundColorId: "color-background",
     });

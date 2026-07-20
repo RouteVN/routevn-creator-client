@@ -86,15 +86,13 @@ describe("platformDetails handlers", () => {
 
   it("keeps the page empty when no platform has been created", async () => {
     const deps = createDeps();
-    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(
-      undefined,
-    );
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(undefined);
 
     await handleAfterMount(deps);
 
-    expect(
-      deps.projectService.getCurrentPlatformDetails,
-    ).toHaveBeenCalledTimes(3);
+    expect(deps.projectService.getCurrentPlatformDetails).toHaveBeenCalledTimes(
+      3,
+    );
     expect(deps.store.setPlatformApplicationInfo).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
@@ -116,9 +114,9 @@ describe("platformDetails handlers", () => {
 
     await handleAfterMount(deps);
 
-    expect(
-      deps.projectService.getCurrentPlatformDetails,
-    ).toHaveBeenCalledTimes(3);
+    expect(deps.projectService.getCurrentPlatformDetails).toHaveBeenCalledTimes(
+      3,
+    );
     expect(deps.store.setPlatformApplicationInfo).toHaveBeenCalledWith({
       platform: "web",
       applicationInfo: {
@@ -135,8 +133,6 @@ describe("platformDetails handlers", () => {
       applicationName: "Project One",
       applicationIdentifier: "",
       iconFileId: "project-icon-1",
-      shortName: "",
-      description: "",
       themeColorId: "",
       backgroundColorId: "",
     };
@@ -281,8 +277,6 @@ describe("platformDetails handlers", () => {
       applicationName: "Web Project",
       applicationIdentifier: "com.example.web-project",
       iconFileId: "web-icon-1",
-      shortName: "Project",
-      description: "Web description",
       themeColorId: "color-theme",
       backgroundColorId: "color-background",
     };
@@ -297,8 +291,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: " Web Project ",
             applicationIdentifier: " com.example.web-project ",
-            shortName: " Project ",
-            description: " Web description ",
             themeColorId: " color-theme ",
             backgroundColorId: " color-background ",
           },
@@ -338,8 +330,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: "Web Project",
             applicationIdentifier: "com.example.web-project",
-            shortName: "Project",
-            description: "Web description",
             themeColorId: undefined,
             backgroundColorId: undefined,
           },
@@ -353,8 +343,6 @@ describe("platformDetails handlers", () => {
       applicationName: "Web Project",
       applicationIdentifier: "com.example.web-project",
       iconFileId: "web-icon-1",
-      shortName: "Project",
-      description: "Web description",
       themeColorId: "",
       backgroundColorId: "",
     });
@@ -407,8 +395,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: "Project One",
             applicationIdentifier: "",
-            shortName: "",
-            description: "",
             themeColorId: "",
             backgroundColorId: "",
           },
@@ -439,8 +425,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: "Project One",
             applicationIdentifier: "com.yourteam/yourvn",
-            shortName: "",
-            description: "",
             themeColorId: "",
             backgroundColorId: "",
           },
@@ -472,8 +456,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: "Project One",
             applicationIdentifier: "com.example.web-project",
-            shortName: "",
-            description: "",
             themeColorId: "color-removed",
             backgroundColorId: "",
           },

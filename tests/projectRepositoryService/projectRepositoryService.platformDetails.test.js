@@ -133,8 +133,6 @@ describe("projectRepositoryService platform details", () => {
       applicationName: "Project One",
       applicationIdentifier: "",
       iconFileId: "project-icon-1",
-      shortName: "",
-      description: "",
       themeColorId: "",
       backgroundColorId: "",
     });
@@ -148,14 +146,11 @@ describe("projectRepositoryService platform details", () => {
     await expect(
       harness.service.createCurrentPlatformDetails("web", {
         applicationName: "Web Release",
-        shortName: "Release",
       }),
     ).resolves.toEqual({
       applicationName: "Web Release",
       applicationIdentifier: "",
       iconFileId: "project-icon-1",
-      shortName: "Release",
-      description: "",
       themeColorId: "",
       backgroundColorId: "",
     });
@@ -227,14 +222,14 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toMatchObject({
       applicationName: "Web Project",
       iconFileId: "web-icon-1",
-      shortName: "Project",
     });
     expect(harness.getPlatformDetails("web")).toMatchObject({
       applicationName: "Web Project",
       applicationIdentifier: "namespace-1",
       iconFileId: "web-icon-1",
-      shortName: "Project",
     });
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("shortName");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("description");
     expect(harness.store.app.set).toHaveBeenCalledWith(
       "platformDetails.web",
       expect.objectContaining({
@@ -251,8 +246,6 @@ describe("projectRepositoryService platform details", () => {
           applicationName: "Web Project",
           applicationIdentifier: "com.example.web-project",
           iconFileId: "web-icon-1",
-          shortName: "Project",
-          description: "Web release",
           themeColorId: "",
           backgroundColorId: "",
         },
@@ -264,6 +257,8 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toMatchObject({
       applicationIdentifier: "com.example.web-project",
     });
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("shortName");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("description");
 
     await harness.service.updateCurrentPlatformDetails("web", {
       applicationIdentifier: "com.example.web-project-two",
@@ -329,9 +324,7 @@ describe("projectRepositoryService platform details", () => {
     await harness.service.updateCurrentProjectInfo({
       iconFileId: "project-icon-1",
     });
-    expect(harness.getPlatformDetails("web").iconFileId).toBe(
-      "project-icon-1",
-    );
+    expect(harness.getPlatformDetails("web").iconFileId).toBe("project-icon-1");
     expect(harness.getPlatformDetails("windows").iconFileId).toBe(
       "project-icon-1",
     );
@@ -350,9 +343,7 @@ describe("projectRepositoryService platform details", () => {
     });
 
     expect(harness.getProjectInfo().iconFileId).toBe("project-icon-2");
-    expect(harness.getPlatformDetails("web").iconFileId).toBe(
-      "project-icon-1",
-    );
+    expect(harness.getPlatformDetails("web").iconFileId).toBe("project-icon-1");
     expect(harness.getPlatformDetails("windows").iconFileId).toBe(
       "windows-icon-1",
     );

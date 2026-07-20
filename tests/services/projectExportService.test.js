@@ -359,8 +359,6 @@ describe("projectExportService", () => {
       title: "Project One",
       iconFileId: "icon-1",
       web: {
-        shortName: "Project",
-        description: 'A visual novel about <friends> & "adventure".',
         themeColor: "#112233",
         backgroundColor: "#000000",
       },
@@ -376,11 +374,9 @@ describe("projectExportService", () => {
     });
     expect(indexHtml).toContain("<title>Project One</title>");
     expect(indexHtml).toContain(
-      '<meta name="application-name" content="Project" />',
+      '<meta name="application-name" content="Project One" />',
     );
-    expect(indexHtml).toContain(
-      'content="A visual novel about &lt;friends&gt; &amp; &quot;adventure&quot;."',
-    );
+    expect(indexHtml).not.toContain('<meta name="description"');
     expect(indexHtml).toContain(
       '<meta name="theme-color" content="#112233" />',
     );
@@ -389,19 +385,17 @@ describe("projectExportService", () => {
       `<link rel="icon" href="./${BUNDLE_WEB_ICON_512_FILE_NAME}" />`,
     );
 
-    expect(
-      JSON.parse(
-        createBundleWebManifest({
-          title: project.title,
-          ...project.web,
-          iconFileName192: BUNDLE_WEB_ICON_192_FILE_NAME,
-          iconFileName512: BUNDLE_WEB_ICON_512_FILE_NAME,
-        }),
-      ),
-    ).toMatchObject({
+    const manifest = JSON.parse(
+      createBundleWebManifest({
+        title: project.title,
+        ...project.web,
+        iconFileName192: BUNDLE_WEB_ICON_192_FILE_NAME,
+        iconFileName512: BUNDLE_WEB_ICON_512_FILE_NAME,
+      }),
+    );
+    expect(manifest).toMatchObject({
       name: "Project One",
-      short_name: "Project",
-      description: project.web.description,
+      short_name: "Project One",
       theme_color: "#112233",
       background_color: "#000000",
       icons: [
@@ -419,6 +413,7 @@ describe("projectExportService", () => {
         },
       ],
     });
+    expect(manifest).not.toHaveProperty("description");
   });
 
   it("stores repeated raw assets once in bundle format v4", async () => {

@@ -391,11 +391,10 @@ const requirePlatformDetailsForExport = async ({
     applicationInfo = await projectService.getCurrentPlatformDetails(platform);
     if (platform === "web" && applicationInfo) {
       const projectInfo = await projectService.getCurrentProjectInfo();
-      // TODO: Restore Web-specific name and icon overrides if separate Web
-      // branding returns. Web currently uses project-owned branding.
+      // TODO: Restore Web-specific icon overrides if separate Web branding
+      // returns. Web currently uses the project-owned icon.
       applicationInfo = {
         ...applicationInfo,
-        applicationName: projectInfo.name,
         iconFileId: projectInfo.iconFileId,
       };
     }
@@ -563,8 +562,8 @@ const createVersionExportData = async ({
     return entry;
   });
 
-  const usesProjectBranding = platform === "web";
-  const iconFileId = usesProjectBranding
+  const usesProjectIcon = platform === "web";
+  const iconFileId = usesProjectIcon
     ? projectInfo.iconFileId
     : (applicationInfo?.iconFileId ?? projectInfo.iconFileId);
   if (iconFileId && !fileEntries.some((entry) => entry.fileId === iconFileId)) {
@@ -579,15 +578,14 @@ const createVersionExportData = async ({
       platform === "web"
         ? applicationInfo.applicationIdentifier
         : projectInfo.namespace,
-    title: usesProjectBranding
-      ? projectInfo.name
-      : getProjectExportTitle({ projectInfo, applicationInfo }),
+    title:
+      platform === "web"
+        ? applicationInfo.applicationName.trim()
+        : getProjectExportTitle({ projectInfo, applicationInfo }),
     iconFileId,
   };
   if (platform === "web") {
     projectMetadata.web = {
-      shortName: applicationInfo.shortName,
-      description: applicationInfo.description,
       themeColor:
         getPlatformDetailsColor(projectService, applicationInfo.themeColorId)
           ?.hex ?? "",
