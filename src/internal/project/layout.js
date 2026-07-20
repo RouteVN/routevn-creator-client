@@ -18,6 +18,7 @@ import {
 } from "./interactionPayload.js";
 import { generateId } from "../id.js";
 import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
+import { normalizeSaveLoadDateFormat } from "../saveLoadDateFormats.js";
 
 const TEXT_NODE_TYPES = new Set([
   "text",
@@ -64,7 +65,6 @@ const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
   "text-revealing-ref-dialogue-content": "${dialogue.content}",
   "text-ref-choice-item-content": "${item.content}",
-  "text-ref-save-load-slot-date": "${formatDate(item.savedAt)}",
   "text-ref-dialogue-line-character-name": "${line.characterName}",
   "text-ref-dialogue-line-content": "${line.content[0].text}",
   "text-ref-history-line-character-name": "${item.characterName}",
@@ -1233,6 +1233,11 @@ const getTextNodeContent = (node, context = {}) => {
     Number.isInteger(context.choiceItemIndex)
   ) {
     return `\${choice.items[${context.choiceItemIndex}].content}`;
+  }
+
+  if (node.type === "text-ref-save-load-slot-date") {
+    const dateFormat = normalizeSaveLoadDateFormat(node.dateFormat);
+    return `\${formatDate(item.savedAt, ${JSON.stringify(dateFormat)})}`;
   }
 
   const referencedContent = TEXT_CONTENT_BY_TYPE[node.type];

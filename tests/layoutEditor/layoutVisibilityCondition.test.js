@@ -38,10 +38,13 @@ const findElement = (elements, predicate) => {
   return undefined;
 };
 
-const buildDefaultTemplateLayout = (layoutName) => {
-  const layout = Object.values(defaultRepositoryTemplate.layouts.items).find(
+const getDefaultTemplateLayout = (layoutName) =>
+  Object.values(defaultRepositoryTemplate.layouts.items).find(
     (entry) => entry.name === layoutName,
   );
+
+const buildDefaultTemplateLayout = (layoutName) => {
+  const layout = getDefaultTemplateLayout(layoutName);
 
   const emptyCollection = { items: {}, tree: [] };
   return buildLayoutElements(
@@ -515,7 +518,49 @@ describe("layout visibility conditions", () => {
       expect.objectContaining({
         id: "slot-date-instance-${i}",
         type: "text",
-        content: "${formatDate(item.savedAt)}",
+        content: '${formatDate(item.savedAt, "DD/MM/YYYY")}',
+      }),
+    ]);
+  });
+
+  it("projects authored save/load date formats and normalizes unsupported values", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "english-date",
+          type: "text-ref-save-load-slot-date",
+          dateFormat: "DD MMM YYYY",
+        },
+        {
+          id: "cjk-date",
+          type: "text-ref-save-load-slot-date",
+          dateFormat: "YYYY年MM月DD日",
+        },
+        {
+          id: "unsupported-date",
+          type: "text-ref-save-load-slot-date",
+          dateFormat: "MMM DD, YYYY",
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      {
+        layoutId: "layout-save",
+        layoutType: "save-load",
+      },
+    );
+
+    expect(elements).toEqual([
+      expect.objectContaining({
+        content: '${formatDate(item.savedAt, "DD MMM YYYY")}',
+      }),
+      expect.objectContaining({
+        content: '${formatDate(item.savedAt, "YYYY年MM月DD日")}',
+      }),
+      expect.objectContaining({
+        content: '${formatDate(item.savedAt, "DD/MM/YYYY")}',
       }),
     ]);
   });
@@ -762,12 +807,19 @@ describe("layout visibility conditions", () => {
 
     Object.entries(expectedByLayoutName).forEach(
       ([layoutName, expectedConfig]) => {
+        const rawLayout = getDefaultTemplateLayout(layoutName);
+        const rawDateElement = Object.values(rawLayout.elements.items).find(
+          (element) => element.type === "text-ref-save-load-slot-date",
+        );
         const { elements } = buildDefaultTemplateLayout(layoutName);
         const slotContainer = findElement(
           elements,
           (element) => element.$each === "item, i in saveSlots",
         );
 
+        expect(rawDateElement).toMatchObject({
+          dateFormat: "DD/MM/YYYY",
+        });
         expect(slotContainer).toMatchObject({
           type: "container",
           $each: "item, i in saveSlots",
@@ -785,6 +837,16 @@ describe("layout visibility conditions", () => {
           hover: {
             inheritToChildren: true,
           },
+        });
+        expect(
+          findElement(
+            slotContainer.children,
+            (element) =>
+              element.id?.startsWith("UK85MSpkHfto") ||
+              element.id?.startsWith("yLNcQmHkiBmD"),
+          ),
+        ).toMatchObject({
+          content: '${formatDate(item.savedAt, "DD/MM/YYYY")}',
         });
         if (expectedConfig.rightClick) {
           expect(slotContainer?.rightClick).toEqual(expectedConfig.rightClick);

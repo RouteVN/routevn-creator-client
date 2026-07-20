@@ -6,6 +6,7 @@ import {
   normalizeLayoutTextContent,
   toLayoutTextBackwardCompatibleText,
 } from "./layoutTextContent.js";
+import { DEFAULT_SAVE_LOAD_DATE_FORMAT } from "./saveLoadDateFormats.js";
 
 const BASE_TRANSFORM = {
   x: 0,
@@ -336,6 +337,7 @@ const CREATE_TEMPLATES = {
         ...BASE_TRANSFORM,
         y: 192,
         text: "text",
+        dateFormat: DEFAULT_SAVE_LOAD_DATE_FORMAT,
         textStyle: {
           wordWrapWidth: 320,
           align: "left",
@@ -557,6 +559,7 @@ const DEFAULT_CAPABILITIES = {
   supportsParticleSelection: false,
   supportsSliderImages: false,
   supportsSliderValues: false,
+  supportsDateFormat: false,
 };
 
 const FAMILY_CAPABILITIES = {
@@ -637,6 +640,9 @@ const ITEM_TYPE_CAPABILITY_OVERRIDES = {
     supportsTextRevealIndicator: true,
     supportsTextRevealSound: true,
     supportsTextAlignment: false,
+  },
+  "text-ref-save-load-slot-date": {
+    supportsDateFormat: true,
   },
 };
 
@@ -830,7 +836,11 @@ const PANEL_FEATURES_BY_TYPE = {
   ],
   "text-ref-character-name": [...DEFAULT_PANEL_FEATURES, "textStyles"],
   "text-ref-choice-item-content": [...DEFAULT_PANEL_FEATURES, "textStyles"],
-  "text-ref-save-load-slot-date": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  "text-ref-save-load-slot-date": [
+    ...DEFAULT_PANEL_FEATURES,
+    "dateFormat",
+    "textStyles",
+  ],
   "text-ref-dialogue-line-character-name": [
     ...DEFAULT_PANEL_FEATURES,
     "textStyles",

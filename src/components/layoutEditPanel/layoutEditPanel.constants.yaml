@@ -332,6 +332,14 @@ layoutSections:
       - type: text-content-summary
         name: content
         value: "${values.textContentSummary}"
+  - "$when": "supportsDateFormat"
+    label: Date
+    items:
+      - type: select
+        label: Format
+        name: dateFormat
+        value: "${values.dateFormat}"
+        options: "${dateFormatOptions}"
   - "$when": "supportsTextRevealEffect"
     id: textRevealing
     label: Revealing
