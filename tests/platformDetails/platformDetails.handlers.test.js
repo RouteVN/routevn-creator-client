@@ -11,6 +11,7 @@ import { EN_I18N } from "../support/i18n.js";
 const createDeps = () => ({
   appService: {
     showAlert: vi.fn(),
+    showDialog: vi.fn(async () => true),
     showToast: vi.fn(),
   },
   i18n: EN_I18N,
@@ -18,7 +19,6 @@ const createDeps = () => ({
     createCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetailsDefaults: vi.fn(),
-    subscribeProjectState: vi.fn(),
     updateCurrentPlatformDetails: vi.fn(),
     uploadFiles: vi.fn(),
   },
@@ -41,60 +41,39 @@ const createDeps = () => ({
       mode: "edit",
       platform: "windows",
     })),
-    selectColorIds: vi.fn(() => new Set(["color-theme", "color-background"])),
     selectPlatformEditDefaultValues: vi.fn(() => ({
       applicationName: "Project One",
     })),
     selectPlatformEditIconFileId: vi.fn(() => "windows-icon-1"),
     selectSelectedPlatform: vi.fn(() => "windows"),
-    setColorsData: vi.fn(),
     setPlatformApplicationInfo: vi.fn(),
     setPlatformEditIconFileId: vi.fn(),
     setSelectedPlatform: vi.fn(),
     setUiConfig: vi.fn(),
   },
+  uiConfig: { id: "touch" },
 });
 
 describe("platformDetails handlers", () => {
-  it("keeps project color choices synchronized", () => {
+  it("configures the page before mount", () => {
     const deps = createDeps();
-    const colorsData = {
-      items: {
-        "color-theme": {
-          id: "color-theme",
-          type: "color",
-          name: "Ocean Blue",
-          hex: "#112233",
-        },
-      },
-      tree: [{ id: "color-theme" }],
-    };
-    const unsubscribe = vi.fn();
-    deps.projectService.subscribeProjectState.mockImplementation((listener) => {
-      listener({ repositoryState: { colors: colorsData } });
-      return unsubscribe;
+
+    handleBeforeMount(deps);
+
+    expect(deps.store.setUiConfig).toHaveBeenCalledWith({
+      uiConfig: { id: "touch" },
     });
-
-    const cleanup = handleBeforeMount(deps);
-
-    expect(deps.store.setColorsData).toHaveBeenCalledWith({ colorsData });
-    expect(deps.render).toHaveBeenCalledTimes(1);
-
-    cleanup();
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the page empty when no platform has been created", async () => {
     const deps = createDeps();
-    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(
-      undefined,
-    );
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(undefined);
 
     await handleAfterMount(deps);
 
-    expect(
-      deps.projectService.getCurrentPlatformDetails,
-    ).toHaveBeenCalledTimes(3);
+    expect(deps.projectService.getCurrentPlatformDetails).toHaveBeenCalledTimes(
+      3,
+    );
     expect(deps.store.setPlatformApplicationInfo).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
@@ -108,7 +87,6 @@ describe("platformDetails handlers", () => {
         }
         const applicationInfo = {
           applicationName: `${platform} Project`,
-          iconFileId: `${platform}-icon-1`,
         };
         return applicationInfo;
       },
@@ -116,14 +94,13 @@ describe("platformDetails handlers", () => {
 
     await handleAfterMount(deps);
 
-    expect(
-      deps.projectService.getCurrentPlatformDetails,
-    ).toHaveBeenCalledTimes(3);
+    expect(deps.projectService.getCurrentPlatformDetails).toHaveBeenCalledTimes(
+      3,
+    );
     expect(deps.store.setPlatformApplicationInfo).toHaveBeenCalledWith({
       platform: "web",
       applicationInfo: {
         applicationName: "web Project",
-        iconFileId: "web-icon-1",
       },
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
@@ -134,11 +111,6 @@ describe("platformDetails handlers", () => {
     const applicationInfo = {
       applicationName: "Project One",
       applicationIdentifier: "",
-      iconFileId: "project-icon-1",
-      shortName: "",
-      description: "",
-      themeColorId: "",
-      backgroundColorId: "",
     };
     deps.projectService.getCurrentPlatformDetailsDefaults.mockResolvedValue(
       applicationInfo,
@@ -280,11 +252,6 @@ describe("platformDetails handlers", () => {
     const applicationInfo = {
       applicationName: "Web Project",
       applicationIdentifier: "com.example.web-project",
-      iconFileId: "web-icon-1",
-      shortName: "Project",
-      description: "Web description",
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
     };
     deps.projectService.createCurrentPlatformDetails.mockResolvedValue(
       applicationInfo,
@@ -297,10 +264,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: " Web Project ",
             applicationIdentifier: " com.example.web-project ",
-            shortName: " Project ",
-            description: " Web description ",
-            themeColorId: " color-theme ",
-            backgroundColorId: " color-background ",
           },
         },
       },
@@ -318,17 +281,62 @@ describe("platformDetails handlers", () => {
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: EN_I18N.platformDetailsPage.platformDetailsCreatedMessage,
     });
+    expect(deps.appService.showDialog).not.toHaveBeenCalled();
   });
 
-  it("clears optional Web colors when the form omits their values", async () => {
+  it("warns before changing an existing Web application identifier", async () => {
     const deps = createDeps();
     deps.store.selectPlatformDialogState.mockReturnValue({
       mode: "edit",
       platform: "web",
     });
+    deps.store.selectPlatformEditDefaultValues.mockReturnValue({
+      applicationIdentifier: "com.example.web-project",
+    });
     deps.store.selectPlatformEditIconFileId.mockReturnValue("web-icon-1");
-    deps.projectService.updateCurrentPlatformDetails.mockImplementation(
-      async (_platform, patch) => patch,
+    deps.appService.showDialog.mockResolvedValue(false);
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Web Project",
+            applicationIdentifier: "com.example.web-project-two",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showDialog).toHaveBeenCalledWith({
+      title: EN_I18N.platformDetailsPage.webApplicationIdentifierChangeTitle,
+      message:
+        EN_I18N.platformDetailsPage.webApplicationIdentifierChangeMessage,
+      confirmText:
+        EN_I18N.platformDetailsPage.webApplicationIdentifierChangeConfirm,
+      cancelText: EN_I18N.platformDetailsPage.cancelButton,
+    });
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("saves a changed Web application identifier after confirmation", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "edit",
+      platform: "web",
+    });
+    deps.store.selectPlatformEditDefaultValues.mockReturnValue({
+      applicationIdentifier: "com.example.web-project",
+    });
+    deps.store.selectPlatformEditIconFileId.mockReturnValue("web-icon-1");
+    const applicationInfo = {
+      applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project-two",
+    };
+    deps.projectService.updateCurrentPlatformDetails.mockResolvedValue(
+      applicationInfo,
     );
 
     await handlePlatformEditFormAction(deps, {
@@ -337,11 +345,7 @@ describe("platformDetails handlers", () => {
           actionId: "submit",
           values: {
             applicationName: "Web Project",
-            applicationIdentifier: "com.example.web-project",
-            shortName: "Project",
-            description: "Web description",
-            themeColorId: undefined,
-            backgroundColorId: undefined,
+            applicationIdentifier: "com.example.web-project-two",
           },
         },
       },
@@ -349,16 +353,44 @@ describe("platformDetails handlers", () => {
 
     expect(
       deps.projectService.updateCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", {
-      applicationName: "Web Project",
-      applicationIdentifier: "com.example.web-project",
-      iconFileId: "web-icon-1",
-      shortName: "Project",
-      description: "Web description",
-      themeColorId: "",
-      backgroundColorId: "",
+    ).toHaveBeenCalledWith("web", applicationInfo);
+    expect(deps.store.closePlatformEditDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves Web edits without warning when the identifier is unchanged", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "edit",
+      platform: "web",
     });
-    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    deps.store.selectPlatformEditDefaultValues.mockReturnValue({
+      applicationIdentifier: "com.example.web-project",
+    });
+    deps.store.selectPlatformEditIconFileId.mockReturnValue("web-icon-1");
+    const applicationInfo = {
+      applicationName: "Updated Web Project",
+      applicationIdentifier: "com.example.web-project",
+    };
+    deps.projectService.updateCurrentPlatformDetails.mockResolvedValue(
+      applicationInfo,
+    );
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Updated Web Project",
+            applicationIdentifier: "com.example.web-project",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showDialog).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("web", applicationInfo);
   });
 
   it("does not create macOS platform details without a bundle identifier", async () => {
@@ -407,10 +439,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: "Project One",
             applicationIdentifier: "",
-            shortName: "",
-            description: "",
-            themeColorId: "",
-            backgroundColorId: "",
           },
         },
       },
@@ -439,10 +467,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: "Project One",
             applicationIdentifier: "com.yourteam/yourvn",
-            shortName: "",
-            description: "",
-            themeColorId: "",
-            backgroundColorId: "",
           },
         },
       },
@@ -454,39 +478,6 @@ describe("platformDetails handlers", () => {
     });
     expect(
       deps.projectService.createCurrentPlatformDetails,
-    ).not.toHaveBeenCalled();
-  });
-
-  it("does not save Web platform details with a removed project color", async () => {
-    const deps = createDeps();
-    deps.store.selectPlatformDialogState.mockReturnValue({
-      mode: "edit",
-      platform: "web",
-    });
-    deps.store.selectColorIds.mockReturnValue(new Set());
-
-    await handlePlatformEditFormAction(deps, {
-      _event: {
-        detail: {
-          actionId: "submit",
-          values: {
-            applicationName: "Project One",
-            applicationIdentifier: "com.example.web-project",
-            shortName: "",
-            description: "",
-            themeColorId: "color-removed",
-            backgroundColorId: "",
-          },
-        },
-      },
-    });
-
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.platformDetailsPage.webThemeColorNotFound,
-      title: EN_I18N.platformDetailsPage.warningTitle,
-    });
-    expect(
-      deps.projectService.updateCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
   });
 

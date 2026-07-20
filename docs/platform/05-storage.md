@@ -58,9 +58,7 @@ Current app-owned keys:
   - `language`
   - `iconFileId`
 - `platformDetails.web`
-  - platform application name, icon, and identifier plus Web short name,
-    description, and references to project colors for theme and startup
-    background
+  - platform application name and identifier
 - `platformDetails.windows`
   - platform application name, icon, and identifier plus publisher,
     description, and copyright
@@ -71,10 +69,11 @@ Current app-owned keys:
 
 Important details:
 
-- release metadata is read from these app-store records at export time; Web
-  values and icon are written to the exported HTML, Web manifest, and
-  `app-icon.png`, Windows values to executable/installer version metadata, and
-  macOS values to `Info.plist`
+- release metadata is read from these app-store records at export time; the Web
+  Application Name and project-owned icon are written to the exported HTML,
+  Web manifest, and generated `app-icon-192.png`/`app-icon-512.png` files,
+  Windows values to executable/installer version metadata, and macOS values to
+  `Info.plist`
 - the macOS `applicationIdentifier` starts blank, is required and editable,
   and controls both the exported app identity and save-data location; builds
   using different identifiers do not share saves
@@ -90,7 +89,8 @@ Important details:
   key, and created platform keys can be edited but not deleted
 - preview data under `releaseInfo.web`, `releaseInfo.windows`, or
   `releaseInfo.macos` is copied to the matching `platformDetails.*` key when
-  first read
+  first read; obsolete Web icon metadata is removed because Web export uses
+  the project-owned icon
 - repository state is not the source of truth for `name`, `description`,
   `language`, or `iconFileId`
 - committed event rows also store `project_id`

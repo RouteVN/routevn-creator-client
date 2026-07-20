@@ -1,5 +1,3 @@
-import { tap } from "rxjs";
-import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { validatePlatformDetails } from "../../internal/platformDetailsValidation.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
@@ -12,21 +10,8 @@ const ICON_VALIDATIONS = [
 ];
 
 export const handleBeforeMount = (deps) => {
-  const { projectService, render, store, uiConfig } = deps;
+  const { store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
-
-  const subscription = createProjectStateStream({ projectService })
-    .pipe(
-      tap(({ repositoryState }) => {
-        store.setColorsData({ colorsData: repositoryState?.colors });
-        render();
-      }),
-    )
-    .subscribe();
-
-  return () => {
-    subscription.unsubscribe();
-  };
 };
 
 export const handleAfterMount = async (deps) => {
@@ -128,17 +113,13 @@ export const handlePlatformEditDialogClose = (deps) => {
 const createPlatformDetailsPatch = ({ platform, values, iconFileId }) => {
   const patch = {
     applicationName: values.applicationName.trim(),
-    iconFileId,
   };
 
-  patch.applicationIdentifier = values.applicationIdentifier.trim();
-
-  if (platform === "web") {
-    patch.shortName = values.shortName.trim();
-    patch.description = values.description.trim();
-    patch.themeColorId = (values.themeColorId ?? "").trim();
-    patch.backgroundColorId = (values.backgroundColorId ?? "").trim();
+  if (platform !== "web") {
+    patch.iconFileId = iconFileId;
   }
+
+  patch.applicationIdentifier = values.applicationIdentifier.trim();
 
   if (platform === "windows" || platform === "macos") {
     patch.publisher = values.publisher.trim();
@@ -162,12 +143,6 @@ const getValidationMessage = (copy, code) => {
   }
   if (code === "macos-icon-required") {
     return copy.macosIconRequired;
-  }
-  if (code === "theme-color-not-found") {
-    return copy.webThemeColorNotFound;
-  }
-  if (code === "background-color-not-found") {
-    return copy.webBackgroundColorNotFound;
   }
   if (code === "web-identifier-required") {
     return copy.webApplicationIdentifierRequired;
@@ -204,7 +179,6 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
   const validation = validatePlatformDetails({
     platform,
     applicationInfo: patch,
-    availableColorIds: platform === "web" ? store.selectColorIds() : undefined,
   });
   if (!validation.valid) {
     appService.showAlert({
@@ -212,6 +186,22 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
       title: copy.warningTitle,
     });
     return;
+  }
+
+  if (mode === "edit" && platform === "web") {
+    const originalApplicationIdentifier =
+      store.selectPlatformEditDefaultValues().applicationIdentifier ?? "";
+    if (patch.applicationIdentifier !== originalApplicationIdentifier) {
+      const confirmed = await appService.showDialog({
+        title: copy.webApplicationIdentifierChangeTitle,
+        message: copy.webApplicationIdentifierChangeMessage,
+        confirmText: copy.webApplicationIdentifierChangeConfirm,
+        cancelText: copy.cancelButton,
+      });
+      if (!confirmed) {
+        return;
+      }
+    }
   }
 
   try {

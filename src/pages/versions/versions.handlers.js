@@ -300,18 +300,6 @@ const getPlatformDetailsValidationMessage = (code, copy) => {
       "Add a macOS application icon in Platform Details before exporting."
     );
   }
-  if (code === "theme-color-not-found") {
-    return (
-      copy.platformDetailsThemeColorNotFound ??
-      "The theme color selected in Web Platform Details no longer exists. Update it before exporting."
-    );
-  }
-  if (code === "background-color-not-found") {
-    return (
-      copy.platformDetailsBackgroundColorNotFound ??
-      "The background color selected in Web Platform Details no longer exists. Update it before exporting."
-    );
-  }
   if (code === "web-identifier-required") {
     return (
       copy.platformDetailsWebIdentifierRequired ??
@@ -348,38 +336,6 @@ const getPlatformDetailsValidationMessage = (code, copy) => {
   );
 };
 
-const getCurrentColorIds = (projectService) => {
-  const colors = projectService.getRepositoryState()?.colors?.items ?? {};
-  return new Set(
-    Object.values(colors)
-      .filter((color) => color?.type === "color")
-      .map((color) => color.id),
-  );
-};
-
-const getPlatformDetailsColor = (projectService, colorId) => {
-  if (!colorId) {
-    return undefined;
-  }
-
-  const color = projectService.getRepositoryState()?.colors?.items?.[colorId];
-  return color?.type === "color" ? color : undefined;
-};
-
-const getPlatformDetailsColorLabel = (projectService, colorId) => {
-  const color = getPlatformDetailsColor(projectService, colorId);
-  if (!color) {
-    return "";
-  }
-
-  const name = color.name?.trim();
-  const hex = color.hex?.trim();
-  if (name && hex) {
-    return `${name} (${hex})`;
-  }
-  return name || hex || "";
-};
-
 const requirePlatformDetailsForExport = async ({
   appService,
   copy,
@@ -389,6 +345,15 @@ const requirePlatformDetailsForExport = async ({
   let applicationInfo;
   try {
     applicationInfo = await projectService.getCurrentPlatformDetails(platform);
+    if (platform === "web" && applicationInfo) {
+      const projectInfo = await projectService.getCurrentProjectInfo();
+      // TODO: Restore Web-specific icon overrides if separate Web branding
+      // returns. Web currently uses the project-owned icon.
+      applicationInfo = {
+        ...applicationInfo,
+        iconFileId: projectInfo.iconFileId,
+      };
+    }
   } catch {
     appService.showAlert({
       message:
@@ -412,8 +377,6 @@ const requirePlatformDetailsForExport = async ({
     validation = validatePlatformDetails({
       platform,
       applicationInfo,
-      availableColorIds:
-        platform === "web" ? getCurrentColorIds(projectService) : undefined,
     });
   } catch {
     appService.showAlert({
@@ -553,9 +516,10 @@ const createVersionExportData = async ({
     return entry;
   });
 
-  const iconFileId = applicationInfo
-    ? applicationInfo.iconFileId
-    : projectInfo.iconFileId;
+  const usesProjectIcon = platform === "web";
+  const iconFileId = usesProjectIcon
+    ? projectInfo.iconFileId
+    : (applicationInfo?.iconFileId ?? projectInfo.iconFileId);
   if (iconFileId && !fileEntries.some((entry) => entry.fileId === iconFileId)) {
     fileEntries.push({
       fileId: iconFileId,
@@ -568,24 +532,12 @@ const createVersionExportData = async ({
       platform === "web"
         ? applicationInfo.applicationIdentifier
         : projectInfo.namespace,
-    title: getProjectExportTitle({ projectInfo, applicationInfo }),
+    title:
+      platform === "web"
+        ? applicationInfo.applicationName.trim()
+        : getProjectExportTitle({ projectInfo, applicationInfo }),
     iconFileId,
   };
-  if (platform === "web") {
-    projectMetadata.web = {
-      shortName: applicationInfo.shortName,
-      description: applicationInfo.description,
-      themeColor:
-        getPlatformDetailsColor(projectService, applicationInfo.themeColorId)
-          ?.hex ?? "",
-      backgroundColor:
-        getPlatformDetailsColor(
-          projectService,
-          applicationInfo.backgroundColorId,
-        )?.hex ?? "",
-    };
-  }
-
   const transformedData = createBundleInstructions({
     projectData: constructedProjectData,
     bundler: {
@@ -819,20 +771,6 @@ const prepareExportConfirmation = async (
     versionId,
     versionName: version.name ?? "",
     applicationInfo,
-    themeColor:
-      platform === "web"
-        ? getPlatformDetailsColorLabel(
-            projectService,
-            applicationInfo.themeColorId,
-          )
-        : "",
-    backgroundColor:
-      platform === "web"
-        ? getPlatformDetailsColorLabel(
-            projectService,
-            applicationInfo.backgroundColorId,
-          )
-        : "",
   });
   render();
 };

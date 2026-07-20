@@ -1,5 +1,5 @@
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
-use image::{ExtendedColorType, ImageEncoder, ImageFormat};
+use image::{ExtendedColorType, ImageEncoder, ImageFormat, ImageReader};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sprite_dicing::{Pivot, Pixel, Prefs, SourceSprite, Texture, dice};
@@ -13,7 +13,7 @@ use zip::{CompressionMethod, ZipWriter};
 
 const BUNDLE_VERSION: u8 = 4;
 const BUNDLE_HEADER_SIZE: usize = 16;
-const WEB_ICON_FILE_NAME: &str = "app-icon.png";
+const WEB_ICON_FILES: [(&str, u32); 2] = [("app-icon-192.png", 192), ("app-icon-512.png", 512)];
 const DICING_ELIGIBLE_MIME_TYPES: [&str; 3] = ["image/png", "image/jpeg", "image/webp"];
 const DICING_UNIT_SIZE: u32 = 64;
 const DICING_PADDING: u32 = 0;
@@ -420,6 +420,34 @@ fn encode_texture_as_png(texture: &Texture) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("Failed to encode diced atlas as PNG: {e}"))?;
 
     Ok(encoded)
+}
+
+fn create_web_icon_png_variants(path: &Path) -> Result<Vec<(&'static str, Vec<u8>)>, String> {
+    let image = ImageReader::open(path)
+        .map_err(|e| format!("Failed to open the Web application icon: {e}"))?
+        .with_guessed_format()
+        .map_err(|e| format!("Failed to detect the Web application icon format: {e}"))?
+        .decode()
+        .map_err(|e| format!("Failed to decode the Web application icon: {e}"))?;
+
+    WEB_ICON_FILES
+        .iter()
+        .map(|(file_name, size)| {
+            let rgba = image
+                .resize_exact(*size, *size, image::imageops::FilterType::Lanczos3)
+                .to_rgba8();
+            let mut encoded = Vec::new();
+            let encoder = PngEncoder::new_with_quality(
+                &mut encoded,
+                CompressionType::Best,
+                FilterType::Adaptive,
+            );
+            encoder
+                .write_image(&rgba, *size, *size, ExtendedColorType::Rgba8)
+                .map_err(|e| format!("Failed to encode {file_name}: {e}"))?;
+            Ok((*file_name, encoded))
+        })
+        .collect()
 }
 
 fn build_dicing_prefs() -> Prefs {
@@ -851,12 +879,12 @@ fn write_distribution_zip(
             .iter()
             .find(|asset| asset.id == web_icon_file_id)
             .ok_or_else(|| "The Web application icon could not be exported.".to_string())?;
-        let mut icon_file = File::open(&icon_asset.path)
-            .map_err(|e| format!("Failed to open the Web application icon: {e}"))?;
-        zip.start_file(WEB_ICON_FILE_NAME, options)
-            .map_err(|e| format!("Failed to create {WEB_ICON_FILE_NAME} zip entry: {e}"))?;
-        std::io::copy(&mut icon_file, &mut zip)
-            .map_err(|e| format!("Failed to write the Web application icon: {e}"))?;
+        for (file_name, bytes) in create_web_icon_png_variants(Path::new(&icon_asset.path))? {
+            zip.start_file(file_name, options)
+                .map_err(|e| format!("Failed to create {file_name} zip entry: {e}"))?;
+            zip.write_all(&bytes)
+                .map_err(|e| format!("Failed to write {file_name}: {e}"))?;
+        }
     }
 
     let mut writer = zip
@@ -1203,7 +1231,7 @@ mod tests {
             Some("<!doctype html><html></html>".to_string()),
             Some("console.log('bundle');".to_string()),
             Some(r#"{"name":"Game"}"#.to_string()),
-            Some("file-a".to_string()),
+            None,
             false,
         )
         .expect("streamed zip export should succeed");
@@ -1234,13 +1262,6 @@ mod tests {
             .read_to_string(&mut web_manifest)
             .expect("read manifest.webmanifest");
         assert_eq!(web_manifest, r#"{"name":"Game"}"#);
-        let mut web_icon = Vec::new();
-        archive
-            .by_name(WEB_ICON_FILE_NAME)
-            .expect("Web icon entry")
-            .read_to_end(&mut web_icon)
-            .expect("read Web icon");
-        assert_eq!(web_icon, asset_bytes);
         let direct_package = create_package_bin(
             vec![
                 ZipAssetInput {
@@ -1275,6 +1296,47 @@ mod tests {
         assert_eq!(file_a_chunks, file_b_chunks);
         assert_eq!(file_a_chunks.len(), 1);
         assert_eq!(manifest["chunking"]["mode"], "whole-file-only");
+
+        fs::remove_dir_all(test_dir).expect("remove temp test dir");
+    }
+
+    #[test]
+    fn streamed_zip_export_writes_web_icon_variants() {
+        let test_dir = create_unique_test_dir();
+        let icon_path = test_dir.join("project-icon");
+        let output_path = test_dir.join("export.zip");
+        write_fixture_in_format(&icon_path, ImageFormat::Png, [255, 96, 96, 255], 20, 20);
+
+        create_distribution_zip_streamed_sync(
+            output_path.display().to_string(),
+            vec![ZipAssetInput {
+                id: "project-icon".to_string(),
+                path: icon_path.display().to_string(),
+                mime: Some("image/png".to_string()),
+            }],
+            r#"{"projectData":{}}"#.to_string(),
+            None,
+            None,
+            None,
+            Some("project-icon".to_string()),
+            false,
+        )
+        .expect("streamed zip export should succeed");
+
+        let zip_file = File::open(&output_path).expect("open output zip");
+        let mut archive = ZipArchive::new(zip_file).expect("open zip archive");
+        for (file_name, expected_size) in WEB_ICON_FILES {
+            let mut icon_bytes = Vec::new();
+            archive
+                .by_name(file_name)
+                .expect("Web icon entry")
+                .read_to_end(&mut icon_bytes)
+                .expect("read Web icon");
+            let icon = image::load_from_memory_with_format(&icon_bytes, ImageFormat::Png)
+                .expect("decode Web icon");
+            assert_eq!(icon.width(), expected_size);
+            assert_eq!(icon.height(), expected_size);
+        }
 
         fs::remove_dir_all(test_dir).expect("remove temp test dir");
     }

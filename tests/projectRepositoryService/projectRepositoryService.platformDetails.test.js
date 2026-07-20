@@ -132,11 +132,6 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toEqual({
       applicationName: "Project One",
       applicationIdentifier: "",
-      iconFileId: "project-icon-1",
-      shortName: "",
-      description: "",
-      themeColorId: "",
-      backgroundColorId: "",
     });
     await expect(
       harness.service.getCurrentPlatformDetailsDefaults("macos"),
@@ -148,16 +143,10 @@ describe("projectRepositoryService platform details", () => {
     await expect(
       harness.service.createCurrentPlatformDetails("web", {
         applicationName: "Web Release",
-        shortName: "Release",
       }),
     ).resolves.toEqual({
       applicationName: "Web Release",
       applicationIdentifier: "",
-      iconFileId: "project-icon-1",
-      shortName: "Release",
-      description: "",
-      themeColorId: "",
-      backgroundColorId: "",
     });
     await expect(
       harness.service.createCurrentPlatformDetails("windows"),
@@ -191,8 +180,8 @@ describe("projectRepositoryService platform details", () => {
 
     expect(harness.getPlatformDetails("web")).toMatchObject({
       applicationName: "Web Release",
-      iconFileId: "project-icon-1",
     });
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
     expect(harness.getPlatformDetails("windows")).toMatchObject({
       applicationName: "Project One",
       iconFileId: "project-icon-1",
@@ -226,15 +215,20 @@ describe("projectRepositoryService platform details", () => {
       harness.service.getCurrentPlatformDetails("web"),
     ).resolves.toMatchObject({
       applicationName: "Web Project",
-      iconFileId: "web-icon-1",
-      shortName: "Project",
     });
     expect(harness.getPlatformDetails("web")).toMatchObject({
       applicationName: "Web Project",
       applicationIdentifier: "namespace-1",
-      iconFileId: "web-icon-1",
-      shortName: "Project",
     });
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("shortName");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("description");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty(
+      "themeColorId",
+    );
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty(
+      "backgroundColorId",
+    );
     expect(harness.store.app.set).toHaveBeenCalledWith(
       "platformDetails.web",
       expect.objectContaining({
@@ -251,10 +245,8 @@ describe("projectRepositoryService platform details", () => {
           applicationName: "Web Project",
           applicationIdentifier: "com.example.web-project",
           iconFileId: "web-icon-1",
-          shortName: "Project",
-          description: "Web release",
-          themeColorId: "",
-          backgroundColorId: "",
+          themeColorId: "theme-color-1",
+          backgroundColorId: "background-color-1",
         },
       },
     });
@@ -264,13 +256,24 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toMatchObject({
       applicationIdentifier: "com.example.web-project",
     });
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("shortName");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("description");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty(
+      "themeColorId",
+    );
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty(
+      "backgroundColorId",
+    );
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
 
     await harness.service.updateCurrentPlatformDetails("web", {
       applicationIdentifier: "com.example.web-project-two",
+      iconFileId: "ignored-web-icon",
     });
     expect(harness.getPlatformDetails("web")).toMatchObject({
       applicationIdentifier: "com.example.web-project-two",
     });
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
   });
 
   it("preserves and updates the editable macOS application identifier", async () => {
@@ -307,7 +310,7 @@ describe("projectRepositoryService platform details", () => {
     });
   });
 
-  it("fills empty platform icons from the next project icon upload only", async () => {
+  it("fills empty native platform icons from the next project icon upload only", async () => {
     const harness = createHarness({
       projectInfo: {
         id: "project-1",
@@ -329,9 +332,7 @@ describe("projectRepositoryService platform details", () => {
     await harness.service.updateCurrentProjectInfo({
       iconFileId: "project-icon-1",
     });
-    expect(harness.getPlatformDetails("web").iconFileId).toBe(
-      "project-icon-1",
-    );
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
     expect(harness.getPlatformDetails("windows").iconFileId).toBe(
       "project-icon-1",
     );
@@ -350,9 +351,7 @@ describe("projectRepositoryService platform details", () => {
     });
 
     expect(harness.getProjectInfo().iconFileId).toBe("project-icon-2");
-    expect(harness.getPlatformDetails("web").iconFileId).toBe(
-      "project-icon-1",
-    );
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
     expect(harness.getPlatformDetails("windows").iconFileId).toBe(
       "windows-icon-1",
     );
@@ -370,8 +369,7 @@ describe("projectRepositoryService platform details", () => {
     ]);
 
     await harness.service.updateCurrentPlatformDetails("web", {
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
+      applicationName: "Web Project",
     });
 
     await harness.service.updateCurrentPlatformDetails("windows", {
@@ -392,12 +390,8 @@ describe("projectRepositoryService platform details", () => {
       copyright: "Copyright Example Publisher",
     });
     expect(harness.getPlatformDetails("web").applicationName).toBe(
-      "Project One",
+      "Web Project",
     );
-    expect(harness.getPlatformDetails("web")).toMatchObject({
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
-    });
     expect(harness.getPlatformDetails("macos").applicationName).toBe(
       "Project One",
     );

@@ -8,8 +8,8 @@ import {
 const ICON_VALIDATIONS = [
   {
     type: "image-min-size",
-    minWidth: 64,
-    minHeight: 64,
+    minWidth: 512,
+    minHeight: 512,
   },
 ];
 

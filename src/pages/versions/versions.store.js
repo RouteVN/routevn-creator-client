@@ -131,31 +131,6 @@ const buildExportConfirmationFields = (
     value: formatConfirmationValue(applicationInfo.applicationIdentifier, copy),
   });
 
-  if (confirmation.platform === "web") {
-    fields.push(
-      {
-        type: "text",
-        label: platformDetailsCopy.shortNameLabel ?? "Short Name",
-        value: formatConfirmationValue(applicationInfo.shortName, copy),
-      },
-      {
-        type: "text",
-        label: platformDetailsCopy.descriptionLabel ?? "Description",
-        value: formatConfirmationValue(applicationInfo.description, copy),
-      },
-      {
-        type: "text",
-        label: platformDetailsCopy.themeColorLabel ?? "Theme Color",
-        value: formatConfirmationValue(confirmation.themeColor, copy),
-      },
-      {
-        type: "text",
-        label: platformDetailsCopy.backgroundColorLabel ?? "Background Color",
-        value: formatConfirmationValue(confirmation.backgroundColor, copy),
-      },
-    );
-  }
-
   if (
     confirmation.platform === "windows" ||
     confirmation.platform === "macos"
@@ -230,8 +205,6 @@ export const createInitialState = () => ({
     versionId: undefined,
     versionName: "",
     applicationInfo: undefined,
-    themeColor: "",
-    backgroundColor: "",
   },
 });
 
@@ -308,15 +281,7 @@ export const closeVersionDialog = ({ state }, _payload = {}) => {
 
 export const openExportConfirmation = (
   { state },
-  {
-    exportType,
-    platform,
-    versionId,
-    versionName,
-    applicationInfo,
-    themeColor,
-    backgroundColor,
-  } = {},
+  { exportType, platform, versionId, versionName, applicationInfo } = {},
 ) => {
   state.exportConfirmation.isOpen = true;
   state.exportConfirmation.exportType = exportType;
@@ -324,8 +289,6 @@ export const openExportConfirmation = (
   state.exportConfirmation.versionId = versionId;
   state.exportConfirmation.versionName = versionName ?? "";
   state.exportConfirmation.applicationInfo = applicationInfo;
-  state.exportConfirmation.themeColor = themeColor ?? "";
-  state.exportConfirmation.backgroundColor = backgroundColor ?? "";
 };
 
 export const closeExportConfirmation = ({ state }, _payload = {}) => {
@@ -335,8 +298,6 @@ export const closeExportConfirmation = ({ state }, _payload = {}) => {
   state.exportConfirmation.versionId = undefined;
   state.exportConfirmation.versionName = "";
   state.exportConfirmation.applicationInfo = undefined;
-  state.exportConfirmation.themeColor = "";
-  state.exportConfirmation.backgroundColor = "";
 };
 
 export const selectDropdownMenuTargetVersionId = ({ state }) => {
@@ -357,8 +318,6 @@ export const selectExportConfirmation = ({ state }) => {
     platform: state.exportConfirmation.platform,
     versionId: state.exportConfirmation.versionId,
     applicationInfo: state.exportConfirmation.applicationInfo,
-    themeColor: state.exportConfirmation.themeColor,
-    backgroundColor: state.exportConfirmation.backgroundColor,
   };
 };
 

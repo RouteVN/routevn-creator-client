@@ -6,9 +6,7 @@ import {
   openPlatformCreateDialog,
   openPlatformEditDialog,
   selectViewData,
-  setColorsData,
   setPlatformApplicationInfo,
-  setPlatformEditIconFileId,
   setSelectedPlatform,
 } from "../../src/pages/platformDetails/platformDetails.store.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -44,11 +42,6 @@ describe("platformDetails.store", () => {
         applicationInfo: {
           applicationName: "Project One",
           applicationIdentifier: "",
-          iconFileId: "project-icon-1",
-          shortName: "",
-          description: "",
-          themeColorId: "",
-          backgroundColorId: "",
         },
       },
     );
@@ -118,28 +111,6 @@ describe("platformDetails.store", () => {
 
   it("prefills platform edit state independently", () => {
     const state = createInitialState();
-    setColorsData(
-      { state },
-      {
-        colorsData: {
-          items: {
-            "color-theme": {
-              id: "color-theme",
-              type: "color",
-              name: "Ocean Blue",
-              hex: "#112233",
-            },
-            "color-background": {
-              id: "color-background",
-              type: "color",
-              name: "Night",
-              hex: "#000000",
-            },
-          },
-          tree: [{ id: "color-theme" }, { id: "color-background" }],
-        },
-      },
-    );
     setPlatformApplicationInfo(
       { state },
       {
@@ -148,10 +119,6 @@ describe("platformDetails.store", () => {
           applicationName: "Web Project",
           applicationIdentifier: "com.example.web-project",
           iconFileId: "web-icon-1",
-          shortName: "Project",
-          description: "Web description",
-          themeColorId: "color-theme",
-          backgroundColorId: "color-background",
         },
       },
     );
@@ -161,12 +128,8 @@ describe("platformDetails.store", () => {
     expect(state.platformEditDefaultValues).toMatchObject({
       applicationName: "Web Project",
       applicationIdentifier: "com.example.web-project",
-      shortName: "Project",
-      description: "Web description",
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
     });
-    expect(state.platformEditIconFileId).toBe("web-icon-1");
+    expect(state.platformEditIconFileId).toBeUndefined();
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.addPlatformMenu.items).toEqual([]);
@@ -179,26 +142,25 @@ describe("platformDetails.store", () => {
           EN_I18N.platformDetailsPage.webApplicationIdentifierDescription,
       }),
     );
-    expect(viewData.platformDetailFields).toContainEqual({
-      type: "text",
-      label: "Application Identifier",
-      value: "com.example.web-project",
+    expect(viewData.platformDetailFields).toEqual([
+      {
+        type: "slot",
+        slot: "platform-application-name",
+        label: "Application Name",
+      },
+      {
+        type: "slot",
+        slot: "platform-application-identifier",
+        label: "Application Identifier",
+      },
+    ]);
+    expect(viewData).toMatchObject({
+      platformApplicationName: "Web Project",
+      platformApplicationIdentifier: "com.example.web-project",
+      showPlatformApplicationIcon: false,
+      showPlatformEditIcon: false,
     });
-    expect(viewData.platformEditForm.fields).toContainEqual(
-      expect.objectContaining({
-        name: "themeColorId",
-        type: "select",
-        options: [
-          { label: "Ocean Blue", value: "color-theme" },
-          { label: "Night", value: "color-background" },
-        ],
-      }),
-    );
-    expect(viewData.platformDetailFields).toContainEqual({
-      type: "text",
-      label: "Theme Color",
-      value: "Ocean Blue",
-    });
+    expect(viewData.platformEditForm.fields).toHaveLength(2);
     expect(viewData.platformEditForm.actions.buttons).toEqual([
       {
         id: "submit",
@@ -207,8 +169,5 @@ describe("platformDetails.store", () => {
         label: "Save Changes",
       },
     ]);
-
-    setPlatformEditIconFileId({ state }, { iconFileId: "web-icon-2" });
-    expect(state.platformEditIconFileId).toBe("web-icon-2");
   });
 });

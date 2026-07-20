@@ -1,4 +1,3 @@
-import { toFlatItems } from "../../internal/project/tree.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
 const PLATFORM_IDS = ["web", "windows", "macos"];
@@ -9,14 +8,12 @@ const createPlatformApplicationInfo = (platform) => {
   const applicationInfo = {
     applicationName: "",
     applicationIdentifier: "",
-    iconFileId: undefined,
   };
 
-  if (platform === "web") {
-    applicationInfo.shortName = "";
-    applicationInfo.description = "";
-    applicationInfo.themeColorId = "";
-    applicationInfo.backgroundColorId = "";
+  // TODO: Add a Web-specific icon back when Web export no longer uses the
+  // Project Info icon.
+  if (platform !== "web") {
+    applicationInfo.iconFileId = undefined;
   }
 
   if (platform === "windows") {
@@ -38,10 +35,7 @@ const createPlatformApplicationInfo = (platform) => {
 const createPlatformEditDefaultValues = () => ({
   applicationName: "",
   applicationIdentifier: "",
-  shortName: "",
   description: "",
-  themeColorId: "",
-  backgroundColorId: "",
   publisher: "",
   copyright: "",
   category: "",
@@ -87,70 +81,31 @@ const getPlatformTabLabel = (platform, copy) => {
   return copy.webTabLabel;
 };
 
-const buildColorOptions = (colorsData) =>
-  toFlatItems(colorsData)
-    .filter((item) => item.type === "color")
-    .map((color) => ({
-      label: color.name,
-      value: color.id,
-    }));
-
-const getColorName = (colorOptions, colorId) => {
-  return colorOptions.find((option) => option.value === colorId)?.label ?? "";
-};
-
-const buildPlatformDetailFields = (
-  platform,
-  applicationInfo,
-  colorOptions,
-  copy,
-) => {
+const buildPlatformDetailFields = (platform, applicationInfo, copy) => {
   const fields = [
     {
-      type: "text",
-      label: copy.applicationNameLabel,
-      value: applicationInfo.applicationName,
-    },
-    {
       type: "slot",
-      slot: "platform-application-icon",
-      label: copy.iconLabel,
+      slot: "platform-application-name",
+      label: copy.applicationNameLabel,
     },
   ];
 
+  if (platform !== "web") {
+    fields.push({
+      type: "slot",
+      slot: "platform-application-icon",
+      label: copy.iconLabel,
+    });
+  }
+
   fields.push({
-    type: "text",
+    type: "slot",
+    slot: "platform-application-identifier",
     label:
       platform === "macos"
         ? copy.macosApplicationIdentifierLabel
         : copy.applicationIdentifierLabel,
-    value: applicationInfo.applicationIdentifier,
   });
-
-  if (platform === "web") {
-    fields.push(
-      {
-        type: "text",
-        label: copy.shortNameLabel,
-        value: applicationInfo.shortName,
-      },
-      {
-        type: "text",
-        label: copy.descriptionLabel,
-        value: applicationInfo.description,
-      },
-      {
-        type: "text",
-        label: copy.themeColorLabel,
-        value: getColorName(colorOptions, applicationInfo.themeColorId),
-      },
-      {
-        type: "text",
-        label: copy.backgroundColorLabel,
-        value: getColorName(colorOptions, applicationInfo.backgroundColorId),
-      },
-    );
-  }
 
   if (platform === "windows" || platform === "macos") {
     fields.push(
@@ -186,7 +141,7 @@ const buildPlatformDetailFields = (
   return fields;
 };
 
-const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
+const createPlatformEditForm = (platform, mode, copy) => {
   const fields = [
     {
       name: "applicationName",
@@ -195,13 +150,16 @@ const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
       description: copy[`${platform}ApplicationNameDescription`],
       required: true,
     },
-    {
+  ];
+
+  if (platform !== "web") {
+    fields.push({
       type: "slot",
       slot: "platform-application-icon-edit",
       label: copy.iconLabel,
       description: copy[`${platform}IconDescription`],
-    },
-  ];
+    });
+  }
 
   fields.push({
     name: "applicationIdentifier",
@@ -213,43 +171,6 @@ const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
     description: copy[`${platform}ApplicationIdentifierDescription`],
     required: platform !== "windows",
   });
-
-  if (platform === "web") {
-    fields.push(
-      {
-        name: "shortName",
-        type: "input-text",
-        label: copy.shortNameLabel,
-        description: copy.webShortNameDescription,
-        required: false,
-      },
-      {
-        name: "description",
-        type: "input-textarea",
-        label: copy.descriptionLabel,
-        description: copy.webDescriptionDescription,
-        required: false,
-      },
-      {
-        name: "themeColorId",
-        type: "select",
-        label: copy.themeColorLabel,
-        description: copy.webThemeColorDescription,
-        placeholder: copy.chooseProjectColorPlaceholder,
-        options: colorOptions,
-        required: false,
-      },
-      {
-        name: "backgroundColorId",
-        type: "select",
-        label: copy.backgroundColorLabel,
-        description: copy.webBackgroundColorDescription,
-        placeholder: copy.chooseProjectColorPlaceholder,
-        options: colorOptions,
-        required: false,
-      },
-    );
-  }
 
   if (platform === "windows" || platform === "macos") {
     fields.push(
@@ -314,7 +235,6 @@ const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
 };
 
 export const createInitialState = () => ({
-  colorsData: { items: {}, tree: [] },
   platformApplicationInfo: {},
   selectedPlatform: undefined,
   isTouchMode: false,
@@ -345,14 +265,6 @@ export const selectPlatformEditIconFileId = ({ state }) => {
   return state.platformEditIconFileId;
 };
 
-export const selectColorIds = ({ state }) => {
-  return new Set(
-    toFlatItems(state.colorsData)
-      .filter((item) => item.type === "color")
-      .map((color) => color.id),
-  );
-};
-
 export const selectPlatformDialogState = ({ state }) => {
   return {
     mode: state.platformDialogMode,
@@ -366,7 +278,6 @@ export const selectIsPlatformEditIconCropDialogOpen = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectPlatformDetailsPageCopy(i18n);
-  const colorOptions = buildColorOptions(state.colorsData);
   const createdPlatforms = VISIBLE_PLATFORM_IDS.filter(
     (platform) => state.platformApplicationInfo[platform],
   );
@@ -397,30 +308,30 @@ export const selectViewData = ({ state, i18n }) => {
       ? buildPlatformDetailFields(
           state.selectedPlatform,
           selectedPlatformInfo,
-          colorOptions,
           copy,
         )
       : [],
     platformApplicationIconFileId: selectedPlatformInfo?.iconFileId,
+    platformApplicationIdentifier:
+      selectedPlatformInfo?.applicationIdentifier ?? "",
+    platformApplicationName: selectedPlatformInfo?.applicationName ?? "",
     platformEditButtonLabel: copy.editPlatformDetailsButtonLabel,
     platformEditDefaultValues: state.platformEditDefaultValues,
     platformEditForm: formPlatform
-      ? createPlatformEditForm(formPlatform, formMode, colorOptions, copy)
+      ? createPlatformEditForm(formPlatform, formMode, copy)
       : undefined,
     platformDialogKey: `${formMode}-${formPlatform ?? "none"}`,
     platformEditIconFileId: state.platformEditIconFileId,
     platformEditIconCropFile: state.platformEditIconCropFile,
     isPlatformEditDialogOpen: state.isPlatformEditDialogOpen,
     isPlatformEditIconCropDialogOpen: state.isPlatformEditIconCropDialogOpen,
+    showPlatformApplicationIcon: state.selectedPlatform !== "web",
+    showPlatformEditIcon: formPlatform !== "web",
     resourceCategory: "releases",
     selectedResourceId: "platformDetails",
     showExplorerPanel: !state.isTouchMode,
     title: copy.title,
   };
-};
-
-export const setColorsData = ({ state }, { colorsData } = {}) => {
-  state.colorsData = colorsData ?? { items: {}, tree: [] };
 };
 
 export const setPlatformApplicationInfo = (
@@ -439,13 +350,8 @@ export const setPlatformApplicationInfo = (
   state.platformApplicationInfo[platform] = target;
   target.applicationName = applicationInfo?.applicationName ?? "";
   target.applicationIdentifier = applicationInfo?.applicationIdentifier ?? "";
-  target.iconFileId = applicationInfo?.iconFileId ?? undefined;
-
-  if (platform === "web") {
-    target.shortName = applicationInfo?.shortName ?? "";
-    target.description = applicationInfo?.description ?? "";
-    target.themeColorId = applicationInfo?.themeColorId ?? "";
-    target.backgroundColorId = applicationInfo?.backgroundColorId ?? "";
+  if (platform !== "web") {
+    target.iconFileId = applicationInfo?.iconFileId ?? undefined;
   }
 
   if (platform === "windows" || platform === "macos") {
@@ -498,22 +404,18 @@ export const closeAddPlatformMenu = ({ state }, _payload = {}) => {
   state.addPlatformMenu.items = [];
 };
 
-const setPlatformDialogDefaults = (state, applicationInfo) => {
+const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
   state.platformEditDefaultValues.applicationName =
     applicationInfo.applicationName;
   state.platformEditDefaultValues.applicationIdentifier =
     applicationInfo.applicationIdentifier ?? "";
-  state.platformEditDefaultValues.shortName = applicationInfo.shortName ?? "";
   state.platformEditDefaultValues.description =
     applicationInfo.description ?? "";
-  state.platformEditDefaultValues.themeColorId =
-    applicationInfo.themeColorId ?? "";
-  state.platformEditDefaultValues.backgroundColorId =
-    applicationInfo.backgroundColorId ?? "";
   state.platformEditDefaultValues.publisher = applicationInfo.publisher ?? "";
   state.platformEditDefaultValues.copyright = applicationInfo.copyright ?? "";
   state.platformEditDefaultValues.category = applicationInfo.category ?? "";
-  state.platformEditIconFileId = applicationInfo.iconFileId;
+  state.platformEditIconFileId =
+    platform === "web" ? undefined : applicationInfo.iconFileId;
 };
 
 export const openPlatformCreateDialog = (
@@ -527,7 +429,7 @@ export const openPlatformCreateDialog = (
   state.isPlatformEditDialogOpen = true;
   state.platformDialogMode = "create";
   state.platformDialogPlatform = platform;
-  setPlatformDialogDefaults(state, applicationInfo);
+  setPlatformDialogDefaults(state, platform, applicationInfo);
 };
 
 export const openPlatformEditDialog = ({ state }, _payload = {}) => {
@@ -535,7 +437,7 @@ export const openPlatformEditDialog = ({ state }, _payload = {}) => {
   state.isPlatformEditDialogOpen = true;
   state.platformDialogMode = "edit";
   state.platformDialogPlatform = state.selectedPlatform;
-  setPlatformDialogDefaults(state, applicationInfo);
+  setPlatformDialogDefaults(state, state.selectedPlatform, applicationInfo);
 };
 
 export const closePlatformEditDialog = ({ state }, _payload = {}) => {

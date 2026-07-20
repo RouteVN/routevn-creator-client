@@ -804,22 +804,26 @@ Release packaging metadata is stored independently under `platformDetails.web`,
 `app` store. No platform record exists until the user explicitly adds that
 platform from Platform Details and submits its prefilled create form. Opening or
 cancelling the form does not persist a record. Form defaults copy the project
-name and icon. The Web identifier starts blank, is required and editable, and
-controls browser save-data identity; older stored Web records are backfilled
-once from `projectInfo.namespace`. The Windows and macOS identifiers start
-blank. The macOS identifier is required and editable;
+name, and native platform defaults also copy the project icon. The Web
+identifier starts blank, is required and editable, and controls browser
+save-data identity; older stored Web records are backfilled once from
+`projectInfo.namespace`. The Windows and macOS identifiers start blank. The
+macOS identifier is required and editable;
 changing it changes the exported app and save-data identity, so builds using
 different identifiers do not share saves.
 Preview records stored under the former
 `releaseInfo.<platform>` keys are copied into the `platformDetails.<platform>`
 namespace when read. A later project icon update fills an existing platform icon
-only while that platform icon remains empty. The records otherwise have no
+only while that native platform icon remains empty. The records otherwise have no
 cross-platform synchronization or delete flow. Platform exports validate the
 matching record and show its values
 in a read-only confirmation dialog before opening a save picker or starting
 the export. Web metadata is emitted into `index.html`,
-`manifest.webmanifest`, and the bundle instructions; the selected Web icon is
-also emitted as `app-icon.png` and referenced by both HTML and the manifest.
+`manifest.webmanifest`, and the bundle instructions; Web export uses the Web
+Application Name and project-owned icon. The same Application Name is used for
+the manifest `name` and `short_name`. Web theme and startup background colors
+use fixed runtime defaults. The icon is emitted as 192px and 512px PNGs. HTML
+uses the 512px PNG as its favicon, and the manifest references both sizes.
 Windows metadata is
 stamped into the portable executable's version resources and the NSIS
 installer's version keys. macOS metadata is stamped into `Info.plist` using

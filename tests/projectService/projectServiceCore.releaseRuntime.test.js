@@ -159,8 +159,14 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     });
     mocked.repositoryService.getCurrentPlatformDetails.mockImplementation(
       async (platform) => {
-        if (platform === "web" || platform === "macos") {
+        if (platform === "macos") {
           return { iconFileId: "file-icon-1" };
+        }
+        if (platform === "web") {
+          return {
+            applicationName: "Web Project",
+            applicationIdentifier: "com.example.web-project",
+          };
         }
         return { iconFileId: "file-other" };
       },
@@ -190,13 +196,10 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       }),
     ).resolves.toEqual({
       inProps: {
-        platformDetails: [
-          { property: "web.iconFileId" },
-          { property: "macos.iconFileId" },
-        ],
+        platformDetails: [{ property: "macos.iconFileId" }],
       },
       isUsed: true,
-      count: 2,
+      count: 1,
     });
   });
 

@@ -133,12 +133,7 @@ Current keys:
   - independently customizable Web release metadata
   - current fields:
     - `applicationName`
-    - `iconFileId`
     - `applicationIdentifier`
-    - `shortName`
-    - `description`
-    - `themeColorId`
-    - `backgroundColorId`
 - `platformDetails.windows`
   - independently customizable Windows release metadata
   - current fields:
@@ -160,32 +155,37 @@ Current keys:
     - `category`
   - no platform record exists until the user adds that platform from Platform
     Details and submits its create form
-  - the create form is prefilled from the current project name and icon;
-    cancelling it does not persist a record
+  - the create form is prefilled from the current project name; cancelling it
+    does not persist a record
   - the Web identifier starts blank, is required and editable, and controls
     browser save-data identity; older stored Web records are backfilled once
     from `projectInfo.namespace`
+  - changing an existing Web identifier requires confirmation because users
+    who update to the new identifier cannot access saves created under the old
+    identifier
   - the Windows identifier starts blank and is optional; the macOS identifier
     starts blank, is required and editable, and controls the exported app and
     save-data identity
   - platform export is blocked until the corresponding platform record exists
-    and passes validation; Web export also checks that selected project colors
-    still exist
+    and passes validation
   - after preflight passes, every export shows the selected version and the
     platform record in a read-only confirmation dialog; save-path selection
     and bundle creation start only after the user confirms
-  - image deletion treats each platform `iconFileId` as a live reference and
-    is blocked while the image file is used by any platform details record
-  - exports materialize the matching record into platform artifacts: Web HTML,
-    manifest, standalone `app-icon.png`, and bundle metadata; Windows PE/NSIS
-    version metadata; or macOS `Info.plist`
-  - a later project-icon update fills an existing platform icon only while
-    that platform icon is empty
+  - image deletion treats each native platform `iconFileId` as a live
+    reference and is blocked while the image file is used by a native platform
+    details record
+  - exports materialize platform metadata into platform artifacts: Web HTML,
+    manifest, generated `app-icon-192.png`/`app-icon-512.png` files based on the
+    project icon, and bundle metadata; Windows PE/NSIS version metadata; or
+    macOS `Info.plist`
+  - a later project-icon update fills an existing native platform icon only
+    while that platform icon is empty
   - after creation, each platform record is edited and persisted independently
   - created platform records cannot be deleted
   - preview data under `releaseInfo.web`, `releaseInfo.windows`, or
     `releaseInfo.macos` is copied to the matching `platformDetails.*` key when
-    first read
+    first read; obsolete Web icon metadata is removed because Web export uses
+    the project-owned icon
 - `creatorVersion`
   - stored project format version gate for compatibility checks
 - `versions`

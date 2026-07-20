@@ -182,14 +182,12 @@ export const createProjectRepositoryService = ({
     const platformDetails = {
       applicationName: sourceInfo?.applicationName ?? "",
       applicationIdentifier: sourceInfo?.applicationIdentifier ?? "",
-      iconFileId: sourceInfo?.iconFileId ?? null,
     };
 
-    if (platform === "web") {
-      platformDetails.shortName = "";
-      platformDetails.description = "";
-      platformDetails.themeColorId = "";
-      platformDetails.backgroundColorId = "";
+    // TODO: Add a Web-specific icon back when Web export no longer uses the
+    // project-owned icon.
+    if (platform !== "web") {
+      platformDetails.iconFileId = sourceInfo?.iconFileId ?? null;
     }
 
     if (platform === "windows") {
@@ -210,13 +208,6 @@ export const createProjectRepositoryService = ({
 
   const normalizePlatformDetails = (platform, platformDetails) => {
     const normalized = createPlatformDetails(platform, platformDetails);
-
-    if (platform === "web") {
-      normalized.shortName = platformDetails?.shortName ?? "";
-      normalized.description = platformDetails?.description ?? "";
-      normalized.themeColorId = platformDetails?.themeColorId ?? "";
-      normalized.backgroundColorId = platformDetails?.backgroundColorId ?? "";
-    }
 
     if (platform === "windows") {
       normalized.publisher = platformDetails?.publisher ?? "";
@@ -766,6 +757,17 @@ export const createProjectRepositoryService = ({
       shouldPersist = true;
     }
 
+    if (
+      platform === "web" &&
+      (Object.hasOwn(storedPlatformDetails, "shortName") ||
+        Object.hasOwn(storedPlatformDetails, "description") ||
+        Object.hasOwn(storedPlatformDetails, "themeColorId") ||
+        Object.hasOwn(storedPlatformDetails, "backgroundColorId") ||
+        Object.hasOwn(storedPlatformDetails, "iconFileId"))
+    ) {
+      shouldPersist = true;
+    }
+
     if (shouldPersist) {
       await store.app.set(key, platformDetails);
     }
@@ -779,6 +781,10 @@ export const createProjectRepositoryService = ({
     }
 
     for (const platform of Object.keys(PLATFORM_DETAILS_KEYS)) {
+      if (platform === "web") {
+        continue;
+      }
+
       const key = getPlatformDetailsKey(platform);
       const platformDetails = await readPlatformDetailsFromStore(
         store,

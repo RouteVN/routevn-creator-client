@@ -724,6 +724,25 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         return url.absoluteString
     }
 
+    private func resizedWebIconData(_ sourceData: Data, size: CGFloat) throws -> Data {
+        guard let sourceImage = UIImage(data: sourceData) else {
+            throw RouteVNError.message("The Web application icon could not be decoded.")
+        }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        let targetSize = CGSize(width: size, height: size)
+        let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
+        let resizedImage = renderer.image { _ in
+            sourceImage.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
+        guard let pngData = resizedImage.pngData() else {
+            throw RouteVNError.message("The Web application icon could not be encoded.")
+        }
+        return pngData
+    }
+
     private func createDistributionZipStreamedToUri(_ payload: [String: Any]) throws -> [String: Any] {
         let projectId = try storage.safePathSegment(requiredString(payload, "projectId"))
         let uri = try requiredString(payload, "uri")
@@ -774,10 +793,17 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 guard FileManager.default.fileExists(atPath: webIconURL.path) else {
                     throw RouteVNError.message("The Web application icon could not be exported.")
                 }
-                try writer.addDataEntry(
-                    name: "app-icon.png",
-                    data: try Data(contentsOf: webIconURL)
-                )
+                let sourceData = try Data(contentsOf: webIconURL)
+                let webIconVariants = [
+                    ("app-icon-192.png", CGFloat(192)),
+                    ("app-icon-512.png", CGFloat(512))
+                ]
+                for (fileName, size) in webIconVariants {
+                    try writer.addDataEntry(
+                        name: fileName,
+                        data: try resizedWebIconData(sourceData, size: size)
+                    )
+                }
             }
             let zipBytes = try writer.finalize()
 

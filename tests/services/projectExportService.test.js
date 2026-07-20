@@ -5,7 +5,9 @@ import {
   BUNDLE_FORMAT_VERSION_V4,
   BUNDLE_HEADER_SIZE,
   BUNDLE_PLAYER_INDEX_HTML,
-  BUNDLE_WEB_ICON_FILE_NAME,
+  BUNDLE_WEB_ICON_192_FILE_NAME,
+  BUNDLE_WEB_ICON_512_FILE_NAME,
+  BUNDLE_WEB_ICON_FILES,
   createBundleInstructions,
   createBundlePlayerIndexHtml,
   createBundleResult,
@@ -186,7 +188,7 @@ describe("projectExportService", () => {
         manifestJson: expect.any(String),
         mainJs: undefined,
         webIconFileId: "icon-1",
-        webIconFileName: BUNDLE_WEB_ICON_FILE_NAME,
+        webIconFiles: BUNDLE_WEB_ICON_FILES,
       },
       getCurrentReference,
       getFileContent,
@@ -351,64 +353,61 @@ describe("projectExportService", () => {
     });
   });
 
-  it("stores Web release metadata and renders it into Web export files", () => {
+  it("renders Web application metadata with fixed colors", () => {
     const project = {
       namespace: "project-one",
       title: "Project One",
       iconFileId: "icon-1",
-      web: {
-        shortName: "Project",
-        description: 'A visual novel about <friends> & "adventure".',
-        themeColor: "#112233",
-        backgroundColor: "#000000",
-      },
     };
     const instructions = createBundleInstructions({ projectData: {}, project });
 
-    expect(instructions.bundleMetadata.project.web).toEqual(project.web);
+    expect(instructions.bundleMetadata.project).toEqual(project);
 
     const indexHtml = createBundlePlayerIndexHtml({
       title: project.title,
-      ...project.web,
-      iconFileName: BUNDLE_WEB_ICON_FILE_NAME,
+      iconFileName512: BUNDLE_WEB_ICON_512_FILE_NAME,
     });
     expect(indexHtml).toContain("<title>Project One</title>");
     expect(indexHtml).toContain(
-      '<meta name="application-name" content="Project" />',
+      '<meta name="application-name" content="Project One" />',
     );
+    expect(indexHtml).not.toContain('<meta name="description"');
     expect(indexHtml).toContain(
-      'content="A visual novel about &lt;friends&gt; &amp; &quot;adventure&quot;."',
-    );
-    expect(indexHtml).toContain(
-      '<meta name="theme-color" content="#112233" />',
+      '<meta name="theme-color" content="#000000" />',
     );
     expect(indexHtml).toContain("background: #000000;");
     expect(indexHtml).toContain(
-      `<link rel="icon" href="./${BUNDLE_WEB_ICON_FILE_NAME}" />`,
+      `<link rel="icon" href="./${BUNDLE_WEB_ICON_512_FILE_NAME}" />`,
     );
 
-    expect(
-      JSON.parse(
-        createBundleWebManifest({
-          title: project.title,
-          ...project.web,
-          iconFileName: BUNDLE_WEB_ICON_FILE_NAME,
-        }),
-      ),
-    ).toMatchObject({
+    const manifest = JSON.parse(
+      createBundleWebManifest({
+        title: project.title,
+        iconFileName192: BUNDLE_WEB_ICON_192_FILE_NAME,
+        iconFileName512: BUNDLE_WEB_ICON_512_FILE_NAME,
+      }),
+    );
+    expect(manifest).toMatchObject({
       name: "Project One",
-      short_name: "Project",
-      description: project.web.description,
-      theme_color: "#112233",
+      short_name: "Project One",
+      theme_color: "#000000",
       background_color: "#000000",
       icons: [
         {
-          src: `./${BUNDLE_WEB_ICON_FILE_NAME}`,
+          src: `./${BUNDLE_WEB_ICON_192_FILE_NAME}`,
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "any",
+        },
+        {
+          src: `./${BUNDLE_WEB_ICON_512_FILE_NAME}`,
+          sizes: "512x512",
           type: "image/png",
           purpose: "any",
         },
       ],
     });
+    expect(manifest).not.toHaveProperty("description");
   });
 
   it("stores repeated raw assets once in bundle format v4", async () => {

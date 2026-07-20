@@ -2,6 +2,7 @@ const propsChanged = (oldProps = {}, newProps = {}) => {
   return (
     oldProps.open !== newProps.open ||
     oldProps.file !== newProps.file ||
+    oldProps.outputSize !== newProps.outputSize ||
     oldProps.title !== newProps.title ||
     oldProps.description !== newProps.description ||
     oldProps.confirmLabel !== newProps.confirmLabel

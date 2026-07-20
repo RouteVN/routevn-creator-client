@@ -40,4 +40,4 @@ template:
                   - rtgl-button#browseButton variant=se: ${browseButtonLabel}
               - $if validationErrors.projectPath:
                   - rtgl-text s=sm c=de: ${validationErrors.projectPath}
-  - rvn-square-image-crop-dialog#iconCropDialog :open=${isIconCropDialogOpen} :file=${iconCropFile}: null
+  - rvn-square-image-crop-dialog#iconCropDialog :open=${isIconCropDialogOpen} :file=${iconCropFile} :outputSize=${512}: null

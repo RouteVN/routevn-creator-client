@@ -4,19 +4,7 @@ const MACOS_CATEGORY_PATTERN =
   /^public\.app-category\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const WEB_APPLICATION_IDENTIFIER_PATTERN = /^(?=.*[A-Za-z0-9])[A-Za-z0-9.-]+$/;
 
-const hasColor = (availableColorIds, colorId) => {
-  if (!colorId || availableColorIds === undefined) {
-    return true;
-  }
-
-  return availableColorIds.has(colorId);
-};
-
-export const validatePlatformDetails = ({
-  platform,
-  applicationInfo,
-  availableColorIds,
-} = {}) => {
+export const validatePlatformDetails = ({ platform, applicationInfo } = {}) => {
   if (!applicationInfo.applicationName.trim()) {
     return { valid: false, code: "application-name-required" };
   }
@@ -40,12 +28,6 @@ export const validatePlatformDetails = ({
       )
     ) {
       return { valid: false, code: "web-identifier-invalid" };
-    }
-    if (!hasColor(availableColorIds, applicationInfo.themeColorId)) {
-      return { valid: false, code: "theme-color-not-found" };
-    }
-    if (!hasColor(availableColorIds, applicationInfo.backgroundColorId)) {
-      return { valid: false, code: "background-color-not-found" };
     }
   }
 

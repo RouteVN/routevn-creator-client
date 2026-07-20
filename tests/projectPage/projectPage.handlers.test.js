@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleBackButtonKeyDown,
+  handleEditDialogIconClick,
   handleEditFormAction,
   handleProjectActionMenuClickItem,
 } from "../../src/pages/project/project.handlers.js";
@@ -18,6 +19,31 @@ const createKeyEvent = (key) => ({
 });
 
 describe("project page handlers", () => {
+  it("requires project icon sources to be at least 512px", async () => {
+    const deps = {
+      appService: {
+        pickFiles: vi.fn(async () => undefined),
+      },
+      store: {},
+      render: vi.fn(),
+      i18n: EN_I18N,
+    };
+
+    await handleEditDialogIconClick(deps);
+
+    expect(deps.appService.pickFiles).toHaveBeenCalledWith({
+      accept: "image/*",
+      multiple: false,
+      validations: [
+        {
+          type: "image-min-size",
+          minWidth: 512,
+          minHeight: 512,
+        },
+      ],
+    });
+  });
+
   it("activates Back to Projects from Enter and Space", () => {
     const deps = createDeps();
     const enterEvent = createKeyEvent("Enter");
