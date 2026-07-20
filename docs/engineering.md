@@ -573,7 +573,10 @@ and native save-identity concepts:
   - these are not compatibility gates; they are exporter provenance only
 
 - browser-hosted bundle save namespace
-  - source of truth is project-specific DB `projectInfo.namespace`
+  - source of truth is
+    `platformDetails.web.applicationIdentifier` in the project-specific DB
+  - older stored Web platform records without an identifier receive
+    `projectInfo.namespace` once to preserve existing save identity
   - exported into bundle metadata as `bundleMetadata.project.namespace`
   - browser runtime should use that namespace for IndexedDB/save identity
   - `projectId` must not be exposed into the exported bundle for this purpose
@@ -801,9 +804,12 @@ Release packaging metadata is stored independently under `platformDetails.web`,
 `app` store. No platform record exists until the user explicitly adds that
 platform from Platform Details and submits its prefilled create form. Opening or
 cancelling the form does not persist a record. Form defaults copy the project
-name and icon, while the Windows and macOS identifiers start blank. The macOS
-identifier is required and editable; changing it changes the exported app and
-save-data identity, so builds using different identifiers do not share saves.
+name and icon. The Web identifier starts blank, is required and editable, and
+controls browser save-data identity; older stored Web records are backfilled
+once from `projectInfo.namespace`. The Windows and macOS identifiers start
+blank. The macOS identifier is required and editable;
+changing it changes the exported app and save-data identity, so builds using
+different identifiers do not share saves.
 Preview records stored under the former
 `releaseInfo.<platform>` keys are copied into the `platformDetails.<platform>`
 namespace when read. A later project icon update fills an existing platform icon
@@ -837,7 +843,10 @@ Project identity has an important split:
   not the ownership source
 - committed repository event history in `project.db` still stores `project_id`
   per committed row
-- browser-hosted bundle save identity uses `projectInfo.namespace`
+- browser-hosted bundle save identity uses
+  `platformDetails.web.applicationIdentifier`
+- `projectInfo.namespace` backfills older stored Web records without that
+  identifier
 - native Windows player save identity uses the stable Tauri application
   identifier and one unpartitioned `runtime.db`
 

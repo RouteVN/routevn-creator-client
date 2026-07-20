@@ -99,6 +99,7 @@ describe("versions store export actions", () => {
         versionName: "Version 1",
         applicationInfo: {
           applicationName: "Web Edition",
+          applicationIdentifier: "com.example.web-edition",
           iconFileId: "web-icon",
           shortName: "Web",
           description: "Browser release",
@@ -119,6 +120,11 @@ describe("versions store export actions", () => {
       expect.arrayContaining([
         { type: "text", label: "Release Version", value: "Version 1" },
         { type: "text", label: "Application Name", value: "Web Edition" },
+        {
+          type: "text",
+          label: "Application Identifier",
+          value: "com.example.web-edition",
+        },
         { type: "text", label: "Theme Color", value: "Accent (#112233)" },
         {
           type: "text",

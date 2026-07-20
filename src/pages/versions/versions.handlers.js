@@ -312,6 +312,18 @@ const getPlatformDetailsValidationMessage = (code, copy) => {
       "The background color selected in Web Platform Details no longer exists. Update it before exporting."
     );
   }
+  if (code === "web-identifier-required") {
+    return (
+      copy.platformDetailsWebIdentifierRequired ??
+      "Add a Web application identifier before exporting."
+    );
+  }
+  if (code === "web-identifier-invalid") {
+    return (
+      copy.platformDetailsWebIdentifierInvalid ??
+      "The Web application identifier is invalid. Update it before exporting."
+    );
+  }
   if (code === "windows-identifier-invalid") {
     return (
       copy.platformDetailsWindowsIdentifierInvalid ??
@@ -552,7 +564,10 @@ const createVersionExportData = async ({
   }
 
   const projectMetadata = {
-    namespace: projectInfo.namespace,
+    namespace:
+      platform === "web"
+        ? applicationInfo.applicationIdentifier
+        : projectInfo.namespace,
     title: getProjectExportTitle({ projectInfo, applicationInfo }),
     iconFileId,
   };

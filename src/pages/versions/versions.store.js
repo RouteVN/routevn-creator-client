@@ -120,21 +120,16 @@ const buildExportConfirmationFields = (
     },
   ];
 
-  if (confirmation.platform !== "web") {
-    fields.push({
-      type: "text",
-      label:
-        confirmation.platform === "macos"
-          ? (platformDetailsCopy.macosApplicationIdentifierLabel ??
-            "Bundle Identifier")
-          : (platformDetailsCopy.applicationIdentifierLabel ??
-            "Application Identifier"),
-      value: formatConfirmationValue(
-        applicationInfo.applicationIdentifier,
-        copy,
-      ),
-    });
-  }
+  fields.push({
+    type: "text",
+    label:
+      confirmation.platform === "macos"
+        ? (platformDetailsCopy.macosApplicationIdentifierLabel ??
+          "Bundle Identifier")
+        : (platformDetailsCopy.applicationIdentifierLabel ??
+          "Application Identifier"),
+    value: formatConfirmationValue(applicationInfo.applicationIdentifier, copy),
+  });
 
   if (confirmation.platform === "web") {
     fields.push(
