@@ -198,6 +198,7 @@ const buildExportConfirmationFields = (
 };
 
 export const createInitialState = () => ({
+  isVersionsLoading: true,
   versions: [],
   selectedItemId: undefined,
   platform: "web",
@@ -429,6 +430,7 @@ export const selectViewData = ({ state, i18n }) => {
   });
 
   return {
+    isVersionsLoading: state.isVersionsLoading,
     versions,
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedVersion?.name ?? "",
@@ -465,6 +467,7 @@ export const selectViewData = ({ state, i18n }) => {
     exportConfirmationKey: `${state.exportConfirmation.exportType ?? "none"}-${state.exportConfirmation.versionId ?? "none"}`,
     title: copy.title ?? "Versions",
     addButton: copy.addButton ?? "Add",
+    loadingMessage: copy.loadingMessage ?? "Loading...",
     noVersionsMessage: copy.noVersionsMessage ?? "No versions",
     exportWebButton: copy.exportWebButton ?? "Export Web",
     exportWindowsExecutableButton:
@@ -489,6 +492,7 @@ export const selectViewData = ({ state, i18n }) => {
 
 export const setVersions = ({ state }, { versions } = {}) => {
   state.versions = Array.isArray(versions) ? versions : [];
+  state.isVersionsLoading = false;
 
   if (!findVersionById(state.versions, state.selectedItemId)) {
     state.selectedItemId = undefined;
@@ -497,6 +501,10 @@ export const setVersions = ({ state }, { versions } = {}) => {
   if (!findVersionById(state.versions, state.editingVersionId)) {
     state.editingVersionId = undefined;
   }
+};
+
+export const setVersionsLoading = ({ state }, { loading } = {}) => {
+  state.isVersionsLoading = loading;
 };
 
 export const addVersion = ({ state }, { version } = {}) => {

@@ -19,6 +19,7 @@ export const createInitialState = () => ({
   userDisplayColor: "#E2E8F0",
   userAvatar: "",
   avatarInitial: "U",
+  isProjectsLoading: true,
   projects: [],
   cloudProjects: [],
   platform: "tauri",
@@ -126,6 +127,11 @@ export const createInitialState = () => ({
 
 export const setProjects = ({ state }, { projects } = {}) => {
   state.projects = projects;
+  state.isProjectsLoading = false;
+};
+
+export const setProjectsLoading = ({ state }, { loading } = {}) => {
+  state.isProjectsLoading = loading;
 };
 
 export const addProject = ({ state }, { project } = {}) => {
@@ -730,8 +736,13 @@ export const selectViewData = ({ state, i18n }) => {
     }),
     deleteDialogConfirmLabel: copy.removeButton,
     hasLocalProjects,
-    localEmptyMessage: hasLocalProjects ? "" : copy.localEmptyTitle,
-    localEmptySubMessage: hasLocalProjects ? "" : copy.localEmptyDescription,
+    loadingMessage: copy.loadingMessage,
+    localEmptyMessage:
+      state.isProjectsLoading || hasLocalProjects ? "" : copy.localEmptyTitle,
+    localEmptySubMessage:
+      state.isProjectsLoading || hasLocalProjects
+        ? ""
+        : copy.localEmptyDescription,
     hasCloudProjects,
     showCloudLoginHint,
     cloudEmptyMessage: showCloudLoginHint

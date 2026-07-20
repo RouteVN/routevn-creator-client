@@ -483,6 +483,8 @@ export const createProjectServiceCore = ({
       repositoryService.createCurrentPlatformDetails,
     updateCurrentPlatformDetails:
       repositoryService.updateCurrentPlatformDetails,
+    getCachedVersions: collabService.getCachedVersions,
+    loadVersionsFromProject: collabService.loadVersionsFromProject,
     addVersionToProject: collabService.addVersionToProject,
     updateVersionInProject: collabService.updateVersionInProject,
     deleteVersionFromProject: collabService.deleteVersionFromProject,

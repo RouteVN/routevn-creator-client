@@ -256,9 +256,6 @@ describe("layoutEditPanel sound handlers", () => {
     const deps = createDeps({
       itemType: "text-revealing",
     });
-    deps.appService.showDropdownMenu.mockResolvedValueOnce({
-      item: { key: "revealSoundId" },
-    });
 
     await handleSectionActionClick(deps, {
       _event: {
@@ -266,18 +263,45 @@ describe("layoutEditPanel sound handlers", () => {
         clientY: 20,
         currentTarget: {
           dataset: {
-            id: "textRevealIndicator",
+            id: "textRevealing",
           },
         },
       },
     });
 
+    expect(deps.appService.showDropdownMenu).not.toHaveBeenCalled();
     expect(deps.state.soundSelectorDialog).toMatchObject({
       open: true,
       name: "revealSoundId",
       source: "value",
     });
     expect(deps.state.soundFormDialog.open).toBe(false);
+  });
+
+  it("shows an alert when no reveal sounds are available", async () => {
+    const deps = createDeps({
+      itemType: "text-revealing",
+      soundsData: {
+        items: {},
+        tree: [],
+      },
+    });
+
+    await handleSectionActionClick(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            id: "textRevealing",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "No sounds available. Create a sound resource first.",
+      title: "Warning",
+    });
+    expect(deps.state.soundSelectorDialog.open).toBe(false);
   });
 
   it("clears the selected hover sound and its volume", () => {

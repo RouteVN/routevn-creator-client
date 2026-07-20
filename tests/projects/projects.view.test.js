@@ -2,6 +2,20 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("projects view", () => {
+  it("shows loading before the settled empty-project state", () => {
+    const projectsView = readFileSync(
+      new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    const loadingIndex = projectsView.indexOf("$if isProjectsLoading:");
+    const emptyIndex = projectsView.indexOf("$elif localEmptyMessage:");
+
+    expect(loadingIndex).toBeGreaterThan(-1);
+    expect(emptyIndex).toBeGreaterThan(loadingIndex);
+    expect(projectsView).toContain("rtgl-text s=lg c=mu-fg: ${loadingMessage}");
+  });
+
   it("uses the shared navbar style for the projects title and mobile create action", () => {
     const projectsView = readFileSync(
       new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
