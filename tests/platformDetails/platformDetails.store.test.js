@@ -14,7 +14,7 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("platformDetails.store", () => {
-  it("starts empty and offers every uncreated platform", () => {
+  it("starts empty and offers only Web", () => {
     const state = createInitialState();
 
     let viewData = selectViewData({ state, i18n: EN_I18N });
@@ -31,11 +31,7 @@ describe("platformDetails.store", () => {
       isOpen: true,
       x: 100,
       y: 200,
-      items: [
-        { label: "Web", type: "item", value: "web" },
-        { label: "Windows", type: "item", value: "windows" },
-        { label: "macOS", type: "item", value: "macos" },
-      ],
+      items: [{ label: "Web", type: "item", value: "web" }],
     });
   });
 
@@ -87,7 +83,7 @@ describe("platformDetails.store", () => {
     });
   });
 
-  it("shows independently selected platform details", () => {
+  it("keeps native platform details out of the visible tabs", () => {
     const state = createInitialState();
     setPlatformApplicationInfo(
       { state },
@@ -109,33 +105,15 @@ describe("platformDetails.store", () => {
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData).toMatchObject({
-      hasPlatformDetails: true,
-      platformTabs: [{ id: "macos", label: "macOS" }],
-      selectedPlatform: "macos",
-      selectedPlatformTitle: "macOS Platform Details",
-      platformApplicationIconFileId: "macos-icon-1",
+      hasPlatformDetails: false,
+      platformTabs: [],
+      selectedPlatform: undefined,
       selectedResourceId: "platformDetails",
     });
-    expect(viewData.platformDetailFields).toContainEqual({
-      type: "text",
-      label: "Application Category",
-      value: "public.app-category.games",
+    expect(state.platformApplicationInfo.macos).toMatchObject({
+      applicationName: "macOS Project",
+      applicationIdentifier: "com.example.macos-project",
     });
-    expect(viewData.platformDetailFields).toContainEqual({
-      type: "text",
-      label: "Bundle Identifier",
-      value: "com.example.macos-project",
-    });
-    const applicationIdentifierField = viewData.platformEditForm.fields.find(
-      (field) => field.name === "applicationIdentifier",
-    );
-    expect(applicationIdentifierField).toMatchObject({
-      name: "applicationIdentifier",
-      label: "Bundle Identifier",
-      description:
-        EN_I18N.platformDetailsPage.macosApplicationIdentifierDescription,
-    });
-    expect(applicationIdentifierField.disabled).toBeUndefined();
   });
 
   it("prefills platform edit state independently", () => {
@@ -191,10 +169,8 @@ describe("platformDetails.store", () => {
     expect(state.platformEditIconFileId).toBe("web-icon-1");
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(viewData.addPlatformMenu.items.map((item) => item.value)).toEqual([
-      "windows",
-      "macos",
-    ]);
+    expect(viewData.addPlatformMenu.items).toEqual([]);
+    expect(viewData.canAddPlatform).toBe(false);
     expect(viewData.platformEditForm.fields).toContainEqual(
       expect.objectContaining({
         name: "applicationIdentifier",
