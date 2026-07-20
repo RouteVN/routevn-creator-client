@@ -168,7 +168,7 @@ const runClick = (deps, { clickCount = 1, metaKey = false } = {}) => {
 };
 
 describe("layoutEditorCanvas pointer selection", () => {
-  it("renders hover with Route Graphics rects and a one-CSS-pixel black line", () => {
+  it("renders hover with Route Graphics rects and a one-CSS-pixel light-gray line", () => {
     const deps = createDeps();
 
     handleCanvasPointerMove(deps, {

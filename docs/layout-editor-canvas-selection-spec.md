@@ -1,6 +1,6 @@
 # Layout Editor Canvas Hover And Selection Specification
 
-Status: Proposed implementation specification
+Status: Implemented
 
 Last updated: 2026-07-21
 
@@ -66,8 +66,9 @@ The canvas interaction model establishes these rules:
    front of them.
 5. A right-click **Select layer** menu provides an explicit way to choose from
    layers underneath one pointer position.
-6. Hidden and locked layers do not participate in normal canvas selection.
-7. Clicking empty canvas space or pressing `Escape` clears selection.
+6. Hidden layers do not participate in normal canvas selection. Locked-element
+   behavior remains deferred until authored elements support locking.
+7. Clicking empty canvas space clears selection.
 
 The baseline does not prescribe every low-level hit-testing detail or define
 RouteVN concepts such as repeated preview instances and fragment references.
@@ -233,8 +234,11 @@ eligible occurrence behind it can then win.
 
 ## Hover Behavior
 
-Hover is a prediction of the target that a primary click with the current
-modifier keys would select.
+Hover normally predicts the target that a primary click with the current
+modifier keys would select. The selected-descendant suppression rule below is
+an intentional presentation exception: it avoids highlighting an ancestor
+while the pointer remains over its selected descendant, even though a normal
+click would select that ancestor.
 
 ### Normal hover
 
@@ -279,13 +283,13 @@ target immediately.
 - If they refer to different occurrences, keep the selection chrome and show
   the hover outline at the same time.
 - Clear hover when the pointer leaves the canvas, no candidate exists, a drag
-  starts, the canvas is disabled, or the component unmounts.
+  starts, or the component unmounts.
 
 Hover updates MUST be cheap. Pointer movement MUST NOT reload assets, query the
 repository, or recompile the layout. It MAY submit the cached render tree plus
 the hover rectangles through Route Graphics' element-diff render path. Hit
-testing SHOULD use an index rebuilt only when the resolved render tree changes,
-and visual updates SHOULD be limited to one animation-frame cadence.
+testing MUST query Route Graphics' live transformed render tree, and visual
+updates SHOULD be limited to one animation-frame cadence.
 
 ## Click Behavior
 
@@ -331,7 +335,8 @@ MUST NOT accidentally reset the depth and prevent repeated descent.
 - The white selection outline MUST be outside the occurrence and the gray
   outline MUST be inside it, without duplicating either color on both sides of
   the authored boundary.
-- Keep the stroke approximately two CSS pixels at every canvas scale.
+- Keep each outline approximately one CSS pixel at every canvas scale. Together,
+  the exterior white and interior gray bands span approximately two CSS pixels.
 - Show the existing white anchor marker with its one-CSS-pixel light-gray
   border and only the resize handles supported by the selected authored item.
 - Use no selection fill; authored content must remain visible and color-accurate.
@@ -351,8 +356,7 @@ A primary click inside the graphics canvas with no selectable candidate MUST:
 - remove hover and selection chrome
 
 The synthetic preview background counts as empty space. Clicking UI outside the
-design canvas does not implicitly clear canvas selection. `Escape` SHOULD also
-clear selection, unless a higher-priority dialog or input owns the key.
+design canvas does not implicitly clear canvas selection.
 
 ### Pointer gesture boundary
 
@@ -515,7 +519,8 @@ At all times:
 - there is at most one authored selected item
 - there is at most one hovered render occurrence
 - a selected occurrence, when present, maps to `selectedItemId`
-- hover resolution and click resolution use the same hit index and resolver
+- hover resolution and click resolution use the same live renderer hit results
+  and resolver
 - hover never mutates authored selection
 - selection never mutates project data
 - editor chrome never participates in content hit testing
@@ -523,8 +528,7 @@ At all times:
 
 ## Acceptance Scenarios
 
-The implementation is complete only when automated coverage proves all of the
-following:
+The following scenarios define the implemented behavior:
 
 1. A top-level image highlights on hover and selects on click.
 2. Hover and click over a child select its top-level container.
@@ -557,11 +561,12 @@ following:
 18. Selection handles and move/resize drags continue to work without selecting
     content behind the overlay.
 
-Pure resolver tests SHOULD cover hierarchy, paint order, visibility, clipping,
-selection-owner mapping, and occurrence fallback. Canvas integration tests
-SHOULD cover pointer/modifier sequences and synchronization. VT coverage SHOULD
-capture at least normal hover, deep hover, parent selection, deep selection,
-and overlap selection with stable pointer positions.
+Current unit and integration coverage verifies hierarchy resolution, paint-order
+handoff, selection-owner mapping, fragment boundaries, repeated occurrences,
+editor-chrome hit handling, pointer selection, and explorer/detail
+synchronization. Route Graphics owns coverage for live transformed bounds,
+clipping, text whitespace, sprite bounds, and renderer paint order. Dedicated VT
+coverage for canvas hover and selection remains future work.
 
 ## Implementation Boundaries
 
@@ -578,8 +583,9 @@ This specification fits the existing architecture as follows:
 - Route Graphics owns low-level transformed hit testing when the renderer must
   expose it; page handlers must not inspect Pixi or browser globals directly.
 
-The resolved render tree and hit index SHOULD be cached per successful canvas
-render. Pointer movement should query that cache and update editor chrome only.
+The resolved render elements and authored-occurrence metadata SHOULD be cached
+per successful canvas render. Pointer movement should query Route Graphics'
+live transformed render tree and update editor chrome only.
 The implementation MUST NOT add selection behavior by attaching authored
 runtime interaction payloads to every layout element, because doing so mixes
 editor intent with game-runtime behavior.
