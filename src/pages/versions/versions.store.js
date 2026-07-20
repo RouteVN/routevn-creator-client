@@ -7,6 +7,9 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
 
+// TODO: Show native export actions again when Windows and macOS releases are ready.
+const NATIVE_EXPORTS_VISIBLE = false;
+
 const findVersionById = (versions, versionId) => {
   if (!versionId) {
     return undefined;
@@ -458,7 +461,6 @@ export const selectViewData = ({ state, i18n }) => {
       state.exportConfirmation.exportType,
       copy,
     ),
-    exportConfirmationCancelLabel: copy.cancelButton ?? "Cancel",
     exportConfirmationKey: `${state.exportConfirmation.exportType ?? "none"}-${state.exportConfirmation.versionId ?? "none"}`,
     title: copy.title ?? "Versions",
     createButton: copy.createButton ?? "New Version",
@@ -471,13 +473,17 @@ export const selectViewData = ({ state, i18n }) => {
       copy.exportWindowsInstallerButton ?? "Export Windows Installer",
     exportMacosApplicationButton:
       copy.exportMacosApplicationButton ?? "Export macOS App",
-    canExportWindowsExecutable: state.platform === "tauri",
+    canExportWindowsExecutable:
+      NATIVE_EXPORTS_VISIBLE && state.platform === "tauri",
     canExportWindowsInstaller:
-      state.platform === "tauri" && state.windowsExportAvailability.installer,
+      NATIVE_EXPORTS_VISIBLE &&
+      state.platform === "tauri" &&
+      state.windowsExportAvailability.installer,
     canExportMacosApplication:
-      (state.platform === "tauri" &&
+      NATIVE_EXPORTS_VISIBLE &&
+      ((state.platform === "tauri" &&
         state.macosExportAvailability.hostSupported) ||
-      state.visualTestMode,
+        state.visualTestMode),
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     resourceCategory: "releases",
     resourceType: "versions",

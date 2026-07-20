@@ -47,10 +47,6 @@ refs:
     eventListeners:
       close:
         handler: handleExportConfirmationClose
-  exportConfirmationCancelButton:
-    eventListeners:
-      click:
-        handler: handleExportConfirmationClose
   exportConfirmationConfirmButton:
     eventListeners:
       click:
@@ -145,7 +141,6 @@ template:
                           - rvn-file-image slot=export-confirmation-icon fileId=${exportConfirmationIconFileId} w=96 h=96 bw=xs bc=bo br=md: null
                         $else:
                           - rtgl-image slot=export-confirmation-icon src="/public/project_logo_placeholder.png" w=96 h=96 bw=xs bc=bo br=md: null
-              - rtgl-view d=h ah=e av=c g=sm:
-                  - rtgl-button#exportConfirmationCancelButton v=se: ${exportConfirmationCancelLabel}
+              - rtgl-view w=f d=h ah=e av=c g=sm:
                   - rtgl-button#exportConfirmationConfirmButton v=pr pre=download: ${exportConfirmationConfirmLabel}
   - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=${dropdownMenu.items}: null
