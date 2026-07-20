@@ -45,12 +45,14 @@ describe("resource view background selection", () => {
   );
 
   it.each(RESOURCE_PAGES)(
-    "%s clears selection from a resource-view background click",
+    "%s clears selection from resource-view and explorer background clicks",
     (pageName) => {
       const view = readSource(`pages/${pageName}/${pageName}.view.yaml`);
 
       expect(view).toContain("background-click:");
       expect(view).toContain("handler: handleResourceViewBackgroundClick");
+      expect(view).toContain("selection-cleared:");
+      expect(view).toContain("handler: handleFileExplorerSelectionChanged");
     },
   );
 });

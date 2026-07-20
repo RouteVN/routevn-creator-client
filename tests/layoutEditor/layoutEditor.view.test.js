@@ -2,6 +2,19 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("layoutEditor.view", () => {
+  it("opts into file explorer background deselection", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(layoutEditorView).toContain("selection-cleared:");
+    expect(layoutEditorView).toContain("handler: handleFileExplorerItemClick");
+  });
+
   it("keeps the mobile preview mounted while node detail is visible", () => {
     const layoutEditorView = readFileSync(
       new URL(

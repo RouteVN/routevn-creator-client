@@ -2,6 +2,18 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("scenes view", () => {
+  it("opts into file explorer background deselection", () => {
+    const scenesView = readFileSync(
+      new URL("../../src/pages/scenes/scenes.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(scenesView).toContain("selection-cleared:");
+    expect(scenesView).toContain(
+      "handler: handleFileExplorerSelectionChanged",
+    );
+  });
+
   it("uses a bordered top-right mobile hamburger opener", () => {
     const scenesView = readFileSync(
       new URL("../../src/pages/scenes/scenes.view.yaml", import.meta.url),

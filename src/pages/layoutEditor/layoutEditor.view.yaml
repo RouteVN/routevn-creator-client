@@ -8,6 +8,8 @@ refs:
         handler: handleFileExplorerTargetChanged
       item-click:
         handler: handleFileExplorerItemClick
+      selection-cleared:
+        handler: handleFileExplorerItemClick
       item-visibility-toggle:
         handler: handleFileExplorerVisibilityToggle
   groupview:

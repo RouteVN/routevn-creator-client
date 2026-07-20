@@ -254,7 +254,7 @@ describe("baseFileExplorer handlers", () => {
     expect(deps.render).toHaveBeenCalledTimes(1);
     expect(deps.dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "item-click",
+        type: "selection-cleared",
         detail: {
           id: undefined,
           itemId: undefined,
@@ -262,6 +262,9 @@ describe("baseFileExplorer handlers", () => {
           isFolder: false,
         },
       }),
+    );
+    expect(deps.dispatchEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "item-click" }),
     );
   });
 

@@ -7,6 +7,8 @@ refs:
         handler: handleFileExplorerTargetChanged
       item-click:
         handler: handleFileExplorerSelectionChanged
+      selection-cleared:
+        handler: handleFileExplorerSelectionChanged
       dblclick-item:
         handler: handleFileExplorerDoubleClick
   groupview:

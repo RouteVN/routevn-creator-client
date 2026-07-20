@@ -145,7 +145,7 @@ const emitItemClick = ({ dispatchEvent, item } = {}) => {
 
 const emitSelectionCleared = ({ dispatchEvent } = {}) => {
   dispatchEvent(
-    new CustomEvent("item-click", {
+    new CustomEvent("selection-cleared", {
       detail: {
         id: undefined,
         itemId: undefined,
