@@ -178,7 +178,7 @@ describe("versions store export actions", () => {
     );
   });
 
-  it("shows Windows EXE export in Tauri without hiding it behind resource preflight", () => {
+  it("hides Windows exports in Tauri even when native exports are available", () => {
     const state = createInitialState();
 
     setPlatform({ state }, { platform: "tauri" });
@@ -186,15 +186,15 @@ describe("versions store export actions", () => {
       { state },
       {
         availability: {
-          portableExecutable: false,
-          installer: false,
+          portableExecutable: true,
+          installer: true,
         },
       },
     );
 
     const viewData = selectViewData({ state });
 
-    expect(viewData.canExportWindowsExecutable).toBe(true);
+    expect(viewData.canExportWindowsExecutable).toBe(false);
     expect(viewData.canExportWindowsInstaller).toBe(false);
   });
 
@@ -217,7 +217,7 @@ describe("versions store export actions", () => {
     expect(viewData.canExportWindowsInstaller).toBe(false);
   });
 
-  it("keeps macOS application export visible on a macOS host when preflight fails", () => {
+  it("hides macOS application export on a supported macOS host", () => {
     const state = createInitialState();
     setPlatform({ state }, { platform: "tauri" });
     setMacosExportAvailability(
@@ -231,7 +231,7 @@ describe("versions store export actions", () => {
       },
     );
 
-    expect(selectViewData({ state }).canExportMacosApplication).toBe(true);
+    expect(selectViewData({ state }).canExportMacosApplication).toBe(false);
 
     setMacosExportAvailability(
       { state },
@@ -243,7 +243,7 @@ describe("versions store export actions", () => {
         },
       },
     );
-    expect(selectViewData({ state }).canExportMacosApplication).toBe(true);
+    expect(selectViewData({ state }).canExportMacosApplication).toBe(false);
 
     setMacosExportAvailability(
       { state },
@@ -258,11 +258,11 @@ describe("versions store export actions", () => {
     expect(selectViewData({ state }).canExportMacosApplication).toBe(false);
   });
 
-  it("exposes the macOS action to the visual workflow without native tools", () => {
+  it("keeps macOS export hidden in the visual workflow", () => {
     const state = createInitialState();
 
     setVisualTestMode({ state }, { enabled: true });
 
-    expect(selectViewData({ state }).canExportMacosApplication).toBe(true);
+    expect(selectViewData({ state }).canExportMacosApplication).toBe(false);
   });
 });
