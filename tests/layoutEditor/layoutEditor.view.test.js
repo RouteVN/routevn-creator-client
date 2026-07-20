@@ -56,4 +56,20 @@ describe("layoutEditor.view", () => {
       "rvn-layout-editor-preview#layoutEditorPreview",
     );
   });
+
+  it("renders only allowlisted semantic labels in selected-item headers", () => {
+    const layoutEditorView = readFileSync(
+      new URL(
+        "../../src/pages/layoutEditor/layoutEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(layoutEditorView).not.toContain(
+      "rtgl-text s=xs c=mu-fg: ${item.type}",
+    );
+    expect(layoutEditorView.match(/\$if itemRoleLabel:/g)).toHaveLength(2);
+    expect(layoutEditorView.match(/\$\{itemRoleLabel\}/g)).toHaveLength(2);
+  });
 });

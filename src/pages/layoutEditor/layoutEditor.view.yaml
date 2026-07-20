@@ -97,7 +97,8 @@ template:
                       - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                           - 'rtgl-view d=h av=c w=1fg g=xs style="min-width: 0;"':
                               - rtgl-text w=1fg ellipsis=true: ${item.name}
-                              - rtgl-text s=xs c=mu-fg: ${item.type}
+                              - $if itemRoleLabel:
+                                  - rtgl-text s=xs c=mu-fg: ${itemRoleLabel}
                       - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
                           - rvn-layout-edit-panel#layoutEditPanel layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :values=${item} :imagesData=${imagesData} :soundsData=${soundsData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
                           - 'rtgl-view w=f h=32vh style="flex-shrink: 0;"': null
@@ -109,7 +110,8 @@ template:
                           - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                               - rtgl-view d=h av=c w=1fg g=xs:
                                   - rtgl-text w=1fg ellipsis=true: ${item.name}
-                                  - rtgl-text s=xs c=mu-fg: ${item.type}
+                                  - $if itemRoleLabel:
+                                      - rtgl-text s=xs c=mu-fg: ${itemRoleLabel}
                           - rtgl-view w=f h=1fg sv pv=md:
                               - rvn-layout-edit-panel#layoutEditPanel layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :values=${item} :imagesData=${imagesData} :soundsData=${soundsData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
                     $else:

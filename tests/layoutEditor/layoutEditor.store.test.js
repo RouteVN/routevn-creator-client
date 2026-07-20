@@ -284,6 +284,75 @@ describe("layoutEditor.store", () => {
     ).toBe(false);
   });
 
+  it("shows semantic role labels only for referenced layout elements", () => {
+    const state = createInitialState();
+    const roleLabels = {
+      "choice-item": ["container-ref-choice-item", "Choice Item"],
+      "choice-item-text": ["text-ref-choice-item-content", "Choice Item Text"],
+      "dialogue-text": [
+        "text-revealing-ref-dialogue-content",
+        "Dialogue Text",
+      ],
+      "nvl-line": ["container-ref-dialogue-line", "NVL Line"],
+      "nvl-line-speaker-name": [
+        "text-ref-dialogue-line-character-name",
+        "NVL Line Speaker Name",
+      ],
+      "nvl-line-text": ["text-revealing", "NVL Line Text"],
+      "save-item": ["container-ref-save-load-slot", "Save Item"],
+      "save-item-date": ["text-ref-save-load-slot-date", "Save Item Date"],
+      "speaker-name": ["text-ref-character-name", "Speaker Name"],
+    };
+    const items = {
+      text: {
+        type: "text",
+        name: "Text",
+      },
+    };
+
+    for (const [id, [type]] of Object.entries(roleLabels)) {
+      items[id] = { type, name: id };
+    }
+
+    syncRepositoryState(
+      { state },
+      {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId: "layout-1",
+        layout: {
+          id: "layout-1",
+          layoutType: "general",
+        },
+        layoutData: {
+          items,
+          tree: Object.keys(items).map((id) => ({ id })),
+        },
+      },
+    );
+
+    for (const [id, [, expectedLabel]] of Object.entries(roleLabels)) {
+      setDetailPanelSelectedItemId({ state }, { itemId: id });
+
+      const viewData = selectViewData({
+        state,
+        constants: TEST_CONSTANTS,
+        i18n: EN_I18N,
+      });
+
+      expect(viewData.itemRoleLabel).toBe(expectedLabel);
+    }
+
+    setDetailPanelSelectedItemId({ state }, { itemId: "text" });
+
+    expect(
+      selectViewData({
+        state,
+        constants: TEST_CONSTANTS,
+        i18n: EN_I18N,
+      }).itemRoleLabel,
+    ).toBeUndefined();
+  });
+
   it("keeps child creation actions only on container items", () => {
     const state = createInitialState();
 

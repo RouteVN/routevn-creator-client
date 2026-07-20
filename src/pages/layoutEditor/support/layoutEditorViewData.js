@@ -30,6 +30,14 @@ const getElementIcon = (definition) => {
   return definition.icon;
 };
 
+const getExplorerElementIcon = (definition) => {
+  if (definition.icon === "fragment") {
+    return definition.icon;
+  }
+
+  return getElementIcon(definition);
+};
+
 export const toLayoutEditorContextMenuItems = (
   items = [],
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
@@ -179,7 +187,7 @@ export const toLayoutEditorExplorerItems = (
 
     return {
       ...item,
-      svg: item.svg ?? getElementIcon(definition),
+      svg: item.svg ?? getExplorerElementIcon(definition),
       contextMenuItems:
         canReceiveChildren === true
           ? toContainerContextMenuItems(contextMenuItems, item)
