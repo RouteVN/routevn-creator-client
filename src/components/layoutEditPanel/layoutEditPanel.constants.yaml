@@ -333,13 +333,24 @@ layoutSections:
         name: content
         value: "${values.textContentSummary}"
   - "$when": "supportsTextRevealEffect"
+    id: textRevealing
     label: Revealing
+    "$if canAddTextRevealSound":
+      labelAction: plus
     items:
       - type: select
         label: Effect
         name: revealEffect
         value: "${values.revealEffect}"
         options: "${revealEffectOptions}"
+      - type: list-bar
+        items: "${values.textRevealSoundItems}"
+      - "$when": "values.revealSoundId"
+        type: segmented-control
+        label: Stop
+        name: revealSoundStopTiming
+        value: "${values.revealSoundStopTiming}"
+        options: "${revealSoundStopTimingOptions}"
   - "$when": "supportsTextRevealIndicator"
     id: textRevealIndicator
     label: Indicator

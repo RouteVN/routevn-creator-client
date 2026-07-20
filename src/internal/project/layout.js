@@ -1078,7 +1078,7 @@ const getSoundFileReference = (soundItems, soundId) => {
   };
 };
 
-const getRevealSoundReference = (soundItems, soundId) => {
+const getRevealSoundReference = (soundItems, soundId, stopTiming) => {
   const soundReference = getSoundFileReference(soundItems, soundId);
   if (!soundReference) {
     return undefined;
@@ -1087,6 +1087,7 @@ const getRevealSoundReference = (soundItems, soundId) => {
   return {
     src: soundReference.soundSrc,
     fileType: soundReference.soundFileType ?? "audio/*",
+    stopTiming: stopTiming ?? "immediate",
   };
 };
 
@@ -1341,6 +1342,7 @@ const applyTextNode = ({ element, node, context }) => {
     const revealSound = getRevealSoundReference(
       context.soundItems,
       node.revealSoundId,
+      node.revealSoundStopTiming,
     );
     if (revealSound) {
       nextElement.revealSound = revealSound;

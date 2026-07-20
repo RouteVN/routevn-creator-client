@@ -7,6 +7,15 @@ const versionsView = readFileSync(
 );
 
 describe("versions view export actions", () => {
+  it("shows loading before the settled empty-version state", () => {
+    const loadingIndex = versionsView.indexOf("$if isVersionsLoading:");
+    const emptyIndex = versionsView.indexOf("$elif versions.length == 0:");
+
+    expect(loadingIndex).toBeGreaterThan(-1);
+    expect(emptyIndex).toBeGreaterThan(loadingIndex);
+    expect(versionsView).toContain("rtgl-text s=lg c=mu-fg: ${loadingMessage}");
+  });
+
   it("renders a read-only confirmation dialog before exporting", () => {
     expect(versionsView).toContain(
       "rtgl-dialog#exportConfirmationDialog ?open=${isExportConfirmationOpen}",

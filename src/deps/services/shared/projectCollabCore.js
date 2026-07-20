@@ -25,6 +25,7 @@ export const createProjectCollabCore = ({
   const collabSessionsByProject = new Map();
   const collabSessionModeByProject = new Map();
   const localCollabActorsByProject = new Map();
+  const versionsByProject = new Map();
 
   const getCurrentProjectId = () => {
     const { p } = router.getPayload();
@@ -195,39 +196,63 @@ export const createProjectCollabCore = ({
     return session.submitCommand(command);
   };
 
-  const addVersionToProject = async (projectId, version) => {
+  const resolveProjectAdapter = async (projectId) => {
     let adapter = getAdapterByProject(projectId);
     if (!adapter) {
       await getRepositoryByProject(projectId);
       adapter = getAdapterByProject(projectId);
     }
-    const versions = (await adapter.app.get("versions")) || [];
+    return adapter;
+  };
+
+  const cacheVersions = (projectId, versions) => {
+    const cachedVersions = structuredClone(versions);
+    versionsByProject.set(projectId, cachedVersions);
+    return structuredClone(cachedVersions);
+  };
+
+  const getCachedVersions = (projectId) => {
+    const targetProjectId = projectId || getCurrentProjectId();
+    if (!targetProjectId || !versionsByProject.has(targetProjectId)) {
+      return undefined;
+    }
+    return structuredClone(versionsByProject.get(targetProjectId));
+  };
+
+  const loadVersionsFromProject = async (projectId) => {
+    const adapter = await resolveProjectAdapter(projectId);
+    const storedVersions = await adapter.app.get("versions");
+    const versions = Array.isArray(storedVersions) ? storedVersions : [];
+    return cacheVersions(projectId, versions);
+  };
+
+  const addVersionToProject = async (projectId, version) => {
+    const adapter = await resolveProjectAdapter(projectId);
+    const storedVersions = await adapter.app.get("versions");
+    const versions = Array.isArray(storedVersions) ? storedVersions : [];
     versions.unshift(version);
     await adapter.app.set("versions", versions);
+    cacheVersions(projectId, versions);
   };
 
   const updateVersionInProject = async (projectId, versionId, patch) => {
-    let adapter = getAdapterByProject(projectId);
-    if (!adapter) {
-      await getRepositoryByProject(projectId);
-      adapter = getAdapterByProject(projectId);
-    }
-    const versions = (await adapter.app.get("versions")) || [];
+    const adapter = await resolveProjectAdapter(projectId);
+    const storedVersions = await adapter.app.get("versions");
+    const versions = Array.isArray(storedVersions) ? storedVersions : [];
     const nextVersions = versions.map((version) =>
       version.id === versionId ? { ...version, ...patch } : version,
     );
     await adapter.app.set("versions", nextVersions);
+    cacheVersions(projectId, nextVersions);
   };
 
   const deleteVersionFromProject = async (projectId, versionId) => {
-    let adapter = getAdapterByProject(projectId);
-    if (!adapter) {
-      await getRepositoryByProject(projectId);
-      adapter = getAdapterByProject(projectId);
-    }
-    const versions = (await adapter.app.get("versions")) || [];
+    const adapter = await resolveProjectAdapter(projectId);
+    const storedVersions = await adapter.app.get("versions");
+    const versions = Array.isArray(storedVersions) ? storedVersions : [];
     const newVersions = versions.filter((version) => version.id !== versionId);
     await adapter.app.set("versions", newVersions);
+    cacheVersions(projectId, newVersions);
   };
 
   const commandApi = createCommandApi({
@@ -336,6 +361,8 @@ export const createProjectCollabCore = ({
     getCollabSessionMode,
     stopCollabSession,
     submitCommand,
+    getCachedVersions,
+    loadVersionsFromProject,
     addVersionToProject,
     updateVersionInProject,
     deleteVersionFromProject,

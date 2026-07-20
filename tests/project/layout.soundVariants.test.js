@@ -154,10 +154,41 @@ describe("layout sound variants", () => {
     expect(elements[0].revealSound).toEqual({
       src: "file-reveal",
       fileType: "audio/wav",
+      stopTiming: "immediate",
     });
     expect(extractFileIdsFromRenderState(elements)).toContainEqual({
       url: "file-reveal",
       type: "audio/wav",
+    });
+  });
+
+  it("maps loop-end text reveal sound stop timing into route-graphics config", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "text-reveal-1",
+          type: "text-revealing",
+          text: "Hello",
+          x: 0,
+          y: 0,
+          revealSoundId: "sound-reveal",
+          revealSoundStopTiming: "loopEnd",
+        },
+      ],
+      {},
+      EMPTY_TREE,
+      EMPTY_TREE,
+      EMPTY_TREE,
+      {
+        layoutId: "layout-1",
+        soundsData: SOUNDS_DATA,
+      },
+    );
+
+    expect(elements[0].revealSound).toEqual({
+      src: "file-reveal",
+      fileType: "audio/wav",
+      stopTiming: "loopEnd",
     });
   });
 });

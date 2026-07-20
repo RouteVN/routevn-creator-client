@@ -119,6 +119,28 @@ export const createRevealEffectOptions = (copy = {}) => [
   { label: copy.noneOption ?? "None", value: "none" },
 ];
 
+export const createRevealSoundStopTimingOptions = (copy = {}) => [
+  {
+    label: copy.revealSoundStopImmediate ?? "Immediate",
+    value: "immediate",
+  },
+  {
+    label: copy.revealSoundStopLoopEnd ?? "Loop End",
+    value: "loopEnd",
+  },
+];
+
+const createTextRevealSoundItems = (revealSoundId, copy = {}) =>
+  revealSoundId
+    ? [
+        {
+          name: "revealSoundId",
+          label: copy.soundLabel ?? "Sound",
+          soundId: revealSoundId,
+        },
+      ]
+    : [];
+
 export const createTextContentDialogForm = (copy = {}) => ({
   title: copy.textTitle ?? "Text",
   fields: [
@@ -331,16 +353,18 @@ export const toInspectorValues = ({
     hoverSoundId: values?.hoverSoundId ?? "",
     clickSoundId: values?.clickSoundId ?? "",
     revealSoundId: values?.revealSoundId ?? "",
+    revealSoundStopTiming: values?.revealSoundStopTiming ?? "immediate",
     conditionalOverrides: normalizeConditionalOverrideRules(
       values?.conditionalOverrides,
     ),
+    textRevealSoundItems: createTextRevealSoundItems(
+      values?.revealSoundId,
+      copy,
+    ),
     textRevealIndicatorAddItems: createTextRevealIndicatorAddItems(indicator, {
-      revealSoundId: values?.revealSoundId,
-      supportsTextRevealSound: capabilities.supportsTextRevealSound === true,
       copy,
     }),
     textRevealIndicatorItems: createTextRevealIndicatorListItems(indicator, {
-      revealSoundId: values?.revealSoundId,
       copy,
     }),
     actions: toLayoutActionItems(values, hiddenActionModes, copy),

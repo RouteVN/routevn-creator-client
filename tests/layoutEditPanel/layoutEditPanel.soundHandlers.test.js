@@ -16,6 +16,7 @@ import {
   handleSectionActionClick,
   handleSoundSelectorSubmit,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const SOUNDS_DATA = {
   items: {
@@ -72,6 +73,7 @@ const createDeps = ({ soundsData = SOUNDS_DATA, itemType = "text" } = {}) => {
     props: {
       itemType,
     },
+    i18n: EN_I18N,
     render: vi.fn(),
     dispatchEvent: vi.fn(),
   };
@@ -108,9 +110,6 @@ describe("layoutEditPanel sound handlers", () => {
     const deps = createDeps({
       itemType: "text-revealing",
     });
-    deps.appService.showDropdownMenu.mockResolvedValueOnce({
-      item: { key: "revealSoundId" },
-    });
 
     await handleSectionActionClick(deps, {
       _event: {
@@ -118,27 +117,43 @@ describe("layoutEditPanel sound handlers", () => {
         clientY: 20,
         currentTarget: {
           dataset: {
-            id: "textRevealIndicator",
+            id: "textRevealing",
           },
         },
       },
     });
 
-    expect(deps.appService.showDropdownMenu).toHaveBeenCalledWith({
-      items: expect.arrayContaining([
-        expect.objectContaining({
-          label: "Sound",
-          key: "revealSoundId",
-        }),
-      ]),
-      x: 10,
-      y: 20,
-      place: "bs",
-    });
+    expect(deps.appService.showDropdownMenu).not.toHaveBeenCalled();
     expect(deps.state.soundSelectorDialog).toMatchObject({
       open: true,
       name: "revealSoundId",
     });
+  });
+
+  it("shows an alert when no reveal sounds are available", async () => {
+    const deps = createDeps({
+      itemType: "text-revealing",
+      soundsData: {
+        items: {},
+        tree: [],
+      },
+    });
+
+    await handleSectionActionClick(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            id: "textRevealing",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "No sounds available. Create a sound resource first.",
+      title: "Warning",
+    });
+    expect(deps.state.soundSelectorDialog.open).toBe(false);
   });
 
   it("applies the submitted hover sound selection", () => {

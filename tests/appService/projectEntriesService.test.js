@@ -23,6 +23,7 @@ const createDb = (initialEntries = []) => {
 const createService = (
   initialEntries = [],
   {
+    getCurrentProjectId = () => "",
     projectService = {
       getProjectInfoByPath: vi.fn(async () => {
         throw new Error("unexpected getProjectInfoByPath call");
@@ -43,7 +44,7 @@ const createService = (
   const db = createDb(initialEntries);
   const service = createProjectEntriesService({
     db,
-    getCurrentProjectId: () => "",
+    getCurrentProjectId,
     projectService,
     platformAdapter,
   });
@@ -52,6 +53,163 @@ const createService = (
 };
 
 describe("projectEntriesService", () => {
+  it("caches the settled project list in memory after the first load", async () => {
+    const { service } = createService([
+      {
+        id: "project-1",
+        projectPath: "/projects/project-one",
+        name: "Project One",
+        description: "",
+        language: "en",
+        iconFileId: null,
+      },
+    ]);
+
+    expect(service.getCachedProjects()).toBeUndefined();
+
+    const projects = await service.loadAllProjects();
+    projects[0].name = "Changed outside the cache";
+
+    expect(service.getCachedProjects()).toEqual([
+      expect.objectContaining({
+        id: "project-1",
+        name: "Project One",
+        projectPath: "/projects/project-one",
+      }),
+    ]);
+  });
+
+  it("keeps the in-memory project list aligned with entry updates", async () => {
+    const { service } = createService([
+      {
+        id: "project-1",
+        projectPath: "/projects/project-one",
+        name: "Project One",
+        description: "",
+        language: "en",
+        iconFileId: null,
+      },
+    ]);
+    await service.loadAllProjects();
+
+    await service.updateProjectEntry("project-1", {
+      name: "Project One Updated",
+    });
+
+    expect(service.getCachedProjects()).toEqual([
+      expect.objectContaining({
+        id: "project-1",
+        name: "Project One Updated",
+      }),
+    ]);
+  });
+
+  it("keeps cached project icons alive when refreshing the current project entry", async () => {
+    const cachedIconCleanup = vi.fn();
+    const currentIconCleanup = vi.fn();
+    const loadProjectIcon = vi
+      .fn()
+      .mockResolvedValueOnce({
+        url: "blob:cached-icon",
+        cleanup: cachedIconCleanup,
+      })
+      .mockResolvedValueOnce({
+        url: "blob:current-icon",
+        cleanup: currentIconCleanup,
+      });
+    const { service } = createService(
+      [
+        {
+          id: "project-1",
+          projectPath: "/projects/project-one",
+          name: "Project One",
+          language: "en",
+          iconFileId: "icon-1",
+        },
+      ],
+      {
+        getCurrentProjectId: () => "project-1",
+        platformAdapter: {
+          mapProjectEntryToProject: (entry) => ({
+            projectPath: entry.projectPath,
+          }),
+          loadProjectIcon,
+        },
+      },
+    );
+
+    await service.loadAllProjects();
+    const currentProject = await service.refreshCurrentProjectEntry();
+
+    expect(currentProject.iconUrl).toBe("blob:current-icon");
+    expect(service.getCachedProjects()[0].iconUrl).toBe("blob:cached-icon");
+    expect(cachedIconCleanup).not.toHaveBeenCalled();
+    expect(currentIconCleanup).not.toHaveBeenCalled();
+  });
+
+  it("updates project metadata caches without writing the source database again", async () => {
+    const cleanupIcon = vi.fn();
+    const { db, service } = createService(
+      [
+        {
+          id: "project-1",
+          projectPath: "/projects/project-one",
+          name: "Project One",
+          description: "Description",
+          language: "en",
+          iconFileId: "icon-1",
+        },
+      ],
+      {
+        platformAdapter: {
+          isDuplicateProjectEntry: ({ entries, entry }) => {
+            return entries.some(
+              (project) => project?.projectPath === entry?.projectPath,
+            );
+          },
+          mapProjectEntryToProject: (entry) => ({
+            projectPath: entry?.projectPath,
+          }),
+          loadProjectIcon: vi.fn(async () => ({
+            url: "blob:icon-1",
+            cleanup: cleanupIcon,
+          })),
+        },
+      },
+    );
+    await service.loadAllProjects();
+    service.setCurrentProjectEntry({ id: "project-1", source: "local" });
+    db.set.mockClear();
+
+    service.updateCachedProject("project-1", {
+      name: "Project One Updated",
+      description: "Updated description",
+      language: "zh-Hans",
+      iconFileId: "icon-2",
+    });
+
+    expect(service.getCachedProjects()).toEqual([
+      expect.objectContaining({
+        id: "project-1",
+        name: "Project One Updated",
+        description: "Updated description",
+        language: "zh-Hans",
+        iconFileId: "icon-2",
+      }),
+    ]);
+    expect(service.getCachedProjects()[0]).not.toHaveProperty("iconUrl");
+    expect(service.getCurrentProjectEntry()).toEqual(
+      expect.objectContaining({
+        id: "project-1",
+        name: "Project One Updated",
+        language: "zh-Hans",
+        iconFileId: "icon-2",
+      }),
+    );
+    expect(cleanupIcon).toHaveBeenCalledTimes(1);
+    expect(db.set).not.toHaveBeenCalled();
+  });
+
   it("replaces an existing local project entry when the same project id is re-added from a new path", async () => {
     const { service } = createService([
       {

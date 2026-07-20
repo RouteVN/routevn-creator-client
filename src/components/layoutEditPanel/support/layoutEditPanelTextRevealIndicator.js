@@ -8,11 +8,6 @@ export const TEXT_REVEAL_INDICATOR_STATE_ITEMS = [
   { type: "item", label: "Revealing", key: "revealing" },
   { type: "item", label: "Complete", key: "complete" },
 ];
-const TEXT_REVEAL_INDICATOR_SOUND_ITEM = {
-  type: "item",
-  label: "Sound",
-  key: "revealSoundId",
-};
 
 const TEXT_REVEAL_INDICATOR_STATE_LABELS = {
   revealing: "Revealing",
@@ -122,10 +117,10 @@ export const toTextRevealIndicatorValues = (indicator) => {
 
 export const createTextRevealIndicatorListItems = (
   indicator,
-  { revealSoundId, copy = {} } = {},
+  { copy = {} } = {},
 ) => {
   const values = toTextRevealIndicatorValues(indicator);
-  const items = [
+  return [
     {
       name: "indicator.revealing",
       label: copy.revealingLabel ?? "Revealing",
@@ -143,38 +138,19 @@ export const createTextRevealIndicatorListItems = (
       animationName: values.complete.animationName,
     },
   ].filter((item) => item.imageId || item.resourceId);
-
-  if (revealSoundId) {
-    items.push({
-      name: "revealSoundId",
-      label: copy.soundLabel ?? "Sound",
-      soundId: revealSoundId,
-    });
-  }
-
-  return items;
 };
 
 export const createTextRevealIndicatorAddItems = (
   indicator,
-  { revealSoundId, supportsTextRevealSound = false, copy = {} } = {},
+  { copy = {} } = {},
 ) => {
   const values = toTextRevealIndicatorValues(indicator);
-  const items = TEXT_REVEAL_INDICATOR_STATE_ITEMS.filter(
+  return TEXT_REVEAL_INDICATOR_STATE_ITEMS.filter(
     (item) => !values[item.key]?.imageId && !values[item.key]?.resourceId,
   ).map((item) => ({
     ...item,
     label: getTextRevealIndicatorStateLabel(item.key, copy),
   }));
-
-  if (supportsTextRevealSound && !revealSoundId) {
-    items.push({
-      ...TEXT_REVEAL_INDICATOR_SOUND_ITEM,
-      label: copy.soundLabel ?? TEXT_REVEAL_INDICATOR_SOUND_ITEM.label,
-    });
-  }
-
-  return items;
 };
 
 export const createTextRevealIndicatorDialogDefaults = ({
