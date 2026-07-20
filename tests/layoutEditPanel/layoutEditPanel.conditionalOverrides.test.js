@@ -360,7 +360,7 @@ describe("layoutEditPanel conditional overrides", () => {
     );
     const imageSelectorDialog = view.slice(
       view.indexOf("rtgl-dialog#imageSelectorDialog"),
-      view.indexOf("rtgl-dialog#soundSelectorDialog"),
+      view.indexOf("rtgl-dialog#soundFormDialog"),
     );
 
     expect(imageSelectorDialog).toContain(

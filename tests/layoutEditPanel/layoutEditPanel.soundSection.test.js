@@ -3,6 +3,7 @@ import yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  openSoundFormDialog,
   selectViewData,
   setSoundsData,
   setValues,
@@ -50,6 +51,68 @@ const createProps = (itemType = "text") => ({
 });
 
 describe("layoutEditPanel sound section", () => {
+  it("builds the sound form with a sound slot and volume control", () => {
+    const state = createInitialState();
+    setValues(
+      { state },
+      {
+        values: {
+          type: "text",
+          text: "hello",
+          hoverSoundId: "sound-hover",
+          hover: {
+            soundVolume: 45,
+          },
+        },
+      },
+    );
+    setSoundsData(
+      { state },
+      {
+        soundsData: SOUNDS_DATA,
+      },
+    );
+    openSoundFormDialog(
+      { state },
+      {
+        name: "hoverSoundId",
+        volumeName: "hover.soundVolume",
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      props: createProps("text"),
+      constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.soundForm.fields).toEqual([
+      expect.objectContaining({
+        type: "slot",
+        slot: "sound-item",
+        label: "Sound",
+      }),
+      expect.objectContaining({
+        name: "volume",
+        type: "slider-with-input",
+        min: 0,
+        max: 100,
+      }),
+    ]);
+    expect(viewData.soundForm.actions.buttons).toEqual([
+      expect.objectContaining({
+        id: "submit",
+        label: "Save",
+      }),
+    ]);
+    expect(viewData.soundFormDefaults.volume).toBe(45);
+    expect(viewData.soundFormSoundItem).toMatchObject({
+      id: "sound-hover",
+      name: "Hover Sound",
+    });
+  });
+
   it("shows hover and click sound picker rows for text items", () => {
     const state = createInitialState();
 

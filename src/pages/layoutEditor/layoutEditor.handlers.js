@@ -60,6 +60,17 @@ const DEBOUNCE_DELAYS = {
   UPDATE: 500,
 };
 
+const INTERACTION_SOUND_VOLUME_CONFIG_BY_ID_FIELD = {
+  hoverSoundId: {
+    interactionName: "hover",
+    volumeName: "hover.soundVolume",
+  },
+  clickSoundId: {
+    interactionName: "click",
+    volumeName: "click.soundVolume",
+  },
+};
+
 const SLIDER_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-slider-create-dialog";
 const SPRITE_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-sprite-create-dialog";
 const LAYOUT_EDITOR_PERSIST_ERROR_COOLDOWN_MS = 1500;
@@ -1885,6 +1896,18 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
         value: detail.value,
         imagesData: store.selectImages(),
       });
+
+      const soundVolumeConfig =
+        INTERACTION_SOUND_VOLUME_CONFIG_BY_ID_FIELD[detail.name];
+      if (soundVolumeConfig) {
+        updatedItem = applyLayoutItemFieldChange({
+          item: updatedItem,
+          name: soundVolumeConfig.volumeName,
+          value:
+            detail.formValues?.[soundVolumeConfig.interactionName]?.soundVolume,
+          imagesData: store.selectImages(),
+        });
+      }
     }
   }
 

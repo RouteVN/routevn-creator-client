@@ -72,6 +72,7 @@ import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
 const POSITION_POPOVER_NAMES = new Set(["x", "y"]);
+const DEFAULT_INTERACTION_SOUND_VOLUME = 100;
 const TEXT_CONTENT_MENTION_VARIABLE_TYPES = new Set([
   "string",
   "number",
@@ -260,6 +261,48 @@ const localizePanelSections = (sections = [], copy = {}) => {
     items: (section.items ?? []).map((item) => localizePanelItem(item, copy)),
   }));
 };
+
+const normalizeInteractionSoundVolume = (
+  volume,
+  fallback = DEFAULT_INTERACTION_SOUND_VOLUME,
+) => {
+  const parsedVolume = Number(volume);
+  if (!Number.isFinite(parsedVolume)) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(parsedVolume)));
+};
+
+const createSoundForm = (copy = {}) => ({
+  title: copy.soundLabel ?? "Sound",
+  fields: [
+    {
+      type: "slot",
+      slot: "sound-item",
+      label: copy.soundLabel ?? "Sound",
+    },
+    {
+      name: "volume",
+      type: "slider-with-input",
+      label: copy.volumeLabel ?? "Volume",
+      min: 0,
+      max: 100,
+      step: 1,
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: copy.saveButton ?? "Save",
+      },
+    ],
+  },
+});
 const POSITION_POPOVER_PRESETS = [
   {
     label: "0",
@@ -672,6 +715,16 @@ const resetSelectionUiState = (state) => {
   state.soundSelectorDialog = {
     open: false,
     name: undefined,
+    source: undefined,
+  };
+  state.soundFormDialog = {
+    open: false,
+    key: 0,
+    name: undefined,
+    volumeName: undefined,
+    selectedSoundId: undefined,
+    volume: DEFAULT_INTERACTION_SOUND_VOLUME,
+    validationErrors: {},
   };
   state.spritesheetSelectorDialog = {
     open: false,
@@ -1162,11 +1215,12 @@ export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
 
 export const openSoundSelectorDialog = (
   { state },
-  { name, selectedSoundId } = {},
+  { name, selectedSoundId, source = "value" } = {},
 ) => {
   state.soundSelectorDialog = {
     open: true,
     name,
+    source,
   };
   state.tempSelectedSoundId =
     selectedSoundId ??
@@ -1177,8 +1231,51 @@ export const closeSoundSelectorDialog = ({ state }, _payload = {}) => {
   state.soundSelectorDialog = {
     open: false,
     name: undefined,
+    source: undefined,
   };
   state.tempSelectedSoundId = undefined;
+};
+
+export const openSoundFormDialog = ({ state }, { name, volumeName } = {}) => {
+  if (!name || !volumeName) {
+    return;
+  }
+
+  state.soundFormDialog = {
+    open: true,
+    key: state.soundFormDialog.key + 1,
+    name,
+    volumeName,
+    selectedSoundId: getValueAtPath(state.values, name),
+    volume: normalizeInteractionSoundVolume(
+      getValueAtPath(state.values, volumeName),
+    ),
+    validationErrors: {},
+  };
+};
+
+export const closeSoundFormDialog = ({ state }, _payload = {}) => {
+  state.soundFormDialog = {
+    open: false,
+    key: state.soundFormDialog.key,
+    name: undefined,
+    volumeName: undefined,
+    selectedSoundId: undefined,
+    volume: DEFAULT_INTERACTION_SOUND_VOLUME,
+    validationErrors: {},
+  };
+};
+
+export const setSoundFormDialogSoundId = ({ state }, { soundId } = {}) => {
+  state.soundFormDialog.selectedSoundId = soundId;
+  state.soundFormDialog.validationErrors = {};
+};
+
+export const setSoundFormDialogValidationErrors = (
+  { state },
+  { errors } = {},
+) => {
+  state.soundFormDialog.validationErrors = errors ?? {};
 };
 
 export const openSpritesheetSelectorDialog = (
@@ -1315,6 +1412,10 @@ export const selectImageSelectorDialog = ({ state }) => {
 
 export const selectSoundSelectorDialog = ({ state }) => {
   return state.soundSelectorDialog;
+};
+
+export const selectSoundFormDialog = ({ state }) => {
+  return state.soundFormDialog;
 };
 
 export const selectSpritesheetSelectorDialog = ({ state }) => {
@@ -1507,6 +1608,8 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     { label: copy.noneOption ?? "None", value: "" },
     ...soundItems,
   ];
+  const soundFormSoundItem =
+    state.soundsData?.items?.[state.soundFormDialog.selectedSoundId];
   const variableOptions = getVariableOptions(state.variablesData, {
     type: "number",
   });
@@ -1882,6 +1985,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     soundSelectorDialog: state.soundSelectorDialog,
     tempSelectedSoundId: state.tempSelectedSoundId,
     soundFolderItems,
+    soundFormDialog: state.soundFormDialog,
+    soundForm: createSoundForm(copy),
+    soundFormDefaults: {
+      volume: state.soundFormDialog.volume,
+    },
+    soundFormSoundItem,
     spritesheetSelectorDialog: state.spritesheetSelectorDialog,
     tempSelectedSpritesheetValue: state.tempSelectedSpritesheetValue,
     spritesheetFolderItems,
@@ -1900,6 +2009,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     selectSpritesheetAnimationLabel:
       copy.selectSpritesheetAnimationLabel ?? "Select a spritesheet animation",
     selectImageLabel: copy.selectImageLabel ?? "Select image",
+    selectSoundLabel: copy.selectSoundLabel ?? "Select sound",
     selectVisualLabel: copy.selectVisualLabel ?? "Select visual",
   };
 };

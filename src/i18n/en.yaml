@@ -1435,6 +1435,7 @@ layoutEditPanel:
   scrollUpLabel: "Scroll Up"
   selectButton: "Select"
   selectImageLabel: "Select image"
+  selectSoundLabel: "Select sound"
   selectSpritesheetAnimationLabel: "Select a spritesheet animation"
   selectVisualLabel: "Select visual"
   sliderBarSection: "Slider Bar"
@@ -1442,6 +1443,7 @@ layoutEditPanel:
   sliderThumbSection: "Slider Thumb"
   sliderValuesSection: "Slider Values"
   soundLabel: "Sound"
+  soundRequired: "Sound is required."
   stopLabel: "Stop"
   spritesheetLabel: "Spritesheet"
   stepLabel: "Step"
@@ -1460,6 +1462,7 @@ layoutEditPanel:
   visibleOption: "Visible"
   visualLabel: "Visual"
   visualRequired: "Visual is required."
+  volumeLabel: "Volume"
   widthLabel: "Width"
   yesOption: "Yes"
 controlsPage:

@@ -203,6 +203,20 @@ refs:
     eventListeners:
       close:
         handler: handleSoundSelectorCancel
+  soundFormDialog:
+    eventListeners:
+      close:
+        handler: handleSoundFormDialogClose
+  soundForm:
+    eventListeners:
+      form-action:
+        handler: handleSoundFormAction
+  soundFormSoundField:
+    eventListeners:
+      click:
+        handler: handleSoundFormSoundFieldClick
+      keydown:
+        handler: handleSoundFormSoundFieldKeyDown
   soundSelectorFileExplorer:
     eventListeners:
       item-click:
@@ -215,10 +229,6 @@ refs:
     eventListeners:
       click:
         handler: handleSoundSelectorSubmit
-  cancelSoundSelection:
-    eventListeners:
-      click:
-        handler: handleSoundSelectorCancel
   spritesheetSelectorDialog:
     eventListeners:
       close:
@@ -503,6 +513,26 @@ template:
                       - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#confirmImageSelection variant=pr: ${selectButton}
+  - rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=sm:
+      - $if soundFormDialog.open:
+          - rtgl-view slot=content g=md w=f:
+              - rtgl-form#soundForm key=${soundFormDialog.key} :form=${soundForm} :defaultValues=${soundFormDefaults} w=f:
+                  - rtgl-view slot="sound-item" g=xs w=f:
+                      - $if soundFormSoundItem:
+                          - 'rtgl-view#soundFormSoundField role=button tabindex=0 aria-haspopup=dialog aria-label="${selectSoundLabel}" cur=pointer bw=xs bc=bo h-bc=ac br=md w=160 overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                              - 'div style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
+                                  - $if soundFormSoundItem.waveformDataFileId:
+                                      - rvn-waveform-visualizer waveformDataFileId=${soundFormSoundItem.waveformDataFileId} w=f h=f: null
+                                    $else:
+                                      - rtgl-view w=f h=f av=c ah=c bgc=mu:
+                                          - rtgl-svg svg=play wh=24 c=mu-fg: null
+                              - rtgl-view w=f p=md:
+                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${soundFormSoundItem.name}
+                        $else:
+                          - 'rtgl-view#soundFormSoundField role=button tabindex=0 aria-haspopup=dialog aria-label="${selectSoundLabel}" w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
+                              - rtgl-text s=sm c=mu-fg: ${selectSoundLabel}
+                      - $if soundFormDialog.validationErrors.soundId:
+                          - rtgl-text s=sm c=de: ${soundFormDialog.validationErrors.soundId}
   - rtgl-dialog#soundSelectorDialog ?open=${soundSelectorDialog.open} s=lg:
       - $if soundSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
@@ -512,7 +542,6 @@ template:
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                       - rvn-sound-selector#soundSelector selectedSoundId=${tempSelectedSoundId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelSoundSelection variant=se: ${cancelButton}
                   - rtgl-button#confirmSoundSelection variant=pr: ${okButton}
   - rtgl-dialog#spritesheetSelectorDialog ?open=${spritesheetSelectorDialog.open} s=xl:
       - $if spritesheetSelectorDialog.open:

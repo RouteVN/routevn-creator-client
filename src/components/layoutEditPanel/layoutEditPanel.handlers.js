@@ -65,6 +65,14 @@ const SOUND_ID_FIELDS = new Set([
   "clickSoundId",
   "revealSoundId",
 ]);
+const SOUND_FORM_CONFIG_BY_ID_FIELD = {
+  hoverSoundId: {
+    volumeName: "hover.soundVolume",
+  },
+  clickSoundId: {
+    volumeName: "click.soundVolume",
+  },
+};
 const SIZE_FIELDS = new Set(["width", "height"]);
 const CONDITIONAL_OVERRIDE_IMAGE_FIELDS = new Set([
   "imageId",
@@ -603,6 +611,43 @@ const applyPanelValueUpdate = (
   emitPanelUpdate(deps, { name, value: normalizedValue });
 };
 
+const openSoundForm = (deps, { name } = {}) => {
+  const { render, store } = deps;
+  const config = SOUND_FORM_CONFIG_BY_ID_FIELD[name];
+  if (!config) {
+    return;
+  }
+
+  store.openSoundFormDialog({
+    name,
+    volumeName: config.volumeName,
+  });
+  render();
+};
+
+const removeSoundVariant = (deps, { name } = {}) => {
+  const { render, store } = deps;
+  const config = SOUND_FORM_CONFIG_BY_ID_FIELD[name];
+  if (!config) {
+    return false;
+  }
+
+  store.updateValueProperty({
+    name,
+    value: undefined,
+  });
+  store.updateValueProperty({
+    name: config.volumeName,
+    value: undefined,
+  });
+  render();
+  emitPanelUpdate(deps, {
+    name,
+    value: undefined,
+  });
+  return true;
+};
+
 export const handleBeforeMount = (deps) => {
   const { props, store, uiConfig } = deps;
   const values = props.values || {};
@@ -1106,6 +1151,14 @@ export const handleOptionSelected = (deps, payload) => {
     return;
   }
 
+  if (
+    SOUND_FORM_CONFIG_BY_ID_FIELD[name] &&
+    (value === "" || value === null || value === undefined)
+  ) {
+    removeSoundVariant(deps, { name });
+    return;
+  }
+
   applyPanelValueUpdate(deps, {
     name,
     value,
@@ -1275,20 +1328,9 @@ export const handleSectionActionClick = async (deps, payload) => {
       return;
     }
 
-    if (store.selectSoundOptions().length === 0) {
-      appService.showAlert({
-        message:
-          copy.noSoundsAvailable ??
-          "No sounds available. Create a sound resource first.",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
-    store.openSoundSelectorDialog({
+    openSoundForm(deps, {
       name: variantResult.item.key,
     });
-    render();
   } else if (id === "conditionalOverrides") {
     store.openConditionalOverrideConditionDialog({
       editingIndex: undefined,
@@ -2099,6 +2141,11 @@ export const handleListBarItemClick = async (deps, payload) => {
     return;
   }
 
+  if (SOUND_FORM_CONFIG_BY_ID_FIELD[name]) {
+    openSoundForm(deps, { name });
+    return;
+  }
+
   if (SOUND_ID_FIELDS.has(name)) {
     store.openSoundSelectorDialog({
       name,
@@ -2194,6 +2241,10 @@ export const handleListBarItemRightClick = async (deps, payload) => {
         name: "indicator",
         value: indicator,
       });
+      return;
+    }
+
+    if (removeSoundVariant(deps, { name })) {
       return;
     }
 
@@ -2355,6 +2406,90 @@ export const handleImageSelectorSubmit = (deps) => {
 };
 
 // --- Sound Selector ---
+export const handleSoundFormDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeSoundFormDialog();
+  render();
+};
+
+export const handleSoundFormSoundFieldClick = (deps) => {
+  const { appService, render, store } = deps;
+  const copy = selectCopy(deps);
+  const dialog = store.selectSoundFormDialog();
+
+  if (!dialog.open) {
+    return;
+  }
+
+  if (store.selectSoundOptions().length === 0) {
+    appService.showAlert({
+      message:
+        copy.noSoundsAvailable ??
+        "No sounds available. Create a sound resource first.",
+      title: copy.warningTitle ?? "Warning",
+    });
+    return;
+  }
+
+  store.openSoundSelectorDialog({
+    name: dialog.name,
+    selectedSoundId: dialog.selectedSoundId,
+    source: "soundForm",
+  });
+  render();
+};
+
+export const handleSoundFormSoundFieldKeyDown = (deps, payload) => {
+  if (payload._event.key !== "Enter" && payload._event.key !== " ") {
+    return;
+  }
+
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
+  handleSoundFormSoundFieldClick(deps);
+};
+
+export const handleSoundFormAction = (deps, payload) => {
+  const { render, store } = deps;
+  const { actionId, values } = payload._event.detail;
+
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const dialog = store.selectSoundFormDialog();
+  if (!dialog.selectedSoundId) {
+    const copy = selectCopy(deps);
+    store.setSoundFormDialogValidationErrors({
+      errors: {
+        soundId: copy.soundRequired ?? "Sound is required.",
+      },
+    });
+    render();
+    return;
+  }
+
+  const parsedVolume = Number(values.volume);
+  const volume = Number.isFinite(parsedVolume)
+    ? Math.max(0, Math.min(100, Math.round(parsedVolume)))
+    : 100;
+
+  store.updateValueProperty({
+    name: dialog.name,
+    value: dialog.selectedSoundId,
+  });
+  store.updateValueProperty({
+    name: dialog.volumeName,
+    value: volume,
+  });
+  store.closeSoundFormDialog();
+  render();
+  emitPanelUpdate(deps, {
+    name: dialog.name,
+    value: dialog.selectedSoundId,
+  });
+};
+
 export const handleSoundSelectorSoundSelected = (deps, payload) => {
   const { store } = deps;
   const { _event } = payload;
@@ -2381,9 +2516,16 @@ export const handleSoundSelectorCancel = (deps) => {
 };
 
 export const handleSoundSelectorSubmit = (deps) => {
-  const { store } = deps;
+  const { render, store } = deps;
   const soundId = store.selectTempSelectedSoundId();
-  const { name } = store.selectSoundSelectorDialog();
+  const { name, source } = store.selectSoundSelectorDialog();
+
+  if (source === "soundForm") {
+    store.setSoundFormDialogSoundId({ soundId });
+    store.closeSoundSelectorDialog();
+    render();
+    return;
+  }
 
   applyPanelValueUpdate(deps, {
     name,

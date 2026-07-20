@@ -1435,6 +1435,7 @@ layoutEditPanel:
   scrollUpLabel: "上スクロール"
   selectButton: "選択"
   selectImageLabel: "画像を選択"
+  selectSoundLabel: "音声を選択"
   selectSpritesheetAnimationLabel: "スプライトシートアニメーションを選択"
   selectVisualLabel: "表示素材を選択"
   sliderBarSection: "スライダーバー"
@@ -1442,6 +1443,7 @@ layoutEditPanel:
   sliderThumbSection: "スライダーつまみ"
   sliderValuesSection: "スライダー値"
   soundLabel: "音声"
+  soundRequired: "音声は必須です。"
   stopLabel: "停止"
   spritesheetLabel: "スプライトシート"
   stepLabel: "ステップ"
@@ -1460,6 +1462,7 @@ layoutEditPanel:
   visibleOption: "表示"
   visualLabel: "表示素材"
   visualRequired: "表示素材は必須です。"
+  volumeLabel: "音量"
   widthLabel: "幅"
   yesOption: "はい"
 controlsPage:
