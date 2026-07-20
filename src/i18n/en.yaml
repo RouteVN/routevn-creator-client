@@ -255,7 +255,7 @@ registerPage:
   registerButton: "Register"
   title: "Register"
 platformDetailsPage:
-  addPlatformButtonLabel: "Add platform"
+  addPlatformButtonLabel: "Add Platform"
   applicationIdentifierLabel: "Application Identifier"
   applicationNameLabel: "Application Name"
   applicationNameRequired: "Application name is required."
