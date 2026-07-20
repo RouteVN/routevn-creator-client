@@ -645,10 +645,6 @@ const removeSoundVariant = (deps, { name } = {}) => {
     name,
     value: undefined,
   });
-  emitPanelUpdate(deps, {
-    name: config.volumeName,
-    value: undefined,
-  });
   return true;
 };
 
@@ -2491,10 +2487,6 @@ export const handleSoundFormAction = (deps, payload) => {
   emitPanelUpdate(deps, {
     name: dialog.name,
     value: dialog.selectedSoundId,
-  });
-  emitPanelUpdate(deps, {
-    name: dialog.volumeName,
-    value: volume,
   });
 };
 

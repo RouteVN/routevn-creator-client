@@ -212,19 +212,17 @@ describe("layoutEditPanel sound handlers", () => {
     expect(deps.state.values.hoverSoundId).toBe("sound-hover");
     expect(deps.state.values.hover.soundVolume).toBe(65);
     expect(deps.state.soundFormDialog.open).toBe(false);
-    expect(deps.dispatchEvent).toHaveBeenCalledTimes(2);
-    expect(
-      deps.dispatchEvent.mock.calls.map(([event]) => event.detail),
-    ).toEqual([
-      expect.objectContaining({
-        name: "hoverSoundId",
-        value: "sound-hover",
-      }),
-      expect.objectContaining({
-        name: "hover.soundVolume",
-        value: 65,
-      }),
-    ]);
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(deps.dispatchEvent.mock.calls[0][0].detail).toMatchObject({
+      name: "hoverSoundId",
+      value: "sound-hover",
+      formValues: {
+        hoverSoundId: "sound-hover",
+        hover: {
+          soundVolume: 65,
+        },
+      },
+    });
   });
 
   it("keeps the form open when a sound has not been selected", () => {
@@ -331,7 +329,12 @@ describe("layoutEditPanel sound handlers", () => {
 
     expect(deps.state.values).not.toHaveProperty("hoverSoundId");
     expect(deps.state.values.hover).not.toHaveProperty("soundVolume");
-    expect(deps.dispatchEvent).toHaveBeenCalledTimes(2);
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(deps.dispatchEvent.mock.calls[0][0].detail).toMatchObject({
+      name: "hoverSoundId",
+      value: undefined,
+      formValues: deps.state.values,
+    });
   });
 
   it("shows an alert when the form tries to select from no sounds", async () => {

@@ -537,6 +537,67 @@ describe("layoutEditor.handleSaveButtonClick", () => {
 });
 
 describe("layoutEditor.handleLayoutEditPanelUpdateHandler", () => {
+  it("queues click sound ID and volume in one atomic update", async () => {
+    const updateLayoutElement = vi.fn(async () => ({ valid: true }));
+    const deps = createLayoutEditorDeps({
+      updateLayoutElement,
+    });
+    const currentElement = {
+      id: "item-1",
+      type: "text",
+      name: "Dialogue Text",
+      clickSoundId: "sound-old",
+      click: {
+        payload: {
+          action: "next",
+        },
+        soundVolume: 20,
+      },
+    };
+
+    deps.store.selectSelectedItemId = vi.fn(() => "item-1");
+    deps.store.selectSelectedItemData = vi.fn(() => currentElement);
+    deps.store.selectImages = vi.fn(() => ({ items: {}, tree: [] }));
+
+    await handleLayoutEditPanelUpdateHandler(deps, {
+      _event: {
+        detail: {
+          name: "clickSoundId",
+          value: "sound-new",
+          formValues: {
+            ...currentElement,
+            clickSoundId: "sound-new",
+            click: {
+              ...currentElement.click,
+              soundVolume: 65,
+            },
+          },
+        },
+      },
+    });
+
+    const expectedUpdatedItem = expect.objectContaining({
+      clickSoundId: "sound-new",
+      click: {
+        payload: {
+          action: "next",
+        },
+        soundVolume: 65,
+      },
+    });
+    expect(deps.store.updateSelectedItem).toHaveBeenCalledWith({
+      updatedItem: expectedUpdatedItem,
+    });
+    expect(deps.subject.dispatch).toHaveBeenCalledTimes(1);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "layoutEditor.updateElement",
+      expect.objectContaining({
+        updatedItem: expectedUpdatedItem,
+      }),
+    );
+    expect(updateLayoutElement).not.toHaveBeenCalled();
+  });
+
   it("persists text reveal indicator visual updates immediately", async () => {
     const updateLayoutElement = vi.fn(async () => ({ valid: true }));
     const deps = createLayoutEditorDeps({
