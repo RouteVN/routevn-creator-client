@@ -519,6 +519,7 @@ const {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleResourceViewBackgroundClick: handleResourceViewBackgroundClickBase,
   handleItemClick: handleAnimationItemClickBase,
   handleSearchInput,
   handleMobileFileExplorerOpen,
@@ -676,6 +677,13 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   await renderSelectedAnimationPreview(deps, {
     forceInit: true,
   });
+};
+
+export const handleResourceViewBackgroundClick = async (deps) => {
+  deps.store.setAnimationPreviewVisible?.({ visible: false });
+  handleResourceViewBackgroundClickBase(deps);
+  deps.store.clearPreviewRuntime();
+  await renderSelectedAnimationPreview(deps, { forceInit: true });
 };
 
 export const handleAnimationItemClick = async (deps, payload) => {

@@ -7,12 +7,16 @@ refs:
         handler: handleFileExplorerTargetChanged
       item-click:
         handler: handleFileExplorerSelectionChanged
+      selection-cleared:
+        handler: handleFileExplorerSelectionChanged
       folder-collapse-change:
         handler: handleFileExplorerFolderCollapseChange
       dblclick-item:
         handler: handleFileExplorerDoubleClick
   groupview:
     eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
       item-click:
         handler: handleSpriteItemClick
       group-collapse-change:

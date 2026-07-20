@@ -209,6 +209,7 @@ const {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleResourceViewBackgroundClick,
   handleEditDialogClose,
   handleSearchInput,
   handleItemClick: handleBaseFontItemClick,
@@ -267,6 +268,7 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleResourceViewBackgroundClick,
   handleEditDialogClose,
 };
 

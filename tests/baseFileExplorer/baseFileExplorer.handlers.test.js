@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  handleClearSelection,
+  handleContainerClick,
   handleItemContextMenu,
   handleItemPointerDown,
   handleItemTouchStart,
@@ -175,12 +177,17 @@ const createDragDeps = ({ itemCount = 4, rootHeight = 128 } = {}) => {
 
 const createDeps = ({ selectedItemId, itemCount = 15 } = {}) => {
   let currentSelectedItemId = selectedItemId;
+  let suppressNextClick = false;
   const store = {
     expandItemAncestors: vi.fn(),
     selectCollapsedIds: vi.fn(() => []),
     selectSelectedItemId: vi.fn(() => currentSelectedItemId),
+    selectSuppressNextClick: vi.fn(() => suppressNextClick),
     setSelectedItemId: vi.fn(({ itemId }) => {
       currentSelectedItemId = itemId;
+    }),
+    setSuppressNextClick: vi.fn(({ suppress }) => {
+      suppressNextClick = suppress;
     }),
   };
 
@@ -196,6 +203,24 @@ const createDeps = ({ selectedItemId, itemCount = 15 } = {}) => {
 };
 
 describe("baseFileExplorer handlers", () => {
+  it("clears selection through the public explorer method handler", () => {
+    const deps = {
+      store: {
+        clearPendingDrag: vi.fn(),
+        setSelectedItemId: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleClearSelection(deps);
+
+    expect(deps.store.clearPendingDrag).toHaveBeenCalledOnce();
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
+  });
+
   beforeEach(() => {
     globalThis.requestAnimationFrame = vi.fn((callback) => {
       callback();
@@ -206,6 +231,83 @@ describe("baseFileExplorer handlers", () => {
   afterEach(() => {
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     vi.useRealTimers();
+  });
+
+  it("clears selection when the explorer's empty area is clicked", () => {
+    const deps = createDeps({ selectedItemId: "item-1" });
+    const target = {
+      closest: vi.fn(() => undefined),
+    };
+
+    handleContainerClick(deps, {
+      _event: {
+        target,
+      },
+    });
+
+    expect(target.closest).toHaveBeenCalledWith(
+      "[data-file-explorer-item='true']",
+    );
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "selection-cleared",
+        detail: {
+          id: undefined,
+          itemId: undefined,
+          item: undefined,
+          isFolder: false,
+        },
+      }),
+    );
+    expect(deps.dispatchEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "item-click" }),
+    );
+  });
+
+  it("does not clear selection when a file explorer row is clicked", () => {
+    const deps = createDeps({ selectedItemId: "item-1" });
+    const item = {};
+
+    handleContainerClick(deps, {
+      _event: {
+        target: {
+          closest: vi.fn(() => item),
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not clear selection for the suppressed click after a touch drag", () => {
+    const deps = createDeps({ selectedItemId: "item-1" });
+    const event = {
+      target: {
+        closest: vi.fn(() => undefined),
+      },
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+    deps.store.setSuppressNextClick({ suppress: true });
+
+    handleContainerClick(deps, {
+      _event: event,
+    });
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.store.setSuppressNextClick).toHaveBeenLastCalledWith({
+      suppress: false,
+    });
+    expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
   });
 
   it("emits visibility changes without selecting or dragging the row", () => {

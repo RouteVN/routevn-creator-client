@@ -45,6 +45,47 @@ describe("createCatalogPageHandlers", () => {
     expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(1);
   });
 
+  it("clears item and folder selection after an empty explorer click", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    const handlers = createCatalogPageHandlers({
+      resourceType: "colors",
+    });
+    const deps = {
+      store: {
+        setSelectedFolderId: vi.fn(),
+        setSelectedItemId: vi.fn(),
+      },
+      refs: {
+        fileExplorerKeyboardScope: {
+          focus: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handlers.handleFileExplorerSelectionChanged(deps, {
+      _event: {
+        detail: {
+          itemId: undefined,
+          isFolder: false,
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedFolderId).toHaveBeenCalledWith({
+      folderId: undefined,
+    });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(1);
+  });
+
   it("focuses the keyboard scope after mount", () => {
     globalThis.requestAnimationFrame = vi.fn((callback) => {
       callback();

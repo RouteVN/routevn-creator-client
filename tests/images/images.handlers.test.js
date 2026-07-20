@@ -27,6 +27,7 @@ import {
   handleFileExplorerKeyboardScopeKeyDown,
   handleFileExplorerSelectionChanged,
   handleImageItemPreview,
+  handleResourceViewBackgroundClick,
   handleMobileDetailDeleteClick,
   handleMobileDetailPreviewClick,
   handlePreviewCanvasModeClick,
@@ -49,6 +50,32 @@ describe("images handlers", () => {
 
   afterEach(() => {
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
+  it("clears image, folder, and explorer selection from a grid background click", () => {
+    const deps = {
+      store: {
+        setSelectedFolderId: vi.fn(),
+        setSelectedItemId: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          clearSelection: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleResourceViewBackgroundClick(deps);
+
+    expect(deps.store.setSelectedFolderId).toHaveBeenCalledWith({
+      folderId: undefined,
+    });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(deps.refs.fileExplorer.clearSelection).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledOnce();
   });
 
   it("opens the selected image edit dialog when e is pressed", () => {
@@ -207,6 +234,40 @@ describe("images handlers", () => {
     expect(deps.store.closeMobileFileExplorer).toHaveBeenCalledTimes(1);
     expect(deps.refs.groupview.scrollItemIntoView).toHaveBeenCalledWith({
       itemId: "image-1",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears image and folder selection after clicking empty explorer space", () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const deps = {
+      store: {
+        selectIsTouchMode: vi.fn(() => false),
+        setSelectedFolderId: vi.fn(),
+        setSelectedItemId: vi.fn(),
+      },
+      refs: {
+        fileExplorerKeyboardScope: {
+          focus: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handleFileExplorerSelectionChanged(deps, {
+      _event: {
+        detail: {
+          itemId: undefined,
+          isFolder: false,
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedFolderId).toHaveBeenCalledWith({
+      folderId: undefined,
+    });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
   });

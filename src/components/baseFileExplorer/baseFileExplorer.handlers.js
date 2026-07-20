@@ -143,6 +143,19 @@ const emitItemClick = ({ dispatchEvent, item } = {}) => {
   );
 };
 
+const emitSelectionCleared = ({ dispatchEvent } = {}) => {
+  dispatchEvent(
+    new CustomEvent("selection-cleared", {
+      detail: {
+        id: undefined,
+        itemId: undefined,
+        item: undefined,
+        isFolder: false,
+      },
+    }),
+  );
+};
+
 const emitFolderCollapseChange = ({
   dispatchEvent,
   folderId,
@@ -1329,6 +1342,28 @@ const shouldSuppressTouchContextMenu = (deps, event) => {
   );
 };
 
+export const handleContainerClick = (deps, payload) => {
+  const { dispatchEvent, render, store } = deps;
+  if (store.selectSuppressNextClick()) {
+    payload?._event?.preventDefault?.();
+    payload?._event?.stopPropagation?.();
+    store.setSuppressNextClick({ suppress: false });
+    return;
+  }
+
+  const target = payload?._event?.target;
+  if (
+    typeof target?.closest === "function" &&
+    target.closest("[data-file-explorer-item='true']")
+  ) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId: undefined });
+  render();
+  emitSelectionCleared({ dispatchEvent });
+};
+
 export const handleContainerContextMenu = (deps, payload) => {
   const { store, render, props } = deps;
   if (shouldSuppressTouchContextMenu(deps, payload._event)) {
@@ -1488,6 +1523,14 @@ export const handlePageItemClick = (deps, payload) => {
   const item = deps.props.items?.find((entry) => entry.id === itemId);
 
   selectVisibleItem({ deps, item, emitSelectionEvent: false });
+};
+
+export const handleClearSelection = (deps) => {
+  const { store, render } = deps;
+
+  store.clearPendingDrag();
+  store.setSelectedItemId({ itemId: undefined });
+  render();
 };
 
 export const handleGetSelectedItem = (deps) => {

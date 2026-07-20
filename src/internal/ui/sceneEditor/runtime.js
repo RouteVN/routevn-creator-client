@@ -1,12 +1,15 @@
 import {
+  debounce,
   debounceTime,
   EMPTY,
   filter,
   fromEvent,
   map,
+  of,
   switchMap,
   tap,
   throttleTime,
+  timer,
 } from "rxjs";
 import {
   extractFileIdsFromRenderState,
@@ -44,6 +47,7 @@ import {
 
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
+const SCENE_EDITOR_CANVAS_RENDER_DEBOUNCE_MS = 50;
 const CANVAS_RUNTIME_LINE_SYNC_WINDOW_MS = 1200;
 const FAILED_SCENE_ASSET_RETRY_DELAY_MS = 60000;
 
@@ -217,6 +221,23 @@ export const createSceneEditorRenderQueue = (renderCanvas) => {
 
     return activeRenderPromise;
   };
+};
+
+const toCanvasRenderPayload = (payload = {}) => {
+  const renderPayload = { ...payload };
+  delete renderPayload.completion;
+  delete renderPayload.debounceMs;
+  delete renderPayload.flush;
+  return renderPayload;
+};
+
+export const flushSceneEditorCanvasRender = (subject, renderPayload = {}) => {
+  return new Promise((resolve, reject) => {
+    const payload = { ...renderPayload };
+    payload.flush = true;
+    payload.completion = { resolve, reject };
+    subject.dispatch("sceneEditor.renderCanvas", payload);
+  });
 };
 
 const createAssetLoadCache = () => ({
@@ -2025,18 +2046,38 @@ export const mountSceneEditorSubscriptions = (deps) => {
           syncPresentationState: payload?.syncPresentationState === true,
         });
       }),
-      debounceTime(50),
+      debounce(({ payload }) => {
+        if (payload?.flush === true) {
+          return of(undefined);
+        }
+
+        return timer(
+          payload?.debounceMs ?? SCENE_EDITOR_CANVAS_RENDER_DEBOUNCE_MS,
+        );
+      }),
       tap(async ({ payload }) => {
         const queueStartedAt = getDebugNow();
-        await queueRenderCanvas(payload);
-        emitSceneEditorTiming("runtime.render-canvas.event", {
-          phase: "queued-complete",
-          durationMs: getDebugDurationMs(queueStartedAt),
-          skipRender: payload?.skipRender === true,
-          skipAnimations: payload?.skipAnimations ?? true,
-          skipCanvasPaint: payload?.skipCanvasPaint === true,
-          syncPresentationState: payload?.syncPresentationState === true,
-        });
+        const completion = payload?.completion;
+
+        try {
+          await queueRenderCanvas(toCanvasRenderPayload(payload));
+          emitSceneEditorTiming("runtime.render-canvas.event", {
+            phase: "queued-complete",
+            durationMs: getDebugDurationMs(queueStartedAt),
+            skipRender: payload?.skipRender === true,
+            skipAnimations: payload?.skipAnimations ?? true,
+            skipCanvasPaint: payload?.skipCanvasPaint === true,
+            syncPresentationState: payload?.syncPresentationState === true,
+          });
+          completion?.resolve();
+        } catch (error) {
+          if (completion) {
+            completion.reject(error);
+            return;
+          }
+
+          throw error;
+        }
       }),
     ),
     subject.pipe(

@@ -1,6 +1,6 @@
 ---
 title: Images Workflow
-description: Covers seeded image interactions, preview keyboard navigation, explorer keyboard navigation, drag and drop, empty search, upload, preview, edit, rename, and filtered search in one VT scenario.
+description: Covers seeded image interactions, explorer and grid background deselection, preview keyboard navigation, explorer keyboard navigation, drag and drop, empty search, upload, preview, edit, rename, and filtered search in one VT scenario.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -143,6 +143,40 @@ steps:
     args:
       - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const preview = deepQuery(document, '#detailImagePreview'); return preview ? getComputedStyle(preview).pointerEvents : undefined; })()"
     value: none
+  - action: click
+    x: 150
+    y: 850
+  - action: waitFor
+    selector: "#detailView"
+    state: hidden
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return deepQuery(document, 'rvn-base-file-explorer#fileExplorer')?.getSelectedItem?.() === undefined; })()"
+    value: true
+  - action: select
+    selector: "rvn-media-resources-view#groupview #itemRef0x0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#detailView"
+    state: attached
+    timeoutMs: 5000
+  - action: click
+    x: 700
+    y: 850
+  - action: waitFor
+    selector: "#detailView"
+    state: hidden
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return deepQuery(document, 'rvn-base-file-explorer#fileExplorer')?.getSelectedItem?.() === undefined; })()"
+    value: true
   - action: keypress
     key: j
   - action: wait

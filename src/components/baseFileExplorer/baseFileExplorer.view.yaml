@@ -1,6 +1,8 @@
 refs:
   root:
     eventListeners:
+      click:
+        handler: handleContainerClick
       contextmenu:
         handler: handleContainerContextMenu
   item*:

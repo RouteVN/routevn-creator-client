@@ -5,6 +5,7 @@ import {
   handleFileExplorerAction,
   handleFileExplorerItemClick,
   handleFileExplorerVisibilityToggle,
+  handleLayoutEditorCanvasBackgroundClick,
   handleLayoutEditorCanvasDragUpdate,
   handleLayoutEditorCanvasMetricsChange,
   handleLayoutEditPanelUpdateHandler,
@@ -782,6 +783,29 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
 });
 
 describe("layoutEditor.handleFileExplorerItemClick", () => {
+  it("clears node selection after clicking empty explorer space", async () => {
+    const store = {
+      setSelectedItemId: vi.fn(),
+    };
+    const render = vi.fn();
+
+    await handleFileExplorerItemClick(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            itemId: undefined,
+          },
+        },
+      },
+    );
+
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
   it("closes the mobile node explorer and reveals detail for the selected node", async () => {
     const store = {
       setSelectedItemId: vi.fn(),
@@ -809,6 +833,63 @@ describe("layoutEditor.handleFileExplorerItemClick", () => {
     });
     expect(store.closeMobileFileExplorer).toHaveBeenCalled();
     expect(render).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("layoutEditor.handleLayoutEditorCanvasBackgroundClick", () => {
+  it("clears node and explorer selection after clicking outside the canvas", () => {
+    const background = {};
+    const store = {
+      setSelectedItemId: vi.fn(),
+    };
+    const refs = {
+      fileExplorer: {
+        clearSelection: vi.fn(),
+      },
+    };
+    const render = vi.fn();
+
+    handleLayoutEditorCanvasBackgroundClick(
+      { store, refs, render },
+      {
+        _event: {
+          target: background,
+          currentTarget: background,
+        },
+      },
+    );
+
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(refs.fileExplorer.clearSelection).toHaveBeenCalledTimes(1);
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps selection after a click inside the canvas", () => {
+    const store = {
+      setSelectedItemId: vi.fn(),
+    };
+    const refs = {
+      fileExplorer: {
+        clearSelection: vi.fn(),
+      },
+    };
+    const render = vi.fn();
+
+    handleLayoutEditorCanvasBackgroundClick(
+      { store, refs, render },
+      {
+        _event: {
+          target: {},
+          currentTarget: {},
+        },
+      },
+    );
+
+    expect(store.setSelectedItemId).not.toHaveBeenCalled();
+    expect(refs.fileExplorer.clearSelection).not.toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
   });
 });
 

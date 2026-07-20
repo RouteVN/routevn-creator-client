@@ -466,7 +466,7 @@ export const selectViewData = ({ state, i18n }) => {
     exportConfirmationCancelLabel: copy.cancelButton ?? "Cancel",
     exportConfirmationKey: `${state.exportConfirmation.exportType ?? "none"}-${state.exportConfirmation.versionId ?? "none"}`,
     title: copy.title ?? "Versions",
-    addButton: copy.addButton ?? "Add",
+    createButton: copy.createButton ?? "New Version",
     loadingMessage: copy.loadingMessage ?? "Loading...",
     noVersionsMessage: copy.noVersionsMessage ?? "No versions",
     exportWebButton: copy.exportWebButton ?? "Export Web",

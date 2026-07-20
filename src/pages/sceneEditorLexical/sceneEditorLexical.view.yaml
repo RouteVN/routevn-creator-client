@@ -135,6 +135,12 @@ refs:
         handler: handlePreviewButtonMouseDown
       click:
         handler: handlePreviewClick
+  downloadCanvasButton:
+    eventListeners:
+      mousedown:
+        handler: handleDownloadCanvasButtonMouseDown
+      click:
+        handler: handleDownloadCanvasClick
   vnPreview:
     eventListeners:
       close:
@@ -204,6 +210,7 @@ template:
               - 'rtgl-view w=1fg d=v h=f style="min-width: 0; min-height: 0;"':
                   - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h jc=e g=sm:
                       - 'rtgl-button#previewButton sq pre=play v=ol title="${previewButton}" aria-label="${previewButton}"': null
+                      - 'rtgl-button#downloadCanvasButton sq pre=download v=ol title="${downloadCanvasButton}" aria-label="${downloadCanvasButton}"': null
                       - rtgl-view w=1fg: null
                       - 'rtgl-text#sceneTextStats s=xs c=mu-fg style="white-space: nowrap;"': ${sceneTextStatsLabel}
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':

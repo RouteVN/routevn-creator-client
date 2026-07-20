@@ -18,6 +18,10 @@ export function getSelectedItem(payload = {}) {
   });
 }
 
+export function clearSelection() {
+  this.transformedHandlers.handleClearSelection();
+}
+
 export function navigateSelection(payload = {}) {
   return this.transformedHandlers.handleNavigateSelection({
     _event: {

@@ -10,8 +10,10 @@ import {
   handleBackgroundTransformEditorCloseClick,
   handleBackgroundTransformEditorKeyDown,
   handleCommandLineSubmit,
+  handleDownloadCanvasClick,
   handleDropdownMenuClickItem,
   handleEditorBlur,
+  handleEditorDataChanged,
   handleNewLine,
   handlePreviewClick,
   handleSectionMoveSceneFormActionClick,
@@ -226,6 +228,216 @@ describe("sceneEditorLexical.handlers preview", () => {
       lineId: "line-1",
     });
     expect(calls).toEqual(["editor-blur", "app-blur", "show-preview"]);
+  });
+});
+
+describe("sceneEditorLexical.handlers canvas download", () => {
+  it("captures the current canvas and saves it with a generic filename", async () => {
+    const imageDataUrl = "data:image/png;base64,aGVsbG8=";
+    const canvasRoot = {};
+    const calls = [];
+    const saveFilePicker = vi.fn(async (_blob, defaultPath) => defaultPath);
+    const showToast = vi.fn();
+    const deps = {
+      i18n: EN_I18N,
+      graphicsService: {
+        extractBase64: vi.fn(async () => {
+          calls.push("capture");
+          return imageDataUrl;
+        }),
+      },
+      appService: {
+        saveFilePicker,
+        showToast,
+      },
+      refs: {
+        previewCanvasHost: {
+          getCanvasRoot: vi.fn(() => canvasRoot),
+        },
+      },
+      subject: {
+        dispatch: vi.fn((_action, payload) => {
+          calls.push("render");
+          payload.completion.resolve();
+        }),
+      },
+    };
+
+    await handleDownloadCanvasClick(deps);
+
+    expect(calls).toEqual(["render", "capture"]);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      expect.objectContaining({
+        flush: true,
+        preserveAnimationPlayback: true,
+        skipAnimations: true,
+        skipRender: true,
+        syncPresentationState: true,
+      }),
+    );
+    expect(deps.graphicsService.extractBase64).toHaveBeenCalledWith("story");
+    expect(deps.refs.previewCanvasHost.getCanvasRoot).toHaveBeenCalledOnce();
+    expect(saveFilePicker).toHaveBeenCalledOnce();
+    const [blob, defaultPath, options] = saveFilePicker.mock.calls[0];
+    expect(blob.type).toBe("image/png");
+    expect(await blob.text()).toBe("hello");
+    expect(defaultPath).toMatch(/^scene-canvas-\d{8}-\d{6}\.png$/);
+    expect(options).toEqual({
+      title: "Save canvas image",
+      filters: [{ name: "PNG Image", extensions: ["png"] }],
+    });
+    expect(showToast).toHaveBeenCalledWith({
+      message: "Canvas downloaded.",
+      status: "success",
+    });
+  });
+
+  it("shows user-facing feedback when the current canvas cannot be captured", async () => {
+    const showToast = vi.fn();
+    const deps = {
+      i18n: EN_I18N,
+      graphicsService: {
+        extractBase64: vi.fn(async () => undefined),
+      },
+      appService: {
+        saveFilePicker: vi.fn(),
+        showToast,
+      },
+      refs: {
+        previewCanvasHost: {
+          getCanvasRoot: vi.fn(() => undefined),
+        },
+      },
+      subject: {
+        dispatch: vi.fn((_action, payload) => {
+          payload.completion.resolve();
+        }),
+      },
+      store: {},
+    };
+
+    await handleDownloadCanvasClick(deps);
+
+    expect(deps.appService.saveFilePicker).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith({
+      title: "Error",
+      message: "Failed to download canvas.",
+      status: "error",
+    });
+  });
+});
+
+describe("sceneEditorLexical.handlers editor changes", () => {
+  it("keeps canvas playback running while refreshing typed text", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const state = {
+        draftSection: {
+          sceneId: "scene-1",
+          sectionId: "section-1",
+          baseRevision: 1,
+          dirty: true,
+          isComposing: false,
+          lastSource: "text",
+          lines: [
+            {
+              id: "line-1",
+              sectionId: "section-1",
+              actions: {},
+            },
+          ],
+        },
+        draftSavePendingSinceAt: 0,
+        draftSaveTimerId: undefined,
+        selectedLineId: "line-1",
+      };
+      const store = {
+        selectIsSectionsOverviewOpen: vi.fn(() => false),
+        selectDraftSection: vi.fn(() => state.draftSection),
+        selectDraftSectionBySectionId: vi.fn(() => state.draftSection),
+        selectSceneId: vi.fn(() => "scene-1"),
+        selectSelectedSectionId: vi.fn(() => "section-1"),
+        selectSelectedLineId: vi.fn(() => state.selectedLineId),
+        selectRepositoryRevision: vi.fn(() => 1),
+        setDraftSection: vi.fn(({ draftSection }) => {
+          state.draftSection = draftSection;
+        }),
+        setSelectedLineId: vi.fn(({ selectedLineId }) => {
+          state.selectedLineId = selectedLineId;
+        }),
+        selectSceneTextStatsRefreshHandle: vi.fn(() => undefined),
+        setSceneTextStatsRefreshHandle: vi.fn(),
+        selectDraftSaveTimerId: vi.fn(() => state.draftSaveTimerId),
+        clearDraftSaveTimer: vi.fn(() => {
+          state.draftSaveTimerId = undefined;
+        }),
+        selectPendingDraftSections: vi.fn(() => [state.draftSection]),
+        selectDraftSavePendingSinceAt: vi.fn(
+          () => state.draftSavePendingSinceAt,
+        ),
+        setDraftSavePendingSinceAt: vi.fn(({ timestamp }) => {
+          state.draftSavePendingSinceAt = timestamp;
+        }),
+        selectLastDraftFlushStartedAt: vi.fn(() => 0),
+        setDraftSaveTimerId: vi.fn(({ timerId }) => {
+          state.draftSaveTimerId = timerId;
+        }),
+      };
+      const deps = {
+        store,
+        refs: {},
+        render: vi.fn(),
+        subject: {
+          dispatch: vi.fn(),
+        },
+      };
+      const nextLines = [
+        {
+          id: "line-1",
+          sectionId: "section-1",
+          actions: {
+            dialogue: {
+              content: {
+                root: {
+                  children: [],
+                },
+              },
+            },
+          },
+        },
+      ];
+
+      await handleEditorDataChanged(deps, {
+        _event: {
+          currentTarget: {
+            dataset: {
+              sectionId: "section-1",
+            },
+          },
+          detail: {
+            lines: nextLines,
+            reason: "text",
+            selectedLineId: "line-1",
+          },
+        },
+      });
+
+      expect(deps.subject.dispatch).toHaveBeenCalledWith(
+        "sceneEditor.renderCanvas",
+        {
+          debounceMs: 100,
+          preserveAnimationPlayback: true,
+          skipAnimations: true,
+          skipRender: true,
+          syncPresentationState: true,
+        },
+      );
+    } finally {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
   });
 });
 

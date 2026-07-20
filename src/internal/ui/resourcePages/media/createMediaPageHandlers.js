@@ -9,6 +9,7 @@ import {
   shouldSuppressMobileDetailSheetForFileExplorerSelection,
 } from "../mobileResourcePage.js";
 import { handleResourceZoomShortcutKeyDown } from "../zoomShortcuts.js";
+import { clearResourcePageSelection } from "../resourceViewBackground.js";
 
 export const createMediaPageHandlers = ({
   resourceType,
@@ -235,6 +236,10 @@ export const createMediaPageHandlers = ({
     }
 
     if (!itemId) {
+      store.setSelectedFolderId({ folderId: undefined });
+      store.setSelectedItemId({ itemId: undefined });
+      render();
+      focusKeyboardScope(deps);
       return;
     }
 
@@ -322,6 +327,10 @@ export const createMediaPageHandlers = ({
     store.setSelectedItemId({ itemId });
     refs.fileExplorer?.selectItem?.({ itemId });
     render();
+  };
+
+  const handleResourceViewBackgroundClick = (deps) => {
+    clearResourcePageSelection(deps);
   };
 
   const handleMobileFileExplorerOpen = (deps) => {
@@ -461,6 +470,7 @@ export const createMediaPageHandlers = ({
     handleFileExplorerKeyboardScopeClick,
     handleFileExplorerKeyboardScopeKeyDown,
     handleEditDialogClose,
+    handleResourceViewBackgroundClick,
     handleItemClick,
     handleItemDoubleClick,
     handleItemEdit,

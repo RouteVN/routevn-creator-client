@@ -37,6 +37,7 @@ import {
   findSpriteGroupUsage,
 } from "./support/spriteGroupUsage.js";
 import { selectCharactersPageCopy } from "./support/charactersPageCopy.js";
+import { clearResourcePageSelection } from "../../internal/ui/resourcePages/resourceViewBackground.js";
 
 const AVATAR_VALIDATIONS = [
   {
@@ -337,6 +338,10 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   }
 
   if (!itemId) {
+    store.setSelectedFolderId({ folderId: undefined });
+    store.setSelectedItemId({ itemId: undefined });
+    render();
+    focusFileExplorerKeyboardScope(deps);
     return;
   }
 
@@ -362,6 +367,10 @@ export const handleCharacterItemClick = (deps, payload) => {
   const { fileExplorer } = refs;
   fileExplorer?.selectItem?.({ itemId });
   render();
+};
+
+export const handleResourceViewBackgroundClick = (deps) => {
+  clearResourcePageSelection(deps);
 };
 
 export const handleCharacterItemDoubleClick = async (deps, payload) => {

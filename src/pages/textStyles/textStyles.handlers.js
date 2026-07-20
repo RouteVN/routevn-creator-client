@@ -32,6 +32,7 @@ import {
 import { tap } from "rxjs";
 import { TEXT_STYLE_TAG_SCOPE_KEY } from "./textStyles.store.js";
 import { selectTextStylesPageCopy } from "./support/textStylesPageCopy.js";
+import { clearResourcePageSelection } from "../../internal/ui/resourcePages/resourceViewBackground.js";
 
 const selectCopy = (deps = {}) => selectTextStylesPageCopy(deps.i18n);
 
@@ -206,6 +207,14 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
     return;
   }
 
+  if (!itemId) {
+    store.setSelectedFolderId({ folderId: undefined });
+    store.setSelectedItemId({ itemId: undefined });
+    render();
+    focusFileExplorerKeyboardScope(deps);
+    return;
+  }
+
   store.setSelectedFolderId({ folderId: undefined });
   const selectionPayload = { itemId };
   if (shouldSuppressMobileDetailSheetForFileExplorerSelection(deps)) {
@@ -226,6 +235,10 @@ export const handleTextStyleItemClick = (deps, payload) => {
   fileExplorer?.selectItem?.({ itemId });
 
   render();
+};
+
+export const handleResourceViewBackgroundClick = (deps) => {
+  clearResourcePageSelection(deps);
 };
 
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {

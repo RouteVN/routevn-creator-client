@@ -625,6 +625,8 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   const detail = payload._event.detail || {};
   const itemId = detail.id || detail.itemId || detail.item?.id;
   if (!itemId) {
+    store.setSelectedItemId({ itemId: undefined });
+    render();
     return;
   }
 
@@ -642,6 +644,19 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   scheduleDetailPanelSelectionRender(deps, {
     itemId,
   });
+};
+
+export const handleLayoutEditorCanvasBackgroundClick = (deps, payload) => {
+  const { store, refs, render } = deps;
+  const event = payload._event;
+
+  if (event.target !== event.currentTarget) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId: undefined });
+  refs.fileExplorer?.clearSelection?.();
+  render();
 };
 
 export const handleFileExplorerVisibilityToggle = async (deps, payload) => {

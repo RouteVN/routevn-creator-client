@@ -19,6 +19,7 @@ describe("baseFileExplorer view", () => {
   it("keeps bottom empty space after the item list without intercepting clicks", () => {
     const view = readView();
 
+    expect(view).toContain("handler: handleContainerClick");
     expect(view).toContain("div#container");
     expect(view).toContain("height: ${bottomEmptySpaceHeight};");
     expect(view).toContain("flex: 0 0 ${bottomEmptySpaceHeight};");

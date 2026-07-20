@@ -3,6 +3,7 @@ import {
   handleBeforeMount,
   handleItemContextMenu,
   handleItemDoubleClick,
+  handleScrollContainerClick,
   handleTagFilterButtonClick,
   handleZoomButtonClick,
   handleZoomOut,
@@ -16,6 +17,49 @@ const createMobileColumnZoomProps = () => ({
 });
 
 describe("mediaResourcesView.handlers", () => {
+  it("emits a background click from empty grid space", () => {
+    const dispatchEvent = vi.fn();
+
+    handleScrollContainerClick(
+      { dispatchEvent },
+      {
+        _event: {
+          composedPath: () => [
+            {
+              matches: vi.fn(() => false),
+            },
+          ],
+        },
+      },
+    );
+
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "background-click" }),
+    );
+  });
+
+  it.each([
+    "[data-resource-view-item='true']",
+    "[data-resource-view-control='true']",
+  ])("does not emit a background click from %s", (matchingSelector) => {
+    const dispatchEvent = vi.fn();
+
+    handleScrollContainerClick(
+      { dispatchEvent },
+      {
+        _event: {
+          composedPath: () => [
+            {
+              matches: vi.fn((selector) => selector === matchingSelector),
+            },
+          ],
+        },
+      },
+    );
+
+    expect(dispatchEvent).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["filter", handleTagFilterButtonClick, "openTagFilterPopover"],
     ["zoom", handleZoomButtonClick, "openZoomPopover"],

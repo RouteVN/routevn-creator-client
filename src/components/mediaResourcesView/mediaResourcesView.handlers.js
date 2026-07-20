@@ -9,6 +9,7 @@ import {
   openTagFilterPopoverFromButton,
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
+import { dispatchResourceViewBackgroundClick } from "../../internal/ui/resourcePages/resourceViewBackground.js";
 
 const PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const PROGRESSIVE_BATCH_ITEM_COUNT = 24;
@@ -886,6 +887,8 @@ export const handleGroupClick = (deps, payload) => {
     }),
   );
 };
+
+export const handleScrollContainerClick = dispatchResourceViewBackgroundClick;
 
 export const handleSetGroupCollapsed = (deps, payload = {}) => {
   const { store, render } = deps;

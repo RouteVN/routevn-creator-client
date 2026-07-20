@@ -7,10 +7,14 @@ refs:
         handler: handleFileExplorerTargetChanged
       item-click:
         handler: handleFileExplorerSelectionChanged
+      selection-cleared:
+        handler: handleFileExplorerSelectionChanged
       dblclick-item:
         handler: handleTransformItemDoubleClick
   groupview:
     eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
       item-click:
         handler: handleTransformItemClick
       item-edit:

@@ -88,6 +88,10 @@ methods:
       description: Returns the currently selected explorer item and folder state.
       params: []
       returns: object
+    clearSelection:
+      description: Clears the current explorer selection.
+      params: []
+      returns: void
     navigateSelection:
       description: Moves explorer selection across visible items.
       params: []

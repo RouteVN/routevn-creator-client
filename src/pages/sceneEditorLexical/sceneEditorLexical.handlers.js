@@ -1,6 +1,7 @@
 import { filter, fromEvent, tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { generateId } from "../../internal/id.js";
+import { captureCanvasImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import {
   areSceneEditorLinesEqual,
   cloneSceneEditorLines,
@@ -22,6 +23,7 @@ import {
 } from "../../internal/ui/sceneEditor/sceneEditorTiming.js";
 import {
   cloneWithDiagnostics,
+  flushSceneEditorCanvasRender,
   initializeSceneEditorPage,
   mountSceneEditorSubscriptions,
   renderSceneEditorState,
@@ -43,6 +45,10 @@ import {
   selectSceneEditorSection,
 } from "../../internal/ui/sceneEditor/sectionOperations.js";
 import { selectSceneEditorCopy } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
+import {
+  createSceneCanvasFileName,
+  dataUrlToBlob,
+} from "./support/sceneCanvasDownload.js";
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
 const MISSING_PROJECT_RESOLUTION_MESSAGE =
@@ -56,6 +62,7 @@ const MIN_BACKGROUND_TRANSFORM_SCALE = 0.01;
 const BACKGROUND_TRANSFORM_KEYBOARD_NUDGE = 1;
 const BACKGROUND_TRANSFORM_KEYBOARD_LARGE_NUDGE = 10;
 const SCENE_EDITOR_SELECTION_URL_SYNC_THROTTLE_MS = 250;
+const SCENE_EDITOR_TEXT_CANVAS_RENDER_DEBOUNCE_MS = 100;
 const SCENE_TEXT_STATS_REFRESH_DEBOUNCE_MS = 400;
 const SCENE_TEXT_STATS_IDLE_TIMEOUT_MS = 1500;
 
@@ -2219,9 +2226,11 @@ export const handleEditorDataChanged = async (deps, payload) => {
 
   const canvasDispatchStartedAt = getSceneEditorTimingNow();
   subject.dispatch("sceneEditor.renderCanvas", {
+    debounceMs: SCENE_EDITOR_TEXT_CANVAS_RENDER_DEBOUNCE_MS,
     skipRender: true,
     syncPresentationState: true,
     skipAnimations: true,
+    preserveAnimationPlayback: true,
   });
   const canvasDispatchDurationMs = getSceneEditorTimingDurationMs(
     canvasDispatchStartedAt,
@@ -2428,6 +2437,10 @@ export const handleFormatButtonMouseDown = (deps, payload) => {
 export const handlePreviewButtonMouseDown = (deps, payload) => {
   payload?._event?.preventDefault?.();
   deps.store.setSkipNextEditorBlurDraftFlush({ value: true });
+};
+
+export const handleDownloadCanvasButtonMouseDown = (_deps, payload) => {
+  payload?._event?.preventDefault?.();
 };
 
 export const handleDialogueCharacterShortcut = async (deps, payload) => {
@@ -3234,12 +3247,6 @@ export const handleSceneSettingsFormAction = (deps, payload) => {
   const detail = payload._event.detail || {};
   const action = detail.actionId;
 
-  if (action === "cancel") {
-    store.hideSceneSettingsDialog();
-    render();
-    return;
-  }
-
   if (action !== "save") {
     return;
   }
@@ -3488,6 +3495,49 @@ export const handleToggleSectionsGraphView = (deps) => {
   const { store, render } = deps;
   store.toggleSectionsGraphView();
   render();
+};
+
+export const handleDownloadCanvasClick = async (deps) => {
+  const { appService, graphicsService, refs, subject } = deps;
+  const copy = selectCopy(deps);
+
+  try {
+    await flushSceneEditorCanvasRender(subject, {
+      skipRender: true,
+      syncPresentationState: true,
+      skipAnimations: true,
+      preserveAnimationPlayback: true,
+    });
+    const canvasRoot = refs.previewCanvasHost?.getCanvasRoot?.();
+    const imageDataUrl = await captureCanvasImage(graphicsService, canvasRoot);
+    if (!imageDataUrl) {
+      throw new Error("Canvas image is unavailable");
+    }
+
+    const blob = dataUrlToBlob(imageDataUrl);
+    const savedPath = await appService.saveFilePicker(
+      blob,
+      createSceneCanvasFileName(),
+      {
+        title: copy.saveCanvasDialogTitle ?? "Save canvas image",
+        filters: [{ name: "PNG Image", extensions: ["png"] }],
+      },
+    );
+    if (!savedPath) {
+      return;
+    }
+
+    appService.showToast({
+      message: copy.canvasDownloaded ?? "Canvas downloaded.",
+      status: "success",
+    });
+  } catch {
+    appService.showToast({
+      title: copy.errorTitle ?? "Error",
+      message: copy.failedDownloadCanvas ?? "Failed to download canvas.",
+      status: "error",
+    });
+  }
 };
 
 export const handlePreviewClick = (deps, payload) => {

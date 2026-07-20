@@ -111,6 +111,15 @@ describe("sceneEditorLexical.store", () => {
         { value: "xl", label: "Extra Large" },
       ],
     });
+    expect(viewData.sceneSettingsForm.actions.buttons).toEqual([
+      {
+        id: "save",
+        variant: "pr",
+        label: "Save",
+        type: "submit",
+        validate: true,
+      },
+    ]);
   });
 
   it("limits preview canvas width for portrait projects", () => {

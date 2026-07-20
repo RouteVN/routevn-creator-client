@@ -39,6 +39,7 @@ import {
 import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
 import { SPRITESHEET_TAG_SCOPE_KEY } from "./spritesheets.store.js";
 import { selectSpritesheetsPageCopy } from "./support/spritesheetsPageCopy.js";
+import { clearResourcePageSelection } from "../../internal/ui/resourcePages/resourceViewBackground.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const SPRITESHEET_IMAGE_FILE_ACCEPT = ".png";
@@ -558,6 +559,10 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   if (!itemId) {
+    store.setSelectedFolderId({ folderId: undefined });
+    store.setSelectedItemId({ itemId: undefined });
+    render();
+    focusFileExplorerKeyboardScope(deps);
     return;
   }
 
@@ -591,6 +596,10 @@ export const handleSpritesheetItemClick = (deps, payload) => {
   store.setSelectedItemId({ itemId });
   refs.fileExplorer?.selectItem?.({ itemId });
   render();
+};
+
+export const handleResourceViewBackgroundClick = (deps) => {
+  clearResourcePageSelection(deps);
 };
 
 export const handleSpritesheetItemDoubleClick = (deps, payload) => {

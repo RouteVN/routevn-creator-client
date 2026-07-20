@@ -215,6 +215,9 @@ steps:
     type: text
     selector: "#sceneTextStats"
     value: "0 lines 0 words"
+  - action: assert
+    type: visible
+    selector: "#downloadCanvasButton"
   - action: screenshot
   - action: select
     selector: "#systemActions #addActionButton"

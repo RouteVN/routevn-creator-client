@@ -2,6 +2,16 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("images view", () => {
+  it("clears selection when the media grid emits a background click", () => {
+    const imagesView = readFileSync(
+      new URL("../../src/pages/images/images.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(imagesView).toContain("background-click:");
+    expect(imagesView).toContain("handler: handleResourceViewBackgroundClick");
+  });
+
   it("shows column zoom controls in the mobile media header", () => {
     const imagesView = readFileSync(
       new URL("../../src/pages/images/images.view.yaml", import.meta.url),
