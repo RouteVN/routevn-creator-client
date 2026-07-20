@@ -249,10 +249,10 @@ export const handleVariableSelectChange = (deps, payload) => {
 
   // Get variable type to set appropriate default value
   const variable = store.selectVariableItemById({ variableId: value });
-  // When variable changes, reset operation and set default value
+  // When variable changes, default to setting its type-appropriate value
   store.setTempOperation({
     variableId: value,
-    op: "",
+    op: "set",
     value: getDefaultValueForVariable(variable),
     roundTo: undefined,
   });
