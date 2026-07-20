@@ -185,6 +185,22 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
     return;
   }
 
+  if (mode === "edit" && platform === "web") {
+    const originalApplicationIdentifier =
+      store.selectPlatformEditDefaultValues().applicationIdentifier ?? "";
+    if (patch.applicationIdentifier !== originalApplicationIdentifier) {
+      const confirmed = await appService.showDialog({
+        title: copy.webApplicationIdentifierChangeTitle,
+        message: copy.webApplicationIdentifierChangeMessage,
+        confirmText: copy.webApplicationIdentifierChangeConfirm,
+        cancelText: copy.cancelButton,
+      });
+      if (!confirmed) {
+        return;
+      }
+    }
+  }
+
   try {
     const applicationInfo =
       mode === "create"

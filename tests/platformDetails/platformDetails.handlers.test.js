@@ -11,6 +11,7 @@ import { EN_I18N } from "../support/i18n.js";
 const createDeps = () => ({
   appService: {
     showAlert: vi.fn(),
+    showDialog: vi.fn(async () => true),
     showToast: vi.fn(),
   },
   i18n: EN_I18N,
@@ -284,6 +285,118 @@ describe("platformDetails handlers", () => {
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: EN_I18N.platformDetailsPage.platformDetailsCreatedMessage,
     });
+    expect(deps.appService.showDialog).not.toHaveBeenCalled();
+  });
+
+  it("warns before changing an existing Web application identifier", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "edit",
+      platform: "web",
+    });
+    deps.store.selectPlatformEditDefaultValues.mockReturnValue({
+      applicationIdentifier: "com.example.web-project",
+    });
+    deps.store.selectPlatformEditIconFileId.mockReturnValue("web-icon-1");
+    deps.appService.showDialog.mockResolvedValue(false);
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Web Project",
+            applicationIdentifier: "com.example.web-project-two",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showDialog).toHaveBeenCalledWith({
+      title: EN_I18N.platformDetailsPage.webApplicationIdentifierChangeTitle,
+      message:
+        EN_I18N.platformDetailsPage.webApplicationIdentifierChangeMessage,
+      confirmText:
+        EN_I18N.platformDetailsPage.webApplicationIdentifierChangeConfirm,
+      cancelText: EN_I18N.platformDetailsPage.cancelButton,
+    });
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("saves a changed Web application identifier after confirmation", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "edit",
+      platform: "web",
+    });
+    deps.store.selectPlatformEditDefaultValues.mockReturnValue({
+      applicationIdentifier: "com.example.web-project",
+    });
+    deps.store.selectPlatformEditIconFileId.mockReturnValue("web-icon-1");
+    const applicationInfo = {
+      applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project-two",
+      iconFileId: "web-icon-1",
+    };
+    deps.projectService.updateCurrentPlatformDetails.mockResolvedValue(
+      applicationInfo,
+    );
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Web Project",
+            applicationIdentifier: "com.example.web-project-two",
+          },
+        },
+      },
+    });
+
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("web", applicationInfo);
+    expect(deps.store.closePlatformEditDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves Web edits without warning when the identifier is unchanged", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "edit",
+      platform: "web",
+    });
+    deps.store.selectPlatformEditDefaultValues.mockReturnValue({
+      applicationIdentifier: "com.example.web-project",
+    });
+    deps.store.selectPlatformEditIconFileId.mockReturnValue("web-icon-1");
+    const applicationInfo = {
+      applicationName: "Updated Web Project",
+      applicationIdentifier: "com.example.web-project",
+      iconFileId: "web-icon-1",
+    };
+    deps.projectService.updateCurrentPlatformDetails.mockResolvedValue(
+      applicationInfo,
+    );
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Updated Web Project",
+            applicationIdentifier: "com.example.web-project",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showDialog).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("web", applicationInfo);
   });
 
   it("does not create macOS platform details without a bundle identifier", async () => {

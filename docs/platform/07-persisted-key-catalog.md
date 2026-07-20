@@ -161,6 +161,9 @@ Current keys:
   - the Web identifier starts blank, is required and editable, and controls
     browser save-data identity; older stored Web records are backfilled once
     from `projectInfo.namespace`
+  - changing an existing Web identifier requires confirmation because users
+    who update to the new identifier cannot access saves created under the old
+    identifier
   - the Windows identifier starts blank and is optional; the macOS identifier
     starts blank, is required and editable, and controls the exported app and
     save-data identity
