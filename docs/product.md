@@ -75,6 +75,12 @@ It should solve it by keeping the default experience simple while allowing users
 - When a common pattern already exists and works well, prefer using it.
 - Familiarity reduces learning cost and helps users build confidence quickly.
 
+### 9. Dialog Actions
+
+- Dialog forms should normally show only the primary action.
+- Use the dialog's standard close affordance for cancellation instead of adding a redundant Cancel button.
+- Add an explicit Cancel action only when closing the dialog is unavailable or cancellation has distinct product behavior.
+
 ## Examples
 
 ### 1. No-Code Authoring

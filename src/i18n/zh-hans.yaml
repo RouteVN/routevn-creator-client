@@ -1429,6 +1429,7 @@ layoutEditPanel:
   scrollUpLabel: "向上滚动"
   selectButton: "选择"
   selectImageLabel: "选择图像"
+  selectSoundLabel: "选择音频"
   selectSpritesheetAnimationLabel: "选择精灵图集动画"
   selectVisualLabel: "选择视觉素材"
   sliderBarSection: "滑块轨道"
@@ -1436,6 +1437,7 @@ layoutEditPanel:
   sliderThumbSection: "滑块按钮"
   sliderValuesSection: "滑块值"
   soundLabel: "音频"
+  soundRequired: "必须选择音频。"
   spritesheetLabel: "精灵图集"
   stepLabel: "步长"
   submitButton: "提交"
@@ -1453,6 +1455,7 @@ layoutEditPanel:
   visibleOption: "显示"
   visualLabel: "视觉素材"
   visualRequired: "视觉素材为必填项。"
+  volumeLabel: "音量"
   widthLabel: "宽度"
   yesOption: "是"
 controlsPage:

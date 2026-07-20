@@ -45,6 +45,12 @@ describe("layout sound variants", () => {
           y: 0,
           hoverSoundId: "sound-hover",
           clickSoundId: "sound-click",
+          hover: {
+            soundVolume: 40,
+          },
+          click: {
+            soundVolume: 65,
+          },
         },
       ],
       {},
@@ -59,19 +65,24 @@ describe("layout sound variants", () => {
 
     expect(elements[0].hover?.soundSrc).toBe("file-hover");
     expect(elements[0].hover?.soundFileType).toBe("audio/ogg");
+    expect(elements[0].hover?.soundVolume).toBe(40);
     expect(elements[0].click?.soundSrc).toBe("file-click");
     expect(elements[0].click?.soundFileType).toBe("audio/mpeg");
+    expect(elements[0].click?.soundVolume).toBe(65);
 
-    expect(extractFileIdsFromRenderState(elements)).toEqual([
-      {
-        url: "file-hover",
-        type: "audio/ogg",
-      },
-      {
-        url: "file-click",
-        type: "audio/mpeg",
-      },
-    ]);
+    expect(extractFileIdsFromRenderState(elements)).toEqual(
+      expect.arrayContaining([
+        {
+          url: "file-hover",
+          type: "audio/ogg",
+        },
+        {
+          url: "file-click",
+          type: "audio/mpeg",
+        },
+      ]),
+    );
+    expect(extractFileIdsFromRenderState(elements)).toHaveLength(2);
   });
 
   it("maps sprite hover and click sound ids into route-graphics interaction sounds", () => {

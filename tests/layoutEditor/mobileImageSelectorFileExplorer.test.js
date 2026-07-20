@@ -108,7 +108,7 @@ const viewCases = [
     name: "layout edit panel",
     path: "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
     start: "rtgl-dialog#imageSelectorDialog",
-    end: "rtgl-dialog#soundSelectorDialog",
+    end: "rtgl-dialog#soundFormDialog",
     explorer: "rvn-base-file-explorer#imageSelectorFileExplorer",
   },
   {
