@@ -855,7 +855,12 @@ const prefixElementIds = (elements, prefix) => {
   });
 };
 
-const resolveFragmentChildren = ({ node, imageItems, context }) => {
+const resolveFragmentChildren = ({
+  node,
+  imageItems,
+  context,
+  ancestry = [],
+}) => {
   const fragmentLayoutId = node.fragmentLayoutId;
   const fragmentStack = context.fragmentStack || [];
   if (
@@ -892,6 +897,7 @@ const resolveFragmentChildren = ({ node, imageItems, context }) => {
           node: child,
           imageItems,
           context: fragmentContext,
+          ancestry,
         }),
       )
       .filter(Boolean),
@@ -1680,7 +1686,7 @@ const applyContainerNode = ({ element, node }) => {
   };
 };
 
-const mapLayoutNode = ({ node, imageItems, context }) => {
+const mapLayoutNode = ({ node, imageItems, context, ancestry = [] }) => {
   if (node.hidden === true) {
     return undefined;
   }
@@ -1702,6 +1708,13 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
             ),
           }
         : context;
+  const nodeAncestry = [
+    ...ancestry,
+    {
+      layoutId: nodeContext.layoutId,
+      node: effectiveNode,
+    },
+  ];
   let element = buildBaseElement(node, nodeContext);
 
   element = applyTextNode({
@@ -1747,6 +1760,7 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
           node: effectiveNode,
           imageItems,
           context: childContext,
+          ancestry: nodeAncestry,
         })
       : effectiveNode.children?.length > 0
         ? effectiveNode.children
@@ -1755,6 +1769,7 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
                 node: child,
                 imageItems,
                 context: childContext,
+                ancestry: nodeAncestry,
               }),
             )
             .filter(Boolean)
@@ -1766,6 +1781,14 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
     if (REPEATING_CONTAINER_CONFIG[effectiveNode.type]) {
       element.children = updateChildrenIds(element.children, "i");
     }
+  }
+
+  if (typeof nodeContext.mapElement === "function") {
+    element = nodeContext.mapElement({
+      element,
+      node: effectiveNode,
+      ancestry: nodeAncestry,
+    });
   }
 
   return element;
@@ -1923,6 +1946,7 @@ export const buildLayoutElements = (
     spritesheetItems: options.spritesheetsData?.items || {},
     layoutsData: options.layoutsData,
     fragmentStack: options.fragmentStack ?? [],
+    mapElement: options.mapElement,
   };
 
   const orderedLayout = applyLayoutRenderOrder({

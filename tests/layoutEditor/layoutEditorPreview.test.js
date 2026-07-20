@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  createLayoutEditorHoverOverlay,
   createLayoutEditorRenderedElements,
   createLayoutEditorRenderState,
   createLayoutEditorSelectionOverlay,
@@ -13,6 +14,80 @@ import {
 } from "../../src/internal/layoutConditions.js";
 
 describe("layoutEditorPreview", () => {
+  it("creates one-sided hover rects with CSS-scaled renderer strokes", () => {
+    const overlays = createLayoutEditorHoverOverlay({
+      bounds: {
+        corners: [
+          { x: 10, y: 20 },
+          { x: 110, y: 20 },
+          { x: 110, y: 60 },
+          { x: 10, y: 60 },
+        ],
+      },
+      canvasUnitsPerCssPixel: 2,
+    });
+
+    expect(overlays).toHaveLength(2);
+    expect(overlays[0]).toMatchObject({
+      id: "hover-border-outer",
+      x: 9,
+      y: 19,
+      width: 102,
+      height: 42,
+      border: {
+        color: "#ffffff",
+        width: 2,
+      },
+    });
+    expect(overlays[1]).toMatchObject({
+      id: "hover-border-inner",
+      x: 11,
+      y: 21,
+      width: 98,
+      height: 38,
+      border: {
+        color: "#b3b3b3",
+        width: 2,
+      },
+    });
+
+    const selectionOverlays = createLayoutEditorSelectionOverlay({
+      selectedItemId: "selected",
+      occurrencesById: {
+        selected: {
+          ownerItemId: "selected",
+        },
+      },
+      occurrenceIdsByOwner: {
+        selected: ["selected"],
+      },
+      selectedItem: {
+        type: "container-ref-choice-item",
+      },
+      parsedElements: [
+        {
+          id: "selected",
+          type: "rect",
+          width: 100,
+          height: 40,
+        },
+      ],
+      canvasUnitsPerCssPixel: 2,
+    });
+    const [selectionOuter, selectionInner, , selectionAnchor] =
+      selectionOverlays[0].children;
+
+    expect(selectionOuter.border.width).toBe(2);
+    expect(selectionInner.border.width).toBe(2);
+    expect(selectionAnchor).toMatchObject({
+      width: 16,
+      height: 16,
+      border: {
+        width: 2,
+      },
+    });
+  });
+
   it("builds stable preview data from variables, dialogue defaults, and choices", () => {
     const previewData = createLayoutEditorPreviewData({
       variablesData: {
@@ -674,6 +749,17 @@ describe("layoutEditorPreview", () => {
   it("creates a draggable overlay only for the first repeated instance", () => {
     const overlays = createLayoutEditorSelectionOverlay({
       selectedItemId: "target",
+      occurrencesById: {
+        "target-instance-0": {
+          ownerItemId: "target",
+        },
+        "target-instance-1": {
+          ownerItemId: "target",
+        },
+      },
+      occurrenceIdsByOwner: {
+        target: ["target-instance-0", "target-instance-1"],
+      },
       parsedElements: [
         {
           id: "target-instance-0",
@@ -698,16 +784,45 @@ describe("layoutEditorPreview", () => {
 
     expect(overlays).toHaveLength(1);
     expect(overlays[0].id).toBe("selected-border-group");
-    expect(overlays[0].children).toHaveLength(6);
-    expect(overlays[0].children[0].id).toBe("selected-border");
-    expect(overlays[0].children[0].x).toBe(0);
-    expect(overlays[0].children[0].y).toBe(0);
-    expect(overlays[0].children[0].drag).toEqual({
+    expect(overlays[0].children).toHaveLength(8);
+    expect(overlays[0].children[0]).toMatchObject({
+      id: "selected-border-outer",
+      x: -0.5,
+      y: -0.5,
+      width: 101,
+      height: 41,
+      border: {
+        color: "#ffffff",
+        width: 1,
+        alpha: 1,
+      },
+    });
+    expect(overlays[0].children[1]).toMatchObject({
+      id: "selected-border-inner",
+      x: 0.5,
+      y: 0.5,
+      width: 99,
+      height: 39,
+      border: {
+        color: "#b3b3b3",
+        width: 1,
+        alpha: 1,
+      },
+    });
+    expect(overlays[0].children[2]).toMatchObject({
+      id: "selected-border",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 40,
+    });
+    expect(overlays[0].children[2].border).toBeUndefined();
+    expect(overlays[0].children[2].drag).toEqual({
       start: { payload: {} },
       move: { payload: {} },
       end: { payload: {} },
     });
-    expect(overlays[0].children[5]).toEqual({
+    expect(overlays[0].children[7]).toEqual({
       id: "selected-border-anchor",
       type: "rect",
       x: 46,
@@ -719,7 +834,7 @@ describe("layoutEditorPreview", () => {
         alpha: 1,
       },
       border: {
-        color: "#111111",
+        color: "#b3b3b3",
         width: 1,
         alpha: 1,
       },
@@ -729,6 +844,14 @@ describe("layoutEditorPreview", () => {
   it("does not add resize handles for container items without size controls", () => {
     const overlays = createLayoutEditorSelectionOverlay({
       selectedItemId: "choice-item",
+      occurrencesById: {
+        "choice-item": {
+          ownerItemId: "choice-item",
+        },
+      },
+      occurrenceIdsByOwner: {
+        "choice-item": ["choice-item"],
+      },
       selectedItem: {
         type: "container-ref-choice-item",
       },
@@ -746,6 +869,8 @@ describe("layoutEditorPreview", () => {
 
     expect(overlays).toHaveLength(1);
     expect(overlays[0].children.map((item) => item.id)).toEqual([
+      "selected-border-outer",
+      "selected-border-inner",
       "selected-border",
       "selected-border-anchor",
     ]);
@@ -754,6 +879,14 @@ describe("layoutEditorPreview", () => {
   it("does not add resize handles for auto-width text items", () => {
     const overlays = createLayoutEditorSelectionOverlay({
       selectedItemId: "text-item",
+      occurrencesById: {
+        "text-item": {
+          ownerItemId: "text-item",
+        },
+      },
+      occurrenceIdsByOwner: {
+        "text-item": ["text-item"],
+      },
       selectedItem: {
         type: "text",
         width: undefined,
@@ -772,6 +905,8 @@ describe("layoutEditorPreview", () => {
 
     expect(overlays).toHaveLength(1);
     expect(overlays[0].children.map((item) => item.id)).toEqual([
+      "selected-border-outer",
+      "selected-border-inner",
       "selected-border",
       "selected-border-anchor",
     ]);

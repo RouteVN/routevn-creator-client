@@ -8,6 +8,7 @@ import {
   handleLayoutEditorCanvasBackgroundClick,
   handleLayoutEditorCanvasDragUpdate,
   handleLayoutEditorCanvasMetricsChange,
+  handleLayoutEditorCanvasSelectionChange,
   handleLayoutEditPanelUpdateHandler,
   handlePreviewButtonClick,
   handleSaveButtonClick,
@@ -847,6 +848,7 @@ describe("layoutEditor.handleFileExplorerItemClick", () => {
   it("clears node selection after clicking empty explorer space", async () => {
     const store = {
       setSelectedItemId: vi.fn(),
+      setDetailPanelSelectedItemId: vi.fn(),
     };
     const render = vi.fn();
 
@@ -870,6 +872,7 @@ describe("layoutEditor.handleFileExplorerItemClick", () => {
   it("closes the mobile node explorer and reveals detail for the selected node", async () => {
     const store = {
       setSelectedItemId: vi.fn(),
+      selectSelectedItemId: vi.fn(() => undefined),
       selectIsTouchMode: vi.fn(() => true),
       selectIsMobileFileExplorerOpen: vi.fn(() => true),
       setDetailPanelSelectedItemId: vi.fn(),
@@ -878,7 +881,7 @@ describe("layoutEditor.handleFileExplorerItemClick", () => {
     const render = vi.fn();
 
     await handleFileExplorerItemClick(
-      { store, render },
+      { store, refs: {}, render },
       {
         _event: {
           detail: {
@@ -902,6 +905,7 @@ describe("layoutEditor.handleLayoutEditorCanvasBackgroundClick", () => {
     const background = {};
     const store = {
       setSelectedItemId: vi.fn(),
+      setDetailPanelSelectedItemId: vi.fn(),
     };
     const refs = {
       fileExplorer: {
@@ -951,6 +955,76 @@ describe("layoutEditor.handleLayoutEditorCanvasBackgroundClick", () => {
     expect(store.setSelectedItemId).not.toHaveBeenCalled();
     expect(refs.fileExplorer.clearSelection).not.toHaveBeenCalled();
     expect(render).not.toHaveBeenCalled();
+  });
+});
+
+describe("layoutEditor.handleLayoutEditorCanvasSelectionChange", () => {
+  it("synchronizes canvas selection with explorer and touch detail", () => {
+    const store = {
+      setSelectedItemId: vi.fn(),
+      selectIsTouchMode: vi.fn(() => true),
+      setDetailPanelSelectedItemId: vi.fn(),
+    };
+    const refs = {
+      fileExplorer: {
+        selectItem: vi.fn(),
+      },
+    };
+    const render = vi.fn();
+
+    handleLayoutEditorCanvasSelectionChange(
+      { store, refs, render },
+      {
+        _event: {
+          detail: {
+            itemId: "node-1",
+            occurrenceId: "node-1-instance-2",
+          },
+        },
+      },
+    );
+
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({ itemId: "node-1" });
+    expect(refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "node-1",
+    });
+    expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+      itemId: "node-1",
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears all canonical selection surfaces for an empty canvas hit", () => {
+    const store = {
+      setSelectedItemId: vi.fn(),
+      setDetailPanelSelectedItemId: vi.fn(),
+    };
+    const refs = {
+      fileExplorer: {
+        clearSelection: vi.fn(),
+      },
+    };
+    const render = vi.fn();
+
+    handleLayoutEditorCanvasSelectionChange(
+      { store, refs, render },
+      {
+        _event: {
+          detail: {
+            itemId: undefined,
+          },
+        },
+      },
+    );
+
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(refs.fileExplorer.clearSelection).toHaveBeenCalledTimes(1);
+    expect(render).toHaveBeenCalledTimes(1);
   });
 });
 
