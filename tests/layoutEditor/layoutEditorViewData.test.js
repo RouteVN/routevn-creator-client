@@ -396,7 +396,19 @@ describe("layoutEditorViewData", () => {
     expect(item.svg).toBe("spritesheets");
   });
 
-  it("uses the same combined special icons for add actions and explorer items", () => {
+  it("uses the normal fragment icon in the explorer", () => {
+    const [item] = toLayoutEditorExplorerItems([
+      {
+        id: "fragment-1",
+        type: "fragment-ref",
+        name: "Fragment",
+      },
+    ]);
+
+    expect(item.svg).toBe("fragment");
+  });
+
+  it("uses combined special icons for add actions and explorer items", () => {
     const createTypes = [
       "container",
       "sprite",
@@ -439,11 +451,11 @@ describe("layoutEditorViewData", () => {
       })),
     );
 
-    expect(menuItems.map((item) => item.icon)).toEqual(
-      explorerItems.map((item) => item.svg),
-    );
+    const menuIcons = menuItems.map((item) => item.icon);
+    const explorerIcons = explorerItems.map((item) => item.svg);
+
     expect(explorerItems.every((item) => !item.iconCornerBadge)).toBe(true);
-    expect(menuItems.map((item) => item.icon)).toEqual([
+    expect(menuIcons).toEqual([
       "container",
       "sprite",
       "spritesheets",
@@ -471,5 +483,10 @@ describe("layoutEditorViewData", () => {
       "text-special",
       "rect",
     ]);
+    expect(explorerIcons).toEqual(
+      menuIcons.map((icon) =>
+        icon === "fragment-special" ? "fragment" : icon,
+      ),
+    );
   });
 });

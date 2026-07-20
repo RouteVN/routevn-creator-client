@@ -82,6 +82,54 @@ const LABEL_TEXT_KEYS = Object.freeze({
   Edit: "editMenuLabel",
 });
 
+const ITEM_ROLE_LABELS = Object.freeze({
+  "container-ref-choice-item": {
+    copyKey: "choiceItemElementLabel",
+    fallback: "Choice Item",
+  },
+  "container-ref-dialogue-line": {
+    copyKey: "nvlLineElementLabel",
+    fallback: "NVL Line",
+  },
+  "container-ref-save-load-slot": {
+    copyKey: "saveItemElementLabel",
+    fallback: "Save Item",
+  },
+  "text-ref-character-name": {
+    copyKey: "speakerNameElementLabel",
+    fallback: "Speaker Name",
+  },
+  "text-ref-choice-item-content": {
+    copyKey: "choiceItemTextElementLabel",
+    fallback: "Choice Item Text",
+  },
+  "text-ref-dialogue-line-character-name": {
+    copyKey: "nvlLineSpeakerNameElementLabel",
+    fallback: "NVL Line Speaker Name",
+  },
+  "text-ref-dialogue-line-content": {
+    copyKey: "nvlLineTextElementLabel",
+    fallback: "NVL Line Text",
+  },
+  "text-ref-save-load-slot-date": {
+    copyKey: "saveItemDateElementLabel",
+    fallback: "Save Item Date",
+  },
+  "text-revealing-ref-dialogue-content": {
+    copyKey: "dialogueTextElementLabel",
+    fallback: "Dialogue Text",
+  },
+  "text-revealing": {
+    copyKey: "nvlLineTextElementLabel",
+    fallback: "NVL Line Text",
+  },
+});
+
+const selectItemRoleLabel = (itemType, copy = {}) => {
+  const role = ITEM_ROLE_LABELS[itemType];
+  return role ? (copy[role.copyKey] ?? role.fallback) : undefined;
+};
+
 const localizeMenuItems = (items = [], copy = {}) => {
   return items.map((item) => {
     if (!item?.label) {
@@ -565,6 +613,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
 
   return {
     item,
+    itemRoleLabel: selectItemRoleLabel(item?.type, copy),
     loadingPreviewLabel: copy.loadingPreviewLabel,
     noSelectionLabel: copy.noSelectionLabel,
     nodeButtonLabel: copy.nodeButtonLabel ?? "Node",
