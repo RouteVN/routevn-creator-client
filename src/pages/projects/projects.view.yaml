@@ -163,7 +163,10 @@ template:
                   - 'rtgl-view w=f ah=c':
                       - rtgl-view sm-w=f w=640 h=1fg d=v g=xl:
                           - rtgl-view w=f g=md pt=lg:
-                              - $if localEmptyMessage:
+                              - $if isProjectsLoading:
+                                  - rtgl-view w=f h=120 ah=c av=c:
+                                      - rtgl-text s=lg c=mu-fg: ${loadingMessage}
+                                $elif localEmptyMessage:
                                   - rtgl-view w=f h=120 ah=c av=c:
                                       - rtgl-view d=v ah=c g=md:
                                           - rtgl-text s=lg c=mu-fg: ${localEmptyMessage}

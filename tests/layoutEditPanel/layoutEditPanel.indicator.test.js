@@ -41,6 +41,7 @@ import {
   handleTextRevealIndicatorImageFieldClick,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import { toInspectorValues } from "../../src/components/layoutEditPanel/support/layoutEditPanelViewData.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
@@ -109,6 +110,7 @@ const createDeps = (state) => ({
     showDropdownMenu: vi.fn(),
   },
   props: createProps(),
+  i18n: EN_I18N,
   refs: {
     textRevealIndicatorForm: {
       getValues: vi.fn(),
@@ -233,6 +235,7 @@ describe("layoutEditPanel text reveal indicators", () => {
       state,
       props: createProps(),
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+      i18n: EN_I18N,
     });
     const indicatorSection = viewData.config.sections.find(
       (section) => section.id === "textRevealIndicator",
@@ -266,12 +269,15 @@ describe("layoutEditPanel text reveal indicators", () => {
       state,
       props: createProps(),
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+      i18n: EN_I18N,
     });
     const indicatorSection = viewData.config.sections.find(
       (section) => section.id === "textRevealIndicator",
     );
 
-    expect(indicatorSection?.items[0]?.items).toEqual([]);
+    expect(indicatorSection?.items.flatMap((item) => item.items ?? [])).toEqual(
+      [],
+    );
     expect(indicatorSection?.labelAction).toBe("plus");
   });
 
@@ -299,6 +305,7 @@ describe("layoutEditPanel text reveal indicators", () => {
       state,
       props: createProps(),
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+      i18n: EN_I18N,
     });
     const indicatorSection = viewData.config.sections.find(
       (section) => section.id === "textRevealIndicator",
@@ -364,6 +371,7 @@ describe("layoutEditPanel text reveal indicators", () => {
       state,
       props: createProps(),
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+      i18n: EN_I18N,
     });
 
     expect(viewData.textRevealIndicatorDialogDefaults).toEqual({
@@ -427,10 +435,7 @@ describe("layoutEditPanel text reveal indicators", () => {
 
     expect(deps.appService.showDropdownMenu).toHaveBeenCalledWith(
       expect.objectContaining({
-        items: [
-          { type: "item", label: "Complete", key: "complete" },
-          { type: "item", label: "Sound", key: "revealSoundId" },
-        ],
+        items: [{ type: "item", label: "Complete", key: "complete" }],
       }),
     );
     expect(state.textRevealIndicatorDialog).toMatchObject({
@@ -737,6 +742,7 @@ describe("layoutEditPanel text reveal indicators", () => {
       state,
       props: createProps(),
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+      i18n: EN_I18N,
     });
     const indicatorSection = viewData.config.sections.find(
       (section) => section.id === "textRevealIndicator",

@@ -28,8 +28,7 @@ const refreshVersionsData = async (deps) => {
   const { p: projectId } = appService.getPayload();
 
   await projectService.ensureRepository();
-  const adapter = projectService.getAdapterById(projectId);
-  const versions = (await adapter.app.get("versions")) || [];
+  const versions = await projectService.loadVersionsFromProject(projectId);
 
   store.setVersions({ versions });
   render();
@@ -580,10 +579,16 @@ const createVersionExportData = async ({
 };
 
 export const handleBeforeMount = (deps) => {
-  const { appService, store, uiConfig } = deps;
+  const { appService, projectService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
   store.setPlatform({ platform: appService.getPlatform() });
   store.setVisualTestMode({ enabled: isVisualTestMode() });
+
+  const { p: projectId } = appService.getPayload();
+  const cachedVersions = projectService.getCachedVersions(projectId);
+  if (cachedVersions !== undefined) {
+    store.setVersions({ versions: cachedVersions });
+  }
 };
 
 export const handleAfterMount = async (deps) => {

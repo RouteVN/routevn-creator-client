@@ -66,6 +66,26 @@ describe("versions store mobile view data", () => {
   });
 });
 
+describe("versions store loading state", () => {
+  it("keeps the initial empty collection in loading state until versions arrive", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state })).toMatchObject({
+      isVersionsLoading: true,
+      loadingMessage: "Loading...",
+      versions: [],
+    });
+
+    setVersions({ state }, { versions: [] });
+
+    expect(selectViewData({ state })).toMatchObject({
+      isVersionsLoading: false,
+      noVersionsMessage: "No versions",
+      versions: [],
+    });
+  });
+});
+
 describe("versions store export actions", () => {
   it("builds read-only Web export confirmation fields", () => {
     const state = createInitialState();

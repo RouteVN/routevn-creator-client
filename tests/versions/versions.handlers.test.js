@@ -156,14 +156,20 @@ const chooseAndConfirmExport = async (handler, deps) => {
 describe("versions lifecycle", () => {
   it("syncs touch UI config before mount", () => {
     const setUiConfig = vi.fn();
+    const setVersions = vi.fn();
     const deps = {
       appService: {
         getPlatform: vi.fn(() => "web"),
+        getPayload: vi.fn(() => ({ p: "project-1" })),
+      },
+      projectService: {
+        getCachedVersions: vi.fn(() => undefined),
       },
       store: {
         setUiConfig,
         setPlatform: vi.fn(),
         setVisualTestMode: vi.fn(),
+        setVersions,
       },
       uiConfig: {
         id: "touch",
@@ -180,6 +186,42 @@ describe("versions lifecycle", () => {
     expect(deps.store.setVisualTestMode).toHaveBeenCalledWith({
       enabled: false,
     });
+    expect(setVersions).not.toHaveBeenCalled();
+  });
+
+  it("hydrates the first render from the current project's version cache", () => {
+    const versions = [
+      {
+        id: "version-1",
+        name: "Version One",
+      },
+    ];
+    const deps = {
+      appService: {
+        getPlatform: vi.fn(() => "web"),
+        getPayload: vi.fn(() => ({ p: "project-1" })),
+      },
+      projectService: {
+        getCachedVersions: vi.fn(() => versions),
+      },
+      store: {
+        setUiConfig: vi.fn(),
+        setPlatform: vi.fn(),
+        setVisualTestMode: vi.fn(),
+        setVersions: vi.fn(),
+      },
+      uiConfig: {
+        id: "normal",
+        inputMode: "pointer",
+      },
+    };
+
+    handleBeforeMount(deps);
+
+    expect(deps.projectService.getCachedVersions).toHaveBeenCalledWith(
+      "project-1",
+    );
+    expect(deps.store.setVersions).toHaveBeenCalledWith({ versions });
   });
 });
 
@@ -264,15 +306,13 @@ describe("versions.handleDownloadZipClick", () => {
       getState: vi.fn(() => structuredClone(initialProjectData)),
     };
     const deps = createDeps({ repository });
-    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(
-      undefined,
-    );
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue(undefined);
 
     await handleDownloadZipClick(deps, createVersionClickPayload());
 
-    expect(
-      deps.projectService.getCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web");
+    expect(deps.projectService.getCurrentPlatformDetails).toHaveBeenCalledWith(
+      "web",
+    );
     expect(
       deps.projectService.promptDistributionZipPath,
     ).not.toHaveBeenCalled();

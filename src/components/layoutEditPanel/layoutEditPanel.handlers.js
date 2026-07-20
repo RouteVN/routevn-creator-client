@@ -1328,13 +1328,24 @@ export const handleSectionActionClick = async (deps, payload) => {
   } else if (id === "blur") {
     store.openSpriteBlurDialog();
     render();
+  } else if (id === "textRevealing") {
+    if (store.selectSoundOptions().length === 0) {
+      appService.showAlert({
+        message:
+          copy.noSoundsAvailable ??
+          "No sounds available. Create a sound resource first.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    store.openSoundSelectorDialog({
+      name: "revealSoundId",
+    });
+    render();
   } else if (id === "textRevealIndicator") {
     const currentValues = store.selectValues();
-    const capabilities =
-      getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {};
     const items = createTextRevealIndicatorAddItems(currentValues.indicator, {
-      revealSoundId: currentValues.revealSoundId,
-      supportsTextRevealSound: capabilities.supportsTextRevealSound === true,
       copy,
     });
     if (items.length === 0) {
@@ -1348,24 +1359,6 @@ export const handleSectionActionClick = async (deps, payload) => {
       place: "bs",
     });
     if (!result?.item?.key) {
-      return;
-    }
-
-    if (result.item.key === "revealSoundId") {
-      if (store.selectSoundOptions().length === 0) {
-        appService.showAlert({
-          message:
-            copy.noSoundsAvailable ??
-            "No sounds available. Create a sound resource first.",
-          title: copy.warningTitle ?? "Warning",
-        });
-        return;
-      }
-
-      store.openSoundSelectorDialog({
-        name: "revealSoundId",
-      });
-      render();
       return;
     }
 

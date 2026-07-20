@@ -13,6 +13,7 @@ import {
   handleLanguageDialogClose,
   handleLanguageFormAction,
   handleOpenButtonClick,
+  handleBeforeMount,
   handleProjectContextMenu,
   handleProjectsClick,
 } from "../../src/pages/projects/projects.handlers.js";
@@ -29,6 +30,7 @@ const createDeps = ({
     openFolderPicker: vi.fn(),
     openExistingProject: vi.fn(),
     loadAllProjects: vi.fn(async () => []),
+    getCachedProjects: vi.fn(() => undefined),
     createNewProject: vi.fn(async () => ({
       id: "project-2",
       name: "New Project",
@@ -60,6 +62,7 @@ const createDeps = ({
         ],
       })),
       setProjects: vi.fn(),
+      setUiConfig: vi.fn(),
       selectProjects: vi.fn(() => [
         {
           id: "project-1",
@@ -128,6 +131,31 @@ const createPayload = (projectId = "project-1") => {
     },
   };
 };
+
+describe("projects lifecycle", () => {
+  it("hydrates the first render from the in-memory project cache", () => {
+    const deps = createDeps();
+    const projects = [
+      {
+        id: "project-1",
+        name: "Project One",
+      },
+    ];
+    deps.appService.getCachedProjects.mockReturnValue(projects);
+
+    handleBeforeMount(deps);
+
+    expect(deps.store.setProjects).toHaveBeenCalledWith({ projects });
+  });
+
+  it("keeps loading active when the project cache is not initialized", () => {
+    const deps = createDeps();
+
+    handleBeforeMount(deps);
+
+    expect(deps.store.setProjects).not.toHaveBeenCalled();
+  });
+});
 
 describe("projects.handleProjectsClick", () => {
   it("shows an alert dialog for incompatible project versions", async () => {

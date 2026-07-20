@@ -121,6 +121,7 @@ describe("project page handlers", () => {
           source: "local",
         })),
         showAlert: vi.fn(),
+        updateCachedProject: vi.fn(),
       },
       projectService: {
         updateCurrentProjectInfo: vi.fn(async () => nextProjectInfo),
@@ -161,6 +162,10 @@ describe("project page handlers", () => {
       language: "zh-Hans",
       iconFileId: "icon-1",
     });
+    expect(deps.appService.updateCachedProject).toHaveBeenCalledWith(
+      "project-1",
+      nextProjectInfo,
+    );
     expect(deps.store.setCurrentProject).toHaveBeenCalledWith({
       project: {
         name: "Project One Updated",

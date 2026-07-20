@@ -53,18 +53,141 @@ export const createProjectEntriesService = ({
 }) => {
   let currentProjectEntry = createEmptyProjectEntry();
   let projectEntriesCache = [];
+  let projectsCache;
   const iconCleanupByProjectId = new Map();
+
+  const clearCachedProjectIcon = (projectId) => {
+    iconCleanupByProjectId.get(projectId)?.();
+    iconCleanupByProjectId.delete(projectId);
+  };
+
+  const mapProjectEntryToProject = (entry) => ({
+    id: entry.id,
+    name: entry.name || "Untitled Project",
+    description: entry.description || "",
+    language: normalizeProjectLanguage(entry.language),
+    iconFileId: entry.iconFileId || null,
+    createdAt: entry.createdAt,
+    lastOpenedAt: entry.lastOpenedAt,
+    ...platformAdapter.mapProjectEntryToProject?.(entry),
+  });
+
+  const setProjectsCache = (projects) => {
+    projectsCache = structuredClone(projects);
+  };
+
+  const syncProjectsCacheFromEntries = (entries) => {
+    const cachedProjectsById = new Map(
+      (projectsCache ?? []).map((project) => [project.id, project]),
+    );
+    const projects = entries.map((entry) => {
+      const project = mapProjectEntryToProject(entry);
+      const cachedProject = cachedProjectsById.get(project.id);
+      if (
+        cachedProject?.iconUrl &&
+        cachedProject.iconFileId === project.iconFileId
+      ) {
+        project.iconUrl = cachedProject.iconUrl;
+      } else if (
+        cachedProject &&
+        cachedProject.iconFileId !== project.iconFileId
+      ) {
+        clearCachedProjectIcon(project.id);
+      }
+      return project;
+    });
+
+    const projectIds = new Set(projects.map((project) => project.id));
+    for (const projectId of iconCleanupByProjectId.keys()) {
+      if (!projectIds.has(projectId)) {
+        clearCachedProjectIcon(projectId);
+      }
+    }
+
+    setProjectsCache(projects);
+  };
+
+  const cacheProject = (project) => {
+    if (!project?.id || projectsCache === undefined) {
+      return;
+    }
+
+    const existingIndex = projectsCache.findIndex(
+      (cachedProject) => cachedProject.id === project.id,
+    );
+    if (existingIndex === -1) {
+      projectsCache.push(structuredClone(project));
+      return;
+    }
+
+    projectsCache[existingIndex] = structuredClone({
+      ...projectsCache[existingIndex],
+      ...project,
+    });
+  };
+
+  const updateCachedProject = (projectId, updates) => {
+    const normalizedUpdates = structuredClone(updates);
+    if (Object.hasOwn(normalizedUpdates, "language")) {
+      normalizedUpdates.language = normalizeProjectLanguage(
+        normalizedUpdates.language,
+      );
+    }
+
+    const entryIndex = projectEntriesCache.findIndex(
+      (entry) => entry.id === projectId,
+    );
+    if (entryIndex !== -1) {
+      projectEntriesCache[entryIndex] = {
+        ...projectEntriesCache[entryIndex],
+        ...normalizedUpdates,
+      };
+    }
+
+    if (
+      currentProjectEntry.id === projectId &&
+      currentProjectEntry.source === "local"
+    ) {
+      currentProjectEntry = normalizeLocalProjectEntry({
+        ...currentProjectEntry,
+        ...normalizedUpdates,
+      });
+    }
+
+    if (projectsCache === undefined) {
+      return undefined;
+    }
+
+    const projectIndex = projectsCache.findIndex(
+      (project) => project.id === projectId,
+    );
+    if (projectIndex === -1) {
+      return undefined;
+    }
+
+    const previousProject = projectsCache[projectIndex];
+    const project = {
+      ...previousProject,
+      ...normalizedUpdates,
+    };
+    const didIconChange =
+      Object.hasOwn(normalizedUpdates, "iconFileId") &&
+      normalizedUpdates.iconFileId !== previousProject.iconFileId;
+    if (didIconChange) {
+      delete project.iconUrl;
+      clearCachedProjectIcon(projectId);
+    }
+
+    projectsCache[projectIndex] = structuredClone(project);
+    return structuredClone(project);
+  };
 
   const setProjectIcon = ({ project, iconResult }) => {
     if (!project?.id) {
       return project;
     }
 
-    const previousCleanup = iconCleanupByProjectId.get(project.id);
-    if (typeof previousCleanup === "function") {
-      previousCleanup();
-      iconCleanupByProjectId.delete(project.id);
-    }
+    clearCachedProjectIcon(project.id);
 
     if (!iconResult) {
       return project;
@@ -87,12 +210,11 @@ export const createProjectEntriesService = ({
 
   const pruneIconCleanup = (projects = []) => {
     const activeIds = new Set(projects.map((project) => project.id));
-    for (const [projectId, cleanup] of iconCleanupByProjectId.entries()) {
+    for (const projectId of iconCleanupByProjectId.keys()) {
       if (activeIds.has(projectId)) {
         continue;
       }
-      cleanup?.();
-      iconCleanupByProjectId.delete(projectId);
+      clearCachedProjectIcon(projectId);
     }
   };
 
@@ -157,6 +279,7 @@ export const createProjectEntriesService = ({
       };
       await db.set("projectEntries", entries);
       projectEntriesCache = structuredClone(entries);
+      syncProjectsCacheFromEntries(entries);
       if (normalizedEntry.id === getCurrentProjectId()) {
         currentProjectEntry = normalizeLocalProjectEntry(
           entries[existingEntryIndex],
@@ -176,6 +299,7 @@ export const createProjectEntriesService = ({
     entries.push(normalizedEntry);
     await db.set("projectEntries", entries);
     projectEntriesCache = structuredClone(entries);
+    syncProjectsCacheFromEntries(entries);
     if (normalizedEntry.id === getCurrentProjectId()) {
       currentProjectEntry = normalizeLocalProjectEntry(normalizedEntry);
     }
@@ -187,6 +311,7 @@ export const createProjectEntriesService = ({
     const filtered = entries.filter((entry) => entry.id !== projectId);
     await db.set("projectEntries", filtered);
     projectEntriesCache = structuredClone(filtered);
+    syncProjectsCacheFromEntries(filtered);
     if (currentProjectEntry.id === projectId) {
       const routeProjectId = getCurrentProjectId();
       currentProjectEntry = routeProjectId
@@ -194,9 +319,7 @@ export const createProjectEntriesService = ({
         : createEmptyProjectEntry();
     }
 
-    const cleanup = iconCleanupByProjectId.get(projectId);
-    cleanup?.();
-    iconCleanupByProjectId.delete(projectId);
+    clearCachedProjectIcon(projectId);
     return filtered;
   };
 
@@ -210,6 +333,7 @@ export const createProjectEntriesService = ({
       });
       await db.set("projectEntries", entries);
       projectEntriesCache = structuredClone(entries);
+      syncProjectsCacheFromEntries(entries);
       if (
         currentProjectEntry.id === projectId &&
         currentProjectEntry.source === "local"
@@ -231,6 +355,7 @@ export const createProjectEntriesService = ({
     );
     await db.set("projectEntries", filtered);
     projectEntriesCache = structuredClone(filtered);
+    syncProjectsCacheFromEntries(filtered);
 
     if (currentProjectEntry?.projectPath === projectPath) {
       const routeProjectId = getCurrentProjectId();
@@ -305,6 +430,7 @@ export const createProjectEntriesService = ({
 
     await db.set("projectEntries", nextEntries);
     projectEntriesCache = structuredClone(nextEntries);
+    syncProjectsCacheFromEntries(nextEntries);
     return nextEntries;
   };
 
@@ -337,16 +463,7 @@ export const createProjectEntriesService = ({
         projectEntries.map(async (entry) => {
           // projectEntries cache the current projectInfo snapshot for fast
           // listing without opening every project DB.
-          const project = {
-            id: entry.id,
-            name: entry.name || "Untitled Project",
-            description: entry.description || "",
-            language: normalizeProjectLanguage(entry.language),
-            iconFileId: entry.iconFileId || null,
-            createdAt: entry.createdAt,
-            lastOpenedAt: entry.lastOpenedAt,
-            ...platformAdapter.mapProjectEntryToProject?.(entry),
-          };
+          const project = mapProjectEntryToProject(entry);
 
           const iconResult = await platformAdapter.loadProjectIcon?.({
             entry,
@@ -357,7 +474,18 @@ export const createProjectEntriesService = ({
       );
 
       pruneIconCleanup(projectsWithFullData);
+      setProjectsCache(projectsWithFullData);
       return projectsWithFullData;
+    },
+
+    getCachedProjects() {
+      return projectsCache === undefined
+        ? undefined
+        : structuredClone(projectsCache);
+    },
+
+    updateCachedProject(projectId, updates) {
+      return updateCachedProject(projectId, updates);
     },
 
     setCurrentProjectEntry(entry) {
@@ -383,21 +511,25 @@ export const createProjectEntriesService = ({
     },
 
     async openExistingProject(folderPath) {
-      return platformAdapter.openExistingProject({
+      const project = await platformAdapter.openExistingProject({
         folderPath,
         addProjectEntry,
         loadProjectIcon: platformAdapter.loadProjectIcon,
         projectService,
       });
+      cacheProject(project);
+      return project;
     },
 
     async createNewProject(payload) {
-      return platformAdapter.createNewProject({
+      const project = await platformAdapter.createNewProject({
         ...payload,
         language: requireProjectLanguage(payload.language),
         addProjectEntry,
         projectService,
       });
+      cacheProject(project);
+      return project;
     },
 
     getCurrentProjectEntry() {

@@ -9,6 +9,7 @@ import {
   openAppVersionMenu,
   selectViewData,
   setPlatform,
+  setProjects,
 } from "../../src/pages/projects/projects.store.js";
 
 const EN_I18N_URL = new URL("../../src/i18n/en.yaml", import.meta.url);
@@ -139,6 +140,27 @@ describe("projects.store addProject", () => {
           ],
         },
       ],
+    });
+  });
+});
+
+describe("projects store loading state", () => {
+  it("does not expose the empty state until projects finish loading", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      isProjectsLoading: true,
+      loadingMessage: "Loading...",
+      localEmptyMessage: "",
+      localEmptySubMessage: "",
+    });
+
+    setProjects({ state }, { projects: [] });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      isProjectsLoading: false,
+      localEmptyMessage: "No local projects yet",
+      localEmptySubMessage: "Create or open a local project to get started",
     });
   });
 });

@@ -54,6 +54,7 @@ import {
 import {
   ACTION_INTERACTION_TYPES,
   createRevealEffectOptions,
+  createRevealSoundStopTimingOptions,
   createTextContentDialogForm,
   getLayoutEditPanelSections,
   getLayoutInteractionActions,
@@ -139,6 +140,7 @@ const STATIC_LABEL_COPY_KEYS = {
   Sound: "soundLabel",
   Spritesheet: "spritesheetLabel",
   Step: "stepLabel",
+  Stop: "stopLabel",
   Submit: "submitButton",
   Text: "textTitle",
   "Text Alignment": "textAlignmentLabel",
@@ -1641,6 +1643,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}:${selectedSpritesheetPreview.animation?.fps ?? ""}`,
       fragmentLayoutOptions,
       values,
+      revealSoundStopTimingOptions: createRevealSoundStopTimingOptions(copy),
       showLayoutSizeSection,
       supportsWidthMode,
       widthMode,
@@ -1662,6 +1665,8 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         getAvailableChildInteractionItems(values, copy).length > 0,
       blurSummary: getSpriteBlurSummary(values.blur, copy),
       canAddSpriteBlur: !hasSpriteBlur,
+      canAddTextRevealSound:
+        capabilities.supportsTextRevealSound === true && !values.revealSoundId,
       canAddTextRevealIndicator: values.textRevealIndicatorAddItems.length > 0,
       canAddTextStyleVariant:
         !values.hoverTextStyleId || !values.clickTextStyleId,

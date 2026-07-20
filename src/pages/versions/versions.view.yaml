@@ -77,7 +77,10 @@ template:
                               - rtgl-text: ${title}
                           - 'rtgl-button#saveVersionBtn v=pr sq pre=plus title="${addButton}" aria-label="${addButton}"': null
                   - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
-                      - $if versions.length == 0:
+                      - $if isVersionsLoading:
+                          - rtgl-view w=f h=f av=c ah=c:
+                              - rtgl-text s=lg c=mu-fg: ${loadingMessage}
+                        $elif versions.length == 0:
                           - rtgl-view w=f h=f av=c ah=c:
                               - rtgl-view d=v ah=c g=md:
                                   - rtgl-text s=lg c=mu-fg: ${noVersionsMessage}

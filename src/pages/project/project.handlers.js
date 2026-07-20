@@ -212,6 +212,7 @@ export const handleEditFormAction = async (deps, payload) => {
   };
 
   const nextProjectInfo = await projectService.updateCurrentProjectInfo(patch);
+  appService.updateCachedProject(currentProject.id, nextProjectInfo);
 
   store.setCurrentProject({
     project: {
