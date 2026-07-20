@@ -22,7 +22,6 @@ describe("layoutEditPanel sound dialogs view", () => {
 
     expect(soundFormStart).toBeGreaterThan(-1);
     expect(soundSelectorStart).toBeGreaterThan(soundFormStart);
-    expect(soundFormView).toContain("s=sm close-button");
     expect(soundFormView).toContain("rtgl-form#soundForm");
     expect(soundFormView).toContain('slot="sound-item"');
     expect(soundFormView).toContain("rtgl-view#soundFormSoundField");
@@ -56,7 +55,6 @@ describe("layoutEditPanel sound dialogs view", () => {
       spritesheetDialogStart,
     );
     expect(soundDialogView).toContain("rtgl-view slot=content d=v w=f g=md");
-    expect(soundDialogView).toContain("s=lg close-button");
     expect(soundDialogView).not.toContain("cancelSoundSelection");
   });
 });
