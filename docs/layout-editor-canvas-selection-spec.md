@@ -2,12 +2,13 @@
 
 Status: Proposed implementation specification
 
-Last updated: 2026-07-20
+Last updated: 2026-07-21
 
 ## Purpose
 
 The layout editor canvas must let users discover and select authored layout
-elements directly, using interaction rules familiar from Figma.
+elements directly, using interaction rules familiar from layered graphics
+editors.
 
 This document defines exactly:
 
@@ -36,7 +37,7 @@ canvas:
 
 The separate interactive Preview surface is not changed by this specification.
 
-The following Figma features are intentionally deferred:
+The following advanced canvas features are intentionally deferred:
 
 - multiple selection and `Shift`-click
 - selection marquee
@@ -51,38 +52,26 @@ The node explorer remains the way to select an element behind another element
 until **Select layer** is implemented. It also remains the complete keyboard
 selection path.
 
-## Research Baseline
+## Interaction Baseline
 
-Figma's documented behavior establishes these rules:
+The canvas interaction model establishes these rules:
 
 1. An ordinary canvas click selects a parent by default when the visible object
    is nested in a frame or group.
 2. Double-clicking descends one level of nesting. Repeating the action descends
    again.
 3. Holding `Command` on macOS or `Control` on Windows performs a deep select.
-   Figma describes this as highlighting and selecting the deepest visible layer
-   under the pointer.
+   This highlights and selects the deepest visible layer under the pointer.
 4. Layer order controls visual overlap: layers drawn above other layers are in
    front of them.
-5. A right-click **Select layer** menu is Figma's explicit way to choose from
+5. A right-click **Select layer** menu provides an explicit way to choose from
    layers underneath one pointer position.
-6. Hidden layers do not participate in Figma's normal canvas selection. Locked
-   layers are also skipped by normal left-click selection.
+6. Hidden and locked layers do not participate in normal canvas selection.
 7. Clicking empty canvas space or pressing `Escape` clears selection.
 
-Primary sources, accessed 2026-07-20:
-
-- [Select layers and objects](https://help.figma.com/hc/en-us/articles/360040449873-Select-layers-and-objects)
-- [The UX writer's guide to Figma](https://www.figma.com/best-practices/the-ux-writers-guide-to-figma/)
-- [Layers 101: Get started with layers](https://help.figma.com/hc/en-us/articles/26584819173271-Layers-101-Get-started-with-layers)
-- [Parent, child, and sibling relationships](https://help.figma.com/hc/en-us/articles/360039959014-Parent-child-and-sibling-relationships)
-- [Lock and unlock layers](https://help.figma.com/hc/en-us/articles/360041596573-Lock-and-unlock-layers)
-
-Figma's public documentation does not specify every low-level hit-testing
-detail, nor can it define RouteVN concepts such as repeated preview instances
-and fragment references. Those behaviors are explicit RouteVN product
-decisions below. They follow Figma's hierarchy and stacking model without
-pretending that the two document models are identical.
+The baseline does not prescribe every low-level hit-testing detail or define
+RouteVN concepts such as repeated preview instances and fragment references.
+Those behaviors are explicit RouteVN product decisions below.
 
 ## Terms
 
@@ -363,8 +352,7 @@ A primary click inside the graphics canvas with no selectable candidate MUST:
 
 The synthetic preview background counts as empty space. Clicking UI outside the
 design canvas does not implicitly clear canvas selection. `Escape` SHOULD also
-clear selection, matching Figma, unless a higher-priority dialog or input owns
-the key.
+clear selection, unless a higher-priority dialog or input owns the key.
 
 ### Pointer gesture boundary
 
@@ -596,7 +584,7 @@ The implementation MUST NOT add selection behavior by attaching authored
 runtime interaction payloads to every layout element, because doing so mixes
 editor intent with game-runtime behavior.
 
-## Deferred Figma Parity
+## Deferred Canvas Features
 
 When a **Select layer** context menu is added, it should list unique selection
 owners under the pointer in front-to-back order, identify repeated occurrences,
