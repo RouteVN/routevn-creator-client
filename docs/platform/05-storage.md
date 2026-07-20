@@ -59,8 +59,7 @@ Current app-owned keys:
   - `iconFileId`
 - `platformDetails.web`
   - platform application name, icon, and identifier plus Web short name,
-    description, and references to project colors for theme and startup
-    background
+    and description
 - `platformDetails.windows`
   - platform application name, icon, and identifier plus publisher,
     description, and copyright

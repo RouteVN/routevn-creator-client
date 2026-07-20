@@ -68,8 +68,6 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
           applicationInfo.applicationIdentifier = "web-project-one";
           applicationInfo.shortName = "";
           applicationInfo.description = "";
-          applicationInfo.themeColorId = "";
-          applicationInfo.backgroundColorId = "";
         }
         if (platform === "windows") {
           applicationInfo.applicationIdentifier = "";
@@ -356,34 +354,6 @@ describe("versions.handleDownloadZipClick", () => {
     });
   });
 
-  it("stops before the save dialog when Web platform details uses a removed color", async () => {
-    const repositoryState = structuredClone(initialProjectData);
-    const repository = {
-      loadState: vi.fn(async () => repositoryState),
-      getState: vi.fn(() => repositoryState),
-    };
-    const deps = createDeps({ repository });
-    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
-      applicationName: "Project One",
-      applicationIdentifier: "web-project-one",
-      iconFileId: "icon-1",
-      shortName: "",
-      description: "",
-      themeColorId: "color-removed",
-      backgroundColorId: "",
-    });
-
-    await handleDownloadZipClick(deps, createVersionClickPayload());
-
-    expect(
-      deps.projectService.promptDistributionZipPath,
-    ).not.toHaveBeenCalled();
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: EN_I18N.versionsPage.platformDetailsThemeColorNotFound,
-      title: EN_I18N.versionsPage.warningTitle,
-    });
-  });
-
   it("stops before the save dialog when Web application identifier is missing", async () => {
     const repositoryState = structuredClone(initialProjectData);
     const repository = {
@@ -397,8 +367,6 @@ describe("versions.handleDownloadZipClick", () => {
       iconFileId: "icon-1",
       shortName: "",
       description: "",
-      themeColorId: "",
-      backgroundColorId: "",
     });
 
     await handleDownloadZipClick(deps, createVersionClickPayload());
@@ -425,8 +393,6 @@ describe("versions.handleDownloadZipClick", () => {
       iconFileId: "icon-1",
       shortName: "",
       description: "",
-      themeColorId: "",
-      backgroundColorId: "",
     });
 
     await handleDownloadZipClick(deps, createVersionClickPayload());
@@ -613,8 +579,6 @@ describe("versions.handleDownloadZipClick", () => {
       iconFileId: "web-icon",
       shortName: "Web",
       description: "Web release",
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
     });
 
     await chooseAndConfirmExport(handleDownloadZipClick, deps);
@@ -629,8 +593,8 @@ describe("versions.handleDownloadZipClick", () => {
       web: {
         shortName: "Web",
         description: "Web release",
-        themeColor: "#112233",
-        backgroundColor: "#000000",
+        themeColor: "",
+        backgroundColor: "",
       },
     });
     expect(

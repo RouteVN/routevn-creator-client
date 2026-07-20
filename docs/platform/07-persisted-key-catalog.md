@@ -137,8 +137,6 @@ Current keys:
     - `applicationIdentifier`
     - `shortName`
     - `description`
-    - `themeColorId`
-    - `backgroundColorId`
 - `platformDetails.windows`
   - independently customizable Windows release metadata
   - current fields:
@@ -169,8 +167,7 @@ Current keys:
     starts blank, is required and editable, and controls the exported app and
     save-data identity
   - platform export is blocked until the corresponding platform record exists
-    and passes validation; Web export also checks that selected project colors
-    still exist
+    and passes validation
   - after preflight passes, every export shows the selected version and the
     platform record in a read-only confirmation dialog; save-path selection
     and bundle creation start only after the user confirms

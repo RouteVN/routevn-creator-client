@@ -103,11 +103,7 @@ describe("versions store export actions", () => {
           iconFileId: "web-icon",
           shortName: "Web",
           description: "Browser release",
-          themeColorId: "color-theme",
-          backgroundColorId: "color-background",
         },
-        themeColor: "Accent (#112233)",
-        backgroundColor: "Dark (#000000)",
       },
     );
 
@@ -125,14 +121,24 @@ describe("versions store export actions", () => {
           label: "Application Identifier",
           value: "com.example.web-edition",
         },
-        { type: "text", label: "Theme Color", value: "Accent (#112233)" },
         {
           type: "text",
-          label: "Background Color",
-          value: "Dark (#000000)",
+          label: "Short Name",
+          value: "Web",
+        },
+        {
+          type: "text",
+          label: "Description",
+          value: "Browser release",
         },
       ]),
     );
+    expect(
+      viewData.exportConfirmationFields.some(
+        (field) =>
+          field.label === "Theme Color" || field.label === "Background Color",
+      ),
+    ).toBe(false);
     expect(selectExportConfirmation({ state })).toMatchObject({
       exportType: "web",
       platform: "web",

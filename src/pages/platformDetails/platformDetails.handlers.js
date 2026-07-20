@@ -1,5 +1,3 @@
-import { tap } from "rxjs";
-import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { validatePlatformDetails } from "../../internal/platformDetailsValidation.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
@@ -12,21 +10,8 @@ const ICON_VALIDATIONS = [
 ];
 
 export const handleBeforeMount = (deps) => {
-  const { projectService, render, store, uiConfig } = deps;
+  const { store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
-
-  const subscription = createProjectStateStream({ projectService })
-    .pipe(
-      tap(({ repositoryState }) => {
-        store.setColorsData({ colorsData: repositoryState?.colors });
-        render();
-      }),
-    )
-    .subscribe();
-
-  return () => {
-    subscription.unsubscribe();
-  };
 };
 
 export const handleAfterMount = async (deps) => {
@@ -136,8 +121,6 @@ const createPlatformDetailsPatch = ({ platform, values, iconFileId }) => {
   if (platform === "web") {
     patch.shortName = values.shortName.trim();
     patch.description = values.description.trim();
-    patch.themeColorId = (values.themeColorId ?? "").trim();
-    patch.backgroundColorId = (values.backgroundColorId ?? "").trim();
   }
 
   if (platform === "windows" || platform === "macos") {
@@ -162,12 +145,6 @@ const getValidationMessage = (copy, code) => {
   }
   if (code === "macos-icon-required") {
     return copy.macosIconRequired;
-  }
-  if (code === "theme-color-not-found") {
-    return copy.webThemeColorNotFound;
-  }
-  if (code === "background-color-not-found") {
-    return copy.webBackgroundColorNotFound;
   }
   if (code === "web-identifier-required") {
     return copy.webApplicationIdentifierRequired;
@@ -204,7 +181,6 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
   const validation = validatePlatformDetails({
     platform,
     applicationInfo: patch,
-    availableColorIds: platform === "web" ? store.selectColorIds() : undefined,
   });
   if (!validation.valid) {
     appService.showAlert({

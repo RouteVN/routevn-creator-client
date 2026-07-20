@@ -188,8 +188,6 @@ export const createProjectRepositoryService = ({
     if (platform === "web") {
       platformDetails.shortName = "";
       platformDetails.description = "";
-      platformDetails.themeColorId = "";
-      platformDetails.backgroundColorId = "";
     }
 
     if (platform === "windows") {
@@ -214,8 +212,6 @@ export const createProjectRepositoryService = ({
     if (platform === "web") {
       normalized.shortName = platformDetails?.shortName ?? "";
       normalized.description = platformDetails?.description ?? "";
-      normalized.themeColorId = platformDetails?.themeColorId ?? "";
-      normalized.backgroundColorId = platformDetails?.backgroundColorId ?? "";
     }
 
     if (platform === "windows") {

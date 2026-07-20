@@ -6,7 +6,6 @@ import {
   openPlatformCreateDialog,
   openPlatformEditDialog,
   selectViewData,
-  setColorsData,
   setPlatformApplicationInfo,
   setPlatformEditIconFileId,
   setSelectedPlatform,
@@ -47,8 +46,6 @@ describe("platformDetails.store", () => {
           iconFileId: "project-icon-1",
           shortName: "",
           description: "",
-          themeColorId: "",
-          backgroundColorId: "",
         },
       },
     );
@@ -118,28 +115,6 @@ describe("platformDetails.store", () => {
 
   it("prefills platform edit state independently", () => {
     const state = createInitialState();
-    setColorsData(
-      { state },
-      {
-        colorsData: {
-          items: {
-            "color-theme": {
-              id: "color-theme",
-              type: "color",
-              name: "Ocean Blue",
-              hex: "#112233",
-            },
-            "color-background": {
-              id: "color-background",
-              type: "color",
-              name: "Night",
-              hex: "#000000",
-            },
-          },
-          tree: [{ id: "color-theme" }, { id: "color-background" }],
-        },
-      },
-    );
     setPlatformApplicationInfo(
       { state },
       {
@@ -150,8 +125,6 @@ describe("platformDetails.store", () => {
           iconFileId: "web-icon-1",
           shortName: "Project",
           description: "Web description",
-          themeColorId: "color-theme",
-          backgroundColorId: "color-background",
         },
       },
     );
@@ -163,8 +136,6 @@ describe("platformDetails.store", () => {
       applicationIdentifier: "com.example.web-project",
       shortName: "Project",
       description: "Web description",
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
     });
     expect(state.platformEditIconFileId).toBe("web-icon-1");
 
@@ -184,21 +155,19 @@ describe("platformDetails.store", () => {
       label: "Application Identifier",
       value: "com.example.web-project",
     });
-    expect(viewData.platformEditForm.fields).toContainEqual(
-      expect.objectContaining({
-        name: "themeColorId",
-        type: "select",
-        options: [
-          { label: "Ocean Blue", value: "color-theme" },
-          { label: "Night", value: "color-background" },
-        ],
-      }),
-    );
-    expect(viewData.platformDetailFields).toContainEqual({
-      type: "text",
-      label: "Theme Color",
-      value: "Ocean Blue",
-    });
+    expect(
+      viewData.platformEditForm.fields.some(
+        (field) =>
+          field.name === "themeColorId" ||
+          field.name === "backgroundColorId",
+      ),
+    ).toBe(false);
+    expect(
+      viewData.platformDetailFields.some(
+        (field) =>
+          field.label === "Theme Color" || field.label === "Background Color",
+      ),
+    ).toBe(false);
     expect(viewData.platformEditForm.actions.buttons).toEqual([
       {
         id: "submit",

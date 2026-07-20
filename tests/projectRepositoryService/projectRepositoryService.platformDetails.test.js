@@ -135,8 +135,6 @@ describe("projectRepositoryService platform details", () => {
       iconFileId: "project-icon-1",
       shortName: "",
       description: "",
-      themeColorId: "",
-      backgroundColorId: "",
     });
     await expect(
       harness.service.getCurrentPlatformDetailsDefaults("macos"),
@@ -156,8 +154,6 @@ describe("projectRepositoryService platform details", () => {
       iconFileId: "project-icon-1",
       shortName: "Release",
       description: "",
-      themeColorId: "",
-      backgroundColorId: "",
     });
     await expect(
       harness.service.createCurrentPlatformDetails("windows"),
@@ -253,8 +249,6 @@ describe("projectRepositoryService platform details", () => {
           iconFileId: "web-icon-1",
           shortName: "Project",
           description: "Web release",
-          themeColorId: "",
-          backgroundColorId: "",
         },
       },
     });
@@ -370,8 +364,8 @@ describe("projectRepositoryService platform details", () => {
     ]);
 
     await harness.service.updateCurrentPlatformDetails("web", {
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
+      shortName: "Web Project",
+      description: "Web description",
     });
 
     await harness.service.updateCurrentPlatformDetails("windows", {
@@ -395,8 +389,8 @@ describe("projectRepositoryService platform details", () => {
       "Project One",
     );
     expect(harness.getPlatformDetails("web")).toMatchObject({
-      themeColorId: "color-theme",
-      backgroundColorId: "color-background",
+      shortName: "Web Project",
+      description: "Web description",
     });
     expect(harness.getPlatformDetails("macos").applicationName).toBe(
       "Project One",
