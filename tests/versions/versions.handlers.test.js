@@ -65,6 +65,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
           iconFileId: "icon-1",
         };
         if (platform === "web") {
+          applicationInfo.applicationIdentifier = "web-project-one";
           applicationInfo.shortName = "";
           applicationInfo.description = "";
           applicationInfo.themeColorId = "";
@@ -364,6 +365,7 @@ describe("versions.handleDownloadZipClick", () => {
     const deps = createDeps({ repository });
     deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
       applicationName: "Project One",
+      applicationIdentifier: "web-project-one",
       iconFileId: "icon-1",
       shortName: "",
       description: "",
@@ -378,6 +380,62 @@ describe("versions.handleDownloadZipClick", () => {
     ).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: EN_I18N.versionsPage.platformDetailsThemeColorNotFound,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+  });
+
+  it("stops before the save dialog when Web application identifier is missing", async () => {
+    const repositoryState = structuredClone(initialProjectData);
+    const repository = {
+      loadState: vi.fn(async () => repositoryState),
+      getState: vi.fn(() => repositoryState),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Project One",
+      applicationIdentifier: "",
+      iconFileId: "icon-1",
+      shortName: "",
+      description: "",
+      themeColorId: "",
+      backgroundColorId: "",
+    });
+
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+
+    expect(
+      deps.projectService.promptDistributionZipPath,
+    ).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.platformDetailsWebIdentifierRequired,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+  });
+
+  it("stops before the save dialog when Web application identifier is invalid", async () => {
+    const repositoryState = structuredClone(initialProjectData);
+    const repository = {
+      loadState: vi.fn(async () => repositoryState),
+      getState: vi.fn(() => repositoryState),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Project One",
+      applicationIdentifier: "com.yourteam/yourvn",
+      iconFileId: "icon-1",
+      shortName: "",
+      description: "",
+      themeColorId: "",
+      backgroundColorId: "",
+    });
+
+    await handleDownloadZipClick(deps, createVersionClickPayload());
+
+    expect(
+      deps.projectService.promptDistributionZipPath,
+    ).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.platformDetailsWebIdentifierInvalid,
       title: EN_I18N.versionsPage.warningTitle,
     });
   });
@@ -513,7 +571,7 @@ describe("versions.handleDownloadZipClick", () => {
       deps.projectService.createDistributionZipStreamed.mock.calls[0][0]
         .bundleMetadata.project,
     ).toMatchObject({
-      namespace: "project-one",
+      namespace: "web-project-one",
       title: "Project One",
       iconFileId: "icon-1",
     });
@@ -551,6 +609,7 @@ describe("versions.handleDownloadZipClick", () => {
     const deps = createDeps({ repository });
     deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
       applicationName: "Web Edition",
+      applicationIdentifier: "com.example.web-edition",
       iconFileId: "web-icon",
       shortName: "Web",
       description: "Web release",
@@ -564,7 +623,7 @@ describe("versions.handleDownloadZipClick", () => {
       deps.projectService.createDistributionZipStreamed.mock.calls[0][0]
         .bundleMetadata.project,
     ).toMatchObject({
-      namespace: "project-one",
+      namespace: "com.example.web-edition",
       title: "Web Edition",
       iconFileId: "web-icon",
       web: {

@@ -2,10 +2,13 @@ import { toFlatItems } from "../../internal/project/tree.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
 const PLATFORM_IDS = ["web", "windows", "macos"];
+// TODO: Add Windows and macOS back when native platform releases are ready.
+const VISIBLE_PLATFORM_IDS = ["web"];
 
 const createPlatformApplicationInfo = (platform) => {
   const applicationInfo = {
     applicationName: "",
+    applicationIdentifier: "",
     iconFileId: undefined,
   };
 
@@ -17,14 +20,12 @@ const createPlatformApplicationInfo = (platform) => {
   }
 
   if (platform === "windows") {
-    applicationInfo.applicationIdentifier = "";
     applicationInfo.publisher = "";
     applicationInfo.description = "";
     applicationInfo.copyright = "";
   }
 
   if (platform === "macos") {
-    applicationInfo.applicationIdentifier = "";
     applicationInfo.publisher = "";
     applicationInfo.description = "";
     applicationInfo.copyright = "";
@@ -117,16 +118,14 @@ const buildPlatformDetailFields = (
     },
   ];
 
-  if (platform !== "web") {
-    fields.push({
-      type: "text",
-      label:
-        platform === "macos"
-          ? copy.macosApplicationIdentifierLabel
-          : copy.applicationIdentifierLabel,
-      value: applicationInfo.applicationIdentifier,
-    });
-  }
+  fields.push({
+    type: "text",
+    label:
+      platform === "macos"
+        ? copy.macosApplicationIdentifierLabel
+        : copy.applicationIdentifierLabel,
+    value: applicationInfo.applicationIdentifier,
+  });
 
   if (platform === "web") {
     fields.push(
@@ -204,18 +203,16 @@ const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
     },
   ];
 
-  if (platform !== "web") {
-    fields.push({
-      name: "applicationIdentifier",
-      type: "input-text",
-      label:
-        platform === "macos"
-          ? copy.macosApplicationIdentifierLabel
-          : copy.applicationIdentifierLabel,
-      description: copy[`${platform}ApplicationIdentifierDescription`],
-      required: platform === "macos",
-    });
-  }
+  fields.push({
+    name: "applicationIdentifier",
+    type: "input-text",
+    label:
+      platform === "macos"
+        ? copy.macosApplicationIdentifierLabel
+        : copy.applicationIdentifierLabel,
+    description: copy[`${platform}ApplicationIdentifierDescription`],
+    required: platform !== "windows",
+  });
 
   if (platform === "web") {
     fields.push(
@@ -370,7 +367,7 @@ export const selectIsPlatformEditIconCropDialogOpen = ({ state }) => {
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectPlatformDetailsPageCopy(i18n);
   const colorOptions = buildColorOptions(state.colorsData);
-  const createdPlatforms = PLATFORM_IDS.filter(
+  const createdPlatforms = VISIBLE_PLATFORM_IDS.filter(
     (platform) => state.platformApplicationInfo[platform],
   );
   const selectedPlatformInfo = state.selectedPlatform
@@ -382,7 +379,7 @@ export const selectViewData = ({ state, i18n }) => {
   return {
     addPlatformButtonLabel: copy.addPlatformButtonLabel,
     addPlatformMenu: state.addPlatformMenu,
-    canAddPlatform: createdPlatforms.length < PLATFORM_IDS.length,
+    canAddPlatform: createdPlatforms.length < VISIBLE_PLATFORM_IDS.length,
     clickToUploadLabel: copy.clickToUpload,
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
     detailFillHeight: false,
@@ -441,11 +438,8 @@ export const setPlatformApplicationInfo = (
   const target = createPlatformApplicationInfo(platform);
   state.platformApplicationInfo[platform] = target;
   target.applicationName = applicationInfo?.applicationName ?? "";
+  target.applicationIdentifier = applicationInfo?.applicationIdentifier ?? "";
   target.iconFileId = applicationInfo?.iconFileId ?? undefined;
-
-  if (platform !== "web") {
-    target.applicationIdentifier = applicationInfo?.applicationIdentifier ?? "";
-  }
 
   if (platform === "web") {
     target.shortName = applicationInfo?.shortName ?? "";
@@ -464,7 +458,7 @@ export const setPlatformApplicationInfo = (
     target.category = applicationInfo?.category ?? "";
   }
 
-  if (!state.selectedPlatform) {
+  if (!state.selectedPlatform && VISIBLE_PLATFORM_IDS.includes(platform)) {
     state.selectedPlatform = platform;
   }
 };
@@ -476,7 +470,7 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 
 export const setSelectedPlatform = ({ state }, { platform } = {}) => {
   if (
-    PLATFORM_IDS.includes(platform) &&
+    VISIBLE_PLATFORM_IDS.includes(platform) &&
     state.platformApplicationInfo[platform]
   ) {
     state.selectedPlatform = platform;
@@ -488,7 +482,7 @@ export const openAddPlatformMenu = ({ state, i18n }, { x, y } = {}) => {
   state.addPlatformMenu.isOpen = true;
   state.addPlatformMenu.x = x ?? 0;
   state.addPlatformMenu.y = y ?? 0;
-  state.addPlatformMenu.items = PLATFORM_IDS.filter(
+  state.addPlatformMenu.items = VISIBLE_PLATFORM_IDS.filter(
     (platform) => !state.platformApplicationInfo[platform],
   ).map((platform) => ({
     label: getPlatformTabLabel(platform, copy),

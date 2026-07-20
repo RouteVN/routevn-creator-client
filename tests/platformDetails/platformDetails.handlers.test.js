@@ -133,6 +133,7 @@ describe("platformDetails handlers", () => {
     const deps = createDeps();
     const applicationInfo = {
       applicationName: "Project One",
+      applicationIdentifier: "",
       iconFileId: "project-icon-1",
       shortName: "",
       description: "",
@@ -278,6 +279,7 @@ describe("platformDetails handlers", () => {
     deps.store.selectPlatformEditIconFileId.mockReturnValue("web-icon-1");
     const applicationInfo = {
       applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project",
       iconFileId: "web-icon-1",
       shortName: "Project",
       description: "Web description",
@@ -294,6 +296,7 @@ describe("platformDetails handlers", () => {
           actionId: "submit",
           values: {
             applicationName: " Web Project ",
+            applicationIdentifier: " com.example.web-project ",
             shortName: " Project ",
             description: " Web description ",
             themeColorId: " color-theme ",
@@ -334,6 +337,7 @@ describe("platformDetails handlers", () => {
           actionId: "submit",
           values: {
             applicationName: "Web Project",
+            applicationIdentifier: "com.example.web-project",
             shortName: "Project",
             description: "Web description",
             themeColorId: undefined,
@@ -347,6 +351,7 @@ describe("platformDetails handlers", () => {
       deps.projectService.updateCurrentPlatformDetails,
     ).toHaveBeenCalledWith("web", {
       applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project",
       iconFileId: "web-icon-1",
       shortName: "Project",
       description: "Web description",
@@ -388,6 +393,70 @@ describe("platformDetails handlers", () => {
     ).not.toHaveBeenCalled();
   });
 
+  it("does not create Web platform details without an application identifier", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "create",
+      platform: "web",
+    });
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Project One",
+            applicationIdentifier: "",
+            shortName: "",
+            description: "",
+            themeColorId: "",
+            backgroundColorId: "",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.platformDetailsPage.webApplicationIdentifierRequired,
+      title: EN_I18N.platformDetailsPage.warningTitle,
+    });
+    expect(
+      deps.projectService.createCurrentPlatformDetails,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("does not create Web platform details with an invalid application identifier", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "create",
+      platform: "web",
+    });
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Project One",
+            applicationIdentifier: "com.yourteam/yourvn",
+            shortName: "",
+            description: "",
+            themeColorId: "",
+            backgroundColorId: "",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.platformDetailsPage.webApplicationIdentifierInvalid,
+      title: EN_I18N.platformDetailsPage.warningTitle,
+    });
+    expect(
+      deps.projectService.createCurrentPlatformDetails,
+    ).not.toHaveBeenCalled();
+  });
+
   it("does not save Web platform details with a removed project color", async () => {
     const deps = createDeps();
     deps.store.selectPlatformDialogState.mockReturnValue({
@@ -402,6 +471,7 @@ describe("platformDetails handlers", () => {
           actionId: "submit",
           values: {
             applicationName: "Project One",
+            applicationIdentifier: "com.example.web-project",
             shortName: "",
             description: "",
             themeColorId: "color-removed",

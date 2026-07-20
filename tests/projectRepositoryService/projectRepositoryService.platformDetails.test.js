@@ -131,6 +131,7 @@ describe("projectRepositoryService platform details", () => {
       harness.service.getCurrentPlatformDetailsDefaults("web"),
     ).resolves.toEqual({
       applicationName: "Project One",
+      applicationIdentifier: "",
       iconFileId: "project-icon-1",
       shortName: "",
       description: "",
@@ -151,6 +152,7 @@ describe("projectRepositoryService platform details", () => {
       }),
     ).resolves.toEqual({
       applicationName: "Web Release",
+      applicationIdentifier: "",
       iconFileId: "project-icon-1",
       shortName: "Release",
       description: "",
@@ -229,13 +231,46 @@ describe("projectRepositoryService platform details", () => {
     });
     expect(harness.getPlatformDetails("web")).toMatchObject({
       applicationName: "Web Project",
+      applicationIdentifier: "namespace-1",
       iconFileId: "web-icon-1",
       shortName: "Project",
     });
     expect(harness.store.app.set).toHaveBeenCalledWith(
       "platformDetails.web",
-      expect.objectContaining({ applicationName: "Web Project" }),
+      expect.objectContaining({
+        applicationName: "Web Project",
+        applicationIdentifier: "namespace-1",
+      }),
     );
+  });
+
+  it("preserves and updates the editable Web application identifier", async () => {
+    const harness = createHarness({
+      platformDetails: {
+        web: {
+          applicationName: "Web Project",
+          applicationIdentifier: "com.example.web-project",
+          iconFileId: "web-icon-1",
+          shortName: "Project",
+          description: "Web release",
+          themeColorId: "",
+          backgroundColorId: "",
+        },
+      },
+    });
+
+    await expect(
+      harness.service.getCurrentPlatformDetails("web"),
+    ).resolves.toMatchObject({
+      applicationIdentifier: "com.example.web-project",
+    });
+
+    await harness.service.updateCurrentPlatformDetails("web", {
+      applicationIdentifier: "com.example.web-project-two",
+    });
+    expect(harness.getPlatformDetails("web")).toMatchObject({
+      applicationIdentifier: "com.example.web-project-two",
+    });
   });
 
   it("preserves and updates the editable macOS application identifier", async () => {

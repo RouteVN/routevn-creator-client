@@ -134,6 +134,7 @@ Current keys:
   - current fields:
     - `applicationName`
     - `iconFileId`
+    - `applicationIdentifier`
     - `shortName`
     - `description`
     - `themeColorId`
@@ -161,9 +162,12 @@ Current keys:
     Details and submits its create form
   - the create form is prefilled from the current project name and icon;
     cancelling it does not persist a record
+  - the Web identifier starts blank, is required and editable, and controls
+    browser save-data identity; older stored Web records are backfilled once
+    from `projectInfo.namespace`
   - the Windows identifier starts blank and is optional; the macOS identifier
     starts blank, is required and editable, and controls the exported app and
-    save-data identity; Web does not store an application identifier
+    save-data identity
   - platform export is blocked until the corresponding platform record exists
     and passes validation; Web export also checks that selected project colors
     still exist
@@ -207,8 +211,10 @@ Important ownership rule:
 
 - `projectInfo.id` is the source of truth for canonical project identity on new
   projects
-- `projectInfo.namespace` is the source of truth for browser-hosted bundle save
-  identity on new projects
+- `platformDetails.web.applicationIdentifier` is the source of truth for
+  browser-hosted bundle save identity
+- `projectInfo.namespace` backfills older stored Web records that do not have
+  an identifier
 - `projectId` must not be exported into the bundle just to drive runtime save
   identity
 
