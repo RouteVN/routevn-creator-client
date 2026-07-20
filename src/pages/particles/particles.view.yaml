@@ -11,6 +11,8 @@ refs:
         handler: handleParticleItemDoubleClick
   groupview:
     eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
       item-click:
         handler: handleParticleItemClick
       item-dblclick:

@@ -11,6 +11,8 @@ refs:
         handler: handleColorItemDoubleClick
   groupview:
     eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
       item-click:
         handler: handleColorItemClick
       item-dblclick:

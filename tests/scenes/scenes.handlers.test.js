@@ -95,6 +95,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       setProjectLanguage: vi.fn(),
       hideMapAddHint: vi.fn(),
       setSelectedItemId: vi.fn(),
+      setSelectedFolderId: vi.fn(),
       selectSelectedItemId: vi.fn(() => undefined),
       selectSelectedFolderId: vi.fn(() => undefined),
       openMobileFileExplorer: vi.fn(),
@@ -297,6 +298,32 @@ describe("scenes.handlers config keys", () => {
       durationMs: 160,
     });
     expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("clears scene and folder selection after clicking empty explorer space", () => {
+    const deps = createDeps();
+
+    handleFileExplorerSelectionChanged(deps, {
+      _event: {
+        detail: {
+          itemId: undefined,
+          isFolder: false,
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedFolderId).toHaveBeenCalledWith({
+      folderId: undefined,
+    });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(deps.appService.setUserConfig).toHaveBeenCalledWith(
+      "scenesMap.selectedSceneIdByProject.project-1",
+      undefined,
+    );
+    expect(deps.refs.whiteboard.ensureItemVisible).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
   it("opens the selected scene edit dialog when e is pressed", () => {

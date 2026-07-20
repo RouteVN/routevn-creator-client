@@ -625,6 +625,8 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   const detail = payload._event.detail || {};
   const itemId = detail.id || detail.itemId || detail.item?.id;
   if (!itemId) {
+    store.setSelectedItemId({ itemId: undefined });
+    render();
     return;
   }
 

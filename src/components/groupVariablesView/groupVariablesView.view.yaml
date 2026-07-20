@@ -1,4 +1,8 @@
 refs:
+  scrollContainer:
+    eventListeners:
+      click:
+        handler: handleScrollContainerClick
   searchInput:
     eventListeners:
       value-input:
@@ -105,12 +109,12 @@ template:
               - 'rtgl-button#tagFilterButton sq pre=filter v=${tagFilterButtonVariant} aria-label="${filterLabel}" title="${filterLabel}"': null
           - $if showTrailingMenuButton:
               - 'rtgl-button#menuButton sq pre=hamburger v=ol aria-label="${menuButtonLabel}" title="${menuButtonLabel}"': null
-      - 'rtgl-view h=1fg w=f sv style="min-width: 0; min-height: 0; box-sizing: border-box;"':
+      - 'rtgl-view#scrollContainer h=1fg w=f sv style="min-width: 0; min-height: 0; box-sizing: border-box;"':
           - $if flatGroups.length > 0:
               - $for group, i in flatGroups:
                   - rtgl-view w=f ph=md pos=rel:
                       - 'rtgl-view d=h w=f av=c bgc=${group.headerBackgroundColor} z=100 pv=sm style="position: sticky; top: 0px;"':
-                          - rtgl-view#groupRef${i} data-group-id=${group.id} d=h av=c g=md cur=pointer:
+                          - rtgl-view#groupRef${i} data-group-id=${group.id} data-resource-view-control=true d=h av=c g=md cur=pointer:
                               - $if group.isCollapsed:
                                   - rtgl-svg wh=16 svg=folderArrowRight: null
                                 $else:
@@ -119,7 +123,7 @@ template:
                               - rtgl-text: ${group.fullLabel}
                           - rtgl-view w=1fg: null
                           - $if !readonly:
-                              - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm w=1fg pre=plus: ${addButton}
+                              - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} data-resource-view-control=true s=sm w=1fg pre=plus: ${addButton}
                       - $if !group.isCollapsed:
                           - 'rtgl-view w=f mb=md pv=sm style="min-height: ${group.progressiveContentMinHeight}px;"':
                               - $if group.hasChildren:
@@ -145,7 +149,7 @@ template:
                                                   - rtgl-view w=1fg av=c:
                                                       - rtgl-view w=60% h=12 bgc=mu br=sm: null
                                             $elif item.isSelected:
-                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.domItemId} d=h w=f h=36 av=c bwb=xs cur=${item.cursor} g=md bgc=mu h-bgc=mu br=sm:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.domItemId} data-resource-view-item=true d=h w=f h=36 av=c bwb=xs cur=${item.cursor} g=md bgc=mu h-bgc=mu br=sm:
                                                   - rtgl-view w=2fg d=h av=c g=sm:
                                                       - rtgl-text s=sm: ${item.name}
                                                       - $if item.isEnum:
@@ -157,7 +161,7 @@ template:
                                                   - rtgl-view w=1fg av=c:
                                                       - rtgl-text s=sm: ${item.default}
                                             $else:
-                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.domItemId} d=h w=f h=36 av=c bwb=xs cur=${item.cursor} g=md h-bgc=mu:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.domItemId} data-resource-view-item=true d=h w=f h=36 av=c bwb=xs cur=${item.cursor} g=md h-bgc=mu:
                                                   - rtgl-view w=2fg d=h av=c g=sm:
                                                       - rtgl-text s=sm: ${item.name}
                                                       - $if item.isEnum:
@@ -174,7 +178,7 @@ template:
                                           - rtgl-view w=f h=150 av=c ah=c:
                                               - rtgl-text c=mu-fg: ${noVariablesInGroupMessage}
                                         $else:
-                                          - rtgl-view#addVariableEmptyRef${i} data-group-id=${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
+                                          - rtgl-view#addVariableEmptyRef${i} data-group-id=${group.id} data-resource-view-control=true w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
                                               - rtgl-svg svg=plus wh=24: null
                                               - rtgl-text: ${addVariableButton}
             $elif searchQuery || selectedTagFilterValues.length > 0:

@@ -19,6 +19,7 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { VARIABLE_TAG_SCOPE_KEY } from "./variables.store.js";
 import { selectVariablesPageCopy } from "./support/variablesPageCopy.js";
+import { clearResourcePageSelection } from "../../internal/ui/resourcePages/resourceViewBackground.js";
 import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };
@@ -289,6 +290,10 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   if (!itemId) {
+    store.setSelectedFolderId({ folderId: undefined });
+    store.setSelectedItemId({ itemId: undefined });
+    render();
+    focusFileExplorerKeyboardScope(deps);
     return;
   }
 
@@ -331,6 +336,12 @@ export const handleVariableItemClick = (deps, payload) => {
   store.setSelectedFolderId({ folderId: undefined });
   store.setSelectedItemId({ itemId });
   render();
+};
+
+export const handleResourceViewBackgroundClick = (deps) => {
+  clearResourcePageSelection(deps, {
+    fileExplorerRefName: "fileexplorer",
+  });
 };
 
 export const handleDetailHeaderClick = (deps) => {

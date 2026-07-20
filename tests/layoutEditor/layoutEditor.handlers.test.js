@@ -782,6 +782,29 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
 });
 
 describe("layoutEditor.handleFileExplorerItemClick", () => {
+  it("clears node selection after clicking empty explorer space", async () => {
+    const store = {
+      setSelectedItemId: vi.fn(),
+    };
+    const render = vi.fn();
+
+    await handleFileExplorerItemClick(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            itemId: undefined,
+          },
+        },
+      },
+    );
+
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
   it("closes the mobile node explorer and reveals detail for the selected node", async () => {
     const store = {
       setSelectedItemId: vi.fn(),

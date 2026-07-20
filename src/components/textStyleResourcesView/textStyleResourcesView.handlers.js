@@ -5,6 +5,9 @@ import {
   openTagFilterPopoverFromButton,
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
+import { dispatchResourceViewBackgroundClick } from "../../internal/ui/resourcePages/resourceViewBackground.js";
+
+export const handleScrollContainerClick = dispatchResourceViewBackgroundClick;
 
 const DEFAULT_ITEMS_PER_ROW = 6;
 const DEFAULT_MOBILE_ITEMS_PER_ROW = 2;

@@ -11,6 +11,8 @@ refs:
         handler: handleTransformItemDoubleClick
   groupview:
     eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
       item-click:
         handler: handleTransformItemClick
       item-edit:

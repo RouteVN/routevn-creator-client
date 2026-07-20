@@ -11,6 +11,8 @@ refs:
         handler: handleAnimationItemDoubleClick
   groupview:
     eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
       item-click:
         handler: handleAnimationItemClick
       item-edit:

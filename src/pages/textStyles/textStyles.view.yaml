@@ -11,6 +11,8 @@ refs:
         handler: handleTextStyleItemDoubleClick
   typographyView:
     eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
       item-click:
         handler: handleTextStyleItemClick
       item-edit:

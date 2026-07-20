@@ -54,6 +54,7 @@ import {
 } from "../../internal/resourceTags.js";
 import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
 import { selectCharacterSpritesPageCopy } from "./support/characterSpritesPageCopy.js";
+import { clearResourcePageSelection } from "../../internal/ui/resourcePages/resourceViewBackground.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const IMAGE_FILE_PATTERN = /\.(jpg|jpeg|png|webp)$/i;
@@ -1053,6 +1054,14 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
     return;
   }
 
+  if (!itemId) {
+    store.setSelectedFolderId({ folderId: undefined });
+    store.setSelectedItemId({ itemId: undefined });
+    render();
+    focusGroupView(deps);
+    return;
+  }
+
   const selectionPayload = {
     deps,
     itemId,
@@ -1117,6 +1126,10 @@ export const handleSpriteItemClick = async (deps, payload) => {
     syncExplorer: true,
   });
   focusGroupView(deps);
+};
+
+export const handleResourceViewBackgroundClick = (deps) => {
+  clearResourcePageSelection(deps);
 };
 
 export const handleSpriteItemDoubleClick = (deps, payload) => {

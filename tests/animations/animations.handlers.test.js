@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   handleAnimationItemClick,
   handleFileExplorerSelectionChanged,
+  handleResourceViewBackgroundClick,
   handleImportAnimationClick,
   handleImportFormActionClick,
 } from "../../src/pages/animations/animations.handlers.js";
@@ -11,6 +12,34 @@ const originalFetch = globalThis.fetch;
 describe("animations.handlers", () => {
   afterEach(() => {
     globalThis.fetch = originalFetch;
+  });
+
+  it("clears selection and preview runtime from a resource background click", async () => {
+    const deps = {
+      store: {
+        setSelectedFolderId: vi.fn(),
+        setSelectedItemId: vi.fn(),
+        setAnimationPreviewVisible: vi.fn(),
+        clearPreviewRuntime: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          clearSelection: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    await handleResourceViewBackgroundClick(deps);
+
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(deps.store.setAnimationPreviewVisible).toHaveBeenCalledWith({
+      visible: false,
+    });
+    expect(deps.store.clearPreviewRuntime).toHaveBeenCalledOnce();
+    expect(deps.refs.fileExplorer.clearSelection).toHaveBeenCalledOnce();
   });
 
   it("selects an animation from the catalog without logging", () => {

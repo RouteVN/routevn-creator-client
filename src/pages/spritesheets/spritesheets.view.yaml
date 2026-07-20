@@ -11,6 +11,8 @@ refs:
         handler: handleFileExplorerDoubleClick
   groupview:
     eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
       item-click:
         handler: handleSpritesheetItemClick
       item-dblclick:

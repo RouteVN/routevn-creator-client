@@ -2,6 +2,20 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("mediaResourcesView view", () => {
+  it("distinguishes grid background clicks from cards and controls", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/mediaResourcesView/mediaResourcesView.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain("handler: handleScrollContainerClick");
+    expect(view).toContain("data-resource-view-item=true");
+    expect(view).toContain("data-resource-view-control=true");
+  });
+
   it("renders the optional back action as an outline navbar icon", () => {
     const view = readFileSync(
       new URL(

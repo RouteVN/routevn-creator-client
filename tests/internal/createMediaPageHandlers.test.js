@@ -34,6 +34,7 @@ describe("createMediaPageHandlers", () => {
       },
       store: {
         setItems: vi.fn(),
+        setSelectedFolderId: vi.fn(),
         setSelectedItemId: vi.fn(),
       },
       refs: {
@@ -51,9 +52,10 @@ describe("createMediaPageHandlers", () => {
     expect(deps.store.setItems).toHaveBeenCalledWith({
       data: repositoryState.images,
     });
-    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
-      itemId: undefined,
+    expect(deps.store.setSelectedFolderId).toHaveBeenCalledWith({
+      folderId: "folder-1",
     });
+    expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
     expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
       itemId: "folder-1",
     });
@@ -92,6 +94,7 @@ describe("createMediaPageHandlers", () => {
       },
       store: {
         setItems: vi.fn(),
+        setSelectedFolderId: vi.fn(),
         setSelectedItemId: vi.fn(),
       },
       refs: {
@@ -173,6 +176,7 @@ describe("createMediaPageHandlers", () => {
       },
       store: {
         setItems: vi.fn(),
+        setSelectedFolderId: vi.fn(),
         setSelectedItemId: vi.fn(),
       },
       refs: {
@@ -228,6 +232,7 @@ describe("createMediaPageHandlers", () => {
       },
       store: {
         setItems: vi.fn(),
+        setSelectedFolderId: vi.fn(),
         setSelectedItemId: vi.fn(),
       },
       refs: {
@@ -284,6 +289,7 @@ describe("createMediaPageHandlers", () => {
       },
       store: {
         setItems: vi.fn(),
+        setSelectedFolderId: vi.fn(),
         setSelectedItemId: vi.fn(),
       },
       refs: {
@@ -317,6 +323,7 @@ describe("createMediaPageHandlers", () => {
     });
     const deps = {
       store: {
+        setSelectedFolderId: vi.fn(),
         setSelectedItemId: vi.fn(),
       },
       refs: {
@@ -345,6 +352,47 @@ describe("createMediaPageHandlers", () => {
     expect(deps.refs.groupview.scrollItemIntoView).toHaveBeenCalledWith({
       itemId: "image-1",
     });
+    expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears item and folder selection after an empty explorer click", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    const handlers = createMediaPageHandlers({
+      resourceType: "images",
+    });
+    const deps = {
+      store: {
+        setSelectedFolderId: vi.fn(),
+        setSelectedItemId: vi.fn(),
+      },
+      refs: {
+        fileExplorerKeyboardScope: {
+          focus: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handlers.handleFileExplorerSelectionChanged(deps, {
+      _event: {
+        detail: {
+          itemId: undefined,
+          isFolder: false,
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedFolderId).toHaveBeenCalledWith({
+      folderId: undefined,
+    });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
     expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(1);
   });
 

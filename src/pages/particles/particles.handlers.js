@@ -610,6 +610,7 @@ const {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleResourceViewBackgroundClick: handleResourceViewBackgroundClickBase,
   handleItemClick: handleParticleItemClickBase,
   handleSearchInput,
   handleMobileFileExplorerOpen,
@@ -704,6 +705,12 @@ export {
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   handleFileExplorerSelectionChangedBase(deps, payload);
+  deps.store.clearPreviewRuntime();
+  await renderDetailPreview(deps);
+};
+
+export const handleResourceViewBackgroundClick = async (deps) => {
+  handleResourceViewBackgroundClickBase(deps);
   deps.store.clearPreviewRuntime();
   await renderDetailPreview(deps);
 };

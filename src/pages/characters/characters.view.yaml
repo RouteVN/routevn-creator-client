@@ -11,6 +11,8 @@ refs:
         handler: handleSpritesButtonClick
   charactersView:
     eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
       item-click:
         handler: handleCharacterItemClick
       item-dblclick:

@@ -935,6 +935,10 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   if (!itemId) {
+    store.setSelectedFolderId({ folderId: undefined });
+    setSelectedScene({ store, appService, sceneId: undefined });
+    render();
+    focusFileExplorerKeyboardScope(deps);
     return;
   }
 

@@ -11,6 +11,8 @@ refs:
         handler: handleFontItemDoubleClick
   groupview:
     eventListeners:
+      background-click:
+        handler: handleResourceViewBackgroundClick
       item-click:
         handler: handleFontItemClick
       item-dblclick:
