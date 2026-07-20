@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
+  selectOperationChangeData,
+  selectOperationSaveData,
+  selectSubmitData,
+  selectVariableItemById,
   selectViewData,
   setTempOperation,
   setVariablesData,
@@ -13,60 +17,75 @@ import {
   handleSubmitClick,
   handleVariableSelectChange,
 } from "../../src/components/commandLineUpdateVariable/commandLineUpdateVariable.handlers.js";
+import { EN_I18N as i18n } from "../support/i18n.js";
+
+const createStore = (state, overrides = {}) => ({
+  selectOperationChangeData: () => selectOperationChangeData({ state }),
+  selectOperationSaveData: () => selectOperationSaveData({ state }),
+  selectSubmitData: () => selectSubmitData({ state }),
+  selectVariableItemById: (payload) =>
+    selectVariableItemById({ state }, payload),
+  setTempOperation: (payload) => setTempOperation({ state }, payload),
+  ...overrides,
+});
 
 describe("commandLineUpdateVariable.handlers", () => {
-  it("uses variable types when selecting a project variable", () => {
-    const state = createInitialState();
+  it.each([
+    ["string", ""],
+    ["number", 1],
+    ["boolean", false],
+  ])(
+    "defaults a %s variable to the set operation",
+    (variableType, defaultValue) => {
+      const state = createInitialState();
 
-    setVariablesData(
-      { state },
-      {
-        variables: {
-          items: {
-            saveLoadPagination: {
-              id: "saveLoadPagination",
-              type: "variable",
-              variableType: "number",
-              name: "Save/Load Pagination",
+      setVariablesData(
+        { state },
+        {
+          variables: {
+            items: {
+              selectedVariable: {
+                id: "selectedVariable",
+                type: "variable",
+                variableType,
+                name: "Selected Variable",
+              },
+            },
+            tree: [],
+          },
+        },
+      );
+      setTempOperation(
+        { state },
+        {
+          variableId: "",
+          op: "",
+          value: "",
+        },
+      );
+
+      handleVariableSelectChange(
+        {
+          store: createStore(state),
+          render: () => {},
+        },
+        {
+          _event: {
+            detail: {
+              value: "selectedVariable",
             },
           },
-          tree: [],
         },
-      },
-    );
-    setTempOperation(
-      { state },
-      {
-        variableId: "",
-        op: "",
-        value: "",
-      },
-    );
+      );
 
-    handleVariableSelectChange(
-      {
-        store: {
-          getState: () => state,
-          setTempOperation: (payload) => setTempOperation({ state }, payload),
-        },
-        render: () => {},
-      },
-      {
-        _event: {
-          detail: {
-            value: "saveLoadPagination",
-          },
-        },
-      },
-    );
-
-    expect(state.tempOperation).toEqual({
-      variableId: "saveLoadPagination",
-      op: "",
-      value: 1,
-      roundTo: undefined,
-    });
-  });
+      expect(state.tempOperation).toEqual({
+        variableId: "selectedVariable",
+        op: "set",
+        value: defaultValue,
+        roundTo: undefined,
+      });
+    },
+  );
 
   it("shows variable type as select suffix text", () => {
     const state = createInitialState();
@@ -88,7 +107,7 @@ describe("commandLineUpdateVariable.handlers", () => {
       },
     );
 
-    expect(selectViewData({ state }).variableOptions).toEqual([
+    expect(selectViewData({ state, i18n }).variableOptions).toEqual([
       {
         label: "Save/Load Pagination",
         value: "saveLoadPagination",
@@ -121,10 +140,7 @@ describe("commandLineUpdateVariable.handlers", () => {
 
     handleVariableSelectChange(
       {
-        store: {
-          getState: () => state,
-          setTempOperation: (payload) => setTempOperation({ state }, payload),
-        },
+        store: createStore(state),
         render: () => {},
       },
       {
@@ -138,7 +154,7 @@ describe("commandLineUpdateVariable.handlers", () => {
 
     expect(state.tempOperation).toEqual({
       variableId: "mood",
-      op: "",
+      op: "set",
       value: "happy",
       roundTo: undefined,
     });
@@ -174,7 +190,7 @@ describe("commandLineUpdateVariable.handlers", () => {
       },
     );
 
-    expect(selectViewData({ state })).toMatchObject({
+    expect(selectViewData({ state, i18n })).toMatchObject({
       showEnumValueSelect: true,
       enumValueOptions: [
         { value: "happy", label: "happy" },
@@ -190,7 +206,7 @@ describe("commandLineUpdateVariable.handlers", () => {
       },
     );
 
-    expect(selectViewData({ state }).canSaveOperation).toBe(false);
+    expect(selectViewData({ state, i18n }).canSaveOperation).toBe(false);
   });
 
   it("normalizes enum set operations to a selectable enum value", () => {
@@ -225,10 +241,7 @@ describe("commandLineUpdateVariable.handlers", () => {
 
     handleOperationSelectChange(
       {
-        store: {
-          getState: () => state,
-          setTempOperation: (payload) => setTempOperation({ state }, payload),
-        },
+        store: createStore(state),
         render: () => {},
       },
       {
@@ -260,9 +273,7 @@ describe("commandLineUpdateVariable.handlers", () => {
 
     handleEnumValueSelectChange(
       {
-        store: {
-          setTempOperation: (payload) => setTempOperation({ state }, payload),
-        },
+        store: createStore(state),
         render: () => {},
       },
       {
@@ -307,10 +318,7 @@ describe("commandLineUpdateVariable.handlers", () => {
 
     handleOperationSelectChange(
       {
-        store: {
-          getState: () => state,
-          setTempOperation: (payload) => setTempOperation({ state }, payload),
-        },
+        store: createStore(state),
         render: () => {},
       },
       {
@@ -322,7 +330,7 @@ describe("commandLineUpdateVariable.handlers", () => {
       },
     );
 
-    expect(selectViewData({ state })).toMatchObject({
+    expect(selectViewData({ state, i18n })).toMatchObject({
       showRoundToField: true,
       tempOperation: {
         roundToValue: 2,
@@ -332,9 +340,7 @@ describe("commandLineUpdateVariable.handlers", () => {
 
     handleRoundToInputChange(
       {
-        store: {
-          setTempOperation: (payload) => setTempOperation({ state }, payload),
-        },
+        store: createStore(state),
         render: () => {},
       },
       {
@@ -346,7 +352,7 @@ describe("commandLineUpdateVariable.handlers", () => {
       },
     );
 
-    expect(selectViewData({ state })).toMatchObject({
+    expect(selectViewData({ state, i18n })).toMatchObject({
       tempOperation: {
         roundTo: "4",
         roundToValue: "4",
@@ -391,9 +397,8 @@ describe("commandLineUpdateVariable.handlers", () => {
     handleSubmitClick(
       {
         appService,
-        store: {
-          getState: () => state,
-        },
+        i18n,
+        store: createStore(state),
         dispatchEvent: (event) => {
           dispatchedEvents.push(event);
         },
@@ -457,9 +462,8 @@ describe("commandLineUpdateVariable.handlers", () => {
     handleSubmitClick(
       {
         appService,
-        store: {
-          getState: () => state,
-        },
+        i18n,
+        store: createStore(state),
         dispatchEvent: (event) => {
           dispatchedEvents.push(event);
         },
@@ -520,12 +524,12 @@ describe("commandLineUpdateVariable.handlers", () => {
     handleSaveOperationClick(
       {
         appService,
-        store: {
-          getState: () => state,
+        i18n,
+        store: createStore(state, {
           updateOperation,
           setMode: vi.fn(),
           setCurrentEditingId: vi.fn(),
-        },
+        }),
         render: vi.fn(),
       },
       {
@@ -579,12 +583,12 @@ describe("commandLineUpdateVariable.handlers", () => {
     handleSaveOperationClick(
       {
         appService,
-        store: {
-          getState: () => state,
+        i18n,
+        store: createStore(state, {
           updateOperation,
           setMode: vi.fn(),
           setCurrentEditingId: vi.fn(),
-        },
+        }),
         render: vi.fn(),
       },
       {
@@ -637,12 +641,12 @@ describe("commandLineUpdateVariable.handlers", () => {
     handleSaveOperationClick(
       {
         appService,
-        store: {
-          getState: () => state,
+        i18n,
+        store: createStore(state, {
           updateOperation,
           setMode: vi.fn(),
           setCurrentEditingId: vi.fn(),
-        },
+        }),
         render: vi.fn(),
       },
       {
@@ -693,12 +697,12 @@ describe("commandLineUpdateVariable.handlers", () => {
     handleSaveOperationClick(
       {
         appService,
-        store: {
-          getState: () => state,
+        i18n,
+        store: createStore(state, {
           updateOperation,
           setMode: vi.fn(),
           setCurrentEditingId: vi.fn(),
-        },
+        }),
         render: vi.fn(),
       },
       {
