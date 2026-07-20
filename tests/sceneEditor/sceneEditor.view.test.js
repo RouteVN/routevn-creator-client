@@ -16,4 +16,24 @@ describe("sceneEditorLexical view", () => {
     );
     expect(view).toContain("${sceneTextStatsLabel}");
   });
+
+  it("renders a matching canvas download button after preview", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/pages/sceneEditorLexical/sceneEditorLexical.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const previewButtonIndex = view.indexOf("rtgl-button#previewButton");
+    const downloadButtonIndex = view.indexOf(
+      "rtgl-button#downloadCanvasButton",
+    );
+
+    expect(downloadButtonIndex).toBeGreaterThan(previewButtonIndex);
+    expect(view).toContain(
+      "rtgl-button#downloadCanvasButton sq pre=download v=ol",
+    );
+    expect(view).toContain("handler: handleDownloadCanvasClick");
+  });
 });

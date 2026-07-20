@@ -101,7 +101,7 @@ export const createWebFilePicker = () => {
      * "Saves" a file by triggering a browser download.
      * @param {Blob} blob - The file content as a Blob.
      * @param {string} defaultPath - The suggested filename.
-     * @returns {Promise<void>}
+     * @returns {Promise<string>}
      */
     async saveFilePicker(blob, defaultPath) {
       const url = URL.createObjectURL(blob);
@@ -112,6 +112,7 @@ export const createWebFilePicker = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      return a.download;
     },
   };
 };

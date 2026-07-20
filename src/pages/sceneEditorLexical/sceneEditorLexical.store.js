@@ -1859,6 +1859,7 @@ export const selectViewData = ({ state, i18n }) => {
       loadingAssetsLabel: copy.loadingAssetsLabel ?? "Loading assets...",
       loadingSceneLabel: copy.loadingSceneLabel ?? "Loading scene...",
       previewButton: copy.previewButton ?? "Preview",
+      downloadCanvasButton: copy.downloadCanvasButton ?? "Download canvas",
       sectionsTitle: copy.sectionsLabel ?? "Sections",
       stateTitle: copy.stateTitle ?? "State",
     };
@@ -2123,11 +2124,6 @@ export const selectViewData = ({ state, i18n }) => {
     actions: {
       buttons: [
         {
-          id: "cancel",
-          variant: "se",
-          label: "Cancel",
-        },
-        {
           id: "save",
           variant: "pr",
           label: "Save",
@@ -2237,6 +2233,7 @@ export const selectViewData = ({ state, i18n }) => {
     loadingAssetsLabel: copy.loadingAssetsLabel ?? "Loading assets...",
     loadingSceneLabel: copy.loadingSceneLabel ?? "Loading scene...",
     previewButton: copy.previewButton ?? "Preview",
+    downloadCanvasButton: copy.downloadCanvasButton ?? "Download canvas",
     sectionsTitle: copy.sectionsLabel ?? "Sections",
     stateTitle: copy.stateTitle ?? "State",
   };

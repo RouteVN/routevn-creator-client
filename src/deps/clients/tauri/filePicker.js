@@ -1,4 +1,5 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
+import { writeFile } from "@tauri-apps/plugin-fs";
 
 /**
  * @typedef {Object} FileFilter
@@ -77,11 +78,31 @@ export const createTauriFilePicker = () => {
 
     /**
      * Open a save file picker
-     * @param {SaveFileOptions} [options]
+     * @param {SaveFileOptions|Blob} [options]
+     * @param {string} [defaultPath]
+     * @param {SaveFileOptions} [blobOptions]
      * @returns {Promise<string|null>} Selected save path or null if cancelled
      */
-    async saveFilePicker(options = {}) {
+    async saveFilePicker(options = {}, defaultPath, blobOptions = {}) {
       try {
+        if (options instanceof Blob) {
+          const selected = await save({
+            title: blobOptions.title ?? "Save File",
+            filters: blobOptions.filters ?? [],
+            defaultPath: defaultPath ?? "download",
+            ...blobOptions,
+          });
+          if (!selected) {
+            return null;
+          }
+
+          await writeFile(
+            selected,
+            new Uint8Array(await options.arrayBuffer()),
+          );
+          return selected;
+        }
+
         const selected = await save({
           title: options.title || "Save File",
           filters: options.filters || [],
