@@ -513,7 +513,7 @@ template:
                       - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#confirmImageSelection variant=pr: ${selectButton}
-  - rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=sm:
+  - rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=sm close-button:
       - $if soundFormDialog.open:
           - rtgl-view slot=content g=md w=f:
               - rtgl-form#soundForm key=${soundFormDialog.key} :form=${soundForm} :defaultValues=${soundFormDefaults} w=f:
@@ -533,7 +533,7 @@ template:
                               - rtgl-text s=sm c=mu-fg: ${selectSoundLabel}
                       - $if soundFormDialog.validationErrors.soundId:
                           - rtgl-text s=sm c=de: ${soundFormDialog.validationErrors.soundId}
-  - rtgl-dialog#soundSelectorDialog ?open=${soundSelectorDialog.open} s=lg:
+  - rtgl-dialog#soundSelectorDialog ?open=${soundSelectorDialog.open} s=lg close-button:
       - $if soundSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
               - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
