@@ -646,6 +646,19 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   });
 };
 
+export const handleLayoutEditorCanvasBackgroundClick = (deps, payload) => {
+  const { store, refs, render } = deps;
+  const event = payload._event;
+
+  if (event.target !== event.currentTarget) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId: undefined });
+  refs.fileExplorer?.clearSelection?.();
+  render();
+};
+
 export const handleFileExplorerVisibilityToggle = async (deps, payload) => {
   const { appService, projectService, render, store } = deps;
   const copy = selectCopy(deps);
