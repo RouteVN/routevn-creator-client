@@ -87,7 +87,6 @@ describe("platformDetails handlers", () => {
         }
         const applicationInfo = {
           applicationName: `${platform} Project`,
-          iconFileId: `${platform}-icon-1`,
         };
         return applicationInfo;
       },
@@ -102,7 +101,6 @@ describe("platformDetails handlers", () => {
       platform: "web",
       applicationInfo: {
         applicationName: "web Project",
-        iconFileId: "web-icon-1",
       },
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
@@ -113,7 +111,6 @@ describe("platformDetails handlers", () => {
     const applicationInfo = {
       applicationName: "Project One",
       applicationIdentifier: "",
-      iconFileId: "project-icon-1",
     };
     deps.projectService.getCurrentPlatformDetailsDefaults.mockResolvedValue(
       applicationInfo,
@@ -255,7 +252,6 @@ describe("platformDetails handlers", () => {
     const applicationInfo = {
       applicationName: "Web Project",
       applicationIdentifier: "com.example.web-project",
-      iconFileId: "web-icon-1",
     };
     deps.projectService.createCurrentPlatformDetails.mockResolvedValue(
       applicationInfo,
@@ -338,7 +334,6 @@ describe("platformDetails handlers", () => {
     const applicationInfo = {
       applicationName: "Web Project",
       applicationIdentifier: "com.example.web-project-two",
-      iconFileId: "web-icon-1",
     };
     deps.projectService.updateCurrentPlatformDetails.mockResolvedValue(
       applicationInfo,
@@ -375,7 +370,6 @@ describe("platformDetails handlers", () => {
     const applicationInfo = {
       applicationName: "Updated Web Project",
       applicationIdentifier: "com.example.web-project",
-      iconFileId: "web-icon-1",
     };
     deps.projectService.updateCurrentPlatformDetails.mockResolvedValue(
       applicationInfo,

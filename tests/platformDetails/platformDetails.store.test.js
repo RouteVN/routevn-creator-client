@@ -7,7 +7,6 @@ import {
   openPlatformEditDialog,
   selectViewData,
   setPlatformApplicationInfo,
-  setPlatformEditIconFileId,
   setSelectedPlatform,
 } from "../../src/pages/platformDetails/platformDetails.store.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -43,7 +42,6 @@ describe("platformDetails.store", () => {
         applicationInfo: {
           applicationName: "Project One",
           applicationIdentifier: "",
-          iconFileId: "project-icon-1",
         },
       },
     );
@@ -131,7 +129,7 @@ describe("platformDetails.store", () => {
       applicationName: "Web Project",
       applicationIdentifier: "com.example.web-project",
     });
-    expect(state.platformEditIconFileId).toBe("web-icon-1");
+    expect(state.platformEditIconFileId).toBeUndefined();
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.addPlatformMenu.items).toEqual([]);
@@ -144,25 +142,25 @@ describe("platformDetails.store", () => {
           EN_I18N.platformDetailsPage.webApplicationIdentifierDescription,
       }),
     );
-    expect(viewData.platformDetailFields).toEqual(
-      expect.arrayContaining([
-        {
-          type: "slot",
-          slot: "platform-application-name",
-          label: "Application Name",
-        },
-        {
-          type: "slot",
-          slot: "platform-application-identifier",
-          label: "Application Identifier",
-        },
-      ]),
-    );
+    expect(viewData.platformDetailFields).toEqual([
+      {
+        type: "slot",
+        slot: "platform-application-name",
+        label: "Application Name",
+      },
+      {
+        type: "slot",
+        slot: "platform-application-identifier",
+        label: "Application Identifier",
+      },
+    ]);
     expect(viewData).toMatchObject({
       platformApplicationName: "Web Project",
       platformApplicationIdentifier: "com.example.web-project",
+      showPlatformApplicationIcon: false,
+      showPlatformEditIcon: false,
     });
-    expect(viewData.platformEditForm.fields).toHaveLength(3);
+    expect(viewData.platformEditForm.fields).toHaveLength(2);
     expect(viewData.platformEditForm.actions.buttons).toEqual([
       {
         id: "submit",
@@ -171,8 +169,5 @@ describe("platformDetails.store", () => {
         label: "Save Changes",
       },
     ]);
-
-    setPlatformEditIconFileId({ state }, { iconFileId: "web-icon-2" });
-    expect(state.platformEditIconFileId).toBe("web-icon-2");
   });
 });

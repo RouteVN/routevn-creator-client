@@ -17,7 +17,9 @@ describe("platformDetails view", () => {
     );
   });
 
-  it("uses a keyboard-operable button for adding or replacing the icon", () => {
+  it("keeps the native icon editor keyboard-operable and hides it for Web", () => {
+    expect(platformDetailsView).toContain("$if showPlatformApplicationIcon");
+    expect(platformDetailsView).toContain("$if showPlatformEditIcon");
     expect(platformDetailsView).toContain(
       "button#platformEditDialogIcon type=button",
     );

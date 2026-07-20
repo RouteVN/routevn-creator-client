@@ -310,7 +310,6 @@ platformDetailsPage:
   webApplicationIdentifierInvalid: "Use only letters, numbers, hyphens, and periods."
   webApplicationIdentifierRequired: "Application identifier is required."
   webApplicationNameDescription: "Name used for Web export branding and page metadata."
-  webIconDescription: "Icon used for Web export branding and browser installation surfaces."
   webPlatformDetailsTitle: "Web Platform Details"
   webTabLabel: "Web"
   windowsApplicationIdentifierDescription: "Optional stable internal identifier for this Windows application. When set, use reverse-domain notation such as com.example.game."

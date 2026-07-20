@@ -71,10 +71,11 @@ template:
                           - rvn-detail-view#platformDetailView w=f :fields=${platformDetailFields} :fillHeight=${detailFillHeight}:
                               - rtgl-view#platformApplicationName slot=platform-application-name cur=pointer:
                                   - rtgl-text: ${platformApplicationName}
-                              - $if platformApplicationIconFileId:
-                                  - rvn-file-image#platformApplicationIcon slot=platform-application-icon fileId=${platformApplicationIconFileId} w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
-                                $else:
-                                  - rtgl-image#platformApplicationIcon slot=platform-application-icon src="/public/project_logo_placeholder.png" w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
+                              - $if showPlatformApplicationIcon:
+                                  - $if platformApplicationIconFileId:
+                                      - rvn-file-image#platformApplicationIcon slot=platform-application-icon fileId=${platformApplicationIconFileId} w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
+                                    $else:
+                                      - rtgl-image#platformApplicationIcon slot=platform-application-icon src="/public/project_logo_placeholder.png" w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
                               - rtgl-view#platformApplicationIdentifier slot=platform-application-identifier cur=pointer:
                                   - rtgl-text: ${platformApplicationIdentifier}
                     $else:
@@ -86,10 +87,11 @@ template:
       - $if isPlatformEditDialogOpen:
           - rtgl-view slot=content:
               - rtgl-form#platformEditForm key=${platformDialogKey} :defaultValues=${platformEditDefaultValues} :form=${platformEditForm} w=f:
-                  - 'button#platformEditDialogIcon type=button slot=platform-application-icon-edit aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="width: 120px; height: 120px; padding: 0; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;"':
-                      - $if platformEditIconFileId:
-                          - rvn-file-image fileId=${platformEditIconFileId} w=120 h=120 bw=xs bc=bo br=md: null
-                        $else:
-                          - rtgl-view w=120 h=120 ah=c av=c bw=xs bc=bo br=md:
-                              - rtgl-text c=mu-fg ta=c: ${clickToUploadLabel}
+                  - $if showPlatformEditIcon:
+                      - 'button#platformEditDialogIcon type=button slot=platform-application-icon-edit aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="width: 120px; height: 120px; padding: 0; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;"':
+                          - $if platformEditIconFileId:
+                              - rvn-file-image fileId=${platformEditIconFileId} w=120 h=120 bw=xs bc=bo br=md: null
+                            $else:
+                              - rtgl-view w=120 h=120 ah=c av=c bw=xs bc=bo br=md:
+                                  - rtgl-text c=mu-fg ta=c: ${clickToUploadLabel}
   - rvn-square-image-crop-dialog#platformEditIconCropDialog :open=${isPlatformEditIconCropDialogOpen} :file=${platformEditIconCropFile}: null

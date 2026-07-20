@@ -1,5 +1,5 @@
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
-use image::{ExtendedColorType, ImageEncoder, ImageFormat};
+use image::{ExtendedColorType, ImageEncoder, ImageFormat, ImageReader};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sprite_dicing::{Pivot, Pixel, Prefs, SourceSprite, Texture, dice};
@@ -423,8 +423,12 @@ fn encode_texture_as_png(texture: &Texture) -> Result<Vec<u8>, String> {
 }
 
 fn create_web_icon_png_variants(path: &Path) -> Result<Vec<(&'static str, Vec<u8>)>, String> {
-    let image =
-        image::open(path).map_err(|e| format!("Failed to decode the Web application icon: {e}"))?;
+    let image = ImageReader::open(path)
+        .map_err(|e| format!("Failed to open the Web application icon: {e}"))?
+        .with_guessed_format()
+        .map_err(|e| format!("Failed to detect the Web application icon format: {e}"))?
+        .decode()
+        .map_err(|e| format!("Failed to decode the Web application icon: {e}"))?;
 
     WEB_ICON_FILES
         .iter()
@@ -1299,7 +1303,7 @@ mod tests {
     #[test]
     fn streamed_zip_export_writes_web_icon_variants() {
         let test_dir = create_unique_test_dir();
-        let icon_path = test_dir.join("project-icon.png");
+        let icon_path = test_dir.join("project-icon");
         let output_path = test_dir.join("export.zip");
         write_fixture_in_format(&icon_path, ImageFormat::Png, [255, 96, 96, 255], 20, 20);
 

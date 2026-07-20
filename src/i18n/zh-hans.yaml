@@ -310,7 +310,6 @@ platformDetailsPage:
   webApplicationIdentifierInvalid: "应用标识符只能包含字母、数字、连字符和句点。"
   webApplicationIdentifierRequired: "必须填写应用标识符。"
   webApplicationNameDescription: "用于 Web 导出品牌展示和页面元数据的名称。"
-  webIconDescription: "用于 Web 导出品牌展示和浏览器安装界面的图标。"
   webPlatformDetailsTitle: "Web 平台详情"
   webTabLabel: "Web"
   windowsApplicationIdentifierDescription: "此 Windows 应用的可选稳定内部标识符。填写时请使用反向域名格式，例如 com.example.game。"

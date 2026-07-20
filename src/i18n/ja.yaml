@@ -310,7 +310,6 @@ platformDetailsPage:
   webApplicationIdentifierInvalid: "アプリケーション識別子には、英字、数字、ハイフン、ピリオドのみを使用してください。"
   webApplicationIdentifierRequired: "アプリケーション識別子は必須です。"
   webApplicationNameDescription: "Web 書き出しのブランド表示とページメタデータに使用する名前です。"
-  webIconDescription: "Web 書き出しのブランド表示とブラウザーのインストール画面に使用するアイコンです。"
   webPlatformDetailsTitle: "Web プラットフォーム詳細"
   webTabLabel: "Web"
   windowsApplicationIdentifierDescription: "この Windows アプリケーションの任意の安定した内部識別子です。設定する場合は com.example.game のような逆ドメイン形式を使用してください。"

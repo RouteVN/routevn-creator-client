@@ -182,8 +182,13 @@ export const createProjectRepositoryService = ({
     const platformDetails = {
       applicationName: sourceInfo?.applicationName ?? "",
       applicationIdentifier: sourceInfo?.applicationIdentifier ?? "",
-      iconFileId: sourceInfo?.iconFileId ?? null,
     };
+
+    // TODO: Add a Web-specific icon back when Web export no longer uses the
+    // project-owned icon.
+    if (platform !== "web") {
+      platformDetails.iconFileId = sourceInfo?.iconFileId ?? null;
+    }
 
     if (platform === "windows") {
       platformDetails.publisher = "";
@@ -757,7 +762,8 @@ export const createProjectRepositoryService = ({
       (Object.hasOwn(storedPlatformDetails, "shortName") ||
         Object.hasOwn(storedPlatformDetails, "description") ||
         Object.hasOwn(storedPlatformDetails, "themeColorId") ||
-        Object.hasOwn(storedPlatformDetails, "backgroundColorId"))
+        Object.hasOwn(storedPlatformDetails, "backgroundColorId") ||
+        Object.hasOwn(storedPlatformDetails, "iconFileId"))
     ) {
       shouldPersist = true;
     }
@@ -775,6 +781,10 @@ export const createProjectRepositoryService = ({
     }
 
     for (const platform of Object.keys(PLATFORM_DETAILS_KEYS)) {
+      if (platform === "web") {
+        continue;
+      }
+
       const key = getPlatformDetailsKey(platform);
       const platformDetails = await readPlatformDetailsFromStore(
         store,

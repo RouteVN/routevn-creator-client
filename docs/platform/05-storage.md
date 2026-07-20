@@ -58,7 +58,7 @@ Current app-owned keys:
   - `language`
   - `iconFileId`
 - `platformDetails.web`
-  - platform application name, icon, and identifier
+  - platform application name and identifier
 - `platformDetails.windows`
   - platform application name, icon, and identifier plus publisher,
     description, and copyright
@@ -89,7 +89,8 @@ Important details:
   key, and created platform keys can be edited but not deleted
 - preview data under `releaseInfo.web`, `releaseInfo.windows`, or
   `releaseInfo.macos` is copied to the matching `platformDetails.*` key when
-  first read
+  first read; obsolete Web icon metadata is removed because Web export uses
+  the project-owned icon
 - repository state is not the source of truth for `name`, `description`,
   `language`, or `iconFileId`
 - committed event rows also store `project_id`

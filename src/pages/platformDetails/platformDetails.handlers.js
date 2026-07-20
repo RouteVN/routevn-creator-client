@@ -113,8 +113,11 @@ export const handlePlatformEditDialogClose = (deps) => {
 const createPlatformDetailsPatch = ({ platform, values, iconFileId }) => {
   const patch = {
     applicationName: values.applicationName.trim(),
-    iconFileId,
   };
+
+  if (platform !== "web") {
+    patch.iconFileId = iconFileId;
+  }
 
   patch.applicationIdentifier = values.applicationIdentifier.trim();
 

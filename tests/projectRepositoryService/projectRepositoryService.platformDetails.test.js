@@ -132,7 +132,6 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toEqual({
       applicationName: "Project One",
       applicationIdentifier: "",
-      iconFileId: "project-icon-1",
     });
     await expect(
       harness.service.getCurrentPlatformDetailsDefaults("macos"),
@@ -148,7 +147,6 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toEqual({
       applicationName: "Web Release",
       applicationIdentifier: "",
-      iconFileId: "project-icon-1",
     });
     await expect(
       harness.service.createCurrentPlatformDetails("windows"),
@@ -182,8 +180,8 @@ describe("projectRepositoryService platform details", () => {
 
     expect(harness.getPlatformDetails("web")).toMatchObject({
       applicationName: "Web Release",
-      iconFileId: "project-icon-1",
     });
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
     expect(harness.getPlatformDetails("windows")).toMatchObject({
       applicationName: "Project One",
       iconFileId: "project-icon-1",
@@ -217,13 +215,12 @@ describe("projectRepositoryService platform details", () => {
       harness.service.getCurrentPlatformDetails("web"),
     ).resolves.toMatchObject({
       applicationName: "Web Project",
-      iconFileId: "web-icon-1",
     });
     expect(harness.getPlatformDetails("web")).toMatchObject({
       applicationName: "Web Project",
       applicationIdentifier: "namespace-1",
-      iconFileId: "web-icon-1",
     });
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
     expect(harness.getPlatformDetails("web")).not.toHaveProperty("shortName");
     expect(harness.getPlatformDetails("web")).not.toHaveProperty("description");
     expect(harness.getPlatformDetails("web")).not.toHaveProperty(
@@ -267,13 +264,16 @@ describe("projectRepositoryService platform details", () => {
     expect(harness.getPlatformDetails("web")).not.toHaveProperty(
       "backgroundColorId",
     );
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
 
     await harness.service.updateCurrentPlatformDetails("web", {
       applicationIdentifier: "com.example.web-project-two",
+      iconFileId: "ignored-web-icon",
     });
     expect(harness.getPlatformDetails("web")).toMatchObject({
       applicationIdentifier: "com.example.web-project-two",
     });
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
   });
 
   it("preserves and updates the editable macOS application identifier", async () => {
@@ -310,7 +310,7 @@ describe("projectRepositoryService platform details", () => {
     });
   });
 
-  it("fills empty platform icons from the next project icon upload only", async () => {
+  it("fills empty native platform icons from the next project icon upload only", async () => {
     const harness = createHarness({
       projectInfo: {
         id: "project-1",
@@ -332,7 +332,7 @@ describe("projectRepositoryService platform details", () => {
     await harness.service.updateCurrentProjectInfo({
       iconFileId: "project-icon-1",
     });
-    expect(harness.getPlatformDetails("web").iconFileId).toBe("project-icon-1");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
     expect(harness.getPlatformDetails("windows").iconFileId).toBe(
       "project-icon-1",
     );
@@ -351,7 +351,7 @@ describe("projectRepositoryService platform details", () => {
     });
 
     expect(harness.getProjectInfo().iconFileId).toBe("project-icon-2");
-    expect(harness.getPlatformDetails("web").iconFileId).toBe("project-icon-1");
+    expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
     expect(harness.getPlatformDetails("windows").iconFileId).toBe(
       "windows-icon-1",
     );

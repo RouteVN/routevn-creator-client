@@ -8,8 +8,13 @@ const createPlatformApplicationInfo = (platform) => {
   const applicationInfo = {
     applicationName: "",
     applicationIdentifier: "",
-    iconFileId: undefined,
   };
+
+  // TODO: Add a Web-specific icon back when Web export no longer uses the
+  // Project Info icon.
+  if (platform !== "web") {
+    applicationInfo.iconFileId = undefined;
+  }
 
   if (platform === "windows") {
     applicationInfo.publisher = "";
@@ -83,12 +88,15 @@ const buildPlatformDetailFields = (platform, applicationInfo, copy) => {
       slot: "platform-application-name",
       label: copy.applicationNameLabel,
     },
-    {
+  ];
+
+  if (platform !== "web") {
+    fields.push({
       type: "slot",
       slot: "platform-application-icon",
       label: copy.iconLabel,
-    },
-  ];
+    });
+  }
 
   fields.push({
     type: "slot",
@@ -142,13 +150,16 @@ const createPlatformEditForm = (platform, mode, copy) => {
       description: copy[`${platform}ApplicationNameDescription`],
       required: true,
     },
-    {
+  ];
+
+  if (platform !== "web") {
+    fields.push({
       type: "slot",
       slot: "platform-application-icon-edit",
       label: copy.iconLabel,
       description: copy[`${platform}IconDescription`],
-    },
-  ];
+    });
+  }
 
   fields.push({
     name: "applicationIdentifier",
@@ -314,6 +325,8 @@ export const selectViewData = ({ state, i18n }) => {
     platformEditIconCropFile: state.platformEditIconCropFile,
     isPlatformEditDialogOpen: state.isPlatformEditDialogOpen,
     isPlatformEditIconCropDialogOpen: state.isPlatformEditIconCropDialogOpen,
+    showPlatformApplicationIcon: state.selectedPlatform !== "web",
+    showPlatformEditIcon: formPlatform !== "web",
     resourceCategory: "releases",
     selectedResourceId: "platformDetails",
     showExplorerPanel: !state.isTouchMode,
@@ -337,7 +350,9 @@ export const setPlatformApplicationInfo = (
   state.platformApplicationInfo[platform] = target;
   target.applicationName = applicationInfo?.applicationName ?? "";
   target.applicationIdentifier = applicationInfo?.applicationIdentifier ?? "";
-  target.iconFileId = applicationInfo?.iconFileId ?? undefined;
+  if (platform !== "web") {
+    target.iconFileId = applicationInfo?.iconFileId ?? undefined;
+  }
 
   if (platform === "windows" || platform === "macos") {
     target.publisher = applicationInfo?.publisher ?? "";
@@ -389,7 +404,7 @@ export const closeAddPlatformMenu = ({ state }, _payload = {}) => {
   state.addPlatformMenu.items = [];
 };
 
-const setPlatformDialogDefaults = (state, applicationInfo) => {
+const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
   state.platformEditDefaultValues.applicationName =
     applicationInfo.applicationName;
   state.platformEditDefaultValues.applicationIdentifier =
@@ -399,7 +414,8 @@ const setPlatformDialogDefaults = (state, applicationInfo) => {
   state.platformEditDefaultValues.publisher = applicationInfo.publisher ?? "";
   state.platformEditDefaultValues.copyright = applicationInfo.copyright ?? "";
   state.platformEditDefaultValues.category = applicationInfo.category ?? "";
-  state.platformEditIconFileId = applicationInfo.iconFileId;
+  state.platformEditIconFileId =
+    platform === "web" ? undefined : applicationInfo.iconFileId;
 };
 
 export const openPlatformCreateDialog = (
@@ -413,7 +429,7 @@ export const openPlatformCreateDialog = (
   state.isPlatformEditDialogOpen = true;
   state.platformDialogMode = "create";
   state.platformDialogPlatform = platform;
-  setPlatformDialogDefaults(state, applicationInfo);
+  setPlatformDialogDefaults(state, platform, applicationInfo);
 };
 
 export const openPlatformEditDialog = ({ state }, _payload = {}) => {
@@ -421,7 +437,7 @@ export const openPlatformEditDialog = ({ state }, _payload = {}) => {
   state.isPlatformEditDialogOpen = true;
   state.platformDialogMode = "edit";
   state.platformDialogPlatform = state.selectedPlatform;
-  setPlatformDialogDefaults(state, applicationInfo);
+  setPlatformDialogDefaults(state, state.selectedPlatform, applicationInfo);
 };
 
 export const closePlatformEditDialog = ({ state }, _payload = {}) => {
