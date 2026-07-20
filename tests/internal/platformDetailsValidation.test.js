@@ -17,6 +17,7 @@ describe("platform details validation", () => {
         platform: "web",
         applicationInfo: {
           applicationName: "Project One",
+          applicationIdentifier: "namespace-1",
           themeColorId: "color-missing",
           backgroundColorId: "",
         },
@@ -71,9 +72,24 @@ describe("platform details validation", () => {
     expect(
       validatePlatformDetails({
         platform: "web",
-        applicationInfo: { applicationName: "Project One" },
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "namespace-1",
+        },
       }),
     ).toEqual({ valid: true });
+  });
+
+  it("requires a Web application identifier", () => {
+    expect(
+      validatePlatformDetails({
+        platform: "web",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "",
+        },
+      }),
+    ).toEqual({ valid: false, code: "web-identifier-required" });
   });
 
   it("requires a valid macOS identifier and validates an optional category", () => {

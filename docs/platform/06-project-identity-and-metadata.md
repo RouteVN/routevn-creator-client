@@ -15,8 +15,9 @@ There are four separate concepts that are easy to confuse:
 3. browser-hosted bundle save namespace
 4. native player application identifier
 
-For new projects, the first and third come from `projectInfo` in the
-project-specific DB. The fourth is owned by the native player package.
+For new projects, the first comes from `projectInfo` in the project-specific
+DB. The third is owned by Web Platform Details and initially seeded from
+`projectInfo.namespace`. The fourth is owned by the native player package.
 
 ## Project Metadata
 
@@ -37,8 +38,8 @@ Important details:
 
 - this metadata is not owned by repository state
 - `projectInfo.id` is the canonical project/folder id for new projects
-- `projectInfo.namespace` is the canonical browser-hosted bundle save namespace
-  for new projects
+- `projectInfo.namespace` seeds the Web application identifier and backfills
+  older Web platform records that do not have one
 - `projectInfo.nativeApplicationIdentifier` is retained as app-owned project
   identity metadata; Platform Details does not inherit it as a platform export
   default
@@ -82,8 +83,8 @@ Important details:
 
 ## Browser Bundle Runtime Namespace
 
-The exported bundled runtime now prefers the namespace written into bundle
-metadata from `projectInfo.namespace`.
+The exported bundled runtime uses the application identifier stored in
+`platformDetails.web`.
 
 Bundle metadata now carries:
 
@@ -91,9 +92,16 @@ Bundle metadata now carries:
 
 Important details:
 
+- new Web platform records default `applicationIdentifier` from
+  `projectInfo.namespace`
+- existing Web records without `applicationIdentifier` are backfilled once
+  from `projectInfo.namespace` and persisted, preserving their existing save
+  bucket
+- changing the Web application identifier intentionally selects a different
+  save bucket
 - `projectId` is not exported into the bundle
-- browser IndexedDB/save identity should come from the project-specific DB
-  namespace, not only from the browser path
+- browser IndexedDB/save identity should come from the exported Web application
+  identifier, not only from the browser path
 - the browser-path namespace remains only as a fallback for older bundles that
   do not carry bundle metadata namespace
 - the native Windows SQLite player does not use this namespace as a database
@@ -147,8 +155,10 @@ Use these rules when reasoning about identity:
 
 - for project display metadata, use `projectInfo`
 - for canonical project identity on new projects, use `projectInfo.id`
-- for browser-hosted bundle save identity on new projects, use
-  `projectInfo.namespace`
+- for browser-hosted bundle save identity, use
+  `platformDetails.web.applicationIdentifier`
+- use `projectInfo.namespace` only as the default and compatibility backfill
+  for that Web identifier
 - for native player save identity, use the stable Tauri application
   identifier
 - for repository history semantics, reason about committed repository events

@@ -6,6 +6,7 @@ const PLATFORM_IDS = ["web", "windows", "macos"];
 const createPlatformApplicationInfo = (platform) => {
   const applicationInfo = {
     applicationName: "",
+    applicationIdentifier: "",
     iconFileId: undefined,
   };
 
@@ -17,14 +18,12 @@ const createPlatformApplicationInfo = (platform) => {
   }
 
   if (platform === "windows") {
-    applicationInfo.applicationIdentifier = "";
     applicationInfo.publisher = "";
     applicationInfo.description = "";
     applicationInfo.copyright = "";
   }
 
   if (platform === "macos") {
-    applicationInfo.applicationIdentifier = "";
     applicationInfo.publisher = "";
     applicationInfo.description = "";
     applicationInfo.copyright = "";
@@ -117,16 +116,14 @@ const buildPlatformDetailFields = (
     },
   ];
 
-  if (platform !== "web") {
-    fields.push({
-      type: "text",
-      label:
-        platform === "macos"
-          ? copy.macosApplicationIdentifierLabel
-          : copy.applicationIdentifierLabel,
-      value: applicationInfo.applicationIdentifier,
-    });
-  }
+  fields.push({
+    type: "text",
+    label:
+      platform === "macos"
+        ? copy.macosApplicationIdentifierLabel
+        : copy.applicationIdentifierLabel,
+    value: applicationInfo.applicationIdentifier,
+  });
 
   if (platform === "web") {
     fields.push(
@@ -204,18 +201,16 @@ const createPlatformEditForm = (platform, mode, colorOptions, copy) => {
     },
   ];
 
-  if (platform !== "web") {
-    fields.push({
-      name: "applicationIdentifier",
-      type: "input-text",
-      label:
-        platform === "macos"
-          ? copy.macosApplicationIdentifierLabel
-          : copy.applicationIdentifierLabel,
-      description: copy[`${platform}ApplicationIdentifierDescription`],
-      required: platform === "macos",
-    });
-  }
+  fields.push({
+    name: "applicationIdentifier",
+    type: "input-text",
+    label:
+      platform === "macos"
+        ? copy.macosApplicationIdentifierLabel
+        : copy.applicationIdentifierLabel,
+    description: copy[`${platform}ApplicationIdentifierDescription`],
+    required: platform !== "windows",
+  });
 
   if (platform === "web") {
     fields.push(
@@ -441,11 +436,8 @@ export const setPlatformApplicationInfo = (
   const target = createPlatformApplicationInfo(platform);
   state.platformApplicationInfo[platform] = target;
   target.applicationName = applicationInfo?.applicationName ?? "";
+  target.applicationIdentifier = applicationInfo?.applicationIdentifier ?? "";
   target.iconFileId = applicationInfo?.iconFileId ?? undefined;
-
-  if (platform !== "web") {
-    target.applicationIdentifier = applicationInfo?.applicationIdentifier ?? "";
-  }
 
   if (platform === "web") {
     target.shortName = applicationInfo?.shortName ?? "";

@@ -47,6 +47,7 @@ describe("platformDetails.store", () => {
         platform: "web",
         applicationInfo: {
           applicationName: "Project One",
+          applicationIdentifier: "namespace-1",
           iconFileId: "project-icon-1",
           shortName: "",
           description: "",
@@ -63,6 +64,7 @@ describe("platformDetails.store", () => {
       platformDialogKey: "create-web",
       platformEditDefaultValues: {
         applicationName: "Project One",
+        applicationIdentifier: "namespace-1",
       },
       platformTabs: [],
     });
@@ -166,6 +168,7 @@ describe("platformDetails.store", () => {
         platform: "web",
         applicationInfo: {
           applicationName: "Web Project",
+          applicationIdentifier: "com.example.web-project",
           iconFileId: "web-icon-1",
           shortName: "Project",
           description: "Web description",
@@ -179,6 +182,7 @@ describe("platformDetails.store", () => {
 
     expect(state.platformEditDefaultValues).toMatchObject({
       applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project",
       shortName: "Project",
       description: "Web description",
       themeColorId: "color-theme",
@@ -191,11 +195,19 @@ describe("platformDetails.store", () => {
       "windows",
       "macos",
     ]);
-    expect(
-      viewData.platformEditForm.fields.some(
-        (field) => field.name === "applicationIdentifier",
-      ),
-    ).toBe(false);
+    expect(viewData.platformEditForm.fields).toContainEqual(
+      expect.objectContaining({
+        name: "applicationIdentifier",
+        required: true,
+        description:
+          EN_I18N.platformDetailsPage.webApplicationIdentifierDescription,
+      }),
+    );
+    expect(viewData.platformDetailFields).toContainEqual({
+      type: "text",
+      label: "Application Identifier",
+      value: "com.example.web-project",
+    });
     expect(viewData.platformEditForm.fields).toContainEqual(
       expect.objectContaining({
         name: "themeColorId",

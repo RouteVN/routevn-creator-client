@@ -131,9 +131,7 @@ const createPlatformDetailsPatch = ({ platform, values, iconFileId }) => {
     iconFileId,
   };
 
-  if (platform !== "web") {
-    patch.applicationIdentifier = values.applicationIdentifier.trim();
-  }
+  patch.applicationIdentifier = values.applicationIdentifier.trim();
 
   if (platform === "web") {
     patch.shortName = values.shortName.trim();
@@ -170,6 +168,9 @@ const getValidationMessage = (copy, code) => {
   }
   if (code === "background-color-not-found") {
     return copy.webBackgroundColorNotFound;
+  }
+  if (code === "web-identifier-required") {
+    return copy.webApplicationIdentifierRequired;
   }
   if (code === "windows-identifier-invalid") {
     return copy.windowsApplicationIdentifierInvalid;

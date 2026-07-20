@@ -28,6 +28,9 @@ export const validatePlatformDetails = ({
   }
 
   if (platform === "web") {
+    if (!applicationInfo.applicationIdentifier?.trim()) {
+      return { valid: false, code: "web-identifier-required" };
+    }
     if (!hasColor(availableColorIds, applicationInfo.themeColorId)) {
       return { valid: false, code: "theme-color-not-found" };
     }

@@ -181,12 +181,9 @@ export const createProjectRepositoryService = ({
   const createPlatformDetails = (platform, sourceInfo) => {
     const platformDetails = {
       applicationName: sourceInfo?.applicationName ?? "",
+      applicationIdentifier: sourceInfo?.applicationIdentifier ?? "",
       iconFileId: sourceInfo?.iconFileId ?? null,
     };
-
-    if (platform === "windows" || platform === "macos") {
-      platformDetails.applicationIdentifier = "";
-    }
 
     if (platform === "web") {
       platformDetails.shortName = "";
@@ -213,11 +210,6 @@ export const createProjectRepositoryService = ({
 
   const normalizePlatformDetails = (platform, platformDetails) => {
     const normalized = createPlatformDetails(platform, platformDetails);
-
-    if (platform !== "web") {
-      normalized.applicationIdentifier =
-        platformDetails?.applicationIdentifier ?? "";
-    }
 
     if (platform === "web") {
       normalized.shortName = platformDetails?.shortName ?? "";
@@ -765,6 +757,15 @@ export const createProjectRepositoryService = ({
       storedPlatformDetails,
     );
 
+    if (
+      platform === "web" &&
+      !Object.hasOwn(storedPlatformDetails, "applicationIdentifier")
+    ) {
+      const projectInfo = await readProjectInfoFromStore(store);
+      platformDetails.applicationIdentifier = projectInfo.namespace;
+      shouldPersist = true;
+    }
+
     if (shouldPersist) {
       await store.app.set(key, platformDetails);
     }
@@ -869,10 +870,14 @@ export const createProjectRepositoryService = ({
     const projectInfo = await readProjectInfoFromStore(store, {
       fallbackProjectId: projectId,
     });
-    return createPlatformDetails(platform, {
+    const sourceInfo = {
       applicationName: projectInfo.name,
       iconFileId: projectInfo.iconFileId,
-    });
+    };
+    if (platform === "web") {
+      sourceInfo.applicationIdentifier = projectInfo.namespace;
+    }
+    return createPlatformDetails(platform, sourceInfo);
   };
 
   const createPlatformDetailsByProjectId = async (
@@ -893,10 +898,14 @@ export const createProjectRepositoryService = ({
     const projectInfo = await readProjectInfoFromStore(store, {
       fallbackProjectId: projectId,
     });
-    const defaults = createPlatformDetails(platform, {
+    const sourceInfo = {
       applicationName: projectInfo.name,
       iconFileId: projectInfo.iconFileId,
-    });
+    };
+    if (platform === "web") {
+      sourceInfo.applicationIdentifier = projectInfo.namespace;
+    }
+    const defaults = createPlatformDetails(platform, sourceInfo);
     const platformDetails = mergePlatformDetails(platform, defaults, patch);
     await store.app.set(getPlatformDetailsKey(platform), platformDetails);
     return platformDetails;
