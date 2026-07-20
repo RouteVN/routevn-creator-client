@@ -331,7 +331,7 @@ versionsPage:
   actionLabel: "Action"
   actionSummaryTemplate: "Action {actionIndex} • {createdAt}"
   actionsLabel: "Actions"
-  addButton: "Add"
+  createButton: "New Version"
   bundleInProgressMessage: "Please wait while the bundle is being created..."
   bundleInProgressTitle: "Bundle in progress"
   cancelButton: "Cancel"

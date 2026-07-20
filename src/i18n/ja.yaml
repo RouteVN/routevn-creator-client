@@ -331,7 +331,7 @@ versionsPage:
   actionLabel: "アクション"
   actionSummaryTemplate: "アクション {actionIndex} • {createdAt}"
   actionsLabel: "操作"
-  addButton: "追加"
+  createButton: "新しいバージョン"
   bundleInProgressMessage: "バンドルを作成しています。しばらくお待ちください..."
   bundleInProgressTitle: "バンドル作成中"
   cancelButton: "キャンセル"

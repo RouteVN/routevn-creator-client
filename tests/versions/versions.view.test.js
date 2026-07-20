@@ -7,6 +7,14 @@ const versionsView = readFileSync(
 );
 
 describe("versions view export actions", () => {
+  it("renders a labeled create-version button", () => {
+    expect(versionsView).toContain("rtgl-button#saveVersionBtn v=pr pre=plus");
+    expect(versionsView).toContain(
+      'aria-label="${createButton}"\': ${createButton}',
+    );
+    expect(versionsView).not.toContain("rtgl-button#saveVersionBtn v=pr sq");
+  });
+
   it("shows loading before the settled empty-version state", () => {
     const loadingIndex = versionsView.indexOf("$if isVersionsLoading:");
     const emptyIndex = versionsView.indexOf("$elif versions.length == 0:");

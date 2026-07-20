@@ -331,7 +331,7 @@ versionsPage:
   actionLabel: "操作"
   actionSummaryTemplate: "操作 {actionIndex} • {createdAt}"
   actionsLabel: "操作"
-  addButton: "添加"
+  createButton: "新建版本"
   bundleInProgressMessage: "正在打包，请稍候..."
   bundleInProgressTitle: "正在打包"
   cancelButton: "取消"
