@@ -29,12 +29,13 @@ describe("versions view export actions", () => {
       "rtgl-dialog#exportConfirmationDialog ?open=${isExportConfirmationOpen}",
     );
     expect(versionsView).toContain("rvn-detail-view#exportConfirmationDetail");
-    expect(versionsView).toContain(
+    expect(versionsView).not.toContain(
       "rtgl-button#exportConfirmationCancelButton",
     );
     expect(versionsView).toContain(
       "rtgl-button#exportConfirmationConfirmButton",
     );
+    expect(versionsView).toContain("rtgl-view w=f d=h ah=e av=c g=sm");
     expect(versionsView).toContain("handler: handleExportConfirmationClose");
     expect(versionsView).toContain("handler: handleExportConfirmationConfirm");
   });
