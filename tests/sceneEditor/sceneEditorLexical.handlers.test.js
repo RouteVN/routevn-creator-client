@@ -235,12 +235,16 @@ describe("sceneEditorLexical.handlers canvas download", () => {
   it("captures the current canvas and saves it with a generic filename", async () => {
     const imageDataUrl = "data:image/png;base64,aGVsbG8=";
     const canvasRoot = {};
+    const calls = [];
     const saveFilePicker = vi.fn(async (_blob, defaultPath) => defaultPath);
     const showToast = vi.fn();
     const deps = {
       i18n: EN_I18N,
       graphicsService: {
-        extractBase64: vi.fn(async () => imageDataUrl),
+        extractBase64: vi.fn(async () => {
+          calls.push("capture");
+          return imageDataUrl;
+        }),
       },
       appService: {
         saveFilePicker,
@@ -251,10 +255,27 @@ describe("sceneEditorLexical.handlers canvas download", () => {
           getCanvasRoot: vi.fn(() => canvasRoot),
         },
       },
+      subject: {
+        dispatch: vi.fn((_action, payload) => {
+          calls.push("render");
+          payload.completion.resolve();
+        }),
+      },
     };
 
     await handleDownloadCanvasClick(deps);
 
+    expect(calls).toEqual(["render", "capture"]);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      expect.objectContaining({
+        flush: true,
+        preserveAnimationPlayback: true,
+        skipAnimations: true,
+        skipRender: true,
+        syncPresentationState: true,
+      }),
+    );
     expect(deps.graphicsService.extractBase64).toHaveBeenCalledWith("story");
     expect(deps.refs.previewCanvasHost.getCanvasRoot).toHaveBeenCalledOnce();
     expect(saveFilePicker).toHaveBeenCalledOnce();
@@ -287,6 +308,11 @@ describe("sceneEditorLexical.handlers canvas download", () => {
         previewCanvasHost: {
           getCanvasRoot: vi.fn(() => undefined),
         },
+      },
+      subject: {
+        dispatch: vi.fn((_action, payload) => {
+          payload.completion.resolve();
+        }),
       },
       store: {},
     };

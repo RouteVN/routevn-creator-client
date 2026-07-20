@@ -23,6 +23,7 @@ import {
 } from "../../internal/ui/sceneEditor/sceneEditorTiming.js";
 import {
   cloneWithDiagnostics,
+  flushSceneEditorCanvasRender,
   initializeSceneEditorPage,
   mountSceneEditorSubscriptions,
   renderSceneEditorState,
@@ -3497,10 +3498,16 @@ export const handleToggleSectionsGraphView = (deps) => {
 };
 
 export const handleDownloadCanvasClick = async (deps) => {
-  const { appService, graphicsService, refs } = deps;
+  const { appService, graphicsService, refs, subject } = deps;
   const copy = selectCopy(deps);
 
   try {
+    await flushSceneEditorCanvasRender(subject, {
+      skipRender: true,
+      syncPresentationState: true,
+      skipAnimations: true,
+      preserveAnimationPlayback: true,
+    });
     const canvasRoot = refs.previewCanvasHost?.getCanvasRoot?.();
     const imageDataUrl = await captureCanvasImage(graphicsService, canvasRoot);
     if (!imageDataUrl) {

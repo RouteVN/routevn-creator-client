@@ -3,6 +3,7 @@ import { Subject } from "rxjs";
 import createRouteEngine from "route-engine-js";
 import {
   createSceneEditorRenderQueue,
+  flushSceneEditorCanvasRender,
   mountSceneEditorSubscriptions,
   renderSceneEditorCanvas,
   renderSceneEditorState,
@@ -290,6 +291,35 @@ describe("renderSceneEditorState", () => {
     expect(renderCanvas).toHaveBeenCalledTimes(2);
   });
 
+  it("waits for an active canvas render and its latest pending render", async () => {
+    const resolvers = [];
+    const renderCanvas = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+    const queueRenderCanvas = createSceneEditorRenderQueue(renderCanvas);
+    const firstRender = queueRenderCanvas({ step: 1 });
+    const pendingRender = queueRenderCanvas({ step: 2 });
+    let pendingRenderCompleted = false;
+    void pendingRender.then(() => {
+      pendingRenderCompleted = true;
+    });
+
+    resolvers.shift()?.();
+    await Promise.resolve();
+
+    expect(renderCanvas).toHaveBeenNthCalledWith(2, { step: 2 });
+    expect(pendingRenderCompleted).toBe(false);
+
+    resolvers.shift()?.();
+    await pendingRender;
+    await firstRender;
+
+    expect(pendingRenderCompleted).toBe(true);
+  });
+
   it("supports a longer canvas debounce for typing without slowing other renders", async () => {
     vi.useFakeTimers();
     const subject = new Subject();
@@ -321,6 +351,40 @@ describe("renderSceneEditorState", () => {
       await vi.advanceTimersByTimeAsync(49);
       expect(selectIsScenePageLoading).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(1);
+      expect(selectIsScenePageLoading).toHaveBeenCalledOnce();
+    } finally {
+      unmount();
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
+  });
+
+  it("flushes a pending debounced canvas render immediately", async () => {
+    vi.useFakeTimers();
+    const subject = new Subject();
+    subject.dispatch = (action, payload) => {
+      subject.next({ action, payload });
+    };
+    const selectIsScenePageLoading = vi.fn(() => true);
+    const unmount = mountSceneEditorSubscriptions({
+      subject,
+      store: {
+        selectIsScenePageLoading,
+      },
+    });
+
+    try {
+      subject.dispatch("sceneEditor.renderCanvas", {
+        debounceMs: 100,
+        skipRender: true,
+      });
+
+      await flushSceneEditorCanvasRender(subject, {
+        skipRender: true,
+      });
+
+      expect(selectIsScenePageLoading).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(100);
       expect(selectIsScenePageLoading).toHaveBeenCalledOnce();
     } finally {
       unmount();
