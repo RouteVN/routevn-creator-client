@@ -4122,7 +4122,7 @@ dependencies = [
 
 [[package]]
 name = "routevn-creator"
-version = "1.9.4"
+version = "1.10.0"
 dependencies = [
  "discord-rich-presence",
  "log",
