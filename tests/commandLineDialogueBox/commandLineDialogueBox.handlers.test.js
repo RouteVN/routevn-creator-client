@@ -1699,7 +1699,7 @@ describe("commandLineDialogueBox.handlers", () => {
         store: createStore(state),
         dispatchEvent,
         render,
-        globalUI: {
+        appService: {
           showDropdownMenu,
         },
         i18n: EN_I18N,
@@ -1758,7 +1758,7 @@ describe("commandLineDialogueBox.handlers", () => {
     await handleCharacterSpriteMenuButtonClick(
       {
         store: createStore(state),
-        globalUI: {
+        appService: {
           showDropdownMenu,
         },
         i18n: EN_I18N,

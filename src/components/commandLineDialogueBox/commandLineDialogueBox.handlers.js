@@ -816,7 +816,7 @@ export const handleCharacterSpriteBoxClick = (deps) => {
 };
 
 const showCharacterSpriteMenu = async (deps, { x, y } = {}) => {
-  const { store, render, globalUI, i18n } = deps;
+  const { store, render, appService, i18n } = deps;
   const { characterSpriteEnabled } = store.selectDialogueBuildState();
 
   if (!characterSpriteEnabled) {
@@ -824,7 +824,7 @@ const showCharacterSpriteMenu = async (deps, { x, y } = {}) => {
   }
 
   const copy = selectCommandLineCopy(i18n);
-  const result = await globalUI.showDropdownMenu({
+  const result = await appService.showDropdownMenu({
     items: [
       {
         type: "item",
