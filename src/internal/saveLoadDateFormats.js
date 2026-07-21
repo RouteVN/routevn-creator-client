@@ -1,6 +1,11 @@
-export const DEFAULT_SAVE_LOAD_DATE_FORMAT = "DD/MM/YYYY";
+export const DEFAULT_SAVE_LOAD_DATE_FORMAT = "YYYY-MM-DD";
 
 export const SAVE_LOAD_DATE_FORMAT_PRESETS = [
+  {
+    label: "YYYY-MM-DD",
+    value: "YYYY-MM-DD",
+    suffixText: "2026-12-31",
+  },
   {
     label: "DD/MM/YYYY",
     value: "DD/MM/YYYY",
@@ -10,11 +15,6 @@ export const SAVE_LOAD_DATE_FORMAT_PRESETS = [
     label: "MM/DD/YYYY",
     value: "MM/DD/YYYY",
     suffixText: "12/31/2026",
-  },
-  {
-    label: "YYYY-MM-DD",
-    value: "YYYY-MM-DD",
-    suffixText: "2026-12-31",
   },
   {
     label: "DD MMM YYYY",

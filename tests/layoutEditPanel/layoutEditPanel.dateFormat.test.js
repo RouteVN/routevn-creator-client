@@ -56,8 +56,13 @@ describe("layoutEditPanel save/load date format", () => {
         type: "select",
         label: "Format",
         name: "dateFormat",
-        value: "DD/MM/YYYY",
+        value: "YYYY-MM-DD",
         options: [
+          {
+            label: "YYYY-MM-DD",
+            value: "YYYY-MM-DD",
+            suffixText: "2026-12-31",
+          },
           {
             label: "DD/MM/YYYY",
             value: "DD/MM/YYYY",
@@ -67,11 +72,6 @@ describe("layoutEditPanel save/load date format", () => {
             label: "MM/DD/YYYY",
             value: "MM/DD/YYYY",
             suffixText: "12/31/2026",
-          },
-          {
-            label: "YYYY-MM-DD",
-            value: "YYYY-MM-DD",
-            suffixText: "2026-12-31",
           },
           {
             label: "DD MMM YYYY",

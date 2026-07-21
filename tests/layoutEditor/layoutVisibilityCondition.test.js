@@ -518,7 +518,7 @@ describe("layout visibility conditions", () => {
       expect.objectContaining({
         id: "slot-date-instance-${i}",
         type: "text",
-        content: '${formatDate(item.savedAt, "DD/MM/YYYY")}',
+        content: '${formatDate(item.savedAt, "YYYY-MM-DD")}',
       }),
     ]);
   });
@@ -560,7 +560,7 @@ describe("layout visibility conditions", () => {
         content: '${formatDate(item.savedAt, "YYYY年MM月DD日")}',
       }),
       expect.objectContaining({
-        content: '${formatDate(item.savedAt, "DD/MM/YYYY")}',
+        content: '${formatDate(item.savedAt, "YYYY-MM-DD")}',
       }),
     ]);
   });
@@ -818,7 +818,7 @@ describe("layout visibility conditions", () => {
         );
 
         expect(rawDateElement).toMatchObject({
-          dateFormat: "DD/MM/YYYY",
+          dateFormat: "YYYY-MM-DD",
         });
         expect(slotContainer).toMatchObject({
           type: "container",
@@ -846,7 +846,7 @@ describe("layout visibility conditions", () => {
               element.id?.startsWith("yLNcQmHkiBmD"),
           ),
         ).toMatchObject({
-          content: '${formatDate(item.savedAt, "DD/MM/YYYY")}',
+          content: '${formatDate(item.savedAt, "YYYY-MM-DD")}',
         });
         if (expectedConfig.rightClick) {
           expect(slotContainer?.rightClick).toEqual(expectedConfig.rightClick);

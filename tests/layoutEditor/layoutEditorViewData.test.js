@@ -11,7 +11,7 @@ describe("layoutEditorViewData", () => {
       createLayoutEditorItemTemplate("text-save-load-slot-date"),
     ).toMatchObject({
       type: "text-ref-save-load-slot-date",
-      dateFormat: "DD/MM/YYYY",
+      dateFormat: "YYYY-MM-DD",
     });
   });
 
