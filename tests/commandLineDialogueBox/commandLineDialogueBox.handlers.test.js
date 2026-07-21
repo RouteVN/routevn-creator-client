@@ -6,6 +6,7 @@ import {
   handleButtonSelectClick,
   handleCharacterItemClick,
   handleCharacterSpriteBoxContextMenu,
+  handleCharacterSpriteMenuButtonClick,
   handleFormChange,
   handlePersistSpriteChange,
   handleSpeakerSpriteTooltipMouseEnter,
@@ -205,6 +206,11 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(view).toContain("handler: handleSpeakerSpriteTooltipMouseLeave");
     expect(view).toContain("rtgl-tooltip ?open=${speakerSpriteTooltip.open}");
     expect(view).toContain("handler: handleCharacterSpriteBoxContextMenu");
+    expect(view).toContain(
+      "rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis",
+    );
+    expect(view).toContain('aria-haspopup=menu\': null');
+    expect(view).toContain("handler: handleCharacterSpriteMenuButtonClick");
     expect(view).not.toContain("clearCharacterSpriteButton");
     expect(view).toContain("rtgl-segmented-control#persistSprite");
     expect(
@@ -379,6 +385,46 @@ describe("commandLineDialogueBox.handlers", () => {
 
     expect(state.characterSpriteEnabled).toBe(true);
     expect(state.persistSprite).toBe(true);
+  });
+
+  it("inherits legacy sprite persistence from persistCharacter", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const deps = {
+      props: {
+        layouts,
+        characters,
+        dialogue: {
+          mode: "adv",
+          ui: {
+            resourceId: "layout-adv",
+          },
+          characterId: "character-1",
+          character: {
+            sprite: {
+              items: [{ id: "body", resourceId: "sprite-body" }],
+            },
+          },
+          persistCharacter: true,
+        },
+      },
+      store: createStore(state),
+    };
+
+    handleBeforeMount(deps);
+
+    expect(state.characterSpriteEnabled).toBe(true);
+    expect(state.persistSprite).toBe(true);
+
+    handleSubmitClick({
+      ...deps,
+      dispatchEvent,
+    });
+
+    expect(dispatchEvent.mock.calls[0][0].detail.dialogue).toMatchObject({
+      persistCharacter: true,
+      persistSprite: true,
+    });
   });
 
   it("hydrates dialogue text speed overrides from props into the form state", () => {
@@ -1692,6 +1738,54 @@ describe("commandLineDialogueBox.handlers", () => {
       dispatchEvent.mock.calls[0][0].detail.presentationState.dialogue
         .character,
     ).toBeUndefined();
+  });
+
+  it("opens the sprite removal menu from a keyboard-accessible button", async () => {
+    const state = createInitialState();
+    const showDropdownMenu = vi.fn().mockResolvedValue(undefined);
+    const stopPropagation = vi.fn();
+
+    setSpriteCharacterId({ state }, { characterId: "character-1" });
+    setSelectedSpriteIds(
+      { state },
+      {
+        spriteIdsByGroupId: {
+          body: "sprite-body",
+        },
+      },
+    );
+
+    await handleCharacterSpriteMenuButtonClick(
+      {
+        store: createStore(state),
+        globalUI: {
+          showDropdownMenu,
+        },
+        i18n: EN_I18N,
+      },
+      {
+        _event: {
+          stopPropagation,
+          currentTarget: {
+            getBoundingClientRect: () => ({ left: 40, bottom: 80 }),
+          },
+        },
+      },
+    );
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: [
+        {
+          type: "item",
+          label: "Remove",
+          key: "remove",
+        },
+      ],
+      x: 40,
+      y: 80,
+      place: "bs",
+    });
   });
 
   it("submits persistCharacter for custom naming without a selected character", () => {

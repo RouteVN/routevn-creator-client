@@ -618,7 +618,9 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
     persistCharacter: hasCharacter && dialogue?.persistCharacter === true,
   });
   store.setPersistSprite({
-    persistSprite: dialogue?.persistSprite === true,
+    persistSprite: Object.hasOwn(dialogue, "persistSprite")
+      ? dialogue.persistSprite === true
+      : !!characterSprite && dialogue?.persistCharacter === true,
   });
   store.setRemovePersistedSprite({
     removePersistedSprite:
@@ -813,13 +815,9 @@ export const handleCharacterSpriteBoxClick = (deps) => {
   render();
 };
 
-export const handleCharacterSpriteBoxContextMenu = async (deps, payload) => {
+const showCharacterSpriteMenu = async (deps, { x, y } = {}) => {
   const { store, render, globalUI, i18n } = deps;
-  const { _event: event } = payload;
   const { characterSpriteEnabled } = store.selectDialogueBuildState();
-
-  event.preventDefault();
-  event.stopPropagation();
 
   if (!characterSpriteEnabled) {
     return;
@@ -834,8 +832,8 @@ export const handleCharacterSpriteBoxContextMenu = async (deps, payload) => {
         key: "remove",
       },
     ],
-    x: event.clientX,
-    y: event.clientY,
+    x,
+    y,
     place: "bs",
   });
 
@@ -846,6 +844,30 @@ export const handleCharacterSpriteBoxContextMenu = async (deps, payload) => {
   store.clearCharacterSprite();
   render();
   dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleCharacterSpriteBoxContextMenu = async (deps, payload) => {
+  const { _event: event } = payload;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  await showCharacterSpriteMenu(deps, {
+    x: event.clientX,
+    y: event.clientY,
+  });
+};
+
+export const handleCharacterSpriteMenuButtonClick = async (deps, payload) => {
+  const { _event: event } = payload;
+  const rect = event.currentTarget.getBoundingClientRect();
+
+  event.stopPropagation();
+
+  await showCharacterSpriteMenu(deps, {
+    x: rect.left,
+    y: rect.bottom,
+  });
 };
 
 export const handleSpeakerSpriteTooltipMouseEnter = (deps, payload) => {

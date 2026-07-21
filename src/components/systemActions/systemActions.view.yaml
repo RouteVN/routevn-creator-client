@@ -138,7 +138,7 @@ template:
                       - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: ${preview.resetStoryAtSection.label}
               - $if preview.dialogue:
-                  - rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer style="min-height: 36px;"':
                       - rtgl-svg svg=dialogue wh=24: null
                       - rtgl-view d=h av=c g=xs wrap:
                           - rtgl-text s=sm: ${preview.dialogue.name}

@@ -8,6 +8,7 @@ import {
   setCustomCharacterName,
   selectViewData,
   setPersistCharacter,
+  setPersistSprite,
   setRemovePersistedSprite,
   setSelectedSpriteIds,
   setSpriteCharacterId,
@@ -465,6 +466,32 @@ describe("commandLineDialogueBox.store", () => {
         { value: false, label: "No" },
       ],
     });
+  });
+
+  it("preserves an explicit persistence choice when sprite layers change", () => {
+    const state = createInitialState();
+
+    setSpriteCharacterId({ state }, { characterId: "character-1" });
+    setSelectedSpriteIds(
+      { state },
+      {
+        spriteIdsByGroupId: {
+          body: "sprite-body",
+        },
+      },
+    );
+    setPersistSprite({ state }, { persistSprite: false });
+    setSelectedSpriteIds(
+      { state },
+      {
+        spriteIdsByGroupId: {
+          body: "sprite-body-updated",
+        },
+      },
+    );
+
+    expect(state.persistSprite).toBe(false);
+    expect(state.defaultValues.persistSprite).toBe(false);
   });
 
   it("exposes one visual character sprite picker with transform and sprite data", () => {

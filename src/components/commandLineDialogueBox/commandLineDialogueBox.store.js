@@ -593,6 +593,7 @@ export const setSelectedSpriteIds = (
   { state },
   { spriteIdsByGroupId } = {},
 ) => {
+  const hadCharacterSprite = state.characterSpriteEnabled;
   state.selectedSpriteIds = {};
 
   for (const [spriteGroupId, spriteId] of Object.entries(
@@ -609,8 +610,10 @@ export const setSelectedSpriteIds = (
   state.defaultValues.characterSpriteEnabled = state.characterSpriteEnabled;
 
   if (state.characterSpriteEnabled) {
-    state.persistSprite = true;
-    state.defaultValues.persistSprite = true;
+    if (!hadCharacterSprite) {
+      state.persistSprite = true;
+      state.defaultValues.persistSprite = true;
+    }
     state.removePersistedSprite = false;
     state.defaultValues.removePersistedSprite = false;
   }
@@ -1212,6 +1215,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     transformLabel: localizeCommandLineText("Transform", copy),
     animationLabel: localizeCommandLineText("Animation", copy),
     persistSpriteLabel: localizeCommandLineText("Persist Sprite", copy),
+    characterSpriteMenuLabel: localizeCommandLineText("Remove", copy),
     spriteGroupsLabel: localizeCommandLineText("Sprite Groups", copy),
     speakerSpriteLabel: localizeCommandLineText(SPEAKER_SPRITE_LABEL, copy),
     speakerSpriteTooltip: state.speakerSpriteTooltip,

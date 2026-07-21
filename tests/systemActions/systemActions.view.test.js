@@ -53,7 +53,7 @@ describe("systemActions view", () => {
       "fileId=${visualData.spritesheetFileId}",
     );
     expect(systemActionsView).toContain(
-      "rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer",
+      'rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer style="min-height: 36px;"',
     );
     expect(systemActionsView).toContain(
       "rvn-stacked-file-images :layers=${preview.dialogue.spritePreviewLayers} w=32 h=32",

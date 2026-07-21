@@ -13,6 +13,10 @@ refs:
         handler: handleCharacterSpriteBoxClick
       contextmenu:
         handler: handleCharacterSpriteBoxContextMenu
+  characterSpriteMenuButton:
+    eventListeners:
+      click:
+        handler: handleCharacterSpriteMenuButtonClick
   speakerSpriteTooltip:
     eventListeners:
       mouseenter:
@@ -122,7 +126,10 @@ template:
                                       - rvn-stacked-file-images :layers=${selectedSpriteCharacter.spritePreviewLayers} w=200 h=120 br=sm lazy: null
                                     $else:
                                       - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg: null
-                                  - rtgl-text s=xs c=mu-fg ellipsis w=200: ${selectedSpriteCharacter.displayName}
+                                  - rtgl-view d=h av=c g=xs w=200:
+                                      - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${selectedSpriteCharacter.displayName}
+                                      - $if characterSpriteEnabled:
+                                          - 'rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis title="${characterSpriteMenuLabel}" aria-label="${characterSpriteMenuLabel}" aria-haspopup=menu': null
                           - $if hasSpriteCharacter:
                               - rtgl-view w=1fg g=sm:
                                   - rtgl-text s=sm c=mu-fg: ${transformLabel}

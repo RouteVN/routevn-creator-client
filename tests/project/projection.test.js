@@ -760,12 +760,21 @@ describe("constructProjectData", () => {
 
     const renderState = selectRouteEngineRenderState(projectData);
     expect(renderState.audio).toContainEqual({
-      id: "voice-scene-1-voice-1",
-      type: "sound",
-      src: "file-voice-1",
+      id: "channel:voice",
+      type: "audio-channel",
       volume: 50,
-      loop: false,
-      startDelayMs: null,
+      muted: false,
+      pan: 0,
+      children: [
+        {
+          id: "voice:scene-1:default",
+          type: "sound",
+          src: "file-voice-1",
+          volume: 100,
+          loop: false,
+          startDelayMs: 0,
+        },
+      ],
     });
   });
 
