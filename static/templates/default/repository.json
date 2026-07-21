@@ -934,14 +934,20 @@
         "type": "font",
         "name": "Noto Sans SC 400",
         "fontFamily": "Noto Sans SC 400",
-        "fileId": "Rp37wKfpY5os"
+        "fileId": "Rp37wKfpY5os",
+        "minWeight": 400,
+        "defaultWeight": 400,
+        "maxWeight": 400
       },
       "VWNPTSU9Rbn9": {
         "id": "VWNPTSU9Rbn9",
         "type": "font",
         "name": "Noto Sans SC 600",
         "fontFamily": "Noto Sans SC 600",
-        "fileId": "Jh8TM82HqieT"
+        "fileId": "Jh8TM82HqieT",
+        "minWeight": 600,
+        "defaultWeight": 600,
+        "maxWeight": 600
       }
     },
     "tree": [
@@ -1109,7 +1115,7 @@
         "id": "D6GseHxLs9fE",
         "type": "textStyle",
         "name": "Default",
-        "fontId": "VWNPTSU9Rbn9",
+        "fontId": ["VWNPTSU9Rbn9"],
         "colorId": "iQTpkxVy3Yjo",
         "strokeColorId": "VH2N5yPHTbaW",
         "strokeWidth": 4,
@@ -1122,7 +1128,7 @@
         "id": "4RBLmu6eMk58",
         "type": "textStyle",
         "name": "Dialogue Character Name",
-        "fontId": "7m7oC7i8JTEE",
+        "fontId": ["7m7oC7i8JTEE"],
         "colorId": "iQTpkxVy3Yjo",
         "strokeColorId": "VH2N5yPHTbaW",
         "strokeWidth": 4,
@@ -1135,7 +1141,7 @@
         "id": "5rwEfyx2GBEi",
         "type": "textStyle",
         "name": "Dialogue Content",
-        "fontId": "7m7oC7i8JTEE",
+        "fontId": ["7m7oC7i8JTEE"],
         "colorId": "iQTpkxVy3Yjo",
         "strokeColorId": "VH2N5yPHTbaW",
         "strokeWidth": 4,
@@ -1148,7 +1154,7 @@
         "id": "ddm5XZWo4Rd7",
         "type": "textStyle",
         "name": "Default Hover Yellow",
-        "fontId": "7m7oC7i8JTEE",
+        "fontId": ["7m7oC7i8JTEE"],
         "colorId": "2mssudbGwHNF",
         "strokeColorId": "VH2N5yPHTbaW",
         "strokeWidth": 4,
@@ -1165,7 +1171,7 @@
         "lineHeight": 1.5,
         "colorId": "iQTpkxVy3Yjo",
         "strokeColorId": "VH2N5yPHTbaW",
-        "fontId": "VWNPTSU9Rbn9",
+        "fontId": ["VWNPTSU9Rbn9"],
         "fontWeight": "600",
         "previewText": "Menu Item",
         "strokeWidth": 4
@@ -1178,7 +1184,7 @@
         "lineHeight": 1.5,
         "colorId": "2mssudbGwHNF",
         "strokeColorId": "VH2N5yPHTbaW",
-        "fontId": "VWNPTSU9Rbn9",
+        "fontId": ["VWNPTSU9Rbn9"],
         "fontWeight": "600",
         "previewText": "",
         "strokeWidth": 4
@@ -1191,7 +1197,7 @@
         "lineHeight": 1.5,
         "colorId": "iQTpkxVy3Yjo",
         "strokeColorId": "VH2N5yPHTbaW",
-        "fontId": "7m7oC7i8JTEE",
+        "fontId": ["7m7oC7i8JTEE"],
         "fontWeight": "400",
         "previewText": "Title",
         "strokeWidth": 4
@@ -1204,7 +1210,7 @@
         "lineHeight": 1.5,
         "colorId": "Szm67bRaSseD",
         "strokeColorId": "VH2N5yPHTbaW",
-        "fontId": "VWNPTSU9Rbn9",
+        "fontId": ["VWNPTSU9Rbn9"],
         "fontWeight": "600",
         "previewText": "",
         "strokeWidth": 4

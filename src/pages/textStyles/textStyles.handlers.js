@@ -40,6 +40,7 @@ import {
   isFontWeightSupported,
   isStrictFontMimeType,
 } from "../../internal/fontCapabilities.js";
+import { toPrimaryFontId } from "../../internal/fontIds.js";
 
 const selectCopy = (deps = {}) => selectTextStylesPageCopy(deps.i18n);
 
@@ -90,6 +91,21 @@ const loadFontCapabilities = async (deps, { fontId } = {}) => {
     return undefined;
   }
 
+  if (
+    font.minWeight !== undefined &&
+    font.defaultWeight !== undefined &&
+    font.maxWeight !== undefined
+  ) {
+    const capabilities = {
+      kind: font.minWeight === font.maxWeight ? "static" : "variable",
+      minWeight: font.minWeight,
+      defaultWeight: font.defaultWeight,
+      maxWeight: font.maxWeight,
+    };
+    store.setFontCapabilities({ fontId, capabilities });
+    return capabilities;
+  }
+
   const mimeType = normalizeFontFileType({
     fileType: font.fileType,
     fileName: font.name,
@@ -138,7 +154,7 @@ const canPreserveExistingFontWeight = (store, { fontId, fontWeight } = {}) => {
 
   const editingItem = store.selectItemById(editingItemId);
   return (
-    editingItem?.fontId === fontId &&
+    toPrimaryFontId(editingItem?.fontId) === fontId &&
     String(editingItem.fontWeight) === String(fontWeight)
   );
 };
@@ -370,7 +386,9 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     store.toggleDialog();
   }
   render();
-  void loadFontCapabilities(deps, { fontId: item.fontId }).then(() => {
+  void loadFontCapabilities(deps, {
+    fontId: toPrimaryFontId(item.fontId),
+  }).then(() => {
     render();
   });
 };
@@ -432,7 +450,7 @@ const buildTextStyleData = ({
     fontSize: Number(fontSize ?? 16),
     lineHeight: Number(lineHeight ?? 1.5),
     colorId: fontColor,
-    fontId,
+    fontId: [fontId],
     fontWeight: String(fontWeight ?? "400"),
     previewText: previewText ?? "",
     strokeWidth: hasStrokeColor ? Number(strokeWidth ?? 0) : 0,

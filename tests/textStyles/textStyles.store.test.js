@@ -145,6 +145,24 @@ describe("textStyles.store", () => {
     expect(fieldNames).not.toContain("fontStyle");
   });
 
+  it("prefills the single font selector from a font id array", () => {
+    const state = createInitialState();
+    const item = {
+      id: "style-1",
+      type: "textStyle",
+      name: "Dialogue",
+      fontId: ["font-1"],
+      colorId: "color-1",
+      fontSize: 24,
+      lineHeight: 1.5,
+      fontWeight: "400",
+    };
+
+    setFormValuesFromItem({ state }, { item });
+
+    expect(state.currentFormValues.fontId).toBe("font-1");
+  });
+
   it("shows outline thickness only while an outline color is selected", () => {
     const state = createInitialState();
     const selectFieldNames = () =>
@@ -240,7 +258,7 @@ describe("textStyles.store", () => {
       id: "style-1",
       type: "textStyle",
       name: "Legacy Bold",
-      fontId: "font-1",
+      fontId: ["font-1"],
       colorId: "color-1",
       fontSize: 24,
       lineHeight: 1.5,

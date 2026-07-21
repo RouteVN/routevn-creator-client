@@ -19,6 +19,7 @@ import {
 import { generateId } from "../id.js";
 import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
 import { normalizeSaveLoadDateFormat } from "../saveLoadDateFormats.js";
+import { toFontIds } from "../fontIds.js";
 
 const TEXT_NODE_TYPES = new Set([
   "text",
@@ -467,12 +468,13 @@ const resolveTextStyleId = (nodeTextStyleId, textStylesData = {}) => {
 };
 
 const normalizeTextStyleResource = (textStyleData) => {
-  if (!textStyleData?.fontId || !textStyleData?.colorId) {
+  const fontIds = toFontIds(textStyleData?.fontId);
+  if (fontIds.length === 0 || !textStyleData?.colorId) {
     return undefined;
   }
 
   const textStyle = {
-    fontId: textStyleData.fontId,
+    fontId: fontIds,
     colorId: textStyleData.colorId,
     fontSize: toFiniteNumber(
       textStyleData.fontSize,
@@ -2125,6 +2127,12 @@ export const extractFileIdsFromRenderState = (obj) => {
               ? texture.replace("file:", "")
               : texture;
             addFileReference(fileId, value.fileType || "image/png");
+          });
+        }
+
+        if (key === "fontFamily" && Array.isArray(value[key])) {
+          value[key].forEach((fontFileId) => {
+            addFileReference(fontFileId, value.fileType || "font/ttf");
           });
         }
 

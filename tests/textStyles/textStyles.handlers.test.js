@@ -151,7 +151,7 @@ describe("textStyles.handlers", () => {
     );
 
     expect(createTextStyle.mock.calls[0][0].data).toMatchObject({
-      fontId: "font-1",
+      fontId: ["font-1"],
       shadow: {
         colorId: "color-shadow",
         alpha: 0.75,
@@ -203,7 +203,7 @@ describe("textStyles.handlers", () => {
     });
     deps.store.selectItemById.mockReturnValue({
       id: "text-style-1",
-      fontId: "font-1",
+      fontId: ["font-1"],
       fontWeight: "700",
     });
 
@@ -215,7 +215,10 @@ describe("textStyles.handlers", () => {
     expect(updateTextStyle).toHaveBeenCalledWith(
       expect.objectContaining({
         textStyleId: "text-style-1",
-        data: expect.objectContaining({ fontWeight: "700" }),
+        data: expect.objectContaining({
+          fontId: ["font-1"],
+          fontWeight: "700",
+        }),
       }),
     );
   });
@@ -294,6 +297,61 @@ describe("textStyles.handlers", () => {
       },
     });
     expect(revoke).toHaveBeenCalledOnce();
+  });
+
+  it("uses stored font weight capabilities without reading the font file", async () => {
+    const currentFormValues = {
+      fontId: "font-600",
+      fontWeight: "400",
+    };
+    const deps = {
+      store: {
+        updateFormValues: vi.fn(),
+        selectCurrentFormValues: vi.fn(() => currentFormValues),
+        selectFontCapabilities: vi.fn(),
+        selectFontById: vi.fn(() => ({
+          id: "font-600",
+          type: "font",
+          fileId: "file-600",
+          fileType: "font/ttf",
+          minWeight: 600,
+          defaultWeight: 600,
+          maxWeight: 600,
+        })),
+        setFontCapabilities: vi.fn(),
+        selectDialogState: vi.fn(() => ({ editMode: false })),
+      },
+      projectService: {
+        getFileContent: vi.fn(),
+      },
+      refs: {
+        textStyleForm: {
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    await handleDialogFormChange(deps, {
+      _event: {
+        detail: {
+          name: "fontId",
+          value: "font-600",
+          values: currentFormValues,
+        },
+      },
+    });
+
+    expect(deps.store.setFontCapabilities).toHaveBeenCalledWith({
+      fontId: "font-600",
+      capabilities: {
+        kind: "static",
+        minWeight: 600,
+        defaultWeight: 600,
+        maxWeight: 600,
+      },
+    });
+    expect(deps.projectService.getFileContent).not.toHaveBeenCalled();
   });
 
   it("submits the desktop form through the fixed action button", async () => {

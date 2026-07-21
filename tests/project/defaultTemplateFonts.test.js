@@ -37,6 +37,11 @@ describe("default template fonts", () => {
       );
 
       expect(font.fileId).toBe(fileId);
+      expect(font).toMatchObject({
+        minWeight: weight,
+        defaultWeight: weight,
+        maxWeight: weight,
+      });
       expect(file.mimeType).toBe("font/ttf");
       expect(file.size).toBe(bytes.byteLength);
       expect(file.sha256).toBe(
@@ -60,7 +65,12 @@ describe("default template fonts", () => {
       textStyles
         .filter((item) => item.fontWeight === "600")
         .map((item) => item.fontId),
-    ).toEqual(["VWNPTSU9Rbn9", "VWNPTSU9Rbn9", "VWNPTSU9Rbn9", "VWNPTSU9Rbn9"]);
+    ).toEqual([
+      ["VWNPTSU9Rbn9"],
+      ["VWNPTSU9Rbn9"],
+      ["VWNPTSU9Rbn9"],
+      ["VWNPTSU9Rbn9"],
+    ]);
     expect(textStyles.some((item) => item.fontWeight === "700")).toBe(false);
   });
 });

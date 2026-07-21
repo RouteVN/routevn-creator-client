@@ -23,7 +23,7 @@
     "@rettangoli/fe": "1.2.3",
     "@rettangoli/ui": "1.13.1",
     "@rettangoli/vt": "1.0.5",
-    "@routevn/creator-model": "1.10.3",
+    "@routevn/creator-model": "1.10.4",
     "@tauri-apps/api": "2.11.0",
     "@tauri-apps/plugin-dialog": "2.4.2",
     "@tauri-apps/plugin-fs": "2.5.1",

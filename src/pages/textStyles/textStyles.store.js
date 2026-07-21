@@ -37,6 +37,7 @@ import {
   isFontWeightSupported,
   NEW_FONT_FILE_TYPES,
 } from "../../internal/fontCapabilities.js";
+import { toFontIds, toPrimaryFontId } from "../../internal/fontIds.js";
 
 export const TEXT_STYLE_TAG_SCOPE_KEY = "textStyles";
 
@@ -636,7 +637,7 @@ export const setFormValuesFromItem = ({ state }, { item } = {}) => {
     fontColor: item.colorId ?? "",
     strokeColor: item.strokeColorId ?? "",
     shadowColor: item.shadow?.colorId ?? "",
-    fontId: item.fontId ?? "",
+    fontId: toPrimaryFontId(item.fontId),
     fontSize: item.fontSize,
     lineHeight: item.lineHeight,
     fontWeight: item.fontWeight,
@@ -834,14 +835,20 @@ export const selectViewData = ({ state, i18n }) => {
 
   // Helper function to get font data from ID
   const getFontData = (fontId) => {
-    if (!fontId) return { fontFamily: undefined, fileId: undefined };
+    const fontIds = toFontIds(fontId);
+    if (fontIds.length === 0) {
+      return { fontFamilies: [], fileIds: [] };
+    }
     const fontItems = toFlatItems(state.fontsData);
-    const font = fontItems.find(
-      (item) => item.type === "font" && item.id === fontId,
+    const fonts = fontIds.map((id) =>
+      fontItems.find((item) => item.type === "font" && item.id === id),
     );
-    return font
-      ? { fontFamily: font.fontFamily, fileId: font.fileId }
-      : { fontFamily: fontId, fileId: undefined };
+    return {
+      fontFamilies: fonts.map((font, index) =>
+        font ? font.fontFamily : fontIds[index],
+      ),
+      fileIds: fonts.map((font) => font?.fileId).filter(Boolean),
+    };
   };
 
   // Add text style preview data. Collapse state is owned by the center view.
@@ -850,8 +857,8 @@ export const selectViewData = ({ state, i18n }) => {
       const fontData = getFontData(item.fontId);
       return {
         ...item,
-        fontFamily: fontData.fontFamily,
-        fontFileId: fontData.fileId,
+        fontFamilies: fontData.fontFamilies,
+        fontFileIds: fontData.fileIds,
         color: getColorHex(item.colorId),
         strokeColor: item.strokeColorId ? getColorHex(item.strokeColorId) : "",
         strokeWidth: item.strokeColorId ? (item.strokeWidth ?? 0) : 0,
@@ -891,18 +898,22 @@ export const selectViewData = ({ state, i18n }) => {
 
   // Helper function to get font name from ID
   const getFontName = (fontId) => {
-    if (!fontId) return "";
+    const fontIds = toFontIds(fontId);
+    if (fontIds.length === 0) return "";
     const fontItems = toFlatItems(state.fontsData);
-    const font = fontItems.find(
-      (item) => item.type === "font" && item.id === fontId,
-    );
-    if (!font) return "";
-    return font.fontFamily ?? "";
+    return fontIds
+      .map((id) =>
+        fontItems.find((item) => item.type === "font" && item.id === id),
+      )
+      .filter(Boolean)
+      .map((font) => font.fontFamily ?? "")
+      .filter(Boolean)
+      .join(", ");
   };
 
   const detailPreviewFontData = selectedItem
     ? getFontData(selectedItem.fontId)
-    : { fontFamily: undefined, fileId: undefined };
+    : { fontFamilies: [], fileIds: [] };
 
   let detailFields = [];
   if (selectedItem) {
@@ -1059,7 +1070,7 @@ export const selectViewData = ({ state, i18n }) => {
     ? state.fontCapabilitiesById[selectedFormFontId]
     : undefined;
   const grandfatheredWeight =
-    editingItem?.fontId === selectedFormFontId
+    editingItem && toPrimaryFontId(editingItem.fontId) === selectedFormFontId
       ? editingItem.fontWeight
       : undefined;
   const fontWeightOptions = buildFontWeightOptions({
@@ -1247,7 +1258,7 @@ export const selectViewData = ({ state, i18n }) => {
           fontColor: editingItem.colorId || "",
           strokeColor: editingItem.strokeColorId || "",
           shadowColor: editingItem.shadow?.colorId ?? "",
-          fontId: editingItem.fontId || "",
+          fontId: toPrimaryFontId(editingItem.fontId),
           fontSize: editingItem.fontSize,
           lineHeight: editingItem.lineHeight,
           fontWeight: editingItem.fontWeight,
@@ -1280,12 +1291,12 @@ export const selectViewData = ({ state, i18n }) => {
 
   const getPreviewFontData = () => {
     const fontId = state.currentFormValues.fontId;
-    if (!fontId) return { fontFamily: undefined, fileId: undefined };
+    if (!fontId) return { fontFamilies: [], fileIds: [] };
     try {
       return getFontData(fontId);
     } catch (error) {
       console.error("Failed to get preview font data:", error);
-      return { fontFamily: undefined, fileId: undefined };
+      return { fontFamilies: [], fileIds: [] };
     }
   };
 
@@ -1327,8 +1338,8 @@ export const selectViewData = ({ state, i18n }) => {
     detailPreviewShadowBlur: selectedItem?.shadow?.blur ?? 0,
     detailPreviewShadowOffsetX: selectedItem?.shadow?.offsetX ?? 2,
     detailPreviewShadowOffsetY: selectedItem?.shadow?.offsetY ?? 2,
-    detailPreviewFontFamily: detailPreviewFontData.fontFamily,
-    detailPreviewFontFileId: detailPreviewFontData.fileId,
+    detailPreviewFontFamilies: detailPreviewFontData.fontFamilies,
+    detailPreviewFontFileIds: detailPreviewFontData.fileIds,
     title: copy.title ?? "Text Styles",
     addText: copy.addText ?? "Add",
     addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
@@ -1404,8 +1415,8 @@ export const selectViewData = ({ state, i18n }) => {
     previewShadowBlur: state.currentFormValues.shadowBlur ?? 0,
     previewShadowOffsetX: state.currentFormValues.shadowOffsetX ?? 2,
     previewShadowOffsetY: state.currentFormValues.shadowOffsetY ?? 2,
-    previewFontFamily: previewFontData.fontFamily,
-    previewFontFileId: previewFontData.fileId,
+    previewFontFamilies: previewFontData.fontFamilies,
+    previewFontFileIds: previewFontData.fileIds,
     searchQuery: state.searchQuery,
     resourceType: "textStyles",
   };

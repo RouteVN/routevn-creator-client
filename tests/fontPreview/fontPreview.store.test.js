@@ -22,7 +22,7 @@ describe("fontPreview.store", () => {
     expect(viewData.routeGraphicsPreview).toMatchObject({
       mode: "live",
       textStyle: {
-        fontFamily: "font-file",
+        fontFamily: ["font-file"],
         shadow: {
           color: "#123456",
           alpha: 0.75,
@@ -35,6 +35,20 @@ describe("fontPreview.store", () => {
     expect(viewData.routeGraphicsPreview.textStyle).not.toHaveProperty(
       "fontStyle",
     );
+  });
+
+  it("passes ordered font files to Route Graphics", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        fileIds: ["font-latin", "font-cjk"],
+      },
+    });
+
+    expect(viewData.routeGraphicsPreview.textStyle.fontFamily).toEqual([
+      "font-latin",
+      "font-cjk",
+    ]);
   });
 
   it("keeps Route Graphics shadow independent when the outline is removed", () => {
