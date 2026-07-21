@@ -131,70 +131,78 @@ describe("sceneEditor.lineDecorations", () => {
     expect(viewModels[0].characterFileId).toBeUndefined();
   });
 
-  it("does not mark speaker sprite-only dialogue changes as layout changes", () => {
-    const lines = [{ id: "line-1" }, { id: "line-2" }];
-    const dialogueLayout = {
-      resourceId: "dialogue-layout",
+  it("builds dialogue speaker sprite previews from engine sprite changes", () => {
+    const repositoryState = createRepositoryState();
+    repositoryState.characters.items["character-1"].sprites = {
+      items: {
+        "sprite-neutral": {
+          id: "sprite-neutral",
+          type: "image",
+          fileId: "file-sprite-neutral",
+        },
+      },
+      tree: [{ id: "sprite-neutral" }],
+    };
+    const spriteData = {
+      transformId: "dialogue-left",
+      items: [{ id: "base", resourceId: "sprite-neutral" }],
     };
 
     const viewModels = buildSceneDocumentLineDecorations({
-      lines,
-      repositoryState: createRepositoryState(),
+      lines: [{ id: "line-1" }, { id: "line-2" }],
+      repositoryState,
       sectionLineChanges: {
         lines: [
           {
             id: "line-1",
             changes: {
-              dialogue: {
+              dialogueSprite: {
                 changeType: "add",
-                data: {
-                  ui: dialogueLayout,
-                },
+                data: spriteData,
               },
             },
             presentationState: {
               dialogue: {
-                ui: dialogueLayout,
-                character: {
-                  sprite: {
-                    items: [{ resourceId: "sprite-neutral" }],
-                  },
-                },
+                characterId: "character-1",
+                character: { sprite: spriteData },
               },
             },
           },
           {
             id: "line-2",
             changes: {
-              dialogue: {
-                changeType: "update",
-                data: {
-                  ui: dialogueLayout,
-                  character: {
-                    sprite: {
-                      items: [{ resourceId: "sprite-smile" }],
-                    },
-                  },
-                },
+              dialogueSprite: {
+                changeType: "delete",
+                data: spriteData,
               },
             },
-            presentationState: {
-              dialogue: {
-                ui: dialogueLayout,
-                character: {
-                  sprite: {
-                    items: [{ resourceId: "sprite-smile" }],
-                  },
-                },
-              },
-            },
+            presentationState: { dialogue: {} },
           },
         ],
       },
     });
 
-    expect(viewModels[0].hasDialogueLayout).toBe(true);
-    expect(viewModels[1].hasDialogueLayout).toBe(false);
+    const expectedPreview = {
+      fileId: "file-sprite-neutral",
+      spriteFileIds: ["file-sprite-neutral"],
+      spritePreviewBr: "none",
+      spritePreviewLayers: [
+        {
+          kind: "image",
+          itemId: "sprite-neutral",
+          fileId: "file-sprite-neutral",
+          previewKey: "image:sprite-neutral:file-sprite-neutral",
+        },
+      ],
+    };
+    expect(viewModels[0].dialogueSprite).toEqual({
+      changeType: "add",
+      ...expectedPreview,
+    });
+    expect(viewModels[1].dialogueSprite).toEqual({
+      changeType: "delete",
+      ...expectedPreview,
+    });
   });
 
   it("builds stacked sprite previews for multipart character changes", () => {

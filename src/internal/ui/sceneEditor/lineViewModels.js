@@ -1,5 +1,8 @@
 import { toFlatItems } from "../../project/tree.js";
-import { buildCharacterSpritePreviewLayers } from "../../characterSpritePreview.js";
+import {
+  buildCharacterSpritePreviewLayers,
+  buildDialogueSpritePreviewLayers,
+} from "../../characterSpritePreview.js";
 import { normalizeLineActions } from "../../project/engineActions.js";
 
 const getSectionLineEntry = (sectionLineChanges, lineId) => {
@@ -168,6 +171,37 @@ const buildCharacterSpritePreview = (changes, characterItems) => {
   };
 };
 
+const buildDialogueSpritePreview = ({
+  changes,
+  repositoryState,
+  previousPresentationState,
+  presentationState,
+} = {}) => {
+  const dialogueSpriteChange = changes.dialogueSprite;
+  if (!dialogueSpriteChange) {
+    return undefined;
+  }
+
+  const referencePresentationState =
+    dialogueSpriteChange.changeType === "delete"
+      ? previousPresentationState
+      : presentationState;
+  const spritePreviewLayers = buildDialogueSpritePreviewLayers({
+    characters: repositoryState?.characters,
+    characterId: referencePresentationState?.dialogue?.characterId,
+    spriteItems: dialogueSpriteChange.data?.items,
+  });
+  const spriteFileIds = spritePreviewLayers.map((layer) => layer.fileId);
+
+  return {
+    changeType: dialogueSpriteChange.changeType,
+    fileId: spriteFileIds[0],
+    spriteFileIds,
+    spritePreviewBr: "none",
+    spritePreviewLayers,
+  };
+};
+
 const resolveVisualPreviewFileId = ({ repositoryState, resourceId }) => {
   return resolvePreviewResourceFileId({ repositoryState, resourceId });
 };
@@ -280,26 +314,6 @@ const resolveDialogueModeLabel = (repositoryState, line) => {
   return "ADV";
 };
 
-const selectDialogueLayoutState = (presentationState) => {
-  const dialogue = presentationState?.dialogue;
-  return dialogue?.ui ?? dialogue?.gui;
-};
-
-const hasDialogueLayoutChange = ({
-  changes,
-  previousPresentationState,
-  presentationState,
-} = {}) => {
-  if (!changes?.dialogue) {
-    return false;
-  }
-
-  return (
-    JSON.stringify(selectDialogueLayoutState(previousPresentationState)) !==
-    JSON.stringify(selectDialogueLayoutState(presentationState))
-  );
-};
-
 const toStableDomRefSuffix = (value = "") => {
   return Array.from(String(value)).reduce((result, char) => {
     if (/^[a-zA-Z0-9]$/.test(char)) {
@@ -349,6 +363,12 @@ const buildSceneDocumentLineViewModels = ({
         changes,
         characterLookups.characterItems,
       ),
+      dialogueSprite: buildDialogueSpritePreview({
+        changes,
+        repositoryState,
+        previousPresentationState: previousSectionLineEntry?.presentationState,
+        presentationState: linePresentationState,
+      }),
       visual: buildVisualPreview(repositoryState, changes),
       screenTransition: buildScreenTransitionPreview(lineActions),
       sectionTransition: buildSectionTransitionPreview(line),
@@ -363,11 +383,7 @@ const buildSceneDocumentLineViewModels = ({
       hasSetNextLineConfig:
         !!changes.setNextLineConfig || !!lineActions?.setNextLineConfig,
       setNextLineConfigChangeType: changes.setNextLineConfig?.changeType,
-      hasDialogueLayout: hasDialogueLayoutChange({
-        changes,
-        previousPresentationState: previousSectionLineEntry?.presentationState,
-        presentationState: linePresentationState,
-      }),
+      hasDialogueLayout: !!changes.dialogue,
       dialogueModeLabel: resolveDialogueModeLabel(repositoryState, line),
       dialogueChangeType: changes.dialogue?.changeType,
       hasControl: !!changes.control,

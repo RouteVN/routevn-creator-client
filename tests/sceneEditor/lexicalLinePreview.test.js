@@ -228,6 +228,52 @@ describe("lexical scene document editor line previews", () => {
     }
   });
 
+  it("renders changed dialogue speaker sprites in the right gutter", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorPrototype = LexicalSceneDocumentEditorElement.prototype;
+      const layers = [
+        {
+          kind: "image",
+          itemId: "sprite-neutral",
+          fileId: "file-sprite-neutral",
+          previewKey: "image:sprite-neutral:file-sprite-neutral",
+        },
+      ];
+      const dialogueSprite = {
+        changeType: "delete",
+        fileId: "file-sprite-neutral",
+        spriteFileIds: ["file-sprite-neutral"],
+        spritePreviewBr: "none",
+        spritePreviewLayers: layers,
+      };
+
+      const signature = JSON.parse(
+        editorPrototype.buildRightGutterSignature({ dialogueSprite }),
+      );
+      const previewItems = editorPrototype.createPreviewItems.call(
+        editorPrototype,
+        { dialogueSprite },
+      );
+      const preview = previewItems.querySelector("rvn-stacked-file-images");
+
+      expect(signature.dialogueSprite).toEqual(dialogueSprite);
+      expect(preview).not.toBeNull();
+      expect(preview.layers).toEqual(layers);
+      expect(preview.w).toBe("20");
+      expect(preview.h).toBe("24");
+      expect(
+        previewItems.querySelector(".preview-group-delete-overlay"),
+      ).not.toBeNull();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("renders character sprite line previews from layered preview data", async () => {
     const restoreDomGlobals = installDomGlobals();
 

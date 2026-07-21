@@ -6,6 +6,7 @@ import {
 import {
   buildCharacterSpritePreviewFileIds,
   buildCharacterSpritePreviewLayers,
+  buildDialogueSpritePreviewLayers,
 } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
@@ -574,40 +575,6 @@ const isDisplayableScreenAction = (screenAction) => {
       screenAction?.opacity !== undefined ||
       Object.hasOwn(screenAction ?? {}, "blur"),
   );
-};
-
-const buildDialogueSpritePreviewLayers = ({
-  characters,
-  characterId,
-  spriteItems,
-} = {}) => {
-  const spriteIds = (Array.isArray(spriteItems) ? spriteItems : [])
-    .map((item) => item?.resourceId)
-    .filter(Boolean);
-  if (spriteIds.length === 0) {
-    return [];
-  }
-
-  const charactersById = characters?.items ?? {};
-  const selectedCharacter = charactersById[characterId];
-  const candidates = [
-    selectedCharacter,
-    ...Object.values(charactersById).filter(
-      (character) => character !== selectedCharacter,
-    ),
-  ].filter(Boolean);
-
-  for (const character of candidates) {
-    const layers = buildCharacterSpritePreviewLayers({
-      spritesCollection: character.sprites,
-      spriteIds,
-    });
-    if (layers.length === spriteIds.length) {
-      return layers;
-    }
-  }
-
-  return [];
 };
 
 // Moved from sceneEditor.store.js - now returns object instead of array

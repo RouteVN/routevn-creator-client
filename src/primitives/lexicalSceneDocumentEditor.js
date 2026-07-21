@@ -7894,6 +7894,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return JSON.stringify({
       background: lineDecoration.background,
       characterSprites: lineDecoration.characterSprites,
+      dialogueSprite: lineDecoration.dialogueSprite,
       visual: lineDecoration.visual,
       screenTransition: Boolean(lineDecoration.screenTransition),
       sectionTransition: Boolean(lineDecoration.sectionTransition),
@@ -8580,6 +8581,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
       item.append(stack);
       if (lineDecoration.characterSprites.changeType === "delete") {
+        item.append(this.createPreviewGroupDeleteOverlay());
+      }
+      container.append(item);
+    }
+
+    if (lineDecoration.dialogueSprite) {
+      const item = document.createElement("div");
+      item.className = "preview-item";
+      item.dataset.overlay = "true";
+      const stack = document.createElement("div");
+      stack.className = "preview-image-stack";
+      stack.append(
+        this.createCharacterSpritePreview(lineDecoration.dialogueSprite),
+      );
+      item.append(stack);
+      if (lineDecoration.dialogueSprite.changeType === "delete") {
         item.append(this.createPreviewGroupDeleteOverlay());
       }
       container.append(item);
