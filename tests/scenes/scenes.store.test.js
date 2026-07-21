@@ -6,6 +6,7 @@ import {
   selectIsMobileFileExplorerOpen,
   selectViewData,
   setProjectLanguage,
+  setSceneWorkspaceReady,
   setShowSceneForm,
   setTouchMinimapReady,
   setUiConfig,
@@ -14,6 +15,32 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("scenes.store mobile layout", () => {
+  it("shows the explorer before revealing the initialized scene workspace", () => {
+    const state = createInitialState();
+    state.scenesData = {
+      items: {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          name: "Scene 1",
+        },
+      },
+      tree: [{ id: "scene-1" }],
+    };
+
+    const initialViewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(initialViewData.flatItems).toHaveLength(1);
+    expect(initialViewData.sceneWorkspaceVisibility).toBe("hidden");
+    expect(initialViewData.showMapAddHint).toBe(false);
+
+    setSceneWorkspaceReady({ state }, { isReady: true });
+    const readyViewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(readyViewData.sceneWorkspaceVisibility).toBe("visible");
+    expect(readyViewData.showMapAddHint).toBe(true);
+  });
+
   it("exposes the selected scene word-count label", () => {
     const state = createInitialState();
     state.selectedItemId = "scene-1";

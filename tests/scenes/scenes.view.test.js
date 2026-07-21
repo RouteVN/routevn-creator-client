@@ -2,6 +2,17 @@ import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 
 describe("scenes view", () => {
+  it("keeps the scene workspace mounted but hidden until setup is ready", () => {
+    const scenesView = readFileSync(
+      new URL("../../src/pages/scenes/scenes.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(
+      scenesView.match(/visibility: \$\{sceneWorkspaceVisibility\}/g),
+    ).toHaveLength(2);
+  });
+
   it("opts into file explorer background deselection", () => {
     const scenesView = readFileSync(
       new URL("../../src/pages/scenes/scenes.view.yaml", import.meta.url),
@@ -9,9 +20,7 @@ describe("scenes view", () => {
     );
 
     expect(scenesView).toContain("selection-cleared:");
-    expect(scenesView).toContain(
-      "handler: handleFileExplorerSelectionChanged",
-    );
+    expect(scenesView).toContain("handler: handleFileExplorerSelectionChanged");
   });
 
   it("uses a bordered top-right mobile hamburger opener", () => {

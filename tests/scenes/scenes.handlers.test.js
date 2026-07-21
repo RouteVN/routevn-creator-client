@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Subject } from "rxjs";
 import {
   handleAfterMount,
+  handleBeforeMount,
   handleFileExplorerKeyboardScopeKeyDown,
   handleFileExplorerSelectionChanged,
   handleMobileFileExplorerClose,
@@ -85,6 +87,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       loadSceneOverviews: vi.fn(async () => ({})),
     },
     store: {
+      setUiConfig: vi.fn(),
       selectWhiteboardItems: vi.fn(() => []),
       setItems: vi.fn(),
       setLayouts: vi.fn(),
@@ -95,6 +98,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       }),
       setWhiteboardItems: vi.fn(),
       setProjectLanguage: vi.fn(),
+      setSceneWorkspaceReady: vi.fn(),
       hideMapAddHint: vi.fn(),
       setSelectedItemId: vi.fn(),
       setSelectedFolderId: vi.fn(),
@@ -127,6 +131,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
         selectItem: vi.fn(),
       },
     },
+    subject: new Subject(),
     render: vi.fn(),
   };
 };
@@ -152,6 +157,32 @@ describe("scenes.handlers config keys", () => {
     globalThis.cancelIdleCallback = originalCancelIdleCallback;
   });
 
+  it("hydrates scenes synchronously before the first render", () => {
+    const deps = createDeps();
+
+    const cleanup = handleBeforeMount(deps);
+
+    expect(deps.store.setItems).toHaveBeenCalledWith({
+      scenesData: deps.projectService.getRepositoryState().scenes,
+    });
+    expect(deps.store.setWhiteboardItems).toHaveBeenCalledWith({
+      items: [
+        {
+          id: "scene-1",
+          isInit: false,
+          name: "Scene 1",
+          transitions: [],
+          x: 0,
+          y: 0,
+        },
+      ],
+    });
+    expect(deps.projectService.ensureRepository).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+
+    cleanup();
+  });
+
   it("loads the scenes viewport from project-scoped userConfig keys", async () => {
     const deps = createDeps({
       userConfig: {
@@ -162,6 +193,7 @@ describe("scenes.handlers config keys", () => {
       },
     });
 
+    const cleanup = handleBeforeMount(deps);
     await handleAfterMount(deps);
 
     expect(deps.projectService.getCurrentProjectInfo).toHaveBeenCalledTimes(1);
@@ -188,6 +220,10 @@ describe("scenes.handlers config keys", () => {
       panX: 48,
       panY: 72,
     });
+    expect(deps.store.setSceneWorkspaceReady).toHaveBeenCalledWith({
+      isReady: true,
+    });
+    cleanup();
   });
 
   it("writes zoom and pan changes to project-scoped viewport keys", () => {
@@ -236,6 +272,7 @@ describe("scenes.handlers config keys", () => {
     const deps = createDeps();
     deps.projectService.loadSceneOverviews = loadSceneOverviews;
 
+    const cleanup = handleBeforeMount(deps);
     await handleAfterMount(deps);
 
     expect(deps.store.setItems).toHaveBeenCalled();
@@ -256,6 +293,7 @@ describe("scenes.handlers config keys", () => {
 
     resolveOverviews({});
     await Promise.resolve();
+    cleanup();
   });
 
   it("waits for idle time before loading scene overviews", async () => {
@@ -268,6 +306,7 @@ describe("scenes.handlers config keys", () => {
 
     const deps = createDeps();
 
+    const cleanup = handleBeforeMount(deps);
     await handleAfterMount(deps);
 
     expect(deps.projectService.loadSceneOverviews).not.toHaveBeenCalled();
@@ -280,6 +319,7 @@ describe("scenes.handlers config keys", () => {
     expect(deps.projectService.loadSceneOverviews).toHaveBeenCalledWith({
       sceneIds: ["scene-1"],
     });
+    cleanup();
   });
 
   it("animates scene map centering from file explorer scene selection", () => {

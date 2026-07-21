@@ -6,6 +6,7 @@ import {
   handleContainerGestureEvent,
   handleContainerWheel,
   handleEnsureItemVisible,
+  handleInitialZoomAndPanSetup,
   handleItemMouseDown,
   handleMinimapViewportMouseDown,
   handleMinimapViewportTouchEnd,
@@ -85,6 +86,7 @@ const createDeps = ({
     setPan: vi.fn(({ panX, panY }) => {
       currentPan = { x: panX, y: panY };
     }),
+    setInitialZoomAndPan: vi.fn(),
     selectPanAnimationFrameId: vi.fn(() => panAnimationFrameId),
     setPanAnimationFrameId: vi.fn(({ frameId }) => {
       panAnimationFrameId = frameId;
@@ -158,6 +160,25 @@ const createDeps = ({
     getZoomLevel: () => currentZoomLevel,
   };
 };
+
+describe("whiteboard initial viewport", () => {
+  it("renders the initialized viewport before the parent reveals it", () => {
+    const deps = createDeps();
+
+    handleInitialZoomAndPanSetup(deps, {
+      zoomLevel: 1.25,
+      panX: -80,
+      panY: -40,
+    });
+
+    expect(deps.store.setInitialZoomAndPan).toHaveBeenCalledWith({
+      zoomLevel: 1.25,
+      panX: -80,
+      panY: -40,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+});
 
 const createTouchDragDeps = ({ selectedItemId = "scene-1" } = {}) => {
   let isDragging = false;

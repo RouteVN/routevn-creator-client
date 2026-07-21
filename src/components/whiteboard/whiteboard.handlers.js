@@ -1634,6 +1634,7 @@ export const handleInitialZoomAndPanSetup = (deps, payload) => {
 
   store.setInitialZoomAndPan({ zoomLevel, panX, panY });
   syncContainerSize(deps);
+  renderWithCursorSync(deps);
 };
 
 export const handleWindowResize = (deps) => {
