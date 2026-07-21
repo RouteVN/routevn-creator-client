@@ -1,5 +1,5 @@
 import { parseAndRender } from "jempl";
-import { resolveLayoutReferences } from "route-engine-js";
+import { formatDate, resolveLayoutReferences } from "route-engine-js";
 import {
   buildLayoutElements,
   extractFileIdsFromRenderState,
@@ -43,24 +43,9 @@ const OVERLAY_ANCHOR_CIRCLE_FILL = {
 };
 const OVERLAY_ANCHOR_SIZE = 8;
 const OVERLAY_RESIZE_HANDLE_SIZE = 12;
+export const formatLayoutEditorPreviewDate = formatDate;
 const jemplFunctions = {
-  formatDate: (timestamp, format = "DD/MM/YYYY - HH:mm") => {
-    if (!timestamp) {
-      return "";
-    }
-
-    const date = new Date(timestamp);
-    const pad = (value) => String(value).padStart(2, "0");
-
-    return format
-      .replace("DD", pad(date.getDate()))
-      .replace("MM", pad(date.getMonth() + 1))
-      .replace("YYYY", date.getFullYear())
-      .replace("YY", String(date.getFullYear()).slice(-2))
-      .replace("HH", pad(date.getHours()))
-      .replace("mm", pad(date.getMinutes()))
-      .replace("ss", pad(date.getSeconds()));
-  },
+  formatDate: formatLayoutEditorPreviewDate,
 };
 
 const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");

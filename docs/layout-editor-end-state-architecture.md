@@ -712,7 +712,7 @@ Save/load should be defined by one shared contract.
 
 - slot repeat container loops `saveSlots`
 - save image sprite uses `imageId: "${item.image}"`
-- save date text uses `${formatDate(item.savedAt)}`
+- save date text uses an authored date-only preset such as `${formatDate(item.savedAt, "YYYY-MM-DD")}`
 - save data availability is based on `item.savedAt`
 
 ### Pagination Rule

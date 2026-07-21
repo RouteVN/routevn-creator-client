@@ -55,6 +55,7 @@ import {
   ACTION_INTERACTION_TYPES,
   createRevealEffectOptions,
   createRevealSoundStopTimingOptions,
+  createSaveLoadDateFormatOptions,
   createTextContentDialogForm,
   getLayoutEditPanelSections,
   getLayoutInteractionActions,
@@ -103,12 +104,14 @@ const STATIC_LABEL_COPY_KEYS = {
   Conditional: "conditionalSection",
   "Child Interaction": "childInteractionTitle",
   Default: "defaultLabel",
+  Date: "dateSection",
   Direction: "directionSection",
   Disabled: "disabledOption",
   Effect: "effectLabel",
   Enabled: "enabledOption",
   Field: "fieldLabel",
   Fixed: "fixedOption",
+  Format: "formatLabel",
   Fragment: "fragmentLabel",
   Free: "freeOption",
   "Gap X": "gapXLabel",
@@ -1618,6 +1621,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     ...getRuntimeNumberFieldOptions(),
   ];
   const revealEffectOptions = createRevealEffectOptions(copy);
+  const dateFormatOptions = createSaveLoadDateFormatOptions();
   const fragmentLayoutOptions = getFragmentLayoutOptions(props.layoutsData);
   const visibilityConditionOptions = {
     includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
@@ -1737,6 +1741,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       particleSelectionItems,
       sliderValueOptions,
       revealEffectOptions,
+      dateFormatOptions,
       spritesheetSelectionValue,
       selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
       selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,

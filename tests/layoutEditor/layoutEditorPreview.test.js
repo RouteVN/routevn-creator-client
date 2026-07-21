@@ -4,6 +4,7 @@ import {
   createLayoutEditorRenderedElements,
   createLayoutEditorRenderState,
   createLayoutEditorSelectionOverlay,
+  formatLayoutEditorPreviewDate,
 } from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js";
 import { createLayoutEditorPreviewData } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewData.js";
 import { getRuntimeFieldItems } from "../../src/internal/runtimeFields.js";
@@ -87,6 +88,23 @@ describe("layoutEditorPreview", () => {
       },
     });
     expect(selectionAnchor.border).toBeUndefined();
+  });
+
+  it("formats the authored English and CJK date presets", () => {
+    const timestamp = new Date(2026, 11, 31, 12).getTime();
+
+    expect(formatLayoutEditorPreviewDate(timestamp, "DD MMM YYYY")).toBe(
+      "31 Dec 2026",
+    );
+    expect(
+      formatLayoutEditorPreviewDate(
+        new Date(2027, 6, 20, 12).getTime(),
+        "DD MMM YYYY",
+      ),
+    ).toBe("20 Jul 2027");
+    expect(formatLayoutEditorPreviewDate(timestamp, "YYYY年MM月DD日")).toBe(
+      "2026年12月31日",
+    );
   });
 
   it("builds stable preview data from variables, dialogue defaults, and choices", () => {
