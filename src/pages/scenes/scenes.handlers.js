@@ -753,9 +753,15 @@ const openFolderEditDialogWithValues = ({ deps, folderId } = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, uiConfig } = deps;
+  const { store, projectService, uiConfig } = deps;
 
   store.setUiConfig({ uiConfig });
+  setInitialWhiteboardHydrationState({ store });
+  syncScenesState({
+    store,
+    projectService,
+    shouldRender: false,
+  });
 
   const subscription = createCollabRemoteRefreshStream({
     deps,
@@ -772,18 +778,15 @@ export const handleBeforeMount = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
 
-  await projectService.ensureRepository();
   const projectInfo = await projectService.getCurrentProjectInfo();
   store.setProjectLanguage({ language: projectInfo.language });
 
-  setInitialWhiteboardHydrationState({ store });
-  const initialSnapshot = syncScenesState({
-    store,
-    render,
-    projectService,
-    shouldRender: false,
-  });
-  const sceneItems = initialSnapshot?.sceneItems ?? [];
+  const sceneItems = store.selectWhiteboardItems() ?? [];
+  const domainState = projectService.getDomainState();
+  const orderedSceneIds = getOrderedSceneIds(domainState).filter(
+    (sceneId) => domainState?.scenes?.[sceneId]?.type !== "folder",
+  );
+  const requestId = store.selectSceneOverviewRequestId();
 
   const shouldHideMapAddHint =
     appService.getUserConfig("scenesMap.hideAddSceneHint") === true;
@@ -825,6 +828,7 @@ export const handleAfterMount = async (deps) => {
     });
   }
 
+  store.setSceneWorkspaceReady({ isReady: true });
   render();
 
   if (persistedSelectedSceneId && !store.selectIsTouchMode?.()) {
@@ -837,8 +841,8 @@ export const handleAfterMount = async (deps) => {
     store,
     render,
     projectService,
-    orderedSceneIds: initialSnapshot?.orderedSceneIds ?? [],
-    requestId: initialSnapshot?.requestId,
+    orderedSceneIds,
+    requestId,
   });
 
   focusFileExplorerKeyboardScope(deps);
