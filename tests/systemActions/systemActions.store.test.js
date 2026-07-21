@@ -975,6 +975,27 @@ describe("systemActions.store", () => {
       { state },
       {
         repositoryState: {
+          characters: {
+            items: {
+              "sprite-character": {
+                id: "sprite-character",
+                type: "character",
+                name: "Portrait",
+                sprites: {
+                  items: {
+                    "sprite-body": {
+                      id: "sprite-body",
+                      type: "image",
+                      name: "Body",
+                      fileId: "file-body",
+                    },
+                  },
+                  tree: [{ id: "sprite-body" }],
+                },
+              },
+            },
+            tree: [{ id: "sprite-character" }],
+          },
           layouts: {
             items: {
               "dialogue-layout": {
@@ -1026,7 +1047,15 @@ describe("systemActions.store", () => {
     });
     expect(preview.dialogue).toMatchObject({
       name: "Main Dialogue",
-      spriteLabel: "Sprite: 1 layer",
+      hasSpritePreview: true,
+      spritePreviewLayers: [
+        {
+          kind: "image",
+          itemId: "sprite-body",
+          fileId: "file-body",
+          previewKey: "image:sprite-body:file-body",
+        },
+      ],
     });
   });
 
@@ -1037,6 +1066,27 @@ describe("systemActions.store", () => {
       { state },
       {
         repositoryState: {
+          characters: {
+            items: {
+              "character-1": {
+                id: "character-1",
+                type: "character",
+                name: "Aki",
+                sprites: {
+                  items: {
+                    "sprite-body": {
+                      id: "sprite-body",
+                      type: "image",
+                      name: "Body",
+                      fileId: "file-body",
+                    },
+                  },
+                  tree: [{ id: "sprite-body" }],
+                },
+              },
+            },
+            tree: [{ id: "character-1" }],
+          },
           layouts: {
             items: {
               "dialogue-layout": {
@@ -1068,6 +1118,12 @@ describe("systemActions.store", () => {
               resourceId: "dialogue-layout",
             },
             mode: "adv",
+            characterId: "character-1",
+            character: {
+              sprite: {
+                items: [{ id: "body", resourceId: "sprite-body" }],
+              },
+            },
             content: [{ text: "Inherited layout text" }],
           },
         },
@@ -1079,12 +1135,27 @@ describe("systemActions.store", () => {
         resourceId: "dialogue-layout",
       },
       mode: "adv",
+      characterId: "character-1",
+      character: {
+        sprite: {
+          items: [{ id: "body", resourceId: "sprite-body" }],
+        },
+      },
       content: [{ text: "Inherited layout text" }],
     });
     expect(preview.dialogue).toMatchObject({
       name: "Main Dialogue",
       modeLabel: "ADV",
       appendLabel: "append",
+      hasSpritePreview: true,
+      spritePreviewLayers: [
+        {
+          kind: "image",
+          itemId: "sprite-body",
+          fileId: "file-body",
+          previewKey: "image:sprite-body:file-body",
+        },
+      ],
     });
   });
 

@@ -8,6 +8,7 @@ import {
   setCustomCharacterName,
   selectViewData,
   setPersistCharacter,
+  setPersistSprite,
   setSelectedSpriteIds,
   setSpriteCharacterId,
   setSpriteAnimationId,
@@ -84,6 +85,7 @@ describe("commandLineDialogueBox.store", () => {
     expect(viewData.defaultValues.characterName).toBe("Boss");
     expect(viewData.defaultValues.append).toBe(false);
     expect(viewData.defaultValues.persistCharacter).toBe(true);
+    expect(viewData.addSpeakerSpriteLabel).toBe("Add Speaker Sprite");
     expect(
       viewData.form.fields.find((field) => field.name === "mode"),
     ).toMatchObject({
@@ -131,7 +133,7 @@ describe("commandLineDialogueBox.store", () => {
         y: 0,
       },
       speakerSpriteTooltipContent:
-        "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action",
+        "Speaker's face that appears on top of the dialogue box. For body sprites use the Character Sprites action",
     });
     expect(
       viewData.form.fields.find((field) => field.name === "append"),
@@ -388,6 +390,92 @@ describe("commandLineDialogueBox.store", () => {
         },
       }),
     ).toBe(true);
+  });
+
+  it("shows persist controls only when a sprite is selected", () => {
+    const state = createInitialState();
+    let viewData = selectTestViewData({
+      state,
+      props: {
+        layouts: [],
+        characters: [
+          {
+            id: "character-1",
+            name: "Aki",
+          },
+        ],
+      },
+    });
+    expect(
+      viewData.form.fields.find((field) => field.name === "persistSprite"),
+    ).toBeUndefined();
+    expect(
+      viewData.form.fields.find(
+        (field) => field.name === "removePersistedSprite",
+      ),
+    ).toBeUndefined();
+
+    setSpriteCharacterId({ state }, { characterId: "character-1" });
+    setSelectedSpriteIds(
+      { state },
+      {
+        spriteIdsByGroupId: {
+          base: "sprite-1",
+        },
+      },
+    );
+    viewData = selectTestViewData({
+      state,
+      props: {
+        layouts: [],
+        characters: [
+          {
+            id: "character-1",
+            name: "Aki",
+          },
+        ],
+      },
+    });
+    expect(
+      viewData.form.fields.find(
+        (field) => field.name === "removePersistedSprite",
+      ),
+    ).toBeUndefined();
+    expect(viewData).toMatchObject({
+      persistSprite: true,
+      persistSpriteLabel: "Persist Sprite",
+      persistSpriteOptions: [
+        { value: true, label: "Yes" },
+        { value: false, label: "No" },
+      ],
+    });
+  });
+
+  it("preserves an explicit persistence choice when sprite layers change", () => {
+    const state = createInitialState();
+
+    setSpriteCharacterId({ state }, { characterId: "character-1" });
+    setSelectedSpriteIds(
+      { state },
+      {
+        spriteIdsByGroupId: {
+          body: "sprite-body",
+        },
+      },
+    );
+    setPersistSprite({ state }, { persistSprite: false });
+    setSelectedSpriteIds(
+      { state },
+      {
+        spriteIdsByGroupId: {
+          body: "sprite-body-updated",
+        },
+      },
+    );
+
+    expect(state.persistSprite).toBe(false);
+    expect(state.persistSpriteExplicit).toBe(true);
+    expect(state.defaultValues.persistSprite).toBe(false);
   });
 
   it("exposes one visual character sprite picker with transform and sprite data", () => {

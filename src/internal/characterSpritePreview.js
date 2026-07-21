@@ -72,3 +72,37 @@ export const buildCharacterSpritePreviewFileIds = ({
     spriteIds,
   }).map((layer) => layer.fileId);
 };
+
+export const buildDialogueSpritePreviewLayers = ({
+  characters,
+  characterId,
+  spriteItems,
+} = {}) => {
+  const spriteIds = (Array.isArray(spriteItems) ? spriteItems : [])
+    .map((item) => item?.resourceId)
+    .filter(Boolean);
+  if (spriteIds.length === 0) {
+    return [];
+  }
+
+  const charactersById = characters?.items ?? {};
+  const selectedCharacter = charactersById[characterId];
+  const candidates = [
+    selectedCharacter,
+    ...Object.values(charactersById).filter(
+      (character) => character !== selectedCharacter,
+    ),
+  ].filter(Boolean);
+
+  for (const character of candidates) {
+    const layers = buildCharacterSpritePreviewLayers({
+      spritesCollection: character.sprites,
+      spriteIds,
+    });
+    if (layers.length === spriteIds.length) {
+      return layers;
+    }
+  }
+
+  return [];
+};

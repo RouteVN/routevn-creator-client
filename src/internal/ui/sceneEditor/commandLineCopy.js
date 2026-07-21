@@ -32,8 +32,9 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "Search...": "searchPlaceholder",
   "Select a scene before adding voice audio.": "selectSceneBeforeVoiceAudio",
   "Select a voice audio file first.": "selectVoiceAudioFirst",
-  "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action":
+  "Speaker's face that appears on top of the dialogue box. For body sprites use the Character Sprites action":
     "speakerSpriteTooltip",
+  "Show this sprite on following dialogue lines.": "persistSpriteDescription",
   Spritesheet: "spritesheetLabel",
   Spritesheets: "spritesheetsLabel",
   "The default branch must be the last branch.": "defaultBranchMustBeLast",

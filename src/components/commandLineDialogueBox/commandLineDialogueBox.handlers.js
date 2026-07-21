@@ -3,6 +3,10 @@ import {
   buildCharacterSpritePreviewLayer,
   isCharacterSpriteResourceItem,
 } from "../../internal/characterSpritePreview.js";
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
@@ -420,6 +424,9 @@ const buildDialogueFromState = (
     spriteAnimationId,
     appendDialogue,
     persistCharacter,
+    persistSprite,
+    persistSpriteExplicit,
+    removePersistedSprite,
     clearPage,
     customizeTextSpeed,
     textSpeed,
@@ -475,6 +482,13 @@ const buildDialogueFromState = (
   });
   if (characterSprite) {
     character.sprite = characterSprite;
+    if (persistSpriteExplicit) {
+      dialogue.persistSprite = toBoolean(persistSprite);
+    }
+  } else if (toBoolean(removePersistedSprite)) {
+    dialogue.persistSprite = false;
+  } else if (persistSpriteExplicit && toBoolean(persistSprite)) {
+    dialogue.persistSprite = true;
   }
   if (Object.keys(character).length > 0) {
     dialogue.character = character;
@@ -606,6 +620,18 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
   store.setPersistCharacter({
     persistCharacter: hasCharacter && dialogue?.persistCharacter === true,
   });
+  store.setPersistSprite({
+    persistSprite: Object.hasOwn(dialogue, "persistSprite")
+      ? dialogue.persistSprite === true
+      : !!characterSprite && dialogue?.persistCharacter === true,
+    explicit: Object.hasOwn(dialogue, "persistSprite"),
+  });
+  store.setRemovePersistedSprite({
+    removePersistedSprite:
+      !characterSprite &&
+      Object.hasOwn(dialogue, "persistSprite") &&
+      dialogue.persistSprite === false,
+  });
   store.setAppendDialogue({
     append: selectedMode === "adv" && dialogue?.append === true,
   });
@@ -637,6 +663,9 @@ const syncDialogueFormValues = (deps) => {
     characterName,
     appendDialogue,
     persistCharacter,
+    persistSprite,
+    removePersistedSprite,
+    characterSpriteEnabled,
     clearPage,
     customizeTextSpeed,
     textSpeed,
@@ -647,8 +676,11 @@ const syncDialogueFormValues = (deps) => {
     characterId: selectedCharacterId,
     customCharacterName,
     characterName,
+    characterSpriteEnabled,
     append: appendDialogue,
     persistCharacter,
+    persistSprite,
+    removePersistedSprite,
     clearPage,
     customizeTextSpeed,
     textSpeed: normalizeTextSpeed(textSpeed),
@@ -733,12 +765,25 @@ export const handleFormChange = (deps, payload) => {
   });
   const persistCharacter =
     hasCharacter && hadDialogueCharacter ? formValues.persistCharacter : false;
+  const persistSprite = currentState.characterSpriteEnabled
+    ? (formValues.persistSprite ?? currentState.persistSprite)
+    : currentState.persistSprite;
+  const removePersistedSprite = currentState.characterSpriteEnabled
+    ? false
+    : (formValues.removePersistedSprite ?? currentState.removePersistedSprite);
   const appendDialogue = selectedMode === "adv" && toBoolean(formValues.append);
   store.setAppendDialogue({
     append: appendDialogue,
   });
   store.setPersistCharacter({
     persistCharacter,
+  });
+  store.setPersistSprite({
+    persistSprite,
+    explicit: currentState.persistSpriteExplicit,
+  });
+  store.setRemovePersistedSprite({
+    removePersistedSprite,
   });
   store.setClearPage({ clearPage: formValues.clearPage });
   store.setCustomizeTextSpeed({
@@ -775,6 +820,61 @@ export const handleCharacterSpriteBoxClick = (deps) => {
   render();
 };
 
+const showCharacterSpriteMenu = async (deps, { x, y } = {}) => {
+  const { store, render, appService, i18n } = deps;
+  const { characterSpriteEnabled } = store.selectDialogueBuildState();
+
+  if (!characterSpriteEnabled) {
+    return;
+  }
+
+  const copy = selectCommandLineCopy(i18n);
+  const result = await appService.showDropdownMenu({
+    items: [
+      {
+        type: "item",
+        label: localizeCommandLineText("Remove", copy),
+        key: "remove",
+      },
+    ],
+    x,
+    y,
+    place: "bs",
+  });
+
+  if (result?.item?.key !== "remove") {
+    return;
+  }
+
+  store.clearCharacterSprite();
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleCharacterSpriteBoxContextMenu = async (deps, payload) => {
+  const { _event: event } = payload;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  await showCharacterSpriteMenu(deps, {
+    x: event.clientX,
+    y: event.clientY,
+  });
+};
+
+export const handleCharacterSpriteMenuButtonClick = async (deps, payload) => {
+  const { _event: event } = payload;
+  const rect = event.currentTarget.getBoundingClientRect();
+
+  event.stopPropagation();
+
+  await showCharacterSpriteMenu(deps, {
+    x: rect.left,
+    y: rect.bottom,
+  });
+};
+
 export const handleSpeakerSpriteTooltipMouseEnter = (deps, payload) => {
   const { store, render } = deps;
   const rect = payload._event.currentTarget.getBoundingClientRect();
@@ -807,15 +907,6 @@ export const handleCharacterSpriteGroupBoxClick = (deps, payload) => {
     spriteGroupId,
   });
   render();
-};
-
-export const handleClearCharacterSpriteClick = (deps, payload) => {
-  const { store, render } = deps;
-
-  payload?._event?.stopPropagation?.();
-  store.clearCharacterSprite();
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleFileExplorerItemClick = (deps, payload) => {
@@ -941,6 +1032,15 @@ export const handleAnimationChange = (deps, payload) => {
   const { store, render } = deps;
   const value = payload._event.detail.value;
   store.setSpriteAnimationId({ animationId: value });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handlePersistSpriteChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { value } = payload._event.detail;
+
+  store.setPersistSprite({ persistSprite: value });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

@@ -173,7 +173,7 @@ const PRESENTATION_ACTION_SECTIONS = [
     },
     {
       id: "7",
-      label: "Characters",
+      label: "Character Sprites",
       icon: "character",
       mode: "character",
     },

@@ -6,6 +6,7 @@ import {
 import {
   buildCharacterSpritePreviewFileIds,
   buildCharacterSpritePreviewLayers,
+  buildDialogueSpritePreviewLayers,
 } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
@@ -1007,22 +1008,15 @@ export const selectActionsData = ({ props, state, copy }) => {
       : [];
     const spriteAnimationId =
       dialogueAction.character?.sprite?.animations?.resourceId;
+    const spritePreviewLayers = buildDialogueSpritePreviewLayers({
+      characters: repositoryStateData.characters,
+      characterId: dialogueAction.characterId,
+      spriteItems,
+    });
     const spriteLabel =
-      spriteItems.length > 0
-        ? spriteItems.length === 1
-          ? formatCommandLineCopy(
-              "Sprite: {count} layer",
-              { count: spriteItems.length },
-              copy,
-            )
-          : formatCommandLineCopy(
-              "Sprite: {count} layers",
-              { count: spriteItems.length },
-              copy,
-            )
-        : spriteAnimationId
-          ? localizeCommandLineText("Sprite Animation", copy)
-          : undefined;
+      spriteItems.length === 0 && spriteAnimationId
+        ? localizeCommandLineText("Sprite Animation", copy)
+        : undefined;
     const appendLabel =
       authoredDialogue?.append === true || dialogueAction.append === true
         ? localizeCommandLineText("append", copy)
@@ -1033,6 +1027,8 @@ export const selectActionsData = ({ props, state, copy }) => {
         modeLabel: dialogueModeLabel,
         customCharacterNameLabel,
         persistCharacterLabel,
+        hasSpritePreview: spritePreviewLayers.length > 0,
+        spritePreviewLayers,
         spriteLabel,
         appendLabel,
       };
@@ -1045,6 +1041,8 @@ export const selectActionsData = ({ props, state, copy }) => {
         modeLabel: dialogueModeLabel,
         customCharacterNameLabel,
         persistCharacterLabel,
+        hasSpritePreview: spritePreviewLayers.length > 0,
+        spritePreviewLayers,
         spriteLabel,
         appendLabel,
       };

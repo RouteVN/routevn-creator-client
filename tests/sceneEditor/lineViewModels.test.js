@@ -131,6 +131,80 @@ describe("sceneEditor.lineDecorations", () => {
     expect(viewModels[0].characterFileId).toBeUndefined();
   });
 
+  it("builds dialogue speaker sprite previews from engine sprite changes", () => {
+    const repositoryState = createRepositoryState();
+    repositoryState.characters.items["character-1"].sprites = {
+      items: {
+        "sprite-neutral": {
+          id: "sprite-neutral",
+          type: "image",
+          fileId: "file-sprite-neutral",
+        },
+      },
+      tree: [{ id: "sprite-neutral" }],
+    };
+    const spriteData = {
+      transformId: "dialogue-left",
+      items: [{ id: "base", resourceId: "sprite-neutral" }],
+    };
+
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines: [{ id: "line-1" }, { id: "line-2" }],
+      repositoryState,
+      sectionLineChanges: {
+        lines: [
+          {
+            id: "line-1",
+            changes: {
+              dialogueSprite: {
+                changeType: "add",
+                data: spriteData,
+              },
+            },
+            presentationState: {
+              dialogue: {
+                characterId: "character-1",
+                character: { sprite: spriteData },
+              },
+            },
+          },
+          {
+            id: "line-2",
+            changes: {
+              dialogueSprite: {
+                changeType: "delete",
+                data: spriteData,
+              },
+            },
+            presentationState: { dialogue: {} },
+          },
+        ],
+      },
+    });
+
+    const expectedPreview = {
+      fileId: "file-sprite-neutral",
+      spriteFileIds: ["file-sprite-neutral"],
+      spritePreviewBr: "none",
+      spritePreviewLayers: [
+        {
+          kind: "image",
+          itemId: "sprite-neutral",
+          fileId: "file-sprite-neutral",
+          previewKey: "image:sprite-neutral:file-sprite-neutral",
+        },
+      ],
+    };
+    expect(viewModels[0].dialogueSprite).toEqual({
+      changeType: "add",
+      ...expectedPreview,
+    });
+    expect(viewModels[1].dialogueSprite).toEqual({
+      changeType: "delete",
+      ...expectedPreview,
+    });
+  });
+
   it("builds stacked sprite previews for multipart character changes", () => {
     const lines = [
       {
