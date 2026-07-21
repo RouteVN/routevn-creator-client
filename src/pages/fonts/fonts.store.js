@@ -5,6 +5,7 @@ import { createMediaPageStore } from "../../internal/ui/resourcePages/media/crea
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { selectFontsPageCopy } from "./support/fontsPageCopy.js";
+import { NEW_FONT_FILE_TYPES } from "../../internal/fontCapabilities.js";
 
 export const FONT_TAG_SCOPE_KEY = "fonts";
 
@@ -30,7 +31,7 @@ const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
 
   const activeFontInfo =
     selectedFontInfo?.itemId === item.id ? selectedFontInfo : undefined;
-  const detailFields = [
+  return [
     {
       type: "description",
       value: item.description ?? "",
@@ -54,58 +55,6 @@ const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
       value: item.fileSize ? formatFileSize(item.fileSize) : "",
     },
   ];
-
-  if (activeFontInfo) {
-    detailFields.push({
-      type: "section",
-      label: copy.metadataLabel ?? "Metadata",
-      fields: [
-        {
-          type: "text",
-          label: copy.weightLabel ?? "Weight",
-          value: activeFontInfo.weightClass ?? "",
-        },
-        {
-          type: "text",
-          label: copy.variableFontLabel ?? "Variable Font",
-          value: activeFontInfo.isVariableFont ?? "",
-        },
-        {
-          type: "text",
-          label: copy.supportsItalicsLabel ?? "Supports Italics",
-          value: activeFontInfo.supportsItalics ?? "",
-        },
-        {
-          type: "text",
-          label: copy.glyphCountLabel ?? "Glyph Count",
-          value: String(activeFontInfo.glyphCount ?? ""),
-        },
-        {
-          type: "text",
-          label: copy.supportedScriptsLabel ?? "Supported Scripts",
-          value: activeFontInfo.languageSupport ?? "",
-        },
-      ],
-    });
-
-    if (activeFontInfo.previewNote) {
-      detailFields.push({
-        type: "text",
-        label: copy.previewNoteLabel ?? "Preview Note",
-        value: activeFontInfo.previewNote,
-      });
-    }
-
-    if (activeFontInfo.error) {
-      detailFields.push({
-        type: "text",
-        label: copy.metadataErrorLabel ?? "Metadata Error",
-        value: activeFontInfo.error,
-      });
-    }
-  }
-
-  return detailFields;
 };
 
 const buildMediaItem = (item) => ({
@@ -209,7 +158,7 @@ const {
   resourceCategory: "userInterface",
   uploadText: "Upload",
   copy: selectFontsPageCopy,
-  acceptedFileTypes: [".ttf", ".otf", ".woff", ".woff2", ".ttc", ".eot"],
+  acceptedFileTypes: NEW_FONT_FILE_TYPES,
   centerItemContextMenuItems: [
     { label: "Edit", type: "item", value: "edit-item" },
     { label: "Delete", type: "item", value: "delete-item" },
@@ -263,7 +212,6 @@ const {
         description: editItem?.description ?? "",
         tagIds: editItem?.tagIds ?? [],
       },
-      modalPreviewRows: modalFontInfo?.previewRows ?? [],
       modalGlyphList: modalFontInfo?.glyphs ?? [],
       clickToUploadLabel: copy.clickToUploadLabel ?? "Click to Upload",
     };

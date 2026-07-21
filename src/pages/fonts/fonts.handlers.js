@@ -22,9 +22,11 @@ import {
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { FONT_TAG_SCOPE_KEY } from "./fonts.store.js";
 import { selectFontsPageCopy } from "./support/fontsPageCopy.js";
+import {
+  inspectNewFontFile,
+  NEW_FONT_FILE_ACCEPT,
+} from "../../internal/fontCapabilities.js";
 
-const FONT_FILE_PATTERN = /\.(ttf|otf|woff|woff2|ttc|eot)$/i;
-const FONT_FILE_ACCEPT = ".ttf,.otf,.woff,.woff2,.ttc,.eot";
 const MAX_PARALLEL_UPLOADS = 1;
 
 const selectCopy = (deps = {}) => selectFontsPageCopy(deps.i18n);
@@ -33,22 +35,36 @@ const showInvalidFormatToast = (appService, copy = {}) => {
   appService.showAlert({
     message:
       copy.invalidFormatMessage ??
-      "Invalid file format. Please upload a font file (.ttf, .otf, .woff, .woff2, .ttc, or .eot)",
+      "Invalid file format. Please upload a TTF or OTF font file.",
     title: copy.warningTitle ?? "Warning",
   });
 };
 
-const validateFontFiles = ({ appService, files, copy } = {}) => {
-  const invalidFiles = Array.from(files ?? []).filter(
-    (file) => !file.name.match(FONT_FILE_PATTERN),
-  );
+const showInvalidFontToast = (appService, copy = {}) => {
+  appService.showAlert({
+    message:
+      copy.invalidFontMessage ??
+      "Could not read the font's supported weights. Please choose a valid TTF or OTF font.",
+    title: copy.warningTitle ?? "Warning",
+  });
+};
 
-  if (invalidFiles.length > 0) {
-    showInvalidFormatToast(appService, copy);
-    return false;
+const inspectFontFiles = async ({ appService, files, copy } = {}) => {
+  const capabilitiesByFile = new Map();
+  for (const file of Array.from(files ?? [])) {
+    try {
+      capabilitiesByFile.set(file, await inspectNewFontFile(file));
+    } catch (error) {
+      if (error?.code === "unsupported_font_format") {
+        showInvalidFormatToast(appService, copy);
+      } else {
+        showInvalidFontToast(appService, copy);
+      }
+      return undefined;
+    }
   }
 
-  return true;
+  return capabilitiesByFile;
 };
 
 const pickAndUploadFont = async ({ appService, projectService, copy } = {}) => {
@@ -56,7 +72,7 @@ const pickAndUploadFont = async ({ appService, projectService, copy } = {}) => {
 
   try {
     file = await appService.pickFiles({
-      accept: FONT_FILE_ACCEPT,
+      accept: NEW_FONT_FILE_ACCEPT,
       multiple: false,
     });
   } catch (error) {
@@ -67,7 +83,12 @@ const pickAndUploadFont = async ({ appService, projectService, copy } = {}) => {
     return { cancelled: true };
   }
 
-  if (!validateFontFiles({ appService, files: [file], copy })) {
+  const capabilitiesByFile = await inspectFontFiles({
+    appService,
+    files: [file],
+    copy,
+  });
+  if (!capabilitiesByFile) {
     return { errorType: "validation-failed" };
   }
 
@@ -83,13 +104,19 @@ const pickAndUploadFont = async ({ appService, projectService, copy } = {}) => {
     return { error: "upload-failed", errorType: "upload-failed" };
   }
 
+  uploadResult.fontCapabilities = capabilitiesByFile.get(file);
   return { uploadResult };
 };
 
 const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
   const copy = selectCopy(deps);
   const { appService, projectService, store } = deps;
-  if (!validateFontFiles({ appService, files, copy })) {
+  const capabilitiesByFile = await inspectFontFiles({
+    appService,
+    files,
+    copy,
+  });
+  if (!capabilitiesByFile) {
     return;
   }
 
@@ -107,6 +134,7 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
       if (!uploadResult) {
         throw new Error("upload-failed");
       }
+      uploadResult.fontCapabilities = capabilitiesByFile.get(file);
 
       const fontId = generateId();
       store.updatePendingUpload({
@@ -325,7 +353,7 @@ export const handleUploadClick = async (deps, payload) => {
 
   try {
     files = await appService.pickFiles({
-      accept: FONT_FILE_ACCEPT,
+      accept: NEW_FONT_FILE_ACCEPT,
       multiple: true,
     });
   } catch (error) {

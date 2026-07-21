@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
+import { createTestFontFile } from "../support/fontFixtures.js";
 
 const { generateIdMock, processPendingUploadsMock } = vi.hoisted(() => ({
   generateIdMock: vi.fn(() => "font-123"),
@@ -90,8 +91,9 @@ describe("fonts handlers", () => {
   });
 
   it("marks pending uploads with the created font id before creating", async () => {
-    const file = new File(["font"], "inter.ttf", {
-      type: "font/ttf",
+    const file = createTestFontFile({
+      name: "inter.ttf",
+      weight: 400,
     });
     const uploadResult = {
       fileId: "file-1",
@@ -164,6 +166,16 @@ describe("fonts handlers", () => {
       },
     });
 
+    expect(deps.appService.pickFiles).toHaveBeenCalledWith({
+      accept: ".ttf,.otf",
+      multiple: true,
+    });
+    expect(uploadResult.fontCapabilities).toEqual({
+      kind: "static",
+      defaultWeight: 400,
+      minWeight: 400,
+      maxWeight: 400,
+    });
     expect(deps.store.updatePendingUpload).toHaveBeenCalledWith({
       itemId: "pending-font-1",
       updates: {
@@ -183,5 +195,39 @@ describe("fonts handlers", () => {
       position: "last",
     });
     expect(removePendingUpload).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects new WOFF2 uploads before uploading", async () => {
+    const file = createTestFontFile({
+      name: "legacy.woff2",
+      type: "font/woff2",
+    });
+    const deps = {
+      i18n: EN_I18N,
+      appService: {
+        pickFiles: vi.fn(async () => [file]),
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        uploadFiles: vi.fn(),
+      },
+      store: {},
+    };
+
+    await handleUploadClick(deps, {
+      _event: {
+        detail: {
+          groupId: "folder-1",
+        },
+      },
+    });
+
+    expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
+    expect(processPendingUploadsMock).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("TTF or OTF"),
+      }),
+    );
   });
 });

@@ -2,11 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleDesktopTextStyleFormKeyDown,
   handleDesktopTextStyleSubmitClick,
+  handleDialogFormChange,
   handleFormActionClick,
   handleItemDuplicate,
   handleMobileDetailEditClick,
 } from "../../src/pages/textStyles/textStyles.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createTestFontBytes } from "../support/fontFixtures.js";
 
 describe("textStyles.handlers", () => {
   const createProjectState = () => ({
@@ -41,6 +43,9 @@ describe("textStyles.handlers", () => {
         },
       }),
       selectDialogState: vi.fn(() => dialogState),
+      selectFontCapabilities: vi.fn(() => ({ kind: "unrestricted" })),
+      selectFontById: vi.fn(),
+      selectItemById: vi.fn(),
       selectIsTouchMode: vi.fn(() => false),
       selectCurrentPreviewText: vi.fn(() => "Preview"),
       resetFormValues: vi.fn(),
@@ -50,6 +55,7 @@ describe("textStyles.handlers", () => {
       setTagsData: vi.fn(),
       setColorsData: vi.fn(),
       setFontsData: vi.fn(),
+      setFontCapabilities: vi.fn(),
       openAddColorDialog: vi.fn(),
       openAddFontDialog: vi.fn(),
     },
@@ -154,6 +160,140 @@ describe("textStyles.handlers", () => {
         offsetY: 3,
       },
     });
+  });
+
+  it("rejects a new text style weight unsupported by a static font", async () => {
+    const createTextStyle = vi.fn(async () => "text-style-new");
+    const deps = createFormDeps({ createTextStyle });
+    deps.store.selectFontCapabilities.mockReturnValue({
+      kind: "static",
+      defaultWeight: 400,
+      minWeight: 400,
+      maxWeight: 400,
+    });
+
+    await handleFormActionClick(
+      deps,
+      createSubmitPayload({ fontWeight: "700" }),
+    );
+
+    expect(createTextStyle).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("not supported"),
+      }),
+    );
+  });
+
+  it("preserves an existing unsupported weight while editing", async () => {
+    const updateTextStyle = vi.fn(async () => ({ valid: true }));
+    const deps = createFormDeps({
+      updateTextStyle,
+      dialogState: {
+        targetGroupId: undefined,
+        editMode: true,
+        editingItemId: "text-style-1",
+      },
+    });
+    deps.store.selectFontCapabilities.mockReturnValue({
+      kind: "static",
+      defaultWeight: 400,
+      minWeight: 400,
+      maxWeight: 400,
+    });
+    deps.store.selectItemById.mockReturnValue({
+      id: "text-style-1",
+      fontId: "font-1",
+      fontWeight: "700",
+    });
+
+    await handleFormActionClick(
+      deps,
+      createSubmitPayload({ fontWeight: "700" }),
+    );
+
+    expect(updateTextStyle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        textStyleId: "text-style-1",
+        data: expect.objectContaining({ fontWeight: "700" }),
+      }),
+    );
+  });
+
+  it("loads a TTF's capabilities and selects its real static weight", async () => {
+    let currentFormValues = {
+      fontId: "font-600",
+      fontWeight: "400",
+    };
+    const revoke = vi.fn();
+    const deps = {
+      store: {
+        updateFormValues: vi.fn(({ formData }) => {
+          currentFormValues = { ...currentFormValues, ...formData };
+        }),
+        selectCurrentFormValues: vi.fn(() => currentFormValues),
+        selectFontCapabilities: vi.fn(),
+        selectFontById: vi.fn(() => ({
+          id: "font-600",
+          type: "font",
+          fileId: "file-600",
+          fileType: "font/ttf",
+        })),
+        setFontCapabilities: vi.fn(),
+        selectDialogState: vi.fn(() => ({ editMode: false })),
+      },
+      projectService: {
+        getFileContent: vi.fn(async () => ({
+          url: "blob:font-600",
+          revoke,
+        })),
+      },
+      refs: {
+        textStyleForm: {
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+    const fontBytes = createTestFontBytes({ weight: 600 });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        arrayBuffer: async () => fontBytes.buffer,
+      })),
+    );
+
+    try {
+      await handleDialogFormChange(deps, {
+        _event: {
+          detail: {
+            name: "fontId",
+            value: "font-600",
+            values: currentFormValues,
+          },
+        },
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(deps.store.setFontCapabilities).toHaveBeenCalledWith({
+      fontId: "font-600",
+      capabilities: {
+        kind: "static",
+        defaultWeight: 600,
+        minWeight: 600,
+        maxWeight: 600,
+      },
+    });
+    expect(deps.refs.textStyleForm.setValues).toHaveBeenCalledWith({
+      values: {
+        fontId: "font-600",
+        fontWeight: "600",
+      },
+    });
+    expect(revoke).toHaveBeenCalledOnce();
   });
 
   it("submits the desktop form through the fixed action button", async () => {
@@ -304,6 +444,7 @@ describe("textStyles.handlers", () => {
         setEditMode: vi.fn(),
         selectIsDialogOpen: vi.fn(() => false),
         toggleDialog: vi.fn(),
+        selectFontCapabilities: vi.fn(() => ({ kind: "unrestricted" })),
       },
       refs: {
         fileExplorer: {

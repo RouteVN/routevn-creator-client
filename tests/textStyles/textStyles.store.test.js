@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  setEditMode,
+  setFontCapabilities,
   selectViewData,
   setFormValuesFromItem,
   setItems,
@@ -173,6 +175,109 @@ describe("textStyles.store", () => {
     });
     expect(viewData.dialogForm.actions.buttons).toEqual([
       viewData.dialogSubmitButton,
+    ]);
+  });
+
+  it("offers only a static font's extracted weight", () => {
+    const state = createInitialState();
+    updateFormValues({ state }, { formData: { fontId: "font-1" } });
+    setFontCapabilities(
+      { state },
+      {
+        fontId: "font-1",
+        capabilities: {
+          kind: "static",
+          defaultWeight: 600,
+          minWeight: 600,
+          maxWeight: 600,
+        },
+      },
+    );
+
+    const fontWeightField = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).dialogForm.fields.find((field) => field.name === "fontWeight");
+
+    expect(fontWeightField.options.map((option) => option.value)).toEqual([
+      "600",
+    ]);
+  });
+
+  it("offers standard weights inside a variable font's actual range", () => {
+    const state = createInitialState();
+    updateFormValues({ state }, { formData: { fontId: "font-1" } });
+    setFontCapabilities(
+      { state },
+      {
+        fontId: "font-1",
+        capabilities: {
+          kind: "variable",
+          defaultWeight: 400,
+          minWeight: 250,
+          maxWeight: 725,
+        },
+      },
+    );
+
+    const fontWeightField = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).dialogForm.fields.find((field) => field.name === "fontWeight");
+
+    expect(fontWeightField.options.map((option) => option.value)).toEqual([
+      "300",
+      "400",
+      "500",
+      "600",
+      "700",
+    ]);
+  });
+
+  it("keeps an existing unsupported weight available while editing", () => {
+    const state = createInitialState();
+    const item = {
+      id: "style-1",
+      type: "textStyle",
+      name: "Legacy Bold",
+      fontId: "font-1",
+      colorId: "color-1",
+      fontSize: 24,
+      lineHeight: 1.5,
+      fontWeight: "700",
+    };
+    setItems(
+      { state },
+      {
+        textStylesData: {
+          items: { "style-1": item },
+          tree: [{ id: "style-1" }],
+        },
+      },
+    );
+    setFormValuesFromItem({ state }, { item });
+    setEditMode({ state }, { itemId: "style-1" });
+    setFontCapabilities(
+      { state },
+      {
+        fontId: "font-1",
+        capabilities: {
+          kind: "static",
+          defaultWeight: 400,
+          minWeight: 400,
+          maxWeight: 400,
+        },
+      },
+    );
+
+    const fontWeightField = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).dialogForm.fields.find((field) => field.name === "fontWeight");
+
+    expect(fontWeightField.options.map((option) => option.value)).toEqual([
+      "400",
+      "700",
     ]);
   });
 });

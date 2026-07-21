@@ -70,7 +70,7 @@ describe("layout rich text projection", () => {
     expect(elements[0].content).toEqual([{ text: "Hello" }]);
   });
 
-  it("preserves the default menu font weights for legacy text", () => {
+  it("uses the default menu font's real static weight for legacy text", () => {
     const cases = [
       {
         layoutId: "ob6i5RdAgrcK",
@@ -105,8 +105,8 @@ describe("layout rich text projection", () => {
       );
 
       expect(element.content).toEqual([{ text }]);
-      expect(element.textStyle.fontWeight).toBe("700");
-      expect(element.hover.textStyle.fontWeight).toBe("700");
+      expect(element.textStyle.fontWeight).toBe("600");
+      expect(element.hover.textStyle.fontWeight).toBe("600");
     }
   });
 });

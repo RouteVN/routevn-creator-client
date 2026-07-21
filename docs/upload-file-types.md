@@ -125,16 +125,16 @@ same time.
 | Character sprites page | `.jpg`, `.jpeg`, `.png`, `.webp`; `.png` + `.json` | explicit pair + format toast  | upload menu supports image or spritesheet; edit/replace images |
 | Videos page            | `.mp4`                                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
 | Sounds page            | `.mp3`, `.wav`, `.ogg`                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
-| Fonts page             | `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc`, `.eot`  | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
+| Fonts page             | `.ttf`, `.otf`                                     | format + weight metadata      | picker, center drag-drop, edit/replace                         |
 
 ### Dialog / Special Upload Surfaces
 
-| Surface                             | Allowed file types                | Extra validation                             | Notes                                      |
-| ----------------------------------- | --------------------------------- | -------------------------------------------- | ------------------------------------------ |
-| Character avatar upload             | `image/*`                         | `image-min-size` + square crop dialog        | create dialog, edit dialog, avatar replace |
-| Project icon upload (create dialog) | `image/*`                         | `image-min-size` + square crop dialog        | projects page create dialog                |
-| Project icon upload (settings)      | `image/*`                         | `square`                                     | project settings dialog                    |
-| Text styles add-font dialog         | `.ttf`, `.otf`, `.woff`, `.woff2` | none in page, drop zone filters by extension | narrower than Fonts page today             |
+| Surface                             | Allowed file types | Extra validation                      | Notes                                      |
+| ----------------------------------- | ------------------ | ------------------------------------- | ------------------------------------------ |
+| Character avatar upload             | `image/*`          | `image-min-size` + square crop dialog | create dialog, edit dialog, avatar replace |
+| Project icon upload (create dialog) | `image/*`          | `image-min-size` + square crop dialog | projects page create dialog                |
+| Project icon upload (settings)      | `image/*`          | `square`                              | project settings dialog                    |
+| Text styles add-font dialog         | `.ttf`, `.otf`     | format + weight metadata              | matches the Fonts page                     |
 
 ## Current Code Locations
 
@@ -188,12 +188,19 @@ When adding or changing an uploadable file type:
 6. Update this document.
 7. Validate both picker upload and drag-drop upload.
 
+## Font Compatibility
+
+- New font uploads accept only `.ttf` and `.otf` files.
+- Static fonts expose only their declared `OS/2.usWeightClass` for new text
+  styles.
+- Variable fonts expose weight choices within their declared `fvar` `wght`
+  range.
+- Existing WOFF, WOFF2, TTC, and EOT resources remain readable and renderable.
+- Existing text styles keep saved weight values even if the selected font does
+  not declare that weight.
+
 ## Current Drift To Watch
 
-- Fonts are not fully centralized yet.
-  The Fonts page accepts `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc`, `.eot`,
-  while the Text Styles add-font dialog currently accepts only
-  `.ttf`, `.otf`, `.woff`, `.woff2`.
 - Some image-only surfaces still use `image/*` plus `square` validation instead
   of an explicit extension list.
   If stricter control is required, those surfaces should be narrowed and

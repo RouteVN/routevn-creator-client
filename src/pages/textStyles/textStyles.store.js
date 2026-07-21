@@ -33,8 +33,79 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { selectTextStylesPageCopy } from "./support/textStylesPageCopy.js";
+import {
+  isFontWeightSupported,
+  NEW_FONT_FILE_TYPES,
+} from "../../internal/fontCapabilities.js";
 
 export const TEXT_STYLE_TAG_SCOPE_KEY = "textStyles";
+
+const FONT_WEIGHT_DEFINITIONS = [
+  { value: "100", copyKey: "weight100Thin", label: "100 - Thin" },
+  {
+    value: "200",
+    copyKey: "weight200ExtraLight",
+    label: "200 - Extra Light",
+  },
+  { value: "300", copyKey: "weight300Light", label: "300 - Light" },
+  { value: "400", copyKey: "weight400Normal", label: "400 - Normal" },
+  { value: "500", copyKey: "weight500Medium", label: "500 - Medium" },
+  {
+    value: "600",
+    copyKey: "weight600SemiBold",
+    label: "600 - Semi Bold",
+  },
+  { value: "700", copyKey: "weight700Bold", label: "700 - Bold" },
+  {
+    value: "800",
+    copyKey: "weight800ExtraBold",
+    label: "800 - Extra Bold",
+  },
+  { value: "900", copyKey: "weight900Black", label: "900 - Black" },
+];
+
+const buildFontWeightOptions = ({
+  capabilities,
+  grandfatheredWeight,
+  copy = {},
+} = {}) => {
+  const optionsByValue = new Map();
+  const addOption = (value) => {
+    const normalizedValue = String(value);
+    const definition = FONT_WEIGHT_DEFINITIONS.find(
+      (item) => item.value === normalizedValue,
+    );
+    optionsByValue.set(normalizedValue, {
+      label: definition
+        ? (copy[definition.copyKey] ?? definition.label)
+        : normalizedValue,
+      value: normalizedValue,
+    });
+  };
+
+  if (!capabilities || capabilities.kind === "unrestricted") {
+    FONT_WEIGHT_DEFINITIONS.forEach((definition) =>
+      addOption(definition.value),
+    );
+  } else {
+    FONT_WEIGHT_DEFINITIONS.forEach((definition) => {
+      if (isFontWeightSupported(capabilities, definition.value)) {
+        addOption(definition.value);
+      }
+    });
+    if (capabilities.defaultWeight !== undefined) {
+      addOption(capabilities.defaultWeight);
+    }
+  }
+
+  if (grandfatheredWeight !== undefined) {
+    addOption(grandfatheredWeight);
+  }
+
+  return Array.from(optionsByValue.values()).sort(
+    (left, right) => Number(left.value) - Number(right.value),
+  );
+};
 
 const createTagDialogForm = (copy = {}) =>
   createTagForm({
@@ -241,6 +312,7 @@ export const createInitialState = () => ({
   textStylesData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
+  fontCapabilitiesById: {},
   selectedItemId: undefined,
   selectedFolderId: undefined,
   searchQuery: "",
@@ -361,6 +433,13 @@ export const setColorsData = ({ state }, { colorsData } = {}) => {
 
 export const setFontsData = ({ state }, { fontsData } = {}) => {
   state.fontsData = fontsData;
+};
+
+export const setFontCapabilities = (
+  { state },
+  { fontId, capabilities } = {},
+) => {
+  state.fontCapabilitiesById[fontId] = capabilities;
 };
 
 export const setSelectedItemId = (
@@ -666,6 +745,16 @@ export const selectColorsData = ({ state }) => state.colorsData;
 
 export const selectFontsData = ({ state }) => state.fontsData;
 
+export const selectFontById = ({ state }, { fontId } = {}) => {
+  const font = state.fontsData?.items?.[fontId];
+  return font?.type === "font" ? font : undefined;
+};
+
+export const selectFontCapabilities = ({ state }, { fontId } = {}) =>
+  state.fontCapabilitiesById[fontId];
+
+export const selectCurrentFormValues = ({ state }) => state.currentFormValues;
+
 export const selectTypographyData = ({ state }) => state.textStylesData;
 
 export const selectDialogState = ({ state }) => ({
@@ -965,6 +1054,19 @@ export const selectViewData = ({ state, i18n }) => {
             item.id === state.editingItemId && item.type === "textStyle",
         )
       : undefined;
+  const selectedFormFontId = state.currentFormValues.fontId;
+  const selectedFontCapabilities = selectedFormFontId
+    ? state.fontCapabilitiesById[selectedFormFontId]
+    : undefined;
+  const grandfatheredWeight =
+    editingItem?.fontId === selectedFormFontId
+      ? editingItem.fontWeight
+      : undefined;
+  const fontWeightOptions = buildFontWeightOptions({
+    capabilities: selectedFontCapabilities,
+    grandfatheredWeight,
+    copy,
+  });
 
   const dialogFields = [
     {
@@ -1017,23 +1119,7 @@ export const selectViewData = ({ state, i18n }) => {
       type: "select",
       label: copy.fontWeightLabel ?? "Font Weight",
       placeholder: copy.chooseFontWeightPlaceholder ?? "Choose font weight",
-      options: [
-        { label: copy.weight100Thin ?? "100 - Thin", value: "100" },
-        {
-          label: copy.weight200ExtraLight ?? "200 - Extra Light",
-          value: "200",
-        },
-        { label: copy.weight300Light ?? "300 - Light", value: "300" },
-        { label: copy.weight400Normal ?? "400 - Normal", value: "400" },
-        { label: copy.weight500Medium ?? "500 - Medium", value: "500" },
-        { label: copy.weight600SemiBold ?? "600 - Semi Bold", value: "600" },
-        { label: copy.weight700Bold ?? "700 - Bold", value: "700" },
-        {
-          label: copy.weight800ExtraBold ?? "800 - Extra Bold",
-          value: "800",
-        },
-        { label: copy.weight900Black ?? "900 - Black", value: "900" },
-      ],
+      options: fontWeightOptions,
       required: true,
     },
     {
@@ -1296,7 +1382,7 @@ export const selectViewData = ({ state, i18n }) => {
     dragDropText: state.hasSelectedFont
       ? (copy.dragDropReplace ?? "Replace font file")
       : (copy.dragDropClick ?? "Click or drag font file here"),
-    fontFileTypes: [".ttf", ".otf", ".woff", ".woff2"],
+    fontFileTypes: NEW_FONT_FILE_TYPES,
 
     // Preview values for dialog
     previewText: getPreviewTextValue(state.currentFormValues),
