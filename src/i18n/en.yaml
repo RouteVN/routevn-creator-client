@@ -1665,7 +1665,7 @@ sceneEditorPage:
   upLabel: "Up"
   warningTitle: "Warning"
 commandLinePage:
-  "Add Dialogue Speaker Sprite": "Add Dialogue Speaker Sprite"
+  "Add Speaker Sprite": "Add Speaker Sprite"
   addValueButton: "Add Value"
   "+ Add Branch": "+ Add Branch"
   "+ Add Character": "+ Add Character"

@@ -1665,7 +1665,7 @@ sceneEditorPage:
   upLabel: "上"
   warningTitle: "警告"
 commandLinePage:
-  "Add Dialogue Speaker Sprite": "会話用の立ち絵を追加"
+  "Add Speaker Sprite": "話者の立ち絵を追加"
   addValueButton: "値を追加"
   "+ Add Branch": "+ 分岐を追加"
   "+ Add Character": "+ キャラクターを追加"

@@ -207,7 +207,7 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(view).toContain("rtgl-tooltip ?open=${speakerSpriteTooltip.open}");
     expect(view).toContain("handler: handleCharacterSpriteBoxContextMenu");
     expect(view).toContain(
-      "rtgl-button#addDialogueSpeakerSpriteButton v=ol pre=plus",
+      "rtgl-button#addSpeakerSpriteButton v=ol pre=plus",
     );
     expect(view).toContain("handler: handleCharacterSpriteBoxClick");
     expect(view).toContain(

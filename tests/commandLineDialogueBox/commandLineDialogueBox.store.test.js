@@ -85,9 +85,7 @@ describe("commandLineDialogueBox.store", () => {
     expect(viewData.defaultValues.characterName).toBe("Boss");
     expect(viewData.defaultValues.append).toBe(false);
     expect(viewData.defaultValues.persistCharacter).toBe(true);
-    expect(viewData.addDialogueSpeakerSpriteLabel).toBe(
-      "Add Dialogue Speaker Sprite",
-    );
+    expect(viewData.addSpeakerSpriteLabel).toBe("Add Speaker Sprite");
     expect(
       viewData.form.fields.find((field) => field.name === "mode"),
     ).toMatchObject({

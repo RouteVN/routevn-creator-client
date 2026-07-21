@@ -1193,10 +1193,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     searchPlaceholder: localizeCommandLineText("Search...", copy),
     noAvatarLabel: localizeCommandLineText("No Avatar", copy),
     noPreviewLabel: localizeCommandLineText("No preview", copy),
-    addDialogueSpeakerSpriteLabel: localizeCommandLineText(
-      "Add Dialogue Speaker Sprite",
-      copy,
-    ),
+    addSpeakerSpriteLabel: localizeCommandLineText("Add Speaker Sprite", copy),
     transformLabel: localizeCommandLineText("Transform", copy),
     animationLabel: localizeCommandLineText("Animation", copy),
     persistSpriteLabel: localizeCommandLineText("Persist Sprite", copy),

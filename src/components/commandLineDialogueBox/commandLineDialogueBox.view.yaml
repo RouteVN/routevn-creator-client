@@ -13,7 +13,7 @@ refs:
         handler: handleCharacterSpriteBoxClick
       contextmenu:
         handler: handleCharacterSpriteBoxContextMenu
-  addDialogueSpeakerSpriteButton:
+  addSpeakerSpriteButton:
     eventListeners:
       click:
         handler: handleCharacterSpriteBoxClick
@@ -135,7 +135,7 @@ template:
                                           - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${selectedSpriteCharacter.displayName}
                                           - 'rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis title="${characterSpriteMenuLabel}" aria-label="${characterSpriteMenuLabel}" aria-haspopup=menu': null
                             $else:
-                              - rtgl-button#addDialogueSpeakerSpriteButton v=ol pre=plus: ${addDialogueSpeakerSpriteLabel}
+                              - rtgl-button#addSpeakerSpriteButton v=ol pre=plus: ${addSpeakerSpriteLabel}
                           - $if hasSpriteCharacter:
                               - rtgl-view w=1fg g=sm:
                                   - rtgl-text s=sm c=mu-fg: ${transformLabel}
