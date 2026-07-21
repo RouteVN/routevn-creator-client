@@ -284,6 +284,8 @@ target immediately.
   the hover outline at the same time.
 - Clear hover when the pointer leaves the canvas, no candidate exists, a drag
   starts, or the component unmounts.
+- After a full canvas render, restore the hover outline for an eligible
+  stationary pointer without requiring additional pointer movement.
 
 Hover updates MUST be cheap. Pointer movement MUST NOT reload assets, query the
 repository, or recompile the layout. It MAY submit the cached render tree plus
@@ -337,6 +339,8 @@ MUST NOT accidentally reset the depth and prevent repeated descent.
   the authored boundary.
 - Keep each outline approximately one CSS pixel at every canvas scale. Together,
   the exterior white and interior gray bands span approximately two CSS pixels.
+- When the canvas's CSS size changes, recompute renderer units per CSS pixel and
+  rebuild hover, selection, anchor, and resize chrome from cached render data.
 - Show the existing white anchor marker with its one-CSS-pixel light-gray
   border and only the resize handles supported by the selected authored item.
 - Use no selection fill; authored content must remain visible and color-accurate.

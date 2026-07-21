@@ -24,6 +24,8 @@ export const createInitialState = () => ({
   deepSelectActive: false,
   hoverFrameId: undefined,
   canvasRenderElements: [],
+  canvasBaseElements: [],
+  canvasParsedElements: [],
   canvasUnitsPerCssPixel: 1,
 });
 
@@ -163,9 +165,16 @@ export const setHoverFrameId = ({ state }, { frameId } = {}) => {
 
 export const setCanvasRenderState = (
   { state },
-  { elements = [], canvasUnitsPerCssPixel = 1 } = {},
+  {
+    elements = [],
+    baseElements = [],
+    parsedElements = [],
+    canvasUnitsPerCssPixel = 1,
+  } = {},
 ) => {
   state.canvasRenderElements = elements;
+  state.canvasBaseElements = baseElements;
+  state.canvasParsedElements = parsedElements;
   state.canvasUnitsPerCssPixel = canvasUnitsPerCssPixel;
 };
 
@@ -221,6 +230,13 @@ export const selectSelectionOccurrencesById = ({ state }) => {
   return state.selectionOccurrencesById;
 };
 
+export const selectSelectionOccurrenceState = ({ state }) => {
+  return {
+    occurrencesById: state.selectionOccurrencesById,
+    occurrenceIdsByOwner: state.selectionOccurrenceIdsByOwner,
+  };
+};
+
 export const selectHoveredSelection = ({ state }) => {
   return state.hoveredSelection;
 };
@@ -267,6 +283,8 @@ export const selectHoverFrameId = ({ state }) => {
 export const selectCanvasRenderState = ({ state }) => {
   return {
     elements: state.canvasRenderElements,
+    baseElements: state.canvasBaseElements,
+    parsedElements: state.canvasParsedElements,
     canvasUnitsPerCssPixel: state.canvasUnitsPerCssPixel,
   };
 };

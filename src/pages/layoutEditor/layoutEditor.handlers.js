@@ -1830,11 +1830,11 @@ export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
 
 export const handleLayoutEditorCanvasMetricsChange = (deps, payload) => {
   const { refs, store } = deps;
-  const metrics = payload._event.detail?.metrics;
+  const { itemId, metrics } = payload._event.detail;
   const selectedItemId = store.selectSelectedItemId();
   const detailPanelSelectedItemId = store.selectDetailPanelSelectedItemId?.();
 
-  if (metrics?.id && selectedItemId && metrics.id !== selectedItemId) {
+  if (itemId !== selectedItemId) {
     return;
   }
 

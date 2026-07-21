@@ -717,6 +717,41 @@ export const createLayoutEditorSelectionOverlay = ({
   return [primaryOverlay];
 };
 
+export const createLayoutEditorSelectionRenderState = ({
+  baseElements = [],
+  parsedElements = [],
+  selectedItemId,
+  selectedOccurrenceId,
+  occurrencesById = {},
+  occurrenceIdsByOwner = {},
+  selectedItem,
+  disableMoveDrag = false,
+  canvasUnitsPerCssPixel = 1,
+} = {}) => {
+  const overlayElements = createLayoutEditorSelectionOverlay({
+    parsedElements,
+    selectedItemId,
+    selectedOccurrenceId,
+    occurrencesById,
+    occurrenceIdsByOwner,
+    selectedItem,
+    disableMoveDrag,
+    canvasUnitsPerCssPixel,
+  });
+  const primaryMatchingPath = selectPrimaryMatchingPath({
+    parsedElements,
+    selectedItemId,
+    selectedOccurrenceId,
+    occurrencesById,
+    occurrenceIdsByOwner,
+  });
+
+  return {
+    elements: [...baseElements, ...overlayElements],
+    selectedElementMetrics: toSelectedElementMetrics(primaryMatchingPath),
+  };
+};
+
 export const createLayoutEditorHoverOverlay = ({
   bounds,
   canvasUnitsPerCssPixel = 1,
@@ -985,7 +1020,8 @@ export const createLayoutEditorRenderedElements = ({
   const parsedState = graphicsService.parse({
     elements: renderedElements,
   });
-  const overlayElements = createLayoutEditorSelectionOverlay({
+  const selectionRenderState = createLayoutEditorSelectionRenderState({
+    baseElements: renderedElements,
     parsedElements: parsedState.elements,
     selectedItemId,
     selectedOccurrenceId,
@@ -995,20 +1031,13 @@ export const createLayoutEditorRenderedElements = ({
     disableMoveDrag,
     canvasUnitsPerCssPixel,
   });
-  const primaryMatchingPath = selectPrimaryMatchingPath({
-    parsedElements: parsedState.elements,
-    selectedItemId,
-    selectedOccurrenceId,
-    occurrencesById,
-    occurrenceIdsByOwner,
-  });
-  const selectedElementMetrics = toSelectedElementMetrics(primaryMatchingPath);
   const fileReferences = extractFileIdsFromRenderState(renderedElements);
 
   return {
-    elements: [...renderedElements, ...overlayElements],
+    ...selectionRenderState,
+    baseElements: renderedElements,
+    parsedElements: parsedState.elements,
     fileReferences,
-    selectedElementMetrics,
     occurrencesById,
     occurrenceIdsByOwner,
   };

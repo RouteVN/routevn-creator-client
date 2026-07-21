@@ -822,6 +822,7 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
     handleLayoutEditorCanvasMetricsChange(deps, {
       _event: {
         detail: {
+          itemId: "selected-item",
           metrics: {
             id: "selected-item",
             width: 76,
@@ -841,6 +842,43 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
     expect(
       deps.refs.layoutEditPanel.setSelectedElementMetrics,
     ).not.toHaveBeenCalled();
+  });
+
+  it("accepts metrics for a repeated occurrence of the selected authored item", () => {
+    const metrics = {
+      id: "selected-item-instance-2",
+      width: 76,
+      height: 54,
+    };
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "selected-item"),
+        selectDetailPanelSelectedItemId: vi.fn(() => "selected-item"),
+        setSelectedElementMetrics: vi.fn(),
+      },
+      refs: {
+        layoutEditPanel: {
+          getSelectedElementMetrics: vi.fn(),
+          setSelectedElementMetrics: vi.fn(),
+        },
+      },
+    };
+
+    handleLayoutEditorCanvasMetricsChange(deps, {
+      _event: {
+        detail: {
+          itemId: "selected-item",
+          metrics,
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedElementMetrics).toHaveBeenCalledWith({
+      metrics,
+    });
+    expect(
+      deps.refs.layoutEditPanel.setSelectedElementMetrics,
+    ).toHaveBeenCalledWith({ metrics });
   });
 });
 

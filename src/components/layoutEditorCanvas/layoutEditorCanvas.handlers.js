@@ -13,6 +13,7 @@ import {
   createLayoutEditorAssetReferences,
   createLayoutEditorHoverOverlay,
   createLayoutEditorRenderedElements,
+  createLayoutEditorSelectionRenderState,
   loadLayoutEditorAssets,
 } from "./support/layoutEditorCanvasRender.js";
 import {
@@ -285,6 +286,7 @@ const toRendererPointerPosition = (deps, event = {}) => {
     y: (localY / canvasBounds.height) * height,
     clientX: event.clientX,
     clientY: event.clientY,
+    pointerType: event.pointerType,
   };
 };
 
@@ -384,7 +386,11 @@ const clearCanvasHover = (deps) => {
 const updateCanvasHover = (deps) => {
   const position = deps.store.selectLastPointerPosition();
   const pointerGesture = deps.store.selectPointerGesture();
-  if (!position || pointerGesture?.moved === true) {
+  if (
+    !position ||
+    position.pointerType === "touch" ||
+    pointerGesture?.moved === true
+  ) {
     clearCanvasHover(deps);
     return;
   }
@@ -421,7 +427,75 @@ const scheduleCanvasHoverUpdate = (deps) => {
   deps.store.setHoverFrameId({ frameId });
 };
 
+const dispatchSelectedElementMetrics = (deps, { itemId, metrics } = {}) => {
+  deps.dispatchEvent(
+    new CustomEvent("selected-element-metrics-change", {
+      detail: {
+        itemId,
+        metrics,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+const restoreCanvasHoverAfterRender = (deps) => {
+  deps.store.clearHoveredSelection();
+  const position = deps.store.selectLastPointerPosition();
+  if (position && position.pointerType !== "touch") {
+    scheduleCanvasHoverUpdate(deps);
+  }
+};
+
+const renderCachedCanvasChrome = (
+  deps,
+  { canvasUnitsPerCssPixel = getCanvasUnitsPerCssPixel(deps) } = {},
+) => {
+  const { baseElements, parsedElements } = deps.store.selectCanvasRenderState();
+  if (baseElements.length === 0 || parsedElements.length === 0) {
+    return false;
+  }
+
+  const { occurrencesById, occurrenceIdsByOwner } =
+    deps.store.selectSelectionOccurrenceState();
+  const { elements, selectedElementMetrics } =
+    createLayoutEditorSelectionRenderState({
+      baseElements,
+      parsedElements,
+      selectedItemId: deps.props.selectedItemId,
+      selectedOccurrenceId: deps.store.selectSelectedOccurrenceId(),
+      occurrencesById,
+      occurrenceIdsByOwner,
+      selectedItem:
+        deps.props.layoutState?.elements?.items?.[deps.props.selectedItemId],
+      disableMoveDrag: deps.props.disableMoveDrag === true,
+      canvasUnitsPerCssPixel,
+    });
+
+  deps.graphicsService.render({
+    elements,
+    animations: [],
+  });
+  deps.store.setCanvasRenderState({
+    elements,
+    baseElements,
+    parsedElements,
+    canvasUnitsPerCssPixel,
+  });
+  dispatchSelectedElementMetrics(deps, {
+    itemId: deps.props.selectedItemId,
+    metrics: selectedElementMetrics,
+  });
+  restoreCanvasHoverAfterRender(deps);
+  return true;
+};
+
 const dispatchCanvasSelection = (deps, selection) => {
+  const shouldRefreshSelectedOccurrence =
+    selection?.itemId === deps.props.selectedItemId &&
+    selection.occurrenceId !== deps.store.selectSelectedOccurrenceId();
+
   if (selection) {
     deps.store.setSelectedOccurrence({
       occurrenceId: selection.occurrenceId,
@@ -441,6 +515,10 @@ const dispatchCanvasSelection = (deps, selection) => {
       composed: true,
     }),
   );
+
+  if (shouldRefreshSelectedOccurrence) {
+    renderCachedCanvasChrome(deps);
+  }
 };
 
 export const applyCanvasItemKeyboardChange = ({
@@ -591,6 +669,8 @@ const renderLayoutEditorCanvas = async (
     const canvasUnitsPerCssPixel = getCanvasUnitsPerCssPixel(deps, props);
     const {
       elements,
+      baseElements,
+      parsedElements,
       fileReferences,
       selectedElementMetrics,
       occurrencesById,
@@ -610,15 +690,10 @@ const renderLayoutEditorCanvas = async (
       return;
     }
 
-    deps.dispatchEvent(
-      new CustomEvent("selected-element-metrics-change", {
-        detail: {
-          metrics: selectedElementMetrics,
-        },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    dispatchSelectedElementMetrics(deps, {
+      itemId: props.selectedItemId,
+      metrics: selectedElementMetrics,
+    });
 
     if (clearFirst) {
       deps.graphicsService.render({
@@ -671,15 +746,15 @@ const renderLayoutEditorCanvas = async (
     });
     deps.store.setCanvasRenderState({
       elements,
+      baseElements,
+      parsedElements,
       canvasUnitsPerCssPixel,
     });
     deps.store.setSelectionOccurrences({
       occurrencesById,
       occurrenceIdsByOwner,
     });
-    if (deps.store.selectLastPointerPosition()) {
-      scheduleCanvasHoverUpdate(deps);
-    }
+    restoreCanvasHoverAfterRender(deps);
   } catch (error) {
     console.error("[layoutEditorCanvas] Failed to render canvas", error);
   }
@@ -699,6 +774,22 @@ const initCanvasGraphics = async (deps, props = deps.props) => {
 
 export const handleCaptureThumbnailImage = async (deps) => {
   return captureCanvasThumbnailImage(deps.graphicsService, deps.refs.canvas);
+};
+
+export const handleCanvasResize = (deps) => {
+  if (!deps.store.selectIsGraphicsReady()) {
+    return false;
+  }
+
+  const { canvasUnitsPerCssPixel } = deps.store.selectCanvasRenderState();
+  const nextCanvasUnitsPerCssPixel = getCanvasUnitsPerCssPixel(deps);
+  if (canvasUnitsPerCssPixel === nextCanvasUnitsPerCssPixel) {
+    return false;
+  }
+
+  return renderCachedCanvasChrome(deps, {
+    canvasUnitsPerCssPixel: nextCanvasUnitsPerCssPixel,
+  });
 };
 
 export const handleCanvasPointerMove = (deps, payload) => {
@@ -734,6 +825,11 @@ export const handleCanvasPointerMove = (deps, payload) => {
       clearCanvasHover(deps);
       return;
     }
+  }
+
+  if (event.pointerType === "touch") {
+    clearCanvasHover(deps);
+    return;
   }
 
   scheduleCanvasHoverUpdate(deps);
@@ -1075,8 +1171,76 @@ const subscriptions = (deps) => {
   ];
 };
 
+const mountCanvasResizeObserver = (deps) => {
+  if (typeof globalThis.ResizeObserver !== "function") {
+    return () => {};
+  }
+
+  let observer;
+  let mountFrameId;
+  let mountTimerId;
+  let resizeFrameId;
+  let disposed = false;
+
+  const runResize = () => {
+    resizeFrameId = undefined;
+    if (!disposed) {
+      handleCanvasResize(deps);
+    }
+  };
+  const scheduleResize = () => {
+    if (resizeFrameId !== undefined) {
+      return;
+    }
+
+    if (typeof globalThis.requestAnimationFrame === "function") {
+      resizeFrameId = globalThis.requestAnimationFrame(runResize);
+      return;
+    }
+
+    runResize();
+  };
+  const mountObserver = () => {
+    mountFrameId = undefined;
+    mountTimerId = undefined;
+    if (disposed || !deps.refs.canvas) {
+      return;
+    }
+
+    observer = new globalThis.ResizeObserver(scheduleResize);
+    observer.observe(deps.refs.canvas);
+  };
+
+  if (typeof globalThis.requestAnimationFrame === "function") {
+    mountFrameId = globalThis.requestAnimationFrame(mountObserver);
+  } else {
+    mountTimerId = globalThis.setTimeout(mountObserver, 0);
+  }
+
+  return () => {
+    disposed = true;
+    observer?.disconnect();
+    if (
+      mountFrameId !== undefined &&
+      typeof globalThis.cancelAnimationFrame === "function"
+    ) {
+      globalThis.cancelAnimationFrame(mountFrameId);
+    }
+    if (mountTimerId !== undefined) {
+      globalThis.clearTimeout?.(mountTimerId);
+    }
+    if (
+      resizeFrameId !== undefined &&
+      typeof globalThis.cancelAnimationFrame === "function"
+    ) {
+      globalThis.cancelAnimationFrame(resizeFrameId);
+    }
+  };
+};
+
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
+  const cleanupCanvasResizeObserver = mountCanvasResizeObserver(deps);
 
   return () => {
     const hoverFrameId = deps.store.selectHoverFrameId();
@@ -1086,6 +1250,7 @@ export const handleBeforeMount = (deps) => {
     ) {
       globalThis.cancelAnimationFrame(hoverFrameId);
     }
+    cleanupCanvasResizeObserver();
     cleanupSubscriptions?.();
     void deps.graphicsService.destroy();
   };
