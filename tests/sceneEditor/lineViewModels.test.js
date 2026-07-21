@@ -131,6 +131,72 @@ describe("sceneEditor.lineDecorations", () => {
     expect(viewModels[0].characterFileId).toBeUndefined();
   });
 
+  it("does not mark speaker sprite-only dialogue changes as layout changes", () => {
+    const lines = [{ id: "line-1" }, { id: "line-2" }];
+    const dialogueLayout = {
+      resourceId: "dialogue-layout",
+    };
+
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines,
+      repositoryState: createRepositoryState(),
+      sectionLineChanges: {
+        lines: [
+          {
+            id: "line-1",
+            changes: {
+              dialogue: {
+                changeType: "add",
+                data: {
+                  ui: dialogueLayout,
+                },
+              },
+            },
+            presentationState: {
+              dialogue: {
+                ui: dialogueLayout,
+                character: {
+                  sprite: {
+                    items: [{ resourceId: "sprite-neutral" }],
+                  },
+                },
+              },
+            },
+          },
+          {
+            id: "line-2",
+            changes: {
+              dialogue: {
+                changeType: "update",
+                data: {
+                  ui: dialogueLayout,
+                  character: {
+                    sprite: {
+                      items: [{ resourceId: "sprite-smile" }],
+                    },
+                  },
+                },
+              },
+            },
+            presentationState: {
+              dialogue: {
+                ui: dialogueLayout,
+                character: {
+                  sprite: {
+                    items: [{ resourceId: "sprite-smile" }],
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    expect(viewModels[0].hasDialogueLayout).toBe(true);
+    expect(viewModels[1].hasDialogueLayout).toBe(false);
+  });
+
   it("builds stacked sprite previews for multipart character changes", () => {
     const lines = [
       {

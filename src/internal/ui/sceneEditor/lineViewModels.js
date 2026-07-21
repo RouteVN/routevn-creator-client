@@ -280,6 +280,26 @@ const resolveDialogueModeLabel = (repositoryState, line) => {
   return "ADV";
 };
 
+const selectDialogueLayoutState = (presentationState) => {
+  const dialogue = presentationState?.dialogue;
+  return dialogue?.ui ?? dialogue?.gui;
+};
+
+const hasDialogueLayoutChange = ({
+  changes,
+  previousPresentationState,
+  presentationState,
+} = {}) => {
+  if (!changes?.dialogue) {
+    return false;
+  }
+
+  return (
+    JSON.stringify(selectDialogueLayoutState(previousPresentationState)) !==
+    JSON.stringify(selectDialogueLayoutState(presentationState))
+  );
+};
+
 const toStableDomRefSuffix = (value = "") => {
   return Array.from(String(value)).reduce((result, char) => {
     if (/^[a-zA-Z0-9]$/.test(char)) {
@@ -343,7 +363,11 @@ const buildSceneDocumentLineViewModels = ({
       hasSetNextLineConfig:
         !!changes.setNextLineConfig || !!lineActions?.setNextLineConfig,
       setNextLineConfigChangeType: changes.setNextLineConfig?.changeType,
-      hasDialogueLayout: !!changes.dialogue,
+      hasDialogueLayout: hasDialogueLayoutChange({
+        changes,
+        previousPresentationState: previousSectionLineEntry?.presentationState,
+        presentationState: linePresentationState,
+      }),
       dialogueModeLabel: resolveDialogueModeLabel(repositoryState, line),
       dialogueChangeType: changes.dialogue?.changeType,
       hasControl: !!changes.control,
