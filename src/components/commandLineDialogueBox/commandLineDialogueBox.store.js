@@ -338,6 +338,7 @@ export const createInitialState = () => ({
   appendDialogue: false,
   persistCharacter: false,
   persistSprite: false,
+  persistSpriteExplicit: false,
   removePersistedSprite: false,
   clearPage: false,
   customizeTextSpeed: false,
@@ -599,6 +600,7 @@ export const setSelectedSpriteIds = (
   if (state.characterSpriteEnabled) {
     if (!hadCharacterSprite) {
       state.persistSprite = true;
+      state.persistSpriteExplicit = true;
       state.defaultValues.persistSprite = true;
     }
     state.removePersistedSprite = false;
@@ -659,6 +661,7 @@ export const clearCharacterSprite = ({ state }) => {
   state.tempSelectedSpriteIds = {};
   state.selectedSpriteGroupId = undefined;
   state.persistSprite = false;
+  state.persistSpriteExplicit = true;
   state.defaultValues.persistSprite = false;
   state.removePersistedSprite = true;
   state.defaultValues.removePersistedSprite = true;
@@ -722,9 +725,13 @@ export const setPersistCharacter = ({ state }, { persistCharacter } = {}) => {
   state.defaultValues.persistCharacter = persistCharacterValue;
 };
 
-export const setPersistSprite = ({ state }, { persistSprite } = {}) => {
+export const setPersistSprite = (
+  { state },
+  { persistSprite, explicit = true } = {},
+) => {
   const persistSpriteValue = toBoolean(persistSprite);
   state.persistSprite = persistSpriteValue;
+  state.persistSpriteExplicit = explicit === true;
   state.defaultValues.persistSprite = persistSpriteValue;
 };
 
@@ -792,6 +799,7 @@ export const selectDialogueBuildState = ({ state }) => ({
   appendDialogue: state.appendDialogue,
   persistCharacter: state.persistCharacter,
   persistSprite: state.persistSprite,
+  persistSpriteExplicit: state.persistSpriteExplicit,
   removePersistedSprite: state.removePersistedSprite,
   clearPage: state.clearPage,
   customizeTextSpeed: state.customizeTextSpeed,
@@ -822,6 +830,7 @@ export const selectDialogueFormChangeState = ({ state }) => ({
   characterName: state.characterName,
   characterSpriteEnabled: state.characterSpriteEnabled,
   persistSprite: state.persistSprite,
+  persistSpriteExplicit: state.persistSpriteExplicit,
   removePersistedSprite: state.removePersistedSprite,
   textSpeed: state.textSpeed,
 });

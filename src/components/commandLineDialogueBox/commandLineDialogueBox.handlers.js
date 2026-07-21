@@ -425,6 +425,7 @@ const buildDialogueFromState = (
     appendDialogue,
     persistCharacter,
     persistSprite,
+    persistSpriteExplicit,
     removePersistedSprite,
     clearPage,
     customizeTextSpeed,
@@ -481,10 +482,12 @@ const buildDialogueFromState = (
   });
   if (characterSprite) {
     character.sprite = characterSprite;
-    dialogue.persistSprite = toBoolean(persistSprite);
+    if (persistSpriteExplicit) {
+      dialogue.persistSprite = toBoolean(persistSprite);
+    }
   } else if (toBoolean(removePersistedSprite)) {
     dialogue.persistSprite = false;
-  } else if (toBoolean(persistSprite)) {
+  } else if (persistSpriteExplicit && toBoolean(persistSprite)) {
     dialogue.persistSprite = true;
   }
   if (Object.keys(character).length > 0) {
@@ -621,6 +624,7 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
     persistSprite: Object.hasOwn(dialogue, "persistSprite")
       ? dialogue.persistSprite === true
       : !!characterSprite && dialogue?.persistCharacter === true,
+    explicit: Object.hasOwn(dialogue, "persistSprite"),
   });
   store.setRemovePersistedSprite({
     removePersistedSprite:
@@ -776,6 +780,7 @@ export const handleFormChange = (deps, payload) => {
   });
   store.setPersistSprite({
     persistSprite,
+    explicit: currentState.persistSpriteExplicit,
   });
   store.setRemovePersistedSprite({
     removePersistedSprite,

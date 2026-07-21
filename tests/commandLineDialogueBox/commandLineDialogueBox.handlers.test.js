@@ -206,14 +206,12 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(view).toContain("handler: handleSpeakerSpriteTooltipMouseLeave");
     expect(view).toContain("rtgl-tooltip ?open=${speakerSpriteTooltip.open}");
     expect(view).toContain("handler: handleCharacterSpriteBoxContextMenu");
-    expect(view).toContain(
-      "rtgl-button#addSpeakerSpriteButton v=ol pre=plus",
-    );
+    expect(view).toContain("rtgl-button#addSpeakerSpriteButton v=ol pre=plus");
     expect(view).toContain("handler: handleCharacterSpriteBoxClick");
     expect(view).toContain(
       "rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis",
     );
-    expect(view).toContain('aria-haspopup=menu\': null');
+    expect(view).toContain("aria-haspopup=menu': null");
     expect(view).toContain("handler: handleCharacterSpriteMenuButtonClick");
     expect(view).not.toContain("clearCharacterSpriteButton");
     expect(view).toContain("rtgl-segmented-control#persistSprite");
@@ -391,7 +389,7 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(state.persistSprite).toBe(true);
   });
 
-  it("inherits legacy sprite persistence from persistCharacter", () => {
+  it("preserves omitted legacy sprite persistence on submit", () => {
     const state = createInitialState();
     const dispatchEvent = vi.fn();
     const deps = {
@@ -419,15 +417,104 @@ describe("commandLineDialogueBox.handlers", () => {
 
     expect(state.characterSpriteEnabled).toBe(true);
     expect(state.persistSprite).toBe(true);
+    expect(state.persistSpriteExplicit).toBe(false);
 
     handleSubmitClick({
       ...deps,
       dispatchEvent,
     });
 
-    expect(dispatchEvent.mock.calls[0][0].detail.dialogue).toMatchObject({
-      persistCharacter: true,
-      persistSprite: true,
+    const submittedDialogue = dispatchEvent.mock.calls[0][0].detail.dialogue;
+    expect(submittedDialogue).toMatchObject({ persistCharacter: true });
+    expect(submittedDialogue).not.toHaveProperty("persistSprite");
+  });
+
+  it("does not author legacy sprite persistence when another field changes", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const deps = {
+      props: {
+        layouts,
+        characters,
+        dialogue: {
+          mode: "adv",
+          ui: {
+            resourceId: "layout-adv",
+          },
+          characterId: "character-1",
+          character: {
+            sprite: {
+              items: [{ id: "body", resourceId: "sprite-body" }],
+            },
+          },
+          persistCharacter: true,
+        },
+      },
+      store: createStore(state),
+      render: vi.fn(),
+      dispatchEvent,
+    };
+
+    handleBeforeMount(deps);
+    handleFormChange(deps, {
+      _event: {
+        detail: {
+          values: {
+            mode: "adv",
+            resourceId: "layout-adv",
+            characterId: "character-1",
+            customCharacterName: false,
+            persistCharacter: true,
+            persistSprite: true,
+          },
+        },
+      },
+    });
+    handleSubmitClick(deps);
+
+    expect(state.persistSpriteExplicit).toBe(false);
+    expect(
+      dispatchEvent.mock.calls.at(-1)[0].detail.dialogue,
+    ).not.toHaveProperty("persistSprite");
+  });
+
+  it("authors legacy sprite persistence after an explicit control change", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const deps = {
+      props: {
+        layouts,
+        characters,
+        transforms,
+        dialogue: {
+          mode: "adv",
+          ui: {
+            resourceId: "layout-adv",
+          },
+          characterId: "character-1",
+          character: {
+            sprite: {
+              transformId: "portrait-left",
+              items: [{ id: "body", resourceId: "sprite-body" }],
+            },
+          },
+          persistCharacter: true,
+        },
+      },
+      store: createStore(state),
+      render: vi.fn(),
+      dispatchEvent,
+    };
+
+    handleBeforeMount(deps);
+    handlePersistSpriteChange(deps, {
+      _event: { detail: { value: false } },
+    });
+    handleSubmitClick(deps);
+
+    expect(state.persistSpriteExplicit).toBe(true);
+    expect(dispatchEvent.mock.calls.at(-1)[0].detail.dialogue).toMatchObject({
+      persistSprite: false,
     });
   });
 

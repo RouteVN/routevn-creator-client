@@ -474,6 +474,7 @@ describe("commandLineDialogueBox.store", () => {
     );
 
     expect(state.persistSprite).toBe(false);
+    expect(state.persistSpriteExplicit).toBe(true);
     expect(state.defaultValues.persistSprite).toBe(false);
   });
 
