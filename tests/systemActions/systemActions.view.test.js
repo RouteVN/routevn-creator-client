@@ -52,6 +52,12 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       "fileId=${visualData.spritesheetFileId}",
     );
+    expect(systemActionsView).toContain(
+      "rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer",
+    );
+    expect(systemActionsView).toContain(
+      "rvn-stacked-file-images :layers=${preview.dialogue.spritePreviewLayers} w=32 h=32",
+    );
     expect(conditionalView).toContain(
       "rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes} :allowedModes=${branchActionAllowedModes}",
     );

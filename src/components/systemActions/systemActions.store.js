@@ -576,6 +576,40 @@ const isDisplayableScreenAction = (screenAction) => {
   );
 };
 
+const buildDialogueSpritePreviewLayers = ({
+  characters,
+  characterId,
+  spriteItems,
+} = {}) => {
+  const spriteIds = (Array.isArray(spriteItems) ? spriteItems : [])
+    .map((item) => item?.resourceId)
+    .filter(Boolean);
+  if (spriteIds.length === 0) {
+    return [];
+  }
+
+  const charactersById = characters?.items ?? {};
+  const selectedCharacter = charactersById[characterId];
+  const candidates = [
+    selectedCharacter,
+    ...Object.values(charactersById).filter(
+      (character) => character !== selectedCharacter,
+    ),
+  ].filter(Boolean);
+
+  for (const character of candidates) {
+    const layers = buildCharacterSpritePreviewLayers({
+      spritesCollection: character.sprites,
+      spriteIds,
+    });
+    if (layers.length === spriteIds.length) {
+      return layers;
+    }
+  }
+
+  return [];
+};
+
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state, copy }) => {
   const actions = normalizeLineActions(props.actions || {});
@@ -1007,22 +1041,15 @@ export const selectActionsData = ({ props, state, copy }) => {
       : [];
     const spriteAnimationId =
       dialogueAction.character?.sprite?.animations?.resourceId;
+    const spritePreviewLayers = buildDialogueSpritePreviewLayers({
+      characters: repositoryStateData.characters,
+      characterId: dialogueAction.characterId,
+      spriteItems,
+    });
     const spriteLabel =
-      spriteItems.length > 0
-        ? spriteItems.length === 1
-          ? formatCommandLineCopy(
-              "Sprite: {count} layer",
-              { count: spriteItems.length },
-              copy,
-            )
-          : formatCommandLineCopy(
-              "Sprite: {count} layers",
-              { count: spriteItems.length },
-              copy,
-            )
-        : spriteAnimationId
-          ? localizeCommandLineText("Sprite Animation", copy)
-          : undefined;
+      spriteItems.length === 0 && spriteAnimationId
+        ? localizeCommandLineText("Sprite Animation", copy)
+        : undefined;
     const appendLabel =
       authoredDialogue?.append === true || dialogueAction.append === true
         ? localizeCommandLineText("append", copy)
@@ -1033,6 +1060,8 @@ export const selectActionsData = ({ props, state, copy }) => {
         modeLabel: dialogueModeLabel,
         customCharacterNameLabel,
         persistCharacterLabel,
+        hasSpritePreview: spritePreviewLayers.length > 0,
+        spritePreviewLayers,
         spriteLabel,
         appendLabel,
       };
@@ -1045,6 +1074,8 @@ export const selectActionsData = ({ props, state, copy }) => {
         modeLabel: dialogueModeLabel,
         customCharacterNameLabel,
         persistCharacterLabel,
+        hasSpritePreview: spritePreviewLayers.length > 0,
+        spritePreviewLayers,
         spriteLabel,
         appendLabel,
       };

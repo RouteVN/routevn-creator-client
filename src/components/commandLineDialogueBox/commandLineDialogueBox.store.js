@@ -28,12 +28,17 @@ const ANIMATION_MODE_OPTIONS = [
   },
 ];
 
+const PERSIST_SPRITE_OPTIONS = [
+  { value: true, label: "Yes" },
+  { value: false, label: "No" },
+];
+
 const DEFAULT_TEXT_SPEED = 75;
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
 const SPEAKER_SPRITE_LABEL = "Speaker sprite";
 const SPEAKER_SPRITE_TOOLTIP =
-  "Speaker's face that appears on top of the dialogue box. For body sprites use the Characters action";
+  "Speaker's face that appears on top of the dialogue box. For body sprites use the Character Sprites action";
 const UNGROUPED_CHARACTER_GROUP_ID = "__ungrouped_dialogue_characters__";
 const UNGROUPED_SPRITE_GROUP_ID = "__ungrouped_dialogue_sprites__";
 const UNGROUPED_GROUP_LABEL = "Ungrouped";
@@ -332,6 +337,8 @@ export const createInitialState = () => ({
   selectedMode: "adv",
   appendDialogue: false,
   persistCharacter: false,
+  persistSprite: false,
+  removePersistedSprite: false,
   clearPage: false,
   customizeTextSpeed: false,
   textSpeed: DEFAULT_TEXT_SPEED,
@@ -354,8 +361,11 @@ export const createInitialState = () => ({
     characterId: "",
     customCharacterName: false,
     characterName: "",
+    characterSpriteEnabled: false,
     append: false,
     persistCharacter: false,
+    persistSprite: false,
+    removePersistedSprite: false,
     clearPage: false,
     customizeTextSpeed: false,
     textSpeed: DEFAULT_TEXT_SPEED,
@@ -418,6 +428,19 @@ export const createInitialState = () => ({
       {
         type: "slot",
         slot: "characterSprite",
+      },
+      {
+        $when: "values.characterSpriteEnabled != true",
+        name: "removePersistedSprite",
+        type: "segmented-control",
+        label: "Remove Persistent Sprite",
+        description: "Remove a sprite kept by an earlier dialogue line.",
+        required: true,
+        clearable: false,
+        options: [
+          { value: false, label: "No" },
+          { value: true, label: "Yes" },
+        ],
       },
       {
         name: "customizeTextSpeed",
@@ -526,7 +549,14 @@ export const setCharacterSpriteEnabled = (
   { state },
   { characterSpriteEnabled } = {},
 ) => {
-  state.characterSpriteEnabled = toBoolean(characterSpriteEnabled);
+  const enabled = toBoolean(characterSpriteEnabled);
+  state.characterSpriteEnabled = enabled;
+  state.defaultValues.characterSpriteEnabled = enabled;
+
+  if (enabled) {
+    state.removePersistedSprite = false;
+    state.defaultValues.removePersistedSprite = false;
+  }
 };
 
 export const setSpriteCharacterId = ({ state }, { characterId } = {}) => {
@@ -534,6 +564,7 @@ export const setSpriteCharacterId = ({ state }, { characterId } = {}) => {
 
   if (!state.spriteCharacterId) {
     state.characterSpriteEnabled = false;
+    state.defaultValues.characterSpriteEnabled = false;
     state.selectedSpriteIds = {};
     state.tempSelectedSpriteIds = {};
     state.selectedSpriteGroupId = undefined;
@@ -575,6 +606,14 @@ export const setSelectedSpriteIds = (
   state.characterSpriteEnabled =
     !!state.spriteCharacterId &&
     Object.keys(state.selectedSpriteIds).length > 0;
+  state.defaultValues.characterSpriteEnabled = state.characterSpriteEnabled;
+
+  if (state.characterSpriteEnabled) {
+    state.persistSprite = true;
+    state.defaultValues.persistSprite = true;
+    state.removePersistedSprite = false;
+    state.defaultValues.removePersistedSprite = false;
+  }
 };
 
 export const setTempSelectedSpriteIds = (
@@ -621,6 +660,7 @@ export const setSelectedSpriteGroupId = ({ state }, { spriteGroupId } = {}) => {
 
 export const clearCharacterSprite = ({ state }) => {
   state.characterSpriteEnabled = false;
+  state.defaultValues.characterSpriteEnabled = false;
   state.spriteCharacterId = "";
   state.spriteTransformId = "";
   state.spriteAnimationMode = "none";
@@ -628,6 +668,10 @@ export const clearCharacterSprite = ({ state }) => {
   state.selectedSpriteIds = {};
   state.tempSelectedSpriteIds = {};
   state.selectedSpriteGroupId = undefined;
+  state.persistSprite = false;
+  state.defaultValues.persistSprite = false;
+  state.removePersistedSprite = true;
+  state.defaultValues.removePersistedSprite = true;
 };
 
 export const setSearchQuery = ({ state }, { value } = {}) => {
@@ -688,6 +732,21 @@ export const setPersistCharacter = ({ state }, { persistCharacter } = {}) => {
   state.defaultValues.persistCharacter = persistCharacterValue;
 };
 
+export const setPersistSprite = ({ state }, { persistSprite } = {}) => {
+  const persistSpriteValue = toBoolean(persistSprite);
+  state.persistSprite = persistSpriteValue;
+  state.defaultValues.persistSprite = persistSpriteValue;
+};
+
+export const setRemovePersistedSprite = (
+  { state },
+  { removePersistedSprite } = {},
+) => {
+  const removePersistedSpriteValue = toBoolean(removePersistedSprite);
+  state.removePersistedSprite = removePersistedSpriteValue;
+  state.defaultValues.removePersistedSprite = removePersistedSpriteValue;
+};
+
 export const setClearPage = ({ state }, { clearPage } = {}) => {
   const clearPageValue = toBoolean(clearPage);
   state.clearPage = clearPageValue;
@@ -742,6 +801,8 @@ export const selectDialogueBuildState = ({ state }) => ({
   tempSelectedSpriteIds: state.tempSelectedSpriteIds,
   appendDialogue: state.appendDialogue,
   persistCharacter: state.persistCharacter,
+  persistSprite: state.persistSprite,
+  removePersistedSprite: state.removePersistedSprite,
   clearPage: state.clearPage,
   customizeTextSpeed: state.customizeTextSpeed,
   textSpeed: state.textSpeed,
@@ -755,6 +816,9 @@ export const selectDialogueFormState = ({ state }) => ({
   characterName: state.characterName,
   appendDialogue: state.appendDialogue,
   persistCharacter: state.persistCharacter,
+  persistSprite: state.persistSprite,
+  removePersistedSprite: state.removePersistedSprite,
+  characterSpriteEnabled: state.characterSpriteEnabled,
   clearPage: state.clearPage,
   customizeTextSpeed: state.customizeTextSpeed,
   textSpeed: state.textSpeed,
@@ -766,6 +830,9 @@ export const selectDialogueFormChangeState = ({ state }) => ({
   selectedCharacterId: state.selectedCharacterId,
   customCharacterName: state.customCharacterName,
   characterName: state.characterName,
+  characterSpriteEnabled: state.characterSpriteEnabled,
+  persistSprite: state.persistSprite,
+  removePersistedSprite: state.removePersistedSprite,
   textSpeed: state.textSpeed,
 });
 
@@ -1036,6 +1103,12 @@ export const selectViewData = ({ state, props, i18n }) => {
         value: state.persistCharacter,
       };
     }
+    if (field.name === "removePersistedSprite") {
+      return {
+        ...field,
+        value: state.removePersistedSprite,
+      };
+    }
     if (field.name === "append") {
       return {
         ...field,
@@ -1069,8 +1142,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     characterId: state.selectedCharacterId,
     customCharacterName: state.customCharacterName,
     characterName: state.characterName,
+    characterSpriteEnabled: state.characterSpriteEnabled,
     append: state.appendDialogue,
     persistCharacter: state.persistCharacter,
+    persistSprite: state.persistSprite,
+    removePersistedSprite: state.removePersistedSprite,
     clearPage: state.clearPage,
     customizeTextSpeed: state.customizeTextSpeed,
     textSpeed: normalizeTextSpeed(state.textSpeed),
@@ -1098,6 +1174,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     selectedMode,
     appendDialogue: state.appendDialogue,
     persistCharacter: state.persistCharacter,
+    persistSprite: state.persistSprite,
+    removePersistedSprite: state.removePersistedSprite,
     clearPage: state.clearPage,
     customizeTextSpeed: state.customizeTextSpeed,
     textSpeed: normalizeTextSpeed(state.textSpeed),
@@ -1118,6 +1196,10 @@ export const selectViewData = ({ state, props, i18n }) => {
     ),
     updateAnimationOptions,
     transitionAnimationOptions,
+    persistSpriteOptions: localizeCommandLineOptions(
+      PERSIST_SPRITE_OPTIONS,
+      copy,
+    ),
     spriteItems,
     spriteGroups,
     showSpriteGroupTabs: spriteSelectionTabs.length > 1,
@@ -1128,8 +1210,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     noAvatarLabel: localizeCommandLineText("No Avatar", copy),
     noPreviewLabel: localizeCommandLineText("No preview", copy),
     transformLabel: localizeCommandLineText("Transform", copy),
-    clearButtonLabel: localizeCommandLineText("Clear", copy),
     animationLabel: localizeCommandLineText("Animation", copy),
+    persistSpriteLabel: localizeCommandLineText("Persist Sprite", copy),
     spriteGroupsLabel: localizeCommandLineText("Sprite Groups", copy),
     speakerSpriteLabel: localizeCommandLineText(SPEAKER_SPRITE_LABEL, copy),
     speakerSpriteTooltip: state.speakerSpriteTooltip,

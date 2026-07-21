@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { selectItems } from "../../src/components/commandLineActions/commandLineActions.store.js";
+import { selectItems as selectItemsBase } from "../../src/components/commandLineActions/commandLineActions.store.js";
+import { EN_I18N } from "../support/i18n.js";
+
+const selectItems = ({ props }) =>
+  selectItemsBase({ props, i18n: EN_I18N });
 
 const getSectionModes = (items, label) => {
   const sectionIndex = items.findIndex(
@@ -23,6 +27,16 @@ const getSectionModes = (items, label) => {
 };
 
 describe("commandLineActions.store", () => {
+  it("labels the character action as Character Sprites", () => {
+    const characterAction = selectItems({
+      props: {
+        actionsType: "presentation",
+      },
+    }).find((item) => item.mode === "character");
+
+    expect(characterAction?.label).toBe("Character Sprites");
+  });
+
   it("uses settings icons for generic system actions", () => {
     const items = selectItems({
       props: {

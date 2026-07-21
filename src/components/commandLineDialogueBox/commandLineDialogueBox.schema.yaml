@@ -47,6 +47,8 @@ propsSchema:
           type: boolean
         persistCharacter:
           type: boolean
+        persistSprite:
+          type: boolean
         textSpeed:
           type: number
         ui:

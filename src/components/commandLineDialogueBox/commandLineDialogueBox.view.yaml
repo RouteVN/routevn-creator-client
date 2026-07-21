@@ -11,6 +11,8 @@ refs:
     eventListeners:
       click:
         handler: handleCharacterSpriteBoxClick
+      contextmenu:
+        handler: handleCharacterSpriteBoxContextMenu
   speakerSpriteTooltip:
     eventListeners:
       mouseenter:
@@ -21,10 +23,6 @@ refs:
         handler: handleSpeakerSpriteTooltipMouseEnter
       blur:
         handler: handleSpeakerSpriteTooltipMouseLeave
-  clearCharacterSpriteButton:
-    eventListeners:
-      click:
-        handler: handleClearCharacterSpriteClick
   transform:
     eventListeners:
       value-change:
@@ -41,6 +39,10 @@ refs:
     eventListeners:
       value-change:
         handler: handleAnimationChange
+  persistSprite:
+    eventListeners:
+      value-change:
+        handler: handlePersistSpriteChange
   .characterSpriteGroupBox:
     eventListeners:
       click:
@@ -123,9 +125,7 @@ template:
                                   - rtgl-text s=xs c=mu-fg ellipsis w=200: ${selectedSpriteCharacter.displayName}
                           - $if hasSpriteCharacter:
                               - rtgl-view w=1fg g=sm:
-                                  - rtgl-view d=h w=f av=c g=sm:
-                                      - rtgl-text s=sm c=mu-fg w=1fg: ${transformLabel}
-                                      - rtgl-button#clearCharacterSpriteButton v=ol s=sm: ${clearButtonLabel}
+                                  - rtgl-text s=sm c=mu-fg: ${transformLabel}
                                   - rtgl-select#transform key=${spriteTransformId} :options=${transformOptions} :selectedValue=${spriteTransformId} w=f no-clear: null
                                   - rtgl-text s=sm c=mu-fg: ${animationLabel}
                                   - rtgl-segmented-control#animationMode key=${spriteAnimationMode} :options=${animationModeOptions} :selectedValue=${spriteAnimationMode} w=f no-clear: null
@@ -133,6 +133,8 @@ template:
                                       - rtgl-select#updateAnimation key=${spriteAnimationId} :options=${updateAnimationOptions} :selectedValue=${spriteAnimationId} w=f no-clear: null
                                     $elif spriteAnimationMode == 'transition':
                                       - rtgl-select#transitionAnimation key=${spriteAnimationId} :options=${transitionAnimationOptions} :selectedValue=${spriteAnimationId} w=f no-clear: null
+                                  - rtgl-text s=sm c=mu-fg: ${persistSpriteLabel}
+                                  - rtgl-segmented-control#persistSprite :options=${persistSpriteOptions} :selectedValue=${persistSprite} w=f no-clear: null
                                   - $if selectedSpriteCharacter.showSpriteGroupBoxes:
                                       - rtgl-text s=sm c=mu-fg: ${spriteGroupsLabel}
                                       - rtgl-view d=h wrap g=xs w=f:
