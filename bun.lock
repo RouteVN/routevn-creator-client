@@ -10,9 +10,9 @@
         "@lexical/selection": "0.22.0",
         "@lexical/utils": "0.22.0",
         "@rettangoli/fe": "1.2.3",
-        "@rettangoli/ui": "1.12.0",
+        "@rettangoli/ui": "1.13.1",
         "@rettangoli/vt": "1.0.5",
-        "@routevn/creator-model": "1.10.2",
+        "@routevn/creator-model": "1.10.3",
         "@tauri-apps/api": "2.11.0",
         "@tauri-apps/plugin-dialog": "2.4.2",
         "@tauri-apps/plugin-fs": "2.5.1",
@@ -30,7 +30,7 @@
         "lexical": "0.22.0",
         "nanoid": "5.1.11",
         "route-engine-js": "1.31.1",
-        "route-graphics": "1.28.1",
+        "route-graphics": "1.29.0",
         "rxjs": "7.8.2",
         "snabbdom": "3.6.3",
         "snabbdom-to-html": "7.1.0",
@@ -314,7 +314,7 @@
 
     "@rettangoli/sites": ["@rettangoli/sites@1.2.0", "", { "dependencies": { "gray-matter": "^4.0.3", "jempl": "^0.3.1-rc1", "js-yaml": "^4.1.0", "markdown-it": "^14.1.0", "shiki": "^3.13.0", "ws": "^8.18.0", "yahtml": "0.0.4" } }, "sha512-taGLXClBbCL0Qbj7fFIZ0wW54yHNlKb43cJFZR1Poer2pxvo5GCnShvqZEvUfkPBqp/PKyvLfiOwMxGkbJxqyg=="],
 
-    "@rettangoli/ui": ["@rettangoli/ui@1.12.0", "", { "dependencies": { "@rettangoli/fe": "1.2.3", "jempl": "1.0.1" } }, "sha512-ztGq9VmuMu7l9VUASrWm3+1zZMnK9fTm5ce3xNEtyOZB3TqBdFxEa7T7Bjj+WAZFvMMLDKRs/sQWPf8UjrqyCg=="],
+    "@rettangoli/ui": ["@rettangoli/ui@1.13.1", "", { "dependencies": { "@rettangoli/fe": "1.2.3", "jempl": "1.0.1" } }, "sha512-2+CPEbXPcZPBwdGSuHyT5cWw3cvxlYOn3GELX7WOsoy1VizCOB2PnpA6UMIYst/0UHfVMFUrGV9henaFnr60/Q=="],
 
     "@rettangoli/vt": ["@rettangoli/vt@1.0.5", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-YpZH5xQYj+x5Qy6gn+FUnMTUIQELrZkTA4qN8/U4n/1B4gpNHHPltJK/kVltZQVYVG0Tj676ZIKCMGN0ZAHdzg=="],
 
@@ -400,7 +400,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.60.4", "", { "os": "win32", "cpu": "x64" }, "sha512-QVTUovf40zgTqlFVrKA1uXMVvU2QWEFWfAH8Wdc48IxLvrJMQVMBRjuQyUpzZCDkakImib9eVazbWlC6ksWtJw=="],
 
-    "@routevn/creator-model": ["@routevn/creator-model@1.10.2", "", {}, "sha512-C37TUqSK3TRdY9Ktoi2CBhZ8KXJ4kopyjWd1SsiI2Dd0Op23OUIb+xKDm4+fhuKJtMRcOPQlk7dlnYB3evoK7w=="],
+    "@routevn/creator-model": ["@routevn/creator-model@1.10.3", "", {}, "sha512-sir7pf7KOAkOaiFX6PZefGUqiegXs4Y3D2CM0g/prXXygqKWZ0PovDt96gv/1wBlMLi95m6qatO3JyHnKQTPEQ=="],
 
     "@shikijs/core": ["@shikijs/core@3.23.0", "", { "dependencies": { "@shikijs/types": "3.23.0", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4", "hast-util-to-html": "^9.0.5" } }, "sha512-NSWQz0riNb67xthdm5br6lAkvpDJRTgB36fxlo37ZzM2yq0PQFFzbd8psqC2XMPgCzo1fW6cVi18+ArJ44wqgA=="],
 
@@ -894,7 +894,7 @@
 
     "route-engine-js": ["route-engine-js@1.31.1", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.1", "js-yaml": "^4.1.0", "puty": "^0.1.1", "unicode-segmenter": "^0.17.0" } }, "sha512-DxCXMbK3OgMR3YsV4e1W8jCmD6/rEsQVVFlbN56xG4dUMtAIAPuSjQ8Xa5xRHKPAD/EmS1N0B1kiNCZ7fvVQgg=="],
 
-    "route-graphics": ["route-graphics@1.28.1", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "^8.7.1", "playwright": "^1.44.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-hZkbh4xV3Mcgsszjmp1uXEO9fuAwdxebUWFTIWdvfpkvmUGAye8aWQjMoAvlusYxnMEJ/IwOAdVpdbDu7Hj3xg=="],
+    "route-graphics": ["route-graphics@1.29.0", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "^8.7.1", "playwright": "^1.44.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-9YK8iAlUDLM0Zjncm3OfAfjR3zBuFqeSGUEsGeVaHU6O/hKsf+LHGa44szyhBHqXYC/z+VNABvnLuJCLZ5nf9g=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 

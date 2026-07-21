@@ -632,13 +632,18 @@ const scheduleDetailPanelSelectionRender = (deps, { itemId } = {}) => {
 };
 
 export const handleFileExplorerItemClick = async (deps, payload) => {
-  const { store, render } = deps;
+  const { store, refs, render } = deps;
   const detail = payload._event.detail || {};
   const itemId = detail.id || detail.itemId || detail.item?.id;
   if (!itemId) {
     store.setSelectedItemId({ itemId: undefined });
+    store.setDetailPanelSelectedItemId({ itemId: undefined });
     render();
     return;
+  }
+
+  if (store.selectSelectedItemId() === itemId) {
+    void refs.layoutEditorCanvas?.useDefaultSelectionOccurrence?.();
   }
 
   store.setSelectedItemId({ itemId: itemId });
@@ -657,6 +662,31 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   });
 };
 
+export const handleLayoutEditorCanvasSelectionChange = (deps, payload) => {
+  const { store, refs, render } = deps;
+  const { itemId } = payload._event.detail;
+
+  if (!itemId) {
+    store.setSelectedItemId({ itemId: undefined });
+    store.setDetailPanelSelectedItemId({ itemId: undefined });
+    refs.fileExplorer?.clearSelection?.();
+    render();
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
+  refs.fileExplorer?.selectItem?.({ itemId });
+
+  if (store.selectIsTouchMode?.()) {
+    store.setDetailPanelSelectedItemId({ itemId });
+    render();
+    return;
+  }
+
+  render();
+  scheduleDetailPanelSelectionRender(deps, { itemId });
+};
+
 export const handleLayoutEditorCanvasBackgroundClick = (deps, payload) => {
   const { store, refs, render } = deps;
   const event = payload._event;
@@ -666,6 +696,7 @@ export const handleLayoutEditorCanvasBackgroundClick = (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId: undefined });
+  store.setDetailPanelSelectedItemId({ itemId: undefined });
   refs.fileExplorer?.clearSelection?.();
   render();
 };
@@ -1799,11 +1830,11 @@ export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
 
 export const handleLayoutEditorCanvasMetricsChange = (deps, payload) => {
   const { refs, store } = deps;
-  const metrics = payload._event.detail?.metrics;
+  const { itemId, metrics } = payload._event.detail;
   const selectedItemId = store.selectSelectedItemId();
   const detailPanelSelectedItemId = store.selectDetailPanelSelectedItemId?.();
 
-  if (metrics?.id && selectedItemId && metrics.id !== selectedItemId) {
+  if (itemId !== selectedItemId) {
     return;
   }
 

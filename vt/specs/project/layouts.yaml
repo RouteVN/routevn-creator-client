@@ -76,8 +76,12 @@ steps:
     selector: "#groupview #itemRef0x0"
     state: visible
     timeoutMs: 20000
+  - action: waitFor
+    selector: "#groupview [data-item-id='3JUCKvusYLYq']"
+    state: visible
+    timeoutMs: 5000
   - action: select
-    selector: "#groupview #itemRef0x0"
+    selector: "#groupview [data-item-id='3JUCKvusYLYq']"
     steps:
       - action: click
   - action: waitFor
@@ -136,7 +140,7 @@ steps:
     state: hidden
     timeoutMs: 5000
   - action: select
-    selector: "#groupview #itemRef0x0"
+    selector: "#groupview [data-item-id='3JUCKvusYLYq']"
     steps:
       - action: dblclick
   - action: waitFor
@@ -159,5 +163,35 @@ steps:
     timeoutMs: 5000
   - action: wait
     ms: 250
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#fileExplorer [data-item-id='UK85MSpkHfto']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#fileExplorer [data-item-id='UK85MSpkHfto']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#layoutEditPanel rtgl-select[data-name='dateFormat'] [data-testid='select-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#layoutEditPanel rtgl-select[data-name='dateFormat'] [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#layoutEditPanel rtgl-select[data-name='dateFormat'] #option3"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "#layoutEditPanel rtgl-select[data-name='dateFormat'] #option3"
+    steps:
+      - action: click
+  - action: wait
+    ms: 600
   - action: screenshot
 ---

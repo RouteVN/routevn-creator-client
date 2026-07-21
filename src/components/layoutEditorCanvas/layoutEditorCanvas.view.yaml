@@ -1,5 +1,20 @@
 refs:
-  canvas: {}
+  canvas:
+    eventListeners:
+      pointermove:
+        handler: handleCanvasPointerMove
+      pointerleave:
+        handler: handleCanvasPointerLeave
+      pointerdown:
+        handler: handleCanvasPointerDown
+      pointerup:
+        handler: handleCanvasPointerUp
+      pointercancel:
+        handler: handleCanvasPointerCancel
+      click:
+        handler: handleCanvasClick
+      dblclick:
+        handler: handleCanvasDoubleClick
 template:
   - 'rtgl-view w=f bgc=mu pos=rel bwb=xs style="margin-left: 1px; aspect-ratio: ${canvasAspectRatio};"':
       - rtgl-view pos=abs cor=full:

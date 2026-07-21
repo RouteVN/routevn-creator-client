@@ -306,7 +306,7 @@ already covers the filter-selection surface cleanly.
 
 ## Rettangoli UI Direction
 
-This spec assumes `@rettangoli/ui` `1.7.5`.
+This spec assumes `@rettangoli/ui` `1.13.1`.
 
 Relevant component support:
 
@@ -482,7 +482,7 @@ collection shape inside existing resource roots.
 Implement this in this order:
 
 1. `routevn-creator-model`
-2. client core contract, command API, and `@rettangoli/ui` `1.7.5`
+2. client core contract, command API, and `@rettangoli/ui` `1.13.1`
 3. shared media-page UI for images, sounds, and videos
 4. character-sprites integration
 5. tests, VT coverage, and manual validation

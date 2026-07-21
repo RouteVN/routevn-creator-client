@@ -120,6 +120,7 @@ export const createInitialState = () => ({
   },
   sceneOverviewRequestId: 0,
   isTouchMode: false,
+  isSceneWorkspaceReady: false,
   isMobileFileExplorerOpen: false,
   isTouchMinimapReady: false,
   touchMinimapFrameId: undefined,
@@ -131,6 +132,10 @@ export const createInitialState = () => ({
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
+export const setSceneWorkspaceReady = ({ state }, { isReady } = {}) => {
+  state.isSceneWorkspaceReady = isReady === true;
 };
 
 export const setProjectLanguage = ({ state }, { language } = {}) => {
@@ -640,7 +645,10 @@ export const selectViewData = ({ state, i18n }) => {
     },
     previewVisible: state.previewVisible,
     previewSceneId: state.previewSceneId,
-    showMapAddHint: state.showMapAddHint,
+    showMapAddHint: state.isSceneWorkspaceReady && state.showMapAddHint,
+    sceneWorkspaceVisibility: state.isSceneWorkspaceReady
+      ? "visible"
+      : "hidden",
     sectionsListOpen: state.sectionsListOpen,
     selectedSceneSections,
     selectedSceneTextStatsLabel,

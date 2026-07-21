@@ -18,6 +18,7 @@ import {
 } from "./interactionPayload.js";
 import { generateId } from "../id.js";
 import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
+import { normalizeSaveLoadDateFormat } from "../saveLoadDateFormats.js";
 
 const TEXT_NODE_TYPES = new Set([
   "text",
@@ -64,7 +65,6 @@ const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
   "text-revealing-ref-dialogue-content": "${dialogue.content}",
   "text-ref-choice-item-content": "${item.content}",
-  "text-ref-save-load-slot-date": "${formatDate(item.savedAt)}",
   "text-ref-dialogue-line-character-name": "${line.characterName}",
   "text-ref-dialogue-line-content": "${line.content[0].text}",
   "text-ref-history-line-character-name": "${item.characterName}",
@@ -855,7 +855,12 @@ const prefixElementIds = (elements, prefix) => {
   });
 };
 
-const resolveFragmentChildren = ({ node, imageItems, context }) => {
+const resolveFragmentChildren = ({
+  node,
+  imageItems,
+  context,
+  ancestry = [],
+}) => {
   const fragmentLayoutId = node.fragmentLayoutId;
   const fragmentStack = context.fragmentStack || [];
   if (
@@ -892,6 +897,7 @@ const resolveFragmentChildren = ({ node, imageItems, context }) => {
           node: child,
           imageItems,
           context: fragmentContext,
+          ancestry,
         }),
       )
       .filter(Boolean),
@@ -1227,6 +1233,11 @@ const getTextNodeContent = (node, context = {}) => {
     Number.isInteger(context.choiceItemIndex)
   ) {
     return `\${choice.items[${context.choiceItemIndex}].content}`;
+  }
+
+  if (node.type === "text-ref-save-load-slot-date") {
+    const dateFormat = normalizeSaveLoadDateFormat(node.dateFormat);
+    return `\${formatDate(item.savedAt, ${JSON.stringify(dateFormat)})}`;
   }
 
   const referencedContent = TEXT_CONTENT_BY_TYPE[node.type];
@@ -1680,7 +1691,7 @@ const applyContainerNode = ({ element, node }) => {
   };
 };
 
-const mapLayoutNode = ({ node, imageItems, context }) => {
+const mapLayoutNode = ({ node, imageItems, context, ancestry = [] }) => {
   if (node.hidden === true) {
     return undefined;
   }
@@ -1702,6 +1713,13 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
             ),
           }
         : context;
+  const nodeAncestry = [
+    ...ancestry,
+    {
+      layoutId: nodeContext.layoutId,
+      node: effectiveNode,
+    },
+  ];
   let element = buildBaseElement(node, nodeContext);
 
   element = applyTextNode({
@@ -1747,6 +1765,7 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
           node: effectiveNode,
           imageItems,
           context: childContext,
+          ancestry: nodeAncestry,
         })
       : effectiveNode.children?.length > 0
         ? effectiveNode.children
@@ -1755,6 +1774,7 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
                 node: child,
                 imageItems,
                 context: childContext,
+                ancestry: nodeAncestry,
               }),
             )
             .filter(Boolean)
@@ -1766,6 +1786,14 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
     if (REPEATING_CONTAINER_CONFIG[effectiveNode.type]) {
       element.children = updateChildrenIds(element.children, "i");
     }
+  }
+
+  if (typeof nodeContext.mapElement === "function") {
+    element = nodeContext.mapElement({
+      element,
+      node: effectiveNode,
+      ancestry: nodeAncestry,
+    });
   }
 
   return element;
@@ -1923,6 +1951,7 @@ export const buildLayoutElements = (
     spritesheetItems: options.spritesheetsData?.items || {},
     layoutsData: options.layoutsData,
     fragmentStack: options.fragmentStack ?? [],
+    mapElement: options.mapElement,
   };
 
   const orderedLayout = applyLayoutRenderOrder({

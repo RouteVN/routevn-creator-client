@@ -3,8 +3,18 @@ import {
   toLayoutEditorContextMenuItems,
   toLayoutEditorExplorerItems,
 } from "../../src/pages/layoutEditor/support/layoutEditorViewData.js";
+import { createLayoutEditorItemTemplate } from "../../src/internal/layoutEditorElementRegistry.js";
 
 describe("layoutEditorViewData", () => {
+  it("creates save/load date elements with the date-only default format", () => {
+    expect(
+      createLayoutEditorItemTemplate("text-save-load-slot-date"),
+    ).toMatchObject({
+      type: "text-ref-save-load-slot-date",
+      dateFormat: "YYYY-MM-DD",
+    });
+  });
+
   it("derives own and inherited hidden explorer presentation", () => {
     const items = toLayoutEditorExplorerItems(
       [

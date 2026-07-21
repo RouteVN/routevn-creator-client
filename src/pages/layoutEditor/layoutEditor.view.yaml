@@ -48,6 +48,8 @@ refs:
         handler: handleLayoutEditPanelUpdateHandler
   layoutEditorCanvas:
     eventListeners:
+      selection-change:
+        handler: handleLayoutEditorCanvasSelectionChange
       selected-element-metrics-change:
         handler: handleLayoutEditorCanvasMetricsChange
       drag-update:

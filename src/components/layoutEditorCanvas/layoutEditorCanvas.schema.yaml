@@ -19,3 +19,18 @@ propsSchema:
       type: boolean
     disableInteraction:
       type: boolean
+methods:
+  type: object
+  properties:
+    restartPreview:
+      description: Restarts the interactive layout preview from its initial state.
+      params: []
+      returns: void
+    captureThumbnailImage:
+      description: Captures the current layout preview as an image.
+      params: []
+      returns: object
+    useDefaultSelectionOccurrence:
+      description: Uses the first rendered occurrence for the currently selected authored item.
+      params: []
+      returns: void

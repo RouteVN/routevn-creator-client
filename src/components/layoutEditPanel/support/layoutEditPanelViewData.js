@@ -4,6 +4,10 @@ import { RUNTIME_ACTION_LABELS } from "../../../internal/runtimeActions.js";
 import { parseRuntimeTemplateValue } from "../../../internal/runtimeFields.js";
 import { getLayoutEditorElementDefinition } from "../../../internal/layoutEditorElementRegistry.js";
 import {
+  SAVE_LOAD_DATE_FORMAT_PRESETS,
+  normalizeSaveLoadDateFormat,
+} from "../../../internal/saveLoadDateFormats.js";
+import {
   getLayoutTextSummary,
   getLayoutTextSummaryParts,
   normalizeLayoutTextContent,
@@ -129,6 +133,9 @@ export const createRevealSoundStopTimingOptions = (copy = {}) => [
     value: "loopEnd",
   },
 ];
+
+export const createSaveLoadDateFormatOptions = () =>
+  SAVE_LOAD_DATE_FORMAT_PRESETS.map((preset) => ({ ...preset }));
 
 const createTextRevealSoundItems = (revealSoundId, copy = {}) =>
   revealSoundId
@@ -334,6 +341,10 @@ export const toInspectorValues = ({
     aspectRatioMode: derivedAspectRatioLock !== undefined ? "fixed" : "free",
     aspectRatioLock: derivedAspectRatioLock,
     revealEffect,
+    dateFormat:
+      values?.type === "text-ref-save-load-slot-date"
+        ? normalizeSaveLoadDateFormat(values?.dateFormat)
+        : values?.dateFormat,
     indicator,
     fragmentLayoutId: values?.fragmentLayoutId ?? "",
     paginationMode: values?.paginationMode ?? "continuous",
