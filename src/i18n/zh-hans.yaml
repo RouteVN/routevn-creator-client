@@ -1665,6 +1665,7 @@ sceneEditorPage:
   upLabel: "上"
   warningTitle: "警告"
 commandLinePage:
+  "Add Dialogue Speaker Sprite": "添加对话立绘"
   addValueButton: "添加值"
   "+ Add Branch": "+ 添加分支"
   "+ Add Character": "+ 添加角色"
@@ -1853,8 +1854,6 @@ commandLinePage:
   "Push overlay: {layout}": "显示覆盖层：{layout}"
   "Quality": "质量"
   "Remove": "移除"
-  "Remove Persistent Sprite": "移除保留的立绘"
-  removePersistedSpriteDescription: "移除由之前对话行保留的立绘。"
   "Remove Value": "移除值"
   "Repeat Edge": "重复边缘"
   "Repeat Edge Pixels": "重复边缘像素"

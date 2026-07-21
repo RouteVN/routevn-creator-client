@@ -1665,6 +1665,7 @@ sceneEditorPage:
   upLabel: "上"
   warningTitle: "警告"
 commandLinePage:
+  "Add Dialogue Speaker Sprite": "会話用の立ち絵を追加"
   addValueButton: "値を追加"
   "+ Add Branch": "+ 分岐を追加"
   "+ Add Character": "+ キャラクターを追加"
@@ -1853,8 +1854,6 @@ commandLinePage:
   "Push overlay: {layout}": "オーバーレイを表示: {layout}"
   "Quality": "品質"
   "Remove": "削除"
-  "Remove Persistent Sprite": "保持中の立ち絵を削除"
-  removePersistedSpriteDescription: "以前の会話行から保持されている立ち絵を削除します。"
   "Remove Value": "値を削除"
   "Repeat Edge": "端を繰り返す"
   "Repeat Edge Pixels": "端の繰り返しピクセル"

@@ -1665,6 +1665,7 @@ sceneEditorPage:
   upLabel: "Up"
   warningTitle: "Warning"
 commandLinePage:
+  "Add Dialogue Speaker Sprite": "Add Dialogue Speaker Sprite"
   addValueButton: "Add Value"
   "+ Add Branch": "+ Add Branch"
   "+ Add Character": "+ Add Character"
@@ -1853,8 +1854,6 @@ commandLinePage:
   "Push overlay: {layout}": "Push overlay: {layout}"
   "Quality": "Quality"
   "Remove": "Remove"
-  "Remove Persistent Sprite": "Remove Persistent Sprite"
-  removePersistedSpriteDescription: "Remove a sprite kept by an earlier dialogue line."
   "Remove Value": "Remove Value"
   "Repeat Edge": "Repeat Edge"
   "Repeat Edge Pixels": "Repeat Edge Pixels"

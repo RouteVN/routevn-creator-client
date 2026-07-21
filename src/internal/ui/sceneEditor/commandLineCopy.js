@@ -29,8 +29,6 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "Please add at least one valid variable operation.":
     "validVariableOperationRequired",
   "Please select an input layout.": "selectInputLayoutRequired",
-  "Remove a sprite kept by an earlier dialogue line.":
-    "removePersistedSpriteDescription",
   "Search...": "searchPlaceholder",
   "Select a scene before adding voice audio.": "selectSceneBeforeVoiceAudio",
   "Select a voice audio file first.": "selectVoiceAudioFirst",

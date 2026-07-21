@@ -207,6 +207,10 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(view).toContain("rtgl-tooltip ?open=${speakerSpriteTooltip.open}");
     expect(view).toContain("handler: handleCharacterSpriteBoxContextMenu");
     expect(view).toContain(
+      "rtgl-button#addDialogueSpeakerSpriteButton v=ol pre=plus",
+    );
+    expect(view).toContain("handler: handleCharacterSpriteBoxClick");
+    expect(view).toContain(
       "rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis",
     );
     expect(view).toContain('aria-haspopup=menu\': null');

@@ -430,19 +430,6 @@ export const createInitialState = () => ({
         slot: "characterSprite",
       },
       {
-        $when: "values.characterSpriteEnabled != true",
-        name: "removePersistedSprite",
-        type: "segmented-control",
-        label: "Remove Persistent Sprite",
-        description: "Remove a sprite kept by an earlier dialogue line.",
-        required: true,
-        clearable: false,
-        options: [
-          { value: false, label: "No" },
-          { value: true, label: "Yes" },
-        ],
-      },
-      {
         name: "customizeTextSpeed",
         type: "segmented-control",
         label: "Customize Text Speed",
@@ -1106,12 +1093,6 @@ export const selectViewData = ({ state, props, i18n }) => {
         value: state.persistCharacter,
       };
     }
-    if (field.name === "removePersistedSprite") {
-      return {
-        ...field,
-        value: state.removePersistedSprite,
-      };
-    }
     if (field.name === "append") {
       return {
         ...field,
@@ -1212,6 +1193,10 @@ export const selectViewData = ({ state, props, i18n }) => {
     searchPlaceholder: localizeCommandLineText("Search...", copy),
     noAvatarLabel: localizeCommandLineText("No Avatar", copy),
     noPreviewLabel: localizeCommandLineText("No preview", copy),
+    addDialogueSpeakerSpriteLabel: localizeCommandLineText(
+      "Add Dialogue Speaker Sprite",
+      copy,
+    ),
     transformLabel: localizeCommandLineText("Transform", copy),
     animationLabel: localizeCommandLineText("Animation", copy),
     persistSpriteLabel: localizeCommandLineText("Persist Sprite", copy),

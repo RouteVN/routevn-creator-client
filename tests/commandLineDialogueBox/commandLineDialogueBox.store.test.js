@@ -9,7 +9,6 @@ import {
   selectViewData,
   setPersistCharacter,
   setPersistSprite,
-  setRemovePersistedSprite,
   setSelectedSpriteIds,
   setSpriteCharacterId,
   setSpriteAnimationId,
@@ -86,6 +85,9 @@ describe("commandLineDialogueBox.store", () => {
     expect(viewData.defaultValues.characterName).toBe("Boss");
     expect(viewData.defaultValues.append).toBe(false);
     expect(viewData.defaultValues.persistCharacter).toBe(true);
+    expect(viewData.addDialogueSpeakerSpriteLabel).toBe(
+      "Add Dialogue Speaker Sprite",
+    );
     expect(
       viewData.form.fields.find((field) => field.name === "mode"),
     ).toMatchObject({
@@ -392,7 +394,7 @@ describe("commandLineDialogueBox.store", () => {
     ).toBe(true);
   });
 
-  it("shows persist controls for a selected sprite and a removal control without one", () => {
+  it("shows persist controls only when a sprite is selected", () => {
     const state = createInitialState();
     let viewData = selectTestViewData({
       state,
@@ -406,24 +408,14 @@ describe("commandLineDialogueBox.store", () => {
         ],
       },
     });
-    let removePersistedSpriteField = viewData.form.fields.find(
-      (field) => field.name === "removePersistedSprite",
-    );
-
     expect(
       viewData.form.fields.find((field) => field.name === "persistSprite"),
     ).toBeUndefined();
     expect(
-      isFieldVisible({
-        field: removePersistedSpriteField,
-        values: viewData.defaultValues,
-      }),
-    ).toBe(true);
-    expect(removePersistedSpriteField).toMatchObject({
-      label: "Remove Persistent Sprite",
-      description: "Remove a sprite kept by an earlier dialogue line.",
-      value: false,
-    });
+      viewData.form.fields.find(
+        (field) => field.name === "removePersistedSprite",
+      ),
+    ).toBeUndefined();
 
     setSpriteCharacterId({ state }, { characterId: "character-1" });
     setSelectedSpriteIds(
@@ -434,8 +426,6 @@ describe("commandLineDialogueBox.store", () => {
         },
       },
     );
-    setRemovePersistedSprite({ state }, { removePersistedSprite: false });
-
     viewData = selectTestViewData({
       state,
       props: {
@@ -448,16 +438,11 @@ describe("commandLineDialogueBox.store", () => {
         ],
       },
     });
-    removePersistedSpriteField = viewData.form.fields.find(
-      (field) => field.name === "removePersistedSprite",
-    );
-
     expect(
-      isFieldVisible({
-        field: removePersistedSpriteField,
-        values: viewData.defaultValues,
-      }),
-    ).toBe(false);
+      viewData.form.fields.find(
+        (field) => field.name === "removePersistedSprite",
+      ),
+    ).toBeUndefined();
     expect(viewData).toMatchObject({
       persistSprite: true,
       persistSpriteLabel: "Persist Sprite",

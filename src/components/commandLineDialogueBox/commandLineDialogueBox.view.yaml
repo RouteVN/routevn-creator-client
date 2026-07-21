@@ -13,6 +13,10 @@ refs:
         handler: handleCharacterSpriteBoxClick
       contextmenu:
         handler: handleCharacterSpriteBoxContextMenu
+  addDialogueSpeakerSpriteButton:
+    eventListeners:
+      click:
+        handler: handleCharacterSpriteBoxClick
   characterSpriteMenuButton:
     eventListeners:
       click:
@@ -120,16 +124,18 @@ template:
                           - rtgl-text: ${speakerSpriteLabel}
                           - 'button#speakerSpriteTooltip.commandLineDialogueBoxTooltipTrigger type=button aria-label="${speakerSpriteTooltipContent}"': "?"
                       - rtgl-view d=h g=md av=t pv=md br=md w=f:
-                          - rtgl-view#characterSpriteBox cur=pointer bw=xs bc=bo h-bc=ac br=sm:
-                              - rtgl-view p=md g=md br=md:
-                                  - $if selectedSpriteCharacter.hasSpritePreview:
-                                      - rvn-stacked-file-images :layers=${selectedSpriteCharacter.spritePreviewLayers} w=200 h=120 br=sm lazy: null
-                                    $else:
-                                      - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg: null
-                                  - rtgl-view d=h av=c g=xs w=200:
-                                      - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${selectedSpriteCharacter.displayName}
-                                      - $if characterSpriteEnabled:
+                          - $if characterSpriteEnabled:
+                              - rtgl-view#characterSpriteBox cur=pointer bw=xs bc=bo h-bc=ac br=sm:
+                                  - rtgl-view p=md g=md br=md:
+                                      - $if selectedSpriteCharacter.hasSpritePreview:
+                                          - rvn-stacked-file-images :layers=${selectedSpriteCharacter.spritePreviewLayers} w=200 h=120 br=sm lazy: null
+                                        $else:
+                                          - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg: null
+                                      - rtgl-view d=h av=c g=xs w=200:
+                                          - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${selectedSpriteCharacter.displayName}
                                           - 'rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis title="${characterSpriteMenuLabel}" aria-label="${characterSpriteMenuLabel}" aria-haspopup=menu': null
+                            $else:
+                              - rtgl-button#addDialogueSpeakerSpriteButton v=ol pre=plus: ${addDialogueSpeakerSpriteLabel}
                           - $if hasSpriteCharacter:
                               - rtgl-view w=1fg g=sm:
                                   - rtgl-text s=sm c=mu-fg: ${transformLabel}
