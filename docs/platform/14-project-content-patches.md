@@ -1,11 +1,12 @@
 # Project Content Patches
 
-Date baseline: July 16, 2026.
+Date baseline: July 22, 2026.
 
 ## Status
 
-Project content patches are an exceptional repair mechanism for correcting
-specific user-project data written by a released RouteVN Creator template.
+Project content patches are an exceptional repair mechanism for correcting or
+augmenting specific user-project data written by a released RouteVN Creator
+version or template.
 
 They are not:
 
@@ -18,7 +19,9 @@ The normal compatibility policy remains unchanged. Schema and project-format
 changes must use the compatibility strategy described in
 `10-model-compatibility-and-upgrades.md`.
 
-## Current Patch
+## Current Patches
+
+### Default Menu Text Styles
 
 RouteVN Creator 1.9.1 introduced one grouped content patch for two default menu
 text-style defects.
@@ -45,7 +48,43 @@ visible `Load` text are not patch selectors.
 The corrected values also live in `static/templates/default/repository.json`
 so newly created projects do not depend on the repair.
 
-## Execution Contract
+### Font Weight Metadata
+
+RouteVN Creator 1.10.0 added one patch that populates the following flat fields
+on legacy font resources:
+
+- `minWeight`
+- `defaultWeight`
+- `maxWeight`
+
+Completion marker:
+
+```text
+contentPatch.fontWeightMetadata-1-10-0 = true
+```
+
+The patch follows these rules:
+
+1. A font that already has all three fields is a successful no-op and its file
+   is not read.
+2. A font with an incomplete field set is inspected and all three fields are
+   written together.
+3. Only TTF and OTF files are inspected. WOFF, WOFF2, TTC, EOT, fonts without
+   file ids, folders, and unknown formats are successful no-ops.
+4. File format is resolved from the backing file record first, with legacy
+   font-owned file metadata used only as a fallback.
+5. Static fonts receive their extracted `usWeightClass` for all three fields.
+6. Variable fonts receive the extracted `wght` minimum, default, and maximum.
+7. The patch does not change text-style font ids or existing text-style font
+   weights.
+8. Deterministically invalid or uninspectable TTF/OTF data is logged and
+   treated as a successful no-op. File access failures and rejected font update
+   commands abort the patch so it can retry later.
+
+New font uploads already persist these fields, and the default template fonts
+already contain them, so neither path depends on the patch.
+
+## Default Menu Patch Execution Contract
 
 The grouped patch follows this order:
 
@@ -77,12 +116,17 @@ An in-memory per-project promise prevents duplicate execution by concurrent
 repository-ensure calls in one application instance. The persisted marker is
 the cross-restart completion record.
 
+The font metadata patch uses the same marker ordering and concurrency guard.
+When a retry follows a partially completed run, fonts that now have all three
+fields are skipped before their files are read.
+
 ## Persistence And Commands
 
-The patch must use existing repository commands:
+The patches must use existing repository commands:
 
 - `textStyle.update` with only `fontWeight`
 - `layout.element.update` with only `textStyleId` and `replace: false`
+- `font.update` with `minWeight`, `defaultWeight`, and `maxWeight` together
 
 It must not mutate projected repository state directly and must not introduce a
 patch-specific creator-model command. Command submission preserves normal

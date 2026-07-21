@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
   importImageFile: vi.fn(),
   checkProjectResourceUsage: vi.fn(),
   checkSceneDeleteUsage: vi.fn(),
+  extractFontWeightCapabilities: vi.fn(),
+  fetch: vi.fn(),
   repositoryService: {
     getCachedStore: vi.fn(),
     getCachedReference: vi.fn(),
@@ -43,6 +45,7 @@ const mocked = vi.hoisted(() => ({
       upgradeLayoutSchemaVersion: vi.fn(),
       updateTextStyle: vi.fn(),
       updateLayoutElement: vi.fn(),
+      updateFont: vi.fn(),
       deleteSceneItem: vi.fn(),
     },
     addVersionToProject: vi.fn(),
@@ -103,7 +106,34 @@ vi.mock("../../src/deps/services/shared/resourceUsage.js", () => ({
   checkSceneDeleteUsage: mocked.checkSceneDeleteUsage,
 }));
 
+vi.mock("../../src/internal/fontCapabilities.js", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    extractFontWeightCapabilities: mocked.extractFontWeightCapabilities,
+  };
+});
+
 import { createProjectServiceCore } from "../../src/deps/services/shared/projectServiceCore.js";
+
+const createTestProjectService = (overrides = {}) =>
+  createProjectServiceCore({
+    router: {
+      getPayload: () => ({ p: "project-1" }),
+    },
+    db: {},
+    filePicker: {},
+    idGenerator: () => "generated-id",
+    now: () => 0,
+    collabLog: () => {},
+    creatorVersion: 1,
+    storageAdapter: {
+      initializeProject: vi.fn(),
+    },
+    fileAdapter: {},
+    collabAdapter: {},
+    ...overrides,
+  });
 
 describe("projectServiceCore releaseProjectRuntime", () => {
   beforeEach(() => {
@@ -120,7 +150,11 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.collabService.commandApi.upgradeLayoutSchemaVersion.mockReset();
     mocked.collabService.commandApi.updateTextStyle.mockReset();
     mocked.collabService.commandApi.updateLayoutElement.mockReset();
+    mocked.collabService.commandApi.updateFont.mockReset();
     mocked.collabService.commandApi.deleteSceneItem.mockReset();
+    mocked.assetService.getFileContent.mockReset();
+    mocked.extractFontWeightCapabilities.mockReset();
+    mocked.fetch.mockReset();
     mocked.projectStore.app.get.mockReset();
     mocked.projectStore.app.set.mockReset();
     mocked.checkProjectResourceUsage.mockReset();
@@ -134,6 +168,11 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.repositoryService.getCurrentPlatformDetails.mockResolvedValue(
       undefined,
     );
+    vi.stubGlobal("fetch", mocked.fetch);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("reports an image used by platform release icons", async () => {
@@ -744,6 +783,10 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       "contentPatch.defaultMenuTextStyles-1-9-1",
       true,
     );
+    expect(mocked.projectStore.app.set).toHaveBeenCalledWith(
+      "contentPatch.fontWeightMetadata-1-10-0",
+      true,
+    );
   });
 
   it("does not patch default menu values that no longer match the legacy values", async () => {
@@ -909,6 +952,258 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     expect(
       mocked.collabService.commandApi.updateLayoutElement,
     ).not.toHaveBeenCalled();
+  });
+
+  it("migrates incomplete TTF and OTF weight metadata without inspecting complete or WOFF fonts", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        files: {
+          items: {
+            "file-static": { mimeType: "font/ttf" },
+            "file-variable": { mimeType: "font/otf" },
+            "file-complete": { mimeType: "font/ttf" },
+            "file-woff": { mimeType: "font/woff" },
+          },
+        },
+        fonts: {
+          items: {
+            "font-static": {
+              id: "font-static",
+              type: "font",
+              fileId: "file-static",
+            },
+            "font-variable": {
+              id: "font-variable",
+              type: "font",
+              fileId: "file-variable",
+              minWeight: 200,
+            },
+            "font-complete": {
+              id: "font-complete",
+              type: "font",
+              fileId: "file-complete",
+              minWeight: 400,
+              defaultWeight: 400,
+              maxWeight: 400,
+            },
+            "font-woff": {
+              id: "font-woff",
+              type: "font",
+              fileId: "file-woff",
+            },
+          },
+        },
+        layouts: { items: {} },
+        textStyles: { items: {} },
+      })),
+    };
+    const revokeStatic = vi.fn();
+    const revokeVariable = vi.fn();
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.projectStore.app.get.mockImplementation(async (key) =>
+      key === "contentPatch.defaultMenuTextStyles-1-9-1" ? true : undefined,
+    );
+    mocked.assetService.getFileContent.mockImplementation(async (fileId) => ({
+      url: `font://${fileId}`,
+      revoke: fileId === "file-static" ? revokeStatic : revokeVariable,
+    }));
+    mocked.fetch.mockResolvedValue({
+      ok: true,
+      arrayBuffer: vi.fn(async () => new Uint8Array([1, 2, 3]).buffer),
+    });
+    mocked.extractFontWeightCapabilities
+      .mockReturnValueOnce({
+        kind: "static",
+        minWeight: 400,
+        defaultWeight: 400,
+        maxWeight: 400,
+      })
+      .mockReturnValueOnce({
+        kind: "variable",
+        minWeight: 100,
+        defaultWeight: 500,
+        maxWeight: 900,
+      });
+    mocked.collabService.commandApi.updateFont.mockResolvedValue({
+      valid: true,
+    });
+
+    const projectService = createTestProjectService();
+    await projectService.ensureRepository();
+
+    expect(mocked.assetService.getFileContent.mock.calls).toEqual([
+      ["file-static"],
+      ["file-variable"],
+    ]);
+    expect(mocked.collabService.commandApi.updateFont.mock.calls).toEqual([
+      [
+        {
+          fontId: "font-static",
+          data: {
+            minWeight: 400,
+            defaultWeight: 400,
+            maxWeight: 400,
+          },
+        },
+      ],
+      [
+        {
+          fontId: "font-variable",
+          data: {
+            minWeight: 100,
+            defaultWeight: 500,
+            maxWeight: 900,
+          },
+        },
+      ],
+    ]);
+    expect(revokeStatic).toHaveBeenCalledTimes(1);
+    expect(revokeVariable).toHaveBeenCalledTimes(1);
+    expect(mocked.projectStore.app.set).toHaveBeenCalledWith(
+      "contentPatch.fontWeightMetadata-1-10-0",
+      true,
+    );
+  });
+
+  it("does not inspect fonts when the weight metadata patch is already complete", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        files: {
+          items: {
+            "file-font": { mimeType: "font/ttf" },
+          },
+        },
+        fonts: {
+          items: {
+            "font-1": {
+              id: "font-1",
+              type: "font",
+              fileId: "file-font",
+            },
+          },
+        },
+        layouts: { items: {} },
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.projectStore.app.get.mockResolvedValue(true);
+
+    const projectService = createTestProjectService();
+    await projectService.ensureRepository();
+
+    expect(mocked.assetService.getFileContent).not.toHaveBeenCalled();
+    expect(mocked.extractFontWeightCapabilities).not.toHaveBeenCalled();
+    expect(mocked.collabService.commandApi.updateFont).not.toHaveBeenCalled();
+    expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
+  });
+
+  it("records the font metadata patch after skipping an invalid TTF file", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        files: {
+          items: {
+            "file-font": { mimeType: "font/ttf" },
+          },
+        },
+        fonts: {
+          items: {
+            "font-1": {
+              id: "font-1",
+              type: "font",
+              fileId: "file-font",
+            },
+          },
+        },
+        layouts: { items: {} },
+        textStyles: { items: {} },
+      })),
+    };
+    const inspectionError = Object.assign(new Error("Invalid font data."), {
+      code: "invalid_font_data",
+    });
+    const revoke = vi.fn();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.projectStore.app.get.mockImplementation(async (key) =>
+      key === "contentPatch.defaultMenuTextStyles-1-9-1" ? true : undefined,
+    );
+    mocked.assetService.getFileContent.mockResolvedValue({
+      url: "font://file-font",
+      revoke,
+    });
+    mocked.fetch.mockResolvedValue({
+      ok: true,
+      arrayBuffer: vi.fn(async () => new Uint8Array([1, 2, 3]).buffer),
+    });
+    mocked.extractFontWeightCapabilities.mockImplementation(() => {
+      throw inspectionError;
+    });
+
+    const projectService = createTestProjectService();
+    await projectService.ensureRepository();
+
+    expect(mocked.collabService.commandApi.updateFont).not.toHaveBeenCalled();
+    expect(revoke).toHaveBeenCalledTimes(1);
+    expect(mocked.projectStore.app.set).toHaveBeenCalledWith(
+      "contentPatch.fontWeightMetadata-1-10-0",
+      true,
+    );
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+  });
+
+  it("does not record font metadata completion when an update fails", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        files: {
+          items: {
+            "file-font": { mimeType: "font/otf" },
+          },
+        },
+        fonts: {
+          items: {
+            "font-1": {
+              id: "font-1",
+              type: "font",
+              fileId: "file-font",
+            },
+          },
+        },
+        layouts: { items: {} },
+        textStyles: { items: {} },
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.projectStore.app.get.mockImplementation(async (key) =>
+      key === "contentPatch.defaultMenuTextStyles-1-9-1" ? true : undefined,
+    );
+    mocked.assetService.getFileContent.mockResolvedValue({
+      url: "font://file-font",
+    });
+    mocked.fetch.mockResolvedValue({
+      ok: true,
+      arrayBuffer: vi.fn(async () => new Uint8Array([1, 2, 3]).buffer),
+    });
+    mocked.extractFontWeightCapabilities.mockReturnValue({
+      kind: "static",
+      minWeight: 600,
+      defaultWeight: 600,
+      maxWeight: 600,
+    });
+    mocked.collabService.commandApi.updateFont.mockResolvedValue({
+      valid: false,
+      error: { message: "Font update failed." },
+    });
+
+    const projectService = createTestProjectService();
+    await expect(projectService.ensureRepository()).rejects.toThrow(
+      "Font update failed.",
+    );
+
+    expect(mocked.projectStore.app.set).not.toHaveBeenCalledWith(
+      "contentPatch.fontWeightMetadata-1-10-0",
+      true,
+    );
   });
 
   it("loads historical repository state through the ensured repository contract", async () => {

@@ -206,6 +206,11 @@ Current keys:
   - boolean completion marker for the one-time default menu text-style repair
   - full execution and collaboration-safety contract:
     `14-project-content-patches.md`
+- `contentPatch.fontWeightMetadata-1-10-0`
+  - boolean completion marker for adding weight metadata to legacy TTF and OTF
+    font resources
+  - full execution and collaboration-safety contract:
+    `14-project-content-patches.md`
 
 Important ownership rule:
 

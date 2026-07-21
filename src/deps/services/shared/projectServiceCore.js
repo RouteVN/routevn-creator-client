@@ -12,12 +12,24 @@ import {
   CURRENT_LAYOUT_SCHEMA_VERSION,
   normalizeLayoutSchemaVersion,
 } from "../../../internal/project/layout.js";
+import {
+  extractFontWeightCapabilities,
+  isStrictFontMimeType,
+} from "../../../internal/fontCapabilities.js";
+import { normalizeFontFileType } from "../../../internal/fileTypes.js";
 
 // Exceptional shipped-data repair. Keep its marker, legacy predicates,
 // collaboration gate, and lifecycle aligned with
 // docs/platform/14-project-content-patches.md.
 const DEFAULT_MENU_TEXT_STYLES_PATCH_KEY =
   "contentPatch.defaultMenuTextStyles-1-9-1";
+const FONT_WEIGHT_METADATA_PATCH_KEY = "contentPatch.fontWeightMetadata-1-10-0";
+const NON_RETRYABLE_FONT_INSPECTION_ERROR_CODES = new Set([
+  "unsupported_font_format",
+  "invalid_font_data",
+  "missing_font_weight",
+  "invalid_font_weight",
+]);
 const MENU_ITEM_TEXT_STYLE_ID = "e2WbW3vcPZR9";
 const MENU_ITEM_SELECTED_TEXT_STYLE_ID = "saV5A4pkvHRb";
 const MENU_PAGE_LAYOUT_ID = "fKr5fa67MQWh";
@@ -92,7 +104,7 @@ export const createProjectServiceCore = ({
   const getCurrentProjectId = () =>
     repositoryService.getEnsuredProjectId() || router.getPayload()?.p;
 
-  const defaultMenuTextStylesPatchByProject = new Map();
+  const contentPatchesByProject = new Map();
 
   const getRepositoryState = () => {
     const repository = repositoryService.getCachedRepository();
@@ -203,21 +215,123 @@ export const createProjectServiceCore = ({
     await store.app.set(DEFAULT_MENU_TEXT_STYLES_PATCH_KEY, true);
   };
 
-  const ensureDefaultMenuTextStylesPatch = async (repository) => {
-    const projectId = getCurrentProjectId();
-    const existingPatch = defaultMenuTextStylesPatchByProject.get(projectId);
-    if (existingPatch) {
-      return existingPatch;
+  const hasCompleteFontWeightMetadata = (font) =>
+    font.minWeight !== undefined &&
+    font.defaultWeight !== undefined &&
+    font.maxWeight !== undefined;
+
+  const selectFontsRequiringWeightMetadata = (repositoryState) => {
+    const fonts = repositoryState?.fonts?.items ?? {};
+    const files = repositoryState?.files?.items ?? {};
+    const selectedFonts = [];
+
+    for (const [fontId, font] of Object.entries(fonts)) {
+      if (
+        font?.type !== "font" ||
+        !font.fileId ||
+        hasCompleteFontWeightMetadata(font)
+      ) {
+        continue;
+      }
+
+      const fileRecord = files[font.fileId];
+      const mimeType = normalizeFontFileType({
+        fileType: fileRecord?.mimeType ?? font.fileType,
+        fileName: font.name,
+      });
+      if (!isStrictFontMimeType(mimeType)) {
+        continue;
+      }
+
+      selectedFonts.push({ fontId, font });
     }
 
-    const patch = applyDefaultMenuTextStylesPatch(repository);
-    defaultMenuTextStylesPatchByProject.set(projectId, patch);
+    return selectedFonts;
+  };
+
+  const inspectStoredFontWeightMetadata = async (font) => {
+    let content;
+    try {
+      content = await assetService.getFileContent(font.fileId);
+      const response = await fetch(content.url);
+      if (!response.ok) {
+        throw new Error(`Failed to read font file (HTTP ${response.status}).`);
+      }
+      return extractFontWeightCapabilities(await response.arrayBuffer());
+    } finally {
+      content?.revoke?.();
+    }
+  };
+
+  const patchFontWeightMetadata = async (repositoryState) => {
+    const fonts = selectFontsRequiringWeightMetadata(repositoryState);
+
+    for (const { fontId, font } of fonts) {
+      let capabilities;
+      try {
+        capabilities = await inspectStoredFontWeightMetadata(font);
+      } catch (error) {
+        if (NON_RETRYABLE_FONT_INSPECTION_ERROR_CODES.has(error?.code)) {
+          console.warn(
+            `Could not migrate font weight metadata for ${font.fileId}.`,
+            error,
+          );
+          continue;
+        }
+        throw error;
+      }
+
+      const result = await collabService.commandApi.updateFont({
+        fontId,
+        data: {
+          minWeight: capabilities.minWeight,
+          defaultWeight: capabilities.defaultWeight,
+          maxWeight: capabilities.maxWeight,
+        },
+      });
+      if (result?.valid === false) {
+        throw new Error(
+          result.error?.message || "Failed to migrate font weight metadata.",
+        );
+      }
+    }
+  };
+
+  const applyFontWeightMetadataPatch = async (repository) => {
+    if (typeof repository?.getState !== "function") {
+      return;
+    }
+
+    const store = repositoryService.getCachedStore();
+    const isApplied = await store.app.get(FONT_WEIGHT_METADATA_PATCH_KEY);
+    if (isApplied === true) {
+      return;
+    }
+
+    await patchFontWeightMetadata(repository.getState());
+    await store.app.set(FONT_WEIGHT_METADATA_PATCH_KEY, true);
+  };
+
+  const applyProjectContentPatches = async (repository) => {
+    await applyDefaultMenuTextStylesPatch(repository);
+    await applyFontWeightMetadataPatch(repository);
+  };
+
+  const ensureContentPatches = async (repository) => {
+    const projectId = getCurrentProjectId();
+    const existingPatches = contentPatchesByProject.get(projectId);
+    if (existingPatches) {
+      return existingPatches;
+    }
+
+    const patches = applyProjectContentPatches(repository);
+    contentPatchesByProject.set(projectId, patches);
 
     try {
-      await patch;
+      await patches;
     } finally {
-      if (defaultMenuTextStylesPatchByProject.get(projectId) === patch) {
-        defaultMenuTextStylesPatchByProject.delete(projectId);
+      if (contentPatchesByProject.get(projectId) === patches) {
+        contentPatchesByProject.delete(projectId);
       }
     }
   };
@@ -225,7 +339,7 @@ export const createProjectServiceCore = ({
   const ensureProjectContentPatches = async () => {
     const repository = await repositoryService.ensureRepository();
     await ensureLayoutSchemaVersion(repository);
-    await ensureDefaultMenuTextStylesPatch(repository);
+    await ensureContentPatches(repository);
     return repository;
   };
 
@@ -237,7 +351,7 @@ export const createProjectServiceCore = ({
         projectId: getCurrentProjectId(),
       });
     if (shouldApplyContentPatches) {
-      await ensureDefaultMenuTextStylesPatch(repository);
+      await ensureContentPatches(repository);
     }
     return repository;
   };
