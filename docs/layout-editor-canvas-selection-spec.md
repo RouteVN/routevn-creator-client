@@ -341,8 +341,8 @@ MUST NOT accidentally reset the depth and prevent repeated descent.
   the exterior white and interior gray bands span approximately two CSS pixels.
 - When the canvas's CSS size changes, recompute renderer units per CSS pixel and
   rebuild hover, selection, anchor, and resize chrome from cached render data.
-- Show the existing white anchor marker with its one-CSS-pixel light-gray
-  border and only the resize handles supported by the selected authored item.
+- Show a circular white anchor marker with its one-CSS-pixel light-gray border
+  and only the resize handles supported by the selected authored item.
 - Use no selection fill; authored content must remain visible and color-accurate.
 - Draw selection chrome above hover chrome and authored content.
 - Keep selection chrome visible after the pointer leaves the canvas.

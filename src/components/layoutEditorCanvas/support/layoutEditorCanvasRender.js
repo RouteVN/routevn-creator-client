@@ -26,14 +26,20 @@ const OVERLAY_FILL = {
   color: "#ffffff",
   alpha: 0.001,
 };
-const OVERLAY_ANCHOR_FILL = {
-  color: "#ffffff",
-  alpha: 1,
-};
-const OVERLAY_ANCHOR_BORDER = {
-  color: OVERLAY_INNER_COLOR,
-  width: 1,
-  alpha: 1,
+const OVERLAY_ANCHOR_CIRCLE_FILL = {
+  type: "radial-gradient",
+  innerCenter: { x: 0.5, y: 0.5 },
+  innerRadius: 0,
+  outerCenter: { x: 0.5, y: 0.5 },
+  outerRadius: 0.5,
+  coordinateSpace: "local",
+  stops: [
+    { offset: 0, color: "#ffffff" },
+    { offset: 0.75, color: "#ffffff" },
+    { offset: 0.75, color: OVERLAY_INNER_COLOR },
+    { offset: 1, color: OVERLAY_INNER_COLOR },
+    { offset: 1, color: "transparent" },
+  ],
 };
 const OVERLAY_ANCHOR_SIZE = 8;
 const OVERLAY_RESIZE_HANDLE_SIZE = 12;
@@ -457,11 +463,7 @@ const buildOverlayAnchorMarker = ({
     y: originY - anchorSize / 2,
     width: anchorSize,
     height: anchorSize,
-    fill: OVERLAY_ANCHOR_FILL,
-    border: {
-      ...OVERLAY_ANCHOR_BORDER,
-      width: OVERLAY_ANCHOR_BORDER.width * canvasUnitsPerCssPixel,
-    },
+    fill: OVERLAY_ANCHOR_CIRCLE_FILL,
   };
 };
 

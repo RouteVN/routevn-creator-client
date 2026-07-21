@@ -82,10 +82,11 @@ describe("layoutEditorPreview", () => {
     expect(selectionAnchor).toMatchObject({
       width: 16,
       height: 16,
-      border: {
-        width: 2,
+      fill: {
+        type: "radial-gradient",
       },
     });
+    expect(selectionAnchor.border).toBeUndefined();
   });
 
   it("builds stable preview data from variables, dialogue defaults, and choices", () => {
@@ -830,13 +831,19 @@ describe("layoutEditorPreview", () => {
       width: 8,
       height: 8,
       fill: {
-        color: "#ffffff",
-        alpha: 1,
-      },
-      border: {
-        color: "#b3b3b3",
-        width: 1,
-        alpha: 1,
+        type: "radial-gradient",
+        innerCenter: { x: 0.5, y: 0.5 },
+        innerRadius: 0,
+        outerCenter: { x: 0.5, y: 0.5 },
+        outerRadius: 0.5,
+        coordinateSpace: "local",
+        stops: [
+          { offset: 0, color: "#ffffff" },
+          { offset: 0.75, color: "#ffffff" },
+          { offset: 0.75, color: "#b3b3b3" },
+          { offset: 1, color: "#b3b3b3" },
+          { offset: 1, color: "transparent" },
+        ],
       },
     });
   });
