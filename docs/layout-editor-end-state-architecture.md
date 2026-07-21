@@ -166,6 +166,9 @@ It must be pure and deterministic.
 - selection/overlay orchestration
 - editor-side persistence policy
 
+Canvas hover, hit testing, nesting, overlap, and selection behavior are defined
+in `docs/layout-editor-canvas-selection-spec.md`.
+
 It may depend on project semantics, but it must not redefine them.
 
 ### Client Right Panel UI

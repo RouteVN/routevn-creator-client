@@ -10,12 +10,13 @@
 6. [Project Storage And Sync Redesign](./project-storage-and-sync-redesign.md)
 7. [Insieme 2.1.0 Hard Cutover Checklist](./insieme-2.1.0-hard-cutover-checklist.md)
 8. [Animation Editor Transition Mask Plan](./animation-editor-transition-mask-plan.md)
-9. [Resource Tags Spec](./resource-tags-spec.md)
-10. [Import Packages](./import-packages.md)
-11. [Observability Proposal](./observability.md)
-12. [Android Development](./android.md)
-13. [iOS Development](./ios.md)
-14. [macOS Player Export Plan](./macos-player-export-plan.md)
+9. [Layout Editor Canvas Hover And Selection Spec](./layout-editor-canvas-selection-spec.md)
+10. [Resource Tags Spec](./resource-tags-spec.md)
+11. [Import Packages](./import-packages.md)
+12. [Observability Proposal](./observability.md)
+13. [Android Development](./android.md)
+14. [iOS Development](./ios.md)
+15. [macOS Player Export Plan](./macos-player-export-plan.md)
 
 ## Runbooks
 

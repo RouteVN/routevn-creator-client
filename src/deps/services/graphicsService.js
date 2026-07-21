@@ -2262,6 +2262,8 @@ export const createGraphicsService = async ({
       );
     },
     parse: (payload) => routeGraphics?.parse(payload),
+    hitTestElementBounds: (point) =>
+      routeGraphics?.hitTestElementBounds(point) ?? [],
     destroy: async () => {
       if (routeGraphicsInitPromise) {
         await routeGraphicsInitPromise.catch(() => {});

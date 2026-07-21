@@ -6,24 +6,40 @@ import {
 } from "../../../internal/project/layout.js";
 import { getLayoutEditorItemResizeEdges } from "../../../internal/layoutEditorElementRegistry.js";
 import { toHierarchyStructure } from "../../../internal/project/tree.js";
+import {
+  createLayoutEditorSelectionElementMapper,
+  extractLayoutEditorSelectionOccurrences,
+} from "./layoutEditorCanvasSelection.js";
 
-const OVERLAY_BORDER = {
+const OVERLAY_INNER_COLOR = "#b3b3b3";
+const OVERLAY_INNER_BORDER = {
+  color: OVERLAY_INNER_COLOR,
+  width: 1,
+  alpha: 1,
+};
+const OVERLAY_OUTER_BORDER = {
   color: "#ffffff",
-  width: 2,
+  width: 1,
   alpha: 1,
 };
 const OVERLAY_FILL = {
   color: "#ffffff",
   alpha: 0.001,
 };
-const OVERLAY_ANCHOR_FILL = {
-  color: "#ffffff",
-  alpha: 1,
-};
-const OVERLAY_ANCHOR_BORDER = {
-  color: "#111111",
-  width: 1,
-  alpha: 1,
+const OVERLAY_ANCHOR_CIRCLE_FILL = {
+  type: "radial-gradient",
+  innerCenter: { x: 0.5, y: 0.5 },
+  innerRadius: 0,
+  outerCenter: { x: 0.5, y: 0.5 },
+  outerRadius: 0.5,
+  coordinateSpace: "local",
+  stops: [
+    { offset: 0, color: "#ffffff" },
+    { offset: 0.75, color: "#ffffff" },
+    { offset: 0.75, color: OVERLAY_INNER_COLOR },
+    { offset: 1, color: OVERLAY_INNER_COLOR },
+    { offset: 1, color: "transparent" },
+  ],
 };
 const OVERLAY_ANCHOR_SIZE = 8;
 const OVERLAY_RESIZE_HANDLE_SIZE = 12;
@@ -290,38 +306,21 @@ const createLayoutEditorPreviewBackgroundElement = ({
   };
 };
 
-const isSelectableMatch = (elementId, selectedItemId) => {
-  if (typeof elementId !== "string" || typeof selectedItemId !== "string") {
-    return false;
-  }
-
-  if (elementId === selectedItemId) {
-    return true;
-  }
-
-  return elementId === `${selectedItemId}-instance-0`;
-};
-
 const collectMatchingPaths = (
   elements,
-  selectedItemId,
+  occurrenceId,
   parentPath = [],
   matchingPaths = [],
 ) => {
   toElementList(elements).forEach((element) => {
     const path = [...parentPath, element];
 
-    if (isSelectableMatch(element.id, selectedItemId)) {
+    if (element.id === occurrenceId) {
       matchingPaths.push(path);
     }
 
     if (Array.isArray(element.children) && element.children.length > 0) {
-      collectMatchingPaths(
-        element.children,
-        selectedItemId,
-        path,
-        matchingPaths,
-      );
+      collectMatchingPaths(element.children, occurrenceId, path, matchingPaths);
     }
   });
 
@@ -372,7 +371,6 @@ const buildOverlayRect = ({ element, overlayId, draggable }) => {
     width: element.width,
     height: element.height,
     fill: OVERLAY_FILL,
-    border: OVERLAY_BORDER,
   };
 
   if (draggable) {
@@ -395,48 +393,109 @@ const buildOverlayRect = ({ element, overlayId, draggable }) => {
   return overlayRect;
 };
 
-const buildOverlayAnchorMarker = ({ element, overlayId }) => {
+const buildOverlayOuterRect = ({
+  element,
+  overlayId,
+  canvasUnitsPerCssPixel,
+}) => {
+  if (!hasRenderableBounds(element)) {
+    return undefined;
+  }
+
+  const borderWidth = OVERLAY_OUTER_BORDER.width * canvasUnitsPerCssPixel;
+  const borderOffset = borderWidth / 2;
+
+  return {
+    id: `${overlayId}-outer`,
+    type: "rect",
+    x: -borderOffset,
+    y: -borderOffset,
+    width: element.width + borderWidth,
+    height: element.height + borderWidth,
+    fill: OVERLAY_FILL,
+    border: {
+      ...OVERLAY_OUTER_BORDER,
+      width: borderWidth,
+    },
+  };
+};
+
+const buildOverlayInnerRect = ({
+  element,
+  overlayId,
+  canvasUnitsPerCssPixel,
+}) => {
+  if (!hasRenderableBounds(element)) {
+    return undefined;
+  }
+
+  return {
+    id: `${overlayId}-inner`,
+    type: "rect",
+    x: canvasUnitsPerCssPixel / 2,
+    y: canvasUnitsPerCssPixel / 2,
+    width: Math.max(0, element.width - canvasUnitsPerCssPixel),
+    height: Math.max(0, element.height - canvasUnitsPerCssPixel),
+    fill: OVERLAY_FILL,
+    border: {
+      ...OVERLAY_INNER_BORDER,
+      width: OVERLAY_INNER_BORDER.width * canvasUnitsPerCssPixel,
+    },
+  };
+};
+
+const buildOverlayAnchorMarker = ({
+  element,
+  overlayId,
+  canvasUnitsPerCssPixel,
+}) => {
   if (!hasRenderableBounds(element)) {
     return undefined;
   }
 
   const { x: originX, y: originY } = getElementOrigin(element);
+  const anchorSize = OVERLAY_ANCHOR_SIZE * canvasUnitsPerCssPixel;
 
   return {
     id: `${overlayId}-anchor`,
     type: "rect",
-    x: originX - OVERLAY_ANCHOR_SIZE / 2,
-    y: originY - OVERLAY_ANCHOR_SIZE / 2,
-    width: OVERLAY_ANCHOR_SIZE,
-    height: OVERLAY_ANCHOR_SIZE,
-    fill: OVERLAY_ANCHOR_FILL,
-    border: OVERLAY_ANCHOR_BORDER,
+    x: originX - anchorSize / 2,
+    y: originY - anchorSize / 2,
+    width: anchorSize,
+    height: anchorSize,
+    fill: OVERLAY_ANCHOR_CIRCLE_FILL,
   };
 };
 
-const buildOverlayResizeHandle = ({ element, overlayId, edge }) => {
+const buildOverlayResizeHandle = ({
+  element,
+  overlayId,
+  edge,
+  canvasUnitsPerCssPixel,
+}) => {
   if (!hasRenderableBounds(element)) {
     return undefined;
   }
 
   const vertical = edge === "left" || edge === "right";
+  const resizeHandleSize = OVERLAY_RESIZE_HANDLE_SIZE * canvasUnitsPerCssPixel;
   const resizeHandle = {
     id: `${overlayId}-resize-${edge}`,
     type: "rect",
     x:
       edge === "left"
-        ? -OVERLAY_RESIZE_HANDLE_SIZE / 2
+        ? -resizeHandleSize / 2
         : edge === "right"
-          ? element.width - OVERLAY_RESIZE_HANDLE_SIZE / 2
+          ? element.width - resizeHandleSize / 2
           : 0,
     y:
       edge === "top"
-        ? -OVERLAY_RESIZE_HANDLE_SIZE / 2
+        ? -resizeHandleSize / 2
         : edge === "bottom"
-          ? element.height - OVERLAY_RESIZE_HANDLE_SIZE / 2
+          ? element.height - resizeHandleSize / 2
           : 0,
-    width: vertical ? OVERLAY_RESIZE_HANDLE_SIZE : element.width,
-    height: vertical ? element.height : OVERLAY_RESIZE_HANDLE_SIZE,
+    width: vertical ? resizeHandleSize : element.width,
+    height: vertical ? element.height : resizeHandleSize,
     fill: OVERLAY_FILL,
     hover: {
       cursor: vertical ? "ew-resize" : "ns-resize",
@@ -457,11 +516,23 @@ const buildOverlayResizeHandle = ({ element, overlayId, edge }) => {
   return resizeHandle;
 };
 
-const buildOverlayResizeHandles = ({ element, overlayId, selectedItem }) => {
+const buildOverlayResizeHandles = ({
+  element,
+  overlayId,
+  selectedItem,
+  canvasUnitsPerCssPixel,
+}) => {
   const edges = getLayoutEditorItemResizeEdges(selectedItem ?? element);
 
   return edges
-    .map((edge) => buildOverlayResizeHandle({ element, overlayId, edge }))
+    .map((edge) =>
+      buildOverlayResizeHandle({
+        element,
+        overlayId,
+        edge,
+        canvasUnitsPerCssPixel,
+      }),
+    )
     .filter(Boolean);
 };
 
@@ -491,20 +562,37 @@ const buildOverlayElementContainer = ({ element, overlayId, children }) => {
   return overlayContainer;
 };
 
-const buildOverlayTree = ({ path, overlayId, draggable, selectedItem }) => {
+const buildOverlayTree = ({
+  path,
+  overlayId,
+  draggable,
+  selectedItem,
+  canvasUnitsPerCssPixel,
+}) => {
   const selectedElement = path[path.length - 1];
   const overlayRect = buildOverlayRect({
     element: selectedElement,
     overlayId,
     draggable,
   });
+  const overlayOuterRect = buildOverlayOuterRect({
+    element: selectedElement,
+    overlayId,
+    canvasUnitsPerCssPixel,
+  });
+  const overlayInnerRect = buildOverlayInnerRect({
+    element: selectedElement,
+    overlayId,
+    canvasUnitsPerCssPixel,
+  });
   const anchorMarker = buildOverlayAnchorMarker({
     element: selectedElement,
     overlayId,
+    canvasUnitsPerCssPixel,
   });
   let overlayTree;
 
-  if (!overlayRect || !anchorMarker) {
+  if (!overlayRect || !overlayOuterRect || !overlayInnerRect || !anchorMarker) {
     return undefined;
   }
 
@@ -512,11 +600,14 @@ const buildOverlayTree = ({ path, overlayId, draggable, selectedItem }) => {
     element: selectedElement,
     overlayId: `${overlayId}-group`,
     children: [
+      overlayOuterRect,
+      overlayInnerRect,
       overlayRect,
       ...buildOverlayResizeHandles({
         element: selectedElement,
         overlayId,
         selectedItem,
+        canvasUnitsPerCssPixel,
       }),
       anchorMarker,
     ],
@@ -535,27 +626,32 @@ const buildOverlayTree = ({ path, overlayId, draggable, selectedItem }) => {
   return overlayTree;
 };
 
-const selectPrimaryMatchingPath = (parsedElements, selectedItemId) => {
+const selectPrimaryMatchingPath = ({
+  parsedElements,
+  selectedItemId,
+  selectedOccurrenceId,
+  occurrencesById,
+  occurrenceIdsByOwner,
+}) => {
   if (!selectedItemId) {
     return undefined;
   }
 
+  const selectedOccurrence = occurrencesById[selectedOccurrenceId];
+  const occurrenceId =
+    selectedOccurrence?.ownerItemId === selectedItemId
+      ? selectedOccurrenceId
+      : occurrenceIdsByOwner[selectedItemId]?.[0];
   const matchingPaths = collectMatchingPaths(
     parsedElements,
-    selectedItemId,
+    occurrenceId,
   ).filter((path) => hasRenderableBounds(path[path.length - 1]));
 
   if (matchingPaths.length === 0) {
     return undefined;
   }
 
-  return (
-    matchingPaths.find(
-      (path) =>
-        path[path.length - 1]?.id === selectedItemId ||
-        path[path.length - 1]?.id === `${selectedItemId}-instance-0`,
-    ) ?? matchingPaths[0]
-  );
+  return matchingPaths[0];
 };
 
 const toSelectedElementMetrics = (path) => {
@@ -590,10 +686,20 @@ const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
 export const createLayoutEditorSelectionOverlay = ({
   parsedElements,
   selectedItemId,
+  selectedOccurrenceId,
+  occurrencesById = {},
+  occurrenceIdsByOwner = {},
   selectedItem,
   disableMoveDrag = false,
+  canvasUnitsPerCssPixel = 1,
 } = {}) => {
-  const primaryPath = selectPrimaryMatchingPath(parsedElements, selectedItemId);
+  const primaryPath = selectPrimaryMatchingPath({
+    parsedElements,
+    selectedItemId,
+    selectedOccurrenceId,
+    occurrencesById,
+    occurrenceIdsByOwner,
+  });
   if (!primaryPath) {
     return [];
   }
@@ -603,6 +709,7 @@ export const createLayoutEditorSelectionOverlay = ({
     overlayId: "selected-border",
     draggable: disableMoveDrag !== true,
     selectedItem,
+    canvasUnitsPerCssPixel,
   });
 
   if (!primaryOverlay) {
@@ -610,6 +717,108 @@ export const createLayoutEditorSelectionOverlay = ({
   }
 
   return [primaryOverlay];
+};
+
+export const createLayoutEditorSelectionRenderState = ({
+  baseElements = [],
+  parsedElements = [],
+  selectedItemId,
+  selectedOccurrenceId,
+  occurrencesById = {},
+  occurrenceIdsByOwner = {},
+  selectedItem,
+  disableMoveDrag = false,
+  canvasUnitsPerCssPixel = 1,
+} = {}) => {
+  const overlayElements = createLayoutEditorSelectionOverlay({
+    parsedElements,
+    selectedItemId,
+    selectedOccurrenceId,
+    occurrencesById,
+    occurrenceIdsByOwner,
+    selectedItem,
+    disableMoveDrag,
+    canvasUnitsPerCssPixel,
+  });
+  const primaryMatchingPath = selectPrimaryMatchingPath({
+    parsedElements,
+    selectedItemId,
+    selectedOccurrenceId,
+    occurrencesById,
+    occurrenceIdsByOwner,
+  });
+
+  return {
+    elements: [...baseElements, ...overlayElements],
+    selectedElementMetrics: toSelectedElementMetrics(primaryMatchingPath),
+  };
+};
+
+export const createLayoutEditorHoverOverlay = ({
+  bounds,
+  canvasUnitsPerCssPixel = 1,
+} = {}) => {
+  const corners = bounds?.corners ?? [];
+  if (corners.length !== 4) {
+    return [];
+  }
+
+  const [topLeft, topRight, , bottomLeft] = corners;
+  const width = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y);
+  const height = Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y);
+  if (width <= 0 || height <= 0) {
+    return [];
+  }
+
+  const unitX = {
+    x: (topRight.x - topLeft.x) / width,
+    y: (topRight.y - topLeft.y) / width,
+  };
+  const unitY = {
+    x: (bottomLeft.x - topLeft.x) / height,
+    y: (bottomLeft.y - topLeft.y) / height,
+  };
+  const rotation = (Math.atan2(unitX.y, unitX.x) * 180) / Math.PI;
+  const halfStroke = canvasUnitsPerCssPixel / 2;
+  const toOffsetPoint = (distance) => ({
+    x: topLeft.x + unitX.x * distance + unitY.x * distance,
+    y: topLeft.y + unitX.y * distance + unitY.y * distance,
+  });
+  const outerPosition = toOffsetPoint(-halfStroke);
+  const innerPosition = toOffsetPoint(halfStroke);
+
+  return [
+    {
+      id: "hover-border-outer",
+      type: "rect",
+      x: outerPosition.x,
+      y: outerPosition.y,
+      width: width + canvasUnitsPerCssPixel,
+      height: height + canvasUnitsPerCssPixel,
+      rotation,
+      fill: OVERLAY_FILL,
+      border: {
+        color: "#ffffff",
+        width: canvasUnitsPerCssPixel,
+        alpha: 1,
+      },
+    },
+    {
+      id: "hover-border-inner",
+      type: "rect",
+      x: innerPosition.x,
+      y: innerPosition.y,
+      width: Math.max(0, width - canvasUnitsPerCssPixel),
+      height: Math.max(0, height - canvasUnitsPerCssPixel),
+      rotation,
+      fill: OVERLAY_FILL,
+      border: {
+        color: OVERLAY_INNER_COLOR,
+        width: canvasUnitsPerCssPixel,
+        alpha: 1,
+      },
+    },
+  ];
 };
 
 export const loadLayoutEditorAssets = async ({
@@ -724,6 +933,9 @@ export const createLayoutEditorRenderState = ({
       particlesData,
       spritesheetsData,
       layoutsData: repositoryState?.layouts?.items || {},
+      mapElement: createLayoutEditorSelectionElementMapper({
+        layoutId: layoutState?.id,
+      }),
     },
   );
 
@@ -752,6 +964,9 @@ const createLayoutEditorResolvedElements = ({
   const resolvedFinalElements = resolveLayoutReferences(finalElements, {
     resources,
   });
+  const selectionOccurrences = extractLayoutEditorSelectionOccurrences(
+    resolvedFinalElements,
+  );
   const previewBackgroundElement = createLayoutEditorPreviewBackgroundElement({
     previewData: normalizedPreviewData,
     repositoryState,
@@ -759,8 +974,10 @@ const createLayoutEditorResolvedElements = ({
   });
   return {
     renderedElements: previewBackgroundElement
-      ? [previewBackgroundElement, ...resolvedFinalElements]
-      : resolvedFinalElements,
+      ? [previewBackgroundElement, ...selectionOccurrences.elements]
+      : selectionOccurrences.elements,
+    occurrencesById: selectionOccurrences.occurrencesById,
+    occurrenceIdsByOwner: selectionOccurrences.occurrenceIdsByOwner,
   };
 };
 
@@ -790,32 +1007,40 @@ export const createLayoutEditorRenderedElements = ({
   previewData,
   resolution,
   selectedItemId,
+  selectedOccurrenceId,
   disableMoveDrag,
+  canvasUnitsPerCssPixel,
   graphicsService,
 } = {}) => {
-  const { renderedElements } = createLayoutEditorResolvedElements({
-    layoutState,
-    repositoryState,
-    previewData,
-    resolution,
-  });
+  const { renderedElements, occurrencesById, occurrenceIdsByOwner } =
+    createLayoutEditorResolvedElements({
+      layoutState,
+      repositoryState,
+      previewData,
+      resolution,
+    });
   const parsedState = graphicsService.parse({
     elements: renderedElements,
   });
-  const overlayElements = createLayoutEditorSelectionOverlay({
+  const selectionRenderState = createLayoutEditorSelectionRenderState({
+    baseElements: renderedElements,
     parsedElements: parsedState.elements,
     selectedItemId,
+    selectedOccurrenceId,
+    occurrencesById,
+    occurrenceIdsByOwner,
     selectedItem: layoutState?.elements?.items?.[selectedItemId],
     disableMoveDrag,
+    canvasUnitsPerCssPixel,
   });
-  const selectedElementMetrics = toSelectedElementMetrics(
-    selectPrimaryMatchingPath(parsedState.elements, selectedItemId),
-  );
   const fileReferences = extractFileIdsFromRenderState(renderedElements);
 
   return {
-    elements: [...renderedElements, ...overlayElements],
+    ...selectionRenderState,
+    baseElements: renderedElements,
+    parsedElements: parsedState.elements,
     fileReferences,
-    selectedElementMetrics,
+    occurrencesById,
+    occurrenceIdsByOwner,
   };
 };

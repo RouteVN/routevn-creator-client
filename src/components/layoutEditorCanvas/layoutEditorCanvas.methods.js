@@ -5,3 +5,7 @@ export function restartPreview() {
 export function captureThumbnailImage() {
   return this.transformedHandlers.handleCaptureThumbnailImage({});
 }
+
+export function useDefaultSelectionOccurrence() {
+  return this.transformedHandlers.handleUseDefaultSelectionOccurrence({});
+}
