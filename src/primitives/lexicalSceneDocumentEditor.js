@@ -910,6 +910,10 @@ const isPlainSpaceKey = (event) => {
   );
 };
 
+const isImeProcessKeyboardEvent = (event) => {
+  return event?.keyCode === 229 || event?.which === 229;
+};
+
 const getEventTimestamp = (event) => {
   const timestamp = Number(event?.timeStamp);
   return Number.isFinite(timestamp) ? timestamp : undefined;
@@ -1308,31 +1312,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       ),
       this.editor.registerCommand(
         KEY_ENTER_COMMAND,
-        (event) => {
-          if (event?.isComposing || this.isComposing) {
-            return false;
-          }
-
-          if (event?.shiftKey) {
-            event.preventDefault();
-            event.stopPropagation?.();
-            this.pendingSoftLineBreakBeforeInput = true;
-            this.insertSoftLineBreak();
-            requestAnimationFrame(() => {
-              this.pendingSoftLineBreakBeforeInput = false;
-            });
-            return true;
-          }
-
-          event?.preventDefault?.();
-          event?.stopPropagation?.();
-          this.pendingParagraphSplitBeforeInput = true;
-          this.splitCurrentLine();
-          requestAnimationFrame(() => {
-            this.pendingParagraphSplitBeforeInput = false;
-          });
-          return true;
-        },
+        (event) => this.handleLexicalEnterCommand(event),
         COMMAND_PRIORITY_HIGH,
       ),
       this.editor.registerCommand(
@@ -2562,6 +2542,41 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     event.preventDefault?.();
     event.stopPropagation?.();
     event.stopImmediatePropagation?.();
+    return true;
+  }
+
+  handleLexicalEnterCommand(event) {
+    if (event?.isComposing || this.isComposing) {
+      return false;
+    }
+
+    // macOS WebKit can queue the Enter keydown that confirms an IME choice
+    // until after compositionend. Its composition flags are false by then,
+    // but keyCode/which 229 still identifies it as an IME process event.
+    if (isImeProcessKeyboardEvent(event)) {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      return true;
+    }
+
+    if (event?.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation?.();
+      this.pendingSoftLineBreakBeforeInput = true;
+      this.insertSoftLineBreak();
+      requestAnimationFrame(() => {
+        this.pendingSoftLineBreakBeforeInput = false;
+      });
+      return true;
+    }
+
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    this.pendingParagraphSplitBeforeInput = true;
+    this.splitCurrentLine();
+    requestAnimationFrame(() => {
+      this.pendingParagraphSplitBeforeInput = false;
+    });
     return true;
   }
 
