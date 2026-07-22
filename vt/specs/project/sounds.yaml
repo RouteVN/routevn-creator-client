@@ -164,6 +164,10 @@ steps:
     selector: "#editDialog"
     state: hidden
     timeoutMs: 5000
+  - action: select
+    selector: "#fileExplorerKeyboardScope"
+    steps:
+      - action: focus
   - action: keypress
     key: j
   - action: keypress

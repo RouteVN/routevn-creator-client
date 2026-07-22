@@ -167,11 +167,15 @@ steps:
   - action: keypress
     key: Escape
   - action: waitFor
+    selector: "#fileExplorer #dropdownMenu[open]"
+    state: hidden
+    timeoutMs: 5000
+  - action: waitFor
     selector: "#fileExplorer [data-item-id='UK85MSpkHfto']"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#fileExplorer [data-item-id='UK85MSpkHfto']"
+    selector: "#fileExplorer [data-item-id='UK85MSpkHfto'] rtgl-text"
     steps:
       - action: click
   - action: waitFor

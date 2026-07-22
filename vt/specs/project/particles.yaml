@@ -94,11 +94,11 @@ steps:
     state: visible
     timeoutMs: 5000
   - action: waitFor
-    selector: "#previewImageSelectorDialog [role='option'][data-item-id]"
+    selector: "#previewImageSelectorDialog #imageItemRef0x0[data-item-id]"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#previewImageSelectorDialog [role='option'][data-item-id]"
+    selector: "#previewImageSelectorDialog #imageItemRef0x0[data-item-id]"
     steps:
       - action: click
   - action: select

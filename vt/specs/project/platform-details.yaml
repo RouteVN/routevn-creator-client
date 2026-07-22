@@ -67,11 +67,11 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rtgl-global-ui rtgl-dropdown-menu#addPlatformMenu #option0"
+    selector: "rtgl-dropdown-menu#addPlatformMenu #option0"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "rtgl-global-ui rtgl-dropdown-menu#addPlatformMenu #option0"
+    selector: "rtgl-dropdown-menu#addPlatformMenu #option0"
     steps:
       - action: click
   - action: waitFor
@@ -81,6 +81,12 @@ steps:
   - action: wait
     ms: 250
   - action: screenshot
+  - action: select
+    selector: "#platformEditDialog rtgl-input#field1 input"
+    steps:
+      - action: clear
+      - action: write
+        value: com.example.project-one
   - action: select
     selector: "#platformEditDialog rtgl-button[data-action-id='submit']"
     steps:

@@ -1,6 +1,6 @@
 ---
 title: Fonts Workflow
-description: Covers the fonts page detail, glyph preview dialog, edit dialog, and empty search state.
+description: Covers the fonts page preview readiness, detail metadata, gallery zoom, edit dialog, and empty search state.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -91,23 +91,27 @@ steps:
   - action: wait
     ms: 300
   - action: screenshot
+  - action: assert
+    type: text
+    selector: "#detailHeader"
+    value: Noto Sans SC
   - action: select
-    selector: "#groupview #itemRef0x0"
+    selector: "#zoomButton"
     steps:
-      - action: dblclick
+      - action: click
   - action: waitFor
-    selector: "#fontDialog"
-    state: visible
-    timeoutMs: 10000
+    selector: "#zoomPopover[open][positioned]"
+    state: attached
+    timeoutMs: 5000
   - action: wait
-    ms: 500
+    ms: 150
   - action: screenshot
   - action: keypress
     key: Escape
   - action: waitFor
-    selector: "#fontDialog"
+    selector: "#zoomPopover"
     state: hidden
-    timeoutMs: 10000
+    timeoutMs: 5000
   - action: wait
     ms: 250
   - action: select
