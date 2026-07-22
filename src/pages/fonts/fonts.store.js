@@ -5,7 +5,10 @@ import { createMediaPageStore } from "../../internal/ui/resourcePages/media/crea
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { selectFontsPageCopy } from "./support/fontsPageCopy.js";
-import { NEW_FONT_FILE_TYPES } from "../../internal/fontCapabilities.js";
+import {
+  getFontFaceWeightDescriptor,
+  NEW_FONT_FILE_TYPES,
+} from "../../internal/fontCapabilities.js";
 
 export const FONT_TAG_SCOPE_KEY = "fonts";
 
@@ -86,6 +89,8 @@ const buildMediaItem = (item) => ({
   fontFamily: item.fontFamily ?? "sans-serif",
   previewText: "Aa",
   fontFileId: item.fileId,
+  fontWeight: item.defaultWeight ?? "normal",
+  fontWeightDescriptor: getFontFaceWeightDescriptor(item) ?? "",
 });
 
 const buildPendingMediaItem = (item) => ({
@@ -229,6 +234,14 @@ const {
       }),
       editPreviewFontFamily:
         state.editUploadResult?.fontName ?? editItem?.fontFamily ?? "",
+      editPreviewFontWeightDescriptor:
+        getFontFaceWeightDescriptor(
+          state.editUploadResult?.fontCapabilities ?? editItem,
+        ) ?? "",
+      editPreviewFontWeight:
+        state.editUploadResult?.fontCapabilities?.defaultWeight ??
+        editItem?.defaultWeight ??
+        "normal",
       editDefaultValues: {
         ...baseViewData.editDefaultValues,
         description: editItem?.description ?? "",

@@ -1,3 +1,5 @@
+import { getFontFaceWeightDescriptor } from "../../../internal/fontCapabilities.js";
+
 const PREVIEW_GLYPH_CHARACTERS = [
   ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ",
   ..."abcdefghijklmnopqrstuvwxyz",
@@ -47,7 +49,9 @@ export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
         throw new Error("Could not get font file URL.");
       }
 
-      await loadFont(fontItem.fontFamily, response.url);
+      await loadFont(fontItem.fontFamily, response.url, {
+        weight: getFontFaceWeightDescriptor(fontItem),
+      });
       const fontResponse = await fetch(response.url);
       const fontBuffer = await fontResponse.arrayBuffer();
       const fontData = new Uint8Array(fontBuffer);
@@ -60,6 +64,7 @@ export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
         fileName: fontItem.name || `${fontItem.fontFamily}.ttf`,
         fileSize: `${Math.round(fontBuffer.byteLength / 1024)} KB`,
         format,
+        fontWeight: fontItem.defaultWeight ?? "normal",
         glyphs: createPreviewGlyphs(),
       };
     } catch (error) {
@@ -70,6 +75,7 @@ export const createFontInfoExtractor = ({ getFileContent, loadFont }) => {
         fileName: fontItem.name || `${fontItem.fontFamily}.ttf`,
         fileSize: "0 KB",
         format: "Unknown",
+        fontWeight: fontItem.defaultWeight ?? "normal",
         glyphs: createPreviewGlyphs(),
         error: error.message,
       };

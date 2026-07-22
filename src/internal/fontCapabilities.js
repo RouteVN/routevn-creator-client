@@ -193,6 +193,25 @@ export const inspectNewFontFile = async (file) => {
 export const isStrictFontMimeType = (mimeType) =>
   STRICT_FONT_MIME_TYPES.has(mimeType?.trim().toLowerCase());
 
+export const getFontFaceWeightDescriptor = (font = {}) => {
+  const { minWeight, defaultWeight, maxWeight } = font;
+  if (
+    !Number.isFinite(minWeight) ||
+    !Number.isFinite(defaultWeight) ||
+    !Number.isFinite(maxWeight) ||
+    minWeight < MIN_FONT_WEIGHT ||
+    maxWeight > MAX_FONT_WEIGHT ||
+    minWeight > defaultWeight ||
+    defaultWeight > maxWeight
+  ) {
+    return undefined;
+  }
+
+  return minWeight === maxWeight
+    ? String(defaultWeight)
+    : `${minWeight} ${maxWeight}`;
+};
+
 export const isFontWeightSupported = (capabilities, fontWeight) => {
   const weight = Number(fontWeight);
   if (!Number.isFinite(weight)) {

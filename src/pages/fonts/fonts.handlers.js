@@ -201,7 +201,8 @@ const loadFontInfo = async (deps, { itemId } = {}) => {
 
   const fontInfoExtractor = createFontInfoExtractor({
     getFileContent: (fileId) => projectService.getFileContent(fileId),
-    loadFont: (fontName, fontUrl) => appService.loadFont(fontName, fontUrl),
+    loadFont: (fontName, fontUrl, options) =>
+      appService.loadFont(fontName, fontUrl, options),
   });
   const fontInfo = await fontInfoExtractor.extractFontInfo(fontItem);
 

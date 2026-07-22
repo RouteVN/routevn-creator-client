@@ -225,6 +225,7 @@ const loadAssets = async (deps, fileReferences) => {
     assets[fileId] = {
       url: result.url,
       type: type || result.type || "image/png",
+      fontWeightDescriptor: fileObj.fontWeightDescriptor,
     };
   }
 

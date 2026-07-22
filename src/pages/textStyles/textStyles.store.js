@@ -34,6 +34,7 @@ import {
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { selectTextStylesPageCopy } from "./support/textStylesPageCopy.js";
 import {
+  getFontFaceWeightDescriptor,
   isFontWeightSupported,
   NEW_FONT_FILE_TYPES,
 } from "../../internal/fontCapabilities.js";
@@ -64,6 +65,21 @@ const FONT_WEIGHT_DEFINITIONS = [
   },
   { value: "900", copyKey: "weight900Black", label: "900 - Black" },
 ];
+
+const getFontCapabilityCacheSignature = (font) => {
+  if (!font) {
+    return "";
+  }
+
+  return JSON.stringify([
+    font.fileId,
+    font.fileType,
+    font.name,
+    font.minWeight,
+    font.defaultWeight,
+    font.maxWeight,
+  ]);
+};
 
 const buildFontWeightOptions = ({
   capabilities,
@@ -433,6 +449,17 @@ export const setColorsData = ({ state }, { colorsData } = {}) => {
 };
 
 export const setFontsData = ({ state }, { fontsData } = {}) => {
+  for (const fontId of Object.keys(state.fontCapabilitiesById)) {
+    const currentFont = state.fontsData?.items?.[fontId];
+    const nextFont = fontsData?.items?.[fontId];
+    if (
+      getFontCapabilityCacheSignature(currentFont) !==
+      getFontCapabilityCacheSignature(nextFont)
+    ) {
+      delete state.fontCapabilitiesById[fontId];
+    }
+  }
+
   state.fontsData = fontsData;
 };
 
@@ -837,17 +864,25 @@ export const selectViewData = ({ state, i18n }) => {
   const getFontData = (fontId) => {
     const fontIds = toFontIds(fontId);
     if (fontIds.length === 0) {
-      return { fontFamilies: [], fileIds: [] };
+      return {
+        fontFamilies: [],
+        fileIds: [],
+        fontWeightDescriptors: [],
+      };
     }
     const fontItems = toFlatItems(state.fontsData);
     const fonts = fontIds.map((id) =>
       fontItems.find((item) => item.type === "font" && item.id === id),
     );
+    const fontsWithFiles = fonts.filter((font) => font?.fileId);
     return {
       fontFamilies: fonts.map((font, index) =>
         font ? font.fontFamily : fontIds[index],
       ),
-      fileIds: fonts.map((font) => font?.fileId).filter(Boolean),
+      fileIds: fontsWithFiles.map((font) => font.fileId),
+      fontWeightDescriptors: fontsWithFiles.map(
+        (font) => getFontFaceWeightDescriptor(font) ?? "",
+      ),
     };
   };
 
@@ -859,6 +894,7 @@ export const selectViewData = ({ state, i18n }) => {
         ...item,
         fontFamilies: fontData.fontFamilies,
         fontFileIds: fontData.fileIds,
+        fontWeightDescriptors: fontData.fontWeightDescriptors,
         color: getColorHex(item.colorId),
         strokeColor: item.strokeColorId ? getColorHex(item.strokeColorId) : "",
         strokeWidth: item.strokeColorId ? (item.strokeWidth ?? 0) : 0,
@@ -913,7 +949,7 @@ export const selectViewData = ({ state, i18n }) => {
 
   const detailPreviewFontData = selectedItem
     ? getFontData(selectedItem.fontId)
-    : { fontFamilies: [], fileIds: [] };
+    : { fontFamilies: [], fileIds: [], fontWeightDescriptors: [] };
 
   let detailFields = [];
   if (selectedItem) {
@@ -1291,12 +1327,14 @@ export const selectViewData = ({ state, i18n }) => {
 
   const getPreviewFontData = () => {
     const fontId = state.currentFormValues.fontId;
-    if (!fontId) return { fontFamilies: [], fileIds: [] };
+    if (!fontId) {
+      return { fontFamilies: [], fileIds: [], fontWeightDescriptors: [] };
+    }
     try {
       return getFontData(fontId);
     } catch (error) {
       console.error("Failed to get preview font data:", error);
-      return { fontFamilies: [], fileIds: [] };
+      return { fontFamilies: [], fileIds: [], fontWeightDescriptors: [] };
     }
   };
 
@@ -1340,6 +1378,8 @@ export const selectViewData = ({ state, i18n }) => {
     detailPreviewShadowOffsetY: selectedItem?.shadow?.offsetY ?? 2,
     detailPreviewFontFamilies: detailPreviewFontData.fontFamilies,
     detailPreviewFontFileIds: detailPreviewFontData.fileIds,
+    detailPreviewFontWeightDescriptors:
+      detailPreviewFontData.fontWeightDescriptors,
     title: copy.title ?? "Text Styles",
     addText: copy.addText ?? "Add",
     addTagPlaceholder: copy.addTagPlaceholder ?? "Add tag",
@@ -1417,6 +1457,7 @@ export const selectViewData = ({ state, i18n }) => {
     previewShadowOffsetY: state.currentFormValues.shadowOffsetY ?? 2,
     previewFontFamilies: previewFontData.fontFamilies,
     previewFontFileIds: previewFontData.fileIds,
+    previewFontWeightDescriptors: previewFontData.fontWeightDescriptors,
     searchQuery: state.searchQuery,
     resourceType: "textStyles",
   };

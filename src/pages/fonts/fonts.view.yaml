@@ -178,7 +178,7 @@ template:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
               - $if editPreviewFileId:
                   - rtgl-view#editDialogFontPreview slot="font-slot" bw=xs bc=bo br=md p=md cur=pointer:
-                      - rvn-font-preview mode=live fileId=${editPreviewFileId} :fontFamily=${editPreviewFontFamily} previewText="Aa" fontSize=60 width=320 height=120 av=c ah=c: null
+                      - rvn-font-preview mode=live fileId=${editPreviewFileId} :fontFamily=${editPreviewFontFamily} :fontWeightDescriptor=${editPreviewFontWeightDescriptor} fontWeight=${editPreviewFontWeight} previewText="Aa" fontSize=60 width=320 height=120 av=c ah=c: null
                 $else:
                   - rtgl-view#editDialogFontPreviewPlaceholder slot="font-slot" h=120 bw=xs bc=bo br=md av=c ah=c cur=pointer:
                       - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
@@ -193,7 +193,7 @@ template:
                           - 'rtgl-view d=h wrap ah=s style="gap: 4px;"':
                               - $for glyph in modalGlyphList:
                                   - rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg:
-                                      - 'rtgl-text style="font-family: ${modalFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
+                                      - 'rtgl-text style="font-family: ${modalFontInfo.fontFamily}; font-size: 24px; font-weight: ${modalFontInfo.fontWeight}; line-height: 1;"': ${glyph.char}
             $else:
               - rtgl-view d=v av=c ah=c h=200:
                   - rtgl-text c=mu-fg: ${loadingLabel}

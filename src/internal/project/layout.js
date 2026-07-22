@@ -20,6 +20,7 @@ import { generateId } from "../id.js";
 import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
 import { normalizeSaveLoadDateFormat } from "../saveLoadDateFormats.js";
 import { toFontIds } from "../fontIds.js";
+import { getFontFaceWeightDescriptor } from "../fontCapabilities.js";
 
 const TEXT_NODE_TYPES = new Set([
   "text",
@@ -1878,6 +1879,15 @@ const createFontResources = (fontsData = {}, filesData = {}) => {
       if (normalizedItem.fileType) {
         font.fileType = normalizedItem.fileType;
       }
+      if (normalizedItem.minWeight !== undefined) {
+        font.minWeight = normalizedItem.minWeight;
+      }
+      if (normalizedItem.defaultWeight !== undefined) {
+        font.defaultWeight = normalizedItem.defaultWeight;
+      }
+      if (normalizedItem.maxWeight !== undefined) {
+        font.maxWeight = normalizedItem.maxWeight;
+      }
 
       result[fontId] = font;
       return result;
@@ -2044,7 +2054,11 @@ export const extractFileIdsFromRenderState = (obj) => {
     return normalizedCurrent;
   };
 
-  const addFileReference = (fileId, type = defaultFileReferenceType) => {
+  const addFileReference = (
+    fileId,
+    type = defaultFileReferenceType,
+    metadata = {},
+  ) => {
     if (typeof fileId !== "string" || fileId.length === 0) {
       return;
     }
@@ -2058,15 +2072,25 @@ export const extractFileIdsFromRenderState = (obj) => {
       existingReference?.type,
       type,
     );
+    const fontWeightDescriptor = getFontFaceWeightDescriptor(metadata);
 
-    if (existingReference?.type === preferredType) {
+    if (
+      existingReference?.type === preferredType &&
+      (fontWeightDescriptor === undefined ||
+        existingReference.fontWeightDescriptor === fontWeightDescriptor)
+    ) {
       return;
     }
 
-    fileReferencesByKey.set(fileId, {
+    const nextReference = {
+      ...existingReference,
       url: fileId,
       type: preferredType,
-    });
+    };
+    if (fontWeightDescriptor !== undefined) {
+      nextReference.fontWeightDescriptor = fontWeightDescriptor;
+    }
+    fileReferencesByKey.set(fileId, nextReference);
   };
 
   const traverse = (value) => {
@@ -2108,6 +2132,7 @@ export const extractFileIdsFromRenderState = (obj) => {
                 ? normalizedFontFileId.replace("file:", "")
                 : normalizedFontFileId,
               value.fileType || "font/ttf",
+              value,
             );
           });
           return;
@@ -2140,6 +2165,7 @@ export const extractFileIdsFromRenderState = (obj) => {
             key === "soundSrc"
               ? value.soundFileType || value.fileType || "audio/*"
               : value.fileType || "image/png",
+            value,
           );
         }
 

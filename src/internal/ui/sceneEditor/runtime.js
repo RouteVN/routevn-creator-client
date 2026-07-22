@@ -29,6 +29,7 @@ import {
   summarizeProjectDataForRouteEngine,
 } from "../../project/routeEngineProjectData.js";
 import { prepareRuntimeInteractionExecution } from "../../runtime/graphicsEngineRuntime.js";
+import { getFontFaceWeightDescriptor } from "../../fontCapabilities.js";
 import {
   createBackgroundTransformEditorCanvasState,
   createProjectDataWithBackgroundTransformEditor,
@@ -487,6 +488,7 @@ async function createAssetsFromFileIds(
       assets[fileId] = {
         url: result.url,
         type: type || "image/png",
+        fontWeightDescriptor: getFontFaceWeightDescriptor(foundItem),
       };
     } catch (error) {
       console.error(`Failed to load file ${fileId}:`, error);

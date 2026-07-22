@@ -1,12 +1,29 @@
 const getFontLoadKey = (attrs = {}) => {
-  const { fileId, fileIds, fontFamily, fontFamilies } = attrs;
+  const {
+    fileId,
+    fileIds,
+    fontFamily,
+    fontFamilies,
+    fontWeightDescriptor,
+    fontWeightDescriptors,
+  } = attrs;
   const resolvedFileIds = Array.isArray(fileIds)
     ? fileIds
     : fileId && fileId !== "undefined"
       ? [fileId]
       : [];
   if (resolvedFileIds.length > 0) {
-    return resolvedFileIds.join("\u0000");
+    const resolvedWeightDescriptors = Array.isArray(fontWeightDescriptors)
+      ? fontWeightDescriptors
+      : fontWeightDescriptor && fontWeightDescriptor !== "undefined"
+        ? [fontWeightDescriptor]
+        : [];
+    return resolvedFileIds
+      .map(
+        (resolvedFileId, index) =>
+          `${resolvedFileId}\u0001${resolvedWeightDescriptors[index] ?? ""}`,
+      )
+      .join("\u0000");
   }
 
   const resolvedFontFamilies = Array.isArray(fontFamilies)
@@ -25,6 +42,11 @@ const loadPreviewFont = async (deps, attrs = {}) => {
     : attrs.fileId && attrs.fileId !== "undefined"
       ? [attrs.fileId]
       : [];
+  const fontWeightDescriptors = Array.isArray(attrs.fontWeightDescriptors)
+    ? attrs.fontWeightDescriptors
+    : attrs.fontWeightDescriptor && attrs.fontWeightDescriptor !== "undefined"
+      ? [attrs.fontWeightDescriptor]
+      : [];
   const key = getFontLoadKey(attrs);
 
   store.startFontLoad({ key });
@@ -33,10 +55,11 @@ const loadPreviewFont = async (deps, attrs = {}) => {
   if (fileIds.length > 0) {
     try {
       await Promise.all(
-        fileIds.map(async (fileId) => {
+        fileIds.map(async (fileId, index) => {
           const result = await projectService.loadFontFile({
             fontName: fileId,
             fileId,
+            fontWeightDescriptor: fontWeightDescriptors[index] || undefined,
           });
           if (result?.success === false) {
             throw new Error("Unable to load preview font");

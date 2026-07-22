@@ -156,6 +156,9 @@ describe("layout file id extraction", () => {
         type: "font",
         fileId: "file-primary",
         fileType: "font/ttf",
+        minWeight: 600,
+        defaultWeight: 600,
+        maxWeight: 600,
       },
       "font-fallback": {
         id: "font-fallback",
@@ -192,6 +195,7 @@ describe("layout file id extraction", () => {
       {
         url: "file-primary",
         type: "font/ttf",
+        fontWeightDescriptor: "600",
       },
       {
         url: "file-fallback",

@@ -5,6 +5,7 @@ import {
   extractFileIdsFromRenderState,
 } from "../../../internal/project/layout.js";
 import { getLayoutEditorItemResizeEdges } from "../../../internal/layoutEditorElementRegistry.js";
+import { getFontFaceWeightDescriptor } from "../../../internal/fontCapabilities.js";
 import { toHierarchyStructure } from "../../../internal/project/tree.js";
 import {
   createLayoutEditorSelectionElementMapper,
@@ -107,8 +108,8 @@ const resolveFontAssetType = (fileName = "") => {
   return "font/ttf";
 };
 
-const createFontAssetTypeByFileId = (fontsItems = {}) => {
-  const fontAssetTypeByFileId = {};
+const createFontAssetMetadataByFileId = (fontsItems = {}) => {
+  const fontAssetMetadataByFileId = {};
 
   for (const fontItem of Object.values(fontsItems)) {
     const fileId = fontItem?.fileId;
@@ -116,10 +117,13 @@ const createFontAssetTypeByFileId = (fontsItems = {}) => {
       continue;
     }
 
-    fontAssetTypeByFileId[fileId] = resolveFontAssetType(fontItem.name || "");
+    fontAssetMetadataByFileId[fileId] = {
+      type: resolveFontAssetType(fontItem.name || ""),
+      fontWeightDescriptor: getFontFaceWeightDescriptor(fontItem),
+    };
   }
 
-  return fontAssetTypeByFileId;
+  return fontAssetMetadataByFileId;
 };
 
 const normalizeHistoryDialogueItem = (item) => {
@@ -817,7 +821,7 @@ export const loadLayoutEditorAssets = async ({
 } = {}) => {
   const assets = {};
   const uniqueFileReferences = dedupeFileReferences(fileReferences);
-  const fontAssetTypeByFileId = createFontAssetTypeByFileId(fontsItems);
+  const fontAssetMetadataByFileId = createFontAssetMetadataByFileId(fontsItems);
 
   const assetEntries = await Promise.all(
     uniqueFileReferences.map(async (fileReference) => {
@@ -827,9 +831,9 @@ export const loadLayoutEditorAssets = async ({
       let url;
 
       let type = fileType || "image/png";
-      const fontAssetType = fontAssetTypeByFileId[fileId];
-      if (fontAssetType) {
-        type = fontAssetType;
+      const fontAssetMetadata = fontAssetMetadataByFileId[fileId];
+      if (fontAssetMetadata) {
+        type = fontAssetMetadata.type;
       }
 
       if (alreadyLoaded) {
@@ -837,6 +841,7 @@ export const loadLayoutEditorAssets = async ({
           alreadyLoaded: true,
           fileId,
           type,
+          fontWeightDescriptor: fontAssetMetadata?.fontWeightDescriptor,
           url: undefined,
         };
       }
@@ -861,6 +866,7 @@ export const loadLayoutEditorAssets = async ({
       return {
         fileId,
         type,
+        fontWeightDescriptor: fontAssetMetadata?.fontWeightDescriptor,
         url,
       };
     }),
@@ -874,6 +880,7 @@ export const loadLayoutEditorAssets = async ({
     assets[`${assetEntry.fileId}`] = {
       url: assetEntry.url,
       type: assetEntry.type,
+      fontWeightDescriptor: assetEntry.fontWeightDescriptor,
     };
   }
 

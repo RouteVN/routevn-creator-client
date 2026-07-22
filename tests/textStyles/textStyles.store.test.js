@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  setFontsData,
   setEditMode,
   setFontCapabilities,
   selectViewData,
@@ -12,6 +13,94 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("textStyles.store", () => {
+  it("invalidates cached capabilities when a font file or metadata changes", () => {
+    const state = createInitialState();
+    setFontsData(
+      { state },
+      {
+        fontsData: {
+          tree: [{ id: "font-1" }],
+          items: {
+            "font-1": {
+              id: "font-1",
+              type: "font",
+              fileId: "file-1",
+              minWeight: 400,
+              defaultWeight: 400,
+              maxWeight: 400,
+            },
+          },
+        },
+      },
+    );
+    setFontCapabilities(
+      { state },
+      {
+        fontId: "font-1",
+        capabilities: {
+          kind: "static",
+          minWeight: 400,
+          defaultWeight: 400,
+          maxWeight: 400,
+        },
+      },
+    );
+
+    setFontsData(
+      { state },
+      {
+        fontsData: {
+          tree: [{ id: "font-1" }],
+          items: {
+            "font-1": {
+              id: "font-1",
+              type: "font",
+              fileId: "file-2",
+              minWeight: 600,
+              defaultWeight: 600,
+              maxWeight: 600,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.fontCapabilitiesById["font-1"]).toBeUndefined();
+
+    setFontCapabilities(
+      { state },
+      {
+        fontId: "font-1",
+        capabilities: {
+          kind: "static",
+          minWeight: 600,
+          defaultWeight: 600,
+          maxWeight: 600,
+        },
+      },
+    );
+    setFontsData(
+      { state },
+      {
+        fontsData: {
+          tree: [{ id: "font-1" }],
+          items: {
+            "font-1": {
+              id: "font-1",
+              type: "font",
+              fileId: "file-2",
+              minWeight: 100,
+              defaultWeight: 400,
+              maxWeight: 900,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.fontCapabilitiesById["font-1"]).toBeUndefined();
+  });
+
   it("marks groups that contain child folders", () => {
     const state = createInitialState();
 

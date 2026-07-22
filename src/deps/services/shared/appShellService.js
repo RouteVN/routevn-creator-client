@@ -319,8 +319,8 @@ export const createAppShellService = ({
       return audioService;
     },
 
-    async loadFont(fontName, fontUrl) {
-      return loadFont(fontName, fontUrl);
+    async loadFont(fontName, fontUrl, options) {
+      return loadFont(fontName, fontUrl, options);
     },
   };
 };

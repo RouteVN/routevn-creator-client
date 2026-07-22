@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createLayoutEditorHoverOverlay,
+  loadLayoutEditorAssets,
   createLayoutEditorRenderedElements,
   createLayoutEditorRenderState,
   createLayoutEditorSelectionOverlay,
@@ -15,6 +16,34 @@ import {
 } from "../../src/internal/layoutConditions.js";
 
 describe("layoutEditorPreview", () => {
+  it("loads font assets with their persisted weight descriptor", async () => {
+    const assets = await loadLayoutEditorAssets({
+      projectService: {
+        getFileContent: async () => ({ url: "font://semibold" }),
+      },
+      fileReferences: [{ url: "font-file", type: "font/ttf" }],
+      fontsItems: {
+        "font-600": {
+          id: "font-600",
+          type: "font",
+          name: "Semibold.ttf",
+          fileId: "font-file",
+          minWeight: 600,
+          defaultWeight: 600,
+          maxWeight: 600,
+        },
+      },
+    });
+
+    expect(assets).toEqual({
+      "font-file": {
+        url: "font://semibold",
+        type: "font/ttf",
+        fontWeightDescriptor: "600",
+      },
+    });
+  });
+
   it("creates one-sided hover rects with CSS-scaled renderer strokes", () => {
     const overlays = createLayoutEditorHoverOverlay({
       bounds: {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   extractFontWeightCapabilities,
+  getFontFaceWeightDescriptor,
   inspectNewFontFile,
   isFontWeightSupported,
 } from "../../src/internal/fontCapabilities.js";
@@ -50,6 +51,15 @@ describe("font capabilities", () => {
     expect(isFontWeightSupported(capabilities, 725)).toBe(true);
     expect(isFontWeightSupported(capabilities, 249)).toBe(false);
     expect(isFontWeightSupported(capabilities, 726)).toBe(false);
+    expect(getFontFaceWeightDescriptor(capabilities)).toBe("250 725");
+    expect(
+      getFontFaceWeightDescriptor({
+        minWeight: 600,
+        defaultWeight: 600,
+        maxWeight: 600,
+      }),
+    ).toBe("600");
+    expect(getFontFaceWeightDescriptor({})).toBeUndefined();
   });
 
   it("accepts OTF sfnt files", async () => {
