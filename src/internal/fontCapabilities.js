@@ -12,6 +12,11 @@ const STRICT_FONT_MIME_TYPES = new Set([
 ]);
 const MIN_FONT_WEIGHT = 1;
 const MAX_FONT_WEIGHT = 1000;
+const FONT_WEIGHT_EXTRACTION_ERROR_CODES = new Set([
+  "missing_font_weight",
+  "invalid_font_weight",
+  "unreadable_font_weight",
+]);
 
 const createFontInspectionError = (code, message, cause) => {
   const error = new Error(message);
@@ -112,8 +117,21 @@ export const extractFontWeightCapabilities = (fontData) => {
     );
   }
 
-  const staticWeight = readStaticWeight(font);
-  const variableWeightAxis = readVariableWeightAxis(font);
+  let staticWeight;
+  let variableWeightAxis;
+  try {
+    staticWeight = readStaticWeight(font);
+    variableWeightAxis = readVariableWeightAxis(font);
+  } catch (error) {
+    if (FONT_WEIGHT_EXTRACTION_ERROR_CODES.has(error?.code)) {
+      throw error;
+    }
+    throw createFontInspectionError(
+      "unreadable_font_weight",
+      "The font's weight metadata could not be read.",
+      error,
+    );
+  }
 
   if (!variableWeightAxis) {
     return {
@@ -143,7 +161,15 @@ export const inspectNewFontFile = async (file) => {
     );
   }
 
-  return extractFontWeightCapabilities(await file.arrayBuffer());
+  const fontData = await file.arrayBuffer();
+  try {
+    return extractFontWeightCapabilities(fontData);
+  } catch (error) {
+    if (FONT_WEIGHT_EXTRACTION_ERROR_CODES.has(error?.code)) {
+      return { kind: "unrestricted" };
+    }
+    throw error;
+  }
 };
 
 export const isStrictFontMimeType = (mimeType) =>
@@ -155,7 +181,11 @@ export const isFontWeightSupported = (capabilities, fontWeight) => {
     return false;
   }
 
-  if (!capabilities || capabilities.kind === "unrestricted") {
+  if (
+    !capabilities ||
+    capabilities.kind === "unrestricted" ||
+    capabilities.kind === "unavailable"
+  ) {
     return true;
   }
 

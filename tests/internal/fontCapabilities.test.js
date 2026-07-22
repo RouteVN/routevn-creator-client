@@ -25,7 +25,7 @@ describe("font capabilities", () => {
     });
     expect(isFontWeightSupported(capabilities, "600")).toBe(true);
     expect(isFontWeightSupported(capabilities, "700")).toBe(false);
-    expect(isFontWeightSupported({ kind: "unavailable" }, "600")).toBe(false);
+    expect(isFontWeightSupported({ kind: "unavailable" }, "600")).toBe(true);
   });
 
   it("uses the actual wght axis range for variable fonts", () => {
@@ -94,6 +94,19 @@ describe("font capabilities", () => {
       minWeight: 100,
       maxWeight: 900,
     });
+  });
+
+  it("falls back to unrestricted weights when metadata is unusable", async () => {
+    const file = createTestFontFile({
+      name: "unknown-weight.ttf",
+      weight: 0,
+    });
+
+    await expect(inspectNewFontFile(file)).resolves.toEqual({
+      kind: "unrestricted",
+    });
+    expect(isFontWeightSupported({ kind: "unrestricted" }, 100)).toBe(true);
+    expect(isFontWeightSupported({ kind: "unrestricted" }, 900)).toBe(true);
   });
 
   it("rejects unsupported extensions and malformed font data", async () => {

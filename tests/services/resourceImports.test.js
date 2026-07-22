@@ -240,6 +240,25 @@ describe("resource image imports", () => {
     });
   });
 
+  it("leaves weight fields blank when font metadata is unknown", () => {
+    expect(
+      buildFontResourceDataFromUploadResult({
+        uploadResult: {
+          fileId: "file-1",
+          displayName: "Unknown Font",
+          fontCapabilities: { kind: "unrestricted" },
+        },
+        fontFamily: "Unknown Font",
+      }),
+    ).toEqual({
+      type: "font",
+      fileId: "file-1",
+      name: "Unknown Font",
+      description: "",
+      fontFamily: "Unknown Font",
+    });
+  });
+
   it("imports one image file through the upload and create contracts", async () => {
     const file = { name: "scene.png" };
     const uploadFiles = vi.fn(async () => [

@@ -1135,7 +1135,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
   });
 
-  it("records the font metadata patch after skipping an invalid TTF file", async () => {
+  it("records the font metadata patch after leaving unreadable weight fields blank", async () => {
     const repository = {
       getState: vi.fn(() => ({
         files: {
@@ -1156,8 +1156,8 @@ describe("projectServiceCore releaseProjectRuntime", () => {
         textStyles: { items: {} },
       })),
     };
-    const inspectionError = Object.assign(new Error("Invalid font data."), {
-      code: "invalid_font_data",
+    const inspectionError = Object.assign(new Error("Unreadable weight."), {
+      code: "unreadable_font_weight",
     });
     const revoke = vi.fn();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});

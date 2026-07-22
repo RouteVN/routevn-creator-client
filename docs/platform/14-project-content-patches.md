@@ -80,9 +80,13 @@ The patch follows these rules:
 8. Deterministically invalid or uninspectable font data is logged and treated
    as a successful no-op. File access failures and rejected font update commands
    abort the patch so it can retry later.
+9. A deterministic inspection no-op leaves all three fields absent. The Text
+   Styles UI interprets absent weight metadata as unknown and offers all
+   standard weights instead of blocking the font.
 
-New font uploads already persist these fields, and the default template fonts
-already contain them, so neither path depends on the patch.
+New font uploads persist these fields whenever extraction succeeds, and the
+default template fonts already contain them, so neither path depends on the
+patch.
 
 ## Default Menu Patch Execution Contract
 

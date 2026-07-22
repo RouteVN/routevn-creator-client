@@ -299,6 +299,70 @@ describe("textStyles.handlers", () => {
     expect(revoke).toHaveBeenCalledOnce();
   });
 
+  it("keeps all weights available when stored font metadata is unusable", async () => {
+    const currentFormValues = {
+      fontId: "font-unknown",
+      fontWeight: "700",
+    };
+    const revoke = vi.fn();
+    const deps = {
+      store: {
+        updateFormValues: vi.fn(),
+        selectCurrentFormValues: vi.fn(() => currentFormValues),
+        selectFontCapabilities: vi.fn(),
+        selectFontById: vi.fn(() => ({
+          id: "font-unknown",
+          type: "font",
+          fileId: "file-unknown",
+          fileType: "font/ttf",
+        })),
+        setFontCapabilities: vi.fn(),
+        selectDialogState: vi.fn(() => ({ editMode: false })),
+      },
+      projectService: {
+        getFileContent: vi.fn(async () => ({
+          url: "blob:font-unknown",
+          revoke,
+        })),
+      },
+      refs: {
+        textStyleForm: {
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+    const fontBytes = createTestFontBytes({ weight: 0 });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        arrayBuffer: async () => fontBytes.buffer,
+      })),
+    );
+
+    try {
+      await handleDialogFormChange(deps, {
+        _event: {
+          detail: {
+            name: "fontId",
+            value: "font-unknown",
+            values: currentFormValues,
+          },
+        },
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(deps.store.setFontCapabilities).toHaveBeenCalledWith({
+      fontId: "font-unknown",
+      capabilities: { kind: "unrestricted" },
+    });
+    expect(deps.refs.textStyleForm.setValues).not.toHaveBeenCalled();
+    expect(revoke).toHaveBeenCalledOnce();
+  });
+
   it("uses stored font weight capabilities without reading the font file", async () => {
     const currentFormValues = {
       fontId: "font-600",

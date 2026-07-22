@@ -138,9 +138,9 @@ const loadFontCapabilities = async (deps, { fontId } = {}) => {
     );
     store.setFontCapabilities({
       fontId,
-      capabilities: { kind: "unavailable" },
+      capabilities: { kind: "unrestricted" },
     });
-    return { kind: "unavailable" };
+    return undefined;
   } finally {
     content?.revoke?.();
   }

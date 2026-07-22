@@ -197,6 +197,10 @@ When adding or changing an uploadable file type:
   styles.
 - Variable fonts expose weight choices within their declared `fvar` `wght`
   range.
+- If a supported font container opens but its weight metadata cannot be read,
+  the three weight fields are left absent. Text Styles treats that font as
+  unknown and offers the complete standard 100–900 weight list.
+- A file that is not a valid supported font container is still rejected.
 - Existing TTC and EOT resources remain readable and renderable without strict
   weight metadata.
 - Existing text styles keep saved weight values even if the selected font does

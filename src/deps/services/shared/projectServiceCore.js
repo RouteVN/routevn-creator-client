@@ -29,6 +29,7 @@ const NON_RETRYABLE_FONT_INSPECTION_ERROR_CODES = new Set([
   "invalid_font_data",
   "missing_font_weight",
   "invalid_font_weight",
+  "unreadable_font_weight",
 ]);
 const MENU_ITEM_TEXT_STYLE_ID = "e2WbW3vcPZR9";
 const MENU_ITEM_SELECTED_TEXT_STYLE_ID = "saV5A4pkvHRb";

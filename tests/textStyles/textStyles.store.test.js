@@ -252,6 +252,35 @@ describe("textStyles.store", () => {
     ]);
   });
 
+  it("offers all standard weights when a font's weight is unknown", () => {
+    const state = createInitialState();
+    updateFormValues({ state }, { formData: { fontId: "font-1" } });
+    setFontCapabilities(
+      { state },
+      {
+        fontId: "font-1",
+        capabilities: { kind: "unrestricted" },
+      },
+    );
+
+    const fontWeightField = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).dialogForm.fields.find((field) => field.name === "fontWeight");
+
+    expect(fontWeightField.options.map((option) => option.value)).toEqual([
+      "100",
+      "200",
+      "300",
+      "400",
+      "500",
+      "600",
+      "700",
+      "800",
+      "900",
+    ]);
+  });
+
   it("keeps an existing unsupported weight available while editing", () => {
     const state = createInitialState();
     const item = {
