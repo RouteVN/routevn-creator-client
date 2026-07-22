@@ -31,4 +31,20 @@ describe("fonts view", () => {
 
     expect(fontsView).toContain("scroll-bottom-padding=32vh");
   });
+
+  it("does not refocus the explorer after detail-panel clicks", () => {
+    const fontsView = readFileSync(
+      new URL("../../src/pages/fonts/fonts.view.yaml", import.meta.url),
+      "utf8",
+    );
+    const blockStart = fontsView.indexOf("  fileExplorerDetailKeyboardScope:");
+    const blockEnd = fontsView.indexOf("  fontDialog:", blockStart);
+    const detailKeyboardScopeBlock = fontsView.slice(blockStart, blockEnd);
+
+    expect(detailKeyboardScopeBlock).toContain("keydown:");
+    expect(detailKeyboardScopeBlock).not.toContain("click:");
+    expect(detailKeyboardScopeBlock).not.toContain(
+      "handler: handleFileExplorerKeyboardScopeClick",
+    );
+  });
 });

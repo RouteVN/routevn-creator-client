@@ -65,8 +65,6 @@ refs:
         handler: handleFileExplorerKeyboardScopeKeyDown
   fileExplorerDetailKeyboardScope:
     eventListeners:
-      click:
-        handler: handleFileExplorerKeyboardScopeClick
       keydown:
         handler: handleFileExplorerKeyboardScopeKeyDown
   fontDialog:

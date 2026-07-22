@@ -35,14 +35,6 @@ const isFocusableInteractiveTarget = (target) => {
   return Boolean(target.closest(`${TEXT_ENTRY_SELECTOR}, button, a`));
 };
 
-const hasActiveRangeSelection = (event) => {
-  const target = getEventTarget(event);
-  const selection = target?.ownerDocument?.defaultView?.getSelection?.();
-  return Boolean(
-    selection && selection.rangeCount > 0 && !selection.isCollapsed,
-  );
-};
-
 const VIM_ARROW_KEYS = {
   h: "ArrowLeft",
   j: "ArrowDown",
@@ -146,10 +138,7 @@ export const createFileExplorerKeyboardScopeHandlers = ({
 
   const handleKeyboardScopeClick = (deps, payload) => {
     const event = payload?._event;
-    if (
-      isFocusableInteractiveTarget(getEventTarget(event)) ||
-      hasActiveRangeSelection(event)
-    ) {
+    if (isFocusableInteractiveTarget(getEventTarget(event))) {
       return;
     }
 
