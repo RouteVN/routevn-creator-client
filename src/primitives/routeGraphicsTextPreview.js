@@ -2,6 +2,7 @@ import createRouteGraphics, { textPlugin } from "route-graphics";
 import {
   createRouteGraphicsTextPreviewCacheKey,
   createRouteGraphicsTextPreviewState,
+  getParentElementAcrossShadowRoot,
 } from "../internal/routeGraphicsTextPreview.js";
 
 export const ROUTE_GRAPHICS_TEXT_PREVIEW_TAG_NAME =
@@ -49,14 +50,14 @@ const resolveCurrentColor = (element, value) => {
 };
 
 const findVisibleBackgroundColor = (element) => {
-  let current = element.parentElement;
+  let current = getParentElementAcrossShadowRoot(element);
 
   while (current) {
     const backgroundColor = getComputedStyle(current).backgroundColor;
     if (!isTransparentColor(backgroundColor)) {
       return normalizeCssColor(backgroundColor);
     }
-    current = current.parentElement;
+    current = getParentElementAcrossShadowRoot(current);
   }
 
   return "#000000";

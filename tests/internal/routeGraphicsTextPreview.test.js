@@ -1,10 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createRouteGraphicsTextPreviewCacheKey,
   createRouteGraphicsTextPreviewState,
+  getParentElementAcrossShadowRoot,
 } from "../../src/internal/routeGraphicsTextPreview.js";
 
 describe("Route Graphics text preview", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("creates a render state that passes the text style to Route Graphics", () => {
     const preview = {
       content: "Preview",
@@ -86,5 +91,23 @@ describe("Route Graphics text preview", () => {
     expect(createRouteGraphicsTextPreviewCacheKey(base)).not.toBe(
       createRouteGraphicsTextPreviewCacheKey({ ...base, width: 320 }),
     );
+  });
+
+  it("crosses Shadow DOM boundaries when resolving the preview background", () => {
+    class TestShadowRoot {
+      constructor(host) {
+        this.host = host;
+      }
+    }
+
+    vi.stubGlobal("ShadowRoot", TestShadowRoot);
+    const themeSurface = { id: "theme-surface" };
+    const shadowRoot = new TestShadowRoot(themeSurface);
+    const previewElement = {
+      parentElement: undefined,
+      getRootNode: () => shadowRoot,
+    };
+
+    expect(getParentElementAcrossShadowRoot(previewElement)).toBe(themeSurface);
   });
 });
