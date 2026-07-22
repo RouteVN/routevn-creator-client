@@ -23,6 +23,8 @@ refs:
         handler: handleFontItemEdit
       files-dropped:
         handler: handleFilesDropped
+      files-drop-rejected:
+        handler: handleFilesDropRejected
       upload-click:
         handler: handleUploadClick
       search-input:
@@ -63,8 +65,6 @@ refs:
         handler: handleFileExplorerKeyboardScopeKeyDown
   fileExplorerDetailKeyboardScope:
     eventListeners:
-      click:
-        handler: handleFileExplorerKeyboardScopeClick
       keydown:
         handler: handleFileExplorerKeyboardScopeKeyDown
   fontDialog:
@@ -138,7 +138,7 @@ template:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
                           - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button menu-button-placement=trailing show-zoom-controls zoom-in-popover zoom-control-mode=columns default-items-per-row=2 items-per-row-config-key="groupFontsView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
-                      - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupFontsView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                      - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupFontsView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems} scroll-bottom-padding=32vh': null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":
@@ -178,7 +178,7 @@ template:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
               - $if editPreviewFileId:
                   - rtgl-view#editDialogFontPreview slot="font-slot" bw=xs bc=bo br=md p=md cur=pointer:
-                      - rvn-font-preview mode=live fileId=${editPreviewFileId} fontFamily=${editPreviewFontFamily} previewText="Aa" fontSize=60 width=320 height=120 av=c ah=c: null
+                      - rvn-font-preview mode=live fileId=${editPreviewFileId} :fontFamily=${editPreviewFontFamily} :fontWeightDescriptor=${editPreviewFontWeightDescriptor} fontWeight=${editPreviewFontWeight} previewText="Aa" fontSize=60 width=320 height=120 av=c ah=c: null
                 $else:
                   - rtgl-view#editDialogFontPreviewPlaceholder slot="font-slot" h=120 bw=xs bc=bo br=md av=c ah=c cur=pointer:
                       - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
@@ -188,19 +188,12 @@ template:
       - rtgl-view slot="content" p=xl:
           - $if modalFontInfo:
               - rtgl-view d=v g=md:
-                  - $if modalPreviewRows.length:
-                      - $for previewRow in modalPreviewRows:
-                          - rtgl-view p=md bgc=bg-hover br=sm:
-                              - 'rtgl-view d=h wrap ah=s style="gap: 4px;"':
-                                  - $for glyph in previewRow.glyphs:
-                                      - rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg:
-                                          - 'rtgl-text style="font-family: ${modalFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
                   - $if modalGlyphList.length:
                       - rtgl-view p=md bgc=bg-hover br=sm:
                           - 'rtgl-view d=h wrap ah=s style="gap: 4px;"':
                               - $for glyph in modalGlyphList:
                                   - rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg:
-                                      - 'rtgl-text style="font-family: ${modalFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
+                                      - 'rtgl-text style="font-family: ${modalFontInfo.fontFamily}; font-size: 24px; font-weight: ${modalFontInfo.fontWeight}; line-height: 1;"': ${glyph.char}
             $else:
               - rtgl-view d=v av=c ah=c h=200:
                   - rtgl-text c=mu-fg: ${loadingLabel}

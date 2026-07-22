@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  extractFileIdsForLayouts,
   extractFileIdsForScenes,
   extractFileIdsForValue,
 } from "../../src/internal/project/layout.js";
@@ -143,6 +144,62 @@ describe("layout file id extraction", () => {
       {
         url: "file-reveal",
         type: "audio/ogg",
+      },
+    ]);
+  });
+
+  it("includes every font in an array-valued text style font stack", () => {
+    const projectData = createProjectData();
+    projectData.resources.fonts = {
+      "font-primary": {
+        id: "font-primary",
+        type: "font",
+        fileId: "file-primary",
+        fileType: "font/ttf",
+        minWeight: 600,
+        defaultWeight: 600,
+        maxWeight: 600,
+      },
+      "font-fallback": {
+        id: "font-fallback",
+        type: "font",
+        fileId: "file-fallback",
+        fileType: "font/woff2",
+      },
+    };
+    projectData.resources.textStyles = {
+      "text-style-dialogue": {
+        id: "text-style-dialogue",
+        type: "textStyle",
+        fontId: ["font-primary", "font-fallback"],
+      },
+    };
+    projectData.resources.layouts = {
+      "layout-main": {
+        id: "layout-main",
+        type: "layout",
+        elements: {
+          items: {
+            dialogue: {
+              id: "dialogue",
+              type: "text",
+              textStyleId: "text-style-dialogue",
+            },
+          },
+          tree: [{ id: "dialogue", children: [] }],
+        },
+      },
+    };
+
+    expect(extractFileIdsForLayouts(projectData, ["layout-main"])).toEqual([
+      {
+        url: "file-primary",
+        type: "font/ttf",
+        fontWeightDescriptor: "600",
+      },
+      {
+        url: "file-fallback",
+        type: "font/woff2",
       },
     ]);
   });

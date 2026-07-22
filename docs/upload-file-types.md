@@ -125,16 +125,16 @@ same time.
 | Character sprites page | `.jpg`, `.jpeg`, `.png`, `.webp`; `.png` + `.json` | explicit pair + format toast  | upload menu supports image or spritesheet; edit/replace images |
 | Videos page            | `.mp4`                                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
 | Sounds page            | `.mp3`, `.wav`, `.ogg`                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
-| Fonts page             | `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc`, `.eot`  | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
+| Fonts page             | `.ttf`, `.otf`, `.woff2`                           | format + weight metadata      | picker, center drag-drop, edit/replace                         |
 
 ### Dialog / Special Upload Surfaces
 
-| Surface                             | Allowed file types                | Extra validation                             | Notes                                      |
-| ----------------------------------- | --------------------------------- | -------------------------------------------- | ------------------------------------------ |
-| Character avatar upload             | `image/*`                         | `image-min-size` + square crop dialog        | create dialog, edit dialog, avatar replace |
-| Project icon upload (create dialog) | `image/*`                         | `image-min-size` + square crop dialog        | projects page create dialog                |
-| Project icon upload (settings)      | `image/*`                         | `square`                                     | project settings dialog                    |
-| Text styles add-font dialog         | `.ttf`, `.otf`, `.woff`, `.woff2` | none in page, drop zone filters by extension | narrower than Fonts page today             |
+| Surface                             | Allowed file types       | Extra validation                      | Notes                                      |
+| ----------------------------------- | ------------------------ | ------------------------------------- | ------------------------------------------ |
+| Character avatar upload             | `image/*`                | `image-min-size` + square crop dialog | create dialog, edit dialog, avatar replace |
+| Project icon upload (create dialog) | `image/*`                | `image-min-size` + square crop dialog | projects page create dialog                |
+| Project icon upload (settings)      | `image/*`                | `square`                              | project settings dialog                    |
+| Text styles add-font dialog         | `.ttf`, `.otf`, `.woff2` | format + weight metadata              | matches the Fonts page                     |
 
 ## Current Code Locations
 
@@ -188,12 +188,42 @@ When adding or changing an uploadable file type:
 6. Update this document.
 7. Validate both picker upload and drag-drop upload.
 
+## Font Compatibility
+
+- New font uploads accept `.ttf`, `.otf`, and `.woff2` files. WOFF1 uploads are
+  rejected with an invalid-format alert.
+- All three upload formats are decoded through the shared font inspection path
+  before their weight metadata is persisted.
+- Static fonts expose only their declared `OS/2.usWeightClass` for new text
+  styles.
+- Variable fonts expose weight choices within their declared `fvar` `wght`
+  range.
+- If a supported font container opens but its weight metadata cannot be read,
+  the three weight fields are left absent. Text Styles treats that font as
+  unknown and offers the complete standard 100–900 weight list.
+- A file that is not a valid supported font container is still rejected.
+- Existing WOFF1 resources remain readable, renderable, and eligible for weight
+  metadata migration. Existing TTC and EOT resources remain readable and
+  renderable without strict weight metadata.
+- Existing text styles keep saved weight values even if the selected font does
+  not declare that weight.
+
+### Default Template Font Selection
+
+- The default template contains 400 and 600 WOFF2 resources for combined Latin,
+  Greek, and Cyrillic coverage, plus dedicated Simplified Chinese, Traditional
+  Chinese, Japanese, and Korean pairs.
+- New `zh-Hans`, `zh-Hant`, `ja`, and `ko` projects receive their matching font
+  pair. Every other project language currently receives the Latin pair.
+- The combined pair also covers Vietnamese and IPA.
+- Project initialization removes unselected font resources and file records
+  before repository creation. Web, Tauri, Android, and iOS then copy only the
+  files retained by the resolved template.
+- Changing project language after creation does not replace project fonts or
+  rewrite text styles.
+
 ## Current Drift To Watch
 
-- Fonts are not fully centralized yet.
-  The Fonts page accepts `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc`, `.eot`,
-  while the Text Styles add-font dialog currently accepts only
-  `.ttf`, `.otf`, `.woff`, `.woff2`.
 - Some image-only surfaces still use `image/*` plus `square` validation instead
   of an explicit extension list.
   If stricter control is required, those surfaces should be narrowed and

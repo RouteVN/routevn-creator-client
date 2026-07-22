@@ -83,8 +83,16 @@ export const selectViewData = ({ props: attrs, state }) => {
   const fontSize = Number.parseInt(attrs.fontSize, 10) || 100;
   const lineHeight = Number.parseFloat(attrs.lineHeight);
   const resolvedPadding = Number.isFinite(padding) ? Math.max(0, padding) : 0;
-  const fileId =
-    attrs.fileId && attrs.fileId !== "undefined" ? attrs.fileId : undefined;
+  const fileIds = Array.isArray(attrs.fileIds)
+    ? attrs.fileIds
+    : attrs.fileId && attrs.fileId !== "undefined"
+      ? [attrs.fileId]
+      : [];
+  const fontFamilies = Array.isArray(attrs.fontFamilies)
+    ? attrs.fontFamilies
+    : attrs.fontFamily && attrs.fontFamily !== "undefined"
+      ? [attrs.fontFamily]
+      : [];
 
   // Only use dynamic background if no background is explicitly provided
   const backgroundColor =
@@ -94,7 +102,12 @@ export const selectViewData = ({ props: attrs, state }) => {
   const textStyle = {
     align: attrs.textAlign || "left",
     fill: textColor,
-    fontFamily: fileId ?? attrs.fontFamily ?? "sans-serif",
+    fontFamily:
+      fileIds.length > 0
+        ? fileIds
+        : fontFamilies.length > 0
+          ? fontFamilies
+          : ["sans-serif"],
     fontSize,
     fontWeight: attrs.fontWeight || "normal",
     lineHeight: Number.isFinite(lineHeight) ? lineHeight : 1.5,

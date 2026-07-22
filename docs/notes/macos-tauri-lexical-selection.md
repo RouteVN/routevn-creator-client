@@ -8,6 +8,8 @@ does not visibly update the document.
 
 On Linux and macOS, Chinese IME commits could also appear at the caret and then
 disappear when the user pressed Space or entered another ordinary character.
+On macOS, pressing Enter to confirm a Chinese or Japanese IME choice could also
+confirm the text and immediately split the current scene line.
 
 Observed selection/focus behavior:
 
@@ -102,6 +104,8 @@ as the source of truth before selection-sensitive text edits:
 - final `insertFromComposition` commits are prevented from mutating only the
   contenteditable DOM and are inserted through Lexical at the native target
   range instead
+- a post-composition Enter with `keyCode` or `which` equal to `229` is consumed
+  as an IME process event instead of splitting the current scene line
 
 ## IME Composition Commits
 
@@ -123,3 +127,27 @@ remain browser-managed.
 Regression coverage must include both the `insertFromComposition` commit and a
 following ordinary Space insertion. Checking only that the Chinese text appears
 in the DOM does not catch the stale-state failure.
+
+## IME Confirmation Enter
+
+macOS WebKit can queue the Enter `keydown` used to confirm an IME choice until
+after it has emitted the final `insertFromComposition` event and
+`compositionend`. When Lexical receives that queued event, the native event,
+the primitive, and Lexical all report that composition has ended. A guard based
+only on `isComposing` therefore mistakes the confirmation key for an ordinary
+Enter and calls `splitCurrentLine()`.
+
+The queued event retains the browser's IME process-key marker: both `keyCode`
+and `which` are `229`. `handleLexicalEnterCommand` first leaves active
+composition events to the IME. Once composition is no longer active, it
+prevents and consumes an event carrying the `229` marker. A normal Enter uses
+key code `13` and continues through the regular line-splitting path.
+
+Do not replace this marker check with a short post-composition timeout. The
+observed WebKit event timestamp can precede the later composition events even
+though the event reaches Lexical after them, and a timing-based suppression can
+consume the Enter that Japanese IME still needs to confirm its candidate.
+
+`tests/sceneEditor/lexicalLineEditing.test.js` covers all three required paths:
+active-composition Enter is left to the IME, a deferred `229` Enter is consumed
+without splitting, and a regular `13` Enter still splits the line.

@@ -5,6 +5,10 @@ import { createMediaPageStore } from "../../internal/ui/resourcePages/media/crea
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { selectFontsPageCopy } from "./support/fontsPageCopy.js";
+import {
+  getFontFaceWeightDescriptor,
+  NEW_FONT_FILE_TYPES,
+} from "../../internal/fontCapabilities.js";
 
 export const FONT_TAG_SCOPE_KEY = "fonts";
 
@@ -23,6 +27,23 @@ const getDetailFileTypeLabel = ({ item, selectedFontInfo } = {}) => {
   });
 };
 
+const formatSupportedFontWeights = ({ item, copy = {} } = {}) => {
+  const { minWeight, defaultWeight, maxWeight } = item;
+  if (
+    !Number.isFinite(minWeight) ||
+    !Number.isFinite(defaultWeight) ||
+    !Number.isFinite(maxWeight) ||
+    minWeight > defaultWeight ||
+    defaultWeight > maxWeight
+  ) {
+    return copy.unknownValue ?? "Unknown";
+  }
+
+  return minWeight === maxWeight
+    ? `${minWeight}`
+    : `${minWeight}\u2013${maxWeight}`;
+};
+
 const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
   if (!item) {
     return [];
@@ -30,7 +51,7 @@ const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
 
   const activeFontInfo =
     selectedFontInfo?.itemId === item.id ? selectedFontInfo : undefined;
-  const detailFields = [
+  return [
     {
       type: "description",
       value: item.description ?? "",
@@ -39,6 +60,11 @@ const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
       type: "slot",
       slot: "font-tags",
       label: copy.tagsLabel ?? "Tags",
+    },
+    {
+      type: "text",
+      label: copy.fontWeightsLabel ?? "Font Weights",
+      value: formatSupportedFontWeights({ item, copy }),
     },
     {
       type: "text",
@@ -54,58 +80,6 @@ const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
       value: item.fileSize ? formatFileSize(item.fileSize) : "",
     },
   ];
-
-  if (activeFontInfo) {
-    detailFields.push({
-      type: "section",
-      label: copy.metadataLabel ?? "Metadata",
-      fields: [
-        {
-          type: "text",
-          label: copy.weightLabel ?? "Weight",
-          value: activeFontInfo.weightClass ?? "",
-        },
-        {
-          type: "text",
-          label: copy.variableFontLabel ?? "Variable Font",
-          value: activeFontInfo.isVariableFont ?? "",
-        },
-        {
-          type: "text",
-          label: copy.supportsItalicsLabel ?? "Supports Italics",
-          value: activeFontInfo.supportsItalics ?? "",
-        },
-        {
-          type: "text",
-          label: copy.glyphCountLabel ?? "Glyph Count",
-          value: String(activeFontInfo.glyphCount ?? ""),
-        },
-        {
-          type: "text",
-          label: copy.supportedScriptsLabel ?? "Supported Scripts",
-          value: activeFontInfo.languageSupport ?? "",
-        },
-      ],
-    });
-
-    if (activeFontInfo.previewNote) {
-      detailFields.push({
-        type: "text",
-        label: copy.previewNoteLabel ?? "Preview Note",
-        value: activeFontInfo.previewNote,
-      });
-    }
-
-    if (activeFontInfo.error) {
-      detailFields.push({
-        type: "text",
-        label: copy.metadataErrorLabel ?? "Metadata Error",
-        value: activeFontInfo.error,
-      });
-    }
-  }
-
-  return detailFields;
 };
 
 const buildMediaItem = (item) => ({
@@ -115,6 +89,8 @@ const buildMediaItem = (item) => ({
   fontFamily: item.fontFamily ?? "sans-serif",
   previewText: "Aa",
   fontFileId: item.fileId,
+  fontWeight: item.defaultWeight ?? "normal",
+  fontWeightDescriptor: getFontFaceWeightDescriptor(item) ?? "",
 });
 
 const buildPendingMediaItem = (item) => ({
@@ -209,7 +185,7 @@ const {
   resourceCategory: "userInterface",
   uploadText: "Upload",
   copy: selectFontsPageCopy,
-  acceptedFileTypes: [".ttf", ".otf", ".woff", ".woff2", ".ttc", ".eot"],
+  acceptedFileTypes: NEW_FONT_FILE_TYPES,
   centerItemContextMenuItems: [
     { label: "Edit", type: "item", value: "edit-item" },
     { label: "Delete", type: "item", value: "delete-item" },
@@ -258,12 +234,19 @@ const {
       }),
       editPreviewFontFamily:
         state.editUploadResult?.fontName ?? editItem?.fontFamily ?? "",
+      editPreviewFontWeightDescriptor:
+        getFontFaceWeightDescriptor(
+          state.editUploadResult?.fontCapabilities ?? editItem,
+        ) ?? "",
+      editPreviewFontWeight:
+        state.editUploadResult?.fontCapabilities?.defaultWeight ??
+        editItem?.defaultWeight ??
+        "normal",
       editDefaultValues: {
         ...baseViewData.editDefaultValues,
         description: editItem?.description ?? "",
         tagIds: editItem?.tagIds ?? [],
       },
-      modalPreviewRows: modalFontInfo?.previewRows ?? [],
       modalGlyphList: modalFontInfo?.glyphs ?? [],
       clickToUploadLabel: copy.clickToUploadLabel ?? "Click to Upload",
     };

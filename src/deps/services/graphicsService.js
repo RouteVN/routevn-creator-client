@@ -16,6 +16,7 @@ import {
   loadGraphicsEnginePlugins,
 } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
+import { loadFontBuffer } from "./shared/fontLoader.js";
 
 const cloneBufferForAudioDecode = (value) => {
   if (value instanceof ArrayBuffer) {
@@ -1559,6 +1560,7 @@ export const createGraphicsService = async ({
         normalizeGraphicsAssetForLoad(asset, { projectMediaOrigin }),
       ],
     );
+    const normalizedAssetsByKey = new Map(normalizedAssetEntries);
     const assetEntriesToLoad = normalizedAssetEntries.filter(([key, asset]) => {
       if (isDataUrl(asset?.url)) {
         return !hasLoadedAsset(key);
@@ -1582,13 +1584,16 @@ export const createGraphicsService = async ({
     );
 
     const directBufferMap = Object.fromEntries(
-      dataUrlAssetEntries.map(([key, asset]) => [
-        key,
-        {
+      dataUrlAssetEntries.map(([key, asset]) => {
+        const bufferEntry = {
           buffer: decodeDataUrlToArrayBuffer(asset.url),
           type: asset.type ?? getDataUrlMimeType(asset.url),
-        },
-      ]),
+        };
+        if (asset.fontWeightDescriptor !== undefined) {
+          bufferEntry.fontWeightDescriptor = asset.fontWeightDescriptor;
+        }
+        return [key, bufferEntry];
+      }),
     );
     const bufferedAssets = Object.fromEntries(bufferedAssetEntriesToFetch);
     const blobUrlsToRevoke = bufferedAssetEntriesToFetch
@@ -1615,7 +1620,20 @@ export const createGraphicsService = async ({
     const fullBufferMap = activeBufferManager.getBufferMap();
     const loadedBufferMap = Object.fromEntries(
       bufferedAssetEntries
-        .map(([key]) => [key, fullBufferMap[key]])
+        .map(([key]) => {
+          const bufferEntry = fullBufferMap[key];
+          if (!bufferEntry) {
+            return [key, undefined];
+          }
+
+          const loadedBufferEntry = { ...bufferEntry };
+          const fontWeightDescriptor =
+            normalizedAssetsByKey.get(key)?.fontWeightDescriptor;
+          if (fontWeightDescriptor !== undefined) {
+            loadedBufferEntry.fontWeightDescriptor = fontWeightDescriptor;
+          }
+          return [key, loadedBufferEntry];
+        })
         .filter(([, value]) => !!value),
     );
     const deltaBufferMap = {
@@ -1641,8 +1659,31 @@ export const createGraphicsService = async ({
       }
     }
 
+    const fontAssetEntries = Object.entries(deltaBufferMap).filter(
+      ([, value]) => classifyAsset(value?.type) === "font",
+    );
+    if (fontAssetEntries.length > 0) {
+      await Promise.all(
+        fontAssetEntries.map(([key, value]) =>
+          loadFontBuffer(key, value.buffer, value.type, {
+            weight: value.fontWeightDescriptor,
+          }),
+        ),
+      );
+
+      if (
+        runtimeVersion !== assetLoadRuntimeVersion ||
+        assetBufferManager !== activeBufferManager
+      ) {
+        return;
+      }
+    }
+
     const renderAssetEntries = Object.entries(deltaBufferMap).filter(
-      ([, value]) => classifyAsset(value?.type) !== "audio",
+      ([, value]) => {
+        const assetType = classifyAsset(value?.type);
+        return assetType !== "audio" && assetType !== "font";
+      },
     );
     const renderAssetBufferMap = Object.fromEntries(renderAssetEntries);
 

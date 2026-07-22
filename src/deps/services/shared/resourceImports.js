@@ -63,26 +63,49 @@ export const buildVideoResourcePatchFromUploadResult = (uploadResult = {}) => ({
   height: uploadResult.dimensions?.height,
 });
 
+const assignFontWeightFields = (data, uploadResult = {}) => {
+  const capabilities = uploadResult.fontCapabilities;
+  if (
+    capabilities?.minWeight !== undefined &&
+    capabilities.defaultWeight !== undefined &&
+    capabilities.maxWeight !== undefined
+  ) {
+    data.minWeight = capabilities.minWeight;
+    data.defaultWeight = capabilities.defaultWeight;
+    data.maxWeight = capabilities.maxWeight;
+  }
+
+  return data;
+};
+
 export const buildFontResourceDataFromUploadResult = ({
   uploadResult = {},
   name,
   description = "",
   fontFamily,
-} = {}) => ({
-  type: "font",
-  fileId: uploadResult.fileId,
-  name: name ?? uploadResult.displayName,
-  description,
-  fontFamily,
-});
+} = {}) => {
+  const data = {
+    type: "font",
+    fileId: uploadResult.fileId,
+    name: name ?? uploadResult.displayName,
+    description,
+    fontFamily,
+  };
+
+  return assignFontWeightFields(data, uploadResult);
+};
 
 export const buildFontResourcePatchFromUploadResult = ({
   uploadResult = {},
   fontFamily,
-} = {}) => ({
-  fileId: uploadResult.fileId,
-  fontFamily,
-});
+} = {}) => {
+  const data = {
+    fileId: uploadResult.fileId,
+    fontFamily,
+  };
+
+  return assignFontWeightFields(data, uploadResult);
+};
 
 const createMissingUploadResult = (message) => ({
   valid: false,

@@ -15,6 +15,19 @@ const getAlignmentAnchor = (value) => {
   return 0;
 };
 
+export const getParentElementAcrossShadowRoot = (element) => {
+  if (element?.parentElement) {
+    return element.parentElement;
+  }
+
+  const root = element?.getRootNode?.();
+  if (typeof ShadowRoot !== "undefined" && root instanceof ShadowRoot) {
+    return root.host;
+  }
+
+  return undefined;
+};
+
 export const createRouteGraphicsTextPreviewState = ({
   preview = {},
   width,

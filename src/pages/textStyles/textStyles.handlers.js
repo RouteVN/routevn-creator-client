@@ -33,8 +33,26 @@ import { tap } from "rxjs";
 import { TEXT_STYLE_TAG_SCOPE_KEY } from "./textStyles.store.js";
 import { selectTextStylesPageCopy } from "./support/textStylesPageCopy.js";
 import { clearResourcePageSelection } from "../../internal/ui/resourcePages/resourceViewBackground.js";
+import { getMediaPageData } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { normalizeFontFileType } from "../../internal/fileTypes.js";
+import {
+  extractFontWeightCapabilities,
+  inspectNewFontFile,
+  isFontWeightSupported,
+  isStrictFontMimeType,
+} from "../../internal/fontCapabilities.js";
+import { toFontIds, toPrimaryFontId } from "../../internal/fontIds.js";
 
 const selectCopy = (deps = {}) => selectTextStylesPageCopy(deps.i18n);
+
+const showInvalidFontFormatAlert = (appService, copy = {}) => {
+  appService.showAlert({
+    message:
+      copy.invalidFormatMessage ??
+      "Invalid file format. Please upload a TTF, OTF, or WOFF2 font file.",
+    title: copy.warningTitle ?? "Warning",
+  });
+};
 
 // Helper function to sync repository state to store
 const syncRepositoryToStore = ({
@@ -57,7 +75,124 @@ const syncRepositoryToStore = ({
     }),
   });
   store.setColorsData({ colorsData: state?.colors });
-  store.setFontsData({ fontsData: state?.fonts });
+  store.setFontsData({
+    fontsData: getMediaPageData({
+      repositoryState: state,
+      resourceType: "fonts",
+    }),
+  });
+};
+
+const loadFontCapabilities = async (deps, { fontId } = {}) => {
+  const { projectService, store } = deps;
+  if (!fontId) {
+    return undefined;
+  }
+
+  const cachedCapabilities = store.selectFontCapabilities({ fontId });
+  if (cachedCapabilities) {
+    return cachedCapabilities.kind === "unrestricted"
+      ? undefined
+      : cachedCapabilities;
+  }
+
+  const font = store.selectFontById({ fontId });
+  if (!font?.fileId) {
+    return undefined;
+  }
+
+  if (
+    font.minWeight !== undefined &&
+    font.defaultWeight !== undefined &&
+    font.maxWeight !== undefined
+  ) {
+    const capabilities = {
+      kind: font.minWeight === font.maxWeight ? "static" : "variable",
+      minWeight: font.minWeight,
+      defaultWeight: font.defaultWeight,
+      maxWeight: font.maxWeight,
+    };
+    store.setFontCapabilities({ fontId, capabilities });
+    return capabilities;
+  }
+
+  const mimeType = normalizeFontFileType({
+    fileType: font.fileType,
+    fileName: font.name,
+  });
+  if (!isStrictFontMimeType(mimeType)) {
+    store.setFontCapabilities({
+      fontId,
+      capabilities: { kind: "unrestricted" },
+    });
+    return undefined;
+  }
+
+  let content;
+  try {
+    content = await projectService.getFileContent(font.fileId);
+    const response = await fetch(content.url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const capabilities = extractFontWeightCapabilities(
+      await response.arrayBuffer(),
+    );
+    store.setFontCapabilities({ fontId, capabilities });
+    return capabilities;
+  } catch (error) {
+    console.warn(
+      `Could not inspect font capabilities for ${font.fileId}.`,
+      error,
+    );
+    store.setFontCapabilities({
+      fontId,
+      capabilities: { kind: "unrestricted" },
+    });
+    return undefined;
+  } finally {
+    content?.revoke?.();
+  }
+};
+
+const canPreserveExistingFontWeight = (store, { fontId, fontWeight } = {}) => {
+  const { editMode, editingItemId } = store.selectDialogState();
+  if (!editMode || !editingItemId) {
+    return false;
+  }
+
+  const editingItem = store.selectItemById(editingItemId);
+  return (
+    toPrimaryFontId(editingItem?.fontId) === fontId &&
+    String(editingItem.fontWeight) === String(fontWeight)
+  );
+};
+
+const validateSelectedFontWeight = async (
+  deps,
+  { fontId, fontWeight } = {},
+) => {
+  const { appService, store } = deps;
+  const capabilities = await loadFontCapabilities(deps, { fontId });
+  if (
+    !capabilities ||
+    isFontWeightSupported(capabilities, fontWeight) ||
+    canPreserveExistingFontWeight(store, { fontId, fontWeight })
+  ) {
+    return true;
+  }
+
+  const copy = selectCopy(deps);
+  appService.showAlert({
+    message:
+      capabilities.kind === "unavailable"
+        ? (copy.invalidFontMessage ??
+          "Could not read the font's supported weights. Please choose a valid TTF, OTF, or WOFF2 font.")
+        : (copy.unsupportedFontWeight ??
+          "The selected weight is not supported by this font."),
+    title: copy.warningTitle ?? "Warning",
+  });
+  return false;
 };
 
 export const handleBeforeMount = (deps) => {
@@ -260,6 +395,11 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     store.toggleDialog();
   }
   render();
+  void loadFontCapabilities(deps, {
+    fontId: toPrimaryFontId(item.fontId),
+  }).then(() => {
+    render();
+  });
 };
 
 const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
@@ -319,7 +459,7 @@ const buildTextStyleData = ({
     fontSize: Number(fontSize ?? 16),
     lineHeight: Number(lineHeight ?? 1.5),
     colorId: fontColor,
-    fontId,
+    fontId: toFontIds(fontId),
     fontWeight: String(fontWeight ?? "400"),
     previewText: previewText ?? "",
     strokeWidth: hasStrokeColor ? Number(strokeWidth ?? 0) : 0,
@@ -416,7 +556,7 @@ const handleTextStyleCreated = async (deps, payload) => {
 };
 
 const handleTextStyleUpdated = async (deps, payload) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, store } = deps;
   const copy = selectCopy(deps);
   const {
     itemId,
@@ -437,6 +577,9 @@ const handleTextStyleUpdated = async (deps, payload) => {
     shadowOffsetX,
     shadowOffsetY,
   } = payload._event.detail;
+  const currentFontIds = toFontIds(store.selectItemById({ itemId })?.fontId);
+  const updatedFontIds =
+    currentFontIds[0] === fontId ? currentFontIds : [fontId];
 
   const updateAttempt = await runResourcePageMutation({
     appService,
@@ -452,7 +595,7 @@ const handleTextStyleUpdated = async (deps, payload) => {
           fontSize,
           lineHeight,
           fontColor,
-          fontId,
+          fontId: updatedFontIds,
           fontWeight,
           previewText,
           strokeColor,
@@ -626,8 +769,8 @@ export const handleTextStyleFormAddOptionClick = (deps, payload) => {
   });
 };
 
-export const handleDialogFormChange = (deps, payload) => {
-  const { store, render } = deps;
+export const handleDialogFormChange = async (deps, payload) => {
+  const { store, render, refs } = deps;
   const { name, value, values } = payload._event.detail;
 
   const formData = {
@@ -641,6 +784,41 @@ export const handleDialogFormChange = (deps, payload) => {
   // Update form values for preview
   store.updateFormValues({ formData });
   render();
+
+  if (name !== "fontId" || !value) {
+    return;
+  }
+
+  const capabilities = await loadFontCapabilities(deps, { fontId: value });
+  const currentValues = store.selectCurrentFormValues();
+  if (currentValues.fontId !== value) {
+    return;
+  }
+
+  if (
+    !capabilities ||
+    isFontWeightSupported(capabilities, currentValues.fontWeight) ||
+    canPreserveExistingFontWeight(store, {
+      fontId: value,
+      fontWeight: currentValues.fontWeight,
+    })
+  ) {
+    render();
+    return;
+  }
+
+  if (capabilities.kind === "unavailable") {
+    render();
+    return;
+  }
+
+  const nextValues = {
+    ...currentValues,
+    fontWeight: String(capabilities.defaultWeight),
+  };
+  store.updateFormValues({ formData: nextValues });
+  render();
+  refs.textStyleForm.setValues({ values: nextValues });
 };
 
 export const handlePreviewTextInput = (deps, payload) => {
@@ -715,6 +893,15 @@ export const handleFormActionClick = async (deps, payload) => {
           copy.fillRequiredFields ?? "Please fill in all required fields",
         title: copy.warningTitle ?? "Warning",
       });
+      return;
+    }
+
+    if (
+      !(await validateSelectedFontWeight(deps, {
+        fontId: formData.fontId,
+        fontWeight: formData.fontWeight,
+      }))
+    ) {
       return;
     }
 
@@ -934,8 +1121,25 @@ export const handleFontFileSelected = async (deps, payload) => {
 
   if (files && files.length > 0) {
     const file = files[0];
-    // Extract font name from file name (remove extension)
-    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
+    let fontCapabilities;
+    try {
+      fontCapabilities = await inspectNewFontFile(file);
+    } catch (error) {
+      if (error?.code === "unsupported_font_format") {
+        showInvalidFontFormatAlert(appService, copy);
+        return;
+      }
+
+      appService.showAlert({
+        message:
+          copy.invalidFontMessage ??
+          "Could not read the font's supported weights. Please choose a valid TTF, OTF, or WOFF2 font.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const fontName = file.name.replace(/\.(ttf|otf|woff2)$/i, "");
 
     try {
       // Upload the file immediately when selected
@@ -953,6 +1157,7 @@ export const handleFontFileSelected = async (deps, payload) => {
       }
 
       const uploadResult = uploadResults[0];
+      uploadResult.fontCapabilities = fontCapabilities;
       store.setSelectedFontFile({
         file,
         fileName: fontName,
@@ -968,6 +1173,15 @@ export const handleFontFileSelected = async (deps, payload) => {
       });
     }
   }
+};
+
+export const handleFontFileRejected = (deps, payload) => {
+  const files = payload._event.detail?.files ?? [];
+  if (files.length === 0) {
+    return;
+  }
+
+  showInvalidFontFormatAlert(deps.appService, selectCopy(deps));
 };
 
 export const handleAddFontFormAction = async (deps, payload) => {
@@ -1012,6 +1226,11 @@ export const handleAddFontFormAction = async (deps, payload) => {
     if (!createAttempt.ok) {
       return;
     }
+
+    store.setFontCapabilities({
+      fontId: newFontId,
+      capabilities: fontData.uploadResult.fontCapabilities,
+    });
 
     // Sync repository to store to ensure all data is updated
     syncRepositoryToStore({ store, projectService });

@@ -4695,6 +4695,77 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("suppresses WebKit's deferred IME process Enter without blocking active composition", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const animationFrameQueue = installAnimationFrameQueue();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const splitCurrentLine = vi.fn();
+
+      editorElement.state = {
+        mode: "text-editor",
+      };
+      editorElement.isComposing = true;
+      editorElement.pendingParagraphSplitBeforeInput = false;
+      editorElement.splitCurrentLine = splitCurrentLine;
+
+      const activeCompositionEnter = {
+        type: "keydown",
+        key: "Enter",
+        code: "Enter",
+        keyCode: 229,
+        which: 229,
+        isComposing: true,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+      expect(
+        editorElement.handleLexicalEnterCommand(activeCompositionEnter),
+      ).toBe(false);
+      expect(activeCompositionEnter.preventDefault).not.toHaveBeenCalled();
+
+      editorElement.isComposing = false;
+      const deferredProcessEnter = {
+        type: "keydown",
+        key: "Enter",
+        code: "Enter",
+        keyCode: 229,
+        which: 229,
+        isComposing: false,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+      expect(
+        editorElement.handleLexicalEnterCommand(deferredProcessEnter),
+      ).toBe(true);
+      expect(deferredProcessEnter.preventDefault).toHaveBeenCalledTimes(1);
+      expect(deferredProcessEnter.stopPropagation).toHaveBeenCalledTimes(1);
+      expect(splitCurrentLine).not.toHaveBeenCalled();
+
+      const regularEnter = {
+        type: "keydown",
+        key: "Enter",
+        code: "Enter",
+        keyCode: 13,
+        which: 13,
+        isComposing: false,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+      expect(editorElement.handleLexicalEnterCommand(regularEnter)).toBe(true);
+      expect(splitCurrentLine).toHaveBeenCalledTimes(1);
+    } finally {
+      animationFrameQueue.restore();
+      restoreDomGlobals();
+    }
+  });
+
   it("preserves a WebKit composition commit when the next input is Space", async () => {
     const restoreDomGlobals = installDomGlobals();
 

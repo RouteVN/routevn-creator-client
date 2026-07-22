@@ -1756,8 +1756,13 @@ const scanNodeForResourceReferences = (node, onReference) => {
   if (!node || typeof node !== "object") return;
 
   for (const [key, value] of Object.entries(node)) {
-    if (typeof value === "string" && EXPORT_RESOURCE_KEYS.has(key)) {
-      onReference({ key, value });
+    if (EXPORT_RESOURCE_KEYS.has(key)) {
+      const resourceIds = Array.isArray(value) ? value : [value];
+      resourceIds.forEach((resourceId) => {
+        if (typeof resourceId === "string") {
+          onReference({ key, value: resourceId });
+        }
+      });
     }
 
     if (value && typeof value === "object") {
@@ -1793,9 +1798,9 @@ const checkNode = (node, resourceId, keys, usages) => {
 
   for (const [key, value] of Object.entries(node)) {
     if (
-      typeof value === "string" &&
-      value === resourceId &&
-      keys.includes(key)
+      keys.includes(key) &&
+      (value === resourceId ||
+        (Array.isArray(value) && value.includes(resourceId)))
     ) {
       usages.push({
         property: key,

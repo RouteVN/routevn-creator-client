@@ -250,12 +250,12 @@ template:
                                                                   - rtgl-view w=f h=f bw=xs bc=bo av=c ah=c:
                                                                       - rtgl-text s=sm c=mu-fg: Processing...
                                                                 $else:
-                                                                  - rvn-font-preview mode=thumbnail fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=60 width=f height=f padding=8 av=c ah=c: null
+                                                                  - rvn-font-preview mode=thumbnail :fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} :fontWeightDescriptor=${item.fontWeightDescriptor} fontWeight=${item.fontWeight} fontSize=60 width=f height=f padding=8 av=c ah=c: null
                                                         $elif item.isProcessing:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=sm c=mu-fg: Processing...
                                                         $else:
-                                                          - rvn-font-preview mode=thumbnail fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=60 width=${item.fontPreviewWidth} height=${mediaHeight} av=c ah=c: null
+                                                          - rvn-font-preview mode=thumbnail :fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} :fontWeightDescriptor=${item.fontWeightDescriptor} fontWeight=${item.fontWeight} fontSize=60 width=${item.fontPreviewWidth} height=${mediaHeight} av=c ah=c: null
                                                       - rtgl-view w=f p=md:
                                                           - rtgl-text s=xs c=mu-fg ellipsis w=${item.mediaTextWidth}: ${item.name}
                                                 $else:

@@ -22,6 +22,10 @@ import {
   scaleTemplateProjectStateForResolution,
 } from "../../../internal/projectResolution.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
+import {
+  filterTemplateFileIds,
+  resolveTemplateFontsForLanguage,
+} from "../../../internal/defaultTemplateFonts.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -104,7 +108,10 @@ export const readProjectAppValue = async ({ projectId, key }) => {
 
 async function copyTemplateFiles(templateId, templateData, adapter) {
   const templateFilesPath = `/templates/${templateId}/files/`;
-  const filesToCopy = await getTemplateFiles(templateId);
+  const filesToCopy = filterTemplateFileIds({
+    templateData,
+    templateFileIds: await getTemplateFiles(templateId),
+  });
 
   for (const fileId of filesToCopy) {
     try {
@@ -162,17 +169,22 @@ export const initializeProject = async ({
 
   // Load template data from static files
   const loadedTemplateData = await loadTemplate(template);
+  const languageTemplateData = resolveTemplateFontsForLanguage({
+    templateId: template,
+    templateData: loadedTemplateData,
+    language: projectInfo?.language,
+  });
   const resolvedProjectResolution = resolveProjectResolutionForWrite({
     projectResolution,
-    fallbackResolution: loadedTemplateData.project?.resolution,
+    fallbackResolution: languageTemplateData.project?.resolution,
   });
   const templateData = scaleTemplateProjectStateForResolution(
-    loadedTemplateData,
+    languageTemplateData,
     resolvedProjectResolution,
   );
 
   // Copy template files to project's IndexedDB
-  await copyTemplateFiles(template, loadedTemplateData, adapter);
+  await copyTemplateFiles(template, templateData, adapter);
 
   assertSupportedProjectState(templateData);
 

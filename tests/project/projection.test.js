@@ -1516,7 +1516,7 @@ describe("constructProjectData", () => {
             id: "style-1",
             type: "textStyle",
             name: "Outlined Text",
-            fontId: "font-1",
+            fontId: ["font-1"],
             colorId: "fill",
             fontSize: 32,
             lineHeight: 1.2,
@@ -1605,6 +1605,7 @@ describe("constructProjectData", () => {
     expect(usage.usedIds.colors).toEqual(
       expect.arrayContaining(["fill", "stroke", "shadow"]),
     );
+    expect(usage.usedIds.fonts).toContain("font-1");
 
     const filteredState = buildFilteredStateForExport(repositoryState, usage);
     const projectData = constructProjectData(filteredState);
@@ -1619,6 +1620,7 @@ describe("constructProjectData", () => {
       hex: "#112233",
     });
     expect(projectData.resources.textStyles["style-1"]).toMatchObject({
+      fontId: ["font-1"],
       shadow: {
         colorId: "shadow",
         alpha: 0.75,

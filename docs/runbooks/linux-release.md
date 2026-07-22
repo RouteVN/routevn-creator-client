@@ -5,13 +5,15 @@ Linux direct releases are AppImage-only.
 
 ## Versioning
 
-- For every app release, update the version in all four of these places:
+- For every app release, update the Creator version in all four of these places:
   - `src-tauri/tauri.conf.json`: the top-level `version`
   - `src-tauri/Cargo.toml`: the `routevn-creator` package version
   - `src-tauri/Cargo.lock`: the `routevn-creator` package entry
   - `src-tauri/assets/com.routevn.creator.metainfo.xml`: the latest Linux
     `<release>` entry, including its release date
-- Keep all four version values aligned.
+- Keep all four Creator version values aligned. The reusable player shell has
+  its own independent version and must not be changed as part of a Creator
+  release.
 - Do not change the app version only to represent a package rebuild.
 
 ## Build

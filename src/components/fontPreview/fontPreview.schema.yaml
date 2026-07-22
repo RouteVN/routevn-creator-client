@@ -8,9 +8,27 @@ propsSchema:
     fontFamily:
       type: string
       description: Font family to use
+    fontFamilies:
+      type: array
+      description: Ordered font families to use
+      items:
+        type: string
     fileId:
       type: string
       description: File ID for the font file
+    fileIds:
+      type: array
+      description: Ordered file IDs for the font files
+      items:
+        type: string
+    fontWeightDescriptor:
+      type: string
+      description: CSS weight descriptor for the font file
+    fontWeightDescriptors:
+      type: array
+      description: CSS weight descriptors aligned with the ordered font files
+      items:
+        type: string
     fontSize:
       type: string
       description: Font size in pixels

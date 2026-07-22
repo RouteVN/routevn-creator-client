@@ -19,6 +19,8 @@ import {
 import { generateId } from "../id.js";
 import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
 import { normalizeSaveLoadDateFormat } from "../saveLoadDateFormats.js";
+import { toFontIds } from "../fontIds.js";
+import { getFontFaceWeightDescriptor } from "../fontCapabilities.js";
 
 const TEXT_NODE_TYPES = new Set([
   "text",
@@ -467,12 +469,13 @@ const resolveTextStyleId = (nodeTextStyleId, textStylesData = {}) => {
 };
 
 const normalizeTextStyleResource = (textStyleData) => {
-  if (!textStyleData?.fontId || !textStyleData?.colorId) {
+  const fontIds = toFontIds(textStyleData?.fontId);
+  if (fontIds.length === 0 || !textStyleData?.colorId) {
     return undefined;
   }
 
   const textStyle = {
-    fontId: textStyleData.fontId,
+    fontId: fontIds,
     colorId: textStyleData.colorId,
     fontSize: toFiniteNumber(
       textStyleData.fontSize,
@@ -1876,6 +1879,15 @@ const createFontResources = (fontsData = {}, filesData = {}) => {
       if (normalizedItem.fileType) {
         font.fileType = normalizedItem.fileType;
       }
+      if (normalizedItem.minWeight !== undefined) {
+        font.minWeight = normalizedItem.minWeight;
+      }
+      if (normalizedItem.defaultWeight !== undefined) {
+        font.defaultWeight = normalizedItem.defaultWeight;
+      }
+      if (normalizedItem.maxWeight !== undefined) {
+        font.maxWeight = normalizedItem.maxWeight;
+      }
 
       result[fontId] = font;
       return result;
@@ -2042,7 +2054,11 @@ export const extractFileIdsFromRenderState = (obj) => {
     return normalizedCurrent;
   };
 
-  const addFileReference = (fileId, type = defaultFileReferenceType) => {
+  const addFileReference = (
+    fileId,
+    type = defaultFileReferenceType,
+    metadata = {},
+  ) => {
     if (typeof fileId !== "string" || fileId.length === 0) {
       return;
     }
@@ -2056,15 +2072,25 @@ export const extractFileIdsFromRenderState = (obj) => {
       existingReference?.type,
       type,
     );
+    const fontWeightDescriptor = getFontFaceWeightDescriptor(metadata);
 
-    if (existingReference?.type === preferredType) {
+    if (
+      existingReference?.type === preferredType &&
+      (fontWeightDescriptor === undefined ||
+        existingReference.fontWeightDescriptor === fontWeightDescriptor)
+    ) {
       return;
     }
 
-    fileReferencesByKey.set(fileId, {
+    const nextReference = {
+      ...existingReference,
       url: fileId,
       type: preferredType,
-    });
+    };
+    if (fontWeightDescriptor !== undefined) {
+      nextReference.fontWeightDescriptor = fontWeightDescriptor;
+    }
+    fileReferencesByKey.set(fileId, nextReference);
   };
 
   const traverse = (value) => {
@@ -2084,6 +2110,34 @@ export const extractFileIdsFromRenderState = (obj) => {
 
     if (typeof value === "object") {
       Object.keys(value).forEach((key) => {
+        if (key === "fontFamily") {
+          const fontFileIds = Array.isArray(value[key])
+            ? value[key]
+            : typeof value[key] === "string"
+              ? value[key].split(",")
+              : [];
+
+          fontFileIds.forEach((fontFileId) => {
+            if (typeof fontFileId !== "string") {
+              return;
+            }
+
+            const normalizedFontFileId = fontFileId.trim();
+            if (!normalizedFontFileId) {
+              return;
+            }
+
+            addFileReference(
+              normalizedFontFileId.startsWith("file:")
+                ? normalizedFontFileId.replace("file:", "")
+                : normalizedFontFileId,
+              value.fileType || "font/ttf",
+              value,
+            );
+          });
+          return;
+        }
+
         if (
           (key === "fileId" ||
             key === "url" ||
@@ -2094,7 +2148,6 @@ export const extractFileIdsFromRenderState = (obj) => {
             key === "hoverUrl" ||
             key === "clickUrl" ||
             key === "fontFileId" ||
-            key === "fontFamily" ||
             key === "texture") &&
           typeof value[key] === "string"
         ) {
@@ -2112,6 +2165,7 @@ export const extractFileIdsFromRenderState = (obj) => {
             key === "soundSrc"
               ? value.soundFileType || value.fileType || "audio/*"
               : value.fileType || "image/png",
+            value,
           );
         }
 
@@ -2293,31 +2347,38 @@ const collectResourceSelectionFromValue = (projectData, value) => {
 
   const scanValue = (node) => {
     traverseScene(node, (key, entry) => {
-      if (!RESOURCE_REFERENCE_KEYS.has(key) || typeof entry !== "string") {
+      if (!RESOURCE_REFERENCE_KEYS.has(key)) {
         return;
       }
 
-      const hadLayout = selection.layouts.has(entry);
-      const hadTextStyle = selection.textStyles.has(entry);
-      addResourceIdToSelection(selection, resources, entry);
+      const resourceIds = Array.isArray(entry) ? entry : [entry];
+      resourceIds.forEach((resourceId) => {
+        if (typeof resourceId !== "string") {
+          return;
+        }
 
-      if (
-        !hadLayout &&
-        selection.layouts.has(entry) &&
-        !queuedLayoutIds.has(entry)
-      ) {
-        queuedLayoutIds.add(entry);
-        pendingLayoutIds.push(entry);
-      }
+        const hadLayout = selection.layouts.has(resourceId);
+        const hadTextStyle = selection.textStyles.has(resourceId);
+        addResourceIdToSelection(selection, resources, resourceId);
 
-      if (
-        !hadTextStyle &&
-        selection.textStyles.has(entry) &&
-        !queuedTextStyleIds.has(entry)
-      ) {
-        queuedTextStyleIds.add(entry);
-        pendingTextStyleIds.push(entry);
-      }
+        if (
+          !hadLayout &&
+          selection.layouts.has(resourceId) &&
+          !queuedLayoutIds.has(resourceId)
+        ) {
+          queuedLayoutIds.add(resourceId);
+          pendingLayoutIds.push(resourceId);
+        }
+
+        if (
+          !hadTextStyle &&
+          selection.textStyles.has(resourceId) &&
+          !queuedTextStyleIds.has(resourceId)
+        ) {
+          queuedTextStyleIds.add(resourceId);
+          pendingTextStyleIds.push(resourceId);
+        }
+      });
     });
   };
 

@@ -188,6 +188,12 @@ describe("resource image imports", () => {
         uploadResult: {
           fileId: "file-1",
           displayName: "Inter",
+          fontCapabilities: {
+            kind: "static",
+            minWeight: 400,
+            defaultWeight: 400,
+            maxWeight: 400,
+          },
           file: {
             type: "font/ttf",
             size: 123,
@@ -201,6 +207,9 @@ describe("resource image imports", () => {
       name: "Inter",
       description: "",
       fontFamily: "Inter",
+      minWeight: 400,
+      defaultWeight: 400,
+      maxWeight: 400,
     });
   });
 
@@ -209,6 +218,12 @@ describe("resource image imports", () => {
       buildFontResourcePatchFromUploadResult({
         uploadResult: {
           fileId: "file-1",
+          fontCapabilities: {
+            kind: "variable",
+            minWeight: 200,
+            defaultWeight: 400,
+            maxWeight: 800,
+          },
           file: {
             type: "font/ttf",
             size: 123,
@@ -219,6 +234,28 @@ describe("resource image imports", () => {
     ).toEqual({
       fileId: "file-1",
       fontFamily: "Inter",
+      minWeight: 200,
+      defaultWeight: 400,
+      maxWeight: 800,
+    });
+  });
+
+  it("leaves weight fields blank when font metadata is unknown", () => {
+    expect(
+      buildFontResourceDataFromUploadResult({
+        uploadResult: {
+          fileId: "file-1",
+          displayName: "Unknown Font",
+          fontCapabilities: { kind: "unrestricted" },
+        },
+        fontFamily: "Unknown Font",
+      }),
+    ).toEqual({
+      type: "font",
+      fileId: "file-1",
+      name: "Unknown Font",
+      description: "",
+      fontFamily: "Unknown Font",
     });
   });
 

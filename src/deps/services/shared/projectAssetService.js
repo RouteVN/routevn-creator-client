@@ -393,7 +393,7 @@ export const createProjectAssetService = ({
       }
     },
 
-    async loadFontFile({ fontName, fileId }) {
+    async loadFontFile({ fontName, fileId, fontWeightDescriptor }) {
       if (!fontName || !fileId || fileId === "undefined") {
         throw new Error(
           "Invalid font parameters: fontName and fileId are required.",
@@ -402,7 +402,9 @@ export const createProjectAssetService = ({
 
       try {
         const content = await getFileContent(fileId);
-        await loadFont(fontName, content.url);
+        await loadFont(fontName, content.url, {
+          weight: fontWeightDescriptor,
+        });
         return { success: true };
       } catch (error) {
         console.error("Failed to load font file:", error);

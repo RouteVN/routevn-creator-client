@@ -37,6 +37,10 @@ import { toBootstrappedDraftEvent } from "../shared/collab/clientStoreHistory.js
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import { createWebIconAssets } from "../../clients/web/webIconAssets.js";
+import {
+  filterTemplateFileIds,
+  resolveTemplateFontsForLanguage,
+} from "../../../internal/defaultTemplateFonts.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -387,7 +391,10 @@ const resolveIOSProjectFileMetadata = async ({
 
 const copyTemplateFiles = async ({ templateId, projectId, templateData }) => {
   const templateFilesPath = `/templates/${templateId}/files/`;
-  const filesToCopy = await getTemplateFiles(templateId);
+  const filesToCopy = filterTemplateFileIds({
+    templateData,
+    templateFileIds: await getTemplateFiles(templateId),
+  });
 
   for (const fileId of filesToCopy) {
     try {
@@ -623,12 +630,17 @@ export const createIOSProjectServiceAdapters = ({
       await ensureIOSProjectStorage(safeProjectId);
 
       const loadedTemplateData = await loadTemplate(template);
+      const languageTemplateData = resolveTemplateFontsForLanguage({
+        templateId: template,
+        templateData: loadedTemplateData,
+        language: projectInfo?.language,
+      });
       const resolvedProjectResolution = resolveProjectResolutionForWrite({
         projectResolution,
-        fallbackResolution: loadedTemplateData.project?.resolution,
+        fallbackResolution: languageTemplateData.project?.resolution,
       });
       const templateData = scaleTemplateProjectStateForResolution(
-        loadedTemplateData,
+        languageTemplateData,
         resolvedProjectResolution,
       );
       await copyTemplateFiles({

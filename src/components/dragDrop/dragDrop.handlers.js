@@ -3,6 +3,18 @@ import {
   isFileTypeAccepted,
 } from "../../internal/fileTypes.js";
 
+const dispatchRejectedFiles = (dispatchEvent, files) => {
+  if (files.length === 0) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("file-rejected", {
+      detail: { files },
+    }),
+  );
+};
+
 export const handleClick = (deps) => {
   const { dispatchEvent, props } = deps;
   const input = document.createElement("input");
@@ -12,9 +24,15 @@ export const handleClick = (deps) => {
 
   input.onchange = (e) => {
     if (e.target && e.target.files) {
-      const validFiles = Array.from(e.target.files).filter((file) =>
+      const files = Array.from(e.target.files);
+      const validFiles = files.filter((file) =>
         isFileTypeAccepted(file, props.acceptedFileTypes),
       );
+      const rejectedFiles = files.filter(
+        (file) => !isFileTypeAccepted(file, props.acceptedFileTypes),
+      );
+
+      dispatchRejectedFiles(dispatchEvent, rejectedFiles);
 
       if (validFiles.length > 0) {
         dispatchEvent(
@@ -61,22 +79,20 @@ export const handleDrop = (deps, payload) => {
   store.stopDragging();
   render();
 
-  const files = payload._event.dataTransfer.files;
+  const files = Array.from(payload._event.dataTransfer.files);
 
-  // Filter for accepted file types only
-  const validFiles = Array.from(files).filter((file) =>
+  const validFiles = files.filter((file) =>
     isFileTypeAccepted(file, props.acceptedFileTypes),
   );
+  const rejectedFiles = files.filter(
+    (file) => !isFileTypeAccepted(file, props.acceptedFileTypes),
+  );
+
+  dispatchRejectedFiles(dispatchEvent, rejectedFiles);
 
   if (validFiles.length > 0) {
     dispatchEvent(
       new CustomEvent("file-selected", { detail: { files: validFiles } }),
-    );
-  } else if (files.length > 0) {
-    // Show feedback if files were dropped but none were accepted
-    console.warn(
-      "No files match the accepted file types:",
-      props.acceptedFileTypes,
     );
   }
 };

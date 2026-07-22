@@ -43,4 +43,17 @@ describe("mediaResourcesView view", () => {
     expect(view).toContain("rtgl-popover#zoomPopover");
     expect(view.match(/place=be/g)).toHaveLength(2);
   });
+
+  it("passes font family names to previews without interpolating selector text", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/mediaResourcesView/mediaResourcesView.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view.match(/:fontFamily=\$\{item\.fontFamily\}/g)).toHaveLength(2);
+    expect(view).not.toContain(" fontFamily=${item.fontFamily}");
+  });
 });
