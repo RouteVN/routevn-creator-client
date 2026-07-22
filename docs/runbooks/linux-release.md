@@ -11,14 +11,9 @@ Linux direct releases are AppImage-only.
   - `src-tauri/Cargo.lock`: the `routevn-creator` package entry
   - `src-tauri/assets/com.routevn.creator.metainfo.xml`: the latest Linux
     `<release>` entry, including its release date
-- Keep the reusable player shell aligned in these three places:
-  - `crates/routevn-packager/tauri-shell/src-tauri/tauri.conf.json`: the
-    top-level `version`
-  - `crates/routevn-packager/tauri-shell/src-tauri/Cargo.toml`: the
-    `routevn-shell` package version
-  - `crates/routevn-packager/tauri-shell/src-tauri/Cargo.lock`: the
-    `routevn-shell` package entry
-- Keep all seven version values aligned.
+- Keep all four Creator version values aligned. The reusable player shell has
+  its own independent version and must not be changed as part of a Creator
+  release.
 - Do not change the app version only to represent a package rebuild.
 
 ## Build

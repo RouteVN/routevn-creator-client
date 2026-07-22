@@ -1,6 +1,6 @@
 [package]
 name = "routevn-shell"
-version = "1.10.1"
+version = "0.1.0"
 description = "Reusable Tauri shell for RouteVN desktop packaging"
 authors = ["RouteVN"]
 license = ""
