@@ -20,6 +20,7 @@ vi.mock(
 
 import {
   handleDataChanged,
+  handleEditFormAction,
   handleUploadClick,
 } from "../../src/pages/fonts/fonts.handlers.js";
 
@@ -230,6 +231,54 @@ describe("fonts handlers", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining("WOFF2"),
+      }),
+    );
+  });
+
+  it("rejects replacements with unknown weights when metadata would become stale", async () => {
+    const deps = {
+      i18n: EN_I18N,
+      appService: {
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        updateFont: vi.fn(),
+      },
+      store: {
+        selectEditItemId: vi.fn(() => "font-1"),
+        selectEditUploadResult: vi.fn(() => ({
+          fileId: "file-new",
+          fontName: "Unknown Font",
+          fontCapabilities: {
+            kind: "unrestricted",
+          },
+        })),
+        selectFontItemById: vi.fn(() => ({
+          id: "font-1",
+          minWeight: 400,
+          defaultWeight: 400,
+          maxWeight: 400,
+        })),
+      },
+    };
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Updated Font",
+            description: "",
+            tagIds: [],
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.updateFont).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("could not be read"),
       }),
     );
   });

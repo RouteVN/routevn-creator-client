@@ -467,6 +467,24 @@ export const handleEditFormAction = async (deps, payload) => {
   }
 
   const editUploadResult = store.selectEditUploadResult();
+  if (editUploadResult?.fontCapabilities?.kind === "unrestricted") {
+    const currentFont = store.selectFontItemById({ itemId: editItemId });
+    const hasStoredWeightMetadata =
+      currentFont?.minWeight !== undefined ||
+      currentFont?.defaultWeight !== undefined ||
+      currentFont?.maxWeight !== undefined;
+
+    if (hasStoredWeightMetadata) {
+      appService.showAlert({
+        message:
+          copy.unknownWeightReplacementMessage ??
+          "This font cannot be replaced because the new file's supported weights could not be read.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+  }
+
   const fontPatch = editUploadResult
     ? buildFontResourcePatchFromUploadResult({
         uploadResult: editUploadResult,

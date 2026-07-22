@@ -20,4 +20,23 @@ describe("layout font families", () => {
       },
     ]);
   });
+
+  it("extracts every font file from a resolved comma-separated family", () => {
+    expect(
+      extractFileIdsFromRenderState({
+        textStyle: {
+          fontFamily: "font-latin, font-cjk",
+        },
+      }),
+    ).toEqual([
+      {
+        url: "font-latin",
+        type: "font/ttf",
+      },
+      {
+        url: "font-cjk",
+        type: "font/ttf",
+      },
+    ]);
+  });
 });

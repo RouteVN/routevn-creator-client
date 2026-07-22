@@ -2086,6 +2086,33 @@ export const extractFileIdsFromRenderState = (obj) => {
 
     if (typeof value === "object") {
       Object.keys(value).forEach((key) => {
+        if (key === "fontFamily") {
+          const fontFileIds = Array.isArray(value[key])
+            ? value[key]
+            : typeof value[key] === "string"
+              ? value[key].split(",")
+              : [];
+
+          fontFileIds.forEach((fontFileId) => {
+            if (typeof fontFileId !== "string") {
+              return;
+            }
+
+            const normalizedFontFileId = fontFileId.trim();
+            if (!normalizedFontFileId) {
+              return;
+            }
+
+            addFileReference(
+              normalizedFontFileId.startsWith("file:")
+                ? normalizedFontFileId.replace("file:", "")
+                : normalizedFontFileId,
+              value.fileType || "font/ttf",
+            );
+          });
+          return;
+        }
+
         if (
           (key === "fileId" ||
             key === "url" ||
@@ -2096,7 +2123,6 @@ export const extractFileIdsFromRenderState = (obj) => {
             key === "hoverUrl" ||
             key === "clickUrl" ||
             key === "fontFileId" ||
-            key === "fontFamily" ||
             key === "texture") &&
           typeof value[key] === "string"
         ) {
@@ -2127,12 +2153,6 @@ export const extractFileIdsFromRenderState = (obj) => {
               ? texture.replace("file:", "")
               : texture;
             addFileReference(fileId, value.fileType || "image/png");
-          });
-        }
-
-        if (key === "fontFamily" && Array.isArray(value[key])) {
-          value[key].forEach((fontFileId) => {
-            addFileReference(fontFileId, value.fileType || "font/ttf");
           });
         }
 
@@ -2301,31 +2321,38 @@ const collectResourceSelectionFromValue = (projectData, value) => {
 
   const scanValue = (node) => {
     traverseScene(node, (key, entry) => {
-      if (!RESOURCE_REFERENCE_KEYS.has(key) || typeof entry !== "string") {
+      if (!RESOURCE_REFERENCE_KEYS.has(key)) {
         return;
       }
 
-      const hadLayout = selection.layouts.has(entry);
-      const hadTextStyle = selection.textStyles.has(entry);
-      addResourceIdToSelection(selection, resources, entry);
+      const resourceIds = Array.isArray(entry) ? entry : [entry];
+      resourceIds.forEach((resourceId) => {
+        if (typeof resourceId !== "string") {
+          return;
+        }
 
-      if (
-        !hadLayout &&
-        selection.layouts.has(entry) &&
-        !queuedLayoutIds.has(entry)
-      ) {
-        queuedLayoutIds.add(entry);
-        pendingLayoutIds.push(entry);
-      }
+        const hadLayout = selection.layouts.has(resourceId);
+        const hadTextStyle = selection.textStyles.has(resourceId);
+        addResourceIdToSelection(selection, resources, resourceId);
 
-      if (
-        !hadTextStyle &&
-        selection.textStyles.has(entry) &&
-        !queuedTextStyleIds.has(entry)
-      ) {
-        queuedTextStyleIds.add(entry);
-        pendingTextStyleIds.push(entry);
-      }
+        if (
+          !hadLayout &&
+          selection.layouts.has(resourceId) &&
+          !queuedLayoutIds.has(resourceId)
+        ) {
+          queuedLayoutIds.add(resourceId);
+          pendingLayoutIds.push(resourceId);
+        }
+
+        if (
+          !hadTextStyle &&
+          selection.textStyles.has(resourceId) &&
+          !queuedTextStyleIds.has(resourceId)
+        ) {
+          queuedTextStyleIds.add(resourceId);
+          pendingTextStyleIds.push(resourceId);
+        }
+      });
     });
   };
 

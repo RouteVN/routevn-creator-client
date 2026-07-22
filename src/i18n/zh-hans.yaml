@@ -549,6 +549,7 @@ fontsPage:
   invalidFormatMessage: "文件格式无效。请上传 TTF、OTF、WOFF 或 WOFF2 字体。"
   nameRequired: "字体名称为必填项。"
   title: "字体"
+  unknownWeightReplacementMessage: "无法读取新文件支持的字重，因此无法替换此字体。"
   updateButton: "更新字体"
 textStylesPage:
   addColorButton: "添加颜色"

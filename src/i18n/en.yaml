@@ -549,6 +549,7 @@ fontsPage:
   invalidFormatMessage: "Invalid file format. Please upload a TTF, OTF, WOFF, or WOFF2 font file."
   nameRequired: "Font name is required."
   title: "Fonts"
+  unknownWeightReplacementMessage: "This font cannot be replaced because the new file's supported weights could not be read."
   updateButton: "Update Font"
 textStylesPage:
   addColorButton: "Add Color"

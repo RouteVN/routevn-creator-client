@@ -135,6 +135,68 @@ describe("textStyles.handlers", () => {
     );
   });
 
+  it("preserves fallback font ids when updating an unrelated field", async () => {
+    const updateTextStyle = vi.fn(async () => ({ valid: true }));
+    const deps = createFormDeps({
+      updateTextStyle,
+      dialogState: {
+        targetGroupId: undefined,
+        editMode: true,
+        editingItemId: "text-style-1",
+      },
+    });
+    deps.store.selectItemById.mockReturnValue({
+      id: "text-style-1",
+      fontId: ["font-1", "font-fallback"],
+      fontWeight: "400",
+    });
+
+    await handleFormActionClick(
+      deps,
+      createSubmitPayload({ name: "Updated Dialogue" }),
+    );
+
+    expect(updateTextStyle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        textStyleId: "text-style-1",
+        data: expect.objectContaining({
+          name: "Updated Dialogue",
+          fontId: ["font-1", "font-fallback"],
+        }),
+      }),
+    );
+  });
+
+  it("resets the fallback stack when the primary font changes", async () => {
+    const updateTextStyle = vi.fn(async () => ({ valid: true }));
+    const deps = createFormDeps({
+      updateTextStyle,
+      dialogState: {
+        targetGroupId: undefined,
+        editMode: true,
+        editingItemId: "text-style-1",
+      },
+    });
+    deps.store.selectItemById.mockReturnValue({
+      id: "text-style-1",
+      fontId: ["font-1", "font-fallback"],
+      fontWeight: "400",
+    });
+
+    await handleFormActionClick(
+      deps,
+      createSubmitPayload({ fontId: "font-2" }),
+    );
+
+    expect(updateTextStyle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          fontId: ["font-2"],
+        }),
+      }),
+    );
+  });
+
   it("persists shadow settings", async () => {
     const createTextStyle = vi.fn(async () => "text-style-new");
     const deps = createFormDeps({ createTextStyle });

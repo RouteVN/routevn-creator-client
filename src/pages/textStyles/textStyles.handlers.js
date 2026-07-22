@@ -40,7 +40,7 @@ import {
   isFontWeightSupported,
   isStrictFontMimeType,
 } from "../../internal/fontCapabilities.js";
-import { toPrimaryFontId } from "../../internal/fontIds.js";
+import { toFontIds, toPrimaryFontId } from "../../internal/fontIds.js";
 
 const selectCopy = (deps = {}) => selectTextStylesPageCopy(deps.i18n);
 
@@ -450,7 +450,7 @@ const buildTextStyleData = ({
     fontSize: Number(fontSize ?? 16),
     lineHeight: Number(lineHeight ?? 1.5),
     colorId: fontColor,
-    fontId: [fontId],
+    fontId: toFontIds(fontId),
     fontWeight: String(fontWeight ?? "400"),
     previewText: previewText ?? "",
     strokeWidth: hasStrokeColor ? Number(strokeWidth ?? 0) : 0,
@@ -547,7 +547,7 @@ const handleTextStyleCreated = async (deps, payload) => {
 };
 
 const handleTextStyleUpdated = async (deps, payload) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, store } = deps;
   const copy = selectCopy(deps);
   const {
     itemId,
@@ -568,6 +568,9 @@ const handleTextStyleUpdated = async (deps, payload) => {
     shadowOffsetX,
     shadowOffsetY,
   } = payload._event.detail;
+  const currentFontIds = toFontIds(store.selectItemById({ itemId })?.fontId);
+  const updatedFontIds =
+    currentFontIds[0] === fontId ? currentFontIds : [fontId];
 
   const updateAttempt = await runResourcePageMutation({
     appService,
@@ -583,7 +586,7 @@ const handleTextStyleUpdated = async (deps, payload) => {
           fontSize,
           lineHeight,
           fontColor,
-          fontId,
+          fontId: updatedFontIds,
           fontWeight,
           previewText,
           strokeColor,
