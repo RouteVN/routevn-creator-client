@@ -208,6 +208,21 @@ When adding or changing an uploadable file type:
 - Existing text styles keep saved weight values even if the selected font does
   not declare that weight.
 
+### Default Template Font Selection
+
+- The default template contains 400 and 600 WOFF2 resources for Latin,
+  Simplified Chinese, Traditional Chinese, Japanese, and Korean.
+- New `zh-Hans`, `zh-Hant`, `ja`, and `ko` projects receive their matching font
+  pair. Every other project language currently receives the Latin pair.
+- The Latin files are temporary base-Latin placeholders. They will be replaced
+  in place by combined Latin + Latin Extended files while keeping their current
+  resource and file ids.
+- Project initialization removes unselected font resources and file records
+  before repository creation. Web, Tauri, Android, and iOS then copy only the
+  files retained by the resolved template.
+- Changing project language after creation does not replace project fonts or
+  rewrite text styles.
+
 ## Current Drift To Watch
 
 - Some image-only surfaces still use `image/*` plus `square` validation instead

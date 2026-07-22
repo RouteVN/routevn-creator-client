@@ -235,16 +235,72 @@
       "Rp37wKfpY5os": {
         "id": "Rp37wKfpY5os",
         "type": "font",
-        "mimeType": "font/ttf",
-        "size": 2534728,
-        "sha256": "f1caaade72a6d83bf7f38ece3e837d106e333a5915d8460f4ba3d26a8573f2f1"
+        "mimeType": "font/woff2",
+        "size": 13120,
+        "sha256": "09aee8065d25508f23a4c3d92cd777ac869c52d93fd868a88f025d888a7937d6"
       },
       "Jh8TM82HqieT": {
         "id": "Jh8TM82HqieT",
         "type": "font",
-        "mimeType": "font/ttf",
-        "size": 2532584,
-        "sha256": "03bddcd402e41c8161f31eb86294392270fead2c6557015664eae47b598bfbc8"
+        "mimeType": "font/woff2",
+        "size": 13496,
+        "sha256": "79e274470d1c5a0118eb325e2ea6f2eb2a449336d7fde1a4f20a2f32fe1119ed"
+      },
+      "ZHx7255RbJ5t": {
+        "id": "ZHx7255RbJ5t",
+        "type": "font",
+        "mimeType": "font/woff2",
+        "size": 1142552,
+        "sha256": "95e3633b6a98f764ba3adfb54504a0cd4799328c009adf9081d6c1850f9c4c78"
+      },
+      "JvxG1tGLKwkv": {
+        "id": "JvxG1tGLKwkv",
+        "type": "font",
+        "mimeType": "font/woff2",
+        "size": 1162352,
+        "sha256": "578fb41a3dc2817b703611ad94b5c27dac96a3907c9d6b843c513217b562e1a2"
+      },
+      "FMDyvtH9dyuN": {
+        "id": "FMDyvtH9dyuN",
+        "type": "font",
+        "mimeType": "font/woff2",
+        "size": 997024,
+        "sha256": "3d1d5e0fb09bee286abf60061b1f464cc52172704ee610fab9527af88bca5253"
+      },
+      "8MXNvtBwPtTq": {
+        "id": "8MXNvtBwPtTq",
+        "type": "font",
+        "mimeType": "font/woff2",
+        "size": 1015060,
+        "sha256": "5eff788e63cefaa02c0d21282e89e1a84952bdcf09ee31bbc82f195b612ba627"
+      },
+      "EaK2s8ym6rdR": {
+        "id": "EaK2s8ym6rdR",
+        "type": "font",
+        "mimeType": "font/woff2",
+        "size": 1017536,
+        "sha256": "4a7b928d4d75e7fc0bace614030664a7ea7eb7d2f754fd2b2da9c3c0ed350570"
+      },
+      "pPCVTowexkmp": {
+        "id": "pPCVTowexkmp",
+        "type": "font",
+        "mimeType": "font/woff2",
+        "size": 1033272,
+        "sha256": "e84ff1511c5021d688f1099c7d1846978ece3043b52696fe8fef9ce8e75c3a66"
+      },
+      "B7grrxQ4V3Ck": {
+        "id": "B7grrxQ4V3Ck",
+        "type": "font",
+        "mimeType": "font/woff2",
+        "size": 541864,
+        "sha256": "3aa0d1d63f3b5b2a33053a41a34512eac63abfb1dc2112aeda04733656a1a6d9"
+      },
+      "PqLnMqrManq1": {
+        "id": "PqLnMqrManq1",
+        "type": "font",
+        "mimeType": "font/woff2",
+        "size": 555084,
+        "sha256": "ca35dea0414e4ccf58fe5f2aa8e681f38aa89cf90186bf048d324e7f9c2e83a9"
       },
       "Yecv5u5nK9YT": {
         "id": "Yecv5u5nK9YT",
@@ -453,6 +509,30 @@
       },
       {
         "id": "Jh8TM82HqieT"
+      },
+      {
+        "id": "ZHx7255RbJ5t"
+      },
+      {
+        "id": "JvxG1tGLKwkv"
+      },
+      {
+        "id": "FMDyvtH9dyuN"
+      },
+      {
+        "id": "8MXNvtBwPtTq"
+      },
+      {
+        "id": "EaK2s8ym6rdR"
+      },
+      {
+        "id": "pPCVTowexkmp"
+      },
+      {
+        "id": "B7grrxQ4V3Ck"
+      },
+      {
+        "id": "PqLnMqrManq1"
       },
       {
         "id": "Yecv5u5nK9YT"
@@ -932,8 +1012,8 @@
       "7m7oC7i8JTEE": {
         "id": "7m7oC7i8JTEE",
         "type": "font",
-        "name": "Noto Sans SC 400",
-        "fontFamily": "Noto Sans SC 400",
+        "name": "Noto Sans 400",
+        "fontFamily": "Noto Sans 400",
         "fileId": "Rp37wKfpY5os",
         "minWeight": 400,
         "defaultWeight": 400,
@@ -942,9 +1022,89 @@
       "VWNPTSU9Rbn9": {
         "id": "VWNPTSU9Rbn9",
         "type": "font",
+        "name": "Noto Sans 600",
+        "fontFamily": "Noto Sans 600",
+        "fileId": "Jh8TM82HqieT",
+        "minWeight": 600,
+        "defaultWeight": 600,
+        "maxWeight": 600
+      },
+      "Z2HN83Bf7gpR": {
+        "id": "Z2HN83Bf7gpR",
+        "type": "font",
+        "name": "Noto Sans SC 400",
+        "fontFamily": "Noto Sans SC 400",
+        "fileId": "ZHx7255RbJ5t",
+        "minWeight": 400,
+        "defaultWeight": 400,
+        "maxWeight": 400
+      },
+      "EXhpiGrxPb7o": {
+        "id": "EXhpiGrxPb7o",
+        "type": "font",
         "name": "Noto Sans SC 600",
         "fontFamily": "Noto Sans SC 600",
-        "fileId": "Jh8TM82HqieT",
+        "fileId": "JvxG1tGLKwkv",
+        "minWeight": 600,
+        "defaultWeight": 600,
+        "maxWeight": 600
+      },
+      "Q9XcyYASXkdg": {
+        "id": "Q9XcyYASXkdg",
+        "type": "font",
+        "name": "Noto Sans TC 400",
+        "fontFamily": "Noto Sans TC 400",
+        "fileId": "FMDyvtH9dyuN",
+        "minWeight": 400,
+        "defaultWeight": 400,
+        "maxWeight": 400
+      },
+      "bYV8UwdabWUZ": {
+        "id": "bYV8UwdabWUZ",
+        "type": "font",
+        "name": "Noto Sans TC 600",
+        "fontFamily": "Noto Sans TC 600",
+        "fileId": "8MXNvtBwPtTq",
+        "minWeight": 600,
+        "defaultWeight": 600,
+        "maxWeight": 600
+      },
+      "UcH7DSpdiL7s": {
+        "id": "UcH7DSpdiL7s",
+        "type": "font",
+        "name": "Noto Sans JP 400",
+        "fontFamily": "Noto Sans JP 400",
+        "fileId": "EaK2s8ym6rdR",
+        "minWeight": 400,
+        "defaultWeight": 400,
+        "maxWeight": 400
+      },
+      "KSe3hgW8WEgM": {
+        "id": "KSe3hgW8WEgM",
+        "type": "font",
+        "name": "Noto Sans JP 600",
+        "fontFamily": "Noto Sans JP 600",
+        "fileId": "pPCVTowexkmp",
+        "minWeight": 600,
+        "defaultWeight": 600,
+        "maxWeight": 600
+      },
+      "EB7DfVu2MWGE": {
+        "id": "EB7DfVu2MWGE",
+        "type": "font",
+        "name": "Noto Sans KR 400",
+        "fontFamily": "Noto Sans KR 400",
+        "fileId": "B7grrxQ4V3Ck",
+        "minWeight": 400,
+        "defaultWeight": 400,
+        "maxWeight": 400
+      },
+      "JRC3F9CpMikH": {
+        "id": "JRC3F9CpMikH",
+        "type": "font",
+        "name": "Noto Sans KR 600",
+        "fontFamily": "Noto Sans KR 600",
+        "fileId": "PqLnMqrManq1",
         "minWeight": 600,
         "defaultWeight": 600,
         "maxWeight": 600
@@ -959,6 +1119,30 @@
           },
           {
             "id": "VWNPTSU9Rbn9"
+          },
+          {
+            "id": "Z2HN83Bf7gpR"
+          },
+          {
+            "id": "EXhpiGrxPb7o"
+          },
+          {
+            "id": "Q9XcyYASXkdg"
+          },
+          {
+            "id": "bYV8UwdabWUZ"
+          },
+          {
+            "id": "UcH7DSpdiL7s"
+          },
+          {
+            "id": "KSe3hgW8WEgM"
+          },
+          {
+            "id": "EB7DfVu2MWGE"
+          },
+          {
+            "id": "JRC3F9CpMikH"
           }
         ]
       }
