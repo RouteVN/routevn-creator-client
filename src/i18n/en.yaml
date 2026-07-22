@@ -303,7 +303,7 @@ platformDetailsPage:
   saveChangesButton: "Save Changes"
   title: "Platform Details"
   warningTitle: "Warning"
-  webApplicationIdentifierDescription: "Identifies this Web app's save data. Use letters, numbers, hyphens, and periods, for example com.yourteam.yourvn. Changing it prevents access to existing saves."
+  webApplicationIdentifierDescription: "Identifies this Web app's save data. Use letters, numbers, hyphens, and periods. Changing it prevents access to existing saves."
   webApplicationIdentifierChangeConfirm: "Change Identifier"
   webApplicationIdentifierChangeMessage: "Users who update to a Web export with the new identifier will lose access to their existing saves."
   webApplicationIdentifierChangeTitle: "Change Application Identifier?"
