@@ -210,13 +210,12 @@ When adding or changing an uploadable file type:
 
 ### Default Template Font Selection
 
-- The default template contains 400 and 600 WOFF2 resources for Latin,
-  Simplified Chinese, Traditional Chinese, Japanese, and Korean.
+- The default template contains 400 and 600 WOFF2 resources for combined Latin,
+  Greek, and Cyrillic coverage, plus dedicated Simplified Chinese, Traditional
+  Chinese, Japanese, and Korean pairs.
 - New `zh-Hans`, `zh-Hant`, `ja`, and `ko` projects receive their matching font
   pair. Every other project language currently receives the Latin pair.
-- The Latin files are temporary base-Latin placeholders. They will be replaced
-  in place by combined Latin + Latin Extended files while keeping their current
-  resource and file ids.
+- The combined pair also covers Vietnamese and IPA.
 - Project initialization removes unselected font resources and file records
   before repository creation. Web, Tauri, Android, and iOS then copy only the
   files retained by the resolved template.

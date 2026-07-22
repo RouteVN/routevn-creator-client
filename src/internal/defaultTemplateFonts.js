@@ -1,8 +1,7 @@
 import { normalizeProjectLanguage } from "./projectLanguage.js";
 
 export const DEFAULT_TEMPLATE_FONT_SETS = Object.freeze({
-  // Temporary base-Latin assets. Replace their file contents with the
-  // combined Latin + Latin Extended files when those assets are ready.
+  // Combined Latin, Greek, Cyrillic, Vietnamese, and IPA coverage.
   latin: Object.freeze({
     400: Object.freeze(["7m7oC7i8JTEE"]),
     600: Object.freeze(["VWNPTSU9Rbn9"]),
