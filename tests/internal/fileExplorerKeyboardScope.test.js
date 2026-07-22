@@ -79,6 +79,32 @@ describe("fileExplorerKeyboardScope", () => {
     expect(deps.refs.fileExplorerKeyboardScope.focus).not.toHaveBeenCalled();
   });
 
+  it("does not steal focus from a browser text selection", () => {
+    const { handleKeyboardScopeClick } =
+      createFileExplorerKeyboardScopeHandlers();
+    const deps = createDeps();
+    const getSelection = vi.fn(() => ({
+      isCollapsed: false,
+      rangeCount: 1,
+    }));
+
+    handleKeyboardScopeClick(deps, {
+      _event: {
+        target: {
+          tagName: "RTGL-TEXT",
+          ownerDocument: {
+            defaultView: {
+              getSelection,
+            },
+          },
+        },
+      },
+    });
+
+    expect(getSelection).toHaveBeenCalledOnce();
+    expect(deps.refs.fileExplorerKeyboardScope.focus).not.toHaveBeenCalled();
+  });
+
   it("navigates explorer selection with up and down arrows", () => {
     const fileExplorer = {
       navigateSelection: vi.fn(() => ({
