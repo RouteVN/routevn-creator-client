@@ -1,9 +1,9 @@
 import { create as createFont } from "fontkit";
 
-export const NEW_FONT_FILE_ACCEPT = ".ttf,.otf,.woff,.woff2";
-export const NEW_FONT_FILE_TYPES = [".ttf", ".otf", ".woff", ".woff2"];
+export const NEW_FONT_FILE_ACCEPT = ".ttf,.otf,.woff2";
+export const NEW_FONT_FILE_TYPES = [".ttf", ".otf", ".woff2"];
 
-const NEW_FONT_FILE_PATTERN = /\.(ttf|otf|woff|woff2)$/i;
+const NEW_FONT_FILE_PATTERN = /\.(ttf|otf|woff2)$/i;
 const STRICT_FONT_MIME_TYPES = new Set([
   "font/ttf",
   "font/otf",
@@ -43,6 +43,17 @@ const toUint8Array = (fontData) => {
   throw createFontInspectionError(
     "invalid_font_data",
     "Font data must be an ArrayBuffer or typed array.",
+  );
+};
+
+const isWoff1FontData = (fontData) => {
+  const bytes = toUint8Array(fontData);
+  return (
+    bytes.byteLength >= 4 &&
+    bytes[0] === 0x77 &&
+    bytes[1] === 0x4f &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46
   );
 };
 
@@ -157,11 +168,18 @@ export const inspectNewFontFile = async (file) => {
   if (!isNewFontFileSupported(file)) {
     throw createFontInspectionError(
       "unsupported_font_format",
-      "Only TTF, OTF, WOFF, and WOFF2 font files are supported for new uploads.",
+      "Only TTF, OTF, and WOFF2 font files are supported for new uploads.",
     );
   }
 
   const fontData = await file.arrayBuffer();
+  if (isWoff1FontData(fontData)) {
+    throw createFontInspectionError(
+      "unsupported_font_format",
+      "WOFF1 font files are not supported for new uploads.",
+    );
+  }
+
   try {
     return extractFontWeightCapabilities(fontData);
   } catch (error) {

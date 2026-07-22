@@ -67,17 +67,37 @@ describe("font capabilities", () => {
   });
 
   it("extracts a static weight from WOFF files", async () => {
+    expect(
+      extractFontWeightCapabilities(createTestWoffBytes({ weight: 600 })),
+    ).toEqual({
+      kind: "static",
+      defaultWeight: 600,
+      minWeight: 600,
+      maxWeight: 600,
+    });
+  });
+
+  it("rejects WOFF1 files for new uploads", async () => {
     const file = new File(
       [createTestWoffBytes({ weight: 600 })],
       "test-font.woff",
       { type: "font/woff" },
     );
 
-    await expect(inspectNewFontFile(file)).resolves.toEqual({
-      kind: "static",
-      defaultWeight: 600,
-      minWeight: 600,
-      maxWeight: 600,
+    await expect(inspectNewFontFile(file)).rejects.toMatchObject({
+      code: "unsupported_font_format",
+    });
+  });
+
+  it("rejects WOFF1 data even when the file has an allowed extension", async () => {
+    const file = new File(
+      [createTestWoffBytes({ weight: 600 })],
+      "misnamed-font.woff2",
+      { type: "font/woff2" },
+    );
+
+    await expect(inspectNewFontFile(file)).rejects.toMatchObject({
+      code: "unsupported_font_format",
     });
   });
 

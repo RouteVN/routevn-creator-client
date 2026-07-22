@@ -3,6 +3,8 @@ import {
   handleDesktopTextStyleFormKeyDown,
   handleDesktopTextStyleSubmitClick,
   handleDialogFormChange,
+  handleFontFileRejected,
+  handleFontFileSelected,
   handleFormActionClick,
   handleItemDuplicate,
   handleMobileDetailEditClick,
@@ -283,6 +285,68 @@ describe("textStyles.handlers", () => {
         }),
       }),
     );
+  });
+
+  it("shows an alert and rejects WOFF1 files in the add-font dialog", async () => {
+    const file = new File(["legacy woff"], "legacy.woff", {
+      type: "font/woff",
+    });
+    const deps = {
+      i18n: EN_I18N,
+      store: {
+        setSelectedFontFile: vi.fn(),
+      },
+      projectService: {
+        uploadFiles: vi.fn(),
+      },
+      appService: {
+        showAlert: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    await handleFontFileSelected(deps, {
+      _event: {
+        detail: {
+          files: [file],
+        },
+      },
+    });
+
+    expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
+    expect(deps.store.setSelectedFontFile).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "Invalid file format. Please upload a TTF, OTF, or WOFF2 font file.",
+      title: "Warning",
+    });
+  });
+
+  it("shows an alert when WOFF1 is rejected from the add-font drop zone", () => {
+    const deps = {
+      i18n: EN_I18N,
+      appService: {
+        showAlert: vi.fn(),
+      },
+    };
+
+    handleFontFileRejected(deps, {
+      _event: {
+        detail: {
+          files: [
+            new File(["legacy woff"], "legacy.woff", {
+              type: "font/woff",
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "Invalid file format. Please upload a TTF, OTF, or WOFF2 font file.",
+      title: "Warning",
+    });
   });
 
   it("loads a TTF's capabilities and selects its real static weight", async () => {

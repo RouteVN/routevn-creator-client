@@ -125,16 +125,16 @@ same time.
 | Character sprites page | `.jpg`, `.jpeg`, `.png`, `.webp`; `.png` + `.json` | explicit pair + format toast  | upload menu supports image or spritesheet; edit/replace images |
 | Videos page            | `.mp4`                                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
 | Sounds page            | `.mp3`, `.wav`, `.ogg`                             | explicit invalid-format toast | picker, center drag-drop, edit/replace                         |
-| Fonts page             | `.ttf`, `.otf`, `.woff`, `.woff2`                  | format + weight metadata      | picker, center drag-drop, edit/replace                         |
+| Fonts page             | `.ttf`, `.otf`, `.woff2`                           | format + weight metadata      | picker, center drag-drop, edit/replace                         |
 
 ### Dialog / Special Upload Surfaces
 
-| Surface                             | Allowed file types                | Extra validation                      | Notes                                      |
-| ----------------------------------- | --------------------------------- | ------------------------------------- | ------------------------------------------ |
-| Character avatar upload             | `image/*`                         | `image-min-size` + square crop dialog | create dialog, edit dialog, avatar replace |
-| Project icon upload (create dialog) | `image/*`                         | `image-min-size` + square crop dialog | projects page create dialog                |
-| Project icon upload (settings)      | `image/*`                         | `square`                              | project settings dialog                    |
-| Text styles add-font dialog         | `.ttf`, `.otf`, `.woff`, `.woff2` | format + weight metadata              | matches the Fonts page                     |
+| Surface                             | Allowed file types       | Extra validation                      | Notes                                      |
+| ----------------------------------- | ------------------------ | ------------------------------------- | ------------------------------------------ |
+| Character avatar upload             | `image/*`                | `image-min-size` + square crop dialog | create dialog, edit dialog, avatar replace |
+| Project icon upload (create dialog) | `image/*`                | `image-min-size` + square crop dialog | projects page create dialog                |
+| Project icon upload (settings)      | `image/*`                | `square`                              | project settings dialog                    |
+| Text styles add-font dialog         | `.ttf`, `.otf`, `.woff2` | format + weight metadata              | matches the Fonts page                     |
 
 ## Current Code Locations
 
@@ -190,9 +190,10 @@ When adding or changing an uploadable file type:
 
 ## Font Compatibility
 
-- New font uploads accept `.ttf`, `.otf`, `.woff`, and `.woff2` files.
-- All four formats are decoded through the shared font inspection path before
-  their weight metadata is persisted.
+- New font uploads accept `.ttf`, `.otf`, and `.woff2` files. WOFF1 uploads are
+  rejected with an invalid-format alert.
+- All three upload formats are decoded through the shared font inspection path
+  before their weight metadata is persisted.
 - Static fonts expose only their declared `OS/2.usWeightClass` for new text
   styles.
 - Variable fonts expose weight choices within their declared `fvar` `wght`
@@ -201,8 +202,9 @@ When adding or changing an uploadable file type:
   the three weight fields are left absent. Text Styles treats that font as
   unknown and offers the complete standard 100–900 weight list.
 - A file that is not a valid supported font container is still rejected.
-- Existing TTC and EOT resources remain readable and renderable without strict
-  weight metadata.
+- Existing WOFF1 resources remain readable, renderable, and eligible for weight
+  metadata migration. Existing TTC and EOT resources remain readable and
+  renderable without strict weight metadata.
 - Existing text styles keep saved weight values even if the selected font does
   not declare that weight.
 

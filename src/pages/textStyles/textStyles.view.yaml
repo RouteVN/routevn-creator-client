@@ -129,6 +129,8 @@ refs:
     eventListeners:
       file-selected:
         handler: handleFontFileSelected
+      file-rejected:
+        handler: handleFontFileRejected
   addFontForm:
     eventListeners:
       form-action:

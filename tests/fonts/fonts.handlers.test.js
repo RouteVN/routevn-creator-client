@@ -21,6 +21,7 @@ vi.mock(
 import {
   handleDataChanged,
   handleEditFormAction,
+  handleFilesDropRejected,
   handleUploadClick,
 } from "../../src/pages/fonts/fonts.handlers.js";
 
@@ -168,7 +169,7 @@ describe("fonts handlers", () => {
     });
 
     expect(deps.appService.pickFiles).toHaveBeenCalledWith({
-      accept: ".ttf,.otf,.woff,.woff2",
+      accept: ".ttf,.otf,.woff2",
       multiple: true,
     });
     expect(uploadResult.fontCapabilities).toEqual({
@@ -233,6 +234,66 @@ describe("fonts handlers", () => {
         message: expect.stringContaining("WOFF2"),
       }),
     );
+  });
+
+  it("shows an alert and rejects WOFF1 uploads before uploading", async () => {
+    const file = new File(["legacy woff"], "legacy.woff", {
+      type: "font/woff",
+    });
+    const deps = {
+      i18n: EN_I18N,
+      appService: {
+        pickFiles: vi.fn(async () => [file]),
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        uploadFiles: vi.fn(),
+      },
+      store: {},
+    };
+
+    await handleUploadClick(deps, {
+      _event: {
+        detail: {
+          groupId: "folder-1",
+        },
+      },
+    });
+
+    expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
+    expect(processPendingUploadsMock).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "Invalid file format. Please upload a TTF, OTF, or WOFF2 font file.",
+      title: "Warning",
+    });
+  });
+
+  it("shows an alert when a WOFF1 file is rejected during drag and drop", () => {
+    const deps = {
+      i18n: EN_I18N,
+      appService: {
+        showAlert: vi.fn(),
+      },
+    };
+
+    handleFilesDropRejected(deps, {
+      _event: {
+        detail: {
+          rejectedFiles: [
+            new File(["legacy woff"], "legacy.woff", {
+              type: "font/woff",
+            }),
+          ],
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "Invalid file format. Please upload a TTF, OTF, or WOFF2 font file.",
+      title: "Warning",
+    });
   });
 
   it("rejects replacements with unknown weights when metadata would become stale", async () => {
