@@ -214,7 +214,7 @@ steps:
   - action: assert
     type: text
     selector: "#sceneTextStats"
-    value: "0 lines 0 words"
+    value: "5 lines 0 characters"
   - action: assert
     type: visible
     selector: "#downloadCanvasButton"
