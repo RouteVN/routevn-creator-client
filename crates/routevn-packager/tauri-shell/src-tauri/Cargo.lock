@@ -3577,7 +3577,7 @@ dependencies = [
 
 [[package]]
 name = "routevn-shell"
-version = "0.1.0"
+version = "1.10.1"
 dependencies = [
  "icu_collections",
  "icu_locale_core",
