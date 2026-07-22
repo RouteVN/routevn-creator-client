@@ -9,7 +9,12 @@ const FONT_EXTENSION_TO_MIME = {
 
 const FONT_MIME_ALIASES = {
   "application/font-woff": "font/woff",
+  "application/font-woff2": "font/woff2",
+  "application/x-font-otf": "font/otf",
+  "application/x-font-ttf": "font/ttf",
   "application/x-font-woff": "font/woff",
+  "application/x-font-woff2": "font/woff2",
+  "application/x-font-opentype": "font/otf",
   "application/font-sfnt": "font/ttf",
   "application/x-font-truetype": "font/ttf",
   "application/x-truetype-font": "font/ttf",

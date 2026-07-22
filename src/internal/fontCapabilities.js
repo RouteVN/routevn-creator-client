@@ -1,24 +1,34 @@
-export const NEW_FONT_FILE_ACCEPT = ".ttf,.otf";
-export const NEW_FONT_FILE_TYPES = [".ttf", ".otf"];
+import { create as createFont } from "fontkit";
 
-const NEW_FONT_FILE_PATTERN = /\.(ttf|otf)$/i;
-const STRICT_FONT_MIME_TYPES = new Set(["font/ttf", "font/otf"]);
+export const NEW_FONT_FILE_ACCEPT = ".ttf,.otf,.woff,.woff2";
+export const NEW_FONT_FILE_TYPES = [".ttf", ".otf", ".woff", ".woff2"];
+
+const NEW_FONT_FILE_PATTERN = /\.(ttf|otf|woff|woff2)$/i;
+const STRICT_FONT_MIME_TYPES = new Set([
+  "font/ttf",
+  "font/otf",
+  "font/woff",
+  "font/woff2",
+]);
 const MIN_FONT_WEIGHT = 1;
 const MAX_FONT_WEIGHT = 1000;
 
-const createFontInspectionError = (code, message) => {
+const createFontInspectionError = (code, message, cause) => {
   const error = new Error(message);
   error.code = code;
+  if (cause) {
+    error.cause = cause;
+  }
   return error;
 };
 
-const toDataView = (fontData) => {
+const toUint8Array = (fontData) => {
   if (fontData instanceof ArrayBuffer) {
-    return new DataView(fontData);
+    return new Uint8Array(fontData);
   }
 
   if (ArrayBuffer.isView(fontData)) {
-    return new DataView(
+    return new Uint8Array(
       fontData.buffer,
       fontData.byteOffset,
       fontData.byteLength,
@@ -31,77 +41,15 @@ const toDataView = (fontData) => {
   );
 };
 
-const readTag = (view, offset) => {
-  if (offset < 0 || offset + 4 > view.byteLength) {
-    return "";
-  }
-
-  return String.fromCharCode(
-    view.getUint8(offset),
-    view.getUint8(offset + 1),
-    view.getUint8(offset + 2),
-    view.getUint8(offset + 3),
-  );
-};
-
-const isSupportedSfntSignature = (view) => {
-  if (view.byteLength < 12) {
-    return false;
-  }
-
-  return (
-    view.getUint32(0, false) === 0x00010000 ||
-    readTag(view, 0) === "OTTO" ||
-    readTag(view, 0) === "true"
-  );
-};
-
-const readSfntTables = (view) => {
-  if (!isSupportedSfntSignature(view)) {
-    throw createFontInspectionError(
-      "unsupported_font_format",
-      "The file is not a supported TTF or OTF font.",
-    );
-  }
-
-  const tableCount = view.getUint16(4, false);
-  const directoryEnd = 12 + tableCount * 16;
-  if (tableCount === 0 || directoryEnd > view.byteLength) {
-    throw createFontInspectionError(
-      "invalid_font_data",
-      "The font table directory is invalid.",
-    );
-  }
-
-  const tables = new Map();
-  for (let index = 0; index < tableCount; index += 1) {
-    const recordOffset = 12 + index * 16;
-    const tag = readTag(view, recordOffset);
-    const offset = view.getUint32(recordOffset + 8, false);
-    const length = view.getUint32(recordOffset + 12, false);
-    if (offset + length > view.byteLength) {
-      throw createFontInspectionError(
-        "invalid_font_data",
-        `The ${tag || "unknown"} font table is out of bounds.`,
-      );
-    }
-
-    tables.set(tag, { offset, length });
-  }
-
-  return tables;
-};
-
-const readStaticWeight = (view, tables) => {
-  const table = tables.get("OS/2");
-  if (!table || table.length < 6) {
+const readStaticWeight = (font) => {
+  const weight = font["OS/2"]?.usWeightClass;
+  if (!Number.isFinite(weight)) {
     throw createFontInspectionError(
       "missing_font_weight",
       "The font does not contain a valid OS/2 weight class.",
     );
   }
 
-  const weight = view.getUint16(table.offset + 4, false);
   if (weight < MIN_FONT_WEIGHT || weight > MAX_FONT_WEIGHT) {
     throw createFontInspectionError(
       "invalid_font_weight",
@@ -112,40 +60,20 @@ const readStaticWeight = (view, tables) => {
   return weight;
 };
 
-const readFixed = (view, offset) => view.getInt32(offset, false) / 65536;
-
-const readVariableWeightAxis = (view, tables) => {
-  const table = tables.get("fvar");
-  if (!table) {
+const readVariableWeightAxis = (font) => {
+  const axes = font.fvar?.axis;
+  if (!Array.isArray(axes)) {
     return undefined;
   }
 
-  if (table.length < 16) {
-    throw createFontInspectionError(
-      "invalid_font_data",
-      "The font variations table is invalid.",
-    );
-  }
-
-  const axesOffset = view.getUint16(table.offset + 4, false);
-  const axisCount = view.getUint16(table.offset + 8, false);
-  const axisSize = view.getUint16(table.offset + 10, false);
-  if (axisSize < 20 || axesOffset + axisCount * axisSize > table.length) {
-    throw createFontInspectionError(
-      "invalid_font_data",
-      "The font variation axes are invalid.",
-    );
-  }
-
-  for (let index = 0; index < axisCount; index += 1) {
-    const axisOffset = table.offset + axesOffset + index * axisSize;
-    if (readTag(view, axisOffset) !== "wght") {
+  for (const axis of axes) {
+    if (axis.axisTag?.trim() !== "wght") {
       continue;
     }
 
-    const minWeight = readFixed(view, axisOffset + 4);
-    const defaultWeight = readFixed(view, axisOffset + 8);
-    const maxWeight = readFixed(view, axisOffset + 12);
+    const minWeight = axis.minValue;
+    const defaultWeight = axis.defaultValue;
+    const maxWeight = axis.maxValue;
     if (
       !Number.isFinite(minWeight) ||
       !Number.isFinite(defaultWeight) ||
@@ -172,10 +100,20 @@ const readVariableWeightAxis = (view, tables) => {
 };
 
 export const extractFontWeightCapabilities = (fontData) => {
-  const view = toDataView(fontData);
-  const tables = readSfntTables(view);
-  const staticWeight = readStaticWeight(view, tables);
-  const variableWeightAxis = readVariableWeightAxis(view, tables);
+  const bytes = toUint8Array(fontData);
+  let font;
+  try {
+    font = createFont(bytes);
+  } catch (error) {
+    throw createFontInspectionError(
+      "unsupported_font_format",
+      "The file is not a supported TTF, OTF, WOFF, or WOFF2 font.",
+      error,
+    );
+  }
+
+  const staticWeight = readStaticWeight(font);
+  const variableWeightAxis = readVariableWeightAxis(font);
 
   if (!variableWeightAxis) {
     return {
@@ -201,7 +139,7 @@ export const inspectNewFontFile = async (file) => {
   if (!isNewFontFileSupported(file)) {
     throw createFontInspectionError(
       "unsupported_font_format",
-      "Only TTF and OTF font files are supported for new uploads.",
+      "Only TTF, OTF, WOFF, and WOFF2 font files are supported for new uploads.",
     );
   }
 

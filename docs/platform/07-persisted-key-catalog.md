@@ -207,8 +207,8 @@ Current keys:
   - full execution and collaboration-safety contract:
     `14-project-content-patches.md`
 - `contentPatch.fontWeightMetadata-1-10-0`
-  - boolean completion marker for adding weight metadata to legacy TTF and OTF
-    font resources
+  - boolean completion marker for adding weight metadata to legacy TTF, OTF,
+    WOFF, and WOFF2 font resources
   - full execution and collaboration-safety contract:
     `14-project-content-patches.md`
 

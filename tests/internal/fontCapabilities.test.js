@@ -7,7 +7,9 @@ import {
 import {
   createTestFontBytes,
   createTestFontFile,
+  createTestWoffBytes,
 } from "../support/fontFixtures.js";
+import { createVariableWoff2Bytes } from "../support/woff2FontFixture.js";
 
 describe("font capabilities", () => {
   it("uses the OS/2 weight class as the only static-font weight", () => {
@@ -64,11 +66,41 @@ describe("font capabilities", () => {
     });
   });
 
-  it("rejects legacy web-font uploads and malformed font data", async () => {
+  it("extracts a static weight from WOFF files", async () => {
+    const file = new File(
+      [createTestWoffBytes({ weight: 600 })],
+      "test-font.woff",
+      { type: "font/woff" },
+    );
+
+    await expect(inspectNewFontFile(file)).resolves.toEqual({
+      kind: "static",
+      defaultWeight: 600,
+      minWeight: 600,
+      maxWeight: 600,
+    });
+  });
+
+  it("extracts the real weight axis from WOFF2 variable fonts", async () => {
+    const file = new File(
+      [createVariableWoff2Bytes()],
+      "noto-sans-variable.woff2",
+      { type: "font/woff2" },
+    );
+
+    await expect(inspectNewFontFile(file)).resolves.toEqual({
+      kind: "variable",
+      defaultWeight: 400,
+      minWeight: 100,
+      maxWeight: 900,
+    });
+  });
+
+  it("rejects unsupported extensions and malformed font data", async () => {
     await expect(
       inspectNewFontFile(
-        new File([createTestFontBytes()], "legacy.woff2", {
-          type: "font/woff2",
+        new File([createTestFontBytes()], "collection.ttc", {
+          type: "font/collection",
         }),
       ),
     ).rejects.toMatchObject({ code: "unsupported_font_format" });

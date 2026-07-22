@@ -167,7 +167,7 @@ describe("fonts handlers", () => {
     });
 
     expect(deps.appService.pickFiles).toHaveBeenCalledWith({
-      accept: ".ttf,.otf",
+      accept: ".ttf,.otf,.woff,.woff2",
       multiple: true,
     });
     expect(uploadResult.fontCapabilities).toEqual({
@@ -200,10 +200,10 @@ describe("fonts handlers", () => {
     expect(removePendingUpload).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects new WOFF2 uploads before uploading", async () => {
+  it("rejects unsupported TTC uploads before uploading", async () => {
     const file = createTestFontFile({
-      name: "legacy.woff2",
-      type: "font/woff2",
+      name: "collection.ttc",
+      type: "font/collection",
     });
     const deps = {
       i18n: EN_I18N,
@@ -229,7 +229,7 @@ describe("fonts handlers", () => {
     expect(processPendingUploadsMock).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining("TTF or OTF"),
+        message: expect.stringContaining("WOFF2"),
       }),
     );
   });

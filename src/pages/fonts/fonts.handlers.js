@@ -35,7 +35,7 @@ const showInvalidFormatToast = (appService, copy = {}) => {
   appService.showAlert({
     message:
       copy.invalidFormatMessage ??
-      "Invalid file format. Please upload a TTF or OTF font file.",
+      "Invalid file format. Please upload a TTF, OTF, WOFF, or WOFF2 font file.",
     title: copy.warningTitle ?? "Warning",
   });
 };
@@ -44,7 +44,7 @@ const showInvalidFontToast = (appService, copy = {}) => {
   appService.showAlert({
     message:
       copy.invalidFontMessage ??
-      "Could not read the font's supported weights. Please choose a valid TTF or OTF font.",
+      "Could not read the font's supported weights. Please choose a valid TTF, OTF, WOFF, or WOFF2 font.",
     title: copy.warningTitle ?? "Warning",
   });
 };

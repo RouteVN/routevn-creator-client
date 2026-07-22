@@ -32,6 +32,7 @@
     "@tauri-apps/plugin-sql": "2.3.1",
     "@tauri-apps/plugin-updater": "2.10.1",
     "file-type": "21.3.4",
+    "fontkit": "2.0.4",
     "immer": "10.2.0",
     "insieme": "2.1.1",
     "jempl": "1.0.0",

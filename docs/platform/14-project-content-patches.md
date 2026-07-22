@@ -69,17 +69,17 @@ The patch follows these rules:
    is not read.
 2. A font with an incomplete field set is inspected and all three fields are
    written together.
-3. Only TTF and OTF files are inspected. WOFF, WOFF2, TTC, EOT, fonts without
-   file ids, folders, and unknown formats are successful no-ops.
+3. TTF, OTF, WOFF, and WOFF2 files are inspected. TTC, EOT, fonts without file
+   ids, folders, and unknown formats are successful no-ops.
 4. File format is resolved from the backing file record first, with legacy
    font-owned file metadata used only as a fallback.
 5. Static fonts receive their extracted `usWeightClass` for all three fields.
 6. Variable fonts receive the extracted `wght` minimum, default, and maximum.
 7. The patch does not change text-style font ids or existing text-style font
    weights.
-8. Deterministically invalid or uninspectable TTF/OTF data is logged and
-   treated as a successful no-op. File access failures and rejected font update
-   commands abort the patch so it can retry later.
+8. Deterministically invalid or uninspectable font data is logged and treated
+   as a successful no-op. File access failures and rejected font update commands
+   abort the patch so it can retry later.
 
 New font uploads already persist these fields, and the default template fonts
 already contain them, so neither path depends on the patch.

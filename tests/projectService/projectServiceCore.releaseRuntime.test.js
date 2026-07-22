@@ -954,15 +954,16 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     ).not.toHaveBeenCalled();
   });
 
-  it("migrates incomplete TTF and OTF weight metadata without inspecting complete or WOFF fonts", async () => {
+  it("migrates incomplete TTF, OTF, WOFF, and WOFF2 weight metadata without inspecting complete fonts", async () => {
     const repository = {
       getState: vi.fn(() => ({
         files: {
           items: {
             "file-static": { mimeType: "font/ttf" },
-            "file-variable": { mimeType: "font/otf" },
+            "file-variable": { mimeType: "application/x-font-otf" },
             "file-complete": { mimeType: "font/ttf" },
             "file-woff": { mimeType: "font/woff" },
+            "file-woff2": { mimeType: "application/font-woff2" },
           },
         },
         fonts: {
@@ -991,21 +992,25 @@ describe("projectServiceCore releaseProjectRuntime", () => {
               type: "font",
               fileId: "file-woff",
             },
+            "font-woff2": {
+              id: "font-woff2",
+              type: "font",
+              fileId: "file-woff2",
+            },
           },
         },
         layouts: { items: {} },
         textStyles: { items: {} },
       })),
     };
-    const revokeStatic = vi.fn();
-    const revokeVariable = vi.fn();
+    const revoke = vi.fn();
     mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
     mocked.projectStore.app.get.mockImplementation(async (key) =>
       key === "contentPatch.defaultMenuTextStyles-1-9-1" ? true : undefined,
     );
     mocked.assetService.getFileContent.mockImplementation(async (fileId) => ({
       url: `font://${fileId}`,
-      revoke: fileId === "file-static" ? revokeStatic : revokeVariable,
+      revoke,
     }));
     mocked.fetch.mockResolvedValue({
       ok: true,
@@ -1023,6 +1028,18 @@ describe("projectServiceCore releaseProjectRuntime", () => {
         minWeight: 100,
         defaultWeight: 500,
         maxWeight: 900,
+      })
+      .mockReturnValueOnce({
+        kind: "static",
+        minWeight: 300,
+        defaultWeight: 300,
+        maxWeight: 300,
+      })
+      .mockReturnValueOnce({
+        kind: "variable",
+        minWeight: 200,
+        defaultWeight: 400,
+        maxWeight: 800,
       });
     mocked.collabService.commandApi.updateFont.mockResolvedValue({
       valid: true,
@@ -1034,6 +1051,8 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     expect(mocked.assetService.getFileContent.mock.calls).toEqual([
       ["file-static"],
       ["file-variable"],
+      ["file-woff"],
+      ["file-woff2"],
     ]);
     expect(mocked.collabService.commandApi.updateFont.mock.calls).toEqual([
       [
@@ -1056,9 +1075,28 @@ describe("projectServiceCore releaseProjectRuntime", () => {
           },
         },
       ],
+      [
+        {
+          fontId: "font-woff",
+          data: {
+            minWeight: 300,
+            defaultWeight: 300,
+            maxWeight: 300,
+          },
+        },
+      ],
+      [
+        {
+          fontId: "font-woff2",
+          data: {
+            minWeight: 200,
+            defaultWeight: 400,
+            maxWeight: 800,
+          },
+        },
+      ],
     ]);
-    expect(revokeStatic).toHaveBeenCalledTimes(1);
-    expect(revokeVariable).toHaveBeenCalledTimes(1);
+    expect(revoke).toHaveBeenCalledTimes(4);
     expect(mocked.projectStore.app.set).toHaveBeenCalledWith(
       "contentPatch.fontWeightMetadata-1-10-0",
       true,

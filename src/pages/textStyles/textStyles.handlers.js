@@ -126,7 +126,7 @@ const loadFontCapabilities = async (deps, { fontId } = {}) => {
       throw new Error(`HTTP ${response.status}`);
     }
     const capabilities = await inspectNewFontFile({
-      name: mimeType === "font/otf" ? "font.otf" : "font.ttf",
+      name: `font.${mimeType.split("/")[1]}`,
       arrayBuffer: () => response.arrayBuffer(),
     });
     store.setFontCapabilities({ fontId, capabilities });
@@ -178,7 +178,7 @@ const validateSelectedFontWeight = async (
     message:
       capabilities.kind === "unavailable"
         ? (copy.invalidFontMessage ??
-          "Could not read the font's supported weights. Please choose a valid TTF or OTF font.")
+          "Could not read the font's supported weights. Please choose a valid TTF, OTF, WOFF, or WOFF2 font.")
         : (copy.unsupportedFontWeight ??
           "The selected weight is not supported by this font."),
     title: copy.warningTitle ?? "Warning",
@@ -1117,15 +1117,15 @@ export const handleFontFileSelected = async (deps, payload) => {
         message:
           error?.code === "unsupported_font_format"
             ? (copy.invalidFormatMessage ??
-              "Invalid file format. Please upload a TTF or OTF font file.")
+              "Invalid file format. Please upload a TTF, OTF, WOFF, or WOFF2 font file.")
             : (copy.invalidFontMessage ??
-              "Could not read the font's supported weights. Please choose a valid TTF or OTF font."),
+              "Could not read the font's supported weights. Please choose a valid TTF, OTF, WOFF, or WOFF2 font."),
         title: copy.warningTitle ?? "Warning",
       });
       return;
     }
 
-    const fontName = file.name.replace(/\.(ttf|otf)$/i, "");
+    const fontName = file.name.replace(/\.(ttf|otf|woff|woff2)$/i, "");
 
     try {
       // Upload the file immediately when selected
