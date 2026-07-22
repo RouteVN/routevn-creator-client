@@ -48,7 +48,7 @@ describe("fonts store pending uploads", () => {
 });
 
 describe("fonts store details", () => {
-  it("does not expose extracted font metadata", () => {
+  const selectFontDetailFields = (item, fontInfo) => {
     const context = {
       state: createInitialState(),
       i18n: EN_I18N,
@@ -57,29 +57,73 @@ describe("fonts store details", () => {
       data: {
         tree: [{ id: "font-1" }],
         items: {
-          "font-1": {
-            id: "font-1",
-            type: "font",
-            name: "Test Font",
-            fileId: "file-1",
-          },
+          "font-1": item,
         },
       },
     });
     setSelectedItemId(context, { itemId: "font-1" });
-    cacheFontInfo(context, {
-      itemId: "font-1",
-      fontInfo: {
+    if (fontInfo) {
+      cacheFontInfo(context, {
         itemId: "font-1",
-        format: "WOFF2",
-        weightClass: "Normal",
-        isVariableFont: "No",
-        supportsItalics: "No",
-        glyphCount: 100,
-      },
+        fontInfo,
+      });
+    }
+
+    return selectViewData(context).detailFields;
+  };
+
+  const baseFont = {
+    id: "font-1",
+    type: "font",
+    name: "Test Font",
+    fileId: "file-1",
+  };
+
+  it("shows one supported weight for a static font", () => {
+    const detailFields = selectFontDetailFields({
+      ...baseFont,
+      minWeight: 400,
+      defaultWeight: 400,
+      maxWeight: 400,
     });
 
-    const detailFields = selectViewData(context).detailFields;
+    expect(detailFields).toContainEqual({
+      type: "text",
+      label: "Supported Font Weights",
+      value: "400",
+    });
+  });
+
+  it("shows the supported range for a variable font", () => {
+    const detailFields = selectFontDetailFields({
+      ...baseFont,
+      minWeight: 100,
+      defaultWeight: 400,
+      maxWeight: 900,
+    });
+
+    expect(detailFields).toContainEqual({
+      type: "text",
+      label: "Supported Font Weights",
+      value: "100\u2013900",
+    });
+  });
+
+  it("shows unknown without exposing removed extracted font metadata", () => {
+    const detailFields = selectFontDetailFields(baseFont, {
+      itemId: "font-1",
+      format: "WOFF2",
+      weightClass: "Normal",
+      isVariableFont: "No",
+      supportsItalics: "No",
+      glyphCount: 100,
+    });
+
+    expect(detailFields).toContainEqual({
+      type: "text",
+      label: "Supported Font Weights",
+      value: "Unknown",
+    });
 
     expect(detailFields).not.toEqual(
       expect.arrayContaining([
@@ -89,7 +133,7 @@ describe("fonts store details", () => {
       ]),
     );
     expect(JSON.stringify(detailFields)).not.toMatch(
-      /Metadata|Weight|Variable Font|Supports Italics|Glyph Count/,
+      /Metadata|Variable Font|Supports Italics|Glyph Count/,
     );
   });
 });

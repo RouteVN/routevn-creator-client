@@ -548,6 +548,7 @@ fontsPage:
   invalidFontMessage: "Could not read the font's supported weights. Please choose a valid TTF, OTF, or WOFF2 font."
   invalidFormatMessage: "Invalid file format. Please upload a TTF, OTF, or WOFF2 font file."
   nameRequired: "Font name is required."
+  supportedFontWeightsLabel: "Supported Font Weights"
   title: "Fonts"
   unknownWeightReplacementMessage: "This font cannot be replaced because the new file's supported weights could not be read."
   updateButton: "Update Font"

@@ -24,6 +24,23 @@ const getDetailFileTypeLabel = ({ item, selectedFontInfo } = {}) => {
   });
 };
 
+const formatSupportedFontWeights = ({ item, copy = {} } = {}) => {
+  const { minWeight, defaultWeight, maxWeight } = item;
+  if (
+    !Number.isFinite(minWeight) ||
+    !Number.isFinite(defaultWeight) ||
+    !Number.isFinite(maxWeight) ||
+    minWeight > defaultWeight ||
+    defaultWeight > maxWeight
+  ) {
+    return copy.unknownValue ?? "Unknown";
+  }
+
+  return minWeight === maxWeight
+    ? `${minWeight}`
+    : `${minWeight}\u2013${maxWeight}`;
+};
+
 const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
   if (!item) {
     return [];
@@ -40,6 +57,11 @@ const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
       type: "slot",
       slot: "font-tags",
       label: copy.tagsLabel ?? "Tags",
+    },
+    {
+      type: "text",
+      label: copy.supportedFontWeightsLabel ?? "Supported Font Weights",
+      value: formatSupportedFontWeights({ item, copy }),
     },
     {
       type: "text",

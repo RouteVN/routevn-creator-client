@@ -22,4 +22,13 @@ describe("fonts view", () => {
     expect(fontsView).toContain(":fontFamily=${editPreviewFontFamily}");
     expect(fontsView).not.toContain(" fontFamily=${editPreviewFontFamily}");
   });
+
+  it("keeps a scroll filler below the desktop font grid", () => {
+    const fontsView = readFileSync(
+      new URL("../../src/pages/fonts/fonts.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(fontsView).toContain("scroll-bottom-padding=32vh");
+  });
 });
