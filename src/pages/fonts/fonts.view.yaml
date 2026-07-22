@@ -180,7 +180,7 @@ template:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
               - $if editPreviewFileId:
                   - rtgl-view#editDialogFontPreview slot="font-slot" bw=xs bc=bo br=md p=md cur=pointer:
-                      - rvn-font-preview mode=live fileId=${editPreviewFileId} fontFamily=${editPreviewFontFamily} previewText="Aa" fontSize=60 width=320 height=120 av=c ah=c: null
+                      - rvn-font-preview mode=live fileId=${editPreviewFileId} :fontFamily=${editPreviewFontFamily} previewText="Aa" fontSize=60 width=320 height=120 av=c ah=c: null
                 $else:
                   - rtgl-view#editDialogFontPreviewPlaceholder slot="font-slot" h=120 bw=xs bc=bo br=md av=c ah=c cur=pointer:
                       - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
