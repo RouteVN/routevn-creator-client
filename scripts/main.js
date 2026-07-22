@@ -104,8 +104,6 @@ const recordDiagnosticStep = (message, details) => {
   if (diagnosticEvents.length > MAX_DIAGNOSTIC_EVENTS) {
     diagnosticEvents.shift();
   }
-
-  console.info("[RouteVN player]", message, details ?? "");
 };
 
 document.addEventListener(
