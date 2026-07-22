@@ -548,7 +548,7 @@ fontsPage:
   invalidFontMessage: "无法读取字体支持的字重。请选择有效的 TTF、OTF 或 WOFF2 字体。"
   invalidFormatMessage: "文件格式无效。请上传 TTF、OTF 或 WOFF2 字体。"
   nameRequired: "字体名称为必填项。"
-  supportedFontWeightsLabel: "支持的字重"
+  fontWeightsLabel: "字体字重"
   title: "字体"
   unknownWeightReplacementMessage: "无法读取新文件支持的字重，因此无法替换此字体。"
   updateButton: "更新字体"

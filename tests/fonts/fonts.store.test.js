@@ -89,7 +89,7 @@ describe("fonts store details", () => {
 
     expect(detailFields).toContainEqual({
       type: "text",
-      label: "Supported Font Weights",
+      label: "Font Weights",
       value: "400",
     });
   });
@@ -104,7 +104,7 @@ describe("fonts store details", () => {
 
     expect(detailFields).toContainEqual({
       type: "text",
-      label: "Supported Font Weights",
+      label: "Font Weights",
       value: "100\u2013900",
     });
   });
@@ -121,7 +121,7 @@ describe("fonts store details", () => {
 
     expect(detailFields).toContainEqual({
       type: "text",
-      label: "Supported Font Weights",
+      label: "Font Weights",
       value: "Unknown",
     });
 

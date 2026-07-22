@@ -548,7 +548,7 @@ fontsPage:
   invalidFontMessage: "フォントの対応ウェイトを読み取れませんでした。有効な TTF、OTF、または WOFF2 フォントを選択してください。"
   invalidFormatMessage: "ファイル形式が無効です。TTF、OTF、または WOFF2 フォントをアップロードしてください。"
   nameRequired: "フォント名は必須です。"
-  supportedFontWeightsLabel: "対応フォントウェイト"
+  fontWeightsLabel: "フォントウェイト"
   title: "フォント"
   unknownWeightReplacementMessage: "新しいファイルの対応ウェイトを読み取れないため、このフォントを置き換えることはできません。"
   updateButton: "フォントを更新"

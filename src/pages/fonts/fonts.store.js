@@ -60,7 +60,7 @@ const buildDetailFields = ({ item, selectedFontInfo, copy = {} } = {}) => {
     },
     {
       type: "text",
-      label: copy.supportedFontWeightsLabel ?? "Supported Font Weights",
+      label: copy.fontWeightsLabel ?? "Font Weights",
       value: formatSupportedFontWeights({ item, copy }),
     },
     {
