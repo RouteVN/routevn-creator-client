@@ -99,7 +99,7 @@ describe("commandLineBgm.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("updates only the selected clip volume", () => {
+  it("updates only the selected clip timing and volume", () => {
     const state = createState();
     const store = createStore(state);
     const render = vi.fn();
@@ -109,12 +109,13 @@ describe("commandLineBgm.handlers", () => {
       { store, render },
       {
         _event: {
-          detail: { values: { volume: 35 } },
+          detail: { values: { startDelayMs: 750, volume: 35 } },
         },
       },
     );
 
     expect(state.bgm.volume).toBe(75);
+    expect(state.bgm.sounds[0].startDelayMs).toBe(750);
     expect(state.bgm.sounds[0].volume).toBe(35);
     expect(render).toHaveBeenCalledOnce();
   });
@@ -131,6 +132,66 @@ describe("commandLineBgm.handlers", () => {
     expect(state.selectedSoundId).toBeUndefined();
     expect(stopPropagation).toHaveBeenCalledOnce();
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("ignores a channel click synthesized from a replaced drag surface", () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    store.insertSound({ id: "intro-clip", resourceId: "intro", index: 0 });
+    const channel = {
+      classList: { contains: vi.fn(() => true) },
+    };
+
+    handleChannelClick(
+      { store, render },
+      {
+        _event: {
+          currentTarget: channel,
+          target: {},
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(state.selectedSoundId).toBe("intro-clip");
+    expect(render).not.toHaveBeenCalled();
+  });
+
+  it("keeps the sound selected when a post-drag click targets the channel", () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    store.insertSound({ id: "intro-clip", resourceId: "intro", index: 0 });
+    store.startSoundDrag({
+      soundId: "intro-clip",
+      pointerId: 7,
+      clientX: 100,
+      timelineDurationMs: 2000,
+      timelineWidthPx: 400,
+    });
+    store.finishSoundDrag({
+      pointerId: 7,
+      suppressChannelClickUntil: 500,
+    });
+    const channel = {
+      classList: { contains: vi.fn(() => true) },
+    };
+
+    handleChannelClick(
+      { store, render },
+      {
+        _event: {
+          currentTarget: channel,
+          target: channel,
+          timeStamp: 300,
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(state.selectedSoundId).toBe("intro-clip");
+    expect(render).not.toHaveBeenCalled();
   });
 
   it("opens the gallery with the requested insertion index", () => {

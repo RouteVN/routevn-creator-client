@@ -1760,6 +1760,7 @@ commandLinePage:
   "Default branch": "デフォルト分岐"
   "Default hide only": "標準では非表示のみ"
   "Delay (ms)": "遅延（ms）"
+  "Start Delay (ms)": "開始遅延（ms）"
   "Delete": "削除"
   "Dialogue Box": "メッセージウィンドウ"
   "Dialogue ADV": "ADVスタイル"

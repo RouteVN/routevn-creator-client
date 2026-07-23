@@ -1,6 +1,12 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { generateId } from "../../internal/id.js";
 import {
+  finishAudioTimelineDrag,
+  mountAudioTimelineDragSubscriptions,
+  moveAudioTimelineDrag,
+  startAudioTimelineDrag,
+} from "../../internal/ui/sceneEditor/audioTimelineDrag.js";
+import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
@@ -16,6 +22,23 @@ const getDropdownPositionFromEvent = (event) => {
 
 const isSelectionKey = (event) => {
   return event.key === "Enter" || event.key === " ";
+};
+
+const syncSelectedSoundForm = ({ refs, store }) => {
+  const channelId = store.selectSelectedChannelId();
+  const soundId = store.selectSelectedSoundId();
+  const sound = store.selectSoundById({ channelId, soundId });
+  if (!sound) {
+    return;
+  }
+
+  refs.form.setValues({
+    values: {
+      startDelayMs: sound.startDelayMs,
+      loop: sound.loop,
+      volume: sound.volume,
+    },
+  });
 };
 
 const openSfxGallery = ({ store, render, channelId, index }) => {
@@ -91,10 +114,29 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+export const handleBeforeMount = (deps) => {
+  return mountAudioTimelineDragSubscriptions(deps);
+};
+
 export const handleChannelClick = (deps, payload) => {
   const { store, render } = deps;
-  payload._event.stopPropagation();
-  const channelId = payload._event.currentTarget.dataset.channelId;
+  const { _event: event } = payload;
+  if (
+    store.selectShouldSuppressChannelClick({
+      eventTimeStamp: event.timeStamp,
+    })
+  ) {
+    return;
+  }
+  if (
+    event.currentTarget?.classList?.contains("sfxChannel") &&
+    event.target !== event.currentTarget
+  ) {
+    return;
+  }
+
+  event.stopPropagation();
+  const channelId = event.currentTarget.dataset.channelId;
   store.setSelectedChannel({ channelId });
   render();
 };
@@ -127,12 +169,56 @@ export const handleSoundClick = (deps, payload) => {
 
 export const handleSoundKeyDown = (deps, payload) => {
   const { _event: event } = payload;
-  if (!isSelectionKey(event) || event.target !== event.currentTarget) {
+  if (event.target !== event.currentTarget) {
+    return;
+  }
+
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+    const { store, render } = deps;
+    event.preventDefault();
+    event.stopPropagation();
+    const { channelId, soundId } = selectSoundFromEvent(store, event);
+    const sound = store.selectSoundById({ channelId, soundId });
+    const direction = event.key === "ArrowLeft" ? -1 : 1;
+    const stepMs = event.shiftKey ? 1000 : 100;
+    store.updateSound({
+      channelId,
+      soundId,
+      values: {
+        startDelayMs: sound.startDelayMs + direction * stepMs,
+      },
+    });
+    render();
+    syncSelectedSoundForm(deps);
+    return;
+  }
+
+  if (!isSelectionKey(event)) {
     return;
   }
 
   event.preventDefault();
   handleSoundClick(deps, payload);
+};
+
+export const handleSoundDragPointerDown = (deps, payload) => {
+  startAudioTimelineDrag(deps, payload._event);
+};
+
+export const handleWindowPointerMove = (deps, payload) => {
+  moveAudioTimelineDrag(deps, payload._event);
+};
+
+export const handleWindowPointerUp = (deps, payload) => {
+  if (finishAudioTimelineDrag(deps, payload._event)) {
+    syncSelectedSoundForm(deps);
+  }
+};
+
+export const handleWindowPointerCancel = (deps, payload) => {
+  if (finishAudioTimelineDrag(deps, payload._event)) {
+    syncSelectedSoundForm(deps);
+  }
 };
 
 export const handleSoundDoubleClick = (deps, payload) => {

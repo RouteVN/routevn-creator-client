@@ -3,6 +3,7 @@ import * as sfxStore from "../../src/components/commandLineSoundEffects/commandL
 import {
   addChannel,
   createInitialState,
+  finishSoundDrag,
   insertSound,
   moveChannel,
   removeChannel,
@@ -12,6 +13,8 @@ import {
   setRepositoryState,
   setSelectedSound,
   setSfx,
+  startSoundDrag,
+  updateSoundDrag,
 } from "../../src/components/commandLineSoundEffects/commandLineSoundEffects.store.js";
 
 const sounds = {
@@ -102,7 +105,7 @@ describe("commandLineSoundEffects.store", () => {
     expect(state.selectedChannelId).toBe("Weather");
   });
 
-  it("loads canonical channels and sizes clips proportionally", () => {
+  it("loads canonical channels and lays out overlapping clips in lanes", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });
     setSfx(
@@ -146,15 +149,17 @@ describe("commandLineSoundEffects.store", () => {
         resourceId: "thunder",
         loop: false,
         volume: 60,
-        startDelayMs: 2000,
+        startDelayMs: 999,
       },
     ]);
     const channelView = selectViewData({ state, i18n }).channels[0];
-    expect(channelView.durationLabel).toBe("0:08");
-    expect(channelView.timelineWidthPercent).toBe("100.0000");
+    expect(channelView.durationLabel).toBe("0:06");
+    expect(channelView.channelHeightPx).toBe(276);
     expect(
       channelView.sounds.map((sound) => ({
         durationLabel: sound.durationLabel,
+        leftPercent: sound.leftPercent,
+        topPx: sound.topPx,
         widthPercent: sound.widthPercent,
         insertBeforeIndex: sound.insertBeforeIndex,
         insertAfterIndex: sound.insertAfterIndex,
@@ -162,13 +167,17 @@ describe("commandLineSoundEffects.store", () => {
     ).toEqual([
       {
         durationLabel: "0:02",
-        widthPercent: "25.0000",
+        leftPercent: "0.0000",
+        topPx: 0,
+        widthPercent: "28.5755",
         insertBeforeIndex: 0,
         insertAfterIndex: 1,
       },
       {
         durationLabel: "0:06",
-        widthPercent: "75.0000",
+        leftPercent: "14.2735",
+        topPx: 126,
+        widthPercent: "85.7265",
         insertBeforeIndex: 1,
         insertAfterIndex: 2,
       },
@@ -186,10 +195,15 @@ describe("commandLineSoundEffects.store", () => {
     expect(soundSelection.selectionHeading).toBe("Audio");
     expect(soundSelection.selectionName).toBe("Rain");
     expect(soundSelection.form.fields.map((field) => field.name)).toEqual([
+      "startDelayMs",
       "loop",
       "volume",
     ]);
-    expect(soundSelection.defaultValues).toEqual({ loop: true, volume: 90 });
+    expect(soundSelection.defaultValues).toEqual({
+      startDelayMs: 0,
+      loop: true,
+      volume: 90,
+    });
   });
 
   it("uses the longest channel as the shared timeline width", () => {
@@ -204,7 +218,11 @@ describe("commandLineSoundEffects.store", () => {
               id: "Weather",
               sounds: [
                 { id: "rain-clip", resourceId: "rain" },
-                { id: "thunder-clip", resourceId: "thunder" },
+                {
+                  id: "thunder-clip",
+                  resourceId: "thunder",
+                  startDelayMs: 2000,
+                },
               ],
             },
             {
@@ -221,21 +239,21 @@ describe("commandLineSoundEffects.store", () => {
       viewData.channels.map((channel) => ({
         id: channel.id,
         durationLabel: channel.durationLabel,
-        timelineWidthPercent: channel.timelineWidthPercent,
+        timelineDurationMs: channel.timelineDurationMs,
       })),
     ).toEqual([
       {
         id: "Weather",
         durationLabel: "0:08",
-        timelineWidthPercent: "100.0000",
+        timelineDurationMs: 8000,
       },
       {
         id: "UI",
         durationLabel: "0:02",
-        timelineWidthPercent: "25.0000",
+        timelineDurationMs: 8000,
       },
     ]);
-    expect(viewData.channels[1].sounds[0].widthPercent).toBe("100.0000");
+    expect(viewData.channels[1].sounds[0].widthPercent).toBe("25.0000");
   });
 
   it("migrates legacy items into a visible channel without changing their effective volume", () => {
@@ -271,7 +289,7 @@ describe("commandLineSoundEffects.store", () => {
               resourceId: "thunder",
               loop: false,
               volume: 50,
-              startDelayMs: 2000,
+              startDelayMs: 0,
             },
           ],
         },
@@ -279,7 +297,7 @@ describe("commandLineSoundEffects.store", () => {
     });
   });
 
-  it("reflows only the affected channel after insertion and removal", () => {
+  it("places inserted sounds without reflowing the channel after removal", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });
     addChannel({ state }, { id: "Weather" });
@@ -311,8 +329,47 @@ describe("commandLineSoundEffects.store", () => {
     expect(state.channels[1].sounds).toEqual([]);
 
     removeSound({ state }, { channelId: "Weather", soundId: "rain-clip" });
-    expect(state.channels[0].sounds[0].startDelayMs).toBe(0);
+    expect(state.channels[0].sounds[0].startDelayMs).toBe(2000);
     expect(state.selectedChannelId).toBe("Weather");
     expect(state.selectedSoundId).toBeUndefined();
+  });
+
+  it("updates one SFX sound start delay from a horizontal timeline drag", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+    addChannel({ state }, { id: "Weather" });
+    insertSound(
+      { state },
+      {
+        channelId: "Weather",
+        id: "rain-clip",
+        resourceId: "rain",
+        index: 0,
+      },
+    );
+
+    startSoundDrag(
+      { state },
+      {
+        channelId: "Weather",
+        soundId: "rain-clip",
+        pointerId: 9,
+        clientX: 0,
+        timelineDurationMs: 2000,
+        timelineWidthPx: 400,
+      },
+    );
+    updateSoundDrag(
+      { state },
+      {
+        pointerId: 9,
+        clientX: 200,
+      },
+    );
+
+    expect(state.channels[0].sounds[0].startDelayMs).toBe(1000);
+
+    finishSoundDrag({ state }, { pointerId: 9 });
+    expect(state.soundDrag).toBeUndefined();
   });
 });

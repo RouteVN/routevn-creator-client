@@ -1,5 +1,13 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  createAudioTimelineLayout,
+  formatAudioDurationMs,
+  normalizeAudioStartDelayMs,
+  resolveAudioInsertionTiming,
+  resolveDraggedAudioStartDelayMs,
+  sortAudioSoundsByStartDelay,
+} from "../../internal/audioTimeline.js";
+import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
   localizeCommandLineText,
@@ -19,42 +27,6 @@ const normalizeVolume = (volume, fallback) => {
 
   const nextVolume = parsedVolume > 100 ? parsedVolume / 10 : parsedVolume;
   return Math.max(0, Math.min(100, Math.round(nextVolume)));
-};
-
-const resolveSoundDurationMs = (sound, resource) => {
-  const resourceDurationSeconds = Math.max(0, Number(resource?.duration) || 0);
-  const startAtSeconds = Math.max(0, Number(sound.startAt) || 0);
-  const endAtSeconds =
-    sound.endAt !== undefined && sound.endAt !== null
-      ? Math.max(startAtSeconds, Number(sound.endAt) || 0)
-      : resourceDurationSeconds;
-  const playbackRate = Number(sound.playbackRate) || 1;
-  return Math.max(
-    0,
-    Math.round(((endAtSeconds - startAtSeconds) / playbackRate) * 1000),
-  );
-};
-
-const formatDurationMs = (durationMs) => {
-  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-};
-
-const reflowSounds = (sounds, items) => {
-  const resourceById = new Map(
-    toFlatItems(items).map((item) => [item.id, item]),
-  );
-  let startDelayMs = 0;
-
-  sounds.forEach((sound) => {
-    sound.startDelayMs = startDelayMs;
-    startDelayMs += resolveSoundDurationMs(
-      sound,
-      resourceById.get(sound.resourceId),
-    );
-  });
 };
 
 const normalizeSounds = (
@@ -78,7 +50,7 @@ const normalizeSounds = (
       resourceId: sound.resourceId,
       loop: sound.loop ?? false,
       volume: normalizeVolume(sound.volume, defaultVolume),
-      startDelayMs: 0,
+      startDelayMs: normalizeAudioStartDelayMs(sound.startDelayMs),
     };
     for (const field of ["muted", "pan", "playbackRate", "startAt", "endAt"]) {
       if (sound[field] !== undefined) {
@@ -91,7 +63,6 @@ const normalizeSounds = (
 
 const normalizeChannel = (
   channel = {},
-  items = { items: {}, tree: [] },
   {
     defaultChannelVolume = DEFAULT_CHANNEL_VOLUME,
     defaultSoundVolume = DEFAULT_SOUND_VOLUME,
@@ -109,11 +80,11 @@ const normalizeChannel = (
       normalizedChannel[field] = channel[field];
     }
   }
-  reflowSounds(normalizedChannel.sounds, items);
+  sortAudioSoundsByStartDelay(normalizedChannel.sounds);
   return normalizedChannel;
 };
 
-const normalizeSfxChannels = (sfx = {}, items = { items: {}, tree: [] }) => {
+const normalizeSfxChannels = (sfx = {}) => {
   if (Array.isArray(sfx?.channels)) {
     const usedIds = new Set();
     return sfx.channels.map((channel, index) => {
@@ -126,7 +97,7 @@ const normalizeSfxChannels = (sfx = {}, items = { items: {}, tree: [] }) => {
         duplicateIndex += 1;
       }
       usedIds.add(id);
-      return normalizeChannel({ ...channel, id }, items);
+      return normalizeChannel({ ...channel, id });
     });
   }
 
@@ -138,7 +109,6 @@ const normalizeSfxChannels = (sfx = {}, items = { items: {}, tree: [] }) => {
           volume: 100,
           sounds: sfx.items,
         },
-        items,
         {
           defaultChannelVolume: 100,
           defaultSoundVolume: DEFAULT_LEGACY_SOUND_VOLUME,
@@ -165,6 +135,13 @@ const CHANNEL_FORM = {
 
 const SOUND_FORM = {
   fields: [
+    {
+      name: "startDelayMs",
+      label: "Start Delay (ms)",
+      type: "input-number",
+      min: 0,
+      step: 10,
+    },
     {
       name: "loop",
       description: "Loop",
@@ -213,6 +190,8 @@ export const createInitialState = () => ({
   channels: [],
   selectedChannelId: undefined,
   selectedSoundId: undefined,
+  soundDrag: undefined,
+  suppressChannelClickUntil: 0,
   pendingChannelId: undefined,
   pendingInsertIndex: 0,
   tempSelectedResourceId: undefined,
@@ -238,6 +217,18 @@ export const selectSelectedChannelId = ({ state }) => {
 };
 
 export const selectSelectedSoundId = ({ state }) => state.selectedSoundId;
+
+export const selectSoundDrag = ({ state }) => state.soundDrag;
+
+export const selectShouldSuppressChannelClick = (
+  { state },
+  { eventTimeStamp } = {},
+) => {
+  return (
+    Number.isFinite(eventTimeStamp) &&
+    eventTimeStamp <= state.suppressChannelClickUntil
+  );
+};
 
 export const selectPendingChannelId = ({ state }) => state.pendingChannelId;
 
@@ -339,49 +330,35 @@ export const selectViewData = ({ state, i18n }) => {
     })
     .filter((group) => group.shouldDisplay);
 
-  const channelDurations = state.channels.map((channel) => {
-    return channel.sounds.map((sound) => {
-      return resolveSoundDurationMs(
-        sound,
-        soundResourceById.get(sound.resourceId),
-      );
+  const baseTimelines = state.channels.map((channel) => {
+    return createAudioTimelineLayout({
+      sounds: channel.sounds,
+      resourceById: soundResourceById,
     });
   });
-  const channelDurationTotals = channelDurations.map((durations) => {
-    return durations.reduce((total, duration) => {
-      return total + Math.max(0, duration);
-    }, 0);
-  });
-  const longestChannelDurationMs = Math.max(0, ...channelDurationTotals);
-  const longestChannelSoundCount = Math.max(
+  const longestChannelDurationMs = Math.max(
     0,
-    ...state.channels.map((channel) => channel.sounds.length),
+    ...baseTimelines.map((timeline) => timeline.channelDurationMs),
   );
+  const timelines = state.channels.map((channel) => {
+    return createAudioTimelineLayout({
+      sounds: channel.sounds,
+      resourceById: soundResourceById,
+      timelineDurationMs: longestChannelDurationMs,
+    });
+  });
 
   const channels = state.channels.map((channel, channelIndex) => {
-    const durations = channelDurations[channelIndex];
-    const channelDurationMs = channelDurationTotals[channelIndex];
-    const equalWidth = channel.sounds.length
-      ? 100 / channel.sounds.length
-      : 100;
-    const timelineWidthPercent =
-      longestChannelDurationMs > 0
-        ? (channelDurationMs / longestChannelDurationMs) * 100
-        : longestChannelSoundCount > 0
-          ? (channel.sounds.length / longestChannelSoundCount) * 100
-          : 100;
+    const timeline = timelines[channelIndex];
     const channelSelected =
       channel.id === state.selectedChannelId &&
       state.selectedSoundId === undefined;
-    const sounds = channel.sounds.map((sound, soundIndex) => {
+    const sounds = timeline.sounds.map((timelineSound) => {
+      const { sound, durationMs } = timelineSound;
       const resource = soundResourceById.get(sound.resourceId);
       const isSelected =
         channel.id === state.selectedChannelId &&
         sound.id === state.selectedSoundId;
-      const widthPercent =
-        channelDurationMs > 0
-          ? (Math.max(0, durations[soundIndex]) / channelDurationMs) * 100
-          : equalWidth;
 
       return {
         ...sound,
@@ -390,10 +367,12 @@ export const selectViewData = ({ state, i18n }) => {
         waveformDataFileId: resource?.waveformDataFileId,
         itemBorderColor: isSelected ? "pr" : "bo",
         itemHoverBorderColor: isSelected ? "pr" : "ac",
-        durationLabel: formatDurationMs(durations[soundIndex]),
-        widthPercent: widthPercent.toFixed(4),
-        insertBeforeIndex: soundIndex,
-        insertAfterIndex: soundIndex + 1,
+        durationLabel: formatAudioDurationMs(durationMs),
+        leftPercent: timelineSound.leftPercent,
+        widthPercent: timelineSound.widthPercent,
+        topPx: timelineSound.topPx,
+        insertBeforeIndex: timelineSound.sourceIndex,
+        insertAfterIndex: timelineSound.sourceIndex + 1,
       };
     });
 
@@ -403,8 +382,10 @@ export const selectViewData = ({ state, i18n }) => {
       sounds,
       channelBorderColor: channelSelected ? "pr" : "bo",
       channelHoverBorderColor: channelSelected ? "pr" : "ac",
-      durationLabel: formatDurationMs(channelDurationMs),
-      timelineWidthPercent: timelineWidthPercent.toFixed(4),
+      durationLabel: formatAudioDurationMs(timeline.channelDurationMs),
+      timelineDurationMs: timeline.timelineDurationMs,
+      timelineHeightPx: timeline.timelineHeightPx,
+      channelHeightPx: timeline.timelineHeightPx + 24,
     };
   });
 
@@ -418,6 +399,7 @@ export const selectViewData = ({ state, i18n }) => {
   const form = selectedSound ? SOUND_FORM : CHANNEL_FORM;
   const defaultValues = selectedSound
     ? {
+        startDelayMs: selectedSound.startDelayMs,
         loop: selectedSound.loop,
         volume: selectedSound.volume,
       }
@@ -467,13 +449,10 @@ export const setMode = ({ state }, { mode } = {}) => {
 
 export const setRepositoryState = ({ state }, { sounds } = {}) => {
   state.items = sounds;
-  state.channels.forEach((channel) => {
-    reflowSounds(channel.sounds, state.items);
-  });
 };
 
 export const setSfx = ({ state }, { sfx } = {}) => {
-  state.channels = normalizeSfxChannels(sfx, state.items);
+  state.channels = normalizeSfxChannels(sfx);
   state.selectedChannelId = state.channels[0]?.id;
   state.selectedSoundId = undefined;
 };
@@ -488,13 +467,10 @@ export const addChannel = ({ state }, { id } = {}) => {
   }
 
   state.channels.push(
-    normalizeChannel(
-      {
-        id: channelId,
-        sounds: [],
-      },
-      state.items,
-    ),
+    normalizeChannel({
+      id: channelId,
+      sounds: [],
+    }),
   );
   state.selectedChannelId = channelId;
   state.selectedSoundId = undefined;
@@ -571,6 +547,79 @@ export const updateSound = (
   if (values.volume !== undefined) {
     sound.volume = normalizeVolume(values.volume, DEFAULT_SOUND_VOLUME);
   }
+  if (values.startDelayMs !== undefined) {
+    sound.startDelayMs = normalizeAudioStartDelayMs(values.startDelayMs);
+    const channel = state.channels.find((item) => item.id === channelId);
+    sortAudioSoundsByStartDelay(channel.sounds);
+  }
+};
+
+export const startSoundDrag = (
+  { state },
+  {
+    channelId,
+    soundId,
+    pointerId,
+    clientX,
+    timelineDurationMs,
+    timelineWidthPx,
+  } = {},
+) => {
+  const sound = state.channels
+    .find((channel) => channel.id === channelId)
+    ?.sounds.find((item) => item.id === soundId);
+  if (!sound || timelineDurationMs <= 0 || timelineWidthPx <= 0) {
+    return;
+  }
+
+  state.selectedChannelId = channelId;
+  state.selectedSoundId = soundId;
+  state.soundDrag = {
+    channelId,
+    soundId,
+    pointerId,
+    originClientX: clientX,
+    originStartDelayMs: sound.startDelayMs,
+    timelineDurationMs,
+    timelineWidthPx,
+  };
+};
+
+export const updateSoundDrag = ({ state }, { pointerId, clientX } = {}) => {
+  const drag = state.soundDrag;
+  if (!drag || drag.pointerId !== pointerId) {
+    return;
+  }
+
+  const sound = state.channels
+    .find((channel) => channel.id === drag.channelId)
+    ?.sounds.find((item) => item.id === drag.soundId);
+  if (!sound) {
+    state.soundDrag = undefined;
+    return;
+  }
+
+  sound.startDelayMs = resolveDraggedAudioStartDelayMs({
+    ...drag,
+    clientX,
+  });
+};
+
+export const finishSoundDrag = (
+  { state },
+  { pointerId, suppressChannelClickUntil } = {},
+) => {
+  const drag = state.soundDrag;
+  if (!drag || drag.pointerId !== pointerId) {
+    return;
+  }
+
+  const channel = state.channels.find((item) => item.id === drag.channelId);
+  if (channel) {
+    sortAudioSoundsByStartDelay(channel.sounds);
+  }
+  state.soundDrag = undefined;
+  state.suppressChannelClickUntil = suppressChannelClickUntil ?? 0;
 };
 
 export const insertSound = (
@@ -602,8 +651,21 @@ export const insertSound = (
     0,
     Math.min(index ?? channel.sounds.length, channel.sounds.length),
   );
+  const resourceById = new Map(
+    toFlatItems(state.items).map((item) => [item.id, item]),
+  );
+  const insertionTiming = resolveAudioInsertionTiming({
+    sounds: channel.sounds,
+    index: insertIndex,
+    sound,
+    resourceById,
+  });
+  sound.startDelayMs = insertionTiming.startDelayMs;
+  channel.sounds.slice(insertIndex).forEach((existingSound) => {
+    existingSound.startDelayMs += insertionTiming.shiftMs;
+  });
   channel.sounds.splice(insertIndex, 0, sound);
-  reflowSounds(channel.sounds, state.items);
+  sortAudioSoundsByStartDelay(channel.sounds);
   state.selectedChannelId = channel.id;
   state.selectedSoundId = sound.id;
   state.tempSelectedResourceId = undefined;
@@ -616,7 +678,6 @@ export const removeSound = ({ state }, { channelId, soundId } = {}) => {
   }
 
   channel.sounds = channel.sounds.filter((sound) => sound.id !== soundId);
-  reflowSounds(channel.sounds, state.items);
   state.selectedChannelId = channel.id;
   state.selectedSoundId = undefined;
 };

@@ -1760,6 +1760,7 @@ commandLinePage:
   "Default branch": "默认分支"
   "Default hide only": "默认仅隐藏"
   "Delay (ms)": "延迟（ms）"
+  "Start Delay (ms)": "开始延迟（ms）"
   "Delete": "删除"
   "Dialogue Box": "对话框"
   "Dialogue ADV": "ADV 样式"

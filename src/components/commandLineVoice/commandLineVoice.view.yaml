@@ -17,11 +17,11 @@ refs:
     eventListeners:
       click:
         handler: handleEmptyAddClick
-  insertBeforeButton:
+  insertBeforeButton*:
     eventListeners:
       click:
         handler: handleEdgeAddClick
-  insertAfterButton:
+  insertAfterButton*:
     eventListeners:
       click:
         handler: handleEdgeAddClick
@@ -35,6 +35,10 @@ refs:
         handler: handleSoundContextMenu
       keydown:
         handler: handleSoundKeyDown
+  soundDragSurface*:
+    eventListeners:
+      pointerdown:
+        handler: handleSoundDragPointerDown
   submitButton:
     eventListeners:
       click:
@@ -55,11 +59,34 @@ styles:
     overflow-y: hidden
   ".voiceTimelineTrack":
     min-width: 100%
+    position: relative
   ".voiceSoundClip":
     box-sizing: border-box
     min-width: 56px
     overflow: hidden
     outline: none
+    position: absolute
+  ".voiceSoundClipContent":
+    box-sizing: border-box
+    min-width: "0"
+    overflow: hidden
+  ".voiceSoundWaveformArea":
+    flex: "0 0 94px"
+    height: 94px
+    position: relative
+    width: 100%
+  ".voiceSoundDragSurface":
+    bottom: "0"
+    cursor: grab
+    left: "0"
+    position: absolute
+    right: "0"
+    top: "0"
+    touch-action: none
+    user-select: none
+    z-index: "3"
+  ".voiceSoundDragSurface:active":
+    cursor: grabbing
   ".voiceSoundClip:focus-visible":
     box-shadow: 0 0 0 2px var(--ring) inset
   ".voiceInsertZone":
@@ -75,9 +102,9 @@ styles:
     opacity: "0"
     padding: "0"
     position: absolute
-    top: 24px
+    top: "0"
     transition: opacity 120ms ease, background 120ms ease
-    width: 44px
+    width: "min(44px, 50%)"
     z-index: "5"
   ".voiceInsertZone:hover":
     background: var(--primary)
@@ -134,7 +161,7 @@ template:
       - rtgl-view d=h g=md: null
       - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - 'rtgl-view h=1fg sv w=f g=lg mt=lg style="min-height: 0;"':
-          - 'rtgl-view#voiceChannel.voiceChannel w=f h=150 d=v pos=rel bgc=mu bw=xs bc=${channelBorderColor} h-bc=${channelHoverBorderColor} br=sm tabindex=0 role=group aria-label="${channelLabel}"':
+          - 'rtgl-view#voiceChannel.voiceChannel w=f d=v pos=rel bgc=mu bw=xs bc=${channelBorderColor} h-bc=${channelHoverBorderColor} br=sm tabindex=0 role=group aria-label="${channelLabel}" style="height: ${channelHeightPx}px;"':
               - 'button#channelSelectButton.voiceChannelSelect type=button aria-label="${channelLabel}"':
                   - span: ${channelLabel}
                   - span: ${channelDurationLabel}
@@ -142,19 +169,22 @@ template:
                   - 'rtgl-view w=f h=126 bgc=bg bwb=xs bc=${channelBorderColor} style="min-height: 0;"':
                       - 'button#emptyAddButton.voiceEmptyAdd type=button aria-label="${addAudioLabel}"': "+"
                 $else:
-                  - rtgl-view.voiceTimelineTrack d=h w=f h=126:
+                  - 'rtgl-view.voiceTimelineTrack data-timeline-track=true data-timeline-duration-ms=${timelineDurationMs} w=f pos=rel style="height: ${timelineHeightPx}px; min-width: 100%;"':
                       - $for sound, i in sounds:
-                          - 'rtgl-view#soundClip${i}.voiceSoundClip data-sound-id=${sound.id} d=v h=f bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="flex: 0 0 ${sound.widthPercent}%;"':
-                              - $if sound.waveformDataFileId:
-                                  - rvn-waveform-visualizer waveformDataFileId=${sound.waveformDataFileId} w=f h=94: null
-                                $else:
-                                  - rtgl-view w=f h=94 av=c ah=c:
-                                      - rtgl-text s=sm c=mu-fg: No waveform
-                              - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
-                                  - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
-                                  - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
-                  - 'button#insertBeforeButton.voiceInsertZone.voiceInsertBefore type=button data-insert-index=0 aria-label="${addBeforeLabel}"': "+"
-                  - 'button#insertAfterButton.voiceInsertZone.voiceInsertAfter type=button data-insert-index=${sounds.length} aria-label="${addAfterLabel}"': "+"
+                          - 'rtgl-view#soundClip${i}.voiceSoundClip data-sound-id=${sound.id} d=v pos=abs overflow=hidden bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="box-sizing: border-box; min-width: 56px; left: ${sound.leftPercent}%; top: ${sound.topPx}px; width: ${sound.widthPercent}%; height: 126px;"':
+                              - rtgl-view.voiceSoundClipContent d=v w=f h=f:
+                                  - div.voiceSoundWaveformArea:
+                                      - $if sound.waveformDataFileId:
+                                          - rvn-waveform-visualizer waveformDataFileId=${sound.waveformDataFileId} w=f h=94: null
+                                        $else:
+                                          - rtgl-view w=f h=94 av=c ah=c:
+                                              - rtgl-text s=sm c=mu-fg: No waveform
+                                      - 'div#soundDragSurface${i}.voiceSoundDragSurface data-sound-id=${sound.id}': null
+                                      - 'button#insertBeforeButton${i}.voiceInsertZone.voiceInsertBefore type=button data-insert-index=${sound.insertBeforeIndex} aria-label="${addBeforeLabel}"': "+"
+                                      - 'button#insertAfterButton${i}.voiceInsertZone.voiceInsertAfter type=button data-insert-index=${sound.insertAfterIndex} aria-label="${addAfterLabel}"': "+"
+                                  - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
+                                      - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
+                                      - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
           - rtgl-view w=f g=md:
               - rtgl-view w=f:
                   - rtgl-text s=md: ${selectionHeading}

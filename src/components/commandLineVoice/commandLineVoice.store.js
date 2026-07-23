@@ -1,5 +1,13 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
+  createAudioTimelineLayout,
+  formatAudioDurationMs,
+  normalizeAudioStartDelayMs,
+  resolveAudioInsertionTiming,
+  resolveDraggedAudioStartDelayMs,
+  sortAudioSoundsByStartDelay,
+} from "../../internal/audioTimeline.js";
+import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
   localizeCommandLineText,
@@ -20,42 +28,6 @@ const normalizeVolume = (volume, fallback) => {
   return Math.max(0, Math.min(100, Math.round(nextVolume)));
 };
 
-const resolveSoundDurationMs = (sound, resource) => {
-  const resourceDurationSeconds = Math.max(0, Number(resource?.duration) || 0);
-  const startAtSeconds = Math.max(0, Number(sound.startAt) || 0);
-  const endAtSeconds =
-    sound.endAt !== undefined && sound.endAt !== null
-      ? Math.max(startAtSeconds, Number(sound.endAt) || 0)
-      : resourceDurationSeconds;
-  const playbackRate = Number(sound.playbackRate) || 1;
-  return Math.max(
-    0,
-    Math.round(((endAtSeconds - startAtSeconds) / playbackRate) * 1000),
-  );
-};
-
-const formatDurationMs = (durationMs) => {
-  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-};
-
-const reflowSounds = (sounds, items) => {
-  const resourceById = new Map(
-    toFlatItems(items).map((item) => [item.id, item]),
-  );
-  let startDelayMs = 0;
-
-  sounds.forEach((sound) => {
-    sound.startDelayMs = startDelayMs;
-    startDelayMs += resolveSoundDurationMs(
-      sound,
-      resourceById.get(sound.resourceId),
-    );
-  });
-};
-
 const normalizeSounds = (sounds = []) => {
   const usedIds = new Set();
   return sounds.map((sound, index) => {
@@ -74,7 +46,7 @@ const normalizeSounds = (sounds = []) => {
       resourceId: sound.resourceId,
       loop: false,
       volume: normalizeVolume(sound.volume, DEFAULT_SOUND_VOLUME),
-      startDelayMs: 0,
+      startDelayMs: normalizeAudioStartDelayMs(sound.startDelayMs),
     };
     for (const field of ["muted", "pan", "playbackRate", "startAt", "endAt"]) {
       if (sound[field] !== undefined) {
@@ -85,7 +57,7 @@ const normalizeSounds = (sounds = []) => {
   });
 };
 
-const normalizeVoice = (voice = {}, items = { items: {}, tree: [] }) => {
+const normalizeVoice = (voice = {}) => {
   const normalizedVoice = {
     loop: voice.loop ?? false,
     volume: normalizeVolume(voice.volume, DEFAULT_CHANNEL_VOLUME),
@@ -100,11 +72,12 @@ const normalizeVoice = (voice = {}, items = { items: {}, tree: [] }) => {
         id: LEGACY_SOUND_ID,
         resourceId: voice.resourceId,
         volume: DEFAULT_SOUND_VOLUME,
+        startDelayMs: voice.startDelayMs,
       },
     ]);
   }
 
-  reflowSounds(normalizedVoice.sounds, items);
+  sortAudioSoundsByStartDelay(normalizedVoice.sounds);
   return normalizedVoice;
 };
 
@@ -133,6 +106,13 @@ const CHANNEL_FORM = {
 const SOUND_FORM = {
   fields: [
     {
+      name: "startDelayMs",
+      label: "Start Delay (ms)",
+      type: "input-number",
+      min: 0,
+      step: 10,
+    },
+    {
       name: "volume",
       description: "Volume",
       type: "slider-with-input",
@@ -146,6 +126,8 @@ const SOUND_FORM = {
 export const createInitialState = () => ({
   items: { items: {}, tree: [] },
   selectedSoundId: undefined,
+  soundDrag: undefined,
+  suppressChannelClickUntil: 0,
   voice: normalizeVoice(),
   playingSound: {
     title: "",
@@ -157,10 +139,22 @@ export const createInitialState = () => ({
 export const selectVoice = ({ state }) => state.voice;
 
 export const selectVoicePayload = ({ state }) => {
-  return normalizeVoice(state.voice, state.items);
+  return normalizeVoice(state.voice);
 };
 
 export const selectSelectedSoundId = ({ state }) => state.selectedSoundId;
+
+export const selectSoundDrag = ({ state }) => state.soundDrag;
+
+export const selectShouldSuppressChannelClick = (
+  { state },
+  { eventTimeStamp } = {},
+) => {
+  return (
+    Number.isFinite(eventTimeStamp) &&
+    eventTimeStamp <= state.suppressChannelClickUntil
+  );
+};
 
 export const selectVoiceSoundById = ({ state }, { soundId } = {}) => {
   return state.voice.sounds.find((sound) => sound.id === soundId);
@@ -189,22 +183,14 @@ export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const flatVoiceItems = toFlatItems(state.items);
   const resourceById = new Map(flatVoiceItems.map((item) => [item.id, item]));
-  const durations = state.voice.sounds.map((sound) => {
-    return resolveSoundDurationMs(sound, resourceById.get(sound.resourceId));
+  const timeline = createAudioTimelineLayout({
+    sounds: state.voice.sounds,
+    resourceById,
   });
-  const channelDurationMs = durations.reduce((total, duration) => {
-    return total + Math.max(0, duration);
-  }, 0);
-  const equalWidth = state.voice.sounds.length
-    ? 100 / state.voice.sounds.length
-    : 100;
-  const sounds = state.voice.sounds.map((sound, index) => {
+  const sounds = timeline.sounds.map((timelineSound) => {
+    const { sound, durationMs } = timelineSound;
     const resource = resourceById.get(sound.resourceId);
     const isSelected = sound.id === state.selectedSoundId;
-    const widthPercent =
-      channelDurationMs > 0
-        ? (Math.max(0, durations[index]) / channelDurationMs) * 100
-        : equalWidth;
     return {
       ...sound,
       name: resource?.name ?? sound.resourceId,
@@ -212,8 +198,12 @@ export const selectViewData = ({ state, i18n }) => {
       waveformDataFileId: resource?.waveformDataFileId,
       itemBorderColor: isSelected ? "pr" : "bo",
       itemHoverBorderColor: isSelected ? "pr" : "ac",
-      durationLabel: formatDurationMs(durations[index]),
-      widthPercent: widthPercent.toFixed(4),
+      durationLabel: formatAudioDurationMs(durationMs),
+      leftPercent: timelineSound.leftPercent,
+      widthPercent: timelineSound.widthPercent,
+      topPx: timelineSound.topPx,
+      insertBeforeIndex: timelineSound.sourceIndex,
+      insertAfterIndex: timelineSound.sourceIndex + 1,
     };
   });
   const selectedSound = sounds.find(
@@ -228,6 +218,7 @@ export const selectViewData = ({ state, i18n }) => {
         volume: state.voice.volume,
       }
     : {
+        startDelayMs: selectedSound.startDelayMs,
         volume: selectedSound.volume,
       };
 
@@ -236,7 +227,10 @@ export const selectViewData = ({ state, i18n }) => {
     channelBorderColor: channelSelected ? "pr" : "bo",
     channelHoverBorderColor: channelSelected ? "pr" : "ac",
     channelLabel: channelName,
-    channelDurationLabel: formatDurationMs(channelDurationMs),
+    channelDurationLabel: formatAudioDurationMs(timeline.channelDurationMs),
+    timelineDurationMs: timeline.timelineDurationMs,
+    timelineHeightPx: timeline.timelineHeightPx,
+    channelHeightPx: timeline.timelineHeightPx + 24,
     addAudioLabel: localizeCommandLineText("Add voice audio", copy),
     addBeforeLabel: localizeCommandLineText("Add audio before", copy),
     addAfterLabel: localizeCommandLineText("Add audio after", copy),
@@ -259,11 +253,10 @@ export const selectViewData = ({ state, i18n }) => {
 
 export const setRepositoryState = ({ state }, { voices } = {}) => {
   state.items = voices ?? { items: {}, tree: [] };
-  state.voice = normalizeVoice(state.voice, state.items);
 };
 
 export const setVoice = ({ state }, { voice } = {}) => {
-  state.voice = normalizeVoice(voice, state.items);
+  state.voice = normalizeVoice(voice);
   state.selectedSoundId = undefined;
 };
 
@@ -293,6 +286,61 @@ export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
   if (values.volume !== undefined) {
     sound.volume = normalizeVolume(values.volume, DEFAULT_SOUND_VOLUME);
   }
+  if (values.startDelayMs !== undefined) {
+    sound.startDelayMs = normalizeAudioStartDelayMs(values.startDelayMs);
+    sortAudioSoundsByStartDelay(state.voice.sounds);
+  }
+};
+
+export const startSoundDrag = (
+  { state },
+  { soundId, pointerId, clientX, timelineDurationMs, timelineWidthPx } = {},
+) => {
+  const sound = state.voice.sounds.find((item) => item.id === soundId);
+  if (!sound || timelineDurationMs <= 0 || timelineWidthPx <= 0) {
+    return;
+  }
+
+  state.selectedSoundId = soundId;
+  state.soundDrag = {
+    soundId,
+    pointerId,
+    originClientX: clientX,
+    originStartDelayMs: sound.startDelayMs,
+    timelineDurationMs,
+    timelineWidthPx,
+  };
+};
+
+export const updateSoundDrag = ({ state }, { pointerId, clientX } = {}) => {
+  const drag = state.soundDrag;
+  if (!drag || drag.pointerId !== pointerId) {
+    return;
+  }
+
+  const sound = state.voice.sounds.find((item) => item.id === drag.soundId);
+  if (!sound) {
+    state.soundDrag = undefined;
+    return;
+  }
+
+  sound.startDelayMs = resolveDraggedAudioStartDelayMs({
+    ...drag,
+    clientX,
+  });
+};
+
+export const finishSoundDrag = (
+  { state },
+  { pointerId, suppressChannelClickUntil } = {},
+) => {
+  if (!state.soundDrag || state.soundDrag.pointerId !== pointerId) {
+    return;
+  }
+
+  sortAudioSoundsByStartDelay(state.voice.sounds);
+  state.soundDrag = undefined;
+  state.suppressChannelClickUntil = suppressChannelClickUntil ?? 0;
 };
 
 export const insertSound = (
@@ -307,8 +355,21 @@ export const insertSound = (
     },
   ])[0];
   const insertIndex = Math.max(0, Math.min(index, state.voice.sounds.length));
+  const resourceById = new Map(
+    toFlatItems(state.items).map((item) => [item.id, item]),
+  );
+  const insertionTiming = resolveAudioInsertionTiming({
+    sounds: state.voice.sounds,
+    index: insertIndex,
+    sound,
+    resourceById,
+  });
+  sound.startDelayMs = insertionTiming.startDelayMs;
+  state.voice.sounds.slice(insertIndex).forEach((existingSound) => {
+    existingSound.startDelayMs += insertionTiming.shiftMs;
+  });
   state.voice.sounds.splice(insertIndex, 0, sound);
-  reflowSounds(state.voice.sounds, state.items);
+  sortAudioSoundsByStartDelay(state.voice.sounds);
   state.selectedSoundId = sound.id;
   closeAudioPlayer({ state });
 };
@@ -317,7 +378,6 @@ export const removeSound = ({ state }, { soundId } = {}) => {
   state.voice.sounds = state.voice.sounds.filter(
     (sound) => sound.id !== soundId,
   );
-  reflowSounds(state.voice.sounds, state.items);
   state.selectedSoundId = undefined;
   closeAudioPlayer({ state });
 };

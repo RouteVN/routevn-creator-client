@@ -93,6 +93,43 @@ describe("commandLineSoundEffects.handlers", () => {
     expect(render).not.toHaveBeenCalled();
   });
 
+  it("moves a selected sound by keyboard timing steps", () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    store.addChannel({ id: "Weather" });
+    store.insertSound({
+      channelId: "Weather",
+      id: "rain-clip",
+      resourceId: "rain",
+      index: 0,
+    });
+    const soundClip = {
+      dataset: { channelId: "Weather", soundId: "rain-clip" },
+    };
+
+    handleSoundKeyDown(
+      {
+        store,
+        render,
+        refs: { form: { setValues: vi.fn() } },
+      },
+      {
+        _event: {
+          key: "ArrowRight",
+          shiftKey: false,
+          target: soundClip,
+          currentTarget: soundClip,
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(state.channels[0].sounds[0].startDelayMs).toBe(100);
+    expect(render).toHaveBeenCalledOnce();
+  });
+
   it("creates a named channel and rejects a duplicate name", () => {
     const state = createState();
     const store = createStore(state);
@@ -219,13 +256,16 @@ describe("commandLineSoundEffects.handlers", () => {
       { store, render },
       {
         _event: {
-          detail: { values: { loop: true, volume: 35 } },
+          detail: {
+            values: { startDelayMs: 750, loop: true, volume: 35 },
+          },
         },
       },
     );
 
     expect(state.channels[0].volume).toBe(60);
     expect(state.channels[0].sounds[0]).toMatchObject({
+      startDelayMs: 750,
       loop: true,
       volume: 35,
     });

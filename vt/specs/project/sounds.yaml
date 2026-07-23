@@ -290,14 +290,14 @@ steps:
     ms: 300
   - action: screenshot
   - action: select
-    selector: "rvn-command-line-bgm#commandLineBgm #insertAfterButton"
+    selector: "rvn-command-line-bgm#commandLineBgm #insertAfterButton0"
     steps:
       - action: hover
   - action: wait
     ms: 250
   - action: screenshot
   - action: select
-    selector: "rvn-command-line-bgm#commandLineBgm #insertAfterButton"
+    selector: "rvn-command-line-bgm#commandLineBgm #insertAfterButton0"
     steps:
       - action: click
   - action: waitFor
@@ -316,6 +316,16 @@ steps:
     selector: "rvn-command-line-bgm#commandLineBgm #soundClip1"
     state: visible
     timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm rtgl-form#form rtgl-input-number#field0 input"
+    steps:
+      - action: clear
+      - action: write
+        value: "0"
+      - action: blur
   - action: wait
     ms: 300
   - action: screenshot

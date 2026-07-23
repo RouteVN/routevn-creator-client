@@ -7,9 +7,12 @@ import {
   selectSelectedSoundId,
   selectViewData,
   selectVoicePayload,
+  finishSoundDrag,
   setRepositoryState,
   setSelectedSound,
   setVoice,
+  startSoundDrag,
+  updateSoundDrag,
 } from "../../src/components/commandLineVoice/commandLineVoice.store.js";
 
 const voices = {
@@ -72,7 +75,7 @@ describe("commandLineVoice.store", () => {
     expect(viewData.defaultValues).toEqual({ loop: false, volume: 100 });
   });
 
-  it("migrates a legacy Voice sound into the canonical channel", () => {
+  it("migrates a legacy Voice sound without losing its start delay", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { voices });
     setVoice(
@@ -96,18 +99,19 @@ describe("commandLineVoice.store", () => {
           resourceId: "response",
           loop: false,
           volume: 100,
-          startDelayMs: 0,
+          startDelayMs: 250,
         },
       ],
     });
     expect(selectViewData({ state, i18n }).sounds[0]).toMatchObject({
       name: "Response",
       durationLabel: "0:06",
-      widthPercent: "100.0000",
+      leftPercent: "4.0000",
+      widthPercent: "96.0000",
     });
   });
 
-  it("sizes clips proportionally and exposes channel or clip controls", () => {
+  it("lays out parallel clips and exposes their start delay controls", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { voices });
     setVoice(
@@ -118,30 +122,42 @@ describe("commandLineVoice.store", () => {
           volume: 80,
           sounds: [
             { id: "intro-clip", resourceId: "intro", volume: 90 },
-            { id: "response-clip", resourceId: "response", volume: 60 },
+            {
+              id: "response-clip",
+              resourceId: "response",
+              volume: 60,
+              startDelayMs: 1000,
+            },
           ],
         },
       },
     );
 
     const viewData = selectViewData({ state, i18n });
-    expect(viewData.channelDurationLabel).toBe("0:08");
+    expect(viewData.channelDurationLabel).toBe("0:07");
+    expect(viewData.channelHeightPx).toBe(276);
     expect(
       viewData.sounds.map((sound) => ({
         durationLabel: sound.durationLabel,
+        leftPercent: sound.leftPercent,
         startDelayMs: sound.startDelayMs,
+        topPx: sound.topPx,
         widthPercent: sound.widthPercent,
       })),
     ).toEqual([
       {
         durationLabel: "0:02",
+        leftPercent: "0.0000",
         startDelayMs: 0,
-        widthPercent: "25.0000",
+        topPx: 0,
+        widthPercent: "28.5714",
       },
       {
         durationLabel: "0:06",
-        startDelayMs: 2000,
-        widthPercent: "75.0000",
+        leftPercent: "14.2857",
+        startDelayMs: 1000,
+        topPx: 126,
+        widthPercent: "85.7143",
       },
     ]);
 
@@ -150,12 +166,16 @@ describe("commandLineVoice.store", () => {
     expect(selectedViewData.selectionHeading).toBe("Audio");
     expect(selectedViewData.selectionName).toBe("Intro");
     expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([
+      "startDelayMs",
       "volume",
     ]);
-    expect(selectedViewData.defaultValues).toEqual({ volume: 90 });
+    expect(selectedViewData.defaultValues).toEqual({
+      startDelayMs: 0,
+      volume: 90,
+    });
   });
 
-  it("reflows the Voice timeline after insertion and removal", () => {
+  it("places inserted Voice sounds without reflowing after removal", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { voices });
     insertSound(
@@ -178,9 +198,38 @@ describe("commandLineVoice.store", () => {
         resourceId: "response",
         loop: false,
         volume: 100,
-        startDelayMs: 0,
+        startDelayMs: 2000,
       },
     ]);
     expect(selectSelectedSoundId({ state })).toBeUndefined();
+  });
+
+  it("updates a Voice sound start delay from a horizontal timeline drag", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { voices });
+    insertSound({ state }, { id: "intro-clip", resourceId: "intro", index: 0 });
+
+    startSoundDrag(
+      { state },
+      {
+        soundId: "intro-clip",
+        pointerId: 4,
+        clientX: 50,
+        timelineDurationMs: 2000,
+        timelineWidthPx: 400,
+      },
+    );
+    updateSoundDrag(
+      { state },
+      {
+        pointerId: 4,
+        clientX: 250,
+      },
+    );
+
+    expect(selectVoicePayload({ state }).sounds[0].startDelayMs).toBe(1000);
+
+    finishSoundDrag({ state }, { pointerId: 4 });
+    expect(state.soundDrag).toBeUndefined();
   });
 });

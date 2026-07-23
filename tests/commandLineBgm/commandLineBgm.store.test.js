@@ -10,6 +10,9 @@ import {
   setBgm,
   setRepositoryState,
   setSelectedSound,
+  startSoundDrag,
+  updateSoundDrag,
+  finishSoundDrag,
 } from "../../src/components/commandLineBgm/commandLineBgm.store.js";
 
 const sounds = {
@@ -84,7 +87,7 @@ describe("commandLineBgm.store", () => {
     expect(viewData.defaultValues).toEqual({ loop: true, volume: 75 });
   });
 
-  it("migrates legacy single-sound BGM into a full-width canonical clip", () => {
+  it("migrates legacy single-sound BGM without losing its start delay", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });
     setBgm(
@@ -108,17 +111,18 @@ describe("commandLineBgm.store", () => {
           resourceId: "theme",
           loop: false,
           volume: 100,
-          startDelayMs: 0,
+          startDelayMs: 250,
         },
       ],
     });
     expect(selectViewData({ state, i18n }).sounds[0]).toMatchObject({
       name: "Theme",
-      widthPercent: "100.0000",
+      leftPercent: "4.0000",
+      widthPercent: "96.0000",
     });
   });
 
-  it("sizes canonical clips proportionally and derives their sequential delays", () => {
+  it("positions canonical clips by their preserved absolute start delays", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });
     setBgm(
@@ -153,19 +157,32 @@ describe("commandLineBgm.store", () => {
         resourceId: "theme",
         loop: false,
         volume: 60,
-        startDelayMs: 2000,
+        startDelayMs: 999,
       },
     ]);
     const viewData = selectViewData({ state, i18n });
-    expect(viewData.channelDurationLabel).toBe("0:08");
+    expect(viewData.channelDurationLabel).toBe("0:06");
+    expect(viewData.channelHeightPx).toBe(276);
     expect(
       viewData.sounds.map((sound) => ({
         durationLabel: sound.durationLabel,
+        leftPercent: sound.leftPercent,
+        topPx: sound.topPx,
         widthPercent: sound.widthPercent,
       })),
     ).toEqual([
-      { durationLabel: "0:02", widthPercent: "25.0000" },
-      { durationLabel: "0:06", widthPercent: "75.0000" },
+      {
+        durationLabel: "0:02",
+        leftPercent: "0.0000",
+        topPx: 0,
+        widthPercent: "28.5755",
+      },
+      {
+        durationLabel: "0:06",
+        leftPercent: "14.2735",
+        topPx: 126,
+        widthPercent: "85.7265",
+      },
     ]);
 
     setSelectedSound({ state }, { soundId: "intro-clip" });
@@ -173,12 +190,16 @@ describe("commandLineBgm.store", () => {
     expect(selectedViewData.selectionHeading).toBe("Audio");
     expect(selectedViewData.selectionName).toBe("Intro");
     expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([
+      "startDelayMs",
       "volume",
     ]);
-    expect(selectedViewData.defaultValues).toEqual({ volume: 90 });
+    expect(selectedViewData.defaultValues).toEqual({
+      startDelayMs: 0,
+      volume: 90,
+    });
   });
 
-  it("reflows the timeline after insertion and removal", () => {
+  it("places inserted sounds sequentially without reflowing after removal", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });
     insertSound({ state }, { id: "theme-clip", resourceId: "theme", index: 0 });
@@ -199,9 +220,39 @@ describe("commandLineBgm.store", () => {
         resourceId: "theme",
         loop: false,
         volume: 100,
-        startDelayMs: 0,
+        startDelayMs: 2000,
       },
     ]);
     expect(selectSelectedSoundId({ state })).toBeUndefined();
+  });
+
+  it("updates a sound start delay from a horizontal timeline drag", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+    insertSound({ state }, { id: "intro-clip", resourceId: "intro", index: 0 });
+
+    startSoundDrag(
+      { state },
+      {
+        soundId: "intro-clip",
+        pointerId: 7,
+        clientX: 100,
+        timelineDurationMs: 2000,
+        timelineWidthPx: 400,
+      },
+    );
+    updateSoundDrag(
+      { state },
+      {
+        pointerId: 7,
+        clientX: 300,
+      },
+    );
+
+    expect(selectBgm({ state }).sounds[0].startDelayMs).toBe(1000);
+
+    finishSoundDrag({ state }, { pointerId: 7 });
+    expect(state.soundDrag).toBeUndefined();
+    expect(selectViewData({ state, i18n }).channelDurationLabel).toBe("0:03");
   });
 });
