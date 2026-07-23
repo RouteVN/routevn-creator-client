@@ -3,6 +3,7 @@ import {
   createAudioTimelineLayout,
   createAudioTimelineSnapStartDelays,
   formatAudioDurationMs,
+  normalizeAudioChannelInterruption,
   normalizeAudioStartDelayMs,
   resolveAudioInsertionTiming,
   resolveDraggedAudioStartDelayMs,
@@ -71,6 +72,7 @@ const normalizeChannel = (
 ) => {
   const normalizedChannel = {
     id: String(channel.id ?? "").trim(),
+    interruption: normalizeAudioChannelInterruption(channel.interruption),
     volume: normalizeVolume(channel.volume, defaultChannelVolume),
     sounds: normalizeSounds(channel.sounds, {
       defaultVolume: defaultSoundVolume,
@@ -123,6 +125,15 @@ const normalizeSfxChannels = (sfx = {}) => {
 
 const CHANNEL_FORM = {
   fields: [
+    {
+      name: "interruption",
+      description: "Interruption",
+      type: "segmented-control",
+      options: [
+        { value: "immediate", label: "Immediate" },
+        { value: "loopEnd", label: "Loop End" },
+      ],
+    },
     {
       name: "volume",
       description: "Volume",
@@ -405,6 +416,8 @@ export const selectViewData = ({ state, i18n }) => {
         volume: selectedSound.volume,
       }
     : {
+        interruption:
+          selectedChannel?.interruption ?? normalizeAudioChannelInterruption(),
         volume: selectedChannel?.volume ?? DEFAULT_CHANNEL_VOLUME,
       };
 
@@ -526,6 +539,11 @@ export const updateChannel = ({ state }, { channelId, values = {} } = {}) => {
     return;
   }
 
+  if (values.interruption !== undefined) {
+    channel.interruption = normalizeAudioChannelInterruption(
+      values.interruption,
+    );
+  }
   if (values.volume !== undefined) {
     channel.volume = normalizeVolume(values.volume, DEFAULT_CHANNEL_VOLUME);
   }

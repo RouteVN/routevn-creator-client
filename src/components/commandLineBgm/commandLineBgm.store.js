@@ -3,6 +3,7 @@ import {
   createAudioTimelineLayout,
   createAudioTimelineSnapStartDelays,
   formatAudioDurationMs,
+  normalizeAudioChannelInterruption,
   normalizeAudioStartDelayMs,
   resolveAudioInsertionTiming,
   resolveDraggedAudioStartDelayMs,
@@ -60,6 +61,7 @@ const normalizeSounds = (sounds = []) => {
 
 const normalizeBgm = (bgm = {}) => {
   const normalizedBgm = {
+    interruption: normalizeAudioChannelInterruption(bgm.interruption),
     loop: bgm.loop ?? true,
     volume: normalizeVolume(bgm.volume, DEFAULT_CHANNEL_VOLUME),
     sounds: [],
@@ -91,6 +93,15 @@ const CHANNEL_FORM = {
       options: [
         { value: true, label: "Loop" },
         { value: false, label: "Don't Loop" },
+      ],
+    },
+    {
+      name: "interruption",
+      description: "Interruption",
+      type: "segmented-control",
+      options: [
+        { value: "immediate", label: "Immediate" },
+        { value: "loopEnd", label: "Loop End" },
       ],
     },
     {
@@ -276,6 +287,7 @@ export const selectViewData = ({ state, i18n }) => {
   const form = channelSelected ? CHANNEL_FORM : SOUND_FORM;
   const defaultValues = channelSelected
     ? {
+        interruption: state.bgm.interruption,
         loop: state.bgm.loop,
         volume: state.bgm.volume,
       }
@@ -342,6 +354,11 @@ export const setSelectedSound = ({ state }, { soundId } = {}) => {
 };
 
 export const updateChannel = ({ state }, { values = {} } = {}) => {
+  if (values.interruption !== undefined) {
+    state.bgm.interruption = normalizeAudioChannelInterruption(
+      values.interruption,
+    );
+  }
   if (values.loop !== undefined) {
     state.bgm.loop = values.loop;
   }

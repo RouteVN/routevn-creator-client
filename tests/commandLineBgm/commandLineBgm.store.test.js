@@ -72,6 +72,7 @@ describe("commandLineBgm.store", () => {
     const viewData = selectViewData({ state, i18n });
 
     expect(selectBgm({ state })).toEqual({
+      interruption: "immediate",
       loop: true,
       volume: 75,
       sounds: [],
@@ -82,9 +83,14 @@ describe("commandLineBgm.store", () => {
     expect(viewData.channelDurationLabel).toBe("0:00");
     expect(viewData.form.fields.map((field) => field.name)).toEqual([
       "loop",
+      "interruption",
       "volume",
     ]);
-    expect(viewData.defaultValues).toEqual({ loop: true, volume: 75 });
+    expect(viewData.defaultValues).toEqual({
+      interruption: "immediate",
+      loop: true,
+      volume: 75,
+    });
   });
 
   it("migrates legacy single-sound BGM without losing its start delay", () => {
@@ -103,6 +109,7 @@ describe("commandLineBgm.store", () => {
     );
 
     expect(selectBgm({ state })).toEqual({
+      interruption: "immediate",
       loop: false,
       volume: 50,
       sounds: [

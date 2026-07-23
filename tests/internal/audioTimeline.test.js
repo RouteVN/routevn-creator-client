@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createAudioTimelineLayout,
   createAudioTimelineSnapStartDelays,
+  normalizeAudioChannelInterruption,
   resolveAudioInsertionTiming,
   resolveDraggedAudioStartDelayMs,
 } from "../../src/internal/audioTimeline.js";
@@ -12,6 +13,13 @@ const resourceById = new Map([
 ]);
 
 describe("audioTimeline", () => {
+  it("defaults channel interruption to immediate", () => {
+    expect(normalizeAudioChannelInterruption()).toBe("immediate");
+    expect(normalizeAudioChannelInterruption("immediate")).toBe("immediate");
+    expect(normalizeAudioChannelInterruption("loopEnd")).toBe("loopEnd");
+    expect(normalizeAudioChannelInterruption("unsupported")).toBe("immediate");
+  });
+
   it("uses absolute start times and separates overlapping sounds into lanes", () => {
     const timeline = createAudioTimelineLayout({
       sounds: [

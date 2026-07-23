@@ -88,8 +88,18 @@ describe("commandLineSoundEffects.store", () => {
 
     expect(selectSfx({ state })).toEqual({
       channels: [
-        { id: "Weather", volume: 75, sounds: [] },
-        { id: "UI", volume: 75, sounds: [] },
+        {
+          id: "Weather",
+          interruption: "immediate",
+          volume: 75,
+          sounds: [],
+        },
+        {
+          id: "UI",
+          interruption: "immediate",
+          volume: 75,
+          sounds: [],
+        },
       ],
     });
     expect(state.selectedChannelId).toBe("UI");
@@ -187,8 +197,13 @@ describe("commandLineSoundEffects.store", () => {
     expect(channelSelection.selectionHeading).toBe("Channel");
     expect(channelSelection.selectionName).toBe("Weather");
     expect(channelSelection.form.fields.map((field) => field.name)).toEqual([
+      "interruption",
       "volume",
     ]);
+    expect(channelSelection.defaultValues).toEqual({
+      interruption: "immediate",
+      volume: 80,
+    });
 
     setSelectedSound({ state }, { channelId: "Weather", soundId: "rain-clip" });
     const soundSelection = selectViewData({ state, i18n });
@@ -275,6 +290,7 @@ describe("commandLineSoundEffects.store", () => {
       channels: [
         {
           id: "default",
+          interruption: "immediate",
           volume: 100,
           sounds: [
             {

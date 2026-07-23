@@ -12,6 +12,10 @@ export const normalizeAudioStartDelayMs = (value, fallback = 0) => {
   return Math.max(0, Math.round(parsedValue));
 };
 
+export const normalizeAudioChannelInterruption = (value) => {
+  return value === "loopEnd" ? "loopEnd" : "immediate";
+};
+
 export const resolveAudioSoundDurationMs = (sound = {}, resource = {}) => {
   const resourceDurationSeconds = Math.max(0, Number(resource?.duration) || 0);
   const startAtSeconds = Math.max(0, Number(sound.startAt) || 0);

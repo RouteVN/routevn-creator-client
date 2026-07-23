@@ -60,6 +60,7 @@ describe("commandLineVoice.store", () => {
     const viewData = selectViewData({ state, i18n });
 
     expect(selectVoicePayload({ state })).toEqual({
+      interruption: "immediate",
       loop: false,
       volume: 100,
       sounds: [],
@@ -70,9 +71,14 @@ describe("commandLineVoice.store", () => {
     expect(viewData.selectionName).toBe("Voice Channel");
     expect(viewData.form.fields.map((field) => field.name)).toEqual([
       "loop",
+      "interruption",
       "volume",
     ]);
-    expect(viewData.defaultValues).toEqual({ loop: false, volume: 100 });
+    expect(viewData.defaultValues).toEqual({
+      interruption: "immediate",
+      loop: false,
+      volume: 100,
+    });
   });
 
   it("migrates a legacy Voice sound without losing its start delay", () => {
@@ -91,6 +97,7 @@ describe("commandLineVoice.store", () => {
     );
 
     expect(selectVoicePayload({ state })).toEqual({
+      interruption: "immediate",
       loop: true,
       volume: 50,
       sounds: [

@@ -148,7 +148,14 @@ describe("commandLineSoundEffects.handlers", () => {
       },
     });
 
-    expect(state.channels).toEqual([{ id: "Weather", volume: 75, sounds: [] }]);
+    expect(state.channels).toEqual([
+      {
+        id: "Weather",
+        interruption: "immediate",
+        volume: 75,
+        sounds: [],
+      },
+    ]);
     expect(state.selectedChannelId).toBe("Weather");
     expect(render).toHaveBeenCalledOnce();
 
@@ -336,6 +343,7 @@ describe("commandLineSoundEffects.handlers", () => {
         channels: [
           {
             id: "Weather",
+            interruption: "immediate",
             volume: 75,
             sounds: [
               {

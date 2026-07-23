@@ -129,6 +129,7 @@ describe("commandLineVoice.handlers", () => {
       position: "last",
     });
     expect(voiceStore.selectVoicePayload({ state })).toEqual({
+      interruption: "immediate",
       loop: false,
       volume: 100,
       sounds: [
@@ -295,6 +296,7 @@ describe("commandLineVoice.handlers", () => {
     expect(dispatchEvent).toHaveBeenCalledOnce();
     expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
       voice: {
+        interruption: "immediate",
         loop: false,
         volume: 100,
         sounds: [

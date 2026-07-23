@@ -43,6 +43,9 @@ propsSchema:
                 type: boolean
               pan:
                 type: number
+              interruption:
+                type: string
+                enum: [immediate, loopEnd]
               sounds:
                 type: array
                 items:

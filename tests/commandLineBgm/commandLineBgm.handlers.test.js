@@ -90,12 +90,23 @@ describe("commandLineBgm.handlers", () => {
       { store: createStore(state), render },
       {
         _event: {
-          detail: { values: { loop: false, volume: 60 } },
+          detail: {
+            values: {
+              interruption: "loopEnd",
+              loop: false,
+              volume: 60,
+            },
+          },
         },
       },
     );
 
-    expect(state.bgm).toEqual({ loop: false, volume: 60, sounds: [] });
+    expect(state.bgm).toEqual({
+      interruption: "loopEnd",
+      loop: false,
+      volume: 60,
+      sounds: [],
+    });
     expect(render).toHaveBeenCalledOnce();
   });
 
@@ -336,6 +347,7 @@ describe("commandLineBgm.handlers", () => {
     const event = dispatchEvent.mock.calls[0][0];
     expect(event.detail).toEqual({
       bgm: {
+        interruption: "immediate",
         loop: true,
         volume: 75,
         sounds: [
