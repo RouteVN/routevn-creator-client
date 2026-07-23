@@ -127,7 +127,7 @@ export const handleSoundClick = (deps, payload) => {
 
 export const handleSoundKeyDown = (deps, payload) => {
   const { _event: event } = payload;
-  if (!isSelectionKey(event)) {
+  if (!isSelectionKey(event) || event.target !== event.currentTarget) {
     return;
   }
 

@@ -8,6 +8,7 @@ import { Ticker } from "pixi.js";
 
 import createRouteGraphics from "route-graphics";
 import { createRuntimeAssetFromDicedImage } from "../src/internal/bundleRuntimeDicedImages.js";
+import { prepareRenderStateAudioChannelsForGraphics } from "../src/internal/audioRenderState.js";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
 import {
   createRuntimeEventContext,
@@ -710,8 +711,12 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
   };
 
   const renderEngineState = (renderState) => {
-    latestPreparedRenderState = prepareRenderStateKeyboardForGraphics({
+    const audioRenderState = prepareRenderStateAudioChannelsForGraphics({
       renderState,
+      presentationState: engine?.selectPresentationState?.(),
+    });
+    latestPreparedRenderState = prepareRenderStateKeyboardForGraphics({
+      renderState: audioRenderState,
     });
     const missingAssetIds = bundleAssetLoader.collectMissingAssetIds(
       latestPreparedRenderState,

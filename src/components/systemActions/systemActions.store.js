@@ -77,6 +77,10 @@ const getAllowedModes = (attrs = {}) => {
     : [];
 };
 
+const resolveVoiceResourceId = (voice) => {
+  return voice?.sounds?.[0]?.resourceId ?? voice?.resourceId;
+};
+
 const getDialogVariant = (attrs = {}) =>
   attrs.dialogVariant === "scene-editor-left" ? "scene-editor-left" : "default";
 
@@ -352,9 +356,9 @@ export const selectMode = ({ state }) => {
 };
 
 export const updateActions = ({ state }, payload = {}) => {
-  const previousVoiceResourceId = state.actions?.voice?.resourceId;
+  const previousVoiceResourceId = resolveVoiceResourceId(state.actions?.voice);
   const nextPayload = payload || {};
-  const nextVoiceResourceId = nextPayload.voice?.resourceId;
+  const nextVoiceResourceId = resolveVoiceResourceId(nextPayload.voice);
   state.actions = { ...nextPayload };
 
   if (previousVoiceResourceId !== nextVoiceResourceId) {
@@ -684,8 +688,7 @@ export const selectActionsData = ({ props, state, copy }) => {
     : isPlainObject(presentationState.voice)
       ? presentationState.voice
       : undefined;
-  const voiceResourceId =
-    voiceAction?.sounds?.[0]?.resourceId ?? voiceAction?.resourceId;
+  const voiceResourceId = resolveVoiceResourceId(voiceAction);
   if (voiceResourceId) {
     actionsObject.voice = voiceAction;
     preview.voice = voices[voiceResourceId] ??

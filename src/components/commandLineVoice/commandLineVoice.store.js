@@ -72,6 +72,7 @@ const normalizeSounds = (sounds = []) => {
     const normalizedSound = {
       id,
       resourceId: sound.resourceId,
+      loop: false,
       volume: normalizeVolume(sound.volume, DEFAULT_SOUND_VOLUME),
       startDelayMs: 0,
     };

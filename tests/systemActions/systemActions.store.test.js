@@ -526,6 +526,52 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("closes the inline voice preview player when a canonical Voice changes or is removed", () => {
+    const state = createInitialState();
+
+    updateActions(
+      { state },
+      {
+        voice: {
+          sounds: [{ id: "voice-a", resourceId: "voice-line-1" }],
+        },
+      },
+    );
+    openAudioPlayer(
+      { state },
+      {
+        fileId: "file-voice-line-1",
+        fileName: "Aki Line 1",
+      },
+    );
+
+    updateActions(
+      { state },
+      {
+        voice: {
+          sounds: [{ id: "voice-b", resourceId: "voice-line-2" }],
+        },
+      },
+    );
+
+    expect(state.showAudioPlayer).toBe(false);
+
+    openAudioPlayer(
+      { state },
+      {
+        fileId: "file-voice-line-2",
+        fileName: "Aki Line 2",
+      },
+    );
+    updateActions({ state }, {});
+
+    expect(state.showAudioPlayer).toBe(false);
+    expect(state.playingSound).toEqual({
+      fileId: undefined,
+      title: "",
+    });
+  });
+
   it("preserves and previews input form actions", () => {
     const state = createInitialState();
     const inputElements = {

@@ -135,6 +135,7 @@ describe("commandLineVoice.handlers", () => {
         {
           id: voiceId,
           resourceId: voiceId,
+          loop: false,
           volume: 100,
           startDelayMs: 0,
         },
@@ -295,6 +296,7 @@ describe("commandLineVoice.handlers", () => {
           {
             id: "clip",
             resourceId: "voice-1",
+            loop: false,
             volume: 100,
             startDelayMs: 0,
           },

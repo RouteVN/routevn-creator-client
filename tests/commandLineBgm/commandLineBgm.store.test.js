@@ -106,6 +106,7 @@ describe("commandLineBgm.store", () => {
         {
           id: "default",
           resourceId: "theme",
+          loop: false,
           volume: 100,
           startDelayMs: 0,
         },
@@ -143,12 +144,14 @@ describe("commandLineBgm.store", () => {
       {
         id: "intro-clip",
         resourceId: "intro",
+        loop: false,
         volume: 90,
         startDelayMs: 0,
       },
       {
         id: "theme-clip",
         resourceId: "theme",
+        loop: false,
         volume: 60,
         startDelayMs: 2000,
       },
@@ -194,6 +197,7 @@ describe("commandLineBgm.store", () => {
       {
         id: "theme-clip",
         resourceId: "theme",
+        loop: false,
         volume: 100,
         startDelayMs: 0,
       },

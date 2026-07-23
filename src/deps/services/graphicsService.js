@@ -5,6 +5,7 @@ import createRouteGraphics, {
 } from "route-graphics";
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
+import { prepareRenderStateAudioChannelsForGraphics } from "../../internal/audioRenderState.js";
 import {
   prepareRenderStateKeyboardForGraphics,
   toRouteGraphicsKeyboardResource,
@@ -1786,8 +1787,12 @@ export const createGraphicsService = async ({
 
   const renderEngineState = (renderState, options = {}) => {
     const { allowDeferredAudio = true, skipAudio = false } = options;
-    let nextRenderState = prepareRenderStateKeyboardForGraphics({
+    let nextRenderState = prepareRenderStateAudioChannelsForGraphics({
       renderState: withActiveControlKeyboard(renderState),
+      presentationState: engine?.selectPresentationState?.(),
+    });
+    nextRenderState = prepareRenderStateKeyboardForGraphics({
+      renderState: nextRenderState,
       enableGlobalKeyboardBindings,
     });
     nextRenderState =

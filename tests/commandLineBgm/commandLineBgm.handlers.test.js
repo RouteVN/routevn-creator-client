@@ -281,6 +281,7 @@ describe("commandLineBgm.handlers", () => {
           {
             id: "intro-clip",
             resourceId: "intro",
+            loop: false,
             volume: 100,
             startDelayMs: 0,
           },

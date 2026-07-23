@@ -94,6 +94,7 @@ describe("commandLineVoice.store", () => {
         {
           id: "default",
           resourceId: "response",
+          loop: false,
           volume: 100,
           startDelayMs: 0,
         },
@@ -175,6 +176,7 @@ describe("commandLineVoice.store", () => {
       {
         id: "response-clip",
         resourceId: "response",
+        loop: false,
         volume: 100,
         startDelayMs: 0,
       },

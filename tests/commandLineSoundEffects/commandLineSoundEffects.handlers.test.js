@@ -4,6 +4,7 @@ import {
   handleButtonSelectClick,
   handleChannelContextMenu,
   handleFormChange,
+  handleSoundKeyDown,
   handleSoundContextMenu,
   handleSubmitClick,
 } from "../../src/components/commandLineSoundEffects/commandLineSoundEffects.handlers.js";
@@ -57,6 +58,41 @@ const createState = () => {
 };
 
 describe("commandLineSoundEffects.handlers", () => {
+  it("ignores sound keydowns bubbled from insertion buttons", () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    store.addChannel({ id: "Weather" });
+    store.insertSound({
+      channelId: "Weather",
+      id: "rain-clip",
+      resourceId: "rain",
+      index: 0,
+    });
+    store.setSelectedChannel({ channelId: "Weather" });
+    const insertionButton = {};
+    const soundClip = {
+      dataset: { channelId: "Weather", soundId: "rain-clip" },
+    };
+    const preventDefault = vi.fn();
+
+    handleSoundKeyDown(
+      { store, render },
+      {
+        _event: {
+          key: "Enter",
+          target: insertionButton,
+          currentTarget: soundClip,
+          preventDefault,
+        },
+      },
+    );
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(state.selectedSoundId).toBeUndefined();
+    expect(render).not.toHaveBeenCalled();
+  });
+
   it("creates a named channel and rejects a duplicate name", () => {
     const state = createState();
     const store = createStore(state);
