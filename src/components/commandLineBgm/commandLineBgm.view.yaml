@@ -123,7 +123,7 @@ styles:
     position: absolute
     top: "0"
     transition: opacity 120ms ease, background 120ms ease
-    width: "min(44px, 50%)"
+    width: "min(32px, 40%)"
     z-index: "5"
   ".bgmInsertZone:hover":
     background: var(--primary)
