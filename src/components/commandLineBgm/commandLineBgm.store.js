@@ -6,9 +6,11 @@ import {
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
-const DEFAULT_AUDIO_VOLUME = 75;
+const DEFAULT_CHANNEL_VOLUME = 75;
+const DEFAULT_SOUND_VOLUME = 100;
+const LEGACY_SOUND_ID = "default";
 
-const normalizeVolume = (volume, fallback = DEFAULT_AUDIO_VOLUME) => {
+const normalizeVolume = (volume, fallback) => {
   const parsedVolume = Number(volume);
   if (!Number.isFinite(parsedVolume)) {
     return fallback;
@@ -18,27 +20,95 @@ const normalizeVolume = (volume, fallback = DEFAULT_AUDIO_VOLUME) => {
   return Math.max(0, Math.min(100, Math.round(nextVolume)));
 };
 
-const normalizeBgm = (bgm = {}) => {
+const resolveSoundDurationMs = (sound, resource) => {
+  const resourceDurationSeconds = Math.max(0, Number(resource?.duration) || 0);
+  const startAtSeconds = Math.max(0, Number(sound.startAt) || 0);
+  const endAtSeconds =
+    sound.endAt !== undefined && sound.endAt !== null
+      ? Math.max(startAtSeconds, Number(sound.endAt) || 0)
+      : resourceDurationSeconds;
+  const playbackRate = Number(sound.playbackRate) || 1;
+  return Math.max(
+    0,
+    Math.round(((endAtSeconds - startAtSeconds) / playbackRate) * 1000),
+  );
+};
+
+const formatDurationMs = (durationMs) => {
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+};
+
+const reflowSounds = (sounds, items) => {
+  const resourceById = new Map(
+    toFlatItems(items).map((item) => [item.id, item]),
+  );
+  let startDelayMs = 0;
+
+  sounds.forEach((sound) => {
+    sound.startDelayMs = startDelayMs;
+    startDelayMs += resolveSoundDurationMs(
+      sound,
+      resourceById.get(sound.resourceId),
+    );
+  });
+};
+
+const normalizeSounds = (sounds = []) => {
+  const usedIds = new Set();
+  return sounds.map((sound, index) => {
+    const fallbackId = sound.resourceId ?? `sound-${index + 1}`;
+    const baseId = sound.id ?? fallbackId;
+    let id = baseId;
+    let duplicateIndex = 2;
+    while (usedIds.has(id)) {
+      id = `${baseId}-${duplicateIndex}`;
+      duplicateIndex += 1;
+    }
+    usedIds.add(id);
+
+    const normalizedSound = {
+      id,
+      resourceId: sound.resourceId,
+      volume: normalizeVolume(sound.volume, DEFAULT_SOUND_VOLUME),
+      startDelayMs: 0,
+    };
+    for (const field of ["muted", "pan", "playbackRate", "startAt", "endAt"]) {
+      if (sound[field] !== undefined) {
+        normalizedSound[field] = sound[field];
+      }
+    }
+    return normalizedSound;
+  });
+};
+
+const normalizeBgm = (bgm = {}, items = { items: {}, tree: [] }) => {
   const normalizedBgm = {
-    loop: bgm?.loop ?? true,
-    volume: normalizeVolume(bgm?.volume),
+    loop: bgm.loop ?? true,
+    volume: normalizeVolume(bgm.volume, DEFAULT_CHANNEL_VOLUME),
+    sounds: [],
   };
-  if (bgm?.resourceId !== undefined) {
-    normalizedBgm.resourceId = bgm.resourceId;
+
+  if (Array.isArray(bgm.sounds)) {
+    normalizedBgm.sounds = normalizeSounds(bgm.sounds);
+  } else if (bgm.resourceId !== undefined) {
+    normalizedBgm.sounds = normalizeSounds([
+      {
+        id: LEGACY_SOUND_ID,
+        resourceId: bgm.resourceId,
+        volume: DEFAULT_SOUND_VOLUME,
+      },
+    ]);
   }
-  if (bgm?.startDelayMs !== undefined) {
-    normalizedBgm.startDelayMs = bgm.startDelayMs;
-  }
+
+  reflowSounds(normalizedBgm.sounds, items);
   return normalizedBgm;
 };
 
-const form = {
+const CHANNEL_FORM = {
   fields: [
-    {
-      type: "slot",
-      slot: "audio",
-      description: "Background Music",
-    },
     {
       name: "loop",
       description: "Loop",
@@ -59,11 +129,25 @@ const form = {
   ],
 };
 
+const SOUND_FORM = {
+  fields: [
+    {
+      name: "volume",
+      description: "Volume",
+      type: "slider-with-input",
+      min: 0,
+      max: 100,
+      step: 1,
+    },
+  ],
+};
+
 export const createInitialState = () => ({
   mode: "current",
   items: { items: {}, tree: [] },
-  selectedResourceId: undefined,
   tempSelectedResourceId: undefined,
+  pendingInsertIndex: 0,
+  selectedSoundId: undefined,
   bgm: normalizeBgm(),
   searchQuery: "",
   playingSound: {
@@ -73,89 +157,32 @@ export const createInitialState = () => ({
   showAudioPlayer: false,
 });
 
-export const setBgmAudio = ({ state }, { resourceId } = {}) => {
-  const bgm = normalizeBgm(state.bgm);
-  if (resourceId !== undefined) {
-    bgm.resourceId = resourceId;
-  }
-  state.bgm = bgm;
+export const selectBgm = ({ state }) => state.bgm;
+
+export const selectSelectedSoundId = ({ state }) => state.selectedSoundId;
+
+export const selectSelectedSound = ({ state }) => {
+  return state.bgm.sounds.find((sound) => sound.id === state.selectedSoundId);
 };
 
-export const clearBgmAudio = ({ state }, _payload = {}) => {
-  delete state.bgm.resourceId;
-  state.tempSelectedResourceId = undefined;
-};
-
-export const setBgm = ({ state }, { bgm } = {}) => {
-  state.bgm = normalizeBgm(bgm);
-};
-
-export const setMode = ({ state }, { mode } = {}) => {
-  state.mode = mode;
-};
-
-export const setRepositoryState = ({ state }, { sounds } = {}) => {
-  state.items = sounds;
-};
-
-export const selectBgm = ({ state }) => {
-  return state.bgm;
+export const selectPendingInsertIndex = ({ state }) => {
+  return state.pendingInsertIndex;
 };
 
 export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
 };
 
-export const setTempSelectedResource = ({ state }, { resourceId } = {}) => {
-  state.tempSelectedResourceId = resourceId;
-};
-
-export const setSearchQuery = ({ state }, { value } = {}) => {
-  state.searchQuery = value ?? "";
-};
-
-export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
-  state.playingSound.fileId = fileId;
-  state.playingSound.title = fileName;
-  state.showAudioPlayer = true;
-};
-
-export const closeAudioPlayer = ({ state }, _payload = {}) => {
-  state.showAudioPlayer = false;
-  state.playingSound = {
-    title: "",
-    fileId: undefined,
-  };
-};
-
-export const selectSelectedResource = ({ state }) => {
-  if (!state.bgm.resourceId) {
-    return null;
-  }
-
-  const flatItems = toFlatItems(state.items);
-  const item = flatItems.find((item) => item.id === state.bgm.resourceId);
-
-  if (!item) {
-    return null;
-  }
-
-  return {
-    resourceId: state.bgm.resourceId,
-    fileId: item.fileId,
-    name: item.name,
-    itemBorderColor: "bo",
-    itemHoverBorderColor: "ac",
-    item: {
-      ...item,
-      itemBorderColor: "bo",
-      itemHoverBorderColor: "ac",
-    },
-  };
-};
-
 export const selectSoundItemById = ({ state }, { itemId } = {}) => {
   return toFlatItems(state.items).find((item) => item.id === itemId);
+};
+
+export const selectBgmSoundById = ({ state }, { soundId } = {}) => {
+  return state.bgm.sounds.find((sound) => sound.id === soundId);
+};
+
+export const selectBgmSoundIndexById = ({ state }, { soundId } = {}) => {
+  return state.bgm.sounds.findIndex((sound) => sound.id === soundId);
 };
 
 export const selectBreadcrumb = ({ state }) => {
@@ -187,9 +214,11 @@ export const selectBreadcrumb = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
-  const flatItems = toFlatItems(state.items).filter(
-    (item) => item.type === "folder",
+  const flatSoundItems = toFlatItems(state.items);
+  const soundResourceById = new Map(
+    flatSoundItems.map((item) => [item.id, item]),
   );
+  const folderItems = flatSoundItems.filter((item) => item.type === "folder");
   const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
   const matchesSearch = (item) => {
     if (!searchQuery) {
@@ -200,7 +229,7 @@ export const selectViewData = ({ state, i18n }) => {
     const description = (item.description ?? "").toLowerCase();
     return name.includes(searchQuery) || description.includes(searchQuery);
   };
-  const flatGroups = toFlatGroups(state.items)
+  const groups = toFlatGroups(state.items)
     .map((group) => {
       const children = group.children.filter(matchesSearch).map((child) => {
         const isSelected = child.id === state.tempSelectedResourceId;
@@ -215,34 +244,177 @@ export const selectViewData = ({ state, i18n }) => {
       return {
         ...group,
         children,
-        hasChildren: children.length > 0,
         shouldDisplay: !searchQuery || children.length > 0,
       };
     })
     .filter((group) => group.shouldDisplay);
 
-  const selectedResource = selectSelectedResource({ state });
-  const breadcrumb = selectBreadcrumb({ state });
-
-  const defaultValues = {
-    loop: state.bgm?.loop ?? true,
-    volume: normalizeVolume(state.bgm?.volume),
-    startDelayMs: state.bgm?.startDelayMs,
-    audioWaveformDataFileId: selectedResource?.item?.waveformDataFileId || "",
-  };
+  const durations = state.bgm.sounds.map((sound) => {
+    return resolveSoundDurationMs(
+      sound,
+      soundResourceById.get(sound.resourceId),
+    );
+  });
+  const channelDurationMs = durations.reduce((total, duration) => {
+    return total + Math.max(0, duration);
+  }, 0);
+  const equalWidth = state.bgm.sounds.length
+    ? 100 / state.bgm.sounds.length
+    : 100;
+  const sounds = state.bgm.sounds.map((sound, index) => {
+    const resource = soundResourceById.get(sound.resourceId);
+    const isSelected = sound.id === state.selectedSoundId;
+    const widthPercent =
+      channelDurationMs > 0
+        ? (Math.max(0, durations[index]) / channelDurationMs) * 100
+        : equalWidth;
+    return {
+      ...sound,
+      name: resource?.name ?? sound.resourceId,
+      fileId: resource?.fileId,
+      waveformDataFileId: resource?.waveformDataFileId,
+      itemBorderColor: isSelected ? "pr" : "bo",
+      itemHoverBorderColor: isSelected ? "pr" : "ac",
+      durationLabel: formatDurationMs(durations[index]),
+      widthPercent: widthPercent.toFixed(4),
+    };
+  });
+  const selectedSound = sounds.find(
+    (sound) => sound.id === state.selectedSoundId,
+  );
+  const channelSelected = selectedSound === undefined;
+  const channelName = localizeCommandLineText("BGM Channel", copy);
+  const form = channelSelected ? CHANNEL_FORM : SOUND_FORM;
+  const defaultValues = channelSelected
+    ? {
+        loop: state.bgm.loop,
+        volume: state.bgm.volume,
+      }
+    : {
+        volume: selectedSound.volume,
+      };
 
   return {
     mode: state.mode,
-    audio: selectedResource?.item,
-    items: flatItems,
-    groups: flatGroups,
+    items: folderItems,
+    groups,
+    sounds,
+    channelBorderColor: channelSelected ? "pr" : "bo",
+    channelHoverBorderColor: channelSelected ? "pr" : "ac",
+    channelLabel: channelName,
+    channelDurationLabel: formatDurationMs(channelDurationMs),
+    audioLabel: localizeCommandLineText("Audio", copy),
+    addAudioLabel: localizeCommandLineText("Add BGM audio", copy),
+    addBeforeLabel: localizeCommandLineText("Add audio before", copy),
+    addAfterLabel: localizeCommandLineText("Add audio after", copy),
+    selectionHeading: localizeCommandLineText(
+      channelSelected ? "Channel" : "Audio",
+      copy,
+    ),
+    selectionName: channelSelected ? channelName : selectedSound.name,
+    selectionKey: channelSelected ? "channel" : `sound-${selectedSound.id}`,
+    form: localizeCommandLineForm(form, copy),
+    defaultValues,
     tempSelectedResourceId: state.tempSelectedResourceId,
     searchQuery: state.searchQuery,
     searchPlaceholder: localizeCommandLineText("Search...", copy),
     playingSound: state.playingSound,
     showAudioPlayer: state.showAudioPlayer,
-    breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
-    form: localizeCommandLineForm(form, copy),
-    defaultValues,
+    breadcrumb: localizeCommandLineBreadcrumb(
+      selectBreadcrumb({ state }),
+      copy,
+    ),
+  };
+};
+
+export const setBgm = ({ state }, { bgm } = {}) => {
+  state.bgm = normalizeBgm(bgm, state.items);
+  state.selectedSoundId = undefined;
+};
+
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
+};
+
+export const setRepositoryState = ({ state }, { sounds } = {}) => {
+  state.items = sounds;
+  state.bgm = normalizeBgm(state.bgm, state.items);
+};
+
+export const clearSelectedSound = ({ state }, _payload = {}) => {
+  state.selectedSoundId = undefined;
+};
+
+export const setSelectedSound = ({ state }, { soundId } = {}) => {
+  state.selectedSoundId = soundId;
+};
+
+export const updateChannel = ({ state }, { values = {} } = {}) => {
+  if (values.loop !== undefined) {
+    state.bgm.loop = values.loop;
+  }
+  if (values.volume !== undefined) {
+    state.bgm.volume = normalizeVolume(values.volume, DEFAULT_CHANNEL_VOLUME);
+  }
+};
+
+export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
+  const sound = state.bgm.sounds.find((item) => item.id === soundId);
+  if (!sound) {
+    return;
+  }
+
+  if (values.volume !== undefined) {
+    sound.volume = normalizeVolume(values.volume, DEFAULT_SOUND_VOLUME);
+  }
+};
+
+export const insertSound = (
+  { state },
+  { id, resourceId, index = state.bgm.sounds.length } = {},
+) => {
+  const sound = normalizeSounds([
+    {
+      id,
+      resourceId,
+      volume: DEFAULT_SOUND_VOLUME,
+    },
+  ])[0];
+  const insertIndex = Math.max(0, Math.min(index, state.bgm.sounds.length));
+  state.bgm.sounds.splice(insertIndex, 0, sound);
+  reflowSounds(state.bgm.sounds, state.items);
+  state.selectedSoundId = sound.id;
+  state.tempSelectedResourceId = undefined;
+};
+
+export const removeSound = ({ state }, { soundId } = {}) => {
+  state.bgm.sounds = state.bgm.sounds.filter((sound) => sound.id !== soundId);
+  reflowSounds(state.bgm.sounds, state.items);
+  state.selectedSoundId = undefined;
+};
+
+export const setPendingInsertIndex = ({ state }, { index } = {}) => {
+  state.pendingInsertIndex = index;
+};
+
+export const setTempSelectedResource = ({ state }, { resourceId } = {}) => {
+  state.tempSelectedResourceId = resourceId;
+};
+
+export const setSearchQuery = ({ state }, { value } = {}) => {
+  state.searchQuery = value ?? "";
+};
+
+export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
+  state.playingSound.fileId = fileId;
+  state.playingSound.title = fileName;
+  state.showAudioPlayer = true;
+};
+
+export const closeAudioPlayer = ({ state }, _payload = {}) => {
+  state.showAudioPlayer = false;
+  state.playingSound = {
+    title: "",
+    fileId: undefined,
   };
 };

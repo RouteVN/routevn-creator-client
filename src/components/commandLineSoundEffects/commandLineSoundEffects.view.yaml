@@ -1,16 +1,58 @@
 refs:
-  addNewButton:
+  form:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
+  addChannelButton:
     eventListeners:
       click:
-        handler: handleAddNewClick
-  soundEffectCard*:
+        handler: handleAddChannelClick
+  addChannelPopover:
+    eventListeners:
+      close:
+        handler: handleAddChannelPopoverClose
+  addChannelForm:
+    eventListeners:
+      form-action:
+        handler: handleAddChannelFormAction
+  sfxChannel*:
     eventListeners:
       click:
-        handler: handleSfxClick
-      dblclick:
-        handler: handleSfxDoubleClick
+        handler: handleChannelClick
       contextmenu:
-        handler: handleSfxContextMenu
+        handler: handleChannelContextMenu
+      keydown:
+        handler: handleChannelKeyDown
+  channelSelectButton*:
+    eventListeners:
+      click:
+        handler: handleChannelClick
+  emptyAddButton*:
+    eventListeners:
+      click:
+        handler: handleEmptyAddClick
+  insertBeforeButton*:
+    eventListeners:
+      click:
+        handler: handleEdgeAddClick
+  insertAfterButton*:
+    eventListeners:
+      click:
+        handler: handleEdgeAddClick
+  soundClip*:
+    eventListeners:
+      click:
+        handler: handleSoundClick
+      dblclick:
+        handler: handleSoundDoubleClick
+      contextmenu:
+        handler: handleSoundContextMenu
+      keydown:
+        handler: handleSoundKeyDown
+  baseFileExplorer:
+    eventListeners:
+      item-click:
+        handler: handleFileExplorerItemClick
   galleryScroll: {}
   searchInput:
     eventListeners:
@@ -34,49 +76,149 @@ refs:
     eventListeners:
       click:
         handler: handleButtonSelectClick
-  loopSelect*:
-    eventListeners:
-      value-change:
-        handler: handleSfxLoopChange
-  volumeInput*:
-    eventListeners:
-      value-input:
-        handler: handleSfxVolumeInput
-  dropdownMenu:
-    eventListeners:
-      close:
-        handler: handleDropdownMenuClose
-      item-click:
-        handler: handleDropdownMenuClickItem
   rvnAudioPlayer:
     eventListeners:
       audio-player-close:
         handler: handleAudioPlayerClose
+styles:
+  ".sfxChannel":
+    box-sizing: border-box
+    flex: "0 0 150px"
+    min-width: "0"
+    overflow-x: auto
+    overflow-y: hidden
+  ".sfxTimelineTrack":
+    min-width: 100%
+  ".sfxTimelineContent":
+    box-sizing: border-box
+    min-width: "0"
+    position: relative
+  ".sfxSoundClip":
+    box-sizing: border-box
+    min-width: 56px
+    overflow: hidden
+    outline: none
+    position: relative
+  ".sfxSoundClipContent":
+    box-sizing: border-box
+    min-width: "0"
+    overflow: hidden
+  ".sfxSoundClip:focus-visible":
+    box-shadow: 0 0 0 2px var(--ring) inset
+  ".sfxInsertZone":
+    appearance: none
+    background: transparent
+    border: "0"
+    bottom: "0"
+    color: var(--primary-foreground)
+    cursor: pointer
+    font-family: inherit
+    font-size: 20px
+    font-weight: 600
+    opacity: "0"
+    padding: "0"
+    pointer-events: auto
+    position: absolute
+    top: "0"
+    transition: opacity 120ms ease, background 120ms ease
+    width: "min(44px, 50%)"
+    z-index: "5"
+  ".sfxInsertZone:hover":
+    background: var(--primary)
+    opacity: "0.88"
+  ".sfxInsertZone:focus-visible":
+    background: var(--primary)
+    opacity: "0.88"
+    outline: "2px solid var(--ring)"
+    outline-offset: -2px
+  ".sfxInsertBefore":
+    left: "0"
+  ".sfxInsertAfter":
+    right: "0"
+  ".sfxEmptyAdd":
+    appearance: none
+    background: transparent
+    border: "0"
+    color: var(--muted-foreground)
+    cursor: pointer
+    font-family: inherit
+    font-size: 30px
+    height: 100%
+    padding: "0"
+    width: 100%
+  ".sfxEmptyAdd:hover":
+    color: var(--foreground)
+  ".sfxEmptyAdd:focus-visible":
+    box-shadow: 0 0 0 2px var(--ring) inset
+    outline: none
+  ".sfxChannelHeader":
+    align-items: center
+    border-bottom: "1px solid var(--border)"
+    display: flex
+    flex: "0 0 24px"
+    height: 24px
+    width: 100%
+  ".sfxChannelSelect":
+    align-items: center
+    appearance: none
+    background: transparent
+    border: "0"
+    color: var(--muted-foreground)
+    cursor: pointer
+    display: flex
+    flex: "1 1 auto"
+    font-family: inherit
+    font-size: 12px
+    height: 24px
+    justify-content: space-between
+    min-width: "0"
+    padding: "0 8px"
+    text-align: left
+  ".sfxChannelSelect:hover":
+    color: var(--foreground)
+  ".sfxChannelSelect:focus-visible":
+    box-shadow: 0 0 0 2px var(--ring) inset
+    outline: none
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md: null
       - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
-          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-view#soundEffectsContainer w=f g=md:
-                  - $for sfx, i in defaultValues.sfx:
-                      - rtgl-view d=h w=f g=md av=t:
-                          - rtgl-view#soundEffectCard${i} data-sfx-id=${sfx.id} cur=pointer bw=xs bc=${sfx.itemBorderColor} h-bc=${sfx.itemHoverBorderColor} br=sm:
-                              - rtgl-view p=md g=md br=md:
-                                  - $if sfx.waveformDataFileId:
-                                      - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} w=200 h=120: null
-                                    $else:
-                                      - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                          - rtgl-text s=sm c=mu-fg: No waveform
-                                  - rtgl-text s=xs c=mu-fg ellipsis w=200: ${sfx.name}
-                          - rtgl-view w=1fg g=sm:
-                              - rtgl-text s=sm c=mu-fg: Loop
-                              - rtgl-segmented-control#loopSelect${i} data-index=${i} w=f no-clear :selectedValue=${sfx.loop} :options=${loopOptions}: null
-                              - rtgl-text s=sm c=mu-fg: Volume
-                              - rtgl-slider-input#volumeInput${i} data-index=${i} key=${sfx.id} min=0 max=100 step=1 w=f value=${sfx.volume}: null
-                  - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
+          - 'rtgl-view h=1fg sv w=f g=lg mt=lg style="min-height: 0;"':
+              - $for channel, i in channels:
+                  - 'rtgl-view#sfxChannel${i}.sfxChannel data-channel-id=${channel.id} w=f h=150 d=v pos=rel bgc=mu bw=xs bc=${channel.channelBorderColor} h-bc=${channel.channelHoverBorderColor} br=sm tabindex=0 role=group aria-label="${channel.id}"':
+                      - rtgl-view.sfxChannelHeader:
+                          - 'button#channelSelectButton${i}.sfxChannelSelect type=button data-channel-id=${channel.id} aria-label="${channel.id}"':
+                              - span: ${channel.id}
+                              - span: ${channel.durationLabel}
+                      - $if channel.sounds.length == 0:
+                          - 'rtgl-view w=f h=126 bgc=bg bwb=xs bc=${channel.channelBorderColor} style="min-height: 0;"':
+                              - 'button#emptyAddButton${i}.sfxEmptyAdd type=button data-channel-id=${channel.id} aria-label="${addSoundLabel}"': "+"
+                        $else:
+                          - rtgl-view.sfxTimelineTrack d=h w=f h=126:
+                              - 'rtgl-view.sfxTimelineContent d=h h=f style="flex: 0 0 ${channel.timelineWidthPercent}%;"':
+                                  - $for sound, j in channel.sounds:
+                                      - 'rtgl-view#soundClip${i}x${j}.sfxSoundClip data-channel-id=${channel.id} data-sound-id=${sound.id} d=v h=f pos=rel bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="overflow: hidden; flex: 0 0 ${sound.widthPercent}%;"':
+                                          - rtgl-view.sfxSoundClipContent d=v w=f h=f:
+                                              - $if sound.waveformDataFileId:
+                                                  - rvn-waveform-visualizer waveformDataFileId=${sound.waveformDataFileId} w=f h=94: null
+                                                $else:
+                                                  - rtgl-view w=f h=94 av=c ah=c:
+                                                      - rtgl-text s=sm c=mu-fg: No waveform
+                                              - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
+                                                  - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
+                                                  - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
+                                          - 'button#insertBeforeButton${i}x${j}.sfxInsertZone.sfxInsertBefore type=button data-channel-id=${channel.id} data-insert-index=${sound.insertBeforeIndex} aria-label="${addBeforeLabel}"': "+"
+                                          - 'button#insertAfterButton${i}x${j}.sfxInsertZone.sfxInsertAfter type=button data-channel-id=${channel.id} data-insert-index=${sound.insertAfterIndex} aria-label="${addAfterLabel}"': "+"
+              - 'rtgl-button#addChannelButton v=ol w=f mt=md style="flex: 0 0 auto;"': ${addChannelButtonLabel}
+              - $if hasSelection:
+                  - 'rtgl-view w=f g=md style="flex: 0 0 auto;"':
+                      - rtgl-view w=f:
+                          - rtgl-text s=md: ${selectionHeading}
+                          - rtgl-text s=sm c=mu-fg: ${selectionName}
+                      - rtgl-form#form key=${selectionKey} :form=${form} :defaultValues=${defaultValues}: null
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-              - rtgl-button#submitButton: Submit
+              - rtgl-button#submitButton: ${submitButtonLabel}
       - $if mode == 'gallery':
           - rtgl-view d=h w=f av=c g=md:
               - rtgl-view w=1fg: null
@@ -101,8 +243,9 @@ template:
                                                   - rtgl-text s=sm c=mu-fg: No waveform
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
-              - rtgl-button#buttonSelect: Select
-  - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
+              - rtgl-button#buttonSelect: ${selectButtonLabel}
+  - rtgl-popover#addChannelPopover ?open=${addChannelPopover.isOpen} x=${addChannelPopover.position.x} y=${addChannelPopover.position.y} place=bs:
+      - rtgl-form#addChannelForm key=${addChannelPopover.key} slot=content :defaultValues=${addChannelDefaultValues} :form=${addChannelForm} w=320: null
   - $if showAudioPlayer:
       - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: 0px; right: 0px;"':
           - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null

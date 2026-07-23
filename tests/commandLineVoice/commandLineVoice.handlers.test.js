@@ -1,234 +1,304 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  handleAudioWaveformClick,
+  handleChannelClick,
+  handleEdgeAddClick,
+  handleEmptyAddClick,
+  handleFormChange,
+  handleSoundContextMenu,
   handleSubmitClick,
 } from "../../src/components/commandLineVoice/commandLineVoice.handlers.js";
-import {
-  createInitialState,
-  openAudioPlayer,
-  selectSelectedResource,
-  selectVoicePayload,
-  selectViewData,
-  setRepositoryState,
-  setVoiceAudio,
-} from "../../src/components/commandLineVoice/commandLineVoice.store.js";
+import * as voiceStore from "../../src/components/commandLineVoice/commandLineVoice.store.js";
 
-const createStoreDeps = (state) => ({
-  setRepositoryState: (payload) => setRepositoryState({ state }, payload),
-  setVoiceAudio: (payload) => setVoiceAudio({ state }, payload),
-  openAudioPlayer: (payload) => openAudioPlayer({ state }, payload),
-  selectVoicePayload: () => selectVoicePayload({ state }),
-  selectSelectedResource: () => selectSelectedResource({ state }),
-});
+const i18n = {
+  resourcePages: {},
+  sceneEditorPage: {},
+  commandLinePage: {},
+};
 
-describe("commandLineVoice.handlers", () => {
-  it("uploads a picked audio file, creates a voice resource, and selects it", async () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const stopPropagation = vi.fn();
-    const uploadResult = {
-      fileId: "file-voice-1",
-      displayName: "Alice Line",
-      waveformDataFileId: "wave-voice-1",
-      duration: 2.5,
-      fileRecords: [{ fileId: "file-voice-1" }],
-    };
-    const file = {
+const contextMenuItems = [
+  {
+    type: "item",
+    label: "Insert Sound Before",
+    key: "insert-before",
+  },
+  {
+    type: "item",
+    label: "Insert Sound After",
+    key: "insert-after",
+  },
+  { type: "item", label: "Remove", key: "remove" },
+];
+
+const createStore = (state) => {
+  const store = {};
+  for (const [name, implementation] of Object.entries(voiceStore)) {
+    if (name === "createInitialState" || name === "selectViewData") {
+      continue;
+    }
+    store[name] = (payload) => implementation({ state }, payload);
+  }
+  return store;
+};
+
+const createUploadHarness = () => {
+  const resources = {};
+  const tree = [];
+  const projectService = {
+    ensureRepository: vi.fn(async () => {}),
+    getState: vi.fn(() => ({
+      voices: { items: resources, tree },
+    })),
+    createVoice: vi.fn(async ({ voiceId, data }) => {
+      resources[voiceId] = {
+        id: voiceId,
+        ...data,
+      };
+      tree.push({ id: voiceId });
+      return voiceId;
+    }),
+  };
+  const uploadResult = {
+    fileId: "file-voice-1",
+    displayName: "Alice Line",
+    waveformDataFileId: "wave-voice-1",
+    duration: 2.5,
+    fileRecords: [{ fileId: "file-voice-1" }],
+  };
+  const appService = {
+    pickFiles: vi.fn(async () => ({
       name: "alice-line.ogg",
       uploadSucessful: true,
       uploadSuccessful: true,
       uploadResult,
-    };
-    let createdVoiceId;
-    const projectService = {
-      ensureRepository: vi.fn(async () => {}),
-      getState: vi.fn(() => ({
-        voices: {
-          items: createdVoiceId
-            ? {
-                [createdVoiceId]: {
-                  id: createdVoiceId,
-                  type: "voice",
-                  name: "Alice Line",
-                  sceneId: "scene-1",
-                  fileId: "file-voice-1",
-                  waveformDataFileId: "wave-voice-1",
-                },
-              }
-            : {},
-          tree: createdVoiceId ? [{ id: createdVoiceId }] : [],
-        },
-      })),
-      createVoice: vi.fn(async ({ voiceId }) => {
-        createdVoiceId = voiceId;
-        return voiceId;
-      }),
-    };
-    const appService = {
-      pickFiles: vi.fn(async () => file),
-      showAlert: vi.fn(),
-    };
+    })),
+    showAlert: vi.fn(),
+    showDropdownMenu: vi.fn(),
+  };
 
-    await handleAudioWaveformClick(
-      {
-        appService,
-        projectService,
-        props: {
-          currentSceneId: "scene-1",
-        },
-        store: createStoreDeps(state),
-        render,
-      },
-      {
-        _event: {
-          stopPropagation,
-        },
-      },
-    );
+  return { appService, projectService, uploadResult };
+};
 
-    expect(stopPropagation).toHaveBeenCalledTimes(1);
+const createUploadDeps = (state) => {
+  const store = createStore(state);
+  const render = vi.fn();
+  const harness = createUploadHarness();
+  return {
+    ...harness,
+    deps: {
+      ...harness,
+      i18n,
+      props: { currentSceneId: "scene-1" },
+      store,
+      render,
+    },
+    render,
+    store,
+  };
+};
+
+describe("commandLineVoice.handlers", () => {
+  it("opens the file picker, creates a Voice resource, and inserts a clip", async () => {
+    const state = voiceStore.createInitialState();
+    const { appService, projectService, uploadResult, deps, render } =
+      createUploadDeps(state);
+    const stopPropagation = vi.fn();
+
+    await handleEmptyAddClick(deps, {
+      _event: { stopPropagation },
+    });
+
+    expect(stopPropagation).toHaveBeenCalledOnce();
     expect(appService.pickFiles).toHaveBeenCalledWith({
       accept: ".mp3,.wav,.ogg",
       multiple: false,
       upload: true,
     });
-    expect(projectService.createVoice).toHaveBeenCalledWith(
-      expect.objectContaining({
-        voiceId: createdVoiceId,
-        fileRecords: uploadResult.fileRecords,
-        data: {
-          type: "voice",
-          fileId: "file-voice-1",
-          name: "Alice Line",
-          description: "",
-          sceneId: "scene-1",
-          waveformDataFileId: "wave-voice-1",
-          duration: 2.5,
-        },
-        position: "last",
-      }),
-    );
-    expect(selectVoicePayload({ state })).toEqual({
-      resourceId: createdVoiceId,
+    const { voiceId } = projectService.createVoice.mock.calls[0][0];
+    expect(projectService.createVoice).toHaveBeenCalledWith({
+      voiceId,
+      fileRecords: uploadResult.fileRecords,
+      data: {
+        type: "voice",
+        fileId: "file-voice-1",
+        name: "Alice Line",
+        description: "",
+        sceneId: "scene-1",
+        waveformDataFileId: "wave-voice-1",
+        duration: 2.5,
+      },
+      position: "last",
+    });
+    expect(voiceStore.selectVoicePayload({ state })).toEqual({
       loop: false,
       volume: 100,
+      sounds: [
+        {
+          id: voiceId,
+          resourceId: voiceId,
+          volume: 100,
+          startDelayMs: 0,
+        },
+      ],
     });
-    expect(render).toHaveBeenCalledTimes(1);
+    expect(state.selectedSoundId).toBe(voiceId);
+    expect(render).toHaveBeenCalledOnce();
     expect(appService.showAlert).not.toHaveBeenCalled();
   });
 
-  it("closes a stale preview player after uploading replacement voice audio", async () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const uploadResult = {
-      fileId: "file-voice-2",
-      displayName: "Alice Line 2",
-      fileRecords: [{ fileId: "file-voice-2" }],
-    };
-    const file = {
-      name: "alice-line-2.ogg",
-      uploadSucessful: true,
-      uploadSuccessful: true,
-      uploadResult,
-    };
-    let createdVoiceId;
-    const projectService = {
-      ensureRepository: vi.fn(async () => {}),
-      getState: vi.fn(() => ({
-        voices: {
-          items: createdVoiceId
-            ? {
-                [createdVoiceId]: {
-                  id: createdVoiceId,
-                  type: "voice",
-                  name: "Alice Line 2",
-                  sceneId: "scene-1",
-                  fileId: "file-voice-2",
-                },
-              }
-            : {},
-          tree: createdVoiceId ? [{ id: createdVoiceId }] : [],
-        },
-      })),
-      createVoice: vi.fn(async ({ voiceId }) => {
-        createdVoiceId = voiceId;
-        return voiceId;
-      }),
-    };
-    const appService = {
-      pickFiles: vi.fn(async () => file),
-      showAlert: vi.fn(),
-    };
-
-    setVoiceAudio({ state }, { resourceId: "voice-1" });
-    openAudioPlayer(
+  it("uses the file picker when adding at a channel edge", async () => {
+    const state = voiceStore.createInitialState();
+    const { deps, projectService } = createUploadDeps(state);
+    voiceStore.setVoice(
       { state },
       {
-        fileId: "file-voice-1",
-        fileName: "Alice Line 1",
+        voice: {
+          sounds: [{ id: "existing", resourceId: "existing", volume: 100 }],
+        },
       },
     );
 
-    await handleAudioWaveformClick(
+    await handleEdgeAddClick(deps, {
+      _event: {
+        stopPropagation: vi.fn(),
+        currentTarget: { dataset: { insertIndex: "0" } },
+      },
+    });
+
+    const { voiceId } = projectService.createVoice.mock.calls[0][0];
+    expect(state.voice.sounds.map((sound) => sound.id)).toEqual([
+      voiceId,
+      "existing",
+    ]);
+  });
+
+  it("updates channel controls or only the selected clip volume", () => {
+    const state = voiceStore.createInitialState();
+    const store = createStore(state);
+    const render = vi.fn();
+
+    handleFormChange(
+      { store, render },
+      { _event: { detail: { values: { loop: true, volume: 70 } } } },
+    );
+    expect(state.voice).toMatchObject({ loop: true, volume: 70 });
+
+    store.insertSound({ id: "clip", resourceId: "voice-1", index: 0 });
+    handleFormChange(
+      { store, render },
+      { _event: { detail: { values: { volume: 35 } } } },
+    );
+
+    expect(state.voice.volume).toBe(70);
+    expect(state.voice.sounds[0].volume).toBe(35);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("selects the whole Voice channel from its header", () => {
+    const state = voiceStore.createInitialState();
+    const store = createStore(state);
+    const render = vi.fn();
+    store.insertSound({ id: "clip", resourceId: "voice-1", index: 0 });
+
+    handleChannelClick(
+      { store, render },
+      { _event: { stopPropagation: vi.fn() } },
+    );
+
+    expect(state.selectedSoundId).toBeUndefined();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("removes a Voice clip from its context menu", async () => {
+    const state = voiceStore.createInitialState();
+    const store = createStore(state);
+    const render = vi.fn();
+    store.insertSound({ id: "clip", resourceId: "voice-1", index: 0 });
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "remove" },
+    });
+
+    await handleSoundContextMenu(
       {
-        appService,
-        projectService,
-        props: {
-          currentSceneId: "scene-1",
-        },
-        store: createStoreDeps(state),
+        appService: { showDropdownMenu },
+        i18n,
         render,
+        store,
       },
       {
         _event: {
+          currentTarget: { dataset: { soundId: "clip" } },
+          clientX: 120,
+          clientY: 240,
+          preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
         },
       },
     );
 
-    expect(selectVoicePayload({ state })).toEqual({
-      resourceId: createdVoiceId,
-      loop: false,
-      volume: 100,
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: contextMenuItems,
+      x: 120,
+      y: 240,
+      place: "bs",
     });
-    expect(selectViewData({ state })).toMatchObject({
-      showAudioPlayer: false,
-      playingSound: {
-        fileId: undefined,
-        title: "",
-      },
-    });
+    expect(state.voice.sounds).toEqual([]);
+    expect(render).toHaveBeenCalledTimes(2);
   });
 
-  it("submits the selected voice payload", () => {
-    const state = createInitialState();
-    const dispatchEvent = vi.fn();
-    const stopPropagation = vi.fn();
+  it("uses the file picker for context-menu insertion", async () => {
+    const state = voiceStore.createInitialState();
+    const { deps, appService, projectService } = createUploadDeps(state);
+    deps.store.insertSound({ id: "existing", resourceId: "old", index: 0 });
+    appService.showDropdownMenu.mockResolvedValue({
+      item: { key: "insert-before" },
+    });
 
-    setVoiceAudio({ state }, { resourceId: "voice-1" });
+    await handleSoundContextMenu(deps, {
+      _event: {
+        currentTarget: { dataset: { soundId: "existing" } },
+        clientX: 120,
+        clientY: 240,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      },
+    });
+
+    const { voiceId } = projectService.createVoice.mock.calls[0][0];
+    expect(state.voice.sounds.map((sound) => sound.id)).toEqual([
+      voiceId,
+      "existing",
+    ]);
+  });
+
+  it("submits the canonical Voice channel", () => {
+    const state = voiceStore.createInitialState();
+    const store = createStore(state);
+    const dispatchEvent = vi.fn();
+    store.insertSound({ id: "clip", resourceId: "voice-1", index: 0 });
 
     handleSubmitClick(
       {
-        appService: {
-          showAlert: vi.fn(),
-        },
+        appService: { showAlert: vi.fn() },
         dispatchEvent,
-        store: createStoreDeps(state),
+        i18n,
+        store,
       },
-      {
-        _event: {
-          stopPropagation,
-        },
-      },
+      { _event: { stopPropagation: vi.fn() } },
     );
 
-    expect(stopPropagation).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledOnce();
     expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
       voice: {
-        resourceId: "voice-1",
         loop: false,
         volume: 100,
+        sounds: [
+          {
+            id: "clip",
+            resourceId: "voice-1",
+            volume: 100,
+            startDelayMs: 0,
+          },
+        ],
       },
     });
   });

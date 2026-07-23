@@ -1,22 +1,40 @@
 refs:
-  audioWaveform:
+  form:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
+  voiceChannel:
     eventListeners:
       click:
-        handler: handleAudioWaveformClick
+        handler: handleChannelClick
+      keydown:
+        handler: handleChannelKeyDown
+  channelSelectButton:
+    eventListeners:
+      click:
+        handler: handleChannelClick
+  emptyAddButton:
+    eventListeners:
+      click:
+        handler: handleEmptyAddClick
+  insertBeforeButton:
+    eventListeners:
+      click:
+        handler: handleEdgeAddClick
+  insertAfterButton:
+    eventListeners:
+      click:
+        handler: handleEdgeAddClick
+  soundClip*:
+    eventListeners:
+      click:
+        handler: handleSoundClick
+      dblclick:
+        handler: handleSoundDoubleClick
       contextmenu:
-        handler: handleAudioWaveformRightClick
-  previewButton:
-    eventListeners:
-      click:
-        handler: handlePreviewClick
-  loopSelect:
-    eventListeners:
-      value-change:
-        handler: handleLoopChange
-  volumeInput:
-    eventListeners:
-      value-input:
-        handler: handleVolumeInput
+        handler: handleSoundContextMenu
+      keydown:
+        handler: handleSoundKeyDown
   submitButton:
     eventListeners:
       click:
@@ -29,32 +47,119 @@ refs:
     eventListeners:
       audio-player-close:
         handler: handleAudioPlayerClose
+styles:
+  ".voiceChannel":
+    box-sizing: border-box
+    min-width: "0"
+    overflow-x: auto
+    overflow-y: hidden
+  ".voiceTimelineTrack":
+    min-width: 100%
+  ".voiceSoundClip":
+    box-sizing: border-box
+    min-width: 56px
+    overflow: hidden
+    outline: none
+  ".voiceSoundClip:focus-visible":
+    box-shadow: 0 0 0 2px var(--ring) inset
+  ".voiceInsertZone":
+    appearance: none
+    background: transparent
+    border: "0"
+    bottom: "0"
+    color: var(--primary-foreground)
+    cursor: pointer
+    font-family: inherit
+    font-size: 20px
+    font-weight: 600
+    opacity: "0"
+    padding: "0"
+    position: absolute
+    top: 24px
+    transition: opacity 120ms ease, background 120ms ease
+    width: 44px
+    z-index: "5"
+  ".voiceInsertZone:hover":
+    background: var(--primary)
+    opacity: "0.88"
+  ".voiceInsertZone:focus-visible":
+    background: var(--primary)
+    opacity: "0.88"
+    outline: "2px solid var(--ring)"
+    outline-offset: -2px
+  ".voiceInsertBefore":
+    left: "0"
+  ".voiceInsertAfter":
+    right: "0"
+  ".voiceEmptyAdd":
+    appearance: none
+    background: transparent
+    border: "0"
+    color: var(--muted-foreground)
+    cursor: pointer
+    font-family: inherit
+    font-size: 30px
+    height: 100%
+    padding: "0"
+    width: 100%
+  ".voiceEmptyAdd:hover":
+    color: var(--foreground)
+  ".voiceEmptyAdd:focus-visible":
+    box-shadow: 0 0 0 2px var(--ring) inset
+    outline: none
+  ".voiceChannelSelect":
+    align-items: center
+    appearance: none
+    background: transparent
+    border: "0"
+    border-bottom: "1px solid var(--border)"
+    color: var(--muted-foreground)
+    cursor: pointer
+    display: flex
+    flex: "0 0 24px"
+    font-family: inherit
+    font-size: 12px
+    height: 24px
+    justify-content: space-between
+    padding: "0 8px"
+    text-align: left
+    width: 100%
+  ".voiceChannelSelect:hover":
+    color: var(--foreground)
+  ".voiceChannelSelect:focus-visible":
+    box-shadow: 0 0 0 2px var(--ring) inset
+    outline: none
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md: null
       - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-      - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-          - rtgl-view d=h w=f g=md av=t:
-              - $if audio:
-                  - rtgl-view#audioWaveform cur=pointer bw=xs bc=${audio.itemBorderColor} h-bc=${audio.itemHoverBorderColor} br=sm:
-                      - rtgl-view p=md g=md br=md:
-                          - $if audio.waveformDataFileId:
-                              - rvn-waveform-visualizer waveformDataFileId=${audio.waveformDataFileId} w=200 h=120: null
-                            $else:
-                              - rtgl-view w=200 h=120 av=c ah=c bgc=mu:
-                                  - rtgl-text s=sm c=mu-fg: No waveform
-                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${audio.name}
+      - 'rtgl-view h=1fg sv w=f g=lg mt=lg style="min-height: 0;"':
+          - 'rtgl-view#voiceChannel.voiceChannel w=f h=150 d=v pos=rel bgc=mu bw=xs bc=${channelBorderColor} h-bc=${channelHoverBorderColor} br=sm tabindex=0 role=group aria-label="${channelLabel}"':
+              - 'button#channelSelectButton.voiceChannelSelect type=button aria-label="${channelLabel}"':
+                  - span: ${channelLabel}
+                  - span: ${channelDurationLabel}
+              - $if sounds.length == 0:
+                  - 'rtgl-view w=f h=126 bgc=bg bwb=xs bc=${channelBorderColor} style="min-height: 0;"':
+                      - 'button#emptyAddButton.voiceEmptyAdd type=button aria-label="${addAudioLabel}"': "+"
                 $else:
-                  - rtgl-view#audioWaveform w=250 h=150 bgc=mu av=c ah=c cur=pointer br=sm:
-                      - rtgl-svg svg=upload wh=24 c=mu-fg: null
-                      - rtgl-text s=md c=mu-fg: Select Voice
-              - rtgl-view w=1fg g=sm:
-                  - $if audio:
-                      - rtgl-button#previewButton sq v=ol pre=play: null
-                  - rtgl-text s=sm c=mu-fg: Loop
-                  - rtgl-segmented-control#loopSelect w=f no-clear :selectedValue=${voice.loop} :options=${loopOptions}: null
-                  - rtgl-text s=sm c=mu-fg: Volume
-                  - rtgl-slider-input#volumeInput min=0 max=100 step=1 w=f value=${voice.volume}: null
+                  - rtgl-view.voiceTimelineTrack d=h w=f h=126:
+                      - $for sound, i in sounds:
+                          - 'rtgl-view#soundClip${i}.voiceSoundClip data-sound-id=${sound.id} d=v h=f bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="flex: 0 0 ${sound.widthPercent}%;"':
+                              - $if sound.waveformDataFileId:
+                                  - rvn-waveform-visualizer waveformDataFileId=${sound.waveformDataFileId} w=f h=94: null
+                                $else:
+                                  - rtgl-view w=f h=94 av=c ah=c:
+                                      - rtgl-text s=sm c=mu-fg: No waveform
+                              - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
+                                  - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
+                                  - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
+                  - 'button#insertBeforeButton.voiceInsertZone.voiceInsertBefore type=button data-insert-index=0 aria-label="${addBeforeLabel}"': "+"
+                  - 'button#insertAfterButton.voiceInsertZone.voiceInsertAfter type=button data-insert-index=${sounds.length} aria-label="${addAfterLabel}"': "+"
+          - rtgl-view w=f g=md:
+              - rtgl-view w=f:
+                  - rtgl-text s=md: ${selectionHeading}
+                  - rtgl-text s=sm c=mu-fg: ${selectionName}
+              - rtgl-form#form key=${selectionKey} :form=${form} :defaultValues=${defaultValues}: null
       - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
           - rtgl-button#submitButton: Submit
   - $if showAudioPlayer:

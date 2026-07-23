@@ -277,6 +277,7 @@ const buildInputPreview = (lineActions) => {
 const buildVoicePreview = (lineActions, changes) => {
   return (
     !!changes.voice ||
+    !!lineActions?.voice?.sounds?.length ||
     !!lineActions?.voice?.resourceId ||
     lineActions?.voice?.clear === true
   );
@@ -352,7 +353,9 @@ const buildSceneDocumentLineViewModels = ({
       bgm: changes.bgm
         ? {
             changeType: changes.bgm.changeType,
-            resourceId: changes.bgm.data?.resourceId,
+            resourceId:
+              changes.bgm.data?.sounds?.[0]?.resourceId ??
+              changes.bgm.data?.resourceId,
           }
         : undefined,
       characterFileId: buildDialogueSpeakerPreview(

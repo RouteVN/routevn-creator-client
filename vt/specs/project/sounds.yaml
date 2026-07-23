@@ -215,4 +215,115 @@ steps:
   - action: wait
     ms: 350
   - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/scenes
+  - action: waitFor
+    selector: rvn-scenes
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#whiteboard #itemRef0"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#mapAddHintClose"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mapAddHintClose"
+    steps:
+      - action: click
+  - action: select
+    selector: "#whiteboard #itemRef0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: rvn-scene-editor-lexical
+    state: attached
+    timeoutMs: 20000
+  - action: wait
+    ms: 1200
+  - action: select
+    selector: "rvn-system-actions#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-actions#commandLineActions [data-action-id='5']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions [data-action-id='5']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #emptyAddButton"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #emptyAddButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #resourceItem0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #resourceItem0x0"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #buttonSelect"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #soundClip0"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #insertAfterButton"
+    steps:
+      - action: hover
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #insertAfterButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #resourceItem0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #resourceItem0x0"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #buttonSelect"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #soundClip1"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #channelSelectButton"
+    steps:
+      - action: click
+  - action: wait
+    ms: 250
+  - action: screenshot
 ---

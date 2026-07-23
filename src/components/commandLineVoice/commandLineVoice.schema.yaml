@@ -5,13 +5,31 @@ propsSchema:
     voice:
       type: object
       properties:
+        sounds:
+          type: array
+          items:
+            type: object
+            required: [id, resourceId]
+            properties:
+              id:
+                type: string
+              resourceId:
+                type: string
+              volume:
+                type: number
+              startDelayMs:
+                type: number
         resourceId:
           type: string
+          description: Legacy single-sound Voice resource
         loop:
           type: boolean
+          description: Whether to repeat the complete Voice channel timeline
         volume:
           type: number
+          description: Voice channel volume from 0 to 100
         startDelayMs:
           type: number
+          description: Legacy single-sound start delay
     currentSceneId:
       type: string

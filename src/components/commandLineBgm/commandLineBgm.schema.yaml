@@ -5,11 +5,29 @@ propsSchema:
     bgm:
       type: object
       properties:
+        sounds:
+          type: array
+          items:
+            type: object
+            required: [id, resourceId]
+            properties:
+              id:
+                type: string
+              resourceId:
+                type: string
+              volume:
+                type: number
+              startDelayMs:
+                type: number
         resourceId:
           type: string
+          description: Legacy single-sound BGM resource
         loop:
           type: boolean
+          description: Whether to repeat the complete BGM channel timeline
         volume:
           type: number
+          description: BGM channel volume from 0 to 100
         startDelayMs:
           type: number
+          description: Legacy single-sound start delay

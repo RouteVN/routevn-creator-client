@@ -1,10 +1,40 @@
 refs:
   form:
     eventListeners:
-      form-field-event:
-        handler: handleFormExtra
       form-change:
         handler: handleFormChange
+  bgmChannel:
+    eventListeners:
+      click:
+        handler: handleChannelClick
+      keydown:
+        handler: handleChannelKeyDown
+  channelSelectButton:
+    eventListeners:
+      click:
+        handler: handleChannelClick
+  emptyAddButton:
+    eventListeners:
+      click:
+        handler: handleEmptyAddClick
+  insertBeforeButton:
+    eventListeners:
+      click:
+        handler: handleEdgeAddClick
+  insertAfterButton:
+    eventListeners:
+      click:
+        handler: handleEdgeAddClick
+  soundClip*:
+    eventListeners:
+      click:
+        handler: handleSoundClick
+      dblclick:
+        handler: handleSoundDoubleClick
+      contextmenu:
+        handler: handleSoundContextMenu
+      keydown:
+        handler: handleSoundKeyDown
   baseFileExplorer:
     eventListeners:
       item-click:
@@ -32,31 +62,124 @@ refs:
     eventListeners:
       click:
         handler: handleButtonSelectClick
-  audioWaveform:
-    eventListeners:
-      click:
-        handler: handleAudioWaveformClick
-      contextmenu:
-        handler: handleAudioWaveformRightClick
   rvnAudioPlayer:
     eventListeners:
       audio-player-close:
         handler: handleAudioPlayerClose
+styles:
+  ".bgmChannel":
+    box-sizing: border-box
+    min-width: "0"
+    overflow-x: auto
+    overflow-y: hidden
+  ".bgmTimelineTrack":
+    min-width: 100%
+  ".bgmSoundClip":
+    box-sizing: border-box
+    min-width: 56px
+    overflow: hidden
+    outline: none
+  ".bgmSoundClip:focus-visible":
+    box-shadow: 0 0 0 2px var(--ring) inset
+  ".bgmInsertZone":
+    appearance: none
+    background: transparent
+    border: "0"
+    bottom: "0"
+    color: var(--primary-foreground)
+    cursor: pointer
+    font-family: inherit
+    font-size: 20px
+    font-weight: 600
+    opacity: "0"
+    padding: "0"
+    position: absolute
+    top: 24px
+    transition: opacity 120ms ease, background 120ms ease
+    width: 44px
+    z-index: "5"
+  ".bgmInsertZone:hover":
+    background: var(--primary)
+    opacity: "0.88"
+  ".bgmInsertZone:focus-visible":
+    background: var(--primary)
+    opacity: "0.88"
+    outline: "2px solid var(--ring)"
+    outline-offset: -2px
+  ".bgmInsertBefore":
+    left: "0"
+  ".bgmInsertAfter":
+    right: "0"
+  ".bgmEmptyAdd":
+    appearance: none
+    background: transparent
+    border: "0"
+    color: var(--muted-foreground)
+    cursor: pointer
+    font-family: inherit
+    font-size: 30px
+    height: 100%
+    padding: "0"
+    width: 100%
+  ".bgmEmptyAdd:hover":
+    color: var(--foreground)
+  ".bgmEmptyAdd:focus-visible":
+    box-shadow: 0 0 0 2px var(--ring) inset
+    outline: none
+  ".bgmChannelSelect":
+    align-items: center
+    appearance: none
+    background: transparent
+    border: "0"
+    border-bottom: "1px solid var(--border)"
+    color: var(--muted-foreground)
+    cursor: pointer
+    display: flex
+    flex: "0 0 24px"
+    font-family: inherit
+    font-size: 12px
+    height: 24px
+    justify-content: space-between
+    padding: "0 8px"
+    text-align: left
+    width: 100%
+  ".bgmChannelSelect:hover":
+    color: var(--foreground)
+  ".bgmChannelSelect:focus-visible":
+    box-shadow: 0 0 0 2px var(--ring) inset
+    outline: none
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md: null
       - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
-          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-form#form key=${audio.id} :form=${form} :defaultValues=${defaultValues}:
-                  - $if defaultValues.audioWaveformDataFileId:
-                      - rtgl-view#audioWaveform slot=audio cur=pointer bw=xs bc=${audio.itemBorderColor} h-bc=${audio.itemHoverBorderColor} br=sm:
-                          - rtgl-view p=md g=md br=md:
-                              - rvn-waveform-visualizer waveformDataFileId=${defaultValues.audioWaveformDataFileId} w=200 h=120: null
-                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${audio.name}
+          - 'rtgl-view h=1fg sv w=f g=lg mt=lg style="min-height: 0;"':
+              - 'rtgl-view#bgmChannel.bgmChannel w=f h=150 d=v pos=rel bgc=mu bw=xs bc=${channelBorderColor} h-bc=${channelHoverBorderColor} br=sm tabindex=0 role=group aria-label="${channelLabel}"':
+                  - 'button#channelSelectButton.bgmChannelSelect type=button aria-label="${channelLabel}"':
+                      - span: ${channelLabel}
+                      - span: ${channelDurationLabel}
+                  - $if sounds.length == 0:
+                      - 'rtgl-view w=f h=126 bgc=bg bwb=xs bc=${channelBorderColor} style="min-height: 0;"':
+                          - 'button#emptyAddButton.bgmEmptyAdd type=button aria-label="${addAudioLabel}"': "+"
                     $else:
-                      - rtgl-view#audioWaveform w=250 h=150 bgc=mu av=c ah=c cur=pointer slot=audio:
-                          - rtgl-text s=md c=mu-fg: Select BGM
+                      - rtgl-view.bgmTimelineTrack d=h w=f h=126:
+                          - $for sound, i in sounds:
+                              - 'rtgl-view#soundClip${i}.bgmSoundClip data-sound-id=${sound.id} d=v h=f bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="flex: 0 0 ${sound.widthPercent}%;"':
+                                  - $if sound.waveformDataFileId:
+                                      - rvn-waveform-visualizer waveformDataFileId=${sound.waveformDataFileId} w=f h=94: null
+                                    $else:
+                                      - rtgl-view w=f h=94 av=c ah=c:
+                                          - rtgl-text s=sm c=mu-fg: No waveform
+                                  - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
+                                      - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
+                                      - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
+                      - 'button#insertBeforeButton.bgmInsertZone.bgmInsertBefore type=button data-insert-index=0 aria-label="${addBeforeLabel}"': "+"
+                      - 'button#insertAfterButton.bgmInsertZone.bgmInsertAfter type=button data-insert-index=${sounds.length} aria-label="${addAfterLabel}"': "+"
+              - rtgl-view w=f g=md:
+                  - rtgl-view w=f:
+                      - rtgl-text s=md: ${selectionHeading}
+                      - rtgl-text s=sm c=mu-fg: ${selectionName}
+                  - rtgl-form#form key=${selectionKey} :form=${form} :defaultValues=${defaultValues}: null
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: Submit
       - $if mode == 'gallery':

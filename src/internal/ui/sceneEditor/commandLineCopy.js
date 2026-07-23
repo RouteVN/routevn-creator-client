@@ -11,6 +11,7 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "Choose a string variable...": "chooseStringVariablePlaceholder",
   "Choose a value...": "chooseValuePlaceholder",
   "Choose a variable...": "chooseVariablePlaceholder",
+  "Channel name must be unique.": "channelNameUnique",
   "Condition comparison value is invalid.": "conditionComparisonValueInvalid",
   "Condition enum value is invalid.": "conditionEnumValueInvalid",
   "Condition is unsupported.": "conditionUnsupported",
@@ -19,6 +20,7 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "Enter number...": "enterNumberPlaceholder",
   "Enter text...": "enterTextPlaceholder",
   "Failed to create voice.": "failedCreateVoice",
+  "Failed to load audio waveform.": "failedLoadAudioWaveform",
   "Failed to upload voice.": "failedUploadVoice",
   "Invalid file format. Please upload an audio file (.mp3, .wav, or .ogg).":
     "invalidVoiceFileFormat",
