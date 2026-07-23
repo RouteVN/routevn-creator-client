@@ -14,7 +14,60 @@ propsSchema:
                 type: string
               resourceId:
                 type: string
-              volume:
-                type: number
               loop:
                 type: boolean
+              volume:
+                type: number
+              muted:
+                type: boolean
+              pan:
+                type: number
+              startDelayMs:
+                type: number
+              playbackRate:
+                type: number
+              startAt:
+                type: number
+              endAt:
+                type: [number, "null"]
+        channels:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              volume:
+                type: number
+              muted:
+                type: boolean
+              pan:
+                type: number
+              interruption:
+                type: string
+                enum: [immediate, loopEnd]
+              sounds:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    resourceId:
+                      type: string
+                    loop:
+                      type: boolean
+                    volume:
+                      type: number
+                    muted:
+                      type: boolean
+                    pan:
+                      type: number
+                    startDelayMs:
+                      type: number
+                    playbackRate:
+                      type: number
+                    startAt:
+                      type: number
+                    endAt:
+                      type: [number, "null"]

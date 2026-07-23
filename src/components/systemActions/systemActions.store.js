@@ -77,6 +77,10 @@ const getAllowedModes = (attrs = {}) => {
     : [];
 };
 
+const resolveVoiceResourceId = (voice) => {
+  return voice?.sounds?.[0]?.resourceId ?? voice?.resourceId;
+};
+
 const getDialogVariant = (attrs = {}) =>
   attrs.dialogVariant === "scene-editor-left" ? "scene-editor-left" : "default";
 
@@ -352,9 +356,9 @@ export const selectMode = ({ state }) => {
 };
 
 export const updateActions = ({ state }, payload = {}) => {
-  const previousVoiceResourceId = state.actions?.voice?.resourceId;
+  const previousVoiceResourceId = resolveVoiceResourceId(state.actions?.voice);
   const nextPayload = payload || {};
-  const nextVoiceResourceId = nextPayload.voice?.resourceId;
+  const nextVoiceResourceId = resolveVoiceResourceId(nextPayload.voice);
   state.actions = { ...nextPayload };
 
   if (previousVoiceResourceId !== nextVoiceResourceId) {
@@ -673,7 +677,10 @@ export const selectActionsData = ({ props, state, copy }) => {
 
   if (presentationState.bgm) {
     actionsObject.bgm = presentationState.bgm;
-    preview.bgm = sounds[presentationState.bgm.resourceId];
+    const bgmResourceId =
+      presentationState.bgm.sounds?.[0]?.resourceId ??
+      presentationState.bgm.resourceId;
+    preview.bgm = sounds[bgmResourceId];
   }
 
   const voiceAction = isPlainObject(actions.voice)
@@ -681,25 +688,29 @@ export const selectActionsData = ({ props, state, copy }) => {
     : isPlainObject(presentationState.voice)
       ? presentationState.voice
       : undefined;
-  if (voiceAction?.resourceId) {
+  const voiceResourceId = resolveVoiceResourceId(voiceAction);
+  if (voiceResourceId) {
     actionsObject.voice = voiceAction;
-    preview.voice = voices[voiceAction.resourceId] ??
-      sounds[voiceAction.resourceId] ??
-      (files[voiceAction.resourceId]
+    preview.voice = voices[voiceResourceId] ??
+      sounds[voiceResourceId] ??
+      (files[voiceResourceId]
         ? {
-            id: voiceAction.resourceId,
-            name: files[voiceAction.resourceId].name ?? voiceAction.resourceId,
-            fileId: voiceAction.resourceId,
+            id: voiceResourceId,
+            name: files[voiceResourceId].name ?? voiceResourceId,
+            fileId: voiceResourceId,
           }
         : undefined) ?? {
-        id: voiceAction.resourceId,
-        name: voiceAction.resourceId,
+        id: voiceResourceId,
+        name: voiceResourceId,
       };
   }
 
   // Sound Effects
-  if (actions.sfx?.items) {
-    const soundEffectsData = actions.sfx.items.map((sfx) => ({
+  if (actions.sfx?.items || actions.sfx?.channels) {
+    const soundEffects = Array.isArray(actions.sfx.channels)
+      ? actions.sfx.channels.flatMap((channel) => channel.sounds ?? [])
+      : actions.sfx.items;
+    const soundEffectsData = soundEffects.map((sfx) => ({
       ...sfx,
       sound: sounds[sfx.resourceId],
     }));

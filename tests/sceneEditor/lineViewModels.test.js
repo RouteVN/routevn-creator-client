@@ -16,6 +16,38 @@ const createRepositoryState = () => ({
 });
 
 describe("sceneEditor.lineDecorations", () => {
+  it("uses the first canonical BGM clip for line decorations", () => {
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines: [{ id: "line-1" }],
+      repositoryState: createRepositoryState(),
+      sectionLineChanges: {
+        lines: [
+          {
+            id: "line-1",
+            changes: {
+              bgm: {
+                changeType: "add",
+                data: {
+                  loop: true,
+                  sounds: [
+                    { id: "intro-clip", resourceId: "intro" },
+                    { id: "theme-clip", resourceId: "theme" },
+                  ],
+                },
+              },
+            },
+            presentationState: {},
+          },
+        ],
+      },
+    });
+
+    expect(viewModels[0].bgm).toEqual({
+      changeType: "add",
+      resourceId: "intro",
+    });
+  });
+
   it("uses per-line presentationState from section changes for dialogue avatars", () => {
     const lines = [
       {
@@ -544,6 +576,36 @@ describe("sceneEditor.lineDecorations", () => {
 
     expect(viewModels[0].hasVoice).toBe(true);
     expect(viewModels[1].hasVoice).toBe(false);
+  });
+
+  it("marks canonical Voice channels for inline action previews", () => {
+    const lines = [
+      {
+        id: "line-1",
+        actions: {
+          voice: {
+            sounds: [
+              {
+                id: "clip-1",
+                resourceId: "voice-line-1",
+                volume: 100,
+                startDelayMs: 0,
+              },
+            ],
+          },
+        },
+      },
+    ];
+
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines,
+      repositoryState: createRepositoryState(),
+      sectionLineChanges: {
+        lines: [],
+      },
+    });
+
+    expect(viewModels[0].hasVoice).toBe(true);
   });
 
   it("marks screen actions for inline action previews without duplicating section transitions", () => {

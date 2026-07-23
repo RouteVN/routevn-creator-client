@@ -1,194 +1,373 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { generateId } from "../../internal/id.js";
+import {
+  finishAudioTimelineDrag,
+  mountAudioTimelineDragSubscriptions,
+  moveAudioTimelineDrag,
+  startAudioTimelineDrag,
+} from "../../internal/ui/sceneEditor/audioTimelineDrag.js";
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
+const getDropdownPositionFromEvent = (event) => {
+  const rect = event?.currentTarget?.getBoundingClientRect?.();
+  if (rect) {
+    return { x: rect.left, y: rect.bottom };
+  }
+
+  return { x: event?.clientX ?? 0, y: event?.clientY ?? 0 };
+};
+
+const isSelectionKey = (event) => {
+  return event.key === "Enter" || event.key === " ";
+};
+
+const syncSelectedSoundForm = ({ refs, store }) => {
+  const channelId = store.selectSelectedChannelId();
+  const soundId = store.selectSelectedSoundId();
+  const sound = store.selectSoundById({ channelId, soundId });
+  if (!sound) {
+    return;
+  }
+
+  refs.form.setValues({
+    values: {
+      startDelayMs: sound.startDelayMs,
+      loop: sound.loop,
+      volume: sound.volume,
+    },
+  });
+};
+
+const openSfxGallery = ({ store, render, channelId, index }) => {
+  store.setPendingInsertion({ channelId, index });
+  store.setTempSelectedResource({ resourceId: undefined });
+  store.setMode({ mode: "gallery" });
+  render();
+};
+
+const selectSoundFromEvent = (store, event) => {
+  const { channelId, soundId } = event.currentTarget.dataset;
+  store.setSelectedSound({ channelId, soundId });
+  return { channelId, soundId };
+};
+
+const showChannelMenu = async (deps, event, position) => {
+  const { store, render, appService, i18n } = deps;
+  const channelId = event.currentTarget.dataset.channelId;
+  const channelIndex = store.selectChannelIndexById({ channelId });
+  const channels = store.selectChannels();
+  store.setSelectedChannel({ channelId });
+  render();
+
+  const copy = selectCommandLineCopy(i18n);
+  const items = [];
+  if (channelIndex > 0) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Move Up", copy),
+      key: "move-up",
+    });
+  }
+  if (channelIndex >= 0 && channelIndex < channels.length - 1) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Move Down", copy),
+      key: "move-down",
+    });
+  }
+  items.push({
+    type: "item",
+    label: localizeCommandLineText("Delete", copy),
+    key: "delete",
+  });
+
+  const menuPosition = position ?? getDropdownPositionFromEvent(event);
+  const result = await appService.showDropdownMenu({
+    items,
+    x: menuPosition.x,
+    y: menuPosition.y,
+    place: "bs",
+  });
+  const actionKey = result?.item?.key;
+  if (actionKey === "move-up") {
+    store.moveChannel({ channelId, direction: "up" });
+  } else if (actionKey === "move-down") {
+    store.moveChannel({ channelId, direction: "down" });
+  } else if (actionKey === "delete") {
+    store.removeChannel({ channelId });
+  } else {
+    return;
+  }
+  render();
+};
 
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
   const { sounds } = projectService.getState();
 
-  store.setRepositoryState({
-    sounds,
-  });
-
-  if (props?.sfx?.items) {
-    const { items } = props.sfx;
-    if (items && items.length > 0) {
-      store.setExistingSfxs({
-        sfx: items,
-      });
-    }
-  }
-
-  const sfx = store.selectSfxWithSoundData();
-
-  if (!sfx || sfx.length === 0) {
-    return;
-  }
+  store.setRepositoryState({ sounds });
+  store.setSfx({ sfx: props.sfx });
   render();
 };
 
-export const handleFormExtra = async (deps, payload) => {
+export const handleBeforeMount = (deps) => {
+  return mountAudioTimelineDragSubscriptions(deps);
+};
+
+export const handleChannelClick = (deps, payload) => {
   const { store, render } = deps;
-  const { name } = payload._event.detail;
-
-  // Extract index from field name (e.g., "sfx[0]" -> 0)
-  const match = name.match(/sfx\[(\d+)\]/);
-  if (match) {
-    const index = parseInt(match[1]);
-    // Set current editing to this sound effect
-    const sfx = store.selectSfxs();
-    const soundEffect = sfx[index];
-    if (soundEffect) {
-      store.setCurrentEditingId({ id: soundEffect.id });
-      store.setMode({ mode: "gallery" });
-      render();
-    }
+  const { _event: event } = payload;
+  if (
+    store.selectShouldSuppressChannelClick({
+      eventTimeStamp: event.timeStamp,
+    })
+  ) {
+    return;
   }
-};
-
-export const handleFormChange = () => {
-  // No longer needed since we removed trigger functionality
-};
-
-const resolveSfxByIndex = (store, index) => {
-  if (!Number.isInteger(index)) {
-    return undefined;
-  }
-
-  return store.selectSfxs()[index];
-};
-
-export const handleSfxLoopChange = (deps, payload) => {
-  const { store, render } = deps;
-  const index = Number.parseInt(
-    payload._event.currentTarget?.dataset?.index ?? "",
-    10,
-  );
-  const soundEffect = resolveSfxByIndex(store, index);
-  if (!soundEffect?.id) {
+  if (
+    event.currentTarget?.classList?.contains("sfxChannel") &&
+    event.target !== event.currentTarget
+  ) {
     return;
   }
 
-  const loop =
-    payload._event.detail?.value ??
-    payload._event.currentTarget?.value ??
-    payload._event.target?.value;
-
-  store.updateSfx({
-    id: soundEffect.id,
-    loop,
-  });
+  event.stopPropagation();
+  const channelId = event.currentTarget.dataset.channelId;
+  store.setSelectedChannel({ channelId });
   render();
 };
 
-export const handleSfxVolumeInput = (deps, payload) => {
-  const { store, render } = deps;
-  const index = Number.parseInt(
-    payload._event.currentTarget?.dataset?.index ?? "",
-    10,
-  );
-  const soundEffect = resolveSfxByIndex(store, index);
-  if (!soundEffect?.id) {
+export const handleChannelKeyDown = (deps, payload) => {
+  const { _event: event } = payload;
+  if (!isSelectionKey(event) || event.target !== event.currentTarget) {
     return;
   }
 
-  const rawValue =
-    payload._event.detail?.value ??
-    payload._event.currentTarget?.value ??
-    payload._event.target?.value;
-  const volume = Number.parseInt(rawValue, 10);
-  if (!Number.isFinite(volume)) {
-    return;
-  }
-
-  store.updateSfx({
-    id: soundEffect.id,
-    volume,
-  });
-  render();
+  event.preventDefault();
+  handleChannelClick(deps, payload);
 };
 
-export const handleAddNewClick = (deps, payload) => {
+export const handleChannelContextMenu = async (deps, payload) => {
+  payload._event.preventDefault();
   payload._event.stopPropagation();
+  await showChannelMenu(deps, payload._event, {
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+  });
+};
+
+export const handleSoundClick = (deps, payload) => {
   const { store, render } = deps;
-
-  // Create a new sound effect but don't add it to the store yet
-  const newId = generateId();
-
-  // Set it as currently editing and go to gallery mode
-  store.setCurrentEditingId({
-    id: newId,
-  });
-  store.setMode({
-    mode: "gallery",
-  });
-
+  payload._event.stopPropagation();
+  selectSoundFromEvent(store, payload._event);
   render();
 };
 
-export const handleSfxClick = (deps, payload) => {
-  const { store, render } = deps;
+export const handleSoundKeyDown = (deps, payload) => {
+  const { _event: event } = payload;
+  if (event.target !== event.currentTarget) {
+    return;
+  }
 
-  const target = payload._event.currentTarget;
-  const id = target?.dataset?.sfxId || target?.id?.replace("sfx", "") || "";
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+    const { store, render } = deps;
+    event.preventDefault();
+    event.stopPropagation();
+    const { channelId, soundId } = selectSoundFromEvent(store, event);
+    const sound = store.selectSoundById({ channelId, soundId });
+    const direction = event.key === "ArrowLeft" ? -1 : 1;
+    const stepMs = event.shiftKey ? 1000 : 100;
+    store.updateSound({
+      channelId,
+      soundId,
+      values: {
+        startDelayMs: sound.startDelayMs + direction * stepMs,
+      },
+    });
+    render();
+    syncSelectedSoundForm(deps);
+    return;
+  }
 
-  store.setCurrentEditingId({
-    id: id,
-  });
-  store.setMode({
-    mode: "gallery",
-  });
+  if (!isSelectionKey(event)) {
+    return;
+  }
 
-  render();
+  event.preventDefault();
+  handleSoundClick(deps, payload);
 };
 
-export const handleSfxDoubleClick = (deps, payload) => {
-  const { store, render } = deps;
-  const sfxId = payload._event.currentTarget?.dataset?.sfxId;
-  const soundEffect = store.selectSfxs().find((item) => item.id === sfxId);
-  const soundItem = store.selectSoundItemById({
-    itemId: soundEffect?.resourceId,
-  });
+export const handleSoundDragPointerDown = (deps, payload) => {
+  startAudioTimelineDrag(deps, payload._event);
+};
 
-  if (!soundItem?.fileId) {
+export const handleWindowPointerMove = (deps, payload) => {
+  moveAudioTimelineDrag(deps, payload._event);
+};
+
+export const handleWindowPointerUp = (deps, payload) => {
+  if (finishAudioTimelineDrag(deps, payload._event)) {
+    syncSelectedSoundForm(deps);
+  }
+};
+
+export const handleWindowPointerCancel = (deps, payload) => {
+  if (finishAudioTimelineDrag(deps, payload._event)) {
+    syncSelectedSoundForm(deps);
+  }
+};
+
+export const handleSoundDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.stopPropagation();
+  const { channelId, soundId } = selectSoundFromEvent(store, payload._event);
+  const sound = store.selectSoundById({ channelId, soundId });
+  const resource = store.selectSoundItemById({ itemId: sound?.resourceId });
+  if (!resource?.fileId) {
+    render();
     return;
   }
 
   store.openAudioPlayer({
-    fileId: soundItem.fileId,
-    fileName: soundItem.name,
+    fileId: resource.fileId,
+    fileName: resource.name,
   });
   render();
 };
 
-export const handleSfxContextMenu = (deps, payload) => {
-  payload._event.preventDefault();
-  const { store, render } = deps;
+export const handleSoundContextMenu = async (deps, payload) => {
+  const { store, render, appService, i18n } = deps;
+  const { _event: event } = payload;
+  event.preventDefault();
+  event.stopPropagation();
+  const { channelId, soundId } = selectSoundFromEvent(store, event);
+  const soundIndex = store.selectSoundIndexById({ channelId, soundId });
+  render();
 
-  const target = payload._event.currentTarget;
-  const id = target?.dataset?.sfxId || target?.id?.replace("sfx", "") || "";
-
-  store.showDropdownMenu({
-    position: { x: payload._event.clientX, y: payload._event.clientY },
-    sfxId: id,
+  const copy = selectCommandLineCopy(i18n);
+  const result = await appService.showDropdownMenu({
+    items: [
+      {
+        type: "item",
+        label: localizeCommandLineText("Insert Sound Before", copy),
+        key: "insert-before",
+      },
+      {
+        type: "item",
+        label: localizeCommandLineText("Insert Sound After", copy),
+        key: "insert-after",
+      },
+      {
+        type: "item",
+        label: localizeCommandLineText("Remove", copy),
+        key: "remove",
+      },
+    ],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
   });
 
+  const actionKey = result?.item?.key;
+  if (actionKey === "insert-before") {
+    openSfxGallery({ store, render, channelId, index: soundIndex });
+    return;
+  }
+  if (actionKey === "insert-after") {
+    openSfxGallery({ store, render, channelId, index: soundIndex + 1 });
+    return;
+  }
+  if (actionKey === "remove") {
+    store.removeSound({ channelId, soundId });
+    render();
+  }
+};
+
+export const handleEmptyAddClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store, render } = deps;
+  const channelId = payload._event.currentTarget.dataset.channelId;
+  openSfxGallery({ store, render, channelId, index: 0 });
+};
+
+export const handleEdgeAddClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store, render } = deps;
+  const { channelId, insertIndex } = payload._event.currentTarget.dataset;
+  openSfxGallery({
+    store,
+    render,
+    channelId,
+    index: Number.parseInt(insertIndex, 10),
+  });
+};
+
+export const handleFormChange = (deps, payload) => {
+  const { render, store } = deps;
+  const values = payload._event.detail.values;
+  const channelId = store.selectSelectedChannelId();
+  const soundId = store.selectSelectedSoundId();
+  if (!channelId) {
+    return;
+  }
+
+  if (soundId === undefined) {
+    store.updateChannel({ channelId, values });
+  } else {
+    store.updateSound({ channelId, soundId, values });
+  }
+  render();
+};
+
+export const handleAddChannelClick = (deps, payload) => {
+  const { store, render } = deps;
+  store.openAddChannelPopover({
+    position: getDropdownPositionFromEvent(payload._event),
+  });
+  render();
+};
+
+export const handleAddChannelPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.hideAddChannelPopover();
+  render();
+};
+
+export const handleAddChannelFormAction = (deps, payload) => {
+  const { store, render, appService, i18n } = deps;
+  const detail = payload._event.detail;
+  if (detail.actionId !== "submit") {
+    return;
+  }
+
+  const channelId = String(detail.values?.name ?? "").trim();
+  if (!channelId) {
+    return;
+  }
+  if (store.selectChannelById({ channelId })) {
+    appService.showToast({
+      message: localizeCommandLineText(
+        "Channel name must be unique.",
+        selectCommandLineCopy(i18n),
+      ),
+    });
+    return;
+  }
+
+  store.addChannel({ id: channelId });
+  store.hideAddChannelPopover();
   render();
 };
 
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
+  const resourceId = payload._event.currentTarget.dataset.resourceId;
 
-  const target = payload._event.currentTarget;
-  const id =
-    target?.dataset?.resourceId ||
-    target?.id?.replace("resourceItem", "") ||
-    "";
-
-  store.setTempSelectedResourceId({
-    resourceId: id,
-  });
-
+  store.setTempSelectedResource({ resourceId });
   render();
 };
 
@@ -201,9 +380,7 @@ export const handleResourceItemDoubleClick = (deps, payload) => {
     return;
   }
 
-  store.setTempSelectedResourceId({
-    resourceId,
-  });
+  store.setTempSelectedResource({ resourceId });
   store.openAudioPlayer({
     fileId: selectedItem.fileId,
     fileName: selectedItem.name,
@@ -211,18 +388,46 @@ export const handleResourceItemDoubleClick = (deps, payload) => {
   render();
 };
 
-export const handleFileExplorerItemClick = (deps, payload) => {
-  const { refs } = deps;
+export const handleFileExplorerItemClick = async (deps, payload) => {
+  const {
+    refs,
+    store,
+    render,
+    downloadWaveformData,
+    projectService,
+    appService,
+    i18n,
+  } = deps;
   const { itemId, isFolder } = payload._event.detail;
 
-  if (!isFolder) {
+  if (isFolder) {
+    const groupElement = refs.galleryScroll?.querySelector(
+      `[data-group-id="${itemId}"]`,
+    );
+    groupElement?.scrollIntoView?.({ block: "start" });
     return;
   }
 
-  const groupElement = refs.galleryScroll?.querySelector(
-    `[data-group-id="${itemId}"]`,
-  );
-  groupElement?.scrollIntoView?.({ block: "start" });
+  await projectService.ensureRepository();
+  const { sounds } = projectService.getState();
+  store.setTempSelectedResource({ resourceId: itemId });
+  render();
+
+  const selectedItem = toFlatItems(sounds).find((item) => item.id === itemId);
+  if (selectedItem?.waveformDataFileId && downloadWaveformData) {
+    try {
+      await downloadWaveformData({
+        fileId: selectedItem.waveformDataFileId,
+      });
+    } catch {
+      appService.showToast({
+        message: localizeCommandLineText(
+          "Failed to load audio waveform.",
+          selectCommandLineCopy(i18n),
+        ),
+      });
+    }
+  }
 };
 
 export const handleSearchInput = (deps, payload) => {
@@ -239,22 +444,12 @@ export const handleAudioPlayerClose = (deps) => {
 
 export const handleSubmitClick = (deps, payload) => {
   payload._event.stopPropagation();
-
   const { dispatchEvent, store } = deps;
-  const sfx = store.selectSfxs();
-  const filteredEffects = sfx.filter((se) => se.resourceId);
 
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        sfx: {
-          items: filteredEffects.map((sfx) => ({
-            id: sfx.id,
-            resourceId: sfx.resourceId,
-            volume: sfx.volume,
-            loop: sfx.loop,
-          })),
-        },
+        sfx: store.selectSfx(),
       },
       bubbles: true,
       composed: true,
@@ -264,84 +459,37 @@ export const handleSubmitClick = (deps, payload) => {
 
 export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
+  const { id } = payload._event.detail;
 
-  if (payload._event.detail.id === "actions") {
+  if (id === "actions") {
+    store.hideAddChannelPopover();
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
       }),
     );
-  } else if (payload._event.detail.id === "current") {
-    store.setMode({
-      mode: "current",
-    });
-    render();
+    return;
   }
-};
 
-export const handleDropdownMenuClose = (deps) => {
-  const { store, render } = deps;
-  store.hideDropdownMenu();
+  store.setMode({ mode: id });
+  store.setTempSelectedResource({ resourceId: undefined });
   render();
 };
 
-export const handleDropdownMenuClickItem = (deps, payload) => {
+export const handleButtonSelectClick = (deps) => {
   const { store, render } = deps;
-  const { detail } = payload._event;
-
-  // Extract the actual item (rtgl-dropdown-menu wraps it)
-  const item = detail.item || detail;
-  const sfxId = store.selectDropdownMenuSfxId();
-
-  store.hideDropdownMenu();
-
-  if (item.value === "delete" && sfxId) {
-    store.deleteSfx({
-      id: sfxId,
-    });
+  const resourceId = store.selectTempSelectedResourceId();
+  const channelId = store.selectPendingChannelId();
+  if (!resourceId || !channelId) {
+    return;
   }
 
+  store.insertSound({
+    channelId,
+    id: generateId(),
+    resourceId,
+    index: store.selectPendingInsertIndex(),
+  });
+  store.setMode({ mode: "current" });
   render();
-};
-
-export const handleButtonSelectClick = async (deps) => {
-  const { store, render, projectService } = deps;
-  await projectService.ensureRepository();
-
-  const { sounds } = projectService.getState();
-
-  const tempSelectedResourceId = store.selectTempSelectedResourceId();
-  const tempSelectedSound = toFlatItems(sounds).find(
-    (item) => item.id === tempSelectedResourceId,
-  );
-
-  if (tempSelectedSound) {
-    const currentEditingId = store.selectCurrentEditingId();
-    const sfx = store.selectSfxs();
-    const existingEffect = sfx.find((se) => se.id === currentEditingId);
-
-    if (existingEffect) {
-      // Update existing sound effect
-      store.updateSfx({
-        id: currentEditingId,
-        resourceId: tempSelectedResourceId,
-        name: tempSelectedSound.name,
-      });
-    } else {
-      // Create new sound effect (this was triggered by "Add New" button)
-      store.addSfx({
-        id: currentEditingId,
-      });
-      store.updateSfx({
-        id: currentEditingId,
-        resourceId: tempSelectedResourceId,
-        name: tempSelectedSound.name,
-      });
-    }
-
-    store.setMode({
-      mode: "current",
-    });
-    render();
-  }
 };

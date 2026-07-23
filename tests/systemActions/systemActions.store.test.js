@@ -227,6 +227,103 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("previews canonical BGM channels from their first clip", () => {
+    const state = createInitialState();
+    const bgm = {
+      loop: true,
+      volume: 75,
+      sounds: [
+        { id: "intro-clip", resourceId: "intro", startDelayMs: 0 },
+        { id: "theme-clip", resourceId: "theme", startDelayMs: 2000 },
+      ],
+    };
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          sounds: {
+            items: {
+              intro: {
+                id: "intro",
+                type: "sound",
+                name: "Intro",
+              },
+              theme: {
+                id: "theme",
+                type: "sound",
+                name: "Theme",
+              },
+            },
+            tree: [{ id: "intro" }, { id: "theme" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: { bgm },
+        presentationState: { bgm },
+      },
+    });
+
+    expect(actions.bgm).toEqual(bgm);
+    expect(preview.bgm).toMatchObject({ id: "intro", name: "Intro" });
+  });
+
+  it("preserves and previews sounds across canonical SFX channels", () => {
+    const state = createInitialState();
+    const sfx = {
+      channels: [
+        {
+          id: "Weather",
+          volume: 75,
+          sounds: [{ id: "rain-clip", resourceId: "rain" }],
+        },
+        {
+          id: "UI",
+          volume: 80,
+          sounds: [{ id: "confirm-clip", resourceId: "confirm" }],
+        },
+      ],
+    };
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          sounds: {
+            items: {
+              rain: {
+                id: "rain",
+                type: "sound",
+                name: "Rain",
+              },
+              confirm: {
+                id: "confirm",
+                type: "sound",
+                name: "Confirm",
+              },
+            },
+            tree: [{ id: "rain" }, { id: "confirm" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: { sfx },
+      },
+    });
+
+    expect(actions.sfx).toEqual(sfx);
+    expect(preview.sfx).toEqual({ names: "Rain, Confirm" });
+  });
+
   it("preserves and previews voice actions from repository voices", () => {
     const state = createInitialState();
 
@@ -313,6 +410,55 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("previews the first clip in a canonical Voice channel", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          voices: {
+            items: {
+              "voice-line-1": {
+                id: "voice-line-1",
+                type: "voice",
+                name: "Aki Line 1",
+                fileId: "file-voice-line-1",
+              },
+            },
+            tree: [{ id: "voice-line-1" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          voice: {
+            loop: false,
+            volume: 80,
+            sounds: [
+              {
+                id: "clip-1",
+                resourceId: "voice-line-1",
+                volume: 100,
+                startDelayMs: 0,
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(actions.voice.sounds).toHaveLength(1);
+    expect(preview.voice).toMatchObject({
+      id: "voice-line-1",
+      name: "Aki Line 1",
+    });
+  });
+
   it("exposes inline voice preview player state", () => {
     const state = createInitialState();
 
@@ -377,6 +523,52 @@ describe("systemActions.store", () => {
         fileId: undefined,
         title: "",
       },
+    });
+  });
+
+  it("closes the inline voice preview player when a canonical Voice changes or is removed", () => {
+    const state = createInitialState();
+
+    updateActions(
+      { state },
+      {
+        voice: {
+          sounds: [{ id: "voice-a", resourceId: "voice-line-1" }],
+        },
+      },
+    );
+    openAudioPlayer(
+      { state },
+      {
+        fileId: "file-voice-line-1",
+        fileName: "Aki Line 1",
+      },
+    );
+
+    updateActions(
+      { state },
+      {
+        voice: {
+          sounds: [{ id: "voice-b", resourceId: "voice-line-2" }],
+        },
+      },
+    );
+
+    expect(state.showAudioPlayer).toBe(false);
+
+    openAudioPlayer(
+      { state },
+      {
+        fileId: "file-voice-line-2",
+        fileName: "Aki Line 2",
+      },
+    );
+    updateActions({ state }, {});
+
+    expect(state.showAudioPlayer).toBe(false);
+    expect(state.playingSound).toEqual({
+      fileId: undefined,
+      title: "",
     });
   });
 

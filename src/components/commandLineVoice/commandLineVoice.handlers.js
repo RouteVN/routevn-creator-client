@@ -1,6 +1,12 @@
 import { buildVoiceResourceDataFromUploadResult } from "../../deps/services/shared/resourceImports.js";
 import { generateId } from "../../internal/id.js";
 import {
+  finishAudioTimelineDrag,
+  mountAudioTimelineDragSubscriptions,
+  moveAudioTimelineDrag,
+  startAudioTimelineDrag,
+} from "../../internal/ui/sceneEditor/audioTimelineDrag.js";
+import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
@@ -9,39 +15,22 @@ const VOICE_FILE_ACCEPT = ".mp3,.wav,.ogg";
 const VOICE_FILE_PATTERN = /\.(mp3|wav|ogg)$/i;
 
 const showAlert = (appService, { message, title = "Error" } = {}) => {
-  appService?.showAlert?.({
-    message,
-    title,
-  });
+  appService.showAlert({ message, title });
 };
 
-const getCurrentSceneId = (props = {}) =>
-  typeof props.currentSceneId === "string" && props.currentSceneId.length > 0
+const getCurrentSceneId = (props = {}) => {
+  return typeof props.currentSceneId === "string" && props.currentSceneId.length
     ? props.currentSceneId
     : undefined;
+};
 
 const syncRepositoryState = (projectService, store) => {
   const { voices } = projectService.getState();
-  store.setRepositoryState({
-    voices,
-  });
+  store.setRepositoryState({ voices });
 };
 
-export const handleAfterMount = async (deps) => {
-  const { projectService, store, props, render } = deps;
-  await projectService.ensureRepository();
-  syncRepositoryState(projectService, store);
-
-  if (props.voice) {
-    store.setVoice({ voice: props.voice });
-  }
-
-  render();
-};
-
-export const handleAudioWaveformClick = async (deps, payload) => {
-  payload?._event?.stopPropagation?.();
-  const { appService, projectService, props, store, render, i18n } = deps;
+const pickAndCreateVoice = async (deps) => {
+  const { appService, projectService, props, store, i18n } = deps;
   const copy = selectCommandLineCopy(i18n);
   const sceneId = getCurrentSceneId(props);
 
@@ -130,26 +119,193 @@ export const handleAudioWaveformClick = async (deps, payload) => {
   }
 
   syncRepositoryState(projectService, store);
-  store.setVoiceAudio({
+  return voiceId;
+};
+
+const pickAndInsertVoice = async (deps, index) => {
+  const voiceId = await pickAndCreateVoice(deps);
+  if (!voiceId) {
+    return;
+  }
+
+  const { store, render } = deps;
+  store.insertSound({
+    id: voiceId,
     resourceId: voiceId,
+    index,
   });
   render();
 };
 
-export const handleAudioWaveformRightClick = async (deps, payload) => {
-  const { _event: event } = payload;
-  event.preventDefault();
-  event.stopPropagation();
+const selectSoundFromEvent = (store, event) => {
+  const soundId = event.currentTarget.dataset.soundId;
+  store.setSelectedSound({ soundId });
+  return soundId;
+};
 
-  const { store, render, globalUI } = deps;
-  const copy = selectCommandLineCopy(deps.i18n);
-  const selectedResource = store.selectSelectedResource();
-  if (!selectedResource) {
+const isSelectionKey = (event) => {
+  return event.key === "Enter" || event.key === " ";
+};
+
+const syncSelectedSoundForm = ({ refs, store }) => {
+  const soundId = store.selectSelectedSoundId();
+  const sound = store.selectVoiceSoundById({ soundId });
+  if (!sound) {
     return;
   }
 
-  const result = await globalUI.showDropdownMenu({
+  refs.form.setValues({
+    values: {
+      startDelayMs: sound.startDelayMs,
+      volume: sound.volume,
+    },
+  });
+};
+
+export const handleBeforeMount = (deps) => {
+  return mountAudioTimelineDragSubscriptions(deps);
+};
+
+export const handleAfterMount = async (deps) => {
+  const { projectService, store, props, render } = deps;
+  await projectService.ensureRepository();
+  syncRepositoryState(projectService, store);
+  store.setVoice({ voice: props.voice });
+  render();
+};
+
+export const handleChannelClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { _event: event } = payload;
+  if (
+    store.selectShouldSuppressChannelClick({
+      eventTimeStamp: event.timeStamp,
+    })
+  ) {
+    return;
+  }
+  if (
+    event.currentTarget?.classList?.contains("voiceChannel") &&
+    event.target !== event.currentTarget
+  ) {
+    return;
+  }
+
+  event.stopPropagation();
+  store.clearSelectedSound();
+  render();
+};
+
+export const handleChannelKeyDown = (deps, payload) => {
+  const { _event: event } = payload;
+  if (!isSelectionKey(event) || event.target !== event.currentTarget) {
+    return;
+  }
+
+  event.preventDefault();
+  handleChannelClick(deps, payload);
+};
+
+export const handleSoundClick = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.stopPropagation();
+  selectSoundFromEvent(store, payload._event);
+  render();
+};
+
+export const handleSoundKeyDown = (deps, payload) => {
+  const { _event: event } = payload;
+  if (event.target !== event.currentTarget) {
+    return;
+  }
+
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+    const { store, render } = deps;
+    event.preventDefault();
+    event.stopPropagation();
+    const soundId = selectSoundFromEvent(store, event);
+    const sound = store.selectVoiceSoundById({ soundId });
+    const direction = event.key === "ArrowLeft" ? -1 : 1;
+    const stepMs = event.shiftKey ? 1000 : 100;
+    store.updateSound({
+      soundId,
+      values: {
+        startDelayMs: sound.startDelayMs + direction * stepMs,
+      },
+    });
+    render();
+    syncSelectedSoundForm(deps);
+    return;
+  }
+
+  if (!isSelectionKey(event)) {
+    return;
+  }
+
+  event.preventDefault();
+  handleSoundClick(deps, payload);
+};
+
+export const handleSoundDragPointerDown = (deps, payload) => {
+  startAudioTimelineDrag(deps, payload._event);
+};
+
+export const handleWindowPointerMove = (deps, payload) => {
+  moveAudioTimelineDrag(deps, payload._event);
+};
+
+export const handleWindowPointerUp = (deps, payload) => {
+  if (finishAudioTimelineDrag(deps, payload._event)) {
+    syncSelectedSoundForm(deps);
+  }
+};
+
+export const handleWindowPointerCancel = (deps, payload) => {
+  if (finishAudioTimelineDrag(deps, payload._event)) {
+    syncSelectedSoundForm(deps);
+  }
+};
+
+export const handleSoundDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.stopPropagation();
+  const soundId = selectSoundFromEvent(store, payload._event);
+  const sound = store.selectVoiceSoundById({ soundId });
+  const resource = store.selectVoiceItemById({ itemId: sound.resourceId });
+  if (!resource?.fileId) {
+    render();
+    return;
+  }
+
+  store.openAudioPlayer({
+    fileId: resource.fileId,
+    fileName: resource.name,
+  });
+  render();
+};
+
+export const handleSoundContextMenu = async (deps, payload) => {
+  const { store, render, appService, i18n } = deps;
+  const { _event: event } = payload;
+  event.preventDefault();
+  event.stopPropagation();
+  const soundId = selectSoundFromEvent(store, event);
+  const soundIndex = store.selectVoiceSoundIndexById({ soundId });
+  render();
+
+  const copy = selectCommandLineCopy(i18n);
+  const result = await appService.showDropdownMenu({
     items: [
+      {
+        type: "item",
+        label: localizeCommandLineText("Insert Sound Before", copy),
+        key: "insert-before",
+      },
+      {
+        type: "item",
+        label: localizeCommandLineText("Insert Sound After", copy),
+        key: "insert-after",
+      },
       {
         type: "item",
         label: localizeCommandLineText("Remove", copy),
@@ -161,47 +317,45 @@ export const handleAudioWaveformRightClick = async (deps, payload) => {
     place: "bs",
   });
 
-  if (result?.item?.key === "remove") {
-    store.clearVoiceAudio();
+  const actionKey = result?.item?.key;
+  if (actionKey === "insert-before") {
+    await pickAndInsertVoice(deps, soundIndex);
+    return;
+  }
+  if (actionKey === "insert-after") {
+    await pickAndInsertVoice(deps, soundIndex + 1);
+    return;
+  }
+  if (actionKey === "remove") {
+    store.removeSound({ soundId });
     render();
   }
 };
 
-export const handlePreviewClick = (deps, payload) => {
-  payload?._event?.stopPropagation?.();
-  const { store, render } = deps;
-  const selectedResource = store.selectSelectedResource();
+export const handleEmptyAddClick = async (deps, payload) => {
+  payload._event.stopPropagation();
+  await pickAndInsertVoice(deps, 0);
+};
 
-  if (!selectedResource?.fileId) {
-    return;
+export const handleEdgeAddClick = async (deps, payload) => {
+  payload._event.stopPropagation();
+  const index = Number.parseInt(
+    payload._event.currentTarget.dataset.insertIndex,
+    10,
+  );
+  await pickAndInsertVoice(deps, index);
+};
+
+export const handleFormChange = (deps, payload) => {
+  const { render, store } = deps;
+  const values = payload._event.detail.values;
+  const selectedSoundId = store.selectSelectedSoundId();
+
+  if (selectedSoundId === undefined) {
+    store.updateChannel({ values });
+  } else {
+    store.updateSound({ soundId: selectedSoundId, values });
   }
-
-  store.openAudioPlayer({
-    fileId: selectedResource.fileId,
-    fileName: selectedResource.name,
-  });
-  render();
-};
-
-export const handleLoopChange = (deps, payload) => {
-  const { store, render } = deps;
-  const loop =
-    payload._event.detail?.value ??
-    payload._event.currentTarget?.value ??
-    payload._event.target?.value;
-
-  store.setLoop({ loop });
-  render();
-};
-
-export const handleVolumeInput = (deps, payload) => {
-  const { store, render } = deps;
-  const value =
-    payload._event.detail?.value ??
-    payload._event.currentTarget?.value ??
-    payload._event.target?.value;
-
-  store.setVolume({ volume: value });
   render();
 };
 
@@ -212,12 +366,12 @@ export const handleAudioPlayerClose = (deps) => {
 };
 
 export const handleSubmitClick = (deps, payload) => {
-  payload?._event?.stopPropagation?.();
+  payload._event.stopPropagation();
   const { appService, dispatchEvent, store, i18n } = deps;
   const copy = selectCommandLineCopy(i18n);
   const voice = store.selectVoicePayload();
 
-  if (!voice.resourceId) {
+  if (voice.sounds.length === 0) {
     showAlert(appService, {
       message: localizeCommandLineText(
         "Select a voice audio file first.",
@@ -230,9 +384,7 @@ export const handleSubmitClick = (deps, payload) => {
 
   dispatchEvent(
     new CustomEvent("submit", {
-      detail: {
-        voice,
-      },
+      detail: { voice },
       bubbles: true,
       composed: true,
     }),
