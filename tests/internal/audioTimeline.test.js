@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createAudioTimelineLayout,
+  createAudioTimelineSnapStartDelays,
   resolveAudioInsertionTiming,
   resolveDraggedAudioStartDelayMs,
 } from "../../src/internal/audioTimeline.js";
@@ -71,5 +72,31 @@ describe("audioTimeline", () => {
         timelineWidthPx: 400,
       }),
     ).toBe(510);
+  });
+
+  it("creates snap positions for matching either edge with other clips", () => {
+    expect(
+      createAudioTimelineSnapStartDelays({
+        sounds: [
+          { id: "short-clip", resourceId: "short", startDelayMs: 0 },
+          { id: "long-clip", resourceId: "long", startDelayMs: 5000 },
+        ],
+        soundId: "short-clip",
+        resourceById,
+      }),
+    ).toEqual([0, 3000, 5000, 9000, 11000]);
+  });
+
+  it("magnetically snaps a dragged clip to a nearby boundary", () => {
+    expect(
+      resolveDraggedAudioStartDelayMs({
+        originStartDelayMs: 0,
+        originClientX: 0,
+        clientX: 97,
+        timelineDurationMs: 10000,
+        timelineWidthPx: 500,
+        snapStartDelaysMs: [0, 2000],
+      }),
+    ).toBe(2000);
   });
 });

@@ -1,6 +1,7 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
   createAudioTimelineLayout,
+  createAudioTimelineSnapStartDelays,
   formatAudioDurationMs,
   normalizeAudioStartDelayMs,
   resolveAudioInsertionTiming,
@@ -565,15 +566,17 @@ export const startSoundDrag = (
     timelineWidthPx,
   } = {},
 ) => {
-  const sound = state.channels
-    .find((channel) => channel.id === channelId)
-    ?.sounds.find((item) => item.id === soundId);
+  const channel = state.channels.find((item) => item.id === channelId);
+  const sound = channel?.sounds.find((item) => item.id === soundId);
   if (!sound || timelineDurationMs <= 0 || timelineWidthPx <= 0) {
     return;
   }
 
   state.selectedChannelId = channelId;
   state.selectedSoundId = soundId;
+  const resourceById = new Map(
+    toFlatItems(state.items).map((item) => [item.id, item]),
+  );
   state.soundDrag = {
     channelId,
     soundId,
@@ -582,6 +585,11 @@ export const startSoundDrag = (
     originStartDelayMs: sound.startDelayMs,
     timelineDurationMs,
     timelineWidthPx,
+    snapStartDelaysMs: createAudioTimelineSnapStartDelays({
+      sounds: channel.sounds,
+      soundId,
+      resourceById,
+    }),
   };
 };
 

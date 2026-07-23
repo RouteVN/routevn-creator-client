@@ -1,5 +1,7 @@
 export const AUDIO_TIMELINE_LANE_HEIGHT_PX = 126;
 export const AUDIO_TIMELINE_DRAG_STEP_MS = 10;
+export const AUDIO_TIMELINE_SNAP_DISTANCE_PX = 10;
+export const AUDIO_TIMELINE_MAX_SNAP_DISTANCE_MS = 250;
 
 export const normalizeAudioStartDelayMs = (value, fallback = 0) => {
   const parsedValue = Number(value);
@@ -69,6 +71,43 @@ export const resolveAudioInsertionTiming = ({
     startDelayMs,
     shiftMs: Math.max(0, startDelayMs + durationMs - nextStartDelayMs),
   };
+};
+
+export const createAudioTimelineSnapStartDelays = ({
+  sounds = [],
+  soundId,
+  resourceById = new Map(),
+} = {}) => {
+  const draggedSound = sounds.find((sound) => sound.id === soundId);
+  if (!draggedSound) {
+    return [0];
+  }
+
+  const draggedDurationMs = resolveAudioSoundDurationMs(
+    draggedSound,
+    resourceById.get(draggedSound.resourceId),
+  );
+  const snapStartDelaysMs = new Set([0]);
+
+  sounds.forEach((sound) => {
+    if (sound.id === soundId) {
+      return;
+    }
+
+    const startDelayMs = normalizeAudioStartDelayMs(sound.startDelayMs);
+    const endMs =
+      startDelayMs +
+      resolveAudioSoundDurationMs(sound, resourceById.get(sound.resourceId));
+
+    for (const boundaryMs of [startDelayMs, endMs]) {
+      snapStartDelaysMs.add(boundaryMs);
+      if (boundaryMs >= draggedDurationMs) {
+        snapStartDelaysMs.add(boundaryMs - draggedDurationMs);
+      }
+    }
+  });
+
+  return [...snapStartDelaysMs].sort((left, right) => left - right);
 };
 
 export const createAudioTimelineLayout = ({
@@ -159,6 +198,7 @@ export const resolveDraggedAudioStartDelayMs = ({
   clientX = 0,
   timelineDurationMs = 0,
   timelineWidthPx = 0,
+  snapStartDelaysMs = [],
 } = {}) => {
   if (timelineWidthPx <= 0 || timelineDurationMs <= 0) {
     return normalizeAudioStartDelayMs(originStartDelayMs);
@@ -171,5 +211,30 @@ export const resolveDraggedAudioStartDelayMs = ({
       (normalizeAudioStartDelayMs(originStartDelayMs) + deltaMs) /
         AUDIO_TIMELINE_DRAG_STEP_MS,
     ) * AUDIO_TIMELINE_DRAG_STEP_MS;
-  return Math.max(0, nextStartDelayMs);
+  const normalizedStartDelayMs = Math.max(0, nextStartDelayMs);
+  const snapDistanceMs = Math.min(
+    AUDIO_TIMELINE_MAX_SNAP_DISTANCE_MS,
+    Math.max(
+      AUDIO_TIMELINE_DRAG_STEP_MS,
+      (timelineDurationMs / timelineWidthPx) * AUDIO_TIMELINE_SNAP_DISTANCE_PX,
+    ),
+  );
+  let snappedStartDelayMs = normalizedStartDelayMs;
+  let closestDistanceMs = snapDistanceMs + 1;
+
+  snapStartDelaysMs.forEach((snapStartDelayMs) => {
+    const normalizedSnapStartDelayMs =
+      normalizeAudioStartDelayMs(snapStartDelayMs);
+    const distanceMs = Math.abs(
+      normalizedSnapStartDelayMs - normalizedStartDelayMs,
+    );
+    if (distanceMs < closestDistanceMs) {
+      snappedStartDelayMs = normalizedSnapStartDelayMs;
+      closestDistanceMs = distanceMs;
+    }
+  });
+
+  return closestDistanceMs <= snapDistanceMs
+    ? snappedStartDelayMs
+    : normalizedStartDelayMs;
 };

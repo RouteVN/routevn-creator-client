@@ -1,6 +1,7 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
   createAudioTimelineLayout,
+  createAudioTimelineSnapStartDelays,
   formatAudioDurationMs,
   normalizeAudioStartDelayMs,
   resolveAudioInsertionTiming,
@@ -302,6 +303,9 @@ export const startSoundDrag = (
   }
 
   state.selectedSoundId = soundId;
+  const resourceById = new Map(
+    toFlatItems(state.items).map((item) => [item.id, item]),
+  );
   state.soundDrag = {
     soundId,
     pointerId,
@@ -309,6 +313,11 @@ export const startSoundDrag = (
     originStartDelayMs: sound.startDelayMs,
     timelineDurationMs,
     timelineWidthPx,
+    snapStartDelaysMs: createAudioTimelineSnapStartDelays({
+      sounds: state.voice.sounds,
+      soundId,
+      resourceById,
+    }),
   };
 };
 
