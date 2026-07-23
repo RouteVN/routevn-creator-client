@@ -109,7 +109,7 @@ styles:
     appearance: none
     background: transparent
     border: "0"
-    bottom: "0"
+    bottom: 30px
     color: var(--primary-foreground)
     cursor: pointer
     font-family: inherit
