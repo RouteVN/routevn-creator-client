@@ -151,6 +151,56 @@ describe("app route transitions", () => {
     expect(appService.prepareNavigation).not.toHaveBeenCalled();
   });
 
+  it("returns to projects when project route validation fails", async () => {
+    const error = new Error(
+      "state.story.initialSceneId must reference an existing scene",
+    );
+    error.code = "state_validation_failed";
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      redirect: vi.fn(),
+      replace: vi.fn(),
+      getCurrentProjectId: vi.fn(() => "project-1"),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "tauri"),
+      showAlert: vi.fn(),
+    };
+    const deps = {
+      appService,
+      projectService: {
+        ensureRepository: vi.fn(async () => {
+          throw error;
+        }),
+        getEnsuredProjectId: vi.fn(() => undefined),
+        releaseProjectRuntime: vi.fn(async () => {}),
+      },
+      store: {
+        setCurrentRoute: vi.fn(),
+        closeMobileSheet: vi.fn(),
+        setRepositoryLoading: vi.fn(),
+        setRepositoryLoadingPhase: vi.fn(),
+        setRepositoryLoadingProgress: vi.fn(),
+      },
+      render: vi.fn(),
+      i18n: {},
+    };
+
+    await createRouteTransitionRunner(deps)({
+      path: "/project",
+      payload: { p: "project-1" },
+    });
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "RouteVN Creator couldn't safely open this project.\n\nError: state.story.initialSceneId must reference an existing scene\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.",
+    });
+    expect(appService.redirect).toHaveBeenCalledWith("/projects");
+    expect(deps.store.setCurrentRoute).toHaveBeenCalledWith({
+      route: "/projects",
+      payload: {},
+    });
+  });
+
   it("prepares browser back navigation without rewriting the popped entry", async () => {
     const currentPath = "/projects";
     const currentPayload = {};

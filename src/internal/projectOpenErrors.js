@@ -87,6 +87,15 @@ const isProjectDataStructureValidationError = (error) => {
   );
 };
 
+const getProjectValidationErrorMessage = (error) => {
+  const detail =
+    typeof error?.message === "string" && error.message.trim()
+      ? error.message.trim()
+      : "";
+  const errorDetail = detail ? `\n\nError: ${detail}` : "";
+  return `RouteVN Creator couldn't safely open this project.${errorDetail}\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.`;
+};
+
 export const getProjectOpenErrorMessage = (error) => {
   if (isIncompatibleProjectOpenError(error)) {
     return getIncompatibleProjectOpenMessage(error);
@@ -99,9 +108,7 @@ export const getProjectOpenErrorMessage = (error) => {
   }
 
   if (isProjectDataStructureValidationError(error)) {
-    return withLatestCreatorVersionHint(
-      "Project data structure failed validation.",
-    );
+    return getProjectValidationErrorMessage(error);
   }
 
   if (isProjectDatabaseOpenError(error)) {
