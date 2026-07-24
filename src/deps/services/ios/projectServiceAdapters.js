@@ -33,7 +33,10 @@ import {
   MAIN_VIEW_NAME,
   MAIN_VIEW_VERSION,
 } from "../shared/projectRepositoryViews/shared.js";
-import { toBootstrappedDraftEvent } from "../shared/collab/clientStoreHistory.js";
+import {
+  assertEmptyRepositoryHistory,
+  toBootstrappedDraftEvent,
+} from "../shared/collab/clientStoreHistory.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import { createWebIconAssets } from "../../clients/web/webIconAssets.js";
@@ -627,6 +630,11 @@ export const createIOSProjectServiceAdapters = ({
         throw new Error("Template is required for project initialization");
       }
 
+      const store = await createPersistedIOSProjectStore({
+        projectId: safeProjectId,
+      });
+      assertEmptyRepositoryHistory(await store.getRepositoryHistoryStats());
+
       await ensureIOSProjectStorage(safeProjectId);
 
       const loadedTemplateData = await loadTemplate(template);
@@ -651,9 +659,6 @@ export const createIOSProjectServiceAdapters = ({
 
       assertSupportedProjectState(templateData);
 
-      const store = await createPersistedIOSProjectStore({
-        projectId: safeProjectId,
-      });
       const initialClientTs = Date.now();
       const initialEvent = createProjectCreateRepositoryEvent({
         projectId: safeProjectId,

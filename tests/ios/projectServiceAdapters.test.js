@@ -4,12 +4,14 @@ import { parseBundle } from "../../src/deps/services/shared/projectExportService
 
 const mocked = vi.hoisted(() => ({
   callIOSBridge: vi.fn(),
+  createPersistedIOSProjectStore: vi.fn(),
   createWebIconAssets: vi.fn(async ({ variants }) =>
     variants.map(({ fileName, size }) => ({
       fileName,
       bytes: Uint8Array.from([size === 192 ? 192 : 255]),
     })),
   ),
+  loadTemplate: vi.fn(),
 }));
 
 vi.mock("../../src/deps/clients/ios/bridge.js", async () => {
@@ -23,6 +25,26 @@ vi.mock("../../src/deps/clients/ios/bridge.js", async () => {
 vi.mock("../../src/deps/clients/web/webIconAssets.js", () => ({
   createWebIconAssets: mocked.createWebIconAssets,
 }));
+
+vi.mock("../../src/deps/services/ios/collabClientStore.js", async () => {
+  const actual = await vi.importActual(
+    "../../src/deps/services/ios/collabClientStore.js",
+  );
+  return {
+    ...actual,
+    createPersistedIOSProjectStore: mocked.createPersistedIOSProjectStore,
+  };
+});
+
+vi.mock("../../src/deps/clients/web/templateLoader.js", async () => {
+  const actual = await vi.importActual(
+    "../../src/deps/clients/web/templateLoader.js",
+  );
+  return {
+    ...actual,
+    loadTemplate: mocked.loadTemplate,
+  };
+});
 
 import { createIOSProjectServiceAdapters } from "../../src/deps/services/ios/projectServiceAdapters.js";
 
@@ -38,6 +60,8 @@ const toExactArrayBuffer = (bytes) => {
 describe("ios project service adapters", () => {
   beforeEach(() => {
     mocked.callIOSBridge.mockReset();
+    mocked.createPersistedIOSProjectStore.mockReset();
+    mocked.loadTemplate.mockReset();
     vi.spyOn(console, "info").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
   });
@@ -243,5 +267,53 @@ describe("ios project service adapters", () => {
         getStoreByProject: vi.fn(),
       }),
     ).rejects.toThrow("iOS remote collaboration is disabled.");
+  });
+
+  it("rejects existing iOS project history before initialization writes", async () => {
+    const store = {
+      getRepositoryHistoryStats: vi.fn(async () => ({
+        committedCount: 1,
+        latestCommittedId: 1,
+        draftCount: 0,
+        latestDraftClock: 0,
+      })),
+      insertDraft: vi.fn(async () => {}),
+      saveMaterializedViewCheckpoint: vi.fn(async () => {}),
+      app: {
+        set: vi.fn(async () => {}),
+      },
+    };
+    mocked.createPersistedIOSProjectStore.mockResolvedValue(store);
+    const { storageAdapter } = createIOSProjectServiceAdapters({
+      collabLog: vi.fn(),
+      creatorVersion: 2,
+    });
+
+    await expect(
+      storageAdapter.initializeProject({
+        projectId: "project-1",
+        template: "blank",
+        projectInfo: {
+          id: "project-1",
+          name: "Project One",
+        },
+        projectResolution: {
+          width: 1280,
+          height: 720,
+        },
+      }),
+    ).rejects.toThrow(
+      "Project storage is not empty. New project initialization requires empty storage.",
+    );
+
+    expect(mocked.createPersistedIOSProjectStore).toHaveBeenCalledWith({
+      projectId: "project-1",
+    });
+    expect(store.getRepositoryHistoryStats).toHaveBeenCalledTimes(1);
+    expect(mocked.callIOSBridge).not.toHaveBeenCalled();
+    expect(mocked.loadTemplate).not.toHaveBeenCalled();
+    expect(store.insertDraft).not.toHaveBeenCalled();
+    expect(store.saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
+    expect(store.app.set).not.toHaveBeenCalled();
   });
 });
