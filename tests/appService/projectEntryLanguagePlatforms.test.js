@@ -116,6 +116,31 @@ describe("project-entry language platform propagation", () => {
     },
   );
 
+  it("does not initialize a desktop project in a non-empty folder", async () => {
+    mocked.readDir.mockResolvedValue([{ name: "project.db" }]);
+    const db = createDb();
+    const projectService = createProjectService();
+    const appService = createDesktopAppService(
+      createParams({ db, projectService }),
+    );
+
+    await expect(
+      appService.createNewProject({
+        name: "Project One",
+        description: "",
+        language: "en",
+        projectPath: "/projects/existing-project",
+        template: "blank",
+        projectResolution: { width: 1280, height: 720 },
+      }),
+    ).rejects.toThrow(
+      "The selected folder must be empty. Please choose an empty folder for your new project.",
+    );
+
+    expect(projectService.initializeProject).not.toHaveBeenCalled();
+    await expect(db.get("projectEntries")).resolves.toEqual([]);
+  });
+
   it("keeps language when importing a desktop project", async () => {
     const db = createDb();
     const projectService = {

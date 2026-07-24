@@ -661,8 +661,6 @@ export const createIOSProjectServiceAdapters = ({
         clientTs: initialClientTs,
       });
 
-      await store.clearEvents();
-      await store.clearMaterializedViewCheckpoints();
       await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
       await store.saveMaterializedViewCheckpoint({
         viewName: MAIN_VIEW_NAME,

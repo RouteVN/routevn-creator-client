@@ -6,6 +6,7 @@ const mocked = vi.hoisted(() => ({
   mkdir: vi.fn(async () => {}),
   writeFile: vi.fn(async () => {}),
   readFile: vi.fn(),
+  readDir: vi.fn(async () => []),
   resolveResource: vi.fn(),
   convertFileSrc: vi.fn((value) => value),
   invoke: vi.fn(async () => {}),
@@ -41,6 +42,7 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   mkdir: mocked.mkdir,
   writeFile: mocked.writeFile,
   readFile: mocked.readFile,
+  readDir: mocked.readDir,
   exists: mocked.exists,
 }));
 
@@ -178,6 +180,8 @@ describe("tauri project service adapters preflight reads", () => {
     mocked.mkdir.mockClear();
     mocked.writeFile.mockClear();
     mocked.readFile.mockReset();
+    mocked.readDir.mockReset();
+    mocked.readDir.mockResolvedValue([]);
     mocked.resolveResource.mockReset();
     mocked.convertFileSrc.mockClear();
     mocked.invoke.mockReset();
@@ -767,8 +771,8 @@ describe("tauri project service adapters preflight reads", () => {
       projectResolution: templateState.project.resolution,
     });
 
-    expect(store.clearEvents).toHaveBeenCalledTimes(1);
-    expect(store.clearMaterializedViewCheckpoints).toHaveBeenCalledTimes(1);
+    expect(store.clearEvents).not.toHaveBeenCalled();
+    expect(store.clearMaterializedViewCheckpoints).not.toHaveBeenCalled();
     expect(store.insertDraft).toHaveBeenCalledTimes(1);
     expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledTimes(1);
 
@@ -793,6 +797,49 @@ describe("tauri project service adapters preflight reads", () => {
       storedCreatorVersion: appValues.get("creatorVersion"),
       storedProjectInfo: appValues.get("projectInfo"),
     });
+  });
+
+  it("rejects a non-empty project folder before initialization writes", async () => {
+    mocked.readDir.mockResolvedValue([{ name: "project.db" }]);
+    const store = {
+      clearEvents: vi.fn(async () => {}),
+      clearMaterializedViewCheckpoints: vi.fn(async () => {}),
+      insertDraft: vi.fn(async () => {}),
+      saveMaterializedViewCheckpoint: vi.fn(async () => {}),
+      app: {
+        set: vi.fn(async () => {}),
+      },
+    };
+    mocked.createPersistedTauriProjectStore.mockResolvedValue(store);
+    const { storageAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await expect(
+      storageAdapter.initializeProject({
+        projectId: "project-1",
+        projectPath: "/projects/existing-project",
+        template: "blank",
+        projectInfo: {
+          id: "project-1",
+          name: "Project One",
+        },
+        projectResolution: {
+          width: 1280,
+          height: 720,
+        },
+      }),
+    ).rejects.toThrow(
+      "The selected folder must be empty. Please choose an empty folder for your new project.",
+    );
+
+    expect(mocked.mkdir).not.toHaveBeenCalled();
+    expect(mocked.writeFile).not.toHaveBeenCalled();
+    expect(mocked.loadTemplate).not.toHaveBeenCalled();
+    expect(mocked.createPersistedTauriProjectStore).not.toHaveBeenCalled();
+    expect(store.clearEvents).not.toHaveBeenCalled();
+    expect(store.clearMaterializedViewCheckpoints).not.toHaveBeenCalled();
   });
 
   it("persists a projection gap for incompatible remote commands", async () => {
