@@ -192,7 +192,7 @@ describe("app route transitions", () => {
 
     expect(appService.showAlert).toHaveBeenCalledWith({
       message:
-        "RouteVN Creator couldn't safely open this project.\n\nError: state.story.initialSceneId must reference an existing scene\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.",
+        "RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.\n\nTechnical details: state.story.initialSceneId must reference an existing scene",
     });
     expect(appService.redirect).toHaveBeenCalledWith("/projects");
     expect(deps.store.setCurrentRoute).toHaveBeenCalledWith({
