@@ -33,7 +33,10 @@ import {
   MAIN_VIEW_NAME,
   MAIN_VIEW_VERSION,
 } from "../shared/projectRepositoryViews/shared.js";
-import { toBootstrappedDraftEvent } from "../shared/collab/clientStoreHistory.js";
+import {
+  assertEmptyRepositoryHistory,
+  toBootstrappedDraftEvent,
+} from "../shared/collab/clientStoreHistory.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import { createWebIconAssets } from "../../clients/web/webIconAssets.js";
@@ -627,6 +630,11 @@ export const createAndroidProjectServiceAdapters = ({
         throw new Error("Template is required for project initialization");
       }
 
+      const store = await createPersistedAndroidProjectStore({
+        projectId: safeProjectId,
+      });
+      assertEmptyRepositoryHistory(await store.getRepositoryHistoryStats());
+
       ensureAndroidProjectStorage(safeProjectId);
 
       const loadedTemplateData = await loadTemplate(template);
@@ -651,9 +659,6 @@ export const createAndroidProjectServiceAdapters = ({
 
       assertSupportedProjectState(templateData);
 
-      const store = await createPersistedAndroidProjectStore({
-        projectId: safeProjectId,
-      });
       const initialClientTs = Date.now();
       const initialEvent = createProjectCreateRepositoryEvent({
         projectId: safeProjectId,
@@ -661,8 +666,6 @@ export const createAndroidProjectServiceAdapters = ({
         clientTs: initialClientTs,
       });
 
-      await store.clearEvents();
-      await store.clearMaterializedViewCheckpoints();
       await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
       await store.saveMaterializedViewCheckpoint({
         viewName: MAIN_VIEW_NAME,

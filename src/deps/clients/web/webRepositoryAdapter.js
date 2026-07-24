@@ -188,8 +188,6 @@ export const initializeProject = async ({
 
   assertSupportedProjectState(templateData);
 
-  await adapter.clearMaterializedViewCheckpoints();
-
   const initialClientTs = Date.now();
   const initialEvent = createProjectCreateRepositoryEvent({
     projectId,

@@ -4,12 +4,14 @@ import { parseBundle } from "../../src/deps/services/shared/projectExportService
 
 const mocked = vi.hoisted(() => ({
   callAndroidBridge: vi.fn(),
+  createPersistedAndroidProjectStore: vi.fn(),
   createWebIconAssets: vi.fn(async ({ variants }) =>
     variants.map(({ fileName, size }) => ({
       fileName,
       bytes: Uint8Array.from([size === 192 ? 192 : 255]),
     })),
   ),
+  loadTemplate: vi.fn(),
 }));
 
 vi.mock("../../src/deps/clients/android/bridge.js", async () => {
@@ -26,6 +28,27 @@ vi.mock("../../src/deps/clients/web/webIconAssets.js", () => ({
   createWebIconAssets: mocked.createWebIconAssets,
 }));
 
+vi.mock("../../src/deps/services/android/collabClientStore.js", async () => {
+  const actual = await vi.importActual(
+    "../../src/deps/services/android/collabClientStore.js",
+  );
+  return {
+    ...actual,
+    createPersistedAndroidProjectStore:
+      mocked.createPersistedAndroidProjectStore,
+  };
+});
+
+vi.mock("../../src/deps/clients/web/templateLoader.js", async () => {
+  const actual = await vi.importActual(
+    "../../src/deps/clients/web/templateLoader.js",
+  );
+  return {
+    ...actual,
+    loadTemplate: mocked.loadTemplate,
+  };
+});
+
 import { createAndroidProjectServiceAdapters } from "../../src/deps/services/android/projectServiceAdapters.js";
 
 const toBase64 = (bytes) => Buffer.from(bytes).toString("base64");
@@ -40,6 +63,8 @@ const toExactArrayBuffer = (bytes) => {
 describe("android project service adapters", () => {
   beforeEach(() => {
     mocked.callAndroidBridge.mockReset();
+    mocked.createPersistedAndroidProjectStore.mockReset();
+    mocked.loadTemplate.mockReset();
     vi.spyOn(console, "info").mockImplementation(() => {});
   });
 
@@ -175,5 +200,53 @@ describe("android project service adapters", () => {
         getStoreByProject: vi.fn(),
       }),
     ).rejects.toThrow("Android remote collaboration is disabled.");
+  });
+
+  it("rejects existing Android project history before initialization writes", async () => {
+    const store = {
+      getRepositoryHistoryStats: vi.fn(async () => ({
+        committedCount: 1,
+        latestCommittedId: 1,
+        draftCount: 0,
+        latestDraftClock: 0,
+      })),
+      insertDraft: vi.fn(async () => {}),
+      saveMaterializedViewCheckpoint: vi.fn(async () => {}),
+      app: {
+        set: vi.fn(async () => {}),
+      },
+    };
+    mocked.createPersistedAndroidProjectStore.mockResolvedValue(store);
+    const { storageAdapter } = createAndroidProjectServiceAdapters({
+      collabLog: vi.fn(),
+      creatorVersion: 2,
+    });
+
+    await expect(
+      storageAdapter.initializeProject({
+        projectId: "project-1",
+        template: "blank",
+        projectInfo: {
+          id: "project-1",
+          name: "Project One",
+        },
+        projectResolution: {
+          width: 1280,
+          height: 720,
+        },
+      }),
+    ).rejects.toThrow(
+      "Project storage is not empty. New project initialization requires empty storage.",
+    );
+
+    expect(mocked.createPersistedAndroidProjectStore).toHaveBeenCalledWith({
+      projectId: "project-1",
+    });
+    expect(store.getRepositoryHistoryStats).toHaveBeenCalledTimes(1);
+    expect(mocked.callAndroidBridge).not.toHaveBeenCalled();
+    expect(mocked.loadTemplate).not.toHaveBeenCalled();
+    expect(store.insertDraft).not.toHaveBeenCalled();
+    expect(store.saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
+    expect(store.app.set).not.toHaveBeenCalled();
   });
 });

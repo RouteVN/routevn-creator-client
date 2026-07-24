@@ -87,6 +87,20 @@ const isProjectDataStructureValidationError = (error) => {
   );
 };
 
+const isProjectHistoryIntegrityError = (error) => {
+  const message = String(error?.message ?? "").toLowerCase();
+  return message.includes("committed event invariant violation");
+};
+
+const getProjectIntegrityErrorMessage = (error) => {
+  const detail =
+    typeof error?.message === "string" && error.message.trim()
+      ? error.message.trim()
+      : "";
+  const technicalDetail = detail ? `\n\nTechnical details: ${detail}` : "";
+  return `RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.${technicalDetail}`;
+};
+
 export const getProjectOpenErrorMessage = (error) => {
   if (isIncompatibleProjectOpenError(error)) {
     return getIncompatibleProjectOpenMessage(error);
@@ -98,10 +112,11 @@ export const getProjectOpenErrorMessage = (error) => {
     );
   }
 
-  if (isProjectDataStructureValidationError(error)) {
-    return withLatestCreatorVersionHint(
-      "Project data structure failed validation.",
-    );
+  if (
+    isProjectDataStructureValidationError(error) ||
+    isProjectHistoryIntegrityError(error)
+  ) {
+    return getProjectIntegrityErrorMessage(error);
   }
 
   if (isProjectDatabaseOpenError(error)) {

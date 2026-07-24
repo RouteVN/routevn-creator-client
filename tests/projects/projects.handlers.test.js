@@ -301,7 +301,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 
-  it("suggests updating RouteVN Creator for project data validation errors", async () => {
+  it("shows project validation details and support guidance", async () => {
     const deps = createDeps({
       ensureProjectCompatibleById: vi.fn(async () => {
         const error = new Error(
@@ -311,12 +311,11 @@ describe("projects.handleProjectsClick", () => {
         throw error;
       }),
     });
-
     await handleProjectsClick(deps, createPayload());
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message:
-        "Project data structure failed validation.\nMake sure you're using the latest version of RouteVN Creator.",
+        "RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.\n\nTechnical details: payload.sectionId must reference an existing section",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });

@@ -25,6 +25,16 @@ export const getRepositoryHistoryLength = (stats = {}) => {
   return normalizedStats.committedCount + normalizedStats.draftCount;
 };
 
+export const assertEmptyRepositoryHistory = (stats = {}) => {
+  if (getRepositoryHistoryLength(stats) === 0) {
+    return;
+  }
+
+  throw new Error(
+    "Project storage is not empty. New project initialization requires empty storage.",
+  );
+};
+
 export const areRepositoryHistoryStatsEqual = (left, right) => {
   const normalizedLeft = normalizeRepositoryHistoryStats(left);
   const normalizedRight = normalizeRepositoryHistoryStats(right);

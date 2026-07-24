@@ -1,4 +1,10 @@
-import { mkdir, writeFile, readFile, exists } from "@tauri-apps/plugin-fs";
+import {
+  mkdir,
+  writeFile,
+  readFile,
+  readDir,
+  exists,
+} from "@tauri-apps/plugin-fs";
 import { join, resolveResource } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { fileTypeFromBuffer } from "file-type";
@@ -1018,6 +1024,13 @@ export const createTauriProjectServiceAdapters = ({
         throw new Error("Template is required for project initialization");
       }
 
+      const projectEntries = await readDir(projectPath);
+      if (projectEntries.length > 0) {
+        throw new Error(
+          "The selected folder must be empty. Please choose an empty folder for your new project.",
+        );
+      }
+
       const filesPath = await join(projectPath, "files");
       await mkdir(filesPath, { recursive: true });
 
@@ -1050,8 +1063,6 @@ export const createTauriProjectServiceAdapters = ({
         clientTs: initialClientTs,
       });
 
-      await store.clearEvents();
-      await store.clearMaterializedViewCheckpoints();
       await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
       await store.saveMaterializedViewCheckpoint({
         viewName: MAIN_VIEW_NAME,
