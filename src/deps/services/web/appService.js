@@ -57,13 +57,6 @@ export const createAppService = (params) => {
       const namespace = generateId();
       const nativeApplicationIdentifier = createNativeApplicationIdentifier();
       let iconFileId = null;
-      if (iconFile) {
-        const storedIcon = await projectService.storeFileForProject({
-          projectId,
-          file: iconFile,
-        });
-        iconFileId = storedIcon.fileId;
-      }
 
       const projectEntry = {
         id: projectId,
@@ -86,9 +79,21 @@ export const createAppService = (params) => {
           name,
           description,
           language,
-          iconFileId,
+          iconFileId: null,
         },
       });
+
+      if (iconFile) {
+        const storedIcon = await projectService.storeFileForProject({
+          projectId,
+          file: iconFile,
+        });
+        iconFileId = storedIcon.fileId;
+        projectEntry.iconFileId = iconFileId;
+        await projectService.updateProjectInfoById(projectId, {
+          iconFileId,
+        });
+      }
 
       await addProjectEntry(projectEntry);
       const fullProject = { ...projectEntry };

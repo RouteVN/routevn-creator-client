@@ -6,10 +6,8 @@ import {
 } from "../../clients/web/webRepositoryAdapter.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
 import { createWebSocketTransport } from "./collab/createWebSocketTransport.js";
-import {
-  createPersistedInMemoryClientStore,
-  deletePersistedInMemoryClientStore,
-} from "./collabClientStore.js";
+import { createPersistedInMemoryClientStore } from "./collabClientStore.js";
+import { listIndexedDbDatabaseNames } from "../../clients/web/indexedDb.js";
 import {
   clearCommittedCursor,
   loadCommittedCursor,
@@ -38,6 +36,7 @@ import {
   applyCommandToRepository,
   assertSupportedProjectState,
 } from "../shared/projectRepository.js";
+import { PROJECT_STORAGE_NOT_EMPTY_MESSAGE } from "../../../internal/projectInitialization.js";
 
 const countImageEntries = (imagesData) =>
   Object.values(imagesData?.items || {}).filter(
@@ -93,20 +92,6 @@ export const createWebProjectServiceAdapters = ({
     });
     collabClientStoresByProject.set(projectId, store);
     return store;
-  };
-
-  const evictCollabClientStore = async (projectId) => {
-    const existing = collabClientStoresByProject.get(projectId);
-    collabClientStoresByProject.delete(projectId);
-
-    if (!projectId) {
-      return;
-    }
-
-    await deletePersistedInMemoryClientStore({
-      projectId,
-      store: existing,
-    });
   };
 
   const ensureCommittedIdLoaded = async (projectId, getStoreByProject) => {
@@ -215,8 +200,20 @@ export const createWebProjectServiceAdapters = ({
       projectInfo,
       projectResolution,
     }) => {
+      const databaseNames = await listIndexedDbDatabaseNames();
+      const collabDatabaseSuffix = `:${projectId}`;
+      const hasProjectStorage = [...databaseNames].some((databaseName) => {
+        return (
+          databaseName === projectId ||
+          (databaseName.startsWith("routevn-collab-client:") &&
+            databaseName.endsWith(collabDatabaseSuffix))
+        );
+      });
+      if (hasProjectStorage || collabClientStoresByProject.has(projectId)) {
+        throw new Error(PROJECT_STORAGE_NOT_EMPTY_MESSAGE);
+      }
+
       clearProjectCollabCaches(projectId);
-      await evictCollabClientStore(projectId);
       const rawClientStore = await getCollabClientStore(projectId);
       return initializeWebProject({
         projectId,

@@ -48,8 +48,10 @@ const createDb = () => {
 
 const createProjectService = () => ({
   initializeProject: vi.fn(async () => {}),
-  storeFileForProject: vi.fn(),
+  storeFileForProject: vi.fn(async () => ({ fileId: "icon-1" })),
+  updateProjectInfoById: vi.fn(async () => {}),
   updateProjectInfoByPath: vi.fn(async () => {}),
+  getFileByProjectId: vi.fn(async () => undefined),
 });
 
 const createParams = ({ db, projectService }) => ({
@@ -113,6 +115,67 @@ describe("project-entry language platform propagation", () => {
           projectInfo: expect.objectContaining({ language: "ja" }),
         }),
       );
+    },
+  );
+
+  it.each([
+    ["web", createWebAppService],
+    ["android", createAndroidAppService],
+    ["ios", createIOSAppService],
+  ])(
+    "initializes %s project storage before storing the selected icon",
+    async (_, createAppService) => {
+      const db = createDb();
+      const projectService = createProjectService();
+      const appService = createAppService(createParams({ db, projectService }));
+      const iconFile = {
+        name: "icon.png",
+        type: "image/png",
+      };
+
+      const project = await appService.createNewProject({
+        name: "Project One",
+        description: "",
+        language: "en",
+        template: "blank",
+        projectResolution: { width: 1280, height: 720 },
+        iconFile,
+      });
+
+      expect(projectService.initializeProject).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: project.id,
+          projectInfo: expect.objectContaining({
+            iconFileId: null,
+          }),
+        }),
+      );
+      expect(projectService.storeFileForProject).toHaveBeenCalledWith({
+        projectId: project.id,
+        file: iconFile,
+      });
+      expect(projectService.updateProjectInfoById).toHaveBeenCalledWith(
+        project.id,
+        {
+          iconFileId: "icon-1",
+        },
+      );
+      expect(
+        projectService.initializeProject.mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        projectService.storeFileForProject.mock.invocationCallOrder[0],
+      );
+      expect(
+        projectService.storeFileForProject.mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        projectService.updateProjectInfoById.mock.invocationCallOrder[0],
+      );
+      await expect(db.get("projectEntries")).resolves.toEqual([
+        expect.objectContaining({
+          id: project.id,
+          iconFileId: "icon-1",
+        }),
+      ]);
     },
   );
 

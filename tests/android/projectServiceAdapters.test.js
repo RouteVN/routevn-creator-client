@@ -12,6 +12,7 @@ const mocked = vi.hoisted(() => ({
     })),
   ),
   loadTemplate: vi.fn(),
+  getTemplateFiles: vi.fn(),
 }));
 
 vi.mock("../../src/deps/clients/android/bridge.js", async () => {
@@ -46,10 +47,12 @@ vi.mock("../../src/deps/clients/web/templateLoader.js", async () => {
   return {
     ...actual,
     loadTemplate: mocked.loadTemplate,
+    getTemplateFiles: mocked.getTemplateFiles,
   };
 });
 
 import { createAndroidProjectServiceAdapters } from "../../src/deps/services/android/projectServiceAdapters.js";
+import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
 
 const toBase64 = (bytes) => Buffer.from(bytes).toString("base64");
 
@@ -65,6 +68,8 @@ describe("android project service adapters", () => {
     mocked.callAndroidBridge.mockReset();
     mocked.createPersistedAndroidProjectStore.mockReset();
     mocked.loadTemplate.mockReset();
+    mocked.getTemplateFiles.mockReset();
+    mocked.getTemplateFiles.mockResolvedValue([]);
     vi.spyOn(console, "info").mockImplementation(() => {});
   });
 
@@ -202,14 +207,20 @@ describe("android project service adapters", () => {
     ).rejects.toThrow("Android remote collaboration is disabled.");
   });
 
-  it("rejects existing Android project history before initialization writes", async () => {
+  it("rejects existing Android project storage before initialization writes", async () => {
+    mocked.callAndroidBridge.mockImplementation((method) => {
+      if (method === "getProjectStorageStatus") {
+        return {
+          exists: true,
+          databaseFileExists: true,
+          databaseDirectoryExists: true,
+          projectDirectoryExists: false,
+        };
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
     const store = {
-      getRepositoryHistoryStats: vi.fn(async () => ({
-        committedCount: 1,
-        latestCommittedId: 1,
-        draftCount: 0,
-        latestDraftClock: 0,
-      })),
       insertDraft: vi.fn(async () => {}),
       saveMaterializedViewCheckpoint: vi.fn(async () => {}),
       app: {
@@ -239,14 +250,81 @@ describe("android project service adapters", () => {
       "Project storage is not empty. New project initialization requires empty storage.",
     );
 
-    expect(mocked.createPersistedAndroidProjectStore).toHaveBeenCalledWith({
-      projectId: "project-1",
-    });
-    expect(store.getRepositoryHistoryStats).toHaveBeenCalledTimes(1);
-    expect(mocked.callAndroidBridge).not.toHaveBeenCalled();
+    expect(mocked.callAndroidBridge).toHaveBeenCalledWith(
+      "getProjectStorageStatus",
+      {
+        projectId: "project-1",
+      },
+    );
+    expect(mocked.createPersistedAndroidProjectStore).not.toHaveBeenCalled();
     expect(mocked.loadTemplate).not.toHaveBeenCalled();
     expect(store.insertDraft).not.toHaveBeenCalled();
     expect(store.saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
     expect(store.app.set).not.toHaveBeenCalled();
+  });
+
+  it("creates Android project storage only after the unused-storage check", async () => {
+    mocked.callAndroidBridge.mockImplementation((method) => {
+      if (method === "getProjectStorageStatus") {
+        return {
+          exists: false,
+          databaseFileExists: false,
+          databaseDirectoryExists: false,
+          projectDirectoryExists: false,
+        };
+      }
+      if (method === "ensureProjectStorage") {
+        return true;
+      }
+
+      throw new Error(`Unexpected bridge method: ${method}`);
+    });
+    mocked.loadTemplate.mockResolvedValue(structuredClone(initialProjectData));
+    const store = {
+      insertDraft: vi.fn(async () => {}),
+      saveMaterializedViewCheckpoint: vi.fn(async () => {}),
+      app: {
+        set: vi.fn(async () => {}),
+      },
+    };
+    mocked.createPersistedAndroidProjectStore.mockResolvedValue(store);
+    const { storageAdapter } = createAndroidProjectServiceAdapters({
+      collabLog: vi.fn(),
+      creatorVersion: 2,
+    });
+
+    await storageAdapter.initializeProject({
+      projectId: "project-1",
+      template: "blank",
+      projectInfo: {
+        id: "project-1",
+        name: "Project One",
+      },
+      projectResolution: {
+        width: 1280,
+        height: 720,
+      },
+    });
+
+    expect(mocked.callAndroidBridge).toHaveBeenNthCalledWith(
+      1,
+      "getProjectStorageStatus",
+      {
+        projectId: "project-1",
+      },
+    );
+    expect(mocked.callAndroidBridge).toHaveBeenNthCalledWith(
+      2,
+      "ensureProjectStorage",
+      {
+        projectId: "project-1",
+      },
+    );
+    expect(mocked.createPersistedAndroidProjectStore).toHaveBeenCalledWith({
+      projectId: "project-1",
+    });
+    expect(store.insertDraft).toHaveBeenCalledTimes(1);
+    expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledTimes(1);
+    expect(store.app.set).toHaveBeenCalledTimes(2);
   });
 });

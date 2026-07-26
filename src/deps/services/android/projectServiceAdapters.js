@@ -33,12 +33,10 @@ import {
   MAIN_VIEW_NAME,
   MAIN_VIEW_VERSION,
 } from "../shared/projectRepositoryViews/shared.js";
-import {
-  assertEmptyRepositoryHistory,
-  toBootstrappedDraftEvent,
-} from "../shared/collab/clientStoreHistory.js";
+import { toBootstrappedDraftEvent } from "../shared/collab/clientStoreHistory.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
+import { PROJECT_STORAGE_NOT_EMPTY_MESSAGE } from "../../../internal/projectInitialization.js";
 import { createWebIconAssets } from "../../clients/web/webIconAssets.js";
 import {
   filterTemplateFileIds,
@@ -297,6 +295,17 @@ const ensureAndroidProjectStorage = (projectId) => {
       label: "Android project id",
     }),
   });
+};
+
+const assertUnusedAndroidProjectStorage = (projectId) => {
+  const status = callAndroidBridge("getProjectStorageStatus", {
+    projectId: assertSafeAndroidStorageSegment(projectId, {
+      label: "Android project id",
+    }),
+  });
+  if (status?.exists !== false) {
+    throw new Error(PROJECT_STORAGE_NOT_EMPTY_MESSAGE);
+  }
 };
 
 const writeAndroidProjectFile = ({ projectId, fileId, bytes, mimeType }) => {
@@ -630,10 +639,7 @@ export const createAndroidProjectServiceAdapters = ({
         throw new Error("Template is required for project initialization");
       }
 
-      const store = await createPersistedAndroidProjectStore({
-        projectId: safeProjectId,
-      });
-      assertEmptyRepositoryHistory(await store.getRepositoryHistoryStats());
+      assertUnusedAndroidProjectStorage(safeProjectId);
 
       ensureAndroidProjectStorage(safeProjectId);
 
@@ -659,6 +665,9 @@ export const createAndroidProjectServiceAdapters = ({
 
       assertSupportedProjectState(templateData);
 
+      const store = await createPersistedAndroidProjectStore({
+        projectId: safeProjectId,
+      });
       const initialClientTs = Date.now();
       const initialEvent = createProjectCreateRepositoryEvent({
         projectId: safeProjectId,

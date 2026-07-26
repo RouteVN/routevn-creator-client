@@ -33,12 +33,10 @@ import {
   MAIN_VIEW_NAME,
   MAIN_VIEW_VERSION,
 } from "../shared/projectRepositoryViews/shared.js";
-import {
-  assertEmptyRepositoryHistory,
-  toBootstrappedDraftEvent,
-} from "../shared/collab/clientStoreHistory.js";
+import { toBootstrappedDraftEvent } from "../shared/collab/clientStoreHistory.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
+import { PROJECT_STORAGE_NOT_EMPTY_MESSAGE } from "../../../internal/projectInitialization.js";
 import { createWebIconAssets } from "../../clients/web/webIconAssets.js";
 import {
   filterTemplateFileIds,
@@ -297,6 +295,17 @@ const ensureIOSProjectStorage = async (projectId) => {
       label: "iOS project id",
     }),
   });
+};
+
+const assertUnusedIOSProjectStorage = async (projectId) => {
+  const status = await callIOSBridge("getProjectStorageStatus", {
+    projectId: assertSafeIOSStorageSegment(projectId, {
+      label: "iOS project id",
+    }),
+  });
+  if (status?.exists !== false) {
+    throw new Error(PROJECT_STORAGE_NOT_EMPTY_MESSAGE);
+  }
 };
 
 const writeIOSProjectFile = async ({ projectId, fileId, bytes, mimeType }) => {
@@ -630,10 +639,7 @@ export const createIOSProjectServiceAdapters = ({
         throw new Error("Template is required for project initialization");
       }
 
-      const store = await createPersistedIOSProjectStore({
-        projectId: safeProjectId,
-      });
-      assertEmptyRepositoryHistory(await store.getRepositoryHistoryStats());
+      await assertUnusedIOSProjectStorage(safeProjectId);
 
       await ensureIOSProjectStorage(safeProjectId);
 
@@ -659,6 +665,9 @@ export const createIOSProjectServiceAdapters = ({
 
       assertSupportedProjectState(templateData);
 
+      const store = await createPersistedIOSProjectStore({
+        projectId: safeProjectId,
+      });
       const initialClientTs = Date.now();
       const initialEvent = createProjectCreateRepositoryEvent({
         projectId: safeProjectId,
