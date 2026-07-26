@@ -180,18 +180,9 @@ const getProjectPathFromEvent = (event) => {
   return event?.currentTarget?.dataset?.projectPath ?? "";
 };
 
-const getProjectIndexFromEvent = (event) => {
-  const value = event?.currentTarget?.dataset?.projectIndex;
-  const index = Number(value);
-  if (!Number.isInteger(index) || index < 0) {
-    return undefined;
-  }
-  return index;
-};
-
 const navigateToProjectRoute = async (
   { appService, projectService, store, i18n },
-  { projectId, path } = {},
+  { projectId, projectPath, path } = {},
 ) => {
   const copy = selectProjectsPageCopy(i18n);
   if (!projectId) {
@@ -201,12 +192,20 @@ const navigateToProjectRoute = async (
     return;
   }
 
-  const project = store
-    .selectProjects()
-    .find((entry) => entry?.id === projectId);
+  const projects = store.selectProjects();
+  const project = projectPath
+    ? projects.find((entry) => entry?.projectPath === projectPath)
+    : projects.find((entry) => entry?.id === projectId);
 
   try {
-    await projectService.ensureProjectCompatibleById(projectId);
+    if (projectPath) {
+      await projectService.ensureProjectCompatibleByPath(
+        projectPath,
+        projectId,
+      );
+    } else {
+      await projectService.ensureProjectCompatibleById(projectId);
+    }
   } catch (error) {
     if (isIncompatibleProjectOpenError(error)) {
       await appService.showAlert({
@@ -326,12 +325,6 @@ export const handleCreateDialogClose = (deps) => {
   if (!store.selectIsCreateDialogOpen()) {
     return;
   }
-  store.closeCreateDialog();
-  render();
-};
-
-export const handleCreateDialogCancel = (deps) => {
-  const { store, render } = deps;
   store.closeCreateDialog();
   render();
 };
@@ -846,9 +839,11 @@ export const handleProfileDropdownClickItem = async (deps, payload) => {
 };
 
 export const handleProjectsClick = async (deps, payload) => {
-  const id = getProjectIdFromEvent(payload._event);
+  const projectId = getProjectIdFromEvent(payload._event);
+  const projectPath = getProjectPathFromEvent(payload._event);
   return navigateToProjectRoute(deps, {
-    projectId: id,
+    projectId,
+    projectPath,
     path: "/project",
   });
 };
@@ -859,13 +854,7 @@ export const handleProjectContextMenu = (deps, payload) => {
   payload._event.preventDefault();
 
   const projectId = getProjectIdFromEvent(payload._event);
-  const projects = store.selectProjects();
-  const projectIndex = getProjectIndexFromEvent(payload._event);
-  const project =
-    projects.find((entry) => entry?.id === projectId) ??
-    (projectIndex === undefined ? undefined : projects[projectIndex]);
-  const projectPath =
-    project?.projectPath || getProjectPathFromEvent(payload._event);
+  const projectPath = getProjectPathFromEvent(payload._event);
   if (!projectId) {
     if (!projectPath) {
       appService.showAlert({
@@ -1050,12 +1039,12 @@ export const handleDeleteDialogConfirm = async (deps) => {
       await projectService.releaseProjectRuntime(projectId);
     }
 
-    if (projectId) {
-      await appService.removeProjectEntry(projectId);
-      store.removeProject({ projectId });
-    } else {
+    if (projectPath) {
       await appService.removeProjectEntryByPath(projectPath);
       store.removeProject({ projectPath });
+    } else {
+      await appService.removeProjectEntry(projectId);
+      store.removeProject({ projectId });
     }
   } catch {
     appService.showAlert({
@@ -1113,13 +1102,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   }
 
   const projects = store.selectProjects();
-  const project = projects.find((projectItem) => {
-    if (projectId && projectItem?.id === projectId) {
-      return true;
-    }
-
-    return projectPath && projectItem?.projectPath === projectPath;
-  });
+  const project = projectPath
+    ? projects.find((projectItem) => projectItem?.projectPath === projectPath)
+    : projects.find((projectItem) => projectItem?.id === projectId);
 
   store.closeDropdownMenu();
   store.openDeleteDialog({

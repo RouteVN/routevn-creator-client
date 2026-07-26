@@ -542,7 +542,11 @@ export const createProjectRepositoryService = ({
     };
   };
 
-  const syncProjectEntryProjectInfo = async (projectId, projectInfo) => {
+  const syncProjectEntryProjectInfo = async (
+    projectId,
+    projectInfo,
+    projectPath,
+  ) => {
     if (!db || typeof db.get !== "function" || typeof db.set !== "function") {
       return;
     }
@@ -552,7 +556,9 @@ export const createProjectRepositoryService = ({
       return;
     }
 
-    const entryIndex = entries.findIndex((entry) => entry?.id === projectId);
+    const entryIndex = projectPath
+      ? entries.findIndex((entry) => entry?.projectPath === projectPath)
+      : entries.findIndex((entry) => entry?.id === projectId);
     if (entryIndex < 0) {
       return;
     }
@@ -803,7 +809,12 @@ export const createProjectRepositoryService = ({
     }
   };
 
-  const writeProjectInfoToStore = async ({ store, projectId, patch }) => {
+  const writeProjectInfoToStore = async ({
+    store,
+    projectId,
+    projectPath,
+    patch,
+  }) => {
     const currentProjectInfo = await readProjectInfoFromStore(store, {
       fallbackProjectId: projectId,
     });
@@ -819,7 +830,11 @@ export const createProjectRepositoryService = ({
     }
 
     if (projectId) {
-      await syncProjectEntryProjectInfo(projectId, nextProjectInfo);
+      await syncProjectEntryProjectInfo(
+        projectId,
+        nextProjectInfo,
+        projectPath,
+      );
     }
 
     return nextProjectInfo;
@@ -842,6 +857,7 @@ export const createProjectRepositoryService = ({
     return writeProjectInfoToStore({
       store,
       projectId,
+      projectPath: referencesByProject.get(projectId)?.projectPath,
       patch,
     });
   };
@@ -1134,11 +1150,22 @@ export const createProjectRepositoryService = ({
     return getRepositoryByReference(reference);
   };
 
-  const ensureProjectCompatibleByPath = async (projectPath) => {
-    const reference = await resolveProjectReferenceByPath(projectPath);
+  const ensureProjectCompatibleByPath = async (projectPath, projectId) => {
+    const pathReference = await resolveProjectReferenceByPath(projectPath);
+    const reference = projectId
+      ? {
+          ...pathReference,
+          projectId,
+          repositoryProjectId: projectId,
+        }
+      : pathReference;
     await ensureCompatibleCreatorVersionForReference(reference);
-    const store = await getStoreByPath(projectPath);
+    const store = await getStoreByReference(reference);
     await ensureStoreOpenCompatible(store);
+    if (projectId) {
+      referencesByProject.set(projectId, reference);
+      storesByProject.set(projectId, store);
+    }
   };
 
   const getProjectInfoByPath = async (projectPath) => {
@@ -1222,7 +1249,11 @@ export const createProjectRepositoryService = ({
       projectId,
       cacheKey: reference.cacheKey,
     });
-    await syncProjectEntryProjectInfo(projectId, projectInfo);
+    await syncProjectEntryProjectInfo(
+      projectId,
+      projectInfo,
+      reference.projectPath,
+    );
     emitRepositoryLoadStage(onLoadStage, {
       stage: "repository_ready",
       label: "Project ready.",
@@ -1339,8 +1370,8 @@ export const createProjectRepositoryService = ({
     async getRepositoryByPath(projectPath) {
       return getRepositoryByPath(projectPath);
     },
-    async ensureProjectCompatibleByPath(projectPath) {
-      return ensureProjectCompatibleByPath(projectPath);
+    async ensureProjectCompatibleByPath(projectPath, projectId) {
+      return ensureProjectCompatibleByPath(projectPath, projectId);
     },
     async getProjectInfoByPath(projectPath) {
       return getProjectInfoByPath(projectPath);

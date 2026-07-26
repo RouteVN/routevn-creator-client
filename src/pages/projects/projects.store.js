@@ -4,6 +4,25 @@ import {
   selectProjectsPageCopy,
 } from "./support/projectsPageCopy.js";
 
+const selectLocalProjectKey = (project) => {
+  return project?.projectPath ? project.projectPath : project?.id;
+};
+
+const createLocalProjectItemId = (project, index) => {
+  if (!project?.projectPath) {
+    return `projectItem${index}`;
+  }
+
+  let encodedPath = "";
+  for (let i = 0; i < project.projectPath.length; i += 1) {
+    encodedPath += project.projectPath
+      .charCodeAt(i)
+      .toString(16)
+      .padStart(4, "0");
+  }
+  return `projectItem${encodedPath}`;
+};
+
 export const createInitialState = () => ({
   isTouchMode: false,
   localTitle: "",
@@ -135,12 +154,13 @@ export const setProjectsLoading = ({ state }, { loading } = {}) => {
 };
 
 export const addProject = ({ state }, { project } = {}) => {
-  if (!project?.id) {
+  const projectKey = selectLocalProjectKey(project);
+  if (!projectKey) {
     return;
   }
 
   const existingIndex = state.projects.findIndex(
-    (entry) => entry?.id === project.id,
+    (entry) => selectLocalProjectKey(entry) === projectKey,
   );
   if (existingIndex === -1) {
     state.projects.push(project);
@@ -199,11 +219,11 @@ export const setAuthUser = ({ state }, { user } = {}) => {
 
 export const removeProject = ({ state }, { projectId, projectPath } = {}) => {
   state.projects = state.projects.filter((project) => {
-    if (projectId && project?.id === projectId) {
-      return false;
+    if (projectPath) {
+      return project?.projectPath !== projectPath;
     }
 
-    if (projectPath && project?.projectPath === projectPath) {
+    if (projectId && project?.id === projectId) {
       return false;
     }
 
@@ -703,7 +723,12 @@ export const selectViewData = ({ state, i18n }) => {
     },
   };
 
-  const localProjects = Array.isArray(state.projects) ? state.projects : [];
+  const localProjects = Array.isArray(state.projects)
+    ? state.projects.map((project, index) => ({
+        ...project,
+        itemId: createLocalProjectItemId(project, index),
+      }))
+    : [];
   const cloudProjects = Array.isArray(state.cloudProjects)
     ? state.cloudProjects
     : [];
@@ -717,6 +742,7 @@ export const selectViewData = ({ state, i18n }) => {
 
   return {
     ...state,
+    projects: localProjects,
     localTitle: copy.title,
     cloudTitle: copy.cloudTitle,
     loginButtonText: copy.loginButton,
