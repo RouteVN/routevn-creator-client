@@ -116,7 +116,7 @@ const createOperationBlockMenuItems = (copy = {}) => [
 
 const createOperandSourceMenuItems = (
   copy = {},
-  { operationEnabled = true } = {},
+  { operationEnabled = true, variableItems = [] } = {},
 ) => {
   const operationItem = {
     label: copy.computedNodeOperationSource ?? "Operation",
@@ -132,6 +132,7 @@ const createOperandSourceMenuItems = (
       label: copy.computedNodeVariableSource ?? "Variable",
       type: "item",
       value: "variable",
+      items: variableItems,
     },
     {
       label: copy.computedNodeValueSource ?? "Value",
@@ -355,12 +356,6 @@ export const createInitialState = () => ({
     y: 0,
     operationPath: [],
   },
-  operationVariableMenu: {
-    isOpen: false,
-    x: 0,
-    y: 0,
-    operationPath: [],
-  },
   operationValuePopover: {
     isOpen: false,
     x: 0,
@@ -443,7 +438,6 @@ export const openAddDialog = (
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
   state.operandSourceMenu.isOpen = false;
-  state.operationVariableMenu.isOpen = false;
   state.operationValuePopover.isOpen = false;
   state.enumValuePopover.isOpen = false;
   state.enumValueMenu.isOpen = false;
@@ -477,7 +471,6 @@ export const openEditDialog = (
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
   state.operandSourceMenu.isOpen = false;
-  state.operationVariableMenu.isOpen = false;
   state.operationValuePopover.isOpen = false;
   state.enumValuePopover.isOpen = false;
   state.enumValueMenu.isOpen = false;
@@ -494,7 +487,6 @@ export const closeDialog = ({ state }, _payload = {}) => {
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
   state.operandSourceMenu.isOpen = false;
-  state.operationVariableMenu.isOpen = false;
   state.operationValuePopover.isOpen = false;
   state.enumValuePopover.isOpen = false;
   state.enumValueMenu.isOpen = false;
@@ -621,7 +613,6 @@ export const removeOperation = ({ state }, { operationPath = [] } = {}) => {
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
   state.operandSourceMenu.isOpen = false;
-  state.operationVariableMenu.isOpen = false;
   state.operationValuePopover.isOpen = false;
 };
 
@@ -631,7 +622,6 @@ export const showOperationChoiceMenu = (
 ) => {
   state.operationBlockMenu.isOpen = false;
   state.operandSourceMenu.isOpen = false;
-  state.operationVariableMenu.isOpen = false;
   state.operationValuePopover.isOpen = false;
   state.operationChoiceMenu.isOpen = true;
   state.operationChoiceMenu.x = x ?? 0;
@@ -657,7 +647,6 @@ export const showOperationBlockMenu = (
 ) => {
   state.operationChoiceMenu.isOpen = false;
   state.operandSourceMenu.isOpen = false;
-  state.operationVariableMenu.isOpen = false;
   state.operationValuePopover.isOpen = false;
   state.operationBlockMenu.isOpen = true;
   state.operationBlockMenu.x = x ?? 0;
@@ -679,7 +668,6 @@ export const showOperandSourceMenu = (
 ) => {
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
-  state.operationVariableMenu.isOpen = false;
   state.operationValuePopover.isOpen = false;
   state.operandSourceMenu.isOpen = true;
   state.operandSourceMenu.x = x ?? 0;
@@ -697,28 +685,6 @@ export const selectOperandSourceMenuPosition = ({ state }) => ({
   operationPath: [...state.operandSourceMenu.operationPath],
 });
 
-export const showOperationVariableMenu = (
-  { state },
-  { x, y, operationPath = [] } = {},
-) => {
-  state.operationChoiceMenu.isOpen = false;
-  state.operationBlockMenu.isOpen = false;
-  state.operandSourceMenu.isOpen = false;
-  state.operationValuePopover.isOpen = false;
-  state.operationVariableMenu.isOpen = true;
-  state.operationVariableMenu.x = x ?? 0;
-  state.operationVariableMenu.y = y ?? 0;
-  state.operationVariableMenu.operationPath = cloneOperationPath(operationPath);
-};
-
-export const hideOperationVariableMenu = ({ state }) => {
-  state.operationVariableMenu.isOpen = false;
-};
-
-export const selectOperationVariableMenuPath = ({ state }) => {
-  return [...state.operationVariableMenu.operationPath];
-};
-
 export const showOperationValuePopover = (
   { state },
   { x, y, operationPath = [] } = {},
@@ -726,7 +692,6 @@ export const showOperationValuePopover = (
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
   state.operandSourceMenu.isOpen = false;
-  state.operationVariableMenu.isOpen = false;
   state.operationValuePopover.isOpen = true;
   state.operationValuePopover.x = x ?? 0;
   state.operationValuePopover.y = y ?? 0;
@@ -1157,15 +1122,12 @@ export const selectViewData = ({ state, props, i18n }) => {
       label: item.name,
       suffixText: getVariableTypeLabel(item.variableType, copy),
     }));
-  const operationVariableMenu = {
-    ...state.operationVariableMenu,
-    items: numberVariableOptions
-      .filter((item) => item.itemId !== excludedOperationVariableId)
-      .map(({ itemId: _itemId, ...item }) => ({
-        ...item,
-        type: "item",
-      })),
-  };
+  const numberVariableMenuItems = numberVariableOptions
+    .filter((item) => item.itemId !== excludedOperationVariableId)
+    .map(({ itemId: _itemId, ...item }) => ({
+      ...item,
+      type: "item",
+    }));
   const numberVariableOptionsByPath = new Map(
     numberVariableOptions.map((item) => [item.value, item]),
   );
@@ -1187,6 +1149,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       operationEnabled:
         (operandTargetOperation?.operands.length ?? 0) > 0 &&
         operandTargetOperation.operands[0].source !== "operation",
+      variableItems: numberVariableMenuItems,
     }),
   };
   const operationValuePopover = state.operationValuePopover;
@@ -1251,7 +1214,6 @@ export const selectViewData = ({ state, props, i18n }) => {
     operationBlockMenu,
     operationChoiceMenu,
     operandSourceMenu,
-    operationVariableMenu,
     operationValuePopover,
     operationLabel: copy.computedOperationLabel ?? "Operation",
     addOperationLabel: copy.computedAddOperationLabel ?? "Add operation",

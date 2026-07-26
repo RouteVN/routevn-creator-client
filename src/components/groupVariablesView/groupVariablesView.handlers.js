@@ -12,10 +12,6 @@ import {
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
 import { dispatchResourceViewBackgroundClick } from "../../internal/ui/resourcePages/resourceViewBackground.js";
-import {
-  resolveExcludedOperationVariableId,
-  toVariablePath,
-} from "./support/computedOperationDraft.js";
 
 export const handleScrollContainerClick = dispatchResourceViewBackgroundClick;
 
@@ -563,20 +559,6 @@ export const handleDialogFormChange = (deps, payload) => {
   render();
 };
 
-const selectNumberVariableOptions = (props = {}, editingItemId) =>
-  (props.flatGroups ?? [])
-    .flatMap((group) => group.children ?? [])
-    .filter(
-      (item) =>
-        item.type === "variable" &&
-        item.id !== editingItemId &&
-        item.variableType === "number",
-    )
-    .map((item) => ({
-      value: toVariablePath(item.id),
-      label: item.name,
-    }));
-
 export const handleAddOperationClick = (deps, payload) => {
   const { render, store } = deps;
   payload._event.stopPropagation();
@@ -686,18 +668,28 @@ export const handleOperandSourceMenuClose = (deps) => {
 };
 
 export const handleOperandSourceMenuClick = (deps, payload) => {
-  const { appService, i18n, props, refs, render, store } = deps;
+  const { appService, i18n, refs, render, store } = deps;
   const source = payload._event.detail.item?.value;
 
   closeOperandSourceMenuOverlay(refs.operandSourceMenu);
   store.hideOperandSourceMenu();
+
+  const position = store.selectOperandSourceMenuPosition();
+  if (source?.startsWith("variables.") || source?.startsWith("variables[")) {
+    store.addOperationOperand({
+      source: "variable",
+      variablePath: source,
+      operationPath: position.operationPath,
+    });
+    render();
+    return;
+  }
 
   if (source !== "variable" && source !== "value" && source !== "operation") {
     render();
     return;
   }
 
-  const position = store.selectOperandSourceMenuPosition();
   if (source === "operation") {
     store.showOperationChoiceMenu({
       x: position.x,
@@ -714,56 +706,13 @@ export const handleOperandSourceMenuClick = (deps, payload) => {
     return;
   }
 
-  const submitContext = store.selectSubmitContext();
-  const excludedVariableId = resolveExcludedOperationVariableId({
-    dialogMode: submitContext.dialogMode,
-    editingItemId: submitContext.editingItemId,
-    selectedItemId: props.selectedItemId,
+  render();
+  const copy = selectCopy(i18n);
+  appService.showToast({
+    message:
+      copy.computedVariableOperandUnavailable ??
+      "Create a number variable before adding a Variable operand.",
   });
-  const variableOptions = selectNumberVariableOptions(
-    props,
-    excludedVariableId,
-  );
-  if (source === "variable" && variableOptions.length === 0) {
-    render();
-    const copy = selectCopy(i18n);
-    appService.showToast({
-      message:
-        copy.computedVariableOperandUnavailable ??
-        "Create a number variable before adding a Variable operand.",
-    });
-    return;
-  }
-
-  store.showOperationVariableMenu(position);
-  render();
-};
-
-export const handleOperationVariableMenuClose = (deps) => {
-  const { refs, render, store } = deps;
-  refs.operationVariableMenu.open = false;
-  store.hideOperationVariableMenu();
-  render();
-};
-
-export const handleOperationVariableMenuClick = (deps, payload) => {
-  const { refs, render, store } = deps;
-  const variablePath = payload._event.detail.item?.value;
-  const operationPath = store.selectOperationVariableMenuPath();
-
-  refs.operationVariableMenu.open = false;
-  store.hideOperationVariableMenu();
-  if (!variablePath) {
-    render();
-    return;
-  }
-
-  store.addOperationOperand({
-    source: "variable",
-    variablePath,
-    operationPath,
-  });
-  render();
 };
 
 export const handleOperationValuePopoverClose = (deps) => {

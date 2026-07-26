@@ -12,7 +12,6 @@ import {
   showOperandSourceMenu,
   showOperationBlockMenu,
   showOperationChoiceMenu,
-  showOperationVariableMenu,
   showOperationValuePopover,
   updateOperationValueOperand,
 } from "../../src/components/groupVariablesView/groupVariablesView.store.js";
@@ -295,7 +294,18 @@ describe("groupVariablesView.store", () => {
       x: 30,
       y: 40,
       items: [
-        { label: "Variable", value: "variable" },
+        {
+          label: "Variable",
+          value: "variable",
+          items: [
+            {
+              type: "item",
+              value: "variables.score",
+              label: "Score",
+              suffixText: "Number",
+            },
+          ],
+        },
         { label: "Value", value: "value" },
         {
           label: "Operation",
@@ -314,39 +324,6 @@ describe("groupVariablesView.store", () => {
       i18n: TEST_I18N,
     });
     expect(viewData.operandSourceMenu.items[2]).not.toHaveProperty("disabled");
-
-    showOperationVariableMenu({ state }, { x: 50, y: 60 });
-    viewData = selectViewData({
-      state,
-      props: {
-        flatGroups: [
-          {
-            children: [
-              {
-                id: "score",
-                name: "Score",
-                type: "variable",
-                variableType: "number",
-              },
-            ],
-          },
-        ],
-      },
-      i18n: TEST_I18N,
-    });
-    expect(viewData.operationVariableMenu).toMatchObject({
-      isOpen: true,
-      x: 50,
-      y: 60,
-      items: [
-        {
-          type: "item",
-          value: "variables.score",
-          label: "Score",
-          suffixText: "Number",
-        },
-      ],
-    });
   });
 
   it("excludes the edited variable from Add operand options", () => {
@@ -379,7 +356,7 @@ describe("groupVariablesView.store", () => {
       i18n: TEST_I18N,
     });
 
-    expect(viewData.operationVariableMenu.items).toEqual([
+    expect(viewData.operandSourceMenu.items[0].items).toEqual([
       {
         type: "item",
         value: "variables.score",

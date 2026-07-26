@@ -10,7 +10,6 @@ import {
   handleOperationBlockContextMenu,
   handleOperationBlockMenuClick,
   handleOperationChoiceMenuClick,
-  handleOperationVariableMenuClick,
   handleOperationValueSubmit,
   handleRemoveOperationOperandClick,
   handleRowClick,
@@ -445,35 +444,14 @@ describe("groupVariablesView.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("opens the variable menu from the component-owned operand menu", () => {
+  it("adds a nested variable-menu selection as an operand", () => {
     const addOperationOperand = vi.fn();
     const hideOperandSourceMenu = vi.fn();
-    const showOperationVariableMenu = vi.fn();
     const render = vi.fn();
     const { menu: operandSourceMenu } = createDropdownMenuRef();
 
     handleOperandSourceMenuClick(
       {
-        props: {
-          flatGroups: [
-            {
-              children: [
-                {
-                  id: "score",
-                  name: "Score",
-                  type: "variable",
-                  variableType: "number",
-                },
-                {
-                  id: "title",
-                  name: "Title",
-                  type: "variable",
-                  variableType: "string",
-                },
-              ],
-            },
-          ],
-        },
         refs: { operandSourceMenu },
         store: {
           addOperationOperand,
@@ -483,15 +461,14 @@ describe("groupVariablesView.handlers", () => {
             y: 40,
             operationPath: [1],
           }),
-          selectSubmitContext: () => ({ editingItemId: undefined }),
-          showOperationVariableMenu,
         },
         render,
       },
       {
         _event: {
           detail: {
-            item: { value: "variable" },
+            indexPath: [0, 0],
+            item: { value: "variables.score" },
           },
         },
       },
@@ -499,10 +476,9 @@ describe("groupVariablesView.handlers", () => {
 
     expect(hideOperandSourceMenu).toHaveBeenCalledOnce();
     expect(operandSourceMenu.open).toBe(false);
-    expect(addOperationOperand).not.toHaveBeenCalled();
-    expect(showOperationVariableMenu).toHaveBeenCalledWith({
-      x: 30,
-      y: 40,
+    expect(addOperationOperand).toHaveBeenCalledWith({
+      source: "variable",
+      variablePath: "variables.score",
       operationPath: [1],
     });
     expect(render).toHaveBeenCalledOnce();
@@ -548,104 +524,6 @@ describe("groupVariablesView.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("opens the filtered variable menu without selecting self", () => {
-    const addOperationOperand = vi.fn();
-    const showOperationVariableMenu = vi.fn();
-
-    handleOperandSourceMenuClick(
-      {
-        appService: { showToast: vi.fn() },
-        i18n: { resourcePages: {}, variablesPage: {} },
-        props: {
-          selectedItemId: "total",
-          flatGroups: [
-            {
-              children: [
-                {
-                  id: "total",
-                  name: "Total",
-                  type: "variable",
-                  variableType: "number",
-                },
-                {
-                  id: "score",
-                  name: "Score",
-                  type: "variable",
-                  variableType: "number",
-                },
-              ],
-            },
-          ],
-        },
-        refs: { operandSourceMenu: createDropdownMenuRef().menu },
-        store: {
-          addOperationOperand,
-          hideOperandSourceMenu: vi.fn(),
-          selectOperandSourceMenuPosition: () => ({
-            x: 30,
-            y: 40,
-            operationPath: [],
-          }),
-          selectSubmitContext: () => ({
-            dialogMode: "edit",
-            editingItemId: undefined,
-          }),
-          showOperationVariableMenu,
-        },
-        render: vi.fn(),
-      },
-      {
-        _event: {
-          detail: {
-            item: { value: "variable" },
-          },
-        },
-      },
-    );
-
-    expect(addOperationOperand).not.toHaveBeenCalled();
-    expect(showOperationVariableMenu).toHaveBeenCalledWith({
-      x: 30,
-      y: 40,
-      operationPath: [],
-    });
-  });
-
-  it("adds the selected variable as a read-only operand", () => {
-    const addOperationOperand = vi.fn();
-    const hideOperationVariableMenu = vi.fn();
-    const render = vi.fn();
-    const operationVariableMenu = { open: true };
-
-    handleOperationVariableMenuClick(
-      {
-        refs: { operationVariableMenu },
-        store: {
-          addOperationOperand,
-          hideOperationVariableMenu,
-          selectOperationVariableMenuPath: () => [1],
-        },
-        render,
-      },
-      {
-        _event: {
-          detail: {
-            item: { value: "variables.score" },
-          },
-        },
-      },
-    );
-
-    expect(hideOperationVariableMenu).toHaveBeenCalledOnce();
-    expect(operationVariableMenu.open).toBe(false);
-    expect(addOperationOperand).toHaveBeenCalledWith({
-      source: "variable",
-      variablePath: "variables.score",
-      operationPath: [1],
-    });
-    expect(render).toHaveBeenCalledOnce();
-  });
-
   it("opens the number popover from the Value operand menu item", () => {
     const addOperationOperand = vi.fn();
     const hideOperandSourceMenu = vi.fn();
@@ -658,7 +536,6 @@ describe("groupVariablesView.handlers", () => {
 
     handleOperandSourceMenuClick(
       {
-        props: { flatGroups: [] },
         refs: { operandSourceMenu },
         store: {
           addOperationOperand,
@@ -668,7 +545,6 @@ describe("groupVariablesView.handlers", () => {
             y: 40,
             operationPath: [1],
           }),
-          selectSubmitContext: () => ({ editingItemId: undefined }),
           showOperationValuePopover,
         },
         render,
@@ -758,7 +634,6 @@ describe("groupVariablesView.handlers", () => {
       {
         appService: { showToast },
         i18n: { resourcePages: {}, variablesPage: {} },
-        props: { flatGroups: [] },
         refs: { operandSourceMenu },
         store: {
           addOperationOperand,
@@ -768,7 +643,6 @@ describe("groupVariablesView.handlers", () => {
             y: 40,
             operationPath: [],
           }),
-          selectSubmitContext: () => ({ editingItemId: undefined }),
         },
         render,
       },

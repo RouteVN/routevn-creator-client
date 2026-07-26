@@ -26,7 +26,7 @@ describe("groupVariablesView view", () => {
     expect(view).toContain("rtgl-dropdown-menu#operationBlockMenu");
     expect(view).toContain("rtgl-dropdown-menu#operationChoiceMenu");
     expect(view).toContain("rtgl-dropdown-menu#operandSourceMenu");
-    expect(view).toContain("rtgl-dropdown-menu#operationVariableMenu");
+    expect(view).not.toContain("rtgl-dropdown-menu#operationVariableMenu");
     expect(view).toContain(
       "rvn-computed-value-operand-popover#operationValuePopover",
     );

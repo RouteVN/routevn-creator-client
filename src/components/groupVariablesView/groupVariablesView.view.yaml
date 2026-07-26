@@ -101,12 +101,6 @@ refs:
         handler: handleOperandSourceMenuClose
       item-click:
         handler: handleOperandSourceMenuClick
-  operationVariableMenu:
-    eventListeners:
-      close:
-        handler: handleOperationVariableMenuClose
-      item-click:
-        handler: handleOperationVariableMenuClick
   operationValuePopover:
     eventListeners:
       close:
@@ -277,7 +271,6 @@ template:
       - rtgl-dropdown-menu#operationChoiceMenu :items=${operationChoiceMenu.items} ?open=${operationChoiceMenu.isOpen} x=${operationChoiceMenu.x} y=${operationChoiceMenu.y} place=bs: null
       - rtgl-dropdown-menu#operationBlockMenu :items=${operationBlockMenu.items} ?open=${operationBlockMenu.isOpen} x=${operationBlockMenu.x} y=${operationBlockMenu.y}: null
       - rtgl-dropdown-menu#operandSourceMenu :items=${operandSourceMenu.items} ?open=${operandSourceMenu.isOpen} x=${operandSourceMenu.x} y=${operandSourceMenu.y} place=bs: null
-      - rtgl-dropdown-menu#operationVariableMenu :items=${operationVariableMenu.items} ?open=${operationVariableMenu.isOpen} x=${operationVariableMenu.x} y=${operationVariableMenu.y} place=bs: null
       - rvn-computed-value-operand-popover#operationValuePopover ?open=${operationValuePopover.isOpen} x=${operationValuePopover.x} y=${operationValuePopover.y}: null
       - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
       - rtgl-popover#enumValuePopover ?open=${enumValuePopover.isOpen} x=${enumValuePopover.x} y=${enumValuePopover.y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
