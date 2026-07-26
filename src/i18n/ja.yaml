@@ -178,6 +178,7 @@ appPage:
   failedLoadAppSettings: "アプリ設定を読み込めませんでした。既定値を使用します。"
   failedOpenLink: "リンクを開けませんでした。"
   failedSaveAppSettings: "アプリ設定を保存できませんでした。"
+  failedSaveProjectIcon: "プロジェクトは作成されましたが、プロジェクトアイコンを保存できませんでした。"
   incompatibleProjectTitle: "互換性のないプロジェクト"
   latestVersionMessage: "すでに最新バージョンです"
   laterButton: "後で"

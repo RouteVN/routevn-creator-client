@@ -178,6 +178,7 @@ appPage:
   failedLoadAppSettings: "无法加载应用设置。将使用默认值。"
   failedOpenLink: "无法打开链接。"
   failedSaveAppSettings: "无法保存应用设置。"
+  failedSaveProjectIcon: "项目已创建，但无法保存项目图标。"
   incompatibleProjectTitle: "项目不兼容"
   latestVersionMessage: "当前已经是最新版本"
   laterButton: "稍后"

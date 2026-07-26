@@ -178,6 +178,7 @@ appPage:
   failedLoadAppSettings: "Failed to load app settings. Using defaults."
   failedOpenLink: "Failed to open link."
   failedSaveAppSettings: "Failed to save app settings."
+  failedSaveProjectIcon: "The project was created, but its icon could not be saved."
   incompatibleProjectTitle: "Incompatible Project"
   latestVersionMessage: "You are already on the latest version"
   laterButton: "Later"
