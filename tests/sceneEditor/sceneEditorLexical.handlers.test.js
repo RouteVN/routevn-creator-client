@@ -14,6 +14,7 @@ import {
   handleDropdownMenuClickItem,
   handleEditorBlur,
   handleEditorDataChanged,
+  handleBackClick,
   handleNewLine,
   handlePreviewClick,
   handleSectionMoveSceneFormActionClick,
@@ -137,6 +138,33 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
 
     expect(deps.store.selectPendingDraftSections).toHaveBeenCalled();
     expect(deps.projectService.cacheSceneTextStats).toHaveBeenCalledOnce();
+  });
+});
+
+describe("sceneEditorLexical.handlers back navigation", () => {
+  it("preserves the selected local project path", () => {
+    const appService = {
+      getPayload: vi.fn(() => ({
+        p: "project-1",
+        lp: "/projects/project-one",
+        s: "scene-1",
+      })),
+      navigate: vi.fn(),
+    };
+
+    handleBackClick({ appService });
+
+    expect(appService.navigate).toHaveBeenCalledWith(
+      "/project/scenes",
+      {
+        p: "project-1",
+        lp: "/projects/project-one",
+        s: "scene-1",
+      },
+      {
+        historyMode: "replace",
+      },
+    );
   });
 });
 

@@ -79,6 +79,7 @@ export const createProjectServiceCore = ({
     getCachedRepository: repositoryService.getCachedRepository,
     getRepositoryByProject: repositoryService.getRepositoryByProject,
     getAdapterByProject: repositoryService.getStoreByProjectSync,
+    getProjectCacheKey: repositoryService.getProjectCacheKey,
     createSessionForProject: (payload) =>
       collabAdapter.createSessionForProject({
         ...payload,
@@ -547,6 +548,7 @@ export const createProjectServiceCore = ({
     getRepositoryById: repositoryService.getRepositoryById,
     getAdapterById: repositoryService.getAdapterById,
     getEnsuredProjectId: repositoryService.getEnsuredProjectId,
+    getEnsuredProjectPath: repositoryService.getEnsuredProjectPath,
     releaseCurrentRepository: repositoryService.releaseCurrentRepository,
     releaseProjectRuntime,
     ensureRepository,

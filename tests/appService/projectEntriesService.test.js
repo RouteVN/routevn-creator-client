@@ -24,6 +24,7 @@ const createService = (
   initialEntries = [],
   {
     getCurrentProjectId = () => "",
+    getCurrentProjectPath = () => "",
     projectService = {
       getProjectInfoByPath: vi.fn(async () => {
         throw new Error("unexpected getProjectInfoByPath call");
@@ -45,6 +46,7 @@ const createService = (
   const service = createProjectEntriesService({
     db,
     getCurrentProjectId,
+    getCurrentProjectPath,
     projectService,
     platformAdapter,
   });
@@ -77,6 +79,61 @@ describe("projectEntriesService", () => {
         projectPath: "/projects/project-one",
       }),
     ]);
+  });
+
+  it("keeps the selected local path when project ids match", async () => {
+    const entries = [
+      {
+        id: "shared-project-id",
+        projectPath: "/projects/project-one",
+        name: "Project One",
+      },
+      {
+        id: "shared-project-id",
+        projectPath: "/projects/project-two",
+        name: "Project Two",
+      },
+    ];
+    const { service } = createService(entries, {
+      getCurrentProjectId: () => "shared-project-id",
+    });
+    await service.loadAllProjects();
+
+    service.setCurrentProjectEntry(entries[1]);
+    const currentProject = await service.refreshCurrentProjectEntry();
+
+    expect(currentProject).toMatchObject({
+      id: "shared-project-id",
+      projectPath: "/projects/project-two",
+      name: "Project Two",
+    });
+  });
+
+  it("restores the selected local path from route state after reload", async () => {
+    const entries = [
+      {
+        id: "shared-project-id",
+        projectPath: "/projects/project-one",
+        name: "Project One",
+      },
+      {
+        id: "shared-project-id",
+        projectPath: "/projects/project-two",
+        name: "Project Two",
+      },
+    ];
+    const { service } = createService(entries, {
+      getCurrentProjectId: () => "shared-project-id",
+      getCurrentProjectPath: () => "/projects/project-two",
+    });
+
+    const currentProject = await service.refreshCurrentProjectEntry();
+
+    expect(currentProject).toMatchObject({
+      id: "shared-project-id",
+      projectPath: "/projects/project-two",
+      name: "Project Two",
+    });
   });
 
   it("keeps the in-memory project list aligned with entry updates", async () => {
@@ -210,7 +267,7 @@ describe("projectEntriesService", () => {
     expect(db.set).not.toHaveBeenCalled();
   });
 
-  it("replaces an existing local project entry when the same project id is re-added from a new path", async () => {
+  it("keeps local project entries with the same id when their paths differ", async () => {
     const { service } = createService([
       {
         id: "project-1",
@@ -238,13 +295,23 @@ describe("projectEntriesService", () => {
     expect(entries).toEqual([
       {
         id: "project-1",
+        projectPath: "/old/project-two-migrated",
+        name: "Project Two",
+        description: "old description",
+        language: "en",
+        iconFileId: "icon-old",
+        createdAt: 100,
+        lastOpenedAt: 200,
+      },
+      {
+        id: "project-1",
         projectPath: "/new/project-two-migrated",
         name: "Project Two",
         description: "new description",
         language: "ja",
         iconFileId: "icon-new",
-        createdAt: 100,
-        lastOpenedAt: 200,
+        createdAt: 300,
+        lastOpenedAt: null,
       },
     ]);
   });
@@ -317,7 +384,7 @@ describe("projectEntriesService", () => {
     ]);
   });
 
-  it("preserves the working path when duplicate repaired entries merge by project id", async () => {
+  it("keeps repaired local project entries separate when their paths differ", async () => {
     const getProjectInfoByPath = vi.fn(async () => ({
       id: "project-1",
       name: "Project Two",
@@ -356,11 +423,23 @@ describe("projectEntriesService", () => {
         id: "project-1",
         projectPath: "/projects/working",
       }),
+      expect.objectContaining({
+        id: "project-1",
+        projectPath: "/projects/stale",
+      }),
     ]);
     expect(db.set).toHaveBeenCalledWith("projectEntries", [
       {
         id: "project-1",
         projectPath: "/projects/working",
+        name: "Project Two",
+        description: "Working",
+        language: "en",
+        iconFileId: "icon-working",
+      },
+      {
+        id: "project-1",
+        projectPath: "/projects/stale",
         name: "Project Two",
         description: "Recovered",
         language: "zh-Hans",

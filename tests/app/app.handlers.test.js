@@ -201,6 +201,55 @@ describe("app route transitions", () => {
     });
   });
 
+  it("reloads the repository when a same-id local route selects another path", async () => {
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      getCurrentProjectId: vi.fn(() => "shared-project-id"),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "tauri"),
+    };
+    const projectService = {
+      ensureRepository: vi.fn(async () => {}),
+      getEnsuredProjectId: vi.fn(() => "shared-project-id"),
+      getEnsuredProjectPath: vi.fn(() => "/projects/project-one"),
+      releaseProjectRuntime: vi.fn(async () => {}),
+    };
+    const store = {
+      setCurrentRoute: vi.fn(),
+      closeMobileSheet: vi.fn(),
+      setRepositoryLoading: vi.fn(),
+      setRepositoryLoadingPhase: vi.fn(),
+      setRepositoryLoadingProgress: vi.fn(),
+    };
+
+    await createRouteTransitionRunner({
+      appService,
+      projectService,
+      store,
+      render: vi.fn(),
+      i18n: {},
+    })({
+      path: "/project",
+      payload: {
+        p: "shared-project-id",
+        lp: "/projects/project-two",
+      },
+      navigationPrepared: true,
+    });
+
+    expect(projectService.releaseProjectRuntime).toHaveBeenCalledWith(
+      "shared-project-id",
+    );
+    expect(appService.refreshCurrentProjectEntry).toHaveBeenCalledOnce();
+    expect(projectService.ensureRepository).toHaveBeenCalledOnce();
+    expect(store.setRepositoryLoading).toHaveBeenNthCalledWith(1, {
+      isLoading: true,
+    });
+    expect(store.setRepositoryLoading).toHaveBeenLastCalledWith({
+      isLoading: false,
+    });
+  });
+
   it("prepares browser back navigation without rewriting the popped entry", async () => {
     const currentPath = "/projects";
     const currentPayload = {};

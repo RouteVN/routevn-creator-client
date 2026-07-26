@@ -71,7 +71,10 @@ describe("characters item selection", () => {
   it("opens the selected character's sprites page with Enter", () => {
     const deps = {
       appService: {
-        getPayload: vi.fn(() => ({ p: "project-1" })),
+        getPayload: vi.fn(() => ({
+          p: "project-1",
+          lp: "/projects/project-one",
+        })),
         navigate: vi.fn(),
       },
       refs: {
@@ -98,6 +101,7 @@ describe("characters item selection", () => {
       "/project/character-sprites",
       {
         characterId: "character-1",
+        lp: "/projects/project-one",
         p: "project-1",
       },
     );
