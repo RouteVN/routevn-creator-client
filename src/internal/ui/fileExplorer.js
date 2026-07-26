@@ -5,7 +5,10 @@ import {
   getTextStyleRemovalCount,
 } from "../../constants/textStyles.js";
 import { canItemReceiveChildren } from "../fileExplorerDragOptions.js";
-import { recursivelyCheckResource } from "../project/projection.js";
+import {
+  getComputedVariableDeletionDependents,
+  recursivelyCheckResource,
+} from "../project/projection.js";
 
 const isTextElementType = (type) =>
   [
@@ -373,10 +376,45 @@ const validateResourceDeletion = async ({
   return { canDelete: true };
 };
 
+const validateVariableDeletion = async ({
+  projectService,
+  resourceType,
+  currentItem,
+  itemId,
+  copy,
+}) => {
+  const resourceValidation = await validateResourceDeletion({
+    projectService,
+    resourceType,
+    currentItem,
+    itemId,
+  });
+  if (!resourceValidation.canDelete) {
+    return resourceValidation;
+  }
+
+  const dependents = getComputedVariableDeletionDependents(
+    projectService.getRepositoryState()?.variables,
+    { variableIds: [itemId] },
+  );
+  if (dependents.length === 0) {
+    return resourceValidation;
+  }
+
+  return {
+    canDelete: false,
+    message: (
+      copy.computedVariableDeleteBlocked ??
+      "This variable is used by: {dependents}"
+    ).replace("{dependents}", dependents.map((item) => item.name).join(", ")),
+  };
+};
+
 export const createResourceFileExplorerHandlers = ({
   resourceType,
   refresh = noopRefresh,
   copy,
+  validateDeletion = validateResourceDeletion,
 }) => {
   const resolveCopy = (deps) => {
     if (typeof copy === "function") {
@@ -455,19 +493,22 @@ export const createResourceFileExplorerHandlers = ({
           return;
         }
 
-        const deleteValidation = await validateResourceDeletion({
+        const deleteValidation = await validateDeletion({
           projectService,
           resourceType,
           currentItem,
           itemId,
+          copy: resolvedCopy,
         });
         if (!deleteValidation.canDelete) {
           appService.showAlert({
-            message: getDeletionBlockedCopyMessage({
-              copy: resolvedCopy,
-              itemType: currentItem?.type,
-              reason: deleteValidation.reason,
-            }),
+            message:
+              deleteValidation.message ??
+              getDeletionBlockedCopyMessage({
+                copy: resolvedCopy,
+                itemType: currentItem?.type,
+                reason: deleteValidation.reason,
+              }),
           });
           return;
         }
@@ -1142,6 +1183,7 @@ export const createVariablesFileExplorerHandlers = ({
     resourceType: "variables",
     refresh,
     copy,
+    validateDeletion: validateVariableDeletion,
   });
 };
 

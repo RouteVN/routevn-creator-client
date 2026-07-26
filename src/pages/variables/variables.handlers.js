@@ -23,7 +23,7 @@ import { clearResourcePageSelection } from "../../internal/ui/resourcePages/reso
 import { tap } from "rxjs";
 import { resolveComputedVariables } from "route-engine-js";
 import { getRuntimeFieldItems } from "../../internal/runtimeFields.js";
-import { getComputedVariableDependents } from "../../internal/project/projection.js";
+import { getComputedVariableDeletionDependents } from "../../internal/project/projection.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 const selectCopy = (deps = {}) => selectVariablesPageCopy(deps.i18n);
@@ -680,7 +680,7 @@ export const handleVariableDelete = async (deps, payload) => {
   const { appService, store, projectService } = deps;
   const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
-  const dependents = getComputedVariableDependents(
+  const dependents = getComputedVariableDeletionDependents(
     projectService.getRepositoryState()?.variables,
     { variableIds: [itemId] },
   );

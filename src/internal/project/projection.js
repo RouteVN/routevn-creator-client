@@ -1689,6 +1689,47 @@ export const getComputedVariableDependents = (
   );
 };
 
+const collectVariableDeletionIds = (
+  nodes,
+  targetIds,
+  deletionIds,
+  parentDeleted = false,
+) => {
+  if (!Array.isArray(nodes)) {
+    return;
+  }
+
+  nodes.forEach((node) => {
+    if (!node || typeof node.id !== "string") {
+      return;
+    }
+
+    const isDeleted = parentDeleted || targetIds.has(node.id);
+    if (isDeleted) {
+      deletionIds.add(node.id);
+    }
+    collectVariableDeletionIds(
+      node.children,
+      targetIds,
+      deletionIds,
+      isDeleted,
+    );
+  });
+};
+
+export const getComputedVariableDeletionDependents = (
+  variablesData,
+  { variableIds = [] } = {},
+) => {
+  const targetIds = new Set(variableIds);
+  const deletionIds = new Set(variableIds);
+  collectVariableDeletionIds(variablesData?.tree, targetIds, deletionIds);
+
+  return getComputedVariableDependents(variablesData, {
+    variableIds: [...deletionIds],
+  }).filter((item) => !deletionIds.has(item.id));
+};
+
 const SCENE_RESOURCE_KEYS = [
   "resourceId",
   "transformId",

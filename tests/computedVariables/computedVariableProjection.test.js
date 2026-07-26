@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectComputedVariableReferenceIds,
   constructProjectData,
+  getComputedVariableDeletionDependents,
   getComputedVariableDependents,
 } from "../../src/internal/project/projection.js";
 
@@ -44,6 +45,40 @@ describe("computed variable projection helpers", () => {
         variableIds: ["score"],
       }).map((item) => item.id),
     ).toEqual(["label"]);
+  });
+
+  it("finds surviving dependents when deleting a variable folder", () => {
+    const variablesData = {
+      items: {
+        folder: { id: "folder", type: "folder", name: "Internal" },
+        score: { id: "score", type: "variable", name: "Score" },
+        internalLabel: {
+          id: "internalLabel",
+          type: "variable",
+          name: "Internal label",
+          computed: { expr: { var: "variables.score" } },
+        },
+        externalLabel: {
+          id: "externalLabel",
+          type: "variable",
+          name: "External label",
+          computed: { expr: { var: "variables.score" } },
+        },
+      },
+      tree: [
+        {
+          id: "folder",
+          children: [{ id: "score" }, { id: "internalLabel" }],
+        },
+        { id: "externalLabel" },
+      ],
+    };
+
+    expect(
+      getComputedVariableDeletionDependents(variablesData, {
+        variableIds: ["folder"],
+      }).map((item) => item.id),
+    ).toEqual(["externalLabel"]);
   });
 
   it("preserves computed definitions and maps the result type for the engine", () => {
