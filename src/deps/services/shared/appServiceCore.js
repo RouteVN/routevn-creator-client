@@ -2,6 +2,7 @@ import { createAppShellService } from "./appShellService.js";
 import { createFileSelectionService } from "./fileSelectionService.js";
 import { createProjectEntriesService } from "./projectEntriesService.js";
 import { createUserConfigService } from "./userConfigService.js";
+import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRoute.js";
 import { normalizeTheme } from "../../../internal/theme.js";
 
 export const createAppServiceCore = ({
@@ -24,9 +25,14 @@ export const createAppServiceCore = ({
     return router.getPayload()?.p ?? "";
   };
 
+  const getCurrentProjectPath = () => {
+    return getLocalProjectPathFromPayload(router.getPayload());
+  };
+
   const projectEntriesService = createProjectEntriesService({
     db,
     getCurrentProjectId,
+    getCurrentProjectPath,
     projectService,
     platformAdapter,
   });

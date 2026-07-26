@@ -24,6 +24,7 @@ const createService = (
   initialEntries = [],
   {
     getCurrentProjectId = () => "",
+    getCurrentProjectPath = () => "",
     projectService = {
       getProjectInfoByPath: vi.fn(async () => {
         throw new Error("unexpected getProjectInfoByPath call");
@@ -45,6 +46,7 @@ const createService = (
   const service = createProjectEntriesService({
     db,
     getCurrentProjectId,
+    getCurrentProjectPath,
     projectService,
     platformAdapter,
   });
@@ -98,6 +100,33 @@ describe("projectEntriesService", () => {
     await service.loadAllProjects();
 
     service.setCurrentProjectEntry(entries[1]);
+    const currentProject = await service.refreshCurrentProjectEntry();
+
+    expect(currentProject).toMatchObject({
+      id: "shared-project-id",
+      projectPath: "/projects/project-two",
+      name: "Project Two",
+    });
+  });
+
+  it("restores the selected local path from route state after reload", async () => {
+    const entries = [
+      {
+        id: "shared-project-id",
+        projectPath: "/projects/project-one",
+        name: "Project One",
+      },
+      {
+        id: "shared-project-id",
+        projectPath: "/projects/project-two",
+        name: "Project Two",
+      },
+    ];
+    const { service } = createService(entries, {
+      getCurrentProjectId: () => "shared-project-id",
+      getCurrentProjectPath: () => "/projects/project-two",
+    });
+
     const currentProject = await service.refreshCurrentProjectEntry();
 
     expect(currentProject).toMatchObject({

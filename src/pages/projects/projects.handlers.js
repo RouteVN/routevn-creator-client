@@ -13,6 +13,7 @@ import {
   CUSTOM_PROJECT_RESOLUTION_PRESET,
   resolveProjectResolution,
 } from "../../internal/projectResolution.js";
+import { createProjectRoutePayload } from "../../internal/localProjectRoute.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import {
   formatProjectsPageCopy,
@@ -177,7 +178,8 @@ const getProjectIdFromEvent = (event) => {
 };
 
 const getProjectPathFromEvent = (event) => {
-  return event?.currentTarget?.dataset?.projectPath ?? "";
+  const encodedProjectPath = event?.currentTarget?.dataset?.projectPath ?? "";
+  return encodedProjectPath ? decodeURIComponent(encodedProjectPath) : "";
 };
 
 const navigateToProjectRoute = async (
@@ -230,7 +232,11 @@ const navigateToProjectRoute = async (
   const historyMode = currentHistoryState.preserveProjectsEntryOnProjectOpen
     ? "push"
     : "replace";
-  appService.navigate(path, { p: projectId }, { historyMode });
+  appService.navigate(
+    path,
+    createProjectRoutePayload({ projectId, projectPath }),
+    { historyMode },
+  );
 };
 
 const createProjectFromValues = async (deps, values = {}) => {

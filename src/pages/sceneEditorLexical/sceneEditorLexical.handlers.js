@@ -3794,8 +3794,9 @@ export const handlePreviewCurrentLineChanged = (deps, payload) => {
 
 export const handleBackClick = (deps) => {
   const { appService } = deps;
-  const { p } = appService.getPayload();
-  appService.navigate("/project/scenes", { p }, { historyMode: "replace" });
+  appService.navigate("/project/scenes", appService.getPayload(), {
+    historyMode: "replace",
+  });
 };
 
 export const handleSystemActionsActionDelete = async (deps, payload) => {

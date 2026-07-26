@@ -115,6 +115,12 @@ describe("projects.store addProject", () => {
     expect(viewData.projects[0].itemId).not.toBe(viewData.projects[1].itemId);
     expect(viewData.projects[0].itemId).toMatch(/^projectItem[a-zA-Z0-9]+$/);
     expect(viewData.projects[1].itemId).toMatch(/^projectItem[a-zA-Z0-9]+$/);
+    expect(viewData.projects[0].encodedProjectPath).toBe(
+      encodeURIComponent("/projects/project-one"),
+    );
+    expect(viewData.projects[1].encodedProjectPath).toBe(
+      encodeURIComponent("/projects/project-two"),
+    );
   });
 
   it("removes only the local project at the selected path", () => {

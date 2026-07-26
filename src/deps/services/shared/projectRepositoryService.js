@@ -13,6 +13,7 @@ import { loadProjectionGap } from "./collab/projectionGapState.js";
 import { loadRepositoryEventsFromClientStore } from "./collab/clientStoreHistory.js";
 import { UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE } from "../../../internal/projectOpenErrors.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
+import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRoute.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 
 const flushRepositoryMainCheckpoint = async (repository) => {
@@ -318,8 +319,16 @@ export const createProjectRepositoryService = ({
     return router.getPayload()?.p;
   };
 
+  const getCurrentProjectPath = () => {
+    return getLocalProjectPathFromPayload(router.getPayload());
+  };
+
   const getEnsuredProjectId = () => {
     return currentProjectId;
+  };
+
+  const getEnsuredProjectPath = () => {
+    return currentReference?.projectPath ?? "";
   };
 
   const emitRepositoryLoadStage = (onLoadStage, payload = {}) => {
@@ -586,6 +595,14 @@ export const createProjectRepositoryService = ({
     };
   };
 
+  const bindProjectReferenceToProjectId = (pathReference, projectId) => {
+    return {
+      ...pathReference,
+      projectId,
+      repositoryProjectId: projectId,
+    };
+  };
+
   const resolveProjectReferenceByProjectId = async (projectId) => {
     if (!projectId) {
       throw new Error("projectId is required");
@@ -655,6 +672,36 @@ export const createProjectRepositoryService = ({
       }),
       projectPath,
     );
+  };
+
+  const resolveCurrentProjectReference = async (projectId) => {
+    const projectPath = getCurrentProjectPath();
+    if (!projectPath) {
+      return resolveProjectReferenceByProjectId(projectId);
+    }
+
+    const cachedReference = referencesByProject.get(projectId);
+    if (cachedReference?.projectPath === projectPath) {
+      return cachedReference;
+    }
+
+    const entries = await db.get("projectEntries");
+    const selectedEntry = Array.isArray(entries)
+      ? entries.find(
+          (entry) =>
+            entry?.id === projectId && entry?.projectPath === projectPath,
+        )
+      : undefined;
+    if (!selectedEntry) {
+      throw new Error(
+        `Selected local project path is not registered for '${projectId}'`,
+      );
+    }
+
+    const pathReference = await resolveProjectReferenceByPath(projectPath);
+    const reference = bindProjectReferenceToProjectId(pathReference, projectId);
+    referencesByProject.set(projectId, reference);
+    return reference;
   };
 
   const getStoreByPath = async (projectPath) => {
@@ -1153,11 +1200,7 @@ export const createProjectRepositoryService = ({
   const ensureProjectCompatibleByPath = async (projectPath, projectId) => {
     const pathReference = await resolveProjectReferenceByPath(projectPath);
     const reference = projectId
-      ? {
-          ...pathReference,
-          projectId,
-          repositoryProjectId: projectId,
-        }
+      ? bindProjectReferenceToProjectId(pathReference, projectId)
       : pathReference;
     await ensureCompatibleCreatorVersionForReference(reference);
     const store = await getStoreByReference(reference);
@@ -1207,11 +1250,15 @@ export const createProjectRepositoryService = ({
       throw new Error("No project selected (missing ?p= in URL)");
     }
 
+    const projectPath = getCurrentProjectPath();
+    const isCurrentReferenceSelected =
+      !projectPath || currentReference?.projectPath === projectPath;
     if (
       currentProjectId === projectId &&
       currentRepository &&
       currentStore &&
-      currentReference
+      currentReference &&
+      isCurrentReferenceSelected
     ) {
       assertSupportedProjectState(currentRepository.getState());
       return currentRepository;
@@ -1222,7 +1269,7 @@ export const createProjectRepositoryService = ({
       label: "Resolving project reference...",
       projectId,
     });
-    const reference = await resolveProjectReferenceByProjectId(projectId);
+    const reference = await resolveCurrentProjectReference(projectId);
     const repository = await getRepositoryByReference(reference, {
       onHydrationProgress,
       onLoadStage,
@@ -1273,8 +1320,13 @@ export const createProjectRepositoryService = ({
       throw new Error("No project selected (missing ?p= in URL)");
     }
 
+    const projectPath = getCurrentProjectPath();
+    const isCurrentReferenceSelected =
+      !projectPath || currentReference?.projectPath === projectPath;
     let repository =
-      targetProjectId === currentProjectId ? currentRepository : undefined;
+      targetProjectId === currentProjectId && isCurrentReferenceSelected
+        ? currentRepository
+        : undefined;
 
     if (!repository) {
       const reference = referencesByProject.get(targetProjectId);
@@ -1294,7 +1346,12 @@ export const createProjectRepositoryService = ({
 
   const getCachedRepository = () => {
     const projectId = getCurrentProjectId();
-    if (!currentRepository || currentProjectId !== projectId) {
+    const projectPath = getCurrentProjectPath();
+    if (
+      !currentRepository ||
+      currentProjectId !== projectId ||
+      (projectPath && currentReference?.projectPath !== projectPath)
+    ) {
       throw new Error(
         "Repository not initialized. Call ensureRepository() first.",
       );
@@ -1304,7 +1361,12 @@ export const createProjectRepositoryService = ({
 
   const getCachedStore = () => {
     const projectId = getCurrentProjectId();
-    if (!currentStore || currentProjectId !== projectId) {
+    const projectPath = getCurrentProjectPath();
+    if (
+      !currentStore ||
+      currentProjectId !== projectId ||
+      (projectPath && currentReference?.projectPath !== projectPath)
+    ) {
       throw new Error(
         "Adapter not initialized. Call ensureRepository() first.",
       );
@@ -1314,7 +1376,12 @@ export const createProjectRepositoryService = ({
 
   const getCachedReference = () => {
     const projectId = getCurrentProjectId();
-    if (!currentReference || currentProjectId !== projectId) {
+    const projectPath = getCurrentProjectPath();
+    if (
+      !currentReference ||
+      currentProjectId !== projectId ||
+      (projectPath && currentReference.projectPath !== projectPath)
+    ) {
       throw new Error(
         "Project reference not initialized. Call ensureRepository() first.",
       );
@@ -1322,9 +1389,31 @@ export const createProjectRepositoryService = ({
     return currentReference;
   };
 
+  const getProjectCacheKey = (projectId) => {
+    const selectedProjectPath =
+      projectId === getCurrentProjectId() ? getCurrentProjectPath() : "";
+    if (selectedProjectPath) {
+      const selectedReference =
+        currentReference?.projectPath === selectedProjectPath
+          ? currentReference
+          : referencesByProject.get(projectId);
+      return selectedReference?.projectPath === selectedProjectPath
+        ? selectedReference.cacheKey
+        : selectedProjectPath;
+    }
+
+    const reference =
+      currentProjectId === projectId
+        ? currentReference
+        : referencesByProject.get(projectId);
+    return reference?.cacheKey ?? projectId;
+  };
+
   return {
     getCurrentProjectId,
     getEnsuredProjectId,
+    getEnsuredProjectPath,
+    getProjectCacheKey,
     ensureProjectCompatibleByProjectId,
     getProjectInfoByProjectId,
     getCurrentProjectInfo,

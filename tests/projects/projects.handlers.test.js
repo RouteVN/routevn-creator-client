@@ -137,7 +137,9 @@ const createPayload = (projectId = "project-1", projectPath = undefined) => {
       currentTarget: {
         dataset: {
           projectId,
-          projectPath,
+          projectPath: projectPath
+            ? encodeURIComponent(projectPath)
+            : undefined,
         },
       },
     },
@@ -409,6 +411,16 @@ describe("projects.handleProjectsClick", () => {
       name: "Project Two",
       projectPath: "/projects/project-two",
     });
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project",
+      {
+        p: "shared-project-id",
+        lp: "/projects/project-two",
+      },
+      {
+        historyMode: "replace",
+      },
+    );
   });
 });
 

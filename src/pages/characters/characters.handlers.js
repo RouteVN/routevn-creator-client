@@ -273,11 +273,11 @@ const readSpriteGroupIndex = (payload) =>
 
 const navigateToCharacterSprites = ({ deps, characterId } = {}) => {
   const { appService, render } = deps;
-  const { p } = appService.getPayload();
+  const payload = appService.getPayload();
 
   appService.navigate("/project/character-sprites", {
+    ...payload,
     characterId,
-    p,
   });
 
   render();

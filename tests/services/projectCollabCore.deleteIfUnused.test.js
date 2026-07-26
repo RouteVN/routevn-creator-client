@@ -89,6 +89,55 @@ describe("createProjectCollabCore versions cache", () => {
       { id: "version-1", name: "Version One Updated" },
     ]);
   });
+
+  it("isolates same-id local version caches by project path", async () => {
+    let currentProjectPath = "/projects/project-one";
+    const versionsByPath = {
+      "/projects/project-one": [
+        { id: "version-1", name: "Project One Version" },
+      ],
+      "/projects/project-two": [
+        { id: "version-2", name: "Project Two Version" },
+      ],
+    };
+    const collabCore = createProjectCollabCore({
+      router: {
+        getPayload: () => ({ p: "shared-project-id" }),
+      },
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      getCurrentRepository: async () => undefined,
+      getCachedRepository: () => undefined,
+      getRepositoryByProject: async () => undefined,
+      getAdapterByProject: () => ({
+        app: {
+          get: vi.fn(async () =>
+            structuredClone(versionsByPath[currentProjectPath]),
+          ),
+        },
+      }),
+      getProjectCacheKey: () => currentProjectPath,
+      createSessionForProject: async () => undefined,
+      createTransport: () => undefined,
+      onEnsureLocalSession: () => {},
+      onSessionCleared: () => {},
+      onSessionTransportUpdated: () => {},
+    });
+
+    await collabCore.loadVersionsFromProject("shared-project-id");
+    expect(collabCore.getCachedVersions("shared-project-id")).toEqual([
+      { id: "version-1", name: "Project One Version" },
+    ]);
+
+    currentProjectPath = "/projects/project-two";
+
+    expect(collabCore.getCachedVersions("shared-project-id")).toBeUndefined();
+    await collabCore.loadVersionsFromProject("shared-project-id");
+    expect(collabCore.getCachedVersions("shared-project-id")).toEqual([
+      { id: "version-2", name: "Project Two Version" },
+    ]);
+  });
 });
 
 describe("createProjectCollabCore deleteIfUnused", () => {

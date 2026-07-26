@@ -23,7 +23,7 @@ const PROJECTS_VIEW = yaml.load(
 const handlers = { ...handlerExports };
 
 describe("projects render", () => {
-  it("renders a local project whose path contains spaces", () => {
+  it("renders a local project whose path contains spaces and quotes", () => {
     const state = createInitialState();
     setProjects(
       { state },
@@ -32,7 +32,7 @@ describe("projects render", () => {
           {
             id: "shared-project-id",
             name: "Project One",
-            projectPath: "/projects/Project One 2",
+            projectPath: '/projects/Project "Two" 2',
           },
         ],
       },

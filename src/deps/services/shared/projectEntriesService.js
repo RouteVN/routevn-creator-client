@@ -54,6 +54,7 @@ const canUpdateLocalProject = (currentEntry, nextEntry) => {
 export const createProjectEntriesService = ({
   db,
   getCurrentProjectId,
+  getCurrentProjectPath = () => "",
   projectService,
   platformAdapter,
 }) => {
@@ -297,15 +298,19 @@ export const createProjectEntriesService = ({
         return createEmptyProjectEntry({ id: projectId, source: "local" });
       }
 
+      const routeProjectPath = getCurrentProjectPath();
       const selectedProjectPath =
-        currentProjectEntry.id === projectId
+        routeProjectPath ||
+        (currentProjectEntry.id === projectId
           ? currentProjectEntry.projectPath
-          : undefined;
-      const localEntry =
-        entries.find(
-          (entry) =>
-            selectedProjectPath && entry?.projectPath === selectedProjectPath,
-        ) ?? entries.find((entry) => entry?.id === projectId);
+          : undefined);
+      const localEntry = selectedProjectPath
+        ? entries.find(
+            (entry) =>
+              entry?.id === projectId &&
+              entry?.projectPath === selectedProjectPath,
+          )
+        : entries.find((entry) => entry?.id === projectId);
       if (localEntry) {
         const project = normalizeLocalProjectEntry(localEntry);
         const iconResult = await platformAdapter.loadProjectIcon?.({

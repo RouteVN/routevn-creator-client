@@ -23,6 +23,10 @@ const createLocalProjectItemId = (project, index) => {
   return `projectItem${encodedPath}`;
 };
 
+const encodeProjectPathAttribute = (projectPath) => {
+  return projectPath ? encodeURIComponent(projectPath) : "";
+};
+
 export const createInitialState = () => ({
   isTouchMode: false,
   localTitle: "",
@@ -727,6 +731,7 @@ export const selectViewData = ({ state, i18n }) => {
     ? state.projects.map((project, index) => ({
         ...project,
         itemId: createLocalProjectItemId(project, index),
+        encodedProjectPath: encodeProjectPathAttribute(project.projectPath),
       }))
     : [];
   const cloudProjects = Array.isArray(state.cloudProjects)
