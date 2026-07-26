@@ -124,7 +124,7 @@ describe("project-entry language platform propagation", () => {
     ["ios", createIOSAppService],
   ])(
     "initializes %s project storage before storing the selected icon",
-    async (platform, createAppService) => {
+    async (_, createAppService) => {
       const db = createDb();
       const projectService = createProjectService();
       const appService = createAppService(createParams({ db, projectService }));
@@ -160,20 +160,12 @@ describe("project-entry language platform propagation", () => {
           iconFileId: "icon-1",
         },
       );
-      if (platform === "web") {
-        expect(
-          projectService.initializeProject.mock.invocationCallOrder[0],
-        ).toBeLessThan(db.set.mock.invocationCallOrder[0]);
-        expect(db.set.mock.invocationCallOrder[0]).toBeLessThan(
-          projectService.storeFileForProject.mock.invocationCallOrder[0],
-        );
-      } else {
-        expect(
-          projectService.initializeProject.mock.invocationCallOrder[0],
-        ).toBeLessThan(
-          projectService.storeFileForProject.mock.invocationCallOrder[0],
-        );
-      }
+      expect(
+        projectService.initializeProject.mock.invocationCallOrder[0],
+      ).toBeLessThan(db.set.mock.invocationCallOrder[0]);
+      expect(db.set.mock.invocationCallOrder[0]).toBeLessThan(
+        projectService.storeFileForProject.mock.invocationCallOrder[0],
+      );
       expect(
         projectService.storeFileForProject.mock.invocationCallOrder[0],
       ).toBeLessThan(
@@ -188,76 +180,82 @@ describe("project-entry language platform propagation", () => {
     },
   );
 
-  it.each([
-    [
-      "storing the icon",
-      (projectService) => {
-        projectService.storeFileForProject.mockRejectedValue(
-          new Error("File read failed"),
-        );
-      },
-    ],
-    [
-      "updating project info",
-      (projectService) => {
-        projectService.updateProjectInfoById.mockRejectedValue(
-          new Error("Storage quota exceeded"),
-        );
-      },
-    ],
-  ])(
-    "keeps a web project reachable when %s fails",
-    async (_, arrangeFailure) => {
-      const consoleError = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-      const db = createDb();
-      const projectService = createProjectService();
-      arrangeFailure(projectService);
-      const globalUI = {
-        showToast: vi.fn(),
-      };
-      const appService = createWebAppService(
-        createParams({ db, projectService, globalUI }),
-      );
-      appService.setAppCopyProvider(() => ({
-        errorTitle: "Error",
-        failedSaveProjectIcon:
-          "The project was created, but its icon could not be saved.",
-      }));
-
-      const project = await appService.createNewProject({
-        name: "Project One",
-        description: "",
-        language: "en",
-        template: "blank",
-        projectResolution: { width: 1280, height: 720 },
-        iconFile: {
-          name: "icon.png",
-          type: "image/png",
+  describe.each([
+    ["web", createWebAppService],
+    ["android", createAndroidAppService],
+    ["ios", createIOSAppService],
+  ])("%s project icon persistence", (_, createAppService) => {
+    it.each([
+      [
+        "storing the icon",
+        (projectService) => {
+          projectService.storeFileForProject.mockRejectedValue(
+            new Error("File read failed"),
+          );
         },
-      });
+      ],
+      [
+        "updating project info",
+        (projectService) => {
+          projectService.updateProjectInfoById.mockRejectedValue(
+            new Error("Storage quota exceeded"),
+          );
+        },
+      ],
+    ])(
+      "keeps the project reachable when %s fails",
+      async (_, arrangeFailure) => {
+        const consoleError = vi
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
+        const db = createDb();
+        const projectService = createProjectService();
+        arrangeFailure(projectService);
+        const globalUI = {
+          showToast: vi.fn(),
+        };
+        const appService = createAppService(
+          createParams({ db, projectService, globalUI }),
+        );
+        appService.setAppCopyProvider(() => ({
+          errorTitle: "Error",
+          failedSaveProjectIcon:
+            "The project was created, but its icon could not be saved.",
+        }));
 
-      expect(project.iconFileId).toBeNull();
-      await expect(db.get("projectEntries")).resolves.toEqual([
-        expect.objectContaining({
-          id: project.id,
-          iconFileId: null,
-        }),
-      ]);
-      expect(globalUI.showToast).toHaveBeenCalledWith({
-        title: "Error",
-        message:
-          "The project was created, but its icon could not be saved.",
-        status: "error",
-      });
-      expect(consoleError).toHaveBeenCalledWith(
-        "Failed to save project icon:",
-        expect.any(Error),
-      );
-      consoleError.mockRestore();
-    },
-  );
+        const project = await appService.createNewProject({
+          name: "Project One",
+          description: "",
+          language: "en",
+          template: "blank",
+          projectResolution: { width: 1280, height: 720 },
+          iconFile: {
+            name: "icon.png",
+            type: "image/png",
+          },
+        });
+
+        expect(project.iconFileId).toBeNull();
+        await expect(db.get("projectEntries")).resolves.toEqual([
+          expect.objectContaining({
+            id: project.id,
+            iconFileId: null,
+          }),
+        ]);
+        expect(globalUI.showToast).toHaveBeenCalledWith({
+          title: "Error",
+          message:
+            "The project was created, but its icon could not be saved.",
+          status: "error",
+        });
+        expect(consoleError).toHaveBeenCalledWith(
+          "Failed to save project icon:",
+          expect.any(Error),
+        );
+        consoleError.mockRestore();
+      },
+    );
+  });
 
   it("does not initialize a desktop project in a non-empty folder", async () => {
     mocked.readDir.mockResolvedValue([{ name: "project.db" }]);
