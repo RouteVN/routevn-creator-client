@@ -1,0 +1,21 @@
+refs:
+  popover:
+    eventListeners:
+      close:
+        handler: handlePopoverClose
+  valueInput:
+    eventListeners:
+      value-input:
+        handler: handleValueInput
+      keydown:
+        handler: handleInputKeydown
+  valueSubmit:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+template:
+  - rtgl-popover#popover ?open=${open} x=${x} y=${y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
+      - rtgl-text s=sm: ${valueLabel}
+      - rtgl-input-number#valueInput w=f value=${value}: null
+      - rtgl-view d=h w=f ah=e:
+          - rtgl-button#valueSubmit s=sm v=pr: ${addValueLabel}

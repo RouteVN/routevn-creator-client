@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectLayoutPreviewTargets,
   createSaveLoadPreviewSlots,
+  getLayoutPreviewVariableItems,
 } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewSupport.js";
 import {
   setHistoryDefaultValue,
@@ -112,6 +113,42 @@ describe("layoutEditorPreviewSupport", () => {
         isAvailable: true,
       },
     ]);
+  });
+
+  it("offers stored dependencies instead of direct computed-value overrides", () => {
+    const items = getLayoutPreviewVariableItems({
+      currentLayoutId: "layout-1",
+      currentLayoutType: "general",
+      currentLayoutData: {
+        items: {
+          text: {
+            type: "text",
+            $when: "variables.total == 10",
+          },
+        },
+      },
+      layoutsData: { items: {} },
+      variablesData: {
+        items: {
+          score: {
+            id: "score",
+            type: "variable",
+            name: "Score",
+            variableType: "number",
+            default: 5,
+          },
+          total: {
+            id: "total",
+            type: "variable",
+            name: "Total",
+            variableType: "number",
+            computed: { expr: { add: [{ var: "variables.score" }, 5] } },
+          },
+        },
+      },
+    });
+
+    expect(items.map((item) => item.id)).toEqual(["variables.score"]);
   });
 
   it("writes save/load form edits back to the paginated slot window", () => {

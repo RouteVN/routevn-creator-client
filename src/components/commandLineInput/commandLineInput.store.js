@@ -513,6 +513,7 @@ const createFieldDisplayRows = (fieldRows = [], variableOptions = [], copy) => {
 const createFieldVariableOptions = (variablesData = EMPTY_COLLECTION, copy) => {
   return getVariableOptions(variablesData, {
     type: "string",
+    includeComputed: false,
   }).map((option) => {
     const variableType = (
       variablesData.items?.[option.value]?.variableType || "string"

@@ -8,6 +8,8 @@ import {
   setProgressiveRenderedItemCount,
 } from "../../src/components/groupVariablesView/groupVariablesView.store.js";
 
+const TEST_I18N = { resourcePages: {}, variablesPage: {} };
+
 describe("groupVariablesView.store", () => {
   it("uses the variable id as the edit form key", () => {
     const state = createInitialState();
@@ -27,7 +29,7 @@ describe("groupVariablesView.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state, props: {} });
+    const viewData = selectViewData({ state, props: {}, i18n: TEST_I18N });
 
     expect(viewData.dialogKey).toBe("variable-1");
     expect(viewData.dialogKey).not.toContain("()9f");
@@ -39,13 +41,25 @@ describe("groupVariablesView.store", () => {
     const state = createInitialState();
 
     openAddDialog({ state }, { groupId: "group-1" });
-    const firstKey = selectViewData({ state, props: {} }).dialogKey;
+    const firstKey = selectViewData({
+      state,
+      props: {},
+      i18n: TEST_I18N,
+    }).dialogKey;
 
     closeDialog({ state });
-    const closedKey = selectViewData({ state, props: {} }).dialogKey;
+    const closedKey = selectViewData({
+      state,
+      props: {},
+      i18n: TEST_I18N,
+    }).dialogKey;
 
     openAddDialog({ state }, { groupId: "group-1" });
-    const secondKey = selectViewData({ state, props: {} }).dialogKey;
+    const secondKey = selectViewData({
+      state,
+      props: {},
+      i18n: TEST_I18N,
+    }).dialogKey;
 
     expect(firstKey).toBe("group-1");
     expect(closedKey).toBe("new");
@@ -68,7 +82,7 @@ describe("groupVariablesView.store", () => {
     };
 
     setProgressiveRenderedItemCount({ state }, { itemCount: 0 });
-    const viewData = selectViewData({ state, props });
+    const viewData = selectViewData({ state, props, i18n: TEST_I18N });
 
     expect(viewData.flatGroups[0].children).toEqual([
       expect.objectContaining({

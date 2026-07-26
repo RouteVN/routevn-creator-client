@@ -179,16 +179,16 @@ export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const variableItems = state.variablesData?.items ?? {};
 
-  const variableOptions = getVariableOptions(state.variablesData).map(
-    (option) => {
-      const variable = variableItems[option.value];
-      const variableType = (variable?.variableType || "string").toLowerCase();
-      return {
-        ...option,
-        suffixText: localizeCommandLineText(variableType, copy),
-      };
-    },
-  );
+  const variableOptions = getVariableOptions(state.variablesData, {
+    includeComputed: false,
+  }).map((option) => {
+    const variable = variableItems[option.value];
+    const variableType = (variable?.variableType || "string").toLowerCase();
+    return {
+      ...option,
+      suffixText: localizeCommandLineText(variableType, copy),
+    };
+  });
 
   const selectedVariable = variableItems[state.tempOperation.variableId];
   const selectedType = (

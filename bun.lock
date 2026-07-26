@@ -12,7 +12,7 @@
         "@rettangoli/fe": "1.2.3",
         "@rettangoli/ui": "1.13.1",
         "@rettangoli/vt": "1.0.5",
-        "@routevn/creator-model": "1.10.4",
+        "@routevn/creator-model": "file:../routevn-creator-model",
         "@tauri-apps/api": "2.11.0",
         "@tauri-apps/plugin-dialog": "2.4.2",
         "@tauri-apps/plugin-fs": "2.5.1",
@@ -30,7 +30,7 @@
         "jszip": "3.10.1",
         "lexical": "0.22.0",
         "nanoid": "5.1.11",
-        "route-engine-js": "1.31.2",
+        "route-engine-js": "1.31.5",
         "route-graphics": "1.30.0",
         "rxjs": "7.8.2",
         "snabbdom": "3.6.3",
@@ -401,7 +401,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.60.4", "", { "os": "win32", "cpu": "x64" }, "sha512-QVTUovf40zgTqlFVrKA1uXMVvU2QWEFWfAH8Wdc48IxLvrJMQVMBRjuQyUpzZCDkakImib9eVazbWlC6ksWtJw=="],
 
-    "@routevn/creator-model": ["@routevn/creator-model@1.10.4", "", {}, "sha512-exQ1mKNk4+joS6HuBrDbLWewayhREu6K2t1dCHK+nXrEc/Az9oydm1uAK3ppcpTouOydfNHrTi2+escBmfi9HA=="],
+    "@routevn/creator-model": ["@routevn/creator-model@file:../routevn-creator-model", { "devDependencies": { "js-yaml": "^4.1.0", "puty": "0.1.2", "vitest": "^3.2.1" } }],
 
     "@shikijs/core": ["@shikijs/core@3.23.0", "", { "dependencies": { "@shikijs/types": "3.23.0", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4", "hast-util-to-html": "^9.0.5" } }, "sha512-NSWQz0riNb67xthdm5br6lAkvpDJRTgB36fxlo37ZzM2yq0PQFFzbd8psqC2XMPgCzo1fW6cVi18+ArJ44wqgA=="],
 
@@ -905,7 +905,7 @@
 
     "rollup": ["rollup@4.60.4", "", { "dependencies": { "@types/estree": "1.0.8" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.60.4", "@rollup/rollup-android-arm64": "4.60.4", "@rollup/rollup-darwin-arm64": "4.60.4", "@rollup/rollup-darwin-x64": "4.60.4", "@rollup/rollup-freebsd-arm64": "4.60.4", "@rollup/rollup-freebsd-x64": "4.60.4", "@rollup/rollup-linux-arm-gnueabihf": "4.60.4", "@rollup/rollup-linux-arm-musleabihf": "4.60.4", "@rollup/rollup-linux-arm64-gnu": "4.60.4", "@rollup/rollup-linux-arm64-musl": "4.60.4", "@rollup/rollup-linux-loong64-gnu": "4.60.4", "@rollup/rollup-linux-loong64-musl": "4.60.4", "@rollup/rollup-linux-ppc64-gnu": "4.60.4", "@rollup/rollup-linux-ppc64-musl": "4.60.4", "@rollup/rollup-linux-riscv64-gnu": "4.60.4", "@rollup/rollup-linux-riscv64-musl": "4.60.4", "@rollup/rollup-linux-s390x-gnu": "4.60.4", "@rollup/rollup-linux-x64-gnu": "4.60.4", "@rollup/rollup-linux-x64-musl": "4.60.4", "@rollup/rollup-openbsd-x64": "4.60.4", "@rollup/rollup-openharmony-arm64": "4.60.4", "@rollup/rollup-win32-arm64-msvc": "4.60.4", "@rollup/rollup-win32-ia32-msvc": "4.60.4", "@rollup/rollup-win32-x64-gnu": "4.60.4", "@rollup/rollup-win32-x64-msvc": "4.60.4", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-WHeFSbZYsPu3+bLoNRUuAO+wavNlocOPf3wSHTP7hcFKVnJeWsYlCDbr3mTS14FCizf9ccIxXA8sGL8zKeQN3g=="],
 
-    "route-engine-js": ["route-engine-js@1.31.2", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.1", "js-yaml": "^4.1.0", "puty": "^0.1.1", "unicode-segmenter": "^0.17.0" } }, "sha512-G5HHSr1PJGUi0Koq4OzBwzstgUEpFm4wyvbZW9xb6UYyNV+lyNoCMecnCrCQ/op0ew4OwywozcOjNJylVgzevQ=="],
+    "route-engine-js": ["route-engine-js@1.31.5", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.1", "js-yaml": "^4.1.0", "puty": "^0.1.1", "unicode-segmenter": "^0.17.0" } }, "sha512-9w33SvNXGnRagNAOqpRB/mjE/2awpQo56hy7IIvpNW9ECV4g/G6cDd9rP96NPeqYJhu0g9OASuPkf/ZV/aMPTg=="],
 
     "route-graphics": ["route-graphics@1.30.0", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "^8.7.1", "playwright": "^1.44.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-AU+pHJk9OVFoI31wL/pqLj88rjHJMZnApewllVxtlBQdKt0zljqOrDJbIWO3kMuqOklRyD8JJ7iplN0FllN68A=="],
 

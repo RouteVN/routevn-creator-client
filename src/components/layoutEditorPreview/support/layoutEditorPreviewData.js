@@ -1,5 +1,4 @@
 import {
-  applyPreviewVariableOverrides,
   collectLayoutPreviewTargets,
   createChoicePreviewItems,
   createConfirmDialogPreviewData,
@@ -7,10 +6,10 @@ import {
   createHistoryLines,
   createPreviewInputFieldValues,
   createPreviewRuntimeValues,
-  createPreviewVariables,
   createRuntimeSaveSlots,
   getLayoutPreviewInputFieldItems,
   getLayoutPreviewVariableItems,
+  resolvePreviewVariables,
   usesSaveLoadPreviewInLayout,
   visitLayoutItemsWithFragments,
 } from "./layoutEditorPreviewSupport.js";
@@ -241,13 +240,15 @@ export const createLayoutEditorPreviewData = ({
     typeof backgroundImageId === "string" && backgroundImageId.length > 0
       ? backgroundImageId
       : undefined;
-  const previewVariables = {
-    ...applyPreviewVariableOverrides(
-      createPreviewVariables(variablesData),
-      variablesData,
-      previewVariableValues,
-    ),
+  const runtime = {
+    ...createPreviewRuntimeValues(previewVariableValues, dialogueDefaultValues),
+    dialogueTextSpeed: dialogueRevealingSpeed,
   };
+  const previewVariables = resolvePreviewVariables({
+    variablesData,
+    previewVariableValues,
+    runtime,
+  });
   const inputFieldItems = getLayoutPreviewInputFieldItems({
     currentLayoutId,
     currentLayoutData,
@@ -258,10 +259,6 @@ export const createLayoutEditorPreviewData = ({
     inputFieldItems,
     previewInputFieldValues,
   );
-  const runtime = {
-    ...createPreviewRuntimeValues(previewVariableValues, dialogueDefaultValues),
-    dialogueTextSpeed: dialogueRevealingSpeed,
-  };
   const historyDialogue =
     layoutType === "history" ? createHistoryLines(historyDefaultValues) : [];
   const choice = {

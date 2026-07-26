@@ -6,6 +6,8 @@ import {
 } from "../../../internal/layoutConditions.js";
 import { getLayoutTextReferenceResourceId } from "../../../internal/layoutTextContent.js";
 import { toRuntimeConditionTarget } from "../../../internal/runtimeFields.js";
+import { collectComputedVariableReferenceIds } from "../../../internal/project/projection.js";
+import { resolveComputedVariables } from "route-engine-js";
 import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 
 const PREVIEW_VARIABLE_TYPES = new Set(["boolean", "number", "string"]);
@@ -89,6 +91,9 @@ export const createPreviewVariables = (variablesData = {}) => {
       if (!variableId || variable?.type !== "variable") {
         return variables;
       }
+      if (variable.computed !== undefined) {
+        return variables;
+      }
 
       variables[variableId] = toPreviewVariableValue(variable);
       return variables;
@@ -114,6 +119,9 @@ export const applyPreviewVariableOverrides = (
     }
 
     const variable = variableItems[variableId];
+    if (variable?.computed !== undefined) {
+      continue;
+    }
 
     nextPreviewVariables[variableId] = toPreviewVariableValue({
       ...variable,
@@ -122,6 +130,40 @@ export const applyPreviewVariableOverrides = (
   }
 
   return nextPreviewVariables;
+};
+
+export const resolvePreviewVariables = ({
+  variablesData = {},
+  previewVariableValues = {},
+  runtime = {},
+} = {}) => {
+  const variableItems = variablesData.items ?? {};
+  const variableConfigs = Object.fromEntries(
+    Object.entries(variableItems)
+      .filter(([, variable]) => variable?.type === "variable")
+      .map(([variableId, variable]) => {
+        const config = {
+          type: getPreviewVariableType(variable),
+          scope: variable.scope ?? "context",
+        };
+        if (variable.computed !== undefined) {
+          config.computed = structuredClone(variable.computed);
+        } else {
+          config.default = toPreviewVariableValue(variable);
+        }
+        return [variableId, config];
+      }),
+  );
+  const storedVariables = applyPreviewVariableOverrides(
+    createPreviewVariables(variablesData),
+    variablesData,
+    previewVariableValues,
+  );
+  return resolveComputedVariables({
+    variableConfigs,
+    variables: storedVariables,
+    runtime,
+  });
 };
 
 export const collectLayoutPreviewTargets = (layoutParams = {}) => {
@@ -213,6 +255,17 @@ export const getLayoutPreviewVariableItems = ({
 
     const variable = variableId ? availableVariables[variableId] : runtimeItem;
     if (!variable) {
+      continue;
+    }
+    if (variable.computed !== undefined) {
+      collectComputedVariableReferenceIds(variable.computed).forEach(
+        (dependencyId) => {
+          const dependencyTarget = toVariableConditionTarget(dependencyId);
+          if (!targets.includes(dependencyTarget)) {
+            targets.push(dependencyTarget);
+          }
+        },
+      );
       continue;
     }
     const type = getPreviewVariableType(variable);

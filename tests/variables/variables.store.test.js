@@ -3,6 +3,7 @@ import {
   createInitialState,
   selectViewData,
   setItems,
+  setSelectedItemId,
 } from "../../src/pages/variables/variables.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -97,6 +98,64 @@ describe("variables.store", () => {
         hasChildren: false,
         hasChildFolders: false,
       }),
+    );
+  });
+
+  it("describes computed operations and dependencies without evaluating them", () => {
+    const state = createInitialState();
+    setItems(
+      { state },
+      {
+        variablesData: {
+          items: {
+            folder1: { id: "folder1", type: "folder", name: "Progress" },
+            score: {
+              id: "score",
+              type: "variable",
+              variableType: "number",
+              name: "Score",
+              scope: "context",
+              default: 0,
+            },
+            label: {
+              id: "label",
+              type: "variable",
+              variableType: "string",
+              name: "Label",
+              computed: {
+                branches: [
+                  {
+                    when: { gte: [{ var: "variables.score" }, 10] },
+                    expr: "High",
+                  },
+                ],
+                default: { expr: "Low" },
+              },
+            },
+          },
+          tree: [
+            {
+              id: "folder1",
+              children: [{ id: "score" }, { id: "label" }],
+            },
+          ],
+        },
+      },
+    );
+    setSelectedItemId({ state }, { itemId: "label" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.detailFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Operation",
+          value: "If",
+        }),
+        expect.objectContaining({ label: "Dependencies", value: "Score" }),
+      ]),
+    );
+    expect(viewData.detailFields).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: "Scope" })]),
     );
   });
 });

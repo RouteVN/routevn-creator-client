@@ -1,0 +1,16 @@
+componentName: rvn-computed-value-operand-popover
+propsSchema:
+  type: object
+  properties:
+    open:
+      type: boolean
+    x:
+      type: number
+    y:
+      type: number
+events:
+  close: {}
+  value-submit: {}
+methods:
+  type: object
+  properties: {}

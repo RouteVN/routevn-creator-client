@@ -101,6 +101,13 @@ describe("commandLineUpdateVariable.handlers", () => {
               variableType: "number",
               name: "Save/Load Pagination",
             },
+            computedScore: {
+              id: "computedScore",
+              type: "variable",
+              variableType: "number",
+              name: "Computed Score",
+              computed: { expr: 1 },
+            },
           },
           tree: [],
         },
@@ -422,6 +429,60 @@ describe("commandLineUpdateVariable.handlers", () => {
           },
         ],
       },
+    });
+  });
+
+  it("rejects imported update actions that target a computed variable", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const appService = {
+      showAlert: vi.fn(),
+    };
+    setVariablesData(
+      { state },
+      {
+        variables: {
+          items: {
+            computedScore: {
+              id: "computedScore",
+              type: "variable",
+              variableType: "number",
+              name: "Computed Score",
+              computed: { expr: 1 },
+            },
+          },
+          tree: [],
+        },
+      },
+    );
+    state.actionId = "updateComputedScore";
+    state.operations = [
+      {
+        id: "operation-1",
+        variableId: "computedScore",
+        op: "set",
+        value: 2,
+      },
+    ];
+
+    handleSubmitClick(
+      {
+        appService,
+        i18n,
+        store: createStore(state),
+        dispatchEvent,
+      },
+      {
+        _event: {
+          stopPropagation: () => {},
+        },
+      },
+    );
+
+    expect(dispatchEvent).not.toHaveBeenCalled();
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: "Computed variables cannot be updated.",
+      title: "Warning",
     });
   });
 

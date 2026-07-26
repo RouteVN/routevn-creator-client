@@ -1,0 +1,13 @@
+componentName: rvn-computed-operation-block
+propsSchema:
+  type: object
+  properties:
+    operation:
+      type: object
+events:
+  add-operand-click: {}
+  operation-contextmenu: {}
+  remove-operand-click: {}
+methods:
+  type: object
+  properties: {}

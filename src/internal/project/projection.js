@@ -1182,6 +1182,9 @@ const constructProjectResources = (repositoryState = {}) => {
       .map(([id, item]) => {
         const { variableType, ...engineVariable } = item;
         engineVariable.type = variableType;
+        if (item.computed !== undefined) {
+          engineVariable.scope = "context";
+        }
         return [id, engineVariable];
       }),
   );
@@ -1538,7 +1541,7 @@ export const getSectionPresentation = ({
 };
 
 export const getVariableOptions = (variablesData, options = {}) => {
-  const { type, showType = false } = options;
+  const { type, showType = false, includeComputed = true } = options;
   const variablesItems = variablesData?.items || {};
   const variableEntries = Object.entries(variablesItems);
 
@@ -1550,6 +1553,9 @@ export const getVariableOptions = (variablesData, options = {}) => {
       if (type && item.variableType !== type) {
         return false;
       }
+      if (!includeComputed && item.computed !== undefined) {
+        return false;
+      }
       return true;
     })
     .map(([id, variable]) => {
@@ -1559,6 +1565,128 @@ export const getVariableOptions = (variablesData, options = {}) => {
         value: id,
       };
     });
+};
+
+const decodeComputedReferenceQuotedPart = (rawValue) => {
+  let value = "";
+  for (let index = 1; index < rawValue.length - 1; index += 1) {
+    const character = rawValue[index];
+    if (character !== "\\") {
+      value += character;
+      continue;
+    }
+    index += 1;
+    const escapedCharacter = rawValue[index];
+    if (escapedCharacter === "u") {
+      const hexValue = rawValue.slice(index + 1, index + 5);
+      if (!/^[0-9a-fA-F]{4}$/.test(hexValue)) return undefined;
+      value += String.fromCharCode(Number.parseInt(hexValue, 16));
+      index += 4;
+      continue;
+    }
+    const escapedValues = {
+      "\\": "\\",
+      '"': '"',
+      "'": "'",
+      "/": "/",
+      n: "\n",
+      r: "\r",
+      t: "\t",
+      b: "\b",
+      f: "\f",
+    };
+    if (!Object.hasOwn(escapedValues, escapedCharacter)) return undefined;
+    value += escapedValues[escapedCharacter];
+  }
+  return value;
+};
+
+const getComputedVariableReferenceId = (referencePath) => {
+  if (typeof referencePath !== "string") return undefined;
+  if (referencePath.startsWith("variables.")) {
+    const remainder = referencePath.slice("variables.".length);
+    const separatorIndex = remainder.search(/[.[]/);
+    const variableId =
+      separatorIndex === -1 ? remainder : remainder.slice(0, separatorIndex);
+    return variableId || undefined;
+  }
+  if (!referencePath.startsWith("variables[")) return undefined;
+  let index = "variables[".length;
+  while (/\s/.test(referencePath[index] ?? "")) index += 1;
+  const quote = referencePath[index];
+  if (quote !== '"' && quote !== "'") return undefined;
+  const startIndex = index;
+  index += 1;
+  let escaped = false;
+  while (index < referencePath.length) {
+    const character = referencePath[index];
+    if (escaped) escaped = false;
+    else if (character === "\\") escaped = true;
+    else if (character === quote) {
+      return decodeComputedReferenceQuotedPart(
+        referencePath.slice(startIndex, index + 1),
+      );
+    }
+    index += 1;
+  }
+  return undefined;
+};
+
+const collectComputedExpressionReferenceIds = (value, referenceIds) => {
+  if (value === null || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      collectComputedExpressionReferenceIds(item, referenceIds);
+    });
+    return;
+  }
+  if (Object.hasOwn(value, "literal")) return;
+  if (Object.hasOwn(value, "var")) {
+    const variableId = getComputedVariableReferenceId(value.var);
+    if (variableId) referenceIds.add(variableId);
+    return;
+  }
+  Object.values(value).forEach((item) => {
+    collectComputedExpressionReferenceIds(item, referenceIds);
+  });
+};
+
+export const collectComputedVariableReferenceIds = (computed = {}) => {
+  const referenceIds = new Set();
+  if (Array.isArray(computed.branches)) {
+    computed.branches.forEach((branch) => {
+      collectComputedExpressionReferenceIds(branch?.when, referenceIds);
+      if (Object.hasOwn(branch ?? {}, "expr")) {
+        collectComputedExpressionReferenceIds(branch.expr, referenceIds);
+      }
+    });
+    if (Object.hasOwn(computed.default ?? {}, "expr")) {
+      collectComputedExpressionReferenceIds(
+        computed.default.expr,
+        referenceIds,
+      );
+    }
+    return [...referenceIds];
+  }
+  if (Object.hasOwn(computed, "expr")) {
+    collectComputedExpressionReferenceIds(computed.expr, referenceIds);
+  }
+  return [...referenceIds];
+};
+
+export const getComputedVariableDependents = (
+  variablesData,
+  { variableIds = [] } = {},
+) => {
+  const targetIds = new Set(variableIds);
+  return Object.values(variablesData?.items ?? {}).filter(
+    (item) =>
+      item.type === "variable" &&
+      item.computed !== undefined &&
+      collectComputedVariableReferenceIds(item.computed).some((variableId) =>
+        targetIds.has(variableId),
+      ),
+  );
 };
 
 const SCENE_RESOURCE_KEYS = [

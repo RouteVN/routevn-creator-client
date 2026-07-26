@@ -1615,6 +1615,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     state.soundsData?.items?.[state.soundFormDialog.selectedSoundId];
   const variableOptions = getVariableOptions(state.variablesData, {
     type: "number",
+    includeComputed: false,
   });
   const sliderValueOptions = [
     { label: copy.manualOption ?? "Manual", value: "" },

@@ -47,7 +47,11 @@ refs:
     eventListeners:
       click:
         handler: handleAddVariableClick
-  addVariableDialog:
+  variableDialog:
+    eventListeners:
+      close:
+        handler: handleCloseDialog
+  computedDialog:
     eventListeners:
       close:
         handler: handleCloseDialog
@@ -59,6 +63,56 @@ refs:
         handler: handleDialogFormChange
       add-option-click:
         handler: handleFormAddOptionClick
+  computedForm:
+    eventListeners:
+      form-action:
+        handler: handleFormActionClick
+      form-change:
+        handler: handleDialogFormChange
+      add-option-click:
+        handler: handleFormAddOptionClick
+  addOperationButton:
+    eventListeners:
+      click:
+        handler: handleAddOperationClick
+  operationChoiceMenu:
+    eventListeners:
+      close:
+        handler: handleOperationChoiceMenuClose
+      item-click:
+        handler: handleOperationChoiceMenuClick
+  computedOperationBlock:
+    eventListeners:
+      add-operand-click:
+        handler: handleAddOperationOperandClick
+      operation-contextmenu:
+        handler: handleOperationBlockContextMenu
+      remove-operand-click:
+        handler: handleRemoveOperationOperandClick
+  operationBlockMenu:
+    eventListeners:
+      close:
+        handler: handleOperationBlockMenuClose
+      item-click:
+        handler: handleOperationBlockMenuClick
+  operandSourceMenu:
+    eventListeners:
+      close:
+        handler: handleOperandSourceMenuClose
+      item-click:
+        handler: handleOperandSourceMenuClick
+  operationVariableMenu:
+    eventListeners:
+      close:
+        handler: handleOperationVariableMenuClose
+      item-click:
+        handler: handleOperationVariableMenuClick
+  operationValuePopover:
+    eventListeners:
+      close:
+        handler: handleOperationValuePopoverClose
+      value-submit:
+        handler: handleOperationValueSubmit
   enumAddValueButton:
     eventListeners:
       click:
@@ -154,6 +208,8 @@ template:
                                                       - rtgl-text s=sm: ${item.name}
                                                       - $if item.isEnum:
                                                           - rtgl-tag v=mu s=sm: ${enumLabel}
+                                                      - $if item.isComputed:
+                                                          - rtgl-tag v=mu s=sm: ${computedLabel}
                                                   - rtgl-view w=1fg av=c:
                                                       - rtgl-text s=sm: ${item.scope}
                                                   - rtgl-view w=1fg av=c:
@@ -166,6 +222,8 @@ template:
                                                       - rtgl-text s=sm: ${item.name}
                                                       - $if item.isEnum:
                                                           - rtgl-tag v=mu s=sm: ${enumLabel}
+                                                      - $if item.isComputed:
+                                                          - rtgl-tag v=mu s=sm: ${computedLabel}
                                                   - rtgl-view w=1fg av=c:
                                                       - rtgl-text s=sm: ${item.scope}
                                                   - rtgl-view w=1fg av=c:
@@ -191,9 +249,9 @@ template:
           - $if flatGroups.length > 0:
               - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - $if !readonly:
-      - rtgl-dialog#addVariableDialog s=md ?open=${isDialogOpen}:
+      - rtgl-dialog#variableDialog s=lg ?open=${isVariableDialogOpen}:
           - rtgl-view slot=content g=md:
-              - rtgl-form#variableForm key=${dialogKey} :defaultValues=${defaultValues} :form=${form} w=f :context=${context}:
+              - rtgl-form#variableForm key=variable-${dialogKey} :defaultValues=${defaultValues} :form=${variableForm} w=f :context=${context}:
                   - 'rtgl-view slot="enum-values" d=v w=f g=sm':
                       - $if enumValues.length > 0:
                           - rtgl-view d=h wrap g=sm w=f:
@@ -204,6 +262,23 @@ template:
                           - rtgl-text s=sm c=mu-fg: ${noValuesYetMessage}
                       - rtgl-view d=h w=f:
                           - rtgl-button#enumAddValueButton s=sm v=se pre=plus: ${addValueButton}
+      - rtgl-dialog#computedDialog s=lg ?open=${isComputedDialogOpen}:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#computedForm key=computed-${dialogKey} :defaultValues=${defaultValues} :form=${computedForm} w=f :context=${context}:
+                  - 'rtgl-view slot="operation" d=v w=f g=sm':
+                      - rtgl-view d=h w=f av=c g=sm:
+                          - rtgl-text w=1fg s=md: ${operationLabel}
+                          - $if !operationBlock:
+                              - 'rtgl-button#addOperationButton sq s=sm v=se pre=plus aria-label="${addOperationLabel}" title="${addOperationLabel}"': null
+                      - $if operationBlock:
+                          - rvn-computed-operation-block#computedOperationBlock :operation=${operationBlock}: null
+                        $else:
+                          - rtgl-text s=sm c=mu-fg: ${operationEmptyMessage}
+      - rtgl-dropdown-menu#operationChoiceMenu :items=${operationChoiceMenu.items} ?open=${operationChoiceMenu.isOpen} x=${operationChoiceMenu.x} y=${operationChoiceMenu.y} place=bs: null
+      - rtgl-dropdown-menu#operationBlockMenu :items=${operationBlockMenu.items} ?open=${operationBlockMenu.isOpen} x=${operationBlockMenu.x} y=${operationBlockMenu.y}: null
+      - rtgl-dropdown-menu#operandSourceMenu :items=${operandSourceMenu.items} ?open=${operandSourceMenu.isOpen} x=${operandSourceMenu.x} y=${operandSourceMenu.y} place=bs: null
+      - rtgl-dropdown-menu#operationVariableMenu :items=${operationVariableMenu.items} ?open=${operationVariableMenu.isOpen} x=${operationVariableMenu.x} y=${operationVariableMenu.y} place=bs: null
+      - rvn-computed-value-operand-popover#operationValuePopover ?open=${operationValuePopover.isOpen} x=${operationValuePopover.x} y=${operationValuePopover.y}: null
       - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
       - rtgl-popover#enumValuePopover ?open=${enumValuePopover.isOpen} x=${enumValuePopover.x} y=${enumValuePopover.y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
           - rtgl-form#enumValueForm key=${enumValuePopover.key} :defaultValues=${enumValueDefaultValues} :form=${enumValueForm} w=f: null
