@@ -332,8 +332,6 @@ versionsPage:
   bundleInProgressMessage: "打包期间请保持 RouteVN Creator 开启。大型项目可能需要几分钟。"
   bundleInProgressTitle: "正在打包"
   bundleFinalizingStatus: "正在完成 ZIP..."
-  bundleCancelFailedStatus: "无法取消，导出仍在继续。"
-  bundleCancellingStatus: "正在取消导出..."
   bundleElapsedStatus: "{status} · 已用时 {elapsed}"
   bundleOptimizingImagesStatus: "正在优化图片... {current} / {total}"
   bundlePreparingProjectStatus: "正在准备项目数据..."

@@ -1115,13 +1115,6 @@ export const createProjectExportService = ({
     });
   };
 
-  service.cancelDistributionZipExport = async (exportId) => {
-    if (!fileAdapter.cancelDistributionZipExport) {
-      return false;
-    }
-    return fileAdapter.cancelDistributionZipExport({ exportId });
-  };
-
   service.promptWindowsExecutablePath = async (exeName, options = {}) => {
     return fileAdapter.promptWindowsExecutablePath({
       exeName,

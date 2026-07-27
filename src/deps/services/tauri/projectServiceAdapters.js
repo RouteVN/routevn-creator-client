@@ -39,7 +39,6 @@ import {
   resolveProjectResolutionForWrite,
   scaleTemplateProjectStateForResolution,
 } from "../../../internal/projectResolution.js";
-import { generateId } from "../../../internal/id.js";
 import {
   createMainProjectionState,
   MAIN_PARTITION,
@@ -743,7 +742,6 @@ export const createTauriProjectServiceAdapters = ({
   const collectDistributionAssets = async ({
     fileEntries,
     getCurrentReference,
-    isCancelled,
   }) => {
     const reference = getCurrentReference();
     const filesPath = await join(reference.projectPath, "files");
@@ -751,9 +749,6 @@ export const createTauriProjectServiceAdapters = ({
 
     const assets = [];
     for (const fileEntry of normalizedFileEntries) {
-      if (isCancelled?.()) {
-        throw new Error("Export cancelled.");
-      }
       const safeFileId = assertSafeProjectFileId(fileEntry.id);
       const filePath = await join(filesPath, safeFileId);
       const fileExists = await exists(filePath);
@@ -779,18 +774,12 @@ export const createTauriProjectServiceAdapters = ({
     options = {},
     getCurrentReference,
   }) => {
-    const exportId = options.exportId ?? generateId();
     const assets = await collectDistributionAssets({
       fileEntries,
       getCurrentReference,
-      isCancelled: options.isCancelled,
     });
-    if (options.isCancelled?.()) {
-      throw new Error("Export cancelled.");
-    }
 
     const invokePayload = {
-      exportId,
       outputPath,
       assets,
       instructionsJson: JSON.stringify(projectData),
@@ -813,10 +802,6 @@ export const createTauriProjectServiceAdapters = ({
     logExportSizeStats(stats);
 
     return outputPath;
-  };
-
-  const cancelDistributionZipExport = async ({ exportId } = {}) => {
-    return invoke("cancel_distribution_zip_export", { exportId });
   };
 
   const createWindowsPortableExecutableToPath = async ({
@@ -1285,7 +1270,6 @@ export const createTauriProjectServiceAdapters = ({
 
     promptDistributionZipPath,
     createDistributionZipStreamedToPath,
-    cancelDistributionZipExport,
     promptWindowsExecutablePath,
     promptWindowsInstallerPath,
     promptMacosApplicationPath,

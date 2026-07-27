@@ -332,8 +332,6 @@ versionsPage:
   bundleInProgressMessage: "バンドルの作成中はRouteVN Creatorを開いたままにしてください。大きなプロジェクトでは数分かかる場合があります。"
   bundleInProgressTitle: "バンドル作成中"
   bundleFinalizingStatus: "ZIPを仕上げています..."
-  bundleCancelFailedStatus: "キャンセルできませんでした。出力処理は続行中です。"
-  bundleCancellingStatus: "出力をキャンセルしています..."
   bundleElapsedStatus: "{status}（経過時間: {elapsed}）"
   bundleOptimizingImagesStatus: "画像を最適化しています... {current} / {total}"
   bundlePreparingProjectStatus: "プロジェクトデータを準備しています..."

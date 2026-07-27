@@ -139,7 +139,6 @@ describe("projectExportService", () => {
     const createDistributionZipStreamedToPath = vi.fn(
       async ({ outputPath }) => outputPath,
     );
-    const cancelDistributionZipExport = vi.fn(async () => true);
     const getCurrentReference = vi.fn(() => ({
       projectPath: "/tmp/project-1",
     }));
@@ -152,7 +151,6 @@ describe("projectExportService", () => {
         createDistributionZipStreamed: vi.fn(),
         promptDistributionZipPath: vi.fn(),
         createDistributionZipStreamedToPath,
-        cancelDistributionZipExport,
       },
       filePicker: {
         saveFilePicker: vi.fn(),
@@ -197,13 +195,6 @@ describe("projectExportService", () => {
       },
       getCurrentReference,
       getFileContent,
-    });
-
-    await expect(
-      service.cancelDistributionZipExport("export-1"),
-    ).resolves.toBe(true);
-    expect(cancelDistributionZipExport).toHaveBeenCalledWith({
-      exportId: "export-1",
     });
   });
 

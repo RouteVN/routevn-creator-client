@@ -90,7 +90,6 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
         () => repository?.getState?.() ?? structuredClone(initialProjectData),
       ),
       promptDistributionZipPath: vi.fn(async () => undefined),
-      cancelDistributionZipExport: vi.fn(async () => true),
       createDistributionZipStreamedToPath: vi.fn(async () => "/tmp/export.zip"),
       createDistributionZipStreamed: vi.fn(async () => "/tmp/export.zip"),
       promptWindowsExecutablePath: vi.fn(async () => "/tmp/export.exe"),
@@ -529,25 +528,18 @@ describe("versions.handleDownloadZipClick", () => {
     await chooseAndConfirmExport(handleDownloadZipClick, deps);
 
     expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
-      actionLabel: EN_I18N.versionsPage.cancelButton,
       message: EN_I18N.versionsPage.bundleInProgressMessage,
-      onAction: expect.any(Function),
-      progress: {},
       status: EN_I18N.versionsPage.bundlePreparingProjectStatus,
       title: EN_I18N.versionsPage.bundleInProgressTitle,
     });
     expect(deps.progressDialog.waitForPaint).toHaveBeenCalledTimes(1);
     expect(deps.progressDialog.update).toHaveBeenCalledWith({
-      progress: { current: 1, total: 2 },
       status: "Scanning assets... 1 / 2 · 1s",
     });
     expect(deps.progressDialog.update).toHaveBeenCalledWith({
-      progress: { current: 1024, total: 2048 },
       status: "Writing package... 1 KB / 2 KB",
     });
     expect(deps.progressDialog.update).toHaveBeenCalledWith({
-      actionDisabled: true,
-      progress: {},
       status: EN_I18N.versionsPage.bundleFinalizingStatus,
     });
     expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
@@ -555,40 +547,6 @@ describe("versions.handleDownloadZipClick", () => {
       message: "ZIP export completed.\nSaved to: /tmp/export.zip",
       title: EN_I18N.versionsPage.exportCompletedTitle,
     });
-  });
-
-  it("cancels a running native Web export without reporting a failure", async () => {
-    const repository = {
-      getRevision: vi.fn(() => 3),
-      getState: vi.fn(() => structuredClone(initialProjectData)),
-    };
-    const deps = createDeps({ repository });
-    deps.projectService.promptDistributionZipPath.mockResolvedValue(
-      "/tmp/export.zip",
-    );
-    let nativeExportId;
-    deps.projectService.createDistributionZipStreamedToPath.mockImplementation(
-      async (_projectData, _fileEntries, _outputPath, options) => {
-        nativeExportId = options.exportId;
-        const { onAction } =
-          deps.appService.showProgressDialog.mock.calls[0][0];
-        await onAction();
-        throw new Error("Export cancelled.");
-      },
-    );
-
-    await chooseAndConfirmExport(handleDownloadZipClick, deps);
-
-    expect(deps.projectService.cancelDistributionZipExport).toHaveBeenCalledWith(
-      nativeExportId,
-    );
-    expect(deps.progressDialog.update).toHaveBeenCalledWith({
-      actionDisabled: true,
-      progress: {},
-      status: EN_I18N.versionsPage.bundleCancellingStatus,
-    });
-    expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
-    expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
 
   it("passes file mime metadata into streamed ZIP export", async () => {

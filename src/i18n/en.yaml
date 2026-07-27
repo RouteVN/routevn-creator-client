@@ -332,8 +332,6 @@ versionsPage:
   bundleInProgressMessage: "Keep RouteVN Creator open while the bundle is being created. Large projects may take several minutes."
   bundleInProgressTitle: "Bundle in progress"
   bundleFinalizingStatus: "Finalizing ZIP..."
-  bundleCancelFailedStatus: "Could not cancel. Export is still running."
-  bundleCancellingStatus: "Cancelling export..."
   bundleElapsedStatus: "{status} · {elapsed}"
   bundleOptimizingImagesStatus: "Optimizing images... {current} / {total}"
   bundlePreparingProjectStatus: "Preparing project data..."

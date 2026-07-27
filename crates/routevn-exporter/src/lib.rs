@@ -14,7 +14,6 @@ use zip::write::FileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
 const BUNDLE_VERSION: u8 = 4;
-pub const ZIP_EXPORT_CANCELLED_ERROR: &str = "Export cancelled.";
 const BUNDLE_HEADER_SIZE: usize = 16;
 const WEB_ICON_FILES: [(&str, u32); 2] = [("app-icon-192.png", 192), ("app-icon-512.png", 512)];
 const DICING_ELIGIBLE_MIME_TYPES: [&str; 3] = ["image/png", "image/jpeg", "image/webp"];
@@ -94,7 +93,6 @@ pub struct ZipExportProgress {
 }
 
 pub type ZipExportProgressCallback<'a> = dyn Fn(ZipExportProgress) + Send + Sync + 'a;
-pub type ZipExportCancellationCallback<'a> = dyn Fn() -> bool + Send + Sync + 'a;
 
 #[derive(Debug)]
 pub struct PackageBinExportResult {
@@ -331,15 +329,6 @@ fn emit_progress(
 
 fn elapsed_millis(started: Instant) -> u64 {
     u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX)
-}
-
-fn ensure_export_not_cancelled(
-    is_cancelled: Option<&ZipExportCancellationCallback<'_>>,
-) -> Result<(), String> {
-    if is_cancelled.is_some_and(|is_cancelled| is_cancelled()) {
-        return Err(ZIP_EXPORT_CANCELLED_ERROR.to_string());
-    }
-    Ok(())
 }
 
 fn image_pixel_count(width: u32, height: u32) -> u64 {
@@ -861,7 +850,6 @@ fn build_bundle_manifest(
     assets: &[ZipAssetInput],
     instructions_json: &str,
     on_progress: Option<&ZipExportProgressCallback<'_>>,
-    is_cancelled: Option<&ZipExportCancellationCallback<'_>>,
 ) -> Result<(Vec<u8>, BTreeMap<String, ChunkPayload>, PackageBinStats), String> {
     let mut asset_descriptors = Vec::with_capacity(assets.len());
     let mut raw_asset_bytes = 0u64;
@@ -869,7 +857,6 @@ fn build_bundle_manifest(
     let scan_started = Instant::now();
     emit_progress(on_progress, "scanAssets", 0, assets.len() as u64);
     for (index, asset) in assets.iter().enumerate() {
-        ensure_export_not_cancelled(is_cancelled)?;
         let descriptor = inspect_asset(asset)?;
         raw_asset_bytes += descriptor.size;
         asset_descriptors.push(descriptor);
@@ -941,7 +928,6 @@ fn build_bundle_manifest(
     let image_optimization_started = Instant::now();
     emit_progress(on_progress, "optimizeImages", 0, dicing_groups.len() as u64);
     for (group_id, group_indices) in dicing_groups.iter().enumerate() {
-        ensure_export_not_cancelled(is_cancelled)?;
         let group_assets = group_indices
             .iter()
             .filter_map(|index| asset_descriptors.get(*index))
@@ -1074,13 +1060,11 @@ fn copy_chunk_payload<R: Read, W: Write>(
     written_payload_bytes: &mut u64,
     total_payload_bytes: u64,
     on_progress: Option<&ZipExportProgressCallback<'_>>,
-    is_cancelled: Option<&ZipExportCancellationCallback<'_>>,
 ) -> Result<(), String> {
     let mut hasher = Sha256::new();
     let mut copied_bytes = 0u64;
 
     loop {
-        ensure_export_not_cancelled(is_cancelled)?;
         let read_bytes = reader
             .read(buffer)
             .map_err(|e| format!("Failed to read bundle chunk payload: {e}"))?;
@@ -1119,10 +1103,9 @@ fn write_package_bin_contents<W: Write>(
     assets: &[ZipAssetInput],
     instructions_json: &str,
     on_progress: Option<&ZipExportProgressCallback<'_>>,
-    is_cancelled: Option<&ZipExportCancellationCallback<'_>>,
 ) -> Result<PackageBinStats, String> {
     let (manifest_bytes, chunk_payloads, mut stats) =
-        build_bundle_manifest(assets, instructions_json, on_progress, is_cancelled)?;
+        build_bundle_manifest(assets, instructions_json, on_progress)?;
     let package_write_started = Instant::now();
 
     if manifest_bytes.len() > u32::MAX as usize {
@@ -1170,7 +1153,6 @@ fn write_package_bin_contents<W: Write>(
                     &mut written_payload_bytes,
                     stats.stored_chunk_bytes,
                     on_progress,
-                    is_cancelled,
                 )?;
             }
             ChunkPayloadSource::Temporary(temporary_file) => {
@@ -1186,7 +1168,6 @@ fn write_package_bin_contents<W: Write>(
                     &mut written_payload_bytes,
                     stats.stored_chunk_bytes,
                     on_progress,
-                    is_cancelled,
                 )?;
             }
             ChunkPayloadSource::Memory(bytes) => {
@@ -1200,7 +1181,6 @@ fn write_package_bin_contents<W: Write>(
                     &mut written_payload_bytes,
                     stats.stored_chunk_bytes,
                     on_progress,
-                    is_cancelled,
                 )?;
             }
         }
@@ -1218,9 +1198,8 @@ fn write_package_bin_entry<W: Write + Seek>(
     assets: &[ZipAssetInput],
     instructions_json: &str,
     on_progress: Option<&ZipExportProgressCallback<'_>>,
-    is_cancelled: Option<&ZipExportCancellationCallback<'_>>,
 ) -> Result<PackageBinStats, String> {
-    write_package_bin_contents(zip, assets, instructions_json, on_progress, is_cancelled)
+    write_package_bin_contents(zip, assets, instructions_json, on_progress)
 }
 
 pub fn create_package_bin(
@@ -1228,8 +1207,7 @@ pub fn create_package_bin(
     instructions_json: String,
 ) -> Result<PackageBinExportResult, String> {
     let mut package_bin = Vec::new();
-    let stats =
-        write_package_bin_contents(&mut package_bin, &assets, &instructions_json, None, None)?;
+    let stats = write_package_bin_contents(&mut package_bin, &assets, &instructions_json, None)?;
 
     Ok(PackageBinExportResult {
         package_bin,
@@ -1246,7 +1224,6 @@ fn write_distribution_zip(
     manifest_json: Option<&str>,
     web_icon_file_id: Option<&str>,
     on_progress: Option<&ZipExportProgressCallback<'_>>,
-    is_cancelled: Option<&ZipExportCancellationCallback<'_>>,
 ) -> Result<ZipExportStats, String> {
     let file = File::create(work_path)
         .map_err(|e| format!("Failed to create zip file {}: {e}", work_path.display()))?;
@@ -1261,13 +1238,7 @@ fn write_distribution_zip(
 
     zip.start_file("package.bin", package_options)
         .map_err(|e| format!("Failed to create package.bin zip entry: {e}"))?;
-    let package_stats = write_package_bin_entry(
-        &mut zip,
-        assets,
-        instructions_json,
-        on_progress,
-        is_cancelled,
-    )?;
+    let package_stats = write_package_bin_entry(&mut zip, assets, instructions_json, on_progress)?;
     let finalize_started = Instant::now();
 
     if let Some(index_html) = index_html {
@@ -1292,7 +1263,6 @@ fn write_distribution_zip(
     }
 
     if let Some(web_icon_file_id) = web_icon_file_id {
-        ensure_export_not_cancelled(is_cancelled)?;
         let icon_asset = assets
             .iter()
             .find(|asset| asset.id == web_icon_file_id)
@@ -1305,7 +1275,6 @@ fn write_distribution_zip(
         }
     }
 
-    ensure_export_not_cancelled(is_cancelled)?;
     emit_progress(on_progress, "finalize", 0, 0);
     let mut writer = zip
         .finish()
@@ -1376,32 +1345,6 @@ pub fn create_distribution_zip_streamed_sync_with_progress(
     use_part_file: bool,
     on_progress: Option<&ZipExportProgressCallback<'_>>,
 ) -> Result<ZipExportStats, String> {
-    create_distribution_zip_streamed_sync_with_control(
-        output_path,
-        assets,
-        instructions_json,
-        index_html,
-        main_js,
-        manifest_json,
-        web_icon_file_id,
-        use_part_file,
-        on_progress,
-        None,
-    )
-}
-
-pub fn create_distribution_zip_streamed_sync_with_control(
-    output_path: String,
-    assets: Vec<ZipAssetInput>,
-    instructions_json: String,
-    index_html: Option<String>,
-    main_js: Option<String>,
-    manifest_json: Option<String>,
-    web_icon_file_id: Option<String>,
-    use_part_file: bool,
-    on_progress: Option<&ZipExportProgressCallback<'_>>,
-    is_cancelled: Option<&ZipExportCancellationCallback<'_>>,
-) -> Result<ZipExportStats, String> {
     let export_started = Instant::now();
     let final_path = PathBuf::from(output_path);
     let work_path = if use_part_file {
@@ -1428,7 +1371,6 @@ pub fn create_distribution_zip_streamed_sync_with_control(
         manifest_json.as_deref(),
         web_icon_file_id.as_deref(),
         on_progress,
-        is_cancelled,
     );
 
     let mut stats = match write_result {
@@ -1472,7 +1414,7 @@ mod tests {
     use serde_json::Value;
     use std::io::Read;
     use std::sync::Mutex;
-    use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
     use zip::ZipArchive;
 
@@ -2025,49 +1967,6 @@ mod tests {
         assert_eq!(
             fs::read(&output_path).expect("read existing output"),
             b"existing zip"
-        );
-
-        fs::remove_dir_all(test_dir).expect("remove temp test dir");
-    }
-
-    #[test]
-    fn streamed_zip_export_cancellation_removes_part_and_preserves_existing_output() {
-        let test_dir = create_unique_test_dir();
-        let asset_path = test_dir.join("large.bin");
-        let output_path = test_dir.join("cancelled.zip");
-        fs::write(&asset_path, vec![7u8; STREAM_COPY_BUFFER_SIZE * 2 + 17]).expect("write asset");
-        fs::write(&output_path, b"existing output").expect("write existing output");
-        let cancelled = AtomicBool::new(false);
-        let on_progress = |progress: ZipExportProgress| {
-            if progress.phase == "writePackage" && progress.current > 0 {
-                cancelled.store(true, Ordering::Relaxed);
-            }
-        };
-        let is_cancelled = || cancelled.load(Ordering::Relaxed);
-
-        let error = create_distribution_zip_streamed_sync_with_control(
-            output_path.display().to_string(),
-            vec![ZipAssetInput {
-                id: "large-file".to_string(),
-                path: asset_path.display().to_string(),
-                mime: Some("application/octet-stream".to_string()),
-            }],
-            r#"{"projectData":{}}"#.to_string(),
-            None,
-            None,
-            None,
-            None,
-            true,
-            Some(&on_progress),
-            Some(&is_cancelled),
-        )
-        .expect_err("cancel export");
-
-        assert_eq!(error, ZIP_EXPORT_CANCELLED_ERROR);
-        assert!(!make_part_path(&output_path).exists());
-        assert_eq!(
-            fs::read(&output_path).expect("read existing output"),
-            b"existing output"
         );
 
         fs::remove_dir_all(test_dir).expect("remove temp test dir");

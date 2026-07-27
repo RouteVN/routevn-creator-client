@@ -370,7 +370,6 @@ describe("tauri project service adapters preflight reads", () => {
     expect(mocked.invoke).toHaveBeenCalledWith(
       "create_distribution_zip_streamed",
       expect.objectContaining({
-        exportId: expect.any(String),
         outputPath: "/exports/demo.zip",
         manifestJson: '{"name":"Demo"}',
         webIconFileId: "icon-1",
@@ -387,25 +386,6 @@ describe("tauri project service adapters preflight reads", () => {
           },
         ],
       }),
-    );
-  });
-
-  it("invokes native streamed ZIP cancellation by export id", async () => {
-    mocked.invoke.mockResolvedValue(true);
-    const { fileAdapter } = createTauriProjectServiceAdapters({
-      collabLog: () => {},
-      creatorVersion: 2,
-    });
-
-    await expect(
-      fileAdapter.cancelDistributionZipExport({
-        exportId: "export-1",
-      }),
-    ).resolves.toBe(true);
-
-    expect(mocked.invoke).toHaveBeenCalledWith(
-      "cancel_distribution_zip_export",
-      { exportId: "export-1" },
     );
   });
 
