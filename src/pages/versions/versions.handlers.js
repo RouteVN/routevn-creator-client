@@ -832,6 +832,7 @@ const formatBundleElapsedTime = (value) => {
 const createBundleProgressView = ({ copy, progress } = {}) => {
   const current = Math.max(0, Number(progress?.current) || 0);
   const total = Math.max(0, Number(progress?.total) || 0);
+  const determinateProgress = total > 0 ? { current, total } : {};
   const withElapsedTime = (status) => {
     const elapsed = formatBundleElapsedTime(progress?.elapsedMs);
     if (!elapsed) {
@@ -852,6 +853,7 @@ const createBundleProgressView = ({ copy, progress } = {}) => {
           { current, total },
         ),
       ),
+      progress: determinateProgress,
     };
   }
 
@@ -864,6 +866,7 @@ const createBundleProgressView = ({ copy, progress } = {}) => {
           { current, total },
         ),
       ),
+      progress: determinateProgress,
     };
   }
 
@@ -879,6 +882,7 @@ const createBundleProgressView = ({ copy, progress } = {}) => {
           },
         ),
       ),
+      progress: determinateProgress,
     };
   }
 
@@ -887,11 +891,13 @@ const createBundleProgressView = ({ copy, progress } = {}) => {
       status: withElapsedTime(
         copy.bundleFinalizingStatus ?? "Finalizing ZIP...",
       ),
+      progress: {},
     };
   }
 
   return {
     status: copy.bundlePreparingProjectStatus ?? "Preparing project data...",
+    progress: {},
   };
 };
 
@@ -941,6 +947,7 @@ const runWebExport = async (deps, confirmation) => {
       "Please wait while the bundle is being created...",
     title: copy.bundleInProgressTitle ?? "Bundle in progress",
     status: copy.bundlePreparingProjectStatus ?? "Preparing project data...",
+    progress: {},
   });
   await progressDialog.waitForPaint();
 

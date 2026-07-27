@@ -151,7 +151,11 @@ describe("tauri updater", () => {
     expect(dialog?.textContent).toContain("Downloading update");
     expect(dialog?.textContent).toContain("Keep the app open.");
     expect(dialog?.textContent).toContain("45% complete");
-    expect(dialog?.querySelector('[role="progressbar"]')).toBeNull();
+    const progressTrack = dialog?.querySelector('[role="progressbar"]');
+    const progressFill = progressTrack?.querySelector("[data-progress-fill]");
+    expect(progressTrack?.tagName.toLowerCase()).toBe("rtgl-view");
+    expect(progressTrack?.getAttribute("aria-valuenow")).toBe("45");
+    expect(progressFill?.getAttribute("style")).toContain("width: 45%");
 
     finishDownload();
     await updatePromise;

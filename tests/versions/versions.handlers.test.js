@@ -529,17 +529,21 @@ describe("versions.handleDownloadZipClick", () => {
 
     expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
       message: EN_I18N.versionsPage.bundleInProgressMessage,
+      progress: {},
       status: EN_I18N.versionsPage.bundlePreparingProjectStatus,
       title: EN_I18N.versionsPage.bundleInProgressTitle,
     });
     expect(deps.progressDialog.waitForPaint).toHaveBeenCalledTimes(1);
     expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      progress: { current: 1, total: 2 },
       status: "Scanning assets... 1 / 2 · 1s",
     });
     expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      progress: { current: 1024, total: 2048 },
       status: "Writing package... 1 KB / 2 KB",
     });
     expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      progress: {},
       status: EN_I18N.versionsPage.bundleFinalizingStatus,
     });
     expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);

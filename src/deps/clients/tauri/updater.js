@@ -23,12 +23,14 @@ const createUpdateProgressDialog = (copy = {}) => {
       copy.updateDownloadMessage ??
       "Keep RouteVN Creator open. It will restart when the update is ready.",
     status: copy.updateDownloadProgressUnknown ?? "Downloading...",
+    progress: {},
   });
 
   const update = ({ progress, installing = false } = {}) => {
     if (installing) {
       progressDialog.update({
         status: copy.updateInstallingMessage ?? "Installing update...",
+        progress: {},
       });
       return;
     }
@@ -40,12 +42,17 @@ const createUpdateProgressDialog = (copy = {}) => {
           copy.updateDownloadProgressMessage ?? "{progress}% downloaded",
           { progress: percent },
         ),
+        progress: {
+          current: percent,
+          total: 100,
+        },
       });
       return;
     }
 
     progressDialog.update({
       status: copy.updateDownloadProgressUnknown ?? "Downloading...",
+      progress: {},
     });
   };
 
