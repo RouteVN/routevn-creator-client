@@ -5,6 +5,7 @@ import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
+import { createProgressDialog } from "../../clients/progressDialog.js";
 
 const normalizeFolderSelection = (selection) => {
   if (typeof selection === "string") {
@@ -266,6 +267,10 @@ export const createAppService = (params) => {
 
   return {
     ...appService,
+
+    showProgressDialog(options) {
+      return createProgressDialog(options);
+    },
 
     async loadAllProjects() {
       await syncIOSProjectEntriesFromStorage();

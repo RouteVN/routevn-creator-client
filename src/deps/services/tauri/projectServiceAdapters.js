@@ -6,7 +6,7 @@ import {
   exists,
 } from "@tauri-apps/plugin-fs";
 import { join, resolveResource } from "@tauri-apps/api/path";
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { fileTypeFromBuffer } from "file-type";
 import JSZip from "jszip";
 import {
@@ -39,6 +39,7 @@ import {
   resolveProjectResolutionForWrite,
   scaleTemplateProjectStateForResolution,
 } from "../../../internal/projectResolution.js";
+import { generateId } from "../../../internal/id.js";
 import {
   createMainProjectionState,
   MAIN_PARTITION,
@@ -742,6 +743,7 @@ export const createTauriProjectServiceAdapters = ({
   const collectDistributionAssets = async ({
     fileEntries,
     getCurrentReference,
+    isCancelled,
   }) => {
     const reference = getCurrentReference();
     const filesPath = await join(reference.projectPath, "files");
@@ -749,6 +751,9 @@ export const createTauriProjectServiceAdapters = ({
 
     const assets = [];
     for (const fileEntry of normalizedFileEntries) {
+      if (isCancelled?.()) {
+        throw new Error("Export cancelled.");
+      }
       const safeFileId = assertSafeProjectFileId(fileEntry.id);
       const filePath = await join(filesPath, safeFileId);
       const fileExists = await exists(filePath);
@@ -774,12 +779,18 @@ export const createTauriProjectServiceAdapters = ({
     options = {},
     getCurrentReference,
   }) => {
+    const exportId = options.exportId ?? generateId();
     const assets = await collectDistributionAssets({
       fileEntries,
       getCurrentReference,
+      isCancelled: options.isCancelled,
     });
+    if (options.isCancelled?.()) {
+      throw new Error("Export cancelled.");
+    }
 
-    const stats = await invoke("create_distribution_zip_streamed", {
+    const invokePayload = {
+      exportId,
       outputPath,
       assets,
       instructionsJson: JSON.stringify(projectData),
@@ -788,10 +799,24 @@ export const createTauriProjectServiceAdapters = ({
       manifestJson: staticFiles.manifestJson || null,
       webIconFileId: staticFiles.webIconFileId || null,
       usePartFile: options.usePartFile ?? true,
-    });
+    };
+    const progressChannel = new Channel();
+    if (options.onProgress) {
+      progressChannel.onmessage = options.onProgress;
+    }
+    invokePayload.onProgress = progressChannel;
+
+    const stats = await invoke(
+      "create_distribution_zip_streamed",
+      invokePayload,
+    );
     logExportSizeStats(stats);
 
     return outputPath;
+  };
+
+  const cancelDistributionZipExport = async ({ exportId } = {}) => {
+    return invoke("cancel_distribution_zip_export", { exportId });
   };
 
   const createWindowsPortableExecutableToPath = async ({
@@ -1260,6 +1285,7 @@ export const createTauriProjectServiceAdapters = ({
 
     promptDistributionZipPath,
     createDistributionZipStreamedToPath,
+    cancelDistributionZipExport,
     promptWindowsExecutablePath,
     promptWindowsInstallerPath,
     promptMacosApplicationPath,

@@ -50,6 +50,7 @@ pub fn run() {
     }
 
     let builder = tauri::Builder::default()
+        .manage(export_zip::ZipExportState::default())
         .manage(project_media_server::ProjectMediaServerState::new())
         .manage(static_web_server::StaticWebServerState::new())
         .register_uri_scheme_protocol("project-file", project_file_protocol::handle);
@@ -68,6 +69,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             export_macos::export_macos_application,
             export_macos::get_macos_export_host_capabilities,
+            export_zip::cancel_distribution_zip_export,
             export_zip::create_distribution_zip_streamed,
             export_windows::export_windows_installer,
             export_windows::export_windows_installer_from_project,

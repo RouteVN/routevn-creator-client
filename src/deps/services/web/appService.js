@@ -2,6 +2,7 @@ import { createAppServiceCore } from "../shared/appServiceCore.js";
 import { generateId } from "../../../internal/id.js";
 import { copyTextToClipboard } from "../../../internal/copyText.js";
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
+import { createProgressDialog } from "../../clients/progressDialog.js";
 
 export const createAppService = (params) => {
   const platformAdapter = {
@@ -143,6 +144,10 @@ export const createAppService = (params) => {
 
   return {
     ...appService,
+
+    showProgressDialog(options) {
+      return createProgressDialog(options);
+    },
 
     copyText(value) {
       return copyTextToClipboard(value);
