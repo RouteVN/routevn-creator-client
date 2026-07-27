@@ -493,14 +493,9 @@ const createVersionExportData = async ({
   version,
 } = {}) => {
   const projectInfo = await projectService.getCurrentProjectInfo();
-  const versionActionIndex = version?.actionIndex;
-  const currentRevision = projectService.getRepositoryRevision();
-  const isCurrentVersion =
-    Number.isSafeInteger(versionActionIndex) &&
-    versionActionIndex === currentRevision;
-  const repositoryState = isCurrentVersion
-    ? projectService.getRepositoryState()
-    : await projectService.loadRepositoryState(version?.actionIndex);
+  const repositoryState = await projectService.loadRepositoryState(
+    version?.actionIndex,
+  );
   const usage = collectUsedResourcesForExport(repositoryState);
   const filteredState = buildFilteredStateForExport(repositoryState, usage);
   const constructedProjectData = constructProjectData(filteredState);

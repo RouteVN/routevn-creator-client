@@ -479,7 +479,7 @@ describe("versions.handleDownloadZipClick", () => {
     ).toHaveBeenCalled();
   });
 
-  it("uses the current repository state for an exact revision match", async () => {
+  it("replays an exact revision match instead of exporting the live projection", async () => {
     const repository = {
       getRevision: vi.fn(() => 3),
       getState: vi.fn(() => structuredClone(initialProjectData)),
@@ -489,15 +489,15 @@ describe("versions.handleDownloadZipClick", () => {
 
     await chooseAndConfirmExport(handleDownloadZipClick, deps);
 
-    expect(deps.projectService.getRepositoryRevision).toHaveBeenCalled();
-    expect(deps.projectService.getRepositoryState).toHaveBeenCalled();
-    expect(deps.projectService.loadRepositoryState).not.toHaveBeenCalled();
+    expect(deps.projectService.loadRepositoryState).toHaveBeenCalledWith(3);
+    expect(deps.projectService.getRepositoryState).not.toHaveBeenCalled();
   });
 
   it("shows native Web export phases in the managed progress dialog", async () => {
     const repository = {
       getRevision: vi.fn(() => 3),
       getState: vi.fn(() => structuredClone(initialProjectData)),
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
     };
     const deps = createDeps({ repository });
     deps.projectService.promptDistributionZipPath.mockResolvedValue(
