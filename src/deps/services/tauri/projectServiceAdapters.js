@@ -205,26 +205,6 @@ const normalizeMacosApplicationMetadata = ({
   };
 };
 
-const getByteLength = (value) => {
-  if (!value) {
-    return 0;
-  }
-
-  if (typeof value.byteLength === "number") {
-    return value.byteLength;
-  }
-
-  if (typeof value.size === "number") {
-    return value.size;
-  }
-
-  return 0;
-};
-
-const logExportSizeStats = (stats = {}) => {
-  console.info("[export.bundle.size]", stats);
-};
-
 const getMediaServerVideoUrl = ({ projectMediaOrigin, filePath, mimeType }) => {
   if (
     typeof projectMediaOrigin !== "string" ||
@@ -795,11 +775,7 @@ export const createTauriProjectServiceAdapters = ({
     }
     invokePayload.onProgress = progressChannel;
 
-    const stats = await invoke(
-      "create_distribution_zip_streamed",
-      invokePayload,
-    );
-    logExportSizeStats(stats);
+    await invoke("create_distribution_zip_streamed", invokePayload);
 
     return outputPath;
   };
@@ -850,7 +826,6 @@ export const createTauriProjectServiceAdapters = ({
       iconPng,
     });
 
-    logExportSizeStats(result?.stats);
     return result;
   };
 
@@ -954,7 +929,6 @@ export const createTauriProjectServiceAdapters = ({
       category: metadata.category,
       iconPng,
     });
-    logExportSizeStats(result?.stats);
     return result;
   };
 
@@ -1208,10 +1182,6 @@ export const createTauriProjectServiceAdapters = ({
           compressionOptions: {
             level: 6,
           },
-        });
-        logExportSizeStats({
-          packageBinBytes: getByteLength(bundle),
-          zipBytes: getByteLength(zipBlob),
         });
         const selectedPath = await filePicker.saveFilePicker({
           title: options.title || "Save Distribution ZIP",

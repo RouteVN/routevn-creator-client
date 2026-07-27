@@ -45,26 +45,6 @@ const countImageEntries = (imagesData) =>
 
 const INITIAL_REMOTE_SYNC_TIMEOUT_MS = 5_000;
 
-const getByteLength = (value) => {
-  if (!value) {
-    return 0;
-  }
-
-  if (typeof value.byteLength === "number") {
-    return value.byteLength;
-  }
-
-  if (typeof value.size === "number") {
-    return value.size;
-  }
-
-  return 0;
-};
-
-const logExportSizeStats = (stats = {}) => {
-  console.info("[export.bundle.size]", stats);
-};
-
 const WEB_DISTRIBUTION_ZIP_UNSUPPORTED_MESSAGE =
   "Distribution ZIP export is only supported in the Tauri desktop app.";
 
@@ -284,7 +264,6 @@ export const createWebProjectServiceAdapters = ({
       zipName,
       filePicker,
       staticFiles,
-      stats = {},
     }) => {
       const zip = new JSZip();
       zip.file("package.bin", bundle);
@@ -299,11 +278,6 @@ export const createWebProjectServiceAdapters = ({
         compressionOptions: {
           level: 6,
         },
-      });
-      logExportSizeStats({
-        ...stats,
-        packageBinBytes: getByteLength(bundle),
-        zipBytes: getByteLength(zipBlob),
       });
       await filePicker.saveFilePicker(zipBlob, `${zipName}.zip`);
       return `${zipName}.zip`;

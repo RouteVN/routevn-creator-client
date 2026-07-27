@@ -16,7 +16,7 @@ import {
 } from "./collabClientStore.js";
 import { commandToSyncEvent } from "../shared/collab/mappers.js";
 import {
-  createBundleResult,
+  createBundle,
   normalizeExportFileEntries,
 } from "../shared/projectExportService.js";
 import {
@@ -55,17 +55,6 @@ const normalizeProjectInfo = (projectInfo = {}) => ({
   language: normalizeProjectLanguage(projectInfo.language),
   iconFileId: projectInfo.iconFileId ?? null,
 });
-
-const getByteLength = (value) => {
-  if (!value) return 0;
-  if (typeof value.byteLength === "number") return value.byteLength;
-  if (typeof value.size === "number") return value.size;
-  return 0;
-};
-
-const logExportSizeStats = (stats = {}) => {
-  console.info("[export.bundle.size]", stats);
-};
 
 const isMissingProjectFileError = (error) => {
   return String(error?.message ?? "").includes("Project file was not found");
@@ -483,16 +472,12 @@ const createDistributionZipBytes = async ({
   fileEntries,
   staticFiles,
   getCurrentReference,
-  stats = {},
 }) => {
   const assets = await collectDistributionZipAssets({
     fileEntries,
     getCurrentReference,
   });
-  const { bundle, stats: bundleStats } = await createBundleResult(
-    projectData,
-    assets,
-  );
+  const bundle = await createBundle(projectData, assets);
   const zip = new JSZip();
   zip.file("package.bin", bundle);
   if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
@@ -517,10 +502,6 @@ const createDistributionZipBytes = async ({
     compression: "DEFLATE",
     compressionOptions: { level: 6 },
   });
-  const loggedStats = {};
-  Object.assign(loggedStats, bundleStats, stats);
-  loggedStats.zipBytes = getByteLength(zipBytes);
-  logExportSizeStats(loggedStats);
   return zipBytes;
 };
 
@@ -569,7 +550,6 @@ const createNativeDistributionZipStreamedToPath = async ({
     "createDistributionZipStreamedToUri",
     payload,
   );
-  logExportSizeStats(result?.stats ?? result);
 
   return result?.uri ?? outputPath;
 };
@@ -784,12 +764,7 @@ export const createIOSProjectServiceAdapters = ({
       });
     },
 
-    createDistributionZip: async ({
-      bundle,
-      zipName,
-      staticFiles,
-      stats = {},
-    }) => {
+    createDistributionZip: async ({ bundle, zipName, staticFiles }) => {
       const zip = new JSZip();
       zip.file("package.bin", bundle);
       if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
@@ -800,11 +775,6 @@ export const createIOSProjectServiceAdapters = ({
         type: "uint8array",
         compression: "DEFLATE",
         compressionOptions: { level: 6 },
-      });
-      logExportSizeStats({
-        ...stats,
-        packageBinBytes: getByteLength(bundle),
-        zipBytes: getByteLength(zipBytes),
       });
       return writeDownloadFile({
         filename: `${zipName}.zip`,
