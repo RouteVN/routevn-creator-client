@@ -1371,6 +1371,6 @@ describe("groupVariablesView.handlers", () => {
         }),
       }),
     );
-    expect(closeDialog).toHaveBeenCalledOnce();
+    expect(closeDialog).not.toHaveBeenCalled();
   });
 });

@@ -52,9 +52,7 @@ const createDeps = ({ repositoryState = createRepositoryState() } = {}) => ({
     setTagsData: vi.fn(),
     setSelectedFolderId: vi.fn(),
     setSelectedItemId: vi.fn(),
-    selectSelectedItem: vi.fn(
-      () => repositoryState.variables.items.variable1,
-    ),
+    selectSelectedItem: vi.fn(() => repositoryState.variables.items.variable1),
     selectVariableTreeItemById: vi.fn(
       ({ itemId }) => repositoryState.variables.items[itemId],
     ),
@@ -63,6 +61,9 @@ const createDeps = ({ repositoryState = createRepositoryState() } = {}) => ({
   refs: {
     fileexplorer: {
       selectItem: vi.fn(),
+    },
+    groupview: {
+      closeDialog: vi.fn(),
     },
   },
 });
@@ -215,6 +216,7 @@ describe("variables.handlers", () => {
     expect(data).not.toHaveProperty("default");
     expect(data).not.toHaveProperty("value");
     expect(data).not.toHaveProperty("scope");
+    expect(deps.refs.groupview.closeDialog).toHaveBeenCalledOnce();
   });
 
   it("keeps the dialog open when engine validation rejects a formula", async () => {
@@ -239,6 +241,7 @@ describe("variables.handlers", () => {
       message: "The computed formula is invalid. Review it and try again.",
       title: "Warning",
     });
+    expect(deps.refs.groupview.closeDialog).not.toHaveBeenCalled();
     expect(deps.render).not.toHaveBeenCalled();
   });
 

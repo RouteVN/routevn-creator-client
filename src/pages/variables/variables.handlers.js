@@ -505,7 +505,7 @@ export const handleVariableFormAddOptionClick = (deps, payload) => {
 };
 
 export const handleVariableCreated = async (deps, payload) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, refs } = deps;
   const copy = selectCopy(deps);
   const detail = payload._event.detail;
   const {
@@ -582,11 +582,12 @@ export const handleVariableCreated = async (deps, payload) => {
     return;
   }
 
+  refs.groupview.closeDialog();
   await refreshVariablesData(deps);
 };
 
 export const handleVariableUpdated = async (deps, payload) => {
-  const { appService, store, projectService } = deps;
+  const { appService, store, projectService, refs } = deps;
   const copy = selectCopy(deps);
   const detail = payload._event.detail;
   const {
@@ -671,6 +672,7 @@ export const handleVariableUpdated = async (deps, payload) => {
     return;
   }
 
+  refs.groupview.closeDialog();
   store.setSelectedItemId({ itemId });
 
   await refreshVariablesData(deps);

@@ -4,6 +4,7 @@ import {
   createSaveLoadPreviewSlots,
   getLayoutPreviewVariableItems,
 } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewSupport.js";
+import { createLayoutEditorPreviewData } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewData.js";
 import {
   setHistoryDefaultValue,
   setSaveLoadDefaultValue,
@@ -148,7 +149,43 @@ describe("layoutEditorPreviewSupport", () => {
       },
     });
 
-    expect(items.map((item) => item.id)).toEqual(["variables.score"]);
+    expect(items.map((item) => item.id)).toEqual([
+      "variables.score",
+      "variables.total",
+    ]);
+    expect(items.find((item) => item.id === "variables.total")).toMatchObject({
+      source: "computed",
+      type: "number",
+    });
+  });
+
+  it("includes direct dependency-free computed targets in preview data", () => {
+    const previewData = createLayoutEditorPreviewData({
+      layoutType: "general",
+      currentLayoutId: "layout-1",
+      currentLayoutData: {
+        items: {
+          text: {
+            type: "text",
+            $when: "variables.always == true",
+          },
+        },
+      },
+      layoutsData: { items: {} },
+      variablesData: {
+        items: {
+          always: {
+            id: "always",
+            type: "variable",
+            name: "Always",
+            variableType: "boolean",
+            computed: { expr: { eq: [1, 1] } },
+          },
+        },
+      },
+    });
+
+    expect(previewData.variables.always).toBe(true);
   });
 
   it("writes save/load form edits back to the paginated slot window", () => {

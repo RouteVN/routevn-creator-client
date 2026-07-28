@@ -258,6 +258,17 @@ export const getLayoutPreviewVariableItems = ({
       continue;
     }
     if (variable.computed !== undefined) {
+      const type = getPreviewVariableType(variable);
+      if (isSupportedPreviewVariableType(type)) {
+        addedTargets.add(target);
+        previewVariables.push({
+          id: target,
+          name: variable.name ?? target,
+          type,
+          source: "computed",
+          description: variable.description,
+        });
+      }
       collectComputedVariableReferenceIds(variable.computed).forEach(
         (dependencyId) => {
           const dependencyTarget = toVariableConditionTarget(dependencyId);
@@ -297,36 +308,42 @@ export const supportsPreviewVariablesForLayoutType = (layoutType) => {
   return NORMAL_LIKE_LAYOUT_TYPES.has(layoutType);
 };
 
-export const createPreviewVariablesForm = (previewVariableItems = []) => ({
-  title: "Preview",
-  description: "Edit visibility conditions to preview conditional elements",
-  fields: previewVariableItems.map((variable) => {
-    const sourceLabel =
-      variable.source === "runtime" ? "Runtime state" : "Variable";
-    const descriptionParts = [
-      `${sourceLabel} (${variable.type})`,
-      variable.description,
-    ].filter(Boolean);
+export const createPreviewVariablesForm = (previewVariableItems = []) => {
+  const editablePreviewVariableItems = previewVariableItems.filter(
+    (variable) => variable.source !== "computed",
+  );
 
-    if (variable.type === "boolean") {
+  return {
+    title: "Preview",
+    description: "Edit visibility conditions to preview conditional elements",
+    fields: editablePreviewVariableItems.map((variable) => {
+      const sourceLabel =
+        variable.source === "runtime" ? "Runtime state" : "Variable";
+      const descriptionParts = [
+        `${sourceLabel} (${variable.type})`,
+        variable.description,
+      ].filter(Boolean);
+
+      if (variable.type === "boolean") {
+        return {
+          name: variable.id,
+          type: "select",
+          label: variable.name,
+          clearable: false,
+          options: PREVIEW_BOOLEAN_OPTIONS,
+          description: descriptionParts.join(" • "),
+        };
+      }
+
       return {
         name: variable.id,
-        type: "select",
+        type: variable.type === "number" ? "input-number" : "input-text",
         label: variable.name,
-        clearable: false,
-        options: PREVIEW_BOOLEAN_OPTIONS,
         description: descriptionParts.join(" • "),
       };
-    }
-
-    return {
-      name: variable.id,
-      type: variable.type === "number" ? "input-number" : "input-text",
-      label: variable.name,
-      description: descriptionParts.join(" • "),
-    };
-  }),
-});
+    }),
+  };
+};
 
 export const createPreviewVariableDefaultValues = (
   previewVariableItems = [],
@@ -335,6 +352,9 @@ export const createPreviewVariableDefaultValues = (
   const defaultValues = {};
 
   for (const variable of previewVariableItems) {
+    if (variable.source === "computed") {
+      continue;
+    }
     const value = Object.hasOwn(previewVariableValues, variable.id)
       ? previewVariableValues[variable.id]
       : variable.defaultValue;
@@ -362,20 +382,25 @@ export const createPreviewVariablesViewData = ({
         variablesData,
       })
     : [];
+  const editablePreviewVariableItems = previewVariableItems.filter(
+    (item) => item.source !== "computed",
+  );
   const previewVariablesDefaultValues = createPreviewVariableDefaultValues(
-    previewVariableItems,
+    editablePreviewVariableItems,
     previewVariableValues,
   );
   const previewVariablesFormKey =
-    previewVariableItems.length > 0
-      ? previewVariableItems.map((item) => item.id).join("|")
+    editablePreviewVariableItems.length > 0
+      ? editablePreviewVariableItems.map((item) => item.id).join("|")
       : "empty";
 
   return {
     previewVariableItems,
-    previewVariablesForm: createPreviewVariablesForm(previewVariableItems),
+    previewVariablesForm: createPreviewVariablesForm(
+      editablePreviewVariableItems,
+    ),
     previewVariablesDefaultValues,
     previewVariablesFormKey,
-    hasPreviewVariables: previewVariableItems.length > 0,
+    hasPreviewVariables: editablePreviewVariableItems.length > 0,
   };
 };

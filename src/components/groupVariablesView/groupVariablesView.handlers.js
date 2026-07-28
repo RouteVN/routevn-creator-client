@@ -1261,7 +1261,7 @@ export const handleFormActionClick = (deps, payload) => {
     return;
   }
 
-  const { store, render, dispatchEvent, props, appService, i18n } = deps;
+  const { store, dispatchEvent, props, appService, i18n } = deps;
   const copy = selectCopy(i18n);
   const submitContext = store.selectSubmitContext();
 
@@ -1419,9 +1419,5 @@ export const handleFormActionClick = (deps, payload) => {
         }),
       );
     }
-
-    // Close dialog
-    store.closeDialog();
-    render();
   }
 };

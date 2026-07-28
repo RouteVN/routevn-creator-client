@@ -290,10 +290,12 @@ export const createInitialState = () => ({
     id: createFormId(),
   },
   variables: EMPTY_COLLECTION,
+  variablesLoaded: false,
 });
 
 export const setRepositoryData = ({ state }, { variables } = {}) => {
   state.variables = variables ?? EMPTY_COLLECTION;
+  state.variablesLoaded = true;
 };
 
 export const hydrateForm = ({ state }, { form, layouts, layoutsData } = {}) => {
@@ -400,17 +402,53 @@ export const selectMode = ({ state }) => state.mode ?? "list";
 export const selectEditFieldForm = ({ state }) =>
   state.editFieldForm ?? createEmptyFieldConfig();
 
+const getFieldVariableMappingStatus = (state, variableId) => {
+  if (!variableId) {
+    return "missing";
+  }
+  if (!state.variablesLoaded) {
+    return "unchecked";
+  }
+
+  const variable = state.variables.items?.[variableId];
+  if (variable?.computed !== undefined) {
+    return "computed";
+  }
+  if (
+    variable?.type !== "variable" ||
+    variable.variableType?.toLowerCase() !== "string"
+  ) {
+    return "invalid";
+  }
+
+  return "valid";
+};
+
 export const selectCanSaveEditField = ({ state }) => {
+  const variableMappingStatus = getFieldVariableMappingStatus(
+    state,
+    state.editFieldForm?.variableId,
+  );
+
   return (
     state.mode === "editField" &&
     !!state.editingField &&
     !!state.fields[state.editingField] &&
-    !!state.editFieldForm?.variableId
+    (variableMappingStatus === "valid" || variableMappingStatus === "unchecked")
   );
 };
 
 export const selectFieldRows = ({ state }) =>
-  state.fieldOrder.map((field) => state.fields[field]).filter(Boolean);
+  state.fieldOrder
+    .map((field) => state.fields[field])
+    .filter(Boolean)
+    .map((fieldConfig) => ({
+      ...fieldConfig,
+      variableMappingStatus: getFieldVariableMappingStatus(
+        state,
+        fieldConfig.variableId,
+      ),
+    }));
 
 export const selectFieldRowsWithEditingDraft = ({ state }) => {
   const fieldRows = selectFieldRows({ state });
@@ -419,9 +457,19 @@ export const selectFieldRowsWithEditingDraft = ({ state }) => {
     return fieldRows;
   }
 
-  return fieldRows.map((fieldRow) =>
-    fieldRow.field === state.editingField ? state.editFieldForm : fieldRow,
-  );
+  return fieldRows.map((fieldRow) => {
+    if (fieldRow.field !== state.editingField) {
+      return fieldRow;
+    }
+
+    return {
+      ...state.editFieldForm,
+      variableMappingStatus: getFieldVariableMappingStatus(
+        state,
+        state.editFieldForm.variableId,
+      ),
+    };
+  });
 };
 
 export const selectFormData = ({ state }) =>
@@ -444,7 +492,13 @@ export const selectCanSubmit = ({ state }) => {
     return false;
   }
 
-  if (fieldRows.some((row) => !row.variableId)) {
+  if (
+    fieldRows.some(
+      (row) =>
+        row.variableMappingStatus !== "valid" &&
+        row.variableMappingStatus !== "unchecked",
+    )
+  ) {
     return false;
   }
 
