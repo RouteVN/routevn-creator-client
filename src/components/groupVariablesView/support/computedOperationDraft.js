@@ -1,13 +1,15 @@
+import {
+  getComputedExpressionOperationType,
+  getComputedOperationDefinition,
+  isComputedLiteralValue,
+  isComputedOperationOperandCountValid,
+  isSupportedComputedOperationType,
+} from "../../../internal/computedOperations.js";
+
 const isRecord = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
-const isAddExpression = (expression) =>
-  isRecord(expression) &&
-  Object.keys(expression).length === 1 &&
-  Array.isArray(expression.add) &&
-  expression.add.length === 2;
-
-const toOperandDraft = (expression) => {
+export const createOperandDraftFromExpression = (expression) => {
   if (
     isRecord(expression) &&
     Object.keys(expression).length === 1 &&
@@ -19,7 +21,7 @@ const toOperandDraft = (expression) => {
     };
   }
 
-  if (typeof expression === "number" && Number.isFinite(expression)) {
+  if (isComputedLiteralValue(expression)) {
     return {
       source: "value",
       value: expression,
@@ -37,16 +39,12 @@ const toOperandDraft = (expression) => {
   return undefined;
 };
 
-const toOperandExpression = (operand) => {
+export const buildExpressionFromOperandDraft = (operand) => {
   if (operand?.source === "variable" && operand.variablePath) {
     return { var: operand.variablePath };
   }
 
-  if (
-    operand?.source === "value" &&
-    typeof operand.value === "number" &&
-    Number.isFinite(operand.value)
-  ) {
+  if (operand?.source === "value" && isComputedLiteralValue(operand.value)) {
     return operand.value;
   }
 
@@ -57,53 +55,84 @@ const toOperandExpression = (operand) => {
   return undefined;
 };
 
-export const createAddOperationDraft = () => ({
-  type: "add",
-  operands: [],
-});
-
-const createOperationDraftFromExpression = (expression) => {
-  if (!isAddExpression(expression)) {
+export const createOperationDraft = (operationType) => {
+  if (!isSupportedComputedOperationType(operationType)) {
     return undefined;
   }
 
-  const flattenLeftAddChain = (addExpression) => {
-    const [left, right] = addExpression.add;
-    const leftOperands = isAddExpression(left)
-      ? flattenLeftAddChain(left)
-      : [toOperandDraft(left)];
-    return [...leftOperands, toOperandDraft(right)];
+  return {
+    type: operationType,
+    operands: [],
   };
+};
 
-  const operands = flattenLeftAddChain(expression);
+export const createOperationDraftFromExpression = (expression) => {
+  const operationType = getComputedExpressionOperationType(expression);
+  if (!operationType) {
+    return undefined;
+  }
+  const { expressionKey, expressionShape } =
+    getComputedOperationDefinition(operationType);
+
+  let operands;
+  if (expressionShape === "left-fold") {
+    const flattenLeftOperationChain = (operationExpression) => {
+      const [left, right] = operationExpression[expressionKey];
+      const leftOperands =
+        getComputedExpressionOperationType(left) === operationType
+          ? flattenLeftOperationChain(left)
+          : [createOperandDraftFromExpression(left)];
+      return [...leftOperands, createOperandDraftFromExpression(right)];
+    };
+    operands = flattenLeftOperationChain(expression);
+  } else {
+    operands = expression[expressionKey].map(createOperandDraftFromExpression);
+  }
   if (operands.some((operand) => operand === undefined)) {
     return undefined;
   }
 
   return {
-    type: "add",
+    type: operationType,
     operands,
   };
 };
 
-const buildOperationExpression = (operationDraft) => {
-  if (operationDraft?.type !== "add" || operationDraft.operands.length < 2) {
+export const buildOperationExpression = (operationDraft) => {
+  const definition = getComputedOperationDefinition(operationDraft?.type);
+  if (
+    !definition ||
+    !isComputedOperationOperandCountValid(
+      operationDraft.type,
+      operationDraft.operands.length,
+    )
+  ) {
     return undefined;
   }
+  const { expressionKey, expressionShape } = definition;
 
-  const expressions = operationDraft.operands.map(toOperandExpression);
+  const expressions = operationDraft.operands.map(
+    buildExpressionFromOperandDraft,
+  );
   if (expressions.some((expression) => expression === undefined)) {
     return undefined;
   }
 
-  const expression = expressions.slice(2).reduce(
-    (left, right) => ({
-      add: [left, right],
-    }),
-    {
-      add: [expressions[0], expressions[1]],
-    },
-  );
+  let expression;
+  if (expressionShape === "left-fold") {
+    expression = expressions.slice(2).reduce(
+      (left, right) => ({
+        [expressionKey]: [left, right],
+      }),
+      {
+        [expressionKey]: [expressions[0], expressions[1]],
+      },
+    );
+  } else {
+    expression = {
+      [expressionKey]: expressions,
+    };
+  }
 
   return expression;
 };

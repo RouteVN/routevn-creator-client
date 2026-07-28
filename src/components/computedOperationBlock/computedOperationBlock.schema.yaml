@@ -8,6 +8,10 @@ events:
   add-operand-click: {}
   operation-contextmenu: {}
   remove-operand-click: {}
+  value-operand-click: {}
+  value-operand-contextmenu: {}
+  variable-operand-click: {}
+  variable-operand-contextmenu: {}
 methods:
   type: object
   properties: {}

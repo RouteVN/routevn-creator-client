@@ -1,7 +1,17 @@
 const submitValue = (deps) => {
-  const { dispatchEvent, refs, store } = deps;
-  const value = Number(refs.valueInput.value);
-  if (!Number.isFinite(value)) {
+  const { dispatchEvent, store } = deps;
+  const valueType = store.selectValueType();
+  let value = store.selectValue();
+  if (valueType === "number") {
+    value = Number(value);
+  } else if (valueType === "string") {
+    value = String(value ?? "");
+  } else if (valueType === "boolean") {
+    value = value === true || value === "true";
+  } else {
+    return;
+  }
+  if (valueType === "number" && !Number.isFinite(value)) {
     return;
   }
 
@@ -16,24 +26,46 @@ const submitValue = (deps) => {
 };
 
 export const handleOnUpdate = (deps, payload) => {
-  const { refs, render, store } = deps;
+  const { store } = deps;
   const wasOpen = payload.oldProps.open === true;
   const isOpen = payload.newProps.open === true;
   if (wasOpen || !isOpen) {
     return;
   }
 
-  store.resetValue();
-  render();
-  refs.valueInput.value = 0;
-  refs.valueInput.focus();
+  store.resetValue({
+    valueTypes: payload.newProps.valueTypes,
+    initialValue: payload.newProps.initialValue,
+  });
 };
 
 export const handleValueInput = (deps, payload) => {
   const { store } = deps;
+  const valueType = store.selectValueType();
+  const rawValue =
+    payload._event.detail?.value ?? payload._event.target?.value ?? "";
+  let value = rawValue;
+  if (valueType === "boolean") {
+    value = rawValue === true || rawValue === "true";
+  }
   store.setValue({
-    value: payload._event.detail.value,
+    value,
   });
+};
+
+export const handleValueTypeChange = (deps, payload) => {
+  const { refs, render, store } = deps;
+  const valueType =
+    payload._event.detail?.value ?? payload._event.target?.value;
+  store.setValueType({ valueType });
+  render();
+  const valueInput =
+    valueType === "number"
+      ? refs.numberValueInput
+      : valueType === "boolean"
+        ? refs.booleanValueInput
+        : refs.stringValueInput;
+  valueInput.focus();
 };
 
 export const handleSubmitClick = (deps) => {

@@ -59,7 +59,7 @@ export const createInitialState = () => ({
     {
       id: SIDEBAR_ITEM_SYSTEM,
       title: "System",
-      path: "/project/controls",
+      path: "/project/variables",
       icon: "sliders",
     },
     {

@@ -11,6 +11,18 @@ refs:
     eventListeners:
       click:
         handler: handleRemoveOperandClick
+  valueOperand*:
+    eventListeners:
+      click:
+        handler: handleValueOperandClick
+      contextmenu:
+        handler: handleValueOperandContextMenu
+  variableOperand*:
+    eventListeners:
+      click:
+        handler: handleVariableOperandClick
+      contextmenu:
+        handler: handleVariableOperandContextMenu
 styles:
   ".computed-operation-operand":
     border-top: "1px solid var(--border)"
@@ -22,19 +34,24 @@ template:
           - $for operand, i in operands:
               - rtgl-view.computed-operation-operand d=h w=f av=e g=sm:
                   - $if operand.source == 'variable':
-                      - rtgl-view d=v w=1fg g=xs:
+                      - rtgl-view#variableOperand${i} data-index=${operand.index} d=v w=1fg g=xs cur=pointer:
                           - rtgl-text s=xs c=mu-fg: ${variableLabel}
                           - rtgl-view d=h w=f av=c g=sm:
                               - rtgl-text w=1fg s=md: ${operand.variableLabel}
                               - rtgl-text s=sm c=mu-fg: ${operand.variableTypeLabel}
                     $elif operand.source == 'value':
-                      - rtgl-view d=v w=1fg g=xs:
+                      - rtgl-view#valueOperand${i} data-index=${operand.index} d=v w=1fg g=xs cur=pointer:
                           - rtgl-text s=xs c=mu-fg: ${valueLabel}
-                          - rtgl-text s=md: ${operand.value}
+                          - $if operand.booleanValueLabel:
+                              - rtgl-text s=md: ${operand.booleanValueLabel}
+                            $else:
+                              - rtgl-text s=md: ${operand.value}
                     $else:
                       - 'rvn-computed-operation-block :operation=${operand.operation} style="display: block; flex: 1; min-width: 0;"': null
-                  - 'rtgl-button#removeOperand${i} data-index=${operand.index} sq s=sm v=gh pre=x aria-label="${removeOperandLabel}" title="${removeOperandLabel}"': null
-        $else:
+                  - $if operand.source == 'operation':
+                      - 'rtgl-button#removeOperand${i} data-index=${operand.index} sq s=sm v=gh pre=x aria-label="${removeOperandLabel}" title="${removeOperandLabel}"': null
+      - $if !operationComplete:
           - rtgl-text s=sm c=mu-fg: ${operationNeedsOperandsMessage}
-      - rtgl-view d=h w=f:
-          - rtgl-button#addOperandButton s=sm v=se pre=plus: ${addOperandLabel}
+      - $if canAddOperand:
+          - rtgl-view d=h w=f:
+              - rtgl-button#addOperandButton s=sm v=se pre=plus: ${addOperandLabel}

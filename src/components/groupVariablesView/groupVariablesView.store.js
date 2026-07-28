@@ -21,8 +21,29 @@ import {
 import { resolveResourceScrollBottomPadding } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
+  COMPUTED_LITERAL_TYPES,
+  COMPUTED_OPERATION_TYPES,
+  canAddComputedOperationOperand,
+  getComputedExpressionOperationType,
+  getComputedOperationDefinition,
+  getComputedOperationLabel,
+  isComputedLiteralValue,
+  isComputedLogicalOperationType,
+  isSupportedComputedOperationType,
+} from "../../internal/computedOperations.js";
+import {
+  COMPUTED_CONDITION_OPERATION_TYPES,
+  buildComputedFromConditionalDraft,
+  cloneConditionalBranchDraft,
+  createConditionalBranchDraft,
+  createConditionalDraft,
+  createConditionalDraftFromComputed,
+  createConditionalOperationDraft,
+  isComputedConditionOperationType,
+} from "./support/computedConditionalDraft.js";
+import {
   buildComputedFromOperationDraft,
-  createAddOperationDraft,
+  createOperationDraft,
   createOperationDraftFromComputed,
   resolveExcludedOperationVariableId,
   toVariablePath,
@@ -44,6 +65,10 @@ const DEFAULT_FORM_VALUES = {
 const DEFAULT_ENUM_VALUE_FORM_VALUES = {
   value: "",
 };
+const COMPUTED_OPERAND_VARIABLE_TYPES = new Set([
+  ...COMPUTED_LITERAL_TYPES,
+  "object",
+]);
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 4;
 const MENU_BUTTON_LABEL = "Menu";
 
@@ -92,19 +117,33 @@ const createEnumValueMenuItems = (copy = {}) => [
   { label: copy.removeMenuItem ?? "Remove", type: "item", value: "remove" },
 ];
 
-const createOperationChoiceMenuItems = (copy = {}) => [
+const createOperationChoiceMenuItems = (
+  copy = {},
   {
-    label: copy.computedOperatorAdd ?? "Add",
+    includeConditional = false,
+    operationTypes = COMPUTED_OPERATION_TYPES,
+  } = {},
+) => {
+  const items = operationTypes.map((operationType) => ({
+    label: getComputedOperationLabel(operationType, copy),
     type: "item",
-    value: "add",
-  },
-  {
-    label: copy.computedOperatorIf ?? "If",
-    type: "item",
-    value: "if",
-    disabled: true,
-  },
-];
+    value: operationType,
+  }));
+  if (includeConditional) {
+    items.push({
+      label: copy.computedOperatorIf ?? "If",
+      type: "item",
+      value: "if",
+    });
+  }
+  return items;
+};
+
+const getOperationTypesForResultType = (variableType) =>
+  COMPUTED_OPERATION_TYPES.filter(
+    (operationType) =>
+      getComputedOperationDefinition(operationType).resultType === variableType,
+  );
 
 const createOperationBlockMenuItems = (copy = {}) => [
   {
@@ -114,33 +153,59 @@ const createOperationBlockMenuItems = (copy = {}) => [
   },
 ];
 
+const FORMULA_EXPRESSION_TARGET = Object.freeze({ kind: "formula" });
+
+const cloneExpressionTarget = (target = FORMULA_EXPRESSION_TARGET) => {
+  const nextTarget = {
+    kind: target.kind ?? "formula",
+  };
+  if (target.branchIndex !== undefined) {
+    nextTarget.branchIndex = target.branchIndex;
+  }
+  return nextTarget;
+};
+
+const isConditionalExpressionTarget = (target = {}) =>
+  target.kind === "condition" ||
+  target.kind === "result" ||
+  target.kind === "default";
+
 const createOperandSourceMenuItems = (
   copy = {},
-  { operationEnabled = true, variableItems = [] } = {},
+  {
+    operationEnabled = true,
+    operationTypes = COMPUTED_OPERATION_TYPES,
+    valueEnabled = true,
+    valueVisible = true,
+    variableVisible = true,
+    variableItems = [],
+  } = {},
 ) => {
-  const operationItem = {
-    label: copy.computedNodeOperationSource ?? "Operation",
-    type: "item",
-    value: "operation",
-  };
-  if (!operationEnabled) {
-    operationItem.disabled = true;
-  }
-
-  return [
-    {
+  const items = [];
+  if (variableVisible && variableItems.length > 0) {
+    items.push({
       label: copy.computedNodeVariableSource ?? "Variable",
       type: "item",
       value: "variable",
       items: variableItems,
-    },
-    {
+    });
+  }
+  if (valueVisible && valueEnabled) {
+    items.push({
       label: copy.computedNodeValueSource ?? "Value",
       type: "item",
       value: "value",
-    },
-    operationItem,
-  ];
+    });
+  }
+  if (operationEnabled) {
+    items.push({
+      label: copy.computedNodeOperationSource ?? "Operation",
+      type: "item",
+      value: "operation",
+      items: createOperationChoiceMenuItems(copy, { operationTypes }),
+    });
+  }
+  return items;
 };
 
 const createEnumValueForm = (copy = {}) => ({
@@ -338,29 +403,39 @@ export const createInitialState = () => ({
   dialogMode: "add",
   editingItemId: null,
   operationDraft: undefined,
+  conditionalDraft: undefined,
   operationChoiceMenu: {
     isOpen: false,
     x: 0,
     y: 0,
-    parentOperationPath: undefined,
   },
   operationBlockMenu: {
     isOpen: false,
     x: 0,
     y: 0,
     operationPath: [],
+    purpose: "operation",
+    target: cloneExpressionTarget(),
+    operandIndex: undefined,
   },
   operandSourceMenu: {
     isOpen: false,
     x: 0,
     y: 0,
     operationPath: [],
+    purpose: "operand",
+    target: cloneExpressionTarget(),
+    operandIndex: undefined,
   },
   operationValuePopover: {
     isOpen: false,
     x: 0,
     y: 0,
     operationPath: [],
+    purpose: "operand",
+    target: cloneExpressionTarget(),
+    operandIndex: undefined,
+    initialValue: undefined,
   },
 
   dropdownMenu: {
@@ -398,6 +473,7 @@ export const selectSubmitContext = ({ state }) => ({
   targetGroupId: state.targetGroupId,
   dialogMode: state.dialogMode,
   editingItemId: state.editingItemId,
+  computedMode: state.conditionalDraft ? "conditional" : "operation",
 });
 
 export const selectIsEditMode = ({ state }) => {
@@ -414,10 +490,29 @@ export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
 };
 
 export const updateFormValues = ({ state }, payload = {}) => {
+  const previousVariableType = state.defaultValues.variableType;
   state.defaultValues = {
     ...state.defaultValues,
     ...payload,
   };
+  const operationDefinition = getComputedOperationDefinition(
+    state.operationDraft?.type,
+  );
+  if (
+    state.defaultValues.valueSource === "computed" &&
+    ((operationDefinition &&
+      operationDefinition.resultType !== state.defaultValues.variableType) ||
+      (state.conditionalDraft &&
+        previousVariableType !== state.defaultValues.variableType))
+  ) {
+    state.operationDraft = undefined;
+    state.conditionalDraft = undefined;
+    state.defaultValues.computed = undefined;
+    state.operationChoiceMenu.isOpen = false;
+    state.operationBlockMenu.isOpen = false;
+    state.operandSourceMenu.isOpen = false;
+    state.operationValuePopover.isOpen = false;
+  }
 };
 
 export const toggleDialog = ({ state }, _payload = {}) => {
@@ -433,6 +528,7 @@ export const openAddDialog = (
   state.dialogMode = "add";
   state.editingItemId = null;
   state.operationDraft = undefined;
+  state.conditionalDraft = undefined;
   state.defaultValues = structuredClone(DEFAULT_FORM_VALUES);
   state.defaultValues.valueSource = valueSource;
   state.operationChoiceMenu.isOpen = false;
@@ -452,9 +548,12 @@ export const openEditDialog = (
   state.targetGroupId = groupId;
   state.dialogMode = "edit";
   state.editingItemId = itemId;
-  state.operationDraft = createOperationDraftFromComputed(
+  state.conditionalDraft = createConditionalDraftFromComputed(
     defaultValues.computed,
   );
+  state.operationDraft = state.conditionalDraft
+    ? undefined
+    : createOperationDraftFromComputed(defaultValues.computed);
   const nextDefaultValues = {
     ...structuredClone(DEFAULT_FORM_VALUES),
     ...defaultValues,
@@ -483,6 +582,7 @@ export const closeDialog = ({ state }, _payload = {}) => {
   state.dialogMode = "add";
   state.editingItemId = null;
   state.operationDraft = undefined;
+  state.conditionalDraft = undefined;
   state.defaultValues = structuredClone(DEFAULT_FORM_VALUES);
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
@@ -493,26 +593,215 @@ export const closeDialog = ({ state }, _payload = {}) => {
   state.enumValueMenu.targetIndex = undefined;
 };
 
-const syncOperationComputed = (state) => {
-  state.defaultValues.computed = buildComputedFromOperationDraft(
-    state.operationDraft,
-  );
+const syncComputedDraft = (state) => {
+  state.defaultValues.computed = state.conditionalDraft
+    ? buildComputedFromConditionalDraft(state.conditionalDraft)
+    : buildComputedFromOperationDraft(state.operationDraft);
 };
 
-export const createAddOperation = ({ state }) => {
-  if (state.operationDraft?.type !== "add") {
-    state.operationDraft = createAddOperationDraft();
+export const createOperation = ({ state }, { operationType } = {}) => {
+  const definition = getComputedOperationDefinition(operationType);
+  if (
+    !definition ||
+    definition.resultType !== state.defaultValues.variableType
+  ) {
+    return;
   }
-  state.defaultValues.variableType = "number";
-  syncOperationComputed(state);
+  if (state.operationDraft?.type !== operationType) {
+    state.operationDraft = createOperationDraft(operationType);
+  }
+  state.conditionalDraft = undefined;
+  syncComputedDraft(state);
+};
+
+export const createConditional = ({ state }) => {
+  state.operationDraft = undefined;
+  state.conditionalDraft = createConditionalDraft();
+  syncComputedDraft(state);
 };
 
 const cloneOperationPath = (operationPath = []) => {
   return Array.isArray(operationPath) ? [...operationPath] : [];
 };
 
-const findOperationAtPath = (operationDraft, operationPath = []) => {
-  let operation = operationDraft;
+const getConditionalNode = (conditionalDraft, target = {}) => {
+  if (target.kind === "condition") {
+    return conditionalDraft?.branches[target.branchIndex]?.when;
+  }
+  if (target.kind === "result") {
+    return conditionalDraft?.branches[target.branchIndex]?.result;
+  }
+  if (target.kind === "default") {
+    return conditionalDraft?.defaultResult;
+  }
+  return undefined;
+};
+
+const setConditionalNodeDraft = (conditionalDraft, target = {}, node) => {
+  if (target.kind === "condition") {
+    const branch = conditionalDraft?.branches[target.branchIndex];
+    if (!branch) {
+      return false;
+    }
+    branch.when = node;
+    return true;
+  }
+  if (target.kind === "result") {
+    const branch = conditionalDraft?.branches[target.branchIndex];
+    if (!branch) {
+      return false;
+    }
+    branch.result = node;
+    return true;
+  }
+  if (target.kind === "default" && conditionalDraft) {
+    conditionalDraft.defaultResult = node;
+    return true;
+  }
+  return false;
+};
+
+const getExpressionTargetExpectedTypes = (state, target = {}) => {
+  if (target.kind === "condition") {
+    return ["boolean"];
+  }
+  if (target.kind === "result" || target.kind === "default") {
+    return [state.defaultValues.variableType];
+  }
+  return [];
+};
+
+export const setConditionalNode = (
+  { state },
+  { source, variablePath, value, operationType, target } = {},
+) => {
+  if (!state.conditionalDraft || !isConditionalExpressionTarget(target)) {
+    return;
+  }
+  if (target.kind === "condition" && source !== "operation") {
+    return;
+  }
+
+  const expectedTypes = getExpressionTargetExpectedTypes(state, target);
+  let node;
+  if (source === "variable" && variablePath) {
+    node = {
+      source: "variable",
+      variablePath,
+    };
+  } else if (
+    source === "value" &&
+    target.kind !== "condition" &&
+    isComputedLiteralValue(value) &&
+    expectedTypes.includes(typeof value)
+  ) {
+    node = {
+      source: "value",
+      value,
+    };
+  } else if (
+    source === "operation" &&
+    isSupportedComputedOperationType(operationType) &&
+    expectedTypes.includes(
+      getComputedOperationDefinition(operationType).resultType,
+    ) &&
+    (target.kind !== "condition" ||
+      isComputedConditionOperationType(operationType))
+  ) {
+    const operation =
+      target.kind === "condition"
+        ? createConditionalOperationDraft(operationType)
+        : createOperationDraft(operationType);
+    node = {
+      source: "operation",
+      operation,
+    };
+  } else {
+    return;
+  }
+
+  if (!setConditionalNodeDraft(state.conditionalDraft, target, node)) {
+    return;
+  }
+  syncComputedDraft(state);
+};
+
+export const removeConditionalNode = ({ state }, { target } = {}) => {
+  if (
+    !state.conditionalDraft ||
+    !isConditionalExpressionTarget(target) ||
+    !setConditionalNodeDraft(state.conditionalDraft, target, undefined)
+  ) {
+    return;
+  }
+  syncComputedDraft(state);
+};
+
+export const selectConditionalNodeValue = ({ state }, { target } = {}) => {
+  const node = getConditionalNode(state.conditionalDraft, target);
+  return node?.source === "value" ? node.value : undefined;
+};
+
+export const addConditionalBranch = ({ state }) => {
+  if (!state.conditionalDraft) {
+    return;
+  }
+  state.conditionalDraft.branches.push(createConditionalBranchDraft());
+  syncComputedDraft(state);
+};
+
+export const duplicateConditionalBranch = ({ state }, { branchIndex } = {}) => {
+  const branch = state.conditionalDraft?.branches[branchIndex];
+  if (!branch) {
+    return;
+  }
+  state.conditionalDraft.branches.splice(
+    branchIndex + 1,
+    0,
+    cloneConditionalBranchDraft(branch),
+  );
+  syncComputedDraft(state);
+};
+
+export const moveConditionalBranch = (
+  { state },
+  { branchIndex, offset } = {},
+) => {
+  const branches = state.conditionalDraft?.branches;
+  const targetIndex = branchIndex + offset;
+  if (
+    !branches?.[branchIndex] ||
+    targetIndex < 0 ||
+    targetIndex >= branches.length
+  ) {
+    return;
+  }
+  const [branch] = branches.splice(branchIndex, 1);
+  branches.splice(targetIndex, 0, branch);
+  syncComputedDraft(state);
+};
+
+export const removeConditionalBranch = ({ state }, { branchIndex } = {}) => {
+  const branches = state.conditionalDraft?.branches;
+  if (!branches?.[branchIndex] || branches.length <= 1) {
+    return;
+  }
+  branches.splice(branchIndex, 1);
+  syncComputedDraft(state);
+};
+
+const findOperationAtPath = (
+  state,
+  target = FORMULA_EXPRESSION_TARGET,
+  operationPath = [],
+) => {
+  const rootNode = getConditionalNode(state.conditionalDraft, target);
+  let operation =
+    target.kind === "formula"
+      ? state.operationDraft
+      : rootNode?.source === "operation"
+        ? rootNode.operation
+        : undefined;
   for (const operandIndex of operationPath) {
     const operand = operation?.operands[operandIndex];
     if (operand?.source !== "operation") {
@@ -525,10 +814,21 @@ const findOperationAtPath = (operationDraft, operationPath = []) => {
 
 export const addOperationOperand = (
   { state },
-  { source, variablePath, value, operationType, operationPath = [] } = {},
+  {
+    source,
+    variablePath,
+    value,
+    operationType,
+    operationPath = [],
+    target = FORMULA_EXPRESSION_TARGET,
+  } = {},
 ) => {
-  const operation = findOperationAtPath(state.operationDraft, operationPath);
-  if (operation?.type !== "add") {
+  const operation = findOperationAtPath(state, target, operationPath);
+  const definition = getComputedOperationDefinition(operation?.type);
+  if (
+    !definition ||
+    !canAddComputedOperationOperand(operation.type, operation.operands.length)
+  ) {
     return;
   }
 
@@ -537,70 +837,120 @@ export const addOperationOperand = (
       source: "variable",
       variablePath: variablePath ?? "",
     };
-    if (operation.operands[0]?.source === "operation") {
+    if (
+      definition.expressionShape === "left-fold" &&
+      operation.operands[0]?.source === "operation"
+    ) {
       operation.operands.unshift(operand);
     } else {
       operation.operands.push(operand);
     }
-  } else if (source === "value") {
+  } else if (
+    source === "value" &&
+    isComputedLiteralValue(value) &&
+    definition.operandTypes.includes(typeof value)
+  ) {
     const operand = {
       source: "value",
-      value: Number.isFinite(value) ? value : 0,
+      value,
     };
-    if (operation.operands[0]?.source === "operation") {
+    if (
+      definition.expressionShape === "left-fold" &&
+      operation.operands[0]?.source === "operation"
+    ) {
       operation.operands.unshift(operand);
     } else {
       operation.operands.push(operand);
     }
   } else if (
     source === "operation" &&
-    operationType === "add" &&
-    operation.operands.length > 0 &&
-    operation.operands[0].source !== "operation"
+    isSupportedComputedOperationType(operationType) &&
+    (target.kind !== "condition" ||
+      isComputedConditionOperationType(operationType)) &&
+    definition.operandTypes.includes(
+      getComputedOperationDefinition(operationType).resultType,
+    ) &&
+    (definition.expressionShape !== "left-fold" ||
+      (operation.operands.length > 0 &&
+        operation.operands[0].source !== "operation"))
   ) {
     operation.operands.push({
       source: "operation",
-      operation: createAddOperationDraft(),
+      operation: createOperationDraft(operationType),
     });
   } else {
     return;
   }
-  syncOperationComputed(state);
+  syncComputedDraft(state);
 };
 
 export const updateOperationValueOperand = (
   { state },
-  { operationPath = [], index, value } = {},
+  { operationPath = [], target = FORMULA_EXPRESSION_TARGET, index, value } = {},
 ) => {
-  const operation = findOperationAtPath(state.operationDraft, operationPath);
+  const operation = findOperationAtPath(state, target, operationPath);
   const operand = operation?.operands[index];
-  if (!operand || operand.source !== "value") {
+  const definition = getComputedOperationDefinition(operation?.type);
+  if (
+    !operand ||
+    operand.source !== "value" ||
+    !isComputedLiteralValue(value) ||
+    !definition?.operandTypes.includes(typeof value)
+  ) {
     return;
   }
   operand.value = value;
-  syncOperationComputed(state);
+  syncComputedDraft(state);
+};
+
+export const updateOperationVariableOperand = (
+  { state },
+  {
+    operationPath = [],
+    target = FORMULA_EXPRESSION_TARGET,
+    index,
+    variablePath,
+  } = {},
+) => {
+  const operation = findOperationAtPath(state, target, operationPath);
+  const operand = operation?.operands[index];
+  if (operand?.source !== "variable" || !variablePath) {
+    return;
+  }
+  operand.variablePath = variablePath;
+  syncComputedDraft(state);
 };
 
 export const removeOperationOperand = (
   { state },
-  { operationPath = [], index } = {},
+  { operationPath = [], target = FORMULA_EXPRESSION_TARGET, index } = {},
 ) => {
-  const operation = findOperationAtPath(state.operationDraft, operationPath);
+  const operation = findOperationAtPath(state, target, operationPath);
   if (!operation?.operands[index]) {
     return;
   }
   operation.operands.splice(index, 1);
-  syncOperationComputed(state);
+  syncComputedDraft(state);
 };
 
-export const removeOperation = ({ state }, { operationPath = [] } = {}) => {
+export const removeOperation = (
+  { state },
+  { operationPath = [], target = FORMULA_EXPRESSION_TARGET } = {},
+) => {
   if (operationPath.length === 0) {
-    state.operationDraft = undefined;
+    if (target.kind === "formula") {
+      state.operationDraft = undefined;
+    } else if (
+      !setConditionalNodeDraft(state.conditionalDraft, target, undefined)
+    ) {
+      return;
+    }
   } else {
     const parentOperationPath = operationPath.slice(0, -1);
     const operandIndex = operationPath.at(-1);
     const parentOperation = findOperationAtPath(
-      state.operationDraft,
+      state,
+      target,
       parentOperationPath,
     );
     const operand = parentOperation?.operands[operandIndex];
@@ -609,41 +959,36 @@ export const removeOperation = ({ state }, { operationPath = [] } = {}) => {
     }
     parentOperation.operands.splice(operandIndex, 1);
   }
-  syncOperationComputed(state);
+  syncComputedDraft(state);
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
   state.operandSourceMenu.isOpen = false;
   state.operationValuePopover.isOpen = false;
 };
 
-export const showOperationChoiceMenu = (
-  { state },
-  { x, y, parentOperationPath } = {},
-) => {
+export const showOperationChoiceMenu = ({ state }, { x, y } = {}) => {
   state.operationBlockMenu.isOpen = false;
   state.operandSourceMenu.isOpen = false;
   state.operationValuePopover.isOpen = false;
   state.operationChoiceMenu.isOpen = true;
   state.operationChoiceMenu.x = x ?? 0;
   state.operationChoiceMenu.y = y ?? 0;
-  state.operationChoiceMenu.parentOperationPath =
-    parentOperationPath === undefined
-      ? undefined
-      : cloneOperationPath(parentOperationPath);
 };
 
 export const hideOperationChoiceMenu = ({ state }) => {
   state.operationChoiceMenu.isOpen = false;
 };
 
-export const selectOperationChoiceMenuParentPath = ({ state }) => {
-  const operationPath = state.operationChoiceMenu.parentOperationPath;
-  return operationPath === undefined ? undefined : [...operationPath];
-};
-
 export const showOperationBlockMenu = (
   { state },
-  { x, y, operationPath = [] } = {},
+  {
+    x,
+    y,
+    operationPath = [],
+    purpose = "operation",
+    target = FORMULA_EXPRESSION_TARGET,
+    operandIndex,
+  } = {},
 ) => {
   state.operationChoiceMenu.isOpen = false;
   state.operandSourceMenu.isOpen = false;
@@ -652,6 +997,9 @@ export const showOperationBlockMenu = (
   state.operationBlockMenu.x = x ?? 0;
   state.operationBlockMenu.y = y ?? 0;
   state.operationBlockMenu.operationPath = cloneOperationPath(operationPath);
+  state.operationBlockMenu.purpose = purpose;
+  state.operationBlockMenu.target = cloneExpressionTarget(target);
+  state.operationBlockMenu.operandIndex = operandIndex;
 };
 
 export const hideOperationBlockMenu = ({ state }) => {
@@ -662,9 +1010,23 @@ export const selectOperationBlockMenuPath = ({ state }) => {
   return [...state.operationBlockMenu.operationPath];
 };
 
+export const selectOperationBlockMenuPosition = ({ state }) => ({
+  operationPath: [...state.operationBlockMenu.operationPath],
+  purpose: state.operationBlockMenu.purpose,
+  target: cloneExpressionTarget(state.operationBlockMenu.target),
+  operandIndex: state.operationBlockMenu.operandIndex,
+});
+
 export const showOperandSourceMenu = (
   { state },
-  { x, y, operationPath = [] } = {},
+  {
+    x,
+    y,
+    operationPath = [],
+    purpose = "operand",
+    target = FORMULA_EXPRESSION_TARGET,
+    operandIndex,
+  } = {},
 ) => {
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
@@ -673,6 +1035,9 @@ export const showOperandSourceMenu = (
   state.operandSourceMenu.x = x ?? 0;
   state.operandSourceMenu.y = y ?? 0;
   state.operandSourceMenu.operationPath = cloneOperationPath(operationPath);
+  state.operandSourceMenu.purpose = purpose;
+  state.operandSourceMenu.target = cloneExpressionTarget(target);
+  state.operandSourceMenu.operandIndex = operandIndex;
 };
 
 export const hideOperandSourceMenu = ({ state }) => {
@@ -683,11 +1048,22 @@ export const selectOperandSourceMenuPosition = ({ state }) => ({
   x: state.operandSourceMenu.x,
   y: state.operandSourceMenu.y,
   operationPath: [...state.operandSourceMenu.operationPath],
+  purpose: state.operandSourceMenu.purpose,
+  target: cloneExpressionTarget(state.operandSourceMenu.target),
+  operandIndex: state.operandSourceMenu.operandIndex,
 });
 
 export const showOperationValuePopover = (
   { state },
-  { x, y, operationPath = [] } = {},
+  {
+    x,
+    y,
+    operationPath = [],
+    purpose = "operand",
+    target = FORMULA_EXPRESSION_TARGET,
+    operandIndex,
+    initialValue,
+  } = {},
 ) => {
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
@@ -696,6 +1072,10 @@ export const showOperationValuePopover = (
   state.operationValuePopover.x = x ?? 0;
   state.operationValuePopover.y = y ?? 0;
   state.operationValuePopover.operationPath = cloneOperationPath(operationPath);
+  state.operationValuePopover.purpose = purpose;
+  state.operationValuePopover.target = cloneExpressionTarget(target);
+  state.operationValuePopover.operandIndex = operandIndex;
+  state.operationValuePopover.initialValue = initialValue;
 };
 
 export const hideOperationValuePopover = ({ state }) => {
@@ -705,6 +1085,13 @@ export const hideOperationValuePopover = ({ state }) => {
 export const selectOperationValuePopoverPath = ({ state }) => {
   return [...state.operationValuePopover.operationPath];
 };
+
+export const selectOperationValuePopoverPosition = ({ state }) => ({
+  operationPath: [...state.operationValuePopover.operationPath],
+  purpose: state.operationValuePopover.purpose,
+  target: cloneExpressionTarget(state.operationValuePopover.target),
+  operandIndex: state.operationValuePopover.operandIndex,
+});
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
@@ -845,15 +1232,16 @@ const parseNonNegativeIntegerProp = (value, fallback) => {
 const buildOperationBlockViewData = ({
   operation,
   operationPath = [],
-  numberVariableOptionsByPath,
+  target = FORMULA_EXPRESSION_TARGET,
+  variableOptionsByPath,
   copy,
 }) => {
-  if (operation?.type !== "add") {
+  if (!isSupportedComputedOperationType(operation?.type)) {
     return undefined;
   }
 
-  return {
-    type: "add",
+  const viewData = {
+    type: operation.type,
     operationPath: [...operationPath],
     operands: operation.operands.map((operand, index) => {
       const viewOperand = {
@@ -861,24 +1249,116 @@ const buildOperationBlockViewData = ({
         index,
       };
       if (operand.source === "variable") {
-        const option = numberVariableOptionsByPath.get(operand.variablePath);
+        const option = variableOptionsByPath.get(operand.variablePath);
         viewOperand.variablePath = operand.variablePath;
         viewOperand.variableLabel = option?.label ?? operand.variablePath ?? "";
         viewOperand.variableTypeLabel =
-          option?.suffixText ?? copy.variableTypeNumberLabel ?? "Number";
+          option?.suffixText ?? copy.computedAnyTypeLabel ?? "Any";
       } else if (operand.source === "value") {
         viewOperand.value = operand.value;
+        if (typeof operand.value === "boolean") {
+          viewOperand.booleanValueLabel = getBooleanLabel(operand.value, copy);
+        }
       } else if (operand.source === "operation") {
         viewOperand.operation = buildOperationBlockViewData({
           operation: operand.operation,
           operationPath: [...operationPath, index],
-          numberVariableOptionsByPath,
+          target,
+          variableOptionsByPath,
           copy,
         });
       }
       return viewOperand;
     }),
   };
+  if (target.kind !== "formula") {
+    viewData.target = cloneExpressionTarget(target);
+  }
+  return viewData;
+};
+
+const buildConditionalNodeViewData = ({
+  node,
+  target,
+  variableOptionsByPath,
+  copy,
+}) => {
+  if (!node) {
+    return undefined;
+  }
+
+  const viewNode = {
+    source: node.source,
+    target: cloneExpressionTarget(target),
+  };
+  if (node.source === "variable") {
+    const option = variableOptionsByPath.get(node.variablePath);
+    viewNode.variableLabel = option?.label ?? node.variablePath ?? "";
+    viewNode.variableTypeLabel =
+      option?.suffixText ?? copy.computedAnyTypeLabel ?? "Any";
+  } else if (node.source === "value") {
+    viewNode.value =
+      typeof node.value === "object" ? JSON.stringify(node.value) : node.value;
+    if (typeof node.value === "boolean") {
+      viewNode.booleanValueLabel = getBooleanLabel(node.value, copy);
+    }
+  } else if (node.source === "operation") {
+    viewNode.operation = buildOperationBlockViewData({
+      operation: node.operation,
+      target,
+      variableOptionsByPath,
+      copy,
+    });
+  }
+  return viewNode;
+};
+
+const getOperationOperandOutputType = (operand, variableOptionsByPath) => {
+  if (operand?.source === "value") {
+    return typeof operand.value;
+  }
+  if (operand?.source === "variable") {
+    return variableOptionsByPath.get(operand.variablePath)?.variableType;
+  }
+  if (operand?.source === "operation") {
+    return getComputedOperationDefinition(operand.operation?.type)?.resultType;
+  }
+  return undefined;
+};
+
+const getAcceptedOperationOperandTypes = (operation, variableOptionsByPath) => {
+  const definition = getComputedOperationDefinition(operation?.type);
+  if (!definition) {
+    return ["number"];
+  }
+
+  if (definition.operandTypes.length === 1 || operation.operands.length === 0) {
+    return definition.operandTypes;
+  }
+
+  const firstOperandType = getOperationOperandOutputType(
+    operation.operands[0],
+    variableOptionsByPath,
+  );
+  return definition.operandTypes.includes(firstOperandType)
+    ? [firstOperandType]
+    : definition.operandTypes;
+};
+
+const canAddNestedOperation = (operation) => {
+  const definition = getComputedOperationDefinition(operation?.type);
+  if (
+    !definition ||
+    !canAddComputedOperationOperand(operation.type, operation.operands.length)
+  ) {
+    return false;
+  }
+
+  return (
+    definition.expressionShape !== "left-fold" ||
+    (operation.operands.length > 0 &&
+      operation.operands[0].source !== "operation")
+  );
 };
 
 export const selectViewData = ({ state, props, i18n }) => {
@@ -994,7 +1474,9 @@ export const selectViewData = ({ state, props, i18n }) => {
 
         const isComputed = item.computed !== undefined;
         const isConditional = Array.isArray(item.computed?.branches);
-        const isAddOperation = Array.isArray(item.computed?.expr?.add);
+        const operationType = getComputedExpressionOperationType(
+          item.computed?.expr,
+        );
         const variableType = item.variableType || "string";
         const storedDefault =
           variableType === "number" &&
@@ -1004,9 +1486,7 @@ export const selectViewData = ({ state, props, i18n }) => {
         let defaultValue = isComputed
           ? isConditional
             ? (copy.computedOperatorIf ?? "If")
-            : isAddOperation
-              ? (copy.computedOperatorAdd ?? "Add")
-              : (copy.computedUnknownReference ?? "Unknown")
+            : getComputedOperationLabel(operationType, copy)
           : storedDefault;
         if (typeof defaultValue === "boolean") {
           defaultValue = getBooleanLabel(defaultValue, copy);
@@ -1100,64 +1580,177 @@ export const selectViewData = ({ state, props, i18n }) => {
       label: copy.variableTypeBooleanLabel ?? "Boolean",
     },
   ];
-  if (defaultValues.valueSource === "computed") {
-    variableTypeOptions.push({
-      value: "object",
-      label: copy.variableTypeObjectLabel ?? "Object",
-    });
-  }
   const excludedOperationVariableId = resolveExcludedOperationVariableId({
     dialogMode: state.dialogMode,
     editingItemId: state.editingItemId,
     selectedItemId: props.selectedItemId,
   });
-  const numberVariableOptions = (props.flatGroups ?? [])
+  const operationVariableOptions = (props.flatGroups ?? [])
     .flatMap((group) => group.children ?? [])
     .filter(
-      (item) => item.type === "variable" && item.variableType === "number",
+      (item) =>
+        item.type === "variable" &&
+        COMPUTED_OPERAND_VARIABLE_TYPES.has(item.variableType ?? "string"),
     )
-    .map((item) => ({
-      itemId: item.id,
-      value: toVariablePath(item.id),
-      label: item.name,
-      suffixText: getVariableTypeLabel(item.variableType, copy),
-    }));
-  const numberVariableMenuItems = numberVariableOptions
-    .filter((item) => item.itemId !== excludedOperationVariableId)
-    .map(({ itemId: _itemId, ...item }) => ({
-      ...item,
-      type: "item",
-    }));
-  const numberVariableOptionsByPath = new Map(
-    numberVariableOptions.map((item) => [item.value, item]),
+    .map((item) => {
+      const variableType = item.variableType ?? "string";
+      return {
+        itemId: item.id,
+        value: toVariablePath(item.id),
+        label: item.name,
+        variableType,
+        suffixText: getVariableTypeLabel(variableType, copy),
+      };
+    });
+  const variableOptionsByPath = new Map(
+    operationVariableOptions.map((item) => [item.value, item]),
   );
   const operationChoiceMenu = {
     ...state.operationChoiceMenu,
-    items: createOperationChoiceMenuItems(copy),
+    items: createOperationChoiceMenuItems(copy, {
+      includeConditional: true,
+      operationTypes: getOperationTypesForResultType(
+        defaultValues.variableType,
+      ),
+    }),
   };
   const operationBlockMenu = {
     ...state.operationBlockMenu,
     items: createOperationBlockMenuItems(copy),
   };
   const operandTargetOperation = findOperationAtPath(
-    state.operationDraft,
+    state,
+    state.operandSourceMenu.target,
     state.operandSourceMenu.operationPath,
   );
+  const isNodeVariableMenu =
+    state.operandSourceMenu.purpose === "node-variable";
+  const isOperationVariableMenu =
+    state.operandSourceMenu.purpose === "operation-variable";
+  const isVariableMenu = isNodeVariableMenu || isOperationVariableMenu;
+  const isNodeSourceMenu =
+    state.operandSourceMenu.purpose === "node" || isNodeVariableMenu;
+  const isDirectConditionNode =
+    isNodeSourceMenu && state.operandSourceMenu.target.kind === "condition";
+  const acceptedOperandTypes = isNodeSourceMenu
+    ? getExpressionTargetExpectedTypes(state, state.operandSourceMenu.target)
+    : getAcceptedOperationOperandTypes(
+        operandTargetOperation,
+        variableOptionsByPath,
+      );
+  const variableMenuItems = operationVariableOptions
+    .filter(
+      (item) =>
+        item.itemId !== excludedOperationVariableId &&
+        acceptedOperandTypes.includes(item.variableType),
+    )
+    .map(({ itemId: _itemId, variableType: _variableType, ...item }) => ({
+      ...item,
+      type: "item",
+    }));
+  const availableOperationTypes =
+    state.operandSourceMenu.target.kind === "condition"
+      ? COMPUTED_CONDITION_OPERATION_TYPES
+      : COMPUTED_OPERATION_TYPES;
+  const nestedOperationTypes = availableOperationTypes.filter((operationType) =>
+    acceptedOperandTypes.includes(
+      getComputedOperationDefinition(operationType).resultType,
+    ),
+  );
+  const valueTypes = isDirectConditionNode
+    ? []
+    : COMPUTED_LITERAL_TYPES.filter((valueType) =>
+        acceptedOperandTypes.includes(valueType),
+      );
   const operandSourceMenu = {
     ...state.operandSourceMenu,
-    items: createOperandSourceMenuItems(copy, {
-      operationEnabled:
-        (operandTargetOperation?.operands.length ?? 0) > 0 &&
-        operandTargetOperation.operands[0].source !== "operation",
-      variableItems: numberVariableMenuItems,
-    }),
+    items: isVariableMenu
+      ? variableMenuItems
+      : createOperandSourceMenuItems(copy, {
+          operationEnabled:
+            (isNodeSourceMenu ||
+              canAddNestedOperation(operandTargetOperation)) &&
+            nestedOperationTypes.length > 0,
+          operationTypes: nestedOperationTypes,
+          valueEnabled:
+            valueTypes.length > 0 &&
+            !isComputedLogicalOperationType(operandTargetOperation?.type),
+          valueVisible: !isDirectConditionNode,
+          variableVisible: !isDirectConditionNode,
+          variableItems: variableMenuItems,
+        }),
   };
-  const operationValuePopover = state.operationValuePopover;
+  const valueTargetOperation = findOperationAtPath(
+    state,
+    state.operationValuePopover.target,
+    state.operationValuePopover.operationPath,
+  );
+  const valueAcceptedTypes =
+    state.operationValuePopover.purpose === "node"
+      ? getExpressionTargetExpectedTypes(
+          state,
+          state.operationValuePopover.target,
+        )
+      : getAcceptedOperationOperandTypes(
+          valueTargetOperation,
+          variableOptionsByPath,
+        );
+  const operationValuePopover = {
+    ...state.operationValuePopover,
+    valueTypes:
+      state.operationValuePopover.purpose === "node" &&
+      state.operationValuePopover.target.kind === "condition"
+        ? []
+        : COMPUTED_LITERAL_TYPES.filter((valueType) =>
+            valueAcceptedTypes.includes(valueType),
+          ),
+  };
   const operationBlock = buildOperationBlockViewData({
     operation: state.operationDraft,
-    numberVariableOptionsByPath,
+    target: FORMULA_EXPRESSION_TARGET,
+    variableOptionsByPath,
     copy,
   });
+  const conditionalBuilder = state.conditionalDraft
+    ? {
+        branches: state.conditionalDraft.branches.map((branch, branchIndex) => {
+          const conditionTarget = { kind: "condition", branchIndex };
+          const resultTarget = { kind: "result", branchIndex };
+          return {
+            branchIndex,
+            branchLabel:
+              branchIndex === 0
+                ? (copy.computedConditionalIfLabel ?? "If")
+                : (copy.computedConditionalElseIfLabel ?? "Else if"),
+            canMoveUp: branchIndex > 0,
+            canMoveDown:
+              branchIndex < state.conditionalDraft.branches.length - 1,
+            canRemove: state.conditionalDraft.branches.length > 1,
+            condition: buildConditionalNodeViewData({
+              node: branch.when,
+              target: conditionTarget,
+              variableOptionsByPath,
+              copy,
+            }),
+            conditionTarget,
+            result: buildConditionalNodeViewData({
+              node: branch.result,
+              target: resultTarget,
+              variableOptionsByPath,
+              copy,
+            }),
+            resultTarget,
+          };
+        }),
+        defaultResult: buildConditionalNodeViewData({
+          node: state.conditionalDraft.defaultResult,
+          target: { kind: "default" },
+          variableOptionsByPath,
+          copy,
+        }),
+        defaultTarget: { kind: "default" },
+      }
+    : undefined;
   const enumValues = normalizeVariableEnumValues(defaultValues.enumValues).map(
     (value, index) => ({
       value,
@@ -1207,6 +1800,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     defaultValues: defaultValues,
     variableForm,
     computedForm,
+    conditionalBuilder,
     dialogKey,
     dialogMode: state.dialogMode,
     editingItemId: state.editingItemId,
@@ -1216,9 +1810,25 @@ export const selectViewData = ({ state, props, i18n }) => {
     operandSourceMenu,
     operationValuePopover,
     operationLabel: copy.computedOperationLabel ?? "Operation",
-    addOperationLabel: copy.computedAddOperationLabel ?? "Add operation",
-    operationEmptyMessage:
-      copy.computedOperationEmptyMessage ?? "Add an operation.",
+    addOperationLabel: copy.computedAddOperationLabel ?? "Add an Operation",
+    conditionalWhenLabel: copy.computedConditionalWhenLabel ?? "When",
+    conditionalThenLabel: copy.computedConditionalThenLabel ?? "Then",
+    conditionalOtherwiseLabel:
+      copy.computedConditionalOtherwiseLabel ?? "Otherwise",
+    conditionalAddBranchLabel:
+      copy.computedConditionalAddBranchLabel ?? "Add condition",
+    conditionalAddConditionLabel:
+      copy.computedConditionalAddConditionLabel ?? "Add condition",
+    conditionalAddResultLabel:
+      copy.computedConditionalAddResultLabel ?? "Add result",
+    conditionalDuplicateBranchLabel:
+      copy.computedConditionalDuplicateBranchLabel ?? "Duplicate condition",
+    conditionalRemoveBranchLabel:
+      copy.computedConditionalRemoveBranchLabel ?? "Remove condition",
+    conditionalMoveBranchUpLabel:
+      copy.computedConditionalMoveBranchUpLabel ?? "Move condition up",
+    conditionalMoveBranchDownLabel:
+      copy.computedConditionalMoveBranchDownLabel ?? "Move condition down",
     enumValues,
     enumValuePopover: state.enumValuePopover,
     enumValueForm: createEnumValueForm(copy),

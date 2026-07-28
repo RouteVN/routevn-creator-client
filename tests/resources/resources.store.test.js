@@ -12,8 +12,8 @@ describe("resources store", () => {
     const viewData = selectViewData({ state });
 
     expect(viewData.system.map((item) => item.id)).toEqual([
-      "controls",
       "variables",
+      "controls",
     ]);
     expect(selectResourceRoute({ state }, "variables")).toBe(
       "/project/variables",

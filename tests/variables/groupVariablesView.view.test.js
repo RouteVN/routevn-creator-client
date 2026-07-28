@@ -18,11 +18,42 @@ describe("groupVariablesView view", () => {
     expect(view).toContain("rtgl-form#variableForm");
     expect(view).toContain("rtgl-form#computedForm");
     expect(view).toContain('slot="operation"');
-    expect(view).toContain("$if !operationBlock:");
-    expect(view).toContain("rtgl-button#addOperationButton");
+    expect(view).toContain("rtgl-button#addOperationButton v=se pre=plus w=f");
+    expect(view).not.toContain("rtgl-button#addOperationButton sq");
+    expect(view).not.toContain("${operationEmptyMessage}");
     expect(view).toContain(
       "rvn-computed-operation-block#computedOperationBlock :operation=${operationBlock}",
     );
+    expect(view).toContain("$elif conditionalBuilder:");
+    expect(view).toContain(
+      "rtgl-view d=v w=f g=md bw=xs bc=bo br=md p=md bgc=bg",
+    );
+    expect(view).toContain("$for branch, i in conditionalBuilder.branches:");
+    expect(view).toContain("addConditionalNodeCondition");
+    expect(view).toContain("addConditionalNodeResult");
+    expect(view).toContain("addConditionalNodeDefault");
+    expect(view).toContain(
+      "rtgl-view#conditionalVariableDefault data-target-kind=default",
+    );
+    expect(view).toContain("conditionalVariable*:");
+    expect(view).toContain("conditionalValue*:");
+    expect(view).toContain("handler: handleConditionalValueClick");
+    expect(view).toContain(
+      "rtgl-view#conditionalValueDefault data-target-kind=default",
+    );
+    expect(view).toContain(
+      "rtgl-view#conditionalValueCondition${i} data-target-kind=condition",
+    );
+    expect(view).toContain(
+      "data-target-kind=condition data-branch-index=${branch.branchIndex} w=1fg bw=xs bc=bo br=md p=sm cur=pointer",
+    );
+    expect(view).toContain(
+      "rtgl-view#conditionalValueDefault data-target-kind=default w=1fg bw=xs bc=bo br=md p=sm cur=pointer",
+    );
+    expect(view).not.toContain("removeConditionalNodeCondition");
+    expect(view).not.toContain("removeConditionalNodeResult");
+    expect(view).not.toContain("removeConditionalNodeDefault");
+    expect(view).toContain("addConditionalBranchButton");
     expect(view).toContain("rtgl-dropdown-menu#operationBlockMenu");
     expect(view).toContain("rtgl-dropdown-menu#operationChoiceMenu");
     expect(view).toContain("rtgl-dropdown-menu#operandSourceMenu");

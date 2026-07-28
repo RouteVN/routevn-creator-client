@@ -158,4 +158,60 @@ describe("variables.store", () => {
       expect.arrayContaining([expect.objectContaining({ label: "Scope" })]),
     );
   });
+
+  it.each([
+    ["Subtract", "sub", [10, 3], "number"],
+    ["Multiply", "mul", [10, 3], "number"],
+    ["Divide", "div", [10, 3], "number"],
+    ["Minimum", "min", [10, 3], "number"],
+    ["Maximum", "max", [10, 3], "number"],
+    ["Equal", "eq", [10, 3], "boolean"],
+    ["Not equal", "neq", [10, 3], "boolean"],
+    ["Greater than", "gt", [10, 3], "boolean"],
+    ["Greater or equal", "gte", [10, 3], "boolean"],
+    ["Less than", "lt", [10, 3], "boolean"],
+    ["Less or equal", "lte", [10, 3], "boolean"],
+    ["And", "and", [true, false], "boolean"],
+    ["Or", "or", [true, false], "boolean"],
+    ["Not", "not", [true], "boolean"],
+  ])(
+    "describes %s computed operations",
+    (operationLabel, expressionKey, operands, variableType) => {
+      const state = createInitialState();
+      setItems(
+        { state },
+        {
+          variablesData: {
+            items: {
+              folder1: { id: "folder1", type: "folder", name: "Progress" },
+              result: {
+                id: "result",
+                type: "variable",
+                variableType,
+                name: "Result",
+                computed: { expr: { [expressionKey]: operands } },
+              },
+            },
+            tree: [
+              {
+                id: "folder1",
+                children: [{ id: "result" }],
+              },
+            ],
+          },
+        },
+      );
+      setSelectedItemId({ state }, { itemId: "result" });
+
+      const viewData = selectViewData({ state, i18n: EN_I18N });
+      expect(viewData.detailFields).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: "Operation",
+            value: operationLabel,
+          }),
+        ]),
+      );
+    },
+  );
 });

@@ -12,6 +12,10 @@ import {
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
 import { dispatchResourceViewBackgroundClick } from "../../internal/ui/resourcePages/resourceViewBackground.js";
+import {
+  isComputedLiteralValue,
+  isSupportedComputedOperationType,
+} from "../../internal/computedOperations.js";
 
 export const handleScrollContainerClick = dispatchResourceViewBackgroundClick;
 
@@ -573,10 +577,11 @@ export const handleAddOperationClick = (deps, payload) => {
 
 export const handleAddOperationOperandClick = (deps, payload) => {
   const { render, store } = deps;
-  const { operationPath, x, y } = payload._event.detail;
+  const { operationPath, target, x, y } = payload._event.detail;
 
   store.showOperandSourceMenu({
     operationPath,
+    target,
     x,
     y,
   });
@@ -593,21 +598,20 @@ export const handleOperationChoiceMenuClose = (deps) => {
 export const handleOperationChoiceMenuClick = (deps, payload) => {
   const { refs, render, store } = deps;
   const value = payload._event.detail.item?.value;
-  const parentOperationPath = store.selectOperationChoiceMenuParentPath();
 
   refs.operationChoiceMenu.open = false;
   store.hideOperationChoiceMenu();
 
-  if (value === "add") {
-    if (parentOperationPath === undefined) {
-      store.createAddOperation();
-    } else {
-      store.addOperationOperand({
-        source: "operation",
-        operationType: "add",
-        operationPath: parentOperationPath,
-      });
-    }
+  if (value === "if") {
+    store.createConditional();
+    const values = store.selectDefaultValues();
+    render();
+    refs.computedForm.setValues({ values });
+    return;
+  }
+
+  if (isSupportedComputedOperationType(value)) {
+    store.createOperation({ operationType: value });
     const values = store.selectDefaultValues();
     render();
     refs.computedForm.setValues({ values });
@@ -619,10 +623,11 @@ export const handleOperationChoiceMenuClick = (deps, payload) => {
 
 export const handleOperationBlockContextMenu = (deps, payload) => {
   const { render, store } = deps;
-  const { operationPath, x, y } = payload._event.detail;
+  const { operationPath, target, x, y } = payload._event.detail;
 
   store.showOperationBlockMenu({
     operationPath,
+    target,
     x,
     y,
   });
@@ -639,12 +644,22 @@ export const handleOperationBlockMenuClose = (deps) => {
 export const handleOperationBlockMenuClick = (deps, payload) => {
   const { refs, render, store } = deps;
   const value = payload._event.detail.item?.value;
-  const operationPath = store.selectOperationBlockMenuPath();
+  const position = store.selectOperationBlockMenuPosition();
 
   refs.operationBlockMenu.open = false;
   store.hideOperationBlockMenu();
   if (value === "remove") {
-    store.removeOperation({ operationPath });
+    if (position.purpose === "node") {
+      store.removeConditionalNode({ target: position.target });
+    } else if (position.purpose === "operand") {
+      store.removeOperationOperand({
+        operationPath: position.operationPath,
+        target: position.target,
+        index: position.operandIndex,
+      });
+    } else {
+      store.removeOperation(position);
+    }
     const values = store.selectDefaultValues();
     render();
     refs.computedForm.setValues({ values });
@@ -675,27 +690,49 @@ export const handleOperandSourceMenuClick = (deps, payload) => {
   store.hideOperandSourceMenu();
 
   const position = store.selectOperandSourceMenuPosition();
+  const setNode =
+    position.purpose === "node" || position.purpose === "node-variable";
   if (source?.startsWith("variables.") || source?.startsWith("variables[")) {
-    store.addOperationOperand({
-      source: "variable",
-      variablePath: source,
-      operationPath: position.operationPath,
-    });
+    if (setNode) {
+      store.setConditionalNode({
+        source: "variable",
+        variablePath: source,
+        target: position.target,
+      });
+    } else if (position.purpose === "operation-variable") {
+      store.updateOperationVariableOperand({
+        variablePath: source,
+        operationPath: position.operationPath,
+        target: position.target,
+        index: position.operandIndex,
+      });
+    } else {
+      store.addOperationOperand({
+        source: "variable",
+        variablePath: source,
+        operationPath: position.operationPath,
+        target: position.target,
+      });
+    }
     render();
     return;
   }
 
-  if (source !== "variable" && source !== "value" && source !== "operation") {
-    render();
-    return;
-  }
-
-  if (source === "operation") {
-    store.showOperationChoiceMenu({
-      x: position.x,
-      y: position.y,
-      parentOperationPath: position.operationPath,
-    });
+  if (isSupportedComputedOperationType(source)) {
+    if (setNode) {
+      store.setConditionalNode({
+        source: "operation",
+        operationType: source,
+        target: position.target,
+      });
+    } else {
+      store.addOperationOperand({
+        source: "operation",
+        operationType: source,
+        operationPath: position.operationPath,
+        target: position.target,
+      });
+    }
     render();
     return;
   }
@@ -706,12 +743,17 @@ export const handleOperandSourceMenuClick = (deps, payload) => {
     return;
   }
 
+  if (source !== "variable") {
+    render();
+    return;
+  }
+
   render();
   const copy = selectCopy(i18n);
   appService.showToast({
     message:
       copy.computedVariableOperandUnavailable ??
-      "Create a number variable before adding a Variable operand.",
+      "Create a compatible variable before adding a Variable operand.",
   });
 };
 
@@ -721,29 +763,201 @@ export const handleOperationValuePopoverClose = (deps) => {
   render();
 };
 
+export const handleEditOperationValueClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { operationPath, target, index, value, x, y } = payload._event.detail;
+  store.showOperationValuePopover({
+    operationPath,
+    target,
+    purpose: "edit",
+    operandIndex: index,
+    initialValue: { value },
+    x,
+    y,
+  });
+  render();
+};
+
+export const handleEditOperationVariableClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { operationPath, target, index, x, y } = payload._event.detail;
+  store.showOperandSourceMenu({
+    operationPath,
+    target,
+    purpose: "operation-variable",
+    operandIndex: index,
+    x,
+    y,
+  });
+  render();
+};
+
+export const handleOperationOperandContextMenu = (deps, payload) => {
+  const { render, store } = deps;
+  const { operationPath, target, index, x, y } = payload._event.detail;
+  store.showOperationBlockMenu({
+    operationPath,
+    target,
+    purpose: "operand",
+    operandIndex: index,
+    x,
+    y,
+  });
+  render();
+};
+
 export const handleOperationValueSubmit = (deps, payload) => {
   const { render, store } = deps;
   const { value } = payload._event.detail;
-  if (!Number.isFinite(value)) {
+  if (!isComputedLiteralValue(value)) {
     return;
   }
 
-  const operationPath = store.selectOperationValuePopoverPath();
-  store.addOperationOperand({
-    source: "value",
-    value,
-    operationPath,
-  });
+  const position = store.selectOperationValuePopoverPosition();
+  if (position.purpose === "edit") {
+    store.updateOperationValueOperand({
+      value,
+      operationPath: position.operationPath,
+      target: position.target,
+      index: position.operandIndex,
+    });
+  } else if (position.purpose === "node") {
+    store.setConditionalNode({
+      source: "value",
+      value,
+      target: position.target,
+    });
+  } else {
+    store.addOperationOperand({
+      source: "value",
+      value,
+      operationPath: position.operationPath,
+      target: position.target,
+    });
+  }
   store.hideOperationValuePopover();
   render();
 };
 
 export const handleRemoveOperationOperandClick = (deps, payload) => {
   const { render, store } = deps;
-  const { operationPath, index } = payload._event.detail;
+  const { operationPath, target, index } = payload._event.detail;
   store.removeOperationOperand({
     operationPath,
+    target,
     index,
+  });
+  render();
+};
+
+const getConditionalTargetFromElement = (element) => {
+  const target = {
+    kind: element.dataset.targetKind,
+  };
+  if (element.dataset.branchIndex !== undefined) {
+    target.branchIndex = Number(element.dataset.branchIndex);
+  }
+  return target;
+};
+
+export const handleAddConditionalNodeClick = (deps, payload) => {
+  const { render, store } = deps;
+  payload._event.stopPropagation();
+  const element = payload._event.currentTarget;
+  const rect = element.getBoundingClientRect();
+  store.showOperandSourceMenu({
+    purpose: "node",
+    target: getConditionalTargetFromElement(element),
+    x: rect.left,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleConditionalVariableClick = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  event.stopPropagation();
+  const element = event.currentTarget;
+  const target = getConditionalTargetFromElement(element);
+  const rect = element.getBoundingClientRect();
+  store.showOperandSourceMenu({
+    purpose: target.kind === "condition" ? "node" : "node-variable",
+    target,
+    x: rect.left,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleConditionalValueClick = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  event.stopPropagation();
+  const element = event.currentTarget;
+  const target = getConditionalTargetFromElement(element);
+  if (target.kind === "condition") {
+    return;
+  }
+
+  const value = store.selectConditionalNodeValue({ target });
+  if (!isComputedLiteralValue(value)) {
+    return;
+  }
+
+  const rect = element.getBoundingClientRect();
+  store.showOperationValuePopover({
+    purpose: "node",
+    target,
+    initialValue: { value },
+    x: rect.left,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleConditionalNodeContextMenu = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  event.preventDefault();
+  event.stopPropagation();
+  store.showOperationBlockMenu({
+    purpose: "node",
+    target: getConditionalTargetFromElement(event.currentTarget),
+    x: event.clientX,
+    y: event.clientY,
+  });
+  render();
+};
+
+export const handleAddConditionalBranchClick = (deps) => {
+  const { render, store } = deps;
+  store.addConditionalBranch();
+  render();
+};
+
+export const handleDuplicateConditionalBranchClick = (deps, payload) => {
+  const { render, store } = deps;
+  store.duplicateConditionalBranch({
+    branchIndex: Number(payload._event.currentTarget.dataset.branchIndex),
+  });
+  render();
+};
+
+export const handleMoveConditionalBranchClick = (deps, payload) => {
+  const { render, store } = deps;
+  const element = payload._event.currentTarget;
+  store.moveConditionalBranch({
+    branchIndex: Number(element.dataset.branchIndex),
+    offset: Number(element.dataset.offset),
+  });
+  render();
+};
+
+export const handleRemoveConditionalBranchClick = (deps, payload) => {
+  const { render, store } = deps;
+  store.removeConditionalBranch({
+    branchIndex: Number(payload._event.currentTarget.dataset.branchIndex),
   });
   render();
 };
@@ -1124,8 +1338,11 @@ export const handleFormActionClick = (deps, payload) => {
     if (isComputed && formData.computed === undefined) {
       appService.showAlert({
         message:
-          copy.computedOperationIncomplete ??
-          "Add an operation with at least two operands.",
+          submitContext.computedMode === "conditional"
+            ? (copy.computedConditionalIncomplete ??
+              "Complete every condition and result, including Otherwise.")
+            : (copy.computedOperationIncomplete ??
+              "Complete the operation by adding its required operands."),
         title: copy.warningTitle ?? "Warning",
       });
       return;

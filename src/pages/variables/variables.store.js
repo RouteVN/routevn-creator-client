@@ -34,6 +34,10 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectVariablesPageCopy } from "./support/variablesPageCopy.js";
 import { collectComputedVariableReferenceIds } from "../../internal/project/projection.js";
+import {
+  getComputedExpressionOperationType,
+  getComputedOperationLabel,
+} from "../../internal/computedOperations.js";
 
 const createFolderContextMenuItems = (copy = {}) => [
   {
@@ -418,7 +422,9 @@ export const selectViewData = ({ state, i18n }) => {
 
     if (isComputed) {
       const isConditional = Array.isArray(selectedItem.computed.branches);
-      const isAddOperation = Array.isArray(selectedItem.computed.expr?.add);
+      const operationType = getComputedExpressionOperationType(
+        selectedItem.computed.expr,
+      );
       const dependencies = collectComputedVariableReferenceIds(
         selectedItem.computed,
       ).map(
@@ -431,9 +437,7 @@ export const selectViewData = ({ state, i18n }) => {
           label: copy.computedOperationLabel ?? "Operation",
           value: isConditional
             ? (copy.computedOperatorIf ?? "If")
-            : isAddOperation
-              ? (copy.computedOperatorAdd ?? "Add")
-              : (copy.computedUnknownReference ?? "Unknown"),
+            : getComputedOperationLabel(operationType, copy),
         },
         {
           type: "text",

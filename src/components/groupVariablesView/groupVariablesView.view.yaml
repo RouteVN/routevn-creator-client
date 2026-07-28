@@ -89,6 +89,62 @@ refs:
         handler: handleOperationBlockContextMenu
       remove-operand-click:
         handler: handleRemoveOperationOperandClick
+      value-operand-click:
+        handler: handleEditOperationValueClick
+      value-operand-contextmenu:
+        handler: handleOperationOperandContextMenu
+      variable-operand-click:
+        handler: handleEditOperationVariableClick
+      variable-operand-contextmenu:
+        handler: handleOperationOperandContextMenu
+  conditionalOperationBlock*:
+    eventListeners:
+      add-operand-click:
+        handler: handleAddOperationOperandClick
+      operation-contextmenu:
+        handler: handleOperationBlockContextMenu
+      remove-operand-click:
+        handler: handleRemoveOperationOperandClick
+      value-operand-click:
+        handler: handleEditOperationValueClick
+      value-operand-contextmenu:
+        handler: handleOperationOperandContextMenu
+      variable-operand-click:
+        handler: handleEditOperationVariableClick
+      variable-operand-contextmenu:
+        handler: handleOperationOperandContextMenu
+  addConditionalNode*:
+    eventListeners:
+      click:
+        handler: handleAddConditionalNodeClick
+  conditionalVariable*:
+    eventListeners:
+      click:
+        handler: handleConditionalVariableClick
+      contextmenu:
+        handler: handleConditionalNodeContextMenu
+  conditionalValue*:
+    eventListeners:
+      click:
+        handler: handleConditionalValueClick
+      contextmenu:
+        handler: handleConditionalNodeContextMenu
+  addConditionalBranchButton:
+    eventListeners:
+      click:
+        handler: handleAddConditionalBranchClick
+  duplicateConditionalBranch*:
+    eventListeners:
+      click:
+        handler: handleDuplicateConditionalBranchClick
+  moveConditionalBranch*:
+    eventListeners:
+      click:
+        handler: handleMoveConditionalBranchClick
+  removeConditionalBranch*:
+    eventListeners:
+      click:
+        handler: handleRemoveConditionalBranchClick
   operationBlockMenu:
     eventListeners:
       close:
@@ -262,16 +318,80 @@ template:
                   - 'rtgl-view slot="operation" d=v w=f g=sm':
                       - rtgl-view d=h w=f av=c g=sm:
                           - rtgl-text w=1fg s=md: ${operationLabel}
-                          - $if !operationBlock:
-                              - 'rtgl-button#addOperationButton sq s=sm v=se pre=plus aria-label="${addOperationLabel}" title="${addOperationLabel}"': null
                       - $if operationBlock:
                           - rvn-computed-operation-block#computedOperationBlock :operation=${operationBlock}: null
+                        $elif conditionalBuilder:
+                          - rtgl-view d=v w=f g=md bw=xs bc=bo br=md p=md bgc=bg:
+                              - $for branch, i in conditionalBuilder.branches:
+                                  - rtgl-view d=v w=f g=sm:
+                                      - rtgl-view d=h w=f av=c g=xs:
+                                          - rtgl-text w=1fg s=md: ${branch.branchLabel}
+                                          - $if branch.canMoveUp:
+                                              - 'rtgl-button#moveConditionalBranchUp${i} data-branch-index=${branch.branchIndex} data-offset="-1" s=sm v=gh aria-label="${conditionalMoveBranchUpLabel}" title="${conditionalMoveBranchUpLabel}"': ${conditionalMoveBranchUpLabel}
+                                          - $if branch.canMoveDown:
+                                              - 'rtgl-button#moveConditionalBranchDown${i} data-branch-index=${branch.branchIndex} data-offset="1" s=sm v=gh aria-label="${conditionalMoveBranchDownLabel}" title="${conditionalMoveBranchDownLabel}"': ${conditionalMoveBranchDownLabel}
+                                          - 'rtgl-button#duplicateConditionalBranch${i} data-branch-index=${branch.branchIndex} s=sm v=gh aria-label="${conditionalDuplicateBranchLabel}" title="${conditionalDuplicateBranchLabel}"': ${conditionalDuplicateBranchLabel}
+                                          - $if branch.canRemove:
+                                              - 'rtgl-button#removeConditionalBranch${i} data-branch-index=${branch.branchIndex} s=sm v=gh aria-label="${conditionalRemoveBranchLabel}" title="${conditionalRemoveBranchLabel}"': ${conditionalRemoveBranchLabel}
+                                      - rtgl-text s=xs c=mu-fg: ${conditionalWhenLabel}
+                                      - $if branch.condition:
+                                          - rtgl-view d=h w=f av=e g=sm:
+                                              - $if branch.condition.source == 'operation':
+                                                - 'rvn-computed-operation-block#conditionalOperationBlockCondition${i} :operation=${branch.condition.operation} style="display: block; flex: 1; min-width: 0;"': null
+                                                $elif branch.condition.source == 'variable':
+                                                  - rtgl-view#conditionalVariableCondition${i} data-target-kind=condition data-branch-index=${branch.branchIndex} d=h w=1fg av=c g=sm bw=xs bc=bo br=md p=sm cur=pointer:
+                                                      - rtgl-text w=1fg s=md: ${branch.condition.variableLabel}
+                                                      - rtgl-text s=sm c=mu-fg: ${branch.condition.variableTypeLabel}
+                                                $else:
+                                                  - rtgl-view#conditionalValueCondition${i} data-target-kind=condition data-branch-index=${branch.branchIndex} w=1fg bw=xs bc=bo br=md p=sm cur=pointer:
+                                                      - $if branch.condition.booleanValueLabel:
+                                                          - rtgl-text s=md: ${branch.condition.booleanValueLabel}
+                                                        $else:
+                                                          - rtgl-text s=md: ${branch.condition.value}
+                                        $else:
+                                          - 'rtgl-button#addConditionalNodeCondition${i} data-target-kind=condition data-branch-index=${branch.branchIndex} s=sm v=se pre=plus w=f': ${conditionalAddConditionLabel}
+                                      - rtgl-text s=xs c=mu-fg: ${conditionalThenLabel}
+                                      - $if branch.result:
+                                          - rtgl-view d=h w=f av=e g=sm:
+                                              - $if branch.result.source == 'operation':
+                                                - 'rvn-computed-operation-block#conditionalOperationBlockResult${i} :operation=${branch.result.operation} style="display: block; flex: 1; min-width: 0;"': null
+                                                $elif branch.result.source == 'variable':
+                                                  - rtgl-view#conditionalVariableResult${i} data-target-kind=result data-branch-index=${branch.branchIndex} d=h w=1fg av=c g=sm bw=xs bc=bo br=md p=sm cur=pointer:
+                                                      - rtgl-text w=1fg s=md: ${branch.result.variableLabel}
+                                                      - rtgl-text s=sm c=mu-fg: ${branch.result.variableTypeLabel}
+                                                $else:
+                                                  - rtgl-view#conditionalValueResult${i} data-target-kind=result data-branch-index=${branch.branchIndex} w=1fg bw=xs bc=bo br=md p=sm cur=pointer:
+                                                      - $if branch.result.booleanValueLabel:
+                                                          - rtgl-text s=md: ${branch.result.booleanValueLabel}
+                                                        $else:
+                                                          - rtgl-text s=md: ${branch.result.value}
+                                        $else:
+                                          - 'rtgl-button#addConditionalNodeResult${i} data-target-kind=result data-branch-index=${branch.branchIndex} s=sm v=se pre=plus w=f': ${conditionalAddResultLabel}
+                              - rtgl-button#addConditionalBranchButton s=sm v=se pre=plus: ${conditionalAddBranchLabel}
+                              - rtgl-view d=v w=f g=sm:
+                                  - rtgl-text s=md: ${conditionalOtherwiseLabel}
+                                  - $if conditionalBuilder.defaultResult:
+                                      - rtgl-view d=h w=f av=e g=sm:
+                                          - $if conditionalBuilder.defaultResult.source == 'operation':
+                                            - 'rvn-computed-operation-block#conditionalOperationBlockDefault :operation=${conditionalBuilder.defaultResult.operation} style="display: block; flex: 1; min-width: 0;"': null
+                                            $elif conditionalBuilder.defaultResult.source == 'variable':
+                                              - rtgl-view#conditionalVariableDefault data-target-kind=default d=h w=1fg av=c g=sm bw=xs bc=bo br=md p=sm cur=pointer:
+                                                  - rtgl-text w=1fg s=md: ${conditionalBuilder.defaultResult.variableLabel}
+                                                  - rtgl-text s=sm c=mu-fg: ${conditionalBuilder.defaultResult.variableTypeLabel}
+                                            $else:
+                                              - rtgl-view#conditionalValueDefault data-target-kind=default w=1fg bw=xs bc=bo br=md p=sm cur=pointer:
+                                                  - $if conditionalBuilder.defaultResult.booleanValueLabel:
+                                                      - rtgl-text s=md: ${conditionalBuilder.defaultResult.booleanValueLabel}
+                                                    $else:
+                                                      - rtgl-text s=md: ${conditionalBuilder.defaultResult.value}
+                                    $else:
+                                      - 'rtgl-button#addConditionalNodeDefault data-target-kind=default s=sm v=se pre=plus w=f': ${conditionalAddResultLabel}
                         $else:
-                          - rtgl-text s=sm c=mu-fg: ${operationEmptyMessage}
+                          - rtgl-button#addOperationButton v=se pre=plus w=f: ${addOperationLabel}
       - rtgl-dropdown-menu#operationChoiceMenu :items=${operationChoiceMenu.items} ?open=${operationChoiceMenu.isOpen} x=${operationChoiceMenu.x} y=${operationChoiceMenu.y} place=bs: null
       - rtgl-dropdown-menu#operationBlockMenu :items=${operationBlockMenu.items} ?open=${operationBlockMenu.isOpen} x=${operationBlockMenu.x} y=${operationBlockMenu.y}: null
       - rtgl-dropdown-menu#operandSourceMenu :items=${operandSourceMenu.items} ?open=${operandSourceMenu.isOpen} x=${operandSourceMenu.x} y=${operandSourceMenu.y} place=bs: null
-      - rvn-computed-value-operand-popover#operationValuePopover ?open=${operationValuePopover.isOpen} x=${operationValuePopover.x} y=${operationValuePopover.y}: null
+      - rvn-computed-value-operand-popover#operationValuePopover ?open=${operationValuePopover.isOpen} x=${operationValuePopover.x} y=${operationValuePopover.y} :valueTypes=${operationValuePopover.valueTypes} :initialValue=${operationValuePopover.initialValue}: null
       - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
       - rtgl-popover#enumValuePopover ?open=${enumValuePopover.isOpen} x=${enumValuePopover.x} y=${enumValuePopover.y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
           - rtgl-form#enumValueForm key=${enumValuePopover.key} :defaultValues=${enumValueDefaultValues} :form=${enumValueForm} w=f: null
