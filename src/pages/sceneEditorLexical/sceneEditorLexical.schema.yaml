@@ -2,3 +2,6 @@ componentName: rvn-scene-editor-lexical
 propsSchema:
   type: object
   properties: {}
+events:
+  mobile-keyboard-state-change:
+    type: object

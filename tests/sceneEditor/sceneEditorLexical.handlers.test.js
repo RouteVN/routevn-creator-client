@@ -15,6 +15,7 @@ import {
   handleEditorBlur,
   handleEditorDataChanged,
   handleBackClick,
+  handleMobileKeyboardStateChange,
   handleNewLine,
   handlePreviewClick,
   handleSectionMoveSceneFormActionClick,
@@ -27,6 +28,42 @@ import {
   syncSceneEditorRoutePayload,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+
+describe("sceneEditorLexical.handlers mobile keyboard state", () => {
+  it("reports normalized keyboard visibility to the app shell", () => {
+    const keyboardState = {
+      isVisible: true,
+      bottom: 0,
+      keyboardInset: 255,
+      visualOffsetTop: 0,
+      pageTop: 0,
+      visualHeight: 567,
+      layoutHeight: 567,
+    };
+    const deps = {
+      store: {
+        setMobileKeyboardState: vi.fn(),
+        selectMobileKeyboardState: vi.fn(() => keyboardState),
+      },
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+
+    handleMobileKeyboardStateChange(deps, {
+      _event: {
+        detail: keyboardState,
+      },
+    });
+
+    expect(deps.store.setMobileKeyboardState).toHaveBeenCalledWith(
+      keyboardState,
+    );
+    expect(deps.render).toHaveBeenCalledOnce();
+    const [event] = deps.dispatchEvent.mock.calls[0];
+    expect(event.type).toBe("mobile-keyboard-state-change");
+    expect(event.detail).toEqual(keyboardState);
+  });
+});
 
 describe("sceneEditorLexical.handlers navigation preparation", () => {
   it("awaits the current text-stats cache before leaving the editor", async () => {

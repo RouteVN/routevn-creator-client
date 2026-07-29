@@ -773,6 +773,10 @@ export const setMobileKeyboardState = (
     : 0;
 };
 
+export const selectMobileKeyboardState = ({ state }) => ({
+  ...state.mobileKeyboardState,
+});
+
 export const setRepositoryState = ({ state }, { repository } = {}) => {
   state.repositoryState = repository;
 };

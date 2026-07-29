@@ -5,9 +5,34 @@ import Subject from "../../src/deps/subject.js";
 import {
   createRouteTransitionRunner,
   handleBeforeMount,
+  handleSceneEditorKeyboardStateChange,
   handleWindowPop,
   maybePromptLinuxAppImageDesktopIntegration,
 } from "../../src/pages/app/app.handlers.js";
+
+describe("app Scene Editor keyboard state", () => {
+  it("updates the app shell when the Scene Editor keyboard changes", () => {
+    const deps = {
+      store: {
+        setSceneEditorKeyboardVisible: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleSceneEditorKeyboardStateChange(deps, {
+      _event: {
+        detail: {
+          isVisible: true,
+        },
+      },
+    });
+
+    expect(deps.store.setSceneEditorKeyboardVisible).toHaveBeenCalledWith({
+      isVisible: true,
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
+  });
+});
 
 describe("app route transitions", () => {
   it("updates Discord presence after the active locale changes", () => {

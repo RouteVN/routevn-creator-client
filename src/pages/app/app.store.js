@@ -5,6 +5,7 @@ export const createInitialState = () => ({
   isTouchMode: false,
   isMobileSheetOpen: false,
   mobileSheetVariant: undefined,
+  isSceneEditorKeyboardVisible: false,
   isRepositoryLoading: false,
   repositoryLoadingPhase: "",
   repositoryLoadingCurrent: 0,
@@ -61,10 +62,14 @@ export const selectShowMobileTabBar = ({ state }) => {
   const normalizedRoutesWithoutMobileTabBar = routesWithoutMobileTabBar.map(
     (route) => route.replace(/\/$/, ""),
   );
+  const isSceneEditorKeyboardVisible =
+    normalizedPattern === "/project/scene-editor" &&
+    state.isSceneEditorKeyboardVisible;
 
   return (
     selectShowAppNavigation({ state }) &&
     state.isTouchMode &&
+    !isSceneEditorKeyboardVisible &&
     !normalizedRoutesWithoutMobileTabBar.includes(normalizedPattern)
   );
 };
@@ -177,8 +182,18 @@ export const setPlatform = ({ state }, { platform } = {}) => {
 };
 
 export const setCurrentRoute = ({ state }, { route, payload } = {}) => {
+  if (route !== state.currentRoute) {
+    state.isSceneEditorKeyboardVisible = false;
+  }
   state.currentRoute = route;
   state.currentRoutePayload = { ...payload };
+};
+
+export const setSceneEditorKeyboardVisible = (
+  { state },
+  { isVisible } = {},
+) => {
+  state.isSceneEditorKeyboardVisible = isVisible === true;
 };
 
 export const selectCurrentRoute = ({ state }) => state.currentRoute;

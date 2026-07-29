@@ -719,6 +719,14 @@ export const handleMobileSheetClose = (deps) => {
   render();
 };
 
+export const handleSceneEditorKeyboardStateChange = (deps, payload = {}) => {
+  const { store, render } = deps;
+  const { isVisible } = payload._event.detail;
+
+  store.setSceneEditorKeyboardVisible({ isVisible });
+  render();
+};
+
 const subscriptions = (deps) => {
   const { appService, subject } = deps;
   const runRouteTransition = createRouteTransitionRunner(deps);
