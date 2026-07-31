@@ -22,7 +22,10 @@ import {
   selectPendingResourceId,
   selectPendingSpritesheetAnimationName,
   selectSelectedAnimation,
+  selectSelectedAnimationCanLoop,
+  selectSelectedAnimationLoop,
   selectSelectedAnimationPlaybackContinuity,
+  selectSelectedAnimationPlaybackSpeed,
   selectSelectedAnimationMode,
   selectSelectedBlur,
   selectSelectedBlurActionValue,
@@ -43,7 +46,9 @@ import {
   setRepositoryState,
   setSearchQuery,
   setSelectedAnimation,
+  setSelectedAnimationLoop,
   setSelectedAnimationPlaybackContinuity,
+  setSelectedAnimationPlaybackSpeed,
   setSelectedAnimationMode,
   setSelectedBlur,
   setSelectedBlurEnabled,
@@ -73,8 +78,13 @@ const createStoreApi = (state) => ({
   selectPendingSpritesheetAnimationName: () =>
     selectPendingSpritesheetAnimationName({ state }),
   selectSelectedAnimation: () => selectSelectedAnimation({ state }),
+  selectSelectedAnimationCanLoop: () =>
+    selectSelectedAnimationCanLoop({ state }),
+  selectSelectedAnimationLoop: () => selectSelectedAnimationLoop({ state }),
   selectSelectedAnimationPlaybackContinuity: () =>
     selectSelectedAnimationPlaybackContinuity({ state }),
+  selectSelectedAnimationPlaybackSpeed: () =>
+    selectSelectedAnimationPlaybackSpeed({ state }),
   selectSelectedAnimationMode: () => selectSelectedAnimationMode({ state }),
   selectSelectedBlur: () => selectSelectedBlur({ state }),
   selectSelectedBlurActionValue: () => selectSelectedBlurActionValue({ state }),
@@ -98,8 +108,12 @@ const createStoreApi = (state) => ({
   setPendingResourceId: (payload) => setPendingResourceId({ state }, payload),
   setSearchQuery: (payload) => setSearchQuery({ state }, payload),
   setSelectedAnimation: (payload) => setSelectedAnimation({ state }, payload),
+  setSelectedAnimationLoop: (payload) =>
+    setSelectedAnimationLoop({ state }, payload),
   setSelectedAnimationPlaybackContinuity: (payload) =>
     setSelectedAnimationPlaybackContinuity({ state }, payload),
+  setSelectedAnimationPlaybackSpeed: (payload) =>
+    setSelectedAnimationPlaybackSpeed({ state }, payload),
   setSelectedAnimationMode: (payload) =>
     setSelectedAnimationMode({ state }, payload),
   setSelectedBlur: (payload) => setSelectedBlur({ state }, payload),
@@ -167,8 +181,21 @@ const setRepositoryCollections = (state) => {
               type: "transition",
             },
           },
+          "bg-pan": {
+            id: "bg-pan",
+            type: "animation",
+            name: "Pan",
+            animation: {
+              type: "update",
+              tween: {
+                x: {
+                  keyframes: [{ duration: 300, value: 100 }],
+                },
+              },
+            },
+          },
         },
-        tree: [{ id: "bg-fade" }],
+        tree: [{ id: "bg-fade" }, { id: "bg-pan" }],
       },
       transforms: {
         items: {
@@ -210,9 +237,11 @@ describe("commandLineBackground.handlers", () => {
             repeatEdgePixels: true,
           },
           animations: {
-            resourceId: "bg-fade",
+            resourceId: "bg-pan",
             playback: {
               continuity: "render",
+              speed: 1.5,
+              loop: true,
             },
           },
           loop: true,
@@ -230,8 +259,10 @@ describe("commandLineBackground.handlers", () => {
       kernelSize: 9,
       repeatEdgePixels: true,
     });
-    expect(selectSelectedAnimation({ state })).toBe("bg-fade");
+    expect(selectSelectedAnimation({ state })).toBe("bg-pan");
     expect(selectSelectedAnimationPlaybackContinuity({ state })).toBe("render");
+    expect(selectSelectedAnimationPlaybackSpeed({ state })).toBe(1.5);
+    expect(selectSelectedAnimationLoop({ state })).toBe(true);
     expect(selectBackgroundLoop({ state })).toBe(true);
   });
 
@@ -865,6 +896,7 @@ describe("commandLineBackground.handlers", () => {
             resourceId: "bg-fade",
             playback: {
               continuity: "render",
+              speed: 1,
             },
           },
         },
@@ -877,6 +909,7 @@ describe("commandLineBackground.handlers", () => {
           resourceId: "bg-fade",
           playback: {
             continuity: "render",
+            speed: 1,
           },
         },
       },
@@ -1142,11 +1175,88 @@ describe("commandLineBackground.handlers", () => {
           resourceId: "bg-fade",
           playback: {
             continuity: "render",
+            speed: 1,
           },
         },
       },
     });
     expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("submits playback speed and loop for an update animation", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setRepositoryCollections(state);
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+    setSelectedAnimation(
+      { state },
+      {
+        animationId: "bg-pan",
+      },
+    );
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            name: "playbackSpeed",
+            value: 1.5,
+          },
+        },
+      },
+    );
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            name: "playbackLoop",
+            value: true,
+          },
+        },
+      },
+    );
+
+    handleSubmitClick(
+      {
+        dispatchEvent,
+        store: createStoreApi(state),
+      },
+      {},
+    );
+
+    expect(selectSelectedAnimationPlaybackSpeed({ state })).toBe(1.5);
+    expect(selectSelectedAnimationLoop({ state })).toBe(true);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      background: {
+        resourceId: "bg-school",
+        animations: {
+          resourceId: "bg-pan",
+          playback: {
+            continuity: "render",
+            speed: 1.5,
+            loop: true,
+          },
+        },
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(2);
   });
 
   it("opens the local transform editor and emits customize from inside the background command line", () => {

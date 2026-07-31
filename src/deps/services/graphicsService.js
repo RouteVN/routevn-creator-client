@@ -18,6 +18,17 @@ import {
 import { requireProjectResolution } from "../../internal/projectResolution.js";
 import { loadFontBuffer } from "./shared/fontLoader.js";
 
+const selectLoopingUpdateAnimations = (animations = []) => {
+  if (!Array.isArray(animations)) {
+    return [];
+  }
+
+  return animations.filter(
+    (animation) =>
+      animation?.type === "update" && animation?.playback?.loop === true,
+  );
+};
+
 const cloneBufferForAudioDecode = (value) => {
   if (value instanceof ArrayBuffer) {
     return value.slice(0);
@@ -2257,15 +2268,22 @@ export const createGraphicsService = async ({
         skipAudio = false,
         skipAnimations = false,
       } = options;
-      routeGraphics.setAnimationPlaybackMode?.(
-        skipAnimations && !preserveAnimationPlayback ? "manual" : "auto",
-      );
-      const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
       let renderState = engine.selectRenderState();
+      const loopingAnimations = skipAnimations
+        ? selectLoopingUpdateAnimations(renderState?.animations)
+        : [];
+      const nextAnimationPlaybackMode =
+        skipAnimations &&
+        !preserveAnimationPlayback &&
+        loopingAnimations.length === 0
+          ? "manual"
+          : "auto";
+      routeGraphics.setAnimationPlaybackMode?.(nextAnimationPlaybackMode);
+      const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
       if (skipAnimations) {
         renderState = {
           ...renderState,
-          animations: [],
+          animations: loopingAnimations,
           elements: disableTextRevealingEffects(renderState?.elements),
         };
       }

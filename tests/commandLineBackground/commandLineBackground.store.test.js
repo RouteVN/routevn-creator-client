@@ -58,6 +58,11 @@ describe("commandLineBackground.store", () => {
               name: "Pan",
               animation: {
                 type: "update",
+                tween: {
+                  x: {
+                    keyframes: [{ duration: 300, value: 100 }],
+                  },
+                },
               },
             },
             "bg-fade": {
@@ -204,7 +209,7 @@ describe("commandLineBackground.store", () => {
     );
   });
 
-  it("shows playback continuity when an animation is selected", () => {
+  it("shows playback controls for a selected update animation", () => {
     const state = createInitialState();
 
     setRepositoryState(
@@ -231,6 +236,11 @@ describe("commandLineBackground.store", () => {
               name: "Pan",
               animation: {
                 type: "update",
+                tween: {
+                  x: {
+                    keyframes: [{ duration: 300, value: 100 }],
+                  },
+                },
               },
             },
           },
@@ -275,6 +285,12 @@ describe("commandLineBackground.store", () => {
     const continuityField = viewData.dialogueForm.form.fields.find(
       (field) => field.name === "playbackContinuity",
     );
+    const speedField = viewData.dialogueForm.form.fields.find(
+      (field) => field.name === "playbackSpeed",
+    );
+    const loopField = viewData.dialogueForm.form.fields.find(
+      (field) => field.name === "playbackLoop",
+    );
 
     expect(animationField).toMatchObject({
       type: "select",
@@ -289,7 +305,7 @@ describe("commandLineBackground.store", () => {
     });
     expect(continuityField).toMatchObject({
       name: "playbackContinuity",
-      label: "Playback",
+      label: "Continuity",
       type: "segmented-control",
       options: [
         {
@@ -302,11 +318,131 @@ describe("commandLineBackground.store", () => {
         },
       ],
     });
+    expect(speedField).toMatchObject({
+      name: "playbackSpeed",
+      label: "Playback Speed",
+      type: "input-number",
+      min: 0.01,
+      step: 0.1,
+      required: true,
+    });
+    expect(loopField).toMatchObject({
+      name: "playbackLoop",
+      label: "Loop",
+      type: "segmented-control",
+      clearable: false,
+      options: [
+        {
+          value: false,
+          label: "Don't Loop",
+        },
+        {
+          value: true,
+          label: "Loop",
+        },
+      ],
+    });
+    expect(
+      viewData.dialogueForm.form.fields
+        .filter((field) => field.name?.startsWith("playback"))
+        .map((field) => field.name),
+    ).toEqual(["playbackSpeed", "playbackLoop", "playbackContinuity"]);
     expect(viewData.dialogueForm.defaultValues.transformId).toBe("bg-center");
     expect(viewData.dialogueForm.defaultValues.animationId).toBe("bg-pan");
     expect(viewData.dialogueForm.defaultValues.playbackContinuity).toBe(
       "render",
     );
+    expect(viewData.dialogueForm.defaultValues.playbackSpeed).toBe(1);
+    expect(viewData.dialogueForm.defaultValues.playbackLoop).toBe(false);
+  });
+
+  it("disables playback loop for automatic update animations", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        animations: {
+          items: {
+            "bg-auto": {
+              id: "bg-auto",
+              type: "animation",
+              name: "Automatic Position",
+              animation: {
+                type: "update",
+                tween: {
+                  x: {
+                    auto: {
+                      duration: 300,
+                      easing: "linear",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          tree: [{ id: "bg-auto" }],
+        },
+      },
+    );
+    setSelectedAnimation(
+      { state },
+      {
+        animationId: "bg-auto",
+      },
+    );
+
+    const loopField = selectViewData({
+      state,
+    }).dialogueForm.form.fields.find((field) => field.name === "playbackLoop");
+
+    expect(loopField).toMatchObject({
+      disabled: true,
+      description: "loopingRequiresKeyframesDescription",
+    });
+  });
+
+  it("hides playback loop for a selected transition animation", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        animations: {
+          items: {
+            "bg-fade": {
+              id: "bg-fade",
+              type: "animation",
+              name: "Fade",
+              animation: {
+                type: "transition",
+              },
+            },
+          },
+          tree: [{ id: "bg-fade" }],
+        },
+      },
+    );
+    setSelectedAnimation(
+      { state },
+      {
+        animationId: "bg-fade",
+      },
+    );
+
+    const fields = selectViewData({ state }).dialogueForm.form.fields;
+
+    expect(
+      fields.find((field) => field.name === "playbackSpeed"),
+    ).toBeDefined();
+    expect(
+      fields.find((field) => field.name === "playbackLoop"),
+    ).toBeUndefined();
+    expect(
+      fields
+        .filter((field) => field.name?.startsWith("playback"))
+        .map((field) => field.name),
+    ).toEqual(["playbackSpeed", "playbackContinuity"]);
   });
 
   it("shows the custom transform slot when custom transform is enabled", () => {

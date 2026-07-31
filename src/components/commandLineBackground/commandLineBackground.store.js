@@ -47,6 +47,7 @@ const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
 ];
 
 const DEFAULT_BACKGROUND_OPACITY = 1;
+const DEFAULT_ANIMATION_PLAYBACK_SPEED = 1;
 const BACKGROUND_RESOURCE_CARD_ASPECT_RATIO = "16 / 9";
 const DEFAULT_BACKGROUND_BLUR = {
   x: 6,
@@ -78,6 +79,49 @@ const getAnimationType = (item = {}) => {
   return item?.animation?.type === "transition" ? "transition" : "update";
 };
 
+const getTweenPropertyDurationMs = (tweenProperty) => {
+  if (!Array.isArray(tweenProperty?.keyframes)) {
+    return 0;
+  }
+
+  return tweenProperty.keyframes.reduce((total, keyframe) => {
+    const duration =
+      typeof keyframe?.duration === "number" &&
+      Number.isFinite(keyframe.duration)
+        ? keyframe.duration
+        : 0;
+    return total + duration;
+  }, 0);
+};
+
+const getTweenDurationMs = (tween) => {
+  if (!tween || typeof tween !== "object" || Array.isArray(tween)) {
+    return 0;
+  }
+
+  return Object.values(tween).reduce(
+    (maxDuration, tweenProperty) =>
+      Math.max(maxDuration, getTweenPropertyDurationMs(tweenProperty)),
+    0,
+  );
+};
+
+const canLoopAnimationItem = (item) => {
+  const animation = item?.animation;
+  if (animation?.type !== "update" || animation.complete !== undefined) {
+    return false;
+  }
+
+  const authoredDurationMs = Math.max(
+    getTweenDurationMs(animation.tween),
+    getTweenDurationMs(animation.prev?.tween),
+    getTweenDurationMs(animation.next?.tween),
+    getTweenPropertyDurationMs(animation.mask?.progress),
+  );
+
+  return Number.isFinite(authoredDurationMs) && authoredDurationMs > 0;
+};
+
 const getAnimationItemById = (collection = {}, animationId) => {
   if (!animationId) {
     return undefined;
@@ -93,6 +137,9 @@ const getAnimationModeById = (collection = {}, animationId) => {
   return item ? getAnimationType(item) : undefined;
 };
 
+const canLoopAnimationById = (collection = {}, animationId) =>
+  canLoopAnimationItem(getAnimationItemById(collection, animationId));
+
 const normalizeBackgroundOpacity = (opacity) => {
   if (opacity === undefined || opacity === null || opacity === "") {
     return undefined;
@@ -104,6 +151,13 @@ const normalizeBackgroundOpacity = (opacity) => {
   }
 
   return Math.max(0, Math.min(1, parsedOpacity));
+};
+
+const normalizeAnimationPlaybackSpeed = (speed) => {
+  const parsedSpeed = Number(speed);
+  return Number.isFinite(parsedSpeed) && parsedSpeed > 0
+    ? parsedSpeed
+    : DEFAULT_ANIMATION_PLAYBACK_SPEED;
 };
 
 const normalizeBackgroundBlurNumber = (value, fallback) => {
@@ -187,6 +241,8 @@ export const createInitialState = () => ({
   selectedAnimationMode: "none",
   selectedAnimationId: undefined,
   selectedAnimationPlaybackContinuity: "render",
+  selectedAnimationPlaybackSpeed: DEFAULT_ANIMATION_PLAYBACK_SPEED,
+  selectedAnimationLoop: false,
   backgroundLoop: false,
   pendingResourceId: undefined,
   pendingSpritesheetAnimationName: undefined,
@@ -261,6 +317,12 @@ export const setRepositoryState = (
   );
   if (selectedAnimationMode) {
     state.selectedAnimationMode = selectedAnimationMode;
+    if (
+      selectedAnimationMode !== "update" ||
+      !canLoopAnimationById(state.animationItems, state.selectedAnimationId)
+    ) {
+      state.selectedAnimationLoop = false;
+    }
   }
 };
 
@@ -372,10 +434,17 @@ export const setSelectedAnimationMode = ({ state }, { mode } = {}) => {
   if (mode !== "update" && mode !== "transition") {
     state.selectedAnimationMode = "none";
     state.selectedAnimationId = undefined;
+    state.selectedAnimationLoop = false;
     return;
   }
 
   state.selectedAnimationMode = mode;
+  if (
+    mode !== "update" ||
+    !canLoopAnimationById(state.animationItems, state.selectedAnimationId)
+  ) {
+    state.selectedAnimationLoop = false;
+  }
 
   const selectedAnimationMode = getAnimationModeById(
     state.animationItems,
@@ -399,8 +468,15 @@ export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
   );
   if (selectedAnimationMode) {
     state.selectedAnimationMode = selectedAnimationMode;
+    if (
+      selectedAnimationMode !== "update" ||
+      !canLoopAnimationById(state.animationItems, state.selectedAnimationId)
+    ) {
+      state.selectedAnimationLoop = false;
+    }
   } else if (!state.selectedAnimationId) {
     state.selectedAnimationMode = "none";
+    state.selectedAnimationLoop = false;
   }
 };
 
@@ -528,6 +604,29 @@ export const setSelectedAnimationPlaybackContinuity = (
 
 export const selectSelectedAnimationPlaybackContinuity = ({ state }) => {
   return state.selectedAnimationPlaybackContinuity;
+};
+
+export const setSelectedAnimationPlaybackSpeed = (
+  { state },
+  { speed } = {},
+) => {
+  state.selectedAnimationPlaybackSpeed = normalizeAnimationPlaybackSpeed(speed);
+};
+
+export const selectSelectedAnimationPlaybackSpeed = ({ state }) => {
+  return state.selectedAnimationPlaybackSpeed;
+};
+
+export const setSelectedAnimationLoop = ({ state }, { loop } = {}) => {
+  state.selectedAnimationLoop = loop === true || loop === "true";
+};
+
+export const selectSelectedAnimationLoop = ({ state }) => {
+  return state.selectedAnimationLoop;
+};
+
+export const selectSelectedAnimationCanLoop = ({ state }) => {
+  return canLoopAnimationById(state.animationItems, state.selectedAnimationId);
 };
 
 export const setBackgroundLoop = ({ state }, { loop } = {}) => {
@@ -782,6 +881,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   );
   const breadcrumb = selectBreadcrumb({ state });
   const selectedAnimationMode = state.selectedAnimationMode ?? "none";
+  const selectedAnimationCanLoop = selectSelectedAnimationCanLoop({ state });
   const allAnimationItems = toFlatItems(state.animationItems).filter(
     (item) => item.type === "animation",
   );
@@ -913,8 +1013,36 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
 
   if (selectedAnimationMode !== "none") {
     formFields.push({
+      name: "playbackSpeed",
+      label: "Playback Speed",
+      type: "input-number",
+      min: 0.01,
+      step: 0.1,
+      required: true,
+    });
+  }
+
+  if (selectedAnimationMode === "update") {
+    formFields.push({
+      name: "playbackLoop",
+      label: "Loop",
+      type: "segmented-control",
+      clearable: false,
+      disabled: !selectedAnimationCanLoop,
+      description: selectedAnimationCanLoop
+        ? undefined
+        : "loopingRequiresKeyframesDescription",
+      options: [
+        { value: false, label: "Don't Loop" },
+        { value: true, label: "Loop" },
+      ],
+    });
+  }
+
+  if (selectedAnimationMode !== "none") {
+    formFields.push({
       name: "playbackContinuity",
-      label: "Playback",
+      label: "Continuity",
       type: "segmented-control",
       clearable: false,
       options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
@@ -950,6 +1078,8 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     blurKernelSize: state.selectedBlur.kernelSize,
     blurRepeatEdgePixels: state.selectedBlur.repeatEdgePixels,
     playbackContinuity: state.selectedAnimationPlaybackContinuity,
+    playbackSpeed: state.selectedAnimationPlaybackSpeed,
+    playbackLoop: state.selectedAnimationLoop,
     animationId: state.selectedAnimationId,
     loop: state.backgroundLoop ?? false,
   };
@@ -1007,6 +1137,8 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         state.selectedBlur.kernelSize,
         state.selectedBlur.repeatEdgePixels ? "repeat-edge" : "no-repeat-edge",
         state.selectedAnimationPlaybackContinuity ?? "render",
+        state.selectedAnimationPlaybackSpeed,
+        state.selectedAnimationLoop ? "animation-loop" : "animation-no-loop",
         selectedAnimationMode,
         state.selectedAnimationId ?? "none",
         state.backgroundLoop ? "loop" : "no-loop",
