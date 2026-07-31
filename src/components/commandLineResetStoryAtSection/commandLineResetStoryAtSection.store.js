@@ -152,6 +152,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       copy,
     ),
     form: localizeCommandLineForm(form, copy),
+    formKey: selectedAnimationId ?? "no-animation",
     defaultValues: state.formValues,
     context: {
       sceneOptions,

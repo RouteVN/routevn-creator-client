@@ -172,6 +172,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     mode: state.mode,
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     form: localizeCommandLineForm(form, copy),
+    formKey: selectedAnimationId ?? "no-animation",
     context,
     defaultValues: state.formValues,
   };

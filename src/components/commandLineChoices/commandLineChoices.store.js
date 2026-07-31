@@ -559,6 +559,9 @@ export const selectViewData = ({ state, props, i18n }) => {
     layouts: resourceOptions,
     selectedResourceId,
     editingIndex: state?.editingIndex ?? -1,
+    choiceFormKey: `${state?.editingIndex ?? -1}:${
+      state.editForm.transitionAnimationId ?? "no-animation"
+    }`,
     editForm: state?.editForm,
     editFormContext,
     defaultValues,

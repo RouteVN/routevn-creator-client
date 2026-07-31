@@ -49,7 +49,7 @@ refs:
         handler: handleAnimationChange
   animationPlaybackSpeed:
     eventListeners:
-      value-input:
+      value-change:
         handler: handleAnimationPlaybackSpeedInput
   animationPlaybackLoop:
     eventListeners:

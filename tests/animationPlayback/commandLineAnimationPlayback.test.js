@@ -47,6 +47,21 @@ import {
   selectViewData as selectScreenViewData,
   setFormValues as setScreenFormValues,
 } from "../../src/components/commandLineScreen/commandLineScreen.store.js";
+import {
+  createInitialState as createChoiceState,
+  selectViewData as selectChoiceViewData,
+  updateEditForm,
+} from "../../src/components/commandLineChoices/commandLineChoices.store.js";
+import {
+  createInitialState as createSectionTransitionState,
+  selectViewData as selectSectionTransitionViewData,
+  setFormValues as setSectionTransitionFormValues,
+} from "../../src/components/commandLineSectionTransition/commandLineSectionTransition.store.js";
+import {
+  createInitialState as createResetStoryState,
+  selectViewData as selectResetStoryViewData,
+  setFormValues as setResetStoryFormValues,
+} from "../../src/components/commandLineResetStoryAtSection/commandLineResetStoryAtSection.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const animations = {
@@ -361,5 +376,80 @@ describe("command line animation playback", () => {
     expect(screenView.form.fields.map((field) => field.name)).not.toContain(
       "playbackLoop",
     );
+  });
+
+  it("remounts conditional transition forms with initialized playback values", () => {
+    const choiceState = createChoiceState();
+    const initialChoiceView = selectChoiceViewData({
+      state: choiceState,
+      props: { layouts: [] },
+      i18n: EN_I18N,
+    });
+    updateEditForm(
+      { state: choiceState },
+      { field: "actionType", value: "sectionTransition" },
+    );
+    updateEditForm(
+      { state: choiceState },
+      { field: "transitionAnimationId", value: "fade-transition" },
+    );
+    const selectedChoiceView = selectChoiceViewData({
+      state: choiceState,
+      props: { layouts: [] },
+      i18n: EN_I18N,
+    });
+    expect(selectedChoiceView.choiceFormKey).not.toBe(
+      initialChoiceView.choiceFormKey,
+    );
+    expect(selectedChoiceView.editForm).toMatchObject({
+      playbackSpeed: 1,
+      playbackContinuity: "render",
+    });
+
+    const sectionTransitionState = createSectionTransitionState();
+    const initialSectionTransitionView = selectSectionTransitionViewData({
+      state: sectionTransitionState,
+      props: {},
+      i18n: EN_I18N,
+    });
+    setSectionTransitionFormValues(
+      { state: sectionTransitionState },
+      { transitionAnimationId: "fade-transition" },
+    );
+    const selectedSectionTransitionView = selectSectionTransitionViewData({
+      state: sectionTransitionState,
+      props: {},
+      i18n: EN_I18N,
+    });
+    expect(selectedSectionTransitionView.formKey).not.toBe(
+      initialSectionTransitionView.formKey,
+    );
+    expect(selectedSectionTransitionView.defaultValues).toMatchObject({
+      playbackSpeed: 1,
+      playbackContinuity: "render",
+    });
+
+    const resetStoryState = createResetStoryState();
+    const initialResetStoryView = selectResetStoryViewData({
+      state: resetStoryState,
+      props: {},
+      i18n: EN_I18N,
+    });
+    setResetStoryFormValues(
+      { state: resetStoryState },
+      { values: { transitionAnimationId: "fade-transition" } },
+    );
+    const selectedResetStoryView = selectResetStoryViewData({
+      state: resetStoryState,
+      props: {},
+      i18n: EN_I18N,
+    });
+    expect(selectedResetStoryView.formKey).not.toBe(
+      initialResetStoryView.formKey,
+    );
+    expect(selectedResetStoryView.defaultValues).toMatchObject({
+      playbackSpeed: 1,
+      playbackContinuity: "render",
+    });
   });
 });

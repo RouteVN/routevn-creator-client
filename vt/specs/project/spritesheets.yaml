@@ -382,6 +382,28 @@ steps:
     args:
       - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const visual = deepQuery(document, 'rvn-command-line-visual#commandLineVisual'); const speedField = deepQuery(visual.shadowRoot, '#animationPlaybackSpeed0x0'); const speed = deepQuery(speedField.shadowRoot, 'input'); const loop = deepQuery(visual.shadowRoot, '#animationPlaybackLoop0x0'); const continuity = deepQuery(visual.shadowRoot, '#animationPlaybackContinuity0x0'); return `${speed.value}:${loop.disabled}:${Boolean(continuity)}`; })()"
     value: "1:true:true"
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual #animationPlaybackSpeed0x0 input"
+    steps:
+      - action: clear
+      - action: write
+        value: "0.5"
+  - action: keypress
+    key: Tab
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const visual = deepQuery(document, 'rvn-command-line-visual#commandLineVisual'); const speedField = deepQuery(visual.shadowRoot, '#animationPlaybackSpeed0x0'); return deepQuery(speedField.shadowRoot, 'input').value; })()"
+    value: "0.5"
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual #animationPlaybackSpeed0x0 input"
+    steps:
+      - action: clear
+      - action: write
+        value: "1"
+  - action: keypress
+    key: Tab
   - action: wait
     ms: 300
   - action: screenshot
