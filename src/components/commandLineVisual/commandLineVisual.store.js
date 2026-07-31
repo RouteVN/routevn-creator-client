@@ -1,6 +1,15 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { generatePrefixedId } from "../../internal/id.js";
 import {
+  canLoopAnimationById,
+  createAnimationReference,
+  getAnimationModeById,
+  getAnimationType,
+  normalizeAnimationPlaybackContinuity,
+  normalizeAnimationPlaybackLoop,
+  normalizeAnimationPlaybackSpeed,
+} from "../../internal/animationPlayback.js";
+import {
   getSpritesheetAnimationPreview,
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
@@ -75,6 +84,14 @@ const VISUAL_LAYER_DISPLAY_OPTIONS = VISUAL_LAYER_OPTIONS.slice().sort(
 const TRANSFORM_MODE_OPTIONS = [
   { value: false, label: "Predefined" },
   { value: true, label: "Custom" },
+];
+const ANIMATION_PLAYBACK_LOOP_OPTIONS = [
+  { value: false, label: "Don't Loop" },
+  { value: true, label: "Loop" },
+];
+const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
+  { value: "render", label: "Single Line" },
+  { value: "persistent", label: "Persistent" },
 ];
 
 const createEmptyCollection = () => ({
@@ -270,25 +287,6 @@ const normalizeResourceCollection = (collection, { defaultType } = {}) => {
   return { items, tree };
 };
 
-const getAnimationType = (item = {}) => {
-  return item?.animation?.type === "transition" ? "transition" : "update";
-};
-
-const getAnimationItemById = (collection = {}, animationId) => {
-  if (!animationId) {
-    return undefined;
-  }
-
-  return toFlatItems(collection).find(
-    (item) => item.id === animationId && item.type === "animation",
-  );
-};
-
-const getAnimationModeById = (collection = {}, animationId) => {
-  const item = getAnimationItemById(collection, animationId);
-  return item ? getAnimationType(item) : undefined;
-};
-
 const normalizeVisualLayer = (layer) => {
   const parsedLayer = Number(layer);
   return VISUAL_LAYER_VALUES.includes(parsedLayer)
@@ -310,6 +308,14 @@ const normalizeSelectedVisual = (visual = {}, animations = {}) => {
     nextVisual.animationMode ??
     selectedAnimationMode ??
     (selectedAnimationId ? "update" : "none");
+  if (selectedAnimationId) {
+    nextVisual.animations = createAnimationReference({
+      animationId: selectedAnimationId,
+      animations,
+      playback: nextVisual.animations?.playback,
+      animationMode: nextVisual.animationMode,
+    });
+  }
   nextVisual.layer = normalizeVisualLayer(nextVisual.layer);
 
   return nextVisual;
@@ -780,17 +786,61 @@ export const updateVisualAnimation = (
     return;
   }
 
-  state.selectedVisuals[index].animations = {
-    resourceId: animationId,
-  };
-
   const selectedAnimationMode = getAnimationModeById(
     state.animations,
     animationId,
   );
-  if (selectedAnimationMode) {
-    state.selectedVisuals[index].animationMode = selectedAnimationMode;
+  const visual = state.selectedVisuals[index];
+  visual.animationMode = selectedAnimationMode ?? "update";
+  visual.animations = createAnimationReference({
+    animationId,
+    animations: state.animations,
+    playback: visual.animations?.playback,
+    animationMode: visual.animationMode,
+  });
+};
+
+export const updateVisualAnimationPlaybackSpeed = (
+  { state },
+  { index, speed } = {},
+) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual?.animations) {
+    return;
   }
+
+  visual.animations.playback.speed = normalizeAnimationPlaybackSpeed(speed);
+};
+
+export const updateVisualAnimationPlaybackLoop = (
+  { state },
+  { index, loop } = {},
+) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual?.animations) {
+    return;
+  }
+
+  const canLoop = canLoopAnimationById(
+    state.animations,
+    visual.animations.resourceId,
+  );
+  visual.animations.playback.loop = canLoop
+    ? normalizeAnimationPlaybackLoop(loop)
+    : false;
+};
+
+export const updateVisualAnimationPlaybackContinuity = (
+  { state },
+  { index, continuity } = {},
+) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual?.animations) {
+    return;
+  }
+
+  visual.animations.playback.continuity =
+    normalizeAnimationPlaybackContinuity(continuity);
 };
 
 export const updateVisualLayer = ({ state }, { index, layer } = {}) => {
@@ -1266,8 +1316,13 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     });
   }
 
-  const visualControls = processedSelectedVisuals.map(
-    (visual, visualIndex) => ({
+  const visualControls = processedSelectedVisuals.map((visual, visualIndex) => {
+    const animationCanLoop = canLoopAnimationById(
+      state.animations,
+      visual.animations?.resourceId,
+    );
+
+    return {
       ...visual,
       visualIndex,
       transformId:
@@ -1281,14 +1336,25 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         }),
       ),
       animationId: visual.animations?.resourceId,
+      animationPlaybackSpeed: normalizeAnimationPlaybackSpeed(
+        visual.animations?.playback?.speed,
+      ),
+      animationPlaybackLoop: normalizeAnimationPlaybackLoop(
+        visual.animations?.playback?.loop,
+      ),
+      animationPlaybackContinuity: normalizeAnimationPlaybackContinuity(
+        visual.animations?.playback?.continuity,
+      ),
+      animationCanLoop,
+      animationLoopDisabled: !animationCanLoop,
       layer: normalizeVisualLayer(visual.layer),
       opacity: visual.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
       blurEnabled: Boolean(visual.blur),
       blur: normalizeCommandLineItemBlur(
         visual.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
       ),
-    }),
-  );
+    };
+  });
   const visualGroups = VISUAL_LAYER_DISPLAY_OPTIONS.map((option) => {
     const visuals = visualControls
       .filter((visual) => visual.layer === option.value)
@@ -1308,6 +1374,14 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     visuals: visualGroups.flatMap((group) => group.visuals),
     transformOptions,
     animationOptions,
+    animationPlaybackLoopOptions: localizeCommandLineOptions(
+      ANIMATION_PLAYBACK_LOOP_OPTIONS,
+      copy,
+    ),
+    animationPlaybackContinuityOptions: localizeCommandLineOptions(
+      ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
+      copy,
+    ),
     layerOptions: localizeCommandLineOptions(VISUAL_LAYER_OPTIONS, copy),
     transformModeOptions: localizeCommandLineOptions(
       TRANSFORM_MODE_OPTIONS,
@@ -1390,6 +1464,19 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       copy,
     ),
     animationLabel: localizeCommandLineText("Animation", copy),
+    animationPlaybackSpeedLabel: localizeCommandLineText(
+      "Playback Speed",
+      copy,
+    ),
+    animationPlaybackLoopLabel: localizeCommandLineText("Loop", copy),
+    animationPlaybackContinuityLabel: localizeCommandLineText(
+      "Continuity",
+      copy,
+    ),
+    animationPlaybackLoopDisabledDescription: localizeCommandLineText(
+      "loopingRequiresKeyframesDescription",
+      copy,
+    ),
     selectAnimationPlaceholder: localizeCommandLineText(
       "Select animation",
       copy,

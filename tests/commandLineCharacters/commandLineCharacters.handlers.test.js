@@ -604,6 +604,10 @@ describe("commandLineCharacters.handlers", () => {
               spriteName: "",
               animations: {
                 resourceId: "character-enter",
+                playback: {
+                  continuity: "render",
+                  speed: 1,
+                },
               },
             },
           ],

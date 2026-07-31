@@ -1,5 +1,14 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  canLoopAnimationById,
+  createAnimationReference,
+  getAnimationModeById,
+  getAnimationType,
+  normalizeAnimationPlaybackContinuity,
+  normalizeAnimationPlaybackLoop,
+  normalizeAnimationPlaybackSpeed,
+} from "../../internal/animationPlayback.js";
+import {
   buildCharacterSpritePreviewLayer,
   buildCharacterSpritePreviewFileIds,
   buildCharacterSpritePreviewLayers,
@@ -48,6 +57,14 @@ const TRANSFORM_MODE_OPTIONS = [
   { value: false, label: "Predefined" },
   { value: true, label: "Custom" },
 ];
+const ANIMATION_PLAYBACK_LOOP_OPTIONS = [
+  { value: false, label: "Don't Loop" },
+  { value: true, label: "Loop" },
+];
+const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
+  { value: "render", label: "Single Line" },
+  { value: "persistent", label: "Persistent" },
+];
 const createCharacterContextDropdownItems = (
   characterIndex,
   characters = [],
@@ -75,25 +92,6 @@ const createAddCharacterTransformDropdownItems = (transforms = {}) =>
       type: "item",
       value: transform.id,
     }));
-
-const getAnimationType = (item = {}) => {
-  return item?.animation?.type === "transition" ? "transition" : "update";
-};
-
-const getAnimationItemById = (collection = {}, animationId) => {
-  if (!animationId) {
-    return undefined;
-  }
-
-  return toFlatItems(collection).find(
-    (item) => item.id === animationId && item.type === "animation",
-  );
-};
-
-const getAnimationModeById = (collection = {}, animationId) => {
-  const item = getAnimationItemById(collection, animationId);
-  return item ? getAnimationType(item) : undefined;
-};
 
 const resolveSpriteGroupId = (spriteGroup = {}, index = 0) => {
   if (typeof spriteGroup.id === "string" && spriteGroup.id.length > 0) {
@@ -292,6 +290,14 @@ const normalizeSelectedCharacter = (character = {}, animations = {}) => {
     nextCharacter.animationMode ??
     selectedAnimationMode ??
     (selectedAnimationId ? "update" : "none");
+  if (selectedAnimationId) {
+    nextCharacter.animations = createAnimationReference({
+      animationId: selectedAnimationId,
+      animations,
+      playback: nextCharacter.animations?.playback,
+      animationMode: nextCharacter.animationMode,
+    });
+  }
 
   return nextCharacter;
 };
@@ -652,17 +658,61 @@ export const updateCharacterAnimation = (
     return;
   }
 
-  state.selectedCharacters[index].animations = {
-    resourceId: animationId,
-  };
-
   const selectedAnimationMode = getAnimationModeById(
     state.animations,
     animationId,
   );
-  if (selectedAnimationMode) {
-    state.selectedCharacters[index].animationMode = selectedAnimationMode;
+  const character = state.selectedCharacters[index];
+  character.animationMode = selectedAnimationMode ?? "update";
+  character.animations = createAnimationReference({
+    animationId,
+    animations: state.animations,
+    playback: character.animations?.playback,
+    animationMode: character.animationMode,
+  });
+};
+
+export const updateCharacterAnimationPlaybackSpeed = (
+  { state },
+  { index, speed } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  if (!character?.animations) {
+    return;
   }
+
+  character.animations.playback.speed = normalizeAnimationPlaybackSpeed(speed);
+};
+
+export const updateCharacterAnimationPlaybackLoop = (
+  { state },
+  { index, loop } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  if (!character?.animations) {
+    return;
+  }
+
+  const canLoop = canLoopAnimationById(
+    state.animations,
+    character.animations.resourceId,
+  );
+  character.animations.playback.loop = canLoop
+    ? normalizeAnimationPlaybackLoop(loop)
+    : false;
+};
+
+export const updateCharacterAnimationPlaybackContinuity = (
+  { state },
+  { index, continuity } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  if (!character?.animations) {
+    return;
+  }
+
+  character.animations.playback.continuity =
+    normalizeAnimationPlaybackContinuity(continuity);
 };
 
 export const updateCharacterOpacity = ({ state }, { index, opacity } = {}) => {
@@ -1333,27 +1383,45 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   }
 
   const characterControls = processedSelectedCharacters.map(
-    (char, characterIndex) => ({
-      ...char,
-      characterIndex,
-      // Ensure transformId is set, use first transform as fallback if needed
-      transformId:
-        char.transformId ||
-        (transformOptions.length > 0 ? transformOptions[0].value : undefined),
-      customTransform: hasInlineTransform(char),
-      customTransformDetails: createCustomTransformDetails(char).map(
-        (item) => ({
-          ...item,
-          label: localizeCommandLineText(item.label, copy),
-        }),
-      ),
-      animationId: char.animations?.resourceId,
-      opacity: char.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
-      blurEnabled: Boolean(char.blur),
-      blur: normalizeCommandLineItemBlur(
-        char.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
-      ),
-    }),
+    (char, characterIndex) => {
+      const animationCanLoop = canLoopAnimationById(
+        state.animations,
+        char.animations?.resourceId,
+      );
+
+      return {
+        ...char,
+        characterIndex,
+        // Ensure transformId is set, use first transform as fallback if needed
+        transformId:
+          char.transformId ||
+          (transformOptions.length > 0 ? transformOptions[0].value : undefined),
+        customTransform: hasInlineTransform(char),
+        customTransformDetails: createCustomTransformDetails(char).map(
+          (item) => ({
+            ...item,
+            label: localizeCommandLineText(item.label, copy),
+          }),
+        ),
+        animationId: char.animations?.resourceId,
+        animationPlaybackSpeed: normalizeAnimationPlaybackSpeed(
+          char.animations?.playback?.speed,
+        ),
+        animationPlaybackLoop: normalizeAnimationPlaybackLoop(
+          char.animations?.playback?.loop,
+        ),
+        animationPlaybackContinuity: normalizeAnimationPlaybackContinuity(
+          char.animations?.playback?.continuity,
+        ),
+        animationCanLoop,
+        animationLoopDisabled: !animationCanLoop,
+        opacity: char.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
+        blurEnabled: Boolean(char.blur),
+        blur: normalizeCommandLineItemBlur(
+          char.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
+        ),
+      };
+    },
   );
 
   // Create default values with character data and options
@@ -1361,6 +1429,14 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     characters: characterControls.slice().reverse(),
     transformOptions,
     animationOptions,
+    animationPlaybackLoopOptions: localizeCommandLineOptions(
+      ANIMATION_PLAYBACK_LOOP_OPTIONS,
+      copy,
+    ),
+    animationPlaybackContinuityOptions: localizeCommandLineOptions(
+      ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
+      copy,
+    ),
     transformModeOptions: localizeCommandLineOptions(
       TRANSFORM_MODE_OPTIONS,
       copy,
@@ -1424,6 +1500,19 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     kernelLabel: localizeCommandLineText("Kernel", copy),
     repeatEdgeLabel: localizeCommandLineText("Repeat Edge", copy),
     animationLabel: localizeCommandLineText("Animation", copy),
+    animationPlaybackSpeedLabel: localizeCommandLineText(
+      "Playback Speed",
+      copy,
+    ),
+    animationPlaybackLoopLabel: localizeCommandLineText("Loop", copy),
+    animationPlaybackContinuityLabel: localizeCommandLineText(
+      "Continuity",
+      copy,
+    ),
+    animationPlaybackLoopDisabledDescription: localizeCommandLineText(
+      "loopingRequiresKeyframesDescription",
+      copy,
+    ),
     selectAnimationPlaceholder: localizeCommandLineText(
       "Select animation",
       copy,

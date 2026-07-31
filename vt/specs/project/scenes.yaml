@@ -1,6 +1,6 @@
 ---
 title: Project Scenes Workflow
-description: Covers the scenes page, add-scene flow, scene detail, preview, scene editor, background playback controls, and sections overview.
+description: Covers the scenes page, add-scene flow, scene detail, preview, scene editor, background and screen animation playback controls, and sections overview.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -388,6 +388,53 @@ steps:
     args:
       - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const background = deepQuery(document, 'rvn-command-line-background#commandLineBackground'); const form = deepQuery(background.shadowRoot, 'rtgl-form#form'); const speedField = deepQuery(form.shadowRoot, 'rtgl-input-number[data-field-name=playbackSpeed]'); const speed = deepQuery(speedField.shadowRoot, 'input'); const loop = deepQuery(form.shadowRoot, 'rtgl-segmented-control[data-field-name=playbackLoop]'); const loopOption = deepQuery(loop.shadowRoot, '#option1'); return `${speed.value}:${loop.hasAttribute('disabled')}:${loopOption.getAttribute('aria-pressed')}`; })()"
     value: "1.5:false:true"
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-system-actions-dialog-surface rtgl-dialog[open]"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-actions#commandLineActions #action3"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions #action3"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-select[data-field-name='transitionAnimationId']"
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-select[data-field-name='transitionAnimationId'] [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-select[data-field-name='transitionAnimationId'] #option0"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-select[data-field-name='transitionAnimationId'] #option0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-input-number[data-field-name='playbackSpeed'] input"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const systemActions = deepQuery(document, 'rvn-system-actions#systemActions'); const screen = deepQuery(systemActions.shadowRoot, 'rvn-command-line-screen#commandLineScreen'); const form = deepQuery(screen.shadowRoot, 'rtgl-form#form'); const speedField = deepQuery(form.shadowRoot, 'rtgl-input-number[data-field-name=playbackSpeed]'); const speed = deepQuery(speedField.shadowRoot, 'input'); const continuity = deepQuery(form.shadowRoot, 'rtgl-segmented-control[data-field-name=playbackContinuity]'); const loop = deepQuery(form.shadowRoot, '[data-field-name=playbackLoop]'); return `${speed.value}:${Boolean(continuity)}:${Boolean(loop)}`; })()"
+    value: "1:true:false"
   - action: wait
     ms: 250
   - action: screenshot

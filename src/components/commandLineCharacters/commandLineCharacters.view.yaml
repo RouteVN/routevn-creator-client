@@ -87,6 +87,18 @@ refs:
     eventListeners:
       value-change:
         handler: handleAnimationChange
+  animationPlaybackSpeed*:
+    eventListeners:
+      value-input:
+        handler: handleAnimationPlaybackSpeedInput
+  animationPlaybackLoop*:
+    eventListeners:
+      value-change:
+        handler: handleAnimationPlaybackLoopChange
+  animationPlaybackContinuity*:
+    eventListeners:
+      value-change:
+        handler: handleAnimationPlaybackContinuityChange
   opacity*:
     eventListeners:
       value-input:
@@ -193,6 +205,16 @@ template:
                                                   - rtgl-segmented-control#blurRepeatEdgePixels${i} data-index=${character.characterIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${character.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}: null
                                       - rtgl-text s=sm c=mu-fg: ${animationLabel}
                                       - rtgl-select#animation${i} data-index=${character.characterIndex} key=${character.animationId} :options=${defaultValues.animationOptions} :selectedValue=${character.animationId} w=f placeholder=${selectAnimationPlaceholder}: null
+                                      - $if character.animationId:
+                                          - rtgl-text s=sm c=mu-fg: ${animationPlaybackSpeedLabel}
+                                          - rtgl-input#animationPlaybackSpeed${i} data-index=${character.characterIndex} type=number min=0.01 step=0.1 w=f value=${character.animationPlaybackSpeed}: null
+                                          - $if character.animationMode == 'update':
+                                              - rtgl-text s=sm c=mu-fg: ${animationPlaybackLoopLabel}
+                                              - rtgl-segmented-control#animationPlaybackLoop${i} data-index=${character.characterIndex} w=f no-clear ?disabled=${character.animationLoopDisabled} :selectedValue=${character.animationPlaybackLoop} :options=${defaultValues.animationPlaybackLoopOptions}: null
+                                              - $if !character.animationCanLoop:
+                                                  - rtgl-text s=xs c=mu-fg: ${animationPlaybackLoopDisabledDescription}
+                                          - rtgl-text s=sm c=mu-fg: ${animationPlaybackContinuityLabel}
+                                          - rtgl-segmented-control#animationPlaybackContinuity${i} data-index=${character.characterIndex} w=f no-clear :selectedValue=${character.animationPlaybackContinuity} :options=${defaultValues.animationPlaybackContinuityOptions}: null
                                       - $if character.showSpriteGroupBoxes:
                                           - rtgl-text s=sm c=mu-fg: ${spriteGroupsLabel}
                                           - rtgl-view d=h wrap g=xs w=f:

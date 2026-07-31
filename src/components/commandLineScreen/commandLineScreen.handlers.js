@@ -1,5 +1,7 @@
 const buildScreenDataFromState = (store) => {
   const transitionAnimationId = store.selectTransitionAnimationId();
+  const playbackSpeed = store.selectAnimationPlaybackSpeed();
+  const playbackContinuity = store.selectAnimationPlaybackContinuity();
   const opacity = store.selectScreenOpacity();
   const blur = store.selectScreenBlurActionValue();
 
@@ -8,6 +10,10 @@ const buildScreenDataFromState = (store) => {
   if (transitionAnimationId) {
     screen.animations = {
       resourceId: transitionAnimationId,
+      playback: {
+        continuity: playbackContinuity,
+        speed: playbackSpeed,
+      },
     };
   }
 
@@ -47,6 +53,8 @@ export const handleAfterMount = async (deps) => {
   const screen = props?.screen ?? {};
   const formValues = {
     transitionAnimationId: screen?.animations?.resourceId,
+    playbackSpeed: screen?.animations?.playback?.speed,
+    playbackContinuity: screen?.animations?.playback?.continuity,
     opacity: screen?.opacity,
   };
 

@@ -1,5 +1,12 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  DEFAULT_ANIMATION_PLAYBACK_SPEED,
+  canLoopAnimationById,
+  getAnimationModeById,
+  getAnimationType,
+  normalizeAnimationPlaybackSpeed,
+} from "../../internal/animationPlayback.js";
+import {
   getSpritesheetAnimationPreview,
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
@@ -47,7 +54,6 @@ const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
 ];
 
 const DEFAULT_BACKGROUND_OPACITY = 1;
-const DEFAULT_ANIMATION_PLAYBACK_SPEED = 1;
 const BACKGROUND_RESOURCE_CARD_ASPECT_RATIO = "16 / 9";
 const DEFAULT_BACKGROUND_BLUR = {
   x: 6,
@@ -75,71 +81,6 @@ const normalizeResourceCollection = (collection) => {
   return { items, tree };
 };
 
-const getAnimationType = (item = {}) => {
-  return item?.animation?.type === "transition" ? "transition" : "update";
-};
-
-const getTweenPropertyDurationMs = (tweenProperty) => {
-  if (!Array.isArray(tweenProperty?.keyframes)) {
-    return 0;
-  }
-
-  return tweenProperty.keyframes.reduce((total, keyframe) => {
-    const duration =
-      typeof keyframe?.duration === "number" &&
-      Number.isFinite(keyframe.duration)
-        ? keyframe.duration
-        : 0;
-    return total + duration;
-  }, 0);
-};
-
-const getTweenDurationMs = (tween) => {
-  if (!tween || typeof tween !== "object" || Array.isArray(tween)) {
-    return 0;
-  }
-
-  return Object.values(tween).reduce(
-    (maxDuration, tweenProperty) =>
-      Math.max(maxDuration, getTweenPropertyDurationMs(tweenProperty)),
-    0,
-  );
-};
-
-const canLoopAnimationItem = (item) => {
-  const animation = item?.animation;
-  if (animation?.type !== "update" || animation.complete !== undefined) {
-    return false;
-  }
-
-  const authoredDurationMs = Math.max(
-    getTweenDurationMs(animation.tween),
-    getTweenDurationMs(animation.prev?.tween),
-    getTweenDurationMs(animation.next?.tween),
-    getTweenPropertyDurationMs(animation.mask?.progress),
-  );
-
-  return Number.isFinite(authoredDurationMs) && authoredDurationMs > 0;
-};
-
-const getAnimationItemById = (collection = {}, animationId) => {
-  if (!animationId) {
-    return undefined;
-  }
-
-  return toFlatItems(collection).find(
-    (item) => item.id === animationId && item.type === "animation",
-  );
-};
-
-const getAnimationModeById = (collection = {}, animationId) => {
-  const item = getAnimationItemById(collection, animationId);
-  return item ? getAnimationType(item) : undefined;
-};
-
-const canLoopAnimationById = (collection = {}, animationId) =>
-  canLoopAnimationItem(getAnimationItemById(collection, animationId));
-
 const normalizeBackgroundOpacity = (opacity) => {
   if (opacity === undefined || opacity === null || opacity === "") {
     return undefined;
@@ -151,13 +92,6 @@ const normalizeBackgroundOpacity = (opacity) => {
   }
 
   return Math.max(0, Math.min(1, parsedOpacity));
-};
-
-const normalizeAnimationPlaybackSpeed = (speed) => {
-  const parsedSpeed = Number(speed);
-  return Number.isFinite(parsedSpeed) && parsedSpeed > 0
-    ? parsedSpeed
-    : DEFAULT_ANIMATION_PLAYBACK_SPEED;
 };
 
 const normalizeBackgroundBlurNumber = (value, fallback) => {

@@ -102,7 +102,14 @@ const buildVisualItem = (visual = {}) => {
   if (visual.animations?.resourceId) {
     item.animations = {
       resourceId: visual.animations.resourceId,
+      playback: {
+        continuity: visual.animations.playback.continuity,
+        speed: visual.animations.playback.speed,
+      },
     };
+    if (visual.animationMode === "update") {
+      item.animations.playback.loop = visual.animations.playback.loop;
+    }
   }
 
   return item;
@@ -387,6 +394,51 @@ export const handleAnimationChange = (deps, payload) => {
   const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
   const value = payload._event.detail.value;
   store.updateVisualAnimation({ index, animationId: value });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleAnimationPlaybackSpeedInput = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getIndexFromEvent(payload._event);
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateVisualAnimationPlaybackSpeed({
+    index,
+    speed: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleAnimationPlaybackLoopChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getIndexFromEvent(payload._event);
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateVisualAnimationPlaybackLoop({
+    index,
+    loop: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleAnimationPlaybackContinuityChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getIndexFromEvent(payload._event);
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateVisualAnimationPlaybackContinuity({
+    index,
+    continuity: getEventValue(payload._event),
+  });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

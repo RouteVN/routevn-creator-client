@@ -1,6 +1,10 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
 import {
+  normalizeAnimationPlaybackContinuity,
+  normalizeAnimationPlaybackSpeed,
+} from "../../internal/animationPlayback.js";
+import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
   selectCommandLineCopy,
@@ -36,6 +40,26 @@ const form = {
       placeholder: "Animation",
       options: "${transitionAnimationOptions}",
     },
+    {
+      $when: "transitionAnimationId",
+      name: "playbackSpeed",
+      label: "Playback Speed",
+      type: "input-number",
+      min: 0.01,
+      step: 0.1,
+      required: true,
+    },
+    {
+      $when: "transitionAnimationId",
+      name: "playbackContinuity",
+      label: "Continuity",
+      type: "segmented-control",
+      clearable: false,
+      options: [
+        { value: "render", label: "Single Line" },
+        { value: "persistent", label: "Persistent" },
+      ],
+    },
   ],
   actions: {
     layout: "",
@@ -68,7 +92,13 @@ export const setAnimations = ({ state }, { animations } = {}) => {
 };
 
 export const setFormValues = ({ state }, values = {}) => {
-  state.formValues = values;
+  state.formValues = {
+    ...values,
+    playbackSpeed: normalizeAnimationPlaybackSpeed(values.playbackSpeed),
+    playbackContinuity: normalizeAnimationPlaybackContinuity(
+      values.playbackContinuity,
+    ),
+  };
 };
 
 export const selectSubmitData = ({ state }) => ({

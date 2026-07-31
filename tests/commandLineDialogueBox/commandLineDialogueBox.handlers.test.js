@@ -38,6 +38,9 @@ import {
   setSpriteCharacterId,
   setSpriteAnimationId,
   setSpriteAnimationMode,
+  setSpriteAnimationPlaybackContinuity,
+  setSpriteAnimationPlaybackLoop,
+  setSpriteAnimationPlaybackSpeed,
   setSpriteTransformId,
   setTempSelectedSpriteId,
   setTempSelectedSpriteIds,
@@ -168,7 +171,14 @@ const createStore = (state) => ({
     hideSpeakerSpriteTooltip({ state }, payload),
   setSpriteAnimationMode: (payload) =>
     setSpriteAnimationMode({ state }, payload),
-  setSpriteAnimationId: (payload) => setSpriteAnimationId({ state }, payload),
+  setSpriteAnimationId: (payload) =>
+    setSpriteAnimationId({ state, props: { animations } }, payload),
+  setSpriteAnimationPlaybackSpeed: (payload) =>
+    setSpriteAnimationPlaybackSpeed({ state }, payload),
+  setSpriteAnimationPlaybackLoop: (payload) =>
+    setSpriteAnimationPlaybackLoop({ state, props: { animations } }, payload),
+  setSpriteAnimationPlaybackContinuity: (payload) =>
+    setSpriteAnimationPlaybackContinuity({ state }, payload),
   setAppendDialogue: (payload) => setAppendDialogue({ state }, payload),
   setPersistCharacter: (payload) => setPersistCharacter({ state }, payload),
   setPersistSprite: (payload) => setPersistSprite({ state }, payload),
@@ -1480,6 +1490,10 @@ describe("commandLineDialogueBox.handlers", () => {
             ],
             animations: {
               resourceId: "portrait-in",
+              playback: {
+                continuity: "render",
+                speed: 1,
+              },
             },
           },
         },
@@ -1625,6 +1639,10 @@ describe("commandLineDialogueBox.handlers", () => {
       ],
       animations: {
         resourceId: "portrait-in",
+        playback: {
+          continuity: "render",
+          speed: 1,
+        },
       },
     });
   });

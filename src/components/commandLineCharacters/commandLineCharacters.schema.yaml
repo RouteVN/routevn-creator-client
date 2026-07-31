@@ -65,6 +65,19 @@ propsSchema:
                 properties:
                   resourceId:
                     type: string
+                  playback:
+                    type: object
+                    properties:
+                      continuity:
+                        type: string
+                        enum:
+                          - render
+                          - persistent
+                      speed:
+                        type: number
+                        exclusiveMinimum: 0
+                      loop:
+                        type: boolean
               sprites:
                 type: array
                 items:
