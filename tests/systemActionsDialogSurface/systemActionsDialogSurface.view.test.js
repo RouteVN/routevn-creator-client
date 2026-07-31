@@ -15,11 +15,22 @@ describe("systemActionsDialogSurface view", () => {
       "rtgl-dialog#dialog ?open=${open} layout=fixed bare",
     );
     expect(dialogSurfaceView).toContain(
+      'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"',
+    );
+    expect(dialogSurfaceView).toContain(
       'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"',
     );
     expect(dialogSurfaceView).toContain(
-      "left: ${overlayHorizontalInset}; top: 0; bottom: 0; width: ${panelWidth}; z-index: 2001; background: ${overlayBackground}; pointer-events: none;",
+      "left: ${overlayHorizontalInset}; top: var(--rvn-window-content-offset, 0px); bottom: 0; width: ${panelWidth}; z-index: 2001; background: ${overlayBackground}; pointer-events: none;",
     );
+    expect(dialogSurfaceView).toContain(
+      "top: calc(var(--rvn-window-content-offset, 0px) + ${panelVerticalInset}); bottom: ${panelVerticalInset};",
+    );
+    expect(dialogSurfaceView).toContain("pos=fix bgc=bg bw=xs bc=bo br=md");
+    expect(
+      dialogSurfaceView.match(/slot=content tabindex=-1 autofocus/g),
+    ).toHaveLength(3);
+    expect(dialogSurfaceView.match(/outline: none;/g)).toHaveLength(3);
     expect(dialogSurfaceView).toContain("z-index: 2002;");
     expect(dialogSurfaceView).not.toContain("handleDocumentKeyDown");
   });
