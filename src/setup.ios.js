@@ -4,6 +4,7 @@ import { callIOSBridge } from "./deps/clients/ios/bridge.js";
 import { createDb } from "./deps/clients/ios/db.js";
 import { createIOSFilePicker } from "./deps/clients/ios/filePicker.js";
 import IOSRouter from "./deps/clients/ios/router.js";
+import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
 
 import { createAppService } from "./deps/services/ios/appService.js";
 import { createProjectService } from "./deps/services/ios/projectService.js";
@@ -51,6 +52,7 @@ const filePicker = createIOSFilePicker();
 const globalUIElement = document.querySelector("rtgl-global-ui");
 const globalUI = createGlobalUI(globalUIElement);
 const audioService = createAudioService();
+const browserEventsClient = createBrowserEventsClient();
 
 const appVersion = tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
@@ -243,6 +245,7 @@ const componentDependencies = {
 };
 
 const pageDependencies = {
+  browserEventsClient,
   uiConfig,
   subject,
   graphicsService,

@@ -38,10 +38,20 @@ import {
   PREVIEW_UPDATE_ELEMENT_ID,
   propertyNameDropdownItems,
   SUPPORTED_EASING_NAMES,
+  TIMELINE_ZOOM_STEP,
   TRANSITION_PROPERTY_KEYS,
   UPDATE_PROPERTY_KEYS,
 } from "./animationEditor.constants.js";
 import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy.js";
+
+const TIMELINE_ZOOM_DEFAULT = 1;
+const TIMELINE_ZOOM_MIN = 0.25;
+const TIMELINE_ZOOM_MAX = 4;
+const TIMELINE_BASE_PIXELS_PER_SECOND = 200;
+const TIMELINE_MIN_DISPLAY_DURATION_MS = 1000;
+const TIMELINE_PROPERTY_COLUMN_WIDTH = 104;
+
+const SHOW_MASK_AND_PREVIEW_SECTIONS = false;
 
 const createPropertyFieldConfig = (
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
@@ -197,6 +207,7 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
   Channel: "channelLabel",
   "Custom Initial Value": "customInitialValueLabel",
   "Custom Value": "customValueSource",
+  "Delay (ms)": "delayMsLabel",
   Delete: "deleteMenuItem",
   "Delete keyframe": "deleteKeyframeMenuItem",
   Done: "doneButton",
@@ -747,7 +758,7 @@ const createEditAutoTweenForm = (copy = {}) => {
 const createAddKeyframeForm = (
   property,
   propertyFieldConfig,
-  { includeDuration = true } = {},
+  { includeDelay = false, includeDuration = true } = {},
   copy = {},
 ) => {
   if (!property) {
@@ -756,11 +767,24 @@ const createAddKeyframeForm = (
 
   const fields = [];
 
+  if (includeDelay) {
+    fields.push({
+      name: "delay",
+      type: "input-number",
+      label: "Delay (ms)",
+      min: 0,
+      step: 1,
+      required: true,
+    });
+  }
+
   if (includeDuration) {
     fields.push({
       name: "duration",
-      type: "input-text",
+      type: "input-number",
       label: "Duration (ms)",
+      min: 1,
+      step: 1,
       required: true,
       placeholder: "Duration in milliseconds",
       tooltip: {
@@ -833,7 +857,12 @@ const createUpdateKeyframeForm = (
 ) => {
   return localizeForm(
     {
-      ...createAddKeyframeForm(property, propertyFieldConfig, options, copy),
+      ...createAddKeyframeForm(
+        property,
+        propertyFieldConfig,
+        { ...options, includeDelay: true },
+        copy,
+      ),
       title: "Edit Keyframe",
       actions: {
         layout: "",
@@ -1106,6 +1135,10 @@ const cloneTransitionMask = (mask = {}) => {
   nextMask.sample = mask.sample;
   nextMask.softness = mask.softness;
   nextMask.invert = mask.invert;
+  nextMask.progress = mask.progress
+    ? structuredClone(mask.progress)
+    : undefined;
+  nextMask.progressDelay = mask.progressDelay;
   nextMask.progressDuration = mask.progressDuration;
   nextMask.progressEasing = mask.progressEasing;
   return nextMask;
@@ -1212,6 +1245,15 @@ export const createInitialState = () => ({
   data: EMPTY_TREE,
   imagesData: createEmptyImagesData(),
   selectedItemId: undefined,
+  selectedKeyframe: undefined,
+  selectedProperty: undefined,
+  timelinePan: undefined,
+  timelinePanClickSuppressed: false,
+  timelinePanHovered: false,
+  timelinePanMode: false,
+  timelineZoom: TIMELINE_ZOOM_DEFAULT,
+  timelineScrollLeft: 0,
+  timelineViewportWidth: undefined,
   dialogType: "update",
   targetGroupId: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
@@ -1227,7 +1269,12 @@ export const createInitialState = () => ({
   autosaveVersion: 0,
   autosavePersistedVersion: 0,
   autosaveInFlight: false,
+  autosaveTimerId: undefined,
+  autosavePendingSinceAt: undefined,
+  lastAutosaveFlushStartedAt: undefined,
+  autosavePersistedFingerprint: undefined,
   previewPlaybackMode: "auto",
+  previewLoopEnabled: false,
   previewRenderVersion: 0,
   previewPreparedVersion: undefined,
   previewPlayheadTimeMs: undefined,
@@ -1278,6 +1325,80 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 
 export const selectIsTouchMode = ({ state }) => {
   return state.isTouchMode;
+};
+
+export const setTimelineZoom = ({ state }, { zoom } = {}) => {
+  const numericZoom = Number(zoom);
+  if (!Number.isFinite(numericZoom)) {
+    return;
+  }
+
+  state.timelineZoom = Math.min(
+    TIMELINE_ZOOM_MAX,
+    Math.max(TIMELINE_ZOOM_MIN, numericZoom),
+  );
+};
+
+export const nudgeTimelineZoom = ({ state }, { delta } = {}) => {
+  setTimelineZoom({ state }, { zoom: state.timelineZoom + Number(delta ?? 0) });
+};
+
+export const selectTimelineZoom = ({ state }) => {
+  return state.timelineZoom;
+};
+
+export const setTimelinePanHovered = ({ state }, { hovered } = {}) => {
+  state.timelinePanHovered = hovered ?? false;
+};
+
+export const setTimelinePanMode = ({ state }, { enabled } = {}) => {
+  state.timelinePanMode = enabled ?? false;
+};
+
+export const startTimelinePan = (
+  { state },
+  { pointerId, startX, startScrollLeft } = {},
+) => {
+  state.timelinePanClickSuppressed = true;
+  state.timelinePan = {
+    pointerId,
+    startX,
+    startScrollLeft,
+  };
+};
+
+export const stopTimelinePan = ({ state }, _payload = {}) => {
+  state.timelinePan = undefined;
+};
+
+export const selectTimelinePan = ({ state }) => {
+  return state.timelinePan;
+};
+
+export const selectTimelinePanHovered = ({ state }) => {
+  return state.timelinePanHovered;
+};
+
+export const selectTimelinePanMode = ({ state }) => {
+  return state.timelinePanMode;
+};
+
+export const selectTimelinePanClickSuppressed = ({ state }) => {
+  return state.timelinePanClickSuppressed;
+};
+
+export const clearTimelinePanClickSuppression = ({ state }, _payload = {}) => {
+  state.timelinePanClickSuppressed = false;
+};
+
+export const setTimelineScrollMetrics = (
+  { state },
+  { scrollLeft, viewportWidth } = {},
+) => {
+  state.timelineScrollLeft = Math.max(0, Number(scrollLeft) || 0);
+  state.timelineViewportWidth = Number.isFinite(Number(viewportWidth))
+    ? Math.max(0, Number(viewportWidth))
+    : undefined;
 };
 
 export const setAnimationName = ({ state }, { name } = {}) => {
@@ -1332,6 +1453,8 @@ export const openDialog = (
     dialogType ?? getDialogType(itemData?.animation?.type);
 
   state.dialogType = resolvedDialogType;
+  state.selectedKeyframe = undefined;
+  state.selectedProperty = undefined;
   state.editMode = Boolean(editMode);
   state.editItemId = itemId;
   state.transitionMaskRemoved = false;
@@ -1432,6 +1555,197 @@ const getMutableSectionProperties = (state, side) => {
   return state.tweenBySection[resolveDialogSide(state, side)];
 };
 
+const selectedKeyframeMatches = (selectedKeyframe, { side, property } = {}) => {
+  return (
+    selectedKeyframe?.side === side && selectedKeyframe?.property === property
+  );
+};
+
+export const setSelectedKeyframe = (
+  { state },
+  { side, property, index } = {},
+) => {
+  state.selectedProperty = undefined;
+  const resolvedSide = resolveDialogSide(state, side);
+  const resolvedIndex = Number(index);
+  const keyframe = getSectionProperties(state, resolvedSide)[property]
+    ?.keyframes?.[resolvedIndex];
+
+  if (!keyframe) {
+    state.selectedKeyframe = undefined;
+    return;
+  }
+
+  state.selectedKeyframe = {
+    side: resolvedSide,
+    property,
+    index: resolvedIndex,
+  };
+};
+
+export const selectSelectedKeyframe = ({ state }) => {
+  return state.selectedKeyframe;
+};
+
+export const clearSelectedKeyframe = ({ state }, _payload = {}) => {
+  state.selectedKeyframe = undefined;
+};
+
+export const setSelectedProperty = ({ state }, { side, property } = {}) => {
+  const resolvedSide = resolveDialogSide(state, side);
+  const selectedProperty = getSectionProperties(state, resolvedSide)[property];
+
+  state.selectedKeyframe = undefined;
+  state.selectedProperty = selectedProperty
+    ? { side: resolvedSide, property }
+    : undefined;
+};
+
+export const selectSelectedProperty = ({ state }) => {
+  return state.selectedProperty;
+};
+
+export const clearTimelineSelection = ({ state }, _payload = {}) => {
+  state.selectedKeyframe = undefined;
+  state.selectedProperty = undefined;
+};
+
+export const selectTimelineSelection = ({ state }) => {
+  return state.selectedKeyframe ?? state.selectedProperty;
+};
+
+const getMutableSelectedKeyframe = (state) => {
+  const selectedKeyframe = state.selectedKeyframe;
+  if (!selectedKeyframe) {
+    return undefined;
+  }
+
+  const { side, property, index } = selectedKeyframe;
+  return getMutableSectionProperties(state, side)[property]?.keyframes?.[index];
+};
+
+export const selectSelectedKeyframeFormValues = ({ state }) => {
+  const keyframe = getMutableSelectedKeyframe(state);
+  if (!keyframe) {
+    return undefined;
+  }
+
+  return {
+    delay: keyframe.delay ?? 0,
+    duration: keyframe.duration,
+    value: keyframe.value,
+    easing: keyframe.easing ?? "linear",
+    relative: keyframe.relative ?? false,
+  };
+};
+
+export const setSelectedKeyframeEasing = ({ state }, { easing } = {}) => {
+  const keyframe = getMutableSelectedKeyframe(state);
+  if (keyframe) {
+    keyframe.easing = easing;
+  }
+};
+
+export const setSelectedKeyframeRelative = ({ state }, { relative } = {}) => {
+  const keyframe = getMutableSelectedKeyframe(state);
+  if (keyframe) {
+    keyframe.relative = relative;
+  }
+};
+
+export const setSelectedKeyframeDuration = ({ state }, { duration } = {}) => {
+  const keyframe = getMutableSelectedKeyframe(state);
+  const nextDuration = Number.parseInt(duration, 10);
+  if (keyframe && Number.isFinite(nextDuration) && nextDuration >= 1) {
+    keyframe.duration = nextDuration;
+  }
+};
+
+export const setSelectedKeyframeDelay = ({ state }, { delay } = {}) => {
+  const keyframe = getMutableSelectedKeyframe(state);
+  const nextDelay = Number.parseInt(delay, 10);
+  if (!keyframe || !Number.isFinite(nextDelay) || nextDelay < 0) {
+    return;
+  }
+
+  if (nextDelay > 0) {
+    keyframe.delay = nextDelay;
+  } else {
+    delete keyframe.delay;
+  }
+};
+
+export const setSelectedKeyframeTiming = (
+  { state },
+  { delay, duration, followingDelay } = {},
+) => {
+  const selectedKeyframe = state.selectedKeyframe;
+  if (!selectedKeyframe) {
+    return;
+  }
+
+  const { side, property, index } = selectedKeyframe;
+  const keyframes = getMutableSectionProperties(state, side)[property]
+    ?.keyframes;
+  const keyframe = keyframes?.[index];
+  const nextDelay = Number.parseInt(delay, 10);
+  const nextDuration = Number.parseInt(duration, 10);
+  if (
+    !keyframe ||
+    !Number.isFinite(nextDelay) ||
+    nextDelay < 0 ||
+    !Number.isFinite(nextDuration) ||
+    nextDuration < 1
+  ) {
+    return;
+  }
+
+  let nextFollowingDelay;
+  if (followingDelay !== undefined && keyframes[index + 1]) {
+    nextFollowingDelay = Number.parseInt(followingDelay, 10);
+    if (!Number.isFinite(nextFollowingDelay) || nextFollowingDelay < 0) {
+      return;
+    }
+  }
+
+  if (nextDelay > 0) {
+    keyframe.delay = nextDelay;
+  } else {
+    delete keyframe.delay;
+  }
+  keyframe.duration = nextDuration;
+
+  if (nextFollowingDelay === undefined) {
+    return;
+  }
+
+  if (nextFollowingDelay > 0) {
+    keyframes[index + 1].delay = nextFollowingDelay;
+  } else {
+    delete keyframes[index + 1].delay;
+  }
+};
+
+export const setSelectedKeyframeValue = ({ state }, { value } = {}) => {
+  const keyframe = getMutableSelectedKeyframe(state);
+  const nextValue = Number(value);
+  if (keyframe && Number.isFinite(nextValue)) {
+    keyframe.value = nextValue;
+  }
+};
+
+export const selectSelectedKeyframeDuration = ({ state }) => {
+  return getMutableSelectedKeyframe(state)?.duration;
+};
+
+export const selectSelectedKeyframeDelay = ({ state }) => {
+  return getMutableSelectedKeyframe(state)?.delay ?? 0;
+};
+
+export const selectSelectedKeyframeValue = ({ state }) => {
+  return getMutableSelectedKeyframe(state)?.value;
+};
+
 const resolveAutoTweenConfig = (config = {}) => {
   const duration = Number(config.duration);
   const resolvedDuration =
@@ -1451,7 +1765,11 @@ const getTweenPropertyDuration = (config = {}) => {
   }
 
   return (config?.keyframes ?? []).reduce((sum, keyframe) => {
-    return sum + (Number(keyframe.duration) || 0);
+    return (
+      sum +
+      Math.max(0, Number(keyframe.delay) || 0) +
+      (Number(keyframe.duration) || 0)
+    );
   }, 0);
 };
 
@@ -1506,13 +1824,17 @@ const createTweenAnimationsForTarget = ({
         tween[property] = {
           keyframes: config.keyframes.map((keyframe) => {
             let value = parseFloat(keyframe.value) ?? 0;
-
-            return {
+            const nextKeyframe = {
               duration: keyframe.duration,
               value,
               easing: keyframe.easing ?? "linear",
               relative: keyframe.relative ?? false,
             };
+            const delay = Math.max(0, Number(keyframe.delay) || 0);
+            if (delay > 0) {
+              nextKeyframe.delay = delay;
+            }
+            return nextKeyframe;
           }),
         };
       } else {
@@ -1565,12 +1887,19 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
     }
 
     tween[property] = {
-      keyframes: config.keyframes.map((keyframe) => ({
-        duration: keyframe.duration,
-        value: parseFloat(keyframe.value) ?? 0,
-        easing: keyframe.easing ?? "linear",
-        relative: keyframe.relative ?? false,
-      })),
+      keyframes: config.keyframes.map((keyframe) => {
+        const nextKeyframe = {
+          duration: keyframe.duration,
+          value: parseFloat(keyframe.value) ?? 0,
+          easing: keyframe.easing ?? "linear",
+          relative: keyframe.relative ?? false,
+        };
+        const delay = Math.max(0, Number(keyframe.delay) || 0);
+        if (delay > 0) {
+          nextKeyframe.delay = delay;
+        }
+        return nextKeyframe;
+      }),
     };
 
     const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
@@ -1770,27 +2099,65 @@ export const addKeyframe = ({ state }, keyframe = {}) => {
   }
 
   const index =
-    keyframe.index === undefined ? keyframes.length : keyframe.index;
+    keyframe.index === undefined ? keyframes.length : Number(keyframe.index);
 
-  keyframes.splice(index, 0, {
+  if (
+    selectedKeyframeMatches(state.selectedKeyframe, {
+      side: resolveDialogSide(state, keyframe.side),
+      property: keyframe.property,
+    }) &&
+    state.selectedKeyframe.index >= index
+  ) {
+    state.selectedKeyframe.index += 1;
+  }
+
+  const nextKeyframe = {
     duration: parseInt(keyframe.duration, 10),
     easing: keyframe.easing,
     value: parseFloat(keyframe.value),
     relative: keyframe.relative,
-  });
+  };
+  if (keyframe.delay !== undefined) {
+    nextKeyframe.delay = Math.max(0, parseInt(keyframe.delay, 10) || 0);
+  }
+
+  keyframes.splice(index, 0, nextKeyframe);
+
+  if (keyframe.followingDelay !== undefined && keyframes[index + 1]) {
+    keyframes[index + 1].delay = Math.max(
+      0,
+      parseInt(keyframe.followingDelay, 10) || 0,
+    );
+  }
 };
 
 export const deleteKeyframe = ({ state }, { side, property, index } = {}) => {
+  const resolvedSide = resolveDialogSide(state, side);
+  const resolvedIndex = Number(index);
   const properties = getMutableSectionProperties(state, side);
   const keyframes = properties?.[property]?.keyframes;
   if (!Array.isArray(keyframes)) {
     return;
   }
 
-  keyframes.splice(index, 1);
+  keyframes.splice(resolvedIndex, 1);
+
+  if (
+    selectedKeyframeMatches(state.selectedKeyframe, {
+      side: resolvedSide,
+      property,
+    })
+  ) {
+    if (state.selectedKeyframe.index === resolvedIndex) {
+      state.selectedKeyframe = undefined;
+    } else if (state.selectedKeyframe.index > resolvedIndex) {
+      state.selectedKeyframe.index -= 1;
+    }
+  }
 };
 
 export const deleteProperty = ({ state }, { side, property } = {}) => {
+  const resolvedSide = resolveDialogSide(state, side);
   const properties = getMutableSectionProperties(state, side);
 
   if (!property || !properties) {
@@ -1798,6 +2165,22 @@ export const deleteProperty = ({ state }, { side, property } = {}) => {
   }
 
   delete properties[property];
+
+  if (
+    selectedKeyframeMatches(state.selectedKeyframe, {
+      side: resolvedSide,
+      property,
+    })
+  ) {
+    state.selectedKeyframe = undefined;
+  }
+
+  if (
+    state.selectedProperty?.side === resolveDialogSide(state, side) &&
+    state.selectedProperty.property === property
+  ) {
+    state.selectedProperty = undefined;
+  }
 };
 
 export const moveKeyframeRight = (
@@ -1814,6 +2197,19 @@ export const moveKeyframeRight = (
   const current = keyframes[numIndex];
   keyframes[numIndex] = keyframes[numIndex + 1];
   keyframes[numIndex + 1] = current;
+
+  if (
+    selectedKeyframeMatches(state.selectedKeyframe, {
+      side: resolveDialogSide(state, side),
+      property,
+    })
+  ) {
+    if (state.selectedKeyframe.index === numIndex) {
+      state.selectedKeyframe.index += 1;
+    } else if (state.selectedKeyframe.index === numIndex + 1) {
+      state.selectedKeyframe.index -= 1;
+    }
+  }
 };
 
 export const moveKeyframeLeft = ({ state }, { side, property, index } = {}) => {
@@ -1827,6 +2223,19 @@ export const moveKeyframeLeft = ({ state }, { side, property, index } = {}) => {
   const current = keyframes[numIndex];
   keyframes[numIndex] = keyframes[numIndex - 1];
   keyframes[numIndex - 1] = current;
+
+  if (
+    selectedKeyframeMatches(state.selectedKeyframe, {
+      side: resolveDialogSide(state, side),
+      property,
+    })
+  ) {
+    if (state.selectedKeyframe.index === numIndex) {
+      state.selectedKeyframe.index -= 1;
+    } else if (state.selectedKeyframe.index === numIndex - 1) {
+      state.selectedKeyframe.index += 1;
+    }
+  }
 };
 
 export const updateKeyframe = (
@@ -1839,12 +2248,24 @@ export const updateKeyframe = (
     return;
   }
 
-  keyframes[index] = {
+  const nextKeyframe = {
     ...keyframe,
     duration: parseInt(keyframe.duration, 10),
     value: parseFloat(keyframe.value),
     relative: keyframe.relative,
   };
+  const currentDelay = Math.max(0, Number(keyframes[index]?.delay) || 0);
+  if (keyframe.delay === undefined && currentDelay > 0) {
+    nextKeyframe.delay = currentDelay;
+  } else {
+    const nextDelay = Math.max(0, Number.parseInt(keyframe.delay, 10) || 0);
+    if (nextDelay > 0) {
+      nextKeyframe.delay = nextDelay;
+    } else {
+      delete nextKeyframe.delay;
+    }
+  }
+  keyframes[index] = nextKeyframe;
 };
 
 export const updateInitialValue = (
@@ -1930,6 +2351,10 @@ export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
 
   const nextMask = createDefaultTransitionMask();
   nextMask.softness = currentMask.softness;
+  nextMask.progress = currentMask.progress
+    ? structuredClone(currentMask.progress)
+    : undefined;
+  nextMask.progressDelay = currentMask.progressDelay ?? nextMask.progressDelay;
   nextMask.progressDuration = currentMask.progressDuration;
   nextMask.progressEasing = currentMask.progressEasing;
   nextMask.imageId =
@@ -2013,6 +2438,7 @@ export const setTransitionMaskProgressDuration = (
   }
 
   transitionMask.progressDuration = numericDuration;
+  transitionMask.progress = undefined;
 };
 
 export const setTransitionMaskProgressEasing = ({ state }, { easing } = {}) => {
@@ -2022,6 +2448,7 @@ export const setTransitionMaskProgressEasing = ({ state }, { easing } = {}) => {
   }
 
   transitionMask.progressEasing = easing;
+  transitionMask.progress = undefined;
 };
 
 export const setTransitionMaskImage = ({ state }, { imageId } = {}) => {
@@ -2326,8 +2753,12 @@ export const queueAutosave = ({ state }, _payload = {}) => {
   state.autosaveVersion += 1;
 };
 
-export const markAutosavePersisted = ({ state }, { version } = {}) => {
+export const markAutosavePersisted = (
+  { state },
+  { version, fingerprint } = {},
+) => {
   state.autosavePersistedVersion = version ?? state.autosaveVersion;
+  state.autosavePersistedFingerprint = fingerprint;
 };
 
 export const setAutosaveInFlight = ({ state }, { inFlight } = {}) => {
@@ -2344,6 +2775,48 @@ export const selectAutosavePersistedVersion = ({ state }) => {
 
 export const selectAutosaveInFlight = ({ state }) => {
   return state.autosaveInFlight;
+};
+
+export const setAutosaveTimerId = ({ state }, { timerId } = {}) => {
+  state.autosaveTimerId = timerId;
+};
+
+export const clearAutosaveTimer = ({ state }, _payload = {}) => {
+  state.autosaveTimerId = undefined;
+};
+
+export const selectAutosaveTimerId = ({ state }) => {
+  return state.autosaveTimerId;
+};
+
+export const setAutosavePendingSinceAt = ({ state }, { timestamp } = {}) => {
+  state.autosavePendingSinceAt = timestamp;
+};
+
+export const selectAutosavePendingSinceAt = ({ state }) => {
+  return state.autosavePendingSinceAt;
+};
+
+export const setLastAutosaveFlushStartedAt = (
+  { state },
+  { timestamp } = {},
+) => {
+  state.lastAutosaveFlushStartedAt = timestamp;
+};
+
+export const selectLastAutosaveFlushStartedAt = ({ state }) => {
+  return state.lastAutosaveFlushStartedAt;
+};
+
+export const setAutosavePersistedFingerprint = (
+  { state },
+  { fingerprint } = {},
+) => {
+  state.autosavePersistedFingerprint = fingerprint;
+};
+
+export const selectAutosavePersistedFingerprint = ({ state }) => {
+  return state.autosavePersistedFingerprint;
 };
 
 export const markAnimationPersisted = ({ state }, { animationId } = {}) => {
@@ -2372,6 +2845,14 @@ export const selectPreviewPlaybackMode = ({ state }) => {
   return state.previewPlaybackMode;
 };
 
+export const togglePreviewLoop = ({ state }, _payload = {}) => {
+  state.previewLoopEnabled = !state.previewLoopEnabled;
+};
+
+export const selectPreviewLoopEnabled = ({ state }) => {
+  return state.previewLoopEnabled;
+};
+
 export const selectPreviewRenderVersion = ({ state }) => {
   return state.previewRenderVersion;
 };
@@ -2382,11 +2863,11 @@ export const selectPreviewPreparedVersion = ({ state }) => {
 
 export const startPreviewPlayback = (
   { state },
-  { startedAtMs, durationMs } = {},
+  { startedAtMs, durationMs, timeMs = 0 } = {},
 ) => {
   state.previewPlaybackStartedAtMs = startedAtMs;
   state.previewPlaybackDurationMs = durationMs;
-  state.previewPlayheadTimeMs = 0;
+  state.previewPlayheadTimeMs = timeMs;
   state.previewPlayheadVisible = true;
   state.previewPlaybackFrameId = undefined;
 };
@@ -2404,9 +2885,14 @@ export const setPreviewPlaybackFrameId = ({ state }, { frameId } = {}) => {
   state.previewPlaybackFrameId = frameId;
 };
 
-export const stopPreviewPlayback = ({ state }, _payload = {}) => {
-  state.previewPlayheadTimeMs = undefined;
-  state.previewPlayheadVisible = false;
+export const stopPreviewPlayback = (
+  { state },
+  { preservePlayhead = false } = {},
+) => {
+  if (!preservePlayhead) {
+    state.previewPlayheadTimeMs = undefined;
+    state.previewPlayheadVisible = false;
+  }
   state.previewPlaybackFrameId = undefined;
   state.previewPlaybackStartedAtMs = undefined;
   state.previewPlaybackDurationMs = undefined;
@@ -2430,6 +2916,10 @@ export const selectPreviewPlaybackStartedAtMs = ({ state }) => {
 
 export const selectPreviewPlaybackDurationMs = ({ state }) => {
   return state.previewPlaybackDurationMs;
+};
+
+export const selectPreviewPlaying = ({ state }) => {
+  return state.previewPlaybackStartedAtMs !== undefined;
 };
 
 export const selectPreviewPlaybackRequestId = ({ state }) => {
@@ -2587,8 +3077,227 @@ const buildMaskEditorPanelData = (state, copy = {}) => {
   return buildTransitionMaskPanelData(state, copy);
 };
 
+const buildSelectedKeyframePanelData = (
+  state,
+  propertyFieldConfig,
+  copy = {},
+) => {
+  const selectedKeyframe = state.selectedKeyframe;
+  if (!selectedKeyframe) {
+    return undefined;
+  }
+
+  const { side, property, index } = selectedKeyframe;
+  const keyframe = getSectionProperties(state, side)[property]?.keyframes?.[
+    index
+  ];
+  if (!keyframe) {
+    return undefined;
+  }
+
+  const timelineLabel =
+    side === "prev"
+      ? (copy.outTimelineLabel ?? "Out")
+      : side === "next"
+        ? (copy.inTimelineLabel ?? "In")
+        : (copy.updateType ?? "Update");
+  return {
+    id: `${side}:${property}:${index}`,
+    fields: [
+      {
+        type: "slot",
+        slot: "actions",
+      },
+      {
+        type: "text",
+        label: copy.timelineLabel ?? "Timeline",
+        value: timelineLabel,
+      },
+      {
+        type: "text",
+        label: copy.propertyLabel ?? "Property",
+        value: propertyFieldConfig[property]?.label ?? property,
+      },
+      {
+        type: "text",
+        label: copy.delayMsLabel ?? "Delay (ms)",
+        value: keyframe.delay ?? 0,
+      },
+      {
+        type: "text",
+        label: copy.durationMsLabel ?? "Duration (ms)",
+        value: keyframe.duration,
+      },
+      {
+        type: "text",
+        label: copy.easingLabel ?? "Easing",
+        value: getOptionLabel(
+          createEasingOptions(copy),
+          keyframe.easing ?? "linear",
+        ),
+      },
+      {
+        type: "text",
+        label: copy.valueLabel ?? "Value",
+        value: keyframe.value,
+      },
+      {
+        type: "text",
+        label: copy.valueTypeLabel ?? "Value type",
+        value:
+          keyframe.relative === true
+            ? (copy.relativeValueType ?? "Relative")
+            : (copy.absoluteValueType ?? "Absolute"),
+      },
+    ],
+  };
+};
+
+const buildSelectedPropertyPanelData = (
+  state,
+  propertyFieldConfig,
+  copy = {},
+) => {
+  const selectedProperty = state.selectedProperty;
+  if (!selectedProperty) {
+    return undefined;
+  }
+
+  const { side, property } = selectedProperty;
+  const propertyConfig = getSectionProperties(state, side)[property];
+  if (!propertyConfig) {
+    return undefined;
+  }
+
+  const timelineLabel =
+    side === "prev"
+      ? (copy.outTimelineLabel ?? "Out")
+      : side === "next"
+        ? (copy.inTimelineLabel ?? "In")
+        : (copy.updateType ?? "Update");
+  const hasInitialValue =
+    propertyConfig.initialValue !== undefined &&
+    propertyConfig.initialValue !== "";
+  const autoConfig = propertyConfig.auto;
+  const fields = [
+    {
+      type: "text",
+      label: copy.timelineLabel ?? "Timeline",
+      value: timelineLabel,
+    },
+    {
+      type: "text",
+      label: copy.propertyLabel ?? "Property",
+      value: propertyFieldConfig[property]?.label ?? property,
+    },
+    {
+      type: "text",
+      label: copy.initialValueLabel ?? "Initial value",
+      value: hasInitialValue
+        ? propertyConfig.initialValue
+        : (copy.defaultLabel ?? "Default"),
+    },
+    {
+      type: "text",
+      label: copy.tweenModeLabel ?? "Tween Mode",
+      value: autoConfig
+        ? (copy.autoTweenMode ?? "Auto")
+        : (copy.keyframesTweenMode ?? "Keyframes"),
+    },
+  ];
+
+  if (autoConfig) {
+    fields.push(
+      {
+        type: "text",
+        label: copy.durationMsLabel ?? "Duration (ms)",
+        value: autoConfig.duration,
+      },
+      {
+        type: "text",
+        label: copy.easingLabel ?? "Easing",
+        value: getOptionLabel(
+          createEasingOptions(copy),
+          autoConfig.easing ?? "linear",
+        ),
+      },
+    );
+  }
+
+  return {
+    id: `${side}:${property}`,
+    fields,
+  };
+};
+
+const createTimelineMetrics = ({ state, activeTimelineDuration }) => {
+  const timelineDisplayDuration = Math.max(
+    TIMELINE_MIN_DISPLAY_DURATION_MS,
+    activeTimelineDuration,
+  );
+  const timelinePixelsPerSecond = Math.round(
+    TIMELINE_BASE_PIXELS_PER_SECOND * state.timelineZoom,
+  );
+  const timelineCanvasWidth = Math.round(
+    TIMELINE_PROPERTY_COLUMN_WIDTH +
+      (timelineDisplayDuration / 1000) * timelinePixelsPerSecond,
+  );
+  const timelinePlayheadTimeMs = Number(state.previewPlayheadTimeMs);
+  const timelinePlayheadRatio =
+    timelineDisplayDuration > 0 && Number.isFinite(timelinePlayheadTimeMs)
+      ? Math.min(
+          1,
+          Math.max(0, timelinePlayheadTimeMs / timelineDisplayDuration),
+        )
+      : 0;
+  const timelinePlayheadViewportX =
+    TIMELINE_PROPERTY_COLUMN_WIDTH +
+    (timelineCanvasWidth - TIMELINE_PROPERTY_COLUMN_WIDTH) *
+      timelinePlayheadRatio -
+    state.timelineScrollLeft;
+  const timelinePlayheadWithinViewport =
+    state.timelineViewportWidth === undefined ||
+    (timelinePlayheadViewportX >= TIMELINE_PROPERTY_COLUMN_WIDTH &&
+      timelinePlayheadViewportX <= state.timelineViewportWidth);
+
+  return {
+    timelineCanvasWidth,
+    timelineDisplayDuration,
+    timelinePixelsPerSecond,
+    timelinePlayheadRatio,
+    timelinePlayheadWithinViewport,
+  };
+};
+
+const getActiveTimelineDuration = (state) => {
+  if (state.dialogType !== "transition") {
+    return getPropertiesDuration(getSectionProperties(state, "update"));
+  }
+
+  return getTransitionTimelineDuration({
+    prevProperties: getSectionProperties(state, "prev"),
+    nextProperties: getSectionProperties(state, "next"),
+    mask: getEffectiveTransitionMask(state),
+  });
+};
+
+export const selectTimelinePlayheadVisible = ({ state }) => {
+  const activeTimelineDuration = getActiveTimelineDuration(state);
+  const { timelinePlayheadWithinViewport } = createTimelineMetrics({
+    state,
+    activeTimelineDuration,
+  });
+
+  return (
+    state.previewPlayheadVisible &&
+    activeTimelineDuration > 0 &&
+    timelinePlayheadWithinViewport
+  );
+};
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectAnimationEditorPageCopy(i18n);
+  const previewPlaying = selectPreviewPlaying({ state });
   const propertyFieldConfig = getLocalizedPropertyFieldConfig(state, copy);
   const defaultInitialValuesByProperty = getDefaultInitialValues(state);
   const dialogType = state.dialogType;
@@ -2600,6 +3309,24 @@ export const selectViewData = ({ state, i18n }) => {
     nextProperties,
     mask: getEffectiveTransitionMask(state),
   });
+  const activeTimelineDuration =
+    dialogType === "transition"
+      ? transitionTimelineDuration
+      : getPropertiesDuration(updateProperties);
+  const {
+    timelineCanvasWidth,
+    timelineDisplayDuration,
+    timelinePixelsPerSecond,
+    timelinePlayheadRatio,
+    timelinePlayheadWithinViewport,
+  } = createTimelineMetrics({ state, activeTimelineDuration });
+  const timelinePlayheadVisible =
+    state.previewPlayheadVisible &&
+    activeTimelineDuration > 0 &&
+    timelinePlayheadWithinViewport;
+  const timelinePlayheadStyle = timelinePlayheadVisible
+    ? `top: 10px; bottom: 0; left: calc(104px + (100% - 104px) * ${timelinePlayheadRatio}); width: 1px; transform: translateX(-0.5px); pointer-events: none; z-index: 5;`
+    : "";
   const updateTimelineDefaultValues = createTimelineDefaultValues(
     UPDATE_PROPERTY_KEYS,
     propertyFieldConfig,
@@ -2643,6 +3370,16 @@ export const selectViewData = ({ state, i18n }) => {
   const transitionMaskPanel = buildTransitionMaskPanelData(state, copy);
   const maskEditorPanel = buildMaskEditorPanelData(state, copy);
   const previewPanel = buildPreviewPanelData(state, copy);
+  const selectedKeyframePanel = buildSelectedKeyframePanelData(
+    state,
+    propertyFieldConfig,
+    copy,
+  );
+  const selectedPropertyPanel = buildSelectedPropertyPanelData(
+    state,
+    propertyFieldConfig,
+    copy,
+  );
   const imageFolderItems = toFlatItems(state.imagesData).filter(
     (item) => item.type === "folder",
   );
@@ -2732,6 +3469,7 @@ export const selectViewData = ({ state, i18n }) => {
 
     if (currentKeyframe) {
       editKeyframeDefaultValues = {
+        delay: currentKeyframe.delay ?? 0,
         duration: currentKeyframe.duration,
         value: currentKeyframe.value,
         easing: currentKeyframe.easing,
@@ -2775,14 +3513,11 @@ export const selectViewData = ({ state, i18n }) => {
     !state.isTouchMode && state.popover.mode === "addProperty";
   const showAddKeyframePopover =
     !state.isTouchMode && state.popover.mode === "addKeyframe";
-  const showEditKeyframePopover =
-    !state.isTouchMode && state.popover.mode === "editKeyframe";
   const showAddPropertyDialog =
     state.isTouchMode && state.popover.mode === "addProperty";
   const showAddKeyframeDialog =
     state.isTouchMode && state.popover.mode === "addKeyframe";
-  const showEditKeyframeDialog =
-    state.isTouchMode && state.popover.mode === "editKeyframe";
+  const showEditKeyframeDialog = state.popover.mode === "editKeyframe";
 
   return {
     resourceCategory: ANIMATION_RESOURCE_CATEGORY,
@@ -2792,6 +3527,22 @@ export const selectViewData = ({ state, i18n }) => {
     animationName: state.dialogDefaultValues?.name ?? "",
     previewPlayheadTimeMs: state.previewPlayheadTimeMs,
     previewPlayheadVisible: state.previewPlayheadVisible,
+    previewLoopEnabled: state.previewLoopEnabled,
+    previewLoopButtonVariant: state.previewLoopEnabled ? "pr" : "ol",
+    timelinePlayheadVisible,
+    timelinePlayheadStyle,
+    timelineZoom: state.timelineZoom,
+    timelineZoomMin: TIMELINE_ZOOM_MIN,
+    timelineZoomMax: TIMELINE_ZOOM_MAX,
+    timelineZoomStep: TIMELINE_ZOOM_STEP,
+    timelinePixelsPerSecond,
+    timelineCanvasStyle: `width: ${timelineCanvasWidth}px; min-width: ${TIMELINE_PROPERTY_COLUMN_WIDTH}px; flex-shrink: 0;${state.timelinePanMode ? " pointer-events: none; user-select: none;" : ""}`,
+    timelinePanCursor: state.timelinePan
+      ? "grabbing"
+      : state.timelinePanMode
+        ? "grab"
+        : "default",
+    timelineDisplayDuration,
     dialogTypeLabel:
       dialogType === "transition"
         ? (copy.transitionType ?? "Transition")
@@ -2803,6 +3554,12 @@ export const selectViewData = ({ state, i18n }) => {
     updateProperties,
     previousProperties,
     nextProperties,
+    selectedKeyframe: state.selectedKeyframe,
+    selectedProperty: state.selectedProperty,
+    selectedKeyframeDetailId: selectedKeyframePanel?.id,
+    selectedKeyframeDetailFields: selectedKeyframePanel?.fields ?? [],
+    selectedPropertyDetailId: selectedPropertyPanel?.id,
+    selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
     updateTimelineDefaultValues,
     transitionTimelineDefaultValues,
     addPropertyForm: createAddPropertyForm(
@@ -2859,8 +3616,7 @@ export const selectViewData = ({ state, i18n }) => {
       popoverIsOpen:
         ["editAuto", "editInitialValue"].includes(state.popover.mode) ||
         showAddPropertyPopover ||
-        showAddKeyframePopover ||
-        showEditKeyframePopover,
+        showAddKeyframePopover,
       maskDialogIsOpen: ["editMask", "addMask"].includes(state.popover.mode),
       dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
         state.popover.mode,
@@ -2876,11 +3632,15 @@ export const selectViewData = ({ state, i18n }) => {
     isPreviewDialogOpen: state.isPreviewDialogOpen,
     maskRemoveConfirmDialogOpen: state.maskRemoveConfirmDialogOpen,
     showRightPanel: !state.isTouchMode,
-    showMobileTweenActions: state.isTouchMode,
-    showMobileMaskButton: state.isTouchMode && dialogType === "transition",
+    showMaskAndPreviewSections:
+      SHOW_MASK_AND_PREVIEW_SECTIONS && !state.isTouchMode,
+    showMobileTweenActions: SHOW_MASK_AND_PREVIEW_SECTIONS && state.isTouchMode,
+    showMobileMaskButton:
+      SHOW_MASK_AND_PREVIEW_SECTIONS &&
+      state.isTouchMode &&
+      dialogType === "transition",
     showAddPropertyPopover,
     showAddKeyframePopover,
-    showEditKeyframePopover,
     showAddPropertyDialog,
     showAddKeyframeDialog,
     showEditKeyframeDialog,
@@ -2896,7 +3656,11 @@ export const selectViewData = ({ state, i18n }) => {
     imageLabel: copy.imageLabel ?? "Image",
     inTimelineLabel: copy.inTimelineLabel ?? "In",
     invertLabel: copy.invertLabel ?? "Invert",
+    detailsPanelTitle: selectedPropertyPanel
+      ? (copy.propertyDetailsTitle ?? "Property Details")
+      : (copy.keyframeDetailsTitle ?? "Keyframe Details"),
     kindLabel: copy.kindLabel ?? "Kind",
+    loopPreviewLabel: copy.loopPreviewLabel ?? "Loop preview",
     maskRemoveConfirmMessage:
       copy.maskRemoveConfirmMessage ??
       "Remove this transition mask? This cannot be undone.",
@@ -2906,7 +3670,10 @@ export const selectViewData = ({ state, i18n }) => {
     noPreviewLabel: copy.noPreviewLabel ?? "No preview",
     okButton: copy.okButton ?? "OK",
     outTimelineLabel: copy.outTimelineLabel ?? "Out",
-    playButton: copy.playButton ?? "Play",
+    playButton: previewPlaying
+      ? (copy.pauseButton ?? "Pause")
+      : (copy.playButton ?? "Play"),
+    previewPlaying,
     previewTitle: copy.previewTitle ?? "Preview",
     progressDurationLabel:
       copy.progressDurationLabel ?? "Progress Duration (ms)",
@@ -2914,7 +3681,13 @@ export const selectViewData = ({ state, i18n }) => {
     removeButton: copy.removeMenuItem ?? "Remove",
     saveButton: copy.saveButton ?? "Save",
     selectImageLabel: copy.selectImageLabel ?? "Select image",
+    selectTimelineItemPrompt:
+      copy.selectTimelineItemPrompt ??
+      "Select a property or keyframe to view its details.",
     softnessLabel: copy.softnessLabel ?? "Softness",
+    timelineZoomLabel: copy.timelineZoomLabel ?? "Timeline zoom",
+    timelineZoomInLabel: copy.timelineZoomInLabel ?? "Zoom timeline in",
+    timelineZoomOutLabel: copy.timelineZoomOutLabel ?? "Zoom timeline out",
     tweenPropertiesTitle: copy.tweenPropertiesTitle ?? "Tween Properties",
   };
 };

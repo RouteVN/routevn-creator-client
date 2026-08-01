@@ -33,7 +33,11 @@ const getTweenPropertyDurationMs = (tweenProperty) => {
       Number.isFinite(keyframe.duration)
         ? keyframe.duration
         : 0;
-    return total + duration;
+    const delay =
+      typeof keyframe?.delay === "number" && Number.isFinite(keyframe.delay)
+        ? Math.max(0, keyframe.delay)
+        : 0;
+    return total + delay + duration;
   }, 0);
 };
 

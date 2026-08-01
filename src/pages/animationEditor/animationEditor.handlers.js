@@ -12,7 +12,12 @@ import {
   addKeyframeDefaultValues,
   AUTO_TWEEN_DEFAULT_DURATION,
   AUTO_TWEEN_DEFAULT_EASING,
+  TIMELINE_ZOOM_STEP,
 } from "./animationEditor.constants.js";
+import {
+  clearScheduledAnimationEditorAutosave,
+  scheduleAnimationEditorAutosave,
+} from "./support/animationEditorAutosave.js";
 import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy.js";
 
 const normalizeTween = (properties = {}) => {
@@ -32,12 +37,19 @@ const normalizeTween = (properties = {}) => {
       }
 
       const normalizedConfig = {
-        keyframes: (config?.keyframes ?? []).map((keyframe) => ({
-          duration: Number(keyframe.duration) || 0,
-          value: Number(keyframe.value) || 0,
-          easing: keyframe.easing ?? "linear",
-          relative: keyframe.relative ?? false,
-        })),
+        keyframes: (config?.keyframes ?? []).map((keyframe) => {
+          const normalizedKeyframe = {
+            duration: Number(keyframe.duration) || 0,
+            value: Number(keyframe.value) || 0,
+            easing: keyframe.easing ?? "linear",
+            relative: keyframe.relative ?? false,
+          };
+          const delay = Math.max(0, Number(keyframe.delay) || 0);
+          if (delay > 0) {
+            normalizedKeyframe.delay = delay;
+          }
+          return normalizedKeyframe;
+        }),
       };
 
       if (config?.initialValue !== undefined && config.initialValue !== "") {
@@ -61,16 +73,38 @@ const getDefaultNewAnimationName = (copy = {}) => {
   return copy.newAnimationName ?? DEFAULT_NEW_ANIMATION_NAME;
 };
 
-const stopPreviewPlaybackIndicator = ({ store } = {}) => {
+const isSpaceKey = (event) => {
+  return (
+    event?.code === "Space" || event?.key === " " || event?.key === "Spacebar"
+  );
+};
+
+const isTextEntryEvent = (event) => {
+  const target = event?.composedPath?.()[0] ?? event?.target;
+  if (target?.isContentEditable) {
+    return true;
+  }
+
+  return ["INPUT", "SELECT", "TEXTAREA"].includes(target?.tagName);
+};
+
+const stopPreviewPlaybackIndicator = ({
+  preservePlayhead = false,
+  store,
+} = {}) => {
   const frameId = store.selectPreviewPlaybackFrameId();
   if (frameId !== undefined) {
     globalThis.cancelAnimationFrame(frameId);
   }
 
-  store.stopPreviewPlayback({});
+  store.stopPreviewPlayback(preservePlayhead ? { preservePlayhead: true } : {});
 };
 
-const schedulePreviewPlaybackIndicatorFrame = ({ render, store } = {}) => {
+const schedulePreviewPlaybackIndicatorFrame = ({
+  graphicsService,
+  render,
+  store,
+} = {}) => {
   const startedAtMs = store.selectPreviewPlaybackStartedAtMs();
   const durationMs = store.selectPreviewPlaybackDurationMs();
 
@@ -80,14 +114,26 @@ const schedulePreviewPlaybackIndicatorFrame = ({ render, store } = {}) => {
 
   const frameId = globalThis.requestAnimationFrame((timestamp) => {
     const elapsedMs = Math.max(0, timestamp - startedAtMs);
-    const nextTimeMs = Math.min(durationMs, Math.round(elapsedMs));
+    const loopEnabled = store.selectPreviewLoopEnabled();
+    const completedCycle = elapsedMs >= durationMs;
+    const nextTimeMs = loopEnabled
+      ? Math.round(elapsedMs % durationMs)
+      : Math.min(durationMs, Math.round(elapsedMs));
 
+    if (loopEnabled && completedCycle) {
+      store.startPreviewPlayback({
+        startedAtMs: timestamp - nextTimeMs,
+        durationMs,
+      });
+    }
+
+    graphicsService.setAnimationTime(nextTimeMs);
     store.setPreviewPlayhead({
       timeMs: nextTimeMs,
       visible: true,
     });
 
-    if (nextTimeMs >= durationMs) {
+    if (!loopEnabled && completedCycle) {
       stopPreviewPlaybackIndicator({
         store,
       });
@@ -96,6 +142,7 @@ const schedulePreviewPlaybackIndicatorFrame = ({ render, store } = {}) => {
     }
 
     schedulePreviewPlaybackIndicatorFrame({
+      graphicsService,
       render,
       store,
     });
@@ -269,6 +316,7 @@ const {
 const preparePreviewPlaybackAtStart = async ({
   graphicsService,
   projectService,
+  startTimeMs = 0,
   store,
   shouldContinue,
 } = {}) => {
@@ -277,10 +325,11 @@ const preparePreviewPlaybackAtStart = async ({
   }
 
   stopPreviewPlaybackIndicator({
+    preservePlayhead: true,
     store,
   });
   graphicsService.setAnimationPlaybackMode("manual");
-  graphicsService.setAnimationTime(0);
+  graphicsService.setAnimationTime(startTimeMs);
   const rendered = await renderPreviewAnimationState({
     graphicsService,
     projectService,
@@ -295,7 +344,7 @@ const preparePreviewPlaybackAtStart = async ({
     return false;
   }
 
-  graphicsService.setAnimationTime(0);
+  graphicsService.setAnimationTime(startTimeMs);
   store.setPreviewPlaybackMode({
     mode: "manual",
   });
@@ -319,6 +368,7 @@ const ensureManualPreviewAtTime = async ({
 
   if (needsPreparation) {
     stopPreviewPlaybackIndicator({
+      preservePlayhead: true,
       store,
     });
     graphicsService.setAnimationPlaybackMode("manual");
@@ -510,6 +560,14 @@ const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
   };
 };
 
+const createAnimationPersistFingerprint = (snapshot) => {
+  return JSON.stringify({
+    name: snapshot.name,
+    description: snapshot.description,
+    animation: snapshot.animationData,
+  });
+};
+
 const waitForAutosaveIdle = async ({ store } = {}) => {
   while (store.selectAutosaveInFlight()) {
     await new Promise((resolve) => {
@@ -518,13 +576,30 @@ const waitForAutosaveIdle = async ({ store } = {}) => {
   }
 };
 
-const flushQueuedAutosave = async ({ deps } = {}) => {
+const scheduleQueuedAutosave = ({ deps } = {}) => {
   const { store } = deps;
+  return scheduleAnimationEditorAutosave(store, () =>
+    flushQueuedAutosave({
+      deps,
+    }),
+  );
+};
+
+const flushQueuedAutosave = async ({ deps, force = false } = {}) => {
+  const { store } = deps;
+  let didPersistFail = false;
+  clearScheduledAnimationEditorAutosave(store);
 
   if (store.selectAutosaveInFlight()) {
-    await waitForAutosaveIdle({
-      store,
-    });
+    if (!force) {
+      return {
+        ok: true,
+        deferred: true,
+      };
+    }
+
+    await waitForAutosaveIdle({ store });
+    return flushQueuedAutosave({ deps, force });
   }
 
   if (store.selectAutosavePersistedVersion() >= store.selectAutosaveVersion()) {
@@ -538,27 +613,45 @@ const flushQueuedAutosave = async ({ deps } = {}) => {
   });
 
   try {
-    while (
-      store.selectAutosavePersistedVersion() < store.selectAutosaveVersion()
-    ) {
+    do {
       const version = store.selectAutosaveVersion();
       const snapshot = createAnimationPersistSnapshot({
         copy: selectCopy(deps),
         store,
       });
+      const fingerprint = createAnimationPersistFingerprint(snapshot);
+
+      if (fingerprint === store.selectAutosavePersistedFingerprint()) {
+        store.markAutosavePersisted({ version, fingerprint });
+        store.setAutosavePendingSinceAt({ timestamp: undefined });
+        continue;
+      }
+
+      store.setLastAutosaveFlushStartedAt({
+        timestamp: globalThis.performance?.now?.() ?? Date.now(),
+      });
+      store.setAutosavePendingSinceAt({ timestamp: undefined });
       const mutationAttempt = await persistEditorSnapshot({
         deps,
         snapshot,
       });
 
       if (!mutationAttempt.ok) {
+        didPersistFail = true;
+        store.setAutosavePendingSinceAt({
+          timestamp: globalThis.performance?.now?.() ?? Date.now(),
+        });
         return mutationAttempt;
       }
 
       store.markAutosavePersisted({
         version,
+        fingerprint,
       });
-    }
+    } while (
+      force &&
+      store.selectAutosavePersistedVersion() < store.selectAutosaveVersion()
+    );
 
     return {
       ok: true,
@@ -567,15 +660,24 @@ const flushQueuedAutosave = async ({ deps } = {}) => {
     store.setAutosaveInFlight({
       inFlight: false,
     });
+
+    if (
+      !force &&
+      !didPersistFail &&
+      store.selectAutosaveTimerId() === undefined &&
+      store.selectAutosavePersistedVersion() < store.selectAutosaveVersion()
+    ) {
+      scheduleQueuedAutosave({ deps });
+    }
   }
 };
 
 const queueEditorAutosave = ({ deps } = {}) => {
   const { store } = deps;
   store.queueAutosave();
-  void flushQueuedAutosave({
-    deps,
-  });
+  if (store.selectAutosavePersistedVersion() < store.selectAutosaveVersion()) {
+    scheduleQueuedAutosave({ deps });
+  }
 };
 
 const initializePreview = async ({ deps } = {}) => {
@@ -657,6 +759,10 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
       itemData,
       dialogType: itemData.animation?.type,
     });
+    const snapshot = createAnimationPersistSnapshot({ copy, store });
+    store.setAutosavePersistedFingerprint({
+      fingerprint: createAnimationPersistFingerprint(snapshot),
+    });
   } else {
     store.setSelectedItemId({ itemId: undefined });
     store.openDialog({
@@ -670,6 +776,7 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
     store.setAnimationDescription({
       description: description ?? "",
     });
+    store.setAutosavePersistedFingerprint({ fingerprint: undefined });
   }
 
   render();
@@ -677,9 +784,66 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
   return true;
 };
 
+const mountTimelinePanSubscriptions = (deps) => {
+  const { browserEventsClient } = deps;
+  const cleanupSubscriptions = [
+    browserEventsClient.subscribeWindowEvent({
+      type: "keydown",
+      options: { capture: true },
+      listener: (event) =>
+        handleTimelinePanKeyDown(deps, {
+          _event: event,
+        }),
+    }),
+    browserEventsClient.subscribeWindowEvent({
+      type: "keyup",
+      options: { capture: true },
+      listener: (event) =>
+        handleTimelinePanKeyUp(deps, {
+          _event: event,
+        }),
+    }),
+    browserEventsClient.subscribeWindowEvent({
+      type: "blur",
+      listener: () => handleTimelinePanWindowBlur(deps),
+    }),
+  ];
+
+  return () => {
+    cleanupSubscriptions.forEach((cleanup) => cleanup());
+  };
+};
+
 export const handleBeforeMount = (deps) => {
-  const { store, uiConfig } = deps;
+  const { appService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
+  const cleanupTimelinePanSubscriptions = mountTimelinePanSubscriptions(deps);
+  const unregisterBeforeNavigation = appService.registerBeforeNavigation(
+    async () => {
+      const autosaveAttempt = await flushQueuedAutosave({
+        deps,
+        force: true,
+      });
+      if (!autosaveAttempt.ok) {
+        throw new Error("Failed to save animation changes before navigation.");
+      }
+    },
+  );
+
+  return async () => {
+    unregisterBeforeNavigation();
+    cleanupTimelinePanSubscriptions();
+    clearScheduledAnimationEditorAutosave(store);
+    store.setPreviewPlaybackRequestId({ requestId: undefined });
+    stopPreviewPlaybackIndicator({ store });
+    const autosaveAttempt = await flushQueuedAutosave({
+      deps,
+      force: true,
+    });
+    if (!autosaveAttempt.ok) {
+      throw new Error("Failed to save animation changes during cleanup.");
+    }
+  };
 };
 
 export const handleAfterMount = async (deps) => {
@@ -695,6 +859,7 @@ export const handleBackClick = async (deps) => {
   });
   const autosaveAttempt = await flushQueuedAutosave({
     deps,
+    force: true,
   });
 
   if (!autosaveAttempt.ok) {
@@ -717,6 +882,7 @@ export const handleSavePreviewClick = async (deps) => {
   const copy = selectCopy(deps);
   const autosaveAttempt = await flushQueuedAutosave({
     deps,
+    force: true,
   });
 
   if (!autosaveAttempt.ok) {
@@ -861,6 +1027,165 @@ export const handleAddPropertiesClick = (deps, payload) => {
   render();
 };
 
+export const handleTimelineZoomChange = (deps, payload) => {
+  const { render, store } = deps;
+  store.setTimelineZoom({ zoom: resolveValueChange(payload) });
+  render();
+};
+
+export const handleTimelineZoomIn = (deps) => {
+  const { render, store } = deps;
+  store.nudgeTimelineZoom({ delta: TIMELINE_ZOOM_STEP });
+  render();
+};
+
+export const handleTimelineZoomOut = (deps) => {
+  const { render, store } = deps;
+  store.nudgeTimelineZoom({ delta: -TIMELINE_ZOOM_STEP });
+  render();
+};
+
+export const handleTimelineScroll = (deps, payload) => {
+  const { render, store } = deps;
+  const wasPlayheadVisible = store.selectTimelinePlayheadVisible();
+  const timelineViewport = payload._event.currentTarget;
+
+  store.setTimelineScrollMetrics({
+    scrollLeft: timelineViewport.scrollLeft,
+    viewportWidth: timelineViewport.clientWidth,
+  });
+
+  if (wasPlayheadVisible !== store.selectTimelinePlayheadVisible()) {
+    render();
+  }
+};
+
+export const handleTimelinePanPointerEnter = (deps) => {
+  const { store } = deps;
+  store.setTimelinePanHovered({ hovered: true });
+};
+
+export const handleTimelinePanPointerLeave = (deps) => {
+  const { store } = deps;
+  store.setTimelinePanHovered({ hovered: false });
+};
+
+export const handleTimelinePanKeyDown = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  if (
+    !isSpaceKey(event) ||
+    isTextEntryEvent(event) ||
+    !store.selectTimelinePanHovered() ||
+    store.selectTimelinePanMode()
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  store.setTimelinePanMode({ enabled: true });
+  render();
+};
+
+const stopTimelinePanGesture = (deps) => {
+  const { refs, store } = deps;
+  const timelinePan = store.selectTimelinePan();
+  if (!timelinePan) {
+    return false;
+  }
+
+  refs.timelineScrollContainer?.releasePointerCapture?.(timelinePan.pointerId);
+  store.stopTimelinePan({});
+  return true;
+};
+
+export const handleTimelinePanKeyUp = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  if (!isSpaceKey(event) || !store.selectTimelinePanMode()) {
+    return;
+  }
+
+  event.preventDefault();
+  stopTimelinePanGesture(deps);
+  store.setTimelinePanMode({ enabled: false });
+  render();
+};
+
+export const handleTimelinePanWindowBlur = (deps) => {
+  const { render, store } = deps;
+  const wasPanning = stopTimelinePanGesture(deps);
+  if (!store.selectTimelinePanMode() && !wasPanning) {
+    return;
+  }
+
+  store.setTimelinePanMode({ enabled: false });
+  render();
+};
+
+export const handleTimelinePanStart = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  if (!store.selectTimelinePanMode() || event.button !== 0) {
+    if (store.selectTimelinePanClickSuppressed()) {
+      store.clearTimelinePanClickSuppression({});
+    }
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  store.startTimelinePan({
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startScrollLeft: event.currentTarget.scrollLeft,
+  });
+  render();
+};
+
+export const handleTimelinePanClick = (deps, payload) => {
+  const { store } = deps;
+  if (!store.selectTimelinePanClickSuppressed()) {
+    return;
+  }
+
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
+  store.clearTimelinePanClickSuppression({});
+};
+
+export const handleTimelinePanMove = (deps, payload) => {
+  const { store } = deps;
+  const event = payload._event;
+  const timelinePan = store.selectTimelinePan();
+  if (!timelinePan || timelinePan.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.scrollLeft = Math.max(
+    0,
+    timelinePan.startScrollLeft - (event.clientX - timelinePan.startX),
+  );
+};
+
+export const handleTimelinePanEnd = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  const timelinePan = store.selectTimelinePan();
+  if (!timelinePan || timelinePan.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.releasePointerCapture?.(event.pointerId);
+  store.stopTimelinePan({});
+  render();
+};
+
 export const handleAddPropertySideMenuItemClick = (deps, payload) => {
   const { render, store } = deps;
   const side = payload._event.detail.item?.value;
@@ -933,23 +1258,35 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
   });
 };
 
-export const handleAddKeyframeInDialog = (deps, payload) => {
+export const handleAddKeyframeFromTimeline = (deps, payload) => {
   const { render, store } = deps;
+  const { delay, duration, followingDelay, index, property } =
+    payload._event.detail;
   const side =
     payload._event.detail.side ??
     (store.selectDialogType() === "transition" ? "prev" : "update");
 
-  store.setPopover({
-    mode: "addKeyframe",
-    x: payload._event.detail.x,
-    y: payload._event.detail.y,
-    payload: {
-      side,
-      property: payload._event.detail.property,
-      index: payload._event.detail.index,
-    },
-  });
+  const keyframe = {
+    ...addKeyframeDefaultValues,
+    side,
+    property,
+    index,
+  };
+  if (duration !== undefined) {
+    keyframe.duration = duration;
+  }
+  if (delay !== undefined) {
+    keyframe.delay = delay;
+  }
+  if (followingDelay !== undefined) {
+    keyframe.followingDelay = followingDelay;
+  }
+
+  store.addKeyframe(keyframe);
+  store.setSelectedKeyframe({ side, property, index });
+  invalidatePreview({ store });
   render();
+  queueEditorAutosave({ deps });
 };
 
 export const handleAddKeyframeFormSubmit = (deps, payload) => {
@@ -992,6 +1329,11 @@ export const handleAddKeyframeFormSubmit = (deps, payload) => {
 
 export const handleKeyframeRightClick = (deps, payload) => {
   const { render, store } = deps;
+  store.setSelectedKeyframe({
+    side: payload._event.detail.side,
+    property: payload._event.detail.property,
+    index: payload._event.detail.index,
+  });
   store.setPopover({
     mode: "keyframeMenu",
     x: payload._event.detail.x,
@@ -1005,19 +1347,93 @@ export const handleKeyframeRightClick = (deps, payload) => {
   render();
 };
 
-export const handleKeyframeClick = (deps, payload) => {
-  const { render, store } = deps;
+const openSelectedKeyframeEditDialog = (deps, { x = 0, y = 0 } = {}) => {
+  const { refs, render, store } = deps;
+  const selectedKeyframe = store.selectSelectedKeyframe();
+  const values = store.selectSelectedKeyframeFormValues();
+  if (!selectedKeyframe || !values) {
+    return false;
+  }
+
   store.setPopover({
     mode: "editKeyframe",
-    x: payload._event.detail.x,
-    y: payload._event.detail.y,
-    payload: {
-      side: payload._event.detail.side,
-      property: payload._event.detail.property,
-      index: payload._event.detail.index,
-    },
+    x,
+    y,
+    payload: selectedKeyframe,
   });
   render();
+  refs.editKeyframeForm.reset();
+  refs.editKeyframeForm.setValues({ values });
+  return true;
+};
+
+export const handleKeyframeClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { index, property, side, x, y } = payload._event.detail;
+  store.setSelectedKeyframe({
+    side,
+    property,
+    index,
+  });
+  if (store.selectIsTouchMode()) {
+    openSelectedKeyframeEditDialog(deps, {
+      x,
+      y,
+    });
+    return;
+  }
+
+  store.closePopover();
+  render();
+};
+
+export const handleKeyframeSelect = (deps, payload) => {
+  const { render, store } = deps;
+  const { index, property, side } = payload._event.detail;
+  store.setSelectedKeyframe({ side, property, index });
+  store.closePopover();
+  render();
+};
+
+export const handleEditorSurfaceClick = (deps, payload) => {
+  const { render, store } = deps;
+  if (!store.selectTimelineSelection()) {
+    return;
+  }
+
+  const selectionSurfaceClicked = payload._event
+    .composedPath()
+    .some(
+      (element) =>
+        element?.dataset?.keyframe === "true" ||
+        element?.dataset?.timelineSelectionSurface === "true",
+    );
+  if (selectionSurfaceClicked) {
+    return;
+  }
+
+  store.clearTimelineSelection({});
+  render();
+};
+
+export const handleKeyframeDurationChange = (deps, payload) => {
+  const { store } = deps;
+  const { delay, duration, followingDelay, index, property, side } =
+    payload._event.detail;
+  store.setSelectedKeyframe({ side, property, index });
+  store.setSelectedKeyframeTiming({ delay, duration, followingDelay });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleEditSelectedKeyframeClick = (deps) => {
+  openSelectedKeyframeEditDialog(deps);
+};
+
+const commitSelectedKeyframeChange = (deps) => {
+  const { render, store } = deps;
+  invalidatePreview({ store });
+  render();
+  queueEditorAutosave({ deps });
 };
 
 export const handleAutoTrackClick = (deps, payload) => {
@@ -1036,13 +1452,35 @@ export const handleAutoTrackClick = (deps, payload) => {
 
 export const handlePropertyNameClick = (deps, payload) => {
   const { render, store } = deps;
+  const { property, side, x, y } = payload._event.detail;
+  store.setSelectedProperty({ side, property });
+  if (store.selectIsTouchMode()) {
+    store.setPopover({
+      mode: "propertyNameMenu",
+      x,
+      y,
+      payload: {
+        side,
+        property,
+      },
+    });
+  } else {
+    store.closePopover();
+  }
+  render();
+};
+
+export const handlePropertyNameRightClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { property, side, x, y } = payload._event.detail;
+  store.setSelectedProperty({ side, property });
   store.setPopover({
     mode: "propertyNameMenu",
-    x: payload._event.detail.x,
-    y: payload._event.detail.y,
+    x,
+    y,
     payload: {
-      side: payload._event.detail.side,
-      property: payload._event.detail.property,
+      side,
+      property,
     },
   });
   render();
@@ -1057,16 +1495,8 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
   let didMutate = false;
 
   if (value === "edit") {
-    store.setPopover({
-      mode: "editKeyframe",
-      x,
-      y,
-      payload: {
-        side,
-        property,
-        index,
-      },
-    });
+    openSelectedKeyframeEditDialog(deps, { x, y });
+    return;
   } else if (value === "delete-property") {
     store.deleteProperty({ side, property });
     store.closePopover();
@@ -1076,27 +1506,27 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
     store.closePopover();
     didMutate = true;
   } else if (value === "add-right") {
-    store.setPopover({
-      mode: "addKeyframe",
-      x,
-      y,
-      payload: {
-        side,
-        property,
-        index: Number(index) + 1,
-      },
+    const addedIndex = Number(index) + 1;
+    store.addKeyframe({
+      ...addKeyframeDefaultValues,
+      side,
+      property,
+      index: addedIndex,
     });
+    store.setSelectedKeyframe({ side, property, index: addedIndex });
+    store.closePopover();
+    didMutate = true;
   } else if (value === "add-left") {
-    store.setPopover({
-      mode: "addKeyframe",
-      x,
-      y,
-      payload: {
-        side,
-        property,
-        index,
-      },
+    const addedIndex = Number(index);
+    store.addKeyframe({
+      ...addKeyframeDefaultValues,
+      side,
+      property,
+      index: addedIndex,
     });
+    store.setSelectedKeyframe({ side, property, index: addedIndex });
+    store.closePopover();
+    didMutate = true;
   } else if (value === "move-right") {
     store.moveKeyframeRight({ side, property, index });
     store.closePopover();
@@ -1132,6 +1562,9 @@ export const handleEditKeyframeFormSubmit = (deps, payload) => {
     ...payload._event.detail.values,
   };
 
+  if (formValues.delay < 0) {
+    formValues.delay = 0;
+  }
   if (formValues.duration < 1) {
     formValues.duration = 1;
   }
@@ -1181,13 +1614,18 @@ export const handleEditAutoFormSubmit = (deps, payload) => {
   });
 };
 
-export const handleRulerTimeHover = async (deps, payload) => {
+export const handleRulerTimeScrub = async (deps, payload) => {
   const { graphicsService, projectService, render, store } = deps;
-  const timeMs = payload._event.detail.timeMs;
+  const { timeMs } = payload._event.detail;
+  store.setPreviewPlaybackRequestId({ requestId: undefined });
+  if (store.selectPreviewPlaying()) {
+    stopPreviewPlaybackIndicator({ preservePlayhead: true, store });
+  }
   store.setPreviewPlayhead({
     timeMs,
     visible: true,
   });
+  render();
   const didChangePreviewState = await ensureManualPreviewAtTime({
     graphicsService,
     projectService,
@@ -1199,8 +1637,6 @@ export const handleRulerTimeHover = async (deps, payload) => {
     render();
   }
 };
-
-export const handleRulerTimeLeave = () => {};
 
 export const handleInitialValueClick = (deps, payload) => {
   const { render, store } = deps;
@@ -1782,6 +2218,24 @@ export const handleReplayAnimation = async (deps) => {
     return;
   }
 
+  if (store.selectPreviewPlaying()) {
+    store.setPreviewPlaybackRequestId({ requestId: undefined });
+    stopPreviewPlaybackIndicator({ preservePlayhead: true, store });
+    render();
+    return;
+  }
+
+  const durationMs = store.selectPreviewDurationMs();
+  if (durationMs <= 0) {
+    return;
+  }
+
+  const currentTimeMs = Number(store.selectPreviewPlayheadTimeMs());
+  const startTimeMs = Number.isFinite(currentTimeMs)
+    ? Math.min(Math.max(0, currentTimeMs), durationMs)
+    : 0;
+  const resolvedStartTimeMs = startTimeMs >= durationMs ? 0 : startTimeMs;
+
   const playbackRequestId = generateId();
   store.setPreviewPlaybackRequestId({
     requestId: playbackRequestId,
@@ -1792,6 +2246,7 @@ export const handleReplayAnimation = async (deps) => {
   const prepared = await preparePreviewPlaybackAtStart({
     graphicsService,
     projectService,
+    startTimeMs: resolvedStartTimeMs,
     store,
     shouldContinue: isCurrentPlaybackRequest,
   });
@@ -1801,20 +2256,14 @@ export const handleReplayAnimation = async (deps) => {
 
   render();
 
-  const durationMs = store.selectPreviewDurationMs();
-
-  if (durationMs <= 0) {
-    return;
-  }
-
   await waitForPreviewPaint();
   if (!isCurrentPlaybackRequest()) {
     return;
   }
 
-  graphicsService.setAnimationPlaybackMode("auto");
+  graphicsService.setAnimationPlaybackMode("manual");
   store.setPreviewPlaybackMode({
-    mode: "auto",
+    mode: "manual",
   });
   const rendered = await renderPreviewAnimationState({
     graphicsService,
@@ -1826,14 +2275,24 @@ export const handleReplayAnimation = async (deps) => {
     return;
   }
 
+  graphicsService.setAnimationTime(resolvedStartTimeMs);
+
   store.startPreviewPlayback({
-    startedAtMs: performance.now(),
+    startedAtMs: performance.now() - resolvedStartTimeMs,
     durationMs,
+    timeMs: resolvedStartTimeMs,
   });
   schedulePreviewPlaybackIndicatorFrame({
+    graphicsService,
     render,
     store,
   });
+  render();
+};
+
+export const handleTogglePreviewLoop = (deps) => {
+  const { render, store } = deps;
+  store.togglePreviewLoop({});
   render();
 };
 

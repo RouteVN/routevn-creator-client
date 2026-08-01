@@ -5,6 +5,7 @@ import { createDb } from "./deps/clients/web/db.js";
 import { createWebFilePicker } from "./deps/clients/web/filePicker.js";
 import { installVtBridge } from "./deps/clients/web/vtBridge.js";
 import { resetWebAppStateForVisualTests } from "./deps/clients/web/vtAppStateReset.js";
+import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
 
 // Services - Web
 import { createAppService } from "./deps/services/web/appService.js";
@@ -57,6 +58,7 @@ const filePicker = createWebFilePicker();
 const globalUIElement = document.querySelector("rtgl-global-ui");
 const globalUI = createGlobalUI(globalUIElement);
 const audioService = createAudioService();
+const browserEventsClient = createBrowserEventsClient();
 
 const appVersion = tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
@@ -122,6 +124,7 @@ const componentDependencies = {
 };
 
 const pageDependencies = {
+  browserEventsClient,
   uiConfig,
   subject,
   graphicsService,

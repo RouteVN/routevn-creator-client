@@ -246,24 +246,32 @@ export const createKeyframeValueCurvePath = ({
   let elapsedTimeMs = 0;
   let startValue = resolveInitialValue({ initialValue, defaultValue });
 
-  keyframes.forEach((keyframe, keyframeIndex) => {
+  keyframes.forEach((keyframe) => {
+    const delay = Math.max(0, resolveNumber(keyframe.delay, 0));
     const duration = resolveNumber(keyframe.duration, 1000) || 1000;
     const targetValue = resolveTargetValue({ keyframe, startValue });
     const easingSamples =
       EASING_SAMPLES[keyframe.easing ?? "linear"] ?? EASING_SAMPLES.linear;
 
+    if (delay > 0) {
+      if (points.length === 0) {
+        points.push({ timeMs: elapsedTimeMs, value: startValue });
+      }
+      points.push({ timeMs: elapsedTimeMs + delay, value: startValue });
+    }
+
     easingSamples.forEach(({ progress, value: easedProgress }, sampleIndex) => {
-      if (keyframeIndex > 0 && sampleIndex === 0) {
+      if (points.length > 0 && sampleIndex === 0) {
         return;
       }
 
       points.push({
-        timeMs: elapsedTimeMs + progress * duration,
+        timeMs: elapsedTimeMs + delay + progress * duration,
         value: startValue + (targetValue - startValue) * easedProgress,
       });
     });
 
-    elapsedTimeMs += duration;
+    elapsedTimeMs += delay + duration;
     startValue = targetValue;
   });
 

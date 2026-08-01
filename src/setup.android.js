@@ -3,6 +3,7 @@ import { createGlobalUI } from "@rettangoli/ui";
 import { createDb } from "./deps/clients/android/db.js";
 import { createAndroidFilePicker } from "./deps/clients/android/filePicker.js";
 import AndroidRouter from "./deps/clients/android/router.js";
+import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
 
 import { createAppService } from "./deps/services/android/appService.js";
 import { createProjectService } from "./deps/services/android/projectService.js";
@@ -39,6 +40,7 @@ const filePicker = createAndroidFilePicker();
 const globalUIElement = document.querySelector("rtgl-global-ui");
 const globalUI = createGlobalUI(globalUIElement);
 const audioService = createAudioService();
+const browserEventsClient = createBrowserEventsClient();
 
 const appVersion = tauriConfig.version;
 const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
@@ -158,6 +160,7 @@ const componentDependencies = {
 };
 
 const pageDependencies = {
+  browserEventsClient,
   uiConfig,
   subject,
   graphicsService,

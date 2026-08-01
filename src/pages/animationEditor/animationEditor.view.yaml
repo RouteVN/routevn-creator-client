@@ -1,4 +1,8 @@
 refs:
+  editorSurface:
+    eventListeners:
+      click:
+        handler: handleEditorSurfaceClick
   backButton:
     eventListeners:
       click:
@@ -7,6 +11,10 @@ refs:
     eventListeners:
       click:
         handler: handleReplayAnimation
+  previewLoopButton:
+    eventListeners:
+      click:
+        handler: handleTogglePreviewLoop
   savePreviewButton:
     eventListeners:
       click:
@@ -43,52 +51,98 @@ refs:
     eventListeners:
       click:
         handler: handleAddPropertiesClick
+  timelineZoomSlider:
+    eventListeners:
+      value-change:
+        handler: handleTimelineZoomChange
+      value-input:
+        handler: handleTimelineZoomChange
+  timelineZoomOut:
+    eventListeners:
+      click:
+        handler: handleTimelineZoomOut
+  timelineZoomIn:
+    eventListeners:
+      click:
+        handler: handleTimelineZoomIn
+  timelineScrollContainer:
+    eventListeners:
+      scroll:
+        handler: handleTimelineScroll
+      pointerenter:
+        handler: handleTimelinePanPointerEnter
+      pointerleave:
+        handler: handleTimelinePanPointerLeave
+      pointerdown:
+        handler: handleTimelinePanStart
+      pointermove:
+        handler: handleTimelinePanMove
+      pointerup:
+        handler: handleTimelinePanEnd
+      pointercancel:
+        handler: handleTimelinePanEnd
+      click:
+        handler: handleTimelinePanClick
   updateTimeline:
     eventListeners:
       add-keyframe:
-        handler: handleAddKeyframeInDialog
-      ruler-time-hover:
-        handler: handleRulerTimeHover
-      ruler-time-leave:
-        handler: handleRulerTimeLeave
+        handler: handleAddKeyframeFromTimeline
+      ruler-time-scrub:
+        handler: handleRulerTimeScrub
       keyframe-click:
         handler: handleKeyframeClick
+      keyframe-select:
+        handler: handleKeyframeSelect
+      keyframe-duration-change:
+        handler: handleKeyframeDurationChange
       auto-track-click:
         handler: handleAutoTrackClick
       keyframe-right-click:
         handler: handleKeyframeRightClick
       property-name-click:
         handler: handlePropertyNameClick
+      property-name-right-click:
+        handler: handlePropertyNameRightClick
       initial-value-click:
         handler: handleInitialValueClick
   transitionRuler:
     eventListeners:
-      ruler-time-hover:
-        handler: handleRulerTimeHover
-      ruler-time-leave:
-        handler: handleRulerTimeLeave
+      ruler-time-scrub:
+        handler: handleRulerTimeScrub
   previousTimeline:
     eventListeners:
       add-keyframe:
-        handler: handleAddKeyframeInDialog
+        handler: handleAddKeyframeFromTimeline
       keyframe-click:
         handler: handleKeyframeClick
+      keyframe-select:
+        handler: handleKeyframeSelect
+      keyframe-duration-change:
+        handler: handleKeyframeDurationChange
       keyframe-right-click:
         handler: handleKeyframeRightClick
       property-name-click:
         handler: handlePropertyNameClick
+      property-name-right-click:
+        handler: handlePropertyNameRightClick
       initial-value-click:
         handler: handleInitialValueClick
   nextTimeline:
     eventListeners:
       add-keyframe:
-        handler: handleAddKeyframeInDialog
+        handler: handleAddKeyframeFromTimeline
       keyframe-click:
         handler: handleKeyframeClick
+      keyframe-select:
+        handler: handleKeyframeSelect
+      keyframe-duration-change:
+        handler: handleKeyframeDurationChange
       keyframe-right-click:
         handler: handleKeyframeRightClick
       property-name-click:
         handler: handlePropertyNameClick
+      property-name-right-click:
+        handler: handlePropertyNameRightClick
       initial-value-click:
         handler: handleInitialValueClick
   addPropertyPopover:
@@ -137,6 +191,10 @@ refs:
         handler: handleEditInitialValueFormSubmit
       form-change:
         handler: handleEditInitialValueFormChange
+  editSelectedKeyframeButton:
+    eventListeners:
+      click:
+        handler: handleEditSelectedKeyframeClick
   keyframeDropdownMenu:
     eventListeners:
       close:
@@ -305,7 +363,7 @@ refs:
         handler: handleMaskImagePreviewOverlayClick
   canvas: {}
 template:
-  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+  - 'rtgl-view#editorSurface d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - rvn-resizable-panel w=300 min-w=200 max-w=500 resize-side="right":
           - rtgl-view slot="content" w=f h=f:
               - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
@@ -315,13 +373,14 @@ template:
               - rtgl-button#backButton sq pre=chevronLeft v=ol: null
               - rtgl-view w=1fg:
                   - rtgl-text: ${animationName}
-              - rtgl-button#playButton s=sm: ${playButton}
+              - 'rtgl-button#previewLoopButton sq v=${previewLoopButtonVariant} pre=loop aria-label="${loopPreviewLabel}" aria-pressed="${previewLoopEnabled}" title="${loopPreviewLabel}"': null
+              - 'rtgl-button#playButton s=sm aria-label="${playButton}" aria-pressed="${previewPlaying}"': ${playButton}
           - rtgl-view h=1fg sv w=f p=md g=lg:
               - rtgl-view d=v w=f g=md:
                   - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
                       - rtgl-view pos=abs cor=full:
                           - 'div#canvas style="width: 100%; height: 100%; display: flex;"': null
-              - rtgl-view d=v w=f g=md:
+              - 'rtgl-view d=v w=f h=1fg g=md style="min-height: 0;"':
                   - $if showMobileTweenActions:
                       - rtgl-view d=h w=f g=sm wrap:
                           - $if showMobileMaskButton:
@@ -330,22 +389,53 @@ template:
                   - rtgl-view d=h av=c w=f:
                       - rtgl-text: ${tweenPropertiesTitle}
                       - rtgl-view w=1fg: null
+                      - rtgl-view d=h av=c g=sm mr=md:
+                          - 'rtgl-button#timelineZoomOut sq v=ol s=sm aria-label="${timelineZoomOutLabel}" title="${timelineZoomOutLabel}"': '-'
+                          - 'rtgl-slider#timelineZoomSlider w=120 min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom} aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
+                          - 'rtgl-button#timelineZoomIn sq v=ol s=sm aria-label="${timelineZoomInLabel}" title="${timelineZoomInLabel}"': +
                       - $if dialogType == 'update' && updateAddPropertyButtonVisible:
                           - rtgl-button#addPropertiesButton data-side=update pre=plus s=sm: ${addButton}
                       - $if dialogType == 'transition' && transitionAddPropertyButtonVisible:
                           - rtgl-button#addPropertiesButton pre=plus s=sm: ${addButton}
                   - $if dialogType == 'update':
-                      - rvn-keyframe-timeline#updateTimeline editable=true ?showRuler=true ?interactiveRuler=true side=update ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} :properties=${updateProperties} :defaultValues=${updateTimelineDefaultValues}: null
+                      - 'rtgl-view#timelineScrollContainer w=f h=1fg sh cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
+                          - 'rtgl-view d=v h=f pos=rel style="${timelineCanvasStyle}"':
+                              - rvn-keyframe-timeline#updateTimeline editable=true ?showRuler=true ?interactiveRuler=true side=update ?indicatorVisible=${timelinePlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} timelineDuration=${timelineDisplayDuration} :properties=${updateProperties} :defaultValues=${updateTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
+                              - $if timelinePlayheadVisible:
+                                  - 'rtgl-view pos=abs bgc=fg op="0.5" style="${timelinePlayheadStyle}"': null
                     $else:
-                      - rtgl-view d=v w=f g=md:
-                          - rvn-keyframe-timeline#transitionRuler ?showRuler=true ?showTracks=false ?interactiveRuler=true ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} timelineDuration=${transitionTimelineDuration}: null
-                          - rtgl-view d=v w=f g=xs:
-                              - rtgl-text s=sm c=mu-fg: ${outTimelineLabel}
-                              - rvn-keyframe-timeline#previousTimeline editable=true side=prev ?showRuler=false ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} :properties=${previousProperties} :defaultValues=${transitionTimelineDefaultValues}: null
-                          - rtgl-view d=v w=f g=xs:
-                              - rtgl-text s=sm c=mu-fg: ${inTimelineLabel}
-                              - rvn-keyframe-timeline#nextTimeline editable=true side=next ?showRuler=false ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues}: null
+                      - 'rtgl-view#timelineScrollContainer w=f h=1fg sh cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
+                          - 'rtgl-view d=v h=f g=md pos=rel style="${timelineCanvasStyle}"':
+                              - rvn-keyframe-timeline#transitionRuler ?showRuler=true ?showTracks=false ?interactiveRuler=true ?indicatorVisible=${timelinePlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} timelineDuration=${timelineDisplayDuration}: null
+                              - rtgl-view d=v w=f g=xs:
+                                  - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
+                                      - rtgl-view w=72 av=c ah=c:
+                                          - rtgl-text s=sm c=mu-fg: ${outTimelineLabel}
+                                      - rtgl-view h=24 w=24 mr=sm ml=sm: null
+                                  - rvn-keyframe-timeline#previousTimeline editable=true side=prev ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDisplayDuration} :properties=${previousProperties} :defaultValues=${transitionTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
+                              - rtgl-view d=v w=f g=xs:
+                                  - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
+                                      - rtgl-view w=72 av=c ah=c:
+                                          - rtgl-text s=sm c=mu-fg: ${inTimelineLabel}
+                                      - rtgl-view h=24 w=24 mr=sm ml=sm: null
+                                  - rvn-keyframe-timeline#nextTimeline editable=true side=next ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDisplayDuration} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
+                              - $if timelinePlayheadVisible:
+                                  - 'rtgl-view pos=abs bgc=fg op="0.5" style="${timelinePlayheadStyle}"': null
       - $if showRightPanel:
+          - rvn-resizable-panel#timelineDetailsPanel data-timeline-selection-surface=true panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+              - 'rtgl-view wh=f slot="content" bgc=bg d=v style="min-width: 0; min-height: 0;"':
+                  - rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo:
+                      - rtgl-text w=1fg: ${detailsPanelTitle}
+                  - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
+                      - $if selectedKeyframeDetailId:
+                          - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} w=f :fields=${selectedKeyframeDetailFields} :fillHeight=${false}:
+                              - rtgl-button#editSelectedKeyframeButton slot=actions w=f v=se pre=edit: ${editButton}
+                        $elif selectedPropertyDetailId:
+                          - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} w=f :fields=${selectedPropertyDetailFields} :fillHeight=${false}: null
+                        $else:
+                          - rtgl-view w=f h=f av=c ah=c p=md:
+                              - rtgl-text s=sm c=mu-fg ta=c: ${selectTimelineItemPrompt}
+      - $if showMaskAndPreviewSections:
           - 'rtgl-view w=1fg h=f bgc=bg bwl=xs bc=bo d=v style="min-width: 0; min-height: 0;"':
               - 'rtgl-view w=f h=1fg d=v style="min-height: 0;"':
                   - rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo g=sm:
@@ -432,9 +522,6 @@ template:
       - $if showAddKeyframePopover:
           - rtgl-view slot=content:
               - rtgl-form#addKeyframeForm :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues}: null
-      - $if showEditKeyframePopover:
-          - rtgl-view slot=content:
-              - rtgl-form#editKeyframeForm :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues}: null
       - $if popover.mode == 'editAuto':
           - rtgl-view slot=content:
               - rtgl-form#editAutoForm :form=${editAutoForm} :defaultValues=${editAutoDefaultValues}: null
