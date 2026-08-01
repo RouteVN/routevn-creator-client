@@ -1308,6 +1308,8 @@ layoutEditorPage:
   nvlLineSpeakerNameElementLabel: "NVL 对话行说话者名称"
   nvlLineTextElementLabel: "NVL 对话行文本"
   ownerPreviewSaved: "{ownerLabel}预览已保存。"
+  previewPlayButton: "播放"
+  previewRevealingSpeedLabel: "显示速度"
   previewTitle: "预览"
   particleDefaultName: "粒子"
   particleLabel: "粒子"

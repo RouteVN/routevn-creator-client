@@ -1308,6 +1308,8 @@ layoutEditorPage:
   nvlLineSpeakerNameElementLabel: "NVL行の話者名"
   nvlLineTextElementLabel: "NVL行テキスト"
   ownerPreviewSaved: "{ownerLabel}のプレビューを保存しました。"
+  previewPlayButton: "再生"
+  previewRevealingSpeedLabel: "表示速度"
   previewTitle: "プレビュー"
   particleDefaultName: "パーティクル"
   particleLabel: "パーティクル"

@@ -314,7 +314,6 @@ export const createPreviewVariablesForm = (previewVariableItems = []) => {
   );
 
   return {
-    title: "Preview",
     description: "Edit visibility conditions to preview conditional elements",
     fields: editablePreviewVariableItems.map((variable) => {
       const sourceLabel =

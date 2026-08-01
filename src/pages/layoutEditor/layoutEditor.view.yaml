@@ -77,17 +77,15 @@ template:
                   - rtgl-button#nodeButton ml=sm v=se: ${nodeButtonLabel}
               - $if showMobilePreviewButton:
                   - rtgl-button#previewButton ml=sm v=se: ${previewTitle}
-              - $if showTopSavePreviewButton:
-                  - rtgl-button#saveButton ml=sm: ${savePreviewButton}
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
               - 'rtgl-view#layoutEditorCanvasBackground w=f style="min-width: 0;"':
                   - 'div style="position: relative; width: ${layoutEditorCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
                       - 'rvn-layout-editor-canvas#layoutEditorCanvas style="display: block; width: 100%;" :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${selectedItemIsInsideDirectedContainer} :disableInteraction=${selectedItemIsEffectivelyHidden}': null
               - 'rtgl-view h=1fg w=f sv style="min-height: 0; ${previewPanelVisibilityStyle}"':
-                  - $if showMobilePreviewHeader:
+                  - $if showPreviewHeader:
                       - 'rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-                          - rtgl-text w=1fg s=md ellipsis=true: ${previewTitle}
-                          - rtgl-button#saveButton ml=sm v=se: ${savePreviewButton}
+                          - rtgl-text w=1fg s=lg ellipsis=true: ${previewTitle}
+                          - rtgl-button#saveButton ml=sm: ${savePreviewButton}
                   - $if isPreviewMounted:
                       - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState} :initialPreviewData=${previewHydrationData} :charactersData=${charactersData}: null
                     $else:

@@ -1,6 +1,4 @@
 dialogueForm:
-  title: Preview
-  description: Edit to see how the layout will look like with different data
   fields:
     - name: dialogue-character-id
       label: Character
@@ -51,7 +49,6 @@ dialogueForm:
           value: true
 
 nvlForm:
-  title: Preview
   description: Edit to see how the layout will look like with different content items
   fields:
     - name: linesNum
@@ -85,8 +82,6 @@ nvlForm:
           placeholder: Enter line text
 
 choiceForm:
-  title: Preview
-  description: Edit to see how the layout will look like with different data
   fields:
     - name: choicesNum
       type: select
@@ -113,7 +108,6 @@ choiceForm:
       placeholder: Enter choice text
 
 historyForm:
-  title: Preview
   description: Edit to see how the history layout will look like with different history entries
   fields:
     - name: linesNum
@@ -147,7 +141,6 @@ historyForm:
           placeholder: Enter history line text
 
 saveLoadForm:
-  title: Preview
   description: Edit to see how the layout will look like with different save slot data
   fields:
     - "$when": "showSlotsNum"

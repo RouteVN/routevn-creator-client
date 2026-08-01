@@ -166,7 +166,6 @@ const withDialogueCharacterNameField = (form, { visible } = {}) => {
 
 const createPreviewBackgroundOnlyForm = () => {
   return withPreviewBackgroundSlot({
-    title: "Preview",
     description: "Choose preview-only data for the canvas",
     fields: [],
   });

@@ -1308,6 +1308,8 @@ layoutEditorPage:
   nvlLineSpeakerNameElementLabel: "NVL Line Speaker Name"
   nvlLineTextElementLabel: "NVL Line Text"
   ownerPreviewSaved: "{ownerLabel} preview saved."
+  previewPlayButton: "Play"
+  previewRevealingSpeedLabel: "Revealing Speed"
   previewTitle: "Preview"
   particleDefaultName: "Particle"
   particleLabel: "Particle"
