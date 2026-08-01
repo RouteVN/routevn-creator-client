@@ -3,7 +3,7 @@
 set -euo pipefail
 
 images=(
-  "docker.io/han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.12"
+  "docker.io/han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.1.0"
 )
 
 find_local_image() {
