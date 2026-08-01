@@ -1,7 +1,5 @@
-const EDGE_INSERT_ZONE_PX = 18;
-const BETWEEN_INSERT_ZONE_PADDING_PX = 12;
-const INSERT_CHIP_OFFSET_PX = 10;
-const EDGE_INSERT_ZONE_WIDTH_PX = EDGE_INSERT_ZONE_PX * 2;
+const DURATION_RESIZE_SNAP_MS = 100;
+const DEFAULT_KEYFRAME_DURATION_MS = 1000;
 
 const clamp = (value, min, max) => {
   return Math.min(Math.max(value, min), max);
@@ -29,7 +27,10 @@ const resolveTimelineDuration = (props = {}) => {
     const propertyDuration = config?.auto
       ? Number(config.auto.duration) || 0
       : (config?.keyframes ?? []).reduce(
-          (sum, keyframe) => sum + (parseFloat(keyframe.duration) || 1000),
+          (sum, keyframe) =>
+            sum +
+            Math.max(0, parseFloat(keyframe.delay) || 0) +
+            (parseFloat(keyframe.duration) || 1000),
           0,
         );
     maxDuration = Math.max(maxDuration, propertyDuration);
@@ -38,15 +39,17 @@ const resolveTimelineDuration = (props = {}) => {
   return maxDuration;
 };
 
-const dispatchRulerHoverEvent = ({
+const dispatchRulerScrubEvent = ({
+  committed = false,
   dispatchEvent,
   side,
   timeMs,
   leftPercent,
 } = {}) => {
   dispatchEvent(
-    new CustomEvent("ruler-time-hover", {
+    new CustomEvent("ruler-time-scrub", {
       detail: {
+        committed,
         side,
         timeMs,
         leftPercent,
@@ -57,11 +60,25 @@ const dispatchRulerHoverEvent = ({
   );
 };
 
+const resolveRulerScrubPosition = ({ element, clientX, props } = {}) => {
+  const leftPercent = resolveHoverIndicatorPercent({ element, clientX });
+  const timelineDuration = resolveTimelineDuration(props);
+  const timeMs =
+    leftPercent === undefined
+      ? undefined
+      : Math.round((leftPercent / 100) * timelineDuration);
+
+  return { leftPercent, timeMs };
+};
+
 const dispatchAddKeyframeEvent = ({
   dispatchEvent,
   property,
   side,
   index,
+  delay,
+  duration,
+  followingDelay,
   x,
   y,
 } = {}) => {
@@ -71,6 +88,9 @@ const dispatchAddKeyframeEvent = ({
         property,
         side,
         index,
+        delay,
+        duration,
+        followingDelay,
         x,
         y,
       },
@@ -101,34 +121,97 @@ const dispatchAutoTrackClickEvent = ({
   );
 };
 
-const createHoverTarget = ({
+const dispatchKeyframeDurationChangeEvent = ({
+  dispatchEvent,
+  delay,
+  duration,
+  followingDelay,
   property,
-  mode,
+  side,
   index,
-  indicatorLeft,
-  zoneLeft,
-  zoneRight,
-  trackWidth,
 } = {}) => {
-  const safeZoneLeft = Math.max(0, zoneLeft ?? 0);
-  const safeZoneRight = Math.max(safeZoneLeft, zoneRight ?? safeZoneLeft);
-
-  return {
+  const detail = {
+    delay,
+    duration,
     property,
-    mode,
+    side,
     index,
-    indicatorLeft,
-    chipLeft: clamp(
-      indicatorLeft,
-      INSERT_CHIP_OFFSET_PX,
-      Math.max(INSERT_CHIP_OFFSET_PX, trackWidth - INSERT_CHIP_OFFSET_PX),
-    ),
-    zoneLeft: safeZoneLeft,
-    zoneWidth: safeZoneRight - safeZoneLeft,
   };
+  if (followingDelay !== undefined) {
+    detail.followingDelay = followingDelay;
+  }
+
+  dispatchEvent(
+    new CustomEvent("keyframe-duration-change", {
+      detail,
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
-const resolveTrackHoverTarget = ({ trackElement, clientX } = {}) => {
+const dispatchKeyframeClickEvent = ({
+  dispatchEvent,
+  property,
+  index,
+  side,
+  x,
+  y,
+} = {}) => {
+  dispatchEvent(
+    new CustomEvent("keyframe-click", {
+      detail: {
+        property,
+        index,
+        side,
+        x,
+        y,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+const createGapHoverTarget = ({
+  property,
+  index,
+  relativeX,
+  zoneLeft,
+  zoneRight,
+  gapDuration,
+  hasFollowingKeyframe = false,
+} = {}) => {
+  if (
+    gapDuration <= 0 ||
+    zoneRight <= zoneLeft ||
+    relativeX < zoneLeft ||
+    relativeX > zoneRight
+  ) {
+    return undefined;
+  }
+
+  const duration = Math.min(DEFAULT_KEYFRAME_DURATION_MS, gapDuration);
+  const remainingDelay = gapDuration - duration;
+  const delay = Math.round(remainingDelay / 2);
+  const hoverTarget = {
+    property,
+    mode: "gap",
+    index,
+    chipLeft: (zoneLeft + zoneRight) / 2,
+    zoneLeft,
+    zoneWidth: zoneRight - zoneLeft,
+    delay,
+    duration,
+  };
+  if (hasFollowingKeyframe) {
+    hoverTarget.followingDelay = remainingDelay - delay;
+  }
+
+  return hoverTarget;
+};
+
+const resolveTrackHoverTarget = ({ clientX, props, trackElement } = {}) => {
   const property = trackElement?.dataset?.property;
   const trackMode = trackElement?.dataset?.trackMode;
   const trackRect = trackElement?.getBoundingClientRect?.();
@@ -141,108 +224,110 @@ const resolveTrackHoverTarget = ({ trackElement, clientX } = {}) => {
   const keyframeElements = Array.from(
     trackElement.querySelectorAll("[data-keyframe='true']"),
   );
-  const relativeX = clamp(clientX - trackRect.left, 0, trackWidth);
   if (keyframeElements.length === 0) {
-    return createHoverTarget({
+    return {
       property,
       mode: "empty",
       index: 0,
-      indicatorLeft: relativeX,
+      chipLeft: trackWidth / 2,
       zoneLeft: 0,
-      zoneRight: trackWidth,
-      trackWidth,
-    });
+      zoneWidth: trackWidth,
+    };
   }
 
+  const relativeX = clamp(clientX - trackRect.left, 0, trackWidth);
+  const keyframes = props.properties?.[property]?.keyframes ?? [];
   const keyframeRects = keyframeElements
-    .map((element) => {
-      const rect = element.getBoundingClientRect();
-      return {
-        left: rect.left - trackRect.left,
-        right: rect.right - trackRect.left,
-      };
-    })
-    .sort((left, right) => left.left - right.left);
+    .map((element) => ({
+      index: Number(element.dataset.index),
+      rect: element.getBoundingClientRect(),
+    }))
+    .sort((left, right) => left.index - right.index);
 
-  if (relativeX <= EDGE_INSERT_ZONE_PX) {
-    return createHoverTarget({
-      property,
-      mode: "left",
-      index: 0,
-      indicatorLeft: 0,
-      zoneLeft: 0,
-      zoneRight: Math.min(trackWidth, EDGE_INSERT_ZONE_WIDTH_PX),
-      trackWidth,
-    });
+  const first = keyframeRects[0];
+  const leadingGapTarget = createGapHoverTarget({
+    property,
+    index: first.index,
+    relativeX,
+    zoneLeft: 0,
+    zoneRight: first.rect.left - trackRect.left,
+    gapDuration: Math.max(0, parseFloat(keyframes[first.index]?.delay) || 0),
+    hasFollowingKeyframe: true,
+  });
+  if (leadingGapTarget) {
+    return leadingGapTarget;
   }
 
-  for (let index = 0; index < keyframeRects.length - 1; index += 1) {
-    const current = keyframeRects[index];
-    const next = keyframeRects[index + 1];
-    const zoneLeft = Math.max(
+  for (let position = 1; position < keyframeRects.length; position += 1) {
+    const previous = keyframeRects[position - 1];
+    const next = keyframeRects[position];
+    const gapDuration = Math.max(
       0,
-      current.right - BETWEEN_INSERT_ZONE_PADDING_PX,
+      parseFloat(keyframes[next.index]?.delay) || 0,
     );
-    const zoneRight = Math.min(
-      trackWidth,
-      next.left + BETWEEN_INSERT_ZONE_PADDING_PX,
-    );
+    const zoneLeft = previous.rect.right - trackRect.left;
+    const zoneRight = next.rect.left - trackRect.left;
 
-    if (relativeX >= zoneLeft && relativeX <= zoneRight) {
-      return createHoverTarget({
-        property,
-        mode: "between",
-        index: index + 1,
-        indicatorLeft: current.right,
-        zoneLeft,
-        zoneRight,
-        trackWidth,
-      });
+    const betweenGapTarget = createGapHoverTarget({
+      property,
+      index: next.index,
+      relativeX,
+      zoneLeft,
+      zoneRight,
+      gapDuration,
+      hasFollowingKeyframe: true,
+    });
+    if (betweenGapTarget) {
+      return betweenGapTarget;
     }
   }
 
-  const lastKeyframe = keyframeRects[keyframeRects.length - 1];
-  const rightZoneRight = Math.min(
-    trackWidth,
-    lastKeyframe.right + EDGE_INSERT_ZONE_WIDTH_PX,
+  const propertyDuration = keyframes.reduce((sum, keyframe) => {
+    return (
+      sum +
+      Math.max(0, parseFloat(keyframe.delay) || 0) +
+      (parseFloat(keyframe.duration) || DEFAULT_KEYFRAME_DURATION_MS)
+    );
+  }, 0);
+  const trailingGapDuration = Math.max(
+    0,
+    resolveTimelineDuration(props) - propertyDuration,
   );
-  const rightZoneLeft = Math.max(0, rightZoneRight - EDGE_INSERT_ZONE_WIDTH_PX);
+  const last = keyframeRects[keyframeRects.length - 1];
 
-  if (relativeX >= rightZoneLeft) {
-    return createHoverTarget({
-      property,
-      mode: "right",
-      index: keyframeRects.length,
-      indicatorLeft: lastKeyframe.right,
-      zoneLeft: rightZoneLeft,
-      zoneRight: rightZoneRight,
-      trackWidth,
-    });
-  }
-
-  return undefined;
+  return createGapHoverTarget({
+    property,
+    index: last.index + 1,
+    relativeX,
+    zoneLeft: last.rect.right - trackRect.left,
+    zoneRight: trackWidth,
+    gapDuration: trailingGapDuration,
+  });
 };
 
-export const handleRulerMouseMove = (deps, payload) => {
+export const handleRulerScrubStart = (deps, payload) => {
   const { dispatchEvent, props, render, store } = deps;
-  if (props.interactiveRuler !== true) {
+  const event = payload._event;
+  if (props.interactiveRuler !== true || event.button !== 0) {
     return;
   }
 
-  const leftPercent = resolveHoverIndicatorPercent({
-    element: payload._event.currentTarget,
-    clientX: payload._event.clientX,
+  const { leftPercent, timeMs } = resolveRulerScrubPosition({
+    element: event.currentTarget,
+    clientX: event.clientX,
+    props,
   });
-  const timelineDuration = resolveTimelineDuration(props);
-  const timeMs =
-    leftPercent === undefined
-      ? undefined
-      : Math.round((leftPercent / 100) * timelineDuration);
+  if (leftPercent === undefined) {
+    return;
+  }
 
-  store.setHoverIndicator({
+  event.preventDefault();
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  store.startRulerScrub({
     leftPercent,
+    pointerId: event.pointerId,
   });
-  dispatchRulerHoverEvent({
+  dispatchRulerScrubEvent({
     dispatchEvent,
     side: props?.side,
     timeMs,
@@ -251,32 +336,76 @@ export const handleRulerMouseMove = (deps, payload) => {
   render();
 };
 
-export const handleRulerMouseLeave = (deps, _payload) => {
-  const { dispatchEvent, props, store, render } = deps;
-  if (props.interactiveRuler !== true) {
+export const handleRulerScrubMove = (deps, payload) => {
+  const { dispatchEvent, props, render, store } = deps;
+  const event = payload._event;
+  const rulerScrub = store.selectRulerScrub();
+  if (!rulerScrub || rulerScrub.pointerId !== event.pointerId) {
     return;
   }
 
-  store.clearHoverIndicator({});
-  dispatchEvent(
-    new CustomEvent("ruler-time-leave", {
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  const { leftPercent, timeMs } = resolveRulerScrubPosition({
+    element: event.currentTarget,
+    clientX: event.clientX,
+    props,
+  });
+  event.preventDefault();
+  store.updateRulerScrub({ leftPercent });
+  dispatchRulerScrubEvent({
+    dispatchEvent,
+    side: props?.side,
+    timeMs,
+    leftPercent,
+  });
+  render();
+};
+
+export const handleRulerScrubEnd = (deps, payload) => {
+  const { dispatchEvent, props, render, store } = deps;
+  const event = payload._event;
+  const rulerScrub = store.selectRulerScrub();
+  if (!rulerScrub || rulerScrub.pointerId !== event.pointerId) {
+    return;
+  }
+
+  const { leftPercent, timeMs } = resolveRulerScrubPosition({
+    element: event.currentTarget,
+    clientX: event.clientX,
+    props,
+  });
+  event.preventDefault();
+  event.currentTarget.releasePointerCapture?.(event.pointerId);
+  store.clearRulerScrub({});
+  dispatchRulerScrubEvent({
+    committed: true,
+    dispatchEvent,
+    side: props?.side,
+    timeMs,
+    leftPercent,
+  });
+  render();
+};
+
+export const handleRulerScrubCancel = (deps, payload) => {
+  const { render, store } = deps;
+  const rulerScrub = store.selectRulerScrub();
+  if (!rulerScrub || rulerScrub.pointerId !== payload._event.pointerId) {
+    return;
+  }
+
+  store.clearRulerScrub({});
   render();
 };
 
 export const handleTrackMouseMove = (deps, payload) => {
   const { render, store, props } = deps;
 
-  store.clearHoverIndicator({});
-
   if (props.editable) {
     store.setHoverTarget({
       hoverTarget: resolveTrackHoverTarget({
-        trackElement: payload._event.currentTarget,
         clientX: payload._event.clientX,
+        props,
+        trackElement: payload._event.currentTarget,
       }),
     });
   }
@@ -285,7 +414,6 @@ export const handleTrackMouseMove = (deps, payload) => {
 
 export const handleTrackMouseLeave = (deps, _payload) => {
   const { store, render } = deps;
-  store.clearHoverIndicator({});
   store.clearHoverTarget({});
   render();
 };
@@ -306,6 +434,7 @@ export const handleTrackClick = (deps, payload) => {
   const side = props?.side;
 
   if (trackMode === "auto") {
+    payload._event.stopPropagation();
     dispatchAutoTrackClickEvent({
       dispatchEvent,
       property,
@@ -320,18 +449,22 @@ export const handleTrackClick = (deps, payload) => {
     return;
   }
 
+  payload._event.stopPropagation();
   dispatchAddKeyframeEvent({
     dispatchEvent,
     property,
     side,
     index: hoverTarget.index,
+    delay: hoverTarget.delay,
+    duration: hoverTarget.duration,
+    followingDelay: hoverTarget.followingDelay,
     x: payload._event.clientX,
     y: payload._event.clientY,
   });
 };
 
 export const handleKeyframeClick = (deps, payload) => {
-  const { dispatchEvent, props, store } = deps;
+  const { dispatchEvent, props } = deps;
   if (!props.editable) {
     return;
   }
@@ -340,44 +473,15 @@ export const handleKeyframeClick = (deps, payload) => {
   const property = payload._event.currentTarget.dataset.property;
   const index = payload._event.currentTarget.dataset.index;
   const side = props?.side;
-  const hoverTarget = store.selectHoverTarget();
-  const trackElement = payload._event.currentTarget.parentElement;
-  const keyframeCount = trackElement?.querySelectorAll?.(
-    "[data-keyframe='true']",
-  )?.length;
-  const keyframeIndex = Number(index);
-  const lastKeyframeIndex =
-    keyframeCount && keyframeCount > 0 ? keyframeCount - 1 : undefined;
 
-  if (
-    hoverTarget?.property === property &&
-    ((hoverTarget.mode === "left" && keyframeIndex === 0) ||
-      (hoverTarget.mode === "right" && keyframeIndex === lastKeyframeIndex))
-  ) {
-    dispatchAddKeyframeEvent({
-      dispatchEvent,
-      property,
-      side,
-      index: hoverTarget.index,
-      x: payload._event.clientX,
-      y: payload._event.clientY,
-    });
-    return;
-  }
-
-  dispatchEvent(
-    new CustomEvent("keyframe-click", {
-      detail: {
-        property,
-        index,
-        side,
-        x: payload._event.clientX,
-        y: payload._event.clientY,
-      },
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  dispatchKeyframeClickEvent({
+    dispatchEvent,
+    property,
+    index,
+    side,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+  });
 };
 
 export const handleKeyframeRightClick = (deps, payload) => {
@@ -404,21 +508,287 @@ export const handleKeyframeRightClick = (deps, payload) => {
   );
 };
 
+export const handleKeyframeMoveStart = (deps, payload) => {
+  const { dispatchEvent, props, render, store } = deps;
+  const event = payload._event;
+  if (!props.editable || event.button !== 0) {
+    return;
+  }
+
+  const keyframeElement = event.currentTarget;
+  const trackElement = keyframeElement.closest?.(
+    "[data-keyframe-track='true']",
+  );
+  const trackWidth = trackElement?.getBoundingClientRect?.().width;
+  const property = keyframeElement.dataset.property;
+  const index = Number(keyframeElement.dataset.index);
+  const keyframes = props.properties?.[property]?.keyframes ?? [];
+  const keyframe = keyframes[index];
+  const followingKeyframe = keyframes[index + 1];
+  const startDelay = Math.max(0, parseFloat(keyframe?.delay) || 0);
+  const startFollowingDelay = followingKeyframe
+    ? Math.max(0, parseFloat(followingKeyframe.delay) || 0)
+    : undefined;
+  const startDuration = parseFloat(keyframe?.duration) || 1000;
+  const timelineDuration = resolveTimelineDuration(props);
+
+  if (!(trackWidth > 0) || !(timelineDuration > 0)) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  dispatchKeyframeClickEvent({
+    dispatchEvent,
+    property,
+    index,
+    side: props.side,
+    x: event.clientX,
+    y: event.clientY,
+  });
+  keyframeElement.setPointerCapture?.(event.pointerId);
+  store.startKeyframeMove({
+    pointerId: event.pointerId,
+    property,
+    index,
+    startX: event.clientX,
+    startDelay,
+    startFollowingDelay,
+    duration: startDuration,
+    timelineDuration,
+    trackWidth,
+  });
+  render();
+};
+
+export const handleKeyframeMove = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  const keyframeMove = store.selectKeyframeMove();
+  if (!keyframeMove || keyframeMove.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  const deltaX = event.clientX - keyframeMove.startX;
+  const deltaDelay =
+    (deltaX / keyframeMove.trackWidth) * keyframeMove.timelineDuration;
+  const snappedDelay =
+    Math.round(
+      (keyframeMove.startDelay + deltaDelay) / DURATION_RESIZE_SNAP_MS,
+    ) * DURATION_RESIZE_SNAP_MS;
+  const maxDelay =
+    keyframeMove.startFollowingDelay === undefined
+      ? Number.POSITIVE_INFINITY
+      : keyframeMove.startDelay + keyframeMove.startFollowingDelay;
+  const delay = clamp(snappedDelay, 0, maxDelay);
+  const followingDelay =
+    keyframeMove.startFollowingDelay === undefined
+      ? undefined
+      : keyframeMove.startFollowingDelay - (delay - keyframeMove.startDelay);
+  store.setKeyframeMoveTiming({
+    delay,
+    followingDelay,
+  });
+  render();
+};
+
+export const handleKeyframeMoveEnd = (deps, payload) => {
+  const { dispatchEvent, props, render, store } = deps;
+  const event = payload._event;
+  const keyframeMove = store.selectKeyframeMove();
+  if (!keyframeMove || keyframeMove.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.releasePointerCapture?.(event.pointerId);
+  store.clearKeyframeMove({});
+  if (keyframeMove.delay !== keyframeMove.startDelay) {
+    dispatchKeyframeDurationChangeEvent({
+      dispatchEvent,
+      delay: keyframeMove.delay,
+      duration: keyframeMove.duration,
+      followingDelay: keyframeMove.followingDelay,
+      property: keyframeMove.property,
+      side: props.side,
+      index: keyframeMove.index,
+    });
+  }
+  render();
+};
+
+export const handleKeyframeMoveCancel = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  const keyframeMove = store.selectKeyframeMove();
+  if (!keyframeMove || keyframeMove.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.stopPropagation();
+  store.clearKeyframeMove({});
+  render();
+};
+
+export const handleDurationResizeStart = (deps, payload) => {
+  const { props, render, store } = deps;
+  if (!props.editable) {
+    return;
+  }
+
+  const event = payload._event;
+  const handleElement = event.currentTarget;
+  const trackElement = handleElement.closest?.("[data-keyframe-track='true']");
+  const trackWidth = trackElement?.getBoundingClientRect?.().width;
+  const property = handleElement.dataset.property;
+  const index = Number(handleElement.dataset.index);
+  const edge = handleElement.dataset.resizeEdge ?? "right";
+  const startDelay = Math.max(
+    0,
+    parseFloat(props.properties?.[property]?.keyframes?.[index]?.delay) || 0,
+  );
+  const startDuration =
+    parseFloat(props.properties?.[property]?.keyframes?.[index]?.duration) ||
+    1000;
+  const timelineDuration = resolveTimelineDuration(props);
+
+  if (!(trackWidth > 0) || !(timelineDuration > 0)) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  handleElement.setPointerCapture?.(event.pointerId);
+  store.startDurationResize({
+    pointerId: event.pointerId,
+    property,
+    index,
+    edge,
+    startX: event.clientX,
+    startDelay,
+    startDuration,
+    timelineDuration,
+    trackWidth,
+  });
+  render();
+};
+
+export const handleDurationResizeMove = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  const durationResize = store.selectDurationResize();
+  if (!durationResize || durationResize.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  const deltaX = event.clientX - durationResize.startX;
+  const deltaDuration =
+    (deltaX / durationResize.trackWidth) * durationResize.timelineDuration;
+  let delay = durationResize.startDelay;
+  let duration;
+
+  if (durationResize.edge === "left") {
+    const totalDuration =
+      durationResize.startDelay + durationResize.startDuration;
+    const maxDelay = Math.max(0, totalDuration - DURATION_RESIZE_SNAP_MS);
+    delay = clamp(
+      Math.round(
+        (durationResize.startDelay + deltaDuration) / DURATION_RESIZE_SNAP_MS,
+      ) * DURATION_RESIZE_SNAP_MS,
+      0,
+      maxDelay,
+    );
+    duration = totalDuration - delay;
+  } else {
+    duration = Math.max(
+      DURATION_RESIZE_SNAP_MS,
+      Math.round(
+        (durationResize.startDuration + deltaDuration) /
+          DURATION_RESIZE_SNAP_MS,
+      ) * DURATION_RESIZE_SNAP_MS,
+    );
+  }
+
+  store.setDurationResizeTiming({ delay, duration });
+  render();
+};
+
+export const handleDurationResizeEnd = (deps, payload) => {
+  const { dispatchEvent, props, render, store } = deps;
+  const event = payload._event;
+  const durationResize = store.selectDurationResize();
+  if (!durationResize || durationResize.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.releasePointerCapture?.(event.pointerId);
+  store.clearDurationResize({});
+  dispatchKeyframeDurationChangeEvent({
+    dispatchEvent,
+    delay: durationResize.delay,
+    duration: durationResize.duration,
+    property: durationResize.property,
+    side: props.side,
+    index: durationResize.index,
+  });
+  render();
+};
+
+export const handleDurationResizeCancel = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  const durationResize = store.selectDurationResize();
+  if (!durationResize || durationResize.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.stopPropagation();
+  store.clearDurationResize({});
+  render();
+};
+
+export const handleDurationHandleClick = (_deps, payload) => {
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
+};
+
 export const handlePropertyNameClick = (deps, payload) => {
   const { dispatchEvent, props } = deps;
-  const target = payload._event.currentTarget;
-  const property =
-    target?.dataset?.property || target?.id?.replace("propertyName", "") || "";
-  const side = props?.side;
+  const event = payload._event;
+  event.stopPropagation();
 
-  // Dispatch event to parent to handle property right-click
   dispatchEvent(
     new CustomEvent("property-name-click", {
       detail: {
-        property,
-        side,
-        x: payload._event.clientX,
-        y: payload._event.clientY,
+        property: event.currentTarget.dataset.property,
+        side: props.side,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handlePropertyNameRightClick = (deps, payload) => {
+  const { dispatchEvent, props } = deps;
+  const event = payload._event;
+  event.preventDefault();
+  event.stopPropagation();
+
+  dispatchEvent(
+    new CustomEvent("property-name-right-click", {
+      detail: {
+        property: event.currentTarget.dataset.property,
+        side: props.side,
+        x: event.clientX,
+        y: event.clientY,
       },
       bubbles: true,
       composed: true,
@@ -432,6 +802,8 @@ export const handleInitialValueClick = (deps, payload) => {
   if (target?.dataset?.interactive !== "true") {
     return;
   }
+
+  payload._event.stopPropagation();
 
   const property =
     target?.dataset?.property || target?.id?.replace("initialValue", "") || "";

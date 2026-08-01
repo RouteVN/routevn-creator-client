@@ -5,28 +5,464 @@ import {
   PREVIEW_UPDATE_ELEMENT_ID,
 } from "../../src/pages/animationEditor/animationEditor.constants.js";
 import {
+  addKeyframe,
   addProperty,
   commitPendingTransitionMask,
   createInitialState,
+  clearSelectedKeyframe,
+  clearTimelineSelection,
+  deleteKeyframe,
+  deleteProperty,
   enableTransitionMask,
+  moveKeyframeLeft,
+  moveKeyframeRight,
+  nudgeTimelineZoom,
   openDialog,
   selectAnimationRenderStateWithAnimations,
   selectAnimationResetState,
+  selectPreviewDurationMs,
   selectPreviewData,
+  selectTimelinePlayheadVisible,
   selectViewData,
   setImages,
   setPopover,
+  setPreviewPlayhead,
   setPreviewImage,
   setProjectResolution,
+  setSelectedKeyframe,
+  setSelectedKeyframeDelay,
+  setSelectedKeyframeDuration,
+  setSelectedKeyframeEasing,
+  setSelectedKeyframeRelative,
+  setSelectedKeyframeTiming,
+  setSelectedKeyframeValue,
+  setSelectedProperty,
+  startPreviewPlayback,
+  stopPreviewPlayback,
+  setTimelineScrollMetrics,
+  setTimelineZoom,
   setTransitionMaskChannel,
   setTransitionMaskImage,
   setUiConfig,
   startPendingTransitionMask,
+  togglePreviewLoop,
   updatePopoverFormValues,
 } from "../../src/pages/animationEditor/animationEditor.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("animationEditor.store", () => {
+  it("switches the preview button between Play and Pause", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      playButton: "Play",
+      previewPlaying: false,
+    });
+
+    startPreviewPlayback(
+      { state },
+      { startedAtMs: 100, durationMs: 1000, timeMs: 400 },
+    );
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      playButton: "Pause",
+      previewPlaying: true,
+    });
+
+    stopPreviewPlayback({ state }, { preservePlayhead: true });
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      playButton: "Play",
+      previewPlaying: false,
+    });
+    expect(state.previewPlayheadTimeMs).toBe(400);
+    expect(state.previewPlayheadVisible).toBe(true);
+  });
+
+  it("toggles preview looping and exposes the loop button state", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      previewLoopEnabled: false,
+      previewLoopButtonVariant: "ol",
+      loopPreviewLabel: "Loop preview",
+    });
+
+    togglePreviewLoop({ state });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      previewLoopEnabled: true,
+      previewLoopButtonVariant: "pr",
+    });
+  });
+
+  it("clears the selected keyframe", () => {
+    const state = createInitialState();
+    state.selectedKeyframe = { side: "update", property: "x", index: 0 };
+
+    clearSelectedKeyframe({ state });
+
+    expect(state.selectedKeyframe).toBeUndefined();
+  });
+
+  it("positions the playhead across the full timeline canvas", () => {
+    const state = createInitialState();
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 1000, value: 10 }],
+    };
+    setPreviewPlayhead({ state }, { timeMs: 500, visible: true });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.timelinePlayheadVisible).toBe(true);
+    expect(viewData.timelinePlayheadStyle).toContain("top: 10px; bottom: 0");
+    expect(viewData.timelinePlayheadStyle).toContain(
+      "left: calc(104px + (100% - 104px) * 0.5)",
+    );
+  });
+
+  it("positions the playhead against the minimum one-second timeline scale", () => {
+    const state = createInitialState();
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 500, value: 10 }],
+    };
+    setPreviewPlayhead({ state }, { timeMs: 500, visible: true });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.timelineDisplayDuration).toBe(1000);
+    expect(viewData.timelinePlayheadStyle).toContain(
+      "left: calc(104px + (100% - 104px) * 0.5)",
+    );
+  });
+
+  it("hides the playhead while it is behind the sticky property column", () => {
+    const state = createInitialState();
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 1000, value: 10 }],
+    };
+    setPreviewPlayhead({ state }, { timeMs: 500, visible: true });
+
+    setTimelineScrollMetrics(
+      { state },
+      { scrollLeft: 125, viewportWidth: 300 },
+    );
+
+    expect(selectTimelinePlayheadVisible({ state })).toBe(false);
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      timelinePlayheadVisible: false,
+      timelinePlayheadStyle: "",
+    });
+
+    setTimelineScrollMetrics({ state }, { scrollLeft: 75, viewportWidth: 300 });
+
+    expect(selectTimelinePlayheadVisible({ state })).toBe(true);
+  });
+
+  it("clamps timeline zoom and exposes its control values", () => {
+    const state = createInitialState();
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 3000, value: 10 }],
+    };
+
+    setTimelineZoom({ state }, { zoom: 2.5 });
+    nudgeTimelineZoom({ state }, { delta: 0.125 });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      timelineZoom: 2.625,
+      timelineZoomMin: 0.25,
+      timelineZoomMax: 4,
+      timelineZoomStep: 0.125,
+      timelinePixelsPerSecond: 525,
+      timelineCanvasStyle: "width: 1679px; min-width: 104px; flex-shrink: 0;",
+      timelineDisplayDuration: 3000,
+      timelineZoomLabel: "Timeline zoom",
+    });
+
+    setTimelineZoom({ state }, { zoom: 10 });
+    expect(state.timelineZoom).toBe(4);
+    setTimelineZoom({ state }, { zoom: 0 });
+    expect(state.timelineZoom).toBe(0.25);
+  });
+
+  it("uses 200 pixels per second at the default timeline zoom", () => {
+    const state = createInitialState();
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 2000, value: 10 }],
+    };
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      timelineZoom: 1,
+      timelinePixelsPerSecond: 200,
+      timelineCanvasStyle: "width: 504px; min-width: 104px; flex-shrink: 0;",
+      timelineDisplayDuration: 2000,
+    });
+  });
+
+  it("shows the selected keyframe details while Mask and Preview stay hidden", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.x = {
+      keyframes: [
+        {
+          delay: 125,
+          duration: 450,
+          easing: "easeOutBounce",
+          value: 120,
+          relative: true,
+        },
+      ],
+    };
+
+    setSelectedKeyframe({ state }, { side: "update", property: "x", index: 0 });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.selectedKeyframe).toEqual({
+      side: "update",
+      property: "x",
+      index: 0,
+    });
+    expect(viewData.selectedKeyframeDetailId).toBe("update:x:0");
+    expect(viewData.selectedKeyframeDetailFields).toEqual([
+      { type: "text", label: "Timeline", value: "Update" },
+      { type: "text", label: "Property", value: "Position X" },
+      {
+        type: "slot",
+        label: "Delay (ms)",
+        slot: "keyframe-delay",
+      },
+      {
+        type: "slot",
+        label: "Duration (ms)",
+        slot: "keyframe-duration",
+      },
+      { type: "slot", label: "Easing", slot: "keyframe-easing" },
+      { type: "slot", label: "Value", slot: "keyframe-value" },
+      {
+        type: "slot",
+        label: "Value type",
+        slot: "keyframe-value-type",
+      },
+    ]);
+    expect(viewData.selectedKeyframeDelay).toBe(125);
+    expect(viewData.selectedKeyframeDuration).toBe(450);
+    expect(viewData.selectedKeyframeEasing).toBe("easeOutBounce");
+    expect(viewData.selectedKeyframeValue).toBe(120);
+    expect(viewData.selectedKeyframeValueType).toBe("relative");
+    expect(viewData.keyframeEasingOptions).toContainEqual({
+      label: "Ease Out Bounce",
+      value: "easeOutBounce",
+    });
+    expect(viewData.keyframeValueTypeOptions).toEqual([
+      { label: "Absolute", value: "absolute" },
+      { label: "Relative", value: "relative" },
+    ]);
+    expect(viewData.showRightPanel).toBe(true);
+    expect(viewData.showMaskAndPreviewSections).toBe(false);
+    expect(viewData.showMobileTweenActions).toBe(false);
+
+    setSelectedKeyframeDelay({ state }, { delay: 240.9 });
+    setSelectedKeyframeDuration({ state }, { duration: 875.9 });
+    setSelectedKeyframeEasing({ state }, { easing: "easeInQuad" });
+    setSelectedKeyframeRelative({ state }, { relative: false });
+    setSelectedKeyframeValue({ state }, { value: -12.5 });
+    expect(state.tweenBySection.update.x.keyframes[0]).toMatchObject({
+      delay: 240,
+      duration: 875,
+      easing: "easeInQuad",
+      relative: false,
+      value: -12.5,
+    });
+
+    setPopover({ state }, { mode: "editSelectedKeyframeDelay", x: 20, y: 40 });
+    const delayPopoverViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(delayPopoverViewData.popover.popoverIsOpen).toBe(false);
+    expect(delayPopoverViewData.selectedKeyframeNumberPopoverIsOpen).toBe(true);
+    expect(delayPopoverViewData.showSelectedKeyframeDelayPopover).toBe(true);
+    expect(delayPopoverViewData.showSelectedKeyframeDurationPopover).toBe(
+      false,
+    );
+    expect(delayPopoverViewData.showSelectedKeyframeValuePopover).toBe(false);
+  });
+
+  it("shows selected property details and keeps property and keyframe selection exclusive", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+    state.tweenBySection.prev.alpha = {
+      initialValue: 0.5,
+      keyframes: [{ duration: 600, easing: "linear", value: 1 }],
+    };
+
+    setSelectedProperty({ state }, { side: "prev", property: "alpha" });
+
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.selectedProperty).toEqual({
+      side: "prev",
+      property: "alpha",
+    });
+    expect(viewData.selectedKeyframe).toBeUndefined();
+    expect(viewData.detailsPanelTitle).toBe("Property Details");
+    expect(viewData.selectedPropertyDetailId).toBe("prev:alpha");
+    expect(viewData.selectedPropertyDetailFields).toEqual([
+      { type: "text", label: "Timeline", value: "Out" },
+      { type: "text", label: "Property", value: "Alpha" },
+      { type: "text", label: "Initial value", value: 0.5 },
+      { type: "text", label: "Tween Mode", value: "Keyframes" },
+    ]);
+
+    setSelectedKeyframe(
+      { state },
+      { side: "prev", property: "alpha", index: 0 },
+    );
+    expect(state.selectedProperty).toBeUndefined();
+    expect(state.selectedKeyframe).toEqual({
+      side: "prev",
+      property: "alpha",
+      index: 0,
+    });
+
+    clearTimelineSelection({ state });
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.selectedProperty).toBeUndefined();
+    expect(viewData.selectedKeyframe).toBeUndefined();
+  });
+
+  it("keeps a single keyframe selected through timeline mutations", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.x = {
+      keyframes: [
+        { duration: 100, easing: "linear", value: 1 },
+        { duration: 100, easing: "linear", value: 2 },
+        { duration: 100, easing: "linear", value: 3 },
+      ],
+    };
+    state.tweenBySection.update.y = {
+      keyframes: [{ duration: 100, easing: "linear", value: 4 }],
+    };
+
+    setSelectedKeyframe({ state }, { side: "update", property: "x", index: 1 });
+    addKeyframe(
+      { state },
+      {
+        side: "update",
+        property: "x",
+        index: 0,
+        duration: 100,
+        easing: "linear",
+        value: 0,
+      },
+    );
+    expect(state.selectedKeyframe.index).toBe(2);
+
+    moveKeyframeLeft({ state }, { side: "update", property: "x", index: 2 });
+    expect(state.selectedKeyframe.index).toBe(1);
+
+    moveKeyframeRight({ state }, { side: "update", property: "x", index: 1 });
+    expect(state.selectedKeyframe.index).toBe(2);
+
+    deleteKeyframe({ state }, { side: "update", property: "x", index: 0 });
+    expect(state.selectedKeyframe.index).toBe(1);
+
+    setSelectedKeyframe({ state }, { side: "update", property: "y", index: 0 });
+    expect(state.selectedKeyframe).toEqual({
+      side: "update",
+      property: "y",
+      index: 0,
+    });
+
+    deleteProperty({ state }, { side: "update", property: "y" });
+    expect(state.selectedKeyframe).toBeUndefined();
+  });
+
+  it("inserts a keyframe into a delay gap without shifting the following keyframe", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.x = {
+      keyframes: [
+        { duration: 500, easing: "linear", value: 1 },
+        { delay: 1500, duration: 500, easing: "linear", value: 2 },
+      ],
+    };
+
+    addKeyframe(
+      { state },
+      {
+        side: "update",
+        property: "x",
+        index: 1,
+        delay: 250,
+        duration: 1000,
+        followingDelay: 250,
+        easing: "linear",
+        relative: false,
+        value: 0,
+      },
+    );
+
+    expect(state.tweenBySection.update.x.keyframes).toEqual([
+      { duration: 500, easing: "linear", value: 1 },
+      {
+        delay: 250,
+        duration: 1000,
+        easing: "linear",
+        relative: false,
+        value: 0,
+      },
+      { delay: 250, duration: 500, easing: "linear", value: 2 },
+    ]);
+  });
+
+  it("updates selected keyframe delay and duration atomically", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 1000, easing: "linear", value: 10 }],
+    };
+    setSelectedKeyframe({ state }, { side: "update", property: "x", index: 0 });
+
+    setSelectedKeyframeTiming({ state }, { delay: 300, duration: 700 });
+    expect(state.tweenBySection.update.x.keyframes[0]).toMatchObject({
+      delay: 300,
+      duration: 700,
+    });
+
+    setSelectedKeyframeTiming({ state }, { delay: 0, duration: 1000 });
+    expect(state.tweenBySection.update.x.keyframes[0]).not.toHaveProperty(
+      "delay",
+    );
+    expect(state.tweenBySection.update.x.keyframes[0].duration).toBe(1000);
+  });
+
+  it("offsets the following delay when a keyframe moves", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.x = {
+      keyframes: [
+        { delay: 200, duration: 600, easing: "linear", value: 10 },
+        { delay: 300, duration: 500, easing: "linear", value: 20 },
+      ],
+    };
+    setSelectedKeyframe({ state }, { side: "update", property: "x", index: 0 });
+
+    setSelectedKeyframeTiming(
+      { state },
+      { delay: 400, duration: 600, followingDelay: 100 },
+    );
+
+    expect(state.tweenBySection.update.x.keyframes).toEqual([
+      { delay: 400, duration: 600, easing: "linear", value: 10 },
+      { delay: 100, duration: 500, easing: "linear", value: 20 },
+    ]);
+
+    setSelectedKeyframeTiming(
+      { state },
+      { delay: 500, duration: 600, followingDelay: 0 },
+    );
+    expect(state.tweenBySection.update.x.keyframes[1]).not.toHaveProperty(
+      "delay",
+    );
+  });
+
   it("does not show Mask in the transition Add menu", () => {
     const state = createInitialState();
     openDialog({ state }, { dialogType: "transition" });
@@ -807,6 +1243,29 @@ describe("animationEditor.store", () => {
       src: "file-target",
       width: 1024,
       height: 768,
+    });
+  });
+
+  it("includes keyframe delay in preview timing and render payloads", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.x = {
+      keyframes: [
+        {
+          delay: 300,
+          duration: 700,
+          easing: "linear",
+          value: 10,
+        },
+      ],
+    };
+
+    const renderState = selectAnimationRenderStateWithAnimations({ state });
+
+    expect(selectPreviewDurationMs({ state })).toBe(1000);
+    expect(renderState.animations[0].tween.x.keyframes[0]).toMatchObject({
+      delay: 300,
+      duration: 700,
     });
   });
 

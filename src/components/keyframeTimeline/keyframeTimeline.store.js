@@ -1,28 +1,140 @@
 import { createKeyframeValueCurvePath } from "./keyframeTimeline.easing.js";
 
 export const createInitialState = () => ({
+  durationResize: undefined,
   hoverTarget: undefined,
-  hoverIndicatorLeftPercent: undefined,
+  keyframeMove: undefined,
+  rulerScrub: undefined,
 });
 
 export const setHoverTarget = ({ state }, { hoverTarget } = {}) => {
   state.hoverTarget = hoverTarget;
 };
 
-export const setHoverIndicator = ({ state }, { leftPercent } = {}) => {
-  state.hoverIndicatorLeftPercent = leftPercent;
-};
-
 export const clearHoverTarget = ({ state }, _payload = {}) => {
   state.hoverTarget = undefined;
 };
 
-export const clearHoverIndicator = ({ state }, _payload = {}) => {
-  state.hoverIndicatorLeftPercent = undefined;
-};
-
 export const selectHoverTarget = ({ state }) => {
   return state.hoverTarget;
+};
+
+export const startRulerScrub = ({ state }, { leftPercent, pointerId } = {}) => {
+  state.rulerScrub = { leftPercent, pointerId };
+};
+
+export const updateRulerScrub = ({ state }, { leftPercent } = {}) => {
+  if (state.rulerScrub) {
+    state.rulerScrub.leftPercent = leftPercent;
+  }
+};
+
+export const clearRulerScrub = ({ state }, _payload = {}) => {
+  state.rulerScrub = undefined;
+};
+
+export const selectRulerScrub = ({ state }) => {
+  return state.rulerScrub;
+};
+
+export const startDurationResize = (
+  { state },
+  {
+    pointerId,
+    property,
+    index,
+    edge,
+    startX,
+    startDelay,
+    startDuration,
+    timelineDuration,
+    trackWidth,
+  } = {},
+) => {
+  const resolvedStartDelay = Math.max(0, Number(startDelay) || 0);
+  state.durationResize = {
+    pointerId,
+    property,
+    index: Number(index),
+    edge,
+    startX,
+    startDelay: resolvedStartDelay,
+    startDuration,
+    delay: resolvedStartDelay,
+    duration: startDuration,
+    timelineDuration,
+    trackWidth,
+  };
+};
+
+export const setDurationResizeTiming = (
+  { state },
+  { delay, duration } = {},
+) => {
+  if (state.durationResize) {
+    state.durationResize.delay = delay;
+    state.durationResize.duration = duration;
+  }
+};
+
+export const clearDurationResize = ({ state }, _payload = {}) => {
+  state.durationResize = undefined;
+};
+
+export const selectDurationResize = ({ state }) => {
+  return state.durationResize;
+};
+
+export const startKeyframeMove = (
+  { state },
+  {
+    pointerId,
+    property,
+    index,
+    startX,
+    startDelay,
+    startFollowingDelay,
+    duration,
+    timelineDuration,
+    trackWidth,
+  } = {},
+) => {
+  const resolvedStartDelay = Math.max(0, Number(startDelay) || 0);
+  const resolvedStartFollowingDelay =
+    startFollowingDelay === undefined
+      ? undefined
+      : Math.max(0, Number(startFollowingDelay) || 0);
+  state.keyframeMove = {
+    pointerId,
+    property,
+    index: Number(index),
+    startX,
+    startDelay: resolvedStartDelay,
+    delay: resolvedStartDelay,
+    startFollowingDelay: resolvedStartFollowingDelay,
+    followingDelay: resolvedStartFollowingDelay,
+    duration,
+    timelineDuration,
+    trackWidth,
+  };
+};
+
+export const setKeyframeMoveTiming = (
+  { state },
+  { delay, followingDelay } = {},
+) => {
+  if (state.keyframeMove) {
+    state.keyframeMove.delay = delay;
+    state.keyframeMove.followingDelay = followingDelay;
+  }
+};
+
+export const clearKeyframeMove = ({ state }, _payload = {}) => {
+  state.keyframeMove = undefined;
+};
+
+export const selectKeyframeMove = ({ state }) => {
+  return state.keyframeMove;
 };
 
 const RULER_TARGET_MAJOR_TICK_COUNT = 6;
@@ -61,7 +173,11 @@ const getPropertyDuration = (config = {}) => {
   }
 
   return (config?.keyframes ?? []).reduce((sum, keyframe) => {
-    return sum + (parseFloat(keyframe.duration) || 1000);
+    return (
+      sum +
+      Math.max(0, parseFloat(keyframe.delay) || 0) +
+      (parseFloat(keyframe.duration) || 1000)
+    );
   }, 0);
 };
 
@@ -199,6 +315,34 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       state.hoverTarget?.mode === "empty"
     );
   };
+  const resolveKeyframeTiming = ({ propertyName, index, keyframe } = {}) => {
+    const durationResize = state.durationResize;
+    const keyframeMove = state.keyframeMove;
+    const isResizingKeyframe =
+      durationResize?.property === propertyName &&
+      durationResize.index === index;
+    const isMovingKeyframe =
+      keyframeMove?.property === propertyName && keyframeMove.index === index;
+    const isFollowingMovingKeyframe =
+      keyframeMove?.property === propertyName &&
+      keyframeMove.index + 1 === index &&
+      keyframeMove.followingDelay !== undefined;
+
+    return {
+      delay: isMovingKeyframe
+        ? Math.max(0, Number(keyframeMove.delay) || 0)
+        : isFollowingMovingKeyframe
+          ? Math.max(0, Number(keyframeMove.followingDelay) || 0)
+          : isResizingKeyframe
+            ? Math.max(0, Number(durationResize.delay) || 0)
+            : Math.max(0, parseFloat(keyframe.delay) || 0),
+      duration: isMovingKeyframe
+        ? keyframeMove.duration
+        : isResizingKeyframe
+          ? durationResize.duration
+          : parseFloat(keyframe.duration) || 1000,
+    };
+  };
 
   let selectedProperties = [];
   if (props.properties) {
@@ -207,8 +351,13 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       const value = propertyConfig.initialValue;
       const isDefault = value === undefined || value === "";
       const autoConfig = propertyConfig.auto;
+      const selected =
+        attrs.selectedProperty?.side === attrs.side &&
+        attrs.selectedProperty?.property === propertyName;
       return {
         name: propertyName,
+        selected,
+        nameColor: selected ? "pr" : "fg",
         initialValue: autoConfig ? "" : isDefault ? "D" : value,
         initialValueInteractive: !autoConfig,
         trackMode: autoConfig ? "auto" : "keyframes",
@@ -226,13 +375,29 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   let maxDuration = 0;
   if (selectedProperties.length > 0) {
     selectedProperties.forEach((property) => {
-      maxDuration = Math.max(maxDuration, getPropertyDuration(property));
+      const propertyDuration = property.auto
+        ? getPropertyDuration(property)
+        : (property.keyframes ?? []).reduce((sum, keyframe, index) => {
+            const timing = resolveKeyframeTiming({
+              propertyName: property.name,
+              index,
+              keyframe,
+            });
+            return sum + timing.delay + timing.duration;
+          }, 0);
+      maxDuration = Math.max(maxDuration, propertyDuration);
     });
   }
+  const interactionTimelineDuration = Number(
+    state.durationResize?.timelineDuration ??
+      state.keyframeMove?.timelineDuration,
+  );
   const resolvedTimelineDuration =
-    Number(props.timelineDuration) > 0
-      ? Number(props.timelineDuration)
-      : maxDuration;
+    interactionTimelineDuration > 0
+      ? interactionTimelineDuration
+      : Number(props.timelineDuration) > 0
+        ? Number(props.timelineDuration)
+        : maxDuration;
   const totalDuration =
     resolvedTimelineDuration > 0 ? `${resolvedTimelineDuration}ms` : "0ms";
   const externalIndicatorTimeMs = Number(attrs.indicatorTimeMs);
@@ -247,23 +412,19 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         )
       : undefined;
   const indicatorLeftPercent =
-    state.hoverIndicatorLeftPercent ?? externalIndicatorLeftPercent;
+    state.rulerScrub?.leftPercent ?? externalIndicatorLeftPercent;
   const indicatorVisible = indicatorLeftPercent !== undefined;
-  const hoverIndicatorVisible = indicatorVisible && showRuler;
-  const hoverIndicatorTimeMs = hoverIndicatorVisible
-    ? state.hoverIndicatorLeftPercent !== undefined
+  const rulerIndicatorVisible = indicatorVisible && showRuler;
+  const playheadIndicatorTimeMs = rulerIndicatorVisible
+    ? state.rulerScrub?.leftPercent !== undefined
       ? Math.round((indicatorLeftPercent / 100) * resolvedTimelineDuration)
       : Math.round(externalIndicatorTimeMs)
     : undefined;
-  const hoverIndicatorTimeLabel =
-    hoverIndicatorTimeMs === undefined ? "" : `${hoverIndicatorTimeMs} ms`;
-  const hoverIndicatorRulerStyle = hoverIndicatorVisible
-    ? `top: 10px; bottom: 0; left: ${indicatorLeftPercent}%; width: 1px; transform: translateX(-0.5px); pointer-events: none; z-index: 3;`
-    : "";
-  const hoverIndicatorTrackStyle = hoverIndicatorVisible
-    ? `top: 0; bottom: 0; left: ${indicatorLeftPercent}%; width: 1px; transform: translateX(-0.5px); pointer-events: none; z-index: 3;`
-    : "";
-  const hoverIndicatorLabelStyle = hoverIndicatorVisible
+  const playheadIndicatorTimeLabel =
+    playheadIndicatorTimeMs === undefined
+      ? ""
+      : `${playheadIndicatorTimeMs} ms`;
+  const playheadIndicatorLabelStyle = rulerIndicatorVisible
     ? createHoverIndicatorLabelStyle(indicatorLeftPercent)
     : "";
   const rulerTicks = showRuler
@@ -309,8 +470,21 @@ export const selectViewData = ({ state, props, props: attrs }) => {
 
       if (resolvedTimelineDuration > 0) {
         const propertyConfig = props.properties?.[property.name] ?? {};
-        const propertyTotalDuration = property.keyframes.reduce(
-          (sum, keyframe) => sum + (parseFloat(keyframe.duration) || 1000),
+        const effectiveKeyframes = property.keyframes.map(
+          (keyframe, keyframeIndex) => {
+            const timing = resolveKeyframeTiming({
+              propertyName: property.name,
+              index: keyframeIndex,
+              keyframe,
+            });
+            return {
+              ...keyframe,
+              ...timing,
+            };
+          },
+        );
+        const propertyTotalDuration = effectiveKeyframes.reduce(
+          (sum, keyframe) => sum + keyframe.delay + keyframe.duration,
           0,
         );
 
@@ -319,31 +493,52 @@ export const selectViewData = ({ state, props, props: attrs }) => {
           (propertyTotalDuration / resolvedTimelineDuration) * 100;
 
         // Calculate width percentage for each keyframe based on max duration
-        nextProperty.keyframes = property.keyframes.map((keyframe) => {
-          const duration = parseFloat(keyframe.duration) || 1000;
-          const widthPercent = (duration / resolvedTimelineDuration) * 100;
-          // Add prefix for relative values
-          let displayValue = keyframe.value;
-          if (keyframe.relative) {
-            // Check if value already has a sign
-            const numValue = parseFloat(keyframe.value);
-            if (!isNaN(numValue)) {
-              displayValue =
-                numValue >= 0 ? `Δ+${keyframe.value}` : `Δ${keyframe.value}`;
+        nextProperty.keyframes = effectiveKeyframes.map(
+          (keyframe, keyframeIndex) => {
+            const segmentDuration = keyframe.delay + keyframe.duration;
+            const widthPercent =
+              (segmentDuration / resolvedTimelineDuration) * 100;
+            const delayPercent =
+              segmentDuration > 0
+                ? (keyframe.delay / segmentDuration) * 100
+                : 0;
+            const selected =
+              attrs.selectedKeyframe?.side === attrs.side &&
+              attrs.selectedKeyframe?.property === property.name &&
+              Number(attrs.selectedKeyframe?.index) === keyframeIndex;
+            // Add prefix for relative values
+            let displayValue = keyframe.value;
+            if (keyframe.relative) {
+              // Check if value already has a sign
+              const numValue = parseFloat(keyframe.value);
+              if (!isNaN(numValue)) {
+                displayValue =
+                  numValue >= 0 ? `Δ+${keyframe.value}` : `Δ${keyframe.value}`;
+              }
             }
-          }
-          return {
-            ...keyframe,
-            easing: keyframe.easing ?? "linear",
-            easingLabel: formatEasingLabel(keyframe.easing ?? "linear"),
-            value: displayValue,
-            widthPercent: widthPercent.toFixed(2),
-          };
-        });
+            return {
+              ...keyframe,
+              easing: keyframe.easing ?? "linear",
+              easingLabel: formatEasingLabel(keyframe.easing ?? "linear"),
+              value: displayValue,
+              widthPercent: widthPercent.toFixed(2),
+              delayPercent: delayPercent.toFixed(2),
+              cursor:
+                state.keyframeMove?.property === property.name &&
+                state.keyframeMove.index === keyframeIndex
+                  ? "grabbing"
+                  : "grab",
+              selected,
+              backgroundColor: "ac",
+              foregroundColor: "ac-fg",
+              borderColor: selected ? "var(--ring)" : "var(--accent)",
+            };
+          },
+        );
         nextProperty.valueCurvePath = createKeyframeValueCurvePath({
           defaultValue: props.defaultValues?.[property.name],
           initialValue: propertyConfig.initialValue,
-          keyframes: property.keyframes,
+          keyframes: effectiveKeyframes,
           timelineDuration: resolvedTimelineDuration,
         });
         nextProperty.propertyWidthPercent = propertyWidthPercent.toFixed(2);
@@ -396,12 +591,9 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     showRuler,
     showTracks,
     rulerTicks,
-    hoverIndicatorVisible,
-    trackIndicatorVisible: indicatorVisible,
-    hoverIndicatorTimeLabel,
-    hoverIndicatorLabelStyle,
-    hoverIndicatorRulerStyle,
-    hoverIndicatorTrackStyle,
+    rulerIndicatorVisible,
+    playheadIndicatorTimeLabel,
+    playheadIndicatorLabelStyle,
     editable: attrs.editable,
   };
 

@@ -440,7 +440,11 @@ export const getTweenPropertyDuration = (config = {}) => {
   }
 
   return (config?.keyframes ?? []).reduce((sum, keyframe) => {
-    return sum + (Number(keyframe?.duration) || 0);
+    return (
+      sum +
+      Math.max(0, Number(keyframe?.delay) || 0) +
+      (Number(keyframe?.duration) || 0)
+    );
   }, 0);
 };
 
@@ -467,13 +471,17 @@ const createTweenAnimationsForTarget = ({
         tween[property] = {
           keyframes: config.keyframes.map((keyframe) => {
             let value = parseFloat(keyframe.value) ?? 0;
-
-            return {
+            const nextKeyframe = {
               duration: keyframe.duration,
               value,
               easing: keyframe.easing ?? "linear",
               relative: keyframe.relative ?? false,
             };
+            const delay = Math.max(0, Number(keyframe.delay) || 0);
+            if (delay > 0) {
+              nextKeyframe.delay = delay;
+            }
+            return nextKeyframe;
           }),
         };
       } else {
@@ -526,12 +534,19 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
     }
 
     tween[property] = {
-      keyframes: config.keyframes.map((keyframe) => ({
-        duration: keyframe.duration,
-        value: parseFloat(keyframe.value) ?? 0,
-        easing: keyframe.easing ?? "linear",
-        relative: keyframe.relative ?? false,
-      })),
+      keyframes: config.keyframes.map((keyframe) => {
+        const nextKeyframe = {
+          duration: keyframe.duration,
+          value: parseFloat(keyframe.value) ?? 0,
+          easing: keyframe.easing ?? "linear",
+          relative: keyframe.relative ?? false,
+        };
+        const delay = Math.max(0, Number(keyframe.delay) || 0);
+        if (delay > 0) {
+          nextKeyframe.delay = delay;
+        }
+        return nextKeyframe;
+      }),
     };
 
     const defaultValue = defaultInitialValuesByProperty[property] ?? 0;

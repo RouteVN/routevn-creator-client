@@ -12,6 +12,7 @@ export const PREVIEW_TRANSITION_PREV_FILL = "#ffffff";
 export const PREVIEW_TRANSITION_NEXT_FILL = "#000000";
 export const AUTO_TWEEN_DEFAULT_DURATION = 1000;
 export const AUTO_TWEEN_DEFAULT_EASING = "linear";
+export const TIMELINE_ZOOM_STEP = 0.125;
 
 export const UPDATE_PROPERTY_KEYS = [
   "alpha",
