@@ -14,7 +14,7 @@ describe("animationMasks", () => {
         fileId: "masks/spiral.png",
       },
     };
-    const persistedMask = {
+    const delayedMask = {
       kind: "single",
       imageId: "mask-image",
       channel: "red",
@@ -32,7 +32,7 @@ describe("animationMasks", () => {
     };
 
     const editorMask = normalizeTransitionMaskForEditor(
-      persistedMask,
+      delayedMask,
       imageItems,
     );
 
@@ -44,10 +44,24 @@ describe("animationMasks", () => {
     expect(getTransitionMaskDuration(editorMask)).toBe(1500);
     expect(
       compileTransitionMaskForRuntime(editorMask, imageItems)?.progress,
-    ).toEqual(persistedMask.progress);
+    ).toEqual(delayedMask.progress);
 
     const serializedMask = serializeTransitionMask(editorMask);
-    expect(serializedMask.progress).toEqual(persistedMask.progress);
+    expect(serializedMask.progress).toEqual({
+      initialValue: 0,
+      keyframes: [
+        {
+          duration: 500,
+          value: 0,
+          easing: "linear",
+        },
+        {
+          duration: 1000,
+          value: 1,
+          easing: "linear",
+        },
+      ],
+    });
     expect(serializedMask).not.toHaveProperty("progressDuration");
     expect(serializedMask).not.toHaveProperty("progressEasing");
     expect(
@@ -74,5 +88,12 @@ describe("animationMasks", () => {
       progressDuration: 1000,
       progressEasing: "linear",
     });
+
+    expect(
+      serializeTransitionMask({
+        ...editorMask,
+        progress: undefined,
+      }).progress,
+    ).toEqual(serializedMask.progress);
   });
 });
