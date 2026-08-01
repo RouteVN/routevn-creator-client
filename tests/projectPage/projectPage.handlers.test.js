@@ -23,6 +23,18 @@ const createKeyEvent = (key) => ({
   preventDefault: vi.fn(),
 });
 
+const withProjectAnalyticsRequestState = (store = {}) => {
+  let requestId = 0;
+
+  return {
+    ...store,
+    selectProjectAnalyticsRequestId: vi.fn(() => requestId),
+    setProjectAnalyticsRequestId: vi.fn((payload) => {
+      requestId = payload.requestId;
+    }),
+  };
+};
+
 describe("project page handlers", () => {
   it("loads resource counts before resolving per-scene text analytics", async () => {
     let resolveSceneTextStats;
@@ -56,13 +68,13 @@ describe("project page handlers", () => {
         getRepositoryState: vi.fn(() => repositoryState),
         ensureSceneTextStats: vi.fn(() => sceneTextStatsPromise),
       },
-      store: {
+      store: withProjectAnalyticsRequestState({
         setCurrentProject: vi.fn(),
         setProjectAnalytics: vi.fn(),
         setSceneTextAnalyticsError: vi.fn(),
         setSceneTextAnalyticsLoading: vi.fn(),
         selectCurrentProject: vi.fn(() => ({ language: "en" })),
-      },
+      }),
       render: vi.fn(),
       i18n: EN_I18N,
     };
@@ -140,14 +152,14 @@ describe("project page handlers", () => {
           },
         })),
       },
-      store: {
+      store: withProjectAnalyticsRequestState({
         setPlatform: vi.fn(),
         setCurrentProject: vi.fn(),
         setProjectAnalytics: vi.fn(),
         setSceneTextAnalyticsError: vi.fn(),
         setSceneTextAnalyticsLoading: vi.fn(),
         selectCurrentProject: vi.fn(() => ({ language: "en" })),
-      },
+      }),
       render: vi.fn(),
     };
 
@@ -211,6 +223,143 @@ describe("project page handlers", () => {
 
     cleanup();
     expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not let an older manual refresh overwrite newer repository analytics", async () => {
+    let projectStateListener;
+    let resolveManualSceneTextStats;
+    let currentProject = { language: "en" };
+    const manualSceneTextStatsPromise = new Promise((resolve) => {
+      resolveManualSceneTextStats = resolve;
+    });
+    const initialRepositoryState = {
+      project: { resolution: { width: 1920, height: 1080 } },
+      images: {
+        items: {
+          "image-1": { id: "image-1", type: "image" },
+        },
+      },
+      scenes: {
+        items: {
+          "scene-1": { id: "scene-1", name: "Older Scene", type: "scene" },
+        },
+        tree: [{ id: "scene-1" }],
+      },
+    };
+    const newerRepositoryState = {
+      ...initialRepositoryState,
+      images: {
+        items: {
+          "image-1": { id: "image-1", type: "image" },
+          "image-2": { id: "image-2", type: "image" },
+        },
+      },
+      scenes: {
+        items: {
+          "scene-1": { id: "scene-1", name: "Newer Scene", type: "scene" },
+        },
+        tree: [{ id: "scene-1" }],
+      },
+    };
+    const ensureSceneTextStats = vi
+      .fn()
+      .mockImplementationOnce(() => manualSceneTextStatsPromise)
+      .mockResolvedValueOnce({
+        "scene-1": {
+          lineCount: 2,
+          wordCount: 22,
+          characterCount: 88,
+          language: "en",
+        },
+      });
+    const deps = {
+      appService: {
+        getPlatform: vi.fn(() => "web"),
+        getCurrentProjectEntry: vi.fn(() => ({ source: "local" })),
+      },
+      projectService: {
+        ensureRepository: vi.fn(async () => {}),
+        getCurrentProjectInfo: vi.fn(async () => ({
+          name: "Project One",
+          language: "en",
+        })),
+        getRepositoryState: vi.fn(() => initialRepositoryState),
+        subscribeProjectState: vi.fn((listener) => {
+          projectStateListener = listener;
+          return vi.fn();
+        }),
+        ensureSceneTextStats,
+      },
+      store: withProjectAnalyticsRequestState({
+        setPlatform: vi.fn(),
+        setCurrentProject: vi.fn(({ project }) => {
+          currentProject = { ...currentProject, ...project };
+        }),
+        selectCurrentProject: vi.fn(() => currentProject),
+        setProjectAnalytics: vi.fn(),
+        setSceneTextAnalyticsError: vi.fn(),
+        setSceneTextAnalyticsLoading: vi.fn(),
+      }),
+      render: vi.fn(),
+      i18n: EN_I18N,
+    };
+
+    const cleanup = handleBeforeMount(deps);
+    const mountPromise = handleAfterMount(deps);
+    await vi.waitFor(() => {
+      expect(ensureSceneTextStats).toHaveBeenCalledTimes(1);
+    });
+
+    projectStateListener({ repositoryState: newerRepositoryState });
+    await vi.waitFor(() => {
+      expect(ensureSceneTextStats).toHaveBeenCalledTimes(2);
+      expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
+        analytics: expect.objectContaining({
+          resourceGroups: expect.arrayContaining([
+            expect.objectContaining({
+              key: "assets",
+              resources: expect.arrayContaining([{ key: "images", count: 2 }]),
+            }),
+          ]),
+          scenes: [
+            expect.objectContaining({
+              name: "Newer Scene",
+              textStats: expect.objectContaining({ wordCount: 22 }),
+            }),
+          ],
+        }),
+      });
+    });
+    const renderCountAfterNewerRefresh = deps.render.mock.calls.length;
+
+    resolveManualSceneTextStats({
+      "scene-1": {
+        lineCount: 1,
+        wordCount: 11,
+        characterCount: 44,
+        language: "en",
+      },
+    });
+    await mountPromise;
+
+    expect(deps.render).toHaveBeenCalledTimes(renderCountAfterNewerRefresh);
+    expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
+      analytics: expect.objectContaining({
+        resourceGroups: expect.arrayContaining([
+          expect.objectContaining({
+            key: "assets",
+            resources: expect.arrayContaining([{ key: "images", count: 2 }]),
+          }),
+        ]),
+        scenes: [
+          expect.objectContaining({
+            name: "Newer Scene",
+            textStats: expect.objectContaining({ wordCount: 22 }),
+          }),
+        ],
+      }),
+    });
+    cleanup();
   });
 
   it("requires project icon sources to be at least 512px", async () => {
@@ -445,7 +594,7 @@ describe("project page handlers", () => {
           },
         })),
       },
-      store: {
+      store: withProjectAnalyticsRequestState({
         selectEditIconFileId: vi.fn(() => "icon-1"),
         selectCurrentProject: vi.fn(() => currentProjectInfo),
         setCurrentProject: vi.fn(({ project }) => {
@@ -455,7 +604,7 @@ describe("project page handlers", () => {
         setProjectAnalytics: vi.fn(),
         setSceneTextAnalyticsError: vi.fn(),
         setSceneTextAnalyticsLoading: vi.fn(),
-      },
+      }),
       subject: {
         dispatch: vi.fn(),
       },

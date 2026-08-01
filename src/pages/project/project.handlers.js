@@ -24,7 +24,9 @@ const beginProjectAnalyticsRefresh = (deps, { repositoryState } = {}) => {
   const analytics = buildProjectAnalytics({ repositoryState });
   const sceneIds = analytics.scenes.map((scene) => scene.id);
   const language = store.selectCurrentProject().language;
+  const requestId = store.selectProjectAnalyticsRequestId() + 1;
 
+  store.setProjectAnalyticsRequestId({ requestId });
   store.setProjectAnalytics({ analytics });
   store.setSceneTextAnalyticsError({ hasError: false });
   store.setSceneTextAnalyticsLoading({ isLoading: sceneIds.length > 0 });
@@ -34,6 +36,7 @@ const beginProjectAnalyticsRefresh = (deps, { repositoryState } = {}) => {
     analytics,
     language,
     repositoryState,
+    requestId,
     sceneIds,
   };
 };
@@ -52,17 +55,23 @@ const loadProjectAnalytics = async (deps, request) => {
         sceneTextStatsById,
       }),
       hasError: false,
+      requestId: request.requestId,
     };
   } catch {
     return {
       analytics: request.analytics,
       hasError: true,
+      requestId: request.requestId,
     };
   }
 };
 
 const completeProjectAnalyticsRefresh = (deps, result) => {
   const { store, render } = deps;
+  if (store.selectProjectAnalyticsRequestId() !== result.requestId) {
+    return;
+  }
+
   store.setProjectAnalytics({ analytics: result.analytics });
   store.setSceneTextAnalyticsError({ hasError: result.hasError });
   store.setSceneTextAnalyticsLoading({ isLoading: false });

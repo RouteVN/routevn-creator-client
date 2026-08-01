@@ -45,6 +45,7 @@ export const createInitialState = () => ({
   },
   editIconFileId: undefined,
   editIconCropFile: undefined,
+  projectAnalyticsRequestId: 0,
   analytics: {
     ...buildProjectAnalytics(),
     isSceneTextLoading: true,
@@ -120,6 +121,10 @@ export const setProjectAnalytics = ({ state }, { analytics } = {}) => {
   state.analytics.scenes = analytics?.scenes ?? [];
 };
 
+export const setProjectAnalyticsRequestId = ({ state }, { requestId } = {}) => {
+  state.projectAnalyticsRequestId = requestId;
+};
+
 export const setSceneTextAnalyticsLoading = ({ state }, { isLoading } = {}) => {
   state.analytics.isSceneTextLoading = Boolean(isLoading);
 };
@@ -148,6 +153,10 @@ export const selectEditIconFileId = ({ state }) => {
 
 export const selectCurrentProject = ({ state }) => {
   return state.project;
+};
+
+export const selectProjectAnalyticsRequestId = ({ state }) => {
+  return state.projectAnalyticsRequestId;
 };
 
 export const selectIsEditIconCropDialogOpen = ({ state }) => {

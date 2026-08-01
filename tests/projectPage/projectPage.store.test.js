@@ -2,13 +2,23 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   openEditDialog,
+  selectProjectAnalyticsRequestId,
   selectViewData,
   setCurrentProject,
   setProjectAnalytics,
+  setProjectAnalyticsRequestId,
 } from "../../src/pages/project/project.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("project page store", () => {
+  it("tracks the latest project analytics request", () => {
+    const state = createInitialState();
+
+    expect(selectProjectAnalyticsRequestId({ state })).toBe(0);
+    setProjectAnalyticsRequestId({ state }, { requestId: 2 });
+    expect(selectProjectAnalyticsRequestId({ state })).toBe(2);
+  });
+
   it("shows project language in detail and the edit form", () => {
     const state = createInitialState();
     setCurrentProject(
