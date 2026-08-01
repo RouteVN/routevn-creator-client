@@ -161,11 +161,18 @@ export const selectViewData = ({ state, i18n }) => {
   const showCharacterCount =
     getProjectLanguageTextCountMode(state.project.language) ===
     PROJECT_TEXT_COUNT_MODE_CHARACTER;
-  const sceneTextStats = state.analytics.scenes.map((scene) => ({
-    id: scene.id,
-    name: scene.name,
-    textCount: showCharacterCount ? scene.characterCount : scene.wordCount,
-  }));
+  const hasUnavailableSceneTextStats = state.analytics.scenes.some(
+    (scene) => scene.textStats?.language !== state.project.language,
+  );
+  const sceneTextStats = hasUnavailableSceneTextStats
+    ? []
+    : state.analytics.scenes.map((scene) => ({
+        id: scene.id,
+        name: scene.name,
+        textCount: showCharacterCount
+          ? scene.textStats.characterCount
+          : scene.textStats.wordCount,
+      }));
   const totalTextCount = sceneTextStats.reduce(
     (total, scene) => total + scene.textCount,
     0,
@@ -276,7 +283,7 @@ export const selectViewData = ({ state, i18n }) => {
       ...scene,
       textCount: formatCount(scene.textCount),
     })),
-    sceneCount: formatCount(sceneTextStats.length),
+    sceneCount: formatCount(state.analytics.scenes.length),
     sceneCountLabel: copy.totalScenesLabel,
     sceneTextCountLabel: showCharacterCount
       ? copy.charactersLabel
@@ -286,7 +293,8 @@ export const selectViewData = ({ state, i18n }) => {
       ? copy.totalCharactersLabel
       : copy.totalWordsLabel,
     isSceneTextLoading: state.analytics.isSceneTextLoading,
-    hasSceneTextError: state.analytics.hasSceneTextError,
+    hasSceneTextError:
+      state.analytics.hasSceneTextError || hasUnavailableSceneTextStats,
     showNativeProjectActions:
       (state.platform === "android" || state.platform === "ios") &&
       state.project.source === "local",

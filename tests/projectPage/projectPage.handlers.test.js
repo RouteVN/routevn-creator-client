@@ -4,6 +4,7 @@ import {
   handleAnalyticsLinkClick,
   handleAnalyticsLinkKeyDown,
   handleBackButtonKeyDown,
+  handleBeforeMount,
   handleEditDialogIconClick,
   handleEditFormAction,
   handleProjectActionMenuClickItem,
@@ -55,6 +56,7 @@ describe("project page handlers", () => {
               lineCount: 2,
               wordCount: 45,
               characterCount: 180,
+              language: "en",
             },
           },
         })),
@@ -81,8 +83,12 @@ describe("project page handlers", () => {
           {
             id: "scene-1",
             name: "Opening",
-            wordCount: 45,
-            characterCount: 180,
+            textStats: {
+              lineCount: 2,
+              wordCount: 45,
+              characterCount: 180,
+              language: "en",
+            },
           },
         ],
       }),
@@ -91,6 +97,101 @@ describe("project page handlers", () => {
       isLoading: false,
     });
     expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes analytics from repository state subscriptions", async () => {
+    let projectStateListener;
+    const unsubscribe = vi.fn();
+    const deps = {
+      appService: {
+        getPlatform: vi.fn(() => "web"),
+        getCurrentProjectEntry: vi.fn(() => ({ source: "local" })),
+      },
+      projectService: {
+        subscribeProjectState: vi.fn((listener) => {
+          projectStateListener = listener;
+          return unsubscribe;
+        }),
+        loadSceneOverviews: vi.fn(async () => ({
+          "scene-1": {
+            textStats: {
+              lineCount: 2,
+              wordCount: 45,
+              characterCount: 180,
+              language: "en",
+            },
+          },
+        })),
+      },
+      store: {
+        setPlatform: vi.fn(),
+        setCurrentProject: vi.fn(),
+        setProjectAnalytics: vi.fn(),
+        setSceneTextAnalyticsError: vi.fn(),
+        setSceneTextAnalyticsLoading: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    const cleanup = handleBeforeMount(deps);
+    projectStateListener({
+      repositoryState: {
+        images: {
+          items: {
+            "image-1": { id: "image-1", type: "image" },
+            "image-2": { id: "image-2", type: "image" },
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.subscribeProjectState).toHaveBeenCalledWith(
+      expect.any(Function),
+      { emitCurrent: false },
+    );
+    expect(deps.store.setProjectAnalytics).toHaveBeenCalledWith({
+      analytics: expect.objectContaining({
+        resourceGroups: expect.arrayContaining([
+          expect.objectContaining({
+            key: "assets",
+            resources: expect.arrayContaining([{ key: "images", count: 2 }]),
+          }),
+        ]),
+      }),
+    });
+    expect(deps.store.setSceneTextAnalyticsLoading).toHaveBeenCalledWith({
+      isLoading: false,
+    });
+
+    projectStateListener({
+      repositoryState: {
+        scenes: {
+          items: {
+            "scene-1": { id: "scene-1", name: "Opening", type: "scene" },
+          },
+          tree: [{ id: "scene-1" }],
+        },
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(deps.projectService.loadSceneOverviews).toHaveBeenCalledWith({
+        sceneIds: ["scene-1"],
+      });
+      expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
+        analytics: expect.objectContaining({
+          scenes: [
+            expect.objectContaining({
+              id: "scene-1",
+              textStats: expect.objectContaining({ language: "en" }),
+            }),
+          ],
+        }),
+      });
+    });
+
+    cleanup();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
   it("requires project icon sources to be at least 512px", async () => {
@@ -303,6 +404,24 @@ describe("project page handlers", () => {
       },
       projectService: {
         updateCurrentProjectInfo: vi.fn(async () => nextProjectInfo),
+        getRepositoryState: vi.fn(() => ({
+          scenes: {
+            items: {
+              "scene-1": { id: "scene-1", name: "Opening", type: "scene" },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        })),
+        loadSceneOverviews: vi.fn(async () => ({
+          "scene-1": {
+            textStats: {
+              lineCount: 2,
+              wordCount: 45,
+              characterCount: 180,
+              language: "en",
+            },
+          },
+        })),
       },
       store: {
         selectEditIconFileId: vi.fn(() => "icon-1"),
@@ -313,6 +432,9 @@ describe("project page handlers", () => {
         })),
         setCurrentProject: vi.fn(),
         closeEditDialog: vi.fn(),
+        setProjectAnalytics: vi.fn(),
+        setSceneTextAnalyticsError: vi.fn(),
+        setSceneTextAnalyticsLoading: vi.fn(),
       },
       subject: {
         dispatch: vi.fn(),
@@ -351,6 +473,18 @@ describe("project page handlers", () => {
         language: "zh-Hans",
         iconFileId: "icon-1",
       },
+    });
+    expect(deps.projectService.loadSceneOverviews).toHaveBeenCalledWith({
+      sceneIds: ["scene-1"],
+    });
+    expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
+      analytics: expect.objectContaining({
+        scenes: [
+          expect.objectContaining({
+            textStats: expect.objectContaining({ language: "en" }),
+          }),
+        ],
+      }),
     });
   });
 });

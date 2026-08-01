@@ -61,15 +61,19 @@ export const buildProjectAnalytics = ({
   sceneOverviewsById = {},
 } = {}) => {
   const scenes = selectScenes(repositoryState).map((scene) => {
-    const textStats = normalizeSceneTextStats(
-      sceneOverviewsById[scene.id]?.textStats,
-    );
+    const cachedTextStats = sceneOverviewsById[scene.id]?.textStats;
+    let textStats;
+    if (cachedTextStats) {
+      textStats = {
+        ...normalizeSceneTextStats(cachedTextStats),
+        language: cachedTextStats.language,
+      };
+    }
 
     return {
       id: scene.id,
       name: scene.name ?? scene.id,
-      wordCount: textStats.wordCount,
-      characterCount: textStats.characterCount,
+      textStats,
     };
   });
   const resourceGroups = PROJECT_ANALYTICS_RESOURCE_GROUPS.map((group) => ({

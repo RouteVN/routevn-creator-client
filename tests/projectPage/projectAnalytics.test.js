@@ -77,10 +77,20 @@ describe("project analytics", () => {
     };
     const sceneOverviewsById = {
       "scene-1": {
-        textStats: { lineCount: 3, wordCount: 120, characterCount: 480 },
+        textStats: {
+          lineCount: 3,
+          wordCount: 120,
+          characterCount: 480,
+          language: "en",
+        },
       },
       "scene-2": {
-        textStats: { lineCount: 2, wordCount: 80, characterCount: 320 },
+        textStats: {
+          lineCount: 2,
+          wordCount: 80,
+          characterCount: 320,
+          language: "en",
+        },
       },
     };
 
@@ -136,14 +146,46 @@ describe("project analytics", () => {
       {
         id: "scene-2",
         name: "Ending",
-        wordCount: 80,
-        characterCount: 320,
+        textStats: {
+          lineCount: 2,
+          wordCount: 80,
+          characterCount: 320,
+          language: "en",
+        },
       },
       {
         id: "scene-1",
         name: "Opening",
-        wordCount: 120,
-        characterCount: 480,
+        textStats: {
+          lineCount: 3,
+          wordCount: 120,
+          characterCount: 480,
+          language: "en",
+        },
+      },
+    ]);
+  });
+
+  it("preserves missing scene text statistics as unavailable", () => {
+    const analytics = buildProjectAnalytics({
+      repositoryState: {
+        scenes: {
+          items: {
+            "scene-1": { id: "scene-1", name: "Opening", type: "scene" },
+          },
+          tree: [{ id: "scene-1" }],
+        },
+      },
+      sceneOverviewsById: {
+        "scene-1": { sceneId: "scene-1" },
+      },
+    });
+
+    expect(analytics.scenes).toEqual([
+      {
+        id: "scene-1",
+        name: "Opening",
+        textStats: undefined,
       },
     ]);
   });

@@ -1,5 +1,7 @@
 import { requireProjectResolution } from "../../internal/projectResolution.js";
 import { requireProjectLanguage } from "../../internal/projectLanguage.js";
+import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
+import { EMPTY, from, switchMap, tap } from "rxjs";
 import {
   formatProjectPageCopy,
   selectProjectPageCopy,
@@ -17,18 +19,100 @@ const ICON_VALIDATIONS = [
   },
 ];
 
+const beginProjectAnalyticsRefresh = (deps, { repositoryState } = {}) => {
+  const { store, render } = deps;
+  const analytics = buildProjectAnalytics({ repositoryState });
+  const sceneIds = analytics.scenes.map((scene) => scene.id);
+
+  store.setProjectAnalytics({ analytics });
+  store.setSceneTextAnalyticsError({ hasError: false });
+  store.setSceneTextAnalyticsLoading({ isLoading: sceneIds.length > 0 });
+  render();
+
+  return {
+    analytics,
+    repositoryState,
+    sceneIds,
+  };
+};
+
+const loadProjectAnalytics = async (deps, request) => {
+  const { projectService } = deps;
+
+  try {
+    const sceneOverviewsById = await projectService.loadSceneOverviews({
+      sceneIds: request.sceneIds,
+    });
+    return {
+      analytics: buildProjectAnalytics({
+        repositoryState: request.repositoryState,
+        sceneOverviewsById,
+      }),
+      hasError: false,
+    };
+  } catch {
+    return {
+      analytics: request.analytics,
+      hasError: true,
+    };
+  }
+};
+
+const completeProjectAnalyticsRefresh = (deps, result) => {
+  const { store, render } = deps;
+  store.setProjectAnalytics({ analytics: result.analytics });
+  store.setSceneTextAnalyticsError({ hasError: result.hasError });
+  store.setSceneTextAnalyticsLoading({ isLoading: false });
+  render();
+};
+
+const refreshProjectAnalytics = async (deps, { repositoryState } = {}) => {
+  const request = beginProjectAnalyticsRefresh(deps, { repositoryState });
+  if (request.sceneIds.length === 0) {
+    return;
+  }
+
+  const result = await loadProjectAnalytics(deps, request);
+  completeProjectAnalyticsRefresh(deps, result);
+};
+
 export const handleBeforeMount = (deps) => {
-  const { appService, store } = deps;
+  const { appService, projectService, store } = deps;
   store.setPlatform({ platform: appService.getPlatform() });
   store.setCurrentProject({
     project: {
       source: appService.getCurrentProjectEntry()?.source,
     },
   });
+
+  const subscription = createProjectStateStream({
+    projectService,
+    emitCurrent: false,
+  })
+    .pipe(
+      switchMap(({ repositoryState }) => {
+        const request = beginProjectAnalyticsRefresh(deps, {
+          repositoryState,
+        });
+        if (request.sceneIds.length === 0) {
+          return EMPTY;
+        }
+
+        return from(loadProjectAnalytics(deps, request));
+      }),
+      tap((result) => {
+        completeProjectAnalyticsRefresh(deps, result);
+      }),
+    )
+    .subscribe();
+
+  return () => {
+    subscription.unsubscribe();
+  };
 };
 
 export const handleAfterMount = async (deps) => {
-  const { appService, projectService, store, render, i18n } = deps;
+  const { appService, projectService, store, i18n } = deps;
   const copy = selectProjectPageCopy(i18n);
   await projectService.ensureRepository();
   const projectInfo = await projectService.getCurrentProjectInfo();
@@ -44,35 +128,7 @@ export const handleAfterMount = async (deps) => {
       source: appService.getCurrentProjectEntry()?.source,
     },
   });
-  const baseAnalytics = buildProjectAnalytics({ repositoryState });
-  store.setProjectAnalytics({ analytics: baseAnalytics });
-
-  const sceneIds = baseAnalytics.scenes.map((scene) => scene.id);
-  if (sceneIds.length === 0) {
-    store.setSceneTextAnalyticsLoading({ isLoading: false });
-    render();
-    return;
-  }
-
-  render();
-
-  try {
-    const sceneOverviewsById = await projectService.loadSceneOverviews({
-      sceneIds,
-    });
-    store.setProjectAnalytics({
-      analytics: buildProjectAnalytics({
-        repositoryState,
-        sceneOverviewsById,
-      }),
-    });
-    store.setSceneTextAnalyticsError({ hasError: false });
-  } catch {
-    store.setSceneTextAnalyticsError({ hasError: true });
-  }
-
-  store.setSceneTextAnalyticsLoading({ isLoading: false });
-  render();
+  await refreshProjectAnalytics(deps, { repositoryState });
 };
 
 const getActionMenuPosition = (event) => {
@@ -254,7 +310,9 @@ export const handleEditFormAction = async (deps, payload) => {
   });
   store.closeEditDialog();
   subject.dispatch("project-image-update");
-  render();
+  await refreshProjectAnalytics(deps, {
+    repositoryState: projectService.getRepositoryState(),
+  });
 };
 
 export const handleEditDialogIconClick = async (deps) => {
