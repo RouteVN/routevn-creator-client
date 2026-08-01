@@ -72,7 +72,7 @@ steps:
   - action: wait
     ms: 500
   - action: waitFor
-    selector: "#sceneTextStatsError"
+    selector: "#sceneTextStatsTable"
     state: visible
     timeoutMs: 10000
   - action: screenshot

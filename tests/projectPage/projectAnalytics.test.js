@@ -75,28 +75,24 @@ describe("project analytics", () => {
         },
       },
     };
-    const sceneOverviewsById = {
+    const sceneTextStatsById = {
       "scene-1": {
-        textStats: {
-          lineCount: 3,
-          wordCount: 120,
-          characterCount: 480,
-          language: "en",
-        },
+        lineCount: 3,
+        wordCount: 120,
+        characterCount: 480,
+        language: "en",
       },
       "scene-2": {
-        textStats: {
-          lineCount: 2,
-          wordCount: 80,
-          characterCount: 320,
-          language: "en",
-        },
+        lineCount: 2,
+        wordCount: 80,
+        characterCount: 320,
+        language: "en",
       },
     };
 
     const analytics = buildProjectAnalytics({
       repositoryState,
-      sceneOverviewsById,
+      sceneTextStatsById,
     });
 
     expect(analytics.resourceGroups).toEqual([
@@ -166,7 +162,7 @@ describe("project analytics", () => {
     ]);
   });
 
-  it("preserves missing scene text statistics as unavailable", () => {
+  it("preserves missing scene text statistics while the service resolves them", () => {
     const analytics = buildProjectAnalytics({
       repositoryState: {
         scenes: {
@@ -176,9 +172,7 @@ describe("project analytics", () => {
           tree: [{ id: "scene-1" }],
         },
       },
-      sceneOverviewsById: {
-        "scene-1": { sceneId: "scene-1" },
-      },
+      sceneTextStatsById: {},
     });
 
     expect(analytics.scenes).toEqual([

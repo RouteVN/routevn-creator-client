@@ -58,10 +58,10 @@ const selectCharacters = (repositoryState = {}) =>
 
 export const buildProjectAnalytics = ({
   repositoryState = {},
-  sceneOverviewsById = {},
+  sceneTextStatsById = {},
 } = {}) => {
   const scenes = selectScenes(repositoryState).map((scene) => {
-    const cachedTextStats = sceneOverviewsById[scene.id]?.textStats;
+    const cachedTextStats = sceneTextStatsById[scene.id];
     let textStats;
     if (cachedTextStats) {
       textStats = {

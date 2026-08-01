@@ -25,6 +25,10 @@ const createKeyEvent = (key) => ({
 
 describe("project page handlers", () => {
   it("loads resource counts before resolving per-scene text analytics", async () => {
+    let resolveSceneTextStats;
+    const sceneTextStatsPromise = new Promise((resolve) => {
+      resolveSceneTextStats = resolve;
+    });
     const repositoryState = {
       project: { resolution: { width: 1920, height: 1080 } },
       scenes: {
@@ -50,31 +54,46 @@ describe("project page handlers", () => {
           language: "en",
         })),
         getRepositoryState: vi.fn(() => repositoryState),
-        loadSceneOverviews: vi.fn(async () => ({
-          "scene-1": {
-            textStats: {
-              lineCount: 2,
-              wordCount: 45,
-              characterCount: 180,
-              language: "en",
-            },
-          },
-        })),
+        ensureSceneTextStats: vi.fn(() => sceneTextStatsPromise),
       },
       store: {
         setCurrentProject: vi.fn(),
         setProjectAnalytics: vi.fn(),
         setSceneTextAnalyticsError: vi.fn(),
         setSceneTextAnalyticsLoading: vi.fn(),
+        selectCurrentProject: vi.fn(() => ({ language: "en" })),
       },
       render: vi.fn(),
       i18n: EN_I18N,
     };
 
-    await handleAfterMount(deps);
+    const mountPromise = handleAfterMount(deps);
 
-    expect(deps.projectService.loadSceneOverviews).toHaveBeenCalledWith({
+    await vi.waitFor(() => {
+      expect(deps.projectService.ensureSceneTextStats).toHaveBeenCalledWith({
+        sceneIds: ["scene-1"],
+        language: "en",
+      });
+    });
+    expect(deps.store.setProjectAnalytics).toHaveBeenCalledTimes(1);
+    expect(deps.store.setSceneTextAnalyticsLoading).toHaveBeenLastCalledWith({
+      isLoading: true,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+
+    resolveSceneTextStats({
+      "scene-1": {
+        lineCount: 2,
+        wordCount: 45,
+        characterCount: 180,
+        language: "en",
+      },
+    });
+    await mountPromise;
+
+    expect(deps.projectService.ensureSceneTextStats).toHaveBeenCalledWith({
       sceneIds: ["scene-1"],
+      language: "en",
     });
     expect(deps.store.setProjectAnalytics).toHaveBeenCalledTimes(2);
     expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
@@ -112,14 +131,12 @@ describe("project page handlers", () => {
           projectStateListener = listener;
           return unsubscribe;
         }),
-        loadSceneOverviews: vi.fn(async () => ({
+        ensureSceneTextStats: vi.fn(async () => ({
           "scene-1": {
-            textStats: {
-              lineCount: 2,
-              wordCount: 45,
-              characterCount: 180,
-              language: "en",
-            },
+            lineCount: 2,
+            wordCount: 45,
+            characterCount: 180,
+            language: "en",
           },
         })),
       },
@@ -129,6 +146,7 @@ describe("project page handlers", () => {
         setProjectAnalytics: vi.fn(),
         setSceneTextAnalyticsError: vi.fn(),
         setSceneTextAnalyticsLoading: vi.fn(),
+        selectCurrentProject: vi.fn(() => ({ language: "en" })),
       },
       render: vi.fn(),
     };
@@ -175,8 +193,9 @@ describe("project page handlers", () => {
     });
 
     await vi.waitFor(() => {
-      expect(deps.projectService.loadSceneOverviews).toHaveBeenCalledWith({
+      expect(deps.projectService.ensureSceneTextStats).toHaveBeenCalledWith({
         sceneIds: ["scene-1"],
+        language: "en",
       });
       expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
         analytics: expect.objectContaining({
@@ -393,6 +412,11 @@ describe("project page handlers", () => {
       language: "zh-Hans",
       iconFileId: "icon-1",
     };
+    let currentProjectInfo = {
+      name: "Project One",
+      description: "Description",
+      language: "en",
+    };
     const deps = {
       appService: {
         getCurrentProjectEntry: vi.fn(() => ({
@@ -412,25 +436,21 @@ describe("project page handlers", () => {
             tree: [{ id: "scene-1" }],
           },
         })),
-        loadSceneOverviews: vi.fn(async () => ({
+        ensureSceneTextStats: vi.fn(async () => ({
           "scene-1": {
-            textStats: {
-              lineCount: 2,
-              wordCount: 45,
-              characterCount: 180,
-              language: "en",
-            },
+            lineCount: 2,
+            wordCount: 45,
+            characterCount: 180,
+            language: "zh-Hans",
           },
         })),
       },
       store: {
         selectEditIconFileId: vi.fn(() => "icon-1"),
-        selectCurrentProject: vi.fn(() => ({
-          name: "Project One",
-          description: "Description",
-          language: "en",
-        })),
-        setCurrentProject: vi.fn(),
+        selectCurrentProject: vi.fn(() => currentProjectInfo),
+        setCurrentProject: vi.fn(({ project }) => {
+          currentProjectInfo = project;
+        }),
         closeEditDialog: vi.fn(),
         setProjectAnalytics: vi.fn(),
         setSceneTextAnalyticsError: vi.fn(),
@@ -474,14 +494,15 @@ describe("project page handlers", () => {
         iconFileId: "icon-1",
       },
     });
-    expect(deps.projectService.loadSceneOverviews).toHaveBeenCalledWith({
+    expect(deps.projectService.ensureSceneTextStats).toHaveBeenCalledWith({
       sceneIds: ["scene-1"],
+      language: "zh-Hans",
     });
     expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
       analytics: expect.objectContaining({
         scenes: [
           expect.objectContaining({
-            textStats: expect.objectContaining({ language: "en" }),
+            textStats: expect.objectContaining({ language: "zh-Hans" }),
           }),
         ],
       }),

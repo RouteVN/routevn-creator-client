@@ -23,6 +23,7 @@ const beginProjectAnalyticsRefresh = (deps, { repositoryState } = {}) => {
   const { store, render } = deps;
   const analytics = buildProjectAnalytics({ repositoryState });
   const sceneIds = analytics.scenes.map((scene) => scene.id);
+  const language = store.selectCurrentProject().language;
 
   store.setProjectAnalytics({ analytics });
   store.setSceneTextAnalyticsError({ hasError: false });
@@ -31,6 +32,7 @@ const beginProjectAnalyticsRefresh = (deps, { repositoryState } = {}) => {
 
   return {
     analytics,
+    language,
     repositoryState,
     sceneIds,
   };
@@ -40,13 +42,14 @@ const loadProjectAnalytics = async (deps, request) => {
   const { projectService } = deps;
 
   try {
-    const sceneOverviewsById = await projectService.loadSceneOverviews({
+    const sceneTextStatsById = await projectService.ensureSceneTextStats({
       sceneIds: request.sceneIds,
+      language: request.language,
     });
     return {
       analytics: buildProjectAnalytics({
         repositoryState: request.repositoryState,
-        sceneOverviewsById,
+        sceneTextStatsById,
       }),
       hasError: false,
     };

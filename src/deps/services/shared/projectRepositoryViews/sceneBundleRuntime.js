@@ -1,4 +1,6 @@
 import { buildSceneOverview } from "../../../../internal/project/sceneOverview.js";
+import { buildSceneTextStats } from "../../../../internal/sceneTextStats.js";
+import { normalizeProjectLanguage } from "../../../../internal/projectLanguage.js";
 import {
   mainScenePartitionFor,
   scenePartitionFor,
@@ -507,7 +509,11 @@ export const createSceneBundleRuntime = ({
     });
   };
 
-  const cacheSceneTextStats = async ({ sceneId, textStats } = {}) => {
+  const cacheSceneTextStats = async ({
+    sceneId,
+    textStats,
+    expectedRevision,
+  } = {}) => {
     if (
       !isNonEmptyString(sceneId) ||
       !textStats ||
@@ -520,12 +526,19 @@ export const createSceneBundleRuntime = ({
       return undefined;
     }
 
+    if (
+      expectedRevision !== undefined &&
+      getCurrentRevision() !== expectedRevision
+    ) {
+      return undefined;
+    }
+
     const cachedTextStats = structuredClone(textStats);
     await saveSceneTextStatsCheckpoint({
       store,
       sceneId,
       value: cachedTextStats,
-      lastCommittedId: getCurrentRevision(),
+      lastCommittedId: expectedRevision ?? getCurrentRevision(),
       updatedAt: now(),
     });
 
@@ -568,6 +581,63 @@ export const createSceneBundleRuntime = ({
         deleteSceneTextStatsCheckpoint({ store, sceneId }),
       ),
     );
+
+    return textStatsBySceneId;
+  };
+
+  const computeSceneTextStats = async ({ sceneId, language } = {}) => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const revision = getCurrentRevision();
+      const sceneState = await getSceneStateForOverview(sceneId);
+      if (getCurrentRevision() !== revision) {
+        continue;
+      }
+
+      const scene = sceneState?.scenes?.items?.[sceneId];
+      if (!scene || scene.type === "folder") {
+        return undefined;
+      }
+
+      const textStats = {
+        ...buildSceneTextStats(scene, { language }),
+        language,
+      };
+      const cachedTextStats = await cacheSceneTextStats({
+        sceneId,
+        textStats,
+        expectedRevision: revision,
+      });
+      if (cachedTextStats && getCurrentRevision() === revision) {
+        return cachedTextStats;
+      }
+    }
+
+    return undefined;
+  };
+
+  const ensureSceneTextStats = async ({ sceneIds = [], language } = {}) => {
+    const normalizedSceneIds = [...new Set(sceneIds.filter(isNonEmptyString))];
+    const normalizedLanguage = normalizeProjectLanguage(language);
+    const cachedTextStatsBySceneId = await loadSceneTextStats({
+      sceneIds: normalizedSceneIds,
+    });
+    const textStatsBySceneId = {};
+
+    for (const sceneId of normalizedSceneIds) {
+      const cachedTextStats = cachedTextStatsBySceneId[sceneId];
+      if (cachedTextStats?.language === normalizedLanguage) {
+        textStatsBySceneId[sceneId] = cachedTextStats;
+        continue;
+      }
+
+      const computedTextStats = await computeSceneTextStats({
+        sceneId,
+        language: normalizedLanguage,
+      });
+      if (computedTextStats) {
+        textStatsBySceneId[sceneId] = computedTextStats;
+      }
+    }
 
     return textStatsBySceneId;
   };
@@ -636,6 +706,7 @@ export const createSceneBundleRuntime = ({
 
     cacheSceneTextStats,
     loadSceneTextStats,
+    ensureSceneTextStats,
 
     async handleCommittedEvents(sourceEvents = []) {
       const committedEvents = Array.isArray(sourceEvents)
