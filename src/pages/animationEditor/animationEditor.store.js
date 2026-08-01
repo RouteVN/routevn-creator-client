@@ -1116,6 +1116,10 @@ const cloneTransitionMask = (mask = {}) => {
   nextMask.sample = mask.sample;
   nextMask.softness = mask.softness;
   nextMask.invert = mask.invert;
+  nextMask.progress = mask.progress
+    ? structuredClone(mask.progress)
+    : undefined;
+  nextMask.progressDelay = mask.progressDelay;
   nextMask.progressDuration = mask.progressDuration;
   nextMask.progressEasing = mask.progressEasing;
   return nextMask;
@@ -2258,6 +2262,10 @@ export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
 
   const nextMask = createDefaultTransitionMask();
   nextMask.softness = currentMask.softness;
+  nextMask.progress = currentMask.progress
+    ? structuredClone(currentMask.progress)
+    : undefined;
+  nextMask.progressDelay = currentMask.progressDelay ?? nextMask.progressDelay;
   nextMask.progressDuration = currentMask.progressDuration;
   nextMask.progressEasing = currentMask.progressEasing;
   nextMask.imageId =
@@ -2341,6 +2349,7 @@ export const setTransitionMaskProgressDuration = (
   }
 
   transitionMask.progressDuration = numericDuration;
+  transitionMask.progress = undefined;
 };
 
 export const setTransitionMaskProgressEasing = ({ state }, { easing } = {}) => {
@@ -2350,6 +2359,7 @@ export const setTransitionMaskProgressEasing = ({ state }, { easing } = {}) => {
   }
 
   transitionMask.progressEasing = easing;
+  transitionMask.progress = undefined;
 };
 
 export const setTransitionMaskImage = ({ state }, { imageId } = {}) => {

@@ -12,6 +12,7 @@ import {
   handleEditorSurfaceClick,
   handleEditorPopoverPositioned,
   handleKeyframeClick,
+  handleKeyframeSelect,
   handleKeyframeDurationChange,
   handleKeyframeDropdownItemClick,
   handleKeyframeRightClick,
@@ -51,26 +52,41 @@ describe("animationEditor.handlers", () => {
     const unregisterBeforeNavigation = vi.fn();
     const store = {
       ...createIdleAutosaveMocks(),
+      selectPreviewPlaybackFrameId: vi.fn(() => 42),
+      setPreviewPlaybackRequestId: vi.fn(),
       setUiConfig: vi.fn(),
+      stopPreviewPlayback: vi.fn(),
     };
-    const cleanup = handleBeforeMount({
-      appService: {
-        registerBeforeNavigation: vi.fn((handler) => {
-          beforeNavigation = handler;
-          return unregisterBeforeNavigation;
-        }),
-      },
-      store,
-      uiConfig: { mode: "desktop" },
-    });
+    const cancelAnimationFrame = vi.fn();
+    vi.stubGlobal("cancelAnimationFrame", cancelAnimationFrame);
 
-    await beforeNavigation();
-    await cleanup();
+    try {
+      const cleanup = handleBeforeMount({
+        appService: {
+          registerBeforeNavigation: vi.fn((handler) => {
+            beforeNavigation = handler;
+            return unregisterBeforeNavigation;
+          }),
+        },
+        store,
+        uiConfig: { mode: "desktop" },
+      });
 
-    expect(store.setUiConfig).toHaveBeenCalledWith({
-      uiConfig: { mode: "desktop" },
-    });
-    expect(unregisterBeforeNavigation).toHaveBeenCalledOnce();
+      await beforeNavigation();
+      await cleanup();
+
+      expect(store.setUiConfig).toHaveBeenCalledWith({
+        uiConfig: { mode: "desktop" },
+      });
+      expect(unregisterBeforeNavigation).toHaveBeenCalledOnce();
+      expect(store.setPreviewPlaybackRequestId).toHaveBeenCalledWith({
+        requestId: undefined,
+      });
+      expect(cancelAnimationFrame).toHaveBeenCalledWith(42);
+      expect(store.stopPreviewPlayback).toHaveBeenCalledWith({});
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("updates timeline zoom from the slider and zoom buttons", () => {
@@ -360,6 +376,27 @@ describe("animationEditor.handlers", () => {
     };
     const render = vi.fn();
 
+    handleKeyframeSelect(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            side: "prev",
+            property: "alpha",
+            index: 2,
+          },
+        },
+      },
+    );
+
+    expect(store.setSelectedKeyframe).toHaveBeenLastCalledWith({
+      side: "prev",
+      property: "alpha",
+      index: 2,
+    });
+    expect(store.setPopover).not.toHaveBeenCalled();
+    expect(store.closePopover).toHaveBeenCalledOnce();
+
     handleKeyframeClick(
       { store, render },
       {
@@ -402,8 +439,8 @@ describe("animationEditor.handlers", () => {
       y: 100,
       payload: { side: "next", property: "x" },
     });
-    expect(store.closePopover).not.toHaveBeenCalled();
-    expect(render).toHaveBeenCalledTimes(2);
+    expect(store.closePopover).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledTimes(3);
   });
 
   it("selects a keyframe before opening its context menu", () => {

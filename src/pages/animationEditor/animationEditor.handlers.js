@@ -787,6 +787,8 @@ export const handleBeforeMount = (deps) => {
   return async () => {
     unregisterBeforeNavigation();
     clearScheduledAnimationEditorAutosave(store);
+    store.setPreviewPlaybackRequestId({ requestId: undefined });
+    stopPreviewPlaybackIndicator({ store });
     const autosaveAttempt = await flushQueuedAutosave({
       deps,
       force: true,
@@ -1194,6 +1196,14 @@ export const handleKeyframeClick = (deps, payload) => {
   } else {
     store.closePopover();
   }
+  render();
+};
+
+export const handleKeyframeSelect = (deps, payload) => {
+  const { render, store } = deps;
+  const { index, property, side } = payload._event.detail;
+  store.setSelectedKeyframe({ side, property, index });
+  store.closePopover();
   render();
 };
 

@@ -327,6 +327,10 @@ describe("keyframeTimeline.handlers", () => {
       {
         dispatchEvent,
         props: { editable: true, side: "next" },
+        store: {
+          clearKeyframeClickSuppression: vi.fn(),
+          selectKeyframeClickSuppressed: vi.fn(() => false),
+        },
       },
       {
         _event: {
@@ -567,10 +571,19 @@ describe("keyframeTimeline.handlers", () => {
 
   it("drags a keyframe without moving the following keyframe", () => {
     let keyframeMove;
+    let keyframeClickSuppressed = false;
     const store = {
-      clearKeyframeMove: vi.fn(() => {
-        keyframeMove = undefined;
+      clearKeyframeClickSuppression: vi.fn(() => {
+        keyframeClickSuppressed = false;
       }),
+      clearKeyframeMove: vi.fn(({ suppressClick = false } = {}) => {
+        keyframeMove = undefined;
+        keyframeClickSuppressed = suppressClick;
+      }),
+      markKeyframeMoveDragged: vi.fn(() => {
+        keyframeMove.dragged = true;
+      }),
+      selectKeyframeClickSuppressed: vi.fn(() => keyframeClickSuppressed),
       selectKeyframeMove: vi.fn(() => keyframeMove),
       setKeyframeMoveTiming: vi.fn(({ delay, followingDelay }) => {
         keyframeMove.delay = delay;
@@ -580,6 +593,7 @@ describe("keyframeTimeline.handlers", () => {
         keyframeMove = {
           ...move,
           delay: move.startDelay,
+          dragged: false,
           followingDelay: move.startFollowingDelay,
         };
       }),
@@ -657,7 +671,7 @@ describe("keyframeTimeline.handlers", () => {
 
     expect(setPointerCapture).toHaveBeenCalledWith(11);
     expect(dispatchEvent.mock.calls[0][0]).toMatchObject({
-      type: "keyframe-click",
+      type: "keyframe-select",
       detail: {
         property: "x",
         side: "update",
@@ -680,6 +694,20 @@ describe("keyframeTimeline.handlers", () => {
         index: 0,
       },
     });
-    expect(store.clearKeyframeMove).toHaveBeenCalledWith({});
+    expect(store.clearKeyframeMove).toHaveBeenCalledWith({
+      suppressClick: true,
+    });
+
+    handleKeyframeClick(deps, {
+      _event: {
+        clientX: 200,
+        clientY: 100,
+        currentTarget: keyframeElement,
+        stopPropagation,
+      },
+    });
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(2);
+    expect(store.clearKeyframeClickSuppression).toHaveBeenCalledWith({});
   });
 });

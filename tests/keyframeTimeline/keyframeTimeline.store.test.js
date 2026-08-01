@@ -5,8 +5,13 @@ import {
   createKeyframeValueCurvePath,
 } from "../../src/components/keyframeTimeline/keyframeTimeline.easing.js";
 import {
+  clearKeyframeClickSuppression,
+  clearKeyframeMove,
   createInitialState,
+  markKeyframeMoveDragged,
+  selectKeyframeClickSuppressed,
   selectViewData,
+  startKeyframeMove,
 } from "../../src/components/keyframeTimeline/keyframeTimeline.store.js";
 
 describe("keyframeTimeline easing curves", () => {
@@ -415,5 +420,32 @@ describe("keyframeTimeline easing curves", () => {
 
     expect(viewData.rulerIndicatorVisible).toBe(true);
     expect(viewData.playheadIndicatorTimeLabel).toBe("500 ms");
+  });
+});
+
+describe("keyframeTimeline gesture state", () => {
+  it("suppresses the click following a completed keyframe drag", () => {
+    const state = createInitialState();
+
+    startKeyframeMove(
+      { state },
+      {
+        pointerId: 1,
+        property: "x",
+        index: 0,
+        startX: 100,
+        startDelay: 0,
+        duration: 1000,
+        timelineDuration: 1000,
+        trackWidth: 200,
+      },
+    );
+    markKeyframeMoveDragged({ state });
+    clearKeyframeMove({ state }, { suppressClick: true });
+
+    expect(selectKeyframeClickSuppressed({ state })).toBe(true);
+
+    clearKeyframeClickSuppression({ state });
+    expect(selectKeyframeClickSuppressed({ state })).toBe(false);
   });
 });

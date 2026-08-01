@@ -173,6 +173,25 @@ const dispatchKeyframeClickEvent = ({
   );
 };
 
+const dispatchKeyframeSelectEvent = ({
+  dispatchEvent,
+  property,
+  index,
+  side,
+} = {}) => {
+  dispatchEvent(
+    new CustomEvent("keyframe-select", {
+      detail: {
+        property,
+        index,
+        side,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 const createGapHoverTarget = ({
   property,
   index,
@@ -464,12 +483,17 @@ export const handleTrackClick = (deps, payload) => {
 };
 
 export const handleKeyframeClick = (deps, payload) => {
-  const { dispatchEvent, props } = deps;
+  const { dispatchEvent, props, store } = deps;
   if (!props.editable) {
     return;
   }
 
   payload._event.stopPropagation();
+  if (store.selectKeyframeClickSuppressed()) {
+    store.clearKeyframeClickSuppression({});
+    return;
+  }
+
   const property = payload._event.currentTarget.dataset.property;
   const index = payload._event.currentTarget.dataset.index;
   const side = props?.side;
@@ -538,14 +562,6 @@ export const handleKeyframeMoveStart = (deps, payload) => {
 
   event.preventDefault();
   event.stopPropagation();
-  dispatchKeyframeClickEvent({
-    dispatchEvent,
-    property,
-    index,
-    side: props.side,
-    x: event.clientX,
-    y: event.clientY,
-  });
   keyframeElement.setPointerCapture?.(event.pointerId);
   store.startKeyframeMove({
     pointerId: event.pointerId,
@@ -557,6 +573,12 @@ export const handleKeyframeMoveStart = (deps, payload) => {
     duration: startDuration,
     timelineDuration,
     trackWidth,
+  });
+  dispatchKeyframeSelectEvent({
+    dispatchEvent,
+    property,
+    index,
+    side: props.side,
   });
   render();
 };
@@ -572,6 +594,9 @@ export const handleKeyframeMove = (deps, payload) => {
   event.preventDefault();
   event.stopPropagation();
   const deltaX = event.clientX - keyframeMove.startX;
+  if (Math.abs(deltaX) >= 4) {
+    store.markKeyframeMoveDragged({});
+  }
   const deltaDelay =
     (deltaX / keyframeMove.trackWidth) * keyframeMove.timelineDuration;
   const snappedDelay =
@@ -605,7 +630,10 @@ export const handleKeyframeMoveEnd = (deps, payload) => {
   event.preventDefault();
   event.stopPropagation();
   event.currentTarget.releasePointerCapture?.(event.pointerId);
-  store.clearKeyframeMove({});
+  store.clearKeyframeMove({
+    suppressClick:
+      keyframeMove.dragged || keyframeMove.delay !== keyframeMove.startDelay,
+  });
   if (keyframeMove.delay !== keyframeMove.startDelay) {
     dispatchKeyframeDurationChangeEvent({
       dispatchEvent,

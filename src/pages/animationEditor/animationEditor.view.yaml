@@ -77,6 +77,8 @@ refs:
         handler: handleRulerTimeScrub
       keyframe-click:
         handler: handleKeyframeClick
+      keyframe-select:
+        handler: handleKeyframeSelect
       keyframe-duration-change:
         handler: handleKeyframeDurationChange
       auto-track-click:
@@ -99,6 +101,8 @@ refs:
         handler: handleAddKeyframeFromTimeline
       keyframe-click:
         handler: handleKeyframeClick
+      keyframe-select:
+        handler: handleKeyframeSelect
       keyframe-duration-change:
         handler: handleKeyframeDurationChange
       keyframe-right-click:
@@ -115,6 +119,8 @@ refs:
         handler: handleAddKeyframeFromTimeline
       keyframe-click:
         handler: handleKeyframeClick
+      keyframe-select:
+        handler: handleKeyframeSelect
       keyframe-duration-change:
         handler: handleKeyframeDurationChange
       keyframe-right-click:

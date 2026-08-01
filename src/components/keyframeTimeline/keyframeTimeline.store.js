@@ -3,6 +3,7 @@ import { createKeyframeValueCurvePath } from "./keyframeTimeline.easing.js";
 export const createInitialState = () => ({
   durationResize: undefined,
   hoverTarget: undefined,
+  keyframeClickSuppressed: false,
   keyframeMove: undefined,
   rulerScrub: undefined,
 });
@@ -104,6 +105,7 @@ export const startKeyframeMove = (
     startFollowingDelay === undefined
       ? undefined
       : Math.max(0, Number(startFollowingDelay) || 0);
+  state.keyframeClickSuppressed = false;
   state.keyframeMove = {
     pointerId,
     property,
@@ -114,9 +116,16 @@ export const startKeyframeMove = (
     startFollowingDelay: resolvedStartFollowingDelay,
     followingDelay: resolvedStartFollowingDelay,
     duration,
+    dragged: false,
     timelineDuration,
     trackWidth,
   };
+};
+
+export const markKeyframeMoveDragged = ({ state }, _payload = {}) => {
+  if (state.keyframeMove) {
+    state.keyframeMove.dragged = true;
+  }
 };
 
 export const setKeyframeMoveTiming = (
@@ -129,12 +138,24 @@ export const setKeyframeMoveTiming = (
   }
 };
 
-export const clearKeyframeMove = ({ state }, _payload = {}) => {
+export const clearKeyframeMove = (
+  { state },
+  { suppressClick = false } = {},
+) => {
   state.keyframeMove = undefined;
+  state.keyframeClickSuppressed = suppressClick;
 };
 
 export const selectKeyframeMove = ({ state }) => {
   return state.keyframeMove;
+};
+
+export const selectKeyframeClickSuppressed = ({ state }) => {
+  return state.keyframeClickSuppressed;
+};
+
+export const clearKeyframeClickSuppression = ({ state }, _payload = {}) => {
+  state.keyframeClickSuppressed = false;
 };
 
 const RULER_TARGET_MAJOR_TICK_COUNT = 6;
