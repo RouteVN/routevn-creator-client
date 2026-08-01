@@ -544,11 +544,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
               value: displayValue,
               widthPercent: widthPercent.toFixed(2),
               delayPercent: delayPercent.toFixed(2),
-              cursor:
-                state.keyframeMove?.property === property.name &&
-                state.keyframeMove.index === keyframeIndex
+              cursor: attrs.editable
+                ? state.keyframeMove?.property === property.name &&
+                  state.keyframeMove.index === keyframeIndex
                   ? "grabbing"
-                  : "grab",
+                  : "grab"
+                : "default",
               selected,
               backgroundColor: "ac",
               foregroundColor: "ac-fg",
@@ -576,9 +577,10 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         propertyName: property.name,
         trackMode: property.trackMode,
       });
-      nextProperty.initialValueCursor = property.initialValueInteractive
-        ? "pointer"
-        : "default";
+      nextProperty.initialValueCursor =
+        attrs.editable && property.initialValueInteractive
+          ? "pointer"
+          : "default";
       nextProperty.emptyLabelVisible = resolveEmptyLabelVisible({
         propertyName: property.name,
       });
@@ -596,9 +598,10 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         propertyName: property.name,
         trackMode: property.trackMode,
       }),
-      initialValueCursor: property.initialValueInteractive
-        ? "pointer"
-        : "default",
+      initialValueCursor:
+        attrs.editable && property.initialValueInteractive
+          ? "pointer"
+          : "default",
       emptyLabelVisible: resolveEmptyLabelVisible({
         propertyName: property.name,
       }),

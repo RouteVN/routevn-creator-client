@@ -22,6 +22,7 @@ import {
   selectAnimationResetState,
   selectPreviewDurationMs,
   selectPreviewData,
+  selectSelectedKeyframeFormValues,
   selectTimelinePan,
   selectTimelinePanClickSuppressed,
   selectTimelinePanMode,
@@ -257,39 +258,34 @@ describe("animationEditor.store", () => {
     });
     expect(viewData.selectedKeyframeDetailId).toBe("update:x:0");
     expect(viewData.selectedKeyframeDetailFields).toEqual([
+      { type: "slot", slot: "actions" },
       { type: "text", label: "Timeline", value: "Update" },
       { type: "text", label: "Property", value: "Position X" },
       {
-        type: "slot",
+        type: "text",
         label: "Delay (ms)",
-        slot: "keyframe-delay",
+        value: 125,
       },
       {
-        type: "slot",
+        type: "text",
         label: "Duration (ms)",
-        slot: "keyframe-duration",
+        value: 450,
       },
-      { type: "slot", label: "Easing", slot: "keyframe-easing" },
-      { type: "slot", label: "Value", slot: "keyframe-value" },
+      { type: "text", label: "Easing", value: "Ease Out Bounce" },
+      { type: "text", label: "Value", value: 120 },
       {
-        type: "slot",
+        type: "text",
         label: "Value type",
-        slot: "keyframe-value-type",
+        value: "Relative",
       },
     ]);
-    expect(viewData.selectedKeyframeDelay).toBe(125);
-    expect(viewData.selectedKeyframeDuration).toBe(450);
-    expect(viewData.selectedKeyframeEasing).toBe("easeOutBounce");
-    expect(viewData.selectedKeyframeValue).toBe(120);
-    expect(viewData.selectedKeyframeValueType).toBe("relative");
-    expect(viewData.keyframeEasingOptions).toContainEqual({
-      label: "Ease Out Bounce",
-      value: "easeOutBounce",
+    expect(selectSelectedKeyframeFormValues({ state })).toEqual({
+      delay: 125,
+      duration: 450,
+      easing: "easeOutBounce",
+      value: 120,
+      relative: true,
     });
-    expect(viewData.keyframeValueTypeOptions).toEqual([
-      { label: "Absolute", value: "absolute" },
-      { label: "Relative", value: "relative" },
-    ]);
     expect(viewData.showRightPanel).toBe(true);
     expect(viewData.showMaskAndPreviewSections).toBe(false);
     expect(viewData.showMobileTweenActions).toBe(false);
@@ -306,16 +302,6 @@ describe("animationEditor.store", () => {
       relative: false,
       value: -12.5,
     });
-
-    setPopover({ state }, { mode: "editSelectedKeyframeDelay", x: 20, y: 40 });
-    const delayPopoverViewData = selectViewData({ state, i18n: EN_I18N });
-    expect(delayPopoverViewData.popover.popoverIsOpen).toBe(false);
-    expect(delayPopoverViewData.selectedKeyframeNumberPopoverIsOpen).toBe(true);
-    expect(delayPopoverViewData.showSelectedKeyframeDelayPopover).toBe(true);
-    expect(delayPopoverViewData.showSelectedKeyframeDurationPopover).toBe(
-      false,
-    );
-    expect(delayPopoverViewData.showSelectedKeyframeValuePopover).toBe(false);
   });
 
   it("shows selected property details and keeps property and keyframe selection exclusive", () => {
@@ -571,8 +557,18 @@ describe("animationEditor.store", () => {
     expect(viewData.transitionMaskPanel.channelLabel).toBe("Greyscale");
   });
 
-  it("uses popovers on desktop and dialogs on touch for add-property and keyframe forms", () => {
+  it("uses touch dialogs for add forms and a dialog for every keyframe edit", () => {
     const state = createInitialState();
+    state.tweenBySection.update.x = {
+      keyframes: [
+        {
+          duration: 1000,
+          easing: "linear",
+          relative: false,
+          value: 0,
+        },
+      ],
+    };
 
     setPopover(
       { state },
@@ -590,7 +586,6 @@ describe("animationEditor.store", () => {
     expect(viewData.showAddPropertyDialog).toBe(false);
     expect(viewData.showAddKeyframePopover).toBe(false);
     expect(viewData.showAddKeyframeDialog).toBe(false);
-    expect(viewData.showEditKeyframePopover).toBe(false);
     expect(viewData.showEditKeyframeDialog).toBe(false);
 
     setPopover(
@@ -611,7 +606,6 @@ describe("animationEditor.store", () => {
     expect(viewData.showAddPropertyDialog).toBe(false);
     expect(viewData.showAddKeyframePopover).toBe(true);
     expect(viewData.showAddKeyframeDialog).toBe(false);
-    expect(viewData.showEditKeyframePopover).toBe(false);
     expect(viewData.showEditKeyframeDialog).toBe(false);
 
     setPopover(
@@ -627,13 +621,28 @@ describe("animationEditor.store", () => {
     );
 
     viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(viewData.popover.popoverIsOpen).toBe(true);
+    expect(viewData.popover.popoverIsOpen).toBe(false);
     expect(viewData.showAddPropertyPopover).toBe(false);
     expect(viewData.showAddPropertyDialog).toBe(false);
     expect(viewData.showAddKeyframePopover).toBe(false);
     expect(viewData.showAddKeyframeDialog).toBe(false);
-    expect(viewData.showEditKeyframePopover).toBe(true);
-    expect(viewData.showEditKeyframeDialog).toBe(false);
+    expect(viewData.showEditKeyframeDialog).toBe(true);
+    expect(viewData.editKeyframeDefaultValues).toMatchObject({
+      delay: 0,
+      duration: 1000,
+      easing: "linear",
+      relative: false,
+      value: 0,
+    });
+    expect(
+      viewData.updateKeyframeForm.fields.find(
+        (field) => field.name === "delay",
+      ),
+    ).toMatchObject({
+      type: "input-number",
+      min: 0,
+      step: 1,
+    });
 
     setUiConfig(
       { state },
@@ -661,7 +670,6 @@ describe("animationEditor.store", () => {
     expect(viewData.showAddPropertyDialog).toBe(true);
     expect(viewData.showAddKeyframePopover).toBe(false);
     expect(viewData.showAddKeyframeDialog).toBe(false);
-    expect(viewData.showEditKeyframePopover).toBe(false);
     expect(viewData.showEditKeyframeDialog).toBe(false);
 
     setPopover(
@@ -682,7 +690,6 @@ describe("animationEditor.store", () => {
     expect(viewData.showAddPropertyDialog).toBe(false);
     expect(viewData.showAddKeyframePopover).toBe(false);
     expect(viewData.showAddKeyframeDialog).toBe(true);
-    expect(viewData.showEditKeyframePopover).toBe(false);
     expect(viewData.showEditKeyframeDialog).toBe(false);
 
     setPopover(
@@ -703,7 +710,6 @@ describe("animationEditor.store", () => {
     expect(viewData.showAddPropertyDialog).toBe(false);
     expect(viewData.showAddKeyframePopover).toBe(false);
     expect(viewData.showAddKeyframeDialog).toBe(false);
-    expect(viewData.showEditKeyframePopover).toBe(false);
     expect(viewData.showEditKeyframeDialog).toBe(true);
   });
 

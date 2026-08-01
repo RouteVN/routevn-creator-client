@@ -663,11 +663,11 @@ export const handleKeyframeMoveCancel = (deps, payload) => {
 
 export const handleDurationResizeStart = (deps, payload) => {
   const { props, render, store } = deps;
-  if (!props.editable) {
+  const event = payload._event;
+  if (!props.editable || event.button !== 0) {
     return;
   }
 
-  const event = payload._event;
   const handleElement = event.currentTarget;
   const trackElement = handleElement.closest?.("[data-keyframe-track='true']");
   const trackWidth = trackElement?.getBoundingClientRect?.().width;

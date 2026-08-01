@@ -207,6 +207,7 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
   Channel: "channelLabel",
   "Custom Initial Value": "customInitialValueLabel",
   "Custom Value": "customValueSource",
+  "Delay (ms)": "delayMsLabel",
   Delete: "deleteMenuItem",
   "Delete keyframe": "deleteKeyframeMenuItem",
   Done: "doneButton",
@@ -757,7 +758,7 @@ const createEditAutoTweenForm = (copy = {}) => {
 const createAddKeyframeForm = (
   property,
   propertyFieldConfig,
-  { includeDuration = true } = {},
+  { includeDelay = false, includeDuration = true } = {},
   copy = {},
 ) => {
   if (!property) {
@@ -766,11 +767,24 @@ const createAddKeyframeForm = (
 
   const fields = [];
 
+  if (includeDelay) {
+    fields.push({
+      name: "delay",
+      type: "input-number",
+      label: "Delay (ms)",
+      min: 0,
+      step: 1,
+      required: true,
+    });
+  }
+
   if (includeDuration) {
     fields.push({
       name: "duration",
-      type: "input-text",
+      type: "input-number",
       label: "Duration (ms)",
+      min: 1,
+      step: 1,
       required: true,
       placeholder: "Duration in milliseconds",
       tooltip: {
@@ -843,7 +857,12 @@ const createUpdateKeyframeForm = (
 ) => {
   return localizeForm(
     {
-      ...createAddKeyframeForm(property, propertyFieldConfig, options, copy),
+      ...createAddKeyframeForm(
+        property,
+        propertyFieldConfig,
+        { ...options, includeDelay: true },
+        copy,
+      ),
       title: "Edit Keyframe",
       actions: {
         layout: "",
@@ -1605,6 +1624,21 @@ const getMutableSelectedKeyframe = (state) => {
   return getMutableSectionProperties(state, side)[property]?.keyframes?.[index];
 };
 
+export const selectSelectedKeyframeFormValues = ({ state }) => {
+  const keyframe = getMutableSelectedKeyframe(state);
+  if (!keyframe) {
+    return undefined;
+  }
+
+  return {
+    delay: keyframe.delay ?? 0,
+    duration: keyframe.duration,
+    value: keyframe.value,
+    easing: keyframe.easing ?? "linear",
+    relative: keyframe.relative ?? false,
+  };
+};
+
 export const setSelectedKeyframeEasing = ({ state }, { easing } = {}) => {
   const keyframe = getMutableSelectedKeyframe(state);
   if (keyframe) {
@@ -2223,6 +2257,13 @@ export const updateKeyframe = (
   const currentDelay = Math.max(0, Number(keyframes[index]?.delay) || 0);
   if (keyframe.delay === undefined && currentDelay > 0) {
     nextKeyframe.delay = currentDelay;
+  } else {
+    const nextDelay = Math.max(0, Number.parseInt(keyframe.delay, 10) || 0);
+    if (nextDelay > 0) {
+      nextKeyframe.delay = nextDelay;
+    } else {
+      delete nextKeyframe.delay;
+    }
   }
   keyframes[index] = nextKeyframe;
 };
@@ -3062,12 +3103,11 @@ const buildSelectedKeyframePanelData = (
         : (copy.updateType ?? "Update");
   return {
     id: `${side}:${property}:${index}`,
-    delay: keyframe.delay ?? 0,
-    duration: keyframe.duration,
-    easing: keyframe.easing ?? "linear",
-    value: keyframe.value,
-    valueType: keyframe.relative === true ? "relative" : "absolute",
     fields: [
+      {
+        type: "slot",
+        slot: "actions",
+      },
       {
         type: "text",
         label: copy.timelineLabel ?? "Timeline",
@@ -3079,29 +3119,35 @@ const buildSelectedKeyframePanelData = (
         value: propertyFieldConfig[property]?.label ?? property,
       },
       {
-        type: "slot",
+        type: "text",
         label: copy.delayMsLabel ?? "Delay (ms)",
-        slot: "keyframe-delay",
+        value: keyframe.delay ?? 0,
       },
       {
-        type: "slot",
+        type: "text",
         label: copy.durationMsLabel ?? "Duration (ms)",
-        slot: "keyframe-duration",
+        value: keyframe.duration,
       },
       {
-        type: "slot",
+        type: "text",
         label: copy.easingLabel ?? "Easing",
-        slot: "keyframe-easing",
+        value: getOptionLabel(
+          createEasingOptions(copy),
+          keyframe.easing ?? "linear",
+        ),
       },
       {
-        type: "slot",
+        type: "text",
         label: copy.valueLabel ?? "Value",
-        slot: "keyframe-value",
+        value: keyframe.value,
       },
       {
-        type: "slot",
+        type: "text",
         label: copy.valueTypeLabel ?? "Value type",
-        slot: "keyframe-value-type",
+        value:
+          keyframe.relative === true
+            ? (copy.relativeValueType ?? "Relative")
+            : (copy.absoluteValueType ?? "Absolute"),
       },
     ],
   };
@@ -3423,6 +3469,7 @@ export const selectViewData = ({ state, i18n }) => {
 
     if (currentKeyframe) {
       editKeyframeDefaultValues = {
+        delay: currentKeyframe.delay ?? 0,
         duration: currentKeyframe.duration,
         value: currentKeyframe.value,
         easing: currentKeyframe.easing,
@@ -3466,20 +3513,11 @@ export const selectViewData = ({ state, i18n }) => {
     !state.isTouchMode && state.popover.mode === "addProperty";
   const showAddKeyframePopover =
     !state.isTouchMode && state.popover.mode === "addKeyframe";
-  const showEditKeyframePopover =
-    !state.isTouchMode && state.popover.mode === "editKeyframe";
   const showAddPropertyDialog =
     state.isTouchMode && state.popover.mode === "addProperty";
   const showAddKeyframeDialog =
     state.isTouchMode && state.popover.mode === "addKeyframe";
-  const showEditKeyframeDialog =
-    state.isTouchMode && state.popover.mode === "editKeyframe";
-  const showSelectedKeyframeDelayPopover =
-    state.popover.mode === "editSelectedKeyframeDelay";
-  const showSelectedKeyframeDurationPopover =
-    state.popover.mode === "editSelectedKeyframeDuration";
-  const showSelectedKeyframeValuePopover =
-    state.popover.mode === "editSelectedKeyframeValue";
+  const showEditKeyframeDialog = state.popover.mode === "editKeyframe";
 
   return {
     resourceCategory: ANIMATION_RESOURCE_CATEGORY,
@@ -3520,24 +3558,8 @@ export const selectViewData = ({ state, i18n }) => {
     selectedProperty: state.selectedProperty,
     selectedKeyframeDetailId: selectedKeyframePanel?.id,
     selectedKeyframeDetailFields: selectedKeyframePanel?.fields ?? [],
-    selectedKeyframeDelay: selectedKeyframePanel?.delay,
-    selectedKeyframeDuration: selectedKeyframePanel?.duration,
-    selectedKeyframeEasing: selectedKeyframePanel?.easing,
-    selectedKeyframeValue: selectedKeyframePanel?.value,
-    selectedKeyframeValueType: selectedKeyframePanel?.valueType,
     selectedPropertyDetailId: selectedPropertyPanel?.id,
     selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
-    keyframeEasingOptions: createEasingOptions(copy),
-    keyframeValueTypeOptions: [
-      {
-        label: copy.absoluteValueType ?? "Absolute",
-        value: "absolute",
-      },
-      {
-        label: copy.relativeValueType ?? "Relative",
-        value: "relative",
-      },
-    ],
     updateTimelineDefaultValues,
     transitionTimelineDefaultValues,
     addPropertyForm: createAddPropertyForm(
@@ -3594,8 +3616,7 @@ export const selectViewData = ({ state, i18n }) => {
       popoverIsOpen:
         ["editAuto", "editInitialValue"].includes(state.popover.mode) ||
         showAddPropertyPopover ||
-        showAddKeyframePopover ||
-        showEditKeyframePopover,
+        showAddKeyframePopover,
       maskDialogIsOpen: ["editMask", "addMask"].includes(state.popover.mode),
       dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
         state.popover.mode,
@@ -3620,17 +3641,9 @@ export const selectViewData = ({ state, i18n }) => {
       dialogType === "transition",
     showAddPropertyPopover,
     showAddKeyframePopover,
-    showEditKeyframePopover,
     showAddPropertyDialog,
     showAddKeyframeDialog,
     showEditKeyframeDialog,
-    selectedKeyframeNumberPopoverIsOpen:
-      showSelectedKeyframeDelayPopover ||
-      showSelectedKeyframeDurationPopover ||
-      showSelectedKeyframeValuePopover,
-    showSelectedKeyframeDelayPopover,
-    showSelectedKeyframeDurationPopover,
-    showSelectedKeyframeValuePopover,
     addButton: copy.addButton ?? "Add",
     addMaskButton: copy.addMaskButton ?? "Add Mask",
     addMaskTitle: copy.addMaskTitle ?? "Add Mask",

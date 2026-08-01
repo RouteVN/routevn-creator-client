@@ -1,4 +1,3 @@
-import { fromEvent, tap } from "rxjs";
 import { generateId } from "../../internal/id.js";
 import {
   createAnimationEditorPayload,
@@ -786,37 +785,32 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
 };
 
 const mountTimelinePanSubscriptions = (deps) => {
-  const browserWindow = globalThis.window;
-  if (!browserWindow?.addEventListener) {
-    return () => {};
-  }
-
-  const subscriptions = [
-    fromEvent(browserWindow, "keydown", { capture: true })
-      .pipe(
-        tap((event) =>
-          handleTimelinePanKeyDown(deps, {
-            _event: event,
-          }),
-        ),
-      )
-      .subscribe(),
-    fromEvent(browserWindow, "keyup", { capture: true })
-      .pipe(
-        tap((event) =>
-          handleTimelinePanKeyUp(deps, {
-            _event: event,
-          }),
-        ),
-      )
-      .subscribe(),
-    fromEvent(browserWindow, "blur")
-      .pipe(tap(() => handleTimelinePanWindowBlur(deps)))
-      .subscribe(),
+  const { browserEventsClient } = deps;
+  const cleanupSubscriptions = [
+    browserEventsClient.subscribeWindowEvent({
+      type: "keydown",
+      options: { capture: true },
+      listener: (event) =>
+        handleTimelinePanKeyDown(deps, {
+          _event: event,
+        }),
+    }),
+    browserEventsClient.subscribeWindowEvent({
+      type: "keyup",
+      options: { capture: true },
+      listener: (event) =>
+        handleTimelinePanKeyUp(deps, {
+          _event: event,
+        }),
+    }),
+    browserEventsClient.subscribeWindowEvent({
+      type: "blur",
+      listener: () => handleTimelinePanWindowBlur(deps),
+    }),
   ];
 
   return () => {
-    subscriptions.forEach((subscription) => subscription.unsubscribe());
+    cleanupSubscriptions.forEach((cleanup) => cleanup());
   };
 };
 
@@ -1353,6 +1347,26 @@ export const handleKeyframeRightClick = (deps, payload) => {
   render();
 };
 
+const openSelectedKeyframeEditDialog = (deps, { x = 0, y = 0 } = {}) => {
+  const { refs, render, store } = deps;
+  const selectedKeyframe = store.selectSelectedKeyframe();
+  const values = store.selectSelectedKeyframeFormValues();
+  if (!selectedKeyframe || !values) {
+    return false;
+  }
+
+  store.setPopover({
+    mode: "editKeyframe",
+    x,
+    y,
+    payload: selectedKeyframe,
+  });
+  render();
+  refs.editKeyframeForm.reset();
+  refs.editKeyframeForm.setValues({ values });
+  return true;
+};
+
 export const handleKeyframeClick = (deps, payload) => {
   const { render, store } = deps;
   const { index, property, side, x, y } = payload._event.detail;
@@ -1362,19 +1376,14 @@ export const handleKeyframeClick = (deps, payload) => {
     index,
   });
   if (store.selectIsTouchMode()) {
-    store.setPopover({
-      mode: "editKeyframe",
+    openSelectedKeyframeEditDialog(deps, {
       x,
       y,
-      payload: {
-        side,
-        property,
-        index,
-      },
     });
-  } else {
-    store.closePopover();
+    return;
   }
+
+  store.closePopover();
   render();
 };
 
@@ -1416,145 +1425,15 @@ export const handleKeyframeDurationChange = (deps, payload) => {
   commitSelectedKeyframeChange(deps);
 };
 
+export const handleEditSelectedKeyframeClick = (deps) => {
+  openSelectedKeyframeEditDialog(deps);
+};
+
 const commitSelectedKeyframeChange = (deps) => {
   const { render, store } = deps;
   invalidatePreview({ store });
   render();
   queueEditorAutosave({ deps });
-};
-
-export const handleSelectedKeyframeEasingChange = (deps, payload) => {
-  const { store } = deps;
-  store.setSelectedKeyframeEasing({
-    easing: resolveValueChange(payload),
-  });
-  commitSelectedKeyframeChange(deps);
-};
-
-export const handleSelectedKeyframeValueTypeChange = (deps, payload) => {
-  const { store } = deps;
-  store.setSelectedKeyframeRelative({
-    relative: resolveValueChange(payload) === "relative",
-  });
-  commitSelectedKeyframeChange(deps);
-};
-
-const openSelectedKeyframeNumberPopover = (deps, payload, { mode } = {}) => {
-  const { render, store } = deps;
-  let value;
-  if (mode === "editSelectedKeyframeDelay") {
-    value = store.selectSelectedKeyframeDelay();
-  } else if (mode === "editSelectedKeyframeDuration") {
-    value = store.selectSelectedKeyframeDuration();
-  } else {
-    value = store.selectSelectedKeyframeValue();
-  }
-  store.setPopover({
-    mode,
-    x: payload._event.clientX,
-    y: payload._event.clientY,
-    payload: {},
-  });
-  store.updatePopoverFormValues({
-    formValues: { value },
-  });
-  render();
-};
-
-export const handleSelectedKeyframeDelayClick = (deps, payload) => {
-  openSelectedKeyframeNumberPopover(deps, payload, {
-    mode: "editSelectedKeyframeDelay",
-  });
-};
-
-export const handleSelectedKeyframeDurationClick = (deps, payload) => {
-  openSelectedKeyframeNumberPopover(deps, payload, {
-    mode: "editSelectedKeyframeDuration",
-  });
-};
-
-export const handleSelectedKeyframeValueClick = (deps, payload) => {
-  openSelectedKeyframeNumberPopover(deps, payload, {
-    mode: "editSelectedKeyframeValue",
-  });
-};
-
-export const handleEditorPopoverPositioned = (deps) => {
-  const { refs, store } = deps;
-  if (
-    [
-      "editSelectedKeyframeDelay",
-      "editSelectedKeyframeDuration",
-      "editSelectedKeyframeValue",
-    ].includes(store.selectPopover().mode)
-  ) {
-    refs.selectedKeyframeNumberInput.focus();
-  }
-};
-
-const commitSelectedKeyframeNumberInput = (deps, value) => {
-  const { store } = deps;
-  if (value === undefined || value === null || value === "") {
-    return;
-  }
-
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) {
-    return;
-  }
-
-  const { mode } = store.selectPopover();
-  if (mode === "editSelectedKeyframeDelay") {
-    if (numericValue < 0) {
-      return;
-    }
-    store.setSelectedKeyframeDelay({ delay: numericValue });
-  } else if (mode === "editSelectedKeyframeDuration") {
-    if (numericValue < 1) {
-      return;
-    }
-    store.setSelectedKeyframeDuration({ duration: numericValue });
-  } else if (mode === "editSelectedKeyframeValue") {
-    store.setSelectedKeyframeValue({ value: numericValue });
-  } else {
-    return;
-  }
-
-  store.closePopover();
-  commitSelectedKeyframeChange(deps);
-};
-
-export const handleSelectedKeyframeNumberInputChange = (deps, payload) => {
-  const { store } = deps;
-  store.updatePopoverFormValues({
-    formValues: {
-      ...store.selectPopover().formValues,
-      value: resolveValueChange(payload),
-    },
-  });
-};
-
-export const handleSelectedKeyframeNumberConfirmClick = (deps) => {
-  const { store } = deps;
-  commitSelectedKeyframeNumberInput(
-    deps,
-    store.selectPopover().formValues.value,
-  );
-};
-
-export const handleSelectedKeyframeNumberInputKeyDown = (deps, payload) => {
-  const { render, store } = deps;
-  const event = payload._event;
-  if (event.key === "Enter") {
-    event.preventDefault();
-    event.stopPropagation();
-    commitSelectedKeyframeNumberInput(deps, event.currentTarget.value);
-  } else if (event.key === "Escape") {
-    event.preventDefault();
-    event.stopPropagation();
-    store.closePopover();
-    render();
-  }
 };
 
 export const handleAutoTrackClick = (deps, payload) => {
@@ -1616,16 +1495,8 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
   let didMutate = false;
 
   if (value === "edit") {
-    store.setPopover({
-      mode: "editKeyframe",
-      x,
-      y,
-      payload: {
-        side,
-        property,
-        index,
-      },
-    });
+    openSelectedKeyframeEditDialog(deps, { x, y });
+    return;
   } else if (value === "delete-property") {
     store.deleteProperty({ side, property });
     store.closePopover();
@@ -1691,6 +1562,9 @@ export const handleEditKeyframeFormSubmit = (deps, payload) => {
     ...payload._event.detail.values,
   };
 
+  if (formValues.delay < 0) {
+    formValues.delay = 0;
+  }
   if (formValues.duration < 1) {
     formValues.duration = 1;
   }

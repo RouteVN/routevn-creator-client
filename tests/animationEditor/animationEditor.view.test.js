@@ -27,7 +27,7 @@ describe("animationEditor view", () => {
     );
   });
 
-  it("uses dialogs on touch for add-property and keyframe forms", () => {
+  it("uses a dialog for keyframe edits and touch add forms", () => {
     const view = readFileSync(
       new URL(
         "../../src/pages/animationEditor/animationEditor.view.yaml",
@@ -38,7 +38,7 @@ describe("animationEditor view", () => {
 
     expect(view).toContain("$if showAddPropertyPopover");
     expect(view).toContain("$if showAddKeyframePopover");
-    expect(view).toContain("$if showEditKeyframePopover");
+    expect(view).not.toContain("$if showEditKeyframePopover");
     expect(view).toContain("rtgl-dialog#addPropertyDialog");
     expect(view).toContain("rtgl-dialog#addKeyframeDialog");
     expect(view).toContain("rtgl-dialog#editKeyframeDialog");
@@ -96,31 +96,12 @@ describe("animationEditor view", () => {
     expect(view).toContain("rvn-detail-view#selectedPropertyDetails");
     expect(view).toContain(":fields=${selectedPropertyDetailFields}");
     expect(view).toContain(
-      "rtgl-select#selectedKeyframeEasingSelect slot=keyframe-easing",
+      "rtgl-button#editSelectedKeyframeButton slot=actions",
     );
-    expect(view).toContain(
-      "rtgl-view#selectedKeyframeDelay slot=keyframe-delay",
-    );
-    expect(view).toContain(
-      "rtgl-view#selectedKeyframeDuration slot=keyframe-duration",
-    );
-    expect(view.indexOf("slot=keyframe-delay")).toBeLessThan(
-      view.indexOf("slot=keyframe-duration"),
-    );
-    expect(view).toContain(
-      "rtgl-view#selectedKeyframeValue slot=keyframe-value",
-    );
-    expect(view).toContain("rtgl-input-number#selectedKeyframeNumberInput");
-    expect(view).toContain(
-      "rtgl-popover#selectedKeyframeNumberPopover ?open=${selectedKeyframeNumberPopoverIsOpen}",
-    );
-    expect(view).toContain(
-      "content-w=220 content-g=sm content-ph=md content-pv=md content-bgc=su",
-    );
-    expect(view).toContain("rtgl-button#selectedKeyframeNumberConfirm");
-    expect(view).toContain(
-      "rtgl-segmented-control#selectedKeyframeValueTypeSelect slot=keyframe-value-type",
-    );
+    expect(view).toContain("handler: handleEditSelectedKeyframeClick");
+    expect(view).not.toContain("selectedKeyframeEasingSelect");
+    expect(view).not.toContain("selectedKeyframeValueTypeSelect");
+    expect(view).not.toContain("selectedKeyframeNumberPopover");
     expect(view).toContain("$if showMaskAndPreviewSections");
     expect(view).toContain(":selectedKeyframe=${selectedKeyframe}");
     expect(view).toContain(":selectedProperty=${selectedProperty}");

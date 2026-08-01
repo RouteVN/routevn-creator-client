@@ -149,12 +149,6 @@ refs:
     eventListeners:
       close:
         handler: handleClosePopover
-  selectedKeyframeNumberPopover:
-    eventListeners:
-      close:
-        handler: handleClosePopover
-      positioned:
-        handler: handleEditorPopoverPositioned
   addPropertyDialog:
     eventListeners:
       close:
@@ -197,38 +191,10 @@ refs:
         handler: handleEditInitialValueFormSubmit
       form-change:
         handler: handleEditInitialValueFormChange
-  selectedKeyframeEasingSelect:
-    eventListeners:
-      value-change:
-        handler: handleSelectedKeyframeEasingChange
-  selectedKeyframeValueTypeSelect:
-    eventListeners:
-      value-change:
-        handler: handleSelectedKeyframeValueTypeChange
-  selectedKeyframeDelay:
+  editSelectedKeyframeButton:
     eventListeners:
       click:
-        handler: handleSelectedKeyframeDelayClick
-  selectedKeyframeDuration:
-    eventListeners:
-      click:
-        handler: handleSelectedKeyframeDurationClick
-  selectedKeyframeValue:
-    eventListeners:
-      click:
-        handler: handleSelectedKeyframeValueClick
-  selectedKeyframeNumberInput:
-    eventListeners:
-      value-input:
-        handler: handleSelectedKeyframeNumberInputChange
-      value-change:
-        handler: handleSelectedKeyframeNumberInputChange
-      keydown:
-        handler: handleSelectedKeyframeNumberInputKeyDown
-  selectedKeyframeNumberConfirm:
-    eventListeners:
-      click:
-        handler: handleSelectedKeyframeNumberConfirmClick
+        handler: handleEditSelectedKeyframeClick
   keyframeDropdownMenu:
     eventListeners:
       close:
@@ -463,14 +429,7 @@ template:
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if selectedKeyframeDetailId:
                           - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} w=f :fields=${selectedKeyframeDetailFields} :fillHeight=${false}:
-                              - rtgl-view#selectedKeyframeDelay slot=keyframe-delay d=h pv=sm ph=md bgc=mu br=md av=c cur=pointer bw=xs bc=bg h-bc=ac h=32 w=f:
-                                  - rtgl-text s=sm: ${selectedKeyframeDelay}
-                              - rtgl-view#selectedKeyframeDuration slot=keyframe-duration d=h pv=sm ph=md bgc=mu br=md av=c cur=pointer bw=xs bc=bg h-bc=ac h=32 w=f:
-                                  - rtgl-text s=sm: ${selectedKeyframeDuration}
-                              - rtgl-select#selectedKeyframeEasingSelect slot=keyframe-easing w=f no-clear :selectedValue=${selectedKeyframeEasing} :options=${keyframeEasingOptions}: null
-                              - rtgl-view#selectedKeyframeValue slot=keyframe-value d=h pv=sm ph=md bgc=mu br=md av=c cur=pointer bw=xs bc=bg h-bc=ac h=32 w=f:
-                                  - rtgl-text s=sm: ${selectedKeyframeValue}
-                              - rtgl-segmented-control#selectedKeyframeValueTypeSelect slot=keyframe-value-type w=f no-clear :selectedValue=${selectedKeyframeValueType} :options=${keyframeValueTypeOptions}: null
+                              - rtgl-button#editSelectedKeyframeButton slot=actions w=f v=se pre=edit: ${editButton}
                         $elif selectedPropertyDetailId:
                           - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} w=f :fields=${selectedPropertyDetailFields} :fillHeight=${false}: null
                         $else:
@@ -563,25 +522,12 @@ template:
       - $if showAddKeyframePopover:
           - rtgl-view slot=content:
               - rtgl-form#addKeyframeForm :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues}: null
-      - $if showEditKeyframePopover:
-          - rtgl-view slot=content:
-              - rtgl-form#editKeyframeForm :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues}: null
       - $if popover.mode == 'editAuto':
           - rtgl-view slot=content:
               - rtgl-form#editAutoForm :form=${editAutoForm} :defaultValues=${editAutoDefaultValues}: null
       - $if popover.mode == 'editInitialValue':
           - rtgl-view slot=content:
               - rtgl-form#editInitialValueForm :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null
-  - rtgl-popover#selectedKeyframeNumberPopover ?open=${selectedKeyframeNumberPopoverIsOpen} x=${popover.x} y=${popover.y} content-w=220 content-g=sm content-ph=md content-pv=md content-bgc=su:
-      - $if showSelectedKeyframeDelayPopover:
-          - rtgl-input-number#selectedKeyframeNumberInput key=${popover.mode} w=f min=0 step=1 value=${popover.formValues.value}: null
-      - $if showSelectedKeyframeDurationPopover:
-          - rtgl-input-number#selectedKeyframeNumberInput key=${popover.mode} w=f min=1 step=1 value=${popover.formValues.value}: null
-      - $if showSelectedKeyframeValuePopover:
-          - rtgl-input-number#selectedKeyframeNumberInput key=${popover.mode} w=f step=any value=${popover.formValues.value}: null
-      - $if showSelectedKeyframeDelayPopover || showSelectedKeyframeDurationPopover || showSelectedKeyframeValuePopover:
-          - rtgl-view d=h w=f ah=e pt=xs:
-              - rtgl-button#selectedKeyframeNumberConfirm s=sm v=pr: ${doneButton}
   - $if showAddPropertyDialog:
       - rtgl-dialog#addPropertyDialog ?open=${showAddPropertyDialog} s=sm:
           - rtgl-form#addPropertyForm key=${addPropertyFormKey} slot=content :form=${addPropertyForm} :context=${addPropertyContext} :defaultValues=${addPropertyFormDefaultValues} w=f: null

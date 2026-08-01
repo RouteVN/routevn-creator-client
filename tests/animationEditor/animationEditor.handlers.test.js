@@ -8,9 +8,10 @@ import {
   handleAddPropertyFormSubmit,
   handleBeforeMount,
   handleConfirmMaskImageSelection,
+  handleEditKeyframeFormSubmit,
   handleEditMaskClick,
+  handleEditSelectedKeyframeClick,
   handleEditorSurfaceClick,
-  handleEditorPopoverPositioned,
   handleKeyframeClick,
   handleKeyframeSelect,
   handleKeyframeDurationChange,
@@ -23,14 +24,6 @@ import {
   handleReplayAnimation,
   handleRulerTimeScrub,
   handleSavePreviewClick,
-  handleSelectedKeyframeDelayClick,
-  handleSelectedKeyframeEasingChange,
-  handleSelectedKeyframeDurationClick,
-  handleSelectedKeyframeNumberConfirmClick,
-  handleSelectedKeyframeNumberInputChange,
-  handleSelectedKeyframeNumberInputKeyDown,
-  handleSelectedKeyframeValueClick,
-  handleSelectedKeyframeValueTypeChange,
   handleTimelineZoomChange,
   handleTimelineZoomIn,
   handleTimelineZoomOut,
@@ -57,6 +50,10 @@ describe("animationEditor.handlers", () => {
   it("registers the animation autosave navigation guard and cleanup", async () => {
     let beforeNavigation;
     const unregisterBeforeNavigation = vi.fn();
+    const cleanupWindowEvent = vi.fn();
+    const browserEventsClient = {
+      subscribeWindowEvent: vi.fn(() => cleanupWindowEvent),
+    };
     const store = {
       ...createIdleAutosaveMocks(),
       selectPreviewPlaybackFrameId: vi.fn(() => 42),
@@ -75,6 +72,7 @@ describe("animationEditor.handlers", () => {
             return unregisterBeforeNavigation;
           }),
         },
+        browserEventsClient,
         store,
         uiConfig: { mode: "desktop" },
       });
@@ -86,6 +84,8 @@ describe("animationEditor.handlers", () => {
         uiConfig: { mode: "desktop" },
       });
       expect(unregisterBeforeNavigation).toHaveBeenCalledOnce();
+      expect(browserEventsClient.subscribeWindowEvent).toHaveBeenCalledTimes(3);
+      expect(cleanupWindowEvent).toHaveBeenCalledTimes(3);
       expect(store.setPreviewPlaybackRequestId).toHaveBeenCalledWith({
         requestId: undefined,
       });
@@ -500,12 +500,30 @@ describe("animationEditor.handlers", () => {
   });
 
   it("opens touch editing surfaces when timeline items are tapped", () => {
+    const selectedKeyframe = {
+      side: "prev",
+      property: "alpha",
+      index: 2,
+    };
+    const formValues = {
+      delay: 200,
+      duration: 600,
+      easing: "linear",
+      relative: false,
+      value: 1,
+    };
     const store = {
       closePopover: vi.fn(),
       selectIsTouchMode: vi.fn(() => true),
+      selectSelectedKeyframe: vi.fn(() => selectedKeyframe),
+      selectSelectedKeyframeFormValues: vi.fn(() => formValues),
       setPopover: vi.fn(),
       setSelectedKeyframe: vi.fn(),
       setSelectedProperty: vi.fn(),
+    };
+    const editKeyframeForm = {
+      reset: vi.fn(),
+      setValues: vi.fn(),
     };
     const render = vi.fn();
 
@@ -531,7 +549,7 @@ describe("animationEditor.handlers", () => {
     expect(store.closePopover).toHaveBeenCalledOnce();
 
     handleKeyframeClick(
-      { store, render },
+      { refs: { editKeyframeForm }, store, render },
       {
         _event: {
           detail: {
@@ -550,6 +568,10 @@ describe("animationEditor.handlers", () => {
       x: 40,
       y: 80,
       payload: { side: "prev", property: "alpha", index: 2 },
+    });
+    expect(editKeyframeForm.reset).toHaveBeenCalledOnce();
+    expect(editKeyframeForm.setValues).toHaveBeenCalledWith({
+      values: formValues,
     });
 
     handlePropertyNameClick(
@@ -718,330 +740,95 @@ describe("animationEditor.handlers", () => {
     },
   );
 
-  it("updates selected keyframe easing and value type from the detail panel", () => {
-    const store = {
-      bumpPreviewRenderVersion: vi.fn(),
-      queueAutosave: vi.fn(),
-      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
-      setSelectedKeyframeEasing: vi.fn(),
-      setSelectedKeyframeRelative: vi.fn(),
-      stopPreviewPlayback: vi.fn(),
-      ...createIdleAutosaveMocks(),
+  it("opens and explicitly prefills keyframe editing from the detail panel", () => {
+    const selectedKeyframe = {
+      side: "update",
+      property: "x",
+      index: 1,
     };
-    const render = vi.fn();
-
-    handleSelectedKeyframeEasingChange(
-      { store, render },
-      {
-        _event: {
-          detail: { value: "easeInOutQuad" },
-        },
-      },
-    );
-    handleSelectedKeyframeValueTypeChange(
-      { store, render },
-      {
-        _event: {
-          detail: { value: "absolute" },
-        },
-      },
-    );
-
-    expect(store.setSelectedKeyframeEasing).toHaveBeenCalledWith({
+    const values = {
+      delay: 200,
+      duration: 800,
       easing: "easeInOutQuad",
-    });
-    expect(store.setSelectedKeyframeRelative).toHaveBeenCalledWith({
-      relative: false,
-    });
-    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledTimes(2);
-    expect(store.queueAutosave).toHaveBeenCalledTimes(2);
-    expect(render).toHaveBeenCalledTimes(2);
-  });
-
-  it("debounces animation changes into one latest snapshot", async () => {
-    vi.useFakeTimers();
-    try {
-      let autosaveVersion = 0;
-      let autosavePersistedVersion = 0;
-      let autosaveInFlight = false;
-      let autosaveTimerId;
-      let autosavePendingSinceAt;
-      let lastAutosaveFlushStartedAt;
-      let autosavePersistedFingerprint;
-      let easing = "linear";
-      const store = {
-        bumpPreviewRenderVersion: vi.fn(),
-        clearAutosaveTimer: vi.fn(() => {
-          autosaveTimerId = undefined;
-        }),
-        markAutosavePersisted: vi.fn(({ version, fingerprint }) => {
-          autosavePersistedVersion = version;
-          autosavePersistedFingerprint = fingerprint;
-        }),
-        queueAutosave: vi.fn(() => {
-          autosaveVersion += 1;
-        }),
-        selectAnimationDescription: vi.fn(() => "Description"),
-        selectAnimationName: vi.fn(() => "Animation"),
-        selectAutosaveInFlight: vi.fn(() => autosaveInFlight),
-        selectAutosavePendingSinceAt: vi.fn(() => autosavePendingSinceAt),
-        selectAutosavePersistedFingerprint: vi.fn(
-          () => autosavePersistedFingerprint,
-        ),
-        selectAutosavePersistedVersion: vi.fn(() => autosavePersistedVersion),
-        selectAutosaveTimerId: vi.fn(() => autosaveTimerId),
-        selectAutosaveVersion: vi.fn(() => autosaveVersion),
-        selectDialogType: vi.fn(() => "update"),
-        selectEditItemId: vi.fn(() => "animation-1"),
-        selectEditMode: vi.fn(() => true),
-        selectLastAutosaveFlushStartedAt: vi.fn(
-          () => lastAutosaveFlushStartedAt,
-        ),
-        selectPreviewPlaybackFrameId: vi.fn(() => undefined),
-        selectProperties: vi.fn(() => ({
-          x: {
-            keyframes: [
-              {
-                duration: 1000,
-                easing,
-                relative: false,
-                value: 10,
-              },
-            ],
-          },
-        })),
-        selectTargetGroupId: vi.fn(() => "group-1"),
-        setAutosaveInFlight: vi.fn(({ inFlight }) => {
-          autosaveInFlight = inFlight;
-        }),
-        setAutosavePendingSinceAt: vi.fn(({ timestamp }) => {
-          autosavePendingSinceAt = timestamp;
-        }),
-        setAutosaveTimerId: vi.fn(({ timerId }) => {
-          autosaveTimerId = timerId;
-        }),
-        setItems: vi.fn(),
-        setLastAutosaveFlushStartedAt: vi.fn(({ timestamp }) => {
-          lastAutosaveFlushStartedAt = timestamp;
-        }),
-        setSelectedItemId: vi.fn(),
-        setSelectedKeyframeEasing: vi.fn(({ easing: nextEasing }) => {
-          easing = nextEasing;
-        }),
-        stopPreviewPlayback: vi.fn(),
-      };
-      const projectService = {
-        getRepositoryState: vi.fn(() => ({
-          animations: { items: {}, tree: [] },
-        })),
-        updateAnimation: vi.fn(async () => ({ valid: true })),
-      };
-      const deps = {
-        appService: { showAlert: vi.fn() },
-        i18n: EN_I18N,
-        projectService,
-        render: vi.fn(),
-        store,
-      };
-
-      handleSelectedKeyframeEasingChange(deps, {
-        _event: { detail: { value: "easeInQuad" } },
-      });
-      await vi.advanceTimersByTimeAsync(400);
-      handleSelectedKeyframeEasingChange(deps, {
-        _event: { detail: { value: "easeOutQuad" } },
-      });
-
-      await vi.advanceTimersByTimeAsync(899);
-      expect(projectService.updateAnimation).not.toHaveBeenCalled();
-
-      await vi.advanceTimersByTimeAsync(1);
-      expect(projectService.updateAnimation).toHaveBeenCalledOnce();
-      expect(projectService.updateAnimation).toHaveBeenCalledWith({
-        animationId: "animation-1",
-        data: {
-          name: "Animation",
-          description: "Description",
-          animation: {
-            type: "update",
-            tween: {
-              x: {
-                keyframes: [
-                  {
-                    duration: 1000,
-                    easing: "easeOutQuad",
-                    relative: false,
-                    value: 10,
-                  },
-                ],
-              },
-            },
-          },
-        },
-      });
-
-      handleSelectedKeyframeEasingChange(deps, {
-        _event: { detail: { value: "easeOutQuad" } },
-      });
-      await vi.advanceTimersByTimeAsync(1000);
-
-      expect(projectService.updateAnimation).toHaveBeenCalledOnce();
-      expect(autosavePersistedVersion).toBe(3);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("opens number popovers for selected keyframe delay, duration, and value", () => {
+      relative: true,
+      value: 20,
+    };
     const store = {
-      selectSelectedKeyframeDelay: vi.fn(() => 250),
-      selectSelectedKeyframeDuration: vi.fn(() => 900),
-      selectSelectedKeyframeValue: vi.fn(() => 12.5),
+      selectSelectedKeyframe: vi.fn(() => selectedKeyframe),
+      selectSelectedKeyframeFormValues: vi.fn(() => values),
       setPopover: vi.fn(),
-      updatePopoverFormValues: vi.fn(),
+    };
+    const editKeyframeForm = {
+      reset: vi.fn(),
+      setValues: vi.fn(),
     };
     const render = vi.fn();
 
-    handleSelectedKeyframeDelayClick(
-      { store, render },
-      { _event: { clientX: 10, clientY: 20 } },
-    );
-    handleSelectedKeyframeDurationClick(
-      { store, render },
-      { _event: { clientX: 20, clientY: 40 } },
-    );
-    handleSelectedKeyframeValueClick(
-      { store, render },
-      { _event: { clientX: 60, clientY: 80 } },
-    );
+    handleEditSelectedKeyframeClick({
+      refs: { editKeyframeForm },
+      render,
+      store,
+    });
 
-    expect(store.setPopover).toHaveBeenNthCalledWith(1, {
-      mode: "editSelectedKeyframeDelay",
-      x: 10,
-      y: 20,
-      payload: {},
+    expect(store.setPopover).toHaveBeenCalledWith({
+      mode: "editKeyframe",
+      x: 0,
+      y: 0,
+      payload: selectedKeyframe,
     });
-    expect(store.setPopover).toHaveBeenNthCalledWith(2, {
-      mode: "editSelectedKeyframeDuration",
-      x: 20,
-      y: 40,
-      payload: {},
-    });
-    expect(store.setPopover).toHaveBeenNthCalledWith(3, {
-      mode: "editSelectedKeyframeValue",
-      x: 60,
-      y: 80,
-      payload: {},
-    });
-    expect(store.updatePopoverFormValues).toHaveBeenNthCalledWith(1, {
-      formValues: { value: 250 },
-    });
-    expect(store.updatePopoverFormValues).toHaveBeenNthCalledWith(2, {
-      formValues: { value: 900 },
-    });
-    expect(store.updatePopoverFormValues).toHaveBeenNthCalledWith(3, {
-      formValues: { value: 12.5 },
-    });
-    expect(render).toHaveBeenCalledTimes(3);
+    expect(render).toHaveBeenCalledOnce();
+    expect(editKeyframeForm.reset).toHaveBeenCalledOnce();
+    expect(editKeyframeForm.setValues).toHaveBeenCalledWith({ values });
   });
 
-  it("tracks the selected keyframe number input draft", () => {
-    const store = {
-      selectPopover: vi.fn(() => ({
-        formValues: { value: 10 },
-      })),
-      updatePopoverFormValues: vi.fn(),
-    };
-
-    handleSelectedKeyframeNumberInputChange(
-      { store },
-      { _event: { detail: { value: 25 } } },
-    );
-
-    expect(store.updatePopoverFormValues).toHaveBeenCalledWith({
-      formValues: { value: 25 },
-    });
-  });
-
-  it("confirms selected keyframe number inputs and closes the popover", () => {
-    let popover = {
-      mode: "editSelectedKeyframeDelay",
-      formValues: { value: 300 },
-    };
+  it("updates delay and keyframe values through the edit dialog", () => {
     const store = {
       bumpPreviewRenderVersion: vi.fn(),
       closePopover: vi.fn(),
       queueAutosave: vi.fn(),
-      selectPopover: vi.fn(() => popover),
+      selectPopover: vi.fn(() => ({
+        payload: { side: "update", property: "x", index: 1 },
+      })),
       selectPreviewPlaybackFrameId: vi.fn(() => undefined),
-      setSelectedKeyframeDelay: vi.fn(),
-      setSelectedKeyframeDuration: vi.fn(),
-      setSelectedKeyframeValue: vi.fn(),
       stopPreviewPlayback: vi.fn(),
+      updateKeyframe: vi.fn(),
       ...createIdleAutosaveMocks(),
     };
     const render = vi.fn();
 
-    handleSelectedKeyframeNumberConfirmClick({ store, render });
-    popover = {
-      mode: "editSelectedKeyframeDuration",
-      formValues: { value: 850 },
-    };
-    handleSelectedKeyframeNumberConfirmClick({ store, render });
-    popover = {
-      mode: "editSelectedKeyframeValue",
-      formValues: { value: -4.5 },
-    };
-    handleSelectedKeyframeNumberConfirmClick({ store, render });
-
-    expect(store.setSelectedKeyframeDelay).toHaveBeenCalledWith({ delay: 300 });
-    expect(store.setSelectedKeyframeDuration).toHaveBeenCalledWith({
-      duration: 850,
-    });
-    expect(store.setSelectedKeyframeValue).toHaveBeenCalledWith({
-      value: -4.5,
-    });
-    expect(store.closePopover).toHaveBeenCalledTimes(3);
-    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledTimes(3);
-    expect(store.queueAutosave).toHaveBeenCalledTimes(3);
-    expect(render).toHaveBeenCalledTimes(3);
-  });
-
-  it("focuses the number input after its popover is positioned", () => {
-    const focus = vi.fn();
-    handleEditorPopoverPositioned({
-      refs: { selectedKeyframeNumberInput: { focus } },
-      store: {
-        selectPopover: vi.fn(() => ({
-          mode: "editSelectedKeyframeDelay",
-        })),
-      },
-    });
-
-    expect(focus).toHaveBeenCalled();
-  });
-
-  it("closes a selected keyframe number popover with Escape", () => {
-    const store = { closePopover: vi.fn() };
-    const render = vi.fn();
-    const preventDefault = vi.fn();
-    const stopPropagation = vi.fn();
-
-    handleSelectedKeyframeNumberInputKeyDown(
+    handleEditKeyframeFormSubmit(
       { store, render },
       {
         _event: {
-          key: "Escape",
-          preventDefault,
-          stopPropagation,
+          detail: {
+            values: {
+              delay: 250,
+              duration: 750,
+              easing: "easeOutQuad",
+              relative: false,
+              value: 80,
+            },
+          },
         },
       },
     );
 
-    expect(preventDefault).toHaveBeenCalled();
-    expect(stopPropagation).toHaveBeenCalled();
-    expect(store.closePopover).toHaveBeenCalled();
-    expect(render).toHaveBeenCalled();
+    expect(store.updateKeyframe).toHaveBeenCalledWith({
+      side: "update",
+      property: "x",
+      index: 1,
+      keyframe: {
+        delay: 250,
+        duration: 750,
+        easing: "easeOutQuad",
+        relative: false,
+        value: 80,
+      },
+    });
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
+    expect(store.closePopover).toHaveBeenCalledOnce();
+    expect(store.queueAutosave).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
   });
 
   it("opens a pending transition mask from the right panel", () => {

@@ -190,6 +190,27 @@ describe("keyframeTimeline easing curves", () => {
     expect(autoProperty.valueCurvePath).toBeUndefined();
   });
 
+  it("uses non-interactive cursors for read-only keyframes", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        editable: false,
+        properties: {
+          x: {
+            initialValue: 0,
+            keyframes: [{ duration: 500, value: 100 }],
+          },
+        },
+      },
+    });
+
+    expect(viewData.editable).toBe(false);
+    expect(viewData.selectedProperties[0]).toMatchObject({
+      initialValueCursor: "default",
+      keyframes: [{ cursor: "default" }],
+    });
+  });
+
   it("renders decorative SVG paths without replacing keyframe click targets", () => {
     const view = readFileSync(
       "src/components/keyframeTimeline/keyframeTimeline.view.yaml",
@@ -217,6 +238,9 @@ describe("keyframeTimeline easing curves", () => {
     );
     expect(view).toMatch(
       /data-keyframe-duration-handle=right[^\n]+cursor: ew-resize/,
+    );
+    expect(view.indexOf("$if editable:")).toBeLessThan(
+      view.indexOf("data-keyframe-duration-handle=left"),
     );
     expect(view).toMatch(/durationHandle[^\n]+[\s\S]+pos=abs bgc=fg/);
     expect(view).toContain("top: 5px; bottom: 5px; left: 6px; width: 1px");
@@ -333,6 +357,7 @@ describe("keyframeTimeline easing curves", () => {
     const viewData = selectViewData({
       state,
       props: {
+        editable: true,
         side: "update",
         properties: {
           x: {
@@ -370,6 +395,7 @@ describe("keyframeTimeline easing curves", () => {
     const viewData = selectViewData({
       state,
       props: {
+        editable: true,
         side: "update",
         properties: {
           x: {

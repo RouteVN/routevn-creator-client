@@ -414,6 +414,7 @@ describe("keyframeTimeline.handlers", () => {
 
     handleDurationResizeStart(deps, {
       _event: {
+        button: 0,
         clientX: 100,
         currentTarget: handleElement,
         pointerId: 7,
@@ -456,6 +457,33 @@ describe("keyframeTimeline.handlers", () => {
       },
     });
     expect(store.clearDurationResize).toHaveBeenCalledWith({});
+  });
+
+  it("ignores non-primary pointer resize starts", () => {
+    const store = {
+      startDurationResize: vi.fn(),
+    };
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    handleDurationResizeStart(
+      {
+        props: { editable: true },
+        render: vi.fn(),
+        store,
+      },
+      {
+        _event: {
+          button: 2,
+          preventDefault,
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(store.startDurationResize).not.toHaveBeenCalled();
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(stopPropagation).not.toHaveBeenCalled();
   });
 
   it("drags a keyframe start handle without moving its end", () => {
@@ -512,6 +540,7 @@ describe("keyframeTimeline.handlers", () => {
 
     handleDurationResizeStart(deps, {
       _event: {
+        button: 0,
         clientX: 100,
         currentTarget: handleElement,
         pointerId: 9,
