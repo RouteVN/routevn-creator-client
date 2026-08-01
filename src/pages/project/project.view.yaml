@@ -136,7 +136,7 @@ template:
                   - $if isSceneTextLoading:
                       - rtgl-text c=mu-fg: ${i18n.projectPage.loadingSceneTextAnalytics}
                     $elif hasSceneTextError:
-                      - rtgl-text c=mu-fg: ${i18n.projectPage.sceneTextAnalyticsUnavailable}
+                      - rtgl-text#sceneTextStatsError c=mu-fg: ${i18n.projectPage.sceneTextAnalyticsUnavailable}
                     $elif sceneTextStats.length == 0:
                       - rtgl-text c=mu-fg: ${i18n.projectPage.noScenes}
                     $else:

@@ -44,7 +44,9 @@ describe("project page view", () => {
       "rtgl-view#analyticsSection w=f d=v g=lg ph=md pt=lg bwt=xs bc=bo",
     );
     expect(projectView).toContain("rtgl-text s=h4: ${group.label}");
-    expect(projectView).not.toContain("${i18n.projectPage.resourceCountsTitle}");
+    expect(projectView).not.toContain(
+      "${i18n.projectPage.resourceCountsTitle}",
+    );
     expect(projectView).not.toContain("${i18n.resourceTypes.characters}");
     expect(projectView).toContain("$for group, groupIndex in resourceGroups");
     expect(projectView).toContain(
@@ -62,7 +64,9 @@ describe("project page view", () => {
     expect(projectView).toContain("sceneTextRow*:");
     expect(projectView).toContain("handler: handleAnalyticsLinkClick");
     expect(projectView).toContain("handler: handleAnalyticsLinkKeyDown");
-    expect(projectView).toContain("data-resource-key=${resource.key} role=link tabindex=0");
+    expect(projectView).toContain(
+      "data-resource-key=${resource.key} role=link tabindex=0",
+    );
     expect(projectView).toContain(
       "flex: 0 1 128px; min-width: 112px; max-width: 128px;",
     );
@@ -79,15 +83,26 @@ describe("project page view", () => {
     );
     expect(projectView).not.toContain("${character.imageCount}");
     expect(projectView).not.toContain("${character.spritesheetCount}");
-    expect(projectView).toContain("#sceneCountTotal data-resource-key=scenes role=link tabindex=0 w=128");
-    expect(projectView).toContain("#sceneTextTotal data-resource-key=scenes role=link tabindex=0 w=128");
-    expect(projectView).toContain("data-character-id=${character.id} role=link tabindex=0");
-    expect(projectView).toContain("data-resource-key=scenes role=link tabindex=0");
-    expect(projectView).toContain("data-scene-id=${scene.id} role=link tabindex=0");
+    expect(projectView).toContain(
+      "#sceneCountTotal data-resource-key=scenes role=link tabindex=0 w=128",
+    );
+    expect(projectView).toContain(
+      "#sceneTextTotal data-resource-key=scenes role=link tabindex=0 w=128",
+    );
+    expect(projectView).toContain(
+      "data-character-id=${character.id} role=link tabindex=0",
+    );
+    expect(projectView).toContain(
+      "data-resource-key=scenes role=link tabindex=0",
+    );
+    expect(projectView).toContain(
+      "data-scene-id=${scene.id} role=link tabindex=0",
+    );
     expect(projectView).toContain("${i18n.projectPage.scenesTitle}");
     expect(projectView).not.toContain("${i18n.projectPage.sceneTextTitle}");
     expect(projectView).toContain("${sceneCountLabel}");
     expect(projectView).toContain("${sceneCount}");
+    expect(projectView).toContain("rtgl-text#sceneTextStatsError");
     expect(projectView).toContain(
       "rtgl-text s=sm c=mu-fg w=1fg: ${sceneTextCountLabel}",
     );
