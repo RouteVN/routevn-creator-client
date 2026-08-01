@@ -61,12 +61,6 @@ refs:
         handler: handleAnalyticsLinkClick
       keydown:
         handler: handleAnalyticsLinkKeyDown
-  sceneTextTotal:
-    eventListeners:
-      click:
-        handler: handleAnalyticsLinkClick
-      keydown:
-        handler: handleAnalyticsLinkKeyDown
   sceneCountTotal:
     eventListeners:
       click:
@@ -133,10 +127,6 @@ template:
                       - 'rtgl-view#sceneCountTotal data-resource-key=scenes role=link tabindex=0 w=128 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="max-width: 100%; font-variant-numeric: tabular-nums;"':
                           - rtgl-text s=sm c=mu-fg: ${sceneCountLabel}
                           - rtgl-text s=h3: ${sceneCount}
-                      - $if !isSceneTextLoading && !hasSceneTextError && sceneTextStats.length > 0:
-                          - 'rtgl-view#sceneTextTotal data-resource-key=scenes role=link tabindex=0 w=128 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="max-width: 100%; font-variant-numeric: tabular-nums;"':
-                              - rtgl-text s=sm c=mu-fg: ${totalTextCountLabel}
-                              - rtgl-text s=h3: ${totalTextCount}
                   - $if isSceneTextLoading:
                       - rtgl-text c=mu-fg: ${i18n.projectPage.loadingSceneTextAnalytics}
                     $elif hasSceneTextError:
@@ -149,11 +139,17 @@ template:
                       - 'rtgl-view#sceneTextStatsTable bw=xs bc=bo br=md style="width: min(100%, 672px); max-width: 672px; align-self: flex-start;"':
                           - rtgl-view w=f d=h g=md p=md bgc=su bwb=xs bc=bo:
                               - rtgl-text s=sm c=mu-fg w=1fg: ${i18n.projectPage.sceneLabel}
+                              - rtgl-text s=sm c=mu-fg w=1fg: ${sceneLineCountLabel}
                               - rtgl-text s=sm c=mu-fg w=1fg: ${sceneTextCountLabel}
                           - $for scene, i in sceneTextStats:
                               - rtgl-view#sceneTextRow${i} data-scene-id=${scene.id} role=link tabindex=0 w=f d=h g=md p=md bwb=xs bc=bo av=c h-bgc=mu cur=pointer:
                                   - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0;"': ${scene.name}
+                                  - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${scene.lineCount}
                                   - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${scene.textCount}
+                          - rtgl-view#sceneTextTotalRow w=f d=h g=md p=md bgc=su av=c:
+                              - rtgl-text s=sm w=1fg: ${i18n.projectPage.totalLabel}
+                              - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${totalLineCount}
+                              - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${totalTextCount}
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:

@@ -162,6 +162,7 @@ projectPage:
   failedSelectProjectIcon: "Failed to select project icon."
   failedUploadProjectIcon: "Failed to upload project icon."
   loadingSceneTextAnalytics: "Loading scene text analytics..."
+  linesLabel: "Lines"
   noScenes: "No scenes yet."
   noLocalProjectOpen: "No local project is currently open."
   projectIconCropNotReady: "Project icon crop is not ready."
@@ -176,9 +177,7 @@ projectPage:
   scenesTitle: "Scenes"
   selectExportFolderTitle: "Select Export Folder"
   spritesLabel: "Sprites"
-  totalCharactersLabel: "Total Characters"
-  totalScenesLabel: "Total Scenes"
-  totalWordsLabel: "Total Words"
+  totalLabel: "Total"
   warningTitle: "Warning"
   wordsLabel: "Words"
 appPage:

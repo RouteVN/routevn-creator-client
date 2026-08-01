@@ -175,10 +175,15 @@ export const selectViewData = ({ state, i18n }) => {
     : state.analytics.scenes.map((scene) => ({
         id: scene.id,
         name: scene.name,
+        lineCount: scene.textStats.lineCount,
         textCount: showCharacterCount
           ? scene.textStats.characterCount
           : scene.textStats.wordCount,
       }));
+  const totalLineCount = sceneTextStats.reduce(
+    (total, scene) => total + scene.lineCount,
+    0,
+  );
   const totalTextCount = sceneTextStats.reduce(
     (total, scene) => total + scene.textCount,
     0,
@@ -287,17 +292,17 @@ export const selectViewData = ({ state, i18n }) => {
     })),
     sceneTextStats: sceneTextStats.map((scene) => ({
       ...scene,
+      lineCount: formatCount(scene.lineCount),
       textCount: formatCount(scene.textCount),
     })),
     sceneCount: formatCount(state.analytics.scenes.length),
-    sceneCountLabel: copy.totalScenesLabel,
+    sceneCountLabel: copy.scenesTitle,
     sceneTextCountLabel: showCharacterCount
       ? copy.charactersLabel
       : copy.wordsLabel,
+    sceneLineCountLabel: copy.linesLabel,
+    totalLineCount: formatCount(totalLineCount),
     totalTextCount: formatCount(totalTextCount),
-    totalTextCountLabel: showCharacterCount
-      ? copy.totalCharactersLabel
-      : copy.totalWordsLabel,
     hasSceneTextError,
     isSceneTextLoading,
     showNativeProjectActions:

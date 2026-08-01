@@ -162,6 +162,7 @@ projectPage:
   failedSelectProjectIcon: "无法选择项目图标。"
   failedUploadProjectIcon: "无法上传项目图标。"
   loadingSceneTextAnalytics: "正在加载场景文本数据..."
+  linesLabel: "行数"
   noScenes: "还没有场景。"
   noLocalProjectOpen: "当前没有打开本地项目。"
   projectIconCropNotReady: "项目图标裁剪尚未准备好。"
@@ -176,9 +177,7 @@ projectPage:
   scenesTitle: "场景"
   selectExportFolderTitle: "选择导出文件夹"
   spritesLabel: "立绘"
-  totalCharactersLabel: "总字符数"
-  totalScenesLabel: "场景总数"
-  totalWordsLabel: "总词数"
+  totalLabel: "总计"
   warningTitle: "警告"
   wordsLabel: "词数"
 appPage:

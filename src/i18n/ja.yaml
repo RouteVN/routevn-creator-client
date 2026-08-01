@@ -162,6 +162,7 @@ projectPage:
   failedSelectProjectIcon: "プロジェクトアイコンを選択できませんでした。"
   failedUploadProjectIcon: "プロジェクトアイコンをアップロードできませんでした。"
   loadingSceneTextAnalytics: "シーンのテキスト量を読み込んでいます..."
+  linesLabel: "行数"
   noScenes: "シーンはまだありません。"
   noLocalProjectOpen: "現在開いているローカルプロジェクトはありません。"
   projectIconCropNotReady: "プロジェクトアイコンのトリミング準備ができていません。"
@@ -176,9 +177,7 @@ projectPage:
   scenesTitle: "シーン"
   selectExportFolderTitle: "出力先フォルダーを選択"
   spritesLabel: "立ち絵"
-  totalCharactersLabel: "合計文字数"
-  totalScenesLabel: "シーン数"
-  totalWordsLabel: "合計単語数"
+  totalLabel: "合計"
   warningTitle: "警告"
   wordsLabel: "単語数"
 appPage:

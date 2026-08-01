@@ -141,6 +141,7 @@ describe("project page store", () => {
               id: "scene-1",
               name: "Opening",
               textStats: {
+                lineCount: 42,
                 wordCount: 1_234,
                 characterCount: 5_678,
                 language: "en",
@@ -175,14 +176,16 @@ describe("project page store", () => {
       {
         id: "scene-1",
         name: "Opening",
+        lineCount: "42",
         textCount: "1,234",
       },
     ]);
+    expect(viewData.sceneLineCountLabel).toBe("Lines");
     expect(viewData.sceneTextCountLabel).toBe("Words");
     expect(viewData.sceneCount).toBe("1");
-    expect(viewData.sceneCountLabel).toBe("Total Scenes");
+    expect(viewData.sceneCountLabel).toBe("Scenes");
+    expect(viewData.totalLineCount).toBe("42");
     expect(viewData.totalTextCount).toBe("1,234");
-    expect(viewData.totalTextCountLabel).toBe("Total Words");
     expect(viewData.isSceneTextLoading).toBe(false);
 
     setCurrentProject(
@@ -209,6 +212,7 @@ describe("project page store", () => {
               id: "scene-1",
               name: "Opening",
               textStats: {
+                lineCount: 56,
                 wordCount: 1_234,
                 characterCount: 5_678,
                 language: "ja",
@@ -221,10 +225,11 @@ describe("project page store", () => {
 
     const japaneseViewData = selectViewData({ state, i18n: EN_I18N });
 
+    expect(japaneseViewData.sceneTextStats[0].lineCount).toBe("56");
     expect(japaneseViewData.sceneTextStats[0].textCount).toBe("5,678");
+    expect(japaneseViewData.totalLineCount).toBe("56");
     expect(japaneseViewData.sceneTextCountLabel).toBe("Characters");
     expect(japaneseViewData.totalTextCount).toBe("5,678");
-    expect(japaneseViewData.totalTextCountLabel).toBe("Total Characters");
     expect(japaneseViewData.isSceneTextLoading).toBe(false);
   });
 

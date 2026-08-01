@@ -60,7 +60,6 @@ describe("project page view", () => {
     expect(projectView).toContain("resourceCount*:");
     expect(projectView).toContain("characterResourceRow*:");
     expect(projectView).toContain("sceneCountTotal:");
-    expect(projectView).toContain("sceneTextTotal:");
     expect(projectView).toContain("sceneTextRow*:");
     expect(projectView).toContain("handler: handleAnalyticsLinkClick");
     expect(projectView).toContain("handler: handleAnalyticsLinkKeyDown");
@@ -86,8 +85,9 @@ describe("project page view", () => {
     expect(projectView).toContain(
       "#sceneCountTotal data-resource-key=scenes role=link tabindex=0 w=128",
     );
-    expect(projectView).toContain(
-      "#sceneTextTotal data-resource-key=scenes role=link tabindex=0 w=128",
+    expect(projectView).not.toContain("#sceneLineTotal");
+    expect(projectView).not.toContain(
+      "#sceneTextTotal data-resource-key=scenes",
     );
     expect(projectView).toContain(
       "data-character-id=${character.id} role=link tabindex=0",
@@ -102,6 +102,14 @@ describe("project page view", () => {
     expect(projectView).not.toContain("${i18n.projectPage.sceneTextTitle}");
     expect(projectView).toContain("${sceneCountLabel}");
     expect(projectView).toContain("${sceneCount}");
+    expect(projectView).toContain("${totalLineCount}");
+    expect(projectView).toContain("${sceneLineCountLabel}");
+    expect(projectView).toContain("${scene.lineCount}");
+    expect(projectView).toContain("rtgl-view#sceneTextTotalRow");
+    expect(projectView).toContain("${i18n.projectPage.totalLabel}");
+    expect(projectView.indexOf("${totalLineCount}")).toBeLessThan(
+      projectView.indexOf("${totalTextCount}"),
+    );
     expect(projectView).toContain("sceneTextStatsError");
     expect(projectView).toContain("sceneTextAnalyticsRetry:");
     expect(projectView).toContain("handler: handleSceneTextAnalyticsRetry");
