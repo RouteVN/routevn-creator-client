@@ -4,14 +4,20 @@ import {
 } from "../../internal/projectResolution.js";
 import {
   DEFAULT_PROJECT_LANGUAGE,
+  getProjectLanguageTextCountMode,
   normalizeProjectLanguage,
+  PROJECT_TEXT_COUNT_MODE_CHARACTER,
 } from "../../internal/projectLanguage.js";
 import {
   createProjectLanguageOptions,
   selectProjectLanguageCopy,
   selectProjectLanguageLabel,
 } from "../../internal/ui/projectLanguage.js";
+import { buildProjectAnalytics } from "./support/projectAnalytics.js";
 import { selectProjectPageCopy } from "./support/projectPageCopy.js";
+
+const formatCount = (value) =>
+  Math.max(0, Math.trunc(Number(value) || 0)).toLocaleString();
 
 export const createInitialState = () => ({
   platform: "web",
@@ -39,6 +45,9 @@ export const createInitialState = () => ({
   },
   editIconFileId: undefined,
   editIconCropFile: undefined,
+  projectAnalyticsRequestId: 0,
+  sceneTextAnalyticsStatus: "loading",
+  analytics: buildProjectAnalytics(),
 });
 
 export const setPlatform = ({ state }, { platform } = {}) => {
@@ -103,6 +112,20 @@ export const setEditIconFileId = ({ state }, { iconFileId } = {}) => {
   state.editIconFileId = iconFileId;
 };
 
+export const setProjectAnalytics = ({ state }, { analytics } = {}) => {
+  state.analytics.resourceGroups = analytics?.resourceGroups ?? [];
+  state.analytics.characterResources = analytics?.characterResources ?? [];
+  state.analytics.scenes = analytics?.scenes ?? [];
+};
+
+export const setProjectAnalyticsRequestId = ({ state }, { requestId } = {}) => {
+  state.projectAnalyticsRequestId = requestId;
+};
+
+export const setSceneTextAnalyticsStatus = ({ state }, { status } = {}) => {
+  state.sceneTextAnalyticsStatus = status;
+};
+
 export const openEditIconCropDialog = ({ state }, { file } = {}) => {
   state.isEditIconCropDialogOpen = true;
   state.editIconCropFile = file;
@@ -125,13 +148,46 @@ export const selectCurrentProject = ({ state }) => {
   return state.project;
 };
 
+export const selectProjectAnalyticsRequestId = ({ state }) => {
+  return state.projectAnalyticsRequestId;
+};
+
 export const selectIsEditIconCropDialogOpen = ({ state }) => {
   return Boolean(state.isEditIconCropDialogOpen);
 };
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectProjectPageCopy(i18n);
+  const resourceTypeCopy = i18n.resourceTypes ?? {};
   const projectLanguageCopy = selectProjectLanguageCopy(i18n);
+  const showCharacterCount =
+    getProjectLanguageTextCountMode(state.project.language) ===
+    PROJECT_TEXT_COUNT_MODE_CHARACTER;
+  const hasMissingSceneTextStats = state.analytics.scenes.some(
+    (scene) => scene.textStats?.language !== state.project.language,
+  );
+  const hasSceneTextError = state.sceneTextAnalyticsStatus === "error";
+  const isSceneTextLoading =
+    state.sceneTextAnalyticsStatus === "loading" ||
+    (!hasSceneTextError && hasMissingSceneTextStats);
+  const sceneTextStats = hasMissingSceneTextStats
+    ? []
+    : state.analytics.scenes.map((scene) => ({
+        id: scene.id,
+        name: scene.name,
+        lineCount: scene.textStats.lineCount,
+        textCount: showCharacterCount
+          ? scene.textStats.characterCount
+          : scene.textStats.wordCount,
+      }));
+  const totalLineCount = sceneTextStats.reduce(
+    (total, scene) => total + scene.lineCount,
+    0,
+  );
+  const totalTextCount = sceneTextStats.reduce(
+    (total, scene) => total + scene.textCount,
+    0,
+  );
   const detailFields = [
     {
       type: "slot",
@@ -220,6 +276,35 @@ export const selectViewData = ({ state, i18n }) => {
     projectExportLoadingStatusText: copy.exportingProject,
     projectSource: state.project.source,
     projectActionMenu: state.projectActionMenu,
+    resourceGroups: state.analytics.resourceGroups.map((group) => ({
+      key: group.key,
+      label: resourceTypeCopy[`${group.key}Label`] ?? group.key,
+      resources: group.resources.map(({ key, count }) => ({
+        key,
+        label: resourceTypeCopy[key] ?? key,
+        count: formatCount(count),
+      })),
+    })),
+    characterResources: state.analytics.characterResources.map((character) => ({
+      id: character.id,
+      name: character.name,
+      spriteCount: formatCount(character.spriteCount),
+    })),
+    sceneTextStats: sceneTextStats.map((scene) => ({
+      ...scene,
+      lineCount: formatCount(scene.lineCount),
+      textCount: formatCount(scene.textCount),
+    })),
+    sceneCount: formatCount(state.analytics.scenes.length),
+    sceneCountLabel: copy.scenesTitle,
+    sceneTextCountLabel: showCharacterCount
+      ? copy.charactersLabel
+      : copy.wordsLabel,
+    sceneLineCountLabel: copy.linesLabel,
+    totalLineCount: formatCount(totalLineCount),
+    totalTextCount: formatCount(totalTextCount),
+    hasSceneTextError,
+    isSceneTextLoading,
     showNativeProjectActions:
       (state.platform === "android" || state.platform === "ios") &&
       state.project.source === "local",
