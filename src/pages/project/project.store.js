@@ -4,14 +4,20 @@ import {
 } from "../../internal/projectResolution.js";
 import {
   DEFAULT_PROJECT_LANGUAGE,
+  getProjectLanguageTextCountMode,
   normalizeProjectLanguage,
+  PROJECT_TEXT_COUNT_MODE_CHARACTER,
 } from "../../internal/projectLanguage.js";
 import {
   createProjectLanguageOptions,
   selectProjectLanguageCopy,
   selectProjectLanguageLabel,
 } from "../../internal/ui/projectLanguage.js";
+import { buildProjectAnalytics } from "./support/projectAnalytics.js";
 import { selectProjectPageCopy } from "./support/projectPageCopy.js";
+
+const formatCount = (value) =>
+  Math.max(0, Math.trunc(Number(value) || 0)).toLocaleString();
 
 export const createInitialState = () => ({
   platform: "web",
@@ -39,6 +45,11 @@ export const createInitialState = () => ({
   },
   editIconFileId: undefined,
   editIconCropFile: undefined,
+  analytics: {
+    ...buildProjectAnalytics(),
+    isSceneTextLoading: true,
+    hasSceneTextError: false,
+  },
 });
 
 export const setPlatform = ({ state }, { platform } = {}) => {
@@ -103,6 +114,20 @@ export const setEditIconFileId = ({ state }, { iconFileId } = {}) => {
   state.editIconFileId = iconFileId;
 };
 
+export const setProjectAnalytics = ({ state }, { analytics } = {}) => {
+  state.analytics.resourceGroups = analytics?.resourceGroups ?? [];
+  state.analytics.characterResources = analytics?.characterResources ?? [];
+  state.analytics.scenes = analytics?.scenes ?? [];
+};
+
+export const setSceneTextAnalyticsLoading = ({ state }, { isLoading } = {}) => {
+  state.analytics.isSceneTextLoading = Boolean(isLoading);
+};
+
+export const setSceneTextAnalyticsError = ({ state }, { hasError } = {}) => {
+  state.analytics.hasSceneTextError = Boolean(hasError);
+};
+
 export const openEditIconCropDialog = ({ state }, { file } = {}) => {
   state.isEditIconCropDialogOpen = true;
   state.editIconCropFile = file;
@@ -131,7 +156,20 @@ export const selectIsEditIconCropDialogOpen = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectProjectPageCopy(i18n);
+  const resourceTypeCopy = i18n.resourceTypes ?? {};
   const projectLanguageCopy = selectProjectLanguageCopy(i18n);
+  const showCharacterCount =
+    getProjectLanguageTextCountMode(state.project.language) ===
+    PROJECT_TEXT_COUNT_MODE_CHARACTER;
+  const sceneTextStats = state.analytics.scenes.map((scene) => ({
+    id: scene.id,
+    name: scene.name,
+    textCount: showCharacterCount ? scene.characterCount : scene.wordCount,
+  }));
+  const totalTextCount = sceneTextStats.reduce(
+    (total, scene) => total + scene.textCount,
+    0,
+  );
   const detailFields = [
     {
       type: "slot",
@@ -220,6 +258,35 @@ export const selectViewData = ({ state, i18n }) => {
     projectExportLoadingStatusText: copy.exportingProject,
     projectSource: state.project.source,
     projectActionMenu: state.projectActionMenu,
+    resourceGroups: state.analytics.resourceGroups.map((group) => ({
+      key: group.key,
+      label: resourceTypeCopy[`${group.key}Label`] ?? group.key,
+      resources: group.resources.map(({ key, count }) => ({
+        key,
+        label: resourceTypeCopy[key] ?? key,
+        count: formatCount(count),
+      })),
+    })),
+    characterResources: state.analytics.characterResources.map((character) => ({
+      id: character.id,
+      name: character.name,
+      spriteCount: formatCount(character.spriteCount),
+    })),
+    sceneTextStats: sceneTextStats.map((scene) => ({
+      ...scene,
+      textCount: formatCount(scene.textCount),
+    })),
+    sceneCount: formatCount(sceneTextStats.length),
+    sceneCountLabel: copy.totalScenesLabel,
+    sceneTextCountLabel: showCharacterCount
+      ? copy.charactersLabel
+      : copy.wordsLabel,
+    totalTextCount: formatCount(totalTextCount),
+    totalTextCountLabel: showCharacterCount
+      ? copy.totalCharactersLabel
+      : copy.totalWordsLabel,
+    isSceneTextLoading: state.analytics.isSceneTextLoading,
+    hasSceneTextError: state.analytics.hasSceneTextError,
     showNativeProjectActions:
       (state.platform === "android" || state.platform === "ios") &&
       state.project.source === "local",

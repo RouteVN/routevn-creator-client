@@ -4,6 +4,7 @@ import {
   openEditDialog,
   selectViewData,
   setCurrentProject,
+  setProjectAnalytics,
 } from "../../src/pages/project/project.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -84,5 +85,88 @@ describe("project page store", () => {
       ],
     });
     expect(viewData.editDefaultValues.language).toBe("ja");
+  });
+
+  it("formats localized resource and scene analytics", () => {
+    const state = createInitialState();
+    setProjectAnalytics(
+      { state },
+      {
+        analytics: {
+          resourceGroups: [
+            {
+              key: "assets",
+              resources: [
+                { key: "images", count: 12 },
+                { key: "characters", count: 1 },
+              ],
+            },
+          ],
+          characterResources: [
+            {
+              id: "character-1",
+              name: "Hero",
+              spriteCount: 6,
+            },
+          ],
+          scenes: [
+            {
+              id: "scene-1",
+              name: "Opening",
+              wordCount: 1_234,
+              characterCount: 5_678,
+            },
+          ],
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.resourceGroups).toEqual([
+      {
+        key: "assets",
+        label: "Assets",
+        resources: [
+          { key: "images", label: "Images", count: "12" },
+          { key: "characters", label: "Characters", count: "1" },
+        ],
+      },
+    ]);
+    expect(viewData.characterResources).toEqual([
+      {
+        id: "character-1",
+        name: "Hero",
+        spriteCount: "6",
+      },
+    ]);
+    expect(viewData.sceneTextStats).toEqual([
+      {
+        id: "scene-1",
+        name: "Opening",
+        textCount: "1,234",
+      },
+    ]);
+    expect(viewData.sceneTextCountLabel).toBe("Words");
+    expect(viewData.sceneCount).toBe("1");
+    expect(viewData.sceneCountLabel).toBe("Total Scenes");
+    expect(viewData.totalTextCount).toBe("1,234");
+    expect(viewData.totalTextCountLabel).toBe("Total Words");
+
+    setCurrentProject(
+      { state },
+      {
+        project: {
+          language: "ja",
+        },
+      },
+    );
+
+    const japaneseViewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(japaneseViewData.sceneTextStats[0].textCount).toBe("5,678");
+    expect(japaneseViewData.sceneTextCountLabel).toBe("Characters");
+    expect(japaneseViewData.totalTextCount).toBe("5,678");
+    expect(japaneseViewData.totalTextCountLabel).toBe("Total Characters");
   });
 });

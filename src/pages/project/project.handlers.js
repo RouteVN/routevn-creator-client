@@ -4,6 +4,10 @@ import {
   formatProjectPageCopy,
   selectProjectPageCopy,
 } from "./support/projectPageCopy.js";
+import {
+  buildProjectAnalytics,
+  selectProjectAnalyticsResourceRoute,
+} from "./support/projectAnalytics.js";
 
 const ICON_VALIDATIONS = [
   {
@@ -40,6 +44,34 @@ export const handleAfterMount = async (deps) => {
       source: appService.getCurrentProjectEntry()?.source,
     },
   });
+  const baseAnalytics = buildProjectAnalytics({ repositoryState });
+  store.setProjectAnalytics({ analytics: baseAnalytics });
+
+  const sceneIds = baseAnalytics.scenes.map((scene) => scene.id);
+  if (sceneIds.length === 0) {
+    store.setSceneTextAnalyticsLoading({ isLoading: false });
+    render();
+    return;
+  }
+
+  render();
+
+  try {
+    const sceneOverviewsById = await projectService.loadSceneOverviews({
+      sceneIds,
+    });
+    store.setProjectAnalytics({
+      analytics: buildProjectAnalytics({
+        repositoryState,
+        sceneOverviewsById,
+      }),
+    });
+    store.setSceneTextAnalyticsError({ hasError: false });
+  } catch {
+    store.setSceneTextAnalyticsError({ hasError: true });
+  }
+
+  store.setSceneTextAnalyticsLoading({ isLoading: false });
   render();
 };
 
@@ -319,4 +351,49 @@ export const handleBackButtonKeyDown = (deps, payload) => {
 
   event.preventDefault();
   handleBackToProjects(deps);
+};
+
+const navigateFromAnalyticsLink = (deps, currentTarget) => {
+  const { appService } = deps;
+  const { resourceKey, characterId, sceneId } = currentTarget.dataset;
+  const currentPayload = appService.getPayload();
+
+  if (resourceKey) {
+    const route = selectProjectAnalyticsResourceRoute({ resourceKey });
+    if (route) {
+      appService.navigate(route, currentPayload);
+    }
+    return;
+  }
+
+  if (characterId) {
+    appService.navigate("/project/character-sprites", {
+      ...currentPayload,
+      characterId,
+    });
+    return;
+  }
+
+  if (sceneId) {
+    const nextPayload = {
+      ...currentPayload,
+      s: sceneId,
+    };
+    delete nextPayload.sceneId;
+    appService.navigate("/project/scene-editor", nextPayload);
+  }
+};
+
+export const handleAnalyticsLinkClick = (deps, payload) => {
+  navigateFromAnalyticsLink(deps, payload._event.currentTarget);
+};
+
+export const handleAnalyticsLinkKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  navigateFromAnalyticsLink(deps, event.currentTarget);
 };
