@@ -273,6 +273,57 @@ describe("project page handlers", () => {
     });
   });
 
+  it("suppresses failure feedback from a superseded manual retry", async () => {
+    let rejectFinalAttempt;
+    const finalAttempt = new Promise((_resolve, reject) => {
+      rejectFinalAttempt = reject;
+    });
+    const ensureSceneTextStats = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("temporary projection failure"))
+      .mockRejectedValueOnce(new Error("temporary projection failure"))
+      .mockReturnValueOnce(finalAttempt);
+    const deps = {
+      appService: {
+        showToast: vi.fn(),
+      },
+      projectService: {
+        getRepositoryState: vi.fn(() => ({
+          scenes: {
+            items: {
+              "scene-1": { id: "scene-1", name: "Opening", type: "scene" },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        })),
+        ensureSceneTextStats,
+      },
+      store: withProjectAnalyticsRequestState({
+        setProjectAnalytics: vi.fn(),
+        selectCurrentProject: vi.fn(() => ({ language: "en" })),
+      }),
+      render: vi.fn(),
+      i18n: EN_I18N,
+    };
+
+    const retryPromise = handleSceneTextAnalyticsRetry(deps);
+    await vi.waitFor(
+      () => {
+        expect(ensureSceneTextStats).toHaveBeenCalledTimes(3);
+      },
+      { timeout: 1_500 },
+    );
+
+    deps.store.setProjectAnalyticsRequestId({ requestId: 2 });
+    rejectFinalAttempt(new Error("permanent projection failure"));
+    await retryPromise;
+
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
+    expect(deps.store.setSceneTextAnalyticsStatus).not.toHaveBeenCalledWith({
+      status: "error",
+    });
+  });
+
   it("refreshes analytics from repository state subscriptions", async () => {
     let projectStateListener;
     const unsubscribe = vi.fn();

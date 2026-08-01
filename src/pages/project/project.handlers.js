@@ -109,11 +109,12 @@ const completeProjectAnalyticsRefresh = (deps, result) => {
 const failProjectAnalyticsRefresh = (deps, request) => {
   const { store, render } = deps;
   if (store.selectProjectAnalyticsRequestId() !== request.requestId) {
-    return;
+    return false;
   }
 
   store.setSceneTextAnalyticsStatus({ status: "error" });
   render();
+  return true;
 };
 
 const refreshProjectAnalytics = async (
@@ -135,8 +136,8 @@ const refreshProjectAnalytics = async (
       completeProjectAnalyticsRefresh(deps, result);
     }
   } catch {
-    failProjectAnalyticsRefresh(deps, request);
-    if (showFailureToast) {
+    const isCurrentRequest = failProjectAnalyticsRefresh(deps, request);
+    if (isCurrentRequest && showFailureToast) {
       const copy = selectProjectPageCopy(i18n);
       appService.showToast({
         message: copy.failedCalculateSceneTextAnalytics,
