@@ -1,3 +1,4 @@
+import { fromEvent, tap } from "rxjs";
 import { generateId } from "../../internal/id.js";
 import {
   createAnimationEditorPayload,
@@ -71,6 +72,21 @@ const selectCopy = ({ i18n } = {}) => selectAnimationEditorPageCopy(i18n);
 
 const getDefaultNewAnimationName = (copy = {}) => {
   return copy.newAnimationName ?? DEFAULT_NEW_ANIMATION_NAME;
+};
+
+const isSpaceKey = (event) => {
+  return (
+    event?.code === "Space" || event?.key === " " || event?.key === "Spacebar"
+  );
+};
+
+const isTextEntryEvent = (event) => {
+  const target = event?.composedPath?.()[0] ?? event?.target;
+  if (target?.isContentEditable) {
+    return true;
+  }
+
+  return ["INPUT", "SELECT", "TEXTAREA"].includes(target?.tagName);
 };
 
 const stopPreviewPlaybackIndicator = ({
@@ -769,9 +785,45 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
   return true;
 };
 
+const mountTimelinePanSubscriptions = (deps) => {
+  const browserWindow = globalThis.window;
+  if (!browserWindow?.addEventListener) {
+    return () => {};
+  }
+
+  const subscriptions = [
+    fromEvent(browserWindow, "keydown", { capture: true })
+      .pipe(
+        tap((event) =>
+          handleTimelinePanKeyDown(deps, {
+            _event: event,
+          }),
+        ),
+      )
+      .subscribe(),
+    fromEvent(browserWindow, "keyup", { capture: true })
+      .pipe(
+        tap((event) =>
+          handleTimelinePanKeyUp(deps, {
+            _event: event,
+          }),
+        ),
+      )
+      .subscribe(),
+    fromEvent(browserWindow, "blur")
+      .pipe(tap(() => handleTimelinePanWindowBlur(deps)))
+      .subscribe(),
+  ];
+
+  return () => {
+    subscriptions.forEach((subscription) => subscription.unsubscribe());
+  };
+};
+
 export const handleBeforeMount = (deps) => {
   const { appService, store, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
+  const cleanupTimelinePanSubscriptions = mountTimelinePanSubscriptions(deps);
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async () => {
       const autosaveAttempt = await flushQueuedAutosave({
@@ -786,6 +838,7 @@ export const handleBeforeMount = (deps) => {
 
   return async () => {
     unregisterBeforeNavigation();
+    cleanupTimelinePanSubscriptions();
     clearScheduledAnimationEditorAutosave(store);
     store.setPreviewPlaybackRequestId({ requestId: undefined });
     stopPreviewPlaybackIndicator({ store });
@@ -1011,6 +1064,132 @@ export const handleTimelineScroll = (deps, payload) => {
   if (wasPlayheadVisible !== store.selectTimelinePlayheadVisible()) {
     render();
   }
+};
+
+export const handleTimelinePanPointerEnter = (deps) => {
+  const { store } = deps;
+  store.setTimelinePanHovered({ hovered: true });
+};
+
+export const handleTimelinePanPointerLeave = (deps) => {
+  const { store } = deps;
+  store.setTimelinePanHovered({ hovered: false });
+};
+
+export const handleTimelinePanKeyDown = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  if (
+    !isSpaceKey(event) ||
+    isTextEntryEvent(event) ||
+    !store.selectTimelinePanHovered() ||
+    store.selectTimelinePanMode()
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  store.setTimelinePanMode({ enabled: true });
+  render();
+};
+
+const stopTimelinePanGesture = (deps) => {
+  const { refs, store } = deps;
+  const timelinePan = store.selectTimelinePan();
+  if (!timelinePan) {
+    return false;
+  }
+
+  refs.timelineScrollContainer?.releasePointerCapture?.(timelinePan.pointerId);
+  store.stopTimelinePan({});
+  return true;
+};
+
+export const handleTimelinePanKeyUp = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  if (!isSpaceKey(event) || !store.selectTimelinePanMode()) {
+    return;
+  }
+
+  event.preventDefault();
+  stopTimelinePanGesture(deps);
+  store.setTimelinePanMode({ enabled: false });
+  render();
+};
+
+export const handleTimelinePanWindowBlur = (deps) => {
+  const { render, store } = deps;
+  const wasPanning = stopTimelinePanGesture(deps);
+  if (!store.selectTimelinePanMode() && !wasPanning) {
+    return;
+  }
+
+  store.setTimelinePanMode({ enabled: false });
+  render();
+};
+
+export const handleTimelinePanStart = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  if (!store.selectTimelinePanMode() || event.button !== 0) {
+    if (store.selectTimelinePanClickSuppressed()) {
+      store.clearTimelinePanClickSuppression({});
+    }
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  store.startTimelinePan({
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startScrollLeft: event.currentTarget.scrollLeft,
+  });
+  render();
+};
+
+export const handleTimelinePanClick = (deps, payload) => {
+  const { store } = deps;
+  if (!store.selectTimelinePanClickSuppressed()) {
+    return;
+  }
+
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
+  store.clearTimelinePanClickSuppression({});
+};
+
+export const handleTimelinePanMove = (deps, payload) => {
+  const { store } = deps;
+  const event = payload._event;
+  const timelinePan = store.selectTimelinePan();
+  if (!timelinePan || timelinePan.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.scrollLeft = Math.max(
+    0,
+    timelinePan.startScrollLeft - (event.clientX - timelinePan.startX),
+  );
+};
+
+export const handleTimelinePanEnd = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  const timelinePan = store.selectTimelinePan();
+  if (!timelinePan || timelinePan.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.releasePointerCapture?.(event.pointerId);
+  store.stopTimelinePan({});
+  render();
 };
 
 export const handleAddPropertySideMenuItemClick = (deps, payload) => {

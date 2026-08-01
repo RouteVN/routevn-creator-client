@@ -145,6 +145,10 @@ describe("animationEditor view", () => {
     expect(view).toContain("rtgl-view d=v w=f h=1fg g=md");
     expect(view).toContain("rtgl-view#timelineScrollContainer w=f h=1fg sh");
     expect(view).toContain("handler: handleTimelineScroll");
+    expect(view).toContain("handler: handleTimelinePanStart");
+    expect(view).toContain("handler: handleTimelinePanMove");
+    expect(view).toContain("handler: handleTimelinePanEnd");
+    expect(view).toContain("cur=${timelinePanCursor}");
     expect(view).not.toContain(
       'timelineScrollContainer w=f style="min-width: 0; overflow-x: auto',
     );

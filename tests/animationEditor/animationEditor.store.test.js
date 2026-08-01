@@ -22,6 +22,9 @@ import {
   selectAnimationResetState,
   selectPreviewDurationMs,
   selectPreviewData,
+  selectTimelinePan,
+  selectTimelinePanClickSuppressed,
+  selectTimelinePanMode,
   selectTimelinePlayheadVisible,
   selectViewData,
   setImages,
@@ -38,7 +41,10 @@ import {
   setSelectedKeyframeValue,
   setSelectedProperty,
   startPreviewPlayback,
+  startTimelinePan,
   stopPreviewPlayback,
+  stopTimelinePan,
+  setTimelinePanMode,
   setTimelineScrollMetrics,
   setTimelineZoom,
   setTransitionMaskChannel,
@@ -195,6 +201,34 @@ describe("animationEditor.store", () => {
       timelineCanvasStyle: "width: 504px; min-width: 104px; flex-shrink: 0;",
       timelineDisplayDuration: 2000,
     });
+  });
+
+  it("exposes timeline hand-pan presentation while Space is held", () => {
+    const state = createInitialState();
+
+    setTimelinePanMode({ state }, { enabled: true });
+    expect(selectTimelinePanMode({ state })).toBe(true);
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      timelinePanCursor: "grab",
+      timelineCanvasStyle: expect.stringContaining("pointer-events: none"),
+    });
+
+    startTimelinePan(
+      { state },
+      { pointerId: 4, startX: 100, startScrollLeft: 300 },
+    );
+    expect(selectTimelinePan({ state })).toEqual({
+      pointerId: 4,
+      startX: 100,
+      startScrollLeft: 300,
+    });
+    expect(selectTimelinePanClickSuppressed({ state })).toBe(true);
+    expect(selectViewData({ state, i18n: EN_I18N }).timelinePanCursor).toBe(
+      "grabbing",
+    );
+
+    stopTimelinePan({ state });
+    expect(selectTimelinePan({ state })).toBeUndefined();
   });
 
   it("shows the selected keyframe details while Mask and Preview stay hidden", () => {

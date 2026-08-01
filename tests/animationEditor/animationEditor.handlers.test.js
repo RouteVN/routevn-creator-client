@@ -34,6 +34,13 @@ import {
   handleTimelineZoomChange,
   handleTimelineZoomIn,
   handleTimelineZoomOut,
+  handleTimelinePanClick,
+  handleTimelinePanEnd,
+  handleTimelinePanKeyDown,
+  handleTimelinePanKeyUp,
+  handleTimelinePanMove,
+  handleTimelinePanPointerEnter,
+  handleTimelinePanStart,
   handleTimelineScroll,
   handleTogglePreviewLoop,
 } from "../../src/pages/animationEditor/animationEditor.handlers.js";
@@ -133,6 +140,132 @@ describe("animationEditor.handlers", () => {
       viewportWidth: 300,
     });
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("pans the timeline horizontally while Space is held", () => {
+    let timelinePan;
+    let timelinePanClickSuppressed = false;
+    let timelinePanHovered = false;
+    let timelinePanMode = false;
+    const store = {
+      selectTimelinePan: vi.fn(() => timelinePan),
+      selectTimelinePanClickSuppressed: vi.fn(() => timelinePanClickSuppressed),
+      selectTimelinePanHovered: vi.fn(() => timelinePanHovered),
+      selectTimelinePanMode: vi.fn(() => timelinePanMode),
+      setTimelinePanHovered: vi.fn(({ hovered }) => {
+        timelinePanHovered = hovered;
+      }),
+      setTimelinePanMode: vi.fn(({ enabled }) => {
+        timelinePanMode = enabled;
+      }),
+      startTimelinePan: vi.fn((nextTimelinePan) => {
+        timelinePanClickSuppressed = true;
+        timelinePan = nextTimelinePan;
+      }),
+      clearTimelinePanClickSuppression: vi.fn(() => {
+        timelinePanClickSuppressed = false;
+      }),
+      stopTimelinePan: vi.fn(() => {
+        timelinePan = undefined;
+      }),
+    };
+    const render = vi.fn();
+    const releasePointerCapture = vi.fn();
+    const timelineViewport = {
+      releasePointerCapture,
+      scrollLeft: 400,
+      setPointerCapture: vi.fn(),
+    };
+    const deps = {
+      refs: { timelineScrollContainer: timelineViewport },
+      render,
+      store,
+    };
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    handleTimelinePanPointerEnter(deps);
+    handleTimelinePanKeyDown(deps, {
+      _event: {
+        code: "Space",
+        composedPath: () => [{ tagName: "DIV" }],
+        preventDefault,
+      },
+    });
+    handleTimelinePanStart(deps, {
+      _event: {
+        button: 0,
+        clientX: 100,
+        currentTarget: timelineViewport,
+        pointerId: 7,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+    handleTimelinePanMove(deps, {
+      _event: {
+        clientX: 50,
+        currentTarget: timelineViewport,
+        pointerId: 7,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(timelineViewport.scrollLeft).toBe(450);
+    expect(store.startTimelinePan).toHaveBeenCalledWith({
+      pointerId: 7,
+      startX: 100,
+      startScrollLeft: 400,
+    });
+
+    handleTimelinePanEnd(deps, {
+      _event: {
+        currentTarget: timelineViewport,
+        pointerId: 7,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+    handleTimelinePanClick(deps, {
+      _event: { preventDefault, stopPropagation },
+    });
+    handleTimelinePanKeyUp(deps, {
+      _event: { code: "Space", preventDefault },
+    });
+
+    expect(releasePointerCapture).toHaveBeenCalledWith(7);
+    expect(store.stopTimelinePan).toHaveBeenCalledWith({});
+    expect(store.clearTimelinePanClickSuppression).toHaveBeenCalledWith({});
+    expect(store.setTimelinePanMode).toHaveBeenLastCalledWith({
+      enabled: false,
+    });
+    expect(render).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not enter timeline pan mode while typing", () => {
+    const store = {
+      selectTimelinePanHovered: vi.fn(() => true),
+      selectTimelinePanMode: vi.fn(() => false),
+      setTimelinePanMode: vi.fn(),
+    };
+    const render = vi.fn();
+    const preventDefault = vi.fn();
+
+    handleTimelinePanKeyDown(
+      { render, store },
+      {
+        _event: {
+          code: "Space",
+          composedPath: () => [{ tagName: "INPUT" }],
+          preventDefault,
+        },
+      },
+    );
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(store.setTimelinePanMode).not.toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
   });
 
   it("toggles preview looping", () => {

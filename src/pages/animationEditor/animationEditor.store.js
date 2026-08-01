@@ -1228,6 +1228,10 @@ export const createInitialState = () => ({
   selectedItemId: undefined,
   selectedKeyframe: undefined,
   selectedProperty: undefined,
+  timelinePan: undefined,
+  timelinePanClickSuppressed: false,
+  timelinePanHovered: false,
+  timelinePanMode: false,
   timelineZoom: TIMELINE_ZOOM_DEFAULT,
   timelineScrollLeft: 0,
   timelineViewportWidth: undefined,
@@ -1322,6 +1326,50 @@ export const nudgeTimelineZoom = ({ state }, { delta } = {}) => {
 
 export const selectTimelineZoom = ({ state }) => {
   return state.timelineZoom;
+};
+
+export const setTimelinePanHovered = ({ state }, { hovered } = {}) => {
+  state.timelinePanHovered = hovered ?? false;
+};
+
+export const setTimelinePanMode = ({ state }, { enabled } = {}) => {
+  state.timelinePanMode = enabled ?? false;
+};
+
+export const startTimelinePan = (
+  { state },
+  { pointerId, startX, startScrollLeft } = {},
+) => {
+  state.timelinePanClickSuppressed = true;
+  state.timelinePan = {
+    pointerId,
+    startX,
+    startScrollLeft,
+  };
+};
+
+export const stopTimelinePan = ({ state }, _payload = {}) => {
+  state.timelinePan = undefined;
+};
+
+export const selectTimelinePan = ({ state }) => {
+  return state.timelinePan;
+};
+
+export const selectTimelinePanHovered = ({ state }) => {
+  return state.timelinePanHovered;
+};
+
+export const selectTimelinePanMode = ({ state }) => {
+  return state.timelinePanMode;
+};
+
+export const selectTimelinePanClickSuppressed = ({ state }) => {
+  return state.timelinePanClickSuppressed;
+};
+
+export const clearTimelinePanClickSuppression = ({ state }, _payload = {}) => {
+  state.timelinePanClickSuppressed = false;
 };
 
 export const setTimelineScrollMetrics = (
@@ -3450,7 +3498,12 @@ export const selectViewData = ({ state, i18n }) => {
     timelineZoomMax: TIMELINE_ZOOM_MAX,
     timelineZoomStep: TIMELINE_ZOOM_STEP,
     timelinePixelsPerSecond,
-    timelineCanvasStyle: `width: ${timelineCanvasWidth}px; min-width: ${TIMELINE_PROPERTY_COLUMN_WIDTH}px; flex-shrink: 0;`,
+    timelineCanvasStyle: `width: ${timelineCanvasWidth}px; min-width: ${TIMELINE_PROPERTY_COLUMN_WIDTH}px; flex-shrink: 0;${state.timelinePanMode ? " pointer-events: none; user-select: none;" : ""}`,
+    timelinePanCursor: state.timelinePan
+      ? "grabbing"
+      : state.timelinePanMode
+        ? "grab"
+        : "default",
     timelineDisplayDuration,
     dialogTypeLabel:
       dialogType === "transition"

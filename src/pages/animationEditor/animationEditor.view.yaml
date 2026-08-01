@@ -69,6 +69,20 @@ refs:
     eventListeners:
       scroll:
         handler: handleTimelineScroll
+      pointerenter:
+        handler: handleTimelinePanPointerEnter
+      pointerleave:
+        handler: handleTimelinePanPointerLeave
+      pointerdown:
+        handler: handleTimelinePanStart
+      pointermove:
+        handler: handleTimelinePanMove
+      pointerup:
+        handler: handleTimelinePanEnd
+      pointercancel:
+        handler: handleTimelinePanEnd
+      click:
+        handler: handleTimelinePanClick
   updateTimeline:
     eventListeners:
       add-keyframe:
@@ -418,13 +432,13 @@ template:
                       - $if dialogType == 'transition' && transitionAddPropertyButtonVisible:
                           - rtgl-button#addPropertiesButton pre=plus s=sm: ${addButton}
                   - $if dialogType == 'update':
-                      - 'rtgl-view#timelineScrollContainer w=f h=1fg sh style="min-width: 0; min-height: 0;"':
+                      - 'rtgl-view#timelineScrollContainer w=f h=1fg sh cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
                           - 'rtgl-view d=v h=f pos=rel style="${timelineCanvasStyle}"':
                               - rvn-keyframe-timeline#updateTimeline editable=true ?showRuler=true ?interactiveRuler=true side=update ?indicatorVisible=${timelinePlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} timelineDuration=${timelineDisplayDuration} :properties=${updateProperties} :defaultValues=${updateTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
                               - $if timelinePlayheadVisible:
                                   - 'rtgl-view pos=abs bgc=fg op="0.5" style="${timelinePlayheadStyle}"': null
                     $else:
-                      - 'rtgl-view#timelineScrollContainer w=f h=1fg sh style="min-width: 0; min-height: 0;"':
+                      - 'rtgl-view#timelineScrollContainer w=f h=1fg sh cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
                           - 'rtgl-view d=v h=f g=md pos=rel style="${timelineCanvasStyle}"':
                               - rvn-keyframe-timeline#transitionRuler ?showRuler=true ?showTracks=false ?interactiveRuler=true ?indicatorVisible=${timelinePlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} timelineDuration=${timelineDisplayDuration}: null
                               - rtgl-view d=v w=f g=xs:
