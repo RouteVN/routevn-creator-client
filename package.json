@@ -22,7 +22,7 @@
     "@lexical/utils": "0.22.0",
     "@rettangoli/fe": "1.4.0",
     "@rettangoli/ui": "1.15.2",
-    "@rettangoli/vt": "1.0.6",
+    "@rettangoli/vt": "1.1.0",
     "@routevn/creator-model": "1.11.0",
     "@tauri-apps/api": "2.11.0",
     "@tauri-apps/plugin-dialog": "2.4.2",
@@ -114,8 +114,6 @@
     "vitest": "3.2.4"
   },
   "overrides": {
-    "@rettangoli/sites": "1.2.0",
-    "@rettangoli/vt": "1.0.6",
     "@tauri-apps/api": "2.11.0",
     "liquidjs": "10.27.0",
     "picomatch": "4.0.5",
