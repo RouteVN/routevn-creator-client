@@ -177,6 +177,7 @@ describe("animationEditor.handlers", () => {
   it("selects a property on click and opens its menu only on right click", () => {
     const store = {
       closePopover: vi.fn(),
+      selectIsTouchMode: vi.fn(() => false),
       setPopover: vi.fn(),
       setSelectedProperty: vi.fn(),
     };
@@ -318,6 +319,7 @@ describe("animationEditor.handlers", () => {
   it("selects a keyframe on click without opening the edit form", () => {
     const store = {
       closePopover: vi.fn(),
+      selectIsTouchMode: vi.fn(() => false),
       setSelectedKeyframe: vi.fn(),
       setPopover: vi.fn(),
     };
@@ -346,6 +348,62 @@ describe("animationEditor.handlers", () => {
     expect(store.closePopover).toHaveBeenCalled();
     expect(store.setPopover).not.toHaveBeenCalled();
     expect(render).toHaveBeenCalled();
+  });
+
+  it("opens touch editing surfaces when timeline items are tapped", () => {
+    const store = {
+      closePopover: vi.fn(),
+      selectIsTouchMode: vi.fn(() => true),
+      setPopover: vi.fn(),
+      setSelectedKeyframe: vi.fn(),
+      setSelectedProperty: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleKeyframeClick(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            side: "prev",
+            property: "alpha",
+            index: 2,
+            x: 40,
+            y: 80,
+          },
+        },
+      },
+    );
+
+    expect(store.setPopover).toHaveBeenLastCalledWith({
+      mode: "editKeyframe",
+      x: 40,
+      y: 80,
+      payload: { side: "prev", property: "alpha", index: 2 },
+    });
+
+    handlePropertyNameClick(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            side: "next",
+            property: "x",
+            x: 60,
+            y: 100,
+          },
+        },
+      },
+    );
+
+    expect(store.setPopover).toHaveBeenLastCalledWith({
+      mode: "propertyNameMenu",
+      x: 60,
+      y: 100,
+      payload: { side: "next", property: "x" },
+    });
+    expect(store.closePopover).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(2);
   });
 
   it("selects a keyframe before opening its context menu", () => {
@@ -1719,6 +1777,7 @@ describe("animationEditor.handlers", () => {
 
   it("updates preview time while scrubbing the timeline ruler", async () => {
     const store = {
+      setPreviewPlaybackRequestId: vi.fn(),
       setPreviewPlayhead: vi.fn(),
       selectPreviewPlaying: vi.fn(() => false),
       selectPreviewPlaybackMode: vi.fn(() => "manual"),
@@ -1749,8 +1808,78 @@ describe("animationEditor.handlers", () => {
       timeMs: 420,
       visible: true,
     });
+    expect(store.setPreviewPlaybackRequestId).toHaveBeenCalledWith({
+      requestId: undefined,
+    });
     expect(graphicsService.setAnimationTime).toHaveBeenCalledWith(420);
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("cancels pending preview playback when timeline scrubbing begins", async () => {
+    let resolveResetRender;
+    const resetRender = new Promise((resolve) => {
+      resolveResetRender = resolve;
+    });
+    const resetState = {
+      elements: [{ id: "reset" }],
+      animations: [],
+    };
+    const renderState = {
+      elements: [{ id: "preview" }],
+      animations: [],
+    };
+    let activePlaybackRequestId;
+    const store = {
+      markPreviewPrepared: vi.fn(),
+      selectAnimationRenderStateWithAnimations: vi.fn(() => renderState),
+      selectAnimationResetState: vi.fn(() => resetState),
+      selectPreviewDurationMs: vi.fn(() => 1000),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      selectPreviewPlaybackMode: vi.fn(() => "manual"),
+      selectPreviewPlaybackRequestId: vi.fn(() => activePlaybackRequestId),
+      selectPreviewPlayheadTimeMs: vi.fn(() => undefined),
+      selectPreviewPlaying: vi.fn(() => false),
+      selectPreviewPreparedVersion: vi.fn(() => 1),
+      selectPreviewRenderVersion: vi.fn(() => 1),
+      setPreviewPlaybackMode: vi.fn(),
+      setPreviewPlaybackRequestId: vi.fn(({ requestId }) => {
+        activePlaybackRequestId = requestId;
+      }),
+      setPreviewPlayhead: vi.fn(),
+      startPreviewPlayback: vi.fn(),
+      stopPreviewPlayback: vi.fn(),
+    };
+    const graphicsService = {
+      loadAssets: vi.fn(),
+      render: vi.fn((state) => {
+        return state === resetState ? resetRender : Promise.resolve();
+      }),
+      setAnimationPlaybackMode: vi.fn(),
+      setAnimationTime: vi.fn(),
+    };
+    const render = vi.fn();
+    const deps = {
+      graphicsService,
+      projectService: {},
+      render,
+      store,
+    };
+
+    const replay = handleReplayAnimation(deps);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(graphicsService.render).toHaveBeenCalledWith(resetState);
+
+    await handleRulerTimeScrub(deps, {
+      _event: { detail: { timeMs: 420 } },
+    });
+    resolveResetRender();
+    await replay;
+
+    expect(activePlaybackRequestId).toBeUndefined();
+    expect(store.startPreviewPlayback).not.toHaveBeenCalled();
+    expect(graphicsService.render).not.toHaveBeenCalledWith(renderState);
+    expect(graphicsService.setAnimationTime).toHaveBeenLastCalledWith(420);
   });
 
   it("pauses playback and follows timeline ruler dragging", async () => {

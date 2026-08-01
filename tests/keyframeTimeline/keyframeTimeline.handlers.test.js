@@ -194,11 +194,21 @@ describe("keyframeTimeline.handlers", () => {
     const deps = { dispatchEvent, props: { side: "next" } };
 
     handlePropertyNameClick(deps, {
-      _event: { currentTarget, stopPropagation },
+      _event: {
+        clientX: 20,
+        clientY: 60,
+        currentTarget,
+        stopPropagation,
+      },
     });
     expect(dispatchEvent.mock.calls[0][0]).toMatchObject({
       type: "property-name-click",
-      detail: { property: "alpha", side: "next" },
+      detail: {
+        property: "alpha",
+        side: "next",
+        x: 20,
+        y: 60,
+      },
     });
 
     const preventDefault = vi.fn();

@@ -769,6 +769,8 @@ export const handlePropertyNameClick = (deps, payload) => {
       detail: {
         property: event.currentTarget.dataset.property,
         side: props.side,
+        x: event.clientX,
+        y: event.clientY,
       },
       bubbles: true,
       composed: true,

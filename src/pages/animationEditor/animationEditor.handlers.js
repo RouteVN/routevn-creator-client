@@ -1174,12 +1174,26 @@ export const handleKeyframeRightClick = (deps, payload) => {
 
 export const handleKeyframeClick = (deps, payload) => {
   const { render, store } = deps;
+  const { index, property, side, x, y } = payload._event.detail;
   store.setSelectedKeyframe({
-    side: payload._event.detail.side,
-    property: payload._event.detail.property,
-    index: payload._event.detail.index,
+    side,
+    property,
+    index,
   });
-  store.closePopover();
+  if (store.selectIsTouchMode()) {
+    store.setPopover({
+      mode: "editKeyframe",
+      x,
+      y,
+      payload: {
+        side,
+        property,
+        index,
+      },
+    });
+  } else {
+    store.closePopover();
+  }
   render();
 };
 
@@ -1370,9 +1384,21 @@ export const handleAutoTrackClick = (deps, payload) => {
 
 export const handlePropertyNameClick = (deps, payload) => {
   const { render, store } = deps;
-  const { property, side } = payload._event.detail;
+  const { property, side, x, y } = payload._event.detail;
   store.setSelectedProperty({ side, property });
-  store.closePopover();
+  if (store.selectIsTouchMode()) {
+    store.setPopover({
+      mode: "propertyNameMenu",
+      x,
+      y,
+      payload: {
+        side,
+        property,
+      },
+    });
+  } else {
+    store.closePopover();
+  }
   render();
 };
 
@@ -1528,8 +1554,8 @@ export const handleEditAutoFormSubmit = (deps, payload) => {
 export const handleRulerTimeScrub = async (deps, payload) => {
   const { graphicsService, projectService, render, store } = deps;
   const { timeMs } = payload._event.detail;
+  store.setPreviewPlaybackRequestId({ requestId: undefined });
   if (store.selectPreviewPlaying()) {
-    store.setPreviewPlaybackRequestId({ requestId: undefined });
     stopPreviewPlaybackIndicator({ preservePlayhead: true, store });
   }
   store.setPreviewPlayhead({
