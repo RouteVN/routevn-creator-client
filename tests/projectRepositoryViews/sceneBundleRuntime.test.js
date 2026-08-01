@@ -366,7 +366,7 @@ describe("sceneBundleRuntime", () => {
     expect(store.saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
   });
 
-  it("discards computed text stats when the repository changes during both attempts", async () => {
+  it("returns no stale text stats when the repository changes during both attempts", async () => {
     let revision = 0;
     const loadSceneProjection = vi.fn(async (sceneId) => {
       revision += 1;
@@ -386,6 +386,36 @@ describe("sceneBundleRuntime", () => {
     ).resolves.toEqual({});
     expect(loadSceneProjection).toHaveBeenCalledTimes(2);
     expect(store.saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it("recalculates text stats when the derived cache cannot be read or written", async () => {
+    const { runtime, store, loadSceneProjection } = createRuntime({
+      events: [],
+    });
+    const cacheError = new Error("cache unavailable");
+    store.loadMaterializedViewCheckpoints.mockRejectedValueOnce(cacheError);
+    store.saveMaterializedViewCheckpoint.mockRejectedValueOnce(cacheError);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      await expect(
+        runtime.ensureSceneTextStats({
+          sceneIds: [inactiveSceneId],
+          language: "en",
+        }),
+      ).resolves.toEqual({
+        [inactiveSceneId]: {
+          lineCount: 1,
+          wordCount: 2,
+          characterCount: 10,
+          language: "en",
+        },
+      });
+      expect(loadSceneProjection).toHaveBeenCalledWith(inactiveSceneId);
+      expect(warn).toHaveBeenCalledTimes(2);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("does not scan scene history when no text stats are cached", async () => {

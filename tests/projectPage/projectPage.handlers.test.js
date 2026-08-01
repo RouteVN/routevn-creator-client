@@ -71,8 +71,6 @@ describe("project page handlers", () => {
       store: withProjectAnalyticsRequestState({
         setCurrentProject: vi.fn(),
         setProjectAnalytics: vi.fn(),
-        setSceneTextAnalyticsError: vi.fn(),
-        setSceneTextAnalyticsLoading: vi.fn(),
         selectCurrentProject: vi.fn(() => ({ language: "en" })),
       }),
       render: vi.fn(),
@@ -88,9 +86,6 @@ describe("project page handlers", () => {
       });
     });
     expect(deps.store.setProjectAnalytics).toHaveBeenCalledTimes(1);
-    expect(deps.store.setSceneTextAnalyticsLoading).toHaveBeenLastCalledWith({
-      isLoading: true,
-    });
     expect(deps.render).toHaveBeenCalledTimes(1);
 
     resolveSceneTextStats({
@@ -124,10 +119,73 @@ describe("project page handlers", () => {
         ],
       }),
     });
-    expect(deps.store.setSceneTextAnalyticsLoading).toHaveBeenCalledWith({
-      isLoading: false,
-    });
     expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("recalculates missing scene text analytics instead of completing with partial results", async () => {
+    const repositoryState = {
+      project: { resolution: { width: 1920, height: 1080 } },
+      scenes: {
+        items: {
+          "scene-1": { id: "scene-1", name: "Opening", type: "scene" },
+        },
+        tree: [{ id: "scene-1" }],
+      },
+    };
+    const ensureSceneTextStats = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("temporary scene projection failure"))
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({
+        "scene-1": {
+          lineCount: 2,
+          wordCount: 45,
+          characterCount: 180,
+          language: "en",
+        },
+      });
+    const deps = {
+      appService: {
+        getCurrentProjectEntry: vi.fn(() => ({ source: "local" })),
+      },
+      projectService: {
+        ensureRepository: vi.fn(async () => {}),
+        getCurrentProjectInfo: vi.fn(async () => ({
+          name: "Project One",
+          language: "en",
+        })),
+        getRepositoryState: vi.fn(() => repositoryState),
+        ensureSceneTextStats,
+      },
+      store: withProjectAnalyticsRequestState({
+        setCurrentProject: vi.fn(),
+        setProjectAnalytics: vi.fn(),
+        selectCurrentProject: vi.fn(() => ({ language: "en" })),
+      }),
+      render: vi.fn(),
+      i18n: EN_I18N,
+    };
+
+    const mountPromise = handleAfterMount(deps);
+
+    await vi.waitFor(
+      () => {
+        expect(ensureSceneTextStats).toHaveBeenCalledTimes(3);
+      },
+      { timeout: 1_500 },
+    );
+    await mountPromise;
+
+    expect(deps.store.setProjectAnalytics).toHaveBeenLastCalledWith({
+      analytics: expect.objectContaining({
+        scenes: [
+          expect.objectContaining({
+            id: "scene-1",
+            textStats: expect.objectContaining({ wordCount: 45 }),
+          }),
+        ],
+      }),
+    });
   });
 
   it("refreshes analytics from repository state subscriptions", async () => {
@@ -156,8 +214,6 @@ describe("project page handlers", () => {
         setPlatform: vi.fn(),
         setCurrentProject: vi.fn(),
         setProjectAnalytics: vi.fn(),
-        setSceneTextAnalyticsError: vi.fn(),
-        setSceneTextAnalyticsLoading: vi.fn(),
         selectCurrentProject: vi.fn(() => ({ language: "en" })),
       }),
       render: vi.fn(),
@@ -189,10 +245,6 @@ describe("project page handlers", () => {
         ]),
       }),
     });
-    expect(deps.store.setSceneTextAnalyticsLoading).toHaveBeenCalledWith({
-      isLoading: false,
-    });
-
     projectStateListener({
       repositoryState: {
         scenes: {
@@ -297,8 +349,6 @@ describe("project page handlers", () => {
         }),
         selectCurrentProject: vi.fn(() => currentProject),
         setProjectAnalytics: vi.fn(),
-        setSceneTextAnalyticsError: vi.fn(),
-        setSceneTextAnalyticsLoading: vi.fn(),
       }),
       render: vi.fn(),
       i18n: EN_I18N,
@@ -602,8 +652,6 @@ describe("project page handlers", () => {
         }),
         closeEditDialog: vi.fn(),
         setProjectAnalytics: vi.fn(),
-        setSceneTextAnalyticsError: vi.fn(),
-        setSceneTextAnalyticsLoading: vi.fn(),
       }),
       subject: {
         dispatch: vi.fn(),

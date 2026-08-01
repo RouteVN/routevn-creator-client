@@ -171,7 +171,6 @@ projectPage:
   resolutionLabel: "Resolution"
   saveChangesButton: "Save Changes"
   sceneLabel: "Scene"
-  sceneTextAnalyticsUnavailable: "Scene text analytics are unavailable."
   scenesTitle: "Scenes"
   selectExportFolderTitle: "Select Export Folder"
   spritesLabel: "Sprites"

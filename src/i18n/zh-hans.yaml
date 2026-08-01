@@ -171,7 +171,6 @@ projectPage:
   resolutionLabel: "分辨率"
   saveChangesButton: "保存更改"
   sceneLabel: "场景"
-  sceneTextAnalyticsUnavailable: "无法加载场景文本数据。"
   scenesTitle: "场景"
   selectExportFolderTitle: "选择导出文件夹"
   spritesLabel: "立绘"

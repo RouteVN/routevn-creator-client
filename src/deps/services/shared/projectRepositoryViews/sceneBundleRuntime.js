@@ -602,13 +602,18 @@ export const createSceneBundleRuntime = ({
         ...buildSceneTextStats(scene, { language }),
         language,
       };
-      const cachedTextStats = await cacheSceneTextStats({
-        sceneId,
-        textStats,
-        expectedRevision: revision,
-      });
-      if (cachedTextStats && getCurrentRevision() === revision) {
-        return cachedTextStats;
+      try {
+        await cacheSceneTextStats({
+          sceneId,
+          textStats,
+          expectedRevision: revision,
+        });
+      } catch (error) {
+        console.warn("Failed to cache recalculated scene text stats:", error);
+      }
+
+      if (getCurrentRevision() === revision) {
+        return textStats;
       }
     }
 
@@ -618,9 +623,14 @@ export const createSceneBundleRuntime = ({
   const ensureSceneTextStats = async ({ sceneIds = [], language } = {}) => {
     const normalizedSceneIds = [...new Set(sceneIds.filter(isNonEmptyString))];
     const normalizedLanguage = normalizeProjectLanguage(language);
-    const cachedTextStatsBySceneId = await loadSceneTextStats({
-      sceneIds: normalizedSceneIds,
-    });
+    let cachedTextStatsBySceneId = {};
+    try {
+      cachedTextStatsBySceneId = await loadSceneTextStats({
+        sceneIds: normalizedSceneIds,
+      });
+    } catch (error) {
+      console.warn("Failed to load cached scene text stats:", error);
+    }
     const textStatsBySceneId = {};
 
     for (const sceneId of normalizedSceneIds) {

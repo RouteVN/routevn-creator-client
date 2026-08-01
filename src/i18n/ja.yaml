@@ -171,7 +171,6 @@ projectPage:
   resolutionLabel: "解像度"
   saveChangesButton: "変更を保存"
   sceneLabel: "シーン"
-  sceneTextAnalyticsUnavailable: "シーンのテキスト量を読み込めませんでした。"
   scenesTitle: "シーン"
   selectExportFolderTitle: "出力先フォルダーを選択"
   spritesLabel: "立ち絵"

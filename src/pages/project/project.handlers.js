@@ -1,7 +1,16 @@
 import { requireProjectResolution } from "../../internal/projectResolution.js";
 import { requireProjectLanguage } from "../../internal/projectLanguage.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
-import { EMPTY, from, switchMap, tap } from "rxjs";
+import {
+  defer,
+  EMPTY,
+  firstValueFrom,
+  from,
+  retry,
+  switchMap,
+  tap,
+  timer,
+} from "rxjs";
 import {
   formatProjectPageCopy,
   selectProjectPageCopy,
@@ -18,6 +27,7 @@ const ICON_VALIDATIONS = [
     minHeight: 512,
   },
 ];
+const SCENE_TEXT_ANALYTICS_RETRY_DELAY_MS = 250;
 
 const beginProjectAnalyticsRefresh = (deps, { repositoryState } = {}) => {
   const { store, render } = deps;
@@ -28,8 +38,6 @@ const beginProjectAnalyticsRefresh = (deps, { repositoryState } = {}) => {
 
   store.setProjectAnalyticsRequestId({ requestId });
   store.setProjectAnalytics({ analytics });
-  store.setSceneTextAnalyticsError({ hasError: false });
-  store.setSceneTextAnalyticsLoading({ isLoading: sceneIds.length > 0 });
   render();
 
   return {
@@ -44,26 +52,40 @@ const beginProjectAnalyticsRefresh = (deps, { repositoryState } = {}) => {
 const loadProjectAnalytics = async (deps, request) => {
   const { projectService } = deps;
 
-  try {
-    const sceneTextStatsById = await projectService.ensureSceneTextStats({
-      sceneIds: request.sceneIds,
-      language: request.language,
-    });
-    return {
-      analytics: buildProjectAnalytics({
-        repositoryState: request.repositoryState,
-        sceneTextStatsById,
-      }),
-      hasError: false,
-      requestId: request.requestId,
-    };
-  } catch {
-    return {
-      analytics: request.analytics,
-      hasError: true,
-      requestId: request.requestId,
-    };
+  const sceneTextStatsById = await projectService.ensureSceneTextStats({
+    sceneIds: request.sceneIds,
+    language: request.language,
+  });
+  const hasAllSceneTextStats = request.sceneIds.every(
+    (sceneId) => sceneTextStatsById[sceneId]?.language === request.language,
+  );
+  if (!hasAllSceneTextStats) {
+    throw new Error("Scene text analytics recalculation is incomplete.");
   }
+
+  return {
+    analytics: buildProjectAnalytics({
+      repositoryState: request.repositoryState,
+      sceneTextStatsById,
+    }),
+    requestId: request.requestId,
+  };
+};
+
+const createProjectAnalyticsLoadStream = (deps, request) => {
+  const { store } = deps;
+
+  return defer(() => {
+    if (store.selectProjectAnalyticsRequestId() !== request.requestId) {
+      return EMPTY;
+    }
+
+    return from(loadProjectAnalytics(deps, request));
+  }).pipe(
+    retry({
+      delay: () => timer(SCENE_TEXT_ANALYTICS_RETRY_DELAY_MS),
+    }),
+  );
 };
 
 const completeProjectAnalyticsRefresh = (deps, result) => {
@@ -73,8 +95,6 @@ const completeProjectAnalyticsRefresh = (deps, result) => {
   }
 
   store.setProjectAnalytics({ analytics: result.analytics });
-  store.setSceneTextAnalyticsError({ hasError: result.hasError });
-  store.setSceneTextAnalyticsLoading({ isLoading: false });
   render();
 };
 
@@ -84,8 +104,13 @@ const refreshProjectAnalytics = async (deps, { repositoryState } = {}) => {
     return;
   }
 
-  const result = await loadProjectAnalytics(deps, request);
-  completeProjectAnalyticsRefresh(deps, result);
+  const result = await firstValueFrom(
+    createProjectAnalyticsLoadStream(deps, request),
+    { defaultValue: undefined },
+  );
+  if (result) {
+    completeProjectAnalyticsRefresh(deps, result);
+  }
 };
 
 export const handleBeforeMount = (deps) => {
@@ -110,7 +135,7 @@ export const handleBeforeMount = (deps) => {
           return EMPTY;
         }
 
-        return from(loadProjectAnalytics(deps, request));
+        return createProjectAnalyticsLoadStream(deps, request);
       }),
       tap((result) => {
         completeProjectAnalyticsRefresh(deps, result);
@@ -119,6 +144,9 @@ export const handleBeforeMount = (deps) => {
     .subscribe();
 
   return () => {
+    store.setProjectAnalyticsRequestId({
+      requestId: store.selectProjectAnalyticsRequestId() + 1,
+    });
     subscription.unsubscribe();
   };
 };

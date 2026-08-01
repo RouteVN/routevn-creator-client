@@ -165,7 +165,7 @@ describe("project page store", () => {
     expect(viewData.sceneCountLabel).toBe("Total Scenes");
     expect(viewData.totalTextCount).toBe("1,234");
     expect(viewData.totalTextCountLabel).toBe("Total Words");
-    expect(viewData.hasSceneTextError).toBe(false);
+    expect(viewData.isSceneTextLoading).toBe(false);
 
     setCurrentProject(
       { state },
@@ -180,7 +180,7 @@ describe("project page store", () => {
 
     expect(staleLanguageViewData.sceneTextStats).toEqual([]);
     expect(staleLanguageViewData.sceneCount).toBe("1");
-    expect(staleLanguageViewData.hasSceneTextError).toBe(true);
+    expect(staleLanguageViewData.isSceneTextLoading).toBe(true);
 
     setProjectAnalytics(
       { state },
@@ -207,10 +207,10 @@ describe("project page store", () => {
     expect(japaneseViewData.sceneTextCountLabel).toBe("Characters");
     expect(japaneseViewData.totalTextCount).toBe("5,678");
     expect(japaneseViewData.totalTextCountLabel).toBe("Total Characters");
-    expect(japaneseViewData.hasSceneTextError).toBe(false);
+    expect(japaneseViewData.isSceneTextLoading).toBe(false);
   });
 
-  it("reports missing scene text statistics as unavailable without losing the scene count", () => {
+  it("keeps loading while scene text statistics are missing", () => {
     const state = createInitialState();
     setProjectAnalytics(
       { state },
@@ -232,6 +232,6 @@ describe("project page store", () => {
     expect(viewData.sceneCount).toBe("1");
     expect(viewData.sceneTextStats).toEqual([]);
     expect(viewData.totalTextCount).toBe("0");
-    expect(viewData.hasSceneTextError).toBe(true);
+    expect(viewData.isSceneTextLoading).toBe(true);
   });
 });
