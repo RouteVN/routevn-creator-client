@@ -79,6 +79,10 @@ refs:
         handler: handleAnalyticsLinkClick
       keydown:
         handler: handleAnalyticsLinkKeyDown
+  sceneTextAnalyticsRetry:
+    eventListeners:
+      click:
+        handler: handleSceneTextAnalyticsRetry
 template:
   - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
       - rtgl-view w=f d=h av=c g=sm:
@@ -129,12 +133,16 @@ template:
                       - 'rtgl-view#sceneCountTotal data-resource-key=scenes role=link tabindex=0 w=128 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="max-width: 100%; font-variant-numeric: tabular-nums;"':
                           - rtgl-text s=sm c=mu-fg: ${sceneCountLabel}
                           - rtgl-text s=h3: ${sceneCount}
-                      - $if !isSceneTextLoading && sceneTextStats.length > 0:
+                      - $if !isSceneTextLoading && !hasSceneTextError && sceneTextStats.length > 0:
                           - 'rtgl-view#sceneTextTotal data-resource-key=scenes role=link tabindex=0 w=128 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="max-width: 100%; font-variant-numeric: tabular-nums;"':
                               - rtgl-text s=sm c=mu-fg: ${totalTextCountLabel}
                               - rtgl-text s=h3: ${totalTextCount}
                   - $if isSceneTextLoading:
                       - rtgl-text c=mu-fg: ${i18n.projectPage.loadingSceneTextAnalytics}
+                    $elif hasSceneTextError:
+                      - rtgl-view d=h av=c g=sm:
+                          - rtgl-text#sceneTextStatsError c=mu-fg: ${i18n.projectPage.failedCalculateSceneTextAnalytics}
+                          - rtgl-button#sceneTextAnalyticsRetry s=sm v=ol: ${i18n.projectPage.retrySceneTextAnalytics}
                     $elif sceneTextStats.length == 0:
                       - rtgl-text c=mu-fg: ${i18n.projectPage.noScenes}
                     $else:

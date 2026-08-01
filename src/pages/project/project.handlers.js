@@ -2,6 +2,7 @@ import { requireProjectResolution } from "../../internal/projectResolution.js";
 import { requireProjectLanguage } from "../../internal/projectLanguage.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import {
+  catchError,
   defer,
   EMPTY,
   firstValueFrom,
@@ -28,6 +29,7 @@ const ICON_VALIDATIONS = [
   },
 ];
 const SCENE_TEXT_ANALYTICS_RETRY_DELAY_MS = 250;
+const SCENE_TEXT_ANALYTICS_RETRY_COUNT = 2;
 
 const beginProjectAnalyticsRefresh = (deps, { repositoryState } = {}) => {
   const { store, render } = deps;
@@ -38,6 +40,9 @@ const beginProjectAnalyticsRefresh = (deps, { repositoryState } = {}) => {
 
   store.setProjectAnalyticsRequestId({ requestId });
   store.setProjectAnalytics({ analytics });
+  store.setSceneTextAnalyticsStatus({
+    status: sceneIds.length > 0 ? "loading" : "ready",
+  });
   render();
 
   return {
@@ -83,7 +88,9 @@ const createProjectAnalyticsLoadStream = (deps, request) => {
     return from(loadProjectAnalytics(deps, request));
   }).pipe(
     retry({
-      delay: () => timer(SCENE_TEXT_ANALYTICS_RETRY_DELAY_MS),
+      count: SCENE_TEXT_ANALYTICS_RETRY_COUNT,
+      delay: (_error, retryCount) =>
+        timer(SCENE_TEXT_ANALYTICS_RETRY_DELAY_MS * 2 ** (retryCount - 1)),
     }),
   );
 };
@@ -95,21 +102,46 @@ const completeProjectAnalyticsRefresh = (deps, result) => {
   }
 
   store.setProjectAnalytics({ analytics: result.analytics });
+  store.setSceneTextAnalyticsStatus({ status: "ready" });
   render();
 };
 
-const refreshProjectAnalytics = async (deps, { repositoryState } = {}) => {
+const failProjectAnalyticsRefresh = (deps, request) => {
+  const { store, render } = deps;
+  if (store.selectProjectAnalyticsRequestId() !== request.requestId) {
+    return;
+  }
+
+  store.setSceneTextAnalyticsStatus({ status: "error" });
+  render();
+};
+
+const refreshProjectAnalytics = async (
+  deps,
+  { repositoryState, showFailureToast = false } = {},
+) => {
+  const { appService, i18n } = deps;
   const request = beginProjectAnalyticsRefresh(deps, { repositoryState });
   if (request.sceneIds.length === 0) {
     return;
   }
 
-  const result = await firstValueFrom(
-    createProjectAnalyticsLoadStream(deps, request),
-    { defaultValue: undefined },
-  );
-  if (result) {
-    completeProjectAnalyticsRefresh(deps, result);
+  try {
+    const result = await firstValueFrom(
+      createProjectAnalyticsLoadStream(deps, request),
+      { defaultValue: undefined },
+    );
+    if (result) {
+      completeProjectAnalyticsRefresh(deps, result);
+    }
+  } catch {
+    failProjectAnalyticsRefresh(deps, request);
+    if (showFailureToast) {
+      const copy = selectProjectPageCopy(i18n);
+      appService.showToast({
+        message: copy.failedCalculateSceneTextAnalytics,
+      });
+    }
   }
 };
 
@@ -135,10 +167,15 @@ export const handleBeforeMount = (deps) => {
           return EMPTY;
         }
 
-        return createProjectAnalyticsLoadStream(deps, request);
-      }),
-      tap((result) => {
-        completeProjectAnalyticsRefresh(deps, result);
+        return createProjectAnalyticsLoadStream(deps, request).pipe(
+          tap((result) => {
+            completeProjectAnalyticsRefresh(deps, result);
+          }),
+          catchError(() => {
+            failProjectAnalyticsRefresh(deps, request);
+            return EMPTY;
+          }),
+        );
       }),
     )
     .subscribe();
@@ -352,6 +389,15 @@ export const handleEditFormAction = async (deps, payload) => {
   subject.dispatch("project-image-update");
   await refreshProjectAnalytics(deps, {
     repositoryState: projectService.getRepositoryState(),
+    showFailureToast: true,
+  });
+};
+
+export const handleSceneTextAnalyticsRetry = async (deps) => {
+  const { projectService } = deps;
+  await refreshProjectAnalytics(deps, {
+    repositoryState: projectService.getRepositoryState(),
+    showFailureToast: true,
   });
 };
 

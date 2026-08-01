@@ -102,7 +102,15 @@ describe("project page view", () => {
     expect(projectView).not.toContain("${i18n.projectPage.sceneTextTitle}");
     expect(projectView).toContain("${sceneCountLabel}");
     expect(projectView).toContain("${sceneCount}");
-    expect(projectView).not.toContain("sceneTextStatsError");
+    expect(projectView).toContain("sceneTextStatsError");
+    expect(projectView).toContain("sceneTextAnalyticsRetry:");
+    expect(projectView).toContain("handler: handleSceneTextAnalyticsRetry");
+    expect(projectView).toContain(
+      "${i18n.projectPage.failedCalculateSceneTextAnalytics}",
+    );
+    expect(projectView).toContain(
+      "${i18n.projectPage.retrySceneTextAnalytics}",
+    );
     expect(projectView).not.toContain("sceneTextAnalyticsUnavailable");
     expect(projectView).toContain(
       "rtgl-text s=sm c=mu-fg w=1fg: ${sceneTextCountLabel}",

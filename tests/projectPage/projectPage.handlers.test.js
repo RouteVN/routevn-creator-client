@@ -8,6 +8,7 @@ import {
   handleEditDialogIconClick,
   handleEditFormAction,
   handleProjectActionMenuClickItem,
+  handleSceneTextAnalyticsRetry,
 } from "../../src/pages/project/project.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -27,6 +28,7 @@ const withProjectAnalyticsRequestState = (store = {}) => {
   let requestId = 0;
 
   return {
+    setSceneTextAnalyticsStatus: vi.fn(),
     ...store,
     selectProjectAnalyticsRequestId: vi.fn(() => requestId),
     setProjectAnalyticsRequestId: vi.fn((payload) => {
@@ -86,6 +88,9 @@ describe("project page handlers", () => {
       });
     });
     expect(deps.store.setProjectAnalytics).toHaveBeenCalledTimes(1);
+    expect(deps.store.setSceneTextAnalyticsStatus).toHaveBeenLastCalledWith({
+      status: "loading",
+    });
     expect(deps.render).toHaveBeenCalledTimes(1);
 
     resolveSceneTextStats({
@@ -118,6 +123,9 @@ describe("project page handlers", () => {
           },
         ],
       }),
+    });
+    expect(deps.store.setSceneTextAnalyticsStatus).toHaveBeenLastCalledWith({
+      status: "ready",
     });
     expect(deps.render).toHaveBeenCalledTimes(2);
   });
@@ -185,6 +193,83 @@ describe("project page handlers", () => {
           }),
         ],
       }),
+    });
+  });
+
+  it("stops retrying permanent failures and exposes an analytics error", async () => {
+    const repositoryState = {
+      project: { resolution: { width: 1920, height: 1080 } },
+      scenes: {
+        items: {
+          "scene-1": { id: "scene-1", name: "Opening", type: "scene" },
+        },
+        tree: [{ id: "scene-1" }],
+      },
+    };
+    const ensureSceneTextStats = vi.fn(async () => {
+      throw new Error("malformed scene projection");
+    });
+    const deps = {
+      appService: {
+        getCurrentProjectEntry: vi.fn(() => ({ source: "local" })),
+      },
+      projectService: {
+        ensureRepository: vi.fn(async () => {}),
+        getCurrentProjectInfo: vi.fn(async () => ({
+          name: "Project One",
+          language: "en",
+        })),
+        getRepositoryState: vi.fn(() => repositoryState),
+        ensureSceneTextStats,
+      },
+      store: withProjectAnalyticsRequestState({
+        setCurrentProject: vi.fn(),
+        setProjectAnalytics: vi.fn(),
+        selectCurrentProject: vi.fn(() => ({ language: "en" })),
+      }),
+      render: vi.fn(),
+      i18n: EN_I18N,
+    };
+
+    await handleAfterMount(deps);
+
+    expect(ensureSceneTextStats).toHaveBeenCalledTimes(3);
+    expect(deps.store.setSceneTextAnalyticsStatus).toHaveBeenLastCalledWith({
+      status: "error",
+    });
+  });
+
+  it("shows feedback when a manual analytics retry keeps failing", async () => {
+    const deps = {
+      appService: {
+        showToast: vi.fn(),
+      },
+      projectService: {
+        getRepositoryState: vi.fn(() => ({
+          scenes: {
+            items: {
+              "scene-1": { id: "scene-1", name: "Opening", type: "scene" },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        })),
+        ensureSceneTextStats: vi.fn(async () => {
+          throw new Error("malformed scene projection");
+        }),
+      },
+      store: withProjectAnalyticsRequestState({
+        setProjectAnalytics: vi.fn(),
+        selectCurrentProject: vi.fn(() => ({ language: "en" })),
+      }),
+      render: vi.fn(),
+      i18n: EN_I18N,
+    };
+
+    await handleSceneTextAnalyticsRetry(deps);
+
+    expect(deps.projectService.ensureSceneTextStats).toHaveBeenCalledTimes(3);
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: EN_I18N.projectPage.failedCalculateSceneTextAnalytics,
     });
   });
 

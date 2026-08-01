@@ -46,6 +46,7 @@ export const createInitialState = () => ({
   editIconFileId: undefined,
   editIconCropFile: undefined,
   projectAnalyticsRequestId: 0,
+  sceneTextAnalyticsStatus: "loading",
   analytics: buildProjectAnalytics(),
 });
 
@@ -121,6 +122,10 @@ export const setProjectAnalyticsRequestId = ({ state }, { requestId } = {}) => {
   state.projectAnalyticsRequestId = requestId;
 };
 
+export const setSceneTextAnalyticsStatus = ({ state }, { status } = {}) => {
+  state.sceneTextAnalyticsStatus = status;
+};
+
 export const openEditIconCropDialog = ({ state }, { file } = {}) => {
   state.isEditIconCropDialogOpen = true;
   state.editIconCropFile = file;
@@ -161,8 +166,10 @@ export const selectViewData = ({ state, i18n }) => {
   const hasMissingSceneTextStats = state.analytics.scenes.some(
     (scene) => scene.textStats?.language !== state.project.language,
   );
+  const hasSceneTextError = state.sceneTextAnalyticsStatus === "error";
   const isSceneTextLoading =
-    state.analytics.scenes.length > 0 && hasMissingSceneTextStats;
+    state.sceneTextAnalyticsStatus === "loading" ||
+    (!hasSceneTextError && hasMissingSceneTextStats);
   const sceneTextStats = hasMissingSceneTextStats
     ? []
     : state.analytics.scenes.map((scene) => ({
@@ -291,6 +298,7 @@ export const selectViewData = ({ state, i18n }) => {
     totalTextCountLabel: showCharacterCount
       ? copy.totalCharactersLabel
       : copy.totalWordsLabel,
+    hasSceneTextError,
     isSceneTextLoading,
     showNativeProjectActions:
       (state.platform === "android" || state.platform === "ios") &&

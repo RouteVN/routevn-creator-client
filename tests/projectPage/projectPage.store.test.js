@@ -7,6 +7,7 @@ import {
   setCurrentProject,
   setProjectAnalytics,
   setProjectAnalyticsRequestId,
+  setSceneTextAnalyticsStatus,
 } from "../../src/pages/project/project.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -17,6 +18,22 @@ describe("project page store", () => {
     expect(selectProjectAnalyticsRequestId({ state })).toBe(0);
     setProjectAnalyticsRequestId({ state }, { requestId: 2 });
     expect(selectProjectAnalyticsRequestId({ state })).toBe(2);
+  });
+
+  it("loads until the first analytics snapshot, including an empty project", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state, i18n: EN_I18N }).isSceneTextLoading).toBe(
+      true,
+    );
+
+    setProjectAnalytics({ state }, { analytics: { scenes: [] } });
+    setSceneTextAnalyticsStatus({ state }, { status: "ready" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.isSceneTextLoading).toBe(false);
+    expect(viewData.hasSceneTextError).toBe(false);
+    expect(viewData.sceneCount).toBe("0");
   });
 
   it("shows project language in detail and the edit form", () => {
@@ -133,6 +150,7 @@ describe("project page store", () => {
         },
       },
     );
+    setSceneTextAnalyticsStatus({ state }, { status: "ready" });
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
@@ -233,5 +251,30 @@ describe("project page store", () => {
     expect(viewData.sceneTextStats).toEqual([]);
     expect(viewData.totalTextCount).toBe("0");
     expect(viewData.isSceneTextLoading).toBe(true);
+  });
+
+  it("stops loading when scene text analytics reach an error state", () => {
+    const state = createInitialState();
+    setProjectAnalytics(
+      { state },
+      {
+        analytics: {
+          scenes: [
+            {
+              id: "scene-1",
+              name: "Opening",
+              textStats: undefined,
+            },
+          ],
+        },
+      },
+    );
+    setSceneTextAnalyticsStatus({ state }, { status: "error" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.isSceneTextLoading).toBe(false);
+    expect(viewData.hasSceneTextError).toBe(true);
+    expect(viewData.sceneTextStats).toEqual([]);
   });
 });
