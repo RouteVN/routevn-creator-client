@@ -1002,6 +1002,8 @@ export const handleCanvasPointerMove = (deps, payload) => {
   }
 
   if (deps.store.selectDragging().isDragging) {
+    deps.store.clearPointerGesture();
+    deps.store.clearPendingClickGesture();
     clearCanvasHover(deps);
     return;
   }
@@ -1046,13 +1048,19 @@ export const handleCanvasPointerDown = (deps, payload) => {
     return;
   }
 
+  deps.store.clearPendingClickGesture();
+  if (deps.store.selectDragging().isDragging) {
+    deps.store.clearPointerGesture();
+    clearCanvasHover(deps);
+    return;
+  }
+
   const position = toRendererPointerPosition(deps, event);
   const hitResolution = hitTestCanvasPosition(deps, position);
   const dragSelection = selectCanvasPointerDragTarget(deps, {
     event,
     hitResolution,
   });
-  deps.store.clearPendingClickGesture();
 
   if (!position || hitResolution.blocked === true) {
     deps.store.clearPointerGesture();

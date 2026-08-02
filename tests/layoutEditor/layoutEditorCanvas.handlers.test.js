@@ -382,6 +382,46 @@ describe("layoutEditorCanvas pointer selection", () => {
     expect(deps.graphicsService.hitTestElementBounds).not.toHaveBeenCalled();
   });
 
+  it.each(["before", "after"])(
+    "does not turn a renderer drag that starts %s wrapper pointerdown into a parent click",
+    (dragStartOrder) => {
+      const deps = createDeps({ selectedItemId: "child" });
+      const pointerEvent = {
+        button: 0,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 30,
+        clientY: 30,
+        metaKey: false,
+        ctrlKey: false,
+        detail: 1,
+      };
+
+      if (dragStartOrder === "before") {
+        deps.store.startDragging({ dragMode: "move" });
+      }
+      handleCanvasPointerDown(deps, { _event: pointerEvent });
+      if (dragStartOrder === "after") {
+        deps.store.startDragging({ dragMode: "move" });
+      }
+      handleCanvasPointerMove(deps, {
+        _event: {
+          ...pointerEvent,
+          clientX: 40,
+          clientY: 40,
+        },
+      });
+      deps.store.stopDragging();
+      handleCanvasPointerUp(deps, { _event: pointerEvent });
+      handleCanvasClick(deps, { _event: pointerEvent });
+
+      expect(deps.store.selectPointerGesture()).toBeUndefined();
+      expect(deps.store.selectPendingClickGesture()).toBeUndefined();
+      expect(deps.dispatchEvent).not.toHaveBeenCalled();
+    },
+  );
+
   it("observes a normal click without consuming the authored gesture", () => {
     const deps = createDeps();
     const event = runClick(deps);
