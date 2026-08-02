@@ -328,6 +328,60 @@ describe("layoutEditorCanvas pointer selection", () => {
     expect(deps.graphicsService.render).not.toHaveBeenCalled();
   });
 
+  it.each(["move", "right", "rotate"])(
+    "suppresses hover previews during %s dragging",
+    (dragMode) => {
+      const deps = createDeps({ selectedItemId: "parent" });
+      deps.store.setHoveredSelection({
+        selection: {
+          itemId: "child",
+          occurrenceId: "child",
+          bounds: bounds(20, 20, 40, 40),
+        },
+      });
+      deps.store.startDragging({ dragMode });
+
+      handleCanvasPointerMove(deps, {
+        _event: {
+          pointerId: 1,
+          pointerType: "mouse",
+          clientX: 30,
+          clientY: 30,
+          metaKey: false,
+          ctrlKey: false,
+        },
+      });
+
+      expect(deps.store.selectHoveredSelection()).toBeUndefined();
+      expect(deps.graphicsService.hitTestElementBounds).not.toHaveBeenCalled();
+    },
+  );
+
+  it("ignores a queued hover update after dragging starts", () => {
+    let runFrame;
+    vi.stubGlobal("requestAnimationFrame", (callback) => {
+      runFrame = callback;
+      return 1;
+    });
+    const deps = createDeps({ selectedItemId: "parent" });
+
+    handleCanvasPointerMove(deps, {
+      _event: {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 30,
+        clientY: 30,
+        metaKey: false,
+        ctrlKey: false,
+      },
+    });
+    deps.store.startDragging({ dragMode: "move" });
+    runFrame();
+
+    expect(deps.store.selectHoveredSelection()).toBeUndefined();
+    expect(deps.graphicsService.hitTestElementBounds).not.toHaveBeenCalled();
+  });
+
   it("observes a normal click without consuming the authored gesture", () => {
     const deps = createDeps();
     const event = runClick(deps);

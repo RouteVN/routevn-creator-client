@@ -496,10 +496,12 @@ const clearCanvasHover = (deps) => {
 const updateCanvasHover = (deps) => {
   const position = deps.store.selectLastPointerPosition();
   const pointerGesture = deps.store.selectPointerGesture();
+  const { isDragging } = deps.store.selectDragging();
   if (
     !position ||
     position.pointerType === "touch" ||
-    pointerGesture?.moved === true
+    pointerGesture?.moved === true ||
+    isDragging
   ) {
     clearCanvasHover(deps);
     return;
@@ -553,7 +555,11 @@ const dispatchSelectedElementMetrics = (deps, { itemId, metrics } = {}) => {
 const restoreCanvasHoverAfterRender = (deps) => {
   deps.store.clearHoveredSelection();
   const position = deps.store.selectLastPointerPosition();
-  if (position && position.pointerType !== "touch") {
+  if (
+    position &&
+    position.pointerType !== "touch" &&
+    deps.store.selectDragging().isDragging !== true
+  ) {
     scheduleCanvasHoverUpdate(deps);
   }
 };
@@ -993,6 +999,11 @@ export const handleCanvasPointerMove = (deps, payload) => {
     pointerGesture.directDragItemId
   ) {
     return handleBorderDragMove(deps, toMoveDragPosition(position));
+  }
+
+  if (deps.store.selectDragging().isDragging) {
+    clearCanvasHover(deps);
+    return;
   }
 
   if (
