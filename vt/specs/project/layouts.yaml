@@ -154,6 +154,17 @@ steps:
     ms: 1200
   - action: screenshot
   - action: select
+    selector: "#fileExplorer [data-item-id='AtgPkS3X9ZBF'] rtgl-text"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#resizableDetailPanel #layoutEditPanel rtgl-segmented-control[data-name='direction'] #option0"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
     selector: "#fileExplorer #itemRef1"
     steps:
       - action: rclick

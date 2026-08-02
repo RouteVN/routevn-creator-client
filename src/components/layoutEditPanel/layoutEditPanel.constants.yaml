@@ -155,10 +155,19 @@ layoutSections:
         value: "${values.direction}"
         options:
           - label: Absolute
+            svg: layout-direction-absolute
+            ariaLabel: Absolute
+            tooltip: Absolute
             value: absolute
           - label: Horizontal
+            svg: layout-direction-horizontal
+            ariaLabel: Horizontal
+            tooltip: Horizontal
             value: horizontal
           - label: Vertical
+            svg: layout-direction-vertical
+            ariaLabel: Vertical
+            tooltip: Vertical
             value: vertical
       - "$when": "showsGapField"
         type: group

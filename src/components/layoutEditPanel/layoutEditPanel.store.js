@@ -180,6 +180,9 @@ const localizeOptions = (options, copy = {}) => {
     if (typeof nextOption.ariaLabel === "string") {
       nextOption.ariaLabel = localizeStaticLabel(nextOption.ariaLabel, copy);
     }
+    if (typeof nextOption.tooltip === "string") {
+      nextOption.tooltip = localizeStaticLabel(nextOption.tooltip, copy);
+    }
     return nextOption;
   });
 };
