@@ -32,10 +32,10 @@ textPopoverForm: &textPopoverForm
         label: Submit
 
 layoutSections:
-  - "$when": "!isInsideDirectedContainer"
-    label: Position
+  - label: Transform
     items:
-      - type: group
+      - "$when": "!isInsideDirectedContainer"
+        type: group
         fields:
           - type: clickable-value
             svg: x
@@ -47,11 +47,30 @@ layoutSections:
             name: y
             value: "${values.y}"
             popoverForm: *numberPopoverForm
-  - "$when": "showLayoutSizeSection"
-    label: Layout
-    items:
-      - "$when": "supportsWidthMode"
+      - "$when": "groupSizeModes"
+        type: segmented-control-group
+        fields:
+          - type: segmented-control
+            label: Width
+            name: widthMode
+            value: "${widthMode}"
+            options:
+              - label: Auto
+                value: auto
+              - label: Fixed
+                value: fixed
+          - type: segmented-control
+            label: Height
+            name: heightMode
+            value: "${heightMode}"
+            options:
+              - label: Auto
+                value: auto
+              - label: Fixed
+                value: fixed
+      - "$when": "showLayoutSizeSection && supportsWidthMode && !groupSizeModes"
         type: segmented-control
+        stacked: "${stackWidthMode}"
         label: Width
         name: widthMode
         value: "${widthMode}"
@@ -60,7 +79,7 @@ layoutSections:
             value: auto
           - label: Fixed
             value: fixed
-      - "$when": "supportsHeightMode"
+      - "$when": "showLayoutSizeSection && supportsHeightMode && !groupSizeModes"
         type: segmented-control
         label: Height
         name: heightMode
@@ -70,7 +89,7 @@ layoutSections:
             value: auto
           - label: Fixed
             value: fixed
-      - "$when": "showWidthField || showHeightField"
+      - "$when": "showLayoutSizeSection && (showWidthField || showHeightField)"
         type: group
         fields:
           - "$when": "showWidthField"
@@ -85,8 +104,9 @@ layoutSections:
             name: height
             value: "${values.height}"
             popoverForm: *numberPopoverForm
-      - "$when": "showAspectRatioMode"
+      - "$when": "showLayoutSizeSection && showAspectRatioMode"
         type: segmented-control
+        stacked: true
         label: Ratio
         name: aspectRatioMode
         value: "${values.aspectRatioMode}"
@@ -95,67 +115,63 @@ layoutSections:
             value: free
           - label: Fixed
             value: fixed
-  - label: Appearance
-    items:
       - type: group
+        stacked: true
         fields:
-          - type: clickable-value
-            label: Opacity
-            name: opacity
-            value: "${values.opacity}"
-            popoverForm: *opacityPopoverForm
           - type: clickable-value
             label: Rotation
             name: rotation
             value: "${values.rotation}"
             metaValue: °
             popoverForm: *numberPopoverForm
-      - "$when": "supportsAnchor"
-        type: anchor-grid
-        label: Anchor
-        name: anchor
-        value: "${values.anchor}"
-        options:
-          - label: Top Left
-            value:
-              x: 0
-              y: 0
-          - label: Top Center
-            value:
-              x: 0.5
-              y: 0
-          - label: Top Right
-            value:
-              x: 1
-              y: 0
-          - label: Center Left
-            value:
-              x: 0
-              y: 0.5
-          - label: Center
-            value:
-              x: 0.5
-              y: 0.5
-          - label: Center Right
-            value:
-              x: 1
-              y: 0.5
-          - label: Bottom Left
-            value:
-              x: 0
-              y: 1
-          - label: Bottom Center
-            value:
-              x: 0.5
-              y: 1
-          - label: Bottom Right
-            value:
-              x: 1
-              y: 1
-  - "$when": "supportsDirection"
-    label: Direction
+          - "$when": "supportsAnchor"
+            type: anchor-grid
+            label: Anchor
+            name: anchor
+            value: "${values.anchor}"
+            options:
+              - label: Top Left
+                value:
+                  x: 0
+                  y: 0
+              - label: Top Center
+                value:
+                  x: 0.5
+                  y: 0
+              - label: Top Right
+                value:
+                  x: 1
+                  y: 0
+              - label: Center Left
+                value:
+                  x: 0
+                  y: 0.5
+              - label: Center
+                value:
+                  x: 0.5
+                  y: 0.5
+              - label: Center Right
+                value:
+                  x: 1
+                  y: 0.5
+              - label: Bottom Left
+                value:
+                  x: 0
+                  y: 1
+              - label: Bottom Center
+                value:
+                  x: 0.5
+                  y: 1
+              - label: Bottom Right
+                value:
+                  x: 1
+                  y: 1
+  - "$when": "supportsDirection || supportsScroll"
+    label: Layout
     items:
-      - type: segmented-control
+      - "$when": "supportsDirection"
+        type: segmented-control
+        stacked: true
         label: Direction
         name: direction
         value: "${values.direction}"
@@ -177,6 +193,7 @@ layoutSections:
             value: vertical
       - "$when": "showsGapField"
         type: group
+        stacked: true
         fields:
           - type: clickable-value
             label: Gap X
@@ -188,10 +205,9 @@ layoutSections:
             name: gapY
             value: "${values.gapY}"
             popoverForm: *numberPopoverForm
-  - "$when": "supportsScroll"
-    label: Scroll
-    items:
-      - type: segmented-control
+      - "$when": "supportsScroll"
+        type: segmented-control
+        stacked: true
         label: Scroll
         name: scroll
         value: "${values.scroll}"
@@ -200,6 +216,17 @@ layoutSections:
             value: false
           - label: Enabled
             value: true
+  - label: Appearance
+    items:
+      - type: group
+        stacked: true
+        halfWidth: true
+        fields:
+          - type: clickable-value
+            label: Opacity
+            name: opacity
+            value: "${values.opacity}"
+            popoverForm: *opacityPopoverForm
   - "$when": 'itemType == "container-ref-choice-single-item"'
     label: Choice
     items:
@@ -479,10 +506,10 @@ layoutSections:
         items: "${conditionalOverrideItems}"
 
 controlSections:
-  - "$when": "!isInsideDirectedContainer"
-    label: Position
+  - label: Transform
     items:
-      - type: group
+      - "$when": "!isInsideDirectedContainer"
+        type: group
         fields:
           - type: clickable-value
             svg: x
@@ -494,11 +521,9 @@ controlSections:
             name: y
             value: "${values.y}"
             popoverForm: *numberPopoverForm
-  - "$when": 'itemType != "fragment-ref"'
-    label: Layout
-    items:
-      - "$when": "supportsWidthMode"
+      - "$when": 'itemType != "fragment-ref" && supportsWidthMode'
         type: segmented-control
+        stacked: "${stackWidthMode}"
         label: Width
         name: widthMode
         value: "${widthMode}"
@@ -507,7 +532,8 @@ controlSections:
             value: auto
           - label: Fixed
             value: fixed
-      - type: group
+      - "$when": 'itemType != "fragment-ref"'
+        type: group
         fields:
           - "$when": '!supportsWidthMode || widthMode == "fixed"'
             type: clickable-value
@@ -520,21 +546,26 @@ controlSections:
             name: height
             value: "${values.height}"
             popoverForm: *numberPopoverForm
-  - label: Appearance
-    items:
       - type: group
+        stacked: true
         fields:
-          - type: clickable-value
-            label: Opacity
-            name: opacity
-            value: "${values.opacity}"
-            popoverForm: *opacityPopoverForm
           - type: clickable-value
             label: Rotation
             name: rotation
             value: "${values.rotation}"
             metaValue: °
             popoverForm: *numberPopoverForm
+  - label: Appearance
+    items:
+      - type: group
+        stacked: true
+        halfWidth: true
+        fields:
+          - type: clickable-value
+            label: Opacity
+            name: opacity
+            value: "${values.opacity}"
+            popoverForm: *opacityPopoverForm
   - id: visibilityCondition
     label: Visibility
     labelAction: plus

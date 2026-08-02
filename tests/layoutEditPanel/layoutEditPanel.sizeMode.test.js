@@ -8,6 +8,7 @@ import {
   updateValueProperty,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { handleOptionSelected } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
@@ -59,6 +60,122 @@ const createViewProps = ({
 });
 
 describe("layoutEditPanel size modes", () => {
+  it.each(["layouts", "controls"])(
+    "stacks text Width above its full-width Auto/Fixed selector for %s",
+    (resourceType) => {
+      const state = createInitialState();
+      setValues(
+        { state },
+        {
+          values: {
+            type: "text",
+            width: undefined,
+            height: 40,
+          },
+        },
+      );
+
+      const viewData = selectViewData({
+        i18n: EN_I18N,
+        state,
+        props: createViewProps({ itemType: "text", resourceType }),
+        constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+      });
+      const widthModeItem = viewData.config.sections
+        .flatMap((section) => section.items)
+        .find((item) => item.name === "widthMode");
+
+      expect(widthModeItem).toMatchObject({
+        type: "segmented-control",
+        stacked: true,
+        label: "Width",
+        value: "auto",
+      });
+    },
+  );
+
+  it("puts directed-container Width and Height in equal stacked-label columns", () => {
+    const state = createInitialState();
+    setValues(
+      { state },
+      {
+        values: {
+          type: "container",
+          direction: "horizontal",
+          width: 0,
+          height: 120,
+        },
+      },
+    );
+
+    const viewData = selectViewData({
+      i18n: EN_I18N,
+      state,
+      props: createViewProps({ itemType: "container" }),
+      constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+    });
+    const sizeModeGroup = viewData.config.sections
+      .flatMap((section) => section.items)
+      .find((item) => item.type === "segmented-control-group");
+
+    expect(sizeModeGroup).toMatchObject({
+      type: "segmented-control-group",
+      fields: [
+        expect.objectContaining({
+          name: "widthMode",
+          label: "Width",
+          value: "auto",
+        }),
+        expect.objectContaining({
+          name: "heightMode",
+          label: "Height",
+          value: "fixed",
+        }),
+      ],
+    });
+  });
+
+  it("stacks Ratio above its full-width mode selector", () => {
+    const state = createInitialState();
+    setValues(
+      { state },
+      {
+        values: {
+          type: "sprite",
+          width: 320,
+          height: 180,
+        },
+      },
+    );
+
+    const viewData = selectViewData({
+      i18n: EN_I18N,
+      state,
+      props: createViewProps({ itemType: "sprite" }),
+      constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+    });
+    const ratioItem = viewData.config.sections
+      .flatMap((section) => section.items)
+      .find((item) => item.name === "aspectRatioMode");
+    const view = readFileSync(
+      new URL(
+        "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(ratioItem).toMatchObject({
+      type: "segmented-control",
+      stacked: true,
+      label: "Ratio",
+      value: "free",
+    });
+    expect(view).toContain("$if item.stacked");
+    expect(view).toContain("rtgl-view d=v w=f g=sm");
+    expect(view.match(/rtgl-segmented-control[^\n]*s=sm/g)).toHaveLength(3);
+  });
+
   it("hides size controls for fragment references", () => {
     for (const resourceType of ["layouts", "controls"]) {
       const state = createInitialState();
@@ -74,6 +191,7 @@ describe("layoutEditPanel size modes", () => {
       );
 
       const viewData = selectViewData({
+        i18n: EN_I18N,
         state,
         props: createViewProps({
           itemType: "fragment-ref",

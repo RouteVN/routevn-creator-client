@@ -1473,6 +1473,7 @@ layoutEditPanel:
   saveBlurButton: "Save Blur"
   scrollDownLabel: "Scroll Down"
   scrollSection: "Scroll"
+  transformSection: "Transform"
   scrollUpLabel: "Scroll Up"
   selectButton: "Select"
   selectImageLabel: "Select image"

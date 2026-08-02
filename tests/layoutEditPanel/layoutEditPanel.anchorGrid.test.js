@@ -50,6 +50,7 @@ const getAnchorItem = (itemType) => {
 
   return viewData.config.sections
     .flatMap((section) => section.items)
+    .flatMap((item) => item.fields ?? [item])
     .find((item) => item.name === "anchor");
 };
 

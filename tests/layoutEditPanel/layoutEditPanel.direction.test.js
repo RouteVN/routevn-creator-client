@@ -47,12 +47,31 @@ describe("layoutEditPanel direction", () => {
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,
       i18n: JA_I18N,
     });
-    const directionItem = viewData.config.sections
-      .flatMap((section) => section.items)
-      .find((item) => item.name === "direction");
+    const [transformSection, layoutSection, appearanceSection] =
+      viewData.config.sections;
+    const directionItem = layoutSection.items.find(
+      (item) => item.name === "direction",
+    );
+    const scrollItem = layoutSection.items.find(
+      (item) => item.name === "scroll",
+    );
+    const gapGroup = layoutSection.items.find((item) => {
+      return item.fields?.some((field) => field.name === "gapX");
+    });
+
+    expect([
+      transformSection.label,
+      layoutSection.label,
+      appearanceSection.label,
+    ]).toEqual([
+      JA_I18N.layoutEditPanel.transformSection,
+      JA_I18N.layoutEditPanel.layoutSection,
+      JA_I18N.layoutEditPanel.appearanceSection,
+    ]);
 
     expect(directionItem).toMatchObject({
       type: "segmented-control",
+      stacked: true,
       value: "horizontal",
       options: [
         {
@@ -76,6 +95,19 @@ describe("layoutEditPanel direction", () => {
           tooltip: "縦",
           value: "vertical",
         },
+      ],
+    });
+    expect(scrollItem).toMatchObject({
+      type: "segmented-control",
+      stacked: true,
+      label: "スクロール",
+    });
+    expect(gapGroup).toMatchObject({
+      type: "group",
+      stacked: true,
+      fields: [
+        expect.objectContaining({ name: "gapX" }),
+        expect.objectContaining({ name: "gapY" }),
       ],
     });
   });

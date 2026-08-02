@@ -1473,6 +1473,7 @@ layoutEditPanel:
   saveBlurButton: "保存模糊"
   scrollDownLabel: "向下滚动"
   scrollSection: "滚动"
+  transformSection: "变换"
   scrollUpLabel: "向上滚动"
   selectButton: "选择"
   selectImageLabel: "选择图像"

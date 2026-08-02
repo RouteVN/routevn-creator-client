@@ -320,7 +320,7 @@ template:
       - $if i > 0:
           - rtgl-view h=1 w=f bgc=mu mv=lg: null
       - rtgl-view key=${section.viewKey} w=f g=md ph=md:
-          - rtgl-view d=h w=f av=c g=sm:
+          - rtgl-view d=h w=f av=c g=sm mb=sm:
               - rtgl-text s=sm: ${section.label}
               - $if section.tooltip:
                   - 'button#sectionTooltip${i}.layoutEditPanelSectionTooltipTrigger type=button aria-label="${section.tooltip}" data-tooltip="${section.tooltip}"': "?"
@@ -330,32 +330,67 @@ template:
           - $for item, j in section.items:
               - rtgl-view key=${item.viewKey} w=f:
                   - $if item.type == 'group':
-                      - rtgl-view d=h w=f g=md av=c:
-                          - $for field, k in item.fields:
-                              - $if field.label:
-                                  - rtgl-text s=sm w=60: ${field.label}
-                              - rtgl-view#groupItem${i}x${j}x${k} data-name=${field.name} w=1fg d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=28:
-                                  - rtgl-view d=h av=c g=md w=1fg:
-                                      - $if field.svg:
-                                          - rtgl-svg svg=${field.svg} wh=16: null
-                                      - rtgl-text s=xs: ${field.value}
-                                  - $if field.metaValue:
-                                      - rtgl-text s=xs c=mu-fg: ${field.metaValue}
+                      - $if item.stacked:
+                          - rtgl-view d=h w=f g=md:
+                              - $for field, k in item.fields:
+                                  - rtgl-view d=v w=1fg g=sm:
+                                      - $if field.label:
+                                          - rtgl-text s=xs c=mu: ${field.label}
+                                      - $if field.type == 'anchor-grid':
+                                          - 'rvn-layout-anchor-grid#selectItem${i}x${j}x${k} data-name=${field.name} label="${field.label}" :value=${field.value} :options=${field.options}': null
+                                        $else:
+                                          - rtgl-view#groupItem${i}x${j}x${k} data-name=${field.name} w=f d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=28:
+                                              - rtgl-view d=h av=c g=md w=1fg:
+                                                  - $if field.svg:
+                                                      - rtgl-svg svg=${field.svg} wh=16: null
+                                                  - rtgl-text s=xs: ${field.value}
+                                              - $if field.metaValue:
+                                                  - rtgl-text s=xs c=mu-fg: ${field.metaValue}
+                              - $if item.halfWidth:
+                                  - rtgl-view w=1fg: null
+                        $else:
+                          - rtgl-view d=h w=f g=md av=c:
+                              - $for field, k in item.fields:
+                                  - $if field.label:
+                                      - rtgl-text s=sm w=60: ${field.label}
+                                  - rtgl-view#groupItem${i}x${j}x${k} data-name=${field.name} w=1fg d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=28:
+                                      - rtgl-view d=h av=c g=md w=1fg:
+                                          - $if field.svg:
+                                              - rtgl-svg svg=${field.svg} wh=16: null
+                                          - rtgl-text s=xs: ${field.value}
+                                      - $if field.metaValue:
+                                          - rtgl-text s=xs c=mu-fg: ${field.metaValue}
                     $elif item.type == 'select':
                       - rtgl-view d=h av=c w=f:
                           - rtgl-text s=xs w=65: ${item.label}
                           - 'rtgl-view style="width: calc(100% - 65px);"':
                               - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
                     $elif item.type == 'anchor-grid':
-                      - rtgl-view d=h w=f:
-                          - 'rtgl-text s=xs w=65 style="padding-top: 4px;"': ${item.label}
-                          - 'rtgl-view style="width: calc(100% - 65px);"':
+                      - $if item.stacked:
+                          - rtgl-view d=v w=f g=sm:
+                              - rtgl-text s=xs c=mu: ${item.label}
                               - 'rvn-layout-anchor-grid#selectItem${i}x${j} data-name=${item.name} label="${item.label}" :value=${item.value} :options=${item.options}': null
+                        $else:
+                          - rtgl-view d=h w=f:
+                              - 'rtgl-text s=xs w=65 style="padding-top: 4px;"': ${item.label}
+                              - 'rtgl-view style="width: calc(100% - 65px);"':
+                                  - 'rvn-layout-anchor-grid#selectItem${i}x${j} data-name=${item.name} label="${item.label}" :value=${item.value} :options=${item.options}': null
                     $elif item.type == 'segmented-control':
-                      - rtgl-view d=h av=c w=f:
-                          - rtgl-text s=xs w=65: ${item.label}
-                          - 'rtgl-view style="width: calc(100% - 65px);"':
-                              - rtgl-segmented-control#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
+                      - $if item.stacked:
+                          - rtgl-view d=v w=f g=sm:
+                              - rtgl-text s=xs c=mu: ${item.label}
+                              - rtgl-segmented-control#selectItem${i}x${j} data-name=${item.name} w=f s=sm no-clear :selectedValue=${item.value} :options=${item.options}: null
+                        $else:
+                          - rtgl-view d=h av=c w=f:
+                              - rtgl-text s=xs w=65: ${item.label}
+                              - 'rtgl-view style="width: calc(100% - 65px);"':
+                                  - rtgl-segmented-control#selectItem${i}x${j} data-name=${item.name} w=f s=sm no-clear :selectedValue=${item.value} :options=${item.options}: null
+                    $elif item.type == 'segmented-control-group':
+                      - rtgl-view d=h w=f g=md:
+                          - $for field, k in item.fields:
+                              - rtgl-view d=v w=1fg g=sm:
+                                  - rtgl-text s=xs c=mu: ${field.label}
+                                  - rtgl-segmented-control#selectItem${i}x${j}x${k} data-name=${field.name} w=f s=sm no-clear :selectedValue=${field.value} :options=${field.options}: null
                     $elif item.type == 'list-item':
                       - $for listItem, k in item.items:
                           - rtgl-view#listItem${i}x${j}x${k} key=${listItem.viewKey} data-id=${listItem.id} data-interaction=${listItem.interactionType} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=pointer:

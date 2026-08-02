@@ -154,6 +154,7 @@ const STATIC_LABEL_COPY_KEYS = {
   "Top Center": "anchorTopCenter",
   "Top Left": "anchorTopLeft",
   "Top Right": "anchorTopRight",
+  Transform: "transformSection",
   Value: "valueLabel",
   Vertical: "verticalOption",
   Visibility: "visibilityLabel",
@@ -243,6 +244,7 @@ const localizePanelItem = (item, copy = {}) => {
         typeof field.label === "string"
           ? localizeStaticLabel(field.label, copy)
           : field.label,
+      options: localizeOptions(field.options, copy),
       popoverForm: localizeForm(field.popoverForm, copy),
     }));
   }
@@ -1715,7 +1717,9 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
   const supportsWidthMode =
     props.itemType?.startsWith("text") === true ||
     showsDirectedContainerSizeMode;
+  const stackWidthMode = props.itemType?.startsWith("text") === true;
   const supportsHeightMode = showsDirectedContainerSizeMode;
+  const groupSizeModes = showsDirectedContainerSizeMode;
   const widthMode =
     props.itemType?.startsWith("text") === true
       ? values.width === undefined
@@ -1766,8 +1770,10 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       revealSoundStopTimingOptions: createRevealSoundStopTimingOptions(copy),
       showLayoutSizeSection,
       supportsWidthMode,
+      stackWidthMode,
       widthMode,
       supportsHeightMode,
+      groupSizeModes,
       heightMode,
       showWidthField,
       showHeightField,

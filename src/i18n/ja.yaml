@@ -1473,6 +1473,7 @@ layoutEditPanel:
   saveBlurButton: "ぼかしを保存"
   scrollDownLabel: "下スクロール"
   scrollSection: "スクロール"
+  transformSection: "変形"
   scrollUpLabel: "上スクロール"
   selectButton: "選択"
   selectImageLabel: "画像を選択"

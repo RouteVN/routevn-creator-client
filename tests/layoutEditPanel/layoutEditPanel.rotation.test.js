@@ -25,7 +25,7 @@ const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
   ),
 );
 
-const getAppearanceFields = ({
+const createPanelViewData = ({
   resourceType = "layouts",
   rotation,
   i18n = EN_I18N,
@@ -42,7 +42,7 @@ const getAppearanceFields = ({
     },
   );
 
-  const viewData = selectViewData({
+  return selectViewData({
     state,
     props: {
       itemType: "container",
@@ -56,22 +56,77 @@ const getAppearanceFields = ({
     constants: LAYOUT_EDIT_PANEL_CONSTANTS,
     i18n,
   });
-  const appearanceLabel = i18n.layoutEditPanel.appearanceSection;
-  const appearanceSection = viewData.config.sections.find(
-    (section) => section.label === appearanceLabel,
+};
+
+const getSectionFields = (viewData, label) => {
+  const section = viewData.config.sections.find(
+    (candidate) => candidate.label === label,
   );
 
-  return appearanceSection.items.flatMap((item) => item.fields ?? []);
+  return section.items.flatMap((item) => item.fields ?? []);
 };
 
 describe("layoutEditPanel rotation", () => {
   it.each(["layouts", "controls"])(
+    "places rotation in Transform and opacity in Appearance for %s",
+    (resourceType) => {
+      const viewData = createPanelViewData({ resourceType });
+      const transformFields = getSectionFields(
+        viewData,
+        EN_I18N.layoutEditPanel.transformSection,
+      );
+      const appearanceFields = getSectionFields(
+        viewData,
+        EN_I18N.layoutEditPanel.appearanceSection,
+      );
+      const configuredSections =
+        resourceType === "controls"
+          ? LAYOUT_EDIT_PANEL_CONSTANTS.controlSections
+          : LAYOUT_EDIT_PANEL_CONSTANTS.layoutSections;
+      const transformGroup = configuredSections
+        .find((section) => section.label === "Transform")
+        .items.find((item) => {
+          return item.fields?.some((field) => field.name === "rotation");
+        });
+      const appearanceGroup = configuredSections
+        .find((section) => section.label === "Appearance")
+        .items.find((item) => item.type === "group");
+
+      expect(transformGroup.stacked).toBe(true);
+      if (resourceType === "layouts") {
+        expect(transformGroup.fields.map((field) => field.name)).toEqual([
+          "rotation",
+          "anchor",
+        ]);
+      }
+      expect(appearanceGroup.stacked).toBe(true);
+      expect(appearanceGroup.halfWidth).toBe(true);
+      expect(transformFields.map((field) => field.name)).toContain("rotation");
+      expect(appearanceFields.map((field) => field.name)).toEqual(["opacity"]);
+      const view = readFileSync(
+        new URL(
+          "../../src/components/layoutEditPanel/layoutEditPanel.view.yaml",
+          import.meta.url,
+        ),
+        "utf8",
+      );
+      expect(view).toContain("rtgl-view d=h w=f av=c g=sm mb=sm");
+      expect(view).toContain("rtgl-view d=v w=1fg g=sm");
+      expect(view).toContain("rtgl-text s=xs c=mu: ${field.label}");
+    },
+  );
+
+  it.each(["layouts", "controls"])(
     "shows unrestricted degree rotation for %s",
     (resourceType) => {
-      const rotationField = getAppearanceFields({
+      const viewData = createPanelViewData({
         resourceType,
         rotation: -45,
-      }).find((field) => field.name === "rotation");
+      });
+      const rotationField = getSectionFields(
+        viewData,
+        EN_I18N.layoutEditPanel.transformSection,
+      ).find((field) => field.name === "rotation");
 
       expect(rotationField).toMatchObject({
         type: "clickable-value",
@@ -89,9 +144,13 @@ describe("layoutEditPanel rotation", () => {
   );
 
   it("defaults missing rotation to zero and localizes its label", () => {
-    const rotationField = getAppearanceFields({
+    const viewData = createPanelViewData({
       i18n: JA_I18N,
-    }).find((field) => field.name === "rotation");
+    });
+    const rotationField = getSectionFields(
+      viewData,
+      JA_I18N.layoutEditPanel.transformSection,
+    ).find((field) => field.name === "rotation");
 
     expect(rotationField).toMatchObject({
       label: "回転",
@@ -106,9 +165,13 @@ describe("layoutEditPanel rotation", () => {
 
     expect(state.values.rotation).toBe(1);
 
-    const rotationField = getAppearanceFields({
+    const viewData = createPanelViewData({
       rotation: 12.34567,
-    }).find((field) => field.name === "rotation");
+    });
+    const rotationField = getSectionFields(
+      viewData,
+      EN_I18N.layoutEditPanel.transformSection,
+    ).find((field) => field.name === "rotation");
 
     expect(rotationField.value).toBe(12.35);
   });
