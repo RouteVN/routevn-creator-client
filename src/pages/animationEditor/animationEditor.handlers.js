@@ -1453,16 +1453,8 @@ export const handleSelectedKeyframeValueTypeChange = (deps, payload) => {
   commitSelectedKeyframeChange(deps);
 };
 
-const openSelectedKeyframeNumberPopover = (deps, payload, { mode } = {}) => {
+const openDetailNumberPopover = (deps, payload, { mode, value } = {}) => {
   const { render, store } = deps;
-  let value;
-  if (mode === "editSelectedKeyframeDelay") {
-    value = store.selectSelectedKeyframeDelay();
-  } else if (mode === "editSelectedKeyframeDuration") {
-    value = store.selectSelectedKeyframeDuration();
-  } else {
-    value = store.selectSelectedKeyframeValue();
-  }
   store.setPopover({
     mode,
     x: payload._event.clientX,
@@ -1476,20 +1468,42 @@ const openSelectedKeyframeNumberPopover = (deps, payload, { mode } = {}) => {
 };
 
 export const handleSelectedKeyframeDelayClick = (deps, payload) => {
-  openSelectedKeyframeNumberPopover(deps, payload, {
+  const { store } = deps;
+  openDetailNumberPopover(deps, payload, {
     mode: "editSelectedKeyframeDelay",
+    value: store.selectSelectedKeyframeDelay(),
   });
 };
 
 export const handleSelectedKeyframeDurationClick = (deps, payload) => {
-  openSelectedKeyframeNumberPopover(deps, payload, {
+  const { store } = deps;
+  openDetailNumberPopover(deps, payload, {
     mode: "editSelectedKeyframeDuration",
+    value: store.selectSelectedKeyframeDuration(),
   });
 };
 
 export const handleSelectedKeyframeValueClick = (deps, payload) => {
-  openSelectedKeyframeNumberPopover(deps, payload, {
+  const { store } = deps;
+  openDetailNumberPopover(deps, payload, {
     mode: "editSelectedKeyframeValue",
+    value: store.selectSelectedKeyframeValue(),
+  });
+};
+
+export const handleSelectedMaskSoftnessClick = (deps, payload) => {
+  const { store } = deps;
+  openDetailNumberPopover(deps, payload, {
+    mode: "editSelectedMaskSoftness",
+    value: store.selectMaskEditorTransitionMask()?.softness,
+  });
+};
+
+export const handleSelectedMaskProgressDurationClick = (deps, payload) => {
+  const { store } = deps;
+  openDetailNumberPopover(deps, payload, {
+    mode: "editSelectedMaskProgressDuration",
+    value: store.selectMaskEditorTransitionMask()?.progressDuration,
   });
 };
 
@@ -1500,13 +1514,15 @@ export const handleEditorPopoverPositioned = (deps) => {
       "editSelectedKeyframeDelay",
       "editSelectedKeyframeDuration",
       "editSelectedKeyframeValue",
+      "editSelectedMaskSoftness",
+      "editSelectedMaskProgressDuration",
     ].includes(store.selectPopover().mode)
   ) {
     refs.selectedKeyframeNumberInput.focus();
   }
 };
 
-const commitSelectedKeyframeNumberInput = (deps, value) => {
+const commitDetailNumberInput = (deps, value) => {
   const { store } = deps;
   if (value === undefined || value === null || value === "") {
     return;
@@ -1530,6 +1546,22 @@ const commitSelectedKeyframeNumberInput = (deps, value) => {
     store.setSelectedKeyframeDuration({ duration: numericValue });
   } else if (mode === "editSelectedKeyframeValue") {
     store.setSelectedKeyframeValue({ value: numericValue });
+  } else if (mode === "editSelectedMaskSoftness") {
+    if (numericValue < 0) {
+      return;
+    }
+    store.setTransitionMaskSoftness({ softness: numericValue });
+    store.closePopover();
+    commitMaskChange(deps);
+    return;
+  } else if (mode === "editSelectedMaskProgressDuration") {
+    if (numericValue < 1) {
+      return;
+    }
+    store.setTransitionMaskProgressDuration({ duration: numericValue });
+    store.closePopover();
+    commitMaskChange(deps);
+    return;
   } else {
     return;
   }
@@ -1549,10 +1581,7 @@ export const handleSelectedKeyframeNumberInputChange = (deps, payload) => {
 
 export const handleSelectedKeyframeNumberConfirmClick = (deps) => {
   const { store } = deps;
-  commitSelectedKeyframeNumberInput(
-    deps,
-    store.selectPopover().formValues.value,
-  );
+  commitDetailNumberInput(deps, store.selectPopover().formValues.value);
 };
 
 export const handleSelectedKeyframeNumberInputKeyDown = (deps, payload) => {
@@ -1561,7 +1590,7 @@ export const handleSelectedKeyframeNumberInputKeyDown = (deps, payload) => {
   if (event.key === "Enter") {
     event.preventDefault();
     event.stopPropagation();
-    commitSelectedKeyframeNumberInput(deps, event.currentTarget.value);
+    commitDetailNumberInput(deps, event.currentTarget.value);
   } else if (event.key === "Escape") {
     event.preventDefault();
     event.stopPropagation();

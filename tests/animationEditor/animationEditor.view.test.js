@@ -138,6 +138,14 @@ describe("animationEditor view", () => {
     expect(view).toContain("handler: handleMaskTimelineRowClick");
     expect(view).toContain("$elif selectedMask");
     expect(view).toContain("rtgl-view#selectedMaskDetails");
+    expect(view).toContain("rtgl-view#selectedMaskSoftness");
+    expect(view).toContain("handler: handleSelectedMaskSoftnessClick");
+    expect(view).toContain("rtgl-view#selectedMaskProgressDuration");
+    expect(view).toContain("handler: handleSelectedMaskProgressDurationClick");
+    expect(view).toContain("$if showSelectedMaskSoftnessPopover");
+    expect(view).toContain("$if showSelectedMaskProgressDurationPopover");
+    expect(view).toContain("min=0 step=0.01 value=${popover.formValues.value}");
+    expect(view).toContain("min=1 step=1 value=${popover.formValues.value}");
     expect(
       view.match(/div\.animationPreviewImageThumbnailTransparencyGrid/g),
     ).toHaveLength(2);

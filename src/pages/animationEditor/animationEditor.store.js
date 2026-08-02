@@ -3592,6 +3592,10 @@ export const selectViewData = ({ state, i18n }) => {
     state.popover.mode === "editSelectedKeyframeDuration";
   const showSelectedKeyframeValuePopover =
     state.popover.mode === "editSelectedKeyframeValue";
+  const showSelectedMaskSoftnessPopover =
+    state.popover.mode === "editSelectedMaskSoftness";
+  const showSelectedMaskProgressDurationPopover =
+    state.popover.mode === "editSelectedMaskProgressDuration";
 
   return {
     resourceCategory: ANIMATION_RESOURCE_CATEGORY,
@@ -3742,10 +3746,14 @@ export const selectViewData = ({ state, i18n }) => {
     selectedKeyframeNumberPopoverIsOpen:
       showSelectedKeyframeDelayPopover ||
       showSelectedKeyframeDurationPopover ||
-      showSelectedKeyframeValuePopover,
+      showSelectedKeyframeValuePopover ||
+      showSelectedMaskSoftnessPopover ||
+      showSelectedMaskProgressDurationPopover,
     showSelectedKeyframeDelayPopover,
     showSelectedKeyframeDurationPopover,
     showSelectedKeyframeValuePopover,
+    showSelectedMaskSoftnessPopover,
+    showSelectedMaskProgressDurationPopover,
     addButton: copy.addButton ?? "Add",
     addMaskButton: copy.addMaskButton ?? "Add Mask",
     addMaskTitle: copy.addMaskTitle ?? "Add Mask",

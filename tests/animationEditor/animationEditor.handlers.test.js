@@ -34,6 +34,8 @@ import {
   handleSelectedKeyframeNumberInputKeyDown,
   handleSelectedKeyframeValueClick,
   handleSelectedKeyframeValueTypeChange,
+  handleSelectedMaskProgressDurationClick,
+  handleSelectedMaskSoftnessClick,
   handleTimelineZoomChange,
   handleTimelineZoomIn,
   handleTimelineZoomOut,
@@ -860,7 +862,48 @@ describe("animationEditor.handlers", () => {
     expect(render).toHaveBeenCalledTimes(3);
   });
 
-  it("tracks and confirms selected keyframe number input values", () => {
+  it("opens number popovers for selected mask softness and duration", () => {
+    const store = {
+      selectMaskEditorTransitionMask: vi.fn(() => ({
+        progressDuration: 900,
+        softness: 0.08,
+      })),
+      setPopover: vi.fn(),
+      updatePopoverFormValues: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleSelectedMaskSoftnessClick(
+      { store, render },
+      { _event: { clientX: 10, clientY: 20 } },
+    );
+    handleSelectedMaskProgressDurationClick(
+      { store, render },
+      { _event: { clientX: 30, clientY: 40 } },
+    );
+
+    expect(store.setPopover).toHaveBeenNthCalledWith(1, {
+      mode: "editSelectedMaskSoftness",
+      x: 10,
+      y: 20,
+      payload: {},
+    });
+    expect(store.setPopover).toHaveBeenNthCalledWith(2, {
+      mode: "editSelectedMaskProgressDuration",
+      x: 30,
+      y: 40,
+      payload: {},
+    });
+    expect(store.updatePopoverFormValues).toHaveBeenNthCalledWith(1, {
+      formValues: { value: 0.08 },
+    });
+    expect(store.updatePopoverFormValues).toHaveBeenNthCalledWith(2, {
+      formValues: { value: 900 },
+    });
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("tracks and confirms selected detail number input values", () => {
     let popover = {
       mode: "editSelectedKeyframeDelay",
       formValues: { value: 300 },
@@ -874,6 +917,8 @@ describe("animationEditor.handlers", () => {
       setSelectedKeyframeDelay: vi.fn(),
       setSelectedKeyframeDuration: vi.fn(),
       setSelectedKeyframeValue: vi.fn(),
+      setTransitionMaskProgressDuration: vi.fn(),
+      setTransitionMaskSoftness: vi.fn(),
       stopPreviewPlayback: vi.fn(),
       updatePopoverFormValues: vi.fn(),
       ...createIdleAutosaveMocks(),
@@ -899,6 +944,16 @@ describe("animationEditor.handlers", () => {
       formValues: { value: -4.5 },
     };
     handleSelectedKeyframeNumberConfirmClick({ store, render });
+    popover = {
+      mode: "editSelectedMaskSoftness",
+      formValues: { value: 0.25 },
+    };
+    handleSelectedKeyframeNumberConfirmClick({ store, render });
+    popover = {
+      mode: "editSelectedMaskProgressDuration",
+      formValues: { value: 1200 },
+    };
+    handleSelectedKeyframeNumberConfirmClick({ store, render });
 
     expect(store.setSelectedKeyframeDelay).toHaveBeenCalledWith({ delay: 300 });
     expect(store.setSelectedKeyframeDuration).toHaveBeenCalledWith({
@@ -907,10 +962,16 @@ describe("animationEditor.handlers", () => {
     expect(store.setSelectedKeyframeValue).toHaveBeenCalledWith({
       value: -4.5,
     });
-    expect(store.closePopover).toHaveBeenCalledTimes(3);
-    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledTimes(3);
-    expect(store.queueAutosave).toHaveBeenCalledTimes(3);
-    expect(render).toHaveBeenCalledTimes(3);
+    expect(store.setTransitionMaskSoftness).toHaveBeenCalledWith({
+      softness: 0.25,
+    });
+    expect(store.setTransitionMaskProgressDuration).toHaveBeenCalledWith({
+      duration: 1200,
+    });
+    expect(store.closePopover).toHaveBeenCalledTimes(5);
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledTimes(5);
+    expect(store.queueAutosave).toHaveBeenCalledTimes(5);
+    expect(render).toHaveBeenCalledTimes(5);
   });
 
   it("focuses the selected keyframe number input when its popover opens", () => {

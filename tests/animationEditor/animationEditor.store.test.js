@@ -585,6 +585,29 @@ describe("animationEditor.store", () => {
       selected: true,
     });
 
+    setPopover({ state }, { mode: "editSelectedMaskSoftness", x: 20, y: 40 });
+    const softnessPopoverViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(softnessPopoverViewData.selectedKeyframeNumberPopoverIsOpen).toBe(
+      true,
+    );
+    expect(softnessPopoverViewData.showSelectedMaskSoftnessPopover).toBe(true);
+    expect(
+      softnessPopoverViewData.showSelectedMaskProgressDurationPopover,
+    ).toBe(false);
+
+    setPopover(
+      { state },
+      { mode: "editSelectedMaskProgressDuration", x: 20, y: 40 },
+    );
+    const durationPopoverViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(durationPopoverViewData.selectedKeyframeNumberPopoverIsOpen).toBe(
+      true,
+    );
+    expect(durationPopoverViewData.showSelectedMaskSoftnessPopover).toBe(false);
+    expect(
+      durationPopoverViewData.showSelectedMaskProgressDurationPopover,
+    ).toBe(true);
+
     clearTimelineSelection({ state });
     expect(selectViewData({ state, i18n: EN_I18N }).selectedMask).toBe(false);
   });

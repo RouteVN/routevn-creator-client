@@ -192,6 +192,25 @@ steps:
     timeoutMs: 5000
   - action: screenshot
   - action: select
+    selector: "#selectedMaskSoftness"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#selectedKeyframeNumberPopover[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "#selectedKeyframeNumberConfirm"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#selectedKeyframeNumberPopover"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
     selector: "#animationEditorTabs #tab1"
     steps:
       - action: click

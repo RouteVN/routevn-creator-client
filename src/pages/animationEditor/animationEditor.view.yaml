@@ -221,6 +221,14 @@ refs:
     eventListeners:
       click:
         handler: handleSelectedKeyframeValueClick
+  selectedMaskSoftness:
+    eventListeners:
+      click:
+        handler: handleSelectedMaskSoftnessClick
+  selectedMaskProgressDuration:
+    eventListeners:
+      click:
+        handler: handleSelectedMaskProgressDurationClick
   selectedKeyframeNumberInput:
     eventListeners:
       value-input:
@@ -520,7 +528,8 @@ template:
                                       - rtgl-segmented-control#maskInvertSelect w=f no-clear :selectedValue=${maskEditorPanel.invertValue} :options=${maskBooleanOptions}: null
                                   - rtgl-view d=v g=xs w=f:
                                       - rtgl-text s=sm c=mu-fg: ${softnessLabel}
-                                      - rtgl-input#maskSoftnessInput type=number min=0 step=0.01 w=f value=${maskEditorPanel.softness}: null
+                                      - rtgl-view#selectedMaskSoftness d=h pv=sm ph=md bgc=mu br=md av=c cur=pointer bw=xs bc=bg h-bc=ac h=32 w=f:
+                                          - rtgl-text s=sm: ${maskEditorPanel.softness}
                                   - rtgl-view d=v g=xs w=f:
                                       - rtgl-text s=sm c=mu-fg: ${imageLabel}
                                       - $if maskEditorPanel.singleImage:
@@ -534,7 +543,8 @@ template:
                                               - rtgl-text c=mu-fg: ${selectImageLabel}
                                   - rtgl-view d=v g=xs w=f:
                                       - rtgl-text s=sm c=mu-fg: ${progressDurationLabel}
-                                      - rtgl-input#maskProgressDurationInput type=number min=1 step=1 w=f value=${maskEditorPanel.progressDuration}: null
+                                      - rtgl-view#selectedMaskProgressDuration d=h pv=sm ph=md bgc=mu br=md av=c cur=pointer bw=xs bc=bg h-bc=ac h=32 w=f:
+                                          - rtgl-text s=sm: ${maskEditorPanel.progressDuration}
                                   - rtgl-view d=v g=xs w=f:
                                       - rtgl-text s=sm c=mu-fg: ${progressEasingLabel}
                                       - rtgl-select#maskProgressEasingSelect w=f no-clear :selectedValue=${maskEditorPanel.progressEasing} :options=${maskProgressEasingOptions}: null
@@ -563,7 +573,11 @@ template:
           - rtgl-input-number#selectedKeyframeNumberInput key=${popover.mode} w=f min=1 step=1 value=${popover.formValues.value}: null
       - $if showSelectedKeyframeValuePopover:
           - rtgl-input-number#selectedKeyframeNumberInput key=${popover.mode} w=f step=any value=${popover.formValues.value}: null
-      - $if showSelectedKeyframeDelayPopover || showSelectedKeyframeDurationPopover || showSelectedKeyframeValuePopover:
+      - $if showSelectedMaskSoftnessPopover:
+          - rtgl-input-number#selectedKeyframeNumberInput key=${popover.mode} w=f min=0 step=0.01 value=${popover.formValues.value}: null
+      - $if showSelectedMaskProgressDurationPopover:
+          - rtgl-input-number#selectedKeyframeNumberInput key=${popover.mode} w=f min=1 step=1 value=${popover.formValues.value}: null
+      - $if showSelectedKeyframeDelayPopover || showSelectedKeyframeDurationPopover || showSelectedKeyframeValuePopover || showSelectedMaskSoftnessPopover || showSelectedMaskProgressDurationPopover:
           - rtgl-view d=h w=f ah=e pt=xs:
               - rtgl-button#selectedKeyframeNumberConfirm s=sm v=pr: ${doneButton}
   - $if showAddPropertyDialog:
