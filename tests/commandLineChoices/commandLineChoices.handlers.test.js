@@ -401,6 +401,10 @@ describe("commandLineChoices.handlers", () => {
               screen: {
                 animations: {
                   resourceId: "screen-crossfade",
+                  playback: {
+                    continuity: "render",
+                    speed: 1,
+                  },
                 },
               },
             },

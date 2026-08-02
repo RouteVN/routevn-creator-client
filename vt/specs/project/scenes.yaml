@@ -1,6 +1,6 @@
 ---
 title: Project Scenes Workflow
-description: Covers the scenes page, add-scene flow, scene detail, preview, scene editor, and sections overview.
+description: Covers the scenes page, add-scene flow, scene detail, preview, scene editor, background and screen animation playback controls, and sections overview.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -68,6 +68,83 @@ steps:
     timeoutMs: 10000
   - action: wait
     ms: 500
+  - action: select
+    selector: "#sidebar [data-item-id='animatedAssets']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-animations
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#groupview #addBtnHeaderRef1"
+    state: visible
+    timeoutMs: 20000
+  - action: select
+    selector: "#groupview #addBtnHeaderRef1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#addDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#addDialog rtgl-input[data-field-name='name'] input"
+    steps:
+      - action: write
+        value: Looping Move
+  - action: select
+    selector: "#addDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-animation-editor
+    state: attached
+    timeoutMs: 20000
+  - action: waitFor
+    selector: "#addPropertiesButton"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#addPropertiesButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#addPropertyForm"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#addPropertyForm rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#updateTimeline #track0"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#updateTimeline #track0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#addKeyframeForm"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#addKeyframeForm rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#updateTimeline #keyframe0x0"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#backButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-animations
+    state: attached
+    timeoutMs: 10000
   - action: select
     selector: "#sidebar [data-item-id='scenes']"
     steps:
@@ -211,6 +288,8 @@ steps:
     selector: 'rvn-lexical-scene-document-editor .editor-paragraph[data-selected="true"][data-mode="block"]'
     state: visible
     timeoutMs: 5000
+  - action: wait
+    ms: 1200
   - action: assert
     type: text
     selector: "#sceneTextStats"
@@ -230,6 +309,195 @@ steps:
   - action: wait
     ms: 250
   - action: screenshot
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions #action4"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId']"
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option2"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option2"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='playbackLoop']"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] [data-testid='select-button']"
+    steps:
+      - action: hover
+      - action: scroll
+        deltaX: 0
+        deltaY: 500
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const background = deepQuery(document, 'rvn-command-line-background#commandLineBackground'); const form = deepQuery(background.shadowRoot, 'rtgl-form#form'); const fields = [...form.shadowRoot.querySelectorAll('[data-field-name]')].map((field) => field.dataset.fieldName); const loop = deepQuery(form.shadowRoot, 'rtgl-segmented-control[data-field-name=playbackLoop]'); return `${fields.slice(-3).join(',')}:${loop.hasAttribute('disabled')}`; })()"
+    value: "playbackSpeed,playbackLoop,playbackContinuity:true"
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option3"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] #option3"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] [data-testid='select-button']"
+    steps:
+      - action: hover
+      - action: scroll
+        deltaX: 0
+        deltaY: 500
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground rtgl-input-number[data-field-name='playbackSpeed'] input"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-input-number[data-field-name='playbackSpeed'] input"
+    steps:
+      - action: clear
+      - action: write
+        value: "1.5"
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='playbackLoop'] #option1"
+    steps:
+      - action: click
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const background = deepQuery(document, 'rvn-command-line-background#commandLineBackground'); const form = deepQuery(background.shadowRoot, 'rtgl-form#form'); const speedField = deepQuery(form.shadowRoot, 'rtgl-input-number[data-field-name=playbackSpeed]'); const speed = deepQuery(speedField.shadowRoot, 'input'); const loop = deepQuery(form.shadowRoot, 'rtgl-segmented-control[data-field-name=playbackLoop]'); const loopOption = deepQuery(loop.shadowRoot, '#option1'); return `${speed.value}:${loop.hasAttribute('disabled')}:${loopOption.getAttribute('aria-pressed')}`; })()"
+    value: "1.5:false:true"
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-system-actions-dialog-surface rtgl-dialog[open]"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-actions#commandLineActions #action3"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions #action3"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-select[data-field-name='transitionAnimationId']"
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-select[data-field-name='transitionAnimationId'] [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-select[data-field-name='transitionAnimationId'] #option0"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-select[data-field-name='transitionAnimationId'] #option0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions#systemActions rvn-command-line-screen#commandLineScreen rtgl-input-number[data-field-name='playbackSpeed'] input"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const systemActions = deepQuery(document, 'rvn-system-actions#systemActions'); const screen = deepQuery(systemActions.shadowRoot, 'rvn-command-line-screen#commandLineScreen'); const form = deepQuery(screen.shadowRoot, 'rtgl-form#form'); const speedField = deepQuery(form.shadowRoot, 'rtgl-input-number[data-field-name=playbackSpeed]'); const speed = deepQuery(speedField.shadowRoot, 'input'); const continuity = deepQuery(form.shadowRoot, 'rtgl-segmented-control[data-field-name=playbackContinuity]'); const loop = deepQuery(form.shadowRoot, '[data-field-name=playbackLoop]'); return `${speed.value}:${Boolean(continuity)}:${Boolean(loop)}`; })()"
+    value: "1:true:false"
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-system-actions-dialog-surface rtgl-dialog[open]"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-actions#commandLineActions #action12"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions #action12"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-choices#commandLineChoices #addChoiceButton"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-choices#commandLineChoices #addChoiceButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-choices#commandLineChoices rtgl-segmented-control[data-field-name='actionType'] #option1"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-choices#commandLineChoices rtgl-segmented-control[data-field-name='actionType'] #option1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-choices#commandLineChoices rtgl-select[data-field-name='transitionAnimationId'] [data-testid='select-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-choices#commandLineChoices rtgl-select[data-field-name='transitionAnimationId'] [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-choices#commandLineChoices rtgl-select[data-field-name='transitionAnimationId'] #option0"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-choices#commandLineChoices rtgl-select[data-field-name='transitionAnimationId'] #option0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-choices#commandLineChoices rtgl-input-number[data-field-name='playbackSpeed'] input"
+    state: visible
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const systemActions = deepQuery(document, 'rvn-system-actions#systemActions'); const choices = deepQuery(systemActions.shadowRoot, 'rvn-command-line-choices#commandLineChoices'); const form = deepQuery(choices.shadowRoot, 'rtgl-form#choiceForm'); const speedField = deepQuery(form.shadowRoot, 'rtgl-input-number[data-field-name=playbackSpeed]'); const speed = deepQuery(speedField.shadowRoot, 'input'); const continuity = deepQuery(form.shadowRoot, 'rtgl-segmented-control[data-field-name=playbackContinuity]'); const continuityOption = deepQuery(continuity.shadowRoot, '#option0'); return `${speed.value}:${continuityOption.getAttribute('aria-pressed')}`; })()"
+    value: "1:true"
   - action: keypress
     key: Escape
   - action: waitFor

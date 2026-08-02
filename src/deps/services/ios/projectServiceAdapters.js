@@ -16,7 +16,7 @@ import {
 } from "./collabClientStore.js";
 import { commandToSyncEvent } from "../shared/collab/mappers.js";
 import {
-  createBundleResult,
+  createBundle,
   normalizeExportFileEntries,
 } from "../shared/projectExportService.js";
 import {
@@ -36,6 +36,7 @@ import {
 import { toBootstrappedDraftEvent } from "../shared/collab/clientStoreHistory.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
+import { PROJECT_STORAGE_NOT_EMPTY_MESSAGE } from "../../../internal/projectInitialization.js";
 import { createWebIconAssets } from "../../clients/web/webIconAssets.js";
 import {
   filterTemplateFileIds,
@@ -54,17 +55,6 @@ const normalizeProjectInfo = (projectInfo = {}) => ({
   language: normalizeProjectLanguage(projectInfo.language),
   iconFileId: projectInfo.iconFileId ?? null,
 });
-
-const getByteLength = (value) => {
-  if (!value) return 0;
-  if (typeof value.byteLength === "number") return value.byteLength;
-  if (typeof value.size === "number") return value.size;
-  return 0;
-};
-
-const logExportSizeStats = (stats = {}) => {
-  console.info("[export.bundle.size]", stats);
-};
 
 const isMissingProjectFileError = (error) => {
   return String(error?.message ?? "").includes("Project file was not found");
@@ -296,6 +286,17 @@ const ensureIOSProjectStorage = async (projectId) => {
   });
 };
 
+const assertUnusedIOSProjectStorage = async (projectId) => {
+  const status = await callIOSBridge("getProjectStorageStatus", {
+    projectId: assertSafeIOSStorageSegment(projectId, {
+      label: "iOS project id",
+    }),
+  });
+  if (status?.exists !== false) {
+    throw new Error(PROJECT_STORAGE_NOT_EMPTY_MESSAGE);
+  }
+};
+
 const writeIOSProjectFile = async ({ projectId, fileId, bytes, mimeType }) => {
   const safeProjectId = assertSafeIOSStorageSegment(projectId, {
     label: "iOS project id",
@@ -471,16 +472,12 @@ const createDistributionZipBytes = async ({
   fileEntries,
   staticFiles,
   getCurrentReference,
-  stats = {},
 }) => {
   const assets = await collectDistributionZipAssets({
     fileEntries,
     getCurrentReference,
   });
-  const { bundle, stats: bundleStats } = await createBundleResult(
-    projectData,
-    assets,
-  );
+  const bundle = await createBundle(projectData, assets);
   const zip = new JSZip();
   zip.file("package.bin", bundle);
   if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
@@ -505,10 +502,6 @@ const createDistributionZipBytes = async ({
     compression: "DEFLATE",
     compressionOptions: { level: 6 },
   });
-  const loggedStats = {};
-  Object.assign(loggedStats, bundleStats, stats);
-  loggedStats.zipBytes = getByteLength(zipBytes);
-  logExportSizeStats(loggedStats);
   return zipBytes;
 };
 
@@ -557,7 +550,6 @@ const createNativeDistributionZipStreamedToPath = async ({
     "createDistributionZipStreamedToUri",
     payload,
   );
-  logExportSizeStats(result?.stats ?? result);
 
   return result?.uri ?? outputPath;
 };
@@ -627,6 +619,8 @@ export const createIOSProjectServiceAdapters = ({
         throw new Error("Template is required for project initialization");
       }
 
+      await assertUnusedIOSProjectStorage(safeProjectId);
+
       await ensureIOSProjectStorage(safeProjectId);
 
       const loadedTemplateData = await loadTemplate(template);
@@ -661,8 +655,6 @@ export const createIOSProjectServiceAdapters = ({
         clientTs: initialClientTs,
       });
 
-      await store.clearEvents();
-      await store.clearMaterializedViewCheckpoints();
       await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
       await store.saveMaterializedViewCheckpoint({
         viewName: MAIN_VIEW_NAME,
@@ -772,12 +764,7 @@ export const createIOSProjectServiceAdapters = ({
       });
     },
 
-    createDistributionZip: async ({
-      bundle,
-      zipName,
-      staticFiles,
-      stats = {},
-    }) => {
+    createDistributionZip: async ({ bundle, zipName, staticFiles }) => {
       const zip = new JSZip();
       zip.file("package.bin", bundle);
       if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
@@ -788,11 +775,6 @@ export const createIOSProjectServiceAdapters = ({
         type: "uint8array",
         compression: "DEFLATE",
         compressionOptions: { level: 6 },
-      });
-      logExportSizeStats({
-        ...stats,
-        packageBinBytes: getByteLength(bundle),
-        zipBytes: getByteLength(zipBytes),
       });
       return writeDownloadFile({
         filename: `${zipName}.zip`,

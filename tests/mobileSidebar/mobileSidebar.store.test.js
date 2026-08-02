@@ -46,12 +46,12 @@ describe("mobileSidebar scene map sections", () => {
       label: "System",
     });
     expect(systemSection.items.map((item) => item.id)).toEqual([
-      "controls",
       "variables",
+      "controls",
     ]);
     expect(systemSection.items.map((item) => item.path)).toEqual([
-      "/project/controls",
       "/project/variables",
+      "/project/controls",
     ]);
   });
 

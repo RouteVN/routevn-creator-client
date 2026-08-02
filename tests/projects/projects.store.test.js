@@ -7,6 +7,7 @@ import {
   createInitialState,
   openLanguageDialog,
   openAppVersionMenu,
+  removeProject,
   selectViewData,
   setPlatform,
   setProjects,
@@ -16,7 +17,7 @@ const EN_I18N_URL = new URL("../../src/i18n/en.yaml", import.meta.url);
 const EN_I18N = yaml.load(readFileSync(EN_I18N_URL, "utf8"));
 
 describe("projects.store addProject", () => {
-  it("replaces an existing project with the same id instead of appending a duplicate", () => {
+  it("keeps local projects with the same id when their paths differ", () => {
     const state = createInitialState();
 
     addProject(
@@ -49,7 +50,104 @@ describe("projects.store addProject", () => {
       {
         id: "project-1",
         name: "Project Two",
+        projectPath: "/old/project-two-migrated",
+      },
+      {
+        id: "project-1",
+        name: "Project Two",
         projectPath: "/new/project-two-migrated",
+      },
+    ]);
+  });
+
+  it("replaces an existing local project with the same path", () => {
+    const state = createInitialState();
+    state.projects = [
+      {
+        id: "project-1",
+        name: "Project One",
+        projectPath: "/projects/project-one",
+      },
+    ];
+
+    addProject(
+      { state },
+      {
+        project: {
+          id: "project-2",
+          name: "Project One Updated",
+          projectPath: "/projects/project-one",
+        },
+      },
+    );
+
+    expect(state.projects).toEqual([
+      {
+        id: "project-2",
+        name: "Project One Updated",
+        projectPath: "/projects/project-one",
+      },
+    ]);
+  });
+
+  it("derives local project row ids from project paths", () => {
+    const state = createInitialState();
+    setProjects(
+      { state },
+      {
+        projects: [
+          {
+            id: "shared-project-id",
+            name: "Project One",
+            projectPath: "/projects/project-one",
+          },
+          {
+            id: "shared-project-id",
+            name: "Project Two",
+            projectPath: "/projects/project-two",
+          },
+        ],
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.projects[0].itemId).not.toBe(viewData.projects[1].itemId);
+    expect(viewData.projects[0].itemId).toMatch(/^projectItem[a-zA-Z0-9]+$/);
+    expect(viewData.projects[1].itemId).toMatch(/^projectItem[a-zA-Z0-9]+$/);
+    expect(viewData.projects[0].encodedProjectPath).toBe(
+      encodeURIComponent("/projects/project-one"),
+    );
+    expect(viewData.projects[1].encodedProjectPath).toBe(
+      encodeURIComponent("/projects/project-two"),
+    );
+  });
+
+  it("removes only the local project at the selected path", () => {
+    const state = createInitialState();
+    state.projects = [
+      {
+        id: "shared-project-id",
+        projectPath: "/projects/project-one",
+      },
+      {
+        id: "shared-project-id",
+        projectPath: "/projects/project-two",
+      },
+    ];
+
+    removeProject(
+      { state },
+      {
+        projectId: "shared-project-id",
+        projectPath: "/projects/project-two",
+      },
+    );
+
+    expect(state.projects).toEqual([
+      {
+        id: "shared-project-id",
+        projectPath: "/projects/project-one",
       },
     ]);
   });

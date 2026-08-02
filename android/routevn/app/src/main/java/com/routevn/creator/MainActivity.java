@@ -772,6 +772,20 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public String getProjectStorageStatus(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                return bridgeSuccess(
+                    MainActivity.this.getProjectStorageStatus(
+                        payload.getString("projectId")
+                    )
+                );
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
         public String listProjectFolders(String payloadJson) {
             try {
                 return bridgeSuccess(MainActivity.this.listProjectFolders());
@@ -1185,6 +1199,29 @@ public class MainActivity extends Activity {
         if (!metadataRoot.exists() && !metadataRoot.mkdirs()) {
             throw new IllegalStateException("Failed to create project metadata directory.");
         }
+    }
+
+    private JSONObject getProjectStorageStatus(String projectId) throws Exception {
+        String safeProjectId = safePathSegment(projectId);
+        File databaseFile = getProjectDatabaseFile(safeProjectId);
+        File databaseDirectory = databaseFile.getParentFile();
+        File projectDirectory = getProjectRoot(safeProjectId);
+        boolean databaseFileExists = databaseFile.exists();
+        boolean databaseDirectoryExists =
+            databaseDirectory != null && databaseDirectory.exists();
+        boolean projectDirectoryExists = projectDirectory.exists();
+
+        JSONObject status = new JSONObject();
+        status.put(
+            "exists",
+            databaseFileExists ||
+                databaseDirectoryExists ||
+                projectDirectoryExists
+        );
+        status.put("databaseFileExists", databaseFileExists);
+        status.put("databaseDirectoryExists", databaseDirectoryExists);
+        status.put("projectDirectoryExists", projectDirectoryExists);
+        return status;
     }
 
     private JSONObject writeProjectFileBytes(

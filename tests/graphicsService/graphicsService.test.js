@@ -2214,4 +2214,80 @@ describe("graphicsService", () => {
       }),
     );
   });
+
+  it("keeps looping updates active while skipping finite animations", async () => {
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [],
+        audio: [],
+        animations: [
+          {
+            id: "background-loop",
+            targetId: "background",
+            type: "update",
+            playback: {
+              loop: true,
+            },
+          },
+          {
+            id: "background-enter",
+            targetId: "background",
+            type: "update",
+          },
+        ],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    service.engineRenderCurrentState({
+      skipAnimations: true,
+    });
+
+    expect(routeGraphicsInstance.setAnimationPlaybackMode).toHaveBeenCalledWith(
+      "auto",
+    );
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        animations: [
+          expect.objectContaining({
+            id: "background-loop",
+            playback: {
+              loop: true,
+            },
+          }),
+        ],
+      }),
+    );
+  });
 });

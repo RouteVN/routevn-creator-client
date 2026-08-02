@@ -29,6 +29,11 @@ const createService = ({
       cacheKey: `/tmp/${projectId}`,
       repositoryProjectId: projectId,
     })),
+    resolveProjectReferenceByPath: vi.fn(async ({ projectPath }) => ({
+      projectPath,
+      cacheKey: projectPath,
+      repositoryProjectId: projectPath,
+    })),
     readCreatorVersionByReference: vi.fn(readCreatorVersionByReference),
     evictStoreByReference: vi.fn(async () => {}),
     createStore: vi.fn(async () => ({
@@ -88,6 +93,32 @@ describe("projectRepositoryService compatibility ordering", () => {
     );
 
     expect(storageAdapter.createStore).toHaveBeenCalledTimes(1);
+  });
+
+  it("binds a project id to the selected local project path", async () => {
+    const { service, storageAdapter } = createService();
+
+    await service.ensureProjectCompatibleByPath(
+      "/projects/project-two",
+      "shared-project-id",
+    );
+    await service.ensureProjectCompatibleByProjectId("shared-project-id");
+
+    expect(
+      storageAdapter.resolveProjectReferenceByProjectId,
+    ).not.toHaveBeenCalled();
+    expect(storageAdapter.createStore).toHaveBeenCalledTimes(2);
+    for (const [payload] of storageAdapter.createStore.mock.calls) {
+      expect(payload).toEqual({
+        reference: {
+          projectPath: "/projects/project-two",
+          cacheKey: "/projects/project-two",
+          projectId: "shared-project-id",
+          repositoryProjectId: "shared-project-id",
+        },
+        db: {},
+      });
+    }
   });
 
   it("rejects projects with a stored projection gap as incompatible", async () => {

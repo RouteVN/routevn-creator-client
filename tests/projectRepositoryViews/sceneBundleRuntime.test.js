@@ -35,7 +35,11 @@ const createScene = (sceneId, sectionId, lineId) => ({
           items: {
             [lineId]: {
               id: lineId,
-              actions: {},
+              actions: {
+                dialogue: {
+                  content: [{ text: "Hello world" }],
+                },
+              },
             },
           },
           tree: [{ id: lineId }],
@@ -98,6 +102,8 @@ const createRuntime = ({
   textStatsCheckpoints = {},
   historyStats,
   getCurrentHistoryStats = () => historyStats,
+  getCurrentRevision = () => events.length,
+  loadSceneProjection: loadSceneProjectionOverride,
 }) => {
   const store = {
     deleteMaterializedViewCheckpoint: vi.fn(async () => {}),
@@ -127,15 +133,15 @@ const createRuntime = ({
         .map((event) => structuredClone(event));
     },
   );
-  const loadSceneProjection = vi.fn(async (sceneId) =>
-    createSceneState(sceneId),
-  );
+  const loadSceneProjection =
+    loadSceneProjectionOverride ??
+    vi.fn(async (sceneId) => createSceneState(sceneId));
 
   const runtime = createSceneBundleRuntime({
     store,
     listCommittedAfter,
     getCurrentMainState: () => mainState,
-    getCurrentRevision: () => events.length,
+    getCurrentRevision,
     getCurrentHistoryStats,
     getActiveSceneId: () => activeSceneId,
     getActiveSceneState: () => createSceneState(activeSceneId),
@@ -233,6 +239,183 @@ describe("sceneBundleRuntime", () => {
       [inactiveSceneId]: textStats,
     });
     expect(loadSceneProjection).not.toHaveBeenCalled();
+  });
+
+  it("computes and caches missing text stats for the requested language", async () => {
+    const { runtime, store, loadSceneProjection } = createRuntime({
+      events: [],
+    });
+
+    await expect(
+      runtime.ensureSceneTextStats({
+        sceneIds: [inactiveSceneId],
+        language: "ja",
+      }),
+    ).resolves.toEqual({
+      [inactiveSceneId]: {
+        lineCount: 1,
+        wordCount: 2,
+        characterCount: 10,
+        language: "ja",
+      },
+    });
+
+    expect(loadSceneProjection).toHaveBeenCalledWith(inactiveSceneId);
+    expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledWith({
+      viewName: SCENE_TEXT_STATS_VIEW_NAME,
+      partition: scenePartitionFor(inactiveSceneId),
+      viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+      lastCommittedId: 0,
+      value: {
+        lineCount: 1,
+        wordCount: 2,
+        characterCount: 10,
+        language: "ja",
+      },
+      updatedAt: expect.any(Number),
+    });
+  });
+
+  it("reuses fresh text stats cached for the requested language", async () => {
+    const textStats = {
+      lineCount: 3,
+      wordCount: 12,
+      characterCount: 48,
+      language: "en",
+    };
+    const partition = scenePartitionFor(inactiveSceneId);
+    const { runtime, store, loadSceneProjection } = createRuntime({
+      events: [],
+      textStatsCheckpoints: {
+        [partition]: {
+          partition,
+          viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+          lastCommittedId: 0,
+          value: textStats,
+        },
+      },
+    });
+
+    await expect(
+      runtime.ensureSceneTextStats({
+        sceneIds: [inactiveSceneId],
+        language: "en",
+      }),
+    ).resolves.toEqual({
+      [inactiveSceneId]: textStats,
+    });
+    expect(loadSceneProjection).not.toHaveBeenCalled();
+    expect(store.saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it("recomputes text stats cached for another language", async () => {
+    const partition = scenePartitionFor(inactiveSceneId);
+    const { runtime, store, loadSceneProjection } = createRuntime({
+      events: [],
+      textStatsCheckpoints: {
+        [partition]: {
+          partition,
+          viewVersion: SCENE_TEXT_STATS_VIEW_VERSION,
+          lastCommittedId: 0,
+          value: {
+            lineCount: 3,
+            wordCount: 12,
+            characterCount: 48,
+            language: "en",
+          },
+        },
+      },
+    });
+
+    await expect(
+      runtime.ensureSceneTextStats({
+        sceneIds: [inactiveSceneId],
+        language: "zh-Hans",
+      }),
+    ).resolves.toEqual({
+      [inactiveSceneId]: {
+        lineCount: 1,
+        wordCount: 2,
+        characterCount: 10,
+        language: "zh-Hans",
+      },
+    });
+    expect(loadSceneProjection).toHaveBeenCalledWith(inactiveSceneId);
+    expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledWith(
+      expect.objectContaining({
+        value: expect.objectContaining({ language: "zh-Hans" }),
+      }),
+    );
+  });
+
+  it("does not cache computed text stats against a different revision", async () => {
+    const { runtime, store } = createRuntime({ events: [] });
+
+    await expect(
+      runtime.cacheSceneTextStats({
+        sceneId: inactiveSceneId,
+        expectedRevision: 1,
+        textStats: {
+          lineCount: 1,
+          wordCount: 2,
+          characterCount: 11,
+          language: "en",
+        },
+      }),
+    ).resolves.toBeUndefined();
+    expect(store.saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it("returns no stale text stats when the repository changes during both attempts", async () => {
+    let revision = 0;
+    const loadSceneProjection = vi.fn(async (sceneId) => {
+      revision += 1;
+      return createSceneState(sceneId);
+    });
+    const { runtime, store } = createRuntime({
+      events: [],
+      getCurrentRevision: () => revision,
+      loadSceneProjection,
+    });
+
+    await expect(
+      runtime.ensureSceneTextStats({
+        sceneIds: [inactiveSceneId],
+        language: "en",
+      }),
+    ).resolves.toEqual({});
+    expect(loadSceneProjection).toHaveBeenCalledTimes(2);
+    expect(store.saveMaterializedViewCheckpoint).not.toHaveBeenCalled();
+  });
+
+  it("recalculates text stats when the derived cache cannot be read or written", async () => {
+    const { runtime, store, loadSceneProjection } = createRuntime({
+      events: [],
+    });
+    const cacheError = new Error("cache unavailable");
+    store.loadMaterializedViewCheckpoints.mockRejectedValueOnce(cacheError);
+    store.saveMaterializedViewCheckpoint.mockRejectedValueOnce(cacheError);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      await expect(
+        runtime.ensureSceneTextStats({
+          sceneIds: [inactiveSceneId],
+          language: "en",
+        }),
+      ).resolves.toEqual({
+        [inactiveSceneId]: {
+          lineCount: 1,
+          wordCount: 2,
+          characterCount: 10,
+          language: "en",
+        },
+      });
+      expect(loadSceneProjection).toHaveBeenCalledWith(inactiveSceneId);
+      expect(warn).toHaveBeenCalledTimes(2);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("does not scan scene history when no text stats are cached", async () => {

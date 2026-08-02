@@ -1,5 +1,9 @@
 import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
 import {
+  normalizeAnimationPlaybackContinuity,
+  normalizeAnimationPlaybackSpeed,
+} from "../../internal/animationPlayback.js";
+import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
   localizeCommandLineText,
@@ -99,6 +103,10 @@ const normalizeScreenFormValues = (values = {}) => {
   const nextValues = {
     ...values,
     opacity: normalizeScreenOpacity(values.opacity),
+    playbackSpeed: normalizeAnimationPlaybackSpeed(values.playbackSpeed),
+    playbackContinuity: normalizeAnimationPlaybackContinuity(
+      values.playbackContinuity,
+    ),
   };
 
   if (!hasFormValue(values, "blur")) {
@@ -133,6 +141,12 @@ const getScreenFormValuesFromAction = (screen = {}) => {
 
   return {
     transitionAnimationId: screen?.animations?.resourceId,
+    playbackSpeed: normalizeAnimationPlaybackSpeed(
+      screen?.animations?.playback?.speed,
+    ),
+    playbackContinuity: normalizeAnimationPlaybackContinuity(
+      screen?.animations?.playback?.continuity,
+    ),
     opacity: normalizeScreenOpacity(screen.opacity),
     blur: Boolean(screen.blur),
     blurX: blur.x,
@@ -159,6 +173,26 @@ const form = {
       clearable: true,
       placeholder: "Animation",
       options: "${transitionAnimationOptions}",
+    },
+    {
+      $when: "transitionAnimationId",
+      name: "playbackSpeed",
+      label: "Playback Speed",
+      type: "input-number",
+      min: 0.01,
+      step: 0.1,
+      required: true,
+    },
+    {
+      $when: "transitionAnimationId",
+      name: "playbackContinuity",
+      label: "Continuity",
+      type: "segmented-control",
+      clearable: false,
+      options: [
+        { value: "render", label: "Single Line" },
+        { value: "persistent", label: "Persistent" },
+      ],
     },
     {
       name: "opacity",
@@ -241,6 +275,16 @@ export const selectTransitionAnimationId = ({ state }) => {
   return state.formValues?.transitionAnimationId;
 };
 
+export const selectAnimationPlaybackSpeed = ({ state }) => {
+  return normalizeAnimationPlaybackSpeed(state.formValues?.playbackSpeed);
+};
+
+export const selectAnimationPlaybackContinuity = ({ state }) => {
+  return normalizeAnimationPlaybackContinuity(
+    state.formValues?.playbackContinuity,
+  );
+};
+
 export const selectScreenOpacity = ({ state }) => {
   return normalizeScreenOpacity(state.formValues?.opacity);
 };
@@ -283,6 +327,12 @@ export const selectViewData = ({ state, props, i18n }) => {
   const selectedOpacity = normalizeScreenOpacity(
     getSelectedFormValue(formValues, propsFormValues, "opacity"),
   );
+  const selectedPlaybackSpeed = normalizeAnimationPlaybackSpeed(
+    getSelectedFormValue(formValues, propsFormValues, "playbackSpeed"),
+  );
+  const selectedPlaybackContinuity = normalizeAnimationPlaybackContinuity(
+    getSelectedFormValue(formValues, propsFormValues, "playbackContinuity"),
+  );
   const selectedBlurEnabled = normalizeScreenBlurEnabled(
     getSelectedFormValue(formValues, propsFormValues, "blur"),
   );
@@ -305,6 +355,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     selectedOpacity !== undefined || selectedBlurEnabled
       ? [
           selectedAnimationId ?? "new-screen",
+          selectedPlaybackSpeed,
+          selectedPlaybackContinuity,
           selectedOpacity ?? DEFAULT_SCREEN_OPACITY,
           selectedBlurEnabled ? "blur" : "no-blur",
           selectedBlur.x,
@@ -334,6 +386,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     defaultValues: {
       ...formValues,
       transitionAnimationId: selectedAnimationId,
+      playbackSpeed: selectedPlaybackSpeed,
+      playbackContinuity: selectedPlaybackContinuity,
       opacity: selectedOpacity ?? DEFAULT_SCREEN_OPACITY,
       blur: selectedBlurEnabled,
       blurX: selectedBlur.x,

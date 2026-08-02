@@ -21,6 +21,7 @@ import {
   markNavigationPaintTiming,
   markNavigationTiming,
 } from "../../internal/navigationTiming.js";
+import { getLocalProjectPathFromPayload } from "../../internal/localProjectRoute.js";
 import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
@@ -331,14 +332,19 @@ export const createRouteTransitionRunner = (deps) => {
       canonicalPath,
       currentProjectId,
     );
+    const currentProjectPath = getLocalProjectPathFromPayload(nextPayload);
     const ensuredProjectId = projectService.getEnsuredProjectId();
-    const isAlreadyEnsured = currentProjectId === ensuredProjectId;
+    const ensuredProjectPath = projectService.getEnsuredProjectPath?.() ?? "";
+    const isAlreadyEnsured =
+      currentProjectId === ensuredProjectId &&
+      (!currentProjectPath || currentProjectPath === ensuredProjectPath);
     const shouldReleaseEnsuredRepository =
-      !!ensuredProjectId &&
-      (!needsRepository || ensuredProjectId !== currentProjectId);
+      !!ensuredProjectId && (!needsRepository || !isAlreadyEnsured);
     markNavigationTiming(routeTiming, "route.state.resolved", {
       currentProjectId,
+      currentProjectPath,
       ensuredProjectId,
+      ensuredProjectPath,
       needsRepository,
       isAlreadyEnsured,
       shouldReleaseEnsuredRepository,
@@ -710,6 +716,14 @@ export const handleMobileSheetClose = (deps) => {
   const { store, render } = deps;
 
   store.closeMobileSheet();
+  render();
+};
+
+export const handleSceneEditorKeyboardStateChange = (deps, payload = {}) => {
+  const { store, render } = deps;
+  const { isVisible } = payload._event.detail;
+
+  store.setSceneEditorKeyboardVisible({ isVisible });
   render();
 };
 

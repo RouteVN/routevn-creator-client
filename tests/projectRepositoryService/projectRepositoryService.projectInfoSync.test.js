@@ -20,6 +20,16 @@ describe("projectRepositoryService project-info cache sync", () => {
     const projectEntries = [
       {
         id: "project-1",
+        projectPath: "/projects/copied-project",
+        name: "Copied Project",
+        description: "Copied description",
+        language: "en",
+        iconFileId: "icon-copy",
+        createdAt: 50,
+        lastOpenedAt: 75,
+      },
+      {
+        id: "project-1",
         projectPath: "/projects/sample-project",
         name: "Sample Project",
         description: "Sample description",
@@ -60,8 +70,8 @@ describe("projectRepositoryService project-info cache sync", () => {
     const storageAdapter = {
       readCreatorVersionByReference: vi.fn(async () => 1),
       resolveProjectReferenceByProjectId: vi.fn(async ({ projectId }) => ({
-        projectPath: `/projects/${projectId}`,
-        cacheKey: `/projects/${projectId}`,
+        projectPath: "/projects/sample-project",
+        cacheKey: "/projects/sample-project",
         repositoryProjectId: projectId,
       })),
       createStore: vi.fn(async () => store),
@@ -86,8 +96,9 @@ describe("projectRepositoryService project-info cache sync", () => {
       expect.objectContaining({ language: "ja" }),
     );
     expect(db.set).toHaveBeenCalledWith("projectEntries", [
+      projectEntries[0],
       {
-        ...projectEntries[0],
+        ...projectEntries[1],
         language: "ja",
       },
     ]);

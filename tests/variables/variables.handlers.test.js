@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleDataChanged,
   handleVariableCreated,
+  handleVariableDelete,
+  handleVariableUpdated,
 } from "../../src/pages/variables/variables.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -18,6 +20,10 @@ const createRepositoryState = () => ({
         id: "variable1",
         type: "variable",
         name: "Score",
+        variableType: "number",
+        scope: "context",
+        default: 0,
+        value: 0,
       },
     },
     tree: [
@@ -36,14 +42,17 @@ const createDeps = ({ repositoryState = createRepositoryState() } = {}) => ({
   i18n: EN_I18N,
   projectService: {
     createVariable: vi.fn(),
+    deleteVariables: vi.fn(),
     getRepositoryState: vi.fn(() => repositoryState),
     getState: vi.fn(() => repositoryState),
+    updateVariable: vi.fn(),
   },
   store: {
     setItems: vi.fn(),
     setTagsData: vi.fn(),
     setSelectedFolderId: vi.fn(),
     setSelectedItemId: vi.fn(),
+    selectSelectedItem: vi.fn(() => repositoryState.variables.items.variable1),
     selectVariableTreeItemById: vi.fn(
       ({ itemId }) => repositoryState.variables.items[itemId],
     ),
@@ -52,6 +61,9 @@ const createDeps = ({ repositoryState = createRepositoryState() } = {}) => ({
   refs: {
     fileexplorer: {
       selectItem: vi.fn(),
+    },
+    groupview: {
+      closeDialog: vi.fn(),
     },
   },
 });
@@ -107,6 +119,151 @@ describe("variables.handlers", () => {
     expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
     expect(deps.refs.fileexplorer.selectItem).toHaveBeenCalledWith({
       itemId: "folder1",
+    });
+  });
+
+  it("creates stored number variables with a zero default when omitted", async () => {
+    const deps = createDeps();
+
+    await handleVariableCreated(deps, {
+      _event: {
+        detail: {
+          groupId: "folder1",
+          name: "Level",
+          description: "",
+          scope: "context",
+          variableType: "number",
+        },
+      },
+    });
+
+    expect(deps.projectService.createVariable).toHaveBeenCalledWith({
+      variableId: expect.any(String),
+      parentId: "folder1",
+      position: "last",
+      data: {
+        type: "variable",
+        name: "Level",
+        description: "",
+        scope: "context",
+        variableType: "number",
+        default: 0,
+        value: 0,
+      },
+    });
+  });
+
+  it("updates stored number variables with a zero default when omitted", async () => {
+    const deps = createDeps();
+
+    await handleVariableUpdated(deps, {
+      _event: {
+        detail: {
+          itemId: "variable1",
+          name: "Score",
+          description: "",
+          scope: "context",
+          variableType: "number",
+        },
+      },
+    });
+
+    expect(deps.projectService.updateVariable).toHaveBeenCalledWith({
+      variableId: "variable1",
+      data: {
+        name: "Score",
+        description: "",
+        scope: "context",
+        default: 0,
+        value: 0,
+      },
+    });
+  });
+
+  it("creates a computed variable without stored values", async () => {
+    const deps = createDeps();
+    const computed = {
+      expr: {
+        add: [{ var: "variables.variable1" }, 5],
+      },
+    };
+
+    await handleVariableCreated(deps, {
+      _event: {
+        detail: {
+          groupId: "folder1",
+          name: "Score with bonus",
+          description: "",
+          variableType: "number",
+          computed,
+        },
+      },
+    });
+
+    expect(deps.projectService.createVariable).toHaveBeenCalledWith({
+      variableId: expect.any(String),
+      parentId: "folder1",
+      position: "last",
+      data: {
+        type: "variable",
+        name: "Score with bonus",
+        description: "",
+        variableType: "number",
+        computed,
+      },
+    });
+    const data = deps.projectService.createVariable.mock.calls[0][0].data;
+    expect(data).not.toHaveProperty("default");
+    expect(data).not.toHaveProperty("value");
+    expect(data).not.toHaveProperty("scope");
+    expect(deps.refs.groupview.closeDialog).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the dialog open when engine validation rejects a formula", async () => {
+    const deps = createDeps();
+
+    await handleVariableCreated(deps, {
+      _event: {
+        detail: {
+          groupId: "folder1",
+          name: "Broken",
+          description: "",
+          variableType: "number",
+          computed: {
+            expr: { var: "variables.missing" },
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.createVariable).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "The computed formula is invalid. Review it and try again.",
+      title: "Warning",
+    });
+    expect(deps.refs.groupview.closeDialog).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+  });
+
+  it("blocks deletion when another computed variable depends on the target", async () => {
+    const repositoryState = createRepositoryState();
+    repositoryState.variables.items.computed1 = {
+      id: "computed1",
+      type: "variable",
+      name: "Score label",
+      variableType: "string",
+      computed: { expr: { var: "variables.variable1" } },
+    };
+    const deps = createDeps({ repositoryState });
+
+    await handleVariableDelete(deps, {
+      _event: { detail: { itemId: "variable1" } },
+    });
+
+    expect(deps.projectService.deleteVariables).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "This variable is used by: Score label",
+      title: "Warning",
     });
   });
 });

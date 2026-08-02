@@ -21,6 +21,9 @@ import { VARIABLE_TAG_SCOPE_KEY } from "./variables.store.js";
 import { selectVariablesPageCopy } from "./support/variablesPageCopy.js";
 import { clearResourcePageSelection } from "../../internal/ui/resourcePages/resourceViewBackground.js";
 import { tap } from "rxjs";
+import { resolveComputedVariables } from "route-engine-js";
+import { getRuntimeFieldItems } from "../../internal/runtimeFields.js";
+import { getComputedVariableDeletionDependents } from "../../internal/project/projection.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 const selectCopy = (deps = {}) => selectVariablesPageCopy(deps.i18n);
@@ -33,29 +36,49 @@ const normalizeOptionalTagIds = (tagIds) => {
   return tagIds;
 };
 
+const resolveStoredVariableDefault = ({ variableType, defaultValue } = {}) => {
+  if (
+    variableType === "number" &&
+    (defaultValue === undefined || defaultValue === "")
+  ) {
+    return 0;
+  }
+
+  return defaultValue ?? "";
+};
+
 const createVariableResourceData = ({
   name,
   description = "",
   scope = "device",
   variableType = "string",
-  defaultValue = "",
+  defaultValue,
   isEnum = false,
   enumValues = [],
   tagIds,
+  computed,
 } = {}) => {
   const enumEnabled = variableType === "string" && isEnum === true;
   const data = {
     name,
     description,
-    scope,
     type: "variable",
     variableType,
-    default: defaultValue,
-    value: defaultValue,
   };
+  if (computed !== undefined) {
+    data.computed = structuredClone(computed);
+  } else {
+    const storedDefault = resolveStoredVariableDefault({
+      variableType,
+      defaultValue,
+    });
+    data.scope = scope;
+    data.default = storedDefault;
+    data.value = storedDefault;
+  }
   const normalizedTagIds = normalizeOptionalTagIds(tagIds);
 
-  if (variableType === "string") {
+  if (computed === undefined && variableType === "string") {
     data.isEnum = enumEnabled;
     data.enumValues = enumEnabled
       ? normalizeVariableEnumValues(enumValues)
@@ -67,6 +90,53 @@ const createVariableResourceData = ({
   }
 
   return data;
+};
+
+const toEngineVariableConfig = (item = {}) => {
+  const config = {
+    type: item.variableType,
+    scope: item.computed === undefined ? item.scope : "context",
+  };
+  if (item.computed !== undefined) {
+    config.computed = structuredClone(item.computed);
+  } else {
+    config.default = structuredClone(item.default);
+  }
+  return config;
+};
+
+const validateComputedCandidate = ({
+  repositoryState,
+  variableId,
+  data,
+} = {}) => {
+  if (data.computed === undefined) {
+    return;
+  }
+  const variableItems = repositoryState?.variables?.items ?? {};
+  const variableConfigs = Object.fromEntries(
+    Object.entries(variableItems)
+      .filter(([, item]) => item.type === "variable")
+      .map(([id, item]) => [id, toEngineVariableConfig(item)]),
+  );
+  variableConfigs[variableId] = toEngineVariableConfig(data);
+  const variables = Object.fromEntries(
+    Object.entries(variableItems)
+      .filter(
+        ([id, item]) =>
+          id !== variableId &&
+          item.type === "variable" &&
+          item.computed === undefined,
+      )
+      .map(([id, item]) => [id, structuredClone(item.value ?? item.default)]),
+  );
+  const runtime = Object.fromEntries(
+    Object.entries(getRuntimeFieldItems()).map(([id, item]) => [
+      id,
+      structuredClone(item.default),
+    ]),
+  );
+  resolveComputedVariables({ variableConfigs, variables, runtime });
 };
 
 const isValidVariableParentFolder = ({ repositoryState, groupId } = {}) => {
@@ -435,8 +505,9 @@ export const handleVariableFormAddOptionClick = (deps, payload) => {
 };
 
 export const handleVariableCreated = async (deps, payload) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, refs } = deps;
   const copy = selectCopy(deps);
+  const detail = payload._event.detail;
   const {
     groupId,
     name,
@@ -447,7 +518,8 @@ export const handleVariableCreated = async (deps, payload) => {
     isEnum,
     enumValues,
     default: defaultValue,
-  } = payload._event.detail;
+    computed,
+  } = detail;
 
   if (
     !isValidVariableParentFolder({
@@ -465,23 +537,42 @@ export const handleVariableCreated = async (deps, payload) => {
     return;
   }
 
+  const variableId = generateId();
+  const data = createVariableResourceData({
+    name,
+    description,
+    tagIds,
+    scope,
+    variableType,
+    isEnum,
+    enumValues,
+    defaultValue,
+    computed,
+  });
+  try {
+    validateComputedCandidate({
+      repositoryState: projectService.getRepositoryState(),
+      variableId,
+      data,
+    });
+  } catch {
+    appService.showAlert({
+      message:
+        copy.computedFormulaInvalid ??
+        "The computed formula is invalid. Review it and try again.",
+      title: copy.warningTitle ?? "Warning",
+    });
+    return;
+  }
+
   const createAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage: copy.failedCreateVariable ?? "Failed to create variable.",
     title: copy.errorTitle ?? "Error",
     action: () =>
       projectService.createVariable({
-        variableId: generateId(),
-        data: createVariableResourceData({
-          name,
-          description,
-          tagIds,
-          scope,
-          variableType,
-          isEnum,
-          enumValues,
-          defaultValue,
-        }),
+        variableId,
+        data,
         parentId: groupId,
         position: "last",
       }),
@@ -491,12 +582,14 @@ export const handleVariableCreated = async (deps, payload) => {
     return;
   }
 
+  refs.groupview.closeDialog();
   await refreshVariablesData(deps);
 };
 
 export const handleVariableUpdated = async (deps, payload) => {
-  const { appService, store, projectService } = deps;
+  const { appService, store, projectService, refs } = deps;
   const copy = selectCopy(deps);
+  const detail = payload._event.detail;
   const {
     itemId,
     name,
@@ -507,23 +600,32 @@ export const handleVariableUpdated = async (deps, payload) => {
     isEnum,
     enumValues,
     default: defaultValue,
-  } = payload._event.detail;
+    computed,
+  } = detail;
 
   if (!itemId) {
     return;
   }
+  const selectedItem = store.selectSelectedItem();
+  const nextVariableType = variableType ?? selectedItem?.variableType;
   const data = {
     name,
     description: description ?? "",
-    scope,
-    default: defaultValue,
-    value: defaultValue,
   };
-  const selectedItem = store.selectSelectedItem();
-  const nextVariableType = variableType ?? selectedItem?.variableType;
+  if (computed !== undefined) {
+    data.computed = structuredClone(computed);
+  } else {
+    const storedDefault = resolveStoredVariableDefault({
+      variableType: nextVariableType,
+      defaultValue,
+    });
+    data.scope = scope;
+    data.default = storedDefault;
+    data.value = storedDefault;
+  }
   const normalizedTagIds = normalizeOptionalTagIds(tagIds);
 
-  if (nextVariableType === "string") {
+  if (computed === undefined && nextVariableType === "string") {
     data.isEnum = isEnum === true;
     data.enumValues =
       isEnum === true ? normalizeVariableEnumValues(enumValues) : [];
@@ -531,6 +633,28 @@ export const handleVariableUpdated = async (deps, payload) => {
 
   if (normalizedTagIds !== undefined) {
     data.tagIds = normalizedTagIds;
+  }
+
+  if (computed !== undefined) {
+    try {
+      validateComputedCandidate({
+        repositoryState: projectService.getRepositoryState(),
+        variableId: itemId,
+        data: {
+          ...selectedItem,
+          ...data,
+          variableType: nextVariableType,
+        },
+      });
+    } catch {
+      appService.showAlert({
+        message:
+          copy.computedFormulaInvalid ??
+          "The computed formula is invalid. Review it and try again.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
   }
 
   const updateAttempt = await runResourcePageMutation({
@@ -548,14 +672,30 @@ export const handleVariableUpdated = async (deps, payload) => {
     return;
   }
 
+  refs.groupview.closeDialog();
   store.setSelectedItemId({ itemId });
 
   await refreshVariablesData(deps);
 };
 
 export const handleVariableDelete = async (deps, payload) => {
-  const { store, projectService } = deps;
+  const { appService, store, projectService } = deps;
+  const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
+  const dependents = getComputedVariableDeletionDependents(
+    projectService.getRepositoryState()?.variables,
+    { variableIds: [itemId] },
+  );
+  if (dependents.length > 0) {
+    appService.showAlert({
+      message: (
+        copy.computedVariableDeleteBlocked ??
+        "This variable is used by: {dependents}"
+      ).replace("{dependents}", dependents.map((item) => item.name).join(", ")),
+      title: copy.warningTitle ?? "Warning",
+    });
+    return;
+  }
 
   await projectService.deleteVariables({
     variableIds: [itemId],

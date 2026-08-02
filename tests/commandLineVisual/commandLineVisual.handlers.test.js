@@ -939,6 +939,11 @@ describe("commandLineVisual.handlers animation controls", () => {
             },
             animations: {
               resourceId: "visual-fade",
+              playback: {
+                continuity: "render",
+                loop: false,
+                speed: 1,
+              },
             },
           },
         ],
@@ -970,6 +975,11 @@ describe("commandLineVisual.handlers animation controls", () => {
             },
             animations: {
               resourceId: "visual-fade",
+              playback: {
+                continuity: "render",
+                loop: false,
+                speed: 1,
+              },
             },
           },
         ],

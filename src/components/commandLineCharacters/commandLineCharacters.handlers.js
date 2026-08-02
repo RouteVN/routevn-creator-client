@@ -240,7 +240,14 @@ const buildCharacterItemsFromState = (
     if (char.animations?.resourceId) {
       item.animations = {
         resourceId: char.animations.resourceId,
+        playback: {
+          continuity: char.animations.playback.continuity,
+          speed: char.animations.playback.speed,
+        },
       };
+      if (char.animationMode === "update") {
+        item.animations.playback.loop = char.animations.playback.loop;
+      }
     }
 
     return item;
@@ -456,6 +463,51 @@ export const handleAnimationChange = (deps, payload) => {
   const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
   const value = payload._event.detail.value;
   store.updateCharacterAnimation({ index, animationId: value });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleAnimationPlaybackSpeedInput = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateCharacterAnimationPlaybackSpeed({
+    index,
+    speed: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleAnimationPlaybackLoopChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateCharacterAnimationPlaybackLoop({
+    index,
+    loop: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleAnimationPlaybackContinuityChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateCharacterAnimationPlaybackContinuity({
+    index,
+    continuity: getEventValue(payload._event),
+  });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

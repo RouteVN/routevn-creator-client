@@ -143,6 +143,7 @@ describe("projectExportService", () => {
       projectPath: "/tmp/project-1",
     }));
     const getFileContent = vi.fn();
+    const onProgress = vi.fn();
     const service = createProjectExportService({
       fileAdapter: {
         downloadBundle: vi.fn(),
@@ -170,6 +171,7 @@ describe("projectExportService", () => {
         },
         [{ fileId: "file-1", mimeType: "image/png" }],
         "/tmp/export.zip",
+        { onProgress },
       ),
     ).resolves.toBe("/tmp/export.zip");
     expect(createDistributionZipStreamedToPath).toHaveBeenCalledWith({
@@ -183,6 +185,7 @@ describe("projectExportService", () => {
       },
       fileEntries: [{ id: "file-1", mimeType: "image/png" }],
       outputPath: "/tmp/export.zip",
+      options: { onProgress },
       staticFiles: {
         indexHtml: expect.any(String),
         manifestJson: expect.any(String),

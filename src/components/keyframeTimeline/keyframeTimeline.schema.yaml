@@ -35,7 +35,7 @@ propsSchema:
       description: Whether the timeline should render its property tracks
     interactiveRuler:
       type: boolean
-      description: Whether the ruler should emit hover events and render the local hover indicator
+      description: Whether the numbered ruler can be clicked and dragged to scrub preview time
     indicatorVisible:
       type: boolean
       description: Whether the timeline should render an external playhead indicator
@@ -45,6 +45,24 @@ propsSchema:
     side:
       type: string
       description: Optional timeline context key included in emitted events
+    selectedKeyframe:
+      type: object
+      description: The single selected keyframe shared across timeline sections
+      properties:
+        side:
+          type: string
+        property:
+          type: string
+        index:
+          type: number
+    selectedProperty:
+      type: object
+      description: The single selected property shared across timeline sections
+      properties:
+        side:
+          type: string
+        property:
+          type: string
     tracks:
       type: array
       description: Array of animation tracks

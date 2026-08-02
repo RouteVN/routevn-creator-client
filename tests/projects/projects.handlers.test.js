@@ -24,6 +24,7 @@ const EN_I18N = yaml.load(readFileSync(EN_I18N_URL, "utf8"));
 
 const createDeps = ({
   ensureProjectCompatibleById = vi.fn(async () => {}),
+  ensureProjectCompatibleByPath = vi.fn(async () => {}),
   platform = "tauri",
 } = {}) => {
   const appService = {
@@ -52,6 +53,7 @@ const createDeps = ({
     appService,
     projectService: {
       ensureProjectCompatibleById,
+      ensureProjectCompatibleByPath,
       releaseProjectRuntime: vi.fn(async () => {}),
     },
     store: {
@@ -129,12 +131,15 @@ const createDeps = ({
   };
 };
 
-const createPayload = (projectId = "project-1") => {
+const createPayload = (projectId = "project-1", projectPath = undefined) => {
   return {
     _event: {
       currentTarget: {
         dataset: {
           projectId,
+          projectPath: projectPath
+            ? encodeURIComponent(projectPath)
+            : undefined,
         },
       },
     },
@@ -301,7 +306,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 
-  it("suggests updating RouteVN Creator for project data validation errors", async () => {
+  it("shows project validation details and support guidance", async () => {
     const deps = createDeps({
       ensureProjectCompatibleById: vi.fn(async () => {
         const error = new Error(
@@ -311,12 +316,11 @@ describe("projects.handleProjectsClick", () => {
         throw error;
       }),
     });
-
     await handleProjectsClick(deps, createPayload());
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message:
-        "Project data structure failed validation.\nMake sure you're using the latest version of RouteVN Creator.",
+        "RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.\n\nTechnical details: payload.sectionId must reference an existing section",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
@@ -376,6 +380,46 @@ describe("projects.handleProjectsClick", () => {
       },
     );
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("opens the selected local project by path when project ids match", async () => {
+    const deps = createDeps();
+    deps.store.selectProjects.mockReturnValue([
+      {
+        id: "shared-project-id",
+        name: "Project One",
+        projectPath: "/projects/project-one",
+      },
+      {
+        id: "shared-project-id",
+        name: "Project Two",
+        projectPath: "/projects/project-two",
+      },
+    ]);
+
+    await handleProjectsClick(
+      deps,
+      createPayload("shared-project-id", "/projects/project-two"),
+    );
+
+    expect(
+      deps.projectService.ensureProjectCompatibleByPath,
+    ).toHaveBeenCalledWith("/projects/project-two", "shared-project-id");
+    expect(deps.appService.setCurrentProjectEntry).toHaveBeenCalledWith({
+      id: "shared-project-id",
+      name: "Project Two",
+      projectPath: "/projects/project-two",
+    });
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project",
+      {
+        p: "shared-project-id",
+        lp: "/projects/project-two",
+      },
+      {
+        historyMode: "replace",
+      },
+    );
   });
 });
 
@@ -758,19 +802,22 @@ describe("projects.handleDeleteDialogConfirm", () => {
   it("releases a local project runtime before removing its project entry", async () => {
     const deps = createDeps();
     deps.store.selectDeleteDialogProjectId.mockReturnValue("project-1");
+    deps.store.selectDeleteDialogProjectPath.mockReturnValue(
+      "/projects/project-one",
+    );
 
-    deps.appService.removeProjectEntry = vi.fn(async () => {});
+    deps.appService.removeProjectEntryByPath = vi.fn(async () => {});
 
     await handleDeleteDialogConfirm(deps);
 
     expect(deps.projectService.releaseProjectRuntime).toHaveBeenCalledWith(
       "project-1",
     );
-    expect(deps.appService.removeProjectEntry).toHaveBeenCalledWith(
-      "project-1",
+    expect(deps.appService.removeProjectEntryByPath).toHaveBeenCalledWith(
+      "/projects/project-one",
     );
     expect(deps.store.removeProject).toHaveBeenCalledWith({
-      projectId: "project-1",
+      projectPath: "/projects/project-one",
     });
     expect(deps.store.closeDeleteDialog).toHaveBeenCalledTimes(1);
   });
@@ -805,7 +852,7 @@ describe("projects.handleProjectContextMenu", () => {
         clientY: 20,
         currentTarget: {
           dataset: {
-            projectIndex: "0",
+            projectPath: "/projects/project-one",
           },
         },
       },
@@ -827,7 +874,7 @@ describe("projects.handleProjectContextMenu", () => {
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
 
-  it("derives the project path from store for a normal local project row", () => {
+  it("uses the row path for a normal local project", () => {
     const deps = createDeps();
 
     handleProjectContextMenu(deps, {
@@ -838,7 +885,7 @@ describe("projects.handleProjectContextMenu", () => {
         currentTarget: {
           dataset: {
             projectId: "project-1",
-            projectIndex: "0",
+            projectPath: "/projects/project-one",
           },
         },
       },

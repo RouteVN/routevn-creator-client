@@ -16,6 +16,7 @@ export const createProjectCollabCore = ({
   getCachedRepository,
   getRepositoryByProject,
   getAdapterByProject,
+  getProjectCacheKey = (projectId) => projectId,
   createSessionForProject,
   createTransport,
   onEnsureLocalSession,
@@ -25,7 +26,7 @@ export const createProjectCollabCore = ({
   const collabSessionsByProject = new Map();
   const collabSessionModeByProject = new Map();
   const localCollabActorsByProject = new Map();
-  const versionsByProject = new Map();
+  const versionsByProjectCacheKey = new Map();
 
   const getCurrentProjectId = () => {
     const { p } = router.getPayload();
@@ -207,16 +208,23 @@ export const createProjectCollabCore = ({
 
   const cacheVersions = (projectId, versions) => {
     const cachedVersions = structuredClone(versions);
-    versionsByProject.set(projectId, cachedVersions);
+    versionsByProjectCacheKey.set(
+      getProjectCacheKey(projectId),
+      cachedVersions,
+    );
     return structuredClone(cachedVersions);
   };
 
   const getCachedVersions = (projectId) => {
     const targetProjectId = projectId || getCurrentProjectId();
-    if (!targetProjectId || !versionsByProject.has(targetProjectId)) {
+    if (!targetProjectId) {
       return undefined;
     }
-    return structuredClone(versionsByProject.get(targetProjectId));
+    const projectCacheKey = getProjectCacheKey(targetProjectId);
+    if (!versionsByProjectCacheKey.has(projectCacheKey)) {
+      return undefined;
+    }
+    return structuredClone(versionsByProjectCacheKey.get(projectCacheKey));
   };
 
   const loadVersionsFromProject = async (projectId) => {

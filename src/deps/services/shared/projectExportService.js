@@ -1102,11 +1102,13 @@ export const createProjectExportService = ({
     projectData,
     fileEntries,
     outputPath,
+    options = {},
   ) => {
     return fileAdapter.createDistributionZipStreamedToPath({
       projectData,
       fileEntries: normalizeExportFileEntries(fileEntries),
       outputPath,
+      options,
       staticFiles: await getBundleStaticFiles(projectData),
       getCurrentReference,
       getFileContent,

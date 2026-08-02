@@ -1,0 +1,45 @@
+refs:
+  popover:
+    eventListeners:
+      close:
+        handler: handlePopoverClose
+  numberValueInput:
+    eventListeners:
+      value-input:
+        handler: handleValueInput
+      keydown:
+        handler: handleInputKeydown
+  stringValueInput:
+    eventListeners:
+      value-input:
+        handler: handleValueInput
+      keydown:
+        handler: handleInputKeydown
+  booleanValueInput:
+    eventListeners:
+      value-change:
+        handler: handleValueInput
+      keydown:
+        handler: handleInputKeydown
+  valueTypeSelect:
+    eventListeners:
+      value-change:
+        handler: handleValueTypeChange
+  valueSubmit:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+template:
+  - rtgl-popover#popover ?open=${open} x=${x} y=${y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
+      - 'rtgl-view style="${valueTypeSelectStyle}" g=sm':
+          - rtgl-text s=sm: ${valueTypeLabel}
+          - rtgl-select#valueTypeSelect w=f no-clear :selectedValue=${valueType} :options=${valueTypeOptions}: null
+      - rtgl-text s=sm: ${valueLabel}
+      - 'rtgl-view style="${numberInputStyle}"':
+          - rtgl-input-number#numberValueInput w=f value=${numberValue}: null
+      - 'rtgl-view style="${stringInputStyle}"':
+          - rtgl-input#stringValueInput w=f value=${stringValue}: null
+      - 'rtgl-view style="${booleanInputStyle}"':
+          - rtgl-select#booleanValueInput w=f no-clear :selectedValue=${booleanSelectedValue} :options=${booleanOptions}: null
+      - rtgl-view d=h w=f ah=e:
+          - rtgl-button#valueSubmit s=sm v=pr: ${addValueLabel}

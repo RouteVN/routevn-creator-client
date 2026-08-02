@@ -198,6 +198,44 @@ describe("layoutEditorPreview", () => {
     expect(previewData.saveSlots).toEqual([]);
   });
 
+  it("resolves computed variables after stored and runtime preview overrides", () => {
+    const previewData = createLayoutEditorPreviewData({
+      variablesData: {
+        items: {
+          score: {
+            type: "variable",
+            variableType: "number",
+            scope: "context",
+            default: 5,
+            value: 5,
+          },
+          total: {
+            type: "variable",
+            variableType: "number",
+            scope: "context",
+            computed: {
+              expr: {
+                add: [
+                  { var: "variables.score" },
+                  { var: "runtime.musicVolume" },
+                ],
+              },
+            },
+          },
+        },
+      },
+      previewVariableValues: {
+        "variables.score": 8,
+        "runtime.musicVolume": 20,
+      },
+    });
+
+    expect(previewData.variables).toMatchObject({
+      score: 8,
+      total: 28,
+    });
+  });
+
   it("builds save/load preview slots for repeating slot containers", () => {
     const saveLoadPreviewData = createLayoutEditorPreviewData({
       layoutType: "save-load",

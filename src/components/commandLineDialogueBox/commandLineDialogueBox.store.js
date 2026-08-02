@@ -1,5 +1,14 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  DEFAULT_ANIMATION_PLAYBACK_CONTINUITY,
+  DEFAULT_ANIMATION_PLAYBACK_SPEED,
+  canLoopAnimationById,
+  getAnimationType,
+  normalizeAnimationPlaybackContinuity,
+  normalizeAnimationPlaybackLoop,
+  normalizeAnimationPlaybackSpeed,
+} from "../../internal/animationPlayback.js";
+import {
   buildCharacterSpritePreviewLayer,
   buildCharacterSpritePreviewFileIds,
   buildCharacterSpritePreviewLayers,
@@ -26,6 +35,14 @@ const ANIMATION_MODE_OPTIONS = [
     label: "Transition",
     value: "transition",
   },
+];
+const ANIMATION_PLAYBACK_LOOP_OPTIONS = [
+  { value: false, label: "Don't Loop" },
+  { value: true, label: "Loop" },
+];
+const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
+  { value: "render", label: "Single Line" },
+  { value: "persistent", label: "Persistent" },
 ];
 
 const PERSIST_SPRITE_OPTIONS = [
@@ -63,10 +80,6 @@ const toCharacterCollection = ({ characters = [], tree } = {}) => {
     items,
     tree: Array.isArray(tree) ? tree : undefined,
   };
-};
-
-const getAnimationType = (item = {}) => {
-  return item?.animation?.type === "transition" ? "transition" : "update";
 };
 
 const getLayoutTypeByMode = (mode) => {
@@ -331,6 +344,9 @@ export const createInitialState = () => ({
   spriteTransformId: "",
   spriteAnimationMode: "none",
   spriteAnimationId: "",
+  spriteAnimationPlaybackSpeed: DEFAULT_ANIMATION_PLAYBACK_SPEED,
+  spriteAnimationPlaybackLoop: false,
+  spriteAnimationPlaybackContinuity: DEFAULT_ANIMATION_PLAYBACK_CONTINUITY,
   selectedSpriteIds: {},
   tempSelectedSpriteIds: {},
   selectedSpriteGroupId: undefined,
@@ -571,10 +587,46 @@ export const setSpriteAnimationMode = ({ state }, { mode } = {}) => {
   if (nextMode !== previousMode) {
     state.spriteAnimationId = "";
   }
+  if (nextMode !== "update") {
+    state.spriteAnimationPlaybackLoop = false;
+  }
 };
 
-export const setSpriteAnimationId = ({ state }, { animationId } = {}) => {
+export const setSpriteAnimationId = (
+  { state, props },
+  { animationId } = {},
+) => {
   state.spriteAnimationId = animationId ?? "";
+  if (
+    state.spriteAnimationMode !== "update" ||
+    !canLoopAnimationById(props?.animations, state.spriteAnimationId)
+  ) {
+    state.spriteAnimationPlaybackLoop = false;
+  }
+};
+
+export const setSpriteAnimationPlaybackSpeed = ({ state }, { speed } = {}) => {
+  state.spriteAnimationPlaybackSpeed = normalizeAnimationPlaybackSpeed(speed);
+};
+
+export const setSpriteAnimationPlaybackLoop = (
+  { state, props },
+  { loop } = {},
+) => {
+  state.spriteAnimationPlaybackLoop = canLoopAnimationById(
+    props?.animations,
+    state.spriteAnimationId,
+  )
+    ? normalizeAnimationPlaybackLoop(loop)
+    : false;
+};
+
+export const setSpriteAnimationPlaybackContinuity = (
+  { state },
+  { continuity } = {},
+) => {
+  state.spriteAnimationPlaybackContinuity =
+    normalizeAnimationPlaybackContinuity(continuity);
 };
 
 export const setSelectedSpriteIds = (
@@ -657,6 +709,10 @@ export const clearCharacterSprite = ({ state }) => {
   state.spriteTransformId = "";
   state.spriteAnimationMode = "none";
   state.spriteAnimationId = "";
+  state.spriteAnimationPlaybackSpeed = DEFAULT_ANIMATION_PLAYBACK_SPEED;
+  state.spriteAnimationPlaybackLoop = false;
+  state.spriteAnimationPlaybackContinuity =
+    DEFAULT_ANIMATION_PLAYBACK_CONTINUITY;
   state.selectedSpriteIds = {};
   state.tempSelectedSpriteIds = {};
   state.selectedSpriteGroupId = undefined;
@@ -794,6 +850,9 @@ export const selectDialogueBuildState = ({ state }) => ({
   spriteTransformId: state.spriteTransformId,
   spriteAnimationMode: state.spriteAnimationMode,
   spriteAnimationId: state.spriteAnimationId,
+  spriteAnimationPlaybackSpeed: state.spriteAnimationPlaybackSpeed,
+  spriteAnimationPlaybackLoop: state.spriteAnimationPlaybackLoop,
+  spriteAnimationPlaybackContinuity: state.spriteAnimationPlaybackContinuity,
   selectedSpriteIds: state.selectedSpriteIds,
   tempSelectedSpriteIds: state.tempSelectedSpriteIds,
   appendDialogue: state.appendDialogue,
@@ -1148,6 +1207,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     values: defaultValues,
   };
 
+  const spriteAnimationCanLoop = canLoopAnimationById(
+    animations,
+    state.spriteAnimationId,
+  );
+
   return {
     mode: state.mode,
     layouts: layoutOptions,
@@ -1163,6 +1227,17 @@ export const selectViewData = ({ state, props, i18n }) => {
     spriteTransformId: selectedSpriteTransformId,
     spriteAnimationMode: state.spriteAnimationMode,
     spriteAnimationId: state.spriteAnimationId,
+    spriteAnimationPlaybackSpeed: normalizeAnimationPlaybackSpeed(
+      state.spriteAnimationPlaybackSpeed,
+    ),
+    spriteAnimationPlaybackLoop: normalizeAnimationPlaybackLoop(
+      state.spriteAnimationPlaybackLoop,
+    ),
+    spriteAnimationPlaybackContinuity: normalizeAnimationPlaybackContinuity(
+      state.spriteAnimationPlaybackContinuity,
+    ),
+    spriteAnimationCanLoop,
+    spriteAnimationLoopDisabled: !spriteAnimationCanLoop,
     selectedSpriteIds: state.selectedSpriteIds,
     selectedMode,
     appendDialogue: state.appendDialogue,
@@ -1187,6 +1262,14 @@ export const selectViewData = ({ state, props, i18n }) => {
       ANIMATION_MODE_OPTIONS,
       copy,
     ),
+    animationPlaybackLoopOptions: localizeCommandLineOptions(
+      ANIMATION_PLAYBACK_LOOP_OPTIONS,
+      copy,
+    ),
+    animationPlaybackContinuityOptions: localizeCommandLineOptions(
+      ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
+      copy,
+    ),
     updateAnimationOptions,
     transitionAnimationOptions,
     persistSpriteOptions: localizeCommandLineOptions(
@@ -1205,6 +1288,19 @@ export const selectViewData = ({ state, props, i18n }) => {
     addSpeakerSpriteLabel: localizeCommandLineText("Add Speaker Sprite", copy),
     transformLabel: localizeCommandLineText("Transform", copy),
     animationLabel: localizeCommandLineText("Animation", copy),
+    animationPlaybackSpeedLabel: localizeCommandLineText(
+      "Playback Speed",
+      copy,
+    ),
+    animationPlaybackLoopLabel: localizeCommandLineText("Loop", copy),
+    animationPlaybackContinuityLabel: localizeCommandLineText(
+      "Continuity",
+      copy,
+    ),
+    animationPlaybackLoopDisabledDescription: localizeCommandLineText(
+      "loopingRequiresKeyframesDescription",
+      copy,
+    ),
     persistSpriteLabel: localizeCommandLineText("Persist Sprite", copy),
     characterSpriteMenuLabel: localizeCommandLineText("Remove", copy),
     spriteGroupsLabel: localizeCommandLineText("Sprite Groups", copy),

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
+  selectAnimationPlaybackContinuity,
+  selectAnimationPlaybackSpeed,
   selectScreenBlur,
   selectScreenBlurActionValue,
   selectScreenOpacity,
@@ -13,6 +15,9 @@ import {
 } from "../../src/components/commandLineScreen/commandLineScreen.handlers.js";
 
 const createStoreApi = (state) => ({
+  selectAnimationPlaybackContinuity: () =>
+    selectAnimationPlaybackContinuity({ state }),
+  selectAnimationPlaybackSpeed: () => selectAnimationPlaybackSpeed({ state }),
   selectScreenBlur: () => selectScreenBlur({ state }),
   selectScreenBlurActionValue: () => selectScreenBlurActionValue({ state }),
   selectScreenOpacity: () => selectScreenOpacity({ state }),
@@ -60,6 +65,10 @@ describe("commandLineScreen.handlers", () => {
         screen: {
           animations: {
             resourceId: "screen-crossfade",
+            playback: {
+              continuity: "render",
+              speed: 1,
+            },
           },
           opacity: 0.5,
           blur: {
@@ -100,6 +109,10 @@ describe("commandLineScreen.handlers", () => {
       screen: {
         animations: {
           resourceId: "screen-crossfade",
+          playback: {
+            continuity: "render",
+            speed: 1,
+          },
         },
       },
     });
@@ -175,6 +188,10 @@ describe("commandLineScreen.handlers", () => {
       screen: {
         animations: {
           resourceId: "screen-crossfade",
+          playback: {
+            continuity: "render",
+            speed: 1,
+          },
         },
         blur: null,
       },

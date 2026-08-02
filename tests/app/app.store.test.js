@@ -10,6 +10,7 @@ import {
   setRepositoryLoading,
   setRepositoryLoadingPhase,
   setRepositoryLoadingProgress,
+  setSceneEditorKeyboardVisible,
   setUiConfig,
 } from "../../src/pages/app/app.store.js";
 
@@ -201,6 +202,38 @@ describe("app.store mobile tab active state", () => {
 
     expect(selectMobileTab({ state, tabId: "release" }).color).toBe("white");
     expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
+  });
+
+  it("replaces the scene editor tabs while the mobile keyboard is visible", () => {
+    const state = createInitialState();
+    setUiConfig({ state }, { uiConfig: { id: "touch", inputMode: "touch" } });
+    setCurrentRoute(
+      { state },
+      {
+        route: "/project/scene-editor",
+        payload: { p: "project-1", s: "scene-1" },
+      },
+    );
+
+    setSceneEditorKeyboardVisible({ state }, { isVisible: true });
+
+    expect(selectViewData({ state }).showMobileTabBar).toBe(false);
+
+    setSceneEditorKeyboardVisible({ state }, { isVisible: false });
+
+    expect(selectViewData({ state }).showMobileTabBar).toBe(true);
+  });
+
+  it("clears scene editor keyboard state when navigating away", () => {
+    const state = createInitialState();
+    setSceneEditorKeyboardVisible({ state }, { isVisible: true });
+
+    setCurrentRoute(
+      { state },
+      { route: "/project/scenes", payload: { p: "project-1" } },
+    );
+
+    expect(state.isSceneEditorKeyboardVisible).toBe(false);
   });
 });
 

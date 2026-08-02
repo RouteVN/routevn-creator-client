@@ -2,12 +2,40 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   openEditDialog,
+  selectProjectAnalyticsRequestId,
   selectViewData,
   setCurrentProject,
+  setProjectAnalytics,
+  setProjectAnalyticsRequestId,
+  setSceneTextAnalyticsStatus,
 } from "../../src/pages/project/project.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("project page store", () => {
+  it("tracks the latest project analytics request", () => {
+    const state = createInitialState();
+
+    expect(selectProjectAnalyticsRequestId({ state })).toBe(0);
+    setProjectAnalyticsRequestId({ state }, { requestId: 2 });
+    expect(selectProjectAnalyticsRequestId({ state })).toBe(2);
+  });
+
+  it("loads until the first analytics snapshot, including an empty project", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state, i18n: EN_I18N }).isSceneTextLoading).toBe(
+      true,
+    );
+
+    setProjectAnalytics({ state }, { analytics: { scenes: [] } });
+    setSceneTextAnalyticsStatus({ state }, { status: "ready" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.isSceneTextLoading).toBe(false);
+    expect(viewData.hasSceneTextError).toBe(false);
+    expect(viewData.sceneCount).toBe("0");
+  });
+
   it("shows project language in detail and the edit form", () => {
     const state = createInitialState();
     setCurrentProject(
@@ -84,5 +112,174 @@ describe("project page store", () => {
       ],
     });
     expect(viewData.editDefaultValues.language).toBe("ja");
+  });
+
+  it("formats localized resource and scene analytics", () => {
+    const state = createInitialState();
+    setProjectAnalytics(
+      { state },
+      {
+        analytics: {
+          resourceGroups: [
+            {
+              key: "assets",
+              resources: [
+                { key: "images", count: 12 },
+                { key: "characters", count: 1 },
+              ],
+            },
+          ],
+          characterResources: [
+            {
+              id: "character-1",
+              name: "Hero",
+              spriteCount: 6,
+            },
+          ],
+          scenes: [
+            {
+              id: "scene-1",
+              name: "Opening",
+              textStats: {
+                lineCount: 42,
+                wordCount: 1_234,
+                characterCount: 5_678,
+                language: "en",
+              },
+            },
+          ],
+        },
+      },
+    );
+    setSceneTextAnalyticsStatus({ state }, { status: "ready" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.resourceGroups).toEqual([
+      {
+        key: "assets",
+        label: "Assets",
+        resources: [
+          { key: "images", label: "Images", count: "12" },
+          { key: "characters", label: "Characters", count: "1" },
+        ],
+      },
+    ]);
+    expect(viewData.characterResources).toEqual([
+      {
+        id: "character-1",
+        name: "Hero",
+        spriteCount: "6",
+      },
+    ]);
+    expect(viewData.sceneTextStats).toEqual([
+      {
+        id: "scene-1",
+        name: "Opening",
+        lineCount: "42",
+        textCount: "1,234",
+      },
+    ]);
+    expect(viewData.sceneLineCountLabel).toBe("Lines");
+    expect(viewData.sceneTextCountLabel).toBe("Words");
+    expect(viewData.sceneCount).toBe("1");
+    expect(viewData.sceneCountLabel).toBe("Scenes");
+    expect(viewData.totalLineCount).toBe("42");
+    expect(viewData.totalTextCount).toBe("1,234");
+    expect(viewData.isSceneTextLoading).toBe(false);
+
+    setCurrentProject(
+      { state },
+      {
+        project: {
+          language: "ja",
+        },
+      },
+    );
+
+    const staleLanguageViewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(staleLanguageViewData.sceneTextStats).toEqual([]);
+    expect(staleLanguageViewData.sceneCount).toBe("1");
+    expect(staleLanguageViewData.isSceneTextLoading).toBe(true);
+
+    setProjectAnalytics(
+      { state },
+      {
+        analytics: {
+          scenes: [
+            {
+              id: "scene-1",
+              name: "Opening",
+              textStats: {
+                lineCount: 56,
+                wordCount: 1_234,
+                characterCount: 5_678,
+                language: "ja",
+              },
+            },
+          ],
+        },
+      },
+    );
+
+    const japaneseViewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(japaneseViewData.sceneTextStats[0].lineCount).toBe("56");
+    expect(japaneseViewData.sceneTextStats[0].textCount).toBe("5,678");
+    expect(japaneseViewData.totalLineCount).toBe("56");
+    expect(japaneseViewData.sceneTextCountLabel).toBe("Characters");
+    expect(japaneseViewData.totalTextCount).toBe("5,678");
+    expect(japaneseViewData.isSceneTextLoading).toBe(false);
+  });
+
+  it("keeps loading while scene text statistics are missing", () => {
+    const state = createInitialState();
+    setProjectAnalytics(
+      { state },
+      {
+        analytics: {
+          scenes: [
+            {
+              id: "scene-1",
+              name: "Opening",
+              textStats: undefined,
+            },
+          ],
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.sceneCount).toBe("1");
+    expect(viewData.sceneTextStats).toEqual([]);
+    expect(viewData.totalTextCount).toBe("0");
+    expect(viewData.isSceneTextLoading).toBe(true);
+  });
+
+  it("stops loading when scene text analytics reach an error state", () => {
+    const state = createInitialState();
+    setProjectAnalytics(
+      { state },
+      {
+        analytics: {
+          scenes: [
+            {
+              id: "scene-1",
+              name: "Opening",
+              textStats: undefined,
+            },
+          ],
+        },
+      },
+    );
+    setSceneTextAnalyticsStatus({ state }, { status: "error" });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.isSceneTextLoading).toBe(false);
+    expect(viewData.hasSceneTextError).toBe(true);
+    expect(viewData.sceneTextStats).toEqual([]);
   });
 });

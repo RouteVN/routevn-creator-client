@@ -64,6 +64,10 @@ export const handleAfterMount = async (deps) => {
       sectionId,
       transitionAnimationId:
         props?.resetStoryAtSection?.screen?.animations?.resourceId,
+      playbackSpeed:
+        props?.resetStoryAtSection?.screen?.animations?.playback?.speed,
+      playbackContinuity:
+        props?.resetStoryAtSection?.screen?.animations?.playback?.continuity,
     },
   });
   render();
@@ -126,6 +130,10 @@ export const handleSubmitClick = (deps) => {
     resetStoryAtSection.screen = {
       animations: {
         resourceId: formValues.transitionAnimationId,
+        playback: {
+          continuity: formValues.playbackContinuity,
+          speed: formValues.playbackSpeed,
+        },
       },
     };
   }

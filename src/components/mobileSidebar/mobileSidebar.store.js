@@ -77,16 +77,16 @@ const userInterfaceItems = [
 
 const systemItems = [
   {
-    id: "controls",
-    label: "Controls",
-    path: "/project/controls",
-    icon: "sliders",
-  },
-  {
     id: "variables",
     label: "Variables",
     path: "/project/variables",
     icon: "variable",
+  },
+  {
+    id: "controls",
+    label: "Controls",
+    path: "/project/controls",
+    icon: "sliders",
   },
 ];
 

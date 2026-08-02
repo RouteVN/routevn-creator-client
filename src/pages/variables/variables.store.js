@@ -33,6 +33,11 @@ import {
   setMobileResourcePageUiConfigState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectVariablesPageCopy } from "./support/variablesPageCopy.js";
+import { collectComputedVariableReferenceIds } from "../../internal/project/projection.js";
+import {
+  getComputedExpressionOperationType,
+  getComputedOperationLabel,
+} from "../../internal/computedOperations.js";
 
 const createFolderContextMenuItems = (copy = {}) => [
   {
@@ -116,6 +121,9 @@ const getScopeLabel = (scope, copy = {}) => {
 };
 
 const getVariableTypeLabel = (variableType, copy = {}) => {
+  if (variableType === "object") {
+    return copy.variableTypeObjectLabel ?? "Object";
+  }
   if (variableType === "number") {
     return copy.variableTypeNumberLabel ?? "Number";
   }
@@ -365,6 +373,7 @@ export const selectViewData = ({ state, i18n }) => {
 
   const detailFields = [];
   if (selectedItem) {
+    const isComputed = selectedItem.computed !== undefined;
     detailFields.push(
       {
         type: "description",
@@ -377,15 +386,24 @@ export const selectViewData = ({ state, i18n }) => {
       },
       {
         type: "text",
-        label: copy.scopeLabel ?? "Scope",
-        value: getScopeLabel(selectedItem.scope, copy),
-      },
-      {
-        type: "text",
-        label: copy.typeLabel ?? "Type",
-        value: getVariableTypeLabel(selectedItem.variableType, copy),
+        label: copy.valueSourceLabel ?? "Value source",
+        value: isComputed
+          ? (copy.computedSourceLabel ?? "Computed")
+          : (copy.variableSourceLabel ?? "Variable"),
       },
     );
+    if (!isComputed) {
+      detailFields.push({
+        type: "text",
+        label: copy.scopeLabel ?? "Scope",
+        value: getScopeLabel(selectedItem.scope, copy),
+      });
+    }
+    detailFields.push({
+      type: "text",
+      label: copy.typeLabel ?? "Type",
+      value: getVariableTypeLabel(selectedItem.variableType, copy),
+    });
 
     if (selectedItemIsEnum) {
       detailFields.push(
@@ -402,11 +420,41 @@ export const selectViewData = ({ state, i18n }) => {
       );
     }
 
-    detailFields.push({
-      type: "text",
-      label: copy.defaultLabel ?? "Default",
-      value: selectedVariableDefault,
-    });
+    if (isComputed) {
+      const isConditional = Array.isArray(selectedItem.computed.branches);
+      const operationType = getComputedExpressionOperationType(
+        selectedItem.computed.expr,
+      );
+      const dependencies = collectComputedVariableReferenceIds(
+        selectedItem.computed,
+      ).map(
+        (variableId) =>
+          state.variablesData?.items?.[variableId]?.name ?? variableId,
+      );
+      detailFields.push(
+        {
+          type: "text",
+          label: copy.computedOperationLabel ?? "Operation",
+          value: isConditional
+            ? (copy.computedOperatorIf ?? "If")
+            : getComputedOperationLabel(operationType, copy),
+        },
+        {
+          type: "text",
+          label: copy.computedDependenciesLabel ?? "Dependencies",
+          value:
+            dependencies.length > 0
+              ? dependencies.join(", ")
+              : (copy.computedNoDependenciesLabel ?? "None"),
+        },
+      );
+    } else {
+      detailFields.push({
+        type: "text",
+        label: copy.defaultLabel ?? "Default",
+        value: selectedVariableDefault,
+      });
+    }
   } else if (selectedFolder?.type === "folder") {
     detailFields.push(
       {

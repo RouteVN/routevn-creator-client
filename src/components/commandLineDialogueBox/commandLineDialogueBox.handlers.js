@@ -1,5 +1,9 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
+  createAnimationReference,
+  getAnimationModeById,
+} from "../../internal/animationPlayback.js";
+import {
   buildCharacterSpritePreviewLayer,
   isCharacterSpriteResourceItem,
 } from "../../internal/characterSpritePreview.js";
@@ -29,22 +33,6 @@ const createEmptyCollection = () => ({
   items: {},
   tree: [],
 });
-
-const getAnimationType = (item = {}) => {
-  return item?.animation?.type === "transition" ? "transition" : "update";
-};
-
-const getAnimationModeById = (collection = {}, animationId) => {
-  if (!animationId) {
-    return undefined;
-  }
-
-  const item = toFlatItems(collection).find(
-    (animation) =>
-      animation.id === animationId && animation.type === "animation",
-  );
-  return item ? getAnimationType(item) : undefined;
-};
 
 const getLayoutTypeByMode = (mode) => {
   return mode === "nvl" ? "dialogue-nvl" : "dialogue-adv";
@@ -318,6 +306,10 @@ const buildDialogueCharacterSprite = ({
   selectedSpriteIds,
   spriteAnimationMode,
   spriteAnimationId,
+  spriteAnimationPlaybackSpeed,
+  spriteAnimationPlaybackLoop,
+  spriteAnimationPlaybackContinuity,
+  animations,
 } = {}) => {
   if (!toBoolean(characterSpriteEnabled) || !spriteCharacterId) {
     return undefined;
@@ -363,9 +355,16 @@ const buildDialogueCharacterSprite = ({
   };
 
   if (spriteAnimationMode !== "none" && spriteAnimationId) {
-    sprite.animations = {
-      resourceId: spriteAnimationId,
-    };
+    sprite.animations = createAnimationReference({
+      animationId: spriteAnimationId,
+      animations,
+      animationMode: spriteAnimationMode,
+      playback: {
+        speed: spriteAnimationPlaybackSpeed,
+        loop: spriteAnimationPlaybackLoop,
+        continuity: spriteAnimationPlaybackContinuity,
+      },
+    });
   }
 
   return sprite;
@@ -422,6 +421,9 @@ const buildDialogueFromState = (
     spriteTransformId,
     spriteAnimationMode,
     spriteAnimationId,
+    spriteAnimationPlaybackSpeed,
+    spriteAnimationPlaybackLoop,
+    spriteAnimationPlaybackContinuity,
     appendDialogue,
     persistCharacter,
     persistSprite,
@@ -479,6 +481,10 @@ const buildDialogueFromState = (
     selectedSpriteIds,
     spriteAnimationMode,
     spriteAnimationId,
+    spriteAnimationPlaybackSpeed,
+    spriteAnimationPlaybackLoop,
+    spriteAnimationPlaybackContinuity,
+    animations: props?.animations,
   });
   if (characterSprite) {
     character.sprite = characterSprite;
@@ -616,6 +622,15 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
   });
   store.setSpriteAnimationId({
     animationId: spriteAnimationId,
+  });
+  store.setSpriteAnimationPlaybackSpeed({
+    speed: characterSprite?.animations?.playback?.speed,
+  });
+  store.setSpriteAnimationPlaybackLoop({
+    loop: characterSprite?.animations?.playback?.loop,
+  });
+  store.setSpriteAnimationPlaybackContinuity({
+    continuity: characterSprite?.animations?.playback?.continuity,
   });
   store.setPersistCharacter({
     persistCharacter: hasCharacter && dialogue?.persistCharacter === true,
@@ -1032,6 +1047,33 @@ export const handleAnimationChange = (deps, payload) => {
   const { store, render } = deps;
   const value = payload._event.detail.value;
   store.setSpriteAnimationId({ animationId: value });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleAnimationPlaybackSpeedInput = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSpriteAnimationPlaybackSpeed({
+    speed: payload._event.detail.value,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleAnimationPlaybackLoopChange = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSpriteAnimationPlaybackLoop({
+    loop: payload._event.detail.value,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleAnimationPlaybackContinuityChange = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSpriteAnimationPlaybackContinuity({
+    continuity: payload._event.detail.value,
+  });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

@@ -79,6 +79,7 @@ export const createProjectServiceCore = ({
     getCachedRepository: repositoryService.getCachedRepository,
     getRepositoryByProject: repositoryService.getRepositoryByProject,
     getAdapterByProject: repositoryService.getStoreByProjectSync,
+    getProjectCacheKey: repositoryService.getProjectCacheKey,
     createSessionForProject: (payload) =>
       collabAdapter.createSessionForProject({
         ...payload,
@@ -401,6 +402,11 @@ export const createProjectServiceCore = ({
     return repository.cacheSceneTextStats(payload);
   };
 
+  const ensureSceneTextStats = async (payload = {}) => {
+    const repository = await ensureRepository();
+    return repository.ensureSceneTextStats(payload);
+  };
+
   const getDomainState = () => {
     const repositoryState = getRepositoryState();
     const projectId = getCurrentProjectId() || "unknown-project";
@@ -547,6 +553,7 @@ export const createProjectServiceCore = ({
     getRepositoryById: repositoryService.getRepositoryById,
     getAdapterById: repositoryService.getAdapterById,
     getEnsuredProjectId: repositoryService.getEnsuredProjectId,
+    getEnsuredProjectPath: repositoryService.getEnsuredProjectPath,
     releaseCurrentRepository: repositoryService.releaseCurrentRepository,
     releaseProjectRuntime,
     ensureRepository,
@@ -588,6 +595,7 @@ export const createProjectServiceCore = ({
     loadSceneOverviews,
     getSceneOverview,
     cacheSceneTextStats,
+    ensureSceneTextStats,
     getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
     updateCurrentProjectInfo: repositoryService.updateCurrentProjectInfo,
     updateProjectInfoById: repositoryService.updateProjectInfoByProjectId,

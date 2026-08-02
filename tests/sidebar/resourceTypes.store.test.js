@@ -17,12 +17,12 @@ describe("resource type navigation", () => {
     const mobileViewData = selectMobileResourceTypesViewData({ props });
 
     expect(desktopViewData.items.map((item) => item.id)).toEqual([
-      "controls",
       "variables",
+      "controls",
     ]);
     expect(mobileViewData.items.map((item) => item.id)).toEqual([
-      "controls",
       "variables",
+      "controls",
     ]);
   });
 

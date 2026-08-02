@@ -46,7 +46,6 @@ export const getLayoutPreviewInputFieldItems = ({
 };
 
 export const createPreviewInputFieldsForm = (inputFieldItems = []) => ({
-  title: "Preview",
   description: "Edit input field values for the canvas",
   fields: inputFieldItems.map((item) => ({
     name: item.field,

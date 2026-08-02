@@ -95,6 +95,18 @@ refs:
     eventListeners:
       value-change:
         handler: handleAnimationChange
+  animationPlaybackSpeed*:
+    eventListeners:
+      value-change:
+        handler: handleAnimationPlaybackSpeedInput
+  animationPlaybackLoop*:
+    eventListeners:
+      value-change:
+        handler: handleAnimationPlaybackLoopChange
+  animationPlaybackContinuity*:
+    eventListeners:
+      value-change:
+        handler: handleAnimationPlaybackContinuityChange
   layer*:
     eventListeners:
       value-change:
@@ -204,6 +216,16 @@ template:
                                               - rtgl-select#transform${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.transformId} :options=${defaultValues.transformOptions} :selectedValue=${visual.transformId} w=f no-clear: null
                                           - rtgl-text s=sm c=mu-fg: ${animationLabel}
                                           - rtgl-select#animation${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.animationId} :options=${defaultValues.animationOptions} :selectedValue=${visual.animationId} w=f placeholder=${selectAnimationPlaceholder}: null
+                                          - $if visual.animationId:
+                                              - rtgl-text s=sm c=mu-fg: ${animationPlaybackSpeedLabel}
+                                              - rtgl-input#animationPlaybackSpeed${groupIndex}x${i} data-index=${visual.visualIndex} type=number min=0.01 step=0.1 w=f value=${visual.animationPlaybackSpeed}: null
+                                              - $if visual.animationMode == 'update':
+                                                  - rtgl-text s=sm c=mu-fg: ${animationPlaybackLoopLabel}
+                                                  - rtgl-segmented-control#animationPlaybackLoop${groupIndex}x${i} data-index=${visual.visualIndex} w=f no-clear ?disabled=${visual.animationLoopDisabled} :selectedValue=${visual.animationPlaybackLoop} :options=${defaultValues.animationPlaybackLoopOptions}: null
+                                                  - $if !visual.animationCanLoop:
+                                                      - rtgl-text s=xs c=mu-fg: ${animationPlaybackLoopDisabledDescription}
+                                              - rtgl-text s=sm c=mu-fg: ${animationPlaybackContinuityLabel}
+                                              - rtgl-segmented-control#animationPlaybackContinuity${groupIndex}x${i} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.animationPlaybackContinuity} :options=${defaultValues.animationPlaybackContinuityOptions}: null
                   - rtgl-button#addVisualButton v=ol w=f mt=md: ${addVisualButtonLabel}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: ${submitButtonLabel}

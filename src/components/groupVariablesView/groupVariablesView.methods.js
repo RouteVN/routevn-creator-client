@@ -15,3 +15,7 @@ export function appendTagIdToForm(payload = {}) {
 
   this.transformedHandlers.handleAppendTagIdToForm({ tagId });
 }
+
+export function closeDialog() {
+  this.transformedHandlers.handleCloseDialog({});
+}

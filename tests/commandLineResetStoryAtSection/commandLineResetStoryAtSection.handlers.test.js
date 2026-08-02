@@ -109,6 +109,10 @@ describe("commandLineResetStoryAtSection.handlers", () => {
         screen: {
           animations: {
             resourceId: "screen-mask-reveal",
+            playback: {
+              continuity: "render",
+              speed: 1,
+            },
           },
         },
       },

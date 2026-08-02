@@ -6,6 +6,8 @@ import {
 } from "../../../internal/layoutConditions.js";
 import { getLayoutTextReferenceResourceId } from "../../../internal/layoutTextContent.js";
 import { toRuntimeConditionTarget } from "../../../internal/runtimeFields.js";
+import { collectComputedVariableReferenceIds } from "../../../internal/project/projection.js";
+import { resolveComputedVariables } from "route-engine-js";
 import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 
 const PREVIEW_VARIABLE_TYPES = new Set(["boolean", "number", "string"]);
@@ -89,6 +91,9 @@ export const createPreviewVariables = (variablesData = {}) => {
       if (!variableId || variable?.type !== "variable") {
         return variables;
       }
+      if (variable.computed !== undefined) {
+        return variables;
+      }
 
       variables[variableId] = toPreviewVariableValue(variable);
       return variables;
@@ -114,6 +119,9 @@ export const applyPreviewVariableOverrides = (
     }
 
     const variable = variableItems[variableId];
+    if (variable?.computed !== undefined) {
+      continue;
+    }
 
     nextPreviewVariables[variableId] = toPreviewVariableValue({
       ...variable,
@@ -122,6 +130,40 @@ export const applyPreviewVariableOverrides = (
   }
 
   return nextPreviewVariables;
+};
+
+export const resolvePreviewVariables = ({
+  variablesData = {},
+  previewVariableValues = {},
+  runtime = {},
+} = {}) => {
+  const variableItems = variablesData.items ?? {};
+  const variableConfigs = Object.fromEntries(
+    Object.entries(variableItems)
+      .filter(([, variable]) => variable?.type === "variable")
+      .map(([variableId, variable]) => {
+        const config = {
+          type: getPreviewVariableType(variable),
+          scope: variable.scope ?? "context",
+        };
+        if (variable.computed !== undefined) {
+          config.computed = structuredClone(variable.computed);
+        } else {
+          config.default = toPreviewVariableValue(variable);
+        }
+        return [variableId, config];
+      }),
+  );
+  const storedVariables = applyPreviewVariableOverrides(
+    createPreviewVariables(variablesData),
+    variablesData,
+    previewVariableValues,
+  );
+  return resolveComputedVariables({
+    variableConfigs,
+    variables: storedVariables,
+    runtime,
+  });
 };
 
 export const collectLayoutPreviewTargets = (layoutParams = {}) => {
@@ -215,6 +257,28 @@ export const getLayoutPreviewVariableItems = ({
     if (!variable) {
       continue;
     }
+    if (variable.computed !== undefined) {
+      const type = getPreviewVariableType(variable);
+      if (isSupportedPreviewVariableType(type)) {
+        addedTargets.add(target);
+        previewVariables.push({
+          id: target,
+          name: variable.name ?? target,
+          type,
+          source: "computed",
+          description: variable.description,
+        });
+      }
+      collectComputedVariableReferenceIds(variable.computed).forEach(
+        (dependencyId) => {
+          const dependencyTarget = toVariableConditionTarget(dependencyId);
+          if (!targets.includes(dependencyTarget)) {
+            targets.push(dependencyTarget);
+          }
+        },
+      );
+      continue;
+    }
     const type = getPreviewVariableType(variable);
 
     if (!isSupportedPreviewVariableType(type)) {
@@ -244,36 +308,41 @@ export const supportsPreviewVariablesForLayoutType = (layoutType) => {
   return NORMAL_LIKE_LAYOUT_TYPES.has(layoutType);
 };
 
-export const createPreviewVariablesForm = (previewVariableItems = []) => ({
-  title: "Preview",
-  description: "Edit visibility conditions to preview conditional elements",
-  fields: previewVariableItems.map((variable) => {
-    const sourceLabel =
-      variable.source === "runtime" ? "Runtime state" : "Variable";
-    const descriptionParts = [
-      `${sourceLabel} (${variable.type})`,
-      variable.description,
-    ].filter(Boolean);
+export const createPreviewVariablesForm = (previewVariableItems = []) => {
+  const editablePreviewVariableItems = previewVariableItems.filter(
+    (variable) => variable.source !== "computed",
+  );
 
-    if (variable.type === "boolean") {
+  return {
+    description: "Edit visibility conditions to preview conditional elements",
+    fields: editablePreviewVariableItems.map((variable) => {
+      const sourceLabel =
+        variable.source === "runtime" ? "Runtime state" : "Variable";
+      const descriptionParts = [
+        `${sourceLabel} (${variable.type})`,
+        variable.description,
+      ].filter(Boolean);
+
+      if (variable.type === "boolean") {
+        return {
+          name: variable.id,
+          type: "select",
+          label: variable.name,
+          clearable: false,
+          options: PREVIEW_BOOLEAN_OPTIONS,
+          description: descriptionParts.join(" • "),
+        };
+      }
+
       return {
         name: variable.id,
-        type: "select",
+        type: variable.type === "number" ? "input-number" : "input-text",
         label: variable.name,
-        clearable: false,
-        options: PREVIEW_BOOLEAN_OPTIONS,
         description: descriptionParts.join(" • "),
       };
-    }
-
-    return {
-      name: variable.id,
-      type: variable.type === "number" ? "input-number" : "input-text",
-      label: variable.name,
-      description: descriptionParts.join(" • "),
-    };
-  }),
-});
+    }),
+  };
+};
 
 export const createPreviewVariableDefaultValues = (
   previewVariableItems = [],
@@ -282,6 +351,9 @@ export const createPreviewVariableDefaultValues = (
   const defaultValues = {};
 
   for (const variable of previewVariableItems) {
+    if (variable.source === "computed") {
+      continue;
+    }
     const value = Object.hasOwn(previewVariableValues, variable.id)
       ? previewVariableValues[variable.id]
       : variable.defaultValue;
@@ -309,20 +381,25 @@ export const createPreviewVariablesViewData = ({
         variablesData,
       })
     : [];
+  const editablePreviewVariableItems = previewVariableItems.filter(
+    (item) => item.source !== "computed",
+  );
   const previewVariablesDefaultValues = createPreviewVariableDefaultValues(
-    previewVariableItems,
+    editablePreviewVariableItems,
     previewVariableValues,
   );
   const previewVariablesFormKey =
-    previewVariableItems.length > 0
-      ? previewVariableItems.map((item) => item.id).join("|")
+    editablePreviewVariableItems.length > 0
+      ? editablePreviewVariableItems.map((item) => item.id).join("|")
       : "empty";
 
   return {
     previewVariableItems,
-    previewVariablesForm: createPreviewVariablesForm(previewVariableItems),
+    previewVariablesForm: createPreviewVariablesForm(
+      editablePreviewVariableItems,
+    ),
     previewVariablesDefaultValues,
     previewVariablesFormKey,
-    hasPreviewVariables: previewVariableItems.length > 0,
+    hasPreviewVariables: editablePreviewVariableItems.length > 0,
   };
 };

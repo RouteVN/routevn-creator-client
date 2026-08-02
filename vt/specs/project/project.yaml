@@ -71,6 +71,20 @@ steps:
     value: /project
   - action: wait
     ms: 500
+  - action: waitFor
+    selector: "#sceneTextStatsTable"
+    state: visible
+    timeoutMs: 10000
+  - action: screenshot
+  - action: select
+    selector: "#projectPageScroll"
+    steps:
+      - action: hover
+      - action: scroll
+        deltaX: 0
+        deltaY: 650
+  - action: wait
+    ms: 250
   - action: screenshot
   - action: select
     selector: "#projectLanguage"

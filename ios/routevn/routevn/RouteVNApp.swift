@@ -246,6 +246,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         case "ensureProjectStorage":
             try storage.ensureProjectDirectories(projectId: requiredString(payload, "projectId"))
             return true
+        case "getProjectStorageStatus":
+            return try storage.projectStorageStatus(projectId: requiredString(payload, "projectId"))
         case "listProjectFolders":
             return try listProjectFolders()
         case "writeProjectFile":
@@ -1989,6 +1991,30 @@ final class RouteVNNativeStorage {
             at: projectMetadataRoot(projectId: safeProjectId),
             withIntermediateDirectories: true
         )
+    }
+
+    func projectStorageStatus(projectId: String) throws -> [String: Any] {
+        let safeProjectId = try safePathSegment(projectId)
+        let databaseURL = try databaseURL(dbPath: projectDatabasePath(projectId: safeProjectId))
+        let databaseDirectoryURL = databaseURL.deletingLastPathComponent()
+        let projectDirectoryURL = try projectRoot(projectId: safeProjectId)
+        let fileManager = FileManager.default
+        let databaseFileExists = fileManager.fileExists(atPath: databaseURL.path)
+        let databaseDirectoryExists = fileManager.fileExists(
+            atPath: databaseDirectoryURL.path
+        )
+        let projectDirectoryExists = fileManager.fileExists(
+            atPath: projectDirectoryURL.path
+        )
+
+        return [
+            "exists": databaseFileExists ||
+                databaseDirectoryExists ||
+                projectDirectoryExists,
+            "databaseFileExists": databaseFileExists,
+            "databaseDirectoryExists": databaseDirectoryExists,
+            "projectDirectoryExists": projectDirectoryExists
+        ]
     }
 
     func writeProjectFile(projectId: String, fileId: String, data: Data, mimeType: String) throws {

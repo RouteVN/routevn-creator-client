@@ -1,6 +1,10 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
 import {
+  normalizeAnimationPlaybackContinuity,
+  normalizeAnimationPlaybackSpeed,
+} from "../../internal/animationPlayback.js";
+import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineDropdownMenu,
   localizeCommandLineForm,
@@ -53,6 +57,26 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
       clearable: true,
       placeholder: "Animation",
       options: "${transitionAnimationOptions}",
+    },
+    {
+      $when: `values.actionType == 'sectionTransition' && values.transitionAnimationId`,
+      name: "playbackSpeed",
+      label: "Playback Speed",
+      type: "input-number",
+      min: 0.01,
+      step: 0.1,
+      required: true,
+    },
+    {
+      $when: `values.actionType == 'sectionTransition' && values.transitionAnimationId`,
+      name: "playbackContinuity",
+      label: "Continuity",
+      type: "segmented-control",
+      clearable: false,
+      options: [
+        { value: "render", label: "Single Line" },
+        { value: "persistent", label: "Persistent" },
+      ],
     },
     {
       type: "slot",
@@ -149,6 +173,8 @@ export const createInitialState = () => ({
     // content: "",
     actionType: "nextLine",
     updateVariable: undefined,
+    playbackSpeed: 1,
+    playbackContinuity: "render",
     // sceneId,
     // sectionId,
   },
@@ -192,16 +218,27 @@ export const setEditingIndex = ({ state }, { index } = {}) => {
       state.editForm.sectionId = clickActions.sectionTransition?.sectionId;
       state.editForm.transitionAnimationId =
         clickActions.sectionTransition?.screen?.animations?.resourceId;
+      state.editForm.playbackSpeed = normalizeAnimationPlaybackSpeed(
+        clickActions.sectionTransition?.screen?.animations?.playback?.speed,
+      );
+      state.editForm.playbackContinuity = normalizeAnimationPlaybackContinuity(
+        clickActions.sectionTransition?.screen?.animations?.playback
+          ?.continuity,
+      );
     } else if (clickActions.nextLine) {
       state.editForm.actionType = "nextLine";
       state.editForm.sceneId = "";
       state.editForm.sectionId = "";
       state.editForm.transitionAnimationId = "";
+      state.editForm.playbackSpeed = 1;
+      state.editForm.playbackContinuity = "render";
     } else {
       state.editForm.actionType = "nextLine";
       state.editForm.sceneId = "";
       state.editForm.sectionId = "";
       state.editForm.transitionAnimationId = "";
+      state.editForm.playbackSpeed = 1;
+      state.editForm.playbackContinuity = "render";
     }
   } else {
     // New choice or reset
@@ -212,6 +249,8 @@ export const setEditingIndex = ({ state }, { index } = {}) => {
     state.editForm.sceneId = "";
     state.editForm.sectionId = "";
     state.editForm.transitionAnimationId = "";
+    state.editForm.playbackSpeed = 1;
+    state.editForm.playbackContinuity = "render";
   }
 };
 
@@ -238,6 +277,12 @@ const buildChoiceDataFromEditForm = (editForm = {}) => {
       sectionTransition.screen = {
         animations: {
           resourceId: editForm.transitionAnimationId,
+          playback: {
+            continuity: normalizeAnimationPlaybackContinuity(
+              editForm.playbackContinuity,
+            ),
+            speed: normalizeAnimationPlaybackSpeed(editForm.playbackSpeed),
+          },
         },
       };
     }
@@ -492,6 +537,12 @@ export const selectViewData = ({ state, props, i18n }) => {
     sceneId: state?.editForm?.sceneId,
     sectionId: state?.editForm?.sectionId,
     transitionAnimationId: state?.editForm?.transitionAnimationId,
+    playbackSpeed: normalizeAnimationPlaybackSpeed(
+      state?.editForm?.playbackSpeed,
+    ),
+    playbackContinuity: normalizeAnimationPlaybackContinuity(
+      state?.editForm?.playbackContinuity,
+    ),
   };
 
   const dropdownMenu = {
@@ -508,6 +559,9 @@ export const selectViewData = ({ state, props, i18n }) => {
     layouts: resourceOptions,
     selectedResourceId,
     editingIndex: state?.editingIndex ?? -1,
+    choiceFormKey: `${state?.editingIndex ?? -1}:${
+      state.editForm.transitionAnimationId ?? "no-animation"
+    }`,
     editForm: state?.editForm,
     editFormContext,
     defaultValues,

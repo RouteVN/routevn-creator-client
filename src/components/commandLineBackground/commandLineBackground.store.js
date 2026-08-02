@@ -1,5 +1,12 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  DEFAULT_ANIMATION_PLAYBACK_SPEED,
+  canLoopAnimationById,
+  getAnimationModeById,
+  getAnimationType,
+  normalizeAnimationPlaybackSpeed,
+} from "../../internal/animationPlayback.js";
+import {
   getSpritesheetAnimationPreview,
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
@@ -72,25 +79,6 @@ const normalizeResourceCollection = (collection) => {
   const tree = Array.isArray(collection?.tree) ? collection.tree : [];
 
   return { items, tree };
-};
-
-const getAnimationType = (item = {}) => {
-  return item?.animation?.type === "transition" ? "transition" : "update";
-};
-
-const getAnimationItemById = (collection = {}, animationId) => {
-  if (!animationId) {
-    return undefined;
-  }
-
-  return toFlatItems(collection).find(
-    (item) => item.id === animationId && item.type === "animation",
-  );
-};
-
-const getAnimationModeById = (collection = {}, animationId) => {
-  const item = getAnimationItemById(collection, animationId);
-  return item ? getAnimationType(item) : undefined;
 };
 
 const normalizeBackgroundOpacity = (opacity) => {
@@ -187,6 +175,8 @@ export const createInitialState = () => ({
   selectedAnimationMode: "none",
   selectedAnimationId: undefined,
   selectedAnimationPlaybackContinuity: "render",
+  selectedAnimationPlaybackSpeed: DEFAULT_ANIMATION_PLAYBACK_SPEED,
+  selectedAnimationLoop: false,
   backgroundLoop: false,
   pendingResourceId: undefined,
   pendingSpritesheetAnimationName: undefined,
@@ -261,6 +251,12 @@ export const setRepositoryState = (
   );
   if (selectedAnimationMode) {
     state.selectedAnimationMode = selectedAnimationMode;
+    if (
+      selectedAnimationMode !== "update" ||
+      !canLoopAnimationById(state.animationItems, state.selectedAnimationId)
+    ) {
+      state.selectedAnimationLoop = false;
+    }
   }
 };
 
@@ -372,10 +368,17 @@ export const setSelectedAnimationMode = ({ state }, { mode } = {}) => {
   if (mode !== "update" && mode !== "transition") {
     state.selectedAnimationMode = "none";
     state.selectedAnimationId = undefined;
+    state.selectedAnimationLoop = false;
     return;
   }
 
   state.selectedAnimationMode = mode;
+  if (
+    mode !== "update" ||
+    !canLoopAnimationById(state.animationItems, state.selectedAnimationId)
+  ) {
+    state.selectedAnimationLoop = false;
+  }
 
   const selectedAnimationMode = getAnimationModeById(
     state.animationItems,
@@ -399,8 +402,15 @@ export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
   );
   if (selectedAnimationMode) {
     state.selectedAnimationMode = selectedAnimationMode;
+    if (
+      selectedAnimationMode !== "update" ||
+      !canLoopAnimationById(state.animationItems, state.selectedAnimationId)
+    ) {
+      state.selectedAnimationLoop = false;
+    }
   } else if (!state.selectedAnimationId) {
     state.selectedAnimationMode = "none";
+    state.selectedAnimationLoop = false;
   }
 };
 
@@ -528,6 +538,29 @@ export const setSelectedAnimationPlaybackContinuity = (
 
 export const selectSelectedAnimationPlaybackContinuity = ({ state }) => {
   return state.selectedAnimationPlaybackContinuity;
+};
+
+export const setSelectedAnimationPlaybackSpeed = (
+  { state },
+  { speed } = {},
+) => {
+  state.selectedAnimationPlaybackSpeed = normalizeAnimationPlaybackSpeed(speed);
+};
+
+export const selectSelectedAnimationPlaybackSpeed = ({ state }) => {
+  return state.selectedAnimationPlaybackSpeed;
+};
+
+export const setSelectedAnimationLoop = ({ state }, { loop } = {}) => {
+  state.selectedAnimationLoop = loop === true || loop === "true";
+};
+
+export const selectSelectedAnimationLoop = ({ state }) => {
+  return state.selectedAnimationLoop;
+};
+
+export const selectSelectedAnimationCanLoop = ({ state }) => {
+  return canLoopAnimationById(state.animationItems, state.selectedAnimationId);
 };
 
 export const setBackgroundLoop = ({ state }, { loop } = {}) => {
@@ -782,6 +815,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   );
   const breadcrumb = selectBreadcrumb({ state });
   const selectedAnimationMode = state.selectedAnimationMode ?? "none";
+  const selectedAnimationCanLoop = selectSelectedAnimationCanLoop({ state });
   const allAnimationItems = toFlatItems(state.animationItems).filter(
     (item) => item.type === "animation",
   );
@@ -913,8 +947,36 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
 
   if (selectedAnimationMode !== "none") {
     formFields.push({
+      name: "playbackSpeed",
+      label: "Playback Speed",
+      type: "input-number",
+      min: 0.01,
+      step: 0.1,
+      required: true,
+    });
+  }
+
+  if (selectedAnimationMode === "update") {
+    formFields.push({
+      name: "playbackLoop",
+      label: "Loop",
+      type: "segmented-control",
+      clearable: false,
+      disabled: !selectedAnimationCanLoop,
+      description: selectedAnimationCanLoop
+        ? undefined
+        : "loopingRequiresKeyframesDescription",
+      options: [
+        { value: false, label: "Don't Loop" },
+        { value: true, label: "Loop" },
+      ],
+    });
+  }
+
+  if (selectedAnimationMode !== "none") {
+    formFields.push({
       name: "playbackContinuity",
-      label: "Playback",
+      label: "Continuity",
       type: "segmented-control",
       clearable: false,
       options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
@@ -950,6 +1012,8 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     blurKernelSize: state.selectedBlur.kernelSize,
     blurRepeatEdgePixels: state.selectedBlur.repeatEdgePixels,
     playbackContinuity: state.selectedAnimationPlaybackContinuity,
+    playbackSpeed: state.selectedAnimationPlaybackSpeed,
+    playbackLoop: state.selectedAnimationLoop,
     animationId: state.selectedAnimationId,
     loop: state.backgroundLoop ?? false,
   };
@@ -1007,6 +1071,8 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         state.selectedBlur.kernelSize,
         state.selectedBlur.repeatEdgePixels ? "repeat-edge" : "no-repeat-edge",
         state.selectedAnimationPlaybackContinuity ?? "render",
+        state.selectedAnimationPlaybackSpeed,
+        state.selectedAnimationLoop ? "animation-loop" : "animation-no-loop",
         selectedAnimationMode,
         state.selectedAnimationId ?? "none",
         state.backgroundLoop ? "loop" : "no-loop",

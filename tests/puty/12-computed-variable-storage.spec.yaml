@@ -1,0 +1,162 @@
+---
+file: ./insiemeStorageScenario.js
+group: computed variable sqlite storage
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: preserves a computed variable definition without stored values
+in:
+  - projectId: project-puty-computed-001
+    actor:
+      userId: user-puty-computed
+      clientId: client-puty-computed
+    commands:
+      - id: cmd-variable-folder-create
+        partition: m
+        type: variable.create
+        clientTs: 1301
+        payload:
+          variableId: folder-1
+          data:
+            type: folder
+            name: Project Variables
+      - id: cmd-variable-score-create
+        partition: m
+        type: variable.create
+        clientTs: 1302
+        payload:
+          variableId: score
+          parentId: folder-1
+          position: last
+          data:
+            type: variable
+            variableType: number
+            name: Score
+            scope: context
+            default: 10
+            value: 10
+      - id: cmd-variable-computed-create
+        partition: m
+        type: variable.create
+        clientTs: 1303
+        payload:
+          variableId: doubled-score
+          parentId: folder-1
+          position: last
+          data:
+            type: variable
+            variableType: number
+            name: Doubled Score
+            computed:
+              expr:
+                mul:
+                  - var: variables.score
+                  - 2
+      - id: cmd-variable-conditional-create
+        partition: m
+        type: variable.create
+        clientTs: 1304
+        payload:
+          variableId: score-label
+          parentId: folder-1
+          position: last
+          data:
+            type: variable
+            variableType: string
+            name: Score Label
+            computed:
+              branches:
+                - when:
+                    gte:
+                      - var: variables.score
+                      - 10
+                  expr: High
+              default:
+                expr: Low
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-variable-folder-create
+      projectId: project-puty-computed-001
+      userId: user-puty-computed
+      partition: m
+      schemaVersion: 1
+      type: variable.create
+      payload:
+        variableId: folder-1
+        data:
+          type: folder
+          name: Project Variables
+      meta:
+        clientTs: 1301
+    - committedId: 2
+      id: cmd-variable-score-create
+      projectId: project-puty-computed-001
+      userId: user-puty-computed
+      partition: m
+      schemaVersion: 1
+      type: variable.create
+      payload:
+        variableId: score
+        parentId: folder-1
+        position: last
+        data:
+          type: variable
+          variableType: number
+          name: Score
+          scope: context
+          default: 10
+          value: 10
+      meta:
+        clientTs: 1302
+    - committedId: 3
+      id: cmd-variable-computed-create
+      projectId: project-puty-computed-001
+      userId: user-puty-computed
+      partition: m
+      schemaVersion: 1
+      type: variable.create
+      payload:
+        variableId: doubled-score
+        parentId: folder-1
+        position: last
+        data:
+          type: variable
+          variableType: number
+          name: Doubled Score
+          computed:
+            expr:
+              mul:
+                - var: variables.score
+                - 2
+      meta:
+        clientTs: 1303
+    - committedId: 4
+      id: cmd-variable-conditional-create
+      projectId: project-puty-computed-001
+      userId: user-puty-computed
+      partition: m
+      schemaVersion: 1
+      type: variable.create
+      payload:
+        variableId: score-label
+        parentId: folder-1
+        position: last
+        data:
+          type: variable
+          variableType: string
+          name: Score Label
+          computed:
+            branches:
+              - when:
+                  gte:
+                    - var: variables.score
+                    - 10
+                expr: High
+            default:
+              expr: Low
+      meta:
+        clientTs: 1304

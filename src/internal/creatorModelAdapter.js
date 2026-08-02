@@ -1300,10 +1300,56 @@ const mergeClientModelExtensions = ({
   };
 };
 
+const normalizeLegacyNumberVariableDefaults = (state) => {
+  const variableItems = state?.variables?.items;
+  if (!isPlainObject(variableItems)) {
+    return state;
+  }
+
+  let nextState = state;
+  let nextItems = variableItems;
+
+  for (const [itemId, item] of Object.entries(variableItems)) {
+    if (
+      item?.type !== "variable" ||
+      item.variableType !== "number" ||
+      item.computed !== undefined ||
+      (item.default !== undefined && item.default !== "")
+    ) {
+      continue;
+    }
+
+    if (nextState === state) {
+      nextItems = {
+        ...variableItems,
+      };
+      nextState = {
+        ...state,
+        variables: {
+          ...state.variables,
+          items: nextItems,
+        },
+      };
+    }
+
+    const nextItem = {
+      ...item,
+      default: 0,
+    };
+    if (nextItem.value === undefined || nextItem.value === "") {
+      nextItem.value = 0;
+    }
+    nextItems[itemId] = nextItem;
+  }
+
+  return nextState;
+};
+
 export const toCreatorModelState = (state) => {
-  return normalizeCreatorModelState({
+  const normalizedState = normalizeCreatorModelState({
     state: stripClientModelExtensions(state),
   });
+  return normalizeLegacyNumberVariableDefaults(normalizedState);
 };
 
 export const normalizeRepositoryStateWithCreatorModel = (state) => {

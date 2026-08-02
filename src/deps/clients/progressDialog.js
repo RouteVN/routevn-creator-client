@@ -19,13 +19,20 @@ const createRtglElement = (root, tagName, attributes = {}, textContent) => {
 };
 
 export const createProgressDialog = (
-  { id = DEFAULT_PROGRESS_DIALOG_ID, title = "", message = "", status } = {},
+  {
+    id = DEFAULT_PROGRESS_DIALOG_ID,
+    title = "",
+    message = "",
+    status,
+    progress,
+  } = {},
   root = typeof document === "undefined" ? undefined : document,
 ) => {
   if (!root?.body) {
     return {
       close: () => {},
       update: () => {},
+      waitForPaint: async () => {},
     };
   }
 
@@ -60,6 +67,33 @@ export const createProgressDialog = (
     { c: "mu-fg" },
     status,
   );
+  const progressTrack = createRtglElement(root, "rtgl-view", {
+    "data-progress-track": "",
+    role: "progressbar",
+    "aria-label": title,
+    "aria-valuemin": "0",
+    w: "f",
+    h: "6",
+    br: "full",
+    pos: "rel",
+    bgc: "su",
+    style: "overflow: hidden; background-color: var(--surface);",
+  });
+  const progressFill = createRtglElement(root, "rtgl-view", {
+    "data-progress-fill": "",
+    h: "f",
+    bgc: "ac",
+    br: "full",
+  });
+  const progressStyle = createRtglElement(root, "style");
+  progressStyle.textContent = `
+    @keyframes routevn-progress-indeterminate {
+      0% { transform: translateX(-100%); }
+      50% { transform: translateX(170%); }
+      100% { transform: translateX(440%); }
+    }
+  `;
+  progressTrack.append(progressStyle, progressFill);
 
   const setStatus = (value) => {
     if (value === undefined || value === "") {
@@ -67,14 +101,49 @@ export const createProgressDialog = (
       return;
     }
     statusText.textContent = value;
+    progressTrack.setAttribute("aria-valuetext", value);
     if (statusText.parentNode !== content) {
       content.append(statusText);
+    }
+  };
+
+  const setProgress = (value) => {
+    if (value === undefined) {
+      progressTrack.remove();
+      return;
+    }
+
+    const current = Number(value?.current);
+    const total = Number(value?.total);
+    if (Number.isFinite(total) && total > 0) {
+      const clampedCurrent = Number.isFinite(current)
+        ? Math.min(Math.max(current, 0), total)
+        : 0;
+      const percent = (clampedCurrent / total) * 100;
+      progressFill.setAttribute(
+        "style",
+        `width: ${percent}%; transition: width 0.15s ease;`,
+      );
+      progressTrack.setAttribute("aria-valuemax", String(total));
+      progressTrack.setAttribute("aria-valuenow", String(clampedCurrent));
+    } else {
+      progressFill.setAttribute(
+        "style",
+        "width: 30%; animation: routevn-progress-indeterminate 1.2s ease-in-out infinite;",
+      );
+      progressTrack.removeAttribute("aria-valuemax");
+      progressTrack.removeAttribute("aria-valuenow");
+    }
+
+    if (progressTrack.parentNode !== content) {
+      content.append(progressTrack);
     }
   };
 
   header.append(titleText, messageText);
   content.append(header);
   setStatus(status);
+  setProgress(progress);
   dialog.append(content);
   root.body.append(dialog);
 
@@ -86,6 +155,7 @@ export const createProgressDialog = (
     update(options = {}) {
       if (options.title !== undefined) {
         titleText.textContent = options.title;
+        progressTrack.setAttribute("aria-label", options.title);
       }
       if (options.message !== undefined) {
         messageText.textContent = options.message;
@@ -93,6 +163,25 @@ export const createProgressDialog = (
       if (options.status !== undefined) {
         setStatus(options.status);
       }
+      if (Object.hasOwn(options, "progress")) {
+        setProgress(options.progress);
+      }
+    },
+    async waitForPaint() {
+      await new Promise((resolve) => {
+        const window = root.defaultView;
+        if (typeof window?.requestAnimationFrame === "function") {
+          window.requestAnimationFrame(() => {
+            window.setTimeout(resolve, 0);
+          });
+          return;
+        }
+        if (typeof window?.setTimeout === "function") {
+          window.setTimeout(resolve, 0);
+          return;
+        }
+        resolve();
+      });
     },
   };
 };

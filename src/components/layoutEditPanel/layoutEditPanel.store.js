@@ -180,6 +180,9 @@ const localizeOptions = (options, copy = {}) => {
     if (typeof nextOption.ariaLabel === "string") {
       nextOption.ariaLabel = localizeStaticLabel(nextOption.ariaLabel, copy);
     }
+    if (typeof nextOption.tooltip === "string") {
+      nextOption.tooltip = localizeStaticLabel(nextOption.tooltip, copy);
+    }
     return nextOption;
   });
 };
@@ -1615,6 +1618,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     state.soundsData?.items?.[state.soundFormDialog.selectedSoundId];
   const variableOptions = getVariableOptions(state.variablesData, {
     type: "number",
+    includeComputed: false,
   });
   const sliderValueOptions = [
     { label: copy.manualOption ?? "Manual", value: "" },

@@ -1,8 +1,7 @@
 import { toFlatItems } from "./project/tree.js";
+import { getAnimationType } from "./animationPlayback.js";
 
-export const getAnimationResourceType = (item = {}) => {
-  return item?.animation?.type === "transition" ? "transition" : "update";
-};
+export const getAnimationResourceType = getAnimationType;
 
 export const getTransitionAnimationOptions = (
   animations = {},

@@ -32,6 +32,8 @@ export const handleAfterMount = async (deps) => {
   const transition = sectionTransition;
   const formValues = {
     transitionAnimationId: transition.screen?.animations?.resourceId,
+    playbackSpeed: transition.screen?.animations?.playback?.speed,
+    playbackContinuity: transition.screen?.animations?.playback?.continuity,
   };
 
   if (transition.sceneId) {
@@ -98,6 +100,10 @@ export const handleSubmitClick = (deps) => {
     sectionTransition.screen = {
       animations: {
         resourceId: formValues.transitionAnimationId,
+        playback: {
+          continuity: formValues.playbackContinuity,
+          speed: formValues.playbackSpeed,
+        },
       },
     };
   }

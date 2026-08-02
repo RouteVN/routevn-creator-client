@@ -805,6 +805,97 @@ export const handleExportConfirmationClose = (deps) => {
   render();
 };
 
+const formatBundleByteCount = (value) => {
+  const bytes = Number(value) || 0;
+  if (bytes < 1024 * 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const formatBundleElapsedTime = (value) => {
+  const elapsedSeconds = Math.floor((Number(value) || 0) / 1000);
+  if (elapsedSeconds < 1) {
+    return "";
+  }
+  if (elapsedSeconds < 60) {
+    return `${elapsedSeconds}s`;
+  }
+  return `${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s`;
+};
+
+const createBundleProgressView = ({ copy, progress } = {}) => {
+  const current = Math.max(0, Number(progress?.current) || 0);
+  const total = Math.max(0, Number(progress?.total) || 0);
+  const determinateProgress = total > 0 ? { current, total } : {};
+  const withElapsedTime = (status) => {
+    const elapsed = formatBundleElapsedTime(progress?.elapsedMs);
+    if (!elapsed) {
+      return status;
+    }
+    return formatI18nCopy(copy.bundleElapsedStatus ?? "{status} · {elapsed}", {
+      status,
+      elapsed,
+    });
+  };
+
+  if (progress?.phase === "scanAssets") {
+    return {
+      status: withElapsedTime(
+        formatI18nCopy(
+          copy.bundleScanningAssetsStatus ??
+            "Scanning assets... {current} / {total}",
+          { current, total },
+        ),
+      ),
+      progress: determinateProgress,
+    };
+  }
+
+  if (progress?.phase === "optimizeImages") {
+    return {
+      status: withElapsedTime(
+        formatI18nCopy(
+          copy.bundleOptimizingImagesStatus ??
+            "Optimizing images... {current} / {total}",
+          { current, total },
+        ),
+      ),
+      progress: determinateProgress,
+    };
+  }
+
+  if (progress?.phase === "writePackage") {
+    return {
+      status: withElapsedTime(
+        formatI18nCopy(
+          copy.bundleWritingPackageStatus ??
+            "Writing package... {current} / {total}",
+          {
+            current: formatBundleByteCount(current),
+            total: formatBundleByteCount(total),
+          },
+        ),
+      ),
+      progress: determinateProgress,
+    };
+  }
+
+  if (progress?.phase === "finalize") {
+    return {
+      status: withElapsedTime(
+        copy.bundleFinalizingStatus ?? "Finalizing ZIP...",
+      ),
+      progress: {},
+    };
+  }
+
+  return {
+    status: copy.bundlePreparingProjectStatus ?? "Preparing project data...",
+    progress: {},
+  };
+};
+
 const runWebExport = async (deps, confirmation) => {
   const { store, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
@@ -845,13 +936,18 @@ const runWebExport = async (deps, confirmation) => {
     return;
   }
 
-  appService.showAlert({
+  const progressDialog = appService.showProgressDialog({
     message:
       copy.bundleInProgressMessage ??
       "Please wait while the bundle is being created...",
     title: copy.bundleInProgressTitle ?? "Bundle in progress",
+    status: copy.bundlePreparingProjectStatus ?? "Preparing project data...",
+    progress: {},
   });
+  await progressDialog.waitForPaint();
 
+  let savedPath;
+  let exportError;
   try {
     const { transformedData, fileEntries } = await createVersionExportData({
       appService,
@@ -860,54 +956,67 @@ const runWebExport = async (deps, confirmation) => {
       projectService,
       version,
     });
-    const savedPath = outputPath
+    const exportOptions = {
+      onProgress: (progress) => {
+        progressDialog.update(createBundleProgressView({ copy, progress }));
+      },
+    };
+    savedPath = outputPath
       ? await projectService.createDistributionZipStreamedToPath(
           transformedData,
           fileEntries,
           outputPath,
+          exportOptions,
         )
       : await projectService.createDistributionZipStreamed(
           transformedData,
           fileEntries,
           zipName,
+          exportOptions,
         );
-
-    if (!savedPath) {
-      appService.closeAll();
-      return;
-    }
-
-    appService.showAlert({
-      message: formatI18nCopy(
-        copy.zipExportCompletedMessage ??
-          "ZIP export completed.\nSaved to: {path}",
-        { path: savedPath },
-      ),
-      title: copy.exportCompletedTitle ?? "Export completed",
-    });
   } catch (error) {
-    const replay = error?.details?.replay;
+    exportError = error;
+  } finally {
+    progressDialog.close();
+  }
 
+  if (exportError) {
+    const replay = exportError?.details?.replay;
     if (replay) {
       console.error("Version export history replay failed", {
         versionId,
         versionName: version?.name,
         versionActionIndex: version?.actionIndex,
         replay,
-        error,
+        error: exportError,
       });
     }
 
     appService.showAlert({
       message: replay
-        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(error)}`
+        ? `${formatReplayFailureMessage({ replay, copy })}\n${getErrorMessage(exportError)}`
         : formatI18nCopy(
             copy.failedSaveZipFile ?? "Failed to save ZIP file: {message}",
-            { message: getErrorMessage(error) },
+            { message: getErrorMessage(exportError) },
           ),
       title: copy.errorTitle ?? "Error",
     });
+    return;
   }
+
+  if (!savedPath) {
+    appService.closeAll();
+    return;
+  }
+
+  appService.showAlert({
+    message: formatI18nCopy(
+      copy.zipExportCompletedMessage ??
+        "ZIP export completed.\nSaved to: {path}",
+      { path: savedPath },
+    ),
+    title: copy.exportCompletedTitle ?? "Export completed",
+  });
 };
 
 const runWindowsExecutableExport = async (deps, confirmation) => {

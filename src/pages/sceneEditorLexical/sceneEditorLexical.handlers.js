@@ -2562,13 +2562,19 @@ export const handleMobileKeyboardToolbarActionClick = (deps, payload) => {
 };
 
 export const handleMobileKeyboardStateChange = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, dispatchEvent } = deps;
   const startedAt = getSceneEditorTimingNow();
   const detail = payload?._event?.detail || {};
 
   store.setMobileKeyboardState(detail);
   const renderStartedAt = getSceneEditorTimingNow();
   render();
+  dispatchEvent(
+    new CustomEvent("mobile-keyboard-state-change", {
+      detail: store.selectMobileKeyboardState(),
+      bubbles: true,
+    }),
+  );
   const renderDurationMs = getSceneEditorTimingDurationMs(renderStartedAt);
   emitSceneEditorTiming("page.mobile-keyboard-state", {
     durationMs: getSceneEditorTimingDurationMs(startedAt),
@@ -3794,8 +3800,9 @@ export const handlePreviewCurrentLineChanged = (deps, payload) => {
 
 export const handleBackClick = (deps) => {
   const { appService } = deps;
-  const { p } = appService.getPayload();
-  appService.navigate("/project/scenes", { p }, { historyMode: "replace" });
+  appService.navigate("/project/scenes", appService.getPayload(), {
+    historyMode: "replace",
+  });
 };
 
 export const handleSystemActionsActionDelete = async (deps, payload) => {

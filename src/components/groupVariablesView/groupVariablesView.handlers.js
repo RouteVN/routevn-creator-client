@@ -12,6 +12,10 @@ import {
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
 import { dispatchResourceViewBackgroundClick } from "../../internal/ui/resourcePages/resourceViewBackground.js";
+import {
+  isComputedLiteralValue,
+  isSupportedComputedOperationType,
+} from "../../internal/computedOperations.js";
 
 export const handleScrollContainerClick = dispatchResourceViewBackgroundClick;
 
@@ -327,7 +331,7 @@ const mergeVariableFormValues = ({
     storedValues.isEnum === true &&
     normalizeVariableEnumValues(storedValues.enumValues).length > 0;
 
-  return {
+  const values = {
     ...storedValues,
     ...formValues,
     isEnum: shouldPreserveEnum
@@ -335,12 +339,21 @@ const mergeVariableFormValues = ({
       : (formValues.isEnum ?? storedValues.isEnum),
     enumValues,
   };
+  values.computed = storedValues.computed;
+  return values;
+};
+
+const getActiveVariableForm = ({ refs, store } = {}) => {
+  const values = store.selectDefaultValues();
+  return values.valueSource === "computed"
+    ? refs?.computedForm
+    : refs?.variableForm;
 };
 
 const getVariableFormValues = ({ refs, store } = {}) => {
   return mergeVariableFormValues({
     storedValues: store.selectDefaultValues(),
-    formValues: refs?.variableForm?.getValues?.(),
+    formValues: getActiveVariableForm({ refs, store })?.getValues?.(),
   });
 };
 
@@ -348,7 +361,7 @@ const selectCopy = (i18n = {}) =>
   selectI18nCopy(i18n, ["resourcePages", "variablesPage"]);
 
 const setVariableFormValues = ({ refs, render, store }, values = {}) => {
-  refs?.variableForm?.setValues?.({
+  getActiveVariableForm({ refs, store })?.setValues?.({
     values,
   });
   store.updateFormValues(values);
@@ -359,7 +372,7 @@ const shouldSyncVariableFormValues = ({
   formValues = {},
   nextValues = {},
 } = {}) => {
-  const syncFieldNames = ["variableType", "isEnum", "default"];
+  const syncFieldNames = ["valueSource", "variableType", "isEnum", "default"];
   return syncFieldNames.some(
     (fieldName) =>
       Object.prototype.hasOwnProperty.call(formValues, fieldName) &&
@@ -394,9 +407,16 @@ const resolveVariableFormValues = ({
     ...prevValues,
     ...newValues,
   };
-  const variableType = nextValues.variableType ?? "string";
+  const valueSource = nextValues.valueSource ?? "variable";
+  let variableType = nextValues.variableType ?? "string";
+  if (valueSource !== "computed" && variableType === "object") {
+    variableType = "string";
+  }
   const variableTypeChanged = variableType !== prevValues.variableType;
-  let isEnum = variableType === "string" && nextValues.isEnum === true;
+  let isEnum =
+    valueSource !== "computed" &&
+    variableType === "string" &&
+    nextValues.isEnum === true;
   let enumValues = isEnum
     ? normalizeVariableEnumValues(nextValues.enumValues)
     : [];
@@ -419,13 +439,16 @@ const resolveVariableFormValues = ({
     defaultValue = enumValues[0] ?? "";
   }
 
-  return {
+  const values = {
     ...nextValues,
+    valueSource,
     variableType,
     isEnum,
     enumValues,
     default: defaultValue,
   };
+  values.computed = prevValues.computed;
+  return values;
 };
 
 const findVariableWithGroup = (flatGroups = [], itemId) => {
@@ -452,8 +475,10 @@ const openEditDialogForItem = ({ deps, itemId } = {}) => {
 
   const { group, item } = found;
   const variableType = item.variableType || "string";
+  const valueSource = item.computed === undefined ? "variable" : "computed";
   const defaultValue =
-    item.default === undefined
+    item.default === undefined ||
+    (variableType === "number" && item.default === "")
       ? getDefaultValueByType(variableType)
       : item.default;
 
@@ -473,10 +498,15 @@ const openEditDialogForItem = ({ deps, itemId } = {}) => {
       description: item.description || "",
       tagIds: item.tagIds ?? [],
       scope: item.scope || "context",
+      valueSource,
       variableType,
       isEnum: isVariableEnumEnabled(item),
       enumValues: normalizeVariableEnumValues(item.enumValues),
       default: defaultValue,
+      computed:
+        item.computed === undefined
+          ? undefined
+          : structuredClone(item.computed),
     },
   });
   render();
@@ -526,19 +556,418 @@ export const handleDialogFormChange = (deps, payload) => {
       nextValues,
     })
   ) {
-    refs.variableForm?.setValues?.({
+    getActiveVariableForm({ refs, store })?.setValues?.({
       values: nextValues,
     });
   }
   render();
 };
 
-export const handleAddVariableClick = (deps, payload) => {
+export const handleAddOperationClick = (deps, payload) => {
+  const { render, store } = deps;
+  payload._event.stopPropagation();
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+
+  store.showOperationChoiceMenu({
+    x: rect.left,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleAddOperationOperandClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { operationPath, target, x, y } = payload._event.detail;
+
+  store.showOperandSourceMenu({
+    operationPath,
+    target,
+    x,
+    y,
+  });
+  render();
+};
+
+export const handleOperationChoiceMenuClose = (deps) => {
+  const { refs, render, store } = deps;
+  refs.operationChoiceMenu.open = false;
+  store.hideOperationChoiceMenu();
+  render();
+};
+
+export const handleOperationChoiceMenuClick = (deps, payload) => {
+  const { refs, render, store } = deps;
+  const value = payload._event.detail.item?.value;
+
+  refs.operationChoiceMenu.open = false;
+  store.hideOperationChoiceMenu();
+
+  if (value === "if") {
+    store.createConditional();
+    const values = store.selectDefaultValues();
+    render();
+    refs.computedForm.setValues({ values });
+    return;
+  }
+
+  if (isSupportedComputedOperationType(value)) {
+    store.createOperation({ operationType: value });
+    const values = store.selectDefaultValues();
+    render();
+    refs.computedForm.setValues({ values });
+    return;
+  }
+
+  render();
+};
+
+export const handleOperationBlockContextMenu = (deps, payload) => {
+  const { render, store } = deps;
+  const { operationPath, target, x, y } = payload._event.detail;
+
+  store.showOperationBlockMenu({
+    operationPath,
+    target,
+    x,
+    y,
+  });
+  render();
+};
+
+export const handleOperationBlockMenuClose = (deps) => {
+  const { refs, render, store } = deps;
+  refs.operationBlockMenu.open = false;
+  store.hideOperationBlockMenu();
+  render();
+};
+
+export const handleOperationBlockMenuClick = (deps, payload) => {
+  const { refs, render, store } = deps;
+  const value = payload._event.detail.item?.value;
+  const position = store.selectOperationBlockMenuPosition();
+
+  refs.operationBlockMenu.open = false;
+  store.hideOperationBlockMenu();
+  if (value === "remove") {
+    if (position.purpose === "node") {
+      store.removeConditionalNode({ target: position.target });
+    } else if (position.purpose === "operand") {
+      store.removeOperationOperand({
+        operationPath: position.operationPath,
+        target: position.target,
+        index: position.operandIndex,
+      });
+    } else {
+      store.removeOperation(position);
+    }
+    const values = store.selectDefaultValues();
+    render();
+    refs.computedForm.setValues({ values });
+    return;
+  }
+
+  render();
+};
+
+const closeOperandSourceMenuOverlay = (operandSourceMenu) => {
+  const popover = operandSourceMenu.shadowRoot.querySelector("rtgl-popover");
+  popover.removeAttribute("open");
+  operandSourceMenu.open = false;
+};
+
+export const handleOperandSourceMenuClose = (deps) => {
+  const { refs, render, store } = deps;
+  closeOperandSourceMenuOverlay(refs.operandSourceMenu);
+  store.hideOperandSourceMenu();
+  render();
+};
+
+export const handleOperandSourceMenuClick = (deps, payload) => {
+  const { appService, i18n, refs, render, store } = deps;
+  const source = payload._event.detail.item?.value;
+
+  closeOperandSourceMenuOverlay(refs.operandSourceMenu);
+  store.hideOperandSourceMenu();
+
+  const position = store.selectOperandSourceMenuPosition();
+  const setNode =
+    position.purpose === "node" || position.purpose === "node-variable";
+  if (source?.startsWith("variables.") || source?.startsWith("variables[")) {
+    if (setNode) {
+      store.setConditionalNode({
+        source: "variable",
+        variablePath: source,
+        target: position.target,
+      });
+    } else if (position.purpose === "operation-variable") {
+      store.updateOperationVariableOperand({
+        variablePath: source,
+        operationPath: position.operationPath,
+        target: position.target,
+        index: position.operandIndex,
+      });
+    } else {
+      store.addOperationOperand({
+        source: "variable",
+        variablePath: source,
+        operationPath: position.operationPath,
+        target: position.target,
+      });
+    }
+    render();
+    return;
+  }
+
+  if (isSupportedComputedOperationType(source)) {
+    if (setNode) {
+      store.setConditionalNode({
+        source: "operation",
+        operationType: source,
+        target: position.target,
+      });
+    } else {
+      store.addOperationOperand({
+        source: "operation",
+        operationType: source,
+        operationPath: position.operationPath,
+        target: position.target,
+      });
+    }
+    render();
+    return;
+  }
+
+  if (source === "value") {
+    store.showOperationValuePopover(position);
+    render();
+    return;
+  }
+
+  if (source !== "variable") {
+    render();
+    return;
+  }
+
+  render();
+  const copy = selectCopy(i18n);
+  appService.showToast({
+    message:
+      copy.computedVariableOperandUnavailable ??
+      "Create a compatible variable before adding a Variable operand.",
+  });
+};
+
+export const handleOperationValuePopoverClose = (deps) => {
+  const { render, store } = deps;
+  store.hideOperationValuePopover();
+  render();
+};
+
+export const handleEditOperationValueClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { operationPath, target, index, value, x, y } = payload._event.detail;
+  store.showOperationValuePopover({
+    operationPath,
+    target,
+    purpose: "edit",
+    operandIndex: index,
+    initialValue: { value },
+    x,
+    y,
+  });
+  render();
+};
+
+export const handleEditOperationVariableClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { operationPath, target, index, x, y } = payload._event.detail;
+  store.showOperandSourceMenu({
+    operationPath,
+    target,
+    purpose: "operation-variable",
+    operandIndex: index,
+    x,
+    y,
+  });
+  render();
+};
+
+export const handleOperationOperandContextMenu = (deps, payload) => {
+  const { render, store } = deps;
+  const { operationPath, target, index, x, y } = payload._event.detail;
+  store.showOperationBlockMenu({
+    operationPath,
+    target,
+    purpose: "operand",
+    operandIndex: index,
+    x,
+    y,
+  });
+  render();
+};
+
+export const handleOperationValueSubmit = (deps, payload) => {
+  const { render, store } = deps;
+  const { value } = payload._event.detail;
+  if (!isComputedLiteralValue(value)) {
+    return;
+  }
+
+  const position = store.selectOperationValuePopoverPosition();
+  if (position.purpose === "edit") {
+    store.updateOperationValueOperand({
+      value,
+      operationPath: position.operationPath,
+      target: position.target,
+      index: position.operandIndex,
+    });
+  } else if (position.purpose === "node") {
+    store.setConditionalNode({
+      source: "value",
+      value,
+      target: position.target,
+    });
+  } else {
+    store.addOperationOperand({
+      source: "value",
+      value,
+      operationPath: position.operationPath,
+      target: position.target,
+    });
+  }
+  store.hideOperationValuePopover();
+  render();
+};
+
+export const handleRemoveOperationOperandClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { operationPath, target, index } = payload._event.detail;
+  store.removeOperationOperand({
+    operationPath,
+    target,
+    index,
+  });
+  render();
+};
+
+const getConditionalTargetFromElement = (element) => {
+  const target = {
+    kind: element.dataset.targetKind,
+  };
+  if (element.dataset.branchIndex !== undefined) {
+    target.branchIndex = Number(element.dataset.branchIndex);
+  }
+  return target;
+};
+
+export const handleAddConditionalNodeClick = (deps, payload) => {
+  const { render, store } = deps;
+  payload._event.stopPropagation();
+  const element = payload._event.currentTarget;
+  const rect = element.getBoundingClientRect();
+  store.showOperandSourceMenu({
+    purpose: "node",
+    target: getConditionalTargetFromElement(element),
+    x: rect.left,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleConditionalVariableClick = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  event.stopPropagation();
+  const element = event.currentTarget;
+  const target = getConditionalTargetFromElement(element);
+  const rect = element.getBoundingClientRect();
+  store.showOperandSourceMenu({
+    purpose: target.kind === "condition" ? "node" : "node-variable",
+    target,
+    x: rect.left,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleConditionalValueClick = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  event.stopPropagation();
+  const element = event.currentTarget;
+  const target = getConditionalTargetFromElement(element);
+  if (target.kind === "condition") {
+    return;
+  }
+
+  const value = store.selectConditionalNodeValue({ target });
+  if (!isComputedLiteralValue(value)) {
+    return;
+  }
+
+  const rect = element.getBoundingClientRect();
+  store.showOperationValuePopover({
+    purpose: "node",
+    target,
+    initialValue: { value },
+    x: rect.left,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleConditionalNodeContextMenu = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  event.preventDefault();
+  event.stopPropagation();
+  store.showOperationBlockMenu({
+    purpose: "node",
+    target: getConditionalTargetFromElement(event.currentTarget),
+    x: event.clientX,
+    y: event.clientY,
+  });
+  render();
+};
+
+export const handleAddConditionalBranchClick = (deps) => {
+  const { render, store } = deps;
+  store.addConditionalBranch();
+  render();
+};
+
+export const handleDuplicateConditionalBranchClick = (deps, payload) => {
+  const { render, store } = deps;
+  store.duplicateConditionalBranch({
+    branchIndex: Number(payload._event.currentTarget.dataset.branchIndex),
+  });
+  render();
+};
+
+export const handleMoveConditionalBranchClick = (deps, payload) => {
+  const { render, store } = deps;
+  const element = payload._event.currentTarget;
+  store.moveConditionalBranch({
+    branchIndex: Number(element.dataset.branchIndex),
+    offset: Number(element.dataset.offset),
+  });
+  render();
+};
+
+export const handleRemoveConditionalBranchClick = (deps, payload) => {
+  const { render, store } = deps;
+  store.removeConditionalBranch({
+    branchIndex: Number(payload._event.currentTarget.dataset.branchIndex),
+  });
+  render();
+};
+
+export const handleAddVariableClick = async (deps, payload) => {
   if (deps.props.readonly === true) {
     return;
   }
 
-  const { store, render } = deps;
+  const { appService, i18n, store, render } = deps;
   payload._event.stopPropagation(); // Prevent group click
 
   // Extract group ID from the clicked button (handles both button and empty state)
@@ -551,7 +980,31 @@ export const handleAddVariableClick = (deps, payload) => {
     return;
   }
 
-  store.openAddDialog({ groupId: groupId });
+  const copy = selectCopy(i18n);
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  const result = await appService.showDropdownMenu({
+    items: [
+      {
+        type: "item",
+        label: copy.variableSourceLabel ?? "Variable",
+        key: "variable",
+      },
+      {
+        type: "item",
+        label: copy.computedSourceLabel ?? "Computed",
+        key: "computed",
+      },
+    ],
+    x: rect.left,
+    y: rect.bottom,
+    place: "bs",
+  });
+  const valueSource = result?.item?.key;
+  if (valueSource !== "variable" && valueSource !== "computed") {
+    return;
+  }
+
+  store.openAddDialog({ groupId, valueSource });
   render();
 };
 
@@ -796,7 +1249,7 @@ export const handleAppendTagIdToForm = (deps, payload = {}) => {
     tagIds: buildUniqueTagIds(currentValues?.tagIds ?? [], [tagId]),
   };
 
-  refs.variableForm?.setValues?.({
+  getActiveVariableForm({ refs, store })?.setValues?.({
     values: nextValues,
   });
   store.updateFormValues(nextValues);
@@ -808,7 +1261,7 @@ export const handleFormActionClick = (deps, payload) => {
     return;
   }
 
-  const { store, render, dispatchEvent, props, appService, i18n } = deps;
+  const { store, dispatchEvent, props, appService, i18n } = deps;
   const copy = selectCopy(i18n);
   const submitContext = store.selectSubmitContext();
 
@@ -840,7 +1293,9 @@ export const handleFormActionClick = (deps, payload) => {
       formData.variableType ??
       submitContext.defaultValues?.variableType ??
       "string";
-    const isEnum = variableType === "string" && formData.isEnum === true;
+    const isComputed = formData.valueSource === "computed";
+    const isEnum =
+      !isComputed && variableType === "string" && formData.isEnum === true;
     const enumValues = isEnum
       ? normalizeVariableEnumValues(formData.enumValues)
       : [];
@@ -880,7 +1335,18 @@ export const handleFormActionClick = (deps, payload) => {
       });
       return;
     }
-
+    if (isComputed && formData.computed === undefined) {
+      appService.showAlert({
+        message:
+          submitContext.computedMode === "conditional"
+            ? (copy.computedConditionalIncomplete ??
+              "Complete every condition and result, including Otherwise.")
+            : (copy.computedOperationIncomplete ??
+              "Complete the operation by adding its required operands."),
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
     // Don't submit if name already exists
     const isDuplicateName = (props.flatGroups || [])
       .flatMap((group) => group.children || [])
@@ -906,46 +1372,52 @@ export const handleFormActionClick = (deps, payload) => {
     }
 
     if (isEditMode) {
+      const detail = {
+        itemId: editingItemId,
+        name,
+        description: formData.description ?? "",
+        tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
+        variableType,
+        isEnum,
+        enumValues,
+      };
+      if (isComputed) {
+        detail.computed = structuredClone(formData.computed);
+      } else {
+        detail.scope = scope;
+        detail.default = defaultValue;
+      }
       dispatchEvent(
         new CustomEvent("variable-updated", {
-          detail: {
-            itemId: editingItemId,
-            name,
-            description: formData.description ?? "",
-            tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
-            scope,
-            variableType,
-            isEnum,
-            enumValues,
-            default: defaultValue,
-          },
+          detail,
           bubbles: true,
           composed: true,
         }),
       );
     } else {
+      const detail = {
+        groupId: targetGroupId,
+        name,
+        description: formData.description ?? "",
+        tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
+        variableType,
+        isEnum,
+        enumValues,
+      };
+      if (isComputed) {
+        detail.computed = structuredClone(formData.computed);
+      } else {
+        detail.scope = scope;
+        detail.default = defaultValue;
+      }
       // Forward variable creation to parent
       dispatchEvent(
         new CustomEvent("variable-created", {
-          detail: {
-            groupId: targetGroupId,
-            name,
-            description: formData.description ?? "",
-            tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
-            scope,
-            variableType,
-            isEnum,
-            enumValues,
-            default: defaultValue,
-          },
+          detail,
           bubbles: true,
           composed: true,
         }),
       );
     }
-
-    // Close dialog
-    store.closeDialog();
-    render();
   }
 };

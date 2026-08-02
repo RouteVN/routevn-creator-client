@@ -156,6 +156,14 @@ const showInvalidOperationValueAlert = (appService, copy) => {
   });
 };
 
+const showComputedVariableReadOnlyAlert = (appService, copy) => {
+  appService.showAlert({
+    message:
+      copy.computedVariableReadOnly ?? "Computed variables cannot be updated.",
+    title: localizeCommandLineText("Warning", copy),
+  });
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   const repository = await projectService.getRepository();
@@ -325,6 +333,12 @@ export const handleSaveOperationClick = (deps, payload) => {
     store.selectOperationSaveData();
 
   if (currentEditingId && tempOperation.variableId && tempOperation.op) {
+    if (
+      variablesData.items?.[tempOperation.variableId]?.computed !== undefined
+    ) {
+      showComputedVariableReadOnlyAlert(appService, copy);
+      return;
+    }
     const normalized = normalizeOperationForSave({
       operation: tempOperation,
       variableItems: getVariableItems(variablesData),
@@ -356,6 +370,16 @@ export const handleSubmitClick = (deps, payload) => {
   const { actionId, operations, variablesData } = store.selectSubmitData();
   const variableItems = getVariableItems(variablesData);
   let hasInvalidOperationValue = false;
+
+  if (
+    operations.some(
+      (operation) =>
+        variableItems[operation.variableId]?.computed !== undefined,
+    )
+  ) {
+    showComputedVariableReadOnlyAlert(appService, copy);
+    return;
+  }
 
   const validOperations = operations
     .filter((op) => op.variableId && op.op)

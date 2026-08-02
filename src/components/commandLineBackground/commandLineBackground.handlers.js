@@ -135,6 +135,10 @@ const buildBackgroundDataFromState = (
   const selectedAnimationId = store.selectSelectedAnimation();
   const selectedAnimationPlaybackContinuity =
     store.selectSelectedAnimationPlaybackContinuity();
+  const selectedAnimationPlaybackSpeed =
+    store.selectSelectedAnimationPlaybackSpeed();
+  const selectedAnimationLoop = store.selectSelectedAnimationLoop();
+  const selectedAnimationCanLoop = store.selectSelectedAnimationCanLoop();
   const backgroundLoop = store.selectBackgroundLoop();
   const hasBackgroundTarget =
     !!selectedResource?.resourceId || !!selectedColorId;
@@ -190,8 +194,14 @@ const buildBackgroundDataFromState = (
       resourceId: selectedAnimationId,
       playback: {
         continuity: selectedAnimationPlaybackContinuity,
+        speed: selectedAnimationPlaybackSpeed,
       },
     };
+    if (selectedAnimationMode === "update") {
+      backgroundData.animations.playback.loop = selectedAnimationCanLoop
+        ? selectedAnimationLoop
+        : false;
+    }
   }
 
   return backgroundData;
@@ -357,6 +367,20 @@ export const handleBeforeMount = (deps) => {
   if (animationPlaybackContinuity) {
     store.setSelectedAnimationPlaybackContinuity({
       continuity: animationPlaybackContinuity,
+    });
+  }
+
+  const animationPlaybackSpeed = backgroundAnimations?.playback?.speed;
+  if (animationPlaybackSpeed !== undefined) {
+    store.setSelectedAnimationPlaybackSpeed({
+      speed: animationPlaybackSpeed,
+    });
+  }
+
+  const animationLoop = backgroundAnimations?.playback?.loop;
+  if (animationLoop !== undefined) {
+    store.setSelectedAnimationLoop({
+      loop: animationLoop,
     });
   }
 
@@ -694,6 +718,24 @@ export const handleFormInputChange = (deps, payload) => {
   if (name === "playbackContinuity") {
     store.setSelectedAnimationPlaybackContinuity({
       continuity: fieldValue,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (name === "playbackSpeed") {
+    store.setSelectedAnimationPlaybackSpeed({
+      speed: fieldValue,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (name === "playbackLoop") {
+    store.setSelectedAnimationLoop({
+      loop: fieldValue,
     });
     render();
     dispatchTemporaryPresentationStateChange(deps);

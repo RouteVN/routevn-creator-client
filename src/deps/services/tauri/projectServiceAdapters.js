@@ -1,6 +1,12 @@
-import { mkdir, writeFile, readFile, exists } from "@tauri-apps/plugin-fs";
+import {
+  mkdir,
+  writeFile,
+  readFile,
+  readDir,
+  exists,
+} from "@tauri-apps/plugin-fs";
 import { join, resolveResource } from "@tauri-apps/api/path";
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { fileTypeFromBuffer } from "file-type";
 import JSZip from "jszip";
 import {
@@ -197,26 +203,6 @@ const normalizeMacosApplicationMetadata = ({
     category: category?.trim() || null,
     iconFileId: normalizedIconFileId,
   };
-};
-
-const getByteLength = (value) => {
-  if (!value) {
-    return 0;
-  }
-
-  if (typeof value.byteLength === "number") {
-    return value.byteLength;
-  }
-
-  if (typeof value.size === "number") {
-    return value.size;
-  }
-
-  return 0;
-};
-
-const logExportSizeStats = (stats = {}) => {
-  console.info("[export.bundle.size]", stats);
 };
 
 const getMediaServerVideoUrl = ({ projectMediaOrigin, filePath, mimeType }) => {
@@ -773,7 +759,7 @@ export const createTauriProjectServiceAdapters = ({
       getCurrentReference,
     });
 
-    const stats = await invoke("create_distribution_zip_streamed", {
+    const invokePayload = {
       outputPath,
       assets,
       instructionsJson: JSON.stringify(projectData),
@@ -782,8 +768,14 @@ export const createTauriProjectServiceAdapters = ({
       manifestJson: staticFiles.manifestJson || null,
       webIconFileId: staticFiles.webIconFileId || null,
       usePartFile: options.usePartFile ?? true,
-    });
-    logExportSizeStats(stats);
+    };
+    const progressChannel = new Channel();
+    if (options.onProgress) {
+      progressChannel.onmessage = options.onProgress;
+    }
+    invokePayload.onProgress = progressChannel;
+
+    await invoke("create_distribution_zip_streamed", invokePayload);
 
     return outputPath;
   };
@@ -834,7 +826,6 @@ export const createTauriProjectServiceAdapters = ({
       iconPng,
     });
 
-    logExportSizeStats(result?.stats);
     return result;
   };
 
@@ -938,7 +929,6 @@ export const createTauriProjectServiceAdapters = ({
       category: metadata.category,
       iconPng,
     });
-    logExportSizeStats(result?.stats);
     return result;
   };
 
@@ -1018,6 +1008,13 @@ export const createTauriProjectServiceAdapters = ({
         throw new Error("Template is required for project initialization");
       }
 
+      const projectEntries = await readDir(projectPath);
+      if (projectEntries.length > 0) {
+        throw new Error(
+          "The selected folder must be empty. Please choose an empty folder for your new project.",
+        );
+      }
+
       const filesPath = await join(projectPath, "files");
       await mkdir(filesPath, { recursive: true });
 
@@ -1050,8 +1047,6 @@ export const createTauriProjectServiceAdapters = ({
         clientTs: initialClientTs,
       });
 
-      await store.clearEvents();
-      await store.clearMaterializedViewCheckpoints();
       await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
       await store.saveMaterializedViewCheckpoint({
         viewName: MAIN_VIEW_NAME,
@@ -1187,10 +1182,6 @@ export const createTauriProjectServiceAdapters = ({
           compressionOptions: {
             level: 6,
           },
-        });
-        logExportSizeStats({
-          packageBinBytes: getByteLength(bundle),
-          zipBytes: getByteLength(zipBlob),
         });
         const selectedPath = await filePicker.saveFilePicker({
           title: options.title || "Save Distribution ZIP",

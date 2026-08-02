@@ -5,9 +5,34 @@ import Subject from "../../src/deps/subject.js";
 import {
   createRouteTransitionRunner,
   handleBeforeMount,
+  handleSceneEditorKeyboardStateChange,
   handleWindowPop,
   maybePromptLinuxAppImageDesktopIntegration,
 } from "../../src/pages/app/app.handlers.js";
+
+describe("app Scene Editor keyboard state", () => {
+  it("updates the app shell when the Scene Editor keyboard changes", () => {
+    const deps = {
+      store: {
+        setSceneEditorKeyboardVisible: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleSceneEditorKeyboardStateChange(deps, {
+      _event: {
+        detail: {
+          isVisible: true,
+        },
+      },
+    });
+
+    expect(deps.store.setSceneEditorKeyboardVisible).toHaveBeenCalledWith({
+      isVisible: true,
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
+  });
+});
 
 describe("app route transitions", () => {
   it("updates Discord presence after the active locale changes", () => {
@@ -149,6 +174,105 @@ describe("app route transitions", () => {
     });
 
     expect(appService.prepareNavigation).not.toHaveBeenCalled();
+  });
+
+  it("returns to projects when project route validation fails", async () => {
+    const error = new Error(
+      "state.story.initialSceneId must reference an existing scene",
+    );
+    error.code = "state_validation_failed";
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      redirect: vi.fn(),
+      replace: vi.fn(),
+      getCurrentProjectId: vi.fn(() => "project-1"),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "tauri"),
+      showAlert: vi.fn(),
+    };
+    const deps = {
+      appService,
+      projectService: {
+        ensureRepository: vi.fn(async () => {
+          throw error;
+        }),
+        getEnsuredProjectId: vi.fn(() => undefined),
+        releaseProjectRuntime: vi.fn(async () => {}),
+      },
+      store: {
+        setCurrentRoute: vi.fn(),
+        closeMobileSheet: vi.fn(),
+        setRepositoryLoading: vi.fn(),
+        setRepositoryLoadingPhase: vi.fn(),
+        setRepositoryLoadingProgress: vi.fn(),
+      },
+      render: vi.fn(),
+      i18n: {},
+    };
+
+    await createRouteTransitionRunner(deps)({
+      path: "/project",
+      payload: { p: "project-1" },
+    });
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.\n\nTechnical details: state.story.initialSceneId must reference an existing scene",
+    });
+    expect(appService.redirect).toHaveBeenCalledWith("/projects");
+    expect(deps.store.setCurrentRoute).toHaveBeenCalledWith({
+      route: "/projects",
+      payload: {},
+    });
+  });
+
+  it("reloads the repository when a same-id local route selects another path", async () => {
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      getCurrentProjectId: vi.fn(() => "shared-project-id"),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "tauri"),
+    };
+    const projectService = {
+      ensureRepository: vi.fn(async () => {}),
+      getEnsuredProjectId: vi.fn(() => "shared-project-id"),
+      getEnsuredProjectPath: vi.fn(() => "/projects/project-one"),
+      releaseProjectRuntime: vi.fn(async () => {}),
+    };
+    const store = {
+      setCurrentRoute: vi.fn(),
+      closeMobileSheet: vi.fn(),
+      setRepositoryLoading: vi.fn(),
+      setRepositoryLoadingPhase: vi.fn(),
+      setRepositoryLoadingProgress: vi.fn(),
+    };
+
+    await createRouteTransitionRunner({
+      appService,
+      projectService,
+      store,
+      render: vi.fn(),
+      i18n: {},
+    })({
+      path: "/project",
+      payload: {
+        p: "shared-project-id",
+        lp: "/projects/project-two",
+      },
+      navigationPrepared: true,
+    });
+
+    expect(projectService.releaseProjectRuntime).toHaveBeenCalledWith(
+      "shared-project-id",
+    );
+    expect(appService.refreshCurrentProjectEntry).toHaveBeenCalledOnce();
+    expect(projectService.ensureRepository).toHaveBeenCalledOnce();
+    expect(store.setRepositoryLoading).toHaveBeenNthCalledWith(1, {
+      isLoading: true,
+    });
+    expect(store.setRepositoryLoading).toHaveBeenLastCalledWith({
+      isLoading: false,
+    });
   });
 
   it("prepares browser back navigation without rewriting the popped entry", async () => {

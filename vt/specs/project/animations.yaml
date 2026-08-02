@@ -158,12 +158,109 @@ steps:
   - action: wait
     ms: 1200
   - action: screenshot
+  - action: waitFor
+    selector: "#animationEditorTab0"
+    state: visible
+    timeoutMs: 5000
   - action: select
-    selector: "#openAddMaskButton"
+    selector: "#addPropertiesButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-dropdown-menu#addPropertySideMenu #option2"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-dropdown-menu#addPropertySideMenu #option2"
     steps:
       - action: click
   - action: waitFor
     selector: "#maskDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#singleMaskImageButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#imageSelectorDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#imageItemRef0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#imageItemRef0x0"
+    steps:
+      - action: click
+  - action: select
+    selector: "#confirmMaskImageSelection"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#imageSelectorDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "#addMaskButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#maskTimelineRow"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#selectedMaskDetails"
+    state: attached
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "#selectedMaskSoftness"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#selectedMaskNumberPopover[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "#selectedMaskNumberConfirm"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#selectedMaskNumberPopover"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "#animationEditorTab0"
+    steps:
+      - action: focus
+  - action: keypress
+    key: ArrowRight
+  - action: waitFor
+    selector: "#animationPreviewPanel"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "#animationEditorTab1"
+    steps:
+      - action: focus
+  - action: keypress
+    key: ArrowLeft
+  - action: waitFor
+    selector: "#animationTweenPanel"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "[data-keyframe='true']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#selectedKeyframeDetails"
     state: attached
     timeoutMs: 5000
   - action: wait
@@ -172,7 +269,34 @@ steps:
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const rect = deepQuery(document, '#singleMaskImageButton').getBoundingClientRect(); return `${Math.round(rect.width)}x${Math.round(rect.height)}`; })()"
-    value: 160x90
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return deepQuery(document, \"[data-keyframe='true']\")?.getAttribute('data-selected'); })()"
+    value: "true"
   - action: screenshot
+  - action: select
+    selector: "#editSelectedKeyframeButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editKeyframeDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#editKeyframeDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "#maskTimelineRow"
+    steps:
+      - action: focus
+  - action: keypress
+    key: Enter
+  - action: waitFor
+    selector: "#selectedMaskDetails"
+    state: attached
+    timeoutMs: 5000
 ---

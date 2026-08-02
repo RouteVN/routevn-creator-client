@@ -27,6 +27,7 @@ describe("progress dialog client", () => {
     expect(dialog?.textContent).toContain("Windows export in progress");
     expect(dialog?.textContent).toContain("Creating executable...");
     expect(dialog?.querySelector("rtgl-button")).toBeNull();
+    expect(dialog?.querySelector("progress")).toBeNull();
 
     const closeEvent = new dom.window.Event("close", {
       bubbles: true,
@@ -67,5 +68,38 @@ describe("progress dialog client", () => {
     expect(content?.children).toHaveLength(2);
     progressDialog.update({ status: "" });
     expect(content?.children).toHaveLength(1);
+  });
+
+  it("renders app-styled indeterminate and determinate progress", () => {
+    const dom = new JSDOM(
+      "<!doctype html><html><head></head><body></body></html>",
+    );
+    const progressDialog = createProgressDialog(
+      {
+        title: "Bundle in progress",
+        progress: {},
+      },
+      dom.window.document,
+    );
+    const track = dom.window.document.querySelector("[data-progress-track]");
+    const fill = track?.querySelector("[data-progress-fill]");
+
+    expect(track?.tagName.toLowerCase()).toBe("rtgl-view");
+    expect(track?.getAttribute("role")).toBe("progressbar");
+    expect(fill?.getAttribute("style")).toContain(
+      "routevn-progress-indeterminate",
+    );
+    expect(dom.window.document.querySelector("progress")).toBeNull();
+
+    progressDialog.update({
+      progress: {
+        current: 25,
+        total: 100,
+      },
+    });
+
+    expect(track?.getAttribute("aria-valuemax")).toBe("100");
+    expect(track?.getAttribute("aria-valuenow")).toBe("25");
+    expect(fill?.getAttribute("style")).toContain("width: 25%");
   });
 });

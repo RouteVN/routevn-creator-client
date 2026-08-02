@@ -4,9 +4,9 @@ const mocked = vi.hoisted(() => ({
   createInsiemeWebStoreAdapter: vi.fn(),
   initializeProject: vi.fn(),
   readProjectAppValue: vi.fn(),
+  listIndexedDbDatabaseNames: vi.fn(),
   createProjectCollabService: vi.fn(),
   createPersistedInMemoryClientStore: vi.fn(),
-  deletePersistedInMemoryClientStore: vi.fn(),
   loadCommittedCursor: vi.fn(),
   saveCommittedCursor: vi.fn(),
   clearCommittedCursor: vi.fn(),
@@ -21,6 +21,10 @@ vi.mock("../../src/deps/clients/web/webRepositoryAdapter.js", () => ({
   readProjectAppValue: mocked.readProjectAppValue,
 }));
 
+vi.mock("../../src/deps/clients/web/indexedDb.js", () => ({
+  listIndexedDbDatabaseNames: mocked.listIndexedDbDatabaseNames,
+}));
+
 vi.mock(
   "../../src/deps/services/shared/collab/createProjectCollabService.js",
   () => ({
@@ -30,7 +34,6 @@ vi.mock(
 
 vi.mock("../../src/deps/services/web/collabClientStore.js", () => ({
   createPersistedInMemoryClientStore: mocked.createPersistedInMemoryClientStore,
-  deletePersistedInMemoryClientStore: mocked.deletePersistedInMemoryClientStore,
 }));
 
 vi.mock("../../src/deps/services/web/collabCommittedCursorStore.js", () => ({
@@ -101,9 +104,9 @@ describe("web project service adapters", () => {
     mocked.createInsiemeWebStoreAdapter.mockReset();
     mocked.initializeProject.mockReset();
     mocked.readProjectAppValue.mockReset();
+    mocked.listIndexedDbDatabaseNames.mockReset();
     mocked.createProjectCollabService.mockReset();
     mocked.createPersistedInMemoryClientStore.mockReset();
-    mocked.deletePersistedInMemoryClientStore.mockReset();
     mocked.loadCommittedCursor.mockReset();
     mocked.saveCommittedCursor.mockReset();
     mocked.clearCommittedCursor.mockReset();
@@ -114,6 +117,7 @@ describe("web project service adapters", () => {
     mocked.createPersistedInMemoryClientStore.mockResolvedValue({
       close: vi.fn(async () => {}),
     });
+    mocked.listIndexedDbDatabaseNames.mockResolvedValue(new Set());
     mocked.loadCommittedCursor.mockResolvedValue(0);
     mocked.createWebSocketTransport.mockReturnValue({
       kind: "transport",
@@ -219,6 +223,109 @@ describe("web project service adapters", () => {
     await expect(fileAdapter.createDistributionZipStreamed()).rejects.toThrow(
       "Distribution ZIP export is only supported",
     );
+  });
+
+  it.each([
+    ["repository", new Set(["project-1"])],
+    ["collaboration", new Set(["routevn-collab-client:2:project-1"])],
+    ["legacy collaboration", new Set(["routevn-collab-client:1:project-1"])],
+  ])(
+    "rejects existing %s browser storage before initialization",
+    async (_, databaseNames) => {
+      mocked.listIndexedDbDatabaseNames.mockResolvedValue(databaseNames);
+      const { storageAdapter } = createWebProjectServiceAdapters({
+        collabLog: () => {},
+        creatorVersion: 2,
+      });
+
+      await expect(
+        storageAdapter.initializeProject({
+          projectId: "project-1",
+          template: "blank",
+          projectInfo: {
+            id: "project-1",
+            name: "Project One",
+          },
+          projectResolution: {
+            width: 1280,
+            height: 720,
+          },
+        }),
+      ).rejects.toThrow(
+        "Project storage is not empty. New project initialization requires empty storage.",
+      );
+
+      expect(mocked.createPersistedInMemoryClientStore).not.toHaveBeenCalled();
+      expect(mocked.initializeProject).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects an existing in-memory collaboration store before initialization", async () => {
+    const { storageAdapter } = createWebProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    await storageAdapter.createStore({
+      reference: {
+        projectId: "project-1",
+      },
+    });
+
+    await expect(
+      storageAdapter.initializeProject({
+        projectId: "project-1",
+        template: "blank",
+        projectInfo: {
+          id: "project-1",
+          name: "Project One",
+        },
+        projectResolution: {
+          width: 1280,
+          height: 720,
+        },
+      }),
+    ).rejects.toThrow(
+      "Project storage is not empty. New project initialization requires empty storage.",
+    );
+
+    expect(mocked.createPersistedInMemoryClientStore).toHaveBeenCalledTimes(1);
+    expect(mocked.initializeProject).not.toHaveBeenCalled();
+  });
+
+  it("initializes browser projects only after confirming storage is unused", async () => {
+    const rawClientStore = {
+      close: vi.fn(async () => {}),
+    };
+    mocked.createPersistedInMemoryClientStore.mockResolvedValue(rawClientStore);
+    const { storageAdapter } = createWebProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const payload = {
+      projectId: "project-1",
+      template: "blank",
+      projectInfo: {
+        id: "project-1",
+        name: "Project One",
+      },
+      projectResolution: {
+        width: 1280,
+        height: 720,
+      },
+    };
+
+    await storageAdapter.initializeProject(payload);
+
+    expect(mocked.listIndexedDbDatabaseNames).toHaveBeenCalledTimes(1);
+    expect(mocked.createPersistedInMemoryClientStore).toHaveBeenCalledWith({
+      projectId: "project-1",
+      logger: expect.any(Function),
+    });
+    expect(mocked.initializeProject).toHaveBeenCalledWith({
+      ...payload,
+      creatorVersion: 2,
+      rawClientStore,
+    });
   });
 
   it("persists a projection gap for incompatible remote commands", async () => {

@@ -49,6 +49,34 @@ refs:
         handler: handleEditIconCropDialogClose
       confirm:
         handler: handleEditIconCropDialogConfirm
+  resourceCount*:
+    eventListeners:
+      click:
+        handler: handleAnalyticsLinkClick
+      keydown:
+        handler: handleAnalyticsLinkKeyDown
+  characterResourceRow*:
+    eventListeners:
+      click:
+        handler: handleAnalyticsLinkClick
+      keydown:
+        handler: handleAnalyticsLinkKeyDown
+  sceneCountTotal:
+    eventListeners:
+      click:
+        handler: handleAnalyticsLinkClick
+      keydown:
+        handler: handleAnalyticsLinkKeyDown
+  sceneTextRow*:
+    eventListeners:
+      click:
+        handler: handleAnalyticsLinkClick
+      keydown:
+        handler: handleAnalyticsLinkKeyDown
+  sceneTextAnalyticsRetry:
+    eventListeners:
+      click:
+        handler: handleSceneTextAnalyticsRetry
 template:
   - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
       - rtgl-view w=f d=h av=c g=sm:
@@ -59,19 +87,69 @@ template:
           - rtgl-view w=1fg: null
           - $if showNativeProjectActions:
               - 'rtgl-button#projectActionsButton sq pre=ellipsis v=ol title="${i18n.projectPage.exportProject}" aria-label="${i18n.projectPage.exportProject}"': null
-  - rtgl-view w=f h=f pt=md:
-      - rtgl-view w=f h=f d=v:
-          - rvn-detail-view#detailView w=f h=1fg :fields=${detailFields}:
-              - rtgl-view#projectTitle slot=project-title cur=pointer:
-                  - rtgl-text s=h3: ${projectName}
-              - rtgl-view#projectDescription slot=project-description cur=pointer:
-                  - rtgl-text c=mu-fg: ${projectDescription}
-              - rtgl-view#projectLanguage slot=project-language cur=pointer:
-                  - rtgl-text: ${projectLanguage}
-              - $if projectIconFileId:
-                  - rvn-file-image#projectImage slot=project-icon fileId=${projectIconFileId} w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
-                $else:
-                  - rtgl-image#projectImage slot=project-icon src="/public/project_logo_placeholder.png" w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
+  - 'rtgl-view#projectPageScroll w=f h=1fg sv style="min-height: 0;"':
+      - rtgl-view w=f d=v g=xl pb=xl:
+          - rtgl-view w=f d=v pt=md:
+              - rvn-detail-view#detailView w=f :fields=${detailFields} :fillHeight=${false}:
+                  - rtgl-view#projectTitle slot=project-title cur=pointer:
+                      - rtgl-text s=h3: ${projectName}
+                  - rtgl-view#projectDescription slot=project-description cur=pointer:
+                      - rtgl-text c=mu-fg: ${projectDescription}
+                  - rtgl-view#projectLanguage slot=project-language cur=pointer:
+                      - rtgl-text: ${projectLanguage}
+                  - $if projectIconFileId:
+                      - rvn-file-image#projectImage slot=project-icon fileId=${projectIconFileId} w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
+                    $else:
+                      - rtgl-image#projectImage slot=project-icon src="/public/project_logo_placeholder.png" w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
+          - rtgl-view#analyticsSection w=f d=v g=lg ph=md pt=lg bwt=xs bc=bo:
+              - rtgl-view w=f d=v g=md:
+                  - $for group, groupIndex in resourceGroups:
+                      - rtgl-view w=f d=v g=sm:
+                          - rtgl-text s=h4: ${group.label}
+                          - rtgl-view w=f d=h wrap g=md:
+                              - $for resource, resourceIndex in group.resources:
+                                  - 'rtgl-view#resourceCount${groupIndex}x${resourceIndex} data-resource-key=${resource.key} role=link tabindex=0 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="flex: 0 1 128px; min-width: 112px; max-width: 128px; font-variant-numeric: tabular-nums;"':
+                                      - rtgl-text s=sm c=mu-fg: ${resource.label}
+                                      - rtgl-text s=h3: ${resource.count}
+                          - $if group.key == 'assets' && characterResources.length > 0:
+                              - rtgl-view w=f d=v g=sm mt=sm:
+                                  - 'rtgl-view#characterResourcesTable bw=xs bc=bo br=md style="width: min(100%, 672px); max-width: 672px; align-self: flex-start;"':
+                                      - rtgl-view w=f d=h g=md p=md bgc=su bwb=xs bc=bo:
+                                          - rtgl-text s=sm c=mu-fg w=1fg: ${i18n.projectPage.characterLabel}
+                                          - rtgl-text s=sm c=mu-fg w=1fg: ${i18n.projectPage.spritesLabel}
+                                      - $for character, i in characterResources:
+                                          - rtgl-view#characterResourceRow${i} data-character-id=${character.id} role=link tabindex=0 w=f d=h g=md p=md bwb=xs bc=bo av=c h-bgc=mu cur=pointer:
+                                              - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0;"': ${character.name}
+                                              - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${character.spriteCount}
+              - rtgl-view w=f d=v g=md:
+                  - rtgl-text s=h4: ${i18n.projectPage.scenesTitle}
+                  - rtgl-view w=f d=h wrap g=md:
+                      - 'rtgl-view#sceneCountTotal data-resource-key=scenes role=link tabindex=0 w=128 d=v g=xs p=md bgc=su h-bgc=mu bw=xs bc=bo br=md cur=pointer style="max-width: 100%; font-variant-numeric: tabular-nums;"':
+                          - rtgl-text s=sm c=mu-fg: ${sceneCountLabel}
+                          - rtgl-text s=h3: ${sceneCount}
+                  - $if isSceneTextLoading:
+                      - rtgl-text c=mu-fg: ${i18n.projectPage.loadingSceneTextAnalytics}
+                    $elif hasSceneTextError:
+                      - rtgl-view d=h av=c g=sm:
+                          - rtgl-text#sceneTextStatsError c=mu-fg: ${i18n.projectPage.failedCalculateSceneTextAnalytics}
+                          - rtgl-button#sceneTextAnalyticsRetry s=sm v=ol: ${i18n.projectPage.retrySceneTextAnalytics}
+                    $elif sceneTextStats.length == 0:
+                      - rtgl-text c=mu-fg: ${i18n.projectPage.noScenes}
+                    $else:
+                      - 'rtgl-view#sceneTextStatsTable bw=xs bc=bo br=md style="width: min(100%, 672px); max-width: 672px; align-self: flex-start;"':
+                          - rtgl-view w=f d=h g=md p=md bgc=su bwb=xs bc=bo:
+                              - rtgl-text s=sm c=mu-fg w=1fg: ${i18n.projectPage.sceneLabel}
+                              - rtgl-text s=sm c=mu-fg w=1fg: ${sceneLineCountLabel}
+                              - rtgl-text s=sm c=mu-fg w=1fg: ${sceneTextCountLabel}
+                          - $for scene, i in sceneTextStats:
+                              - rtgl-view#sceneTextRow${i} data-scene-id=${scene.id} role=link tabindex=0 w=f d=h g=md p=md bwb=xs bc=bo av=c h-bgc=mu cur=pointer:
+                                  - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0;"': ${scene.name}
+                                  - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${scene.lineCount}
+                                  - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${scene.textCount}
+                          - rtgl-view#sceneTextTotalRow w=f d=h g=md p=md bgc=su av=c:
+                              - rtgl-text s=sm w=1fg: ${i18n.projectPage.totalLabel}
+                              - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${totalLineCount}
+                              - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${totalTextCount}
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:

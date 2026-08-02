@@ -70,3 +70,7 @@ methods:
       description: Appends a tag id into the currently open variable form.
       params: []
       returns: void
+    closeDialog:
+      description: Closes the currently open variable form dialog.
+      params: []
+      returns: void

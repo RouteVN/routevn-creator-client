@@ -69,14 +69,14 @@ export const userInterfaceItems = [
 
 export const systemConfigItems = [
   {
-    id: "controls",
-    name: "Controls",
-    path: "/project/controls",
-  },
-  {
     id: "variables",
     name: "Variables",
     path: "/project/variables",
+  },
+  {
+    id: "controls",
+    name: "Controls",
+    path: "/project/controls",
   },
 ];
 

@@ -493,6 +493,49 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     });
   });
 
+  it("ensures scene text stats through the ensured repository contract", async () => {
+    const textStatsBySceneId = {
+      "scene-1": {
+        lineCount: 3,
+        wordCount: 12,
+        characterCount: 48,
+        language: "en",
+      },
+    };
+    const repository = {
+      ensureSceneTextStats: vi.fn(async () => textStatsBySceneId),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await expect(
+      projectService.ensureSceneTextStats({
+        sceneIds: ["scene-1"],
+        language: "en",
+      }),
+    ).resolves.toEqual(textStatsBySceneId);
+    expect(repository.ensureSceneTextStats).toHaveBeenCalledWith({
+      sceneIds: ["scene-1"],
+      language: "en",
+    });
+  });
+
   it("merges separately cached text stats into loaded scene overviews", async () => {
     const textStats = {
       lineCount: 3,

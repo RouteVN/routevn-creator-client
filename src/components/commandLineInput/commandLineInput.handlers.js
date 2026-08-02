@@ -197,7 +197,21 @@ export const handleSubmitClick = (deps, payload) => {
     return;
   }
 
-  if (fieldRows.some((row) => !row.variableId)) {
+  if (fieldRows.some((row) => row.variableMappingStatus === "computed")) {
+    appService.showAlert({
+      message:
+        copy.computedVariableReadOnly ??
+        "Computed variables cannot be updated.",
+      title: localizeCommandLineText("Warning", copy),
+    });
+    return;
+  }
+
+  if (
+    fieldRows.some(
+      (row) => !row.variableId || row.variableMappingStatus === "invalid",
+    )
+  ) {
     appService.showAlert({
       message: localizeCommandLineText(
         "Map every input field to a string variable.",

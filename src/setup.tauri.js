@@ -10,6 +10,7 @@ import { createTauriFilePicker } from "./deps/clients/tauri/filePicker";
 import { setupFileDropNavigationGuard } from "./deps/clients/tauri/fileDropNavigation";
 import createUpdater from "./deps/clients/tauri/updater";
 import { setupCloseListener } from "./deps/clients/tauri/windowClose";
+import { createBrowserEventsClient } from "./deps/clients/browserEvents.js";
 
 // Services
 import { createAppService } from "./deps/services/appService";
@@ -41,6 +42,7 @@ const filePicker = createTauriFilePicker();
 const globalUIElement = document.querySelector("rtgl-global-ui");
 const globalUI = createGlobalUI(globalUIElement);
 const audioService = createAudioService();
+const browserEventsClient = createBrowserEventsClient();
 
 // Get app version
 const appVersion = await getVersion();
@@ -113,6 +115,7 @@ const componentDependencies = {
 };
 
 const pageDependencies = {
+  browserEventsClient,
   distribution,
   updatesEnabled,
   subject,

@@ -528,8 +528,7 @@ describe("layoutEditor.store", () => {
 
     expect(viewData.showExplorerPanel).toBe(false);
     expect(viewData.showDetailPanel).toBe(false);
-    expect(viewData.showTopSavePreviewButton).toBe(false);
-    expect(viewData.showMobilePreviewHeader).toBe(false);
+    expect(viewData.showPreviewHeader).toBe(false);
     expect(viewData.showMobileNodeButton).toBe(true);
     expect(viewData.showMobilePreviewButton).toBe(true);
     expect(viewData.showMobileSelectedNodeDetail).toBe(true);
@@ -543,7 +542,7 @@ describe("layoutEditor.store", () => {
     expect(viewData.item.name).toBe("Node 1");
   });
 
-  it("moves preview saving into the mobile preview header on touch layouts", () => {
+  it("shows preview saving in the preview header on touch layouts", () => {
     const state = createInitialState();
 
     setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
@@ -554,8 +553,7 @@ describe("layoutEditor.store", () => {
       i18n: EN_I18N,
     });
 
-    expect(viewData.showTopSavePreviewButton).toBe(false);
-    expect(viewData.showMobilePreviewHeader).toBe(true);
+    expect(viewData.showPreviewHeader).toBe(true);
     expect(viewData.showMobilePreviewButton).toBe(false);
     expect(viewData.showMobileSelectedNodeDetail).toBe(false);
     expect(viewData.previewPanelVisibilityStyle).toBe("");

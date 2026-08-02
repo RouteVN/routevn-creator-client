@@ -40,7 +40,11 @@ const getTweenPropertyDuration = (propertyConfig = {}) => {
   }
 
   return (propertyConfig?.keyframes ?? []).reduce((sum, keyframe) => {
-    return sum + (Number(keyframe?.duration) || 0);
+    return (
+      sum +
+      Math.max(0, Number(keyframe?.delay) || 0) +
+      (Number(keyframe?.duration) || 0)
+    );
   }, 0);
 };
 
