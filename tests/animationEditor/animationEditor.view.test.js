@@ -67,7 +67,7 @@ describe("animationEditor view", () => {
     const selectorBranch = view.slice(selectorStart, selectorEnd);
 
     expect(
-      selectorBranch.match(/rtgl-view#singleMaskImageButton w=160/g),
+      selectorBranch.match(/rtgl-view#singleMaskImageButton[^\n]* w=160/g),
     ).toHaveLength(2);
     expect(selectorBranch.match(/aspect-ratio: 16 \/ 9;/g)).toHaveLength(2);
     expect(selectorBranch).toContain("max-width: 100%;");
@@ -99,43 +99,38 @@ describe("animationEditor view", () => {
     expect(view).toContain("rtgl-view#timelineDetailsHeader h=48");
     expect(view).toContain("rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}");
     expect(view).not.toContain("${selectTimelineItemPrompt}");
-    expect(view).toContain(
-      "rtgl-select#selectedKeyframeEasingSelect slot=keyframe-easing",
+    expect(view).toContain("rtgl-button#editSelectedKeyframeButton");
+    expect(view).toContain("handler: handleSelectedKeyframeEditClick");
+    expect(view).not.toContain("selectedKeyframeEasingSelect");
+    expect(view).not.toContain("selectedKeyframeDelay slot=keyframe-delay");
+    expect(view).not.toContain(
+      "selectedKeyframeDuration slot=keyframe-duration",
     );
+    expect(view).not.toContain("selectedKeyframeValue slot=keyframe-value");
+    expect(view).toContain("rtgl-input-number#selectedMaskNumberInput");
     expect(view).toContain(
-      "rtgl-view#selectedKeyframeDelay slot=keyframe-delay",
-    );
-    expect(view).toContain(
-      "rtgl-view#selectedKeyframeDuration slot=keyframe-duration",
-    );
-    expect(view.indexOf("slot=keyframe-delay")).toBeLessThan(
-      view.indexOf("slot=keyframe-duration"),
-    );
-    expect(view).toContain(
-      "rtgl-view#selectedKeyframeValue slot=keyframe-value",
-    );
-    expect(view).toContain("rtgl-input-number#selectedKeyframeNumberInput");
-    expect(view).toContain(
-      "rtgl-popover#selectedKeyframeNumberPopover ?open=${selectedKeyframeNumberPopoverIsOpen}",
+      "rtgl-popover#selectedMaskNumberPopover ?open=${selectedMaskNumberPopoverIsOpen}",
     );
     expect(view).toContain(
       "content-w=220 content-g=sm content-ph=md content-pv=md content-bgc=su",
     );
-    expect(view).toContain("rtgl-button#selectedKeyframeNumberConfirm");
+    expect(view).toContain("rtgl-button#selectedMaskNumberConfirm");
     expect(view).toContain(
-      "rtgl-segmented-control#selectedKeyframeValueTypeSelect slot=keyframe-value-type",
+      'rtgl-view#animationEditorTabs role=tablist aria-label="${editorPanelsLabel}"',
     );
-    expect(view).not.toContain("editSelectedKeyframeButton");
     expect(view).toContain(
-      "rtgl-tabs#animationEditorTabs w=f selected-tab=${selectedEditorTab} :items=${editorTabs}",
+      "rtgl-view#animationEditorTab${i}.animationEditorTab role=tab",
     );
+    expect(view).toContain("handler: handleEditorTabKeyDown");
     expect(view).toContain("$if selectedEditorTab == 'tween'");
     expect(view).not.toContain("$elif selectedEditorTab == 'mask'");
     expect(view).toContain("rtgl-view#animationTweenPanel");
     expect(view).not.toContain("rtgl-view#animationMaskPanel");
     expect(view).toContain("rtgl-view#animationPreviewPanel");
     expect(view).toContain("rtgl-view#maskTimelineRow");
+    expect(view).toContain("role=button tabindex=0 aria-pressed");
     expect(view).toContain("handler: handleMaskTimelineRowClick");
+    expect(view).toContain("handler: handleMaskTimelineRowKeyDown");
     expect(view).toContain("$elif selectedMask");
     expect(view).toContain("rtgl-view#selectedMaskDetails");
     expect(view).toContain("rtgl-view#selectedMaskSoftness");
@@ -146,6 +141,8 @@ describe("animationEditor view", () => {
     expect(view).toContain("$if showSelectedMaskProgressDurationPopover");
     expect(view).toContain("min=0 step=0.01 value=${popover.formValues.value}");
     expect(view).toContain("min=1 step=1 value=${popover.formValues.value}");
+    expect(view).toContain("?disabled=${addMaskDisabled}");
+    expect(view).not.toContain("handler: handleSingleMaskImageRightClick");
     expect(
       view.match(/div\.animationPreviewImageThumbnailTransparencyGrid/g),
     ).toHaveLength(2);

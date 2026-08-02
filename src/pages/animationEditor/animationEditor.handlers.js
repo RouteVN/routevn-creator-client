@@ -4,7 +4,10 @@ import {
   getAnimationEditorBackPath,
   resolveAnimationEditorPayload,
 } from "../../internal/animationEditorRoute.js";
-import { serializeTransitionMask } from "../../internal/animationMasks.js";
+import {
+  isTransitionMaskComplete,
+  serializeTransitionMask,
+} from "../../internal/animationMasks.js";
 import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -1021,15 +1024,59 @@ export const handleTimelineZoomIn = (deps) => {
   render();
 };
 
-export const handleEditorTabClick = (deps, payload) => {
+const EDITOR_TAB_IDS = ["tween", "preview"];
+
+const activateEditorTab = (deps, tab) => {
   const { render, store } = deps;
-  const { id: tab } = payload._event.detail;
   if (tab === store.selectSelectedEditorTab()) {
     return;
   }
 
   store.setSelectedEditorTab({ tab });
   render();
+};
+
+export const handleEditorTabClick = (deps, payload) => {
+  activateEditorTab(deps, payload._event.currentTarget.dataset.tabId);
+};
+
+export const handleEditorTabKeyDown = (deps, payload) => {
+  const { refs } = deps;
+  const event = payload._event;
+  const currentTab = event.currentTarget.dataset.tabId;
+  const currentIndex = EDITOR_TAB_IDS.indexOf(currentTab);
+  if (currentIndex < 0) {
+    return;
+  }
+
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    event.stopPropagation();
+    activateEditorTab(deps, currentTab);
+    return;
+  }
+
+  let targetIndex;
+  if (event.key === "ArrowLeft") {
+    targetIndex =
+      (currentIndex - 1 + EDITOR_TAB_IDS.length) % EDITOR_TAB_IDS.length;
+  } else if (event.key === "ArrowRight") {
+    targetIndex = (currentIndex + 1) % EDITOR_TAB_IDS.length;
+  } else if (event.key === "Home") {
+    targetIndex = 0;
+  } else if (event.key === "End") {
+    targetIndex = EDITOR_TAB_IDS.length - 1;
+  } else {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  const targetTab = EDITOR_TAB_IDS[targetIndex];
+  refs.animationEditorTabs
+    .querySelector(`[data-tab-id="${targetTab}"]`)
+    ?.focus();
+  activateEditorTab(deps, targetTab);
 };
 
 export const handleTimelineZoomOut = (deps) => {
@@ -1372,6 +1419,11 @@ const openSelectedKeyframeEditDialog = (deps, { x = 0, y = 0 } = {}) => {
   return true;
 };
 
+export const handleSelectedKeyframeEditClick = (deps, payload) => {
+  const { clientX: x, clientY: y } = payload._event;
+  openSelectedKeyframeEditDialog(deps, { x, y });
+};
+
 export const handleKeyframeClick = (deps, payload) => {
   const { render, store } = deps;
   const { index, property, side, x, y } = payload._event.detail;
@@ -1437,23 +1489,7 @@ const commitSelectedKeyframeChange = (deps) => {
   queueEditorAutosave({ deps });
 };
 
-export const handleSelectedKeyframeEasingChange = (deps, payload) => {
-  const { store } = deps;
-  store.setSelectedKeyframeEasing({
-    easing: resolveValueChange(payload),
-  });
-  commitSelectedKeyframeChange(deps);
-};
-
-export const handleSelectedKeyframeValueTypeChange = (deps, payload) => {
-  const { store } = deps;
-  store.setSelectedKeyframeRelative({
-    relative: resolveValueChange(payload) === "relative",
-  });
-  commitSelectedKeyframeChange(deps);
-};
-
-const openDetailNumberPopover = (deps, payload, { mode, value } = {}) => {
+const openSelectedMaskNumberPopover = (deps, payload, { mode, value } = {}) => {
   const { render, store } = deps;
   store.setPopover({
     mode,
@@ -1467,33 +1503,9 @@ const openDetailNumberPopover = (deps, payload, { mode, value } = {}) => {
   render();
 };
 
-export const handleSelectedKeyframeDelayClick = (deps, payload) => {
-  const { store } = deps;
-  openDetailNumberPopover(deps, payload, {
-    mode: "editSelectedKeyframeDelay",
-    value: store.selectSelectedKeyframeDelay(),
-  });
-};
-
-export const handleSelectedKeyframeDurationClick = (deps, payload) => {
-  const { store } = deps;
-  openDetailNumberPopover(deps, payload, {
-    mode: "editSelectedKeyframeDuration",
-    value: store.selectSelectedKeyframeDuration(),
-  });
-};
-
-export const handleSelectedKeyframeValueClick = (deps, payload) => {
-  const { store } = deps;
-  openDetailNumberPopover(deps, payload, {
-    mode: "editSelectedKeyframeValue",
-    value: store.selectSelectedKeyframeValue(),
-  });
-};
-
 export const handleSelectedMaskSoftnessClick = (deps, payload) => {
   const { store } = deps;
-  openDetailNumberPopover(deps, payload, {
+  openSelectedMaskNumberPopover(deps, payload, {
     mode: "editSelectedMaskSoftness",
     value: store.selectMaskEditorTransitionMask()?.softness,
   });
@@ -1501,28 +1513,41 @@ export const handleSelectedMaskSoftnessClick = (deps, payload) => {
 
 export const handleSelectedMaskProgressDurationClick = (deps, payload) => {
   const { store } = deps;
-  openDetailNumberPopover(deps, payload, {
+  openSelectedMaskNumberPopover(deps, payload, {
     mode: "editSelectedMaskProgressDuration",
     value: store.selectMaskEditorTransitionMask()?.progressDuration,
   });
 };
 
-export const handleEditorPopoverPositioned = (deps) => {
-  const { refs, store } = deps;
-  if (
-    [
-      "editSelectedKeyframeDelay",
-      "editSelectedKeyframeDuration",
-      "editSelectedKeyframeValue",
-      "editSelectedMaskSoftness",
-      "editSelectedMaskProgressDuration",
-    ].includes(store.selectPopover().mode)
+export const handleSelectedMaskNumberFieldKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.currentTarget.dataset.maskNumberField === "softness") {
+    handleSelectedMaskSoftnessClick(deps, payload);
+  } else if (
+    event.currentTarget.dataset.maskNumberField === "progress-duration"
   ) {
-    refs.selectedKeyframeNumberInput.focus();
+    handleSelectedMaskProgressDurationClick(deps, payload);
   }
 };
 
-const commitDetailNumberInput = (deps, value) => {
+export const handleEditorPopoverPositioned = (deps) => {
+  const { refs, store } = deps;
+  if (
+    ["editSelectedMaskSoftness", "editSelectedMaskProgressDuration"].includes(
+      store.selectPopover().mode,
+    )
+  ) {
+    refs.selectedMaskNumberInput.focus();
+  }
+};
+
+const commitSelectedMaskNumberInput = (deps, value) => {
   const { store } = deps;
   if (value === undefined || value === null || value === "") {
     return;
@@ -1534,43 +1559,25 @@ const commitDetailNumberInput = (deps, value) => {
   }
 
   const { mode } = store.selectPopover();
-  if (mode === "editSelectedKeyframeDelay") {
-    if (numericValue < 0) {
-      return;
-    }
-    store.setSelectedKeyframeDelay({ delay: numericValue });
-  } else if (mode === "editSelectedKeyframeDuration") {
-    if (numericValue < 1) {
-      return;
-    }
-    store.setSelectedKeyframeDuration({ duration: numericValue });
-  } else if (mode === "editSelectedKeyframeValue") {
-    store.setSelectedKeyframeValue({ value: numericValue });
-  } else if (mode === "editSelectedMaskSoftness") {
+  if (mode === "editSelectedMaskSoftness") {
     if (numericValue < 0) {
       return;
     }
     store.setTransitionMaskSoftness({ softness: numericValue });
-    store.closePopover();
-    commitMaskChange(deps);
-    return;
   } else if (mode === "editSelectedMaskProgressDuration") {
     if (numericValue < 1) {
       return;
     }
     store.setTransitionMaskProgressDuration({ duration: numericValue });
-    store.closePopover();
-    commitMaskChange(deps);
-    return;
   } else {
     return;
   }
 
   store.closePopover();
-  commitSelectedKeyframeChange(deps);
+  commitMaskChange(deps);
 };
 
-export const handleSelectedKeyframeNumberInputChange = (deps, payload) => {
+export const handleSelectedMaskNumberInputChange = (deps, payload) => {
   const { store } = deps;
   store.updatePopoverFormValues({
     formValues: {
@@ -1579,18 +1586,18 @@ export const handleSelectedKeyframeNumberInputChange = (deps, payload) => {
   });
 };
 
-export const handleSelectedKeyframeNumberConfirmClick = (deps) => {
+export const handleSelectedMaskNumberConfirmClick = (deps) => {
   const { store } = deps;
-  commitDetailNumberInput(deps, store.selectPopover().formValues.value);
+  commitSelectedMaskNumberInput(deps, store.selectPopover().formValues.value);
 };
 
-export const handleSelectedKeyframeNumberInputKeyDown = (deps, payload) => {
+export const handleSelectedMaskNumberInputKeyDown = (deps, payload) => {
   const { render, store } = deps;
   const event = payload._event;
   if (event.key === "Enter") {
     event.preventDefault();
     event.stopPropagation();
-    commitDetailNumberInput(deps, event.currentTarget.value);
+    commitSelectedMaskNumberInput(deps, event.currentTarget.value);
   } else if (event.key === "Escape") {
     event.preventDefault();
     event.stopPropagation();
@@ -1649,9 +1656,8 @@ export const handlePropertyNameRightClick = (deps, payload) => {
   render();
 };
 
-export const handleMaskTimelineRowClick = (deps, payload) => {
+const selectMaskTimelineRow = (deps, event) => {
   const { render, store } = deps;
-  const event = payload._event;
   store.setSelectedMask({});
   if (store.selectIsTouchMode()) {
     store.setPopover({
@@ -1664,6 +1670,21 @@ export const handleMaskTimelineRowClick = (deps, payload) => {
     store.closePopover();
   }
   render();
+};
+
+export const handleMaskTimelineRowClick = (deps, payload) => {
+  selectMaskTimelineRow(deps, payload._event);
+};
+
+export const handleMaskTimelineRowKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  selectMaskTimelineRow(deps, event);
 };
 
 export const handleKeyframeDropdownItemClick = (deps, payload) => {
@@ -1996,7 +2017,15 @@ export const handleOpenAddMaskClick = (deps, payload) => {
 };
 
 export const handleAddMaskClick = (deps) => {
-  const { store } = deps;
+  const { appService, store } = deps;
+  if (!isTransitionMaskComplete(store.selectMaskEditorTransitionMask())) {
+    appService.showToast({
+      message:
+        selectCopy(deps).maskImageRequired ?? "Select an image for the mask.",
+    });
+    return;
+  }
+
   store.commitPendingTransitionMask({});
   store.setSelectedMask({});
   store.closePopover();
@@ -2098,35 +2127,15 @@ export const handleSingleMaskImageClick = (deps) => {
   });
 };
 
-export const handleSingleMaskImageRightClick = async (deps, payload) => {
-  const { appService, store } = deps;
-  const copy = selectCopy(deps);
-  const event = payload?._event;
-  event?.preventDefault?.();
-
-  if (!store.selectMaskEditorTransitionMask()?.imageId) {
+export const handleSingleMaskImageKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
     return;
   }
 
-  const result = await appService.showDropdownMenu({
-    items: [
-      {
-        type: "item",
-        label: copy.removeMenuItem ?? "Remove",
-        key: "remove",
-      },
-    ],
-    x: event.clientX,
-    y: event.clientY,
-    place: "bs",
-  });
-
-  if (!result || result.item?.key !== "remove") {
-    return;
-  }
-
-  store.clearTransitionMaskImage({});
-  commitMaskChange(deps);
+  event.preventDefault();
+  event.stopPropagation();
+  handleSingleMaskImageClick(deps);
 };
 
 export const handleSequenceMaskAddClick = (deps) => {
@@ -2300,6 +2309,14 @@ export const handleConfirmMaskImageSelection = async (deps) => {
   const imageSelectorDialog = store.selectImageSelectorDialog();
   const { index, selectedImageId, target } = imageSelectorDialog;
   const isPreviewImageSelection = isPreviewImageSelectorTarget(target);
+
+  if (target === "single" && !selectedImageId) {
+    appService.showToast({
+      message:
+        selectCopy(deps).maskImageRequired ?? "Select an image for the mask.",
+    });
+    return;
+  }
 
   if (target === "single") {
     store.setTransitionMaskImage({

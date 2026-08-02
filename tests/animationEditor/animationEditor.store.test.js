@@ -289,36 +289,11 @@ describe("animationEditor.store", () => {
     expect(viewData.selectedKeyframeDetailFields).toEqual([
       { type: "text", label: "Timeline", value: "Update" },
       { type: "text", label: "Property", value: "Position X" },
-      {
-        type: "slot",
-        label: "Delay (ms)",
-        slot: "keyframe-delay",
-      },
-      {
-        type: "slot",
-        label: "Duration (ms)",
-        slot: "keyframe-duration",
-      },
-      { type: "slot", label: "Easing", slot: "keyframe-easing" },
-      { type: "slot", label: "Value", slot: "keyframe-value" },
-      {
-        type: "slot",
-        label: "Value type",
-        slot: "keyframe-value-type",
-      },
-    ]);
-    expect(viewData.selectedKeyframeDelay).toBe(125);
-    expect(viewData.selectedKeyframeDuration).toBe(450);
-    expect(viewData.selectedKeyframeEasing).toBe("easeOutBounce");
-    expect(viewData.selectedKeyframeValue).toBe(120);
-    expect(viewData.selectedKeyframeValueType).toBe("relative");
-    expect(viewData.keyframeEasingOptions).toContainEqual({
-      label: "Ease Out Bounce",
-      value: "easeOutBounce",
-    });
-    expect(viewData.keyframeValueTypeOptions).toEqual([
-      { label: "Absolute", value: "absolute" },
-      { label: "Relative", value: "relative" },
+      { type: "text", label: "Delay (ms)", value: 125 },
+      { type: "text", label: "Duration (ms)", value: 450 },
+      { type: "text", label: "Easing", value: "Ease Out Bounce" },
+      { type: "text", label: "Value", value: 120 },
+      { type: "text", label: "Value type", value: "Relative" },
     ]);
     expect(selectSelectedKeyframeFormValues({ state })).toEqual({
       delay: 125,
@@ -342,16 +317,6 @@ describe("animationEditor.store", () => {
       relative: false,
       value: -12.5,
     });
-
-    setPopover({ state }, { mode: "editSelectedKeyframeDelay", x: 20, y: 40 });
-    const delayPopoverViewData = selectViewData({ state, i18n: EN_I18N });
-    expect(delayPopoverViewData.popover.popoverIsOpen).toBe(false);
-    expect(delayPopoverViewData.selectedKeyframeNumberPopoverIsOpen).toBe(true);
-    expect(delayPopoverViewData.showSelectedKeyframeDelayPopover).toBe(true);
-    expect(delayPopoverViewData.showSelectedKeyframeDurationPopover).toBe(
-      false,
-    );
-    expect(delayPopoverViewData.showSelectedKeyframeValuePopover).toBe(false);
   });
 
   it("shows selected property details and keeps property and keyframe selection exclusive", () => {
@@ -560,6 +525,30 @@ describe("animationEditor.store", () => {
     expect(enabledViewData.transitionAddPropertyButtonVisible).toBe(false);
   });
 
+  it("keeps Mask out of the touch Add Property side control", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+    state.tweenBySection.prev = {};
+    state.tweenBySection.next = {};
+    setUiConfig({ state }, { uiConfig: { id: "touch", inputMode: "touch" } });
+    setPopover({ state }, { mode: "addProperty", payload: { side: "prev" } });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    const sideField = viewData.addPropertyForm.fields.find(
+      (field) => field.name === "side",
+    );
+
+    expect(viewData.addPropertySideMenuItems).toContainEqual({
+      label: "Mask",
+      type: "item",
+      value: "mask",
+    });
+    expect(sideField.options).toEqual([
+      { label: "Out", type: "item", value: "prev" },
+      { label: "In", type: "item", value: "next" },
+    ]);
+  });
+
   it("exposes an existing mask for inline editing without a dialog", () => {
     const state = createInitialState();
     openDialog({ state }, { dialogType: "transition" });
@@ -587,9 +576,7 @@ describe("animationEditor.store", () => {
 
     setPopover({ state }, { mode: "editSelectedMaskSoftness", x: 20, y: 40 });
     const softnessPopoverViewData = selectViewData({ state, i18n: EN_I18N });
-    expect(softnessPopoverViewData.selectedKeyframeNumberPopoverIsOpen).toBe(
-      true,
-    );
+    expect(softnessPopoverViewData.selectedMaskNumberPopoverIsOpen).toBe(true);
     expect(softnessPopoverViewData.showSelectedMaskSoftnessPopover).toBe(true);
     expect(
       softnessPopoverViewData.showSelectedMaskProgressDurationPopover,
@@ -600,9 +587,7 @@ describe("animationEditor.store", () => {
       { mode: "editSelectedMaskProgressDuration", x: 20, y: 40 },
     );
     const durationPopoverViewData = selectViewData({ state, i18n: EN_I18N });
-    expect(durationPopoverViewData.selectedKeyframeNumberPopoverIsOpen).toBe(
-      true,
-    );
+    expect(durationPopoverViewData.selectedMaskNumberPopoverIsOpen).toBe(true);
     expect(durationPopoverViewData.showSelectedMaskSoftnessPopover).toBe(false);
     expect(
       durationPopoverViewData.showSelectedMaskProgressDurationPopover,
@@ -634,10 +619,16 @@ describe("animationEditor.store", () => {
     expect(viewData.popover.popoverIsOpen).toBe(false);
     expect(viewData.popover.maskDialogIsOpen).toBe(true);
     expect(viewData.popover.mode).toBe("addMask");
+    expect(viewData.addMaskDisabled).toBe(true);
     expect(viewData.maskChannelOptions).toEqual([
       { label: "Greyscale", value: "red" },
       { label: "Alpha", value: "alpha" },
     ]);
+
+    setTransitionMaskImage({ state }, { imageId: "image-mask" });
+    expect(selectViewData({ state, i18n: EN_I18N }).addMaskDisabled).toBe(
+      false,
+    );
   });
 
   it("uses greyscale red as the default mask channel", () => {

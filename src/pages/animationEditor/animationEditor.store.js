@@ -10,6 +10,7 @@ import {
   createDefaultTransitionMask,
   createDefaultTransitionMaskCompositeItem,
   isEditableTransitionMaskKind,
+  isTransitionMaskComplete,
   normalizeTransitionMaskForEditor,
 } from "../../internal/animationMasks.js";
 import {
@@ -3144,13 +3145,16 @@ const buildSelectedKeyframePanelData = (
       : side === "next"
         ? (copy.inTimelineLabel ?? "In")
         : (copy.updateType ?? "Update");
+  const easing = keyframe.easing ?? "linear";
+  const easingLabel =
+    createEasingOptions(copy).find((option) => option.value === easing)
+      ?.label ?? formatEasingLabel(easing);
+  const valueTypeLabel =
+    keyframe.relative === true
+      ? (copy.relativeValueType ?? "Relative")
+      : (copy.absoluteValueType ?? "Absolute");
   return {
     id: `${side}:${property}:${index}`,
-    delay: keyframe.delay ?? 0,
-    duration: keyframe.duration,
-    easing: keyframe.easing ?? "linear",
-    value: keyframe.value,
-    valueType: keyframe.relative === true ? "relative" : "absolute",
     fields: [
       {
         type: "text",
@@ -3163,29 +3167,29 @@ const buildSelectedKeyframePanelData = (
         value: propertyFieldConfig[property]?.label ?? property,
       },
       {
-        type: "slot",
+        type: "text",
         label: copy.delayMsLabel ?? "Delay (ms)",
-        slot: "keyframe-delay",
+        value: keyframe.delay ?? 0,
       },
       {
-        type: "slot",
+        type: "text",
         label: copy.durationMsLabel ?? "Duration (ms)",
-        slot: "keyframe-duration",
+        value: keyframe.duration,
       },
       {
-        type: "slot",
+        type: "text",
         label: copy.easingLabel ?? "Easing",
-        slot: "keyframe-easing",
+        value: easingLabel,
       },
       {
-        type: "slot",
+        type: "text",
         label: copy.valueLabel ?? "Value",
-        slot: "keyframe-value",
+        value: keyframe.value,
       },
       {
-        type: "slot",
+        type: "text",
         label: copy.valueTypeLabel ?? "Value type",
-        slot: "keyframe-value-type",
+        value: valueTypeLabel,
       },
     ],
   };
@@ -3395,6 +3399,12 @@ export const selectViewData = ({ state, i18n }) => {
       maskAvailable: !getEffectiveTransitionMask(state),
       copy,
     });
+  const transitionPropertySideOptions =
+    createTransitionAddPropertySideMenuItems({
+      previousAvailable: previousAddPropertyOptions.length > 0,
+      nextAvailable: nextAddPropertyOptions.length > 0,
+      copy,
+    });
   const defaultTransitionAddPropertySide =
     previousAddPropertyOptions.length > 0 ? "prev" : "next";
   const addPropertySide =
@@ -3586,12 +3596,6 @@ export const selectViewData = ({ state, i18n }) => {
   const showAddKeyframeDialog =
     state.isTouchMode && state.popover.mode === "addKeyframe";
   const showEditKeyframeDialog = state.popover.mode === "editKeyframe";
-  const showSelectedKeyframeDelayPopover =
-    state.popover.mode === "editSelectedKeyframeDelay";
-  const showSelectedKeyframeDurationPopover =
-    state.popover.mode === "editSelectedKeyframeDuration";
-  const showSelectedKeyframeValuePopover =
-    state.popover.mode === "editSelectedKeyframeValue";
   const showSelectedMaskSoftnessPopover =
     state.popover.mode === "editSelectedMaskSoftness";
   const showSelectedMaskProgressDurationPopover =
@@ -3636,26 +3640,10 @@ export const selectViewData = ({ state, i18n }) => {
     selectedProperty: state.selectedProperty,
     selectedKeyframeDetailId: selectedKeyframePanel?.id,
     selectedKeyframeDetailFields: selectedKeyframePanel?.fields ?? [],
-    selectedKeyframeDelay: selectedKeyframePanel?.delay,
-    selectedKeyframeDuration: selectedKeyframePanel?.duration,
-    selectedKeyframeEasing: selectedKeyframePanel?.easing,
-    selectedKeyframeValue: selectedKeyframePanel?.value,
-    selectedKeyframeValueType: selectedKeyframePanel?.valueType,
     selectedPropertyDetailId: selectedPropertyPanel?.id,
     selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
     selectedMask,
     maskTimelineRow,
-    keyframeEasingOptions: createEasingOptions(copy),
-    keyframeValueTypeOptions: [
-      {
-        label: copy.absoluteValueType ?? "Absolute",
-        value: "absolute",
-      },
-      {
-        label: copy.relativeValueType ?? "Relative",
-        value: "relative",
-      },
-    ],
     updateTimelineDefaultValues,
     transitionTimelineDefaultValues,
     addPropertyForm: createAddPropertyForm(
@@ -3666,7 +3654,7 @@ export const selectViewData = ({ state, i18n }) => {
         property: addPropertySelectedProperty,
         sideOptions:
           state.isTouchMode && dialogType === "transition"
-            ? transitionAddPropertySideOptions
+            ? transitionPropertySideOptions
             : [],
       },
       copy,
@@ -3732,28 +3720,39 @@ export const selectViewData = ({ state, i18n }) => {
       {
         id: DEFAULT_EDITOR_TAB,
         label: copy.tweenTitle ?? "Tween",
+        panelId: "animationTweenPanel",
       },
       {
         id: "preview",
         label: copy.previewTitle ?? "Preview",
+        panelId: "animationPreviewPanel",
       },
-    ],
+    ].map((item, index) => {
+      const selected = item.id === state.selectedEditorTab;
+      return {
+        ...item,
+        index,
+        selected,
+        tabIndex: selected ? 0 : -1,
+        backgroundColor: selected ? "ac" : "",
+        borderColor: selected ? "" : "tr",
+        textColor: selected ? "fg" : "mu-fg",
+      };
+    }),
+    editorPanelsLabel: copy.editorPanelsLabel ?? "Animation editor panels",
     showAddPropertyPopover,
     showAddKeyframePopover,
     showAddPropertyDialog,
     showAddKeyframeDialog,
     showEditKeyframeDialog,
-    selectedKeyframeNumberPopoverIsOpen:
-      showSelectedKeyframeDelayPopover ||
-      showSelectedKeyframeDurationPopover ||
-      showSelectedKeyframeValuePopover ||
+    selectedMaskNumberPopoverIsOpen:
       showSelectedMaskSoftnessPopover ||
       showSelectedMaskProgressDurationPopover,
-    showSelectedKeyframeDelayPopover,
-    showSelectedKeyframeDurationPopover,
-    showSelectedKeyframeValuePopover,
     showSelectedMaskSoftnessPopover,
     showSelectedMaskProgressDurationPopover,
+    addMaskDisabled: !isTransitionMaskComplete(
+      getMaskEditorTransitionMask(state),
+    ),
     addButton: copy.addButton ?? "Add",
     addMaskButton: copy.addMaskButton ?? "Add Mask",
     addMaskTitle: copy.addMaskTitle ?? "Add Mask",
