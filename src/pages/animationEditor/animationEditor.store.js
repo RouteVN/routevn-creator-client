@@ -50,8 +50,8 @@ const TIMELINE_ZOOM_MAX = 4;
 const TIMELINE_BASE_PIXELS_PER_SECOND = 200;
 const TIMELINE_MIN_DISPLAY_DURATION_MS = 1000;
 const TIMELINE_PROPERTY_COLUMN_WIDTH = 104;
-
-const SHOW_MASK_AND_PREVIEW_SECTIONS = false;
+const DEFAULT_EDITOR_TAB = "tween";
+const EDITOR_TAB_IDS = new Set([DEFAULT_EDITOR_TAB, "preview"]);
 
 const createPropertyFieldConfig = (
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
@@ -1008,6 +1008,7 @@ const createAddPropertyForm = (
 const createTransitionAddPropertySideMenuItems = ({
   previousAvailable = false,
   nextAvailable = false,
+  maskAvailable = false,
   copy = {},
 } = {}) => {
   const items = [];
@@ -1025,6 +1026,14 @@ const createTransitionAddPropertySideMenuItems = ({
       label: copy.inTimelineLabel ?? "In",
       type: "item",
       value: "next",
+    });
+  }
+
+  if (maskAvailable) {
+    items.push({
+      label: copy.maskTitle ?? "Mask",
+      type: "item",
+      value: "mask",
     });
   }
 
@@ -1245,8 +1254,10 @@ export const createInitialState = () => ({
   data: EMPTY_TREE,
   imagesData: createEmptyImagesData(),
   selectedItemId: undefined,
+  selectedEditorTab: DEFAULT_EDITOR_TAB,
   selectedKeyframe: undefined,
   selectedProperty: undefined,
+  selectedMask: false,
   timelinePan: undefined,
   timelinePanClickSuppressed: false,
   timelinePanHovered: false,
@@ -1310,6 +1321,16 @@ export const setImages = ({ state }, { images } = {}) => {
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+};
+
+export const setSelectedEditorTab = ({ state }, { tab } = {}) => {
+  if (EDITOR_TAB_IDS.has(tab)) {
+    state.selectedEditorTab = tab;
+  }
+};
+
+export const selectSelectedEditorTab = ({ state }) => {
+  return state.selectedEditorTab;
 };
 
 export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
@@ -1453,8 +1474,10 @@ export const openDialog = (
     dialogType ?? getDialogType(itemData?.animation?.type);
 
   state.dialogType = resolvedDialogType;
+  state.selectedEditorTab = DEFAULT_EDITOR_TAB;
   state.selectedKeyframe = undefined;
   state.selectedProperty = undefined;
+  state.selectedMask = false;
   state.editMode = Boolean(editMode);
   state.editItemId = itemId;
   state.transitionMaskRemoved = false;
@@ -1566,6 +1589,7 @@ export const setSelectedKeyframe = (
   { side, property, index } = {},
 ) => {
   state.selectedProperty = undefined;
+  state.selectedMask = false;
   const resolvedSide = resolveDialogSide(state, side);
   const resolvedIndex = Number(index);
   const keyframe = getSectionProperties(state, resolvedSide)[property]
@@ -1596,6 +1620,7 @@ export const setSelectedProperty = ({ state }, { side, property } = {}) => {
   const selectedProperty = getSectionProperties(state, resolvedSide)[property];
 
   state.selectedKeyframe = undefined;
+  state.selectedMask = false;
   state.selectedProperty = selectedProperty
     ? { side: resolvedSide, property }
     : undefined;
@@ -1605,13 +1630,30 @@ export const selectSelectedProperty = ({ state }) => {
   return state.selectedProperty;
 };
 
+export const setSelectedMask = ({ state }, _payload = {}) => {
+  state.selectedKeyframe = undefined;
+  state.selectedProperty = undefined;
+  state.selectedMask =
+    state.dialogType === "transition" &&
+    Boolean(getEffectiveTransitionMask(state));
+};
+
+export const selectSelectedMask = ({ state }) => {
+  return state.selectedMask;
+};
+
 export const clearTimelineSelection = ({ state }, _payload = {}) => {
   state.selectedKeyframe = undefined;
   state.selectedProperty = undefined;
+  state.selectedMask = false;
 };
 
 export const selectTimelineSelection = ({ state }) => {
-  return state.selectedKeyframe ?? state.selectedProperty;
+  return (
+    state.selectedKeyframe ??
+    state.selectedProperty ??
+    (state.selectedMask ? { type: "mask" } : undefined)
+  );
 };
 
 const getMutableSelectedKeyframe = (state) => {
@@ -2325,6 +2367,7 @@ export const commitPendingTransitionMask = ({ state }, _payload = {}) => {
 export const disableTransitionMask = ({ state }, _payload = {}) => {
   state.transitionMask = undefined;
   state.transitionMaskRemoved = true;
+  state.selectedMask = false;
 };
 
 export const selectTransitionMask = ({ state }) => {
@@ -3103,11 +3146,12 @@ const buildSelectedKeyframePanelData = (
         : (copy.updateType ?? "Update");
   return {
     id: `${side}:${property}:${index}`,
+    delay: keyframe.delay ?? 0,
+    duration: keyframe.duration,
+    easing: keyframe.easing ?? "linear",
+    value: keyframe.value,
+    valueType: keyframe.relative === true ? "relative" : "absolute",
     fields: [
-      {
-        type: "slot",
-        slot: "actions",
-      },
       {
         type: "text",
         label: copy.timelineLabel ?? "Timeline",
@@ -3119,35 +3163,29 @@ const buildSelectedKeyframePanelData = (
         value: propertyFieldConfig[property]?.label ?? property,
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.delayMsLabel ?? "Delay (ms)",
-        value: keyframe.delay ?? 0,
+        slot: "keyframe-delay",
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.durationMsLabel ?? "Duration (ms)",
-        value: keyframe.duration,
+        slot: "keyframe-duration",
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.easingLabel ?? "Easing",
-        value: getOptionLabel(
-          createEasingOptions(copy),
-          keyframe.easing ?? "linear",
-        ),
+        slot: "keyframe-easing",
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.valueLabel ?? "Value",
-        value: keyframe.value,
+        slot: "keyframe-value",
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.valueTypeLabel ?? "Value type",
-        value:
-          keyframe.relative === true
-            ? (copy.relativeValueType ?? "Relative")
-            : (copy.absoluteValueType ?? "Absolute"),
+        slot: "keyframe-value-type",
       },
     ],
   };
@@ -3354,6 +3392,7 @@ export const selectViewData = ({ state, i18n }) => {
     createTransitionAddPropertySideMenuItems({
       previousAvailable: previousAddPropertyOptions.length > 0,
       nextAvailable: nextAddPropertyOptions.length > 0,
+      maskAvailable: !getEffectiveTransitionMask(state),
       copy,
     });
   const defaultTransitionAddPropertySide =
@@ -3369,6 +3408,35 @@ export const selectViewData = ({ state, i18n }) => {
   );
   const transitionMaskPanel = buildTransitionMaskPanelData(state, copy);
   const maskEditorPanel = buildMaskEditorPanelData(state, copy);
+  const selectedMask = state.selectedMask && transitionMaskPanel.enabled;
+  const effectiveTransitionMask = getEffectiveTransitionMask(state);
+  const maskTimelineDelay = Math.max(
+    0,
+    Number(effectiveTransitionMask?.progressDelay) || 0,
+  );
+  const maskTimelineDuration = Math.max(
+    0,
+    Number(transitionMaskPanel.progressDuration) || 0,
+  );
+  const maskTimelineLeftPercent = Math.min(
+    100,
+    (maskTimelineDelay / timelineDisplayDuration) * 100,
+  );
+  const maskTimelineWidthPercent = Math.min(
+    100 - maskTimelineLeftPercent,
+    (maskTimelineDuration / timelineDisplayDuration) * 100,
+  );
+  const maskTimelineRow = transitionMaskPanel.enabled
+    ? {
+        barVisible: !transitionMaskPanel.unsupported,
+        barStyle: `left: ${maskTimelineLeftPercent.toFixed(2)}%; width: ${maskTimelineWidthPercent.toFixed(2)}%;`,
+        barBorderColor: selectedMask ? "var(--ring)" : "var(--accent)",
+        easingLabel: transitionMaskPanel.progressEasingLabel,
+        label: copy.maskTitle ?? "Mask",
+        nameColor: selectedMask ? "pr" : "fg",
+        selected: selectedMask,
+      }
+    : undefined;
   const previewPanel = buildPreviewPanelData(state, copy);
   const selectedKeyframePanel = buildSelectedKeyframePanelData(
     state,
@@ -3518,6 +3586,12 @@ export const selectViewData = ({ state, i18n }) => {
   const showAddKeyframeDialog =
     state.isTouchMode && state.popover.mode === "addKeyframe";
   const showEditKeyframeDialog = state.popover.mode === "editKeyframe";
+  const showSelectedKeyframeDelayPopover =
+    state.popover.mode === "editSelectedKeyframeDelay";
+  const showSelectedKeyframeDurationPopover =
+    state.popover.mode === "editSelectedKeyframeDuration";
+  const showSelectedKeyframeValuePopover =
+    state.popover.mode === "editSelectedKeyframeValue";
 
   return {
     resourceCategory: ANIMATION_RESOURCE_CATEGORY,
@@ -3558,8 +3632,26 @@ export const selectViewData = ({ state, i18n }) => {
     selectedProperty: state.selectedProperty,
     selectedKeyframeDetailId: selectedKeyframePanel?.id,
     selectedKeyframeDetailFields: selectedKeyframePanel?.fields ?? [],
+    selectedKeyframeDelay: selectedKeyframePanel?.delay,
+    selectedKeyframeDuration: selectedKeyframePanel?.duration,
+    selectedKeyframeEasing: selectedKeyframePanel?.easing,
+    selectedKeyframeValue: selectedKeyframePanel?.value,
+    selectedKeyframeValueType: selectedKeyframePanel?.valueType,
     selectedPropertyDetailId: selectedPropertyPanel?.id,
     selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
+    selectedMask,
+    maskTimelineRow,
+    keyframeEasingOptions: createEasingOptions(copy),
+    keyframeValueTypeOptions: [
+      {
+        label: copy.absoluteValueType ?? "Absolute",
+        value: "absolute",
+      },
+      {
+        label: copy.relativeValueType ?? "Relative",
+        value: "relative",
+      },
+    ],
     updateTimelineDefaultValues,
     transitionTimelineDefaultValues,
     addPropertyForm: createAddPropertyForm(
@@ -3608,8 +3700,7 @@ export const selectViewData = ({ state, i18n }) => {
     maskProgressEasingOptions: createEasingOptions(copy),
     updateAddPropertyButtonVisible: updateAddPropertyOptions.length > 0,
     transitionAddPropertyButtonVisible:
-      previousAddPropertyOptions.length > 0 ||
-      nextAddPropertyOptions.length > 0,
+      transitionAddPropertySideOptions.length > 0,
     addPropertySideMenuItems: transitionAddPropertySideOptions,
     popover: {
       ...state.popover,
@@ -3617,7 +3708,7 @@ export const selectViewData = ({ state, i18n }) => {
         ["editAuto", "editInitialValue"].includes(state.popover.mode) ||
         showAddPropertyPopover ||
         showAddKeyframePopover,
-      maskDialogIsOpen: ["editMask", "addMask"].includes(state.popover.mode),
+      maskDialogIsOpen: ["addMask", "editMask"].includes(state.popover.mode),
       dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
         state.popover.mode,
       ),
@@ -3632,18 +3723,29 @@ export const selectViewData = ({ state, i18n }) => {
     isPreviewDialogOpen: state.isPreviewDialogOpen,
     maskRemoveConfirmDialogOpen: state.maskRemoveConfirmDialogOpen,
     showRightPanel: !state.isTouchMode,
-    showMaskAndPreviewSections:
-      SHOW_MASK_AND_PREVIEW_SECTIONS && !state.isTouchMode,
-    showMobileTweenActions: SHOW_MASK_AND_PREVIEW_SECTIONS && state.isTouchMode,
-    showMobileMaskButton:
-      SHOW_MASK_AND_PREVIEW_SECTIONS &&
-      state.isTouchMode &&
-      dialogType === "transition",
+    selectedEditorTab: state.selectedEditorTab,
+    editorTabs: [
+      {
+        id: DEFAULT_EDITOR_TAB,
+        label: copy.tweenTitle ?? "Tween",
+      },
+      {
+        id: "preview",
+        label: copy.previewTitle ?? "Preview",
+      },
+    ],
     showAddPropertyPopover,
     showAddKeyframePopover,
     showAddPropertyDialog,
     showAddKeyframeDialog,
     showEditKeyframeDialog,
+    selectedKeyframeNumberPopoverIsOpen:
+      showSelectedKeyframeDelayPopover ||
+      showSelectedKeyframeDurationPopover ||
+      showSelectedKeyframeValuePopover,
+    showSelectedKeyframeDelayPopover,
+    showSelectedKeyframeDurationPopover,
+    showSelectedKeyframeValuePopover,
     addButton: copy.addButton ?? "Add",
     addMaskButton: copy.addMaskButton ?? "Add Mask",
     addMaskTitle: copy.addMaskTitle ?? "Add Mask",
@@ -3651,14 +3753,17 @@ export const selectViewData = ({ state, i18n }) => {
     channelLabel: copy.channelLabel ?? "Channel",
     doneButton: copy.doneButton ?? "Done",
     editButton: copy.editMenuItem ?? "Edit",
-    editMaskTitle: copy.editMaskTitle ?? "Edit Mask",
     editPreviewButton: copy.editPreviewButton ?? "Edit Preview",
     imageLabel: copy.imageLabel ?? "Image",
     inTimelineLabel: copy.inTimelineLabel ?? "In",
     invertLabel: copy.invertLabel ?? "Invert",
-    detailsPanelTitle: selectedPropertyPanel
-      ? (copy.propertyDetailsTitle ?? "Property Details")
-      : (copy.keyframeDetailsTitle ?? "Keyframe Details"),
+    detailsPanelTitle: selectedMask
+      ? (copy.maskTitle ?? "Mask")
+      : selectedPropertyPanel
+        ? (copy.propertyDetailsTitle ?? "Property Details")
+        : selectedKeyframePanel
+          ? (copy.keyframeDetailsTitle ?? "Keyframe Details")
+          : undefined,
     kindLabel: copy.kindLabel ?? "Kind",
     loopPreviewLabel: copy.loopPreviewLabel ?? "Loop preview",
     maskRemoveConfirmMessage:
@@ -3668,6 +3773,7 @@ export const selectViewData = ({ state, i18n }) => {
     maskTitle: copy.maskTitle ?? "Mask",
     noMaskAvailable: copy.noMaskAvailable ?? "No mask available.",
     noPreviewLabel: copy.noPreviewLabel ?? "No preview",
+    noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     okButton: copy.okButton ?? "OK",
     outTimelineLabel: copy.outTimelineLabel ?? "Out",
     playButton: previewPlaying
@@ -3681,9 +3787,6 @@ export const selectViewData = ({ state, i18n }) => {
     removeButton: copy.removeMenuItem ?? "Remove",
     saveButton: copy.saveButton ?? "Save",
     selectImageLabel: copy.selectImageLabel ?? "Select image",
-    selectTimelineItemPrompt:
-      copy.selectTimelineItemPrompt ??
-      "Select a property or keyframe to view its details.",
     softnessLabel: copy.softnessLabel ?? "Softness",
     timelineZoomLabel: copy.timelineZoomLabel ?? "Timeline zoom",
     timelineZoomInLabel: copy.timelineZoomInLabel ?? "Zoom timeline in",

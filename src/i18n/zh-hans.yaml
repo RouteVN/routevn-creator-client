@@ -814,6 +814,7 @@ animationEditorPage:
   translateYPropertyTooltip: "使用视口高度单位。1 表示向下移动一个完整屏幕高度，-1 表示向上移动一个完整屏幕高度。"
   tweenModeLabel: "补间模式"
   tweenPropertiesTitle: "补间属性"
+  tweenTitle: "补间"
   unsupportedMaskDescription: "保存时会保留这个现有遮罩。如果要添加新的单图遮罩，请先移除它。"
   unsupportedMaskMessageSuffix: "遮罩暂时隐藏"
   updateAutoTweenButton: "更新自动补间"

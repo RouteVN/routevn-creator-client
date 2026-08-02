@@ -58,7 +58,7 @@ template:
       - $if showRuler || (showTracks && selectedProperties.length > 0):
           - rtgl-view d=v w=f g=xs:
               - $if showRuler:
-                  - rtgl-view d=h w=f av=e:
+                  - 'rtgl-view d=h w=f av=e bgc=bg style="position: sticky; top: 0; z-index: 7;"':
                       - 'rtgl-view d=h h=48 w=104 bgc=bg bwr=xs bc=bo style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
                           - rtgl-view w=72: null
                           - rtgl-view h=24 w=24 mr=sm ml=sm: null

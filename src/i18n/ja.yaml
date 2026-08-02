@@ -814,6 +814,7 @@ animationEditorPage:
   translateYPropertyTooltip: "画面高さ単位を使います。1で画面高さ1つ分下へ、-1で画面高さ1つ分上へ移動します。"
   tweenModeLabel: "トゥイーンモード"
   tweenPropertiesTitle: "トゥイーンプロパティ"
+  tweenTitle: "トゥイーン"
   unsupportedMaskDescription: "保存時に既存のマスクは保持されます。新しい単一画像マスクを追加したい場合は削除してください。"
   unsupportedMaskMessageSuffix: "形式のマスクは現在非表示です"
   updateAutoTweenButton: "自動トゥイーンを更新"

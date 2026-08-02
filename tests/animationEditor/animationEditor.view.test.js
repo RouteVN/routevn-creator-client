@@ -27,7 +27,7 @@ describe("animationEditor view", () => {
     );
   });
 
-  it("uses a dialog for keyframe edits and touch add forms", () => {
+  it("keeps the keyframe dialog available for touch and context-menu edits", () => {
     const view = readFileSync(
       new URL(
         "../../src/pages/animationEditor/animationEditor.view.yaml",
@@ -76,7 +76,7 @@ describe("animationEditor view", () => {
     expect(selectorBranch).not.toContain("h=96");
   });
 
-  it("shows keyframe details in the right panel and keeps legacy panels gated", () => {
+  it("shows keyframe and mask details beside the Tween and Preview tabs", () => {
     const view = readFileSync(
       new URL(
         "../../src/pages/animationEditor/animationEditor.view.yaml",
@@ -95,20 +95,78 @@ describe("animationEditor view", () => {
     expect(view).toContain(":fields=${selectedKeyframeDetailFields}");
     expect(view).toContain("rvn-detail-view#selectedPropertyDetails");
     expect(view).toContain(":fields=${selectedPropertyDetailFields}");
+    expect(view).toContain("$if detailsPanelTitle");
+    expect(view).toContain("rtgl-view#timelineDetailsHeader h=48");
+    expect(view).toContain("rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}");
+    expect(view).not.toContain("${selectTimelineItemPrompt}");
     expect(view).toContain(
-      "rtgl-button#editSelectedKeyframeButton slot=actions",
+      "rtgl-select#selectedKeyframeEasingSelect slot=keyframe-easing",
     );
-    expect(view).toContain("handler: handleEditSelectedKeyframeClick");
-    expect(view).not.toContain("selectedKeyframeEasingSelect");
-    expect(view).not.toContain("selectedKeyframeValueTypeSelect");
-    expect(view).not.toContain("selectedKeyframeNumberPopover");
-    expect(view).toContain("$if showMaskAndPreviewSections");
+    expect(view).toContain(
+      "rtgl-view#selectedKeyframeDelay slot=keyframe-delay",
+    );
+    expect(view).toContain(
+      "rtgl-view#selectedKeyframeDuration slot=keyframe-duration",
+    );
+    expect(view.indexOf("slot=keyframe-delay")).toBeLessThan(
+      view.indexOf("slot=keyframe-duration"),
+    );
+    expect(view).toContain(
+      "rtgl-view#selectedKeyframeValue slot=keyframe-value",
+    );
+    expect(view).toContain("rtgl-input-number#selectedKeyframeNumberInput");
+    expect(view).toContain(
+      "rtgl-popover#selectedKeyframeNumberPopover ?open=${selectedKeyframeNumberPopoverIsOpen}",
+    );
+    expect(view).toContain(
+      "content-w=220 content-g=sm content-ph=md content-pv=md content-bgc=su",
+    );
+    expect(view).toContain("rtgl-button#selectedKeyframeNumberConfirm");
+    expect(view).toContain(
+      "rtgl-segmented-control#selectedKeyframeValueTypeSelect slot=keyframe-value-type",
+    );
+    expect(view).not.toContain("editSelectedKeyframeButton");
+    expect(view).toContain(
+      "rtgl-tabs#animationEditorTabs w=f selected-tab=${selectedEditorTab} :items=${editorTabs}",
+    );
+    expect(view).toContain("$if selectedEditorTab == 'tween'");
+    expect(view).not.toContain("$elif selectedEditorTab == 'mask'");
+    expect(view).toContain("rtgl-view#animationTweenPanel");
+    expect(view).not.toContain("rtgl-view#animationMaskPanel");
+    expect(view).toContain("rtgl-view#animationPreviewPanel");
+    expect(view).toContain("rtgl-view#maskTimelineRow");
+    expect(view).toContain("handler: handleMaskTimelineRowClick");
+    expect(view).toContain("$elif selectedMask");
+    expect(view).toContain("rtgl-view#selectedMaskDetails");
+    expect(
+      view.match(/div\.animationPreviewImageThumbnailTransparencyGrid/g),
+    ).toHaveLength(2);
+    expect(view).toContain(
+      "previewImageButton${i} data-target=${item.target} cur=pointer bw=xs",
+    );
+    expect(view).toContain(
+      "previewDialogImageButton${i} data-target=${item.target} cur=pointer bw=xs",
+    );
+    expect(view).toContain("br=md w=160 overflow=hidden");
+    expect(view.match(/rtgl-view w=f p=md:/g)).toHaveLength(2);
+    expect(view).not.toContain("rtgl-segmented-control#maskKindSelect");
+    expect(view).toContain("rtgl-input#maskSoftnessInput type=number");
+    expect(view).toContain("rtgl-select#maskProgressEasingSelect w=f no-clear");
+    expect(view).toContain("rtgl-view d=v w=f g=md pb=xl");
+    expect(view).not.toContain("editMaskButton");
+    expect(view).not.toContain("cancelMaskButton");
+    expect(view).toContain("popover.mode == 'editMask'");
+    expect(view).not.toContain("rtgl-text: ${tweenPropertiesTitle}");
+    expect(view).not.toContain("rtgl-text w=1fg: ${maskTitle}");
+    expect(view).not.toContain("rtgl-text w=1fg: ${previewTitle}");
+    expect(view).toContain("handler: handleEditorTabClick");
+    expect(view).not.toContain("showMaskAndPreviewSections");
     expect(view).toContain(":selectedKeyframe=${selectedKeyframe}");
     expect(view).toContain(":selectedProperty=${selectedProperty}");
     expect(view).toContain("handler: handlePropertyNameRightClick");
   });
 
-  it("places zoom controls before Add and makes the timeline scroll horizontally", () => {
+  it("places zoom controls before Add and lets the timeline scroll on both axes", () => {
     const view = readFileSync(
       new URL(
         "../../src/pages/animationEditor/animationEditor.view.yaml",
@@ -124,7 +182,7 @@ describe("animationEditor view", () => {
       "min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom}",
     );
     expect(view).toContain("rtgl-view d=v w=f h=1fg g=md");
-    expect(view).toContain("rtgl-view#timelineScrollContainer w=f h=1fg sh");
+    expect(view).toContain("rtgl-view#timelineScrollContainer w=f h=1fg sh sv");
     expect(view).toContain("handler: handleTimelineScroll");
     expect(view).toContain("handler: handleTimelinePanStart");
     expect(view).toContain("handler: handleTimelinePanMove");
@@ -134,11 +192,17 @@ describe("animationEditor view", () => {
       'timelineScrollContainer w=f style="min-width: 0; overflow-x: auto',
     );
     expect(view).not.toContain("timelineScaleLabel");
-    expect(view).toContain('style="${timelineCanvasStyle}"');
+    expect(view).toContain('style="${timelineCanvasStyle} min-height: 100%;"');
+    expect(view.match(/rtgl-view h=32 style="flex-shrink: 0;"/g)).toHaveLength(
+      2,
+    );
+    expect(view).toContain(
+      'rtgl-view w=f bgc=bg style="position: sticky; top: 0; z-index: 7;"',
+    );
     expect(view).toContain("timelineDuration=${timelineDisplayDuration}");
     expect(view).not.toContain("timelineZoomPercent");
     expect(view).not.toContain("min-width: 100%");
-    expect(view).toContain("d=v h=f pos=rel");
+    expect(view).not.toContain("d=v h=f pos=rel");
     expect(view).toContain("$if timelinePlayheadVisible");
     expect(view).toContain('style="${timelinePlayheadStyle}"');
     expect(view).toMatch(

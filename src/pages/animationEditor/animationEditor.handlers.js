@@ -956,12 +956,7 @@ export const handleMobileMaskClick = (deps, payload = {}) => {
   };
 
   if (store.selectHasEffectiveTransitionMask()) {
-    store.setPopover({
-      mode: "editMask",
-      x: popoverPosition.x,
-      y: popoverPosition.y,
-      payload: {},
-    });
+    store.setSelectedEditorTab({ tab: "mask" });
     render();
     return;
   }
@@ -993,19 +988,6 @@ export const handleAddPropertiesClick = (deps, payload) => {
   const side = payload._event.currentTarget?.dataset?.side;
 
   if (!side && store.selectDialogType() === "transition") {
-    if (store.selectIsTouchMode()) {
-      store.setPopover({
-        mode: "addProperty",
-        x: payload._event.clientX,
-        y: payload._event.clientY,
-        payload: {
-          side: store.selectDefaultAddPropertySide(),
-        },
-      });
-      render();
-      return;
-    }
-
     store.setPopover({
       mode: "addPropertySideMenu",
       x: payload._event.clientX,
@@ -1036,6 +1018,17 @@ export const handleTimelineZoomChange = (deps, payload) => {
 export const handleTimelineZoomIn = (deps) => {
   const { render, store } = deps;
   store.nudgeTimelineZoom({ delta: TIMELINE_ZOOM_STEP });
+  render();
+};
+
+export const handleEditorTabClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { id: tab } = payload._event.detail;
+  if (tab === store.selectSelectedEditorTab()) {
+    return;
+  }
+
+  store.setSelectedEditorTab({ tab });
   render();
 };
 
@@ -1189,12 +1182,24 @@ export const handleTimelinePanEnd = (deps, payload) => {
 export const handleAddPropertySideMenuItemClick = (deps, payload) => {
   const { render, store } = deps;
   const side = payload._event.detail.item?.value;
+  const popover = store.selectPopover();
+
+  if (side === "mask") {
+    store.startPendingTransitionMask({});
+    store.setPopover({
+      mode: "addMask",
+      x: popover.x,
+      y: popover.y,
+      payload: {},
+    });
+    render();
+    return;
+  }
 
   if (side !== "prev" && side !== "next") {
     return;
   }
 
-  const popover = store.selectPopover();
   store.setPopover({
     mode: "addProperty",
     x: popover.x,
@@ -1425,15 +1430,144 @@ export const handleKeyframeDurationChange = (deps, payload) => {
   commitSelectedKeyframeChange(deps);
 };
 
-export const handleEditSelectedKeyframeClick = (deps) => {
-  openSelectedKeyframeEditDialog(deps);
-};
-
 const commitSelectedKeyframeChange = (deps) => {
   const { render, store } = deps;
   invalidatePreview({ store });
   render();
   queueEditorAutosave({ deps });
+};
+
+export const handleSelectedKeyframeEasingChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeEasing({
+    easing: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeValueTypeChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeRelative({
+    relative: resolveValueChange(payload) === "relative",
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+const openSelectedKeyframeNumberPopover = (deps, payload, { mode } = {}) => {
+  const { render, store } = deps;
+  let value;
+  if (mode === "editSelectedKeyframeDelay") {
+    value = store.selectSelectedKeyframeDelay();
+  } else if (mode === "editSelectedKeyframeDuration") {
+    value = store.selectSelectedKeyframeDuration();
+  } else {
+    value = store.selectSelectedKeyframeValue();
+  }
+  store.setPopover({
+    mode,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+    payload: {},
+  });
+  store.updatePopoverFormValues({
+    formValues: { value },
+  });
+  render();
+};
+
+export const handleSelectedKeyframeDelayClick = (deps, payload) => {
+  openSelectedKeyframeNumberPopover(deps, payload, {
+    mode: "editSelectedKeyframeDelay",
+  });
+};
+
+export const handleSelectedKeyframeDurationClick = (deps, payload) => {
+  openSelectedKeyframeNumberPopover(deps, payload, {
+    mode: "editSelectedKeyframeDuration",
+  });
+};
+
+export const handleSelectedKeyframeValueClick = (deps, payload) => {
+  openSelectedKeyframeNumberPopover(deps, payload, {
+    mode: "editSelectedKeyframeValue",
+  });
+};
+
+export const handleEditorPopoverPositioned = (deps) => {
+  const { refs, store } = deps;
+  if (
+    [
+      "editSelectedKeyframeDelay",
+      "editSelectedKeyframeDuration",
+      "editSelectedKeyframeValue",
+    ].includes(store.selectPopover().mode)
+  ) {
+    refs.selectedKeyframeNumberInput.focus();
+  }
+};
+
+const commitSelectedKeyframeNumberInput = (deps, value) => {
+  const { store } = deps;
+  if (value === undefined || value === null || value === "") {
+    return;
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return;
+  }
+
+  const { mode } = store.selectPopover();
+  if (mode === "editSelectedKeyframeDelay") {
+    if (numericValue < 0) {
+      return;
+    }
+    store.setSelectedKeyframeDelay({ delay: numericValue });
+  } else if (mode === "editSelectedKeyframeDuration") {
+    if (numericValue < 1) {
+      return;
+    }
+    store.setSelectedKeyframeDuration({ duration: numericValue });
+  } else if (mode === "editSelectedKeyframeValue") {
+    store.setSelectedKeyframeValue({ value: numericValue });
+  } else {
+    return;
+  }
+
+  store.closePopover();
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeNumberInputChange = (deps, payload) => {
+  const { store } = deps;
+  store.updatePopoverFormValues({
+    formValues: {
+      value: resolveValueChange(payload),
+    },
+  });
+};
+
+export const handleSelectedKeyframeNumberConfirmClick = (deps) => {
+  const { store } = deps;
+  commitSelectedKeyframeNumberInput(
+    deps,
+    store.selectPopover().formValues.value,
+  );
+};
+
+export const handleSelectedKeyframeNumberInputKeyDown = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  if (event.key === "Enter") {
+    event.preventDefault();
+    event.stopPropagation();
+    commitSelectedKeyframeNumberInput(deps, event.currentTarget.value);
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    store.closePopover();
+    render();
+  }
 };
 
 export const handleAutoTrackClick = (deps, payload) => {
@@ -1483,6 +1617,23 @@ export const handlePropertyNameRightClick = (deps, payload) => {
       property,
     },
   });
+  render();
+};
+
+export const handleMaskTimelineRowClick = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  store.setSelectedMask({});
+  if (store.selectIsTouchMode()) {
+    store.setPopover({
+      mode: "editMask",
+      x: event.clientX,
+      y: event.clientY,
+      payload: {},
+    });
+  } else {
+    store.closePopover();
+  }
   render();
 };
 
@@ -1803,17 +1954,6 @@ export const handleEditInitialValueFormChange = (deps, payload) => {
   render();
 };
 
-export const handleEditMaskClick = (deps, payload) => {
-  const { render, store } = deps;
-  store.setPopover({
-    mode: "editMask",
-    x: payload._event.clientX,
-    y: payload._event.clientY,
-    payload: {},
-  });
-  render();
-};
-
 export const handleOpenAddMaskClick = (deps, payload) => {
   const { render, store } = deps;
   store.startPendingTransitionMask({});
@@ -1829,6 +1969,7 @@ export const handleOpenAddMaskClick = (deps, payload) => {
 export const handleAddMaskClick = (deps) => {
   const { store } = deps;
   store.commitPendingTransitionMask({});
+  store.setSelectedMask({});
   store.closePopover();
   commitMaskChange(deps);
 };
@@ -1836,13 +1977,8 @@ export const handleAddMaskClick = (deps) => {
 export const handleDisableMaskClick = (deps) => {
   const { store } = deps;
   store.disableTransitionMask({});
+  store.closePopover();
   commitMaskChange(deps);
-};
-
-export const handleMobileDisableMaskClick = (deps) => {
-  const { render, store } = deps;
-  store.openMaskRemoveConfirmDialog({});
-  render();
 };
 
 export const handleMaskRemoveConfirmDialogClose = (deps) => {
