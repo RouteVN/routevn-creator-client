@@ -4,6 +4,7 @@ import {
   applyCanvasItemDragChange,
   applyCanvasItemKeyboardChange,
   applyCanvasItemResizeChange,
+  applyCanvasItemRotationChange,
 } from "../../src/components/layoutEditorCanvas/layoutEditorCanvas.handlers.js";
 
 describe("layoutEditorMutations", () => {
@@ -104,6 +105,20 @@ describe("layoutEditorMutations", () => {
 
     expect(updatedItem.anchorX).toBe(0.5);
     expect(updatedItem.anchorY).toBe(1);
+  });
+
+  it("rounds edited rotations to two decimals", () => {
+    const updatedItem = applyLayoutItemFieldChange({
+      item: {
+        id: "container-1",
+        type: "container",
+        rotation: 0,
+      },
+      name: "rotation",
+      value: 12.34567,
+    });
+
+    expect(updatedItem.rotation).toBe(12.35);
   });
 
   it("keeps cleared container direction unset in saved data", () => {
@@ -250,6 +265,28 @@ describe("layoutEditorMutations", () => {
     expect(updatedItem).toMatchObject({
       x: 28,
       y: 40,
+    });
+  });
+
+  it("applies fractional canvas rotation without changing the anchor", () => {
+    const item = {
+      id: "rect-1",
+      type: "rect",
+      x: 10,
+      y: 20,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      rotation: 10,
+    };
+
+    expect(
+      applyCanvasItemRotationChange({ item, rotation: 27.39999999999999 }),
+    ).toMatchObject({
+      x: 10,
+      y: 20,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      rotation: 27.4,
     });
   });
 

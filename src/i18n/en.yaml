@@ -1455,6 +1455,7 @@ layoutEditPanel:
   qualityLabel: "Quality"
   qualitySummaryLabel: "quality"
   ratioLabel: "Ratio"
+  rotationLabel: "Rotation"
   removeButton: "Remove"
   repeatEdgePixelsLabel: "Repeat Edge Pixels"
   repeatEdgeSummary: "repeat edge"

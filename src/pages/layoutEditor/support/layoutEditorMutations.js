@@ -1,4 +1,5 @@
 import { getLayoutEditorTypeRules } from "../../../internal/layoutEditorElementRegistry.js";
+import { normalizeLayoutRotation } from "../../../internal/project/layout.js";
 
 const cloneWithDeletedValue = (target, key) => {
   if (!target || typeof target !== "object") {
@@ -63,6 +64,10 @@ const setTopLevelValue = (target, name, value) => {
 };
 
 const normalizeCommonFieldValue = ({ name, value } = {}) => {
+  if (name === "rotation" && Number.isFinite(Number(value))) {
+    return normalizeLayoutRotation(Number(value));
+  }
+
   if (
     (name === "x" || name === "y" || name === "width" || name === "height") &&
     value !== undefined &&

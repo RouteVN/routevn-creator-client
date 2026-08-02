@@ -55,6 +55,19 @@ const INPUT_INTERACTION_KEYS = [
 ];
 
 export const CURRENT_LAYOUT_SCHEMA_VERSION = 2;
+const LAYOUT_ROTATION_PRECISION = 100;
+
+export const normalizeLayoutRotation = (value) => {
+  if (!Number.isFinite(value)) {
+    return value;
+  }
+
+  const roundingOffset = Math.sign(value) * Number.EPSILON;
+  return (
+    Math.round((value + roundingOffset) * LAYOUT_ROTATION_PRECISION) /
+    LAYOUT_ROTATION_PRECISION
+  );
+};
 
 import {
   buildVisibilityConditionExpression,
@@ -1184,7 +1197,7 @@ const buildBaseElement = (node, context = {}) => {
     anchorY: node.anchorY ?? 0,
     scaleX: node.scaleX ?? 1,
     scaleY: node.scaleY ?? 1,
-    rotation: node.rotation ?? 0,
+    rotation: normalizeLayoutRotation(node.rotation ?? 0),
   };
 
   if (typeof node.opacity === "number") {

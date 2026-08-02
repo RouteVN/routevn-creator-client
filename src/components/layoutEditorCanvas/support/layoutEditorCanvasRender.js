@@ -11,6 +11,10 @@ import {
   createLayoutEditorSelectionElementMapper,
   extractLayoutEditorSelectionOccurrences,
 } from "./layoutEditorCanvasSelection.js";
+import {
+  LAYOUT_EDITOR_ROTATE_CURSOR,
+  LAYOUT_EDITOR_ROTATION_TARGET_ID,
+} from "./layoutEditorCanvasRotation.js";
 
 const OVERLAY_INNER_COLOR = "#b3b3b3";
 const OVERLAY_INNER_BORDER = {
@@ -44,6 +48,7 @@ const OVERLAY_ANCHOR_CIRCLE_FILL = {
 };
 const OVERLAY_ANCHOR_SIZE = 8;
 const OVERLAY_RESIZE_HANDLE_SIZE = 12;
+const OVERLAY_ROTATION_HANDLE_SIZE = 16;
 export const formatLayoutEditorPreviewDate = formatDate;
 const jemplFunctions = {
   formatDate: formatLayoutEditorPreviewDate,
@@ -456,6 +461,77 @@ const buildOverlayAnchorMarker = ({
   };
 };
 
+const transformOverlayPoint = (point, element = {}) => {
+  const { x: originX, y: originY } = getElementOrigin(element);
+  const radians = ((element.rotation ?? 0) * Math.PI) / 180;
+  const cosine = Math.cos(radians);
+  const sine = Math.sin(radians);
+  const localX = point.x - originX;
+  const localY = point.y - originY;
+
+  return {
+    x: Math.round((element.x ?? 0) + originX) + localX * cosine - localY * sine,
+    y: Math.round((element.y ?? 0) + originY) + localX * sine + localY * cosine,
+  };
+};
+
+const getOverlayWorldPoint = (path, localPoint) => {
+  let point = localPoint;
+
+  for (let index = path.length - 1; index >= 0; index -= 1) {
+    point = transformOverlayPoint(point, path[index]);
+  }
+
+  return point;
+};
+
+const buildOverlayRotationHandle = ({
+  element,
+  path,
+  canvasUnitsPerCssPixel,
+}) => {
+  if (!hasRenderableBounds(element)) {
+    return undefined;
+  }
+
+  const { x: originX, y: originY } = getElementOrigin(element);
+  const handleSize = OVERLAY_ROTATION_HANDLE_SIZE * canvasUnitsPerCssPixel;
+  const fallbackPivot = getOverlayWorldPoint(path, {
+    x: originX,
+    y: originY,
+  });
+
+  const dragPayload = {
+    rotationPivotX: fallbackPivot.x,
+    rotationPivotY: fallbackPivot.y,
+  };
+
+  return {
+    id: LAYOUT_EDITOR_ROTATION_TARGET_ID,
+    type: "rect",
+    x: originX - handleSize / 2,
+    y: originY - handleSize / 2,
+    width: handleSize,
+    height: handleSize,
+    cornerRadius: handleSize / 2,
+    fill: OVERLAY_FILL,
+    hover: {
+      cursor: LAYOUT_EDITOR_ROTATE_CURSOR,
+    },
+    drag: {
+      start: {
+        payload: dragPayload,
+      },
+      move: {
+        payload: dragPayload,
+      },
+      end: {
+        payload: dragPayload,
+      },
+    },
+  };
+};
+
 const buildOverlayResizeHandle = ({
   element,
   overlayId,
@@ -579,9 +655,20 @@ const buildOverlayTree = ({
     overlayId,
     canvasUnitsPerCssPixel,
   });
+  const rotationHandle = buildOverlayRotationHandle({
+    element: selectedElement,
+    path,
+    canvasUnitsPerCssPixel,
+  });
   let overlayTree;
 
-  if (!overlayRect || !overlayOuterRect || !overlayInnerRect || !anchorMarker) {
+  if (
+    !overlayRect ||
+    !overlayOuterRect ||
+    !overlayInnerRect ||
+    !anchorMarker ||
+    !rotationHandle
+  ) {
     return undefined;
   }
 
@@ -599,6 +686,7 @@ const buildOverlayTree = ({
         canvasUnitsPerCssPixel,
       }),
       anchorMarker,
+      rotationHandle,
     ],
   });
 

@@ -870,7 +870,7 @@ describe("layoutEditorPreview", () => {
 
     expect(overlays).toHaveLength(1);
     expect(overlays[0].id).toBe("selected-border-group");
-    expect(overlays[0].children).toHaveLength(8);
+    expect(overlays[0].children).toHaveLength(9);
     expect(overlays[0].children[0]).toMatchObject({
       id: "selected-border-outer",
       x: -0.5,
@@ -931,6 +931,26 @@ describe("layoutEditorPreview", () => {
         ],
       },
     });
+    expect(overlays[0].children[8]).toMatchObject({
+      id: "selected-border-rotate",
+      type: "rect",
+      x: 42,
+      y: 12,
+      width: 16,
+      height: 16,
+      cornerRadius: 8,
+      hover: {
+        cursor: "url(/public/layout-editor-rotate-cursor.svg) 16 16, grab",
+      },
+      drag: {
+        start: {
+          payload: {
+            rotationPivotX: 60,
+            rotationPivotY: 40,
+          },
+        },
+      },
+    });
   });
 
   it("does not add resize handles for container items without size controls", () => {
@@ -965,7 +985,54 @@ describe("layoutEditorPreview", () => {
       "selected-border-inner",
       "selected-border",
       "selected-border-anchor",
+      "selected-border-rotate",
     ]);
+  });
+
+  it("keeps the rotation hit area centered on a rotated anchor", () => {
+    const overlays = createLayoutEditorSelectionOverlay({
+      selectedItemId: "target",
+      occurrencesById: {
+        target: {
+          ownerItemId: "target",
+        },
+      },
+      occurrenceIdsByOwner: {
+        target: ["target"],
+      },
+      parsedElements: [
+        {
+          id: "target",
+          type: "rect",
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 40,
+          originX: 50,
+          originY: 20,
+          rotation: 180,
+        },
+      ],
+    });
+    const rotationHandle = overlays[0].children.find(
+      ({ id }) => id === "selected-border-rotate",
+    );
+
+    expect(rotationHandle).toMatchObject({
+      x: 42,
+      y: 12,
+      width: 16,
+      height: 16,
+      cornerRadius: 8,
+      drag: {
+        move: {
+          payload: {
+            rotationPivotX: 50,
+            rotationPivotY: 20,
+          },
+        },
+      },
+    });
   });
 
   it("does not add resize handles for auto-width text items", () => {
@@ -1001,6 +1068,7 @@ describe("layoutEditorPreview", () => {
       "selected-border-inner",
       "selected-border",
       "selected-border-anchor",
+      "selected-border-rotate",
     ]);
   });
 });

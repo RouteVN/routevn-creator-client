@@ -165,6 +165,27 @@ steps:
     ms: 300
   - action: screenshot
   - action: select
+    selector: "#layoutEditPanel [data-name='rotation']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#layoutEditPanel #popoverForm[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#layoutEditPanel #popoverForm rtgl-input-number[data-field-name='value'] input"
+    steps:
+      - action: clear
+      - action: write
+        value: "8"
+  - action: select
+    selector: "#layoutEditPanel #popoverForm rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: wait
+    ms: 600
+  - action: screenshot
+  - action: select
     selector: "#fileExplorer #itemRef1"
     steps:
       - action: rclick

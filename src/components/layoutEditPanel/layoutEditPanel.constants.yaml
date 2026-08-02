@@ -104,6 +104,12 @@ layoutSections:
             name: opacity
             value: "${values.opacity}"
             popoverForm: *opacityPopoverForm
+          - type: clickable-value
+            label: Rotation
+            name: rotation
+            value: "${values.rotation}"
+            metaValue: °
+            popoverForm: *numberPopoverForm
       - "$when": "supportsAnchor"
         type: anchor-grid
         label: Anchor
@@ -523,6 +529,12 @@ controlSections:
             name: opacity
             value: "${values.opacity}"
             popoverForm: *opacityPopoverForm
+          - type: clickable-value
+            label: Rotation
+            name: rotation
+            value: "${values.rotation}"
+            metaValue: °
+            popoverForm: *numberPopoverForm
   - id: visibilityCondition
     label: Visibility
     labelAction: plus

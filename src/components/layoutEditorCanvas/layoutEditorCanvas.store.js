@@ -3,6 +3,7 @@ import {
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import { LAYOUT_EDITOR_ROTATE_CURSOR } from "./support/layoutEditorCanvasRotation.js";
 
 export const createInitialState = () => ({
   isGraphicsReady: false,
@@ -65,6 +66,30 @@ export const setDragStartPosition = (
   if (typeof itemStartHeight === "number") {
     state.dragStartPosition.itemStartHeight = itemStartHeight;
   }
+};
+
+export const setRotationDragStart = ({ state }, { dragStart } = {}) => {
+  if (!dragStart) {
+    return;
+  }
+
+  state.dragStartPosition = dragStart;
+};
+
+export const updateRotationDragProgress = (
+  { state },
+  { pointerAngle, rotationDelta } = {},
+) => {
+  if (
+    !state.dragStartPosition ||
+    !Number.isFinite(pointerAngle) ||
+    !Number.isFinite(rotationDelta)
+  ) {
+    return;
+  }
+
+  state.dragStartPosition.pointerAngle = pointerAngle;
+  state.dragStartPosition.rotationDelta = rotationDelta;
 };
 
 export const stopDragging = ({ state }, _payload = {}) => {
@@ -297,6 +322,11 @@ export const selectViewData = ({ state, props }) => {
 
   return {
     canvasAspectRatio: formatProjectResolutionAspectRatio(resolution),
-    canvasCursor: state.isDragging ? "grabbing" : "default",
+    canvasCursor:
+      state.isDragging && state.dragMode === "rotate"
+        ? LAYOUT_EDITOR_ROTATE_CURSOR
+        : state.isDragging
+          ? "grabbing"
+          : "default",
   };
 };

@@ -216,8 +216,31 @@ describe("layoutEditorCanvasSelection", () => {
         },
       },
     });
+    const rotationChromeHit = resolveLayoutEditorCanvasHitPath({
+      hits: [
+        {
+          path: [
+            {
+              id: "selected-border-rotate",
+              type: "rect",
+              bounds: bounds(),
+            },
+          ],
+        },
+        {
+          path: [{ id: "owned", type: "rect", bounds: bounds() }],
+        },
+      ],
+      occurrencesById: {
+        owned: {
+          ownerItemId: "owned",
+          authoredPath: ["owned"],
+        },
+      },
+    });
 
     expect(chromeHit).toEqual({ blocked: true, path: [] });
+    expect(rotationChromeHit).toEqual({ blocked: true, path: [] });
     expect(selectLayoutEditorCanvasHit(backgroundHit)).toMatchObject({
       itemId: "owned",
     });

@@ -337,6 +337,7 @@ export const toInspectorValues = ({
     textContentSummary,
     textContentSummaryParts,
     opacity: values?.opacity ?? 1,
+    rotation: values?.rotation ?? 0,
     anchor: toAnchorValue(values),
     aspectRatioMode: derivedAspectRatioLock !== undefined ? "fixed" : "free",
     aspectRatioLock: derivedAspectRatioLock,

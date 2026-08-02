@@ -122,6 +122,9 @@ const createLayoutEditorDeps = ({
       layoutEditorCanvas: {
         captureThumbnailImage: vi.fn(async () => "data:text/plain;base64,QQ=="),
       },
+      layoutEditPanel: {
+        setTransientValues: vi.fn(),
+      },
     },
     subject: {
       dispatch: vi.fn(),
@@ -319,6 +322,100 @@ describe("layoutEditor.handleFileExplorerVisibilityToggle", () => {
         hidden: true,
       },
       replace: false,
+    });
+  });
+});
+
+describe("layoutEditor.handleLayoutEditorCanvasDragUpdate", () => {
+  it("updates changed canvas values in the detail panel while persistence stays queued", () => {
+    const updateLayoutElement = vi.fn(async () => ({ valid: true }));
+    const deps = createLayoutEditorDeps({ updateLayoutElement });
+    deps.store.selectItemDataById.mockReturnValue({
+      id: "item-1",
+      type: "container",
+      x: 10,
+      y: 20,
+      width: 100,
+      height: 50,
+      rotation: 10,
+    });
+
+    handleLayoutEditorCanvasDragUpdate(deps, {
+      _event: {
+        detail: {
+          itemId: "item-1",
+          updatedItem: {
+            id: "item-1",
+            type: "container",
+            x: 12,
+            y: 24,
+            width: 120,
+            height: 60,
+            rotation: 12.35,
+          },
+        },
+      },
+    });
+
+    expect(deps.refs.layoutEditPanel.setTransientValues).toHaveBeenCalledWith({
+      values: {
+        x: 12,
+        y: 24,
+        width: 120,
+        height: 60,
+        rotation: 12.35,
+      },
+    });
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(updateLayoutElement).not.toHaveBeenCalled();
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "layoutEditor.updateElement",
+      expect.objectContaining({
+        selectedItemId: "item-1",
+        updatedItem: expect.objectContaining({
+          x: 12,
+          y: 24,
+          width: 120,
+          height: 60,
+          rotation: 12.35,
+        }),
+      }),
+    );
+  });
+
+  it("updates only canvas values that changed during the drag", () => {
+    const deps = createLayoutEditorDeps();
+    deps.store.selectItemDataById.mockReturnValue({
+      id: "item-1",
+      type: "container",
+      x: 0,
+      y: 5,
+      width: 100,
+      height: 40,
+      rotation: 10,
+    });
+
+    handleLayoutEditorCanvasDragUpdate(deps, {
+      _event: {
+        detail: {
+          itemId: "item-1",
+          updatedItem: {
+            id: "item-1",
+            type: "container",
+            x: 20,
+            y: 5,
+            width: 100,
+            height: 40,
+            rotation: 10,
+          },
+        },
+      },
+    });
+
+    expect(deps.refs.layoutEditPanel.setTransientValues).toHaveBeenCalledWith({
+      values: {
+        x: 20,
+      },
     });
   });
 });

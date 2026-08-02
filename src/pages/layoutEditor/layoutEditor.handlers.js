@@ -1778,8 +1778,16 @@ const subscriptions = (deps) => {
   ];
 };
 
+const CANVAS_TRANSIENT_DETAIL_FIELDS = [
+  "x",
+  "y",
+  "width",
+  "height",
+  "rotation",
+];
+
 export const handleLayoutEditorCanvasDragUpdate = (deps, payload) => {
-  const { store, subject } = deps;
+  const { refs, store, subject } = deps;
   const updatedItem = payload._event.detail?.updatedItem;
   if (!updatedItem) {
     return;
@@ -1788,6 +1796,7 @@ export const handleLayoutEditorCanvasDragUpdate = (deps, payload) => {
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
   const selectedItemId = payload._event.detail?.itemId || updatedItem.id;
+  const currentItem = store.selectItemDataById({ itemId: selectedItemId });
   const pendingPayload = queuePendingLayoutEditorPersist(store, {
     layoutId,
     resourceType,
@@ -1799,6 +1808,19 @@ export const handleLayoutEditorCanvasDragUpdate = (deps, payload) => {
     itemId: selectedItemId,
     updatedItem,
   });
+
+  const transientValues = {};
+  for (const name of CANVAS_TRANSIENT_DETAIL_FIELDS) {
+    const value = updatedItem[name];
+    if (Number.isFinite(value) && value !== currentItem?.[name]) {
+      transientValues[name] = value;
+    }
+  }
+  if (Object.keys(transientValues).length > 0) {
+    refs.layoutEditPanel?.setTransientValues?.({
+      values: transientValues,
+    });
+  }
   subject.dispatch("layoutEditor.updateElement", pendingPayload);
 };
 

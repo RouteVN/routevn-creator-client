@@ -66,10 +66,39 @@ const createNoopRouteEnginePersistence = () => ({
 });
 
 const DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID = "dialogue-character-sprite";
+const LAYOUT_EDITOR_ROTATION_TARGET_ID = "selected-border-rotate";
 const INTERACTION_SOUND_KEYS = ["hover", "click", "rightClick"];
 const VIDEO_ASSET_READY_TIMEOUT_MS = 3000;
 const VIDEO_ASSET_WARMUP_TIMEOUT_MS = 2500;
 const VIDEO_ASSET_FRAME_WARMUP_TIMEOUT_MS = 500;
+
+const isLayoutEditorDragTarget = (targetId) => {
+  return (
+    targetId === "selected-border" ||
+    targetId === LAYOUT_EDITOR_ROTATION_TARGET_ID ||
+    targetId?.startsWith("selected-border-resize-")
+  );
+};
+
+const createLayoutEditorDragPayload = (
+  payload,
+  { includePosition = false } = {},
+) => {
+  const event = payload?._event ?? {};
+  const rotationTarget = event.id === LAYOUT_EDITOR_ROTATION_TARGET_ID;
+  const dragPayload = {
+    targetId: event.id,
+    rotationPivotX: payload?.rotationPivotX,
+    rotationPivotY: payload?.rotationPivotY,
+  };
+
+  if (includePosition) {
+    dragPayload.x = rotationTarget ? event.x : Math.round(event.x);
+    dragPayload.y = rotationTarget ? event.y : Math.round(event.y);
+  }
+
+  return dragPayload;
+};
 
 const normalizeGraphicsInteractionSoundVolume = (value) => {
   if (value === undefined || value === null) {
@@ -2072,28 +2101,29 @@ export const createGraphicsService = async ({
             eventHandler: (eventName, payload) => {
               const eventId = payload?._event?.id;
               const actions = getRuntimeEventActions(payload);
-              const layoutEditorDragTarget =
-                eventId === "selected-border" ||
-                eventId?.startsWith("selected-border-resize-");
+              const layoutEditorDragTarget = isLayoutEditorDragTarget(eventId);
               if (eventName === "dragMove") {
                 if (layoutEditorDragTarget) {
-                  subject.dispatch("border-drag-move", {
-                    x: Math.round(payload._event.x),
-                    y: Math.round(payload._event.y),
-                    targetId: eventId,
-                  });
+                  subject.dispatch(
+                    "border-drag-move",
+                    createLayoutEditorDragPayload(payload, {
+                      includePosition: true,
+                    }),
+                  );
                 }
               } else if (eventName === "dragStart") {
                 if (layoutEditorDragTarget) {
-                  subject.dispatch("border-drag-start", {
-                    targetId: eventId,
-                  });
+                  subject.dispatch(
+                    "border-drag-start",
+                    createLayoutEditorDragPayload(payload),
+                  );
                 }
               } else if (eventName === "dragEnd") {
                 if (layoutEditorDragTarget) {
-                  subject.dispatch("border-drag-end", {
-                    targetId: eventId,
-                  });
+                  subject.dispatch(
+                    "border-drag-end",
+                    createLayoutEditorDragPayload(payload),
+                  );
                 }
               }
 

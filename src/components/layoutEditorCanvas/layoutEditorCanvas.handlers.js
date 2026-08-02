@@ -4,6 +4,7 @@ import {
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import { generateId, generatePrefixedId } from "../../internal/id.js";
+import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 import {
   canResizeLayoutEditorItemHeight,
   canResizeLayoutEditorItemWidth,
@@ -22,6 +23,12 @@ import {
   selectLayoutEditorCanvasHover,
   selectNextLayoutEditorCanvasHit,
 } from "./support/layoutEditorCanvasSelection.js";
+import {
+  calculateLayoutEditorRotationDragUpdate,
+  createLayoutEditorRotationDragStart,
+  LAYOUT_EDITOR_ROTATION_TARGET_ID,
+  resolveLayoutEditorRotationPivotFromBounds,
+} from "./support/layoutEditorCanvasRotation.js";
 
 const KEYBOARD_SAVE_DELAY = 1000;
 
@@ -46,12 +53,7 @@ const requireCanvasResolution = (props = {}) => {
   );
 };
 
-const getSelectedItem = (props = {}, pendingUpdatedItem) => {
-  if (pendingUpdatedItem) {
-    return pendingUpdatedItem;
-  }
-
-  const itemId = props.selectedItemId;
+const getLayoutItemById = (props = {}, itemId) => {
   const item = props.layoutState?.elements?.items?.[itemId];
   if (!itemId || !item) {
     return undefined;
@@ -61,6 +63,14 @@ const getSelectedItem = (props = {}, pendingUpdatedItem) => {
     id: itemId,
     ...item,
   };
+};
+
+const getSelectedItem = (props = {}, pendingUpdatedItem) => {
+  if (pendingUpdatedItem) {
+    return pendingUpdatedItem;
+  }
+
+  return getLayoutItemById(props, props.selectedItemId);
 };
 
 const toStoredItem = (item = {}) => {
@@ -106,7 +116,8 @@ const areCanvasItemsEquivalent = (left, right) => {
     left.x === right.x &&
     left.y === right.y &&
     left.width === right.width &&
-    left.height === right.height
+    left.height === right.height &&
+    (left.rotation ?? 0) === (right.rotation ?? 0)
   );
 };
 
@@ -250,12 +261,105 @@ export const applyCanvasItemResizeChange = ({
   return nextItem;
 };
 
+export const applyCanvasItemRotationChange = ({ item, rotation } = {}) => {
+  if (!item || !Number.isFinite(rotation)) {
+    return item;
+  }
+
+  const normalizedRotation = normalizeLayoutRotation(rotation);
+  if (item.rotation === normalizedRotation) {
+    return item;
+  }
+
+  return {
+    ...item,
+    rotation: normalizedRotation,
+  };
+};
+
 const getDragModeFromTargetId = (targetId) => {
+  if (targetId === LAYOUT_EDITOR_ROTATION_TARGET_ID) {
+    return "rotate";
+  }
+
   if (targetId?.startsWith(RESIZE_TARGET_PREFIX)) {
     return targetId.slice(RESIZE_TARGET_PREFIX.length);
   }
 
   return "move";
+};
+
+const findCanvasTargetBounds = (deps, { targetId, position } = {}) => {
+  if (!targetId || !position) {
+    return undefined;
+  }
+
+  const hits = deps.graphicsService.hitTestElementBounds({
+    x: position.x,
+    y: position.y,
+  });
+
+  for (const hit of hits) {
+    const target = hit.path?.find(({ id }) => id === targetId);
+    if (target?.bounds) {
+      return target.bounds;
+    }
+  }
+
+  return undefined;
+};
+
+const resolveRotationDragPivot = (
+  deps,
+  payload,
+  position,
+  { requireTargetBounds = false } = {},
+) => {
+  const targetBounds = findCanvasTargetBounds(deps, {
+    targetId: payload.targetId,
+    position,
+  });
+  const boundsPivot = resolveLayoutEditorRotationPivotFromBounds({
+    bounds: targetBounds,
+  });
+  if (boundsPivot) {
+    return boundsPivot;
+  }
+
+  if (
+    requireTargetBounds ||
+    !Number.isFinite(payload.rotationPivotX) ||
+    !Number.isFinite(payload.rotationPivotY)
+  ) {
+    return undefined;
+  }
+
+  return {
+    x: payload.rotationPivotX,
+    y: payload.rotationPivotY,
+  };
+};
+
+const startCanvasRotationDrag = (
+  deps,
+  { currentItem, payload, position, requireTargetBounds = false } = {},
+) => {
+  const pivot = resolveRotationDragPivot(deps, payload, position, {
+    requireTargetBounds,
+  });
+  const dragStart = createLayoutEditorRotationDragStart({
+    x: position?.x,
+    y: position?.y,
+    pivotX: pivot?.x,
+    pivotY: pivot?.y,
+    itemRotation: currentItem.rotation,
+  });
+  if (!dragStart) {
+    return false;
+  }
+
+  deps.store.setRotationDragStart({ dragStart });
+  return true;
 };
 
 const isDeepSelectModifierActive = (event = {}) => {
@@ -299,6 +403,12 @@ const getCanvasUnitsPerCssPixel = (deps, props = deps.props) => {
   const { width } = requireCanvasResolution(props);
   return width / canvasBounds.width;
 };
+
+const toMoveDragPosition = (position) => ({
+  ...position,
+  x: Math.round(position.x),
+  y: Math.round(position.y),
+});
 
 const hitTestCanvasPosition = (deps, position) => {
   if (!position) {
@@ -519,6 +629,78 @@ const dispatchCanvasSelection = (deps, selection) => {
   if (shouldRefreshSelectedOccurrence) {
     renderCachedCanvasChrome(deps);
   }
+};
+
+const selectCanvasPointerDragTarget = (deps, { event, hitResolution } = {}) => {
+  const hoveredSelection = deps.store.selectHoveredSelection();
+  const hoveredSelectionIsUnderPointer = hitResolution.path?.some(
+    ({ itemId, occurrenceId }) => {
+      return (
+        itemId === hoveredSelection?.itemId &&
+        occurrenceId === hoveredSelection?.occurrenceId
+      );
+    },
+  );
+  if (hoveredSelectionIsUnderPointer) {
+    return hoveredSelection;
+  }
+
+  return selectLayoutEditorCanvasHover(hitResolution, {
+    deepSelect: isDeepSelectModifierActive(event),
+    selectedOccurrenceId: deps.store.selectResolvedSelectedOccurrenceId(),
+  });
+};
+
+const startCanvasPointerSelectionDrag = (
+  deps,
+  { event, pointerGesture } = {},
+) => {
+  const selection = pointerGesture.dragSelection;
+
+  deps.store.setPointerGesture({
+    gesture: {
+      ...pointerGesture,
+      moved: true,
+    },
+  });
+  clearCanvasHover(deps);
+
+  if (!selection) {
+    return false;
+  }
+
+  dispatchCanvasSelection(deps, selection);
+  const currentItem = getLayoutItemById(deps.props, selection.itemId);
+  const canMove =
+    currentItem &&
+    Number.isFinite(currentItem.x) &&
+    Number.isFinite(currentItem.y) &&
+    deps.props.disableInteraction !== true &&
+    deps.props.disableMoveDrag !== true;
+  if (!canMove) {
+    return false;
+  }
+
+  deps.store.setPointerGesture({
+    gesture: {
+      ...pointerGesture,
+      moved: true,
+      directDragItemId: selection.itemId,
+    },
+  });
+  deps.store.setPendingUpdatedItem({ updatedItem: currentItem });
+  deps.store.startDragging({ dragMode: "move" });
+  deps.store.setDragStartPosition({
+    x: Math.round(pointerGesture.startX),
+    y: Math.round(pointerGesture.startY),
+    itemStartX: currentItem.x,
+    itemStartY: currentItem.y,
+    itemStartWidth: currentItem.width,
+    itemStartHeight: currentItem.height,
+  });
+  event.currentTarget?.setPointerCapture?.(event.pointerId);
+  deps.render();
+  return true;
 };
 
 export const applyCanvasItemKeyboardChange = ({
@@ -808,6 +990,13 @@ export const handleCanvasPointerMove = (deps, payload) => {
   const pointerGesture = deps.store.selectPointerGesture();
   if (
     pointerGesture?.pointerId === event.pointerId &&
+    pointerGesture.directDragItemId
+  ) {
+    return handleBorderDragMove(deps, toMoveDragPosition(position));
+  }
+
+  if (
+    pointerGesture?.pointerId === event.pointerId &&
     pointerGesture.moved !== true
   ) {
     const distance = Math.hypot(
@@ -816,13 +1005,13 @@ export const handleCanvasPointerMove = (deps, payload) => {
     );
 
     if (distance >= POINTER_DRAG_THRESHOLD) {
-      deps.store.setPointerGesture({
-        gesture: {
-          ...pointerGesture,
-          moved: true,
-        },
+      const startedDragging = startCanvasPointerSelectionDrag(deps, {
+        event,
+        pointerGesture,
       });
-      clearCanvasHover(deps);
+      if (startedDragging) {
+        return handleBorderDragMove(deps, toMoveDragPosition(position));
+      }
       return;
     }
   }
@@ -848,6 +1037,10 @@ export const handleCanvasPointerDown = (deps, payload) => {
 
   const position = toRendererPointerPosition(deps, event);
   const hitResolution = hitTestCanvasPosition(deps, position);
+  const dragSelection = selectCanvasPointerDragTarget(deps, {
+    event,
+    hitResolution,
+  });
   deps.store.clearPendingClickGesture();
 
   if (!position || hitResolution.blocked === true) {
@@ -861,7 +1054,10 @@ export const handleCanvasPointerDown = (deps, payload) => {
       pointerId: event.pointerId,
       startClientX: position.clientX,
       startClientY: position.clientY,
+      startX: position.x,
+      startY: position.y,
       hitResolution,
+      dragSelection,
       selectedItemIdAtStart: deps.props.selectedItemId,
       moved: false,
     },
@@ -876,6 +1072,12 @@ export const handleCanvasPointerUp = (deps, payload) => {
   }
 
   deps.store.clearPointerGesture();
+  if (pointerGesture.directDragItemId) {
+    deps.store.clearPendingClickGesture();
+    event.currentTarget?.releasePointerCapture?.(event.pointerId);
+    return handleBorderDragEnd(deps);
+  }
+
   if (pointerGesture.moved === true) {
     deps.store.clearPendingClickGesture();
     return;
@@ -890,9 +1092,14 @@ export const handleCanvasPointerUp = (deps, payload) => {
 };
 
 export const handleCanvasPointerCancel = (deps) => {
+  const pointerGesture = deps.store.selectPointerGesture();
   deps.store.clearPointerGesture();
   deps.store.clearPendingClickGesture();
   clearCanvasHover(deps);
+
+  if (pointerGesture?.directDragItemId) {
+    return handleBorderDragEnd(deps);
+  }
 };
 
 export const handleCanvasClick = (deps, payload) => {
@@ -1018,14 +1225,21 @@ const handleBorderDragStart = (deps, payload = {}) => {
   const dragMode = getDragModeFromTargetId(payload.targetId);
   if (
     dragMode !== "move" &&
+    dragMode !== "rotate" &&
     !canResizeCanvasItemForEdge(currentItem, dragMode)
   ) {
     return;
   }
 
-  deps.store.startDragging({
-    dragMode,
-  });
+  deps.store.startDragging({ dragMode });
+  if (dragMode === "rotate") {
+    startCanvasRotationDrag(deps, {
+      currentItem,
+      payload,
+      position: deps.store.selectLastPointerPosition(),
+      requireTargetBounds: true,
+    });
+  }
   deps.store.clearPointerGesture();
   deps.store.clearPendingClickGesture();
   clearCanvasHover(deps);
@@ -1047,6 +1261,15 @@ const handleBorderDragMove = async (deps, payload = {}) => {
 
   const dragging = deps.store.selectDragging();
   if (!dragging.dragStartPosition) {
+    if (dragging.dragMode === "rotate") {
+      startCanvasRotationDrag(deps, {
+        currentItem,
+        payload,
+        position: payload,
+      });
+      return;
+    }
+
     deps.store.setDragStartPosition({
       x: payload.x,
       y: payload.y,
@@ -1058,21 +1281,39 @@ const handleBorderDragMove = async (deps, payload = {}) => {
     return;
   }
 
-  const updatedItem =
-    dragging.dragMode === "move"
-      ? applyCanvasItemDragChange({
-          item: currentItem,
-          dragStartPosition: dragging.dragStartPosition,
-          x: payload.x,
-          y: payload.y,
-        })
-      : applyCanvasItemResizeChange({
-          item: currentItem,
-          dragStartPosition: dragging.dragStartPosition,
-          resizeEdge: dragging.dragMode,
-          x: payload.x,
-          y: payload.y,
-        });
+  let updatedItem;
+
+  if (dragging.dragMode === "move") {
+    updatedItem = applyCanvasItemDragChange({
+      item: currentItem,
+      dragStartPosition: dragging.dragStartPosition,
+      x: payload.x,
+      y: payload.y,
+    });
+  } else if (dragging.dragMode === "rotate") {
+    const rotationUpdate = calculateLayoutEditorRotationDragUpdate({
+      dragStart: dragging.dragStartPosition,
+      x: payload.x,
+      y: payload.y,
+    });
+    if (!rotationUpdate) {
+      return;
+    }
+
+    deps.store.updateRotationDragProgress(rotationUpdate);
+    updatedItem = applyCanvasItemRotationChange({
+      item: currentItem,
+      rotation: rotationUpdate.rotation,
+    });
+  } else {
+    updatedItem = applyCanvasItemResizeChange({
+      item: currentItem,
+      dragStartPosition: dragging.dragStartPosition,
+      resizeEdge: dragging.dragMode,
+      x: payload.x,
+      y: payload.y,
+    });
+  }
   if (updatedItem === currentItem) {
     return;
   }

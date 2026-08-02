@@ -1455,6 +1455,7 @@ layoutEditPanel:
   qualityLabel: "质量"
   qualitySummaryLabel: "质量"
   ratioLabel: "比例"
+  rotationLabel: "旋转"
   removeButton: "移除"
   repeatEdgePixelsLabel: "重复边缘像素"
   repeatEdgeSummary: "重复边缘"

@@ -92,6 +92,7 @@ const isBlockingEditorChromeHit = (hit) => {
 
   return (
     targetId === `${EDITOR_CHROME_ID_PREFIX}-anchor` ||
+    targetId === `${EDITOR_CHROME_ID_PREFIX}-rotate` ||
     targetId?.startsWith(`${EDITOR_CHROME_ID_PREFIX}-resize-`)
   );
 };

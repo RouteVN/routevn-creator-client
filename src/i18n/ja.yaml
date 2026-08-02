@@ -1455,6 +1455,7 @@ layoutEditPanel:
   qualityLabel: "品質"
   qualitySummaryLabel: "品質"
   ratioLabel: "比率"
+  rotationLabel: "回転"
   removeButton: "削除"
   repeatEdgePixelsLabel: "端ピクセルを繰り返す"
   repeatEdgeSummary: "端を繰り返す"

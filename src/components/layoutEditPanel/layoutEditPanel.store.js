@@ -14,6 +14,7 @@ import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorEle
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 import {
   getVisibilityConditionCharacterValueOptions,
   toVisibilityConditionTargetTypeByTarget,
@@ -134,6 +135,7 @@ const STATIC_LABEL_COPY_KEYS = {
   Particle: "particleLabel",
   Position: "positionSection",
   Ratio: "ratioLabel",
+  Rotation: "rotationLabel",
   Revealing: "revealingLabel",
   Right: "rightOption",
   Scroll: "scrollSection",
@@ -1314,7 +1316,13 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
 };
 
 export const setValues = ({ state }, { values } = {}) => {
-  state.values = values ?? {};
+  const nextValues = values ?? {};
+  state.values = Number.isFinite(nextValues.rotation)
+    ? {
+        ...nextValues,
+        rotation: normalizeLayoutRotation(nextValues.rotation),
+      }
+    : nextValues;
   state.actionsEditorActions = getLayoutInteractionActions(
     state.values,
     state.activeInteractionType,

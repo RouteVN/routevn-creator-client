@@ -34,6 +34,7 @@ import {
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
+import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 
 const ACTION_INTERACTION_TYPES = [
   "click",
@@ -86,6 +87,7 @@ const WHEEL_INCREMENT_FIELD_CONFIG = {
   height: { step: 1, fastStep: 10 },
   gapX: { step: 1, fastStep: 10 },
   gapY: { step: 1, fastStep: 10 },
+  rotation: { defaultValue: 0, step: 1, fastStep: 15 },
   opacity: {
     defaultValue: 1,
     step: 0.01,
@@ -470,6 +472,10 @@ const applyPanelValueUpdate = (
       ? Math.round(Number(value))
       : value;
 
+  if (name === "rotation" && Number.isFinite(Number(normalizedValue))) {
+    normalizedValue = normalizeLayoutRotation(Number(normalizedValue));
+  }
+
   if (
     SOUND_ID_FIELDS.has(name) &&
     (normalizedValue === "" || normalizedValue === null)
@@ -690,6 +696,23 @@ export const setSelectedElementMetrics = (deps, { metrics } = {}) => {
 
 export const getSelectedElementMetrics = (deps) => {
   return deps.store.selectSelectedElementMetrics?.();
+};
+
+export const setTransientValues = (deps, { values = {} } = {}) => {
+  const { store, render } = deps;
+
+  for (const [name, value] of Object.entries(values)) {
+    const normalizedValue =
+      name === "rotation" && Number.isFinite(Number(value))
+        ? normalizeLayoutRotation(Number(value))
+        : value;
+
+    store.updateValueProperty({
+      name,
+      value: normalizedValue,
+    });
+  }
+  render();
 };
 
 export const handleOnUpdate = (deps, payload) => {
