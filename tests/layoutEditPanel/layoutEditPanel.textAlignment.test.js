@@ -55,6 +55,7 @@ describe("layoutEditPanel text alignment", () => {
 
     expect(alignmentItem).toMatchObject({
       type: "segmented-control",
+      stacked: true,
       value: "center",
       options: [
         {

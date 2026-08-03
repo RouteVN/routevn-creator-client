@@ -452,6 +452,7 @@ layoutSections:
     label: Text Alignment
     items:
       - type: segmented-control
+        stacked: true
         label: Alignment
         name: textStyle.align
         value: "${values.textStyle.align}"
