@@ -53,7 +53,7 @@ const PERSIST_SPRITE_OPTIONS = [
 const DEFAULT_TEXT_SPEED = 75;
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
-const SPEAKER_SPRITE_LABEL = "Speaker sprite";
+const SPEAKER_SPRITE_LABEL = "Dialogue sprite";
 const SPEAKER_SPRITE_TOOLTIP =
   "Speaker's face that appears on top of the dialogue box. For body sprites use the Character Sprites action";
 const UNGROUPED_CHARACTER_GROUP_ID = "__ungrouped_dialogue_characters__";
@@ -426,10 +426,10 @@ export const createInitialState = () => ({
           {
             name: "characterId",
             type: "select",
-            label: "Speaker",
+            label: "Character",
             description: "",
             required: false,
-            placeholder: "Choose a speaker...",
+            placeholder: "Choose a character...",
             options: [],
           },
           {
@@ -446,25 +446,30 @@ export const createInitialState = () => ({
             ],
           },
           {
-            name: "customCharacterName",
-            type: "segmented-control",
-            label: "Custom Speaker Name",
-            description: "",
-            required: true,
-            clearable: false,
-            options: [
-              { value: false, label: "No" },
-              { value: true, label: "Yes" },
+            type: "row",
+            fields: [
+              {
+                name: "customCharacterName",
+                type: "segmented-control",
+                label: "Custom name",
+                description: "",
+                required: true,
+                clearable: false,
+                options: [
+                  { value: false, label: "No" },
+                  { value: true, label: "Yes" },
+                ],
+              },
+              {
+                $when: "values.customCharacterName == true",
+                name: "characterName",
+                type: "input-text",
+                label: "Speaker Name",
+                description: "",
+                required: true,
+                placeholder: "Enter speaker name",
+              },
             ],
-          },
-          {
-            $when: "values.customCharacterName == true",
-            name: "characterName",
-            type: "input-text",
-            label: "Speaker Name",
-            description: "",
-            required: true,
-            placeholder: "Enter speaker name",
           },
           {
             type: "slot",

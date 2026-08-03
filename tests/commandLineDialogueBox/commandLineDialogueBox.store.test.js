@@ -106,13 +106,13 @@ describe("commandLineDialogueBox.store", () => {
     expect(
       findFormField(viewData, (field) => field.name === "characterId"),
     ).toMatchObject({
-      label: "Speaker",
-      placeholder: "Choose a speaker...",
+      label: "Character",
+      placeholder: "Choose a character...",
     });
     expect(
       findFormField(viewData, (field) => field.name === "customCharacterName"),
     ).toMatchObject({
-      label: "Custom Speaker Name",
+      label: "Custom name",
       type: "segmented-control",
       value: true,
     });
@@ -131,7 +131,7 @@ describe("commandLineDialogueBox.store", () => {
       type: "slot",
     });
     expect(viewData).toMatchObject({
-      speakerSpriteLabel: "Speaker sprite",
+      speakerSpriteLabel: "Dialogue sprite",
       speakerSpriteTooltip: {
         open: false,
         x: 0,
@@ -167,15 +167,15 @@ describe("commandLineDialogueBox.store", () => {
       "Speaker",
       "Options",
     ]);
+    const speakerFields = viewData.form.fields[1].fields;
     expect(
-      viewData.form.fields[1].fields.map((field) => field.name ?? field.slot),
-    ).toEqual([
-      "characterId",
-      "persistCharacter",
-      "customCharacterName",
-      "characterName",
-      "characterSprite",
-    ]);
+      speakerFields.map((field) => field.name ?? field.slot ?? field.type),
+    ).toEqual(["characterId", "persistCharacter", "row", "characterSprite"]);
+    expect(
+      speakerFields
+        .find((field) => field.type === "row")
+        .fields.map((field) => field.name),
+    ).toEqual(["customCharacterName", "characterName"]);
     expect(viewData.form.fields[2].fields.map((field) => field.name)).toEqual([
       "customizeTextSpeed",
       "textSpeed",

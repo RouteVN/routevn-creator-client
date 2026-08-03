@@ -5,7 +5,7 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "Add Value": "addValueButton",
   "Choose a control...": "chooseControlPlaceholder",
   "Choose a layout...": "chooseLayoutPlaceholder",
-  "Choose a speaker...": "chooseSpeakerPlaceholder",
+  "Choose a character...": "chooseCharacterPlaceholder",
   "Choose a string variable for this input field.":
     "chooseStringVariableFieldWarning",
   "Choose a string variable...": "chooseStringVariablePlaceholder",
