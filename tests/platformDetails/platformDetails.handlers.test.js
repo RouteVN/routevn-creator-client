@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleAddPlatformButtonClick,
   handleAddPlatformMenuItemClick,
   handleAfterMount,
   handleBeforeMount,
@@ -36,6 +37,7 @@ const createDeps = () => ({
     closeAddPlatformMenu: vi.fn(),
     closePlatformEditDialog: vi.fn(),
     closePlatformEditIconCropDialog: vi.fn(),
+    openAddPlatformMenu: vi.fn(),
     openPlatformCreateDialog: vi.fn(),
     selectPlatformDialogState: vi.fn(() => ({
       mode: "edit",
@@ -55,6 +57,24 @@ const createDeps = () => ({
 });
 
 describe("platformDetails handlers", () => {
+  it("opens the add-platform menu below the left edge of its button", () => {
+    const deps = createDeps();
+
+    handleAddPlatformButtonClick(deps, {
+      _event: {
+        currentTarget: {
+          getBoundingClientRect: () => ({ left: 120, bottom: 80 }),
+        },
+      },
+    });
+
+    expect(deps.store.openAddPlatformMenu).toHaveBeenCalledWith({
+      x: 120,
+      y: 80,
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
+  });
+
   it("configures the page before mount", () => {
     const deps = createDeps();
 

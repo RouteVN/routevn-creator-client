@@ -1,8 +1,6 @@
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
 const PLATFORM_IDS = ["web", "windows", "macos"];
-// TODO: Add Windows and macOS back when native platform releases are ready.
-const VISIBLE_PLATFORM_IDS = ["web"];
 
 const createPlatformApplicationInfo = (platform) => {
   const applicationInfo = {
@@ -278,7 +276,7 @@ export const selectIsPlatformEditIconCropDialogOpen = ({ state }) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectPlatformDetailsPageCopy(i18n);
-  const createdPlatforms = VISIBLE_PLATFORM_IDS.filter(
+  const createdPlatforms = PLATFORM_IDS.filter(
     (platform) => state.platformApplicationInfo[platform],
   );
   const selectedPlatformInfo = state.selectedPlatform
@@ -290,7 +288,7 @@ export const selectViewData = ({ state, i18n }) => {
   return {
     addPlatformButtonLabel: copy.addPlatformButtonLabel,
     addPlatformMenu: state.addPlatformMenu,
-    canAddPlatform: createdPlatforms.length < VISIBLE_PLATFORM_IDS.length,
+    canAddPlatform: createdPlatforms.length < PLATFORM_IDS.length,
     clickToUploadLabel: copy.clickToUpload,
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
     detailFillHeight: false,
@@ -364,7 +362,7 @@ export const setPlatformApplicationInfo = (
     target.category = applicationInfo?.category ?? "";
   }
 
-  if (!state.selectedPlatform && VISIBLE_PLATFORM_IDS.includes(platform)) {
+  if (!state.selectedPlatform) {
     state.selectedPlatform = platform;
   }
 };
@@ -376,7 +374,7 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 
 export const setSelectedPlatform = ({ state }, { platform } = {}) => {
   if (
-    VISIBLE_PLATFORM_IDS.includes(platform) &&
+    PLATFORM_IDS.includes(platform) &&
     state.platformApplicationInfo[platform]
   ) {
     state.selectedPlatform = platform;
@@ -388,7 +386,7 @@ export const openAddPlatformMenu = ({ state, i18n }, { x, y } = {}) => {
   state.addPlatformMenu.isOpen = true;
   state.addPlatformMenu.x = x ?? 0;
   state.addPlatformMenu.y = y ?? 0;
-  state.addPlatformMenu.items = VISIBLE_PLATFORM_IDS.filter(
+  state.addPlatformMenu.items = PLATFORM_IDS.filter(
     (platform) => !state.platformApplicationInfo[platform],
   ).map((platform) => ({
     label: getPlatformTabLabel(platform, copy),

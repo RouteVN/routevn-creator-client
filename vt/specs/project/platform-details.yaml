@@ -67,11 +67,14 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rtgl-dropdown-menu#addPlatformMenu #option0"
+    selector: "rtgl-dropdown-menu#addPlatformMenu [role='menuitem']:has-text('Web')"
     state: visible
     timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: screenshot
   - action: select
-    selector: "rtgl-dropdown-menu#addPlatformMenu #option0"
+    selector: "rtgl-dropdown-menu#addPlatformMenu [role='menuitem']:has-text('Web')"
     steps:
       - action: click
   - action: waitFor

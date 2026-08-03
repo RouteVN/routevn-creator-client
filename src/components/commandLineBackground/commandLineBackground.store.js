@@ -844,7 +844,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     {
       type: "slot",
       slot: "background",
-      description: "Background",
+      label: "Background",
     },
     {
       name: "colorId",

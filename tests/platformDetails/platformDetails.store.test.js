@@ -12,7 +12,7 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("platformDetails.store", () => {
-  it("starts empty and offers only Web", () => {
+  it("starts empty and offers every supported platform", () => {
     const state = createInitialState();
 
     let viewData = selectViewData({ state, i18n: EN_I18N });
@@ -29,7 +29,11 @@ describe("platformDetails.store", () => {
       isOpen: true,
       x: 100,
       y: 200,
-      items: [{ label: "Web", type: "item", value: "web" }],
+      items: [
+        { label: "Web", type: "item", value: "web" },
+        { label: "Windows", type: "item", value: "windows" },
+        { label: "macOS", type: "item", value: "macos" },
+      ],
     });
   });
 
@@ -76,7 +80,7 @@ describe("platformDetails.store", () => {
     });
   });
 
-  it("keeps native platform details out of the visible tabs", () => {
+  it("shows native platform details in the visible tabs", () => {
     const state = createInitialState();
     setPlatformApplicationInfo(
       { state },
@@ -98,9 +102,9 @@ describe("platformDetails.store", () => {
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData).toMatchObject({
-      hasPlatformDetails: false,
-      platformTabs: [],
-      selectedPlatform: undefined,
+      hasPlatformDetails: true,
+      platformTabs: [{ id: "macos", label: "macOS" }],
+      selectedPlatform: "macos",
       selectedResourceId: "platformDetails",
     });
     expect(state.platformApplicationInfo.macos).toMatchObject({
@@ -132,8 +136,11 @@ describe("platformDetails.store", () => {
     expect(state.platformEditIconFileId).toBeUndefined();
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(viewData.addPlatformMenu.items).toEqual([]);
-    expect(viewData.canAddPlatform).toBe(false);
+    expect(viewData.addPlatformMenu.items).toEqual([
+      { label: "Windows", type: "item", value: "windows" },
+      { label: "macOS", type: "item", value: "macos" },
+    ]);
+    expect(viewData.canAddPlatform).toBe(true);
     expect(viewData.platformEditForm.fields).toContainEqual(
       expect.objectContaining({
         name: "applicationIdentifier",

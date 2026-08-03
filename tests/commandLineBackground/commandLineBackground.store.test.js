@@ -102,6 +102,9 @@ describe("commandLineBackground.store", () => {
       },
     );
     const viewData = selectViewData({ state });
+    const backgroundField = viewData.dialogueForm.form.fields.find(
+      (field) => field.slot === "background",
+    );
     const transformField = viewData.dialogueForm.form.fields.find(
       (field) => field.name === "transformId",
     );
@@ -124,6 +127,11 @@ describe("commandLineBackground.store", () => {
       (field) => field.name === "playbackContinuity",
     );
 
+    expect(backgroundField).toMatchObject({
+      type: "slot",
+      label: "Background",
+    });
+    expect(backgroundField.description).toBeUndefined();
     expect(transformField).toMatchObject({
       label: "Predefined Transform",
       type: "select",

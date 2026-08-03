@@ -55,7 +55,7 @@ export const handlePlatformTabClick = (deps, payload) => {
 export const handleAddPlatformButtonClick = (deps, payload) => {
   const { render, store } = deps;
   const rect = payload._event.currentTarget.getBoundingClientRect();
-  store.openAddPlatformMenu({ x: rect.right, y: rect.bottom });
+  store.openAddPlatformMenu({ x: rect.left, y: rect.bottom });
   render();
 };
 
