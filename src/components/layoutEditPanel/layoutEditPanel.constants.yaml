@@ -118,12 +118,6 @@ layoutSections:
       - type: group
         stacked: true
         fields:
-          - type: clickable-value
-            label: Rotation
-            name: rotation
-            value: "${values.rotation}"
-            metaValue: °
-            popoverForm: *numberPopoverForm
           - "$when": "supportsAnchor"
             type: anchor-grid
             label: Anchor
@@ -166,6 +160,12 @@ layoutSections:
                 value:
                   x: 1
                   y: 1
+          - type: clickable-value
+            label: Rotation
+            name: rotation
+            value: "${values.rotation}"
+            metaValue: °
+            popoverForm: *numberPopoverForm
   - "$when": "supportsDirection || supportsScroll"
     label: Layout
     items:

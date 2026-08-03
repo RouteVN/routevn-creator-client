@@ -95,8 +95,8 @@ describe("layoutEditPanel rotation", () => {
       expect(transformGroup.stacked).toBe(true);
       if (resourceType === "layouts") {
         expect(transformGroup.fields.map((field) => field.name)).toEqual([
-          "rotation",
           "anchor",
+          "rotation",
         ]);
       }
       expect(appearanceGroup.stacked).toBe(true);
