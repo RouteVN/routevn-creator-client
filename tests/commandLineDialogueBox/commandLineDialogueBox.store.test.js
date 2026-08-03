@@ -170,7 +170,7 @@ describe("commandLineDialogueBox.store", () => {
     const speakerFields = viewData.form.fields[1].fields;
     expect(
       speakerFields.map((field) => field.name ?? field.slot ?? field.type),
-    ).toEqual(["characterId", "persistCharacter", "row", "characterSprite"]);
+    ).toEqual(["characterId", "row", "persistCharacter", "characterSprite"]);
     expect(
       speakerFields
         .find((field) => field.type === "row")

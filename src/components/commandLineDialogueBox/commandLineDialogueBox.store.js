@@ -433,19 +433,6 @@ export const createInitialState = () => ({
             options: [],
           },
           {
-            $when: "values.characterId || values.customCharacterName",
-            name: "persistCharacter",
-            type: "segmented-control",
-            label: "Persist Speaker",
-            description: "",
-            required: true,
-            clearable: false,
-            options: [
-              { value: false, label: "No" },
-              { value: true, label: "Yes" },
-            ],
-          },
-          {
             type: "row",
             fields: [
               {
@@ -469,6 +456,19 @@ export const createInitialState = () => ({
                 required: true,
                 placeholder: "Enter speaker name",
               },
+            ],
+          },
+          {
+            $when: "values.characterId || values.customCharacterName",
+            name: "persistCharacter",
+            type: "segmented-control",
+            label: "Persist Speaker",
+            description: "",
+            required: true,
+            clearable: false,
+            options: [
+              { value: false, label: "No" },
+              { value: true, label: "Yes" },
             ],
           },
           {
