@@ -186,6 +186,13 @@ describe("variables.handlers", () => {
       expr: {
         add: [{ var: "variables.variable1" }, 5],
       },
+      examples: [
+        {
+          id: "example-1",
+          name: "Score with bonus",
+          input: { variables: { variable1: 10 } },
+        },
+      ],
     };
 
     await handleVariableCreated(deps, {

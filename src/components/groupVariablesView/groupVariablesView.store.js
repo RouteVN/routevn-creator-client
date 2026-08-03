@@ -48,6 +48,14 @@ import {
   resolveExcludedOperationVariableId,
   toVariablePath,
 } from "./support/computedOperationDraft.js";
+import {
+  buildComputedExampleInput,
+  createComputedExampleDefaultValues,
+  createComputedExampleInputItems,
+  evaluateComputedExample,
+  formatComputedExampleValue,
+  resolveComputedExampleInputValue,
+} from "./support/computedExamples.js";
 
 const DEFAULT_FORM_VALUES = {
   name: "",
@@ -230,6 +238,67 @@ const createEnumValueForm = (copy = {}) => ({
   },
 });
 
+const createComputedExampleForm = ({
+  copy = {},
+  inputItems = [],
+  mode = "add",
+} = {}) => ({
+  title:
+    mode === "edit"
+      ? (copy.computedEditExampleTitle ?? "Edit Example")
+      : (copy.computedAddExampleTitle ?? "Add Example"),
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: copy.nameLabel ?? "Name",
+      required: true,
+    },
+    ...inputItems.map((item) => {
+      const field = {
+        name: item.formName,
+        type:
+          item.type === "number"
+            ? "input-number"
+            : item.type === "boolean"
+              ? "select"
+              : item.type === "object"
+                ? "input-textarea"
+                : "input-text",
+        label: item.name,
+        description: getVariableTypeLabel(item.type, copy),
+        required: item.type !== "string",
+      };
+      if (item.type === "boolean") {
+        field.clearable = false;
+        field.options = [
+          { value: true, label: copy.booleanTrueLabel ?? "True" },
+          { value: false, label: copy.booleanFalseLabel ?? "False" },
+        ];
+      }
+      return field;
+    }),
+    ...(inputItems.length === 0
+      ? [{ type: "slot", slot: "computed-example-empty" }]
+      : []),
+    { type: "slot", slot: "computed-example-result" },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label:
+          mode === "edit"
+            ? (copy.computedUpdateExampleButton ?? "Update Example")
+            : (copy.computedAddExampleButton ?? "Add Example"),
+      },
+    ],
+  },
+});
+
 const createVariableForm = (copy = {}) => ({
   title: copy.addVariableTitle ?? "Add Variable",
   fields: [
@@ -238,11 +307,6 @@ const createVariableForm = (copy = {}) => ({
       type: "input-text",
       label: copy.nameLabel ?? "Name",
       required: true,
-      tooltip: {
-        content:
-          copy.nameRequiredTooltip ??
-          "This field is mandatory and must be unique",
-      },
     },
     {
       name: "description",
@@ -404,6 +468,16 @@ export const createInitialState = () => ({
   editingItemId: null,
   operationDraft: undefined,
   conditionalDraft: undefined,
+  computedExamples: [],
+  computedExampleDialog: {
+    isOpen: false,
+    key: 0,
+    mode: "add",
+    editingExampleId: undefined,
+    inputItems: [],
+    defaultValues: {},
+    draftValues: {},
+  },
   operationChoiceMenu: {
     isOpen: false,
     x: 0,
@@ -468,6 +542,47 @@ export const selectDefaultValues = ({ state }) => {
   return state.defaultValues;
 };
 
+const collectDraftVariablePaths = (value, paths) => {
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      collectDraftVariablePaths(item, paths);
+    });
+    return;
+  }
+  if (value === null || typeof value !== "object") {
+    return;
+  }
+  if (value.source === "variable" && value.variablePath) {
+    paths.add(value.variablePath);
+    return;
+  }
+  Object.values(value).forEach((item) => {
+    collectDraftVariablePaths(item, paths);
+  });
+};
+
+export const selectComputedExampleInputDefinition = ({ state }) => {
+  if (state.defaultValues.computed) {
+    return state.defaultValues.computed;
+  }
+  const variablePaths = new Set();
+  collectDraftVariablePaths(state.operationDraft, variablePaths);
+  collectDraftVariablePaths(state.conditionalDraft, variablePaths);
+  return {
+    expr: {
+      exampleInputs: [...variablePaths].map((variablePath) => ({
+        var: variablePath,
+      })),
+    },
+  };
+};
+
+export const selectComputedExampleDialog = ({ state }) =>
+  state.computedExampleDialog;
+
+export const selectComputedExampleDialogDefaultValues = ({ state }) =>
+  state.computedExampleDialog.defaultValues;
+
 export const selectSubmitContext = ({ state }) => ({
   defaultValues: state.defaultValues,
   targetGroupId: state.targetGroupId,
@@ -507,6 +622,8 @@ export const updateFormValues = ({ state }, payload = {}) => {
   ) {
     state.operationDraft = undefined;
     state.conditionalDraft = undefined;
+    state.computedExamples = [];
+    resetComputedExampleDialog(state);
     state.defaultValues.computed = undefined;
     state.operationChoiceMenu.isOpen = false;
     state.operationBlockMenu.isOpen = false;
@@ -519,6 +636,15 @@ export const toggleDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = !state.isDialogOpen;
 };
 
+const resetComputedExampleDialog = (state) => {
+  state.computedExampleDialog.isOpen = false;
+  state.computedExampleDialog.mode = "add";
+  state.computedExampleDialog.editingExampleId = undefined;
+  state.computedExampleDialog.inputItems = [];
+  state.computedExampleDialog.defaultValues = {};
+  state.computedExampleDialog.draftValues = {};
+};
+
 export const openAddDialog = (
   { state },
   { groupId, valueSource = "variable" } = {},
@@ -529,6 +655,8 @@ export const openAddDialog = (
   state.editingItemId = null;
   state.operationDraft = undefined;
   state.conditionalDraft = undefined;
+  state.computedExamples = [];
+  resetComputedExampleDialog(state);
   state.defaultValues = structuredClone(DEFAULT_FORM_VALUES);
   state.defaultValues.valueSource = valueSource;
   state.operationChoiceMenu.isOpen = false;
@@ -554,6 +682,10 @@ export const openEditDialog = (
   state.operationDraft = state.conditionalDraft
     ? undefined
     : createOperationDraftFromComputed(defaultValues.computed);
+  state.computedExamples = Array.isArray(defaultValues.computed?.examples)
+    ? structuredClone(defaultValues.computed.examples)
+    : [];
+  resetComputedExampleDialog(state);
   const nextDefaultValues = {
     ...structuredClone(DEFAULT_FORM_VALUES),
     ...defaultValues,
@@ -583,6 +715,8 @@ export const closeDialog = ({ state }, _payload = {}) => {
   state.editingItemId = null;
   state.operationDraft = undefined;
   state.conditionalDraft = undefined;
+  state.computedExamples = [];
+  resetComputedExampleDialog(state);
   state.defaultValues = structuredClone(DEFAULT_FORM_VALUES);
   state.operationChoiceMenu.isOpen = false;
   state.operationBlockMenu.isOpen = false;
@@ -593,10 +727,87 @@ export const closeDialog = ({ state }, _payload = {}) => {
   state.enumValueMenu.targetIndex = undefined;
 };
 
+const cloneComputedExampleValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(cloneComputedExampleValue);
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        cloneComputedExampleValue(item),
+      ]),
+    );
+  }
+  return value;
+};
+
 const syncComputedDraft = (state) => {
-  state.defaultValues.computed = state.conditionalDraft
+  const computed = state.conditionalDraft
     ? buildComputedFromConditionalDraft(state.conditionalDraft)
     : buildComputedFromOperationDraft(state.operationDraft);
+  if (computed && state.computedExamples.length > 0) {
+    computed.examples = cloneComputedExampleValue(state.computedExamples);
+  }
+  state.defaultValues.computed = computed;
+};
+
+export const openComputedExampleDialog = (
+  { state },
+  { exampleId, inputItems = [] } = {},
+) => {
+  const example = state.computedExamples.find((item) => item.id === exampleId);
+  const defaultValues = createComputedExampleDefaultValues({
+    inputItems,
+    example,
+  });
+  state.computedExampleDialog.isOpen = true;
+  state.computedExampleDialog.key += 1;
+  state.computedExampleDialog.mode = example ? "edit" : "add";
+  state.computedExampleDialog.editingExampleId = example?.id;
+  state.computedExampleDialog.inputItems = structuredClone(inputItems);
+  state.computedExampleDialog.defaultValues = defaultValues;
+  state.computedExampleDialog.draftValues = structuredClone(defaultValues);
+};
+
+export const closeComputedExampleDialog = ({ state }) => {
+  resetComputedExampleDialog(state);
+};
+
+export const updateComputedExampleDraft = ({ state }, { values = {} } = {}) => {
+  state.computedExampleDialog.draftValues = {
+    ...state.computedExampleDialog.draftValues,
+    ...values,
+  };
+};
+
+export const saveComputedExample = ({ state }, { id, name, input } = {}) => {
+  if (!id || !name || !input) {
+    return;
+  }
+  const example = {
+    id,
+    name,
+    input: cloneComputedExampleValue(input),
+  };
+  const index = state.computedExamples.findIndex((item) => item.id === id);
+  if (index === -1) {
+    state.computedExamples.push(example);
+  } else {
+    state.computedExamples[index] = example;
+  }
+  syncComputedDraft(state);
+};
+
+export const removeComputedExample = ({ state }, { exampleId } = {}) => {
+  const index = state.computedExamples.findIndex(
+    (item) => item.id === exampleId,
+  );
+  if (index === -1) {
+    return;
+  }
+  state.computedExamples.splice(index, 1);
+  syncComputedDraft(state);
 };
 
 export const createOperation = ({ state }, { operationType } = {}) => {
@@ -1556,7 +1767,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     );
     if (computedSubmitButton) {
       computedSubmitButton.label =
-        copy.updateComputedVariableButton ?? "Update Computed Variable";
+        copy.updateComputedVariableButton ?? "Update";
     }
   } else {
     variableForm.title = copy.addVariableTitle ?? "Add Variable";
@@ -1751,6 +1962,54 @@ export const selectViewData = ({ state, props, i18n }) => {
         defaultTarget: { kind: "default" },
       }
     : undefined;
+  const computedExampleInputItems = createComputedExampleInputItems({
+    computed: defaultValues.computed,
+    flatGroups: props.flatGroups,
+  });
+  const computedExamples = state.computedExamples.map((example, index) => {
+    const result = evaluateComputedExample({
+      computed: defaultValues.computed,
+      variableType: defaultValues.variableType,
+      flatGroups: props.flatGroups,
+      input: example.input,
+    });
+    return {
+      id: example.id,
+      label:
+        example.name?.trim() ||
+        (copy.computedExampleLabel ?? "Example {number}").replace(
+          "{number}",
+          String(index + 1),
+        ),
+      inputs: computedExampleInputItems.map((item) => ({
+        label: item.name,
+        value: formatComputedExampleValue(
+          resolveComputedExampleInputValue({ item, example }),
+        ),
+      })),
+      result: result.valid
+        ? formatComputedExampleValue(result.value)
+        : (copy.computedExampleResultError ?? "Unable to calculate result"),
+      resultValid: result.valid,
+    };
+  });
+  let computedExampleDialogInput;
+  try {
+    computedExampleDialogInput = buildComputedExampleInput({
+      inputItems: state.computedExampleDialog.inputItems,
+      values: state.computedExampleDialog.draftValues,
+    });
+  } catch {
+    computedExampleDialogInput = undefined;
+  }
+  const computedExampleDialogResult = computedExampleDialogInput
+    ? evaluateComputedExample({
+        computed: defaultValues.computed,
+        variableType: defaultValues.variableType,
+        flatGroups: props.flatGroups,
+        input: computedExampleDialogInput,
+      })
+    : { valid: false };
   const enumValues = normalizeVariableEnumValues(defaultValues.enumValues).map(
     (value, index) => ({
       value,
@@ -1809,6 +2068,26 @@ export const selectViewData = ({ state, props, i18n }) => {
     operationChoiceMenu,
     operandSourceMenu,
     operationValuePopover,
+    computedExamples,
+    computedExamplesLabel: copy.computedExamplesLabel ?? "Examples",
+    computedExampleAddLabel: copy.computedAddExampleButton ?? "Add Example",
+    computedNoExamplesMessage:
+      copy.computedNoExamplesMessage ?? "No examples yet",
+    computedExampleResultLabel: copy.computedExampleResultLabel ?? "Result",
+    computedExampleDialog: state.computedExampleDialog,
+    computedExampleForm: createComputedExampleForm({
+      copy,
+      inputItems: state.computedExampleDialog.inputItems,
+      mode: state.computedExampleDialog.mode,
+    }),
+    computedExampleDefaultValues: state.computedExampleDialog.defaultValues,
+    computedExampleDialogResult: computedExampleDialogResult.valid
+      ? formatComputedExampleValue(computedExampleDialogResult.value)
+      : (copy.computedExampleResultError ?? "Unable to calculate result"),
+    computedExampleDialogResultValid: computedExampleDialogResult.valid,
+    computedExampleNoInputsMessage:
+      copy.computedExampleNoInputsMessage ??
+      "This formula does not use any variable or runtime inputs.",
     operationLabel: copy.computedOperationLabel ?? "Operation",
     addOperationLabel: copy.computedAddOperationLabel ?? "Add an Operation",
     conditionalWhenLabel: copy.computedConditionalWhenLabel ?? "When",

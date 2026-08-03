@@ -16,6 +16,11 @@ import {
   isComputedLiteralValue,
   isSupportedComputedOperationType,
 } from "../../internal/computedOperations.js";
+import { generateId } from "../../internal/id.js";
+import {
+  buildComputedExampleInput,
+  createComputedExampleInputItems,
+} from "./support/computedExamples.js";
 
 export const handleScrollContainerClick = dispatchResourceViewBackgroundClick;
 
@@ -561,6 +566,138 @@ export const handleDialogFormChange = (deps, payload) => {
     });
   }
   render();
+};
+
+const openComputedExampleEditor = (deps, exampleId) => {
+  const { props, refs, render, store } = deps;
+  const computed = store.selectComputedExampleInputDefinition();
+  const inputItems = createComputedExampleInputItems({
+    computed,
+    flatGroups: props.flatGroups,
+  });
+  store.openComputedExampleDialog({ exampleId, inputItems });
+  const values = store.selectComputedExampleDialogDefaultValues();
+  render();
+  refs.computedExampleForm.reset();
+  refs.computedExampleForm.setValues({ values });
+};
+
+export const handleAddComputedExampleClick = (deps) => {
+  openComputedExampleEditor(deps);
+};
+
+export const handleComputedExampleClick = (deps, payload) => {
+  const exampleId = payload._event.currentTarget.dataset.exampleId;
+  openComputedExampleEditor(deps, exampleId);
+};
+
+export const handleComputedExampleKeyDown = async (deps, payload) => {
+  if (
+    payload._event.key === "ContextMenu" ||
+    (payload._event.shiftKey && payload._event.key === "F10")
+  ) {
+    await handleComputedExampleContextMenu(deps, payload);
+    return;
+  }
+  if (payload._event.key !== "Enter" && payload._event.key !== " ") {
+    return;
+  }
+  payload._event.preventDefault();
+  handleComputedExampleClick(deps, payload);
+};
+
+export const handleComputedExampleContextMenu = async (deps, payload) => {
+  const { appService, i18n, refs, render, store } = deps;
+  const event = payload._event;
+  event.preventDefault();
+  event.stopPropagation();
+  const exampleId = event.currentTarget.dataset.exampleId;
+  if (!exampleId) {
+    return;
+  }
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  const usePointerPosition =
+    Number.isFinite(event.clientX) &&
+    Number.isFinite(event.clientY) &&
+    (event.clientX !== 0 || event.clientY !== 0);
+  const result = await appService.showDropdownMenu({
+    items: [
+      {
+        type: "item",
+        label: selectCopy(i18n).removeMenuItem ?? "Remove",
+        key: "remove",
+      },
+    ],
+    x: usePointerPosition ? event.clientX : rect.left,
+    y: usePointerPosition ? event.clientY : rect.bottom,
+    place: "bs",
+  });
+  if (result?.item?.key !== "remove") {
+    return;
+  }
+
+  store.removeComputedExample({ exampleId });
+  const values = store.selectDefaultValues();
+  render();
+  refs.computedForm.setValues({ values });
+};
+
+export const handleComputedExampleDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeComputedExampleDialog();
+  render();
+};
+
+export const handleComputedExampleFormChange = (deps, payload) => {
+  const { render, store } = deps;
+  store.updateComputedExampleDraft({
+    values: payload._event.detail.values,
+  });
+  render();
+};
+
+export const handleComputedExampleFormAction = (deps, payload) => {
+  const { appService, i18n, refs, render, store } = deps;
+  const dialog = store.selectComputedExampleDialog();
+  const actionId = payload._event.detail.actionId;
+  if (actionId !== "submit") {
+    return;
+  }
+  const copy = selectCopy(i18n);
+  const name = payload._event.detail.values.name?.trim();
+  if (!name) {
+    appService.showAlert({
+      message: copy.computedExampleNameRequired ?? "Example name is required.",
+      title: copy.warningTitle ?? "Warning",
+    });
+    return;
+  }
+  let input;
+  try {
+    input = buildComputedExampleInput({
+      inputItems: dialog.inputItems,
+      values: payload._event.detail.values,
+    });
+  } catch {
+    appService.showAlert({
+      message:
+        copy.computedExampleInvalidInput ??
+        "Enter a valid value for every example input.",
+      title: copy.warningTitle ?? "Warning",
+    });
+    return;
+  }
+
+  store.saveComputedExample({
+    id: dialog.editingExampleId ?? generateId(),
+    name,
+    input,
+  });
+  store.closeComputedExampleDialog();
+  const values = store.selectDefaultValues();
+  render();
+  refs.computedForm.setValues({ values });
 };
 
 export const handleAddOperationClick = (deps, payload) => {
@@ -1261,7 +1398,7 @@ export const handleFormActionClick = (deps, payload) => {
     return;
   }
 
-  const { store, dispatchEvent, props, appService, i18n } = deps;
+  const { store, dispatchEvent, appService, i18n } = deps;
   const copy = selectCopy(i18n);
   const submitContext = store.selectSubmitContext();
 
@@ -1347,21 +1484,6 @@ export const handleFormActionClick = (deps, payload) => {
       });
       return;
     }
-    // Don't submit if name already exists
-    const isDuplicateName = (props.flatGroups || [])
-      .flatMap((group) => group.children || [])
-      .some(
-        (item) =>
-          item.name === name && (!isEditMode || item.id !== editingItemId),
-      );
-    if (isDuplicateName) {
-      appService.showAlert({
-        message: copy.variableNameUnique ?? "Variable name must be unique.",
-        title: copy.warningTitle ?? "Warning",
-      });
-      return;
-    }
-
     // Set default value based on type if not provided
     let defaultValue = formData.default;
     if (defaultValue === undefined || defaultValue === "") {

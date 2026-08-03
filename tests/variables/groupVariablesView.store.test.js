@@ -8,13 +8,17 @@ import {
   duplicateConditionalBranch,
   moveConditionalBranch,
   openAddDialog,
+  openComputedExampleDialog,
   openEditDialog,
+  removeComputedExample,
   removeConditionalBranch,
   removeConditionalNode,
   removeOperation,
   removeOperationOperand,
   selectConditionalNodeValue,
+  selectComputedExampleInputDefinition,
   selectViewData,
+  saveComputedExample,
   setConditionalNode,
   setSearchQuery,
   showOperandSourceMenu,
@@ -43,6 +47,7 @@ const createProps = () => ({
       children: [
         {
           id: "variable-1",
+          type: "variable",
           name: "Can Continue",
           scope: "context",
           variableType: "boolean",
@@ -72,6 +77,9 @@ describe("groupVariablesView.store", () => {
 
     expect(storedView.isVariableDialogOpen).toBe(true);
     expect(storedView.isComputedDialogOpen).toBe(false);
+    expect(
+      storedView.variableForm.fields.find((field) => field.name === "name"),
+    ).not.toHaveProperty("tooltip");
     expect(
       storedView.variableForm.fields.map((field) => field.name),
     ).not.toContain("valueSource");
@@ -126,6 +134,172 @@ describe("groupVariablesView.store", () => {
       computedView.context.variableTypeOptions.map((option) => option.value),
     ).toEqual(["string", "number", "boolean"]);
     expect(computedView.operationBlock).toBeUndefined();
+  });
+
+  it("keeps examples attached while the computed operation changes", () => {
+    const state = createInitialState();
+    openAddDialog({ state }, { groupId: "folder-1", valueSource: "computed" });
+    selectComputedVariableType(state, "number");
+    createOperation({ state }, { operationType: "add" });
+    addOperationOperand({ state }, { source: "value", value: 1 });
+    addOperationOperand({ state }, { source: "value", value: 2 });
+
+    openComputedExampleDialog({ state }, { inputItems: [] });
+    saveComputedExample({ state }, { id: "example-1", name: "Sum", input: {} });
+    state.computedExamples = new Proxy(
+      state.computedExamples.map(
+        (example) =>
+          new Proxy(
+            {
+              id: example.id,
+              name: example.name,
+              input: new Proxy(example.input, {}),
+            },
+            {},
+          ),
+      ),
+      {},
+    );
+    expect(() => {
+      addOperationOperand({ state }, { source: "value", value: 3 });
+    }).not.toThrow();
+
+    expect(state.defaultValues.computed).toEqual({
+      expr: { add: [{ add: [1, 2] }, 3] },
+      examples: [{ id: "example-1", name: "Sum", input: {} }],
+    });
+    const view = selectViewData({
+      state,
+      props: createProps(),
+      i18n: TEST_I18N,
+    });
+    expect(view.computedExamples).toEqual([
+      expect.objectContaining({
+        id: "example-1",
+        label: "Sum",
+        result: "6",
+        resultValid: true,
+      }),
+    ]);
+
+    removeComputedExample({ state }, { exampleId: "example-1" });
+    expect(state.defaultValues.computed).toEqual({
+      expr: { add: [{ add: [1, 2] }, 3] },
+    });
+  });
+
+  it("shows defaults for inputs added after an example was saved", () => {
+    const state = createInitialState();
+    openEditDialog(
+      { state },
+      {
+        groupId: "folder-1",
+        itemId: "computed-1",
+        defaultValues: {
+          valueSource: "computed",
+          variableType: "boolean",
+          computed: {
+            expr: { var: "variables.variable-1" },
+            examples: [
+              {
+                id: "example-1",
+                name: "Default state",
+                input: {},
+              },
+            ],
+          },
+        },
+      },
+    );
+
+    const view = selectViewData({
+      state,
+      props: createProps(),
+      i18n: TEST_I18N,
+    });
+
+    expect(view.computedExamples[0].inputs).toEqual([
+      { label: "Can Continue", value: "true" },
+    ]);
+  });
+
+  it("finds example inputs in an incomplete operation draft", () => {
+    const state = createInitialState();
+    openAddDialog({ state }, { groupId: "folder-1", valueSource: "computed" });
+    selectComputedVariableType(state, "number");
+    createOperation({ state }, { operationType: "add" });
+    addOperationOperand(
+      { state },
+      { source: "variable", variablePath: 'variables["variable-1"]' },
+    );
+
+    expect(selectComputedExampleInputDefinition({ state })).toEqual({
+      expr: {
+        exampleInputs: [{ var: 'variables["variable-1"]' }],
+      },
+    });
+  });
+
+  it("prefills examples when editing a computed variable", () => {
+    const state = createInitialState();
+    openEditDialog(
+      { state },
+      {
+        groupId: "folder-1",
+        itemId: "computed-1",
+        defaultValues: {
+          valueSource: "computed",
+          variableType: "number",
+          computed: {
+            expr: { add: [{ var: "variables.score" }, 1] },
+            examples: [
+              {
+                id: "example-1",
+                name: "Score check",
+                input: { variables: { score: 4 } },
+              },
+            ],
+          },
+        },
+      },
+    );
+    openComputedExampleDialog(
+      { state },
+      {
+        exampleId: "example-1",
+        inputItems: [
+          {
+            source: "variables",
+            id: "score",
+            name: "Score",
+            type: "number",
+            formName: "input0",
+            defaultValue: 0,
+          },
+        ],
+      },
+    );
+
+    expect(state.computedExampleDialog).toMatchObject({
+      isOpen: true,
+      mode: "edit",
+      editingExampleId: "example-1",
+      defaultValues: { name: "Score check", input0: 4 },
+      draftValues: { name: "Score check", input0: 4 },
+    });
+    const view = selectViewData({
+      state,
+      props: createProps(),
+      i18n: TEST_I18N,
+    });
+    expect(view.computedExampleForm.fields[0]).toMatchObject({
+      name: "name",
+      type: "input-text",
+      required: true,
+    });
+    expect(view.computedExampleForm.actions.buttons).toEqual([
+      expect.objectContaining({ id: "submit", validate: true }),
+    ]);
   });
 
   it("keeps the selected type authoritative for root operations", () => {

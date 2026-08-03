@@ -7,6 +7,7 @@ import {
 import { getLayoutTextReferenceResourceId } from "../../../internal/layoutTextContent.js";
 import { toRuntimeConditionTarget } from "../../../internal/runtimeFields.js";
 import { collectComputedVariableReferenceIds } from "../../../internal/project/projection.js";
+import { toExecutableComputed } from "../../../internal/computedExamples.js";
 import { resolveComputedVariables } from "route-engine-js";
 import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 
@@ -147,7 +148,7 @@ export const resolvePreviewVariables = ({
           scope: variable.scope ?? "context",
         };
         if (variable.computed !== undefined) {
-          config.computed = structuredClone(variable.computed);
+          config.computed = toExecutableComputed(variable.computed);
         } else {
           config.default = toPreviewVariableValue(variable);
         }

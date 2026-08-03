@@ -64,7 +64,15 @@ describe("groupVariablesView view", () => {
     );
     expect(view).not.toContain("rtgl-input-number#operationValue${i}");
     expect(view).not.toContain("rtgl-select#operationVariable${i}");
-    expect(view).not.toContain("pre=trash");
+    expect(view).toContain(
+      "rtgl-text w=1fg s=lg fw=b: ${computedExamplesLabel}",
+    );
+    expect(view).toContain("rtgl-button#addComputedExampleButton sq");
+    expect(view).not.toContain("?disabled=${computedExampleAddDisabled}");
+    expect(view).toContain("rtgl-dialog#computedExampleDialog s=md");
+    expect(view).toContain("rtgl-form#computedExampleForm");
+    expect(view).not.toContain("removeComputedExampleButton${i}");
+    expect(view).toContain("handler: handleComputedExampleContextMenu");
     expect(view).not.toContain("Computation mode");
     expect(view).not.toContain("computationModeControl");
     expect(view).not.toContain("computed-formula-editor");

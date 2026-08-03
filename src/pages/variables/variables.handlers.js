@@ -24,6 +24,7 @@ import { tap } from "rxjs";
 import { resolveComputedVariables } from "route-engine-js";
 import { getRuntimeFieldItems } from "../../internal/runtimeFields.js";
 import { getComputedVariableDeletionDependents } from "../../internal/project/projection.js";
+import { toExecutableComputed } from "../../internal/computedExamples.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 const selectCopy = (deps = {}) => selectVariablesPageCopy(deps.i18n);
@@ -98,7 +99,7 @@ const toEngineVariableConfig = (item = {}) => {
     scope: item.computed === undefined ? item.scope : "context",
   };
   if (item.computed !== undefined) {
-    config.computed = structuredClone(item.computed);
+    config.computed = toExecutableComputed(item.computed);
   } else {
     config.default = structuredClone(item.default);
   }

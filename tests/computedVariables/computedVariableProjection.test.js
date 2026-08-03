@@ -81,9 +81,16 @@ describe("computed variable projection helpers", () => {
     ).toEqual(["externalLabel"]);
   });
 
-  it("preserves computed definitions and maps the result type for the engine", () => {
+  it("maps executable computed definitions and result types for the engine", () => {
     const computed = {
       expr: { round: [{ var: "variables.score" }] },
+      examples: [
+        {
+          id: "example-1",
+          name: "Rounded score",
+          input: { variables: { score: 1.5 } },
+        },
+      ],
     };
     const projectData = constructProjectData({
       project: { resolution: { width: 1280, height: 720 } },
@@ -116,9 +123,10 @@ describe("computed variable projection helpers", () => {
       expect.objectContaining({
         type: "number",
         scope: "context",
-        computed,
+        computed: { expr: computed.expr },
       }),
     );
+    expect(computed).toHaveProperty("examples");
     expect(projectData.resources.variables.roundedScore).not.toHaveProperty(
       "variableType",
     );

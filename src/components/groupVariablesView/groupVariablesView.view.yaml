@@ -71,6 +71,28 @@ refs:
         handler: handleDialogFormChange
       add-option-click:
         handler: handleFormAddOptionClick
+  addComputedExampleButton:
+    eventListeners:
+      click:
+        handler: handleAddComputedExampleClick
+  computedExampleItem*:
+    eventListeners:
+      click:
+        handler: handleComputedExampleClick
+      keydown:
+        handler: handleComputedExampleKeyDown
+      contextmenu:
+        handler: handleComputedExampleContextMenu
+  computedExampleDialog:
+    eventListeners:
+      close:
+        handler: handleComputedExampleDialogClose
+  computedExampleForm:
+    eventListeners:
+      form-action:
+        handler: handleComputedExampleFormAction
+      form-change:
+        handler: handleComputedExampleFormChange
   addOperationButton:
     eventListeners:
       click:
@@ -313,8 +335,8 @@ template:
                       - rtgl-view d=h w=f:
                           - rtgl-button#enumAddValueButton s=sm v=se pre=plus: ${addValueButton}
       - rtgl-dialog#computedDialog s=lg ?open=${isComputedDialogOpen}:
-          - rtgl-view slot=content g=md:
-              - rtgl-form#computedForm key=computed-${dialogKey} :defaultValues=${defaultValues} :form=${computedForm} w=f :context=${context}:
+          - 'rtgl-view slot=content d=h g=lg w=f h=70vh style="min-width: 0; min-height: 0; overflow: hidden;"':
+              - 'rtgl-form#computedForm key=computed-${dialogKey} :defaultValues=${defaultValues} :form=${computedForm} w=1fg h=f :context=${context} style="min-width: 0; overflow-y: auto;"':
                   - 'rtgl-view slot="operation" d=v w=f g=sm':
                       - rtgl-view d=h w=f av=c g=sm:
                           - rtgl-text w=1fg s=md: ${operationLabel}
@@ -388,6 +410,34 @@ template:
                                       - 'rtgl-button#addConditionalNodeDefault data-target-kind=default s=sm v=se pre=plus w=f': ${conditionalAddResultLabel}
                         $else:
                           - rtgl-button#addOperationButton v=se pre=plus w=f: ${addOperationLabel}
+              - rtgl-view w=1 h=f bgc=bo: null
+              - 'rtgl-view w=280 h=f d=v g=md style="min-width: 0; min-height: 0;"':
+                  - rtgl-view d=h w=f av=c g=sm:
+                      - rtgl-text w=1fg s=lg fw=b: ${computedExamplesLabel}
+                      - 'rtgl-button#addComputedExampleButton sq v=se pre=plus aria-label="${computedExampleAddLabel}" title="${computedExampleAddLabel}"': null
+                  - $if computedExamples.length > 0:
+                      - 'rtgl-view w=f h=1fg d=v g=sm sv style="min-height: 0;"':
+                          - $for example, i in computedExamples:
+                              - 'rtgl-view#computedExampleItem${i} data-example-id=${example.id} role=button tabindex=0 w=f d=v g=sm p=md bw=xs bc=bo h-bc=pr br=md cur=pointer style="box-sizing: border-box;"':
+                                  - rtgl-text fw=b: ${example.label}
+                                  - $for input, j in example.inputs:
+                                      - rtgl-view d=h w=f av=c g=sm:
+                                          - rtgl-text w=1fg s=xs c=mu-fg ellipsis=true: ${input.label}
+                                          - rtgl-text s=sm ellipsis=true: ${input.value}
+                                  - rtgl-view h=1 w=f bgc=bo: null
+                                  - rtgl-view d=h w=f av=c g=sm:
+                                      - rtgl-text w=1fg s=xs c=mu-fg: ${computedExampleResultLabel}
+                                      - rtgl-text s=sm ellipsis=true: ${example.result}
+                    $else:
+                      - rtgl-view w=f h=1fg av=c ah=c:
+                          - rtgl-text s=sm c=mu-fg: ${computedNoExamplesMessage}
+      - rtgl-dialog#computedExampleDialog s=md ?open=${computedExampleDialog.isOpen}:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#computedExampleForm key=${computedExampleDialog.key} :defaultValues=${computedExampleDefaultValues} :form=${computedExampleForm} w=f:
+                  - rtgl-text slot="computed-example-empty" s=sm c=mu-fg: ${computedExampleNoInputsMessage}
+                  - 'rtgl-view slot="computed-example-result" d=v w=f g=xs p=md bgc=su br=md':
+                      - rtgl-text s=xs c=mu-fg: ${computedExampleResultLabel}
+                      - rtgl-text: ${computedExampleDialogResult}
       - rtgl-dropdown-menu#operationChoiceMenu :items=${operationChoiceMenu.items} ?open=${operationChoiceMenu.isOpen} x=${operationChoiceMenu.x} y=${operationChoiceMenu.y} place=bs: null
       - rtgl-dropdown-menu#operationBlockMenu :items=${operationBlockMenu.items} ?open=${operationBlockMenu.isOpen} x=${operationBlockMenu.x} y=${operationBlockMenu.y}: null
       - rtgl-dropdown-menu#operandSourceMenu :items=${operandSourceMenu.items} ?open=${operandSourceMenu.isOpen} x=${operandSourceMenu.x} y=${operandSourceMenu.y} place=bs: null

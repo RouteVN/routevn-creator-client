@@ -20,6 +20,7 @@ import { toVariableConditionTarget } from "../layoutConditions.js";
 import { requireProjectResolution } from "../projectResolution.js";
 import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
 import { resolveSpritesheetAnimationFps } from "../spritesheets.js";
+import { toExecutableComputed } from "../computedExamples.js";
 
 const DEFAULT_TIMESTAMP = 0;
 const LAYOUT_ACTION_INTERACTION_KEYS = [
@@ -1184,6 +1185,7 @@ const constructProjectResources = (repositoryState = {}) => {
         engineVariable.type = variableType;
         if (item.computed !== undefined) {
           engineVariable.scope = "context";
+          engineVariable.computed = toExecutableComputed(item.computed);
         }
         return [id, engineVariable];
       }),

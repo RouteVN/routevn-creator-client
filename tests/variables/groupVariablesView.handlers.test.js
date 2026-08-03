@@ -2,12 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleAddConditionalBranchClick,
   handleAddConditionalNodeClick,
+  handleAddComputedExampleClick,
   handleAddOperationClick,
   handleAddOperationOperandClick,
   handleAddVariableClick,
   handleConditionalNodeContextMenu,
   handleConditionalValueClick,
   handleConditionalVariableClick,
+  handleComputedExampleContextMenu,
+  handleComputedExampleFormAction,
   handleDialogFormChange,
   handleDuplicateConditionalBranchClick,
   handleEditOperationVariableClick,
@@ -92,6 +95,213 @@ describe("groupVariablesView.handlers", () => {
       groupId: "folder-1",
       valueSource: "computed",
     });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens a computed example form with every referenced input", () => {
+    const reset = vi.fn();
+    const setValues = vi.fn();
+    const openComputedExampleDialog = vi.fn();
+    const render = vi.fn();
+
+    handleAddComputedExampleClick({
+      props: {
+        flatGroups: [
+          {
+            children: [
+              {
+                id: "score",
+                type: "variable",
+                name: "Score",
+                variableType: "number",
+                default: 5,
+              },
+            ],
+          },
+        ],
+      },
+      refs: { computedExampleForm: { reset, setValues } },
+      render,
+      store: {
+        selectComputedExampleInputDefinition: () => ({
+          expr: { var: "variables.score" },
+        }),
+        openComputedExampleDialog,
+        selectComputedExampleDialogDefaultValues: () => ({ input0: 5 }),
+      },
+    });
+
+    expect(openComputedExampleDialog).toHaveBeenCalledWith({
+      exampleId: undefined,
+      inputItems: [
+        expect.objectContaining({
+          source: "variables",
+          id: "score",
+          formName: "input0",
+          defaultValue: 5,
+        }),
+      ],
+    });
+    expect(render).toHaveBeenCalledOnce();
+    expect(reset).toHaveBeenCalledOnce();
+    expect(setValues).toHaveBeenCalledWith({ values: { input0: 5 } });
+  });
+
+  it("opens the example form while the computed formula is incomplete", () => {
+    const openComputedExampleDialog = vi.fn();
+
+    handleAddComputedExampleClick({
+      props: { flatGroups: [] },
+      refs: {
+        computedExampleForm: {
+          reset: vi.fn(),
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+      store: {
+        selectComputedExampleInputDefinition: () => ({
+          expr: { exampleInputs: [] },
+        }),
+        openComputedExampleDialog,
+        selectComputedExampleDialogDefaultValues: () => ({}),
+      },
+    });
+
+    expect(openComputedExampleDialog).toHaveBeenCalledWith({
+      exampleId: undefined,
+      inputItems: [],
+    });
+  });
+
+  it("saves a computed example without persisting its derived result", () => {
+    const saveComputedExample = vi.fn();
+    const closeComputedExampleDialog = vi.fn();
+    const setValues = vi.fn();
+    const render = vi.fn();
+
+    handleComputedExampleFormAction(
+      {
+        appService: { showAlert: vi.fn() },
+        i18n: { resourcePages: {}, variablesPage: {} },
+        refs: { computedForm: { setValues } },
+        render,
+        store: {
+          selectComputedExampleDialog: () => ({
+            editingExampleId: "example-1",
+            inputItems: [
+              {
+                source: "variables",
+                id: "score",
+                type: "number",
+                formName: "input0",
+              },
+            ],
+          }),
+          saveComputedExample,
+          closeComputedExampleDialog,
+          selectDefaultValues: () => ({
+            computed: { expr: { var: "variables.score" } },
+          }),
+        },
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "submit",
+            values: { name: "High score", input0: "12" },
+          },
+        },
+      },
+    );
+
+    expect(saveComputedExample).toHaveBeenCalledWith({
+      id: "example-1",
+      name: "High score",
+      input: { variables: { score: 12 } },
+    });
+    expect(saveComputedExample.mock.calls[0][0]).not.toHaveProperty("result");
+    expect(closeComputedExampleDialog).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+    expect(setValues).toHaveBeenCalledOnce();
+  });
+
+  it("requires a computed example name", () => {
+    const showAlert = vi.fn();
+    const saveComputedExample = vi.fn();
+
+    handleComputedExampleFormAction(
+      {
+        appService: { showAlert },
+        i18n: { resourcePages: {}, variablesPage: {} },
+        refs: { computedForm: { setValues: vi.fn() } },
+        render: vi.fn(),
+        store: {
+          selectComputedExampleDialog: () => ({ inputItems: [] }),
+          saveComputedExample,
+        },
+      },
+      {
+        _event: {
+          detail: { actionId: "submit", values: { name: "   " } },
+        },
+      },
+    );
+
+    expect(showAlert).toHaveBeenCalledWith({
+      message: "Example name is required.",
+      title: "Warning",
+    });
+    expect(saveComputedExample).not.toHaveBeenCalled();
+  });
+
+  it("removes a computed example from its context menu", async () => {
+    const removeComputedExample = vi.fn();
+    const setValues = vi.fn();
+    const render = vi.fn();
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "remove" },
+    });
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    await handleComputedExampleContextMenu(
+      {
+        appService: { showDropdownMenu },
+        i18n: { resourcePages: {}, variablesPage: {} },
+        refs: { computedForm: { setValues } },
+        render,
+        store: {
+          removeComputedExample,
+          selectDefaultValues: () => ({}),
+        },
+      },
+      {
+        _event: {
+          preventDefault,
+          stopPropagation,
+          clientX: 20,
+          clientY: 30,
+          currentTarget: {
+            dataset: { exampleId: "example-1" },
+            getBoundingClientRect: () => ({ left: 5, bottom: 10 }),
+          },
+        },
+      },
+    );
+
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: [{ type: "item", label: "Remove", key: "remove" }],
+      x: 20,
+      y: 30,
+      place: "bs",
+    });
+    expect(removeComputedExample).toHaveBeenCalledWith({
+      exampleId: "example-1",
+    });
+    expect(setValues).toHaveBeenCalledWith({ values: {} });
     expect(render).toHaveBeenCalledOnce();
   });
 
@@ -1318,7 +1528,7 @@ describe("groupVariablesView.handlers", () => {
     expect(dispatchEvent).not.toHaveBeenCalled();
   });
 
-  it("submits the stored operation when form values omit the slot data", () => {
+  it("submits duplicate variable names when form values omit slot data", () => {
     const computed = {
       expr: {
         add: [{ var: "variables.score" }, 10],
@@ -1332,7 +1542,13 @@ describe("groupVariablesView.handlers", () => {
         appService: { showAlert: vi.fn() },
         dispatchEvent,
         i18n: { resourcePages: {}, variablesPage: {} },
-        props: { flatGroups: [] },
+        props: {
+          flatGroups: [
+            {
+              children: [{ id: "existing", name: "Total" }],
+            },
+          ],
+        },
         render: vi.fn(),
         store: {
           closeDialog,
