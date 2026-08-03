@@ -716,6 +716,58 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
+  it("derives the dialogue mode from the selected layout", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const refs = createFormRefs();
+
+    handleFormChange(
+      {
+        props: {
+          layouts,
+          characters,
+        },
+        refs,
+        render,
+        dispatchEvent,
+        store: createStore(state),
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              resourceId: "layout-nvl",
+              characterId: "",
+              customCharacterName: false,
+              characterName: "",
+              append: true,
+              persistCharacter: false,
+              clearPage: true,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.selectedMode).toBe("nvl");
+    expect(state.selectedResourceId).toBe("layout-nvl");
+    expect(state.appendDialogue).toBe(false);
+    expect(state.clearPage).toBe(true);
+    expect(
+      refs.dialogueForm.setValues.mock.calls.at(-1)[0].values,
+    ).not.toHaveProperty("mode");
+    expect(
+      dispatchEvent.mock.calls[0][0].detail.presentationState.dialogue,
+    ).toMatchObject({
+      mode: "nvl",
+      ui: {
+        resourceId: "layout-nvl",
+      },
+      clearPage: true,
+    });
+  });
+
   it("tracks explicit removal of a persistent sprite from the form", () => {
     const state = createInitialState();
     const render = vi.fn();

@@ -467,7 +467,7 @@ export const setRepositoryState = ({ state }, { sounds } = {}) => {
 
 export const setSfx = ({ state }, { sfx } = {}) => {
   state.channels = normalizeSfxChannels(sfx);
-  state.selectedChannelId = state.channels[0]?.id;
+  state.selectedChannelId = undefined;
   state.selectedSoundId = undefined;
 };
 

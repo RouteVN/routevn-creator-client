@@ -185,11 +185,12 @@ template:
                                   - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
                                       - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
                                       - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
-          - rtgl-view w=f g=md:
-              - rtgl-view w=f:
-                  - rtgl-text s=md: ${selectionHeading}
-                  - rtgl-text s=sm c=mu-fg: ${selectionName}
-              - rtgl-form#form key=${selectionKey} :form=${form} :defaultValues=${defaultValues}: null
+          - $if hasSelection:
+              - rtgl-view w=f g=md:
+                  - rtgl-view w=f:
+                      - rtgl-text s=md: ${selectionHeading}
+                      - rtgl-text s=sm c=mu-fg: ${selectionName}
+                  - rtgl-form#form key=${selectionKey} :form=${form} :defaultValues=${defaultValues}: null
       - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
           - rtgl-button#submitButton: Submit
   - $if showAudioPlayer:

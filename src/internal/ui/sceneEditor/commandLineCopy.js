@@ -121,6 +121,12 @@ export const localizeCommandLineFormField = (field = {}, copy = {}) => {
     );
   }
 
+  if (Array.isArray(localizedField.fields)) {
+    localizedField.fields = localizedField.fields.map((nestedField) =>
+      localizeCommandLineFormField(nestedField, copy),
+    );
+  }
+
   if (localizedField.tooltip?.content) {
     localizedField.tooltip = {
       ...localizedField.tooltip,

@@ -137,6 +137,7 @@ const SOUND_FORM = {
 
 export const createInitialState = () => ({
   items: { items: {}, tree: [] },
+  channelSelected: false,
   selectedSoundId: undefined,
   soundDrag: undefined,
   suppressChannelClickUntil: 0,
@@ -221,22 +222,24 @@ export const selectViewData = ({ state, i18n }) => {
   const selectedSound = sounds.find(
     (sound) => sound.id === state.selectedSoundId,
   );
-  const channelSelected = selectedSound === undefined;
+  const channelSelected = state.channelSelected && selectedSound === undefined;
+  const hasSelection = channelSelected || selectedSound !== undefined;
   const channelName = localizeCommandLineText("Voice Channel", copy);
-  const form = channelSelected ? CHANNEL_FORM : SOUND_FORM;
-  const defaultValues = channelSelected
+  const form = selectedSound ? SOUND_FORM : CHANNEL_FORM;
+  const defaultValues = selectedSound
     ? {
+        startDelayMs: selectedSound.startDelayMs,
+        volume: selectedSound.volume,
+      }
+    : {
         interruption: state.voice.interruption,
         loop: state.voice.loop,
         volume: state.voice.volume,
-      }
-    : {
-        startDelayMs: selectedSound.startDelayMs,
-        volume: selectedSound.volume,
       };
 
   return {
     sounds,
+    hasSelection,
     channelBorderColor: channelSelected ? "pr" : "bo",
     channelHoverBorderColor: channelSelected ? "pr" : "ac",
     channelLabel: channelName,
@@ -247,12 +250,15 @@ export const selectViewData = ({ state, i18n }) => {
     addAudioLabel: localizeCommandLineText("Add voice audio", copy),
     addBeforeLabel: localizeCommandLineText("Add audio before", copy),
     addAfterLabel: localizeCommandLineText("Add audio after", copy),
-    selectionHeading: localizeCommandLineText(
-      channelSelected ? "Channel" : "Audio",
-      copy,
-    ),
-    selectionName: channelSelected ? channelName : selectedSound.name,
-    selectionKey: channelSelected ? "channel" : `sound-${selectedSound.id}`,
+    selectionHeading: hasSelection
+      ? localizeCommandLineText(selectedSound ? "Audio" : "Channel", copy)
+      : "",
+    selectionName: selectedSound?.name ?? (channelSelected ? channelName : ""),
+    selectionKey: selectedSound
+      ? `sound-${selectedSound.id}`
+      : channelSelected
+        ? "channel"
+        : "none",
     form: localizeCommandLineForm(form, copy),
     defaultValues,
     playingSound: state.playingSound,
@@ -270,14 +276,17 @@ export const setRepositoryState = ({ state }, { voices } = {}) => {
 
 export const setVoice = ({ state }, { voice } = {}) => {
   state.voice = normalizeVoice(voice);
+  state.channelSelected = false;
   state.selectedSoundId = undefined;
 };
 
 export const clearSelectedSound = ({ state }, _payload = {}) => {
+  state.channelSelected = true;
   state.selectedSoundId = undefined;
 };
 
 export const setSelectedSound = ({ state }, { soundId } = {}) => {
+  state.channelSelected = false;
   state.selectedSoundId = soundId;
 };
 
@@ -319,6 +328,7 @@ export const startSoundDrag = (
     return;
   }
 
+  state.channelSelected = false;
   state.selectedSoundId = soundId;
   const resourceById = new Map(
     toFlatItems(state.items).map((item) => [item.id, item]),
@@ -396,6 +406,7 @@ export const insertSound = (
   });
   state.voice.sounds.splice(insertIndex, 0, sound);
   sortAudioSoundsByStartDelay(state.voice.sounds);
+  state.channelSelected = false;
   state.selectedSoundId = sound.id;
   closeAudioPlayer({ state });
 };
@@ -404,6 +415,7 @@ export const removeSound = ({ state }, { soundId } = {}) => {
   state.voice.sounds = state.voice.sounds.filter(
     (sound) => sound.id !== soundId,
   );
+  state.channelSelected = true;
   state.selectedSoundId = undefined;
   closeAudioPlayer({ state });
 };

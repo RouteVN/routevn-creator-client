@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as bgmStore from "../../src/components/commandLineBgm/commandLineBgm.store.js";
 import {
+  clearSelectedSound,
   createInitialState,
   insertSound,
   removeSound,
@@ -67,7 +68,7 @@ describe("commandLineBgm.store", () => {
     });
   });
 
-  it("starts with an empty selected channel and channel controls", () => {
+  it("starts with an unselected channel and selects it explicitly", () => {
     const state = createInitialState();
     const viewData = selectViewData({ state, i18n });
 
@@ -77,16 +78,27 @@ describe("commandLineBgm.store", () => {
       volume: 75,
       sounds: [],
     });
-    expect(viewData.selectionHeading).toBe("Channel");
-    expect(viewData.selectionName).toBe("BGM Channel");
+    expect(viewData.hasSelection).toBe(false);
+    expect(viewData.channelBorderColor).toBe("bo");
+    expect(viewData.channelHoverBorderColor).toBe("ac");
+    expect(viewData.selectionHeading).toBe("");
+    expect(viewData.selectionName).toBe("");
     expect(viewData.channelLabel).toBe("BGM Channel");
     expect(viewData.channelDurationLabel).toBe("0:00");
-    expect(viewData.form.fields.map((field) => field.name)).toEqual([
+
+    clearSelectedSound({ state });
+    const selectedViewData = selectViewData({ state, i18n });
+    expect(selectedViewData.hasSelection).toBe(true);
+    expect(selectedViewData.channelBorderColor).toBe("pr");
+    expect(selectedViewData.channelHoverBorderColor).toBe("pr");
+    expect(selectedViewData.selectionHeading).toBe("Channel");
+    expect(selectedViewData.selectionName).toBe("BGM Channel");
+    expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([
       "loop",
       "interruption",
       "volume",
     ]);
-    expect(viewData.defaultValues).toEqual({
+    expect(selectedViewData.defaultValues).toEqual({
       interruption: "immediate",
       loop: true,
       volume: 75,

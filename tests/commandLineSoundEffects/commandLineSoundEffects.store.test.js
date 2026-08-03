@@ -11,6 +11,7 @@ import {
   selectSfx,
   selectViewData,
   setRepositoryState,
+  setSelectedChannel,
   setSelectedSound,
   setSfx,
   startSoundDrag,
@@ -162,7 +163,12 @@ describe("commandLineSoundEffects.store", () => {
         startDelayMs: 999,
       },
     ]);
-    const channelView = selectViewData({ state, i18n }).channels[0];
+    const unselectedViewData = selectViewData({ state, i18n });
+    expect(unselectedViewData.hasSelection).toBe(false);
+    expect(unselectedViewData.channels[0].channelBorderColor).toBe("bo");
+    expect(unselectedViewData.channels[0].channelHoverBorderColor).toBe("ac");
+
+    const channelView = unselectedViewData.channels[0];
     expect(channelView.durationLabel).toBe("0:06");
     expect(channelView.channelHeightPx).toBe(276);
     expect(
@@ -193,7 +199,10 @@ describe("commandLineSoundEffects.store", () => {
       },
     ]);
 
+    setSelectedChannel({ state }, { channelId: "Weather" });
     const channelSelection = selectViewData({ state, i18n });
+    expect(channelSelection.channels[0].channelBorderColor).toBe("pr");
+    expect(channelSelection.channels[0].channelHoverBorderColor).toBe("pr");
     expect(channelSelection.selectionHeading).toBe("Channel");
     expect(channelSelection.selectionName).toBe("Weather");
     expect(channelSelection.form.fields.map((field) => field.name)).toEqual([

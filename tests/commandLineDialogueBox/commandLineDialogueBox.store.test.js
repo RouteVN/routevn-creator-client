@@ -23,6 +23,15 @@ import { EN_I18N } from "../support/i18n.js";
 const selectTestViewData = ({ state, props }) =>
   selectViewData({ state, props, i18n: EN_I18N });
 
+const flattenFormFields = (fields = []) =>
+  fields.flatMap((field) => [
+    field,
+    ...(Array.isArray(field.fields) ? flattenFormFields(field.fields) : []),
+  ]);
+
+const findFormField = (viewData, predicate) =>
+  flattenFormFields(viewData.form.fields).find(predicate);
+
 const isFieldVisible = ({ field, values }) => {
   const rendered = parseAndRender(
     {
@@ -87,32 +96,28 @@ describe("commandLineDialogueBox.store", () => {
     expect(viewData.defaultValues.persistCharacter).toBe(true);
     expect(viewData.addSpeakerSpriteLabel).toBe("Add Speaker Sprite");
     expect(
-      viewData.form.fields.find((field) => field.name === "mode"),
-    ).toMatchObject({
-      label: "Mode",
-    });
+      findFormField(viewData, (field) => field.name === "mode"),
+    ).toBeUndefined();
     expect(
-      viewData.form.fields.find((field) => field.name === "resourceId"),
+      findFormField(viewData, (field) => field.name === "resourceId"),
     ).toMatchObject({
       label: "Layout",
     });
     expect(
-      viewData.form.fields.find((field) => field.name === "characterId"),
+      findFormField(viewData, (field) => field.name === "characterId"),
     ).toMatchObject({
       label: "Speaker",
       placeholder: "Choose a speaker...",
     });
     expect(
-      viewData.form.fields.find(
-        (field) => field.name === "customCharacterName",
-      ),
+      findFormField(viewData, (field) => field.name === "customCharacterName"),
     ).toMatchObject({
       label: "Custom Speaker Name",
       type: "segmented-control",
       value: true,
     });
     expect(
-      viewData.form.fields.find((field) => field.name === "characterName"),
+      findFormField(viewData, (field) => field.name === "characterName"),
     ).toMatchObject({
       label: "Speaker Name",
       placeholder: "Enter speaker name",
@@ -120,7 +125,7 @@ describe("commandLineDialogueBox.store", () => {
       value: "Boss",
     });
     expect(
-      viewData.form.fields.find((field) => field.slot === "characterSprite"),
+      findFormField(viewData, (field) => field.slot === "characterSprite"),
     ).toEqual({
       slot: "characterSprite",
       type: "slot",
@@ -136,29 +141,50 @@ describe("commandLineDialogueBox.store", () => {
         "Speaker's face that appears on top of the dialogue box. For body sprites use the Character Sprites action",
     });
     expect(
-      viewData.form.fields.find((field) => field.name === "append"),
+      findFormField(viewData, (field) => field.name === "append"),
     ).toMatchObject({
-      $when: 'values.mode == "adv"',
+      $when: 'dialogueMode == "adv"',
       label: "Append",
       type: "segmented-control",
       value: false,
     });
     expect(
-      viewData.form.fields.find(
+      findFormField(
+        viewData,
         (field) => field.name === "characterSpriteEnabled",
       ),
     ).toBeUndefined();
     expect(
-      viewData.form.fields.find((field) => field.name === "persistCharacter"),
+      findFormField(viewData, (field) => field.name === "persistCharacter"),
     ).toMatchObject({
       $when: "values.characterId || values.customCharacterName",
       label: "Persist Speaker",
       type: "segmented-control",
       value: true,
     });
+    expect(viewData.form.fields.map((field) => field.label)).toEqual([
+      "Layout",
+      "Speaker",
+      "Options",
+    ]);
+    expect(
+      viewData.form.fields[1].fields.map((field) => field.name ?? field.slot),
+    ).toEqual([
+      "characterId",
+      "persistCharacter",
+      "customCharacterName",
+      "characterName",
+      "characterSprite",
+    ]);
+    expect(viewData.form.fields[2].fields.map((field) => field.name)).toEqual([
+      "customizeTextSpeed",
+      "textSpeed",
+      "append",
+      "clearPage",
+    ]);
   });
 
-  it("uses one layout label for every dialogue mode", () => {
+  it("shows ADV and NVL layouts together with right-side mode labels", () => {
     const state = createInitialState();
 
     const viewData = selectTestViewData({
@@ -166,26 +192,10 @@ describe("commandLineDialogueBox.store", () => {
       props: {
         layouts: [
           {
-            id: "layout-nvl",
-            name: "NVL Layout",
-            layoutType: "dialogue-nvl",
+            id: "layout-adv",
+            name: "ADV Layout",
+            layoutType: "dialogue-adv",
           },
-        ],
-        characters: [],
-      },
-    });
-
-    expect(
-      viewData.form.fields.find((field) => field.name === "resourceId"),
-    ).toMatchObject({
-      label: "Layout",
-    });
-
-    state.selectedMode = "nvl";
-    const nvlViewData = selectTestViewData({
-      state,
-      props: {
-        layouts: [
           {
             id: "layout-nvl",
             name: "NVL Layout",
@@ -197,10 +207,50 @@ describe("commandLineDialogueBox.store", () => {
     });
 
     expect(
-      nvlViewData.form.fields.find((field) => field.name === "resourceId"),
+      findFormField(viewData, (field) => field.name === "resourceId"),
     ).toMatchObject({
       label: "Layout",
+      options: [
+        {
+          value: "layout-adv",
+          label: "ADV Layout",
+          suffixText: "ADV",
+        },
+        {
+          value: "layout-nvl",
+          label: "NVL Layout",
+          suffixText: "NVL",
+        },
+      ],
     });
+
+    state.selectedResourceId = "layout-nvl";
+    const nvlViewData = selectTestViewData({
+      state,
+      props: {
+        layouts: [
+          {
+            id: "layout-adv",
+            name: "ADV Layout",
+            layoutType: "dialogue-adv",
+          },
+          {
+            id: "layout-nvl",
+            name: "NVL Layout",
+            layoutType: "dialogue-nvl",
+          },
+        ],
+        characters: [],
+      },
+    });
+
+    expect(
+      findFormField(nvlViewData, (field) => field.name === "resourceId"),
+    ).toMatchObject({
+      value: "layout-nvl",
+    });
+    expect(nvlViewData.selectedMode).toBe("nvl");
+    expect(nvlViewData.context.dialogueMode).toBe("nvl");
   });
 
   it("tracks append in form defaults and field values", () => {
@@ -230,7 +280,7 @@ describe("commandLineDialogueBox.store", () => {
     expect(viewData.appendDialogue).toBe(true);
     expect(viewData.defaultValues.append).toBe(true);
     expect(
-      viewData.form.fields.find((field) => field.name === "append"),
+      findFormField(viewData, (field) => field.name === "append"),
     ).toMatchObject({
       label: "Append",
       type: "segmented-control",
@@ -255,10 +305,12 @@ describe("commandLineDialogueBox.store", () => {
       },
     });
 
-    const customizeTextSpeedField = viewData.form.fields.find(
+    const customizeTextSpeedField = findFormField(
+      viewData,
       (field) => field.name === "customizeTextSpeed",
     );
-    const textSpeedField = viewData.form.fields.find(
+    const textSpeedField = findFormField(
+      viewData,
       (field) => field.name === "textSpeed",
     );
 
@@ -336,7 +388,8 @@ describe("commandLineDialogueBox.store", () => {
         characters: [],
       },
     });
-    const persistCharacterField = viewData.form.fields.find(
+    const persistCharacterField = findFormField(
+      viewData,
       (field) => field.name === "persistCharacter",
     );
 
@@ -407,10 +460,11 @@ describe("commandLineDialogueBox.store", () => {
       },
     });
     expect(
-      viewData.form.fields.find((field) => field.name === "persistSprite"),
+      findFormField(viewData, (field) => field.name === "persistSprite"),
     ).toBeUndefined();
     expect(
-      viewData.form.fields.find(
+      findFormField(
+        viewData,
         (field) => field.name === "removePersistedSprite",
       ),
     ).toBeUndefined();
@@ -437,7 +491,8 @@ describe("commandLineDialogueBox.store", () => {
       },
     });
     expect(
-      viewData.form.fields.find(
+      findFormField(
+        viewData,
         (field) => field.name === "removePersistedSprite",
       ),
     ).toBeUndefined();
@@ -579,7 +634,7 @@ describe("commandLineDialogueBox.store", () => {
     });
 
     expect(
-      viewData.form.fields.find((field) => field.slot === "characterSprite"),
+      findFormField(viewData, (field) => field.slot === "characterSprite"),
     ).toEqual({
       slot: "characterSprite",
       type: "slot",

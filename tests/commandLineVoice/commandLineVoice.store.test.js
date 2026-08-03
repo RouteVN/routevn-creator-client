@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as voiceStore from "../../src/components/commandLineVoice/commandLineVoice.store.js";
 import {
+  clearSelectedSound,
   createInitialState,
   insertSound,
   removeSound,
@@ -55,7 +56,7 @@ describe("commandLineVoice.store", () => {
     });
   });
 
-  it("starts with an empty selected Voice channel", () => {
+  it("starts with an unselected Voice channel and selects it explicitly", () => {
     const state = createInitialState();
     const viewData = selectViewData({ state, i18n });
 
@@ -67,14 +68,25 @@ describe("commandLineVoice.store", () => {
     });
     expect(viewData.channelLabel).toBe("Voice Channel");
     expect(viewData.channelDurationLabel).toBe("0:00");
-    expect(viewData.selectionHeading).toBe("Channel");
-    expect(viewData.selectionName).toBe("Voice Channel");
-    expect(viewData.form.fields.map((field) => field.name)).toEqual([
+    expect(viewData.hasSelection).toBe(false);
+    expect(viewData.channelBorderColor).toBe("bo");
+    expect(viewData.channelHoverBorderColor).toBe("ac");
+    expect(viewData.selectionHeading).toBe("");
+    expect(viewData.selectionName).toBe("");
+
+    clearSelectedSound({ state });
+    const selectedViewData = selectViewData({ state, i18n });
+    expect(selectedViewData.hasSelection).toBe(true);
+    expect(selectedViewData.channelBorderColor).toBe("pr");
+    expect(selectedViewData.channelHoverBorderColor).toBe("pr");
+    expect(selectedViewData.selectionHeading).toBe("Channel");
+    expect(selectedViewData.selectionName).toBe("Voice Channel");
+    expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([
       "loop",
       "interruption",
       "volume",
     ]);
-    expect(viewData.defaultValues).toEqual({
+    expect(selectedViewData.defaultValues).toEqual({
       interruption: "immediate",
       loop: false,
       volume: 100,

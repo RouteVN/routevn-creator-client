@@ -82,18 +82,37 @@ const toCharacterCollection = ({ characters = [], tree } = {}) => {
   };
 };
 
-const getLayoutTypeByMode = (mode) => {
-  return mode === "nvl" ? "dialogue-nvl" : "dialogue-adv";
+const getDialogueModeByLayoutType = (layoutType) => {
+  if (layoutType === "dialogue-nvl") {
+    return "nvl";
+  }
+
+  if (layoutType === "dialogue-adv") {
+    return "adv";
+  }
+
+  return undefined;
 };
 
-const getLayoutOptions = ({ layouts, mode } = {}) => {
-  const layoutType = getLayoutTypeByMode(mode);
+const getLayoutOptions = ({ layouts } = {}) => {
   return (layouts ?? [])
-    .filter((layout) => layout.layoutType === layoutType)
+    .filter((layout) => getDialogueModeByLayoutType(layout.layoutType))
     .map((layout) => ({
       value: layout.id,
       label: layout.name,
+      suffixText: getDialogueModeByLayoutType(layout.layoutType).toUpperCase(),
     }));
+};
+
+const resolveSelectedMode = ({ layouts, resourceId, fallbackMode } = {}) => {
+  const layoutType = (layouts ?? []).find(
+    (layout) => layout.id === resourceId,
+  )?.layoutType;
+
+  return (
+    getDialogueModeByLayoutType(layoutType) ??
+    (fallbackMode === "nvl" ? "nvl" : "adv")
+  );
 };
 
 const resolveSelectedResourceId = ({ layoutOptions, resourceId } = {}) => {
@@ -373,7 +392,6 @@ export const createInitialState = () => ({
   },
 
   defaultValues: {
-    mode: "adv",
     resourceId: "",
     characterId: "",
     customCharacterName: false,
@@ -391,18 +409,6 @@ export const createInitialState = () => ({
   form: {
     fields: [
       {
-        name: "mode",
-        type: "segmented-control",
-        label: "Mode",
-        description: "",
-        required: true,
-        clearable: false,
-        options: [
-          { value: "adv", label: "ADV" },
-          { value: "nvl", label: "NVL" },
-        ],
-      },
-      {
         name: "resourceId",
         type: "select",
         label: "Layout",
@@ -413,99 +419,113 @@ export const createInitialState = () => ({
         options: [],
       },
       {
-        name: "characterId",
-        type: "select",
         label: "Speaker",
         description: "",
-        required: false,
-        placeholder: "Choose a speaker...",
-        options: [],
-      },
-      {
-        name: "customCharacterName",
-        type: "segmented-control",
-        label: "Custom Speaker Name",
-        description: "",
-        required: true,
-        clearable: false,
-        options: [
-          { value: false, label: "No" },
-          { value: true, label: "Yes" },
+        type: "section",
+        fields: [
+          {
+            name: "characterId",
+            type: "select",
+            label: "Speaker",
+            description: "",
+            required: false,
+            placeholder: "Choose a speaker...",
+            options: [],
+          },
+          {
+            $when: "values.characterId || values.customCharacterName",
+            name: "persistCharacter",
+            type: "segmented-control",
+            label: "Persist Speaker",
+            description: "",
+            required: true,
+            clearable: false,
+            options: [
+              { value: false, label: "No" },
+              { value: true, label: "Yes" },
+            ],
+          },
+          {
+            name: "customCharacterName",
+            type: "segmented-control",
+            label: "Custom Speaker Name",
+            description: "",
+            required: true,
+            clearable: false,
+            options: [
+              { value: false, label: "No" },
+              { value: true, label: "Yes" },
+            ],
+          },
+          {
+            $when: "values.customCharacterName == true",
+            name: "characterName",
+            type: "input-text",
+            label: "Speaker Name",
+            description: "",
+            required: true,
+            placeholder: "Enter speaker name",
+          },
+          {
+            type: "slot",
+            slot: "characterSprite",
+          },
         ],
       },
       {
-        $when: "values.customCharacterName == true",
-        name: "characterName",
-        type: "input-text",
-        label: "Speaker Name",
+        label: "Options",
         description: "",
-        required: true,
-        placeholder: "Enter speaker name",
-      },
-      {
-        type: "slot",
-        slot: "characterSprite",
-      },
-      {
-        name: "customizeTextSpeed",
-        type: "segmented-control",
-        label: "Customize Text Speed",
-        description: "",
-        required: true,
-        clearable: false,
-        options: [
-          { value: false, label: "No" },
-          { value: true, label: "Yes" },
-        ],
-      },
-      {
-        $when: "values.customizeTextSpeed == true",
-        name: "textSpeed",
-        type: "slider-with-input",
-        label: "Text Speed",
-        description: "",
-        required: true,
-        min: 0,
-        max: 100,
-        step: 1,
-      },
-      {
-        $when: 'values.mode == "adv"',
-        name: "append",
-        type: "segmented-control",
-        label: "Append",
-        description: "",
-        required: true,
-        clearable: false,
-        options: [
-          { value: false, label: "No" },
-          { value: true, label: "Yes" },
-        ],
-      },
-      {
-        $when: "values.characterId || values.customCharacterName",
-        name: "persistCharacter",
-        type: "segmented-control",
-        label: "Persist Speaker",
-        description: "",
-        required: true,
-        clearable: false,
-        options: [
-          { value: false, label: "No" },
-          { value: true, label: "Yes" },
-        ],
-      },
-      {
-        $when: 'values.mode == "nvl"',
-        name: "clearPage",
-        type: "segmented-control",
-        label: "Clear Page",
-        description: "",
-        required: true,
-        clearable: false,
-        options: [
-          { value: false, label: "No" },
-          { value: true, label: "Yes" },
+        type: "section",
+        fields: [
+          {
+            name: "customizeTextSpeed",
+            type: "segmented-control",
+            label: "Customize Text Speed",
+            description: "",
+            required: true,
+            clearable: false,
+            options: [
+              { value: false, label: "No" },
+              { value: true, label: "Yes" },
+            ],
+          },
+          {
+            $when: "values.customizeTextSpeed == true",
+            name: "textSpeed",
+            type: "slider-with-input",
+            label: "Text Speed",
+            description: "",
+            required: true,
+            min: 0,
+            max: 100,
+            step: 1,
+          },
+          {
+            $when: 'dialogueMode == "adv"',
+            name: "append",
+            type: "segmented-control",
+            label: "Append",
+            description: "",
+            required: true,
+            clearable: false,
+            options: [
+              { value: false, label: "No" },
+              { value: true, label: "Yes" },
+            ],
+          },
+          {
+            $when: 'dialogueMode == "nvl"',
+            name: "clearPage",
+            type: "segmented-control",
+            label: "Clear Page",
+            description: "",
+            required: true,
+            clearable: false,
+            options: [
+              { value: false, label: "No" },
+              { value: true, label: "Yes" },
+            ],
+          },
         ],
       },
     ],
@@ -766,7 +786,6 @@ export const hideSpeakerSpriteTooltip = ({ state }) => {
 export const setSelectedMode = ({ state }, { mode } = {}) => {
   const selectedMode = mode === "nvl" ? "nvl" : "adv";
   state.selectedMode = selectedMode;
-  state.defaultValues.mode = selectedMode;
 };
 
 export const setAppendDialogue = ({ state }, { append } = {}) => {
@@ -866,7 +885,6 @@ export const selectDialogueBuildState = ({ state }) => ({
 });
 
 export const selectDialogueFormState = ({ state }) => ({
-  selectedMode: state.selectedMode,
   selectedResourceId: state.selectedResourceId,
   selectedCharacterId: state.selectedCharacterId,
   customCharacterName: state.customCharacterName,
@@ -942,18 +960,21 @@ export const selectCurrentSpriteItemById = (
 
 export const selectViewData = ({ state, props, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
-  const layouts = props.layouts || [];
-  const characters = props.characters || [];
-  const transforms = props.transforms || createEmptyCollection();
-  const animations = props.animations || createEmptyCollection();
-  const selectedMode = state.selectedMode || "adv";
+  const layouts = props.layouts ?? [];
+  const characters = props.characters ?? [];
+  const transforms = props.transforms ?? createEmptyCollection();
+  const animations = props.animations ?? createEmptyCollection();
   const layoutOptions = getLayoutOptions({
     layouts,
-    mode: selectedMode,
   });
   const selectedResourceId = resolveSelectedResourceId({
     layoutOptions,
     resourceId: state.selectedResourceId,
+  });
+  const selectedMode = resolveSelectedMode({
+    layouts,
+    resourceId: selectedResourceId,
+    fallbackMode: state.selectedMode,
   });
   const characterCollection = toCharacterCollection({
     characters,
@@ -1121,13 +1142,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     });
   }
 
-  const mappedFields = state.form.fields.map((field) => {
-    if (field.name === "mode") {
-      return {
-        ...field,
-        value: selectedMode,
-      };
-    }
+  const mapFormField = (field) => {
     if (field.name === "resourceId") {
       return {
         ...field,
@@ -1185,11 +1200,17 @@ export const selectViewData = ({ state, props, i18n }) => {
         value: normalizeTextSpeed(state.textSpeed),
       };
     }
+    if (Array.isArray(field.fields)) {
+      return {
+        ...field,
+        fields: field.fields.map(mapFormField),
+      };
+    }
     return field;
-  });
+  };
+  const mappedFields = state.form.fields.map(mapFormField);
 
   const defaultValues = {
-    mode: selectedMode,
     resourceId: selectedResourceId,
     characterId: state.selectedCharacterId,
     customCharacterName: state.customCharacterName,
@@ -1204,6 +1225,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     textSpeed: normalizeTextSpeed(state.textSpeed),
   };
   const context = {
+    dialogueMode: selectedMode,
     values: defaultValues,
   };
 

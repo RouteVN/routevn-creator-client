@@ -11,6 +11,11 @@ propsSchema:
             type: string
           name:
             type: string
+          layoutType:
+            type: string
+            enum:
+              - dialogue-adv
+              - dialogue-nvl
     characters:
       type: array
       items:

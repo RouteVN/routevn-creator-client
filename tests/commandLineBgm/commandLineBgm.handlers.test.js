@@ -140,6 +140,7 @@ describe("commandLineBgm.handlers", () => {
     const stopPropagation = vi.fn();
     handleChannelClick({ store, render }, { _event: { stopPropagation } });
 
+    expect(state.channelSelected).toBe(true);
     expect(state.selectedSoundId).toBeUndefined();
     expect(stopPropagation).toHaveBeenCalledOnce();
     expect(render).toHaveBeenCalledOnce();

@@ -211,6 +211,7 @@ describe("commandLineVoice.handlers", () => {
       { _event: { stopPropagation: vi.fn() } },
     );
 
+    expect(state.channelSelected).toBe(true);
     expect(state.selectedSoundId).toBeUndefined();
     expect(render).toHaveBeenCalledOnce();
   });

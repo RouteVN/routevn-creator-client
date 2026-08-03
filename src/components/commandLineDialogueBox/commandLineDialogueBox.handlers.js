@@ -34,8 +34,16 @@ const createEmptyCollection = () => ({
   tree: [],
 });
 
-const getLayoutTypeByMode = (mode) => {
-  return mode === "nvl" ? "dialogue-nvl" : "dialogue-adv";
+const getDialogueModeByLayoutType = (layoutType) => {
+  if (layoutType === "dialogue-nvl") {
+    return "nvl";
+  }
+
+  if (layoutType === "dialogue-adv") {
+    return "adv";
+  }
+
+  return undefined;
 };
 
 const resolveDialogueMode = ({ layouts, dialogue } = {}) => {
@@ -44,17 +52,15 @@ const resolveDialogueMode = ({ layouts, dialogue } = {}) => {
     (layout) => layout.id === resourceId,
   )?.layoutType;
 
-  if (dialogue?.mode === "nvl" || layoutType === "dialogue-nvl") {
-    return "nvl";
-  }
-
-  return "adv";
+  return (
+    getDialogueModeByLayoutType(layoutType) ??
+    (dialogue?.mode === "nvl" ? "nvl" : "adv")
+  );
 };
 
 const resolveSelectedResourceId = ({ layouts, mode, resourceId } = {}) => {
-  const selectedLayoutType = getLayoutTypeByMode(mode);
-  const availableLayouts = (layouts ?? []).filter(
-    (layout) => layout.layoutType === selectedLayoutType,
+  const availableLayouts = (layouts ?? []).filter((layout) =>
+    getDialogueModeByLayoutType(layout.layoutType),
   );
 
   if (
@@ -62,6 +68,14 @@ const resolveSelectedResourceId = ({ layouts, mode, resourceId } = {}) => {
     availableLayouts.some((layout) => layout.id === resourceId)
   ) {
     return resourceId;
+  }
+
+  const matchingModeLayout = availableLayouts.find(
+    (layout) => getDialogueModeByLayoutType(layout.layoutType) === mode,
+  );
+
+  if (matchingModeLayout) {
+    return matchingModeLayout.id;
   }
 
   return availableLayouts[0]?.id ?? "";
@@ -671,7 +685,6 @@ const syncDialogueFormValues = (deps) => {
   }
 
   const {
-    selectedMode,
     selectedResourceId,
     selectedCharacterId,
     customCharacterName,
@@ -686,7 +699,6 @@ const syncDialogueFormValues = (deps) => {
     textSpeed,
   } = store.selectDialogueFormState();
   const values = {
-    mode: selectedMode,
     resourceId: selectedResourceId,
     characterId: selectedCharacterId,
     customCharacterName,
@@ -729,7 +741,20 @@ export const handleFormChange = (deps, payload) => {
   }
 
   const currentState = store.selectDialogueFormChangeState();
-  const selectedMode = formValues.mode === "nvl" ? "nvl" : "adv";
+  const selectedResourceId = resolveSelectedResourceId({
+    layouts: props?.layouts,
+    mode: currentState.selectedMode,
+    resourceId: formValues.resourceId ?? "",
+  });
+  const selectedMode = resolveDialogueMode({
+    layouts: props?.layouts,
+    dialogue: {
+      mode: currentState.selectedMode,
+      ui: {
+        resourceId: selectedResourceId,
+      },
+    },
+  });
   const modeChanged = selectedMode !== currentState.selectedMode;
   const customCharacterName = toBoolean(formValues.customCharacterName);
   const customizeTextSpeed = toBoolean(formValues.customizeTextSpeed);
@@ -765,11 +790,7 @@ export const handleFormChange = (deps, payload) => {
 
   store.setSelectedMode({ mode: selectedMode });
   store.setSelectedResource({
-    resourceId: resolveSelectedResourceId({
-      layouts: props?.layouts,
-      mode: selectedMode,
-      resourceId: formValues.resourceId ?? "",
-    }),
+    resourceId: selectedResourceId,
   });
   store.setSelectedCharacterId({ characterId: selectedCharacterId });
   store.setCustomCharacterName({
@@ -800,7 +821,9 @@ export const handleFormChange = (deps, payload) => {
   store.setRemovePersistedSprite({
     removePersistedSprite,
   });
-  store.setClearPage({ clearPage: formValues.clearPage });
+  store.setClearPage({
+    clearPage: selectedMode === "nvl" && toBoolean(formValues.clearPage),
+  });
   store.setCustomizeTextSpeed({
     customizeTextSpeed,
   });
