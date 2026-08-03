@@ -13,8 +13,9 @@ const view = readFileSync(
 describe("groupVariablesView view", () => {
   it("parses and keeps stored and computed dialogs separate", () => {
     expect(() => yaml.load(view)).not.toThrow();
-    expect(view).toContain("rtgl-dialog#variableDialog");
-    expect(view).toContain("rtgl-dialog#computedDialog");
+    expect(view).toContain("rtgl-dialog#variableDialog s=md");
+    expect(view).toContain("rtgl-dialog#computedDialog s=lg");
+    expect(view).not.toContain("rtgl-dialog#variableDialog s=lg");
     expect(view).toContain("rtgl-form#variableForm");
     expect(view).toContain("rtgl-form#computedForm");
     expect(view).toContain('slot="operation"');

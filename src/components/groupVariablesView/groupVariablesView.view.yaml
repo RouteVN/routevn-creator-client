@@ -299,7 +299,7 @@ template:
           - $if flatGroups.length > 0:
               - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - $if !readonly:
-      - rtgl-dialog#variableDialog s=lg ?open=${isVariableDialogOpen}:
+      - rtgl-dialog#variableDialog s=md ?open=${isVariableDialogOpen}:
           - rtgl-view slot=content g=md:
               - rtgl-form#variableForm key=variable-${dialogKey} :defaultValues=${defaultValues} :form=${variableForm} w=f :context=${context}:
                   - 'rtgl-view slot="enum-values" d=v w=f g=sm':
