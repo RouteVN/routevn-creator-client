@@ -54,6 +54,14 @@ refs:
     eventListeners:
       click:
         handler: handleMaskRemoveConfirmClick
+  selectedMaskDeleteButton:
+    eventListeners:
+      click:
+        handler: handleMaskRemoveRequestClick
+  selectedPropertyDeleteButton:
+    eventListeners:
+      click:
+        handler: handleSelectedPropertyDeleteClick
   addPropertiesButton:
     eventListeners:
       click:
@@ -108,8 +116,6 @@ refs:
         handler: handleKeyframeRightClick
       property-name-click:
         handler: handlePropertyNameClick
-      property-name-right-click:
-        handler: handlePropertyNameRightClick
       initial-value-click:
         handler: handleInitialValueClick
   transitionRuler:
@@ -130,8 +136,6 @@ refs:
         handler: handleKeyframeRightClick
       property-name-click:
         handler: handlePropertyNameClick
-      property-name-right-click:
-        handler: handlePropertyNameRightClick
       initial-value-click:
         handler: handleInitialValueClick
   nextTimeline:
@@ -148,8 +152,22 @@ refs:
         handler: handleKeyframeRightClick
       property-name-click:
         handler: handlePropertyNameClick
-      property-name-right-click:
-        handler: handlePropertyNameRightClick
+      initial-value-click:
+        handler: handleInitialValueClick
+  maskTimeline:
+    eventListeners:
+      add-keyframe:
+        handler: handleAddKeyframeFromTimeline
+      keyframe-click:
+        handler: handleKeyframeClick
+      keyframe-select:
+        handler: handleKeyframeSelect
+      keyframe-duration-change:
+        handler: handleKeyframeDurationChange
+      keyframe-right-click:
+        handler: handleKeyframeRightClick
+      property-name-click:
+        handler: handlePropertyNameClick
       initial-value-click:
         handler: handleInitialValueClick
   addPropertyPopover:
@@ -208,16 +226,16 @@ refs:
     eventListeners:
       click:
         handler: handleSelectedKeyframeEditClick
+  selectedMaskInitialValue:
+    eventListeners:
+      click:
+        handler: handleSelectedMaskInitialValueClick
+      keydown:
+        handler: handleSelectedMaskNumberFieldKeyDown
   selectedMaskSoftness:
     eventListeners:
       click:
         handler: handleSelectedMaskSoftnessClick
-      keydown:
-        handler: handleSelectedMaskNumberFieldKeyDown
-  selectedMaskProgressDuration:
-    eventListeners:
-      click:
-        handler: handleSelectedMaskProgressDurationClick
       keydown:
         handler: handleSelectedMaskNumberFieldKeyDown
   selectedMaskNumberInput:
@@ -248,7 +266,7 @@ refs:
     eventListeners:
       click:
         handler: handleDisableMaskClick
-  maskTimelineRow:
+  unsupportedMaskTimelineRow:
     eventListeners:
       click:
         handler: handleMaskTimelineRowClick
@@ -393,13 +411,10 @@ styles:
   ".animationEditorTab:focus-visible":
     outline: "2px solid var(--ring)"
     outline-offset: 2px
-  "#maskTimelineRow:focus-visible":
+  "#unsupportedMaskTimelineRow:focus-visible":
     outline: "2px solid var(--ring)"
     outline-offset: 2px
   "#selectedMaskSoftness:focus-visible":
-    outline: "2px solid var(--ring)"
-    outline-offset: 2px
-  "#selectedMaskProgressDuration:focus-visible":
     outline: "2px solid var(--ring)"
     outline-offset: 2px
   "#singleMaskImageButton:focus-visible":
@@ -426,26 +441,27 @@ template:
               - 'rtgl-button#playButton s=sm aria-label="${playButton}" aria-pressed="${previewPlaying}"': ${playButton}
           - rtgl-view h=1fg sv w=f p=md g=lg:
               - rtgl-view d=v w=f g=md:
-                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
+                  - 'rtgl-view bgc=fg pos=rel style="width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; aspect-ratio: ${canvasAspectRatio};"':
                       - rtgl-view pos=abs cor=full:
                           - 'div#canvas style="width: 100%; height: 100%; display: flex;"': null
               - 'rtgl-view d=v w=f h=1fg g=md style="min-height: 0;"':
-                  - 'rtgl-view#animationEditorTabs role=tablist aria-label="${editorPanelsLabel}" d=h g=sm bgc=mu p=sm br=lg w=f':
-                      - $for item, i in editorTabs:
-                          - 'rtgl-view#animationEditorTab${i}.animationEditorTab role=tab tabindex=${item.tabIndex} aria-selected="${item.selected}" aria-controls=${item.panelId} data-tab-id=${item.id} cur=pointer bgc=${item.backgroundColor} bw=xs bc=${item.borderColor} pv=md ph=lg br=lg':
-                              - rtgl-text s=sm c=${item.textColor}: ${item.label}
+                  - rtgl-view#animationEditorToolbar d=h w=f av=c:
+                      - 'rtgl-view#animationEditorTabs role=tablist aria-label="${editorPanelsLabel}" d=h g=sm bgc=mu p=sm br=lg w=fit-content':
+                          - $for item, i in editorTabs:
+                              - 'rtgl-view#animationEditorTab${i}.animationEditorTab role=tab tabindex=${item.tabIndex} aria-selected="${item.selected}" aria-controls=${item.panelId} data-tab-id=${item.id} cur=pointer bgc=${item.backgroundColor} bw=xs bc=${item.borderColor} pv=md ph=lg br=lg':
+                                  - rtgl-text s=sm c=${item.textColor}: ${item.label}
+                      - $if selectedEditorTab == 'tween':
+                          - rtgl-view w=1fg: null
+                          - rtgl-view d=h av=c g=sm mr=md:
+                              - 'rtgl-button#timelineZoomOut sq v=ol s=sm aria-label="${timelineZoomOutLabel}" title="${timelineZoomOutLabel}"': '-'
+                              - 'rtgl-slider#timelineZoomSlider w=120 min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom} aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
+                              - 'rtgl-button#timelineZoomIn sq v=ol s=sm aria-label="${timelineZoomInLabel}" title="${timelineZoomInLabel}"': +
+                          - $if dialogType == 'update' && updateAddPropertyButtonVisible:
+                              - rtgl-button#addPropertiesButton data-side=update pre=plus s=sm: ${addButton}
+                          - $if dialogType == 'transition' && transitionAddPropertyButtonVisible:
+                              - rtgl-button#addPropertiesButton pre=plus s=sm: ${addButton}
                   - $if selectedEditorTab == 'tween':
                       - 'rtgl-view#animationTweenPanel role=tabpanel aria-labelledby=animationEditorTab0 d=v w=f h=1fg g=md style="min-height: 0;"':
-                          - rtgl-view d=h av=c w=f:
-                              - rtgl-view w=1fg: null
-                              - rtgl-view d=h av=c g=sm mr=md:
-                                  - 'rtgl-button#timelineZoomOut sq v=ol s=sm aria-label="${timelineZoomOutLabel}" title="${timelineZoomOutLabel}"': '-'
-                                  - 'rtgl-slider#timelineZoomSlider w=120 min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom} aria-label="${timelineZoomLabel}" title="${timelineZoomLabel}"': null
-                                  - 'rtgl-button#timelineZoomIn sq v=ol s=sm aria-label="${timelineZoomInLabel}" title="${timelineZoomInLabel}"': +
-                              - $if dialogType == 'update' && updateAddPropertyButtonVisible:
-                                  - rtgl-button#addPropertiesButton data-side=update pre=plus s=sm: ${addButton}
-                              - $if dialogType == 'transition' && transitionAddPropertyButtonVisible:
-                                  - rtgl-button#addPropertiesButton pre=plus s=sm: ${addButton}
                           - $if dialogType == 'update':
                               - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
                                   - 'rtgl-view d=v pos=rel style="${timelineCanvasStyle} min-height: 100%;"':
@@ -470,15 +486,24 @@ template:
                                                   - rtgl-text s=sm c=mu-fg: ${inTimelineLabel}
                                               - rtgl-view h=24 w=24 mr=sm ml=sm: null
                                           - rvn-keyframe-timeline#nextTimeline editable=true side=next ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDisplayDuration} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
-                                      - $if maskTimelineRow:
-                                          - 'rtgl-view#maskTimelineRow data-timeline-selection-surface=true data-selected=${maskTimelineRow.selected} role=button tabindex=0 aria-pressed="${maskTimelineRow.selected}" d=h w=f h=24 av=c cur=pointer':
-                                              - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
-                                                  - rtgl-view w=72 av=c ah=c:
-                                                      - rtgl-text s=xs c=${maskTimelineRow.nameColor}: ${maskTimelineRow.label}
-                                                  - rtgl-view h=24 w=24 mr=sm ml=sm: null
-                                              - 'rtgl-view w=f h=24 bgc=mu br=sm pos=rel style="min-width: 0; overflow: hidden;"':
-                                                  - $if maskTimelineRow.barVisible:
-                                                      - 'rtgl-view pos=abs bgc=ac bw=xs br=lg title="${maskTimelineRow.easingLabel}" style="top: 2px; bottom: 2px; ${maskTimelineRow.barStyle} border-color: ${maskTimelineRow.barBorderColor};"': null
+                                      - rtgl-view d=v w=f g=xs:
+                                          - 'rtgl-view#maskTimelineCategory d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
+                                              - rtgl-view w=72 av=c ah=c:
+                                                  - rtgl-text s=sm c=mu-fg: ${maskTitle}
+                                              - rtgl-view h=24 w=24 mr=sm ml=sm: null
+                                          - $if maskTimelineRow:
+                                              - $if maskTimelineRow.editable:
+                                                  - rtgl-view#maskTimelineRow data-timeline-selection-surface=true w=f:
+                                                      - rvn-keyframe-timeline#maskTimeline editable=true side=mask ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDisplayDuration} :properties=${maskTimelineProperties} :defaultValues=${maskTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
+                                                $else:
+                                                  - 'rtgl-view#unsupportedMaskTimelineRow data-timeline-selection-surface=true data-selected=${maskTimelineRow.selected} role=button tabindex=0 aria-label="${maskTimelineRow.label}" aria-pressed="${maskTimelineRow.selected}" d=h w=f h=24 av=c cur=pointer':
+                                                      - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
+                                                          - rtgl-view w=72 av=c ah=c:
+                                                              - 'rtgl-view w=28 h=18 bw=xs bc=${maskTimelineRow.imageBorderColor} br=sm overflow=hidden title="${maskTimelineRow.image.name}"':
+                                                                  - $if maskTimelineRow.image.previewFileId:
+                                                                      - rvn-file-image w=f h=f fileId=${maskTimelineRow.image.previewFileId}: null
+                                                          - rtgl-view h=24 w=24 mr=sm ml=sm: null
+                                                      - 'rtgl-view w=f h=24 bgc=mu br=sm style="min-width: 0;"': null
                                       - 'rtgl-view h=32 style="flex-shrink: 0;"': null
                                       - $if timelinePlayheadVisible:
                                           - 'rtgl-view pos=abs bgc=fg op="0.5" style="${timelinePlayheadStyle}"': null
@@ -511,6 +536,10 @@ template:
                   - $if detailsPanelTitle:
                       - rtgl-view#timelineDetailsHeader h=48 w=f d=h av=c ph=md bwb=xs bc=bo:
                           - rtgl-text w=1fg: ${detailsPanelTitle}
+                          - $if selectedMask:
+                              - 'rtgl-button#selectedMaskDeleteButton sq v=gh pre=trash aria-label="${removeButton}" title="${removeButton}"': null
+                            $elif selectedPropertyDetailId:
+                              - 'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"': null
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if selectedKeyframeDetailId:
                           - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} w=f :fields=${selectedKeyframeDetailFields} :fillHeight=${false}: null
@@ -525,6 +554,10 @@ template:
                                       - rtgl-text s=sm: ${maskEditorPanel.unsupportedMessage}
                                       - rtgl-text s=xs c=mu-fg: ${maskEditorPanel.unsupportedDescription}
                                 $else:
+                                  - rtgl-view d=v g=xs w=f:
+                                      - rtgl-text s=sm c=mu-fg: ${initialValueLabel}
+                                      - rtgl-view#selectedMaskInitialValue data-mask-number-field=initial-value role=button tabindex=0 aria-haspopup=dialog d=h pv=sm ph=md bgc=mu br=md av=c cur=pointer bw=xs bc=bg h-bc=ac h=32 w=f:
+                                          - rtgl-text s=sm: ${maskEditorPanel.progressInitialValue}
                                   - rtgl-view d=v g=xs w=f:
                                       - rtgl-text s=sm c=mu-fg: ${channelLabel}
                                       - rtgl-segmented-control#maskChannelSelect w=f no-clear :selectedValue=${maskEditorPanel.channelValue} :options=${maskChannelOptions}: null
@@ -546,15 +579,6 @@ template:
                                         $else:
                                           - 'rtgl-view#singleMaskImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="${selectImageLabel}" w=160 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="aspect-ratio: 16 / 9; max-width: 100%; box-sizing: border-box;"':
                                               - rtgl-text c=mu-fg: ${selectImageLabel}
-                                  - rtgl-view d=v g=xs w=f:
-                                      - rtgl-text s=sm c=mu-fg: ${progressDurationLabel}
-                                      - rtgl-view#selectedMaskProgressDuration data-mask-number-field=progress-duration role=button tabindex=0 aria-haspopup=dialog d=h pv=sm ph=md bgc=mu br=md av=c cur=pointer bw=xs bc=bg h-bc=ac h=32 w=f:
-                                          - rtgl-text s=sm: ${maskEditorPanel.progressDuration}
-                                  - rtgl-view d=v g=xs w=f:
-                                      - rtgl-text s=sm c=mu-fg: ${progressEasingLabel}
-                                      - rtgl-select#maskProgressEasingSelect w=f no-clear :selectedValue=${maskEditorPanel.progressEasing} :options=${maskProgressEasingOptions}: null
-                              - rtgl-view d=h w=f ah=e pt=sm:
-                                  - rtgl-button#disableMaskButton s=sm v=se: ${removeButton}
                         $else:
                           - rtgl-view w=f h=f av=c ah=c p=md:
                               - rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}
@@ -572,11 +596,11 @@ template:
           - rtgl-view slot=content:
               - rtgl-form#editInitialValueForm :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null
   - rtgl-popover#selectedMaskNumberPopover ?open=${selectedMaskNumberPopoverIsOpen} x=${popover.x} y=${popover.y} content-w=220 content-g=sm content-ph=md content-pv=md content-bgc=su:
+      - $if showSelectedMaskInitialValuePopover:
+          - rtgl-input-number#selectedMaskNumberInput key=${popover.mode} w=f min=0 max=1 step=0.01 value=${popover.formValues.value}: null
       - $if showSelectedMaskSoftnessPopover:
           - rtgl-input-number#selectedMaskNumberInput key=${popover.mode} w=f min=0 step=0.01 value=${popover.formValues.value}: null
-      - $if showSelectedMaskProgressDurationPopover:
-          - rtgl-input-number#selectedMaskNumberInput key=${popover.mode} w=f min=1 step=1 value=${popover.formValues.value}: null
-      - $if showSelectedMaskSoftnessPopover || showSelectedMaskProgressDurationPopover:
+      - $if showSelectedMaskInitialValuePopover || showSelectedMaskSoftnessPopover:
           - rtgl-view d=h w=f ah=e pt=xs:
               - rtgl-button#selectedMaskNumberConfirm s=sm v=pr: ${doneButton}
   - $if showAddPropertyDialog:
@@ -621,12 +645,13 @@ template:
                             $else:
                               - 'rtgl-view#singleMaskImageButton role=button tabindex=0 aria-haspopup=dialog aria-label="${selectImageLabel}" w=160 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="aspect-ratio: 16 / 9; max-width: 100%; box-sizing: border-box;"':
                                   - rtgl-text c=mu-fg: ${selectImageLabel}
-                      - rtgl-view d=v g=xs w=f:
-                          - rtgl-text s=sm c=mu-fg: ${progressDurationLabel}
-                          - rtgl-input#maskProgressDurationInput type=number min=1 step=1 w=f value=${maskEditorPanel.progressDuration}: null
-                      - rtgl-view d=v g=xs w=f:
-                          - rtgl-text s=sm c=mu-fg: ${progressEasingLabel}
-                          - rtgl-select#maskProgressEasingSelect w=f no-clear :selectedValue=${maskEditorPanel.progressEasing} :options=${maskProgressEasingOptions}: null
+                      - $if popover.mode == 'addMask':
+                          - rtgl-view d=v g=xs w=f:
+                              - rtgl-text s=sm c=mu-fg: ${progressDurationLabel}
+                              - rtgl-input#maskProgressDurationInput type=number min=1 step=1 w=f value=${maskEditorPanel.progressDuration}: null
+                          - rtgl-view d=v g=xs w=f:
+                              - rtgl-text s=sm c=mu-fg: ${progressEasingLabel}
+                              - rtgl-select#maskProgressEasingSelect w=f no-clear :selectedValue=${maskEditorPanel.progressEasing} :options=${maskProgressEasingOptions}: null
               - $if popover.mode == 'addMask':
                   - rtgl-view d=h g=sm w=f ah=e pt=sm:
                       - rtgl-button#addMaskButton s=sm v=pr ?disabled=${addMaskDisabled}: ${addMaskButton}

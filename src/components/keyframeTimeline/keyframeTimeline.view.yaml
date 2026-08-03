@@ -47,12 +47,16 @@ refs:
     eventListeners:
       click:
         handler: handlePropertyNameClick
-      contextmenu:
-        handler: handlePropertyNameRightClick
+      keydown:
+        handler: handlePropertyNameKeyDown
   initialValue*:
     eventListeners:
       click:
         handler: handleInitialValueClick
+styles:
+  ".keyframeTimelinePropertyRow:focus-visible":
+    outline: "2px solid var(--ring)"
+    outline-offset: -2px
 template:
   - rtgl-view g=md w=f pos=rel:
       - $if showRuler || (showTracks && selectedProperties.length > 0):
@@ -74,10 +78,17 @@ template:
               - $if showTracks:
                   - $for property, pIndex in selectedProperties:
                       - rtgl-view d=h w=f av=c:
-                          - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
-                              - rtgl-view w=72 av=c d=h ah=c:
-                                  - rtgl-text#propertyName${pIndex} data-property=${property.name} data-selected=${property.selected} s=xs c=${property.nameColor} cur=pointer: ${property.name}
-                              - rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm:
+                          - 'rtgl-view data-selected=${property.selected} d=h h=24 w=104 bgc=${property.backgroundColor} h-bgc=${property.hoverBackgroundColor} bwr=xs bc=bo av=c cur=${property.rowCursor} style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
+                              - $if editable:
+                                  - 'rtgl-view#propertyName${pIndex}.keyframeTimelinePropertyRow data-property=${property.name} role=button tabindex=0 aria-pressed="${property.selected}" aria-label="${property.thumbnailName}" w=f h=f pos=abs cur=pointer style="inset: 0; z-index: 0;"': null
+                              - 'rtgl-view w=72 av=c d=h ah=c pos=rel style="z-index: 1; pointer-events: none;"':
+                                  - $if property.thumbnail:
+                                      - 'rtgl-view w=28 h=18 bw=xs bc=${property.thumbnailBorderColor} br=sm overflow=hidden title="${property.thumbnailName}"':
+                                          - $if property.thumbnailFileId:
+                                              - rvn-file-image w=f h=f fileId=${property.thumbnailFileId}: null
+                                    $else:
+                                      - rtgl-text s=xs c=${property.nameColor}: ${property.name}
+                              - 'rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm pos=rel style="z-index: 2;"':
                                   - rtgl-text#initialValue${pIndex} data-property=${property.name} data-interactive=${property.initialValueInteractive} s=xs cur=${property.initialValueCursor}: ${property.initialValue}
                           - 'rtgl-view#track${pIndex} data-keyframe-track=true data-property=${property.name} data-track-mode=${property.trackMode} d=h w=f h=24 bgc=mu br=sm g=xs pos=rel style="min-width: 0; overflow: hidden; cursor: ${property.trackCursor};"':
                               - $if property.valueCurvePath:

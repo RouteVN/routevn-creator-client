@@ -61,7 +61,7 @@ describe("animationEditor view", () => {
 
     const selectorStart = view.indexOf("$if maskEditorPanel.singleImage");
     const selectorEnd = view.indexOf(
-      "rtgl-text s=sm c=mu-fg: ${progressDurationLabel}",
+      "                        $else:\n                          - rtgl-view w=f h=f",
       selectorStart,
     );
     const selectorBranch = view.slice(selectorStart, selectorEnd);
@@ -90,6 +90,9 @@ describe("animationEditor view", () => {
       'rvn-resizable-panel#timelineDetailsPanel data-timeline-selection-surface=true panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left"',
     );
     expect(view).toContain("rtgl-view#editorSurface");
+    expect(view).toContain(
+      "width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; aspect-ratio: ${canvasAspectRatio};",
+    );
     expect(view).toContain("handler: handleEditorSurfaceClick");
     expect(view).toContain("rvn-detail-view#selectedKeyframeDetails");
     expect(view).toContain(":fields=${selectedKeyframeDetailFields}");
@@ -97,6 +100,14 @@ describe("animationEditor view", () => {
     expect(view).toContain(":fields=${selectedPropertyDetailFields}");
     expect(view).toContain("$if detailsPanelTitle");
     expect(view).toContain("rtgl-view#timelineDetailsHeader h=48");
+    expect(view).toContain(
+      'rtgl-button#selectedMaskDeleteButton sq v=gh pre=trash aria-label="${removeButton}" title="${removeButton}"',
+    );
+    expect(view).toContain("handler: handleMaskRemoveRequestClick");
+    expect(view).toContain(
+      'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"',
+    );
+    expect(view).toContain("handler: handleSelectedPropertyDeleteClick");
     expect(view).toContain("rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}");
     expect(view).not.toContain("${selectTimelineItemPrompt}");
     expect(view).toContain("rtgl-button#editSelectedKeyframeButton");
@@ -119,6 +130,9 @@ describe("animationEditor view", () => {
       'rtgl-view#animationEditorTabs role=tablist aria-label="${editorPanelsLabel}"',
     );
     expect(view).toContain(
+      'animationEditorTabs role=tablist aria-label="${editorPanelsLabel}" d=h g=sm bgc=mu p=sm br=lg w=fit-content',
+    );
+    expect(view).toContain(
       "rtgl-view#animationEditorTab${i}.animationEditorTab role=tab",
     );
     expect(view).toContain("handler: handleEditorTabKeyDown");
@@ -127,20 +141,31 @@ describe("animationEditor view", () => {
     expect(view).toContain("rtgl-view#animationTweenPanel");
     expect(view).not.toContain("rtgl-view#animationMaskPanel");
     expect(view).toContain("rtgl-view#animationPreviewPanel");
+    expect(view).toContain("rtgl-view#maskTimelineCategory");
+    expect(view).toContain("rtgl-text s=sm c=mu-fg: ${maskTitle}");
     expect(view).toContain("rtgl-view#maskTimelineRow");
-    expect(view).toContain("role=button tabindex=0 aria-pressed");
+    expect(view).toContain(
+      "rvn-keyframe-timeline#maskTimeline editable=true side=mask",
+    );
+    expect(view).toContain(
+      ":properties=${maskTimelineProperties} :defaultValues=${maskTimelineDefaultValues}",
+    );
     expect(view).toContain("handler: handleMaskTimelineRowClick");
     expect(view).toContain("handler: handleMaskTimelineRowKeyDown");
     expect(view).toContain("$elif selectedMask");
     expect(view).toContain("rtgl-view#selectedMaskDetails");
     expect(view).toContain("rtgl-view#selectedMaskSoftness");
     expect(view).toContain("handler: handleSelectedMaskSoftnessClick");
-    expect(view).toContain("rtgl-view#selectedMaskProgressDuration");
-    expect(view).toContain("handler: handleSelectedMaskProgressDurationClick");
+    expect(view).toContain("rtgl-view#selectedMaskInitialValue");
+    expect(view).toContain("handler: handleSelectedMaskInitialValueClick");
+    expect(view).not.toContain("rtgl-view#selectedMaskProgressDuration");
+    expect(view).not.toContain(
+      "handler: handleSelectedMaskProgressDurationClick",
+    );
     expect(view).toContain("$if showSelectedMaskSoftnessPopover");
-    expect(view).toContain("$if showSelectedMaskProgressDurationPopover");
+    expect(view).toContain("$if showSelectedMaskInitialValuePopover");
+    expect(view).not.toContain("showSelectedMaskProgressDurationPopover");
     expect(view).toContain("min=0 step=0.01 value=${popover.formValues.value}");
-    expect(view).toContain("min=1 step=1 value=${popover.formValues.value}");
     expect(view).toContain("?disabled=${addMaskDisabled}");
     expect(view).not.toContain("handler: handleSingleMaskImageRightClick");
     expect(
@@ -157,6 +182,27 @@ describe("animationEditor view", () => {
     expect(view).not.toContain("rtgl-segmented-control#maskKindSelect");
     expect(view).toContain("rtgl-input#maskSoftnessInput type=number");
     expect(view).toContain("rtgl-select#maskProgressEasingSelect w=f no-clear");
+    expect(view).toContain("$if popover.mode == 'addMask':");
+    const selectedMaskBranchStart = view.indexOf("$elif selectedMask:");
+    const selectedMaskBranchEnd = view.indexOf(
+      "                        $else:\n                          - rtgl-view w=f h=f",
+      selectedMaskBranchStart,
+    );
+    const selectedMaskBranch = view.slice(
+      selectedMaskBranchStart,
+      selectedMaskBranchEnd,
+    );
+    expect(selectedMaskBranch).toContain(
+      "rtgl-segmented-control#maskChannelSelect",
+    );
+    expect(selectedMaskBranch).toContain(
+      "rtgl-segmented-control#maskInvertSelect",
+    );
+    expect(selectedMaskBranch).toContain("rtgl-view#selectedMaskSoftness");
+    expect(selectedMaskBranch).toContain("rtgl-view#singleMaskImageButton");
+    expect(selectedMaskBranch).not.toContain("rtgl-button#disableMaskButton");
+    expect(selectedMaskBranch).not.toContain("maskProgressDurationInput");
+    expect(selectedMaskBranch).not.toContain("maskProgressEasingSelect");
     expect(view).toContain("rtgl-view d=v w=f g=md pb=xl");
     expect(view).not.toContain("editMaskButton");
     expect(view).not.toContain("cancelMaskButton");
@@ -168,7 +214,8 @@ describe("animationEditor view", () => {
     expect(view).not.toContain("showMaskAndPreviewSections");
     expect(view).toContain(":selectedKeyframe=${selectedKeyframe}");
     expect(view).toContain(":selectedProperty=${selectedProperty}");
-    expect(view).toContain("handler: handlePropertyNameRightClick");
+    expect(view).not.toContain("handler: handlePropertyNameRightClick");
+    expect(view).not.toContain("property-name-right-click");
   });
 
   it("places zoom controls before Add and lets the timeline scroll on both axes", () => {
@@ -182,6 +229,18 @@ describe("animationEditor view", () => {
 
     expect(view.indexOf("rtgl-slider#timelineZoomSlider")).toBeLessThan(
       view.indexOf("rtgl-button#addPropertiesButton"),
+    );
+    const toolbarStart = view.indexOf("rtgl-view#animationEditorToolbar");
+    const tweenPanelStart = view.indexOf("rtgl-view#animationTweenPanel");
+    expect(toolbarStart).toBeGreaterThan(-1);
+    expect(view.indexOf("rtgl-view#animationEditorTabs")).toBeGreaterThan(
+      toolbarStart,
+    );
+    expect(view.indexOf("rtgl-slider#timelineZoomSlider")).toBeGreaterThan(
+      toolbarStart,
+    );
+    expect(view.indexOf("rtgl-button#addPropertiesButton")).toBeLessThan(
+      tweenPanelStart,
     );
     expect(view).toContain(
       "min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom}",

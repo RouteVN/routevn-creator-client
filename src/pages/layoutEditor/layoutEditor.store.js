@@ -2,6 +2,7 @@ import { parseAndRender } from "jempl";
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
+  formatHalfViewportCanvasMaxWidth,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
@@ -24,23 +25,10 @@ const arePreviewDataEqual = (left, right) => {
   return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
 };
 
-const selectCanvasAspectRatioWidthMultiplier = ({ state }) => {
-  const projectResolution = requireProjectResolution(
-    state.projectResolution ?? DEFAULT_PROJECT_RESOLUTION,
-    "Project resolution",
-  );
-  const width = Number(projectResolution.width);
-  const height = Number(projectResolution.height);
-  const ratio = width / height;
-
-  return Number.isFinite(ratio) && ratio > 0 ? ratio : 16 / 9;
-};
-
 const selectLayoutEditorCanvasMaxWidth = ({ state }) => {
-  const widthMultiplier = selectCanvasAspectRatioWidthMultiplier({ state });
-  const maxWidthVh = Number((widthMultiplier * 50).toFixed(4));
-
-  return `min(100%, ${maxWidthVh}vh)`;
+  return formatHalfViewportCanvasMaxWidth(
+    state.projectResolution ?? DEFAULT_PROJECT_RESOLUTION,
+  );
 };
 
 const CREATE_TYPE_LABEL_KEYS = Object.freeze({

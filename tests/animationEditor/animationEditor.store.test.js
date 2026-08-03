@@ -87,6 +87,25 @@ describe("animationEditor.store", () => {
     expect(selectSelectedEditorTab({ state })).toBe("tween");
   });
 
+  it("limits the preview canvas to half the viewport height", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      canvasAspectRatio: "1920 / 1080",
+      previewCanvasMaxWidth: "min(100%, 88.8889vh)",
+    });
+
+    setProjectResolution(
+      { state },
+      { projectResolution: { width: 1080, height: 1920 } },
+    );
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      canvasAspectRatio: "1080 / 1920",
+      previewCanvasMaxWidth: "min(100%, 28.125vh)",
+    });
+  });
+
   it("switches the preview button between Play and Pause", () => {
     const state = createInitialState();
 
@@ -335,13 +354,12 @@ describe("animationEditor.store", () => {
       property: "alpha",
     });
     expect(viewData.selectedKeyframe).toBeUndefined();
-    expect(viewData.detailsPanelTitle).toBe("Property Details");
+    expect(viewData.detailsPanelTitle).toBe("Property");
     expect(viewData.selectedPropertyDetailId).toBe("prev:alpha");
     expect(viewData.selectedPropertyDetailFields).toEqual([
-      { type: "text", label: "Timeline", value: "Out" },
+      { type: "text", label: "Timeline", value: "Outgoing" },
       { type: "text", label: "Property", value: "Alpha" },
       { type: "text", label: "Initial value", value: 0.5 },
-      { type: "text", label: "Tween Mode", value: "Keyframes" },
     ]);
 
     setSelectedKeyframe(
@@ -544,8 +562,8 @@ describe("animationEditor.store", () => {
       value: "mask",
     });
     expect(sideField.options).toEqual([
-      { label: "Out", type: "item", value: "prev" },
-      { label: "In", type: "item", value: "next" },
+      { label: "Outgoing", type: "item", value: "prev" },
+      { label: "Incoming", type: "item", value: "next" },
     ]);
   });
 
@@ -560,9 +578,22 @@ describe("animationEditor.store", () => {
     expect(viewData.popover.maskDialogIsOpen).toBe(false);
     expect(viewData.maskEditorPanel.enabled).toBe(true);
     expect(viewData.maskEditorPanel.channelValue).toBe("red");
+    expect(viewData.maskEditorPanel.progressInitialValue).toBe(0);
     expect(viewData.maskTimelineRow).toMatchObject({
+      editable: true,
       label: "Mask",
       selected: false,
+    });
+    expect(viewData.maskTimelineProperties).toEqual({
+      progress: {
+        initialValue: 0,
+        keyframes: [{ duration: 900, value: 1, easing: "linear" }],
+        selected: false,
+        thumbnail: true,
+        thumbnailBorderColor: "bo",
+        thumbnailFileId: undefined,
+        thumbnailName: "Mask",
+      },
     });
 
     setSelectedMask({ state });
@@ -570,31 +601,127 @@ describe("animationEditor.store", () => {
     expect(selectedViewData.selectedMask).toBe(true);
     expect(selectedViewData.detailsPanelTitle).toBe("Mask");
     expect(selectedViewData.maskTimelineRow).toMatchObject({
-      nameColor: "pr",
+      imageBorderColor: "pr",
       selected: true,
     });
+    expect(selectedViewData.maskTimelineProperties.progress.selected).toBe(
+      true,
+    );
+
+    setPopover(
+      {
+        state,
+      },
+      { mode: "editSelectedMaskInitialValue", x: 20, y: 40 },
+    );
+    const initialValuePopoverViewData = selectViewData({
+      state,
+      i18n: EN_I18N,
+    });
+    expect(initialValuePopoverViewData.selectedMaskNumberPopoverIsOpen).toBe(
+      true,
+    );
+    expect(
+      initialValuePopoverViewData.showSelectedMaskInitialValuePopover,
+    ).toBe(true);
 
     setPopover({ state }, { mode: "editSelectedMaskSoftness", x: 20, y: 40 });
     const softnessPopoverViewData = selectViewData({ state, i18n: EN_I18N });
     expect(softnessPopoverViewData.selectedMaskNumberPopoverIsOpen).toBe(true);
     expect(softnessPopoverViewData.showSelectedMaskSoftnessPopover).toBe(true);
-    expect(
-      softnessPopoverViewData.showSelectedMaskProgressDurationPopover,
-    ).toBe(false);
-
-    setPopover(
-      { state },
-      { mode: "editSelectedMaskProgressDuration", x: 20, y: 40 },
-    );
-    const durationPopoverViewData = selectViewData({ state, i18n: EN_I18N });
-    expect(durationPopoverViewData.selectedMaskNumberPopoverIsOpen).toBe(true);
-    expect(durationPopoverViewData.showSelectedMaskSoftnessPopover).toBe(false);
-    expect(
-      durationPopoverViewData.showSelectedMaskProgressDurationPopover,
-    ).toBe(true);
 
     clearTimelineSelection({ state });
     expect(selectViewData({ state, i18n: EN_I18N }).selectedMask).toBe(false);
+  });
+
+  it("adds, selects, moves, resizes, and protects mask progress keyframes", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+    enableTransitionMask({ state });
+    setPopover(
+      {
+        state,
+      },
+      {
+        mode: "keyframeMenu",
+        payload: { side: "mask", property: "progress", index: 0 },
+      },
+    );
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).keyframeDropdownItems,
+    ).not.toContainEqual(expect.objectContaining({ value: "delete-keyframe" }));
+
+    addKeyframe(
+      { state },
+      {
+        side: "mask",
+        property: "progress",
+        index: 1,
+        delay: 200,
+        duration: 600,
+        easing: "easeInQuad",
+        relative: false,
+        value: 0.5,
+      },
+    );
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).keyframeDropdownItems,
+    ).toContainEqual(expect.objectContaining({ value: "delete-keyframe" }));
+    setSelectedKeyframe(
+      { state },
+      { side: "mask", property: "progress", index: 1 },
+    );
+    setSelectedKeyframeTiming({ state }, { delay: 300, duration: 700 });
+
+    expect(state.transitionMask.progress.keyframes[1]).toMatchObject({
+      delay: 300,
+      duration: 700,
+      easing: "easeInQuad",
+      value: 0.5,
+    });
+    const selectedKeyframeViewData = selectViewData({
+      state,
+      i18n: EN_I18N,
+    });
+    expect(selectedKeyframeViewData).toMatchObject({
+      selectedMask: false,
+      selectedKeyframeDetailId: "mask:progress:1",
+      detailsPanelTitle: "Keyframe Details",
+    });
+    expect(
+      selectedKeyframeViewData.selectedKeyframeDetailFields.map(
+        (field) => field.label,
+      ),
+    ).toEqual([
+      "Timeline",
+      "Property",
+      "Delay (ms)",
+      "Duration (ms)",
+      "Easing",
+      "Value",
+      "Value type",
+    ]);
+    expect(selectedKeyframeViewData.selectedKeyframeDetailFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Timeline", value: "Mask" }),
+        expect.objectContaining({ label: "Property", value: "Progress" }),
+      ]),
+    );
+
+    moveKeyframeLeft(
+      { state },
+      { side: "mask", property: "progress", index: 1 },
+    );
+    expect(state.selectedKeyframe).toEqual({
+      side: "mask",
+      property: "progress",
+      index: 0,
+    });
+    expect(state.transitionMask.progress.keyframes[0].value).toBe(0.5);
+
+    deleteKeyframe({ state }, { side: "mask", property: "progress", index: 0 });
+    deleteKeyframe({ state }, { side: "mask", property: "progress", index: 0 });
+    expect(state.transitionMask.progress.keyframes).toHaveLength(1);
   });
 
   it("keeps the timeline mask summary hidden while adding a pending mask", () => {
@@ -1121,6 +1248,9 @@ describe("animationEditor.store", () => {
     });
 
     expect(nextState.transitionMask.kind).toBe("single");
+    expect(nextState.transitionMask.progress.keyframes).toEqual([
+      { duration: 900, value: 1, easing: "linear" },
+    ]);
     expect(nextState.pendingTransitionMask).toBeUndefined();
   });
 
@@ -1160,6 +1290,20 @@ describe("animationEditor.store", () => {
       previewFileId: "thumb-mask",
       previewAspectRatio: "800 / 600",
       name: "Feather Mask",
+    });
+    expect(viewData.maskTimelineRow).toMatchObject({
+      image: {
+        imageId: "mask",
+        previewFileId: "thumb-mask",
+        name: "Feather Mask",
+      },
+      imageBorderColor: "bo",
+      label: "Mask",
+    });
+    expect(viewData.maskTimelineProperties.progress).toMatchObject({
+      thumbnail: true,
+      thumbnailFileId: "thumb-mask",
+      thumbnailName: "Feather Mask",
     });
     expect(viewData.transitionMaskPanel.imageItems).toEqual([
       expect.objectContaining({

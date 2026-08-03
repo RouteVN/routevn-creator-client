@@ -99,30 +99,37 @@ const resolveLeadingProgressHold = (progress = {}) => {
 
 const serializeProgressForModel = (progress = {}) => {
   const serializedProgress = structuredClone(progress);
-  const keyframes = [];
-  let currentValue = Number(progress.initialValue);
-  if (!Number.isFinite(currentValue)) {
-    currentValue = 0;
-  }
-
-  for (const keyframe of progress.keyframes ?? []) {
+  serializedProgress.keyframes = (progress.keyframes ?? []).map((keyframe) => {
+    const serializedKeyframe = structuredClone(keyframe);
     const delay = Math.max(0, Number(keyframe.delay) || 0);
     if (delay > 0) {
-      keyframes.push({
-        duration: Math.max(1, delay),
-        value: currentValue,
-        easing: "linear",
-      });
+      serializedKeyframe.delay = delay;
+    } else {
+      delete serializedKeyframe.delay;
+    }
+    return serializedKeyframe;
+  });
+  return serializedProgress;
+};
+
+const normalizeProgressForEditor = (mask = {}, resolvedProgress = {}) => {
+  if (!mask.progress?.keyframes?.length) {
+    const keyframe = {
+      duration: resolvedProgress.duration,
+      value: 1,
+      easing: resolvedProgress.easing,
+    };
+    if (resolvedProgress.delay > 0) {
+      keyframe.delay = resolvedProgress.delay;
     }
 
-    const serializedKeyframe = structuredClone(keyframe);
-    delete serializedKeyframe.delay;
-    keyframes.push(serializedKeyframe);
-    currentValue = resolveKeyframeValue(currentValue, keyframe);
+    return {
+      initialValue: 0,
+      keyframes: [keyframe],
+    };
   }
 
-  serializedProgress.keyframes = keyframes;
-  return serializedProgress;
+  return structuredClone(mask.progress);
 };
 
 const resolveMaskProgress = (mask = {}) => {
@@ -176,6 +183,16 @@ export const createDefaultTransitionMask = () => {
     progressDelay: 0,
     progressDuration: DEFAULT_TRANSITION_MASK_PROGRESS_DURATION,
     progressEasing: DEFAULT_TRANSITION_MASK_PROGRESS_EASING,
+    progress: {
+      initialValue: 0,
+      keyframes: [
+        {
+          duration: DEFAULT_TRANSITION_MASK_PROGRESS_DURATION,
+          value: 1,
+          easing: DEFAULT_TRANSITION_MASK_PROGRESS_EASING,
+        },
+      ],
+    },
   };
 };
 
@@ -210,9 +227,7 @@ export const normalizeTransitionMaskForEditor = (mask, imageItems = {}) => {
   nextMask.progressDelay = progress.delay;
   nextMask.progressDuration = progress.duration;
   nextMask.progressEasing = progress.easing;
-  nextMask.progress = mask.progress
-    ? structuredClone(mask.progress)
-    : undefined;
+  nextMask.progress = normalizeProgressForEditor(mask, progress);
   nextMask.imageId = resolveEditorSingleMaskImageId(mask, imageItems);
   nextMask.channel = normalizeTransitionMaskChannel(mask.channel);
   nextMask.invert = mask.invert ?? nextMask.invert;

@@ -26,6 +26,7 @@ import {
 } from "../../internal/ui/sceneEditor/sceneEditorTiming.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
+  formatHalfViewportCanvasMaxWidth,
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
@@ -1693,10 +1694,14 @@ const selectCanvasAspectRatioWidthMultiplier = ({ state }) => {
 };
 
 const selectPreviewCanvasMaxWidth = ({ state }) => {
-  const widthMultiplier = selectCanvasAspectRatioWidthMultiplier({ state });
-  const maxWidthVh = Number((widthMultiplier * 50).toFixed(4));
+  const projectResolution = state.repositoryState?.project?.resolution
+    ? requireProjectResolution(
+        state.repositoryState.project.resolution,
+        "Project resolution",
+      )
+    : DEFAULT_PROJECT_RESOLUTION;
 
-  return `min(100%, ${maxWidthVh}vh)`;
+  return formatHalfViewportCanvasMaxWidth(projectResolution);
 };
 
 const selectMobilePreviewCanvasMaxWidth = ({ state }) => {

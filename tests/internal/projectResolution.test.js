@@ -1,12 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
   createProjectResolutionFormValues,
+  formatHalfViewportCanvasMaxWidth,
   PROJECT_RESOLUTION_OPTIONS,
   resolveProjectResolution,
   scaleTemplateProjectStateForResolution,
 } from "../../src/internal/projectResolution.js";
 
 describe("project resolution presets", () => {
+  it("limits a canvas to half the viewport height for its aspect ratio", () => {
+    expect(
+      formatHalfViewportCanvasMaxWidth({ width: 1920, height: 1080 }),
+    ).toBe("min(100%, 88.8889vh)");
+    expect(
+      formatHalfViewportCanvasMaxWidth({ width: 1080, height: 1920 }),
+    ).toBe("min(100%, 28.125vh)");
+  });
+
   it("includes a portrait 1080p option", () => {
     expect(PROJECT_RESOLUTION_OPTIONS).toContainEqual({
       value: "1080x1920",

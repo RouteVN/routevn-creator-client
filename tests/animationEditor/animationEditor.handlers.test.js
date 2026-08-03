@@ -21,9 +21,9 @@ import {
   handleKeyframeRightClick,
   handleMaskTimelineRowClick,
   handleMaskTimelineRowKeyDown,
+  handleMaskRemoveRequestClick,
   handleOpenAddMaskClick,
   handlePropertyNameClick,
-  handlePropertyNameRightClick,
   handlePreviewImageClick,
   handleReplayAnimation,
   handleRulerTimeScrub,
@@ -33,8 +33,9 @@ import {
   handleSelectedMaskNumberFieldKeyDown,
   handleSelectedMaskNumberInputChange,
   handleSelectedMaskNumberInputKeyDown,
-  handleSelectedMaskProgressDurationClick,
+  handleSelectedMaskInitialValueClick,
   handleSelectedMaskSoftnessClick,
+  handleSelectedPropertyDeleteClick,
   handleSingleMaskImageKeyDown,
   handleTimelineZoomChange,
   handleTimelineZoomIn,
@@ -391,7 +392,7 @@ describe("animationEditor.handlers", () => {
     },
   );
 
-  it("selects a property on click and opens its menu only on right click", () => {
+  it("selects a property on click without opening a desktop menu", () => {
     const store = {
       closePopover: vi.fn(),
       selectIsTouchMode: vi.fn(() => false),
@@ -415,31 +416,29 @@ describe("animationEditor.handlers", () => {
     });
     expect(store.closePopover).toHaveBeenCalledWith();
     expect(store.setPopover).not.toHaveBeenCalled();
+  });
 
-    handlePropertyNameRightClick(
-      { store, render },
-      {
-        _event: {
-          detail: {
-            side: "prev",
-            property: "alpha",
-            x: 80,
-            y: 120,
-          },
-        },
-      },
-    );
+  it("deletes the selected property from the detail header", () => {
+    const selectedProperty = { side: "prev", property: "alpha" };
+    const store = {
+      ...createIdleAutosaveMocks(),
+      bumpPreviewRenderVersion: vi.fn(),
+      closePopover: vi.fn(),
+      deleteProperty: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      selectSelectedProperty: vi.fn(() => selectedProperty),
+      stopPreviewPlayback: vi.fn(),
+    };
+    const render = vi.fn();
 
-    expect(store.setSelectedProperty).toHaveBeenLastCalledWith({
-      side: "prev",
-      property: "alpha",
-    });
-    expect(store.setPopover).toHaveBeenCalledWith({
-      mode: "propertyNameMenu",
-      x: 80,
-      y: 120,
-      payload: { side: "prev", property: "alpha" },
-    });
+    handleSelectedPropertyDeleteClick({ store, render });
+
+    expect(store.deleteProperty).toHaveBeenCalledWith(selectedProperty);
+    expect(store.closePopover).toHaveBeenCalledOnce();
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledOnce();
+    expect(store.queueAutosave).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
   });
 
   it("adds and selects a default keyframe from the timeline hover action", () => {
@@ -848,10 +847,9 @@ describe("animationEditor.handlers", () => {
     },
   );
 
-  it("opens number popovers for selected mask softness and duration", () => {
+  it("opens the number popover for selected mask softness", () => {
     const store = {
       selectMaskEditorTransitionMask: vi.fn(() => ({
-        progressDuration: 900,
         softness: 0.08,
       })),
       setPopover: vi.fn(),
@@ -863,30 +861,56 @@ describe("animationEditor.handlers", () => {
       { store, render },
       { _event: { clientX: 10, clientY: 20 } },
     );
-    handleSelectedMaskProgressDurationClick(
-      { store, render },
-      { _event: { clientX: 30, clientY: 40 } },
-    );
 
-    expect(store.setPopover).toHaveBeenNthCalledWith(1, {
+    expect(store.setPopover).toHaveBeenCalledWith({
       mode: "editSelectedMaskSoftness",
       x: 10,
       y: 20,
       payload: {},
     });
-    expect(store.setPopover).toHaveBeenNthCalledWith(2, {
-      mode: "editSelectedMaskProgressDuration",
-      x: 30,
-      y: 40,
-      payload: {},
-    });
-    expect(store.updatePopoverFormValues).toHaveBeenNthCalledWith(1, {
+    expect(store.updatePopoverFormValues).toHaveBeenCalledWith({
       formValues: { value: 0.08 },
     });
-    expect(store.updatePopoverFormValues).toHaveBeenNthCalledWith(2, {
-      formValues: { value: 900 },
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens the number popover for the selected mask initial value", () => {
+    const store = {
+      selectMaskEditorTransitionMask: vi.fn(() => ({
+        progress: { initialValue: 0.2 },
+      })),
+      setPopover: vi.fn(),
+      updatePopoverFormValues: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleSelectedMaskInitialValueClick(
+      { store, render },
+      { _event: { clientX: 10, clientY: 20 } },
+    );
+
+    expect(store.setPopover).toHaveBeenCalledWith({
+      mode: "editSelectedMaskInitialValue",
+      x: 10,
+      y: 20,
+      payload: {},
     });
-    expect(render).toHaveBeenCalledTimes(2);
+    expect(store.updatePopoverFormValues).toHaveBeenCalledWith({
+      formValues: { value: 0.2 },
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens the confirmation dialog before removing the selected mask", () => {
+    const store = {
+      openMaskRemoveConfirmDialog: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleMaskRemoveRequestClick({ store, render });
+
+    expect(store.openMaskRemoveConfirmDialog).toHaveBeenCalledWith({});
+    expect(render).toHaveBeenCalledOnce();
   });
 
   it("opens mask number fields from the keyboard", () => {
@@ -926,7 +950,7 @@ describe("animationEditor.handlers", () => {
   });
 
   it("tracks and confirms selected mask number input values", () => {
-    let popover = {
+    const popover = {
       mode: "editSelectedMaskSoftness",
       formValues: { value: 0.25 },
     };
@@ -936,7 +960,6 @@ describe("animationEditor.handlers", () => {
       queueAutosave: vi.fn(),
       selectPopover: vi.fn(() => popover),
       selectPreviewPlaybackFrameId: vi.fn(() => undefined),
-      setTransitionMaskProgressDuration: vi.fn(),
       setTransitionMaskSoftness: vi.fn(),
       stopPreviewPlayback: vi.fn(),
       updatePopoverFormValues: vi.fn(),
@@ -953,22 +976,43 @@ describe("animationEditor.handlers", () => {
     });
 
     handleSelectedMaskNumberConfirmClick({ store, render });
-    popover = {
-      mode: "editSelectedMaskProgressDuration",
-      formValues: { value: 1200 },
-    };
-    handleSelectedMaskNumberConfirmClick({ store, render });
 
     expect(store.setTransitionMaskSoftness).toHaveBeenCalledWith({
       softness: 0.25,
     });
-    expect(store.setTransitionMaskProgressDuration).toHaveBeenCalledWith({
-      duration: 1200,
+    expect(store.closePopover).toHaveBeenCalledOnce();
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledOnce();
+    expect(store.queueAutosave).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("confirms the selected mask initial value", () => {
+    const store = {
+      bumpPreviewRenderVersion: vi.fn(),
+      closePopover: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectPopover: vi.fn(() => ({
+        mode: "editSelectedMaskInitialValue",
+        formValues: { value: 0.25 },
+      })),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      updateInitialValue: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleSelectedMaskNumberConfirmClick({ store, render });
+
+    expect(store.updateInitialValue).toHaveBeenCalledWith({
+      side: "mask",
+      property: "progress",
+      initialValue: 0.25,
     });
-    expect(store.closePopover).toHaveBeenCalledTimes(2);
-    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledTimes(2);
-    expect(store.queueAutosave).toHaveBeenCalledTimes(2);
-    expect(render).toHaveBeenCalledTimes(2);
+    expect(store.closePopover).toHaveBeenCalledOnce();
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledOnce();
+    expect(store.queueAutosave).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
   });
 
   it("focuses the selected mask number input when its popover opens", () => {
@@ -1229,6 +1273,35 @@ describe("animationEditor.handlers", () => {
       y: 60,
       payload: {},
     });
+  });
+
+  it("selects mask settings when the mask timeline thumbnail is clicked", () => {
+    const store = {
+      closePopover: vi.fn(),
+      selectIsTouchMode: vi.fn(() => false),
+      setPopover: vi.fn(),
+      setSelectedMask: vi.fn(),
+      setSelectedProperty: vi.fn(),
+    };
+    const render = vi.fn();
+    const payload = {
+      _event: {
+        detail: {
+          side: "mask",
+          property: "progress",
+          x: 30,
+          y: 60,
+        },
+      },
+    };
+
+    handlePropertyNameClick({ store, render }, payload);
+
+    expect(store.setSelectedMask).toHaveBeenCalledOnce();
+    expect(store.setSelectedProperty).not.toHaveBeenCalled();
+    expect(store.setPopover).not.toHaveBeenCalled();
+    expect(store.closePopover).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
   });
 
   it("commits a pending transition mask", () => {

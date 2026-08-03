@@ -8,7 +8,7 @@ import {
   handleKeyframeMoveEnd,
   handleKeyframeMoveStart,
   handlePropertyNameClick,
-  handlePropertyNameRightClick,
+  handlePropertyNameKeyDown,
   handleRulerScrubEnd,
   handleRulerScrubMove,
   handleRulerScrubStart,
@@ -187,11 +187,11 @@ describe("keyframeTimeline.handlers", () => {
     });
   });
 
-  it("selects a property on click and reserves its menu for right click", () => {
+  it("selects a property on click", () => {
     const dispatchEvent = vi.fn();
     const stopPropagation = vi.fn();
     const currentTarget = { dataset: { property: "alpha" } };
-    const deps = { dispatchEvent, props: { side: "next" } };
+    const deps = { dispatchEvent, props: { editable: true, side: "next" } };
 
     handlePropertyNameClick(deps, {
       _event: {
@@ -210,27 +210,65 @@ describe("keyframeTimeline.handlers", () => {
         y: 60,
       },
     });
+  });
 
+  it("selects a thumbnail property with Enter or Space", () => {
+    const dispatchEvent = vi.fn();
     const preventDefault = vi.fn();
-    handlePropertyNameRightClick(deps, {
+    const stopPropagation = vi.fn();
+    const currentTarget = { dataset: { property: "progress" } };
+    const deps = {
+      dispatchEvent,
+      props: { editable: true, side: "mask" },
+    };
+
+    handlePropertyNameKeyDown(deps, {
       _event: {
-        clientX: 40,
-        clientY: 80,
+        key: "Enter",
+        clientX: 20,
+        clientY: 40,
         currentTarget,
         preventDefault,
         stopPropagation,
       },
     });
-    expect(preventDefault).toHaveBeenCalled();
-    expect(dispatchEvent.mock.calls[1][0]).toMatchObject({
-      type: "property-name-right-click",
+
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(dispatchEvent.mock.calls[0][0]).toMatchObject({
+      type: "property-name-click",
       detail: {
-        property: "alpha",
-        side: "next",
-        x: 40,
-        y: 80,
+        property: "progress",
+        side: "mask",
       },
     });
+  });
+
+  it("does not expose property selection behavior in read-only timelines", () => {
+    const dispatchEvent = vi.fn();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const currentTarget = { dataset: { property: "alpha" } };
+    const deps = {
+      dispatchEvent,
+      props: { editable: false, side: "update" },
+    };
+
+    handlePropertyNameClick(deps, {
+      _event: { currentTarget, preventDefault, stopPropagation },
+    });
+    handlePropertyNameKeyDown(deps, {
+      _event: {
+        key: "Enter",
+        currentTarget,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(dispatchEvent).not.toHaveBeenCalled();
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(stopPropagation).not.toHaveBeenCalled();
   });
 
   it("changes preview time only while the numbered ruler is being scrubbed", () => {

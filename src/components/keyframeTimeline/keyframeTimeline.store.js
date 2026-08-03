@@ -373,12 +373,26 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       const isDefault = value === undefined || value === "";
       const autoConfig = propertyConfig.auto;
       const selected =
-        attrs.selectedProperty?.side === attrs.side &&
-        attrs.selectedProperty?.property === propertyName;
+        propertyConfig.selected === true ||
+        (attrs.selectedProperty?.side === attrs.side &&
+          attrs.selectedProperty?.property === propertyName);
       return {
         name: propertyName,
         selected,
-        nameColor: selected ? "pr" : "fg",
+        backgroundColor: selected ? "ac" : "bg",
+        hoverBackgroundColor: attrs.editable
+          ? selected
+            ? "ac"
+            : "mu"
+          : selected
+            ? "ac"
+            : "bg",
+        nameColor: selected ? "ac-fg" : "fg",
+        rowCursor: attrs.editable ? "pointer" : "default",
+        thumbnail: propertyConfig.thumbnail === true,
+        thumbnailBorderColor: propertyConfig.thumbnailBorderColor ?? "bo",
+        thumbnailFileId: propertyConfig.thumbnailFileId,
+        thumbnailName: propertyConfig.thumbnailName ?? propertyName,
         initialValue: autoConfig ? "" : isDefault ? "D" : value,
         initialValueInteractive: !autoConfig,
         trackMode: autoConfig ? "auto" : "keyframes",

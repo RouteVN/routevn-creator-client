@@ -789,6 +789,10 @@ export const handleDurationHandleClick = (_deps, payload) => {
 
 export const handlePropertyNameClick = (deps, payload) => {
   const { dispatchEvent, props } = deps;
+  if (!props.editable) {
+    return;
+  }
+
   const event = payload._event;
   event.stopPropagation();
 
@@ -806,24 +810,18 @@ export const handlePropertyNameClick = (deps, payload) => {
   );
 };
 
-export const handlePropertyNameRightClick = (deps, payload) => {
-  const { dispatchEvent, props } = deps;
-  const event = payload._event;
-  event.preventDefault();
-  event.stopPropagation();
+export const handlePropertyNameKeyDown = (deps, payload) => {
+  if (!deps.props.editable) {
+    return;
+  }
 
-  dispatchEvent(
-    new CustomEvent("property-name-right-click", {
-      detail: {
-        property: event.currentTarget.dataset.property,
-        side: props.side,
-        x: event.clientX,
-        y: event.clientY,
-      },
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  handlePropertyNameClick(deps, payload);
 };
 
 export const handleInitialValueClick = (deps, payload) => {

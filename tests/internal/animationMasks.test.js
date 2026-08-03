@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validatePayload } from "@routevn/creator-model";
 import {
   compileTransitionMaskForRuntime,
+  createDefaultTransitionMask,
   getTransitionMaskDuration,
   normalizeTransitionMaskForEditor,
   serializeTransitionMask,
@@ -51,11 +52,7 @@ describe("animationMasks", () => {
       initialValue: 0,
       keyframes: [
         {
-          duration: 500,
-          value: 0,
-          easing: "linear",
-        },
-        {
+          delay: 500,
           duration: 1000,
           value: 1,
           easing: "linear",
@@ -95,5 +92,24 @@ describe("animationMasks", () => {
         progress: undefined,
       }).progress,
     ).toEqual(serializedMask.progress);
+  });
+
+  it("creates and normalizes masks with one editable progress keyframe", () => {
+    expect(createDefaultTransitionMask().progress).toEqual({
+      initialValue: 0,
+      keyframes: [{ duration: 900, value: 1, easing: "linear" }],
+    });
+
+    expect(
+      normalizeTransitionMaskForEditor({
+        kind: "single",
+        imageId: "mask-image",
+        progressDuration: 1200,
+        progressEasing: "easeInQuad",
+      }).progress,
+    ).toEqual({
+      initialValue: 0,
+      keyframes: [{ duration: 1200, value: 1, easing: "easeInQuad" }],
+    });
   });
 });

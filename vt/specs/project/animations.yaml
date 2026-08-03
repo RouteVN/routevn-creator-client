@@ -211,6 +211,14 @@ steps:
     state: visible
     timeoutMs: 5000
   - action: waitFor
+    selector: "#maskTimelineCategory"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#maskTimelineRow rvn-file-image"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
     selector: "#selectedMaskDetails"
     state: attached
     timeoutMs: 5000
@@ -290,7 +298,7 @@ steps:
     state: hidden
     timeoutMs: 5000
   - action: select
-    selector: "#maskTimelineRow"
+    selector: "#maskTimelineRow #propertyName0[role='button']"
     steps:
       - action: focus
   - action: keypress

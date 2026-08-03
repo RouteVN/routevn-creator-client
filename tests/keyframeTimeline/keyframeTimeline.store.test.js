@@ -206,7 +206,10 @@ describe("keyframeTimeline easing curves", () => {
 
     expect(viewData.editable).toBe(false);
     expect(viewData.selectedProperties[0]).toMatchObject({
+      backgroundColor: "bg",
+      hoverBackgroundColor: "bg",
       initialValueCursor: "default",
+      rowCursor: "default",
       keyframes: [{ cursor: "default" }],
     });
   });
@@ -222,7 +225,19 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).toContain("handler: handleKeyframeMoveStart");
     expect(view).toContain("handler: handleKeyframeMove");
     expect(view).toContain("handler: handleKeyframeMoveEnd");
-    expect(view).toContain("handler: handlePropertyNameRightClick");
+    expect(view).not.toContain("handler: handlePropertyNameRightClick");
+    expect(view).not.toContain("property-name-right-click");
+    expect(view).toContain("handler: handlePropertyNameKeyDown");
+    expect(view).toContain("$if property.thumbnail:");
+    expect(view).toContain(
+      "rtgl-view#propertyName${pIndex}.keyframeTimelinePropertyRow",
+    );
+    expect(view).toContain("$if editable:");
+    expect(view).toContain(
+      "w=104 bgc=${property.backgroundColor} h-bgc=${property.hoverBackgroundColor}",
+    );
+    expect(view).toContain("role=button tabindex=0");
+    expect(view).toContain("fileId=${property.thumbnailFileId}");
     expect(view).not.toContain("handleRulerMouseMove");
     expect(view).not.toContain("$if playheadIndicatorVisible");
     expect(view).toContain(
@@ -301,6 +316,7 @@ describe("keyframeTimeline easing curves", () => {
     const viewData = selectViewData({
       state: createInitialState(),
       props: {
+        editable: true,
         side: "prev",
         selectedProperty: { side: "prev", property: "alpha" },
         properties: {
@@ -311,9 +327,70 @@ describe("keyframeTimeline easing curves", () => {
     });
 
     expect(viewData.selectedProperties).toMatchObject([
-      { name: "alpha", selected: true, nameColor: "pr" },
-      { name: "x", selected: false, nameColor: "fg" },
+      {
+        name: "alpha",
+        selected: true,
+        backgroundColor: "ac",
+        hoverBackgroundColor: "ac",
+        nameColor: "ac-fg",
+      },
+      {
+        name: "x",
+        selected: false,
+        backgroundColor: "bg",
+        hoverBackgroundColor: "mu",
+        nameColor: "fg",
+      },
     ]);
+  });
+
+  it("supports selection owned by a custom property surface", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        side: "mask",
+        properties: {
+          progress: {
+            selected: true,
+            thumbnail: true,
+            keyframes: [{ duration: 900, value: 1 }],
+          },
+        },
+      },
+    });
+
+    expect(viewData.selectedProperties[0]).toMatchObject({
+      name: "progress",
+      selected: true,
+      backgroundColor: "ac",
+      hoverBackgroundColor: "ac",
+    });
+  });
+
+  it("exposes a compact thumbnail in place of a property name", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        properties: {
+          progress: {
+            initialValue: 0,
+            keyframes: [{ duration: 900, value: 1 }],
+            thumbnail: true,
+            thumbnailBorderColor: "pr",
+            thumbnailFileId: "thumb-mask",
+            thumbnailName: "Feather Mask",
+          },
+        },
+      },
+    });
+
+    expect(viewData.selectedProperties[0]).toMatchObject({
+      name: "progress",
+      thumbnail: true,
+      thumbnailBorderColor: "pr",
+      thumbnailFileId: "thumb-mask",
+      thumbnailName: "Feather Mask",
+    });
   });
 
   it("previews the duration being resized", () => {

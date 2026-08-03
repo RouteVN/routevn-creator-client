@@ -20,7 +20,7 @@
     "@lexical/rich-text": "0.22.0",
     "@lexical/selection": "0.22.0",
     "@lexical/utils": "0.22.0",
-    "@rettangoli/fe": "1.4.0",
+    "@rettangoli/fe": "1.4.1",
     "@rettangoli/ui": "1.15.2",
     "@rettangoli/vt": "1.1.0",
     "@routevn/creator-model": "1.12.0",
@@ -110,7 +110,7 @@
     "oxlint": "1.65.0",
     "prettier": "3.6.2",
     "puty": "0.1.2",
-    "rtgl": "2.1.1",
+    "rtgl": "2.1.2",
     "vitest": "3.2.4"
   },
   "overrides": {

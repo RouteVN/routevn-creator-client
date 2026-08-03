@@ -1,5 +1,6 @@
 import {
   DEFAULT_PROJECT_RESOLUTION,
+  formatHalfViewportCanvasMaxWidth,
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
@@ -51,6 +52,7 @@ const TIMELINE_ZOOM_MAX = 4;
 const TIMELINE_BASE_PIXELS_PER_SECOND = 200;
 const TIMELINE_MIN_DISPLAY_DURATION_MS = 1000;
 const TIMELINE_PROPERTY_COLUMN_WIDTH = 104;
+const MASK_PROGRESS_PROPERTY = "progress";
 const DEFAULT_EDITOR_TAB = "tween";
 const EDITOR_TAB_IDS = new Set([DEFAULT_EDITOR_TAB, "preview"]);
 
@@ -64,6 +66,15 @@ const createPropertyFieldConfig = (
   );
 
   return {
+    progress: {
+      label: copy.progressPropertyLabel ?? "Progress",
+      defaultValue: 0,
+      slider: {
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
+    },
     alpha: {
       label: copy.alphaPropertyLabel ?? "Alpha",
       defaultValue: 1,
@@ -1016,7 +1027,7 @@ const createTransitionAddPropertySideMenuItems = ({
 
   if (previousAvailable) {
     items.push({
-      label: copy.outTimelineLabel ?? "Out",
+      label: copy.outTimelineLabel ?? "Outgoing",
       type: "item",
       value: "prev",
     });
@@ -1024,7 +1035,7 @@ const createTransitionAddPropertySideMenuItems = ({
 
   if (nextAvailable) {
     items.push({
-      label: copy.inTimelineLabel ?? "In",
+      label: copy.inTimelineLabel ?? "Incoming",
       type: "item",
       value: "next",
     });
@@ -1082,6 +1093,7 @@ const createEmptyMaskPanelData = (copy = {}) => ({
   invertValue: "off",
   invertLabel: copy.offLabel ?? "Off",
   softness: 0.08,
+  progressInitialValue: 0,
   progressDuration: 900,
   progressDurationLabel: "900 ms",
   progressEasing: "linear",
@@ -1094,6 +1106,11 @@ const createEmptyMaskPanelData = (copy = {}) => ({
 });
 
 const getSectionProperties = (state, side) => {
+  if (side === "mask") {
+    const progress = state.transitionMask?.progress;
+    return progress ? { [MASK_PROGRESS_PROPERTY]: progress } : {};
+  }
+
   return state.tweenBySection?.[side] ?? {};
 };
 
@@ -1128,6 +1145,19 @@ const setMaskEditorTransitionMask = (state, mask) => {
   state.transitionMask = mask;
 };
 
+const cloneMaskProgress = (progress) => {
+  if (!progress) {
+    return undefined;
+  }
+
+  return {
+    ...progress,
+    keyframes: (progress.keyframes ?? []).map((keyframe) => ({
+      ...keyframe,
+    })),
+  };
+};
+
 const cloneTransitionMask = (mask = {}) => {
   const nextMask = {};
   nextMask.kind = mask.kind;
@@ -1145,9 +1175,7 @@ const cloneTransitionMask = (mask = {}) => {
   nextMask.sample = mask.sample;
   nextMask.softness = mask.softness;
   nextMask.invert = mask.invert;
-  nextMask.progress = mask.progress
-    ? structuredClone(mask.progress)
-    : undefined;
+  nextMask.progress = cloneMaskProgress(mask.progress);
   nextMask.progressDelay = mask.progressDelay;
   nextMask.progressDuration = mask.progressDuration;
   nextMask.progressEasing = mask.progressEasing;
@@ -1576,7 +1604,13 @@ const resolveDialogSide = (state, side) => {
 };
 
 const getMutableSectionProperties = (state, side) => {
-  return state.tweenBySection[resolveDialogSide(state, side)];
+  const resolvedSide = resolveDialogSide(state, side);
+  if (resolvedSide === "mask") {
+    const progress = state.transitionMask?.progress;
+    return progress ? { [MASK_PROGRESS_PROPERTY]: progress } : {};
+  }
+
+  return state.tweenBySection[resolvedSide];
 };
 
 const selectedKeyframeMatches = (selectedKeyframe, { side, property } = {}) => {
@@ -2182,6 +2216,9 @@ export const deleteKeyframe = ({ state }, { side, property, index } = {}) => {
   if (!Array.isArray(keyframes)) {
     return;
   }
+  if (resolvedSide === "mask" && keyframes.length <= 1) {
+    return;
+  }
 
   keyframes.splice(resolvedIndex, 1);
 
@@ -2203,7 +2240,7 @@ export const deleteProperty = ({ state }, { side, property } = {}) => {
   const resolvedSide = resolveDialogSide(state, side);
   const properties = getMutableSectionProperties(state, side);
 
-  if (!property || !properties) {
+  if (!property || !properties || resolvedSide === "mask") {
     return;
   }
 
@@ -2395,9 +2432,7 @@ export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
 
   const nextMask = createDefaultTransitionMask();
   nextMask.softness = currentMask.softness;
-  nextMask.progress = currentMask.progress
-    ? structuredClone(currentMask.progress)
-    : undefined;
+  nextMask.progress = cloneMaskProgress(currentMask.progress);
   nextMask.progressDelay = currentMask.progressDelay ?? nextMask.progressDelay;
   nextMask.progressDuration = currentMask.progressDuration;
   nextMask.progressEasing = currentMask.progressEasing;
@@ -2482,7 +2517,9 @@ export const setTransitionMaskProgressDuration = (
   }
 
   transitionMask.progressDuration = numericDuration;
-  transitionMask.progress = undefined;
+  if (transitionMask.progress?.keyframes?.length === 1) {
+    transitionMask.progress.keyframes[0].duration = numericDuration;
+  }
 };
 
 export const setTransitionMaskProgressEasing = ({ state }, { easing } = {}) => {
@@ -2492,7 +2529,9 @@ export const setTransitionMaskProgressEasing = ({ state }, { easing } = {}) => {
   }
 
   transitionMask.progressEasing = easing;
-  transitionMask.progress = undefined;
+  if (transitionMask.progress?.keyframes?.length === 1) {
+    transitionMask.progress.keyframes[0].easing = easing;
+  }
 };
 
 export const setTransitionMaskImage = ({ state }, { imageId } = {}) => {
@@ -3016,6 +3055,7 @@ const buildTransitionMaskPanelDataForMask = (
   const invertValue = transitionMask.invert ? "on" : "off";
   const progressDuration = transitionMask.progressDuration ?? 900;
   const progressEasing = transitionMask.progressEasing ?? "linear";
+  const progressInitialValue = transitionMask.progress?.initialValue ?? 0;
   const singleImage = buildMaskImageItem(state, transitionMask.imageId);
   const sequenceItems = (transitionMask.imageIds ?? []).map(
     (imageId, index) => ({
@@ -3063,6 +3103,7 @@ const buildTransitionMaskPanelDataForMask = (
       invertValue,
     ),
     softness: transitionMask.softness ?? 0.08,
+    progressInitialValue,
     progressDuration,
     progressDurationLabel: `${progressDuration} ms`,
     progressEasing,
@@ -3141,10 +3182,12 @@ const buildSelectedKeyframePanelData = (
 
   const timelineLabel =
     side === "prev"
-      ? (copy.outTimelineLabel ?? "Out")
+      ? (copy.outTimelineLabel ?? "Outgoing")
       : side === "next"
-        ? (copy.inTimelineLabel ?? "In")
-        : (copy.updateType ?? "Update");
+        ? (copy.inTimelineLabel ?? "Incoming")
+        : side === "mask"
+          ? (copy.maskTitle ?? "Mask")
+          : (copy.updateType ?? "Update");
   const easing = keyframe.easing ?? "linear";
   const easingLabel =
     createEasingOptions(copy).find((option) => option.value === easing)
@@ -3213,10 +3256,12 @@ const buildSelectedPropertyPanelData = (
 
   const timelineLabel =
     side === "prev"
-      ? (copy.outTimelineLabel ?? "Out")
+      ? (copy.outTimelineLabel ?? "Outgoing")
       : side === "next"
-        ? (copy.inTimelineLabel ?? "In")
-        : (copy.updateType ?? "Update");
+        ? (copy.inTimelineLabel ?? "Incoming")
+        : side === "mask"
+          ? (copy.maskTitle ?? "Mask")
+          : (copy.updateType ?? "Update");
   const hasInitialValue =
     propertyConfig.initialValue !== undefined &&
     propertyConfig.initialValue !== "";
@@ -3238,13 +3283,6 @@ const buildSelectedPropertyPanelData = (
       value: hasInitialValue
         ? propertyConfig.initialValue
         : (copy.defaultLabel ?? "Default"),
-    },
-    {
-      type: "text",
-      label: copy.tweenModeLabel ?? "Tween Mode",
-      value: autoConfig
-        ? (copy.autoTweenMode ?? "Auto")
-        : (copy.keyframesTweenMode ?? "Keyframes"),
     },
   ];
 
@@ -3419,34 +3457,32 @@ export const selectViewData = ({ state, i18n }) => {
   const transitionMaskPanel = buildTransitionMaskPanelData(state, copy);
   const maskEditorPanel = buildMaskEditorPanelData(state, copy);
   const selectedMask = state.selectedMask && transitionMaskPanel.enabled;
-  const effectiveTransitionMask = getEffectiveTransitionMask(state);
-  const maskTimelineDelay = Math.max(
-    0,
-    Number(effectiveTransitionMask?.progressDelay) || 0,
-  );
-  const maskTimelineDuration = Math.max(
-    0,
-    Number(transitionMaskPanel.progressDuration) || 0,
-  );
-  const maskTimelineLeftPercent = Math.min(
-    100,
-    (maskTimelineDelay / timelineDisplayDuration) * 100,
-  );
-  const maskTimelineWidthPercent = Math.min(
-    100 - maskTimelineLeftPercent,
-    (maskTimelineDuration / timelineDisplayDuration) * 100,
-  );
+  const maskProgress = getSectionProperties(state, "mask")[
+    MASK_PROGRESS_PROPERTY
+  ];
+  const maskTimelineImage =
+    transitionMaskPanel.singleImage ?? transitionMaskPanel.imageItems[0] ?? {};
   const maskTimelineRow = transitionMaskPanel.enabled
     ? {
-        barVisible: !transitionMaskPanel.unsupported,
-        barStyle: `left: ${maskTimelineLeftPercent.toFixed(2)}%; width: ${maskTimelineWidthPercent.toFixed(2)}%;`,
-        barBorderColor: selectedMask ? "var(--ring)" : "var(--accent)",
-        easingLabel: transitionMaskPanel.progressEasingLabel,
+        editable: !transitionMaskPanel.unsupported && Boolean(maskProgress),
+        image: maskTimelineImage,
+        imageBorderColor: selectedMask ? "pr" : "bo",
         label: copy.maskTitle ?? "Mask",
-        nameColor: selectedMask ? "pr" : "fg",
         selected: selectedMask,
       }
     : undefined;
+  const maskTimelineProperties = maskTimelineRow?.editable
+    ? {
+        [MASK_PROGRESS_PROPERTY]: {
+          ...maskProgress,
+          selected: selectedMask,
+          thumbnail: true,
+          thumbnailBorderColor: maskTimelineRow.imageBorderColor,
+          thumbnailFileId: maskTimelineImage.previewFileId,
+          thumbnailName: maskTimelineImage.name ?? maskTimelineRow.label,
+        },
+      }
+    : {};
   const previewPanel = buildPreviewPanelData(state, copy);
   const selectedKeyframePanel = buildSelectedKeyframePanelData(
     state,
@@ -3475,6 +3511,13 @@ export const selectViewData = ({ state, i18n }) => {
     const isLastKeyframe = currentIndex === keyframes.length - 1;
 
     return localizeMenuItems(baseKeyframeDropdownItems, copy).filter((item) => {
+      if (
+        item.value === "delete-keyframe" &&
+        side === "mask" &&
+        keyframes.length <= 1
+      ) {
+        return false;
+      }
       if (item.value === "move-left" && isFirstKeyframe) {
         return false;
       }
@@ -3598,8 +3641,8 @@ export const selectViewData = ({ state, i18n }) => {
   const showEditKeyframeDialog = state.popover.mode === "editKeyframe";
   const showSelectedMaskSoftnessPopover =
     state.popover.mode === "editSelectedMaskSoftness";
-  const showSelectedMaskProgressDurationPopover =
-    state.popover.mode === "editSelectedMaskProgressDuration";
+  const showSelectedMaskInitialValuePopover =
+    state.popover.mode === "editSelectedMaskInitialValue";
 
   return {
     resourceCategory: ANIMATION_RESOURCE_CATEGORY,
@@ -3633,6 +3676,9 @@ export const selectViewData = ({ state, i18n }) => {
     canvasAspectRatio: formatProjectResolutionAspectRatio(
       state.projectResolution,
     ),
+    previewCanvasMaxWidth: formatHalfViewportCanvasMaxWidth(
+      state.projectResolution,
+    ),
     updateProperties,
     previousProperties,
     nextProperties,
@@ -3644,6 +3690,8 @@ export const selectViewData = ({ state, i18n }) => {
     selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
     selectedMask,
     maskTimelineRow,
+    maskTimelineProperties,
+    maskTimelineDefaultValues: { [MASK_PROGRESS_PROPERTY]: 0 },
     updateTimelineDefaultValues,
     transitionTimelineDefaultValues,
     addPropertyForm: createAddPropertyForm(
@@ -3746,10 +3794,9 @@ export const selectViewData = ({ state, i18n }) => {
     showAddKeyframeDialog,
     showEditKeyframeDialog,
     selectedMaskNumberPopoverIsOpen:
-      showSelectedMaskSoftnessPopover ||
-      showSelectedMaskProgressDurationPopover,
+      showSelectedMaskInitialValuePopover || showSelectedMaskSoftnessPopover,
+    showSelectedMaskInitialValuePopover,
     showSelectedMaskSoftnessPopover,
-    showSelectedMaskProgressDurationPopover,
     addMaskDisabled: !isTransitionMaskComplete(
       getMaskEditorTransitionMask(state),
     ),
@@ -3759,15 +3806,18 @@ export const selectViewData = ({ state, i18n }) => {
     cancelButton: copy.cancelButton ?? "Cancel",
     channelLabel: copy.channelLabel ?? "Channel",
     doneButton: copy.doneButton ?? "Done",
+    deletePropertyButtonLabel:
+      copy.deletePropertyButtonLabel ?? "Delete property",
     editButton: copy.editMenuItem ?? "Edit",
     editPreviewButton: copy.editPreviewButton ?? "Edit Preview",
     imageLabel: copy.imageLabel ?? "Image",
-    inTimelineLabel: copy.inTimelineLabel ?? "In",
+    initialValueLabel: copy.initialValueLabel ?? "Initial value",
+    inTimelineLabel: copy.inTimelineLabel ?? "Incoming",
     invertLabel: copy.invertLabel ?? "Invert",
     detailsPanelTitle: selectedMask
       ? (copy.maskTitle ?? "Mask")
       : selectedPropertyPanel
-        ? (copy.propertyDetailsTitle ?? "Property Details")
+        ? (copy.propertyDetailsTitle ?? "Property")
         : selectedKeyframePanel
           ? (copy.keyframeDetailsTitle ?? "Keyframe Details")
           : undefined,
@@ -3782,7 +3832,7 @@ export const selectViewData = ({ state, i18n }) => {
     noPreviewLabel: copy.noPreviewLabel ?? "No preview",
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     okButton: copy.okButton ?? "OK",
-    outTimelineLabel: copy.outTimelineLabel ?? "Out",
+    outTimelineLabel: copy.outTimelineLabel ?? "Outgoing",
     playButton: previewPlaying
       ? (copy.pauseButton ?? "Pause")
       : (copy.playButton ?? "Play"),
