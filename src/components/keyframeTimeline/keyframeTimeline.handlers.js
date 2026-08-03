@@ -787,13 +787,8 @@ export const handleDurationHandleClick = (_deps, payload) => {
   payload._event.stopPropagation();
 };
 
-export const handlePropertyNameClick = (deps, payload) => {
+const dispatchPropertyNameClickEvent = (deps, event, { x, y } = {}) => {
   const { dispatchEvent, props } = deps;
-  if (!props.editable) {
-    return;
-  }
-
-  const event = payload._event;
   event.stopPropagation();
 
   dispatchEvent(
@@ -801,13 +796,25 @@ export const handlePropertyNameClick = (deps, payload) => {
       detail: {
         property: event.currentTarget.dataset.property,
         side: props.side,
-        x: event.clientX,
-        y: event.clientY,
+        x,
+        y,
       },
       bubbles: true,
       composed: true,
     }),
   );
+};
+
+export const handlePropertyNameClick = (deps, payload) => {
+  if (!deps.props.editable) {
+    return;
+  }
+
+  const event = payload._event;
+  dispatchPropertyNameClickEvent(deps, event, {
+    x: event.clientX,
+    y: event.clientY,
+  });
 };
 
 export const handlePropertyNameKeyDown = (deps, payload) => {
@@ -821,7 +828,11 @@ export const handlePropertyNameKeyDown = (deps, payload) => {
   }
 
   event.preventDefault();
-  handlePropertyNameClick(deps, payload);
+  const rect = event.currentTarget.getBoundingClientRect();
+  dispatchPropertyNameClickEvent(deps, event, {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  });
 };
 
 export const handleInitialValueClick = (deps, payload) => {

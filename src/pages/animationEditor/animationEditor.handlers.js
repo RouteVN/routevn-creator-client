@@ -1491,10 +1491,12 @@ const commitSelectedKeyframeChange = (deps) => {
 
 const openSelectedMaskNumberPopover = (deps, payload, { mode, value } = {}) => {
   const { render, store } = deps;
+  const event = payload._event;
+  const rect = event.currentTarget?.getBoundingClientRect?.();
   store.setPopover({
     mode,
-    x: payload._event.clientX,
-    y: payload._event.clientY,
+    x: event.detail?.x ?? event.clientX ?? rect?.left ?? 0,
+    y: event.detail?.y ?? event.clientY ?? rect?.bottom ?? 0,
     payload: {},
   });
   store.updatePopoverFormValues({

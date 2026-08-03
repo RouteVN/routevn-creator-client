@@ -212,21 +212,27 @@ describe("keyframeTimeline.handlers", () => {
     });
   });
 
-  it("selects a thumbnail property with Enter or Space", () => {
+  it("positions keyboard property activation at the focused row", () => {
     const dispatchEvent = vi.fn();
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
-    const currentTarget = { dataset: { property: "progress" } };
+    const currentTarget = {
+      dataset: { property: "alpha" },
+      getBoundingClientRect: () => ({
+        height: 32,
+        left: 100,
+        top: 20,
+        width: 80,
+      }),
+    };
     const deps = {
       dispatchEvent,
-      props: { editable: true, side: "mask" },
+      props: { editable: true, side: "next" },
     };
 
     handlePropertyNameKeyDown(deps, {
       _event: {
         key: "Enter",
-        clientX: 20,
-        clientY: 40,
         currentTarget,
         preventDefault,
         stopPropagation,
@@ -238,8 +244,10 @@ describe("keyframeTimeline.handlers", () => {
     expect(dispatchEvent.mock.calls[0][0]).toMatchObject({
       type: "property-name-click",
       detail: {
-        property: "progress",
-        side: "mask",
+        property: "alpha",
+        side: "next",
+        x: 140,
+        y: 36,
       },
     });
   });

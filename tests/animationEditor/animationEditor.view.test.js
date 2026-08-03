@@ -150,6 +150,16 @@ describe("animationEditor view", () => {
     expect(view).toContain(
       ":properties=${maskTimelineProperties} :defaultValues=${maskTimelineDefaultValues}",
     );
+    const maskTimelineListeners = view.slice(
+      view.indexOf("  maskTimeline:"),
+      view.indexOf("  addPropertyPopover:"),
+    );
+    expect(maskTimelineListeners).toContain(
+      "handler: handleSelectedMaskInitialValueClick",
+    );
+    expect(maskTimelineListeners).not.toContain(
+      "handler: handleInitialValueClick",
+    );
     expect(view).toContain("handler: handleMaskTimelineRowClick");
     expect(view).toContain("handler: handleMaskTimelineRowKeyDown");
     expect(view).toContain("$elif selectedMask");

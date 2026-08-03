@@ -874,7 +874,7 @@ describe("animationEditor.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("opens the number popover for the selected mask initial value", () => {
+  it("opens the numeric initial-value popover from the mask timeline event", () => {
     const store = {
       selectMaskEditorTransitionMask: vi.fn(() => ({
         progress: { initialValue: 0.2 },
@@ -886,7 +886,7 @@ describe("animationEditor.handlers", () => {
 
     handleSelectedMaskInitialValueClick(
       { store, render },
-      { _event: { clientX: 10, clientY: 20 } },
+      { _event: { detail: { x: 10, y: 20 } } },
     );
 
     expect(store.setPopover).toHaveBeenCalledWith({
@@ -993,7 +993,7 @@ describe("animationEditor.handlers", () => {
       queueAutosave: vi.fn(),
       selectPopover: vi.fn(() => ({
         mode: "editSelectedMaskInitialValue",
-        formValues: { value: 0.25 },
+        formValues: { value: "0.25" },
       })),
       selectPreviewPlaybackFrameId: vi.fn(() => undefined),
       stopPreviewPlayback: vi.fn(),

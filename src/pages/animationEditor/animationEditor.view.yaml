@@ -169,7 +169,7 @@ refs:
       property-name-click:
         handler: handlePropertyNameClick
       initial-value-click:
-        handler: handleInitialValueClick
+        handler: handleSelectedMaskInitialValueClick
   addPropertyPopover:
     eventListeners:
       close:
