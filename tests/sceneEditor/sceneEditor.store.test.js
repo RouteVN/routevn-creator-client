@@ -12,11 +12,28 @@ import {
   setProjectLanguage,
   setSectionLineChangesBySectionId,
   setTemporaryPresentationState,
+  showAddSectionDropdownMenu,
   showSectionDropdownMenu,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("sceneEditorLexical.store", () => {
+  it("shows a localized add-section menu for empty editor space", () => {
+    const state = createInitialState();
+
+    showAddSectionDropdownMenu({ state }, { position: { x: 120, y: 240 } });
+
+    expect(state.dropdownMenu).toMatchObject({
+      isOpen: true,
+      position: { x: 120, y: 240 },
+      sectionId: null,
+      items: [{ label: "Add section", type: "item", value: "add-section" }],
+    });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).dropdownMenu.items[0].label,
+    ).toBe("Add section");
+  });
+
   it("uses the project language to select the scene text count mode", () => {
     const state = createInitialState();
     setProjectLanguage({ state }, { language: "zh-Hans" });

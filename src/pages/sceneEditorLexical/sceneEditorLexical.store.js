@@ -61,6 +61,7 @@ const MOBILE_PREVIEW_VERTICAL_PADDING_PX = 16;
 const MOBILE_PREVIEW_MIN_HEIGHT_PX = 72;
 
 const SCENE_EDITOR_DROPDOWN_COPY_KEYS = Object.freeze({
+  "Add section": "addSectionMenuItem",
   "Add section above": "addSectionAboveMenuItem",
   "Add section below": "addSectionBelowMenuItem",
   "Move up": "moveUpMenuItem",
@@ -1458,6 +1459,17 @@ export const showSectionDropdownMenu = (
     actionsType: null,
     lineId: undefined,
   };
+};
+
+export const showAddSectionDropdownMenu = ({ state }, { position } = {}) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.position = position;
+  state.dropdownMenu.items = [
+    { label: "Add section", type: "item", value: "add-section" },
+  ];
+  state.dropdownMenu.sectionId = null;
+  state.dropdownMenu.actionsType = null;
+  state.dropdownMenu.lineId = undefined;
 };
 
 export const showSectionsOverviewDropdownMenu = (

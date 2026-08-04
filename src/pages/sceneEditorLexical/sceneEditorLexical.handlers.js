@@ -2926,6 +2926,27 @@ export const handleSectionTabRightClick = (deps, payload) => {
   openSectionTabDropdown(deps, payload._event);
 };
 
+export const handleSectionsEmptySpaceContextMenu = (deps, payload) => {
+  const { store, render } = deps;
+  const event = payload._event;
+  if (
+    isSectionsOverviewOpen(store) ||
+    event.target?.closest?.("[data-section-block-id]")
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  store.showAddSectionDropdownMenu({
+    position: {
+      x: event.clientX,
+      y: event.clientY,
+    },
+  });
+  render();
+};
+
 export const handleActionsDialogClose = (deps) => {
   const { render, store, subject } = deps;
   const suppressNext = store.selectSuppressNextActionsDialogClose?.() === true;
@@ -3052,6 +3073,14 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
       render();
       return;
     }
+  }
+
+  if (action === "add-section") {
+    store.showSectionCreateDialog({
+      defaultName: getDefaultSectionName(store, copy),
+    });
+    render();
+    return;
   }
 
   if (action === "add-section-above" || action === "add-section-below") {

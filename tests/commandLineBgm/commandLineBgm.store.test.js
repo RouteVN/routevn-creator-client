@@ -274,6 +274,11 @@ describe("commandLineBgm.store", () => {
               resourceId: "theme",
               startDelayMs: 4000,
             },
+            {
+              id: "outro-clip",
+              resourceId: "intro",
+              startDelayMs: 7500,
+            },
           ],
         },
       },
@@ -282,6 +287,7 @@ describe("commandLineBgm.store", () => {
     connectSoundToPrevious({ state }, { soundId: "theme-clip" });
 
     expect(selectBgm({ state }).sounds[1].startDelayMs).toBe(1000);
+    expect(selectBgm({ state }).sounds[2].startDelayMs).toBe(4500);
   });
 
   it("updates a sound start delay from a horizontal timeline drag", () => {

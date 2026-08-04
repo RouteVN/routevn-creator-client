@@ -1754,6 +1754,7 @@ scenesPage:
   updateSceneDescription: "更新场景详情"
 sceneEditorPage:
   actionsLabel: "动作"
+  addSectionMenuItem: "添加段落"
   addSectionAboveMenuItem: "在上方添加段落"
   addSectionBelowMenuItem: "在下方添加段落"
   autoLabel: "自动"

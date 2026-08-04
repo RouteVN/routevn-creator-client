@@ -1754,6 +1754,7 @@ scenesPage:
   updateSceneDescription: "シーンの詳細を更新"
 sceneEditorPage:
   actionsLabel: "アクション"
+  addSectionMenuItem: "セクションを追加"
   addSectionAboveMenuItem: "上にセクションを追加"
   addSectionBelowMenuItem: "下にセクションを追加"
   autoLabel: "自動"

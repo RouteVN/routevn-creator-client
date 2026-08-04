@@ -19,6 +19,7 @@ import {
   handleNewLine,
   handlePreviewClick,
   handleSectionMoveSceneFormActionClick,
+  handleSectionsEmptySpaceContextMenu,
   handleSelectedLineChanged,
   handleSystemActionsActionDelete,
   handleSystemActionsDialogOpen,
@@ -2954,6 +2955,91 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       defaultName: "Section 3",
       placementPosition: "after",
       placementTargetSectionId: "section-1",
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
+  });
+
+  it("opens an add-section dropdown from empty space below the sections", () => {
+    const store = {
+      selectIsSectionsOverviewOpen: vi.fn(() => false),
+      showAddSectionDropdownMenu: vi.fn(),
+    };
+    const render = vi.fn();
+    const event = {
+      target: {
+        closest: vi.fn(() => null),
+      },
+      clientX: 120,
+      clientY: 240,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    handleSectionsEmptySpaceContextMenu({ store, render }, { _event: event });
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
+    expect(store.showAddSectionDropdownMenu).toHaveBeenCalledWith({
+      position: { x: 120, y: 240 },
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("keeps existing context-menu behavior inside a section", () => {
+    const store = {
+      selectIsSectionsOverviewOpen: vi.fn(() => false),
+      showAddSectionDropdownMenu: vi.fn(),
+    };
+    const render = vi.fn();
+    const event = {
+      target: {
+        closest: vi.fn(() => ({ dataset: { sectionBlockId: "section-1" } })),
+      },
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    handleSectionsEmptySpaceContextMenu({ store, render }, { _event: event });
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(store.showAddSectionDropdownMenu).not.toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
+  });
+
+  it("opens the section create dialog from the empty-space dropdown", async () => {
+    const store = {
+      selectDropdownMenu: vi.fn(() => ({ sectionId: null })),
+      hideDropdownMenu: vi.fn(),
+      selectScene: vi.fn(() => ({
+        sections: [{ id: "section-1" }, { id: "section-2" }],
+      })),
+      showSectionCreateDialog: vi.fn(),
+      selectSceneId: vi.fn(() => "scene-1"),
+    };
+    const deps = {
+      i18n: EN_I18N,
+      store,
+      render: vi.fn(),
+      projectService: {},
+      subject: {
+        dispatch: vi.fn(),
+      },
+      appService: {},
+    };
+
+    await handleDropdownMenuClickItem(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: "add-section",
+          },
+        },
+      },
+    });
+
+    expect(store.hideDropdownMenu).toHaveBeenCalledOnce();
+    expect(store.showSectionCreateDialog).toHaveBeenCalledWith({
+      defaultName: "Section 3",
     });
     expect(deps.render).toHaveBeenCalledOnce();
   });

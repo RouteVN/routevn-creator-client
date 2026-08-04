@@ -345,6 +345,11 @@ describe("commandLineBgm.handlers", () => {
       soundId: "theme-clip",
       values: { startDelayMs: 5000 },
     });
+    store.insertSound({ id: "outro-clip", resourceId: "intro", index: 2 });
+    store.updateSound({
+      soundId: "outro-clip",
+      values: { startDelayMs: 12000 },
+    });
     const showDropdownMenu = vi.fn().mockResolvedValue({
       item: { key: "connect-to-previous" },
     });
@@ -382,6 +387,7 @@ describe("commandLineBgm.handlers", () => {
       place: "bs",
     });
     expect(state.bgm.sounds[1].startDelayMs).toBe(2000);
+    expect(state.bgm.sounds[2].startDelayMs).toBe(9000);
     expect(state.selectedSoundId).toBe("theme-clip");
     expect(setValues).toHaveBeenCalledWith({
       values: {

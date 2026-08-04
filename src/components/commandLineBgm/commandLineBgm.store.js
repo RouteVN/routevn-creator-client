@@ -406,9 +406,16 @@ export const connectSoundToPrevious = ({ state }, { soundId } = {}) => {
     { state },
     { itemId: previousSound.resourceId },
   );
-  sound.startDelayMs =
+  const currentStartDelayMs = normalizeAudioStartDelayMs(sound.startDelayMs);
+  const connectedStartDelayMs =
     normalizeAudioStartDelayMs(previousSound.startDelayMs) +
     resolveAudioSoundDurationMs(previousSound, previousResource);
+  const shiftMs = connectedStartDelayMs - currentStartDelayMs;
+
+  for (const shiftedSound of state.bgm.sounds.slice(soundIndex)) {
+    shiftedSound.startDelayMs =
+      normalizeAudioStartDelayMs(shiftedSound.startDelayMs) + shiftMs;
+  }
   sortAudioSoundsByStartDelay(state.bgm.sounds);
 };
 

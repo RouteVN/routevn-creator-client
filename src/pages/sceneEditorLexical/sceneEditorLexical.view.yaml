@@ -1,4 +1,8 @@
 refs:
+  sceneEditorSectionsScroll:
+    eventListeners:
+      contextmenu:
+        handler: handleSectionsEmptySpaceContextMenu
   sectionEditor*:
     eventListeners:
       scene-lines-changed:

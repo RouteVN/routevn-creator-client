@@ -1754,6 +1754,7 @@ scenesPage:
   updateSceneDescription: "Update scene details"
 sceneEditorPage:
   actionsLabel: "Actions"
+  addSectionMenuItem: "Add section"
   addSectionAboveMenuItem: "Add section above"
   addSectionBelowMenuItem: "Add section below"
   autoLabel: "Auto"

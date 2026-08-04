@@ -36,4 +36,17 @@ describe("sceneEditorLexical view", () => {
     );
     expect(view).toContain("handler: handleDownloadCanvasClick");
   });
+
+  it("opens the section menu from empty space in the sections scroller", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/pages/sceneEditorLexical/sceneEditorLexical.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain("sceneEditorSectionsScroll:");
+    expect(view).toContain("handler: handleSectionsEmptySpaceContextMenu");
+  });
 });
