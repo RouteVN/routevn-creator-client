@@ -40,6 +40,20 @@ const i18n = {
   commandLinePage: {},
 };
 
+const soundContextMenuItems = [
+  {
+    type: "item",
+    label: "Insert Sound Before",
+    key: "insert-before",
+  },
+  {
+    type: "item",
+    label: "Insert Sound After",
+    key: "insert-after",
+  },
+  { type: "item", label: "Remove", key: "remove" },
+];
+
 const createStore = (state) => {
   const store = {};
   for (const [name, implementation] of Object.entries(sfxStore)) {
@@ -317,6 +331,92 @@ describe("commandLineSoundEffects.handlers", () => {
     expect(state.channels[0].sounds).toEqual([]);
     expect(state.selectedChannelId).toBe("Weather");
     expect(state.selectedSoundId).toBeUndefined();
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("connects an SFX clip and shifts later clips in its channel", async () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const setValues = vi.fn();
+    store.addChannel({ id: "Weather" });
+    store.insertSound({
+      channelId: "Weather",
+      id: "intro-clip",
+      resourceId: "rain",
+      index: 0,
+    });
+    store.insertSound({
+      channelId: "Weather",
+      id: "current-clip",
+      resourceId: "rain",
+      index: 1,
+    });
+    store.updateSound({
+      channelId: "Weather",
+      soundId: "current-clip",
+      values: { startDelayMs: 5000 },
+    });
+    store.insertSound({
+      channelId: "Weather",
+      id: "outro-clip",
+      resourceId: "rain",
+      index: 2,
+    });
+    store.updateSound({
+      channelId: "Weather",
+      soundId: "outro-clip",
+      values: { startDelayMs: 12000 },
+    });
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "connect-to-previous" },
+    });
+
+    await handleSoundContextMenu(
+      {
+        store,
+        render,
+        refs: { form: { setValues } },
+        appService: { showDropdownMenu },
+        i18n,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: { channelId: "Weather", soundId: "current-clip" },
+          },
+          clientX: 120,
+          clientY: 240,
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: [
+        {
+          type: "item",
+          label: "Connect to Previous",
+          key: "connect-to-previous",
+        },
+        ...soundContextMenuItems,
+      ],
+      x: 120,
+      y: 240,
+      place: "bs",
+    });
+    expect(state.channels[0].sounds[1].startDelayMs).toBe(2000);
+    expect(state.channels[0].sounds[2].startDelayMs).toBe(9000);
+    expect(state.selectedChannelId).toBe("Weather");
+    expect(state.selectedSoundId).toBe("current-clip");
+    expect(setValues).toHaveBeenCalledWith({
+      values: {
+        startDelayMs: 2000,
+        loop: false,
+        volume: 100,
+      },
+    });
     expect(render).toHaveBeenCalledTimes(2);
   });
 

@@ -47,6 +47,34 @@ export const sortAudioSoundsByStartDelay = (sounds = []) => {
   });
 };
 
+export const connectAudioSoundToPrevious = ({
+  sounds = [],
+  soundId,
+  resourceById = new Map(),
+} = {}) => {
+  const soundIndex = sounds.findIndex((sound) => sound.id === soundId);
+  if (soundIndex <= 0) {
+    return;
+  }
+
+  const previousSound = sounds[soundIndex - 1];
+  const sound = sounds[soundIndex];
+  const currentStartDelayMs = normalizeAudioStartDelayMs(sound.startDelayMs);
+  const connectedStartDelayMs =
+    normalizeAudioStartDelayMs(previousSound.startDelayMs) +
+    resolveAudioSoundDurationMs(
+      previousSound,
+      resourceById.get(previousSound.resourceId),
+    );
+  const shiftMs = connectedStartDelayMs - currentStartDelayMs;
+
+  for (const shiftedSound of sounds.slice(soundIndex)) {
+    shiftedSound.startDelayMs =
+      normalizeAudioStartDelayMs(shiftedSound.startDelayMs) + shiftMs;
+  }
+  sortAudioSoundsByStartDelay(sounds);
+};
+
 export const resolveAudioInsertionTiming = ({
   sounds = [],
   index = sounds.length,

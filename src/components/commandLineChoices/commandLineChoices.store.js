@@ -31,28 +31,32 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
       required: true,
       options: [
         { value: "nextLine", label: "Continue" },
-        { value: "sectionTransition", label: "Move to Section" },
+        { value: "sectionTransition", label: "Move to section" },
       ],
     },
     {
       $when: `values.actionType == 'sectionTransition'`,
-      name: "sceneId",
-      type: "select",
-      label: "Scene",
-      options: "${scenes}",
-    },
-    {
-      $when: `values.actionType == 'sectionTransition'`,
-      name: "sectionId",
-      type: "select",
-      label: "Section",
-      options: "${sections}",
+      type: "row",
+      fields: [
+        {
+          name: "sceneId",
+          type: "select",
+          label: "Scene",
+          options: "${scenes}",
+        },
+        {
+          name: "sectionId",
+          type: "select",
+          label: "Section",
+          options: "${sections}",
+        },
+      ],
     },
     {
       $when: `values.actionType == 'sectionTransition'`,
       name: "transitionAnimationId",
       type: "select",
-      label: "Screen",
+      label: "Animation",
       required: false,
       clearable: true,
       placeholder: "Animation",
@@ -60,22 +64,27 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
     },
     {
       $when: `values.actionType == 'sectionTransition' && values.transitionAnimationId`,
-      name: "playbackSpeed",
-      label: "Playback Speed",
-      type: "input-number",
-      min: 0.01,
-      step: 0.1,
-      required: true,
-    },
-    {
-      $when: `values.actionType == 'sectionTransition' && values.transitionAnimationId`,
-      name: "playbackContinuity",
-      label: "Continuity",
-      type: "segmented-control",
-      clearable: false,
-      options: [
-        { value: "render", label: "Single Line" },
-        { value: "persistent", label: "Persistent" },
+      type: "row",
+      fields: [
+        {
+          name: "playbackSpeed",
+          label: "Playback Speed",
+          type: "slider-with-input",
+          min: 0.1,
+          max: 3,
+          step: 0.1,
+          required: true,
+        },
+        {
+          name: "playbackContinuity",
+          label: "Continuity",
+          type: "segmented-control",
+          clearable: false,
+          options: [
+            { value: "render", label: "Single Line" },
+            { value: "persistent", label: "Persistent" },
+          ],
+        },
       ],
     },
     {
@@ -439,7 +448,7 @@ const form = {
     {
       type: "slot",
       slot: "choices",
-      description: "Choices",
+      label: "Choices",
     },
   ],
 };
@@ -478,8 +487,13 @@ export const selectViewData = ({ state, props, i18n }) => {
   });
 
   // Pre-compute complex expressions for template
+  const continueLabel = localizeCommandLineText("Continue", copy);
+  const moveToSectionLabel = localizeCommandLineText("Move to section", copy);
   const processedItems = (state?.items || []).map((item) => ({
     ...item,
+    actionLabel: getChoiceClickActions(item).sectionTransition
+      ? moveToSectionLabel
+      : continueLabel,
   }));
 
   const editModeTitle =

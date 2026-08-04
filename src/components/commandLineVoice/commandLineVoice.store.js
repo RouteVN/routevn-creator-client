@@ -1,5 +1,6 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
+  connectAudioSoundToPrevious,
   createAudioTimelineLayout,
   createAudioTimelineSnapStartDelays,
   formatAudioDurationMs,
@@ -119,8 +120,8 @@ const SOUND_FORM = {
   fields: [
     {
       name: "startDelayMs",
-      label: "Start Delay (ms)",
-      type: "input-number",
+      label: "Start Delay",
+      type: "input-duration",
       min: 0,
       step: 10,
     },
@@ -317,6 +318,17 @@ export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
     sound.startDelayMs = normalizeAudioStartDelayMs(values.startDelayMs);
     sortAudioSoundsByStartDelay(state.voice.sounds);
   }
+};
+
+export const connectSoundToPrevious = ({ state }, { soundId } = {}) => {
+  const resourceById = new Map(
+    toFlatItems(state.items).map((item) => [item.id, item]),
+  );
+  connectAudioSoundToPrevious({
+    sounds: state.voice.sounds,
+    soundId,
+    resourceById,
+  });
 };
 
 export const startSoundDrag = (

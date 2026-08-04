@@ -19,6 +19,7 @@ export const createInitialState = () => ({
         type: "select",
         label: "Control",
         description: "",
+        clearable: false,
         required: false,
         placeholder: "Choose a control...",
         options: [],

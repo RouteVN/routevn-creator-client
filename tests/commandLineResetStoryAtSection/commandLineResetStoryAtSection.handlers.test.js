@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
+  selectSubmitData,
   setFormValues,
   setScenes,
 } from "../../src/components/commandLineResetStoryAtSection/commandLineResetStoryAtSection.store.js";
 import { handleSubmitClick } from "../../src/components/commandLineResetStoryAtSection/commandLineResetStoryAtSection.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("commandLineResetStoryAtSection.handlers", () => {
   it("submits resetStoryAtSection with a sectionId payload", () => {
@@ -45,8 +47,9 @@ describe("commandLineResetStoryAtSection.handlers", () => {
         showAlert: vi.fn(),
       },
       dispatchEvent,
+      i18n: EN_I18N,
       store: {
-        getState: () => state,
+        selectSubmitData: () => selectSubmitData({ state }),
       },
     });
 
@@ -97,8 +100,9 @@ describe("commandLineResetStoryAtSection.handlers", () => {
         showAlert: vi.fn(),
       },
       dispatchEvent,
+      i18n: EN_I18N,
       store: {
-        getState: () => state,
+        selectSubmitData: () => selectSubmitData({ state }),
       },
     });
 

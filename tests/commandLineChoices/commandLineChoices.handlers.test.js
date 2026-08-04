@@ -27,6 +27,7 @@ import {
   showDropdownMenu,
   updateEditForm,
 } from "../../src/components/commandLineChoices/commandLineChoices.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const layouts = [
   {
@@ -298,6 +299,7 @@ describe("commandLineChoices.handlers", () => {
       store,
       render,
       dispatchEvent,
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -382,6 +384,7 @@ describe("commandLineChoices.handlers", () => {
       store,
       render,
       dispatchEvent,
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -426,6 +429,7 @@ describe("commandLineChoices.handlers", () => {
     handleSubmitClick({
       dispatchEvent,
       store: createStoreApi(state),
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },

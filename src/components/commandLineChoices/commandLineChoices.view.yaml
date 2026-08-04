@@ -64,10 +64,11 @@ template:
               - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
                   - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context} p=none:
                       - rtgl-view#choicesContainer slot=choices g=md w=f:
-                          - $for item, index in defaultValues.items:
-                              - rtgl-view#choiceItem${index} data-index=${index} d=h av=c w=f g=md p=sm bgc=mu br=sm cur=pointer:
-                                  - rtgl-view w=1fg:
-                                      - rtgl-text: ${item.content}
+                          - $for item, index in items:
+                              - rtgl-view#choiceItem${index} data-index=${index} d=h av=c w=f g=md pv=sm ph=md bgc=mu br=sm cur=pointer:
+                                  - 'rtgl-view w=1fg style="min-width: 0;"':
+                                      - rtgl-text w=f ellipsis=true: ${item.content}
+                                  - 'rtgl-text s=xs c=mu-fg style="white-space: nowrap; flex: 0 0 auto;"': ${item.actionLabel}
                           - rtgl-button#addChoiceButton v=ol w=f mt=md: + Add Choice
               - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
                   - rtgl-button#submitButton: Submit

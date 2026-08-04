@@ -27,6 +27,6 @@ describe("commandLineInput view", () => {
     );
 
     expect(view).not.toContain("Submit Action");
-    expect(view).not.toContain("Move to Section");
+    expect(view).not.toContain("Move to section");
   });
 });

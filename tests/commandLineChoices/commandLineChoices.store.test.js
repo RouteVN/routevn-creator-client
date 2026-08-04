@@ -5,7 +5,7 @@ import {
   selectEditForm,
   selectItems,
   saveChoice,
-  selectViewData,
+  selectViewData as selectViewDataBase,
   setAnimations,
   setEditingIndex,
   setItems,
@@ -13,6 +13,10 @@ import {
   showDropdownMenu,
   updateEditForm,
 } from "../../src/components/commandLineChoices/commandLineChoices.store.js";
+import { EN_I18N } from "../support/i18n.js";
+
+const selectViewData = (context) =>
+  selectViewDataBase({ ...context, i18n: EN_I18N });
 
 describe("commandLineChoices.store", () => {
   it("uses nextLine events for default and added choices", () => {
@@ -53,6 +57,14 @@ describe("commandLineChoices.store", () => {
         },
       },
     });
+
+    const viewData = selectViewData({ state, props: { layouts: [] } });
+    expect(viewData.form.fields[1]).toMatchObject({
+      type: "slot",
+      slot: "choices",
+      label: "Choices",
+    });
+    expect(viewData.form.fields[1].description).toBeUndefined();
   });
 
   it("prefills and offers screen animations for choice section transitions", () => {
@@ -142,12 +154,45 @@ describe("commandLineChoices.store", () => {
     expect(selectEditForm({ state }).transitionAnimationId).toBe(
       "screen-crossfade",
     );
+    expect(viewData.items[0].actionLabel).toBe("Move to section");
     expect(viewData.editFormContext.transitionAnimationOptions).toEqual([
       {
         value: "screen-crossfade",
         label: "Screen Crossfade",
       },
     ]);
+    expect(viewData.choiceFormTemplate.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "row",
+          fields: [
+            expect.objectContaining({ name: "sceneId", label: "Scene" }),
+            expect.objectContaining({ name: "sectionId", label: "Section" }),
+          ],
+        }),
+        expect.objectContaining({
+          name: "transitionAnimationId",
+          label: "Animation",
+        }),
+        expect.objectContaining({
+          type: "row",
+          fields: [
+            expect.objectContaining({
+              name: "playbackSpeed",
+              label: "Playback Speed",
+              type: "slider-with-input",
+              min: 0.1,
+              max: 3,
+              step: 0.1,
+            }),
+            expect.objectContaining({
+              name: "playbackContinuity",
+              label: "Continuity",
+            }),
+          ],
+        }),
+      ]),
+    );
   });
 
   it("hides unavailable move actions in the choice context menu", () => {
@@ -248,6 +293,7 @@ describe("commandLineChoices.store", () => {
     const viewData = selectViewData({ state, props: { layouts: [] } });
 
     expect(selectEditForm({ state }).updateVariable).toEqual(updateVariable);
+    expect(viewData.items[0].actionLabel).toBe("Continue");
     expect(viewData.choiceUpdateVariableActions).toEqual({ updateVariable });
 
     updateEditForm(

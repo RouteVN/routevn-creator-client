@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
+  selectSubmitData,
   setFormValues,
   setScenes,
 } from "../../src/components/commandLineSectionTransition/commandLineSectionTransition.store.js";
 import { handleSubmitClick } from "../../src/components/commandLineSectionTransition/commandLineSectionTransition.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("commandLineSectionTransition.handlers", () => {
   it("submits sectionTransition with an optional screen transition", () => {
@@ -44,8 +46,9 @@ describe("commandLineSectionTransition.handlers", () => {
         showAlert: vi.fn(),
       },
       dispatchEvent,
+      i18n: EN_I18N,
       store: {
-        getState: () => state,
+        selectSubmitData: () => selectSubmitData({ state }),
       },
     });
 

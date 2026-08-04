@@ -3,10 +3,6 @@ import {
   createActionItemWithInlineTransform,
   createBackgroundWithInlineTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
-import {
-  localizeCommandLineText,
-  selectCommandLineCopy,
-} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import { getRoutevnCreatorSystemActionDocsUrl } from "../../internal/routevnUrls.js";
 
 const toPlainObject = (value) => {
@@ -339,38 +335,6 @@ export const handleHelpFloatingButtonClick = (deps, payload) => {
   const mode = store.selectMode();
 
   appService.openUrl(getRoutevnCreatorSystemActionDocsUrl(mode));
-};
-
-export const handleVoicePreviewClick = (deps, payload) => {
-  payload?._event?.preventDefault?.();
-  payload?._event?.stopPropagation?.();
-  const { appService, i18n, store, render } = deps;
-  const copy = selectCommandLineCopy(i18n);
-  const voicePreview = store.selectVoicePreview();
-
-  if (!voicePreview?.fileId) {
-    appService.showAlert({
-      message: localizeCommandLineText(
-        "Voice preview audio is unavailable.",
-        copy,
-      ),
-      title: localizeCommandLineText("Warning", copy),
-    });
-    return;
-  }
-
-  store.openAudioPlayer({
-    fileId: voicePreview.fileId,
-    fileName: voicePreview.name,
-  });
-  render();
-};
-
-export const handleAudioPlayerClose = (deps, payload) => {
-  payload?._event?.stopPropagation?.();
-  const { store, render } = deps;
-  store.closeAudioPlayer();
-  render();
 };
 
 const isBooleanPropEnabled = (value) => {

@@ -32,11 +32,11 @@ describe("systemActions view", () => {
     );
     expect(systemActionsView).toContain("rtgl-view#actionItemVoice");
     expect(systemActionsView).toContain("rtgl-svg svg=microphone wh=24");
-    expect(systemActionsView).toContain(
+    expect(systemActionsView).not.toContain(
       'rtgl-button#voicePreviewButton sq v=ol pre=play title="${previewVoiceLabel}" aria-label="${previewVoiceLabel}"',
     );
     expect(systemActionsView).not.toContain("$if preview.voice.fileId");
-    expect(systemActionsView).toContain(
+    expect(systemActionsView).not.toContain(
       "rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}",
     );
     expect(systemActionsView).toContain("rtgl-svg svg=screen wh=24");

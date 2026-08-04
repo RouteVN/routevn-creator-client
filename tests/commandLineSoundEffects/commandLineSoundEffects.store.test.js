@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as sfxStore from "../../src/components/commandLineSoundEffects/commandLineSoundEffects.store.js";
 import {
   addChannel,
+  connectSoundToPrevious,
   createInitialState,
   finishSoundDrag,
   insertSound,
@@ -223,6 +224,13 @@ describe("commandLineSoundEffects.store", () => {
       "loop",
       "volume",
     ]);
+    expect(soundSelection.form.fields[0]).toMatchObject({
+      name: "startDelayMs",
+      label: "Start Delay",
+      type: "input-duration",
+      min: 0,
+      step: 10,
+    });
     expect(soundSelection.defaultValues).toEqual({
       startDelayMs: 0,
       loop: true,
@@ -357,6 +365,51 @@ describe("commandLineSoundEffects.store", () => {
     expect(state.channels[0].sounds[0].startDelayMs).toBe(2000);
     expect(state.selectedChannelId).toBe("Weather");
     expect(state.selectedSoundId).toBeUndefined();
+  });
+
+  it("connects an SFX sound and shifts later sounds in the same channel", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+    setSfx(
+      { state },
+      {
+        sfx: {
+          channels: [
+            {
+              id: "Weather",
+              sounds: [
+                {
+                  id: "rain-clip",
+                  resourceId: "rain",
+                  startDelayMs: 500,
+                  startAt: 0.5,
+                  endAt: 1.5,
+                  playbackRate: 2,
+                },
+                {
+                  id: "thunder-clip",
+                  resourceId: "thunder",
+                  startDelayMs: 4000,
+                },
+                {
+                  id: "outro-clip",
+                  resourceId: "rain",
+                  startDelayMs: 7500,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    );
+
+    connectSoundToPrevious(
+      { state },
+      { channelId: "Weather", soundId: "thunder-clip" },
+    );
+
+    expect(state.channels[0].sounds[1].startDelayMs).toBe(1000);
+    expect(state.channels[0].sounds[2].startDelayMs).toBe(4500);
   });
 
   it("updates one SFX sound start delay from a horizontal timeline drag", () => {

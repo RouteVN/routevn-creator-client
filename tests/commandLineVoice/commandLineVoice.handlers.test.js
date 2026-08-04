@@ -253,6 +253,85 @@ describe("commandLineVoice.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
+  it("connects a Voice clip and shifts every following clip", async () => {
+    const state = voiceStore.createInitialState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const setValues = vi.fn();
+    store.setRepositoryState({
+      voices: {
+        items: {
+          intro: { id: "intro", type: "voice", duration: 2 },
+          response: { id: "response", type: "voice", duration: 6 },
+        },
+        tree: [{ id: "intro" }, { id: "response" }],
+      },
+    });
+    store.setVoice({
+      voice: {
+        sounds: [
+          { id: "intro-clip", resourceId: "intro" },
+          {
+            id: "response-clip",
+            resourceId: "response",
+            startDelayMs: 5000,
+          },
+          {
+            id: "outro-clip",
+            resourceId: "intro",
+            startDelayMs: 12000,
+          },
+        ],
+      },
+    });
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "connect-to-previous" },
+    });
+
+    await handleSoundContextMenu(
+      {
+        appService: { showDropdownMenu },
+        i18n,
+        refs: { form: { setValues } },
+        render,
+        store,
+      },
+      {
+        _event: {
+          currentTarget: { dataset: { soundId: "response-clip" } },
+          clientX: 120,
+          clientY: 240,
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: [
+        {
+          type: "item",
+          label: "Connect to Previous",
+          key: "connect-to-previous",
+        },
+        ...contextMenuItems,
+      ],
+      x: 120,
+      y: 240,
+      place: "bs",
+    });
+    expect(state.voice.sounds[1].startDelayMs).toBe(2000);
+    expect(state.voice.sounds[2].startDelayMs).toBe(9000);
+    expect(state.selectedSoundId).toBe("response-clip");
+    expect(setValues).toHaveBeenCalledWith({
+      values: {
+        startDelayMs: 2000,
+        volume: 100,
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
   it("uses the file picker for context-menu insertion", async () => {
     const state = voiceStore.createInitialState();
     const { deps, appService, projectService } = createUploadDeps(state);

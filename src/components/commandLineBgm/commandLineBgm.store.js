@@ -1,11 +1,11 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  connectAudioSoundToPrevious,
   createAudioTimelineLayout,
   createAudioTimelineSnapStartDelays,
   formatAudioDurationMs,
   normalizeAudioChannelInterruption,
   normalizeAudioStartDelayMs,
-  resolveAudioSoundDurationMs,
   resolveAudioInsertionTiming,
   resolveDraggedAudioStartDelayMs,
   sortAudioSoundsByStartDelay,
@@ -393,30 +393,14 @@ export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
 };
 
 export const connectSoundToPrevious = ({ state }, { soundId } = {}) => {
-  const soundIndex = state.bgm.sounds.findIndex(
-    (sound) => sound.id === soundId,
+  const resourceById = new Map(
+    toFlatItems(state.items).map((item) => [item.id, item]),
   );
-  if (soundIndex <= 0) {
-    return;
-  }
-
-  const previousSound = state.bgm.sounds[soundIndex - 1];
-  const sound = state.bgm.sounds[soundIndex];
-  const previousResource = selectSoundItemById(
-    { state },
-    { itemId: previousSound.resourceId },
-  );
-  const currentStartDelayMs = normalizeAudioStartDelayMs(sound.startDelayMs);
-  const connectedStartDelayMs =
-    normalizeAudioStartDelayMs(previousSound.startDelayMs) +
-    resolveAudioSoundDurationMs(previousSound, previousResource);
-  const shiftMs = connectedStartDelayMs - currentStartDelayMs;
-
-  for (const shiftedSound of state.bgm.sounds.slice(soundIndex)) {
-    shiftedSound.startDelayMs =
-      normalizeAudioStartDelayMs(shiftedSound.startDelayMs) + shiftMs;
-  }
-  sortAudioSoundsByStartDelay(state.bgm.sounds);
+  connectAudioSoundToPrevious({
+    sounds: state.bgm.sounds,
+    soundId,
+    resourceById,
+  });
 };
 
 export const startSoundDrag = (

@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  closeAudioPlayer,
   createInitialState,
-  openAudioPlayer,
   selectActionsData,
   selectViewData as selectViewDataBase,
   setAuthoredDialogueWasCleared,
@@ -488,119 +486,6 @@ describe("systemActions.store", () => {
     expect(preview.voice).toMatchObject({
       id: "voice-line-1",
       name: "Aki Line 1",
-    });
-  });
-
-  it("exposes inline voice preview player state", () => {
-    const state = createInitialState();
-
-    openAudioPlayer(
-      { state },
-      {
-        fileId: "file-voice-line-1",
-        fileName: "Aki Line 1",
-      },
-    );
-
-    expect(selectViewData({ state, props: {} })).toMatchObject({
-      showAudioPlayer: true,
-      playingSound: {
-        fileId: "file-voice-line-1",
-        title: "Aki Line 1",
-      },
-    });
-
-    closeAudioPlayer({ state });
-
-    expect(selectViewData({ state, props: {} })).toMatchObject({
-      showAudioPlayer: false,
-      playingSound: {
-        fileId: undefined,
-        title: "",
-      },
-    });
-  });
-
-  it("closes the inline voice preview player when the voice action changes", () => {
-    const state = createInitialState();
-
-    updateActions(
-      { state },
-      {
-        voice: {
-          resourceId: "voice-line-1",
-        },
-      },
-    );
-    openAudioPlayer(
-      { state },
-      {
-        fileId: "file-voice-line-1",
-        fileName: "Aki Line 1",
-      },
-    );
-
-    updateActions(
-      { state },
-      {
-        background: {
-          resourceId: "bg-classroom",
-        },
-      },
-    );
-
-    expect(selectViewData({ state, props: {} })).toMatchObject({
-      showAudioPlayer: false,
-      playingSound: {
-        fileId: undefined,
-        title: "",
-      },
-    });
-  });
-
-  it("closes the inline voice preview player when a canonical Voice changes or is removed", () => {
-    const state = createInitialState();
-
-    updateActions(
-      { state },
-      {
-        voice: {
-          sounds: [{ id: "voice-a", resourceId: "voice-line-1" }],
-        },
-      },
-    );
-    openAudioPlayer(
-      { state },
-      {
-        fileId: "file-voice-line-1",
-        fileName: "Aki Line 1",
-      },
-    );
-
-    updateActions(
-      { state },
-      {
-        voice: {
-          sounds: [{ id: "voice-b", resourceId: "voice-line-2" }],
-        },
-      },
-    );
-
-    expect(state.showAudioPlayer).toBe(false);
-
-    openAudioPlayer(
-      { state },
-      {
-        fileId: "file-voice-line-2",
-        fileName: "Aki Line 2",
-      },
-    );
-    updateActions({ state }, {});
-
-    expect(state.showAudioPlayer).toBe(false);
-    expect(state.playingSound).toEqual({
-      fileId: undefined,
-      title: "",
     });
   });
 

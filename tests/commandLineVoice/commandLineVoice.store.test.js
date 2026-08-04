@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as voiceStore from "../../src/components/commandLineVoice/commandLineVoice.store.js";
 import {
   clearSelectedSound,
+  connectSoundToPrevious,
   createInitialState,
   insertSound,
   removeSound,
@@ -188,6 +189,13 @@ describe("commandLineVoice.store", () => {
       "startDelayMs",
       "volume",
     ]);
+    expect(selectedViewData.form.fields[0]).toMatchObject({
+      name: "startDelayMs",
+      label: "Start Delay",
+      type: "input-duration",
+      min: 0,
+      step: 10,
+    });
     expect(selectedViewData.defaultValues).toEqual({
       startDelayMs: 0,
       volume: 90,
@@ -221,6 +229,43 @@ describe("commandLineVoice.store", () => {
       },
     ]);
     expect(selectSelectedSoundId({ state })).toBeUndefined();
+  });
+
+  it("connects a Voice sound and shifts every following sound with it", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { voices });
+    setVoice(
+      { state },
+      {
+        voice: {
+          sounds: [
+            {
+              id: "intro-clip",
+              resourceId: "intro",
+              startDelayMs: 500,
+              startAt: 0.5,
+              endAt: 1.5,
+              playbackRate: 2,
+            },
+            {
+              id: "response-clip",
+              resourceId: "response",
+              startDelayMs: 4000,
+            },
+            {
+              id: "outro-clip",
+              resourceId: "intro",
+              startDelayMs: 7500,
+            },
+          ],
+        },
+      },
+    );
+
+    connectSoundToPrevious({ state }, { soundId: "response-clip" });
+
+    expect(selectVoicePayload({ state }).sounds[1].startDelayMs).toBe(1000);
+    expect(selectVoicePayload({ state }).sounds[2].startDelayMs).toBe(4500);
   });
 
   it("updates a Voice sound start delay from a horizontal timeline drag", () => {

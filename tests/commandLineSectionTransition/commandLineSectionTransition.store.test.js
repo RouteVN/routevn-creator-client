@@ -6,6 +6,7 @@ import {
   setFormValues,
   setScenes,
 } from "../../src/components/commandLineSectionTransition/commandLineSectionTransition.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("commandLineSectionTransition.store", () => {
   it("builds transition animation options from animation resources", () => {
@@ -76,6 +77,7 @@ describe("commandLineSectionTransition.store", () => {
       props: {
         currentSceneId: "scene-1",
       },
+      i18n: EN_I18N,
     });
 
     expect(viewData.context.transitionAnimationOptions).toEqual([
@@ -84,5 +86,27 @@ describe("commandLineSectionTransition.store", () => {
         label: "Screen Crossfade",
       },
     ]);
+    expect(viewData.form.fields[0]).toMatchObject({
+      type: "row",
+      fields: [{ name: "sceneId" }, { name: "sectionId" }],
+    });
+    expect(viewData.form.fields[1]).toMatchObject({
+      name: "transitionAnimationId",
+      label: "Animation",
+      type: "select",
+    });
+    expect(viewData.form.fields[2]).toMatchObject({
+      type: "row",
+      fields: [
+        {
+          name: "playbackSpeed",
+          type: "slider-with-input",
+          min: 0.1,
+          max: 3,
+          step: 0.1,
+        },
+        { name: "playbackContinuity", type: "segmented-control" },
+      ],
+    });
   });
 });

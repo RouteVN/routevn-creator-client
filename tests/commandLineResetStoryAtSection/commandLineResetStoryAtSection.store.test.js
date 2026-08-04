@@ -6,6 +6,7 @@ import {
   setFormValues,
   setScenes,
 } from "../../src/components/commandLineResetStoryAtSection/commandLineResetStoryAtSection.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("commandLineResetStoryAtSection.store", () => {
   it("shows section options for the selected scene", () => {
@@ -60,7 +61,7 @@ describe("commandLineResetStoryAtSection.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state, props: {} });
+    const viewData = selectViewData({ state, props: {}, i18n: EN_I18N });
 
     expect(viewData.context.sceneOptions).toEqual([
       { value: "scene-1", label: "Opening" },
@@ -109,7 +110,7 @@ describe("commandLineResetStoryAtSection.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state, props: {} });
+    const viewData = selectViewData({ state, props: {}, i18n: EN_I18N });
 
     expect(viewData.context.transitionAnimationOptions).toEqual([
       {
@@ -117,5 +118,27 @@ describe("commandLineResetStoryAtSection.store", () => {
         label: "Screen Mask Reveal",
       },
     ]);
+    expect(viewData.form.fields[0]).toMatchObject({
+      type: "row",
+      fields: [{ name: "sceneId" }, { name: "sectionId" }],
+    });
+    expect(viewData.form.fields[1]).toMatchObject({
+      name: "transitionAnimationId",
+      label: "Animation",
+      type: "select",
+    });
+    expect(viewData.form.fields[2]).toMatchObject({
+      type: "row",
+      fields: [
+        {
+          name: "playbackSpeed",
+          type: "slider-with-input",
+          min: 0.1,
+          max: 3,
+          step: 0.1,
+        },
+        { name: "playbackContinuity", type: "segmented-control" },
+      ],
+    });
   });
 });

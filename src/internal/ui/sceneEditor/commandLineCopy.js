@@ -43,7 +43,6 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "The selected input layout does not contain input fields.":
     "inputLayoutHasNoFields",
   "Variable operation value is invalid.": "variableOperationValueInvalid",
-  "Voice preview audio is unavailable.": "voicePreviewUnavailable",
 });
 
 export const selectCommandLineCopy = (i18n = {}) => {
