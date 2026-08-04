@@ -4,9 +4,11 @@ import {
   handleBeforeMount,
   handleButtonSelectClick,
   handleCustomTransformButtonClick,
+  handleCustomTransformButtonKeyDown,
   handleCustomTransformDoneButtonClick,
   handleGetBackgroundTransformPreviewCanvasRoot,
   handleFormInputChange,
+  handleOptionsSectionAction,
   handleResourceItemClick,
   handleSpritesheetSelected,
   handleSubmitClick,
@@ -14,11 +16,16 @@ import {
 } from "../../src/components/commandLineBackground/commandLineBackground.handlers.js";
 import {
   createInitialState,
+  removeAnimationOption,
+  removeOpacityOption,
+  selectAnimationOptionEnabled,
   selectBackgroundLoop,
+  selectBackgroundColorOptionEnabled,
   selectCustomTransform,
   selectCustomTransformEnabled,
   selectCustomTransformEditorOpen,
   selectMode,
+  selectOpacityOptionEnabled,
   selectPendingResourceId,
   selectPendingSpritesheetAnimationName,
   selectSelectedAnimation,
@@ -51,12 +58,15 @@ import {
   setSelectedAnimationPlaybackSpeed,
   setSelectedAnimationMode,
   setSelectedBlur,
-  setSelectedBlurEnabled,
   setSelectedBlurField,
   setSelectedColor,
   setSelectedOpacity,
   setSelectedResource,
   setSelectedTransform,
+  showAnimationOption,
+  showBackgroundColorOption,
+  showBlurOption,
+  showOpacityOption,
   setTab,
   setTempSelectedResource,
   setUiConfig,
@@ -68,12 +78,18 @@ const createEmptyCollection = () => ({
 });
 
 const createStoreApi = (state) => ({
+  removeAnimationOption: (payload) => removeAnimationOption({ state }, payload),
+  removeOpacityOption: (payload) => removeOpacityOption({ state }, payload),
+  selectAnimationOptionEnabled: () => selectAnimationOptionEnabled({ state }),
   selectBackgroundLoop: () => selectBackgroundLoop({ state }),
+  selectBackgroundColorOptionEnabled: () =>
+    selectBackgroundColorOptionEnabled({ state }),
   selectCustomTransform: () => selectCustomTransform({ state }),
   selectCustomTransformEnabled: () => selectCustomTransformEnabled({ state }),
   selectCustomTransformEditorOpen: () =>
     selectCustomTransformEditorOpen({ state }),
   selectMode: () => selectMode({ state }),
+  selectOpacityOptionEnabled: () => selectOpacityOptionEnabled({ state }),
   selectPendingResourceId: () => selectPendingResourceId({ state }),
   selectPendingSpritesheetAnimationName: () =>
     selectPendingSpritesheetAnimationName({ state }),
@@ -117,8 +133,6 @@ const createStoreApi = (state) => ({
   setSelectedAnimationMode: (payload) =>
     setSelectedAnimationMode({ state }, payload),
   setSelectedBlur: (payload) => setSelectedBlur({ state }, payload),
-  setSelectedBlurEnabled: (payload) =>
-    setSelectedBlurEnabled({ state }, payload),
   setSelectedBlurField: (payload) => setSelectedBlurField({ state }, payload),
   setSelectedColor: (payload) => setSelectedColor({ state }, payload),
   setSelectedOpacity: (payload) => setSelectedOpacity({ state }, payload),
@@ -128,6 +142,11 @@ const createStoreApi = (state) => ({
   setTempSelectedResource: (payload) =>
     setTempSelectedResource({ state }, payload),
   setUiConfig: (payload) => setUiConfig({ state }, payload),
+  showAnimationOption: (payload) => showAnimationOption({ state }, payload),
+  showBackgroundColorOption: (payload) =>
+    showBackgroundColorOption({ state }, payload),
+  showBlurOption: (payload) => showBlurOption({ state }, payload),
+  showOpacityOption: (payload) => showOpacityOption({ state }, payload),
 });
 
 const setRepositoryCollections = (state) => {
@@ -213,6 +232,17 @@ const setRepositoryCollections = (state) => {
           },
         },
         tree: [{ id: "bg-center" }],
+      },
+      colors: {
+        items: {
+          "color-night": {
+            id: "color-night",
+            type: "color",
+            name: "Night",
+            hex: "#112233",
+          },
+        },
+        tree: [{ id: "color-night" }],
       },
     },
   );
@@ -719,7 +749,279 @@ describe("commandLineBackground.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
-  it("submits blur when enabled and clears it when disabled", () => {
+  it("adds the inline blur fields from the options section menu", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "blur" },
+    });
+
+    await handleOptionsSectionAction(
+      {
+        appService: { showDropdownMenu },
+        i18n: {
+          resourcePages: {},
+          sceneEditorPage: {},
+          commandLinePage: {},
+        },
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "options",
+            actionId: "add",
+            position: { x: 120, y: 240 },
+          },
+        },
+      },
+    );
+
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: [
+        {
+          type: "item",
+          label: "Background Color",
+          key: "background-color",
+        },
+        {
+          type: "item",
+          label: "Opacity",
+          key: "opacity",
+        },
+        {
+          type: "item",
+          label: "Blur",
+          key: "blur",
+        },
+        {
+          type: "item",
+          label: "Animation",
+          key: "animation",
+        },
+      ],
+      x: 120,
+      y: 240,
+      place: "be",
+    });
+    expect(selectSelectedBlur({ state })).toEqual({
+      x: 6,
+      y: 9,
+      quality: 3,
+      kernelSize: 9,
+      repeatEdgePixels: true,
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds background color as a required inline select and removes its section", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "background-color" },
+    });
+    const i18n = {
+      resourcePages: {},
+      sceneEditorPage: {},
+      commandLinePage: {},
+    };
+
+    setRepositoryCollections(state);
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+
+    await handleOptionsSectionAction(
+      {
+        appService: { showDropdownMenu },
+        i18n,
+        store: createStoreApi(state),
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "options",
+            actionId: "add",
+            position: { x: 120, y: 240 },
+          },
+        },
+      },
+    );
+    expect(selectBackgroundColorOptionEnabled({ state })).toBe(true);
+    expect(selectSelectedColor({ state })).toBeUndefined();
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "colorId",
+            value: "color-night",
+          },
+        },
+      },
+    );
+    expect(selectSelectedColor({ state })).toBe("color-night");
+    expect(selectBackgroundColorOptionEnabled({ state })).toBe(true);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+          colorId: "color-night",
+        },
+      },
+    });
+
+    await handleOptionsSectionAction(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "background-color",
+            actionId: "remove",
+          },
+        },
+      },
+    );
+    expect(selectSelectedColor({ state })).toBeUndefined();
+    expect(selectBackgroundColorOptionEnabled({ state })).toBe(false);
+    expect(dispatchEvent.mock.calls[1][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+        },
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(3);
+  });
+
+  it("removes and restores the inline opacity option", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setRepositoryCollections(state);
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+    setSelectedOpacity({ state }, { opacity: 0.5 });
+
+    await handleOptionsSectionAction(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "opacity",
+            actionId: "remove",
+          },
+        },
+      },
+    );
+
+    expect(selectOpacityOptionEnabled({ state })).toBe(false);
+    expect(selectSelectedOpacity({ state })).toBeUndefined();
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+        },
+      },
+    });
+
+    const reopenedState = createInitialState();
+    handleBeforeMount({
+      store: createStoreApi(reopenedState),
+      props: {
+        background: {
+          resourceId: "bg-school",
+        },
+      },
+    });
+    expect(selectOpacityOptionEnabled({ state: reopenedState })).toBe(false);
+
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "opacity" },
+    });
+    await handleOptionsSectionAction(
+      {
+        appService: { showDropdownMenu },
+        i18n: {
+          resourcePages: {},
+          sceneEditorPage: {},
+          commandLinePage: {},
+        },
+        store: createStoreApi(state),
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "options",
+            actionId: "add",
+            position: { x: 120, y: 240 },
+          },
+        },
+      },
+    );
+
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: [
+        {
+          type: "item",
+          label: "Background Color",
+          key: "background-color",
+        },
+        {
+          type: "item",
+          label: "Opacity",
+          key: "opacity",
+        },
+        {
+          type: "item",
+          label: "Blur",
+          key: "blur",
+        },
+        {
+          type: "item",
+          label: "Animation",
+          key: "animation",
+        },
+      ],
+      x: 120,
+      y: 240,
+      place: "be",
+    });
+    expect(selectOpacityOptionEnabled({ state })).toBe(true);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("updates blur inline and removes it from its section action", async () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
@@ -733,53 +1035,24 @@ describe("commandLineBackground.handlers", () => {
       },
     );
 
-    handleFormInputChange(
-      {
-        store: createStoreApi(state),
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: {
-          detail: {
-            name: "blur",
-            value: true,
-          },
+    showBlurOption({ state });
+    const blurChanges = [
+      { name: "blurX", value: "8" },
+      { name: "blurY", value: 10 },
+      { name: "blurQuality", value: 4 },
+      { name: "blurKernelSize", value: 11 },
+      { name: "blurRepeatEdgePixels", value: false },
+    ];
+    for (const detail of blurChanges) {
+      handleFormInputChange(
+        {
+          store: createStoreApi(state),
+          render,
+          dispatchEvent,
         },
-      },
-    );
-
-    handleFormInputChange(
-      {
-        store: createStoreApi(state),
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: {
-          detail: {
-            name: "blurX",
-            value: "8",
-          },
-        },
-      },
-    );
-
-    handleFormInputChange(
-      {
-        store: createStoreApi(state),
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: {
-          detail: {
-            name: "blurRepeatEdgePixels",
-            value: false,
-          },
-        },
-      },
-    );
+        { _event: { detail } },
+      );
+    }
 
     handleSubmitClick(
       {
@@ -791,28 +1064,26 @@ describe("commandLineBackground.handlers", () => {
 
     expect(selectSelectedBlur({ state })).toEqual({
       x: 8,
-      y: 9,
-      quality: 3,
-      kernelSize: 9,
+      y: 10,
+      quality: 4,
+      kernelSize: 11,
       repeatEdgePixels: false,
     });
-    expect(dispatchEvent).toHaveBeenCalledTimes(4);
-    expect(dispatchEvent.mock.calls[3][0].detail).toEqual({
+    expect(dispatchEvent).toHaveBeenCalledTimes(6);
+    expect(dispatchEvent.mock.calls[5][0].detail).toEqual({
       background: {
         resourceId: "bg-school",
         blur: {
           x: 8,
-          y: 9,
-          quality: 3,
-          kernelSize: 9,
+          y: 10,
+          quality: 4,
+          kernelSize: 11,
           repeatEdgePixels: false,
         },
       },
     });
 
-    dispatchEvent.mockClear();
-
-    handleFormInputChange(
+    await handleOptionsSectionAction(
       {
         store: createStoreApi(state),
         render,
@@ -821,33 +1092,26 @@ describe("commandLineBackground.handlers", () => {
       {
         _event: {
           detail: {
-            name: "blur",
-            value: false,
+            sectionId: "blur",
+            actionId: "remove",
           },
         },
       },
     );
-
-    handleSubmitClick(
-      {
-        dispatchEvent,
-        store: createStoreApi(state),
-      },
-      {},
-    );
+    handleSubmitClick({ dispatchEvent, store: createStoreApi(state) }, {});
 
     expect(selectSelectedBlur({ state })).toBeUndefined();
-    expect(dispatchEvent).toHaveBeenCalledTimes(2);
-    expect(dispatchEvent.mock.calls[1][0].detail).toEqual({
+    expect(dispatchEvent).toHaveBeenCalledTimes(8);
+    expect(dispatchEvent.mock.calls[7][0].detail).toEqual({
       background: {
         resourceId: "bg-school",
         blur: null,
       },
     });
-    expect(render).toHaveBeenCalledTimes(4);
+    expect(render).toHaveBeenCalledTimes(6);
   });
 
-  it("selects animation from the single animation field", () => {
+  it("selects animation from the inline animation option", () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
@@ -886,6 +1150,7 @@ describe("commandLineBackground.handlers", () => {
     );
 
     expect(selectSelectedAnimation({ state })).toBe("bg-fade");
+    expect(selectAnimationOptionEnabled({ state })).toBe(true);
     expect(selectSelectedAnimationMode({ state })).toBe("transition");
     expect(dispatchEvent).toHaveBeenCalledTimes(2);
     expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
@@ -917,7 +1182,7 @@ describe("commandLineBackground.handlers", () => {
     expect(render).toHaveBeenCalledTimes(1);
   });
 
-  it("clears animation from the clearable animation field", () => {
+  it("removes animation from its section action", async () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
@@ -937,7 +1202,7 @@ describe("commandLineBackground.handlers", () => {
       },
     );
 
-    handleFormInputChange(
+    await handleOptionsSectionAction(
       {
         store: createStoreApi(state),
         render,
@@ -946,8 +1211,8 @@ describe("commandLineBackground.handlers", () => {
       {
         _event: {
           detail: {
-            name: "animationId",
-            value: undefined,
+            sectionId: "animation",
+            actionId: "remove",
           },
         },
       },
@@ -962,6 +1227,7 @@ describe("commandLineBackground.handlers", () => {
     );
 
     expect(selectSelectedAnimation({ state })).toBeUndefined();
+    expect(selectAnimationOptionEnabled({ state })).toBe(false);
     expect(selectSelectedAnimationMode({ state })).toBe("none");
     expect(dispatchEvent).toHaveBeenCalledTimes(2);
     expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
@@ -1310,6 +1576,34 @@ describe("commandLineBackground.handlers", () => {
         transformId: "bg-center",
       },
     });
+  });
+
+  it("opens the local transform editor from the summary box with the keyboard", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const event = {
+      key: "Enter",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+
+    handleCustomTransformButtonKeyDown(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      { _event: event },
+    );
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(selectCustomTransformEditorOpen({ state })).toBe(true);
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(
+      "background-transform-customize",
+    );
   });
 
   it("closes the local transform editor and emits done without submitting the command line", () => {

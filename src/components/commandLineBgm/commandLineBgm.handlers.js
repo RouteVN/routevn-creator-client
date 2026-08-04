@@ -177,30 +177,45 @@ export const handleSoundContextMenu = async (deps, payload) => {
   render();
 
   const copy = selectCommandLineCopy(i18n);
+  const items = [];
+  if (soundIndex > 0) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Connect to Previous", copy),
+      key: "connect-to-previous",
+    });
+  }
+  items.push(
+    {
+      type: "item",
+      label: localizeCommandLineText("Insert Sound Before", copy),
+      key: "insert-before",
+    },
+    {
+      type: "item",
+      label: localizeCommandLineText("Insert Sound After", copy),
+      key: "insert-after",
+    },
+    {
+      type: "item",
+      label: localizeCommandLineText("Remove", copy),
+      key: "remove",
+    },
+  );
   const result = await appService.showDropdownMenu({
-    items: [
-      {
-        type: "item",
-        label: localizeCommandLineText("Insert Sound Before", copy),
-        key: "insert-before",
-      },
-      {
-        type: "item",
-        label: localizeCommandLineText("Insert Sound After", copy),
-        key: "insert-after",
-      },
-      {
-        type: "item",
-        label: localizeCommandLineText("Remove", copy),
-        key: "remove",
-      },
-    ],
+    items,
     x: event.clientX,
     y: event.clientY,
     place: "bs",
   });
 
   const actionKey = result?.item?.key;
+  if (actionKey === "connect-to-previous") {
+    store.connectSoundToPrevious({ soundId });
+    render();
+    syncSelectedSoundForm(deps);
+    return;
+  }
   if (actionKey === "insert-before") {
     openBgmGallery({ store, render, index: soundIndex });
     return;

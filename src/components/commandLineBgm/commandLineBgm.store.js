@@ -5,6 +5,7 @@ import {
   formatAudioDurationMs,
   normalizeAudioChannelInterruption,
   normalizeAudioStartDelayMs,
+  resolveAudioSoundDurationMs,
   resolveAudioInsertionTiming,
   resolveDraggedAudioStartDelayMs,
   sortAudioSoundsByStartDelay,
@@ -119,8 +120,8 @@ const SOUND_FORM = {
   fields: [
     {
       name: "startDelayMs",
-      label: "Start Delay (ms)",
-      type: "input-number",
+      label: "Start Delay",
+      type: "input-duration",
       min: 0,
       step: 10,
     },
@@ -389,6 +390,26 @@ export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
     sound.startDelayMs = normalizeAudioStartDelayMs(values.startDelayMs);
     sortAudioSoundsByStartDelay(state.bgm.sounds);
   }
+};
+
+export const connectSoundToPrevious = ({ state }, { soundId } = {}) => {
+  const soundIndex = state.bgm.sounds.findIndex(
+    (sound) => sound.id === soundId,
+  );
+  if (soundIndex <= 0) {
+    return;
+  }
+
+  const previousSound = state.bgm.sounds[soundIndex - 1];
+  const sound = state.bgm.sounds[soundIndex];
+  const previousResource = selectSoundItemById(
+    { state },
+    { itemId: previousSound.resourceId },
+  );
+  sound.startDelayMs =
+    normalizeAudioStartDelayMs(previousSound.startDelayMs) +
+    resolveAudioSoundDurationMs(previousSound, previousResource);
+  sortAudioSoundsByStartDelay(state.bgm.sounds);
 };
 
 export const startSoundDrag = (

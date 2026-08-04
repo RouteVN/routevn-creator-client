@@ -1,4 +1,5 @@
 import { RUNTIME_ACTION_ITEMS } from "../../internal/runtimeActions.js";
+import { PRESENTATION_ACTION_MODE_ORDER } from "../../internal/presentationActionOrder.js";
 import {
   localizeCommandLineItems,
   selectCommandLineCopy,
@@ -8,6 +9,10 @@ const createSection = (label, items) => ({
   label,
   items,
 });
+
+const PRESENTATION_ACTION_MODE_INDEX = new Map(
+  PRESENTATION_ACTION_MODE_ORDER.map((mode, index) => [mode, index]),
+);
 
 const getRuntimeActionItem = (mode) => {
   return RUNTIME_ACTION_ITEMS.find((item) => item.mode === mode);
@@ -308,6 +313,15 @@ const getActionItems = (attrs = {}) => {
           (!allowedModeSet || allowedModeSet.has(item.mode)),
       )
       .map(toActionItem);
+
+    if (actionsType === "presentation") {
+      visibleItems.sort((left, right) => {
+        return (
+          (PRESENTATION_ACTION_MODE_INDEX.get(left.mode) ?? Infinity) -
+          (PRESENTATION_ACTION_MODE_INDEX.get(right.mode) ?? Infinity)
+        );
+      });
+    }
 
     if (visibleItems.length === 0) {
       return [];

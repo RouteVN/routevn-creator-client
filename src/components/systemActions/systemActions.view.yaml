@@ -64,11 +64,11 @@ template:
       - rtgl-view g=md w=f:
           - $if preview.screen || preview.background || preview.bgm || preview.voice || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.form || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.conditional || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
               - $if preview.control:
-                  - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.control};"':
                       - rtgl-svg svg=control wh=24: null
                       - rtgl-text s=sm: ${preview.control.name}
               - $if preview.background:
-                  - rtgl-view#actionItemBackground data-mode=background g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemBackground data-mode=background g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=pointer style="order: ${presentationActionOrder.background};"':
                       - $if preview.background.type == 'image':
                           - rtgl-svg svg=image wh=24: null
                           - $if preview.background.colorHex:
@@ -97,31 +97,31 @@ template:
                           - 'rtgl-view w=36 h=24 bw=xs bc=bo style="background-color: ${preview.background.colorHex}; flex-shrink: 0;"': null
                           - rtgl-text s=sm: ${preview.background.name}
               - $if preview.screen:
-                  - rtgl-view#actionItemScreen data-mode=screen g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemScreen data-mode=screen g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.screen};"':
                       - rtgl-svg svg=screen wh=24: null
                       - rtgl-text s=sm: ${preview.screen.label}
               - $if preview.bgm:
-                  - rtgl-view#actionItemBgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemBgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.bgm};"':
                       - rtgl-svg svg=music wh=24: null
                       - rtgl-text s=sm: ${preview.bgm.name}
               - $if preview.voice:
-                  - rtgl-view#actionItemVoice data-mode=voice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemVoice data-mode=voice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.voice};"':
                       - rtgl-svg svg=microphone wh=24: null
                       - rtgl-text s=sm w=1fg ellipsis=true: ${preview.voice.name}
                       - 'rtgl-button#voicePreviewButton sq v=ol pre=play title="${previewVoiceLabel}" aria-label="${previewVoiceLabel}"': null
               - $if preview.sfx:
-                  - rtgl-view#actionItemSfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemSfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.sfx};"':
                       - rtgl-svg svg=audio wh=24: null
                       - rtgl-text s=sm: ${preview.sfx.names}
               - $if preview.character:
-                  - rtgl-view#actionItemCharacter data-mode=character g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemCharacter data-mode=character g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.character};"':
                       - rtgl-svg svg=character wh=24: null
                       - rtgl-view d=h g=sm av=c:
                           - $for charData, i in preview.character:
                               - $if charData.hasSpritePreview:
                                   - rvn-stacked-file-images :layers=${charData.spritePreviewLayers} w=32 h=32 br=${charData.spritePreviewBr} spritesheetBr=none spritesheetCheckerCellSize=4: null
               - $if preview.visual:
-                  - rtgl-view#actionItemVisual data-mode=visual g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemVisual data-mode=visual g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.visual};"':
                       - rtgl-svg svg=image wh=24: null
                       - rtgl-view d=h g=sm av=c:
                           - $for visualData, i in preview.visual.items:
@@ -130,15 +130,15 @@ template:
                                 $elif visualData.previewFileId:
                                   - rvn-file-image fileId=${visualData.previewFileId} w=32 h=32: null
               - $if preview.sectionTransition:
-                  - rtgl-view#actionItemSectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemSectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.sectionTransition};"':
                       - rtgl-svg svg="transition" wh=24: null
                       - rtgl-text s=sm: ${preview.sectionTransition.label}
               - $if preview.resetStoryAtSection:
-                  - rtgl-view#actionItemResetStoryAtSection data-mode=resetStoryAtSection g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemResetStoryAtSection data-mode=resetStoryAtSection g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.resetStoryAtSection};"':
                       - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: ${preview.resetStoryAtSection.label}
               - $if preview.dialogue:
-                  - 'rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer style="min-height: 36px;"':
+                  - 'rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer style="order: ${presentationActionOrder.dialogue}; min-height: 36px;"':
                       - rtgl-svg svg=dialogue wh=24: null
                       - rtgl-view d=h av=c g=xs wrap:
                           - rtgl-text s=sm: ${preview.dialogue.name}
@@ -158,7 +158,7 @@ template:
                               - rtgl-view bw=xs bc=bo br=sm ph=md pv=sm:
                                   - rtgl-text s=sm: ${preview.dialogue.persistCharacterLabel}
               - $if preview.choice && preview.choice.items:
-                  - rtgl-view#actionItemChoices data-mode=choice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
+                  - 'rtgl-view#actionItemChoices data-mode=choice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md style="order: ${presentationActionOrder.choice};"':
                       - rtgl-svg svg=choices wh=24: null
                       - rtgl-view d=v g=sm:
                           - rtgl-view d=h g=sm wrap:
@@ -166,7 +166,7 @@ template:
                                   - rtgl-view bw=xs bc=bo br=sm ph=md pv=sm:
                                       - rtgl-text s=sm: ${choice.content}
               - $if preview.form:
-                  - rtgl-view#actionItemInput data-mode=input g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
+                  - 'rtgl-view#actionItemInput data-mode=input g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md style="order: ${presentationActionOrder.input};"':
                       - rtgl-svg svg=input wh=24: null
                       - 'rtgl-view d=v g=sm w=1fg style="min-width: 0;"':
                           - rtgl-text s=sm w=f: ${preview.form.layoutName}
@@ -234,15 +234,15 @@ template:
                       - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: ${preview.loadSlot.summary}
               - $if preview.setNextLineConfig:
-                  - rtgl-view#actionItemSetNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemSetNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.setNextLineConfig};"':
                       - rtgl-svg svg=settings wh=24: null
                       - rtgl-text s=sm: ${nextLineConfigLabel}
               - $if preview.updateVariable:
-                  - rtgl-view#actionItemUpdateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                  - 'rtgl-view#actionItemUpdateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.updateVariable};"':
                       - rtgl-svg svg=variable wh=24: null
                       - rtgl-text s=sm: ${preview.updateVariable.summary}
               - $if preview.conditional:
-                  - rtgl-view#actionItemConditional data-mode=conditional g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
+                  - 'rtgl-view#actionItemConditional data-mode=conditional g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md style="order: ${presentationActionOrder.conditional};"':
                       - rtgl-svg svg=settings wh=24: null
                       - rtgl-view d=v:
                           - rtgl-text s=sm: ${preview.conditional.title}

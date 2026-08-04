@@ -114,7 +114,7 @@ export const localizeCommandLineFormField = (field = {}, copy = {}) => {
     placeholder: localizeCommandLineText(field.placeholder, copy),
   };
 
-  if (localizedField.action?.label) {
+  if (localizedField.action) {
     localizedField.action = {
       ...localizedField.action,
       label: localizeCommandLineText(localizedField.action.label, copy),

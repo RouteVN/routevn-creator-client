@@ -257,6 +257,15 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
   );
 };
 
+export const handleCustomTransformButtonKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  handleCustomTransformButtonClick(deps, payload);
+};
+
 export const handleSetCustomTransform = (deps, { transform } = {}) => {
   const { store, render } = deps;
   store.setCustomTransformEnabled?.({
@@ -543,6 +552,100 @@ export const handleBackgroundImageRightClick = async (deps, payload) => {
   dispatchTemporaryPresentationStateChange(deps);
 };
 
+export const handleOptionsSectionAction = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { actionId, position, sectionId } = payload._event.detail;
+
+  if (sectionId === "background-color" && actionId === "remove") {
+    store.setSelectedColor({ colorId: undefined });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (sectionId === "opacity" && actionId === "remove") {
+    store.removeOpacityOption();
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (sectionId === "blur" && actionId === "remove") {
+    store.setSelectedBlur({ blur: null });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (sectionId === "animation" && actionId === "remove") {
+    store.removeAnimationOption();
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (sectionId !== "options" || actionId !== "add") {
+    return;
+  }
+
+  const copy = selectCommandLineCopy(i18n);
+  const items = [];
+  if (!store.selectBackgroundColorOptionEnabled()) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Background Color", copy),
+      key: "background-color",
+    });
+  }
+  if (!store.selectOpacityOptionEnabled()) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Opacity", copy),
+      key: "opacity",
+    });
+  }
+  if (!store.selectSelectedBlur()) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Blur", copy),
+      key: "blur",
+    });
+  }
+  if (!store.selectAnimationOptionEnabled()) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Animation", copy),
+      key: "animation",
+    });
+  }
+  if (items.length === 0) {
+    return;
+  }
+
+  const result = await appService.showDropdownMenu({
+    items,
+    x: position.x,
+    y: position.y,
+    place: "be",
+  });
+
+  if (result?.item?.key === "background-color") {
+    store.showBackgroundColorOption();
+  } else if (result?.item?.key === "opacity") {
+    store.showOpacityOption();
+  } else if (result?.item?.key === "blur") {
+    store.showBlurOption();
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  } else if (result?.item?.key === "animation") {
+    store.showAnimationOption();
+  } else {
+    return;
+  }
+  render();
+};
+
 export const handleImageSelected = async (deps, payload) => {
   const { store, render, projectService } = deps;
   await projectService.ensureRepository();
@@ -688,23 +791,14 @@ export const handleFormInputChange = (deps, payload) => {
     return;
   }
 
-  if (name === "blur") {
-    store.setSelectedBlurEnabled({
-      enabled: fieldValue,
-    });
-    render();
-    dispatchTemporaryPresentationStateChange(deps);
-    return;
-  }
-
-  const blurFieldMap = {
+  const blurFieldNames = {
     blurX: "x",
     blurY: "y",
     blurQuality: "quality",
     blurKernelSize: "kernelSize",
     blurRepeatEdgePixels: "repeatEdgePixels",
   };
-  const blurFieldName = blurFieldMap[name];
+  const blurFieldName = blurFieldNames[name];
   if (blurFieldName) {
     store.setSelectedBlurField({
       fieldName: blurFieldName,
