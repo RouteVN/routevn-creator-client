@@ -18,7 +18,7 @@ import {
   setTextSpeed,
   showSpeakerSpriteTooltip,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
 const selectTestViewData = ({ state, props }) =>
   selectViewData({ state, props, i18n: EN_I18N });
@@ -94,7 +94,6 @@ describe("commandLineDialogueBox.store", () => {
     expect(viewData.defaultValues.characterName).toBe("Boss");
     expect(viewData.defaultValues.append).toBe(false);
     expect(viewData.defaultValues.persistCharacter).toBe(true);
-    expect(viewData.addSpeakerSpriteLabel).toBe("Add Speaker Sprite");
     expect(
       findFormField(viewData, (field) => field.name === "mode"),
     ).toBeUndefined();
@@ -124,12 +123,21 @@ describe("commandLineDialogueBox.store", () => {
       type: "input-text",
       value: "Boss",
     });
-    expect(
-      findFormField(viewData, (field) => field.slot === "characterSprite"),
-    ).toEqual({
+    const characterSpriteField = findFormField(
+      viewData,
+      (field) => field.slot === "characterSprite",
+    );
+    expect(characterSpriteField).toEqual({
+      $when: "values.characterSpriteEnabled == true",
       slot: "characterSprite",
       type: "slot",
     });
+    expect(
+      isFieldVisible({
+        field: characterSpriteField,
+        values: viewData.defaultValues,
+      }),
+    ).toBe(false);
     expect(viewData).toMatchObject({
       speakerSpriteLabel: "Dialogue sprite",
       speakerSpriteTooltip: {
@@ -144,7 +152,7 @@ describe("commandLineDialogueBox.store", () => {
       findFormField(viewData, (field) => field.name === "append"),
     ).toMatchObject({
       $when: 'dialogueMode == "adv"',
-      label: "Append",
+      label: "Append to previous line",
       type: "segmented-control",
       value: false,
     });
@@ -167,21 +175,56 @@ describe("commandLineDialogueBox.store", () => {
       "Speaker",
       "Options",
     ]);
+    expect(viewData.form.fields[1]).toMatchObject({
+      id: "speaker",
+      action: {
+        id: "add",
+        icon: "plus",
+        label: "Add option",
+      },
+    });
+    expect(viewData.form.fields[2]).toMatchObject({
+      id: "options",
+      action: {
+        id: "add",
+        icon: "plus",
+        label: "Add option",
+      },
+    });
     const speakerFields = viewData.form.fields[1].fields;
     expect(
       speakerFields.map((field) => field.name ?? field.slot ?? field.type),
-    ).toEqual(["characterId", "row", "persistCharacter", "characterSprite"]);
+    ).toEqual(["row", "row", "characterSprite"]);
     expect(
-      speakerFields
-        .find((field) => field.type === "row")
-        .fields.map((field) => field.name),
-    ).toEqual(["customCharacterName", "characterName"]);
+      speakerFields.map((field) =>
+        field.type === "row"
+          ? field.fields.map((nestedField) => nestedField.name)
+          : field.slot,
+      ),
+    ).toEqual([
+      ["characterId", "persistCharacter"],
+      ["customCharacterName", "characterName"],
+      "characterSprite",
+    ]);
     expect(viewData.form.fields[2].fields.map((field) => field.name)).toEqual([
-      "customizeTextSpeed",
       "textSpeed",
       "append",
       "clearPage",
     ]);
+  });
+
+  it("localizes the Options section action label", () => {
+    const state = createInitialState();
+
+    const jaViewData = selectViewData({ state, props: {}, i18n: JA_I18N });
+    const zhHansViewData = selectViewData({
+      state,
+      props: {},
+      i18n: ZH_HANS_I18N,
+    });
+
+    expect(jaViewData.form.fields[2].action.label).toBe("オプションを追加");
+    expect(zhHansViewData.form.fields[2].action.label).toBe("添加选项");
   });
 
   it("shows ADV and NVL layouts together with right-side mode labels", () => {
@@ -282,13 +325,13 @@ describe("commandLineDialogueBox.store", () => {
     expect(
       findFormField(viewData, (field) => field.name === "append"),
     ).toMatchObject({
-      label: "Append",
+      label: "Append to previous line",
       type: "segmented-control",
       value: true,
     });
   });
 
-  it("exposes optional text speed controls with no override by default", () => {
+  it("hides text speed until the optional override is added", () => {
     const state = createInitialState();
 
     const viewData = selectTestViewData({
@@ -305,10 +348,6 @@ describe("commandLineDialogueBox.store", () => {
       },
     });
 
-    const customizeTextSpeedField = findFormField(
-      viewData,
-      (field) => field.name === "customizeTextSpeed",
-    );
     const textSpeedField = findFormField(
       viewData,
       (field) => field.name === "textSpeed",
@@ -318,14 +357,13 @@ describe("commandLineDialogueBox.store", () => {
     expect(viewData.textSpeed).toBe(75);
     expect(viewData.defaultValues.customizeTextSpeed).toBe(false);
     expect(viewData.defaultValues.textSpeed).toBe(75);
-    expect(customizeTextSpeedField).toMatchObject({
-      label: "Customize Text Speed",
-      type: "segmented-control",
-      value: false,
-      options: [
-        { value: false, label: "No" },
-        { value: true, label: "Yes" },
-      ],
+    expect(
+      findFormField(viewData, (field) => field.name === "customizeTextSpeed"),
+    ).toBeUndefined();
+    expect(viewData.form.fields[2].action).toMatchObject({
+      id: "add",
+      icon: "plus",
+      label: "Add option",
     });
     expect(textSpeedField).toMatchObject({
       $when: "values.customizeTextSpeed == true",
@@ -354,6 +392,17 @@ describe("commandLineDialogueBox.store", () => {
         },
       }),
     ).toBe(true);
+
+    setCustomizeTextSpeed({ state }, { customizeTextSpeed: true });
+    const customizedViewData = selectTestViewData({
+      state,
+      props: {
+        layouts: [],
+        characters: [],
+      },
+    });
+
+    expect(customizedViewData.form.fields[2].action).toBeUndefined();
   });
 
   it("normalizes text speed values to the supported 0 to 100 range", () => {
@@ -635,12 +684,23 @@ describe("commandLineDialogueBox.store", () => {
 
     expect(
       findFormField(viewData, (field) => field.slot === "characterSprite"),
-    ).toEqual({
+    ).toMatchObject({
+      $when: "values.characterSpriteEnabled == true",
       slot: "characterSprite",
       type: "slot",
     });
     expect(viewData.hasSpriteCharacter).toBe(true);
     expect(viewData.characterSpriteEnabled).toBe(true);
+    expect(viewData.form.fields[1].action).toBeUndefined();
+    expect(
+      isFieldVisible({
+        field: findFormField(
+          viewData,
+          (field) => field.slot === "characterSprite",
+        ),
+        values: viewData.defaultValues,
+      }),
+    ).toBe(true);
     expect(viewData.spriteCharacterId).toBe("character-1");
     expect(viewData.spriteTransformId).toBe("portrait-left");
     expect(viewData.spriteAnimationMode).toBe("transition");

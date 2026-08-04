@@ -695,7 +695,6 @@ const syncDialogueFormValues = (deps) => {
     removePersistedSprite,
     characterSpriteEnabled,
     clearPage,
-    customizeTextSpeed,
     textSpeed,
   } = store.selectDialogueFormState();
   const values = {
@@ -709,7 +708,6 @@ const syncDialogueFormValues = (deps) => {
     persistSprite,
     removePersistedSprite,
     clearPage,
-    customizeTextSpeed,
     textSpeed: normalizeTextSpeed(textSpeed),
   };
 
@@ -757,9 +755,6 @@ export const handleFormChange = (deps, payload) => {
   });
   const modeChanged = selectedMode !== currentState.selectedMode;
   const customCharacterName = toBoolean(formValues.customCharacterName);
-  const customizeTextSpeed = toBoolean(formValues.customizeTextSpeed);
-  const textSpeedVisibilityChanged =
-    customizeTextSpeed !== currentState.customizeTextSpeed;
   const selectedCharacterId = formValues.characterId ?? "";
   const hadDialogueCharacter = hasDialogueCharacter({
     selectedCharacterId: currentState.selectedCharacterId,
@@ -824,9 +819,6 @@ export const handleFormChange = (deps, payload) => {
   store.setClearPage({
     clearPage: selectedMode === "nvl" && toBoolean(formValues.clearPage),
   });
-  store.setCustomizeTextSpeed({
-    customizeTextSpeed,
-  });
   store.setTextSpeed({
     textSpeed: formValues.textSpeed,
     fallback: currentState.textSpeed,
@@ -834,14 +826,72 @@ export const handleFormChange = (deps, payload) => {
 
   render();
 
-  if (
-    modeChanged ||
-    persistCharacterVisibilityChanged ||
-    textSpeedVisibilityChanged
-  ) {
+  if (modeChanged || persistCharacterVisibilityChanged) {
     syncDialogueFormValues(deps);
   }
 
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleFormSectionAction = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { sectionId, actionId, position } = payload._event.detail;
+
+  if (actionId !== "add") {
+    return;
+  }
+
+  const copy = selectCommandLineCopy(i18n);
+
+  if (sectionId === "speaker") {
+    const result = await appService.showDropdownMenu({
+      items: [
+        {
+          type: "item",
+          label: localizeCommandLineText("Dialogue sprite", copy),
+          key: "dialogue-sprite",
+        },
+      ],
+      x: position.x,
+      y: position.y,
+      place: "bs",
+    });
+
+    if (result?.item?.key === "dialogue-sprite") {
+      handleCharacterSpriteBoxClick(deps);
+    }
+    return;
+  }
+
+  if (sectionId !== "options") {
+    return;
+  }
+
+  const { customizeTextSpeed } = store.selectDialogueFormChangeState();
+  if (customizeTextSpeed) {
+    return;
+  }
+
+  const result = await appService.showDropdownMenu({
+    items: [
+      {
+        type: "item",
+        label: localizeCommandLineText("Custom text speed", copy),
+        key: "custom-text-speed",
+      },
+    ],
+    x: position.x,
+    y: position.y,
+    place: "bs",
+  });
+
+  if (result?.item?.key !== "custom-text-speed") {
+    return;
+  }
+
+  store.setCustomizeTextSpeed({ customizeTextSpeed: true });
+  render();
+  syncDialogueFormValues(deps);
   dispatchTemporaryPresentationStateChange(deps);
 };
 

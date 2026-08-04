@@ -419,18 +419,42 @@ export const createInitialState = () => ({
         options: [],
       },
       {
+        id: "speaker",
         label: "Speaker",
         description: "",
         type: "section",
+        action: {
+          id: "add",
+          icon: "plus",
+          label: "Add option",
+        },
         fields: [
           {
-            name: "characterId",
-            type: "select",
-            label: "Character",
-            description: "",
-            required: false,
-            placeholder: "Choose a character...",
-            options: [],
+            type: "row",
+            fields: [
+              {
+                name: "characterId",
+                type: "select",
+                label: "Character",
+                description: "",
+                required: false,
+                placeholder: "Choose a character...",
+                options: [],
+              },
+              {
+                $when: "values.characterId || values.customCharacterName",
+                name: "persistCharacter",
+                type: "segmented-control",
+                label: "Persist Speaker",
+                description: "",
+                required: true,
+                clearable: false,
+                options: [
+                  { value: false, label: "No" },
+                  { value: true, label: "Yes" },
+                ],
+              },
+            ],
           },
           {
             type: "row",
@@ -459,41 +483,23 @@ export const createInitialState = () => ({
             ],
           },
           {
-            $when: "values.characterId || values.customCharacterName",
-            name: "persistCharacter",
-            type: "segmented-control",
-            label: "Persist Speaker",
-            description: "",
-            required: true,
-            clearable: false,
-            options: [
-              { value: false, label: "No" },
-              { value: true, label: "Yes" },
-            ],
-          },
-          {
+            $when: "values.characterSpriteEnabled == true",
             type: "slot",
             slot: "characterSprite",
           },
         ],
       },
       {
+        id: "options",
         label: "Options",
         description: "",
         type: "section",
+        action: {
+          id: "add",
+          icon: "plus",
+          label: "Add option",
+        },
         fields: [
-          {
-            name: "customizeTextSpeed",
-            type: "segmented-control",
-            label: "Customize Text Speed",
-            description: "",
-            required: true,
-            clearable: false,
-            options: [
-              { value: false, label: "No" },
-              { value: true, label: "Yes" },
-            ],
-          },
           {
             $when: "values.customizeTextSpeed == true",
             name: "textSpeed",
@@ -509,7 +515,7 @@ export const createInitialState = () => ({
             $when: 'dialogueMode == "adv"',
             name: "append",
             type: "segmented-control",
-            label: "Append",
+            label: "Append to previous line",
             description: "",
             required: true,
             clearable: false,
@@ -1148,6 +1154,26 @@ export const selectViewData = ({ state, props, i18n }) => {
   }
 
   const mapFormField = (field) => {
+    if (field.id === "speaker") {
+      const mappedSection = {
+        ...field,
+        fields: field.fields.map(mapFormField),
+      };
+      if (state.characterSpriteEnabled) {
+        mappedSection.action = undefined;
+      }
+      return mappedSection;
+    }
+    if (field.id === "options") {
+      const mappedSection = {
+        ...field,
+        fields: field.fields.map(mapFormField),
+      };
+      if (state.customizeTextSpeed) {
+        mappedSection.action = undefined;
+      }
+      return mappedSection;
+    }
     if (field.name === "resourceId") {
       return {
         ...field,
@@ -1191,12 +1217,6 @@ export const selectViewData = ({ state, props, i18n }) => {
       return {
         ...field,
         value: state.clearPage,
-      };
-    }
-    if (field.name === "customizeTextSpeed") {
-      return {
-        ...field,
-        value: state.customizeTextSpeed,
       };
     }
     if (field.name === "textSpeed") {
@@ -1312,7 +1332,6 @@ export const selectViewData = ({ state, props, i18n }) => {
     searchPlaceholder: localizeCommandLineText("Search...", copy),
     noAvatarLabel: localizeCommandLineText("No Avatar", copy),
     noPreviewLabel: localizeCommandLineText("No preview", copy),
-    addSpeakerSpriteLabel: localizeCommandLineText("Add Speaker Sprite", copy),
     transformLabel: localizeCommandLineText("Transform", copy),
     animationLabel: localizeCommandLineText("Animation", copy),
     animationPlaybackSpeedLabel: localizeCommandLineText(

@@ -8,6 +8,7 @@ import {
   handleCharacterSpriteBoxContextMenu,
   handleCharacterSpriteMenuButtonClick,
   handleFormChange,
+  handleFormSectionAction,
   handlePersistSpriteChange,
   handleSpeakerSpriteTooltipMouseEnter,
   handleSpeakerSpriteTooltipMouseLeave,
@@ -216,8 +217,10 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(view).toContain("handler: handleSpeakerSpriteTooltipMouseLeave");
     expect(view).toContain("rtgl-tooltip ?open=${speakerSpriteTooltip.open}");
     expect(view).toContain("handler: handleCharacterSpriteBoxContextMenu");
-    expect(view).toContain("rtgl-button#addSpeakerSpriteButton v=ol pre=plus");
+    expect(view).not.toContain("addSpeakerSpriteButton");
     expect(view).toContain("handler: handleCharacterSpriteBoxClick");
+    expect(view).toContain("form-section-action:");
+    expect(view).toContain("handler: handleFormSectionAction");
     expect(view).toContain(
       "rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis",
     );
@@ -559,12 +562,109 @@ describe("commandLineDialogueBox.handlers", () => {
 
     expect(state.customizeTextSpeed).toBe(true);
     expect(state.textSpeed).toBe(42);
-    expect(setValues).toHaveBeenCalledWith({
-      values: expect.objectContaining({
-        customizeTextSpeed: true,
-        textSpeed: 42,
-      }),
+    const syncedValues = setValues.mock.calls[0][0].values;
+    expect(syncedValues.textSpeed).toBe(42);
+    expect(syncedValues).not.toHaveProperty("customizeTextSpeed");
+  });
+
+  it("adds custom text speed from the Options section menu", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const refs = createFormRefs();
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "custom-text-speed" },
     });
+
+    await handleFormSectionAction(
+      {
+        appService: { showDropdownMenu },
+        i18n: EN_I18N,
+        props: { layouts, characters },
+        refs,
+        render,
+        store: createStore(state),
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "options",
+            actionId: "add",
+            position: { x: 120, y: 64 },
+          },
+        },
+      },
+    );
+
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: [
+        {
+          type: "item",
+          label: "Custom text speed",
+          key: "custom-text-speed",
+        },
+      ],
+      x: 120,
+      y: 64,
+      place: "bs",
+    });
+    expect(state.customizeTextSpeed).toBe(true);
+    expect(state.textSpeed).toBe(75);
+    expect(render).toHaveBeenCalledOnce();
+    expect(refs.dialogueForm.reset).toHaveBeenCalledOnce();
+    expect(refs.dialogueForm.setValues).toHaveBeenCalledWith({
+      values: expect.objectContaining({ textSpeed: 75 }),
+    });
+  });
+
+  it("opens the dialogue sprite picker from the Speaker section menu", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "dialogue-sprite" },
+    });
+
+    setTempSelectedSpriteId(
+      { state },
+      { spriteGroupId: "body", spriteId: "sprite-body" },
+    );
+    setSelectedSpriteGroupId({ state }, { spriteGroupId: "body" });
+    setSearchQuery({ state }, { value: "hero" });
+
+    await handleFormSectionAction(
+      {
+        appService: { showDropdownMenu },
+        i18n: EN_I18N,
+        render,
+        store: createStore(state),
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "speaker",
+            actionId: "add",
+            position: { x: 80, y: 48 },
+          },
+        },
+      },
+    );
+
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: [
+        {
+          type: "item",
+          label: "Dialogue sprite",
+          key: "dialogue-sprite",
+        },
+      ],
+      x: 80,
+      y: 48,
+      place: "bs",
+    });
+    expect(state.mode).toBe("character-select");
+    expect(state.tempSelectedSpriteIds).toEqual({});
+    expect(state.selectedSpriteGroupId).toBeUndefined();
+    expect(state.searchQuery).toBe("");
+    expect(render).toHaveBeenCalledOnce();
   });
 
   it("hydrates persistCharacter when only a custom character name is present", () => {
@@ -872,6 +972,7 @@ describe("commandLineDialogueBox.handlers", () => {
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const refs = createFormRefs();
+    setCustomizeTextSpeed({ state }, { customizeTextSpeed: true });
 
     handleFormChange(
       {
@@ -898,7 +999,6 @@ describe("commandLineDialogueBox.handlers", () => {
               characterName: "",
               persistCharacter: false,
               clearPage: false,
-              customizeTextSpeed: true,
               textSpeed: 62,
             },
           },
