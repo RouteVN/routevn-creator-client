@@ -281,8 +281,7 @@ const normalizeSelectedCharacter = (character = {}, animations = {}) => {
   );
   nextCharacter.opacityOptionEnabled =
     nextCharacter.opacityOptionEnabled ?? nextCharacter.opacity !== undefined;
-  nextCharacter.blurOptionEnabled =
-    nextCharacter.blurOptionEnabled ?? nextCharacter.blur !== undefined;
+  nextCharacter.blurOptionEnabled = Boolean(nextCharacter.blur);
   const selectedAnimationId = nextCharacter?.animations?.resourceId;
   const selectedAnimationMode = getAnimationModeById(
     animations,

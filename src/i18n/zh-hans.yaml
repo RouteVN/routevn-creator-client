@@ -1925,6 +1925,7 @@ commandLinePage:
   "Custom name": "自定义名称"
   "Custom text speed": "自定义文本速度"
   "Remove custom text speed": "移除自定义文本速度"
+  "Remove Opacity": "移除不透明度"
   "Decimal Places": "小数位数"
   "Default branch": "默认分支"
   "Default hide only": "默认仅隐藏"

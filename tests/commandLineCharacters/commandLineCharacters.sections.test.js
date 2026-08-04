@@ -13,7 +13,7 @@ import {
   showCharacterBlurOption,
   showCharacterOpacityOption,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
 describe("commandLineCharacters sections", () => {
   it("creates a named form section for each displayed character", () => {
@@ -210,6 +210,51 @@ describe("commandLineCharacters sections", () => {
     );
     expect(state.selectedCharacters[0].opacity).toBeUndefined();
     expect(state.selectedCharacters[0].blur).toBeNull();
+  });
+
+  it("keeps an explicit blur clear hidden when reopening the form", () => {
+    const state = createInitialState();
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            hero: { id: "hero", type: "character", name: "Hero" },
+          },
+          tree: [{ id: "hero" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      { characters: [{ id: "hero", blur: null }] },
+    );
+
+    expect(state.selectedCharacters[0]).toMatchObject({
+      blur: null,
+      blurOptionEnabled: false,
+    });
+    expect(selectCharacterBlurOptionEnabled({ state }, { index: 0 })).toBe(
+      false,
+    );
+
+    const [section] = selectViewData({ state, i18n: EN_I18N }).form.fields;
+    expect(section.action).toMatchObject({ id: "add", icon: "plus" });
+    expect(section.fields).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "character-0-blur" }),
+      ]),
+    );
+  });
+
+  it("localizes the opacity removal label", () => {
+    const state = createInitialState();
+
+    expect(
+      [EN_I18N, JA_I18N, ZH_HANS_I18N].map(
+        (i18n) => selectViewData({ state, i18n }).removeOpacityLabel,
+      ),
+    ).toEqual(["Remove Opacity", "不透明度を削除", "移除不透明度"]);
   });
 
   it("renders each character row through its matching form section slot", () => {

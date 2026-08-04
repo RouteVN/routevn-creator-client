@@ -1925,6 +1925,7 @@ commandLinePage:
   "Custom name": "カスタム名"
   "Custom text speed": "カスタムテキスト速度"
   "Remove custom text speed": "カスタムテキスト速度を削除"
+  "Remove Opacity": "不透明度を削除"
   "Decimal Places": "小数桁数"
   "Default branch": "デフォルト分岐"
   "Default hide only": "標準では非表示のみ"
