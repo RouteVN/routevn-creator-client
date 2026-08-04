@@ -10,10 +10,12 @@ import {
   setCustomTransformEnabled,
   setSelectedAnimation,
   setSelectedBlur,
+  setSelectedColor,
   setSelectedOpacity,
   setSelectedResource,
   setTempSelectedResource,
   setSelectedTransform,
+  showAnimationOption,
 } from "../../src/components/commandLineBackground/commandLineBackground.store.js";
 
 const TEST_I18N = {
@@ -30,8 +32,15 @@ const createEmptyCollection = () => ({
   tree: [],
 });
 
+const selectOptionFields = (viewData, optionId) => {
+  const optionsSection = viewData.dialogueForm.form.fields.find(
+    (field) => field.id === "options",
+  );
+  return optionsSection.fields.find((field) => field.id === optionId)?.fields;
+};
+
 describe("commandLineBackground.store", () => {
-  it("uses a clearable animation select with type suffix text", () => {
+  it("keeps optional background fields hidden until they are added", () => {
     const state = createInitialState();
 
     setRepositoryState(
@@ -86,6 +95,17 @@ describe("commandLineBackground.store", () => {
           },
           tree: [{ id: "bg-center" }],
         },
+        colors: {
+          items: {
+            "color-night": {
+              id: "color-night",
+              type: "color",
+              name: "Night",
+              hex: "#112233",
+            },
+          },
+          tree: [{ id: "color-night" }],
+        },
       },
     );
     setSelectedResource(
@@ -105,33 +125,37 @@ describe("commandLineBackground.store", () => {
     const backgroundField = viewData.dialogueForm.form.fields.find(
       (field) => field.slot === "background",
     );
-    const transformField = viewData.dialogueForm.form.fields.find(
-      (field) => field.name === "transformId",
+    const transformRow = viewData.dialogueForm.form.fields.find(
+      (field) => field.type === "row",
     );
+    const [transformModeField, transformField] = transformRow.fields;
     const animationField = viewData.dialogueForm.form.fields.find(
       (field) => field.name === "animationId",
     );
     const opacityField = viewData.dialogueForm.form.fields.find(
       (field) => field.name === "opacity",
     );
+    const colorField = viewData.dialogueForm.form.fields.find(
+      (field) => field.name === "colorId",
+    );
     const blurField = viewData.dialogueForm.form.fields.find(
       (field) => field.name === "blur",
-    );
-    const blurXField = viewData.dialogueForm.form.fields.find(
-      (field) => field.name === "blurX",
-    );
-    const blurKernelSizeField = viewData.dialogueForm.form.fields.find(
-      (field) => field.name === "blurKernelSize",
     );
     const continuityField = viewData.dialogueForm.form.fields.find(
       (field) => field.name === "playbackContinuity",
     );
+    const optionsSection = viewData.dialogueForm.form.fields.at(-1);
 
     expect(backgroundField).toMatchObject({
       type: "slot",
       label: "Background",
     });
     expect(backgroundField.description).toBeUndefined();
+    expect(transformModeField).toMatchObject({
+      name: "customTransform",
+      label: "Transform",
+      type: "segmented-control",
+    });
     expect(transformField).toMatchObject({
       label: "Predefined Transform",
       type: "select",
@@ -144,73 +168,27 @@ describe("commandLineBackground.store", () => {
         },
       ],
     });
-    expect(animationField).toMatchObject({
-      label: "Animation",
-      type: "select",
-      clearable: true,
-      placeholder: "Select animation",
-      options: [
-        {
-          value: "bg-pan",
-          label: "Pan",
-          suffixText: "Update",
-        },
-        {
-          value: "bg-fade",
-          label: "Fade",
-          suffixText: "Transition",
-        },
-      ],
-    });
-    expect(opacityField).toMatchObject({
-      label: "Opacity",
-      type: "slider-with-input",
-      min: 0,
-      max: 1,
-      step: 0.01,
-    });
-    expect(blurField).toMatchObject({
-      label: "Blur",
-      type: "segmented-control",
-      clearable: false,
-      options: [
-        {
-          value: false,
-          label: "No Blur",
-        },
-        {
-          value: true,
-          label: "Blur",
-        },
-      ],
-    });
-    expect(blurXField).toMatchObject({
-      $when: "blur == true",
-      label: "Blur X",
-      type: "input-number",
-    });
-    expect(blurKernelSizeField).toMatchObject({
-      $when: "blur == true",
-      label: "Kernel Size",
-      type: "select",
-      options: [
-        { value: 5, label: "5" },
-        { value: 7, label: "7" },
-        { value: 9, label: "9" },
-        { value: 11, label: "11" },
-        { value: 13, label: "13" },
-        { value: 15, label: "15" },
-      ],
-    });
+    expect(animationField).toBeUndefined();
+    expect(opacityField).toBeUndefined();
+    expect(colorField).toBeUndefined();
+    expect(blurField).toBeUndefined();
     expect(continuityField).toBeUndefined();
+    expect(optionsSection).toEqual({
+      type: "section",
+      id: "options",
+      label: "Options",
+      action: {
+        id: "add",
+        icon: "plus",
+        label: "Add Option",
+      },
+      fields: [],
+    });
     expect(viewData.dialogueForm.defaultValues.transformId).toBe("bg-center");
     expect(viewData.dialogueForm.defaultValues.opacity).toBe(1);
-    expect(viewData.dialogueForm.defaultValues.blur).toBe(false);
-    expect(viewData.dialogueForm.defaultValues.blurX).toBe(6);
-    expect(viewData.dialogueForm.defaultValues.blurY).toBe(9);
-    expect(viewData.dialogueForm.defaultValues.blurQuality).toBe(3);
-    expect(viewData.dialogueForm.defaultValues.blurKernelSize).toBe(9);
-    expect(viewData.dialogueForm.defaultValues.blurRepeatEdgePixels).toBe(true);
+    expect(viewData.dialogueForm.defaultValues.colorId).toBeUndefined();
+    expect(viewData.backgroundColorOptionVisible).toBe(false);
+    expect(viewData.dialogueForm.defaultValues.blur).toBeUndefined();
     expect(viewData.dialogueForm.defaultValues.animationId).toBeUndefined();
     expect(viewData.dialogueForm.defaultValues.playbackContinuity).toBe(
       "render",
@@ -287,22 +265,24 @@ describe("commandLineBackground.store", () => {
     );
 
     const viewData = selectViewData({ state });
-    const animationField = viewData.dialogueForm.form.fields.find(
+    const animationFields = selectOptionFields(viewData, "animation");
+    const animationField = animationFields.find(
       (field) => field.name === "animationId",
     );
-    const continuityField = viewData.dialogueForm.form.fields.find(
+    const continuityField = animationFields.find(
       (field) => field.name === "playbackContinuity",
     );
-    const speedField = viewData.dialogueForm.form.fields.find(
+    const speedField = animationFields.find(
       (field) => field.name === "playbackSpeed",
     );
-    const loopField = viewData.dialogueForm.form.fields.find(
+    const loopField = animationFields.find(
       (field) => field.name === "playbackLoop",
     );
 
     expect(animationField).toMatchObject({
       type: "select",
-      clearable: true,
+      noClear: true,
+      required: true,
       options: [
         {
           value: "bg-pan",
@@ -351,7 +331,7 @@ describe("commandLineBackground.store", () => {
       ],
     });
     expect(
-      viewData.dialogueForm.form.fields
+      animationFields
         .filter((field) => field.name?.startsWith("playback"))
         .map((field) => field.name),
     ).toEqual(["playbackSpeed", "playbackLoop", "playbackContinuity"]);
@@ -400,9 +380,10 @@ describe("commandLineBackground.store", () => {
       },
     );
 
-    const loopField = selectViewData({
-      state,
-    }).dialogueForm.form.fields.find((field) => field.name === "playbackLoop");
+    const loopField = selectOptionFields(
+      selectViewData({ state }),
+      "animation",
+    ).find((field) => field.name === "playbackLoop");
 
     expect(loopField).toMatchObject({
       disabled: true,
@@ -438,7 +419,7 @@ describe("commandLineBackground.store", () => {
       },
     );
 
-    const fields = selectViewData({ state }).dialogueForm.form.fields;
+    const fields = selectOptionFields(selectViewData({ state }), "animation");
 
     expect(
       fields.find((field) => field.name === "playbackSpeed"),
@@ -487,7 +468,10 @@ describe("commandLineBackground.store", () => {
     );
 
     const viewData = selectViewData({ state });
-    const transformField = viewData.dialogueForm.form.fields.find(
+    const transformRow = viewData.dialogueForm.form.fields.find(
+      (field) => field.type === "row",
+    );
+    const transformField = transformRow.fields.find(
       (field) => field.name === "transformId",
     );
     const customTransformSlot = viewData.dialogueForm.form.fields.find(
@@ -521,6 +505,80 @@ describe("commandLineBackground.store", () => {
     const viewData = selectViewData({ state });
 
     expect(viewData.dialogueForm.defaultValues.opacity).toBe(0.45);
+    const optionsSection = viewData.dialogueForm.form.fields.at(-1);
+    expect(optionsSection.fields).toContainEqual({
+      type: "section",
+      id: "opacity",
+      label: "Opacity",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          name: "opacity",
+          type: "slider-with-input",
+          min: 0,
+          max: 1,
+          step: 0.01,
+        },
+      ],
+    });
+  });
+
+  it("shows a selected background color as an inline option select", () => {
+    const state = createInitialState();
+    setRepositoryState(
+      { state },
+      {
+        colors: {
+          items: {
+            "color-night": {
+              id: "color-night",
+              type: "color",
+              name: "Night",
+              hex: "#112233",
+            },
+          },
+          tree: [{ id: "color-night" }],
+        },
+      },
+    );
+    setSelectedColor({ state }, { colorId: "color-night" });
+
+    const viewData = selectViewData({ state });
+    const optionsSection = viewData.dialogueForm.form.fields.at(-1);
+
+    expect(viewData.backgroundColorOptionVisible).toBe(true);
+    const backgroundColorSection = optionsSection.fields.find(
+      (field) => field.id === "background-color",
+    );
+    expect(backgroundColorSection).toMatchObject({
+      type: "section",
+      label: "Background Color",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          name: "colorId",
+          type: "select",
+          noClear: true,
+          required: true,
+          placeholder: "Select color",
+          options: [
+            {
+              value: "color-night",
+              label: "Night",
+            },
+          ],
+        },
+      ],
+    });
+    expect(viewData.dialogueForm.defaultValues.colorId).toBe("color-night");
   });
 
   it("uses selected background blur values when enabled", () => {
@@ -541,14 +599,61 @@ describe("commandLineBackground.store", () => {
 
     const viewData = selectViewData({ state });
 
-    expect(viewData.dialogueForm.defaultValues.blur).toBe(true);
-    expect(viewData.dialogueForm.defaultValues.blurX).toBe(8);
-    expect(viewData.dialogueForm.defaultValues.blurY).toBe(10);
-    expect(viewData.dialogueForm.defaultValues.blurQuality).toBe(4);
-    expect(viewData.dialogueForm.defaultValues.blurKernelSize).toBe(11);
-    expect(viewData.dialogueForm.defaultValues.blurRepeatEdgePixels).toBe(
-      false,
+    const optionsSection = viewData.dialogueForm.form.fields.at(-1);
+
+    const blurSection = optionsSection.fields.find(
+      (field) => field.id === "blur",
     );
+    expect(optionsSection.action).toMatchObject({
+      id: "add",
+      icon: "plus",
+    });
+    expect(blurSection).toMatchObject({
+      type: "section",
+      id: "blur",
+      label: "Blur",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          type: "row",
+          fields: [
+            { name: "blurX", label: "Blur X", type: "input-number" },
+            { name: "blurY", label: "Blur Y", type: "input-number" },
+          ],
+        },
+        {
+          type: "row",
+          fields: [
+            {
+              name: "blurQuality",
+              label: "Quality",
+              type: "input-number",
+            },
+            {
+              name: "blurKernelSize",
+              label: "Kernel Size",
+              type: "select",
+            },
+          ],
+        },
+        {
+          name: "blurRepeatEdgePixels",
+          label: "Repeat Edge Pixels",
+          type: "segmented-control",
+        },
+      ],
+    });
+    expect(viewData.dialogueForm.defaultValues).toMatchObject({
+      blurX: 8,
+      blurY: 10,
+      blurQuality: 4,
+      blurKernelSize: 11,
+      blurRepeatEdgePixels: false,
+    });
   });
 
   it("keeps background blur null as an explicit clear value", () => {
@@ -563,8 +668,25 @@ describe("commandLineBackground.store", () => {
 
     const viewData = selectViewData({ state });
 
-    expect(viewData.dialogueForm.defaultValues.blur).toBe(false);
+    const optionsSection = viewData.dialogueForm.form.fields.at(-1);
+    expect(optionsSection.fields.some((field) => field.id === "blur")).toBe(
+      false,
+    );
     expect(selectSelectedBlurActionValue({ state })).toBeNull();
+  });
+
+  it("hides the options add action when every option is visible", () => {
+    const state = createInitialState();
+
+    setSelectedColor({ state }, { colorId: "color-night" });
+    setSelectedOpacity({ state }, { opacity: 1 });
+    setSelectedBlur({ state }, { blur: {} });
+    showAnimationOption({ state });
+
+    const viewData = selectViewData({ state });
+    const optionsSection = viewData.dialogueForm.form.fields.at(-1);
+
+    expect(optionsSection.action).toBeUndefined();
   });
 
   it("normalizes invalid background blur kernel size to a supported option", () => {

@@ -168,10 +168,13 @@ export const createInitialState = () => ({
   tempSelectedSpritesheetAnimationName: undefined,
   selectedTransformId: undefined,
   selectedColorId: undefined,
+  backgroundColorOptionEnabled: false,
   selectedOpacity: undefined,
+  opacityOptionEnabled: false,
   selectedBlurEnabled: false,
   selectedBlurExplicit: false,
   selectedBlur: { ...DEFAULT_BACKGROUND_BLUR },
+  animationOptionEnabled: false,
   selectedAnimationMode: "none",
   selectedAnimationId: undefined,
   selectedAnimationPlaybackContinuity: "render",
@@ -395,6 +398,7 @@ export const selectSelectedAnimationMode = ({ state }) => {
 
 export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
   state.selectedAnimationId = animationId === "none" ? undefined : animationId;
+  state.animationOptionEnabled = !!state.selectedAnimationId;
 
   const selectedAnimationMode = getAnimationModeById(
     state.animationItems,
@@ -416,6 +420,21 @@ export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
 
 export const selectSelectedAnimation = ({ state }) => {
   return state.selectedAnimationId;
+};
+
+export const showAnimationOption = ({ state }) => {
+  state.animationOptionEnabled = true;
+};
+
+export const removeAnimationOption = ({ state }) => {
+  state.animationOptionEnabled = false;
+  state.selectedAnimationId = undefined;
+  state.selectedAnimationMode = "none";
+  state.selectedAnimationLoop = false;
+};
+
+export const selectAnimationOptionEnabled = ({ state }) => {
+  return state.animationOptionEnabled;
 };
 
 export const setSelectedTransform = ({ state }, { transformId } = {}) => {
@@ -472,23 +491,41 @@ export const selectCustomTransformEditorOpen = ({ state }) => {
 export const setSelectedColor = ({ state }, { colorId } = {}) => {
   state.selectedColorId =
     typeof colorId === "string" && colorId.length > 0 ? colorId : undefined;
+  state.backgroundColorOptionEnabled = !!state.selectedColorId;
 };
 
 export const selectSelectedColor = ({ state }) => {
   return state.selectedColorId;
 };
 
+export const showBackgroundColorOption = ({ state }) => {
+  state.backgroundColorOptionEnabled = true;
+};
+
+export const selectBackgroundColorOptionEnabled = ({ state }) => {
+  return state.backgroundColorOptionEnabled;
+};
+
 export const setSelectedOpacity = ({ state }, { opacity } = {}) => {
   state.selectedOpacity = normalizeBackgroundOpacity(opacity);
+  state.opacityOptionEnabled = true;
 };
 
 export const selectSelectedOpacity = ({ state }) => {
   return state.selectedOpacity;
 };
 
-export const setSelectedBlurEnabled = ({ state }, { enabled } = {}) => {
-  state.selectedBlurEnabled = enabled === true || enabled === "true";
-  state.selectedBlurExplicit = true;
+export const showOpacityOption = ({ state }) => {
+  state.opacityOptionEnabled = true;
+};
+
+export const removeOpacityOption = ({ state }) => {
+  state.opacityOptionEnabled = false;
+  state.selectedOpacity = undefined;
+};
+
+export const selectOpacityOptionEnabled = ({ state }) => {
+  return state.opacityOptionEnabled;
 };
 
 export const setSelectedBlur = ({ state }, { blur } = {}) => {
@@ -502,12 +539,17 @@ export const setSelectedBlur = ({ state }, { blur } = {}) => {
   state.selectedBlur = normalizeBackgroundBlur(blur);
 };
 
-export const setSelectedBlurField = ({ state }, { fieldName, value } = {}) => {
+export const showBlurOption = ({ state }) => {
+  state.selectedBlurEnabled = true;
   state.selectedBlurExplicit = true;
-  state.selectedBlur = normalizeBackgroundBlur({
-    ...state.selectedBlur,
-    [fieldName]: value,
-  });
+  state.selectedBlur = normalizeBackgroundBlur(state.selectedBlur);
+};
+
+export const setSelectedBlurField = ({ state }, { fieldName, value } = {}) => {
+  state.selectedBlurEnabled = true;
+  state.selectedBlurExplicit = true;
+  state.selectedBlur[fieldName] = value;
+  state.selectedBlur = normalizeBackgroundBlur(state.selectedBlur);
 };
 
 export const selectSelectedBlur = ({ state }) => {
@@ -833,12 +875,13 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       value: item.id,
       label: item.name,
     }));
-  const colorOptions = toFlatItems(state.colorItems)
-    .filter((item) => item.type === "color")
-    .map((item) => ({
-      value: item.id,
-      label: item.name ?? item.id,
-    }));
+  const allColorItems = toFlatItems(state.colorItems).filter(
+    (item) => item.type === "color",
+  );
+  const colorOptions = allColorItems.map((item) => ({
+    value: item.id,
+    label: item.name ?? item.id,
+  }));
 
   const formFields = [
     {
@@ -847,141 +890,35 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       label: "Background",
     },
     {
-      name: "colorId",
-      label: "Background Color",
-      type: "select",
-      clearable: true,
-      placeholder: "Select color",
-      options: colorOptions,
-    },
-    {
-      name: "customTransform",
-      label: "Transform",
-      type: "segmented-control",
-      clearable: false,
-      options: [
-        { value: false, label: "Predefined" },
-        { value: true, label: "Custom" },
+      type: "row",
+      fields: [
+        {
+          name: "customTransform",
+          label: "Transform",
+          type: "segmented-control",
+          clearable: false,
+          options: [
+            { value: false, label: "Predefined" },
+            { value: true, label: "Custom" },
+          ],
+        },
+        {
+          $when: "customTransform == false",
+          name: "transformId",
+          label: "Predefined Transform",
+          type: "select",
+          clearable: true,
+          placeholder: "Select transform",
+          options: transformOptions,
+        },
       ],
-    },
-    {
-      $when: "customTransform == false",
-      name: "transformId",
-      label: "Predefined Transform",
-      type: "select",
-      clearable: true,
-      placeholder: "Select transform",
-      options: transformOptions,
     },
     {
       $when: "customTransform == true",
       type: "slot",
       slot: "custom-transform",
     },
-    {
-      name: "opacity",
-      label: "Opacity",
-      type: "slider-with-input",
-      min: 0,
-      max: 1,
-      step: 0.01,
-    },
-    {
-      name: "blur",
-      label: "Blur",
-      type: "segmented-control",
-      clearable: false,
-      options: [
-        { value: false, label: "No Blur" },
-        { value: true, label: "Blur" },
-      ],
-    },
-    {
-      $when: "blur == true",
-      name: "blurX",
-      label: "Blur X",
-      type: "input-number",
-    },
-    {
-      $when: "blur == true",
-      name: "blurY",
-      label: "Blur Y",
-      type: "input-number",
-    },
-    {
-      $when: "blur == true",
-      name: "blurQuality",
-      label: "Quality",
-      type: "input-number",
-    },
-    {
-      $when: "blur == true",
-      name: "blurKernelSize",
-      label: "Kernel Size",
-      type: "select",
-      options: BACKGROUND_BLUR_KERNEL_SIZE_OPTIONS.map((value) => ({
-        value,
-        label: String(value),
-      })),
-    },
-    {
-      $when: "blur == true",
-      name: "blurRepeatEdgePixels",
-      label: "Repeat Edge Pixels",
-      type: "segmented-control",
-      clearable: false,
-      options: [
-        { value: false, label: "No" },
-        { value: true, label: "Yes" },
-      ],
-    },
-    {
-      name: "animationId",
-      label: "Animation",
-      type: "select",
-      clearable: true,
-      placeholder: "Select animation",
-      options: animationOptions,
-    },
   ];
-
-  if (selectedAnimationMode !== "none") {
-    formFields.push({
-      name: "playbackSpeed",
-      label: "Playback Speed",
-      type: "input-number",
-      min: 0.01,
-      step: 0.1,
-      required: true,
-    });
-  }
-
-  if (selectedAnimationMode === "update") {
-    formFields.push({
-      name: "playbackLoop",
-      label: "Loop",
-      type: "segmented-control",
-      clearable: false,
-      disabled: !selectedAnimationCanLoop,
-      description: selectedAnimationCanLoop
-        ? undefined
-        : "loopingRequiresKeyframesDescription",
-      options: [
-        { value: false, label: "Don't Loop" },
-        { value: true, label: "Loop" },
-      ],
-    });
-  }
-
-  if (selectedAnimationMode !== "none") {
-    formFields.push({
-      name: "playbackContinuity",
-      label: "Continuity",
-      type: "segmented-control",
-      clearable: false,
-      options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
-    });
-  }
 
   if (selectedResource?.resourceType === "video") {
     formFields.push({
@@ -995,6 +932,195 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     });
   }
 
+  const optionFields = [];
+  if (state.backgroundColorOptionEnabled) {
+    optionFields.push({
+      type: "section",
+      id: "background-color",
+      label: "Background Color",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          name: "colorId",
+          type: "select",
+          noClear: true,
+          required: true,
+          placeholder: "Select color",
+          options: colorOptions,
+        },
+      ],
+    });
+  }
+  if (state.opacityOptionEnabled) {
+    optionFields.push({
+      type: "section",
+      id: "opacity",
+      label: "Opacity",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          name: "opacity",
+          type: "slider-with-input",
+          min: 0,
+          max: 1,
+          step: 0.01,
+        },
+      ],
+    });
+  }
+  if (state.selectedBlurEnabled) {
+    optionFields.push({
+      type: "section",
+      id: "blur",
+      label: "Blur",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          type: "row",
+          fields: [
+            {
+              name: "blurX",
+              label: "Blur X",
+              type: "input-number",
+              min: 0,
+              required: true,
+            },
+            {
+              name: "blurY",
+              label: "Blur Y",
+              type: "input-number",
+              min: 0,
+              required: true,
+            },
+          ],
+        },
+        {
+          type: "row",
+          fields: [
+            {
+              name: "blurQuality",
+              label: "Quality",
+              type: "input-number",
+              min: 1,
+              required: true,
+            },
+            {
+              name: "blurKernelSize",
+              label: "Kernel Size",
+              type: "select",
+              noClear: true,
+              required: true,
+              options: BACKGROUND_BLUR_KERNEL_SIZE_OPTIONS.map((value) => ({
+                value,
+                label: String(value),
+              })),
+            },
+          ],
+        },
+        {
+          name: "blurRepeatEdgePixels",
+          label: "Repeat Edge Pixels",
+          type: "segmented-control",
+          noClear: true,
+          options: [
+            { value: false, label: "No" },
+            { value: true, label: "Yes" },
+          ],
+        },
+      ],
+    });
+  }
+  if (state.animationOptionEnabled) {
+    const animationFields = [
+      {
+        name: "animationId",
+        type: "select",
+        noClear: true,
+        required: true,
+        placeholder: "Select animation",
+        options: animationOptions,
+      },
+    ];
+    if (selectedAnimationMode !== "none") {
+      animationFields.push({
+        name: "playbackSpeed",
+        label: "Playback Speed",
+        type: "input-number",
+        min: 0.01,
+        step: 0.1,
+        required: true,
+      });
+    }
+    if (selectedAnimationMode === "update") {
+      animationFields.push({
+        name: "playbackLoop",
+        label: "Loop",
+        type: "segmented-control",
+        clearable: false,
+        disabled: !selectedAnimationCanLoop,
+        description: selectedAnimationCanLoop
+          ? undefined
+          : "loopingRequiresKeyframesDescription",
+        options: [
+          { value: false, label: "Don't Loop" },
+          { value: true, label: "Loop" },
+        ],
+      });
+    }
+    if (selectedAnimationMode !== "none") {
+      animationFields.push({
+        name: "playbackContinuity",
+        label: "Continuity",
+        type: "segmented-control",
+        clearable: false,
+        options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
+      });
+    }
+    optionFields.push({
+      type: "section",
+      id: "animation",
+      label: "Animation",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: animationFields,
+    });
+  }
+
+  const optionsSection = {
+    type: "section",
+    id: "options",
+    label: "Options",
+    fields: optionFields,
+  };
+  const allOptionsVisible =
+    state.backgroundColorOptionEnabled &&
+    state.opacityOptionEnabled &&
+    state.selectedBlurEnabled &&
+    state.animationOptionEnabled;
+  if (!allOptionsVisible) {
+    optionsSection.action = {
+      id: "add",
+      icon: "plus",
+      label: "Add Option",
+    };
+  }
+  formFields.push(optionsSection);
+
   const form = {
     fields: formFields,
   };
@@ -1005,19 +1131,17 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     customTransform: state.customTransformEnabled,
     transformId: state.selectedTransformId,
     opacity: state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
-    blur: state.selectedBlurEnabled,
-    blurX: state.selectedBlur.x,
-    blurY: state.selectedBlur.y,
-    blurQuality: state.selectedBlur.quality,
-    blurKernelSize: state.selectedBlur.kernelSize,
-    blurRepeatEdgePixels: state.selectedBlur.repeatEdgePixels,
     playbackContinuity: state.selectedAnimationPlaybackContinuity,
     playbackSpeed: state.selectedAnimationPlaybackSpeed,
     playbackLoop: state.selectedAnimationLoop,
     animationId: state.selectedAnimationId,
     loop: state.backgroundLoop ?? false,
+    blurX: state.selectedBlur.x,
+    blurY: state.selectedBlur.y,
+    blurQuality: state.selectedBlur.quality,
+    blurKernelSize: state.selectedBlur.kernelSize,
+    blurRepeatEdgePixels: state.selectedBlur.repeatEdgePixels,
   };
-
   return {
     mode: state.mode,
     tab: state.tab,
@@ -1056,6 +1180,9 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         selectedResource?.resourceType ?? "none",
         selectedResource?.resourceId ?? "none",
         selectedResource?.animationName ?? "none",
+        state.backgroundColorOptionEnabled
+          ? "background-color-option"
+          : "no-background-color-option",
         state.selectedColorId ?? "none",
         state.customTransformEnabled ? "custom-transform" : "preset-transform",
         state.selectedTransformId ?? "none",
@@ -1063,6 +1190,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         state.customTransformEditorOpen
           ? "custom-transform-editor-open"
           : "custom-transform-editor-closed",
+        state.opacityOptionEnabled ? "opacity-option" : "no-opacity-option",
         state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
         state.selectedBlurEnabled ? "blur" : "no-blur",
         state.selectedBlur.x,
@@ -1070,6 +1198,9 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         state.selectedBlur.quality,
         state.selectedBlur.kernelSize,
         state.selectedBlur.repeatEdgePixels ? "repeat-edge" : "no-repeat-edge",
+        state.animationOptionEnabled
+          ? "animation-option"
+          : "no-animation-option",
         state.selectedAnimationPlaybackContinuity ?? "render",
         state.selectedAnimationPlaybackSpeed,
         state.selectedAnimationLoop ? "animation-loop" : "animation-no-loop",
@@ -1080,9 +1211,9 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       form: localizeCommandLineForm(form, copy),
       defaultValues,
     },
+    backgroundColorOptionVisible: state.backgroundColorOptionEnabled,
     noThumbnailLabel: localizeCommandLineText("No thumbnail", copy),
     selectBackgroundLabel: localizeCommandLineText("Select Background", copy),
-    editButtonLabel: localizeCommandLineText("Edit", copy),
     submitButtonLabel: localizeCommandLineText("Submit", copy),
     selectButtonLabel: localizeCommandLineText("Select", copy),
     transformEditorTitle: localizeCommandLineText("Transform", copy),
