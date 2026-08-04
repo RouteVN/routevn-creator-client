@@ -454,6 +454,11 @@ export const createInitialState = () => ({
                   { value: true, label: "Yes" },
                 ],
               },
+              {
+                $when: "!values.characterId && !values.customCharacterName",
+                type: "slot",
+                slot: "persistCharacterSpacer",
+              },
             ],
           },
           {
@@ -479,6 +484,11 @@ export const createInitialState = () => ({
                 description: "",
                 required: true,
                 placeholder: "Enter speaker name",
+              },
+              {
+                $when: "!values.customCharacterName",
+                type: "slot",
+                slot: "characterNameSpacer",
               },
             ],
           },

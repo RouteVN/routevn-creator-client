@@ -198,12 +198,14 @@ describe("commandLineDialogueBox.store", () => {
     expect(
       speakerFields.map((field) =>
         field.type === "row"
-          ? field.fields.map((nestedField) => nestedField.name)
+          ? field.fields.map(
+              (nestedField) => nestedField.name ?? nestedField.slot,
+            )
           : field.slot,
       ),
     ).toEqual([
-      ["characterId", "persistCharacter"],
-      ["customCharacterName", "characterName"],
+      ["characterId", "persistCharacter", "persistCharacterSpacer"],
+      ["customCharacterName", "characterName", "characterNameSpacer"],
       "characterSprite",
     ]);
     expect(viewData.form.fields[2].fields.map((field) => field.name)).toEqual([
@@ -211,6 +213,56 @@ describe("commandLineDialogueBox.store", () => {
       "append",
       "clearPage",
     ]);
+  });
+
+  it("reserves right-hand columns while optional Speaker fields are hidden", () => {
+    const state = createInitialState();
+    const viewData = selectTestViewData({
+      state,
+      props: {
+        layouts: [],
+        characters: [],
+      },
+    });
+    const characterRow = viewData.form.fields[1].fields[0];
+    const persistCharacterField = characterRow.fields.find(
+      (field) => field.name === "persistCharacter",
+    );
+    const spacerField = characterRow.fields.find(
+      (field) => field.slot === "persistCharacterSpacer",
+    );
+    const customNameRow = viewData.form.fields[1].fields[1];
+    const characterNameField = customNameRow.fields.find(
+      (field) => field.name === "characterName",
+    );
+    const characterNameSpacerField = customNameRow.fields.find(
+      (field) => field.slot === "characterNameSpacer",
+    );
+
+    expect(
+      isFieldVisible({
+        field: persistCharacterField,
+        values: viewData.defaultValues,
+      }),
+    ).toBe(false);
+    expect(
+      isFieldVisible({
+        field: spacerField,
+        values: viewData.defaultValues,
+      }),
+    ).toBe(true);
+    expect(
+      isFieldVisible({
+        field: characterNameField,
+        values: viewData.defaultValues,
+      }),
+    ).toBe(false);
+    expect(
+      isFieldVisible({
+        field: characterNameSpacerField,
+        values: viewData.defaultValues,
+      }),
+    ).toBe(true);
   });
 
   it("localizes the Options section action label", () => {
