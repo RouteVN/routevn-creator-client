@@ -276,7 +276,7 @@ template:
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
   - rtgl-popover#addVisualPopover ?open=${addVisualPopover.isOpen} x=${addVisualPopover.position.x} y=${addVisualPopover.position.y} place=bs:
-      - rtgl-form#addVisualForm key=${addVisualPopover.key} slot=content :defaultValues=${addVisualDefaultValues} :form=${addVisualForm} w=320: null
+      - rtgl-form#addVisualForm key=${addVisualPopover.key} slot=content :defaultValues=${addVisualDefaultValues} :form=${addVisualForm} w=320 p=none: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - $if backgroundTransformEditor.isOpen:
       - 'rtgl-view pos=abs edge=f z=20 bgc=bg d=v style="pointer-events: auto; min-width: 0; min-height: 0;"':

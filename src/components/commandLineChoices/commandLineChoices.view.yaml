@@ -62,7 +62,7 @@ template:
               - rtgl-view d=h g=md:
                   - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
               - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-                  - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context}:
+                  - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context} p=none:
                       - rtgl-view#choicesContainer slot=choices g=md w=f:
                           - $for item, index in defaultValues.items:
                               - rtgl-view#choiceItem${index} data-index=${index} d=h av=c w=f g=md p=sm bgc=mu br=sm cur=pointer:
@@ -76,7 +76,7 @@ template:
               - rtgl-view d=h g=md:
                   - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
               - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-                  - rtgl-form#choiceForm key=${choiceFormKey} :form=${choiceFormTemplate} :context=${editFormContext} :defaultValues=${editForm}:
+                  - rtgl-form#choiceForm key=${choiceFormKey} :form=${choiceFormTemplate} :context=${editFormContext} :defaultValues=${editForm} p=none:
                       - rtgl-view slot=updateVariables w=f:
                           - rvn-system-actions#choiceUpdateVariableEditor :showSelected=${true} :actions=${choiceUpdateVariableActions} actionType=system :allowedModes=${choiceUpdateVariableAllowedModes} :showEmbeddedClose=${false}: null
               - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':

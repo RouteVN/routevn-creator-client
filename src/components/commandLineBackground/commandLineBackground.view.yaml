@@ -81,7 +81,7 @@ template:
       - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-form#form key=${dialogueForm.key} :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues}:
+              - rtgl-form#form key=${dialogueForm.key} :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues} p=none:
                   - $if selectedResource:
                       - $if selectedResource.resourceType == 'image':
                           - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=md:
