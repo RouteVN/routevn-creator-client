@@ -38,5 +38,6 @@ export const selectViewData = ({ state, props }) => {
     panelHorizontalInset: "96px",
     panelWidthReduction: "64px",
     panelVerticalInset: "32px",
+    panelMaxHeight: "800px",
   };
 };

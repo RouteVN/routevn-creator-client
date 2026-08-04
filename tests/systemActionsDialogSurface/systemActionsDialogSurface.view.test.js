@@ -26,6 +26,12 @@ describe("systemActionsDialogSurface view", () => {
     expect(dialogSurfaceView).toContain(
       "top: calc(var(--rvn-window-content-offset, 0px) + ${panelVerticalInset}); bottom: ${panelVerticalInset};",
     );
+    expect(dialogSurfaceView).toContain(
+      "height: calc(100vh - var(--rvn-window-content-offset, 0px) - ${panelVerticalInset} - ${panelVerticalInset});",
+    );
+    expect(dialogSurfaceView).toContain(
+      "max-height: ${panelMaxHeight}; margin-block: auto;",
+    );
     expect(dialogSurfaceView).toContain("pos=fix bgc=bg bw=xs bc=bo br=md");
     expect(
       dialogSurfaceView.match(/slot=content tabindex=-1 autofocus/g),

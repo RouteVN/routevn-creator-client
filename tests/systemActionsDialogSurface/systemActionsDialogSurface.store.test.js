@@ -25,6 +25,7 @@ describe("systemActionsDialogSurface.store", () => {
       panelHorizontalInset: "96px",
       panelWidthReduction: "64px",
       panelVerticalInset: "32px",
+      panelMaxHeight: "800px",
     });
   });
 
@@ -64,6 +65,7 @@ describe("systemActionsDialogSurface.store", () => {
       panelHorizontalInset: "96px",
       panelWidthReduction: "64px",
       panelVerticalInset: "32px",
+      panelMaxHeight: "800px",
     });
   });
 });

@@ -213,7 +213,10 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(view).toContain("rtgl-slider-input#textSpeed");
     expect(view).toContain("handler: handleTextSpeedChange");
     expect(view).toContain("rtgl-form#dialogueForm");
-    expect(view).toContain("w=f p=none mb=120:");
+    expect(view).toContain("w=f p=none:");
+    expect(view).toContain(
+      'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"',
+    );
     expect(view).toContain(
       "rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis",
     );

@@ -71,7 +71,7 @@ template:
       - $if mode == 'current':
           - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-form#dialogueForm :defaultValues=${defaultValues} :form=${form} :context=${context} w=f p=none mb=120:
+              - rtgl-form#dialogueForm :defaultValues=${defaultValues} :form=${form} :context=${context} w=f p=none:
                   - $if customizeTextSpeed:
                       - rtgl-view slot=textSpeed g=md w=f:
                           - rtgl-view d=h av=c w=f g=md:
@@ -95,6 +95,7 @@ template:
                                   - $for spriteGroup, i in selectedSpriteCharacter.spriteGroupBoxes:
                                       - 'rtgl-view.characterSpriteGroupBox data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
                                           - rtgl-text s=xs: ${spriteGroup.name}
+              - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton ?disabled=${submitDisabled}: ${submitButtonLabel}
       - $if mode == 'character-select':

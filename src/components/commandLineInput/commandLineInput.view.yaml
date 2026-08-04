@@ -38,7 +38,7 @@ template:
               - rtgl-view d=h g=md:
                   - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
               - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-                  - rtgl-form#form key=${formKey} :form=${form} :defaultValues=${defaultValues} :context=${context} w=f p=none mb=120:
+                  - rtgl-form#form key=${formKey} :form=${form} :defaultValues=${defaultValues} :context=${context} w=f p=none:
                       - rtgl-view slot=${inputFieldsSlot} g=md w=f:
                           - $if hasFields:
                               - $for fieldRow, index in fieldRows:
@@ -51,6 +51,7 @@ template:
                             $else:
                               - rtgl-view p=md bgc=mu br=md w=f:
                                   - rtgl-text s=sm c=mu-fg: ${noInputFieldsLabel}
+                  - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
               - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
                   - rtgl-button#submitButton ?disabled=${submitDisabled}: ${submitButtonLabel}
         $elif mode == "editField":

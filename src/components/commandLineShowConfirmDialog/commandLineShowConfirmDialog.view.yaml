@@ -41,7 +41,7 @@ template:
       - $if mode == 'current':
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
               - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context} w=f p=none: null
-              - rtgl-view g=md mt=md mb=120:
+              - rtgl-view g=md mt=md:
                   - rtgl-view#confirmActionsButton d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f cur=pointer:
                       - rtgl-view d=v:
                           - rtgl-text s=sm: Confirm Actions
@@ -50,6 +50,7 @@ template:
                       - rtgl-view d=v:
                           - rtgl-text s=sm: Cancel Actions
                           - rtgl-text s=xs c=mu-fg: ${cancelActionsSummary}
+              - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton ?disabled=${submitDisabled}: Submit
         $elif mode == 'confirmActions':
