@@ -9,6 +9,14 @@ refs:
         handler: handleFormChange
       form-section-action:
         handler: handleFormSectionAction
+  textSpeed:
+    eventListeners:
+      value-change:
+        handler: handleTextSpeedChange
+  removeCustomTextSpeedButton:
+    eventListeners:
+      click:
+        handler: handleRemoveCustomTextSpeedClick
   characterSpriteBox:
     eventListeners:
       click:
@@ -19,48 +27,6 @@ refs:
     eventListeners:
       click:
         handler: handleCharacterSpriteMenuButtonClick
-  speakerSpriteTooltip:
-    eventListeners:
-      mouseenter:
-        handler: handleSpeakerSpriteTooltipMouseEnter
-      mouseleave:
-        handler: handleSpeakerSpriteTooltipMouseLeave
-      focus:
-        handler: handleSpeakerSpriteTooltipMouseEnter
-      blur:
-        handler: handleSpeakerSpriteTooltipMouseLeave
-  transform:
-    eventListeners:
-      value-change:
-        handler: handleTransformChange
-  animationMode:
-    eventListeners:
-      value-change:
-        handler: handleAnimationModeChange
-  updateAnimation:
-    eventListeners:
-      value-change:
-        handler: handleAnimationChange
-  transitionAnimation:
-    eventListeners:
-      value-change:
-        handler: handleAnimationChange
-  animationPlaybackSpeed:
-    eventListeners:
-      value-change:
-        handler: handleAnimationPlaybackSpeedInput
-  animationPlaybackLoop:
-    eventListeners:
-      value-change:
-        handler: handleAnimationPlaybackLoopChange
-  animationPlaybackContinuity:
-    eventListeners:
-      value-change:
-        handler: handleAnimationPlaybackContinuityChange
-  persistSprite:
-    eventListeners:
-      value-change:
-        handler: handlePersistSpriteChange
   .characterSpriteGroupBox:
     eventListeners:
       click:
@@ -100,78 +66,35 @@ refs:
     eventListeners:
       click:
         handler: handleSubmitClick
-styles:
-  ".commandLineDialogueBoxTooltipTrigger":
-    align-items: center
-    appearance: none
-    background: transparent
-    border: "1px solid var(--muted-foreground)"
-    border-radius: 50%
-    box-sizing: border-box
-    color: var(--muted-foreground)
-    cursor: help
-    display: flex
-    font-family: inherit
-    font-size: 11px
-    font-weight: 600
-    height: 16px
-    justify-content: center
-    line-height: 1
-    margin: 0
-    padding: 0
-    width: 16px
-  ".commandLineDialogueBoxTooltipTrigger:focus-visible":
-    outline: "2px solid var(--ring)"
-    outline-offset: 2px
 template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == 'current':
           - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-form#dialogueForm :defaultValues=${defaultValues} :form=${form} :context=${context} w=f p=none:
+              - rtgl-form#dialogueForm :defaultValues=${defaultValues} :form=${form} :context=${context} w=f p=none mb=120:
+                  - $if customizeTextSpeed:
+                      - rtgl-view slot=textSpeed g=md w=f:
+                          - rtgl-view d=h av=c w=f g=md:
+                              - rtgl-text w=1fg: ${textSpeedLabel}
+                              - 'rtgl-button#removeCustomTextSpeedButton sq s=sm v=gh pre=x title="${removeCustomTextSpeedLabel}" aria-label="${removeCustomTextSpeedLabel}"': null
+                          - rtgl-slider-input#textSpeed w=f min=0 max=100 step=1 value=${textSpeed}: null
                   - $if characterSpriteEnabled:
                       - rtgl-view slot=characterSprite g=md w=f:
-                          - rtgl-view d=h g=md av=c:
-                              - rtgl-text: ${speakerSpriteLabel}
-                              - 'button#speakerSpriteTooltip.commandLineDialogueBoxTooltipTrigger type=button aria-label="${speakerSpriteTooltipContent}"': "?"
-                          - rtgl-view d=h g=md av=t pv=md br=md w=f:
-                              - rtgl-view#characterSpriteBox cur=pointer bw=xs bc=bo h-bc=ac br=sm:
-                                  - rtgl-view p=md g=md br=md:
-                                      - $if selectedSpriteCharacter.hasSpritePreview:
-                                          - rvn-stacked-file-images :layers=${selectedSpriteCharacter.spritePreviewLayers} w=200 h=120 br=sm lazy: null
-                                        $else:
-                                          - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg: null
-                                      - rtgl-view d=h av=c g=xs w=200:
-                                          - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${selectedSpriteCharacter.displayName}
-                                          - 'rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis title="${characterSpriteMenuLabel}" aria-label="${characterSpriteMenuLabel}" aria-haspopup=menu': null
-                          - $if hasSpriteCharacter:
-                              - rtgl-view w=1fg g=sm:
-                                  - rtgl-text s=sm c=mu-fg: ${transformLabel}
-                                  - rtgl-select#transform key=${spriteTransformId} :options=${transformOptions} :selectedValue=${spriteTransformId} w=f no-clear: null
-                                  - rtgl-text s=sm c=mu-fg: ${animationLabel}
-                                  - rtgl-segmented-control#animationMode key=${spriteAnimationMode} :options=${animationModeOptions} :selectedValue=${spriteAnimationMode} w=f no-clear: null
-                                  - $if spriteAnimationMode == 'update':
-                                      - rtgl-select#updateAnimation key=${spriteAnimationId} :options=${updateAnimationOptions} :selectedValue=${spriteAnimationId} w=f no-clear: null
-                                    $elif spriteAnimationMode == 'transition':
-                                      - rtgl-select#transitionAnimation key=${spriteAnimationId} :options=${transitionAnimationOptions} :selectedValue=${spriteAnimationId} w=f no-clear: null
-                                  - $if spriteAnimationId:
-                                      - rtgl-text s=sm c=mu-fg: ${animationPlaybackSpeedLabel}
-                                      - rtgl-input#animationPlaybackSpeed type=number min=0.01 step=0.1 w=f value=${spriteAnimationPlaybackSpeed}: null
-                                      - $if spriteAnimationMode == 'update':
-                                          - rtgl-text s=sm c=mu-fg: ${animationPlaybackLoopLabel}
-                                          - rtgl-segmented-control#animationPlaybackLoop w=f no-clear ?disabled=${spriteAnimationLoopDisabled} :selectedValue=${spriteAnimationPlaybackLoop} :options=${animationPlaybackLoopOptions}: null
-                                          - $if !spriteAnimationCanLoop:
-                                              - rtgl-text s=xs c=mu-fg: ${animationPlaybackLoopDisabledDescription}
-                                      - rtgl-text s=sm c=mu-fg: ${animationPlaybackContinuityLabel}
-                                      - rtgl-segmented-control#animationPlaybackContinuity w=f no-clear :selectedValue=${spriteAnimationPlaybackContinuity} :options=${animationPlaybackContinuityOptions}: null
-                                  - rtgl-text s=sm c=mu-fg: ${persistSpriteLabel}
-                                  - rtgl-segmented-control#persistSprite :options=${persistSpriteOptions} :selectedValue=${persistSprite} w=f no-clear: null
-                                  - $if selectedSpriteCharacter.showSpriteGroupBoxes:
-                                      - rtgl-text s=sm c=mu-fg: ${spriteGroupsLabel}
-                                      - rtgl-view d=h wrap g=xs w=f:
-                                          - $for spriteGroup, i in selectedSpriteCharacter.spriteGroupBoxes:
-                                              - 'rtgl-view.characterSpriteGroupBox data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
-                                                  - rtgl-text s=xs: ${spriteGroup.name}
+                          - rtgl-view#characterSpriteBox cur=pointer bw=xs bc=bo h-bc=ac br=sm:
+                              - rtgl-view p=md g=md br=md:
+                                  - $if selectedSpriteCharacter.hasSpritePreview:
+                                      - rvn-stacked-file-images :layers=${selectedSpriteCharacter.spritePreviewLayers} w=200 h=120 br=sm lazy: null
+                                    $else:
+                                      - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg: null
+                                  - rtgl-view d=h av=c g=xs w=200:
+                                      - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${selectedSpriteCharacter.displayName}
+                                      - 'rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis title="${characterSpriteMenuLabel}" aria-label="${characterSpriteMenuLabel}" aria-haspopup=menu': null
+                          - $if selectedSpriteCharacter.showSpriteGroupBoxes:
+                              - rtgl-text s=sm c=mu-fg: ${spriteGroupsLabel}
+                              - rtgl-view d=h wrap g=xs w=f:
+                                  - $for spriteGroup, i in selectedSpriteCharacter.spriteGroupBoxes:
+                                      - 'rtgl-view.characterSpriteGroupBox data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
+                                          - rtgl-text s=xs: ${spriteGroup.name}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton ?disabled=${submitDisabled}: ${submitButtonLabel}
       - $if mode == 'character-select':
@@ -236,4 +159,3 @@ template:
                       - 'rvn-spritesheet-preview key=${fullImagePreviewKey} previewKey=${fullImagePreviewKey} fileId=${fullImagePreviewFileId} :atlas=${fullImagePreviewAtlas} :animation=${fullImagePreviewAnimation} w=80% h=80% emptyLabel="${noPreviewLabel}"': null
                     $else:
                       - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
-  - rtgl-tooltip ?open=${speakerSpriteTooltip.open} x=${speakerSpriteTooltip.x} y=${speakerSpriteTooltip.y} place="t" content="${speakerSpriteTooltipContent}": null

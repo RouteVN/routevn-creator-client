@@ -64,6 +64,21 @@ import {
 } from "../../src/components/commandLineResetStoryAtSection/commandLineResetStoryAtSection.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
+const findFormField = (fields = [], name) => {
+  for (const field of fields) {
+    if (field.name === name) {
+      return field;
+    }
+
+    const nestedField = findFormField(field.fields, name);
+    if (nestedField) {
+      return nestedField;
+    }
+  }
+
+  return undefined;
+};
+
 const animations = {
   tree: [
     { id: "looping-update" },
@@ -288,19 +303,33 @@ describe("command line animation playback", () => {
       spriteAnimationPlaybackLoop: true,
       spriteAnimationPlaybackContinuity: "persistent",
     });
-    expect(
-      selectDialogueViewData({
-        state: dialogueState,
-        props: { animations, layouts: [], characters: [] },
-        i18n: EN_I18N,
-      }),
-    ).toMatchObject({
+    const dialogueViewData = selectDialogueViewData({
+      state: dialogueState,
+      props: { animations, layouts: [], characters: [] },
+      i18n: EN_I18N,
+    });
+    expect(dialogueViewData).toMatchObject({
       spriteAnimationCanLoop: true,
       spriteAnimationLoopDisabled: false,
-      animationPlaybackSpeedLabel: "Playback Speed",
-      animationPlaybackLoopLabel: "Loop",
-      animationPlaybackContinuityLabel: "Continuity",
     });
+    expect(
+      findFormField(
+        dialogueViewData.form.fields,
+        "spriteAnimationPlaybackSpeed",
+      ),
+    ).toMatchObject({ label: "Playback Speed", value: 2 });
+    expect(
+      findFormField(
+        dialogueViewData.form.fields,
+        "spriteAnimationPlaybackLoop",
+      ),
+    ).toMatchObject({ label: "Loop", value: true });
+    expect(
+      findFormField(
+        dialogueViewData.form.fields,
+        "spriteAnimationPlaybackContinuity",
+      ),
+    ).toMatchObject({ label: "Continuity", value: "persistent" });
 
     setSelectedResource(dialogueDeps, { resourceId: "dialogue-layout" });
     setSpriteCharacterId(dialogueDeps, { characterId: "character-1" });

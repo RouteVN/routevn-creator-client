@@ -163,7 +163,7 @@ const getSelectedFormValue = (formValues, fallbackValues, fieldName) => {
     : fallbackValues[fieldName];
 };
 
-const form = {
+const baseForm = {
   fields: [
     {
       name: "transitionAnimationId",
@@ -194,63 +194,6 @@ const form = {
         { value: "persistent", label: "Persistent" },
       ],
     },
-    {
-      name: "opacity",
-      label: "Opacity",
-      type: "slider-with-input",
-      min: 0,
-      max: 1,
-      step: 0.01,
-    },
-    {
-      name: "blur",
-      label: "Blur",
-      type: "segmented-control",
-      clearable: false,
-      options: [
-        { value: false, label: "No Blur" },
-        { value: true, label: "Blur" },
-      ],
-    },
-    {
-      $when: "blur == true",
-      name: "blurX",
-      label: "Blur X",
-      type: "input-number",
-    },
-    {
-      $when: "blur == true",
-      name: "blurY",
-      label: "Blur Y",
-      type: "input-number",
-    },
-    {
-      $when: "blur == true",
-      name: "blurQuality",
-      label: "Quality",
-      type: "input-number",
-    },
-    {
-      $when: "blur == true",
-      name: "blurKernelSize",
-      label: "Kernel Size",
-      type: "select",
-      options: SCREEN_BLUR_KERNEL_SIZE_OPTIONS.map((value) => ({
-        value,
-        label: String(value),
-      })),
-    },
-    {
-      $when: "blur == true",
-      name: "blurRepeatEdgePixels",
-      label: "Repeat Edge Pixels",
-      type: "segmented-control",
-      clearable: false,
-      options: [
-        { value: false, label: "No" },
-        { value: true, label: "Yes" },
-      ],
-    },
   ],
   actions: {
     layout: "",
@@ -261,6 +204,10 @@ const form = {
 export const createInitialState = () => ({
   animations: createEmptyCollection(),
   formValues: {},
+  opacityOptionEnabled: false,
+  blurOptionEnabled: false,
+  blurOptionExplicit: false,
+  optionVisibilityInitialized: false,
 });
 
 export const setAnimations = ({ state }, { animations } = {}) => {
@@ -268,7 +215,62 @@ export const setAnimations = ({ state }, { animations } = {}) => {
 };
 
 export const setFormValues = ({ state }, { values } = {}) => {
-  state.formValues = normalizeScreenFormValues(values ?? {});
+  const nextValues = { ...values };
+  const includesBlur = hasFormValue(nextValues, "blur");
+
+  if (!includesBlur && state.blurOptionExplicit) {
+    nextValues.blur = state.blurOptionEnabled;
+  }
+
+  state.formValues = normalizeScreenFormValues(nextValues);
+};
+
+export const setScreenOptionVisibility = (
+  { state },
+  { blurEnabled, blurExplicit, opacityEnabled } = {},
+) => {
+  state.opacityOptionEnabled = opacityEnabled === true;
+  state.blurOptionEnabled = blurEnabled === true;
+  state.blurOptionExplicit = blurExplicit === true;
+  state.optionVisibilityInitialized = true;
+};
+
+export const showOpacityOption = ({ state }) => {
+  state.opacityOptionEnabled = true;
+  state.optionVisibilityInitialized = true;
+  state.formValues.opacity =
+    normalizeScreenOpacity(state.formValues.opacity) ?? DEFAULT_SCREEN_OPACITY;
+};
+
+export const removeOpacityOption = ({ state }) => {
+  state.opacityOptionEnabled = false;
+  state.optionVisibilityInitialized = true;
+  state.formValues.opacity = undefined;
+};
+
+export const selectOpacityOptionEnabled = ({ state }) => {
+  return state.opacityOptionEnabled;
+};
+
+export const showBlurOption = ({ state }) => {
+  state.blurOptionEnabled = true;
+  state.blurOptionExplicit = true;
+  state.optionVisibilityInitialized = true;
+  state.formValues = normalizeScreenFormValues({
+    ...state.formValues,
+    blur: true,
+  });
+};
+
+export const removeBlurOption = ({ state }) => {
+  state.blurOptionEnabled = false;
+  state.blurOptionExplicit = true;
+  state.optionVisibilityInitialized = true;
+  state.formValues.blur = false;
+};
+
+export const selectBlurOptionEnabled = ({ state }) => {
+  return state.blurOptionEnabled;
 };
 
 export const selectTransitionAnimationId = ({ state }) => {
@@ -286,11 +288,15 @@ export const selectAnimationPlaybackContinuity = ({ state }) => {
 };
 
 export const selectScreenOpacity = ({ state }) => {
+  if (!state.opacityOptionEnabled) {
+    return undefined;
+  }
+
   return normalizeScreenOpacity(state.formValues?.opacity);
 };
 
 export const selectScreenBlur = ({ state }) => {
-  if (!normalizeScreenBlurEnabled(state.formValues?.blur)) {
+  if (!state.blurOptionEnabled) {
     return undefined;
   }
 
@@ -304,11 +310,11 @@ export const selectScreenBlur = ({ state }) => {
 };
 
 export const selectScreenBlurActionValue = ({ state }) => {
-  if (normalizeScreenBlurEnabled(state.formValues?.blur)) {
+  if (state.blurOptionEnabled) {
     return selectScreenBlur({ state });
   }
 
-  if (hasFormValue(state.formValues, "blur")) {
+  if (state.blurOptionExplicit) {
     return null;
   }
 
@@ -324,18 +330,24 @@ export const selectViewData = ({ state, props, i18n }) => {
     propsFormValues,
     "transitionAnimationId",
   );
-  const selectedOpacity = normalizeScreenOpacity(
-    getSelectedFormValue(formValues, propsFormValues, "opacity"),
-  );
+  const opacityOptionVisible =
+    state.opacityOptionEnabled ||
+    (!state.optionVisibilityInitialized &&
+      propsFormValues.opacity !== undefined);
+  const selectedOpacity = opacityOptionVisible
+    ? normalizeScreenOpacity(
+        getSelectedFormValue(formValues, propsFormValues, "opacity"),
+      )
+    : undefined;
   const selectedPlaybackSpeed = normalizeAnimationPlaybackSpeed(
     getSelectedFormValue(formValues, propsFormValues, "playbackSpeed"),
   );
   const selectedPlaybackContinuity = normalizeAnimationPlaybackContinuity(
     getSelectedFormValue(formValues, propsFormValues, "playbackContinuity"),
   );
-  const selectedBlurEnabled = normalizeScreenBlurEnabled(
-    getSelectedFormValue(formValues, propsFormValues, "blur"),
-  );
+  const selectedBlurEnabled =
+    state.blurOptionEnabled ||
+    (!state.optionVisibilityInitialized && propsFormValues.blur === true);
   const selectedBlur = normalizeScreenBlur({
     x: getSelectedFormValue(formValues, propsFormValues, "blurX"),
     y: getSelectedFormValue(formValues, propsFormValues, "blurY"),
@@ -351,8 +363,9 @@ export const selectViewData = ({ state, props, i18n }) => {
       "blurRepeatEdgePixels",
     ),
   });
+  const blurOptionVisible = selectedBlurEnabled;
   const formKey =
-    selectedOpacity !== undefined || selectedBlurEnabled
+    opacityOptionVisible || blurOptionVisible
       ? [
           selectedAnimationId ?? "new-screen",
           selectedPlaybackSpeed,
@@ -366,6 +379,114 @@ export const selectViewData = ({ state, props, i18n }) => {
           selectedBlur.repeatEdgePixels ? "repeat-edge" : "no-repeat-edge",
         ].join(":")
       : (selectedAnimationId ?? "new-screen");
+
+  const optionFields = [];
+  if (opacityOptionVisible) {
+    optionFields.push({
+      type: "section",
+      id: "opacity",
+      label: "Opacity",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          name: "opacity",
+          type: "slider-with-input",
+          min: 0,
+          max: 1,
+          step: 0.01,
+        },
+      ],
+    });
+  }
+  if (blurOptionVisible) {
+    optionFields.push({
+      type: "section",
+      id: "blur",
+      label: "Blur",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          type: "row",
+          fields: [
+            {
+              name: "blurX",
+              label: "Blur X",
+              type: "input-number",
+              min: 0,
+              required: true,
+            },
+            {
+              name: "blurY",
+              label: "Blur Y",
+              type: "input-number",
+              min: 0,
+              required: true,
+            },
+          ],
+        },
+        {
+          type: "row",
+          fields: [
+            {
+              name: "blurQuality",
+              label: "Quality",
+              type: "input-number",
+              min: 1,
+              required: true,
+            },
+            {
+              name: "blurKernelSize",
+              label: "Kernel Size",
+              type: "select",
+              noClear: true,
+              required: true,
+              options: SCREEN_BLUR_KERNEL_SIZE_OPTIONS.map((value) => ({
+                value,
+                label: String(value),
+              })),
+            },
+          ],
+        },
+        {
+          name: "blurRepeatEdgePixels",
+          label: "Repeat Edge Pixels",
+          type: "segmented-control",
+          noClear: true,
+          options: [
+            { value: false, label: "No" },
+            { value: true, label: "Yes" },
+          ],
+        },
+      ],
+    });
+  }
+
+  const optionsSection = {
+    type: "section",
+    id: "options",
+    label: "Options",
+    fields: optionFields,
+  };
+  if (!opacityOptionVisible || !blurOptionVisible) {
+    optionsSection.action = {
+      id: "add",
+      icon: "plus",
+      label: "Add Option",
+    };
+  }
+
+  const form = {
+    ...baseForm,
+    fields: [...baseForm.fields, optionsSection],
+  };
 
   return {
     breadcrumb: localizeCommandLineBreadcrumb(

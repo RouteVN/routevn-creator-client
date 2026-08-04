@@ -1,3 +1,8 @@
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
 const buildScreenDataFromState = (store) => {
   const transitionAnimationId = store.selectTransitionAnimationId();
   const playbackSpeed = store.selectAnimationPlaybackSpeed();
@@ -67,6 +72,11 @@ export const handleAfterMount = async (deps) => {
     formValues.blurRepeatEdgePixels = screen.blur?.repeatEdgePixels;
   }
 
+  store.setScreenOptionVisibility({
+    opacityEnabled: screen.opacity !== undefined,
+    blurEnabled: Boolean(screen.blur),
+    blurExplicit: Object.hasOwn(screen, "blur"),
+  });
   store.setAnimations({
     animations,
   });
@@ -84,6 +94,67 @@ export const handleFormChange = (deps, payload) => {
   }
 
   store.setFormValues({ values });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleOptionsSectionAction = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { actionId, position, sectionId } = payload._event.detail;
+
+  if (sectionId === "opacity" && actionId === "remove") {
+    store.removeOpacityOption();
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (sectionId === "blur" && actionId === "remove") {
+    store.removeBlurOption();
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (sectionId !== "options" || actionId !== "add") {
+    return;
+  }
+
+  const copy = selectCommandLineCopy(i18n);
+  const items = [];
+  if (!store.selectOpacityOptionEnabled()) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Opacity", copy),
+      key: "opacity",
+    });
+  }
+  if (!store.selectBlurOptionEnabled()) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Blur", copy),
+      key: "blur",
+    });
+  }
+  if (items.length === 0) {
+    return;
+  }
+
+  const result = await appService.showDropdownMenu({
+    items,
+    x: position.x,
+    y: position.y,
+    place: "be",
+  });
+
+  if (result?.item?.key === "opacity") {
+    store.showOpacityOption();
+  } else if (result?.item?.key === "blur") {
+    store.showBlurOption();
+  } else {
+    return;
+  }
+
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

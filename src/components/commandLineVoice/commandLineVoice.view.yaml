@@ -190,7 +190,7 @@ template:
                   - rtgl-view w=f:
                       - rtgl-text s=md: ${selectionHeading}
                       - rtgl-text s=sm c=mu-fg: ${selectionName}
-                  - rtgl-form#form key=${selectionKey} :form=${form} :defaultValues=${defaultValues} p=none: null
+                  - rtgl-form#form key=${selectionKey} :form=${form} :defaultValues=${defaultValues} p=none mb=120: null
       - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
           - rtgl-button#submitButton: Submit
   - $if showAudioPlayer:

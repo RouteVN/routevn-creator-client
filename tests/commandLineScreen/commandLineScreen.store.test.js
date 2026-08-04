@@ -1,19 +1,51 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  removeBlurOption,
+  removeOpacityOption,
+  selectBlurOptionEnabled,
+  selectOpacityOptionEnabled,
   selectScreenBlur,
   selectScreenBlurActionValue,
   selectScreenOpacity,
   selectViewData,
   setAnimations,
   setFormValues,
+  setScreenOptionVisibility,
+  showBlurOption,
+  showOpacityOption,
 } from "../../src/components/commandLineScreen/commandLineScreen.store.js";
+import { EN_I18N } from "../support/i18n.js";
+
+const DEFAULT_EXPECTED_BLUR = {
+  x: 6,
+  y: 9,
+  quality: 3,
+  kernelSize: 9,
+  repeatEdgePixels: true,
+};
+
+const findFormField = (fields, predicate) => {
+  for (const field of fields) {
+    if (predicate(field)) {
+      return field;
+    }
+    if (field.fields) {
+      const nestedField = findFormField(field.fields, predicate);
+      if (nestedField) {
+        return nestedField;
+      }
+    }
+  }
+  return undefined;
+};
 
 describe("commandLineScreen.store", () => {
   it("uses the current screen animation as the initial form value", () => {
     const state = createInitialState();
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: {
         screen: {
@@ -36,51 +68,17 @@ describe("commandLineScreen.store", () => {
       }),
     );
     expect(viewData.form.fields[0].required).toBeUndefined();
-    expect(
-      viewData.form.fields.find((field) => field.name === "opacity"),
-    ).toEqual(
-      expect.objectContaining({
-        label: "Opacity",
-        type: "slider-with-input",
-        min: 0,
-        max: 1,
-        step: 0.01,
-      }),
-    );
-    expect(viewData.form.fields.find((field) => field.name === "blur")).toEqual(
-      expect.objectContaining({
-        label: "Blur",
-        type: "segmented-control",
-        clearable: false,
-        options: [
-          {
-            value: false,
-            label: "No Blur",
-          },
-          {
-            value: true,
-            label: "Blur",
-          },
-        ],
-      }),
-    );
-    expect(
-      viewData.form.fields.find((field) => field.name === "blurKernelSize"),
-    ).toEqual(
-      expect.objectContaining({
-        $when: "blur == true",
-        label: "Kernel Size",
-        type: "select",
-        options: [
-          { value: 5, label: "5" },
-          { value: 7, label: "7" },
-          { value: 9, label: "9" },
-          { value: 11, label: "11" },
-          { value: 13, label: "13" },
-          { value: 15, label: "15" },
-        ],
-      }),
-    );
+    expect(viewData.form.fields.at(-1)).toEqual({
+      type: "section",
+      id: "options",
+      label: "Options",
+      action: {
+        id: "add",
+        icon: "plus",
+        label: "Add Option",
+      },
+      fields: [],
+    });
     expect(viewData.defaultValues.opacity).toBe(1);
     expect(viewData.defaultValues.blur).toBe(false);
     expect(viewData.defaultValues.blurX).toBe(6);
@@ -128,7 +126,7 @@ describe("commandLineScreen.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state, props: {} });
+    const viewData = selectViewData({ state, i18n: EN_I18N, props: {} });
 
     expect(viewData.context.transitionAnimationOptions).toEqual([
       {
@@ -153,6 +151,7 @@ describe("commandLineScreen.store", () => {
     );
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: {
         screen: {
@@ -169,6 +168,10 @@ describe("commandLineScreen.store", () => {
   it("uses selected screen opacity and blur values", () => {
     const state = createInitialState();
 
+    setScreenOptionVisibility(
+      { state },
+      { opacityEnabled: true, blurEnabled: true, blurExplicit: true },
+    );
     setFormValues(
       { state },
       {
@@ -185,7 +188,7 @@ describe("commandLineScreen.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state, props: {} });
+    const viewData = selectViewData({ state, i18n: EN_I18N, props: {} });
 
     expect(viewData.defaultValues.opacity).toBe(0.45);
     expect(viewData.defaultValues.blur).toBe(true);
@@ -202,12 +205,79 @@ describe("commandLineScreen.store", () => {
       kernelSize: 11,
       repeatEdgePixels: false,
     });
+
+    const optionsSection = viewData.form.fields.at(-1);
+    expect(optionsSection.action).toBeUndefined();
+    expect(optionsSection.fields.map((field) => field.id)).toEqual([
+      "opacity",
+      "blur",
+    ]);
+    expect(optionsSection.fields[0]).toMatchObject({
+      type: "section",
+      id: "opacity",
+      label: "Opacity",
+      action: { id: "remove", icon: "x", label: "Remove" },
+      fields: [
+        {
+          name: "opacity",
+          type: "slider-with-input",
+          min: 0,
+          max: 1,
+          step: 0.01,
+        },
+      ],
+    });
+    expect(optionsSection.fields[1]).toMatchObject({
+      type: "section",
+      id: "blur",
+      label: "Blur",
+      action: { id: "remove", icon: "x", label: "Remove" },
+    });
+    expect(
+      findFormField(optionsSection.fields, (field) => {
+        return field.name === "blurKernelSize";
+      }),
+    ).toEqual({
+      name: "blurKernelSize",
+      label: "Kernel Size",
+      type: "select",
+      noClear: true,
+      required: true,
+      options: [
+        { value: 5, label: "5" },
+        { value: 7, label: "7" },
+        { value: 9, label: "9" },
+        { value: 11, label: "11" },
+        { value: 13, label: "13" },
+        { value: 15, label: "15" },
+      ],
+    });
+  });
+
+  it("adds and removes screen options independently", () => {
+    const state = createInitialState();
+
+    showOpacityOption({ state });
+    expect(selectOpacityOptionEnabled({ state })).toBe(true);
+    expect(selectScreenOpacity({ state })).toBe(1);
+
+    showBlurOption({ state });
+    expect(selectBlurOptionEnabled({ state })).toBe(true);
+    expect(selectScreenBlur({ state })).toEqual(DEFAULT_EXPECTED_BLUR);
+
+    removeOpacityOption({ state });
+    removeBlurOption({ state });
+    expect(selectOpacityOptionEnabled({ state })).toBe(false);
+    expect(selectScreenOpacity({ state })).toBeUndefined();
+    expect(selectBlurOptionEnabled({ state })).toBe(false);
+    expect(selectScreenBlurActionValue({ state })).toBeNull();
   });
 
   it("uses screen effect props before form values are set", () => {
     const state = createInitialState();
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: {
         screen: {
@@ -238,6 +308,10 @@ describe("commandLineScreen.store", () => {
   it("uses screen blur null props as an explicit clear value", () => {
     const state = createInitialState();
 
+    setScreenOptionVisibility(
+      { state },
+      { opacityEnabled: false, blurEnabled: false, blurExplicit: true },
+    );
     setFormValues(
       { state },
       {
@@ -248,6 +322,7 @@ describe("commandLineScreen.store", () => {
     );
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: {
         screen: {
@@ -263,6 +338,10 @@ describe("commandLineScreen.store", () => {
   it("normalizes invalid screen blur kernel size to a supported option", () => {
     const state = createInitialState();
 
+    setScreenOptionVisibility(
+      { state },
+      { opacityEnabled: false, blurEnabled: true, blurExplicit: true },
+    );
     setFormValues(
       { state },
       {
@@ -273,7 +352,7 @@ describe("commandLineScreen.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state, props: {} });
+    const viewData = selectViewData({ state, i18n: EN_I18N, props: {} });
 
     expect(viewData.defaultValues.blurKernelSize).toBe(11);
     expect(selectScreenBlur({ state })?.kernelSize).toBe(11);

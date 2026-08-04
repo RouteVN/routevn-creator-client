@@ -17,25 +17,10 @@ import {
 import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
-  localizeCommandLineOptions,
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
-const ANIMATION_MODE_OPTIONS = [
-  {
-    label: "None",
-    value: "none",
-  },
-  {
-    label: "Update",
-    value: "update",
-  },
-  {
-    label: "Transition",
-    value: "transition",
-  },
-];
 const ANIMATION_PLAYBACK_LOOP_OPTIONS = [
   { value: false, label: "Don't Loop" },
   { value: true, label: "Loop" },
@@ -385,12 +370,6 @@ export const createInitialState = () => ({
   fullImagePreviewAtlas: undefined,
   fullImagePreviewAnimation: undefined,
   fullImagePreviewKey: undefined,
-  speakerSpriteTooltip: {
-    open: false,
-    x: 0,
-    y: 0,
-  },
-
   defaultValues: {
     resourceId: "",
     characterId: "",
@@ -494,8 +473,91 @@ export const createInitialState = () => ({
           },
           {
             $when: "values.characterSpriteEnabled == true",
-            type: "slot",
-            slot: "characterSprite",
+            type: "row",
+            fields: [
+              {
+                name: "characterSprite",
+                type: "slot",
+                slot: "characterSprite",
+                label: SPEAKER_SPRITE_LABEL,
+                tooltip: {
+                  content: SPEAKER_SPRITE_TOOLTIP,
+                },
+              },
+              {
+                name: "persistSprite",
+                type: "segmented-control",
+                label: "Persist Sprite",
+                required: true,
+                clearable: false,
+                options: PERSIST_SPRITE_OPTIONS,
+              },
+            ],
+          },
+          {
+            $when: "values.characterSpriteEnabled == true",
+            type: "row",
+            fields: [
+              {
+                name: "spriteTransformId",
+                type: "select",
+                label: "Transform",
+                required: true,
+                clearable: false,
+                options: [],
+              },
+              {
+                name: "spriteAnimationId",
+                type: "select",
+                label: "Animation",
+                clearable: true,
+                placeholder: "Select animation",
+                options: [],
+              },
+            ],
+          },
+          {
+            $when:
+              "values.characterSpriteEnabled == true && values.spriteAnimationId",
+            type: "row",
+            fields: [
+              {
+                name: "spriteAnimationPlaybackSpeed",
+                type: "slider-with-input",
+                label: "Playback Speed",
+                required: true,
+                min: 0.01,
+                max: 4,
+                step: 0.01,
+              },
+              {
+                name: "spriteAnimationPlaybackContinuity",
+                type: "segmented-control",
+                label: "Continuity",
+                required: true,
+                clearable: false,
+                options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
+              },
+            ],
+          },
+          {
+            $when:
+              "values.characterSpriteEnabled == true && values.spriteAnimationId && values.spriteAnimationMode == 'update'",
+            type: "row",
+            fields: [
+              {
+                name: "spriteAnimationPlaybackLoop",
+                type: "segmented-control",
+                label: "Loop",
+                required: true,
+                clearable: false,
+                options: ANIMATION_PLAYBACK_LOOP_OPTIONS,
+              },
+              {
+                type: "slot",
+                slot: "spriteAnimationPlaybackLoopSpacer",
+              },
+            ],
           },
         ],
       },
@@ -511,17 +573,6 @@ export const createInitialState = () => ({
         },
         fields: [
           {
-            $when: "values.customizeTextSpeed == true",
-            name: "textSpeed",
-            type: "slider-with-input",
-            label: "Text Speed",
-            description: "",
-            required: true,
-            min: 0,
-            max: 100,
-            step: 1,
-          },
-          {
             $when: 'dialogueMode == "adv"',
             name: "append",
             type: "segmented-control",
@@ -533,6 +584,11 @@ export const createInitialState = () => ({
               { value: false, label: "No" },
               { value: true, label: "Yes" },
             ],
+          },
+          {
+            $when: "values.customizeTextSpeed == true",
+            type: "slot",
+            slot: "textSpeed",
           },
           {
             $when: 'dialogueMode == "nvl"',
@@ -638,6 +694,23 @@ export const setSpriteAnimationId = (
   { animationId } = {},
 ) => {
   state.spriteAnimationId = animationId ?? "";
+  if (!state.spriteAnimationId) {
+    state.spriteAnimationMode = "none";
+  } else {
+    const selectedAnimation = toFlatItems(props?.animations).find(
+      (item) =>
+        item.id === state.spriteAnimationId && item.type === "animation",
+    );
+    const selectedAnimationMode = selectedAnimation
+      ? getAnimationType(selectedAnimation)
+      : undefined;
+    if (
+      selectedAnimationMode === "update" ||
+      selectedAnimationMode === "transition"
+    ) {
+      state.spriteAnimationMode = selectedAnimationMode;
+    }
+  }
   if (
     state.spriteAnimationMode !== "update" ||
     !canLoopAnimationById(props?.animations, state.spriteAnimationId)
@@ -794,16 +867,6 @@ export const hideFullImagePreview = ({ state }) => {
   state.fullImagePreviewKey = undefined;
 };
 
-export const showSpeakerSpriteTooltip = ({ state }, { x, y } = {}) => {
-  state.speakerSpriteTooltip.open = true;
-  state.speakerSpriteTooltip.x = x;
-  state.speakerSpriteTooltip.y = y;
-};
-
-export const hideSpeakerSpriteTooltip = ({ state }) => {
-  state.speakerSpriteTooltip.open = false;
-};
-
 export const setSelectedMode = ({ state }, { mode } = {}) => {
   const selectedMode = mode === "nvl" ? "nvl" : "adv";
   state.selectedMode = selectedMode;
@@ -915,6 +978,12 @@ export const selectDialogueFormState = ({ state }) => ({
   persistSprite: state.persistSprite,
   removePersistedSprite: state.removePersistedSprite,
   characterSpriteEnabled: state.characterSpriteEnabled,
+  spriteTransformId: state.spriteTransformId,
+  spriteAnimationId: state.spriteAnimationId,
+  spriteAnimationMode: state.spriteAnimationMode,
+  spriteAnimationPlaybackSpeed: state.spriteAnimationPlaybackSpeed,
+  spriteAnimationPlaybackLoop: state.spriteAnimationPlaybackLoop,
+  spriteAnimationPlaybackContinuity: state.spriteAnimationPlaybackContinuity,
   clearPage: state.clearPage,
   customizeTextSpeed: state.customizeTextSpeed,
   textSpeed: state.textSpeed,
@@ -927,6 +996,12 @@ export const selectDialogueFormChangeState = ({ state }) => ({
   customCharacterName: state.customCharacterName,
   characterName: state.characterName,
   characterSpriteEnabled: state.characterSpriteEnabled,
+  spriteTransformId: state.spriteTransformId,
+  spriteAnimationId: state.spriteAnimationId,
+  spriteAnimationMode: state.spriteAnimationMode,
+  spriteAnimationPlaybackSpeed: state.spriteAnimationPlaybackSpeed,
+  spriteAnimationPlaybackLoop: state.spriteAnimationPlaybackLoop,
+  spriteAnimationPlaybackContinuity: state.spriteAnimationPlaybackContinuity,
   persistSprite: state.persistSprite,
   persistSpriteExplicit: state.persistSpriteExplicit,
   removePersistedSprite: state.removePersistedSprite,
@@ -1068,17 +1143,18 @@ export const selectViewData = ({ state, props, i18n }) => {
   const animationItems = toFlatItems(animations).filter(
     (item) => item.type === "animation",
   );
-  const updateAnimationOptions = animationItems
-    .filter((item) => getAnimationType(item) === "update")
+  const animationOptions = animationItems
+    .filter((item) => {
+      const animationType = getAnimationType(item);
+      return animationType === "update" || animationType === "transition";
+    })
     .map((item) => ({
       value: item.id,
       label: item.name,
-    }));
-  const transitionAnimationOptions = animationItems
-    .filter((item) => getAnimationType(item) === "transition")
-    .map((item) => ({
-      value: item.id,
-      label: item.name,
+      suffixText:
+        getAnimationType(item) === "transition"
+          ? localizeCommandLineText("Transition", copy)
+          : localizeCommandLineText("Update", copy),
     }));
   const characterTreeData = buildSelectableTreeData({
     collection: characterCollection,
@@ -1163,6 +1239,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     });
   }
 
+  const spriteAnimationCanLoop = canLoopAnimationById(
+    animations,
+    state.spriteAnimationId,
+  );
+
   const mapFormField = (field) => {
     if (field.id === "speaker") {
       const mappedSection = {
@@ -1180,11 +1261,7 @@ export const selectViewData = ({ state, props, i18n }) => {
         fields: field.fields.map(mapFormField),
       };
       if (state.customizeTextSpeed) {
-        mappedSection.action = {
-          id: "remove-custom-text-speed",
-          icon: "x",
-          label: "Remove custom text speed",
-        };
+        mappedSection.action = undefined;
       }
       return mappedSection;
     }
@@ -1219,6 +1296,54 @@ export const selectViewData = ({ state, props, i18n }) => {
       return {
         ...field,
         value: state.persistCharacter,
+      };
+    }
+    if (field.name === "persistSprite") {
+      return {
+        ...field,
+        value: state.persistSprite,
+      };
+    }
+    if (field.name === "spriteTransformId") {
+      return {
+        ...field,
+        options: transformOptions,
+        value: selectedSpriteTransformId,
+      };
+    }
+    if (field.name === "spriteAnimationId") {
+      return {
+        ...field,
+        options: animationOptions,
+        value: state.spriteAnimationId,
+      };
+    }
+    if (field.name === "spriteAnimationPlaybackSpeed") {
+      return {
+        ...field,
+        value: normalizeAnimationPlaybackSpeed(
+          state.spriteAnimationPlaybackSpeed,
+        ),
+      };
+    }
+    if (field.name === "spriteAnimationPlaybackContinuity") {
+      return {
+        ...field,
+        value: normalizeAnimationPlaybackContinuity(
+          state.spriteAnimationPlaybackContinuity,
+        ),
+      };
+    }
+    if (field.name === "spriteAnimationPlaybackLoop") {
+      return {
+        ...field,
+        disabled: !spriteAnimationCanLoop,
+        description: spriteAnimationCanLoop
+          ? undefined
+          : "loopingRequiresKeyframesDescription",
+        value: normalizeAnimationPlaybackLoop(
+          state.spriteAnimationPlaybackLoop,
+        ),
       };
     }
     if (field.name === "append") {
@@ -1258,6 +1383,18 @@ export const selectViewData = ({ state, props, i18n }) => {
     append: state.appendDialogue,
     persistCharacter: state.persistCharacter,
     persistSprite: state.persistSprite,
+    spriteTransformId: selectedSpriteTransformId,
+    spriteAnimationId: state.spriteAnimationId,
+    spriteAnimationMode: state.spriteAnimationMode,
+    spriteAnimationPlaybackSpeed: normalizeAnimationPlaybackSpeed(
+      state.spriteAnimationPlaybackSpeed,
+    ),
+    spriteAnimationPlaybackLoop: normalizeAnimationPlaybackLoop(
+      state.spriteAnimationPlaybackLoop,
+    ),
+    spriteAnimationPlaybackContinuity: normalizeAnimationPlaybackContinuity(
+      state.spriteAnimationPlaybackContinuity,
+    ),
     removePersistedSprite: state.removePersistedSprite,
     clearPage: state.clearPage,
     customizeTextSpeed: state.customizeTextSpeed,
@@ -1267,11 +1404,6 @@ export const selectViewData = ({ state, props, i18n }) => {
     dialogueMode: selectedMode,
     values: defaultValues,
   };
-
-  const spriteAnimationCanLoop = canLoopAnimationById(
-    animations,
-    state.spriteAnimationId,
-  );
 
   return {
     mode: state.mode,
@@ -1318,25 +1450,6 @@ export const selectViewData = ({ state, props, i18n }) => {
     context,
     items: characterTreeData.explorerItems,
     groups: characterTreeData.groups,
-    transformOptions,
-    animationModeOptions: localizeCommandLineOptions(
-      ANIMATION_MODE_OPTIONS,
-      copy,
-    ),
-    animationPlaybackLoopOptions: localizeCommandLineOptions(
-      ANIMATION_PLAYBACK_LOOP_OPTIONS,
-      copy,
-    ),
-    animationPlaybackContinuityOptions: localizeCommandLineOptions(
-      ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
-      copy,
-    ),
-    updateAnimationOptions,
-    transitionAnimationOptions,
-    persistSpriteOptions: localizeCommandLineOptions(
-      PERSIST_SPRITE_OPTIONS,
-      copy,
-    ),
     spriteItems,
     spriteGroups,
     showSpriteGroupTabs: spriteSelectionTabs.length > 1,
@@ -1346,30 +1459,13 @@ export const selectViewData = ({ state, props, i18n }) => {
     searchPlaceholder: localizeCommandLineText("Search...", copy),
     noAvatarLabel: localizeCommandLineText("No Avatar", copy),
     noPreviewLabel: localizeCommandLineText("No preview", copy),
-    transformLabel: localizeCommandLineText("Transform", copy),
-    animationLabel: localizeCommandLineText("Animation", copy),
-    animationPlaybackSpeedLabel: localizeCommandLineText(
-      "Playback Speed",
+    textSpeedLabel: localizeCommandLineText("Text Speed", copy),
+    removeCustomTextSpeedLabel: localizeCommandLineText(
+      "Remove custom text speed",
       copy,
     ),
-    animationPlaybackLoopLabel: localizeCommandLineText("Loop", copy),
-    animationPlaybackContinuityLabel: localizeCommandLineText(
-      "Continuity",
-      copy,
-    ),
-    animationPlaybackLoopDisabledDescription: localizeCommandLineText(
-      "loopingRequiresKeyframesDescription",
-      copy,
-    ),
-    persistSpriteLabel: localizeCommandLineText("Persist Sprite", copy),
     characterSpriteMenuLabel: localizeCommandLineText("Remove", copy),
     spriteGroupsLabel: localizeCommandLineText("Sprite Groups", copy),
-    speakerSpriteLabel: localizeCommandLineText(SPEAKER_SPRITE_LABEL, copy),
-    speakerSpriteTooltip: state.speakerSpriteTooltip,
-    speakerSpriteTooltipContent: localizeCommandLineText(
-      SPEAKER_SPRITE_TOOLTIP,
-      copy,
-    ),
     submitButtonLabel: localizeCommandLineText("Submit", copy),
     selectButtonLabel: localizeCommandLineText("Select", copy),
     fullImagePreviewVisible: state.fullImagePreviewVisible,

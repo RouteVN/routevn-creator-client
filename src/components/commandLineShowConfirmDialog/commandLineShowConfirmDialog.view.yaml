@@ -41,7 +41,7 @@ template:
       - $if mode == 'current':
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
               - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context} w=f p=none: null
-              - rtgl-view g=md mt=md:
+              - rtgl-view g=md mt=md mb=120:
                   - rtgl-view#confirmActionsButton d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f cur=pointer:
                       - rtgl-view d=v:
                           - rtgl-text s=sm: Confirm Actions

@@ -694,6 +694,12 @@ const syncDialogueFormValues = (deps) => {
     persistSprite,
     removePersistedSprite,
     characterSpriteEnabled,
+    spriteTransformId,
+    spriteAnimationId,
+    spriteAnimationMode,
+    spriteAnimationPlaybackSpeed,
+    spriteAnimationPlaybackLoop,
+    spriteAnimationPlaybackContinuity,
     clearPage,
     textSpeed,
   } = store.selectDialogueFormState();
@@ -703,6 +709,12 @@ const syncDialogueFormValues = (deps) => {
     customCharacterName,
     characterName,
     characterSpriteEnabled,
+    spriteTransformId,
+    spriteAnimationId,
+    spriteAnimationMode,
+    spriteAnimationPlaybackSpeed,
+    spriteAnimationPlaybackLoop,
+    spriteAnimationPlaybackContinuity,
     append: appendDialogue,
     persistCharacter,
     persistSprite,
@@ -766,6 +778,11 @@ export const handleFormChange = (deps, payload) => {
   });
   const persistCharacterVisibilityChanged =
     hadDialogueCharacter !== hasCharacter;
+  const spriteAnimationId = Object.hasOwn(formValues, "spriteAnimationId")
+    ? formValues.spriteAnimationId
+    : currentState.spriteAnimationId;
+  const animationPlaybackVisibilityChanged =
+    !!spriteAnimationId !== !!currentState.spriteAnimationId;
   let characterName = formValues.characterName ?? currentState.characterName;
 
   if (!customCharacterName) {
@@ -799,6 +816,10 @@ export const handleFormChange = (deps, payload) => {
   const persistSprite = currentState.characterSpriteEnabled
     ? (formValues.persistSprite ?? currentState.persistSprite)
     : currentState.persistSprite;
+  const persistSpriteChanged =
+    currentState.characterSpriteEnabled &&
+    Object.hasOwn(formValues, "persistSprite") &&
+    toBoolean(persistSprite) !== currentState.persistSprite;
   const removePersistedSprite = currentState.characterSpriteEnabled
     ? false
     : (formValues.removePersistedSprite ?? currentState.removePersistedSprite);
@@ -811,7 +832,7 @@ export const handleFormChange = (deps, payload) => {
   });
   store.setPersistSprite({
     persistSprite,
-    explicit: currentState.persistSpriteExplicit,
+    explicit: currentState.persistSpriteExplicit || persistSpriteChanged,
   });
   store.setRemovePersistedSprite({
     removePersistedSprite,
@@ -824,9 +845,45 @@ export const handleFormChange = (deps, payload) => {
     fallback: currentState.textSpeed,
   });
 
+  if (currentState.characterSpriteEnabled) {
+    store.setSpriteTransformId({
+      transformId:
+        formValues.spriteTransformId ?? currentState.spriteTransformId,
+    });
+
+    store.setSpriteAnimationId({ animationId: spriteAnimationId });
+
+    if (spriteAnimationId) {
+      store.setSpriteAnimationPlaybackSpeed({
+        speed:
+          formValues.spriteAnimationPlaybackSpeed ??
+          currentState.spriteAnimationPlaybackSpeed,
+      });
+      store.setSpriteAnimationPlaybackContinuity({
+        continuity:
+          formValues.spriteAnimationPlaybackContinuity ??
+          currentState.spriteAnimationPlaybackContinuity,
+      });
+
+      if (
+        getAnimationModeById(props?.animations, spriteAnimationId) === "update"
+      ) {
+        store.setSpriteAnimationPlaybackLoop({
+          loop:
+            formValues.spriteAnimationPlaybackLoop ??
+            currentState.spriteAnimationPlaybackLoop,
+        });
+      }
+    }
+  }
+
   render();
 
-  if (modeChanged || persistCharacterVisibilityChanged) {
+  if (
+    modeChanged ||
+    persistCharacterVisibilityChanged ||
+    animationPlaybackVisibilityChanged
+  ) {
     syncDialogueFormValues(deps);
   }
 
@@ -836,14 +893,6 @@ export const handleFormChange = (deps, payload) => {
 export const handleFormSectionAction = async (deps, payload) => {
   const { appService, i18n, render, store } = deps;
   const { sectionId, actionId, position } = payload._event.detail;
-
-  if (sectionId === "options" && actionId === "remove-custom-text-speed") {
-    store.setCustomizeTextSpeed({ customizeTextSpeed: false });
-    render();
-    syncDialogueFormValues(deps);
-    dispatchTemporaryPresentationStateChange(deps);
-    return;
-  }
 
   if (actionId !== "add") {
     return;
@@ -898,6 +947,24 @@ export const handleFormSectionAction = async (deps, payload) => {
   }
 
   store.setCustomizeTextSpeed({ customizeTextSpeed: true });
+  render();
+  syncDialogueFormValues(deps);
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleTextSpeedChange = (deps, payload) => {
+  const { render, store } = deps;
+  const { value } = payload._event.detail;
+
+  store.setTextSpeed({ textSpeed: value });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleRemoveCustomTextSpeedClick = (deps) => {
+  const { render, store } = deps;
+
+  store.setCustomizeTextSpeed({ customizeTextSpeed: false });
   render();
   syncDialogueFormValues(deps);
   dispatchTemporaryPresentationStateChange(deps);
@@ -969,24 +1036,6 @@ export const handleCharacterSpriteMenuButtonClick = async (deps, payload) => {
     x: rect.left,
     y: rect.bottom,
   });
-};
-
-export const handleSpeakerSpriteTooltipMouseEnter = (deps, payload) => {
-  const { store, render } = deps;
-  const rect = payload._event.currentTarget.getBoundingClientRect();
-
-  store.showSpeakerSpriteTooltip({
-    x: rect.left + rect.width / 2,
-    y: rect.top - 8,
-  });
-  render();
-};
-
-export const handleSpeakerSpriteTooltipMouseLeave = (deps) => {
-  const { store, render } = deps;
-
-  store.hideSpeakerSpriteTooltip();
-  render();
 };
 
 export const handleCharacterSpriteGroupBoxClick = (deps, payload) => {
@@ -1106,66 +1155,6 @@ export const handleSpriteGroupTabClick = (deps, payload) => {
 
   store.setSelectedSpriteGroupId({ spriteGroupId });
   render();
-};
-
-export const handleTransformChange = (deps, payload) => {
-  const { store, render } = deps;
-  const value = payload._event.detail.value;
-  store.setSpriteTransformId({ transformId: value });
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
-export const handleAnimationModeChange = (deps, payload) => {
-  const { store, render } = deps;
-  const value = payload._event.detail.value;
-  store.setSpriteAnimationMode({ mode: value });
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
-export const handleAnimationChange = (deps, payload) => {
-  const { store, render } = deps;
-  const value = payload._event.detail.value;
-  store.setSpriteAnimationId({ animationId: value });
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
-export const handleAnimationPlaybackSpeedInput = (deps, payload) => {
-  const { store, render } = deps;
-  store.setSpriteAnimationPlaybackSpeed({
-    speed: payload._event.detail.value,
-  });
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
-export const handleAnimationPlaybackLoopChange = (deps, payload) => {
-  const { store, render } = deps;
-  store.setSpriteAnimationPlaybackLoop({
-    loop: payload._event.detail.value,
-  });
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
-export const handleAnimationPlaybackContinuityChange = (deps, payload) => {
-  const { store, render } = deps;
-  store.setSpriteAnimationPlaybackContinuity({
-    continuity: payload._event.detail.value,
-  });
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
-export const handlePersistSpriteChange = (deps, payload) => {
-  const { store, render } = deps;
-  const { value } = payload._event.detail;
-
-  store.setPersistSprite({ persistSprite: value });
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleButtonSelectClick = (deps) => {

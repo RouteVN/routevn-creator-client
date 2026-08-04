@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { parseAndRender } from "jempl";
 import {
   createInitialState,
-  hideSpeakerSpriteTooltip,
   setAppendDialogue,
   setCharacterName,
   setCustomCharacterName,
@@ -16,7 +15,6 @@ import {
   setSpriteTransformId,
   setCustomizeTextSpeed,
   setTextSpeed,
-  showSpeakerSpriteTooltip,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.store.js";
 import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
@@ -128,26 +126,24 @@ describe("commandLineDialogueBox.store", () => {
       (field) => field.slot === "characterSprite",
     );
     expect(characterSpriteField).toEqual({
-      $when: "values.characterSpriteEnabled == true",
+      label: "Dialogue sprite",
+      name: "characterSprite",
       slot: "characterSprite",
+      tooltip: {
+        content:
+          "Speaker's face that appears on top of the dialogue box. For body sprites use the Character Sprites action",
+      },
       type: "slot",
+    });
+    const characterSpriteRow = viewData.form.fields[1].fields.find((field) => {
+      return field.fields?.includes(characterSpriteField);
     });
     expect(
       isFieldVisible({
-        field: characterSpriteField,
+        field: characterSpriteRow,
         values: viewData.defaultValues,
       }),
     ).toBe(false);
-    expect(viewData).toMatchObject({
-      speakerSpriteLabel: "Dialogue sprite",
-      speakerSpriteTooltip: {
-        open: false,
-        x: 0,
-        y: 0,
-      },
-      speakerSpriteTooltipContent:
-        "Speaker's face that appears on top of the dialogue box. For body sprites use the Character Sprites action",
-    });
     expect(
       findFormField(viewData, (field) => field.name === "append"),
     ).toMatchObject({
@@ -194,7 +190,7 @@ describe("commandLineDialogueBox.store", () => {
     const speakerFields = viewData.form.fields[1].fields;
     expect(
       speakerFields.map((field) => field.name ?? field.slot ?? field.type),
-    ).toEqual(["row", "row", "characterSprite"]);
+    ).toEqual(["row", "row", "row", "row", "row", "row"]);
     expect(
       speakerFields.map((field) =>
         field.type === "row"
@@ -206,13 +202,14 @@ describe("commandLineDialogueBox.store", () => {
     ).toEqual([
       ["characterId", "persistCharacter", "persistCharacterSpacer"],
       ["customCharacterName", "characterName", "characterNameSpacer"],
-      "characterSprite",
+      ["characterSprite", "persistSprite"],
+      ["spriteTransformId", "spriteAnimationId"],
+      ["spriteAnimationPlaybackSpeed", "spriteAnimationPlaybackContinuity"],
+      ["spriteAnimationPlaybackLoop", "spriteAnimationPlaybackLoopSpacer"],
     ]);
-    expect(viewData.form.fields[2].fields.map((field) => field.name)).toEqual([
-      "textSpeed",
-      "append",
-      "clearPage",
-    ]);
+    expect(
+      viewData.form.fields[2].fields.map((field) => field.name ?? field.slot),
+    ).toEqual(["append", "textSpeed", "clearPage"]);
   });
 
   it("reserves right-hand columns while optional Speaker fields are hidden", () => {
@@ -402,7 +399,7 @@ describe("commandLineDialogueBox.store", () => {
 
     const textSpeedField = findFormField(
       viewData,
-      (field) => field.name === "textSpeed",
+      (field) => field.slot === "textSpeed",
     );
 
     expect(viewData.customizeTextSpeed).toBe(false);
@@ -419,13 +416,13 @@ describe("commandLineDialogueBox.store", () => {
     });
     expect(textSpeedField).toMatchObject({
       $when: "values.customizeTextSpeed == true",
-      label: "Text Speed",
-      type: "slider-with-input",
-      min: 0,
-      max: 100,
-      step: 1,
-      value: 75,
+      slot: "textSpeed",
+      type: "slot",
     });
+    expect(viewData.textSpeedLabel).toBe("Text Speed");
+    expect(viewData.removeCustomTextSpeedLabel).toBe(
+      "Remove custom text speed",
+    );
     expect(
       isFieldVisible({
         field: textSpeedField,
@@ -454,11 +451,7 @@ describe("commandLineDialogueBox.store", () => {
       },
     });
 
-    expect(customizedViewData.form.fields[2].action).toEqual({
-      id: "remove-custom-text-speed",
-      icon: "x",
-      label: "Remove custom text speed",
-    });
+    expect(customizedViewData.form.fields[2].action).toBeUndefined();
   });
 
   it("normalizes text speed values to the supported 0 to 100 range", () => {
@@ -564,9 +557,29 @@ describe("commandLineDialogueBox.store", () => {
         ],
       },
     });
+    let spriteRow = viewData.form.fields[1].fields.find((field) => {
+      return field.fields?.some((nestedField) => {
+        return nestedField.slot === "characterSprite";
+      });
+    });
+    expect(spriteRow).toMatchObject({
+      $when: "values.characterSpriteEnabled == true",
+      type: "row",
+    });
+    expect(
+      isFieldVisible({ field: spriteRow, values: viewData.defaultValues }),
+    ).toBe(false);
     expect(
       findFormField(viewData, (field) => field.name === "persistSprite"),
-    ).toBeUndefined();
+    ).toMatchObject({
+      label: "Persist Sprite",
+      type: "segmented-control",
+      options: [
+        { value: true, label: "Yes" },
+        { value: false, label: "No" },
+      ],
+      value: false,
+    });
     expect(
       findFormField(
         viewData,
@@ -601,14 +614,18 @@ describe("commandLineDialogueBox.store", () => {
         (field) => field.name === "removePersistedSprite",
       ),
     ).toBeUndefined();
-    expect(viewData).toMatchObject({
-      persistSprite: true,
-      persistSpriteLabel: "Persist Sprite",
-      persistSpriteOptions: [
-        { value: true, label: "Yes" },
-        { value: false, label: "No" },
-      ],
+    spriteRow = viewData.form.fields[1].fields.find((field) => {
+      return field.fields?.some((nestedField) => {
+        return nestedField.slot === "characterSprite";
+      });
     });
+    expect(
+      isFieldVisible({ field: spriteRow, values: viewData.defaultValues }),
+    ).toBe(true);
+    expect(viewData.persistSprite).toBe(true);
+    expect(
+      findFormField(viewData, (field) => field.name === "persistSprite"),
+    ).toMatchObject({ value: true });
   });
 
   it("preserves an explicit persistence choice when sprite layers change", () => {
@@ -723,7 +740,7 @@ describe("commandLineDialogueBox.store", () => {
           },
         },
         animations: {
-          tree: [{ id: "portrait-in" }],
+          tree: [{ id: "portrait-in" }, { id: "portrait-pulse" }],
           items: {
             "portrait-in": {
               id: "portrait-in",
@@ -733,27 +750,74 @@ describe("commandLineDialogueBox.store", () => {
                 type: "transition",
               },
             },
+            "portrait-pulse": {
+              id: "portrait-pulse",
+              type: "animation",
+              name: "Portrait Pulse",
+              animation: {
+                type: "update",
+              },
+            },
           },
         },
       },
     });
 
-    expect(
-      findFormField(viewData, (field) => field.slot === "characterSprite"),
-    ).toMatchObject({
+    const speakerFields = viewData.form.fields[1].fields;
+    const spriteRow = speakerFields.find((field) => {
+      return field.fields?.some((nestedField) => {
+        return nestedField.slot === "characterSprite";
+      });
+    });
+    expect(spriteRow).toMatchObject({
       $when: "values.characterSpriteEnabled == true",
-      slot: "characterSprite",
-      type: "slot",
+      type: "row",
+    });
+    expect(spriteRow.fields.map((field) => field.name ?? field.slot)).toEqual([
+      "characterSprite",
+      "persistSprite",
+    ]);
+    const transformAnimationRow = speakerFields.find((field) => {
+      return field.fields?.some((nestedField) => {
+        return nestedField.name === "spriteTransformId";
+      });
+    });
+    expect(transformAnimationRow.fields.map((field) => field.name)).toEqual([
+      "spriteTransformId",
+      "spriteAnimationId",
+    ]);
+    const playbackRow = speakerFields.find((field) => {
+      return field.fields?.some((nestedField) => {
+        return nestedField.name === "spriteAnimationPlaybackSpeed";
+      });
+    });
+    expect(playbackRow.fields.map((field) => field.name)).toEqual([
+      "spriteAnimationPlaybackSpeed",
+      "spriteAnimationPlaybackContinuity",
+    ]);
+    expect(playbackRow.fields[0]).toMatchObject({
+      label: "Playback Speed",
+      type: "slider-with-input",
+      min: 0.01,
+      max: 4,
+      step: 0.01,
+      value: 1,
+    });
+    expect(playbackRow.fields[1]).toMatchObject({
+      label: "Continuity",
+      type: "segmented-control",
+      value: "render",
+      options: [
+        { value: "render", label: "Single Line" },
+        { value: "persistent", label: "Persistent" },
+      ],
     });
     expect(viewData.hasSpriteCharacter).toBe(true);
     expect(viewData.characterSpriteEnabled).toBe(true);
     expect(viewData.form.fields[1].action).toBeUndefined();
     expect(
       isFieldVisible({
-        field: findFormField(
-          viewData,
-          (field) => field.slot === "characterSprite",
-        ),
+        field: spriteRow,
         values: viewData.defaultValues,
       }),
     ).toBe(true);
@@ -761,11 +825,26 @@ describe("commandLineDialogueBox.store", () => {
     expect(viewData.spriteTransformId).toBe("portrait-left");
     expect(viewData.spriteAnimationMode).toBe("transition");
     expect(viewData.spriteAnimationId).toBe("portrait-in");
-    expect(viewData.transformOptions).toEqual([
+    expect(transformAnimationRow.fields[0].options).toEqual([
       { value: "portrait-left", label: "Portrait Left" },
     ]);
-    expect(viewData.transitionAnimationOptions).toEqual([
-      { value: "portrait-in", label: "Portrait In" },
+    expect(transformAnimationRow.fields[1]).toMatchObject({
+      label: "Animation",
+      type: "select",
+      clearable: true,
+      placeholder: "Select animation",
+    });
+    expect(transformAnimationRow.fields[1].options).toEqual([
+      {
+        value: "portrait-in",
+        label: "Portrait In",
+        suffixText: "Transition",
+      },
+      {
+        value: "portrait-pulse",
+        label: "Portrait Pulse",
+        suffixText: "Update",
+      },
     ]);
     expect(viewData.selectedSpriteCharacter).toMatchObject({
       id: "character-1",
@@ -788,30 +867,39 @@ describe("commandLineDialogueBox.store", () => {
     });
   });
 
-  it("clears the selected sprite animation when animation mode changes", () => {
+  it("derives animation mode from the selected animation and clears it", () => {
     const state = createInitialState();
+    const animations = {
+      tree: [{ id: "portrait-update" }, { id: "portrait-transition" }],
+      items: {
+        "portrait-update": {
+          id: "portrait-update",
+          type: "animation",
+          animation: { type: "update" },
+        },
+        "portrait-transition": {
+          id: "portrait-transition",
+          type: "animation",
+          animation: { type: "transition" },
+        },
+      },
+    };
 
-    setSpriteAnimationMode({ state }, { mode: "update" });
-    setSpriteAnimationId({ state }, { animationId: "portrait-update" });
-    setSpriteAnimationMode({ state }, { mode: "transition" });
+    setSpriteAnimationId(
+      { state, props: { animations } },
+      { animationId: "portrait-update" },
+    );
+    expect(state.spriteAnimationMode).toBe("update");
 
+    setSpriteAnimationId(
+      { state, props: { animations } },
+      { animationId: "portrait-transition" },
+    );
     expect(state.spriteAnimationMode).toBe("transition");
+    expect(state.spriteAnimationId).toBe("portrait-transition");
+
+    setSpriteAnimationId({ state, props: { animations } }, {});
+    expect(state.spriteAnimationMode).toBe("none");
     expect(state.spriteAnimationId).toBe("");
-  });
-
-  it("tracks the speaker sprite tooltip position and visibility", () => {
-    const state = createInitialState();
-
-    showSpeakerSpriteTooltip({ state }, { x: 120, y: 64 });
-
-    expect(state.speakerSpriteTooltip).toEqual({
-      open: true,
-      x: 120,
-      y: 64,
-    });
-
-    hideSpeakerSpriteTooltip({ state });
-
-    expect(state.speakerSpriteTooltip.open).toBe(false);
   });
 });

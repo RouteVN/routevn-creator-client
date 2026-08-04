@@ -155,7 +155,7 @@ template:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
               - rtgl-view g=md w=f:
-                  - rtgl-form#form :form=${form} :defaultValues=${defaultValues} p=none:
+                  - rtgl-form#form :form=${form} :defaultValues=${defaultValues} p=none mb=120:
                       - rtgl-view#charactersContainer slot=characters g=md w=f:
                           - $for character, i in defaultValues.characters:
                               - rtgl-view#character${i}.characterRow data-index=${character.characterIndex} data-character-id=${character.id} d=h g=md av=t pv=md br=md w=f:

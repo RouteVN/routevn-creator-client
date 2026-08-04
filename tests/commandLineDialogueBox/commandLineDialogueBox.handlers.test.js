@@ -9,18 +9,16 @@ import {
   handleCharacterSpriteMenuButtonClick,
   handleFormChange,
   handleFormSectionAction,
-  handlePersistSpriteChange,
-  handleSpeakerSpriteTooltipMouseEnter,
-  handleSpeakerSpriteTooltipMouseLeave,
+  handleRemoveCustomTextSpeedClick,
   handleSpriteGroupTabClick,
   handleSpriteItemClick,
   handleSubmitClick,
+  handleTextSpeedChange,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.handlers.js";
 import {
   clearCharacterSprite,
   clearTempSelectedSpriteIds,
   createInitialState,
-  hideSpeakerSpriteTooltip,
   setAppendDialogue,
   setCharacterSpriteEnabled,
   setCharacterName,
@@ -56,7 +54,6 @@ import {
   selectSpriteSelectionConfirmState,
   selectSpriteSelectionState,
   showFullImagePreview,
-  showSpeakerSpriteTooltip,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -166,10 +163,6 @@ const createStore = (state) => ({
   setSearchQuery: (payload) => setSearchQuery({ state }, payload),
   setMode: (payload) => setMode({ state }, payload),
   showFullImagePreview: (payload) => showFullImagePreview({ state }, payload),
-  showSpeakerSpriteTooltip: (payload) =>
-    showSpeakerSpriteTooltip({ state }, payload),
-  hideSpeakerSpriteTooltip: (payload) =>
-    hideSpeakerSpriteTooltip({ state }, payload),
   setSpriteAnimationMode: (payload) =>
     setSpriteAnimationMode({ state }, payload),
   setSpriteAnimationId: (payload) =>
@@ -198,7 +191,7 @@ const createFormRefs = () => ({
 });
 
 describe("commandLineDialogueBox.handlers", () => {
-  it("renders an accessible speaker sprite tooltip trigger", () => {
+  it("renders the dialogue sprite content through the form slot", () => {
     const view = readFileSync(
       new URL(
         "../../src/components/commandLineDialogueBox/commandLineDialogueBox.view.yaml",
@@ -207,64 +200,33 @@ describe("commandLineDialogueBox.handlers", () => {
       "utf8",
     );
 
-    expect(view).toContain(
-      "button#speakerSpriteTooltip.commandLineDialogueBoxTooltipTrigger",
-    );
-    expect(view).toContain(
-      'aria-label="${speakerSpriteTooltipContent}"\': "?"',
-    );
-    expect(view).toContain("handler: handleSpeakerSpriteTooltipMouseEnter");
-    expect(view).toContain("handler: handleSpeakerSpriteTooltipMouseLeave");
-    expect(view).toContain("rtgl-tooltip ?open=${speakerSpriteTooltip.open}");
+    expect(view).toContain("rtgl-view slot=characterSprite g=md w=f");
+    expect(view).not.toContain("speakerSpriteTooltip");
+    expect(view).not.toContain("commandLineDialogueBoxTooltipTrigger");
     expect(view).toContain("handler: handleCharacterSpriteBoxContextMenu");
     expect(view).not.toContain("addSpeakerSpriteButton");
     expect(view).toContain("handler: handleCharacterSpriteBoxClick");
     expect(view).toContain("form-section-action:");
     expect(view).toContain("handler: handleFormSectionAction");
+    expect(view).toContain("rtgl-button#removeCustomTextSpeedButton");
+    expect(view).toContain("handler: handleRemoveCustomTextSpeedClick");
+    expect(view).toContain("rtgl-slider-input#textSpeed");
+    expect(view).toContain("handler: handleTextSpeedChange");
     expect(view).toContain("rtgl-form#dialogueForm");
-    expect(view).toContain("w=f p=none:");
+    expect(view).toContain("w=f p=none mb=120:");
     expect(view).toContain(
       "rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis",
     );
     expect(view).toContain("aria-haspopup=menu': null");
     expect(view).toContain("handler: handleCharacterSpriteMenuButtonClick");
     expect(view).not.toContain("clearCharacterSpriteButton");
-    expect(view).toContain("rtgl-segmented-control#persistSprite");
-    expect(
-      view.indexOf("rtgl-segmented-control#persistSprite"),
-    ).toBeGreaterThan(view.indexOf("rtgl-select#transitionAnimation"));
-  });
-
-  it("shows and hides the speaker sprite tooltip", () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const deps = {
-      store: createStore(state),
-      render,
-    };
-
-    handleSpeakerSpriteTooltipMouseEnter(deps, {
-      _event: {
-        currentTarget: {
-          getBoundingClientRect: () => ({
-            left: 100,
-            top: 80,
-            width: 16,
-          }),
-        },
-      },
-    });
-
-    expect(state.speakerSpriteTooltip).toEqual({
-      open: true,
-      x: 108,
-      y: 72,
-    });
-
-    handleSpeakerSpriteTooltipMouseLeave(deps);
-
-    expect(state.speakerSpriteTooltip.open).toBe(false);
-    expect(render).toHaveBeenCalledTimes(2);
+    expect(view).not.toContain("rtgl-select#transform");
+    expect(view).not.toContain("rtgl-select#animation");
+    expect(view).not.toContain("rtgl-slider-input#animationPlaybackSpeed");
+    expect(view).not.toContain("rtgl-segmented-control#persistSprite");
+    expect(view).not.toContain("rtgl-segmented-control#animationMode");
+    expect(view).not.toContain("rtgl-select#updateAnimation");
+    expect(view).not.toContain("rtgl-select#transitionAnimation");
   });
 
   it("hydrates persistCharacter and custom character name from props into the form state", () => {
@@ -522,8 +484,21 @@ describe("commandLineDialogueBox.handlers", () => {
     };
 
     handleBeforeMount(deps);
-    handlePersistSpriteChange(deps, {
-      _event: { detail: { value: false } },
+    handleFormChange(deps, {
+      _event: {
+        detail: {
+          values: {
+            resourceId: "layout-adv",
+            characterId: "character-1",
+            customCharacterName: false,
+            persistCharacter: true,
+            persistSprite: false,
+            spriteTransformId: "portrait-left",
+            spriteAnimationId: "",
+            append: false,
+          },
+        },
+      },
     });
     handleSubmitClick(deps);
 
@@ -618,41 +593,58 @@ describe("commandLineDialogueBox.handlers", () => {
     });
   });
 
-  it("removes custom text speed from the Options section action", async () => {
+  it("updates custom text speed from the slotted slider", () => {
     const state = createInitialState();
     const render = vi.fn();
-    const refs = createFormRefs();
-    const showDropdownMenu = vi.fn();
     const dispatchEvent = vi.fn();
     setCustomizeTextSpeed({ state }, { customizeTextSpeed: true });
-    setTextSpeed({ state }, { textSpeed: 42 });
 
-    await handleFormSectionAction(
+    handleTextSpeedChange(
       {
-        appService: { showDropdownMenu },
-        i18n: EN_I18N,
         props: {
           layouts,
           characters,
           dialogue: { content: [{ text: "Line text" }] },
         },
-        refs,
         render,
         store: createStore(state),
         dispatchEvent,
       },
       {
         _event: {
-          detail: {
-            sectionId: "options",
-            actionId: "remove-custom-text-speed",
-            position: { x: 120, y: 64 },
-          },
+          detail: { value: 42 },
         },
       },
     );
 
-    expect(showDropdownMenu).not.toHaveBeenCalled();
+    expect(state.textSpeed).toBe(42);
+    expect(render).toHaveBeenCalledOnce();
+    expect(
+      dispatchEvent.mock.calls[0][0].detail.presentationState.dialogue,
+    ).toMatchObject({ textSpeed: 42 });
+  });
+
+  it("removes custom text speed from its field action", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const refs = createFormRefs();
+    const dispatchEvent = vi.fn();
+    setCustomizeTextSpeed({ state }, { customizeTextSpeed: true });
+    setTextSpeed({ state }, { textSpeed: 42 });
+
+    handleRemoveCustomTextSpeedClick({
+      i18n: EN_I18N,
+      props: {
+        layouts,
+        characters,
+        dialogue: { content: [{ text: "Line text" }] },
+      },
+      refs,
+      render,
+      store: createStore(state),
+      dispatchEvent,
+    });
+
     expect(state.customizeTextSpeed).toBe(false);
     expect(state.textSpeed).toBe(42);
     expect(render).toHaveBeenCalledOnce();
@@ -1705,9 +1697,10 @@ describe("commandLineDialogueBox.handlers", () => {
     });
   });
 
-  it("updates sprite persistence from the sprite configuration panel", () => {
+  it("updates sprite configuration from the standard form rows", () => {
     const state = createInitialState();
     const dispatchEvent = vi.fn();
+    const refs = createFormRefs();
     const render = vi.fn();
 
     setSelectedMode({ state }, { mode: "adv" });
@@ -1723,13 +1716,15 @@ describe("commandLineDialogueBox.handlers", () => {
       },
     );
 
-    handlePersistSpriteChange(
+    handleFormChange(
       {
         props: {
           layouts,
           characters,
           transforms,
+          animations,
         },
+        refs,
         store: createStore(state),
         dispatchEvent,
         render,
@@ -1737,18 +1732,107 @@ describe("commandLineDialogueBox.handlers", () => {
       {
         _event: {
           detail: {
-            value: false,
+            values: {
+              resourceId: "layout-adv",
+              characterId: "",
+              customCharacterName: false,
+              persistCharacter: false,
+              persistSprite: false,
+              spriteTransformId: "portrait-left",
+              spriteAnimationId: "portrait-in",
+              spriteAnimationPlaybackSpeed: 1.5,
+              spriteAnimationPlaybackContinuity: "persistent",
+              append: false,
+            },
           },
         },
       },
     );
 
     expect(state.persistSprite).toBe(false);
+    expect(state.spriteTransformId).toBe("portrait-left");
+    expect(state.spriteAnimationId).toBe("portrait-in");
+    expect(state.spriteAnimationMode).toBe("transition");
+    expect(state.spriteAnimationPlaybackSpeed).toBe(1.5);
+    expect(state.spriteAnimationPlaybackContinuity).toBe("persistent");
     expect(render).toHaveBeenCalledTimes(1);
     expect(
       dispatchEvent.mock.calls[0][0].detail.presentationState.dialogue,
     ).toMatchObject({
       persistSprite: false,
+      character: {
+        sprite: {
+          transformId: "portrait-left",
+          animations: {
+            resourceId: "portrait-in",
+            playback: {
+              speed: 1.5,
+              continuity: "persistent",
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("seeds playback defaults when selecting an animation", () => {
+    const state = createInitialState();
+    const refs = createFormRefs();
+    const render = vi.fn();
+
+    setSelectedMode({ state }, { mode: "adv" });
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setSpriteCharacterId({ state }, { characterId: "character-1" });
+    setSpriteTransformId({ state }, { transformId: "portrait-left" });
+    setSelectedSpriteIds(
+      { state },
+      {
+        spriteIdsByGroupId: {
+          body: "sprite-body",
+        },
+      },
+    );
+
+    handleFormChange(
+      {
+        props: {
+          layouts,
+          characters,
+          transforms,
+          animations,
+        },
+        refs,
+        store: createStore(state),
+        dispatchEvent: vi.fn(),
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              resourceId: "layout-adv",
+              characterId: "",
+              customCharacterName: false,
+              persistCharacter: false,
+              persistSprite: true,
+              spriteTransformId: "portrait-left",
+              spriteAnimationId: "portrait-in",
+              append: false,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.spriteAnimationPlaybackSpeed).toBe(1);
+    expect(state.spriteAnimationPlaybackContinuity).toBe("render");
+    expect(refs.dialogueForm.reset).toHaveBeenCalledOnce();
+    expect(refs.dialogueForm.setValues).toHaveBeenCalledWith({
+      values: expect.objectContaining({
+        spriteAnimationId: "portrait-in",
+        spriteAnimationPlaybackSpeed: 1,
+        spriteAnimationPlaybackContinuity: "render",
+      }),
     });
   });
 
