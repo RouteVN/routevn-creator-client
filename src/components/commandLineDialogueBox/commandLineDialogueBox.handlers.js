@@ -837,6 +837,14 @@ export const handleFormSectionAction = async (deps, payload) => {
   const { appService, i18n, render, store } = deps;
   const { sectionId, actionId, position } = payload._event.detail;
 
+  if (sectionId === "options" && actionId === "remove-custom-text-speed") {
+    store.setCustomizeTextSpeed({ customizeTextSpeed: false });
+    render();
+    syncDialogueFormValues(deps);
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
   if (actionId !== "add") {
     return;
   }

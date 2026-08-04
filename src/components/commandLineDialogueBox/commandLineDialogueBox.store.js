@@ -1180,7 +1180,11 @@ export const selectViewData = ({ state, props, i18n }) => {
         fields: field.fields.map(mapFormField),
       };
       if (state.customizeTextSpeed) {
-        mappedSection.action = undefined;
+        mappedSection.action = {
+          id: "remove-custom-text-speed",
+          icon: "x",
+          label: "Remove custom text speed",
+        };
       }
       return mappedSection;
     }

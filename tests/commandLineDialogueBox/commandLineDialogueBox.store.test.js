@@ -454,7 +454,11 @@ describe("commandLineDialogueBox.store", () => {
       },
     });
 
-    expect(customizedViewData.form.fields[2].action).toBeUndefined();
+    expect(customizedViewData.form.fields[2].action).toEqual({
+      id: "remove-custom-text-speed",
+      icon: "x",
+      label: "Remove custom text speed",
+    });
   });
 
   it("normalizes text speed values to the supported 0 to 100 range", () => {

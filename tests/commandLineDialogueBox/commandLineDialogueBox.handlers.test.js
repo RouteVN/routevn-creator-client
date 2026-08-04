@@ -221,6 +221,8 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(view).toContain("handler: handleCharacterSpriteBoxClick");
     expect(view).toContain("form-section-action:");
     expect(view).toContain("handler: handleFormSectionAction");
+    expect(view).toContain("rtgl-form#dialogueForm");
+    expect(view).toContain("w=f p=none:");
     expect(view).toContain(
       "rtgl-button#characterSpriteMenuButton sq s=sm v=gh pre=ellipsis",
     );
@@ -614,6 +616,54 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(refs.dialogueForm.setValues).toHaveBeenCalledWith({
       values: expect.objectContaining({ textSpeed: 75 }),
     });
+  });
+
+  it("removes custom text speed from the Options section action", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const refs = createFormRefs();
+    const showDropdownMenu = vi.fn();
+    const dispatchEvent = vi.fn();
+    setCustomizeTextSpeed({ state }, { customizeTextSpeed: true });
+    setTextSpeed({ state }, { textSpeed: 42 });
+
+    await handleFormSectionAction(
+      {
+        appService: { showDropdownMenu },
+        i18n: EN_I18N,
+        props: {
+          layouts,
+          characters,
+          dialogue: { content: [{ text: "Line text" }] },
+        },
+        refs,
+        render,
+        store: createStore(state),
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "options",
+            actionId: "remove-custom-text-speed",
+            position: { x: 120, y: 64 },
+          },
+        },
+      },
+    );
+
+    expect(showDropdownMenu).not.toHaveBeenCalled();
+    expect(state.customizeTextSpeed).toBe(false);
+    expect(state.textSpeed).toBe(42);
+    expect(render).toHaveBeenCalledOnce();
+    expect(refs.dialogueForm.reset).toHaveBeenCalledOnce();
+    expect(refs.dialogueForm.setValues).toHaveBeenCalledWith({
+      values: expect.not.objectContaining({ customizeTextSpeed: true }),
+    });
+    expect(dispatchEvent).toHaveBeenCalledOnce();
+    expect(
+      dispatchEvent.mock.calls[0][0].detail.presentationState.dialogue,
+    ).not.toHaveProperty("textSpeed");
   });
 
   it("opens the dialogue sprite picker from the Speaker section menu", async () => {
