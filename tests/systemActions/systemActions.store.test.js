@@ -10,6 +10,7 @@ import {
   setRepositoryState,
   updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
+import { PRESENTATION_ACTION_CSS_ORDER } from "../../src/internal/presentationActionOrder.js";
 
 const TEST_I18N = {
   resourcePages: {},
@@ -21,6 +22,37 @@ const selectViewData = (deps) =>
   selectViewDataBase({ ...deps, i18n: TEST_I18N });
 
 describe("systemActions.store", () => {
+  it("uses the canonical presentation action order for state cards", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({
+      state,
+      props: { actionType: "presentation" },
+    });
+
+    expect(viewData.presentationActionOrder).toEqual(
+      PRESENTATION_ACTION_CSS_ORDER,
+    );
+  });
+
+  it("keeps authored system action cards in their existing DOM order", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({
+      state,
+      props: { actionType: "system" },
+    });
+
+    expect(Object.values(viewData.presentationActionOrder)).toEqual(
+      expect.arrayContaining([0]),
+    );
+    expect(
+      Object.values(viewData.presentationActionOrder).every(
+        (order) => order === 0,
+      ),
+    ).toBe(true);
+  });
+
   it("preserves explicit hidden modes for nested action pickers", () => {
     const state = createInitialState();
 

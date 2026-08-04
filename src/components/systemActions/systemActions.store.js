@@ -9,6 +9,10 @@ import {
   buildDialogueSpritePreviewLayers,
 } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
+import {
+  NEUTRAL_PRESENTATION_ACTION_CSS_ORDER,
+  PRESENTATION_ACTION_CSS_ORDER,
+} from "../../internal/presentationActionOrder.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
 import {
   getSpritesheetAnimationPreview,
@@ -286,6 +290,10 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     selectedLine: props.selectedLine,
     actionsType: attrs.actionType,
     showSelected: !!attrs.showSelected,
+    presentationActionOrder:
+      attrs.actionType === "presentation"
+        ? PRESENTATION_ACTION_CSS_ORDER
+        : NEUTRAL_PRESENTATION_ACTION_CSS_ORDER,
     showEmbeddedClose: shouldShowEmbeddedClose(attrs),
     dialogVariant: getDialogVariant(attrs),
     actionsDialogWidth: state.isTouchMode ? "100%" : "800",

@@ -334,6 +334,64 @@ describe("commandLineBgm.handlers", () => {
     },
   );
 
+  it("connects a clip to the previous clip from its context menu", async () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const setValues = vi.fn();
+    store.insertSound({ id: "intro-clip", resourceId: "intro", index: 0 });
+    store.insertSound({ id: "theme-clip", resourceId: "theme", index: 1 });
+    store.updateSound({
+      soundId: "theme-clip",
+      values: { startDelayMs: 5000 },
+    });
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "connect-to-previous" },
+    });
+
+    await handleSoundContextMenu(
+      {
+        store,
+        render,
+        refs: { form: { setValues } },
+        appService: { showDropdownMenu },
+        i18n,
+      },
+      {
+        _event: {
+          currentTarget: { dataset: { soundId: "theme-clip" } },
+          clientX: 120,
+          clientY: 240,
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: [
+        {
+          type: "item",
+          label: "Connect to Previous",
+          key: "connect-to-previous",
+        },
+        ...contextMenuItems,
+      ],
+      x: 120,
+      y: 240,
+      place: "bs",
+    });
+    expect(state.bgm.sounds[1].startDelayMs).toBe(2000);
+    expect(state.selectedSoundId).toBe("theme-clip");
+    expect(setValues).toHaveBeenCalledWith({
+      values: {
+        startDelayMs: 2000,
+        volume: 100,
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
   it("submits the canonical BGM channel", () => {
     const state = createState();
     const store = createStore(state);

@@ -1870,7 +1870,7 @@ export const selectViewData = ({ state, i18n }) => {
       previewButton: copy.previewButton ?? "Preview",
       downloadCanvasButton: copy.downloadCanvasButton ?? "Download canvas",
       sectionsTitle: copy.sectionsLabel ?? "Sections",
-      stateTitle: copy.stateTitle ?? "State",
+      stateTitle: copy.stateTitle ?? "Presentation state",
     };
   }
 
@@ -2244,7 +2244,7 @@ export const selectViewData = ({ state, i18n }) => {
     previewButton: copy.previewButton ?? "Preview",
     downloadCanvasButton: copy.downloadCanvasButton ?? "Download canvas",
     sectionsTitle: copy.sectionsLabel ?? "Sections",
-    stateTitle: copy.stateTitle ?? "State",
+    stateTitle: copy.stateTitle ?? "Presentation state",
   };
 };
 

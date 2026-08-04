@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { selectItems as selectItemsBase } from "../../src/components/commandLineActions/commandLineActions.store.js";
+import { PRESENTATION_ACTION_MODE_ORDER } from "../../src/internal/presentationActionOrder.js";
 import { EN_I18N } from "../support/i18n.js";
 
-const selectItems = ({ props }) =>
-  selectItemsBase({ props, i18n: EN_I18N });
+const selectItems = ({ props }) => selectItemsBase({ props, i18n: EN_I18N });
 
 const getSectionModes = (items, label) => {
   const sectionIndex = items.findIndex(
@@ -27,6 +27,18 @@ const getSectionModes = (items, label) => {
 };
 
 describe("commandLineActions.store", () => {
+  it("uses the canonical presentation action order", () => {
+    const modes = selectItems({
+      props: {
+        actionsType: "presentation",
+      },
+    })
+      .filter((item) => item.type === "item")
+      .map((item) => item.mode);
+
+    expect(modes).toEqual(PRESENTATION_ACTION_MODE_ORDER);
+  });
+
   it("labels the character action as Character Sprites", () => {
     const characterAction = selectItems({
       props: {

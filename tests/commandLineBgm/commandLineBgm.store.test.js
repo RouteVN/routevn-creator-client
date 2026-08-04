@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as bgmStore from "../../src/components/commandLineBgm/commandLineBgm.store.js";
 import {
   clearSelectedSound,
+  connectSoundToPrevious,
   createInitialState,
   insertSound,
   removeSound,
@@ -212,6 +213,13 @@ describe("commandLineBgm.store", () => {
       "startDelayMs",
       "volume",
     ]);
+    expect(selectedViewData.form.fields[0]).toMatchObject({
+      name: "startDelayMs",
+      label: "Start Delay",
+      type: "input-duration",
+      min: 0,
+      step: 10,
+    });
     expect(selectedViewData.defaultValues).toEqual({
       startDelayMs: 0,
       volume: 90,
@@ -243,6 +251,37 @@ describe("commandLineBgm.store", () => {
       },
     ]);
     expect(selectSelectedSoundId({ state })).toBeUndefined();
+  });
+
+  it("connects a sound to the exact end of the previous sound", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+    setBgm(
+      { state },
+      {
+        bgm: {
+          sounds: [
+            {
+              id: "intro-clip",
+              resourceId: "intro",
+              startDelayMs: 500,
+              startAt: 0.5,
+              endAt: 1.5,
+              playbackRate: 2,
+            },
+            {
+              id: "theme-clip",
+              resourceId: "theme",
+              startDelayMs: 4000,
+            },
+          ],
+        },
+      },
+    );
+
+    connectSoundToPrevious({ state }, { soundId: "theme-clip" });
+
+    expect(selectBgm({ state }).sounds[1].startDelayMs).toBe(1000);
   });
 
   it("updates a sound start delay from a horizontal timeline drag", () => {
