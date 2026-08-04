@@ -15,3 +15,4 @@ template:
                       - 'rtgl-view#action${i} data-action-id=${item.id} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="min-width: 0; box-sizing: border-box;"':
                           - rtgl-svg svg=${item.icon} wh=24: null
                           - rtgl-text s=sm w=1fg ellipsis=true: ${item.label}
+          - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null

@@ -14,7 +14,6 @@ describe("command-line form spacing", () => {
     );
 
     let dialogFormCount = 0;
-    let bottomSpacerCount = 0;
 
     for (const componentDirectory of componentDirectories) {
       const viewUrl = new URL(
@@ -26,15 +25,19 @@ describe("command-line form spacing", () => {
         .split("\n")
         .filter((line) => line.includes("- rtgl-form"));
 
-      dialogFormCount += formLines.filter(
+      const componentDialogFormCount = formLines.filter(
         (line) => !line.includes("slot=content"),
       ).length;
-      bottomSpacerCount += view.split(bottomSpacer).length - 1;
+      const componentBottomSpacerCount = view.split(bottomSpacer).length - 1;
+
+      dialogFormCount += componentDialogFormCount;
+      expect(componentBottomSpacerCount).toBeGreaterThanOrEqual(
+        componentDialogFormCount,
+      );
 
       expect(view).not.toContain("mb=120");
     }
 
     expect(dialogFormCount).toBeGreaterThan(0);
-    expect(bottomSpacerCount).toBe(dialogFormCount);
   });
 });

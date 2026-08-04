@@ -965,6 +965,31 @@ describe("commandLineCharacters.handlers", () => {
     });
   });
 
+  it("selects the bottom source index for a newly added character", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const store = createStoreApi(state);
+
+    setExistingCharacters({ state }, { characters: [{ id: "character-1" }] });
+
+    handleCharacterItemClick(
+      { store, render },
+      {
+        _event: {
+          currentTarget: {
+            dataset: { characterId: "character-2" },
+          },
+        },
+      },
+    );
+
+    expect(
+      selectSelectedCharacters({ state }).map((character) => character.id),
+    ).toEqual(["character-2", "character-1"]);
+    expect(selectPendingCharacterIndex({ state })).toBe(0);
+    expect(selectSelectedCharacterIndex({ state })).toBe(0);
+  });
+
   it("keeps existing characters when returning from sprite selection", () => {
     const state = createInitialState();
     const render = vi.fn();

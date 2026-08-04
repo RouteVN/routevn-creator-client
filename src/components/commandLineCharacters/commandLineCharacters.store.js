@@ -17,7 +17,6 @@ import {
 import {
   COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
-  COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
   DEFAULT_COMMAND_LINE_ITEM_BLUR,
   DEFAULT_COMMAND_LINE_ITEM_OPACITY,
   normalizeCommandLineItemBlur,
@@ -280,6 +279,10 @@ const normalizeSelectedCharacter = (character = {}, animations = {}) => {
   const nextCharacter = normalizeCommandLineItemEffects(
     structuredClone(character ?? {}),
   );
+  nextCharacter.opacityOptionEnabled =
+    nextCharacter.opacityOptionEnabled ?? nextCharacter.opacity !== undefined;
+  nextCharacter.blurOptionEnabled =
+    nextCharacter.blurOptionEnabled ?? nextCharacter.blur !== undefined;
   const selectedAnimationId = nextCharacter?.animations?.resourceId;
   const selectedAnimationMode = getAnimationModeById(
     animations,
@@ -498,14 +501,23 @@ export const addCharacter = ({ state }, { id, transformId } = {}) => {
     characterId: id,
   });
 
-  // Store raw character data (same structure as from props)
-  state.selectedCharacters.push({
+  // Source order is bottom-first while the form displays characters top-first.
+  state.selectedCharacters.unshift({
     id: id,
     transformId: defaultTransform,
     sprites: buildDefaultCharacterSprites({ characterData }),
     spriteName: "",
     animationMode: "none",
+    opacityOptionEnabled: false,
+    blurOptionEnabled: false,
   });
+
+  if (Number.isInteger(state.selectedCharacterIndex)) {
+    state.selectedCharacterIndex += 1;
+  }
+  if (Number.isInteger(state.pendingCharacterIndex)) {
+    state.pendingCharacterIndex += 1;
+  }
 };
 
 export const removeCharacter = ({ state }, { index } = {}) => {
@@ -724,10 +736,41 @@ export const updateCharacterOpacity = ({ state }, { index, opacity } = {}) => {
   const normalizedOpacity = normalizeCommandLineItemOpacity(opacity);
   if (normalizedOpacity === undefined) {
     delete character.opacity;
+    character.opacityOptionEnabled = false;
     return;
   }
 
   character.opacity = normalizedOpacity;
+  character.opacityOptionEnabled = true;
+};
+
+export const showCharacterOpacityOption = ({ state }, { index } = {}) => {
+  const character = state.selectedCharacters[index];
+  if (!character) {
+    return;
+  }
+
+  character.opacityOptionEnabled = true;
+  character.opacity =
+    normalizeCommandLineItemOpacity(character.opacity) ??
+    DEFAULT_COMMAND_LINE_ITEM_OPACITY;
+};
+
+export const removeCharacterOpacityOption = ({ state }, { index } = {}) => {
+  const character = state.selectedCharacters[index];
+  if (!character) {
+    return;
+  }
+
+  character.opacityOptionEnabled = false;
+  delete character.opacity;
+};
+
+export const selectCharacterOpacityOptionEnabled = (
+  { state },
+  { index } = {},
+) => {
+  return state.selectedCharacters[index]?.opacityOptionEnabled === true;
 };
 
 export const updateCharacterBlurEnabled = (
@@ -739,6 +782,8 @@ export const updateCharacterBlurEnabled = (
     return;
   }
 
+  character.blurOptionEnabled = true;
+
   if (!normalizeCommandLineItemBlurEnabled(enabled)) {
     character.blur = null;
     return;
@@ -749,6 +794,32 @@ export const updateCharacterBlurEnabled = (
   );
 };
 
+export const showCharacterBlurOption = ({ state }, { index } = {}) => {
+  const character = state.selectedCharacters[index];
+  if (!character) {
+    return;
+  }
+
+  character.blurOptionEnabled = true;
+  character.blur = normalizeCommandLineItemBlur(
+    character.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
+  );
+};
+
+export const removeCharacterBlurOption = ({ state }, { index } = {}) => {
+  const character = state.selectedCharacters[index];
+  if (!character) {
+    return;
+  }
+
+  character.blurOptionEnabled = false;
+  character.blur = null;
+};
+
+export const selectCharacterBlurOptionEnabled = ({ state }, { index } = {}) => {
+  return state.selectedCharacters[index]?.blurOptionEnabled === true;
+};
+
 export const updateCharacterBlurField = (
   { state },
   { index, fieldName, value } = {},
@@ -757,6 +828,8 @@ export const updateCharacterBlurField = (
   if (!character) {
     return;
   }
+
+  character.blurOptionEnabled = true;
 
   character.blur = normalizeCommandLineItemBlurWithField({
     blur: character.blur,
@@ -1071,7 +1144,9 @@ export const selectCharactersWithRepositoryData = ({ state, copy }) => {
         ...getInlineTransformFields(char),
         animations: char.animations,
         animationMode: char.animationMode,
+        opacityOptionEnabled: char.opacityOptionEnabled,
         opacity: char.opacity,
+        blurOptionEnabled: char.blurOptionEnabled,
         blur: char.blur,
         spriteGroups: spriteSelectionGroups,
         spriteGroupBoxes,
@@ -1101,7 +1176,9 @@ export const selectCharactersWithRepositoryData = ({ state, copy }) => {
       ...getInlineTransformFields(char),
       animations: char.animations,
       animationMode: char.animationMode,
+      opacityOptionEnabled: char.opacityOptionEnabled,
       opacity: char.opacity,
+      blurOptionEnabled: char.blurOptionEnabled,
       blur: char.blur,
       spriteGroups: spriteSelectionGroups,
       spriteGroupBoxes,
@@ -1116,15 +1193,199 @@ export const selectCharactersWithRepositoryData = ({ state, copy }) => {
   });
 };
 
-const form = {
-  fields: [
-    {
-      type: "slot",
-      slot: "characters",
-      description: "Characters",
-    },
-  ],
+const createCharacterFormSlots = (characterIndex) => {
+  const prefix = `character-${characterIndex}`;
+  return {
+    formSectionId: prefix,
+    spriteFormSlot: `${prefix}-sprite`,
+    spriteSpacerFormSlot: `${prefix}-sprite-spacer`,
+    transformModeFormSlot: `${prefix}-transform-mode`,
+    predefinedTransformFormSlot: `${prefix}-predefined-transform`,
+    transformSpacerFormSlot: `${prefix}-transform-spacer`,
+    customTransformFormSlot: `${prefix}-custom-transform`,
+    animationFormSlot: `${prefix}-animation`,
+    playbackSpeedFormSlot: `${prefix}-playback-speed`,
+    playbackContinuityFormSlot: `${prefix}-playback-continuity`,
+    playbackLoopFormSlot: `${prefix}-playback-loop`,
+    playbackLoopSpacerFormSlot: `${prefix}-playback-loop-spacer`,
+    opacityFormSlot: `${prefix}-opacity`,
+    blurXFormSlot: `${prefix}-blur-x`,
+    blurYFormSlot: `${prefix}-blur-y`,
+    blurQualityFormSlot: `${prefix}-blur-quality`,
+    blurKernelSizeFormSlot: `${prefix}-blur-kernel-size`,
+    blurRepeatEdgePixelsFormSlot: `${prefix}-blur-repeat-edge-pixels`,
+    spriteGroupsFormSlot: `${prefix}-sprite-groups`,
+  };
 };
+
+const createCharactersForm = (characters = []) => ({
+  fields: characters.map((character) => {
+    const fields = [
+      {
+        type: "row",
+        fields: [
+          {
+            type: "slot",
+            slot: character.spriteFormSlot,
+            label: "Sprite",
+          },
+          {
+            type: "slot",
+            slot: character.spriteSpacerFormSlot,
+          },
+        ],
+      },
+      {
+        type: "row",
+        fields: [
+          {
+            type: "slot",
+            slot: character.transformModeFormSlot,
+            label: "Transform",
+          },
+          {
+            type: "slot",
+            slot: character.customTransform
+              ? character.transformSpacerFormSlot
+              : character.predefinedTransformFormSlot,
+            label: character.customTransform
+              ? undefined
+              : "Predefined Transform",
+          },
+        ],
+      },
+    ];
+
+    if (character.customTransform) {
+      fields.push({
+        type: "slot",
+        slot: character.customTransformFormSlot,
+      });
+    }
+
+    fields.push({
+      type: "slot",
+      slot: character.animationFormSlot,
+      label: "Animation",
+    });
+
+    if (character.animationId) {
+      fields.push({
+        type: "row",
+        fields: [
+          {
+            type: "slot",
+            slot: character.playbackSpeedFormSlot,
+            label: "Playback Speed",
+          },
+          {
+            type: "slot",
+            slot: character.playbackContinuityFormSlot,
+            label: "Continuity",
+          },
+        ],
+      });
+    }
+
+    if (character.animationId && character.animationMode === "update") {
+      fields.push({
+        type: "row",
+        fields: [
+          {
+            type: "slot",
+            slot: character.playbackLoopFormSlot,
+            label: "Loop",
+          },
+          {
+            type: "slot",
+            slot: character.playbackLoopSpacerFormSlot,
+          },
+        ],
+      });
+    }
+
+    if (character.opacityOptionEnabled) {
+      fields.push({
+        type: "slot",
+        slot: character.opacityFormSlot,
+      });
+    }
+
+    if (character.blurOptionEnabled) {
+      fields.push({
+        type: "section",
+        id: `${character.formSectionId}-blur`,
+        label: "Blur",
+        separator: false,
+        action: {
+          id: "remove",
+          icon: "x",
+          label: "Remove",
+        },
+        fields: [
+          {
+            type: "row",
+            fields: [
+              {
+                type: "slot",
+                slot: character.blurXFormSlot,
+                label: "Blur X",
+              },
+              {
+                type: "slot",
+                slot: character.blurYFormSlot,
+                label: "Blur Y",
+              },
+            ],
+          },
+          {
+            type: "row",
+            fields: [
+              {
+                type: "slot",
+                slot: character.blurQualityFormSlot,
+                label: "Quality",
+              },
+              {
+                type: "slot",
+                slot: character.blurKernelSizeFormSlot,
+                label: "Kernel Size",
+              },
+            ],
+          },
+          {
+            type: "slot",
+            slot: character.blurRepeatEdgePixelsFormSlot,
+            label: "Repeat Edge Pixels",
+          },
+        ],
+      });
+    }
+
+    if (character.showSpriteGroupBoxes) {
+      fields.push({
+        type: "slot",
+        slot: character.spriteGroupsFormSlot,
+        label: "Sprite Groups",
+      });
+    }
+
+    return {
+      type: "section",
+      id: character.formSectionId,
+      label: character.displayName,
+      action:
+        character.opacityOptionEnabled && character.blurOptionEnabled
+          ? undefined
+          : {
+              id: "add",
+              icon: "plus",
+              label: "Add option",
+            },
+      fields,
+    };
+  }),
+});
 
 export const selectViewData = ({ state, props = {}, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
@@ -1415,7 +1676,9 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         ),
         animationCanLoop,
         animationLoopDisabled: !animationCanLoop,
+        opacityOptionEnabled: char.opacityOptionEnabled === true,
         opacity: char.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
+        blurOptionEnabled: char.blurOptionEnabled === true,
         blurEnabled: Boolean(char.blur),
         blur: normalizeCommandLineItemBlur(
           char.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
@@ -1425,8 +1688,15 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   );
 
   // Create default values with character data and options
+  const displayedCharacters = characterControls
+    .slice()
+    .reverse()
+    .map((character) => ({
+      ...character,
+      ...createCharacterFormSlots(character.characterIndex),
+    }));
   const defaultValues = {
-    characters: characterControls.slice().reverse(),
+    characters: displayedCharacters,
     transformOptions,
     animationOptions,
     animationPlaybackLoopOptions: localizeCommandLineOptions(
@@ -1439,10 +1709,6 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     ),
     transformModeOptions: localizeCommandLineOptions(
       TRANSFORM_MODE_OPTIONS,
-      copy,
-    ),
-    blurToggleOptions: localizeCommandLineOptions(
-      COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
       copy,
     ),
     blurKernelSizeOptions: localizeCommandLineOptions(
@@ -1482,33 +1748,35 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       props,
     }),
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
-    form: localizeCommandLineForm(form, copy),
+    form: localizeCommandLineForm(
+      createCharactersForm(displayedCharacters),
+      copy,
+    ),
+    formKey:
+      displayedCharacters
+        .map((character) =>
+          [
+            character.characterIndex,
+            character.id,
+            character.displayName,
+            character.customTransform ? "custom-transform" : "preset-transform",
+            character.animationId ?? "no-animation",
+            character.animationMode,
+            character.opacityOptionEnabled ? "opacity" : "no-opacity",
+            character.blurOptionEnabled ? "blur-option" : "no-blur-option",
+            character.blurEnabled ? "blur" : "no-blur",
+            character.showSpriteGroupBoxes ? "sprite-groups" : "no-groups",
+          ].join(":"),
+        )
+        .join("|") || "no-characters",
     defaultValues,
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     noAvatarLabel: localizeCommandLineText("No Avatar", copy),
     noPreviewLabel: localizeCommandLineText("No preview", copy),
     noSpriteLabel: localizeCommandLineText("No Sprite", copy),
-    transformLabel: localizeCommandLineText("Transform", copy),
     editButtonLabel: localizeCommandLineText("Edit", copy),
-    predefinedTransformLabel: localizeCommandLineText(
-      "Predefined Transform",
-      copy,
-    ),
     opacityLabel: localizeCommandLineText("Opacity", copy),
-    blurLabel: localizeCommandLineText("Blur", copy),
-    qualityLabel: localizeCommandLineText("Quality", copy),
-    kernelLabel: localizeCommandLineText("Kernel", copy),
-    repeatEdgeLabel: localizeCommandLineText("Repeat Edge", copy),
-    animationLabel: localizeCommandLineText("Animation", copy),
-    animationPlaybackSpeedLabel: localizeCommandLineText(
-      "Playback Speed",
-      copy,
-    ),
-    animationPlaybackLoopLabel: localizeCommandLineText("Loop", copy),
-    animationPlaybackContinuityLabel: localizeCommandLineText(
-      "Continuity",
-      copy,
-    ),
+    removeOpacityLabel: localizeCommandLineText("Remove Opacity", copy),
     animationPlaybackLoopDisabledDescription: localizeCommandLineText(
       "loopingRequiresKeyframesDescription",
       copy,
@@ -1517,7 +1785,6 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       "Select animation",
       copy,
     ),
-    spriteGroupsLabel: localizeCommandLineText("Sprite Groups", copy),
     addCharacterButtonLabel: localizeCommandLineText("+ Add Character", copy),
     submitButtonLabel: localizeCommandLineText("Submit", copy),
     selectButtonLabel: localizeCommandLineText("Select", copy),

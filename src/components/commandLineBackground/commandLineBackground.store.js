@@ -911,6 +911,11 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
           placeholder: "Select transform",
           options: transformOptions,
         },
+        {
+          $when: "customTransform == true",
+          type: "slot",
+          slot: "transformSpacer",
+        },
       ],
     },
     {
@@ -919,6 +924,50 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       slot: "custom-transform",
     },
   ];
+
+  formFields.push({
+    name: "animationId",
+    label: "Animation",
+    type: "select",
+    clearable: true,
+    placeholder: "Select animation",
+    options: animationOptions,
+  });
+  if (selectedAnimationMode !== "none") {
+    formFields.push({
+      name: "playbackSpeed",
+      label: "Playback Speed",
+      type: "input-number",
+      min: 0.01,
+      step: 0.1,
+      required: true,
+    });
+  }
+  if (selectedAnimationMode === "update") {
+    formFields.push({
+      name: "playbackLoop",
+      label: "Loop",
+      type: "segmented-control",
+      clearable: false,
+      disabled: !selectedAnimationCanLoop,
+      description: selectedAnimationCanLoop
+        ? undefined
+        : "loopingRequiresKeyframesDescription",
+      options: [
+        { value: false, label: "Don't Loop" },
+        { value: true, label: "Loop" },
+      ],
+    });
+  }
+  if (selectedAnimationMode !== "none") {
+    formFields.push({
+      name: "playbackContinuity",
+      label: "Continuity",
+      type: "segmented-control",
+      clearable: false,
+      options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
+    });
+  }
 
   if (selectedResource?.resourceType === "video") {
     formFields.push({
@@ -1042,65 +1091,6 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       ],
     });
   }
-  if (state.animationOptionEnabled) {
-    const animationFields = [
-      {
-        name: "animationId",
-        type: "select",
-        noClear: true,
-        required: true,
-        placeholder: "Select animation",
-        options: animationOptions,
-      },
-    ];
-    if (selectedAnimationMode !== "none") {
-      animationFields.push({
-        name: "playbackSpeed",
-        label: "Playback Speed",
-        type: "input-number",
-        min: 0.01,
-        step: 0.1,
-        required: true,
-      });
-    }
-    if (selectedAnimationMode === "update") {
-      animationFields.push({
-        name: "playbackLoop",
-        label: "Loop",
-        type: "segmented-control",
-        clearable: false,
-        disabled: !selectedAnimationCanLoop,
-        description: selectedAnimationCanLoop
-          ? undefined
-          : "loopingRequiresKeyframesDescription",
-        options: [
-          { value: false, label: "Don't Loop" },
-          { value: true, label: "Loop" },
-        ],
-      });
-    }
-    if (selectedAnimationMode !== "none") {
-      animationFields.push({
-        name: "playbackContinuity",
-        label: "Continuity",
-        type: "segmented-control",
-        clearable: false,
-        options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
-      });
-    }
-    optionFields.push({
-      type: "section",
-      id: "animation",
-      label: "Animation",
-      action: {
-        id: "remove",
-        icon: "x",
-        label: "Remove",
-      },
-      fields: animationFields,
-    });
-  }
-
   const optionsSection = {
     type: "section",
     id: "options",
@@ -1110,8 +1100,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   const allOptionsVisible =
     state.backgroundColorOptionEnabled &&
     state.opacityOptionEnabled &&
-    state.selectedBlurEnabled &&
-    state.animationOptionEnabled;
+    state.selectedBlurEnabled;
   if (!allOptionsVisible) {
     optionsSection.action = {
       id: "add",

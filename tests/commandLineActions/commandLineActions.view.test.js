@@ -23,5 +23,8 @@ describe("commandLineActions view", () => {
       expect(view).toContain('style="min-width: 0; box-sizing: border-box;"');
       expect(view).toContain("rtgl-text s=sm w=1fg ellipsis=true");
     }
+    expect(commandLineActionsView).toContain(
+      'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"',
+    );
   });
 });

@@ -1,4 +1,8 @@
 import { buildCharacterSpritePreviewLayer } from "../../internal/characterSpritePreview.js";
+import {
+  localizeCommandLineText,
+  selectCommandLineCopy,
+} from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const getCharacterIndexFromEvent = (event) => {
   const index = Number.parseInt(event?.currentTarget?.dataset?.index, 10);
@@ -7,6 +11,18 @@ const getCharacterIndexFromEvent = (event) => {
 
 const getEventValue = (event) =>
   event?.detail?.value ?? event?.currentTarget?.value ?? event?.target?.value;
+
+const parseCharacterSectionId = (sectionId) => {
+  const match = /^character-(\d+)(?:-(blur))?$/.exec(sectionId ?? "");
+  if (!match) {
+    return undefined;
+  }
+
+  return {
+    characterIndex: Number.parseInt(match[1], 10),
+    option: match[2],
+  };
+};
 
 const TRANSFORM_FIELDS = [
   "x",
@@ -151,7 +167,7 @@ const beginNewCharacterSpriteSelection = (store, characterId) => {
   });
 
   const currentCharacters = store.selectSelectedCharacters();
-  const newCharacterIndex = currentCharacters.length - 1;
+  const newCharacterIndex = 0;
   const spriteSelectionGroups =
     store.selectSpriteSelectionGroupsForCharacterIndex({
       index: newCharacterIndex,
@@ -564,6 +580,19 @@ export const handleBlurFieldInput = (deps, payload) => {
 
 export const handleBlurFieldChange = handleBlurFieldInput;
 
+export const handleRemoveCharacterOpacityClick = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+
+  if (index === undefined) {
+    return;
+  }
+
+  store.removeCharacterOpacityOption({ index });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
 export const handleFileExplorerItemClick = (deps, payload) => {
   const { refs, store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
@@ -604,6 +633,64 @@ export const handleFormExtra = () => {
 
 export const handleFormChange = () => {
   // Transform and animation updates are handled by direct value-change listeners.
+};
+
+export const handleFormSectionAction = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { actionId, position, sectionId } = payload._event.detail;
+  const section = parseCharacterSectionId(sectionId);
+  if (section === undefined) {
+    return;
+  }
+
+  const { characterIndex, option } = section;
+  if (actionId === "remove" && option === "blur") {
+    store.removeCharacterBlurOption({ index: characterIndex });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+  if (actionId !== "add" || option) {
+    return;
+  }
+
+  const copy = selectCommandLineCopy(i18n);
+  const items = [];
+  if (!store.selectCharacterOpacityOptionEnabled({ index: characterIndex })) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Opacity", copy),
+      key: "opacity",
+    });
+  }
+  if (!store.selectCharacterBlurOptionEnabled({ index: characterIndex })) {
+    items.push({
+      type: "item",
+      label: localizeCommandLineText("Blur", copy),
+      key: "blur",
+    });
+  }
+  if (items.length === 0) {
+    return;
+  }
+
+  const result = await appService.showDropdownMenu({
+    items,
+    x: position.x,
+    y: position.y,
+    place: "be",
+  });
+
+  if (result?.item?.key === "opacity") {
+    store.showCharacterOpacityOption({ index: characterIndex });
+  } else if (result?.item?.key === "blur") {
+    store.showCharacterBlurOption({ index: characterIndex });
+  } else {
+    return;
+  }
+
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleCharacterItemClick = (deps, payload) => {

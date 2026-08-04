@@ -16,7 +16,6 @@ import {
 } from "../../src/components/commandLineBackground/commandLineBackground.handlers.js";
 import {
   createInitialState,
-  removeAnimationOption,
   removeOpacityOption,
   selectAnimationOptionEnabled,
   selectBackgroundLoop,
@@ -63,7 +62,6 @@ import {
   setSelectedOpacity,
   setSelectedResource,
   setSelectedTransform,
-  showAnimationOption,
   showBackgroundColorOption,
   showBlurOption,
   showOpacityOption,
@@ -78,7 +76,6 @@ const createEmptyCollection = () => ({
 });
 
 const createStoreApi = (state) => ({
-  removeAnimationOption: (payload) => removeAnimationOption({ state }, payload),
   removeOpacityOption: (payload) => removeOpacityOption({ state }, payload),
   selectAnimationOptionEnabled: () => selectAnimationOptionEnabled({ state }),
   selectBackgroundLoop: () => selectBackgroundLoop({ state }),
@@ -142,7 +139,6 @@ const createStoreApi = (state) => ({
   setTempSelectedResource: (payload) =>
     setTempSelectedResource({ state }, payload),
   setUiConfig: (payload) => setUiConfig({ state }, payload),
-  showAnimationOption: (payload) => showAnimationOption({ state }, payload),
   showBackgroundColorOption: (payload) =>
     showBackgroundColorOption({ state }, payload),
   showBlurOption: (payload) => showBlurOption({ state }, payload),
@@ -797,11 +793,6 @@ describe("commandLineBackground.handlers", () => {
           label: "Blur",
           key: "blur",
         },
-        {
-          type: "item",
-          label: "Animation",
-          key: "animation",
-        },
       ],
       x: 120,
       y: 240,
@@ -1007,11 +998,6 @@ describe("commandLineBackground.handlers", () => {
           label: "Blur",
           key: "blur",
         },
-        {
-          type: "item",
-          label: "Animation",
-          key: "animation",
-        },
       ],
       x: 120,
       y: 240,
@@ -1182,7 +1168,7 @@ describe("commandLineBackground.handlers", () => {
     expect(render).toHaveBeenCalledTimes(1);
   });
 
-  it("removes animation from its section action", async () => {
+  it("clears animation from its primary select", () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
@@ -1202,7 +1188,7 @@ describe("commandLineBackground.handlers", () => {
       },
     );
 
-    await handleOptionsSectionAction(
+    handleFormInputChange(
       {
         store: createStoreApi(state),
         render,
@@ -1211,8 +1197,8 @@ describe("commandLineBackground.handlers", () => {
       {
         _event: {
           detail: {
-            sectionId: "animation",
-            actionId: "remove",
+            name: "animationId",
+            value: undefined,
           },
         },
       },

@@ -176,22 +176,27 @@ const baseForm = {
     },
     {
       $when: "transitionAnimationId",
-      name: "playbackSpeed",
-      label: "Playback Speed",
-      type: "input-number",
-      min: 0.01,
-      step: 0.1,
-      required: true,
-    },
-    {
-      $when: "transitionAnimationId",
-      name: "playbackContinuity",
-      label: "Continuity",
-      type: "segmented-control",
-      clearable: false,
-      options: [
-        { value: "render", label: "Single Line" },
-        { value: "persistent", label: "Persistent" },
+      type: "row",
+      fields: [
+        {
+          name: "playbackSpeed",
+          label: "Playback Speed",
+          type: "slider-with-input",
+          min: 0.01,
+          max: 4,
+          step: 0.01,
+          required: true,
+        },
+        {
+          name: "playbackContinuity",
+          label: "Continuity",
+          type: "segmented-control",
+          clearable: false,
+          options: [
+            { value: "render", label: "Single Line" },
+            { value: "persistent", label: "Persistent" },
+          ],
+        },
       ],
     },
   ],
