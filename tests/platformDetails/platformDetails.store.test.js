@@ -80,6 +80,33 @@ describe("platformDetails.store", () => {
     });
   });
 
+  it("requires the Windows application identifier in the platform form", () => {
+    const state = createInitialState();
+    openPlatformCreateDialog(
+      { state },
+      {
+        platform: "windows",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "",
+          iconFileId: "windows-icon-1",
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.platformEditForm.fields).toContainEqual(
+      expect.objectContaining({
+        name: "applicationIdentifier",
+        required: true,
+        description:
+          EN_I18N.platformDetailsPage
+            .windowsApplicationIdentifierDescription,
+      }),
+    );
+  });
+
   it("shows native platform details in the visible tabs", () => {
     const state = createInitialState();
     setPlatformApplicationInfo(

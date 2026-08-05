@@ -78,8 +78,10 @@ Required behavior:
 
 The reusable Windows template currently uses `vn.routevn.shell` for every
 export, so Windows exports share this database path until per-game identifier
-stamping is implemented. This temporary limitation is specific to the Windows
-packaging path. The macOS exporter stamps the editable
+stamping is implemented. Windows Platform Details still requires an editable
+application identifier for release metadata, but the current packager does not
+apply that value to the Tauri runtime configuration. This temporary limitation
+is specific to the Windows packaging path. The macOS exporter stamps the editable
 `platformDetails.macos.applicationIdentifier`, and the macOS shell applies it
 to Tauri's runtime configuration before the SQL plugin initializes. Users must
 keep that value stable across builds that should share saves. The later Windows

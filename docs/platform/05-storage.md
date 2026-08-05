@@ -74,6 +74,9 @@ Important details:
   Web manifest, and generated `app-icon-192.png`/`app-icon-512.png` files,
   Windows values to executable/installer version metadata, and macOS values to
   `Info.plist`
+- the Windows `applicationIdentifier` starts blank and is required and editable
+- the Windows `iconFileId` starts empty; the user must upload an image, which is
+  cropped to 256 by 256 pixels before Windows Platform Details can be created
 - the macOS `applicationIdentifier` starts blank, is required and editable,
   and controls both the exported app identity and save-data location; builds
   using different identifiers do not share saves
@@ -90,6 +93,8 @@ Important details:
 - platform detail keys do not exist until the user adds the corresponding
   platform and submits its prefilled create form; cancelling does not write a
   key, and created platform keys can be edited but not deleted
+- a later project-icon update fills an empty macOS platform icon, but never an
+  empty Windows platform icon
 - preview data under `releaseInfo.web`, `releaseInfo.windows`, or
   `releaseInfo.macos` is copied to the matching `platformDetails.*` key when
   first read; obsolete Web icon metadata is removed because Web export uses

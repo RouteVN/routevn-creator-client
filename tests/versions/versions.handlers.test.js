@@ -71,7 +71,8 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
           applicationInfo.applicationIdentifier = "web-project-one";
         }
         if (platform === "windows") {
-          applicationInfo.applicationIdentifier = "";
+          applicationInfo.applicationIdentifier =
+            "com.example.windows-project";
           applicationInfo.publisher = "Studio One";
           applicationInfo.description = "Project description";
           applicationInfo.copyright = "";
@@ -838,6 +839,34 @@ describe("versions Windows export handlers", () => {
     });
   });
 
+  it("requires a Windows application identifier before opening export confirmation", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+      applicationName: "Windows Edition",
+      iconFileId: "windows-icon",
+      applicationIdentifier: "",
+      publisher: "Release Studio",
+      description: "Windows release",
+      copyright: "",
+    });
+
+    await handleDownloadWindowsExecutableClick(
+      deps,
+      createVersionClickPayload(),
+    );
+
+    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message:
+        EN_I18N.versionsPage.platformDetailsWindowsIdentifierRequired,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+  });
+
   it("sanitizes artifact filenames without changing embedded titles", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
@@ -949,7 +978,7 @@ describe("versions Windows export handlers", () => {
     ).toMatchObject({
       title: "Project One",
       version: "1.0.1.0",
-      applicationIdentifier: "",
+      applicationIdentifier: "com.example.windows-project",
       publisher: "Studio One",
       description: "Project description",
       copyright: "",

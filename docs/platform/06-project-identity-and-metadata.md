@@ -108,6 +108,12 @@ Important details:
 - the native Windows SQLite player does not use this namespace as a database
   partition key
 
+Windows Platform Details has its own required, editable application identifier.
+It is exported as Windows release metadata, but the reusable Windows player
+template does not yet apply it as the Tauri runtime identifier. That runtime
+continues to use the shell identifier described below until per-game identifier
+stamping is implemented.
+
 Implication:
 
 - the same exported game keeps the same save bucket when moved to a different

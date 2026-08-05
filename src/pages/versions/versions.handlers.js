@@ -316,6 +316,12 @@ const getPlatformDetailsValidationMessage = (code, copy) => {
       "The Web application identifier is invalid. Update it before exporting."
     );
   }
+  if (code === "windows-identifier-required") {
+    return (
+      copy.platformDetailsWindowsIdentifierRequired ??
+      "Add a Windows application identifier in Platform Details before exporting."
+    );
+  }
   if (code === "windows-identifier-invalid") {
     return (
       copy.platformDetailsWindowsIdentifierInvalid ??

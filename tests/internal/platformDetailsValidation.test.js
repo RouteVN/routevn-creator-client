@@ -11,7 +11,7 @@ describe("platform details validation", () => {
     ).toEqual({ valid: false, code: "application-name-required" });
   });
 
-  it("allows an empty Windows identifier and validates one when provided", () => {
+  it("requires a valid Windows identifier", () => {
     expect(
       validatePlatformDetails({
         platform: "windows",
@@ -21,7 +21,7 @@ describe("platform details validation", () => {
           applicationIdentifier: "",
         },
       }),
-    ).toEqual({ valid: true });
+    ).toEqual({ valid: false, code: "windows-identifier-required" });
     expect(
       validatePlatformDetails({
         platform: "windows",
@@ -32,6 +32,16 @@ describe("platform details validation", () => {
         },
       }),
     ).toEqual({ valid: false, code: "windows-identifier-invalid" });
+    expect(
+      validatePlatformDetails({
+        platform: "windows",
+        applicationInfo: {
+          applicationName: "Project One",
+          iconFileId: "windows-icon",
+          applicationIdentifier: "com.example.project-one",
+        },
+      }),
+    ).toEqual({ valid: true });
   });
 
   it("requires icons for native platforms but keeps the Web icon optional", () => {

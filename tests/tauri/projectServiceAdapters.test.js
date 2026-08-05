@@ -483,6 +483,38 @@ describe("tauri project service adapters preflight reads", () => {
     );
   });
 
+  it("requires a valid application identifier for Windows exports", async () => {
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const options = {
+      projectData: {},
+      fileEntries: [],
+      outputPath: "/exports/Game.exe",
+      title: "Game",
+      version: "1.0.0.4",
+      applicationIdentifier: "",
+      iconFileId: "icon-1",
+      getCurrentReference: () => ({
+        projectPath: "/projects/demo",
+        cacheKey: "/projects/demo",
+      }),
+    };
+
+    await expect(
+      fileAdapter.createWindowsPortableExecutableToPath(options),
+    ).rejects.toThrow(
+      "Native application identifier must use reverse-domain notation with only letters, numbers, hyphens, and periods.",
+    );
+    await expect(
+      fileAdapter.createWindowsInstallerToPath(options),
+    ).rejects.toThrow(
+      "Native application identifier must use reverse-domain notation with only letters, numbers, hyphens, and periods.",
+    );
+    expect(mocked.invoke).not.toHaveBeenCalled();
+  });
+
   it("preflights and invokes universal macOS application export", async () => {
     const onProgress = vi.fn();
     mocked.exists.mockResolvedValue(true);

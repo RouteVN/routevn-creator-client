@@ -828,32 +828,23 @@ export const createProjectRepositoryService = ({
     return platformDetails;
   };
 
-  const syncMissingPlatformDetailsIcons = async ({ store, projectInfo }) => {
+  const syncMissingMacosPlatformDetailsIcon = async ({
+    store,
+    projectInfo,
+  }) => {
     if (!projectInfo.iconFileId) {
       return;
     }
 
-    for (const platform of Object.keys(PLATFORM_DETAILS_KEYS)) {
-      if (platform === "web") {
-        continue;
-      }
-
-      const key = getPlatformDetailsKey(platform);
-      const platformDetails = await readPlatformDetailsFromStore(
-        store,
-        platform,
-      );
-      if (!platformDetails) {
-        continue;
-      }
-
-      if (platformDetails.iconFileId) {
-        continue;
-      }
-
-      platformDetails.iconFileId = projectInfo.iconFileId;
-      await store.app.set(key, platformDetails);
+    const platform = "macos";
+    const key = getPlatformDetailsKey(platform);
+    const platformDetails = await readPlatformDetailsFromStore(store, platform);
+    if (!platformDetails || platformDetails.iconFileId) {
+      return;
     }
+
+    platformDetails.iconFileId = projectInfo.iconFileId;
+    await store.app.set(key, platformDetails);
   };
 
   const writeProjectInfoToStore = async ({
@@ -870,7 +861,7 @@ export const createProjectRepositoryService = ({
     await store.app.set(PROJECT_INFO_KEY, nextProjectInfo);
 
     if (Object.hasOwn(patch, "iconFileId")) {
-      await syncMissingPlatformDetailsIcons({
+      await syncMissingMacosPlatformDetailsIcon({
         store,
         projectInfo: nextProjectInfo,
       });
@@ -941,7 +932,7 @@ export const createProjectRepositoryService = ({
     });
     return createPlatformDetails(platform, {
       applicationName: projectInfo.name,
-      iconFileId: projectInfo.iconFileId,
+      iconFileId: platform === "windows" ? null : projectInfo.iconFileId,
     });
   };
 
@@ -965,7 +956,7 @@ export const createProjectRepositoryService = ({
     });
     const defaults = createPlatformDetails(platform, {
       applicationName: projectInfo.name,
-      iconFileId: projectInfo.iconFileId,
+      iconFileId: platform === "windows" ? null : projectInfo.iconFileId,
     });
     const platformDetails = mergePlatformDetails(platform, defaults, patch);
     await store.app.set(getPlatformDetailsKey(platform), platformDetails);

@@ -136,6 +136,13 @@ describe("projectRepositoryService platform details", () => {
     await expect(
       harness.service.getCurrentPlatformDetailsDefaults("macos"),
     ).resolves.toMatchObject({
+      iconFileId: "project-icon-1",
+      applicationIdentifier: "",
+    });
+    await expect(
+      harness.service.getCurrentPlatformDetailsDefaults("windows"),
+    ).resolves.toMatchObject({
+      iconFileId: null,
       applicationIdentifier: "",
     });
     expect(harness.getPlatformDetails("web")).toBeUndefined();
@@ -152,7 +159,7 @@ describe("projectRepositoryService platform details", () => {
       harness.service.createCurrentPlatformDetails("windows"),
     ).resolves.toEqual({
       applicationName: "Project One",
-      iconFileId: "project-icon-1",
+      iconFileId: null,
       applicationIdentifier: "",
       publisher: "",
       description: "",
@@ -180,7 +187,7 @@ describe("projectRepositoryService platform details", () => {
     expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
     expect(harness.getPlatformDetails("windows")).toMatchObject({
       applicationName: "Project One",
-      iconFileId: "project-icon-1",
+      iconFileId: null,
     });
     expect(harness.getPlatformDetails("macos")).toMatchObject({
       applicationName: "Project One",
@@ -319,7 +326,7 @@ describe("projectRepositoryService platform details", () => {
     });
   });
 
-  it("fills empty native platform icons from the next project icon upload only", async () => {
+  it("fills only an empty macOS platform icon from the next project icon upload", async () => {
     const harness = createHarness({
       projectInfo: {
         id: "project-1",
@@ -342,9 +349,7 @@ describe("projectRepositoryService platform details", () => {
       iconFileId: "project-icon-1",
     });
     expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
-    expect(harness.getPlatformDetails("windows").iconFileId).toBe(
-      "project-icon-1",
-    );
+    expect(harness.getPlatformDetails("windows").iconFileId).toBeNull();
     expect(harness.getPlatformDetails("macos").iconFileId).toBe(
       "project-icon-1",
     );

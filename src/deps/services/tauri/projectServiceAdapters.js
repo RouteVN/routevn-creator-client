@@ -154,7 +154,9 @@ const normalizeWindowsExecutableMetadata = ({
       label: "Project title",
     }),
     version: normalizeWindowsExecutableVersion(version),
-    applicationIdentifier: applicationIdentifier?.trim() || null,
+    applicationIdentifier: requireNativeApplicationIdentifier(
+      applicationIdentifier,
+    ),
     publisher: publisher?.trim() || null,
     description: description?.trim() || null,
     copyright: copyright?.trim() || null,

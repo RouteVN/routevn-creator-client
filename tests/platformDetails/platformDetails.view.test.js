@@ -24,6 +24,9 @@ describe("platformDetails view", () => {
       "button#platformEditDialogIcon type=button",
     );
     expect(platformDetailsView).toContain('aria-label="${clickToUploadLabel}"');
+    expect(platformDetailsView).toContain(
+      "rvn-square-image-crop-dialog#platformEditIconCropDialog :open=${isPlatformEditIconCropDialogOpen} :file=${platformEditIconCropFile} :outputSize=${256}",
+    );
   });
 
   it("opens editing from the application name and identifier details", () => {

@@ -148,7 +148,7 @@ const createPlatformEditForm = (platform, mode, copy) => {
         ? copy.macosApplicationIdentifierLabel
         : copy.applicationIdentifierLabel,
     description: copy[`${platform}ApplicationIdentifierDescription`],
-    required: platform !== "windows",
+    required: true,
   });
 
   if (platform === "windows") {

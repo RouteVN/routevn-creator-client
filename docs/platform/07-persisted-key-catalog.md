@@ -159,9 +159,11 @@ Current keys:
   - changing an existing Web identifier requires confirmation because users
     who update to the new identifier cannot access saves created under the old
     identifier
-  - the Windows identifier starts blank and is optional; the macOS identifier
-    starts blank, is required and editable, and controls the exported app and
-    save-data identity
+  - the Windows and macOS identifiers start blank and are required and editable;
+    the macOS identifier controls the exported app and save-data identity
+  - the Windows icon starts empty and must be uploaded through the 256-by-256
+    crop flow before the platform record can be created; it does not inherit the
+    project icon
   - macOS Version and Build Number are intentionally not persisted here; they
     are required per-export inputs
   - older macOS publisher, description, copyright, category, and application
@@ -179,8 +181,8 @@ Current keys:
     manifest, generated `app-icon-192.png`/`app-icon-512.png` files based on the
     project icon, and bundle metadata; Windows PE/NSIS version metadata; or
     macOS `Info.plist`
-  - a later project-icon update fills an existing native platform icon only
-    while that platform icon is empty
+  - a later project-icon update fills an existing macOS platform icon only
+    while that platform icon is empty; it does not fill the Windows icon
   - after creation, each platform record is edited and persisted independently
   - created platform records cannot be deleted
   - preview data under `releaseInfo.web`, `releaseInfo.windows`, or

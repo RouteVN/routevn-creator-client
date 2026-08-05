@@ -94,4 +94,4 @@ template:
                             $else:
                               - rtgl-view w=120 h=120 ah=c av=c bw=xs bc=bo br=md:
                                   - rtgl-text c=mu-fg ta=c: ${clickToUploadLabel}
-  - rvn-square-image-crop-dialog#platformEditIconCropDialog :open=${isPlatformEditIconCropDialogOpen} :file=${platformEditIconCropFile}: null
+  - rvn-square-image-crop-dialog#platformEditIconCropDialog :open=${isPlatformEditIconCropDialogOpen} :file=${platformEditIconCropFile} :outputSize=${256}: null

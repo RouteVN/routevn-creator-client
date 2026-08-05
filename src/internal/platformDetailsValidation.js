@@ -29,12 +29,15 @@ export const validatePlatformDetails = ({ platform, applicationInfo } = {}) => {
     }
   }
 
-  if (
-    platform === "windows" &&
-    applicationInfo.applicationIdentifier &&
-    !isValidNativeApplicationIdentifier(applicationInfo.applicationIdentifier)
-  ) {
-    return { valid: false, code: "windows-identifier-invalid" };
+  if (platform === "windows") {
+    if (!applicationInfo.applicationIdentifier) {
+      return { valid: false, code: "windows-identifier-required" };
+    }
+    if (
+      !isValidNativeApplicationIdentifier(applicationInfo.applicationIdentifier)
+    ) {
+      return { valid: false, code: "windows-identifier-invalid" };
+    }
   }
 
   if (platform === "macos") {

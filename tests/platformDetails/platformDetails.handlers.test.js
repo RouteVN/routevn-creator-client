@@ -229,6 +229,34 @@ describe("platformDetails handlers", () => {
     ).not.toHaveBeenCalled();
   });
 
+  it("requires an application identifier before saving Windows details", async () => {
+    const deps = createDeps();
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Windows Project",
+            applicationIdentifier: "",
+            publisher: "Example Publisher",
+            description: "Windows description",
+            copyright: "Copyright Example Publisher",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message:
+        EN_I18N.platformDetailsPage.windowsApplicationIdentifierRequired,
+      title: EN_I18N.platformDetailsPage.warningTitle,
+    });
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).not.toHaveBeenCalled();
+  });
+
   it("names macOS when its required application icon is missing", async () => {
     const deps = createDeps();
     deps.store.selectPlatformDialogState.mockReturnValue({
