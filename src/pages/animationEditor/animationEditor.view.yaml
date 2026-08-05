@@ -620,15 +620,15 @@ template:
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if selectedKeyframeDetailId:
                           - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} w=f :fields=${selectedKeyframeDetailFields} :fillHeight=${false}:
-                              - rtgl-view data-popover-input-field=true slot=keyframe-delay w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;":
+                              - 'rtgl-view data-popover-input-field=true slot=keyframe-delay w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
                                   - 'rtgl-popover-input#selectedKeyframeDelay value=${selectedKeyframeEditor.delay} label="${selectedKeyframeEditor.delayLabel}"': null
-                              - rtgl-view data-popover-input-field=true slot=keyframe-duration w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;":
+                              - 'rtgl-view data-popover-input-field=true slot=keyframe-duration w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
                                   - 'rtgl-popover-input#selectedKeyframeDuration value=${selectedKeyframeEditor.duration} label="${selectedKeyframeEditor.durationLabel}"': null
                               - rtgl-select#selectedKeyframeEasingSelect slot=keyframe-easing w=f no-clear :selectedValue=${selectedKeyframeEditor.easing} :options=${selectedKeyframeEditor.easingOptions}: null
                               - $if selectedKeyframeEditor.valueSlider:
                                   - rtgl-slider-input#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.value} min=${selectedKeyframeEditor.valueSlider.min} max=${selectedKeyframeEditor.valueSlider.max} step=${selectedKeyframeEditor.valueSlider.step}: null
                                 $elif selectedKeyframeEditor.valueUsesPopover:
-                                  - rtgl-view data-popover-input-field=true slot=keyframe-value w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;":
+                                  - 'rtgl-view data-popover-input-field=true slot=keyframe-value w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
                                       - 'rtgl-popover-input#selectedKeyframeValuePopover value=${selectedKeyframeEditor.value} label="${selectedKeyframeEditor.valueLabel}"': null
                                 $else:
                                   - rtgl-input-number#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f step=${selectedKeyframeEditor.valueStep} value=${selectedKeyframeEditor.value}: null
@@ -638,7 +638,7 @@ template:
                               - $if selectedPropertyEditor && selectedPropertyEditor.initialValueSlider:
                                   - rtgl-slider-input#selectedPropertyInitialValue slot=property-initial-value key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.initialValue} min=${selectedPropertyEditor.initialValueSlider.min} max=${selectedPropertyEditor.initialValueSlider.max} step=${selectedPropertyEditor.initialValueSlider.step}: null
                                 $elif selectedPropertyEditor && selectedPropertyEditor.initialValueUsesPopover:
-                                  - rtgl-view data-popover-input-field=true slot=property-initial-value w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;":
+                                  - 'rtgl-view data-popover-input-field=true slot=property-initial-value w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
                                       - 'rtgl-popover-input#selectedPropertyInitialValuePopover value=${selectedPropertyEditor.initialValue} label="${selectedPropertyEditor.initialValueLabel}"': null
                                 $elif selectedPropertyEditor:
                                   - rtgl-input-number#selectedPropertyInitialValue slot=property-initial-value key=${selectedPropertyDetailId} w=f step=${selectedPropertyEditor.initialValueStep} value=${selectedPropertyEditor.initialValue}: null
