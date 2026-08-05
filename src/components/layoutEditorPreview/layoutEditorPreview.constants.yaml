@@ -5,18 +5,21 @@ dialogueForm:
       type: select
       options: "${characterOptions}"
       clearable: false
-    - name: dialogue-custom-character-name
-      label: Custom Character Name
-      type: segmented-control
-      noClear: true
-      options:
-        - label: "No"
-          value: false
-        - label: "Yes"
-          value: true
-    - name: dialogue-character-name
-      label: Character Name
-      type: input-text
+    - type: row
+      stackAt: sm
+      fields:
+        - name: dialogue-custom-character-name
+          label: Custom Character Name
+          type: segmented-control
+          noClear: true
+          options:
+            - label: "No"
+              value: false
+            - label: "Yes"
+              value: true
+        - name: dialogue-character-name
+          label: Character Name
+          type: input-text
     - name: dialogue-content
       label: Dialogue Content
       type: input-text

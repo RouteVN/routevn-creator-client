@@ -8,6 +8,7 @@ import {
   createInitialState as createPreviewComponentState,
   hydratePreviewState,
   selectPreviewData,
+  setDialogueDefaultValue,
   setLayoutState,
   setRepositoryState,
 } from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
@@ -119,6 +120,70 @@ describe("layoutEditor preview persistence", () => {
         content: [{ text: "Saved dialogue preview" }],
       },
     });
+  });
+
+  it("applies dialogue runtime toggles after hydrating persisted preview data", () => {
+    const state = createPreviewComponentState();
+    setLayoutState(
+      { state },
+      {
+        layoutState: {
+          id: "layout-dialogue",
+          layoutType: "dialogue-adv",
+          elements: EMPTY_COLLECTION,
+        },
+      },
+    );
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: EMPTY_COLLECTION,
+          images: EMPTY_COLLECTION,
+          variables: EMPTY_COLLECTION,
+        },
+      },
+    );
+    hydratePreviewState(
+      { state },
+      {
+        previewData: {
+          runtime: {
+            skipMode: false,
+          },
+          dialogue: {
+            content: [{ text: "Saved dialogue preview" }],
+          },
+        },
+      },
+    );
+
+    setDialogueDefaultValue(
+      { state },
+      {
+        name: "dialogue-skip-mode",
+        fieldValue: true,
+      },
+    );
+
+    expect(selectPreviewData({ state }).runtime.skipMode).toBe(true);
+  });
+
+  it("keeps runtime overrides for previews without dialogue data", () => {
+    const state = createPreviewComponentState();
+
+    hydratePreviewState(
+      { state },
+      {
+        previewData: {
+          runtime: {
+            skipMode: true,
+          },
+        },
+      },
+    );
+
+    expect(state.previewVariableValues["runtime.skipMode"]).toBe(true);
   });
 
   it("loads persisted preview data but preserves unsaved local preview edits on refresh", () => {

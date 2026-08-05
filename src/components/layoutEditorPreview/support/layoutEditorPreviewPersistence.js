@@ -1,5 +1,16 @@
-import { toVariableConditionTarget } from "../../../internal/layoutConditions.js";
+import {
+  AUTO_MODE_CONDITION_TARGET,
+  LINE_COMPLETED_CONDITION_TARGET,
+  SKIP_MODE_CONDITION_TARGET,
+  toVariableConditionTarget,
+} from "../../../internal/layoutConditions.js";
 import { toRuntimeConditionTarget } from "../../../internal/runtimeFields.js";
+
+const DIALOGUE_RUNTIME_CONDITION_TARGETS = new Set([
+  AUTO_MODE_CONDITION_TARGET,
+  LINE_COMPLETED_CONDITION_TARGET,
+  SKIP_MODE_CONDITION_TARGET,
+]);
 
 const isPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -41,6 +52,7 @@ export const normalizePersistedPreviewData = (previewData) => {
 export const createPersistedPreviewState = (previewData) => {
   const normalizedPreviewData = normalizePersistedPreviewData(previewData);
   const dialogue = normalizedPreviewData.dialogue ?? {};
+  const hasDialoguePreview = isPlainObject(normalizedPreviewData.dialogue);
   const dialogueLines = getDialogueLines(dialogue);
   const historyDialogue = getHistoryLines(
     normalizedPreviewData.historyDialogue,
@@ -74,7 +86,10 @@ export const createPersistedPreviewState = (previewData) => {
     normalizedPreviewData.runtime ?? {},
   )) {
     const target = toRuntimeConditionTarget(runtimeId);
-    if (!target) {
+    if (
+      !target ||
+      (hasDialoguePreview && DIALOGUE_RUNTIME_CONDITION_TARGETS.has(target))
+    ) {
       continue;
     }
     previewVariableValues[target] = value;

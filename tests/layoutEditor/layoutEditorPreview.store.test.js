@@ -21,10 +21,15 @@ const TEST_CONSTANTS = {
         name: "dialogue-character-id",
       },
       {
-        name: "dialogue-custom-character-name",
-      },
-      {
-        name: "dialogue-character-name",
+        type: "row",
+        fields: [
+          {
+            name: "dialogue-custom-character-name",
+          },
+          {
+            name: "dialogue-character-name",
+          },
+        ],
       },
       {
         name: "dialogue-content",
@@ -47,9 +52,21 @@ const TEST_CONSTANTS = {
 
 describe("layoutEditorPreview.store", () => {
   const getNamedFieldNames = (form) => {
-    return form.fields
-      .map((field) => field.name)
-      .filter((name) => typeof name === "string" && name.length > 0);
+    const getFieldNames = (fields = []) => {
+      return fields.flatMap((field) => {
+        const names =
+          typeof field.name === "string" && field.name.length > 0
+            ? [field.name]
+            : [];
+        return [...names, ...getFieldNames(field.fields)];
+      });
+    };
+
+    return getFieldNames(form.fields);
+  };
+
+  const getDialogueNameRow = (form) => {
+    return form.fields.find((field) => field.type === "row");
   };
 
   it("shows dialogue preview and character options for general layouts using dialogue.characterId", () => {
@@ -121,6 +138,9 @@ describe("layoutEditorPreview.store", () => {
       "dialogue-custom-character-name",
       "dialogue-content",
     ]);
+    expect(
+      getNamedFieldNames(getDialogueNameRow(viewData.dialogueForm)),
+    ).toEqual(["dialogue-custom-character-name"]);
     expect(viewData.dialogueContext.characterOptions).toEqual([
       {
         value: "",
@@ -184,6 +204,9 @@ describe("layoutEditorPreview.store", () => {
       "dialogue-character-name",
       "dialogue-content",
     ]);
+    expect(
+      getNamedFieldNames(getDialogueNameRow(viewData.dialogueForm)),
+    ).toEqual(["dialogue-custom-character-name", "dialogue-character-name"]);
   });
 
   it("shows preview controls for every input field in the layout", () => {

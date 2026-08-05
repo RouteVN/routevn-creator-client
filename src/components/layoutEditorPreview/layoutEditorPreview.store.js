@@ -152,14 +152,26 @@ const withDialogueCharacterNameField = (form, { visible } = {}) => {
     return form;
   }
 
+  const filterCharacterNameField = (field) => {
+    const nextField = cloneFormField(field);
+
+    if (Array.isArray(nextField?.fields)) {
+      nextField.fields = nextField.fields
+        .map((childField) => filterCharacterNameField(childField))
+        .filter(Boolean);
+    }
+
+    if (!visible && nextField?.name === DIALOGUE_CHARACTER_NAME_FIELD) {
+      return undefined;
+    }
+
+    return nextField;
+  };
+
   return {
     ...form,
     fields: Array.isArray(form.fields)
-      ? form.fields
-          .map((field) => cloneFormField(field))
-          .filter(
-            (field) => visible || field?.name !== DIALOGUE_CHARACTER_NAME_FIELD,
-          )
+      ? form.fields.map(filterCharacterNameField).filter(Boolean)
       : [],
   };
 };
