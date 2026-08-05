@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { Subject } from "rxjs";
 import {
   handleAddMaskClick,
   handleAddKeyframeFromTimeline,
@@ -38,6 +39,7 @@ import {
   handleSelectedKeyframeRelativeChange,
   handleSelectedKeyframeValueChange,
   handleSelectedPropertyInitialValueChange,
+  handleSelectedPropertyUseDefaultClick,
   handleSelectedMaskNumberConfirmClick,
   handleSelectedMaskNumberFieldKeyDown,
   handleSelectedMaskNumberInputChange,
@@ -79,6 +81,7 @@ describe("animationEditor.handlers", () => {
     const browserEventsClient = {
       subscribeWindowEvent: vi.fn(() => cleanupWindowEvent),
     };
+    const subject = new Subject();
     const store = {
       ...createIdleAutosaveMocks(),
       selectPreviewPlaybackFrameId: vi.fn(() => 42),
@@ -99,6 +102,7 @@ describe("animationEditor.handlers", () => {
         },
         browserEventsClient,
         store,
+        subject,
         uiConfig: { mode: "desktop" },
       });
 
@@ -118,6 +122,54 @@ describe("animationEditor.handlers", () => {
       expect(store.stopPreviewPlayback).toHaveBeenCalledWith({});
     } finally {
       vi.unstubAllGlobals();
+    }
+  });
+
+  it("remeasures the timeline after a resizable panel changes width", async () => {
+    vi.useFakeTimers();
+    const subject = new Subject();
+    const store = {
+      ...createIdleAutosaveMocks(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      selectTimelineViewportWidth: vi.fn(() => 600),
+      setPreviewPlaybackRequestId: vi.fn(),
+      setTimelineScrollMetrics: vi.fn(),
+      setUiConfig: vi.fn(),
+      stopPreviewPlayback: vi.fn(),
+    };
+    const render = vi.fn();
+    const timelineScrollContainer = {
+      clientWidth: 704,
+      scrollLeft: 25,
+    };
+
+    try {
+      const cleanup = handleBeforeMount({
+        appService: {
+          registerBeforeNavigation: vi.fn(() => vi.fn()),
+        },
+        browserEventsClient: {
+          subscribeWindowEvent: vi.fn(() => vi.fn()),
+        },
+        refs: { timelineScrollContainer },
+        render,
+        store,
+        subject,
+        uiConfig: { mode: "desktop" },
+      });
+
+      subject.next({ action: "panel-resize", payload: { width: 360 } });
+      await vi.runAllTimersAsync();
+
+      expect(store.setTimelineScrollMetrics).toHaveBeenCalledWith({
+        scrollLeft: 25,
+        viewportWidth: 704,
+      });
+      expect(render).toHaveBeenCalledOnce();
+
+      await cleanup();
+    } finally {
+      vi.useRealTimers();
     }
   });
 
@@ -1002,6 +1054,67 @@ describe("animationEditor.handlers", () => {
     });
     expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
     expect(store.queueAutosave).toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("restores the selected property's default initial value", () => {
+    const store = {
+      bumpPreviewRenderVersion: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      selectSelectedProperty: vi.fn(() => ({
+        side: "prev",
+        property: "alpha",
+      })),
+      stopPreviewPlayback: vi.fn(),
+      updateInitialValue: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleSelectedPropertyUseDefaultClick({ render, store });
+
+    expect(store.updateInitialValue).toHaveBeenCalledWith({
+      side: "prev",
+      property: "alpha",
+      initialValue: undefined,
+    });
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
+    expect(store.queueAutosave).toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens the initial-value editor from the touch property menu", () => {
+    const store = {
+      selectPopover: vi.fn(() => ({
+        x: 120,
+        y: 160,
+        payload: {
+          side: "next",
+          property: "x",
+        },
+      })),
+      setPopover: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleKeyframeDropdownItemClick(
+      { render, store },
+      {
+        _event: {
+          detail: {
+            item: { value: "edit-initial-value" },
+          },
+        },
+      },
+    );
+
+    expect(store.setPopover).toHaveBeenCalledWith({
+      mode: "editInitialValue",
+      x: 120,
+      y: 160,
+      payload: { side: "next", property: "x" },
+    });
     expect(render).toHaveBeenCalledOnce();
   });
 

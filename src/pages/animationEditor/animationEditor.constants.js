@@ -148,6 +148,11 @@ export const baseKeyframeDropdownItems = [
 
 export const propertyNameDropdownItems = [
   {
+    label: "Edit Initial Value",
+    type: "item",
+    value: "edit-initial-value",
+  },
+  {
     label: "Delete",
     type: "item",
     value: "delete-property",

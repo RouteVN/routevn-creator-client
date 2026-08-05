@@ -1,3 +1,4 @@
+import { auditTime, filter, tap } from "rxjs";
 import { generateId } from "../../internal/id.js";
 import {
   createAnimationEditorPayload,
@@ -789,7 +790,7 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
 };
 
 const mountTimelinePanSubscriptions = (deps) => {
-  const { browserEventsClient } = deps;
+  const { browserEventsClient, subject } = deps;
   const cleanupSubscriptions = [
     browserEventsClient.subscribeWindowEvent({
       type: "keydown",
@@ -816,9 +817,19 @@ const mountTimelinePanSubscriptions = (deps) => {
       listener: () => handleTimelineViewportResize(deps),
     }),
   ];
+  const panelResizeSubscription = subject
+    .pipe(
+      filter(({ action }) =>
+        ["panel-resize", "panel-resize-end"].includes(action),
+      ),
+      auditTime(0),
+      tap(() => handleTimelineViewportResize(deps)),
+    )
+    .subscribe();
 
   return () => {
     cleanupSubscriptions.forEach((cleanup) => cleanup());
+    panelResizeSubscription.unsubscribe();
   };
 };
 
@@ -1597,7 +1608,7 @@ export const handleSelectedKeyframeRelativeChange = (deps, payload) => {
   commitSelectedKeyframeChange(deps);
 };
 
-export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
+const commitSelectedPropertyInitialValue = (deps, initialValue) => {
   const { render, store } = deps;
   const selectedProperty = store.selectSelectedProperty();
   if (!selectedProperty) {
@@ -1608,11 +1619,19 @@ export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
   store.updateInitialValue({
     side,
     property,
-    initialValue: resolveValueChange(payload),
+    initialValue,
   });
   invalidatePreview({ store });
   render();
   queueEditorAutosave({ deps });
+};
+
+export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
+  commitSelectedPropertyInitialValue(deps, resolveValueChange(payload));
+};
+
+export const handleSelectedPropertyUseDefaultClick = (deps) => {
+  commitSelectedPropertyInitialValue(deps, undefined);
 };
 
 const openSelectedMaskNumberPopover = (deps, payload, { mode, value } = {}) => {
@@ -1876,6 +1895,15 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
 
   if (value === "edit") {
     openSelectedKeyframeEditDialog(deps, { x, y });
+    return;
+  } else if (value === "edit-initial-value") {
+    store.setPopover({
+      mode: "editInitialValue",
+      x,
+      y,
+      payload: { side, property },
+    });
+    render();
     return;
   } else if (value === "delete-property") {
     if (["prev", "next"].includes(side)) {

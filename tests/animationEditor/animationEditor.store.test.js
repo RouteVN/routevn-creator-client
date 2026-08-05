@@ -284,9 +284,9 @@ describe("animationEditor.store", () => {
     });
 
     clearTimelineUsedDurationPreview({ state });
-    expect(selectViewData({ state, i18n: EN_I18N }).activeTimelineDuration).toBe(
-      1000,
-    );
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).activeTimelineDuration,
+    ).toBe(1000);
   });
 
   it("hides the playhead while it is behind the sticky property column", () => {
@@ -528,11 +528,20 @@ describe("animationEditor.store", () => {
       },
     ]);
     expect(viewData.selectedPropertyEditor).toEqual({
+      hasInitialValue: true,
       initialValue: 0.5,
       initialValueLabel: "Initial value",
       initialValueSlider: { min: 0, max: 1, step: 0.01 },
       initialValueStep: "any",
       initialValueUsesPopover: false,
+    });
+    expect(viewData.useDefaultValueButtonLabel).toBe("Use Default Value");
+
+    delete state.tweenBySection.prev.alpha.initialValue;
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.selectedPropertyEditor).toMatchObject({
+      hasInitialValue: false,
+      initialValue: 1,
     });
 
     setSelectedKeyframe(
@@ -744,6 +753,39 @@ describe("animationEditor.store", () => {
       { label: "Outgoing", type: "item", value: "prev" },
       { label: "Incoming", type: "item", value: "next" },
     ]);
+  });
+
+  it("offers initial-value editing from a touch keyframed-property menu", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    setUiConfig({ state }, { uiConfig: { id: "touch", inputMode: "touch" } });
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 1000, easing: "linear", value: 0 }],
+    };
+    setPopover(
+      { state },
+      {
+        mode: "propertyNameMenu",
+        payload: { side: "update", property: "x" },
+      },
+    );
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).keyframeDropdownItems,
+    ).toContainEqual({
+      label: "Edit Initial Value",
+      type: "item",
+      value: "edit-initial-value",
+    });
+
+    state.tweenBySection.update.x = {
+      auto: { duration: 1000, easing: "linear" },
+    };
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).keyframeDropdownItems,
+    ).not.toContainEqual(
+      expect.objectContaining({ value: "edit-initial-value" }),
+    );
   });
 
   it("exposes an existing mask for inline editing without a dialog", () => {

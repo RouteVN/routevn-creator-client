@@ -3463,6 +3463,7 @@ const buildSelectedPropertyPanelData = (
     editor: autoConfig
       ? undefined
       : {
+          hasInitialValue,
           initialValue,
           initialValueLabel: copy.initialValueLabel ?? "Initial value",
           initialValueSlider,
@@ -3722,7 +3723,21 @@ export const selectViewData = ({ state, i18n }) => {
 
   const keyframeDropdownItems = (() => {
     if (state.popover.mode !== "keyframeMenu") {
-      return localizeMenuItems(propertyNameDropdownItems, copy);
+      const propertyMenuItems = localizeMenuItems(
+        propertyNameDropdownItems,
+        copy,
+      );
+      if (state.popover.mode !== "propertyNameMenu") {
+        return propertyMenuItems;
+      }
+
+      const { side, property } = state.popover.payload;
+      const propertyConfig = getSectionProperties(state, side)[property];
+      return propertyConfig?.auto
+        ? propertyMenuItems.filter(
+            (item) => item.value !== "edit-initial-value",
+          )
+        : propertyMenuItems;
     }
 
     const { side, property, index } = state.popover.payload;
@@ -4050,6 +4065,8 @@ export const selectViewData = ({ state, i18n }) => {
     editKeyframeButtonLabel: copy.editKeyframeMenuItem ?? "Edit keyframe",
     imageLabel: copy.imageLabel ?? "Image",
     initialValueLabel: copy.initialValueLabel ?? "Initial value",
+    useDefaultValueButtonLabel:
+      copy.useDefaultValueSource ?? "Use Default Value",
     inTimelineLabel: copy.inTimelineLabel ?? "Incoming",
     invertLabel: copy.invertLabel ?? "Invert",
     detailsPanelTitle: selectedMask

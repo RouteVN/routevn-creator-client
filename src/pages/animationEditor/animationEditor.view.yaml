@@ -284,6 +284,10 @@ refs:
     eventListeners:
       value-change:
         handler: handleSelectedPropertyInitialValueChange
+  selectedPropertyUseDefault:
+    eventListeners:
+      click:
+        handler: handleSelectedPropertyUseDefaultClick
   selectedMaskInitialValue:
     eventListeners:
       click:
@@ -635,13 +639,16 @@ template:
                               - rtgl-segmented-control#selectedKeyframeRelative slot=keyframe-value-type w=f no-clear :selectedValue=${selectedKeyframeEditor.relative} :options=${selectedKeyframeEditor.relativeOptions}: null
                         $elif selectedPropertyDetailId:
                           - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} w=f :fields=${selectedPropertyDetailFields} :fillHeight=${false}:
-                              - $if selectedPropertyEditor && selectedPropertyEditor.initialValueSlider:
-                                  - rtgl-slider-input#selectedPropertyInitialValue slot=property-initial-value key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.initialValue} min=${selectedPropertyEditor.initialValueSlider.min} max=${selectedPropertyEditor.initialValueSlider.max} step=${selectedPropertyEditor.initialValueSlider.step}: null
-                                $elif selectedPropertyEditor && selectedPropertyEditor.initialValueUsesPopover:
-                                  - 'rtgl-view data-popover-input-field=true slot=property-initial-value w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
-                                      - 'rvn-value-popover-input#selectedPropertyInitialValuePopover value=${selectedPropertyEditor.initialValue} label="${selectedPropertyEditor.initialValueLabel}"': null
-                                $elif selectedPropertyEditor:
-                                  - rtgl-input-number#selectedPropertyInitialValue slot=property-initial-value key=${selectedPropertyDetailId} w=f step=${selectedPropertyEditor.initialValueStep} value=${selectedPropertyEditor.initialValue}: null
+                              - rtgl-view slot=property-initial-value d=v w=f g=xs:
+                                  - $if selectedPropertyEditor && selectedPropertyEditor.initialValueSlider:
+                                      - rtgl-slider-input#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.initialValue} min=${selectedPropertyEditor.initialValueSlider.min} max=${selectedPropertyEditor.initialValueSlider.max} step=${selectedPropertyEditor.initialValueSlider.step}: null
+                                    $elif selectedPropertyEditor && selectedPropertyEditor.initialValueUsesPopover:
+                                      - 'rtgl-view data-popover-input-field=true w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
+                                          - 'rvn-value-popover-input#selectedPropertyInitialValuePopover value=${selectedPropertyEditor.initialValue} label="${selectedPropertyEditor.initialValueLabel}"': null
+                                    $elif selectedPropertyEditor:
+                                      - rtgl-input-number#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f step=${selectedPropertyEditor.initialValueStep} value=${selectedPropertyEditor.initialValue}: null
+                                  - $if selectedPropertyEditor && selectedPropertyEditor.hasInitialValue:
+                                      - rtgl-button#selectedPropertyUseDefault s=sm v=se w=f: ${useDefaultValueButtonLabel}
                         $elif selectedMask:
                           - rtgl-view#selectedMaskDetails data-timeline-selection-surface=true d=v w=f g=md p=md pb=xl:
                               - $if maskEditorPanel.unsupported:

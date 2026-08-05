@@ -117,9 +117,7 @@ describe("animationEditor view", () => {
     expect(view).toContain("rtgl-button#editSelectedKeyframeButton");
     expect(view).toContain("rtgl-select#selectedKeyframeEasingSelect");
     expect(view).toContain("handler: handleSelectedKeyframeEasingChange");
-    expect(view).toContain(
-      "data-popover-input-field=true slot=keyframe-delay",
-    );
+    expect(view).toContain("data-popover-input-field=true slot=keyframe-delay");
     expect(view).toContain(
       "rvn-value-popover-input#selectedKeyframeDelay value=${selectedKeyframeEditor.delay}",
     );
@@ -129,9 +127,7 @@ describe("animationEditor view", () => {
     expect(view).toContain(
       "rtgl-slider-input#selectedKeyframeValue slot=keyframe-value",
     );
-    expect(view).toContain(
-      "data-popover-input-field=true slot=keyframe-value",
-    );
+    expect(view).toContain("data-popover-input-field=true slot=keyframe-value");
     expect(view).toContain(
       "rtgl-segmented-control#selectedKeyframeRelative slot=keyframe-value-type",
     );
@@ -201,16 +197,19 @@ describe("animationEditor view", () => {
     expect(view).toContain("rtgl-view#selectedMaskInitialValue");
     expect(view).toContain("handler: handleSelectedMaskInitialValueClick");
     expect(view).toContain(
-      "rtgl-slider-input#selectedPropertyInitialValue slot=property-initial-value",
+      "rtgl-view slot=property-initial-value d=v w=f g=xs",
     );
     expect(view).toContain(
-      "data-popover-input-field=true slot=property-initial-value",
+      "rtgl-slider-input#selectedPropertyInitialValue key=${selectedPropertyDetailId}",
+    );
+    expect(view).toContain("data-popover-input-field=true w=f h=32");
+    expect(view).toContain(
+      "rtgl-button#selectedPropertyUseDefault s=sm v=se w=f",
     );
     expect(view.match(/data-popover-input-field=true/g)).toHaveLength(4);
     expect(view.match(/rvn-value-popover-input#/g)).toHaveLength(4);
-    expect(view).toContain(
-      "handler: handleSelectedPropertyInitialValueChange",
-    );
+    expect(view).toContain("handler: handleSelectedPropertyInitialValueChange");
+    expect(view).toContain("handler: handleSelectedPropertyUseDefaultClick");
     expect(view).not.toContain("rtgl-view#selectedMaskProgressDuration");
     expect(view).not.toContain(
       "handler: handleSelectedMaskProgressDurationClick",
