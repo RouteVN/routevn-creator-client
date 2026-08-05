@@ -118,6 +118,25 @@ export const normalizeBackgroundTransformEditorTransform = (
   };
 };
 
+export const applyBackgroundTransformAnchorOrigin = ({
+  transform,
+  selectedElementMetrics,
+} = {}) => {
+  const normalizedTransform =
+    normalizeBackgroundTransformEditorTransform(transform);
+  const width = Number(selectedElementMetrics?.width);
+  const height = Number(selectedElementMetrics?.height);
+
+  if (Number.isFinite(width) && width > 0) {
+    normalizedTransform.originX = normalizedTransform.anchorX * width;
+  }
+  if (Number.isFinite(height) && height > 0) {
+    normalizedTransform.originY = normalizedTransform.anchorY * height;
+  }
+
+  return normalizedTransform;
+};
+
 export const createBackgroundWithInlineTransform = (
   background = {},
   transform = {},
@@ -790,6 +809,31 @@ const updateElementById = (elements, targetId, updateElement) => {
   return { elements: nextElements, updated };
 };
 
+const applyTransformEditorTargetAnchorOrigin = (
+  elements,
+  selectedPath,
+  editorState,
+) => {
+  const selectedElement = selectedPath?.[selectedPath.length - 1];
+  if (!selectedElement) {
+    return elements;
+  }
+
+  const transform = applyBackgroundTransformAnchorOrigin({
+    transform: editorState.transform,
+    selectedElementMetrics: {
+      width: getRenderableWidth(selectedElement),
+      height: getRenderableHeight(selectedElement),
+    },
+  });
+
+  return updateElementById(elements, selectedElement.id, (element) => ({
+    ...element,
+    originX: transform.originX,
+    originY: transform.originY,
+  })).elements;
+};
+
 const translateTransformEditorTarget = (
   elements,
   editorState,
@@ -851,7 +895,18 @@ export const createBackgroundTransformEditorCanvasState = ({
     parsedState?.elements,
     editorState,
   );
-  const selectedPath = initialSelectedPath;
+  const originAdjustedElements = applyTransformEditorTargetAnchorOrigin(
+    renderedElements,
+    initialSelectedPath,
+    editorState,
+  );
+  const originAdjustedState = initialSelectedPath
+    ? graphicsService?.parse?.({ elements: originAdjustedElements })
+    : parsedState;
+  const selectedPath = selectBackgroundElementPath(
+    originAdjustedState?.elements,
+    editorState,
+  );
   const overlayPath =
     selectedPath?.length > 1 ? selectedPath.slice(1) : selectedPath;
   const overlayElement = selectedPath
@@ -862,7 +917,7 @@ export const createBackgroundTransformEditorCanvasState = ({
       })
     : undefined;
   const elementsWithOverlay = addOverlayToRenderedElements({
-    elements: renderedElements,
+    elements: originAdjustedElements,
     path: selectedPath ?? [],
     overlayElement,
   });

@@ -998,6 +998,12 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     const deps = {
       store: {
         clearBackgroundTransformEditorDragStartPosition: vi.fn(),
+        selectBackgroundTransformEditor: vi.fn(() => ({
+          selectedElementMetrics: {
+            width: 400,
+            height: 600,
+          },
+        })),
         setBackgroundTransformEditorTransform,
       },
       render: vi.fn(),
@@ -1013,8 +1019,12 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           transform: {
             x: 320,
             y: 180,
+            anchorX: 0.5,
+            anchorY: 1,
             scaleX: 1.2,
             scaleY: 0.8,
+            originX: 0,
+            originY: 0,
           },
         },
       },
@@ -1024,8 +1034,12 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       transform: expect.objectContaining({
         x: 320,
         y: 180,
+        anchorX: 0.5,
+        anchorY: 1,
         scaleX: 1.2,
         scaleY: 0.8,
+        originX: 200,
+        originY: 600,
       }),
     });
     expect(deps.render).toHaveBeenCalledTimes(1);

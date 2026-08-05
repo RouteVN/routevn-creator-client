@@ -430,6 +430,15 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
   );
 };
 
+export const handleCustomTransformButtonKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  handleCustomTransformButtonClick(deps, payload);
+};
+
 export const handleAnimationChange = (deps, payload) => {
   const { store, render } = deps;
   const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);

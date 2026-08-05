@@ -74,10 +74,8 @@ refs:
     eventListeners:
       click:
         handler: handleCustomTransformButtonClick
-  customTransformChip*:
-    eventListeners:
-      click:
-        handler: handleCustomTransformButtonClick
+      keydown:
+        handler: handleCustomTransformButtonKeyDown
   animation*:
     eventListeners:
       value-change:
@@ -166,13 +164,12 @@ template:
                           - $if !character.customTransform:
                               - 'rtgl-select#transform${i} slot=${character.predefinedTransformFormSlot} data-index=${character.characterIndex} key=${character.transformId} :options=${defaultValues.transformOptions} :selectedValue=${character.transformId} w=f no-clear': null
                           - $if character.customTransform:
-                              - 'rtgl-view.characterRow slot=${character.customTransformFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} d=h av=c w=f g=md':
-                                  - rtgl-view d=h av=c w=1fg g=sm wrap:
+                              - 'rtgl-view#customTransformButton${i}.characterRow slot=${character.customTransformFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} data-target-name="${character.displayName}" role=button tabindex=0 aria-label="${transformEditorTitle}" w=f p=md bw=xs bc=bo h-bc=pr br=md bgc=bg cur=pointer style="box-sizing: border-box;"':
+                                  - rtgl-grid cols=2 g=md w=f:
                                       - $for item, j in character.customTransformDetails:
-                                          - 'rtgl-view#customTransformChip${i}x${j} data-index=${character.characterIndex} d=h av=c g=sm bw=xs bc=bo h-bc=pr br=full bgc=mu ph=md pv=sm cur=pointer style="max-width: 220px; box-sizing: border-box;"':
-                                              - rtgl-text s=xs c=mu-fg ellipsis: ${item.label}
-                                              - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums; white-space: nowrap;"': ${item.value}
-                                  - rtgl-button#customTransformButton${i} data-index=${character.characterIndex} data-target-name="${character.displayName}" v=se: ${editButtonLabel}
+                                          - rtgl-view d=h av=c g=sm:
+                                              - rtgl-text s=sm c=mu-fg: ${item.label}
+                                              - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums;"': ${item.value}
                           - 'rtgl-view.characterRow slot=${character.animationFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} w=f':
                               - rtgl-select#animation${i} data-index=${character.characterIndex} key=${character.animationId} :options=${defaultValues.animationOptions} :selectedValue=${character.animationId} w=f placeholder=${selectAnimationPlaceholder}: null
                           - $if character.animationId:
@@ -183,8 +180,6 @@ template:
                               - $if character.animationMode == 'update':
                                   - 'rtgl-view.characterRow slot=${character.playbackLoopFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} g=xs w=f':
                                       - rtgl-segmented-control#animationPlaybackLoop${i} data-index=${character.characterIndex} w=f no-clear ?disabled=${character.animationLoopDisabled} :selectedValue=${character.animationPlaybackLoop} :options=${defaultValues.animationPlaybackLoopOptions}: null
-                                      - $if !character.animationCanLoop:
-                                          - rtgl-text s=xs c=mu-fg: ${animationPlaybackLoopDisabledDescription}
                           - $if character.opacityOptionEnabled:
                               - 'rtgl-view.characterRow slot=${character.opacityFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} g=md w=f':
                                   - rtgl-view d=h av=c w=f g=md:
@@ -202,7 +197,7 @@ template:
                                   - $for spriteGroup, j in character.spriteGroupBoxes:
                                       - 'rtgl-view.characterSpriteGroupBox data-index=${character.characterIndex} data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
                                           - rtgl-text s=xs: ${spriteGroup.name}
-                  - rtgl-button#addCharacterButton v=ol w=f mt=md: ${addCharacterButtonLabel}
+                  - rtgl-button#addCharacterButton v=ol w=f mt=md mh=lg: ${addCharacterButtonLabel}
                   - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
           - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: ${submitButtonLabel}

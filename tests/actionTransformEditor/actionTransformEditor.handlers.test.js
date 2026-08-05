@@ -25,6 +25,10 @@ describe("actionTransformEditor.handlers", () => {
       {
         props: {
           transform: BASE_TRANSFORM,
+          selectedElementMetrics: {
+            width: 1920,
+            height: 1080,
+          },
         },
         dispatchEvent: (event) => dispatchedEvents.push(event),
       },
@@ -50,9 +54,55 @@ describe("actionTransformEditor.handlers", () => {
       transform: {
         anchorX: 1,
         anchorY: 0,
+        originX: 1920,
+        originY: 0,
       },
     });
     expect(dispatchedEvents[0].detail.transform).not.toHaveProperty("anchor");
+  });
+
+  it("repairs a stale origin when another transform field changes", () => {
+    const dispatchedEvents = [];
+
+    handleInspectorUpdate(
+      {
+        props: {
+          transform: {
+            ...BASE_TRANSFORM,
+            originX: 0,
+            originY: 0,
+          },
+          selectedElementMetrics: {
+            width: 400,
+            height: 600,
+          },
+        },
+        dispatchEvent: (event) => dispatchedEvents.push(event),
+      },
+      {
+        _event: {
+          detail: {
+            name: "rotation",
+            value: 20,
+            formValues: {
+              ...BASE_TRANSFORM,
+              originX: 0,
+              originY: 0,
+              rotation: 20,
+              anchor: { x: 0.5, y: 0.5 },
+            },
+          },
+        },
+      },
+    );
+
+    expect(dispatchedEvents[0].detail.transform).toMatchObject({
+      rotation: 20,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      originX: 200,
+      originY: 300,
+    });
   });
 
   it("owns arrow-key movement while no editor input is focused", () => {

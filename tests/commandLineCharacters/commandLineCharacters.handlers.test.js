@@ -11,6 +11,7 @@ import {
   handleCharacterItemClick,
   handleCharacterContextMenu,
   handleCharacterSpriteGroupBoxClick,
+  handleCustomTransformButtonKeyDown,
   handleDropdownMenuClickItem,
   handleOpacityInput,
   handleSpriteItemClick,
@@ -124,6 +125,57 @@ const createStoreApi = (state) => ({
 });
 
 describe("commandLineCharacters.handlers", () => {
+  it("opens the custom transform editor from the summary box with the keyboard", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+    const event = {
+      key: "Enter",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+      currentTarget: {
+        dataset: {
+          index: "0",
+          targetName: "Hero",
+        },
+      },
+    };
+
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            x: 100,
+            y: 200,
+            sprites: [],
+          },
+        ],
+      },
+    );
+
+    handleCustomTransformButtonKeyDown(
+      {
+        store,
+        dispatchEvent,
+      },
+      { _event: event },
+    );
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(
+      "action-transform-customize",
+    );
+    expect(dispatchEvent.mock.calls[0][0].detail).toMatchObject({
+      targetType: "character",
+      itemIndex: 0,
+      targetName: "Hero",
+    });
+  });
+
   it("opens a transform dropdown before character selection", () => {
     const state = createInitialState();
     const render = vi.fn();

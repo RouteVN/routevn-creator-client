@@ -37,11 +37,13 @@ describe("backgroundTransformEditor", () => {
       id: "bg-cg-background-sprite",
       x: 107,
       y: 74,
+      originX: 960,
+      originY: 540,
     });
     expect(canvasState.renderState.elements[1]).toMatchObject({
       id: "selected-border-group",
-      x: 107,
-      y: 74,
+      x: 1067,
+      y: 614,
     });
   });
 
@@ -243,6 +245,11 @@ describe("backgroundTransformEditor", () => {
 
     const overlay = canvasState.renderState.elements[1];
 
+    expect(canvasState.renderState.elements[0]).toMatchObject({
+      originX: 100,
+      originY: 50,
+    });
+
     expect(overlay.children[5]).toMatchObject({
       id: "selected-border-anchor",
       x: 96,
@@ -257,8 +264,8 @@ describe("backgroundTransformEditor", () => {
       scaleY: 2,
       renderedX: 10,
       renderedY: 20,
-      renderedOriginX: 50,
-      renderedOriginY: 25,
+      renderedOriginX: 100,
+      renderedOriginY: 50,
       renderedRotation: 15,
       renderedScaleX: 2,
       renderedScaleY: 2,

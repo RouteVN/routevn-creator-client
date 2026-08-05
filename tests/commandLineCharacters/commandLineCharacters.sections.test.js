@@ -278,6 +278,13 @@ describe("commandLineCharacters sections", () => {
     expect(view).toContain("slot=${character.animationFormSlot}");
     expect(view).toContain("slot=${character.playbackSpeedFormSlot}");
     expect(view).toContain("rtgl-slider-input#animationPlaybackSpeed${i}");
+    expect(view).toContain("handler: handleCustomTransformButtonKeyDown");
+    expect(view).toContain("rtgl-view#customTransformButton${i}.characterRow");
+    expect(view).toContain("rtgl-grid cols=2 g=md w=f");
+    expect(view).toContain(
+      "rtgl-button#addCharacterButton v=ol w=f mt=md mh=lg",
+    );
+    expect(view).not.toContain("animationPlaybackLoopDisabledDescription");
     expect(view).not.toContain("slot=characters");
   });
 });

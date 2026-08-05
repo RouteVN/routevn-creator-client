@@ -15,7 +15,10 @@ import {
   constructProjectData,
   getSectionPresentation,
 } from "../../internal/project/projection.js";
-import { normalizeBackgroundTransformEditorTransform } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import {
+  applyBackgroundTransformAnchorOrigin,
+  normalizeBackgroundTransformEditorTransform,
+} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 import {
   emitSceneEditorTiming,
   getSceneEditorTimingDurationMs,
@@ -958,6 +961,11 @@ export const setBackgroundTransformEditorSelectedElementMetrics = (
   { metrics } = {},
 ) => {
   state.backgroundTransformEditor.selectedElementMetrics = metrics;
+  state.backgroundTransformEditor.transform =
+    applyBackgroundTransformAnchorOrigin({
+      transform: state.backgroundTransformEditor.transform,
+      selectedElementMetrics: metrics,
+    });
 };
 
 export const setBackgroundTransformEditorTransform = (

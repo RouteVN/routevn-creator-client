@@ -33,6 +33,7 @@ import {
   updateSceneEditorSectionChanges,
 } from "../../internal/ui/sceneEditor/runtime.js";
 import {
+  applyBackgroundTransformAnchorOrigin,
   createActionItemWithInlineTransform,
   createBackgroundTransformEditorPositionPreviewCanvasState,
   createBackgroundWithInlineTransform,
@@ -1451,9 +1452,11 @@ export const handleBackgroundTransformEditorChange = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { store, render, subject } = deps;
   const transient = payload?._event?.detail?.transient === true;
-  const transform = normalizeBackgroundTransformEditorTransform(
-    payload?._event?.detail?.transform,
-  );
+  const editor = store.selectBackgroundTransformEditor?.();
+  const transform = applyBackgroundTransformAnchorOrigin({
+    transform: payload?._event?.detail?.transform,
+    selectedElementMetrics: editor?.selectedElementMetrics,
+  });
 
   store.clearBackgroundTransformEditorDragStartPosition?.();
   store.setBackgroundTransformEditorTransform?.({ transform });

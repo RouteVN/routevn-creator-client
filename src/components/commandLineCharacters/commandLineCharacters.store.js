@@ -1733,13 +1733,8 @@ export const selectViewData = ({ state, i18n }) => {
     noAvatarLabel: localizeCommandLineText("No Avatar", copy),
     noPreviewLabel: localizeCommandLineText("No preview", copy),
     noSpriteLabel: localizeCommandLineText("No Sprite", copy),
-    editButtonLabel: localizeCommandLineText("Edit", copy),
     opacityLabel: localizeCommandLineText("Opacity", copy),
     removeOpacityLabel: localizeCommandLineText("Remove Opacity", copy),
-    animationPlaybackLoopDisabledDescription: localizeCommandLineText(
-      "loopingRequiresKeyframesDescription",
-      copy,
-    ),
     selectAnimationPlaceholder: localizeCommandLineText(
       "Select animation",
       copy,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   clearTemporaryPresentationState,
+  openBackgroundTransformEditor,
   refreshSceneTextStats,
   selectEffectivePresentationState,
   selectViewData,
@@ -9,6 +10,7 @@ import {
   setRepositoryState,
   setSceneId,
   setPresentationState,
+  setBackgroundTransformEditorSelectedElementMetrics,
   setProjectLanguage,
   setSectionLineChangesBySectionId,
   setTemporaryPresentationState,
@@ -18,6 +20,39 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("sceneEditorLexical.store", () => {
+  it("resolves the transform origin when rendered target metrics arrive", () => {
+    const state = createInitialState();
+
+    openBackgroundTransformEditor(
+      { state },
+      {
+        targetType: "character",
+        transform: {
+          anchorX: 0.5,
+          anchorY: 1,
+          originX: 0,
+          originY: 0,
+        },
+      },
+    );
+    setBackgroundTransformEditorSelectedElementMetrics(
+      { state },
+      {
+        metrics: {
+          width: 400,
+          height: 600,
+        },
+      },
+    );
+
+    expect(state.backgroundTransformEditor.transform).toMatchObject({
+      anchorX: 0.5,
+      anchorY: 1,
+      originX: 200,
+      originY: 600,
+    });
+  });
+
   it("shows a localized add-section menu for empty editor space", () => {
     const state = createInitialState();
 

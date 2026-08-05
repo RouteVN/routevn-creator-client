@@ -2,7 +2,10 @@ import {
   applyTransformPositionIntent,
   createTransformKeyboardIntent,
 } from "../../internal/transformKeyboard.js";
-import { normalizeBackgroundTransformEditorTransform } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import {
+  applyBackgroundTransformAnchorOrigin,
+  normalizeBackgroundTransformEditorTransform,
+} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 
 const dispatchTransformChange = (
   { dispatchEvent },
@@ -23,7 +26,11 @@ const dispatchTransformChange = (
   );
 };
 
-const createTransformFromInspectorValues = (currentTransform, values = {}) => {
+const createTransformFromInspectorValues = (
+  currentTransform,
+  values = {},
+  selectedElementMetrics,
+) => {
   const nextTransform = {
     ...currentTransform,
     ...values,
@@ -37,7 +44,10 @@ const createTransformFromInspectorValues = (currentTransform, values = {}) => {
   }
   delete nextTransform.anchor;
 
-  return normalizeBackgroundTransformEditorTransform(nextTransform);
+  return applyBackgroundTransformAnchorOrigin({
+    transform: nextTransform,
+    selectedElementMetrics,
+  });
 };
 
 export const handleBeforeMount = ({ store, uiConfig }) => {
@@ -45,10 +55,12 @@ export const handleBeforeMount = ({ store, uiConfig }) => {
 };
 
 export const handleInspectorUpdate = (deps, payload) => {
+  const { props } = deps;
   const detail = payload._event.detail;
   const transform = createTransformFromInspectorValues(
-    deps.props.transform,
+    props.transform,
     detail.formValues,
+    props.selectedElementMetrics,
   );
 
   dispatchTransformChange(deps, {
