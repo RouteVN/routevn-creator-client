@@ -621,8 +621,10 @@ const updateCanvasElementsByOccurrence = (
 
     let nextElement = element;
     if (occurrenceIds.has(element.id)) {
-      nextElement = updateElement(element);
       updateCount += 1;
+      // Apply transient changes at each outer occurrence only. Fragment children
+      // share that owner and would otherwise receive the same delta twice.
+      return updateElement(element);
     }
 
     if (Array.isArray(element.children)) {

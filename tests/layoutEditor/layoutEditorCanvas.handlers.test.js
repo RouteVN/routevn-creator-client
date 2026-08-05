@@ -599,6 +599,111 @@ describe("layoutEditorCanvas pointer selection", () => {
     });
   });
 
+  it("moves only the outer fragment container in cached drag previews", async () => {
+    const deps = createDeps({ selectedItemId: "fragment-ref" });
+    deps.props.layoutState.elements.items["fragment-ref"] = {
+      type: "fragment-ref",
+      fragmentLayoutId: "fragment-layout",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+    };
+    const fragmentElements = [
+      {
+        id: "fragment-ref",
+        type: "container",
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        children: [
+          {
+            id: "fragment-ref--fragment-child",
+            type: "rect",
+            x: 20,
+            y: 20,
+            width: 40,
+            height: 40,
+          },
+        ],
+      },
+    ];
+    deps.store.setSelectionOccurrences({
+      occurrencesById: {
+        "fragment-ref": {
+          ownerItemId: "fragment-ref",
+          authoredPath: ["fragment-ref"],
+        },
+        "fragment-ref--fragment-child": {
+          ownerItemId: "fragment-ref",
+          authoredPath: ["fragment-ref"],
+        },
+      },
+      occurrenceIdsByOwner: {
+        "fragment-ref": ["fragment-ref", "fragment-ref--fragment-child"],
+      },
+    });
+    deps.store.setCanvasRenderState({
+      elements: fragmentElements,
+      baseElements: fragmentElements,
+      parsedElements: fragmentElements,
+      canvasUnitsPerCssPixel: 1,
+    });
+    deps.graphicsService.hitTestElementBounds.mockReturnValue([
+      {
+        path: [
+          {
+            id: "fragment-ref",
+            type: "container",
+            bounds: bounds(0, 0, 100, 100),
+          },
+          {
+            id: "fragment-ref--fragment-child",
+            type: "rect",
+            bounds: bounds(20, 20, 40, 40),
+          },
+        ],
+      },
+    ]);
+    deps.graphicsService.render.mockClear();
+    const currentTarget = {
+      setPointerCapture: vi.fn(),
+    };
+    const pointerEvent = {
+      button: 0,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: "mouse",
+      currentTarget,
+      clientX: 30,
+      clientY: 30,
+      metaKey: false,
+      ctrlKey: false,
+    };
+
+    handleCanvasPointerDown(deps, { _event: pointerEvent });
+    await handleCanvasPointerMove(deps, {
+      _event: {
+        ...pointerEvent,
+        clientX: 40,
+        clientY: 35,
+      },
+    });
+
+    const lastRender = deps.graphicsService.render.mock.calls.at(-1)[0];
+    expect(lastRender.elements[0]).toMatchObject({
+      id: "fragment-ref",
+      x: 10,
+      y: 5,
+    });
+    expect(lastRender.elements[0].children[0]).toMatchObject({
+      id: "fragment-ref--fragment-child",
+      x: 20,
+      y: 20,
+    });
+  });
+
   it("moves the selected item from its center after crossing the drag threshold", async () => {
     const deps = createDeps({ selectedItemId: "parent" });
     deps.graphicsService.hitTestElementBounds.mockReturnValue([

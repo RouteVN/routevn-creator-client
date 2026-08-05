@@ -262,4 +262,59 @@ steps:
   - action: wait
     ms: 600
   - action: screenshot
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { window.dispatchEvent(new CustomEvent('routevn:vt:navigate', { detail: { path: '/project/layouts' } })); return 'requested'; })()"
+    value: "requested"
+  - action: waitFor
+    selector: rvn-layouts
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/layouts
+  - action: waitFor
+    selector: "#groupview [data-item-id='fKr5fa67MQWh']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#groupview [data-item-id='fKr5fa67MQWh']"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: rvn-layout-editor
+    state: attached
+    timeoutMs: 20000
+  - action: waitFor
+    selector: "#fileExplorer [data-item-id='wTne3pvWw7ui'] rtgl-text"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#fileExplorer [data-item-id='wTne3pvWw7ui'] rtgl-text"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const findById = (elements, id) => { for (const element of Array.isArray(elements) ? elements : []) { if (element?.id === id) return element; const child = findById(element?.children, id); if (child) return child; } }; const fragmentId = 'wTne3pvWw7ui'; const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas'); const renderState = canvas?.store?.selectCanvasRenderState?.(); const occurrenceState = canvas?.store?.selectSelectionOccurrenceState?.(); const root = findById(renderState?.baseElements, fragmentId); const descendantIds = (occurrenceState?.occurrenceIdsByOwner?.[fragmentId] ?? []).filter((id) => id !== fragmentId); const descendants = descendantIds.map((id) => findById(renderState?.baseElements, id)).filter(Boolean); if (!canvas || !root || descendants.length < 2) return 'missing-fragment'; window.__vtFragmentDragBaseline = descendants.map(({ id, x, y, width, height, rotation }) => ({ id, x, y, width, height, rotation })); window.__vtFragmentDragExpected = { x: (root.x ?? 0) + 20, y: (root.y ?? 0) + 10 }; const graphicsService = canvas.deps.graphicsService; window.__vtFragmentOriginalRender = graphicsService.render; graphicsService.render = (payload) => { window.__vtFragmentDragElements = payload?.elements; return window.__vtFragmentOriginalRender(payload); }; canvas.deps.subject.dispatch('border-drag-start', { targetId: 'selected-border' }); canvas.deps.subject.dispatch('border-drag-move', { x: 0, y: 0 }); canvas.deps.subject.dispatch('border-drag-move', { x: 20, y: 10 }); return canvas.store.selectDragging().isDragging && window.__vtFragmentDragElements ? 'dragged' : 'missing-drag'; })()"
+    value: "dragged"
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const findById = (elements, id) => { for (const element of Array.isArray(elements) ? elements : []) { if (element?.id === id) return element; const child = findById(element?.children, id); if (child) return child; } }; const root = findById(window.__vtFragmentDragElements, 'wTne3pvWw7ui'); const fields = ['x', 'y', 'width', 'height', 'rotation']; const descendantsStayedLocal = window.__vtFragmentDragBaseline.every((before) => { const after = findById(window.__vtFragmentDragElements, before.id); return after && fields.every((field) => Object.is(after[field], before[field])); }); return String(root?.x === window.__vtFragmentDragExpected.x && root?.y === window.__vtFragmentDragExpected.y && descendantsStayedLocal); })()"
+    value: "true"
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas'); if (!canvas || !window.__vtFragmentOriginalRender) return 'missing-drag'; canvas.deps.graphicsService.render = window.__vtFragmentOriginalRender; canvas.deps.subject.dispatch('border-drag-end'); delete window.__vtFragmentOriginalRender; delete window.__vtFragmentDragElements; delete window.__vtFragmentDragBaseline; delete window.__vtFragmentDragExpected; return 'released'; })()"
+    value: "released"
+  - action: wait
+    ms: 500
 ---
