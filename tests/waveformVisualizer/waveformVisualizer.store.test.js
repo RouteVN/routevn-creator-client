@@ -7,7 +7,7 @@ import {
 } from "../../src/components/waveformVisualizer/waveformVisualizer.store.js";
 
 describe("waveformVisualizer.store", () => {
-  it("changes the waveform render key with the rendered size", () => {
+  it("tracks the rendered size", () => {
     const state = createInitialState();
 
     setRenderedSize({ state }, { width: 640, height: 360 });
@@ -19,7 +19,6 @@ describe("waveformVisualizer.store", () => {
     expect(selectViewData({ state, props: { w: "f", h: "f" } })).toMatchObject({
       w: "f",
       h: "f",
-      waveformRenderKey: "waveform640x360",
     });
   });
 });

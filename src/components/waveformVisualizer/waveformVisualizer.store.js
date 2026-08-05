@@ -28,12 +28,13 @@ export const selectRenderedSize = ({ state }) => ({
   height: state.renderedHeight,
 });
 
+export const selectWaveformData = ({ state }) => state.waveformData;
+
 export const selectViewData = ({ state, props: attrs }) => {
   return {
     isLoading: state.isLoading,
     w: attrs.w ?? "250",
     h: attrs.h ?? "150",
     waveformData: state.waveformData,
-    waveformRenderKey: `waveform${state.renderedWidth}x${state.renderedHeight}`,
   };
 };
