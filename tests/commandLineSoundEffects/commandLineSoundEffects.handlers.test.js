@@ -170,7 +170,7 @@ describe("commandLineSoundEffects.handlers", () => {
         sounds: [],
       },
     ]);
-    expect(state.selectedChannelId).toBe("Weather");
+    expect(state.selectedChannelId).toBeUndefined();
     expect(render).toHaveBeenCalledOnce();
 
     handleAddChannelFormAction(deps, {
@@ -260,6 +260,7 @@ describe("commandLineSoundEffects.handlers", () => {
     const store = createStore(state);
     const render = vi.fn();
     store.addChannel({ id: "Weather" });
+    store.setSelectedChannel({ channelId: "Weather" });
 
     handleFormChange(
       { store, render },

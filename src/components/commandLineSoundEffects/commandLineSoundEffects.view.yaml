@@ -271,7 +271,7 @@ template:
           - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
   - rtgl-popover#addChannelPopover ?open=${addChannelPopover.isOpen} x=${addChannelPopover.position.x} y=${addChannelPopover.position.y} place=bs:
-      - rtgl-form#addChannelForm key=${addChannelPopover.key} slot=content :defaultValues=${addChannelDefaultValues} :form=${addChannelForm} w=320 p=none: null
+      - rtgl-form#addChannelForm key=${addChannelPopover.key} slot=content :defaultValues=${addChannelDefaultValues} :form=${addChannelForm} w=320: null
   - $if showAudioPlayer:
       - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: 0px; right: 0px;"':
           - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null

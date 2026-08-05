@@ -487,8 +487,6 @@ export const addChannel = ({ state }, { id } = {}) => {
       sounds: [],
     }),
   );
-  state.selectedChannelId = channelId;
-  state.selectedSoundId = undefined;
 };
 
 export const removeChannel = ({ state }, { channelId } = {}) => {
