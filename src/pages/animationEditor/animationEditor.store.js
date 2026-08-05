@@ -4014,7 +4014,7 @@ export const selectViewData = ({ state, i18n }) => {
     editorTabs: [
       {
         id: DEFAULT_EDITOR_TAB,
-        label: copy.tweenTitle ?? "Tween",
+        label: copy.timelineLabel ?? "Timeline",
         panelId: "animationTweenPanel",
       },
       {

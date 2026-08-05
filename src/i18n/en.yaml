@@ -836,7 +836,6 @@ animationEditorPage:
   translateYPropertyTooltip: "Uses viewport-height units. 1 moves by one full screen height, -1 moves by one full screen height upward."
   tweenModeLabel: "Tween Mode"
   tweenPropertiesTitle: "Tween Properties"
-  tweenTitle: "Tween"
   unsupportedMaskDescription: "This existing mask will be preserved when you save. Remove it if you want to add a new single-image mask."
   unsupportedMaskMessageSuffix: "masks are hidden for now"
   updateAutoTweenButton: "Update Auto Tween"

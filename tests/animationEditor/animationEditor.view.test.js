@@ -270,7 +270,7 @@ describe("animationEditor view", () => {
     expect(view).not.toContain("property-name-right-click");
   });
 
-  it("places zoom controls before Add and lets the timeline scroll on both axes", () => {
+  it("places tab actions in the toolbar and lets the timeline scroll on both axes", () => {
     const view = readFileSync(
       new URL(
         "../../src/pages/animationEditor/animationEditor.view.yaml",
@@ -284,6 +284,7 @@ describe("animationEditor view", () => {
     );
     const toolbarStart = view.indexOf("rtgl-view#animationEditorToolbar");
     const tweenPanelStart = view.indexOf("rtgl-view#animationTweenPanel");
+    const previewPanelStart = view.indexOf("rtgl-view#animationPreviewPanel");
     expect(toolbarStart).toBeGreaterThan(-1);
     expect(view.indexOf("rtgl-view#animationEditorTabs")).toBeGreaterThan(
       toolbarStart,
@@ -293,6 +294,12 @@ describe("animationEditor view", () => {
     );
     expect(view.indexOf("rtgl-button#addPropertiesButton")).toBeLessThan(
       tweenPanelStart,
+    );
+    expect(view.indexOf("rtgl-button#savePreviewButton")).toBeGreaterThan(
+      toolbarStart,
+    );
+    expect(view.indexOf("rtgl-button#savePreviewButton")).toBeLessThan(
+      previewPanelStart,
     );
     expect(view).toContain(
       "min=${timelineZoomMin} max=${timelineZoomMax} step=${timelineZoomStep} value=${timelineZoom}",

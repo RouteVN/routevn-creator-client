@@ -522,6 +522,9 @@ template:
                               - rtgl-button#addPropertiesButton data-side=update pre=plus s=sm: ${addButton}
                           - $if dialogType == 'transition' && transitionAddPropertyButtonVisible:
                               - rtgl-button#addPropertiesButton pre=plus s=sm: ${addButton}
+                        $else:
+                          - rtgl-view w=1fg: null
+                          - rtgl-button#savePreviewButton s=sm: ${saveButton}
                   - $if selectedEditorTab == 'tween':
                       - 'rtgl-view#animationTweenPanel role=tabpanel aria-labelledby=animationEditorTab0 d=v w=f h=1fg g=md style="min-height: 0;"':
                           - $if dialogType == 'update':
@@ -592,9 +595,6 @@ template:
                                           - 'rtgl-view pos=abs bgc=fg op="0.5" style="${timelinePlayheadStyle}"': null
                     $else:
                       - 'rtgl-view#animationPreviewPanel role=tabpanel aria-labelledby=animationEditorTab1 w=f h=1fg d=v style="min-height: 0;"':
-                          - rtgl-view h=40 w=f d=h av=c g=sm:
-                              - rtgl-view w=1fg: null
-                              - rtgl-button#savePreviewButton s=sm: ${saveButton}
                           - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                               - rtgl-view d=v w=f g=md pb=xl:
                                   - $for item, i in previewPanel.items:

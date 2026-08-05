@@ -125,6 +125,12 @@ steps:
     type: js
     fn: eval
     args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const player = deepQuery(document, '#rvnAudioPlayer'); const playerBody = deepQuery(player?.shadowRoot, 'rtgl-view[bgc=\"mu\"]'); const playButton = deepQuery(player?.shadowRoot, '#playPauseBtn'); if (!playerBody || !playButton) return false; const playerRect = playerBody.getBoundingClientRect(); const buttonRect = playButton.getBoundingClientRect(); return Math.abs(buttonRect.left + buttonRect.width / 2 - (playerRect.left + playerRect.width / 2)) <= 1; })()"
+    value: true
+  - action: assert
+    type: js
+    fn: eval
+    args:
       - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const player = deepQuery(document, '#rvnAudioPlayer'); const progressTrack = deepQuery(player?.shadowRoot, '#progressBar'); const playerBody = deepQuery(player?.shadowRoot, 'rtgl-view[bgc=\"mu\"]'); return Boolean(progressTrack && playerBody && getComputedStyle(progressTrack).backgroundColor !== getComputedStyle(playerBody).backgroundColor); })()"
     value: true
   - action: keypress

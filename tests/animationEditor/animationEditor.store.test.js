@@ -69,14 +69,14 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("animationEditor.store", () => {
-  it("defaults to Tween and exposes Tween and Preview tabs", () => {
+  it("defaults to Timeline and exposes Timeline and Preview tabs", () => {
     const state = createInitialState();
 
     expect(selectSelectedEditorTab({ state })).toBe("tween");
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       selectedEditorTab: "tween",
       editorTabs: [
-        { id: "tween", label: "Tween" },
+        { id: "tween", label: "Timeline" },
         { id: "preview", label: "Preview" },
       ],
     });
