@@ -1900,9 +1900,32 @@ describe("graphicsService", () => {
 
   it("ignores delayed render effects from a replaced engine", async () => {
     const effectsHandlerOptions = [];
+    const effectsHandlers = [];
     createEffectsHandlerMock.mockImplementation((options) => {
       effectsHandlerOptions.push(options);
-      return vi.fn();
+      const effectsHandler = vi.fn(() => {
+        options.getEngine().selectRenderState();
+      });
+      effectsHandlers.push(effectsHandler);
+      return effectsHandler;
+    });
+    const engineRecords = [];
+    createRouteEngineMock.mockImplementation(({ handlePendingEffects }) => {
+      const routeEngine = {
+        init: vi.fn(),
+        selectRenderState: vi.fn(() => ({
+          id: `render-${engineRecords.length + 1}`,
+          elements: [],
+          audio: [],
+          animations: [],
+        })),
+        selectPresentationState: vi.fn(() => undefined),
+        selectPresentationChanges: vi.fn(() => undefined),
+        selectSectionLineChanges: vi.fn(() => []),
+        handleActions: vi.fn(),
+      };
+      engineRecords.push({ handlePendingEffects, routeEngine });
+      return routeEngine;
     });
 
     const { createGraphicsService } = await import(
@@ -1933,6 +1956,14 @@ describe("graphicsService", () => {
     service.initRouteEngine(projectData);
     routeGraphicsInstance.render.mockClear();
 
+    expect(effectsHandlerOptions[0].getEngine()).toBe(
+      engineRecords[0].routeEngine,
+    );
+    expect(() =>
+      engineRecords[0].handlePendingEffects([{ name: "render" }]),
+    ).not.toThrow();
+    expect(effectsHandlers[0]).not.toHaveBeenCalled();
+
     effectsHandlerOptions[0].routeGraphics.render({
       id: "stale-render",
       elements: [],
@@ -1941,7 +1972,8 @@ describe("graphicsService", () => {
     });
 
     expect(routeGraphicsInstance.render).not.toHaveBeenCalled();
-    expect(effectsHandlerOptions[0].getEngine()).toBeUndefined();
+    engineRecords[1].handlePendingEffects([{ name: "render" }]);
+    expect(effectsHandlers[1]).toHaveBeenCalledWith([{ name: "render" }]);
 
     effectsHandlerOptions[1].routeGraphics.render({
       id: "current-render",

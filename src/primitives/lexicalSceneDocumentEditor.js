@@ -2901,6 +2901,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleWindowKeyDownCapture(event) {
+    if (this.state.selectionActive === false) {
+      return;
+    }
+
     if (this.handleTextModeWindowEscape(event)) {
       return;
     }

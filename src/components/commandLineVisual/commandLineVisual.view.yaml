@@ -205,7 +205,7 @@ template:
                                                           - 'rtgl-view#customTransformChip${groupIndex}x${i}x${j} data-index=${visual.visualIndex} d=h av=c g=sm bw=xs bc=bo h-bc=pr br=full bgc=mu ph=md pv=sm cur=pointer style="max-width: 220px; box-sizing: border-box;"':
                                                               - rtgl-text s=xs c=mu-fg ellipsis: ${item.label}
                                                               - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums; white-space: nowrap;"': ${item.value}
-                                              - rtgl-button#customTransformButton${groupIndex}x${i} data-index=${visual.visualIndex} data-target-name="${visual.displayName}" v=se: ${editButtonLabel}
+                                                  - rtgl-button#customTransformButton${groupIndex}x${i} data-index=${visual.visualIndex} data-target-name="${visual.displayName}" v=se: ${editButtonLabel}
                                             $else:
                                               - rtgl-text s=sm c=mu-fg: ${predefinedTransformLabel}
                                               - rtgl-select#transform${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.transformId} :options=${defaultValues.transformOptions} :selectedValue=${visual.transformId} w=f no-clear: null

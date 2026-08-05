@@ -447,6 +447,14 @@ describe("sceneEditorLexical.store", () => {
     expect(viewData.sectionEditorItems[1].documentLineDecorations[0]).toEqual(
       expect.objectContaining({ id: "line-3", lineNumber: 1 }),
     );
+
+    state.backgroundTransformEditor.isOpen = true;
+    const transformEditorViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(
+      transformEditorViewData.sectionEditorItems.every(
+        ({ selectionActive }) => selectionActive === false,
+      ),
+    ).toBe(true);
   });
 
   it("uses per-section line changes for inactive section decorations", () => {

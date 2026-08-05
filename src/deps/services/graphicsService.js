@@ -2225,9 +2225,9 @@ export const createGraphicsService = async ({
           : (options.persistence ??
             (namespace ? undefined : createNoopRouteEnginePersistence()));
 
-      const handlePendingEffects = createEffectsHandler({
-        getEngine: () =>
-          currentEngineGeneration === engineGeneration ? engine : undefined,
+      let routeEngine;
+      const handleExternalEffects = createEffectsHandler({
+        getEngine: () => routeEngine,
         routeGraphics: {
           render: (renderState) => {
             if (
@@ -2239,7 +2239,7 @@ export const createGraphicsService = async ({
             renderEngineState(renderState);
             onRenderState?.({
               renderState,
-              systemState: engine?.selectSystemState?.(),
+              systemState: routeEngine?.selectSystemState?.(),
             });
           },
         },
@@ -2247,9 +2247,17 @@ export const createGraphicsService = async ({
         persistence,
         ticker: routeEngineTicker,
       });
-      engine = createRouteEngine({ handlePendingEffects });
+      const handlePendingEffects = (effects) => {
+        if (currentEngineGeneration !== engineGeneration) {
+          return;
+        }
+
+        return handleExternalEffects(effects);
+      };
+      routeEngine = createRouteEngine({ handlePendingEffects });
+      engine = routeEngine;
       const initEngine = () => {
-        engine.init({
+        routeEngine.init({
           initialState: {
             global: initialGlobal,
             projectData,

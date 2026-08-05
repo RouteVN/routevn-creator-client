@@ -318,6 +318,49 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("leaves window shortcuts untouched while editor selection is inactive", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      editorElement.state = {
+        selectionActive: false,
+      };
+      editorElement.handleTextModeWindowEscape = vi.fn();
+      editorElement.handleBlockModeWindowShortcut = vi.fn();
+      editorElement.handleBlockModeWindowArrowNavigation = vi.fn();
+      editorElement.handleBlockModeWindowEnter = vi.fn();
+
+      const event = {
+        key: "ArrowDown",
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+
+      editorElement.handleWindowKeyDownCapture(event);
+
+      expect(editorElement.handleTextModeWindowEscape).not.toHaveBeenCalled();
+      expect(
+        editorElement.handleBlockModeWindowShortcut,
+      ).not.toHaveBeenCalled();
+      expect(
+        editorElement.handleBlockModeWindowArrowNavigation,
+      ).not.toHaveBeenCalled();
+      expect(editorElement.handleBlockModeWindowEnter).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(event.stopPropagation).not.toHaveBeenCalled();
+      expect(event.stopImmediatePropagation).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("suppresses block-mode Space from the window capture path", async () => {
     const restoreDomGlobals = installDomGlobals();
 

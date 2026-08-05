@@ -2021,7 +2021,9 @@ export const selectViewData = ({ state, i18n }) => {
           String(index + 1),
         ),
       isSelected: section.id === state.selectedSectionId,
-      selectionActive: section.id === state.selectedSectionId,
+      selectionActive:
+        section.id === state.selectedSectionId &&
+        state.backgroundTransformEditor.isOpen !== true,
       selectedLineId:
         section.id === state.selectedSectionId
           ? (state.selectedLineId ?? INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID)
