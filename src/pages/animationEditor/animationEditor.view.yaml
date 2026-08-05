@@ -154,7 +154,7 @@ refs:
         handler: handlePropertyNameClick
       initial-value-click:
         handler: handleInitialValueClick
-  maskTimeline*:
+  maskKeyframeTimeline*:
     eventListeners:
       add-keyframe:
         handler: handleAddKeyframeFromTimeline
@@ -212,6 +212,10 @@ refs:
     eventListeners:
       form-action:
         handler: handleEditKeyframeFormSubmit
+  editSelectedKeyframeButton:
+    eventListeners:
+      click:
+        handler: handleSelectedKeyframeEditClick
   editAutoForm:
     eventListeners:
       form-action:
@@ -513,8 +517,8 @@ template:
                                               - rtgl-view h=24 w=24 mr=sm ml=sm: null
                                           - $for maskTimelineRow, i in maskTimelineRows:
                                               - $if maskTimelineRow.editable:
-                                                  - rtgl-view#maskTimelineRow${i} data-timeline-selection-surface=true w=f:
-                                                      - rvn-keyframe-timeline#maskTimeline${i} editable=true side=${maskTimelineRow.side} ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDisplayDuration} :properties=${maskTimelineRow.properties} :defaultValues=${maskTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
+                                                  - rtgl-view#maskTrackRow${i} data-timeline-selection-surface=true w=f:
+                                                      - rvn-keyframe-timeline#maskKeyframeTimeline${i} editable=true side=${maskTimelineRow.side} ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDisplayDuration} :properties=${maskTimelineRow.properties} :defaultValues=${maskTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
                                                 $else:
                                                   - 'rtgl-view#unsupportedMaskTimelineRow${i} data-timeline-selection-surface=true data-mask-index=${maskTimelineRow.index} data-selected=${maskTimelineRow.selected} role=button tabindex=0 aria-label="${maskTimelineRow.label}" aria-pressed="${maskTimelineRow.selected}" d=h w=f h=24 av=c cur=pointer':
                                                       - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
@@ -556,7 +560,9 @@ template:
                   - $if detailsPanelTitle:
                       - rtgl-view#timelineDetailsHeader h=48 w=f d=h av=c ph=md bwb=xs bc=bo:
                           - rtgl-text w=1fg: ${detailsPanelTitle}
-                          - $if selectedMask:
+                          - $if selectedKeyframeDetailId:
+                              - 'rtgl-button#editSelectedKeyframeButton sq v=gh pre=edit aria-label="${editKeyframeButtonLabel}" title="${editKeyframeButtonLabel}"': null
+                            $elif selectedMask:
                               - 'rtgl-button#selectedMaskDeleteButton sq v=gh pre=trash aria-label="${removeButton}" title="${removeButton}"': null
                             $elif selectedPropertyDetailId:
                               - 'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"': null

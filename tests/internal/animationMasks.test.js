@@ -19,6 +19,7 @@ describe("animationMasks", () => {
       kind: "single",
       imageId: "mask-image",
       channel: "red",
+      delay: 250,
       progress: {
         initialValue: 0,
         keyframes: [
@@ -38,16 +39,21 @@ describe("animationMasks", () => {
     );
 
     expect(editorMask).toMatchObject({
+      delay: 250,
       progressDelay: 500,
       progressDuration: 1000,
       progressEasing: "linear",
     });
-    expect(getTransitionMaskDuration(editorMask)).toBe(1500);
+    expect(getTransitionMaskDuration(editorMask)).toBe(1750);
     expect(
-      compileTransitionMaskForRuntime(editorMask, imageItems)?.progress,
-    ).toEqual(delayedMask.progress);
+      compileTransitionMaskForRuntime(editorMask, imageItems),
+    ).toMatchObject({
+      delay: 250,
+      progress: delayedMask.progress,
+    });
 
     const serializedMask = serializeTransitionMask(editorMask);
+    expect(serializedMask.delay).toBe(250);
     expect(serializedMask.progress).toEqual({
       initialValue: 0,
       keyframes: [
@@ -123,6 +129,7 @@ describe("animationMasks", () => {
         ...createDefaultTransitionMask(),
         imageId: "second",
         channel: "alpha",
+        delay: 500,
         progress: {
           initialValue: 0,
           keyframes: [{ duration: 1400, value: 1, easing: "linear" }],
@@ -136,10 +143,14 @@ describe("animationMasks", () => {
 
     const serializedMasks = serializeTransitionMask(masks);
     expect(serializedMasks).toHaveLength(2);
-    expect(getTransitionMaskDuration(masks)).toBe(1400);
+    expect(getTransitionMaskDuration(masks)).toBe(1900);
     expect(compileTransitionMaskForRuntime(masks, imageItems)).toEqual([
       expect.objectContaining({ texture: "first.png", channel: "red" }),
-      expect.objectContaining({ texture: "second.png", channel: "alpha" }),
+      expect.objectContaining({
+        texture: "second.png",
+        channel: "alpha",
+        delay: 500,
+      }),
     ]);
     expect(
       validatePayload({

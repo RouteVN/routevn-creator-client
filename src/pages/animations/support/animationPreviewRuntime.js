@@ -7,6 +7,10 @@ import { selectAnimationsPageCopy } from "./animationsPageCopy.js";
 const ANIMATION_PREVIEW_LOOP_PAUSE_MS = 1000;
 
 const collectRuntimeMaskTextureIds = (mask = {}) => {
+  if (Array.isArray(mask)) {
+    return mask.flatMap(collectRuntimeMaskTextureIds);
+  }
+
   if (!mask) {
     return [];
   }

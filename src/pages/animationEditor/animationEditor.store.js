@@ -1250,6 +1250,7 @@ const cloneTransitionMask = (mask = {}) => {
   nextMask.sample = mask.sample;
   nextMask.softness = mask.softness;
   nextMask.invert = mask.invert;
+  nextMask.delay = mask.delay;
   nextMask.progress = cloneMaskProgress(mask.progress);
   nextMask.progressDelay = mask.progressDelay;
   nextMask.progressDuration = mask.progressDuration;
@@ -3922,6 +3923,7 @@ export const selectViewData = ({ state, i18n }) => {
     deletePropertyButtonLabel:
       copy.deletePropertyButtonLabel ?? "Delete property",
     editPreviewButton: copy.editPreviewButton ?? "Edit Preview",
+    editKeyframeButtonLabel: copy.editKeyframeMenuItem ?? "Edit keyframe",
     imageLabel: copy.imageLabel ?? "Image",
     initialValueLabel: copy.initialValueLabel ?? "Initial value",
     inTimelineLabel: copy.inTimelineLabel ?? "Incoming",

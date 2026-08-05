@@ -110,7 +110,7 @@ describe("animationEditor view", () => {
     expect(view).toContain("handler: handleSelectedPropertyDeleteClick");
     expect(view).toContain("rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}");
     expect(view).not.toContain("${selectTimelineItemPrompt}");
-    expect(view).not.toContain("rtgl-button#editSelectedKeyframeButton");
+    expect(view).toContain("rtgl-button#editSelectedKeyframeButton");
     expect(view).toContain("rtgl-select#selectedKeyframeEasingSelect");
     expect(view).toContain("handler: handleSelectedKeyframeEasingChange");
     expect(view).toContain(
@@ -154,15 +154,15 @@ describe("animationEditor view", () => {
     expect(view).toContain("rtgl-view#maskTimelineCategory");
     expect(view).toContain("rtgl-text s=sm c=mu-fg: ${maskTitle}");
     expect(view).toContain("$for maskTimelineRow, i in maskTimelineRows");
-    expect(view).toContain("rtgl-view#maskTimelineRow${i}");
+    expect(view).toContain("rtgl-view#maskTrackRow${i}");
     expect(view).toContain(
-      "rvn-keyframe-timeline#maskTimeline${i} editable=true side=${maskTimelineRow.side}",
+      "rvn-keyframe-timeline#maskKeyframeTimeline${i} editable=true side=${maskTimelineRow.side}",
     );
     expect(view).toContain(
       ":properties=${maskTimelineRow.properties} :defaultValues=${maskTimelineDefaultValues}",
     );
     const maskTimelineListeners = view.slice(
-      view.indexOf("  maskTimeline*:"),
+      view.indexOf("  maskKeyframeTimeline*:"),
       view.indexOf("  addPropertyPopover:"),
     );
     expect(maskTimelineListeners).toContain(
@@ -171,9 +171,13 @@ describe("animationEditor view", () => {
     expect(maskTimelineListeners).not.toContain(
       "handler: handleInitialValueClick",
     );
+    expect(view).not.toContain("rtgl-view#maskTimelineRow${i}");
     expect(view).toContain("handler: handleMaskTimelineRowClick");
     expect(view).toContain("handler: handleMaskTimelineRowKeyDown");
     expect(view).toContain("$elif selectedMask");
+    expect(view).toContain(
+      "rtgl-button#editSelectedKeyframeButton sq v=gh pre=edit",
+    );
     expect(view).toContain("rtgl-view#selectedMaskDetails");
     expect(view).toContain("rtgl-view#selectedMaskSoftness");
     expect(view).toContain("handler: handleSelectedMaskSoftnessClick");

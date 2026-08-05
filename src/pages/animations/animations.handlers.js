@@ -91,6 +91,11 @@ const resolveAnimationImportItems = (input) => {
 };
 
 const collectMaskImageIds = (mask, imageIds) => {
+  if (Array.isArray(mask)) {
+    mask.forEach((item) => collectMaskImageIds(item, imageIds));
+    return;
+  }
+
   if (!isPlainObject(mask)) {
     return;
   }
@@ -327,6 +332,10 @@ const resolveImageId = (imageId, imageIdMap) => {
 };
 
 const rewriteMaskImageRefs = (mask, imageIdMap) => {
+  if (Array.isArray(mask)) {
+    return mask.map((item) => rewriteMaskImageRefs(item, imageIdMap));
+  }
+
   if (!isPlainObject(mask) || imageIdMap.size === 0) {
     return mask;
   }

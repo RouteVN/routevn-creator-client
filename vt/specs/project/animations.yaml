@@ -207,7 +207,7 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#maskTimelineRow0"
+    selector: "#maskTrackRow0"
     state: visible
     timeoutMs: 5000
   - action: waitFor
@@ -215,7 +215,7 @@ steps:
     state: visible
     timeoutMs: 5000
   - action: waitFor
-    selector: "#maskTimelineRow0 rvn-file-image"
+    selector: "#maskTrackRow0 rvn-file-image"
     state: visible
     timeoutMs: 5000
   - action: waitFor
@@ -319,14 +319,14 @@ steps:
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return Boolean(deepQuery(document, '#selectedKeyframeEasingSelect')) && !deepQuery(document, '#editSelectedKeyframeButton'); })()"
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return Boolean(deepQuery(document, '#selectedKeyframeEasingSelect')) && Boolean(deepQuery(document, '#editSelectedKeyframeButton')); })()"
     value: true
   - action: waitFor
     selector: "#selectedKeyframeDetails"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#maskTimelineRow0 #propertyName0[role='button']"
+    selector: "#maskTrackRow0 #propertyName0[role='button']"
     steps:
       - action: focus
   - action: keypress

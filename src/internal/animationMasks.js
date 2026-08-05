@@ -20,6 +20,12 @@ const hasMaskImageReference = (value) => {
   return typeof value === "string" && value.length > 0;
 };
 
+const resolveTransitionMaskDelay = (mask = {}) => {
+  return Number.isSafeInteger(mask.delay) && mask.delay >= 0
+    ? mask.delay
+    : undefined;
+};
+
 const cloneCompositeItem = (item = {}) => {
   return {
     imageId: item.imageId,
@@ -228,6 +234,10 @@ export const normalizeTransitionMaskForEditor = (mask, imageItems = {}) => {
   nextMask.progressDuration = progress.duration;
   nextMask.progressEasing = progress.easing;
   nextMask.progress = normalizeProgressForEditor(mask, progress);
+  const delay = resolveTransitionMaskDelay(mask);
+  if (delay !== undefined) {
+    nextMask.delay = delay;
+  }
   nextMask.imageId = resolveEditorSingleMaskImageId(mask, imageItems);
   nextMask.channel = normalizeTransitionMaskChannel(mask.channel);
   nextMask.invert = mask.invert ?? nextMask.invert;
@@ -289,6 +299,10 @@ export const serializeTransitionMask = (mask) => {
         ? Number(mask.softness)
         : DEFAULT_TRANSITION_MASK_SOFTNESS,
   };
+  const delay = resolveTransitionMaskDelay(mask);
+  if (delay !== undefined) {
+    serializedMask.delay = delay;
+  }
 
   if (mask.progress?.keyframes?.length > 0) {
     serializedMask.progress = serializeProgressForModel(mask.progress);
@@ -370,6 +384,10 @@ export const compileTransitionMaskForRuntime = (mask, imageItems = {}) => {
         : DEFAULT_TRANSITION_MASK_SOFTNESS,
     progress: runtimeProgress,
   };
+  const delay = resolveTransitionMaskDelay(mask);
+  if (delay !== undefined) {
+    runtimeMask.delay = delay;
+  }
 
   if (mask.kind === "single") {
     const texture =
@@ -481,5 +499,7 @@ export const getTransitionMaskDuration = (mask = {}) => {
   }
 
   const progress = resolveMaskProgress(mask);
-  return progress.delay + progress.duration;
+  return (
+    (resolveTransitionMaskDelay(mask) ?? 0) + progress.delay + progress.duration
+  );
 };
