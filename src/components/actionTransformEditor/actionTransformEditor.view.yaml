@@ -3,12 +3,6 @@ refs:
     eventListeners:
       keydown:
         handler: handleWindowKeyDown
-      pointermove:
-        handler: handleWindowPointerMove
-      pointerup:
-        handler: handleWindowPointerUp
-      pointercancel:
-        handler: handleWindowPointerUp
   doneButton:
     eventListeners:
       click:
@@ -18,10 +12,6 @@ refs:
       update:
         handler: handleInspectorUpdate
   actionTransformCanvasHost: {}
-  backgroundDragSurface:
-    eventListeners:
-      pointerdown:
-        handler: handleBackgroundPointerDown
 template:
   - 'rtgl-view w=f h=f d=v bgc=bg style="min-width: 0; min-height: 0; overflow: hidden;"':
       - 'rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo g=md style="flex: 0 0 auto;"':
@@ -32,8 +22,6 @@ template:
               - 'rtgl-view w=f p=md bgc=bg ah=c style="flex: 0 0 auto; min-width: 0;"':
                   - 'div style="position: relative; width: ${canvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; overflow: hidden;"':
                       - 'rvn-scene-editor-preview-canvas#actionTransformCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
-                      - $if isBackgroundTarget:
-                          - 'div#backgroundDragSurface role=button aria-label="${targetTypeLabel}" tabindex=0 style="position: absolute; inset: 0; z-index: 3; cursor: ${backgroundDragCursor}; touch-action: none; user-select: none;"': null
               - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
                   - rvn-layout-edit-panel#transformInspector mode=transform :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :values=${inspectorValues}: null
                   - 'rtgl-view h=25vh style="flex-shrink: 0;"': null
@@ -48,8 +36,6 @@ template:
               - 'rtgl-view w=1fg h=f bgc=bg av=s ah=c style="min-width: 0; min-height: 0; overflow: auto; box-sizing: border-box;"':
                   - 'div style="position: relative; width: ${canvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; overflow: hidden;"':
                       - 'rvn-scene-editor-preview-canvas#actionTransformCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
-                      - $if isBackgroundTarget:
-                          - 'div#backgroundDragSurface role=button aria-label="${targetTypeLabel}" tabindex=0 style="position: absolute; inset: 0; z-index: 3; cursor: ${backgroundDragCursor}; touch-action: none; user-select: none;"': null
               - rvn-resizable-panel panel-type=transform-editor w=300 min-w=240 max-w=500 resize-side=left:
                   - 'rtgl-view slot=content w=f h=f d=v style="min-width: 0; min-height: 0;"':
                       - 'rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo style="flex: 0 0 auto;"':

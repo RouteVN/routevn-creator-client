@@ -2232,7 +2232,6 @@ export const createGraphicsService = async ({
           render: (renderState) => {
             if (
               currentEngineGeneration !== engineGeneration ||
-              suppressRenderEffects ||
               suppressedEngineRenderEffects > 0
             ) {
               return;

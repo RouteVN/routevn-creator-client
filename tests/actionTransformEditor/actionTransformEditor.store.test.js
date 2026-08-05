@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectViewData,
-  setBackgroundDragTransform,
   setUiConfig,
-  startBackgroundDrag,
 } from "../../src/components/actionTransformEditor/actionTransformEditor.store.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -51,10 +49,9 @@ describe("actionTransformEditor.store", () => {
         },
       },
     });
-    expect(viewData.isBackgroundTarget).toBe(false);
   });
 
-  it("exposes a selected drag surface for the background", () => {
+  it("exposes selected element metrics for the background", () => {
     const viewData = selectViewData({
       state: createInitialState(),
       props: {
@@ -85,35 +82,13 @@ describe("actionTransformEditor.store", () => {
       i18n: EN_I18N,
     });
 
-    expect(viewData.isBackgroundTarget).toBe(true);
-    expect(viewData.backgroundDragCursor).toBe("move");
-  });
-
-  it("shows the transient drag transform without waiting for parent props", () => {
-    const state = createInitialState();
-    startBackgroundDrag(
-      { state },
-      {
-        pointerId: 1,
-        transform: { x: 0, y: 0 },
+    expect(viewData).toMatchObject({
+      targetTypeLabel: "Background",
+      selectedElementMetrics: {
+        width: 1920,
+        height: 1080,
       },
-    );
-    setBackgroundDragTransform(
-      { state },
-      {
-        transform: { x: 240, y: 120 },
-      },
-    );
-
-    const viewData = selectViewData({
-      state,
-      props: {
-        transform: { x: 0, y: 0 },
-      },
-      i18n: EN_I18N,
     });
-
-    expect(viewData.inspectorValues).toMatchObject({ x: 240, y: 120 });
   });
 
   it("uses the touch layout when the component receives touch UI config", () => {

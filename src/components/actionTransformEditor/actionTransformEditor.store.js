@@ -31,7 +31,6 @@ const toInspectorValues = (transform = {}) => ({
 
 export const createInitialState = () => ({
   isTouchMode: false,
-  backgroundDrag: undefined,
 });
 
 export const selectIsTouchMode = ({ state }) => state.isTouchMode === true;
@@ -39,7 +38,7 @@ export const selectIsTouchMode = ({ state }) => state.isTouchMode === true;
 export const selectViewData = ({ state, props, i18n }) => {
   const copy = selectCopy(i18n);
   const transform = normalizeBackgroundTransformEditorTransform(
-    state.backgroundDrag?.currentTransform ?? props.transform,
+    props.transform,
   );
   const targetType = TARGET_TYPE_COPY[props.targetType]
     ? props.targetType
@@ -60,59 +59,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     projectResolution,
     selectedElementMetrics: props.selectedElementMetrics,
     inspectorValues: toInspectorValues(transform),
-    isBackgroundTarget: targetType === "background",
-    backgroundDragCursor: state.backgroundDrag ? "grabbing" : "move",
   };
 };
-
-export const startBackgroundDrag = (
-  { state },
-  {
-    pointerId,
-    startClientX,
-    startClientY,
-    canvasWidth,
-    canvasHeight,
-    projectResolution,
-    transform,
-  } = {},
-) => {
-  state.backgroundDrag = {
-    pointerId,
-    startClientX,
-    startClientY,
-    canvasWidth,
-    canvasHeight,
-    projectResolution,
-    transform,
-    currentTransform: transform,
-  };
-};
-
-export const setBackgroundDragTransform = ({ state }, { transform } = {}) => {
-  if (!state.backgroundDrag) {
-    return;
-  }
-
-  state.backgroundDrag.currentTransform = transform;
-};
-
-export const setBackgroundDragPreviewFrameId = (
-  { state },
-  { frameId } = {},
-) => {
-  if (!state.backgroundDrag) {
-    return;
-  }
-
-  state.backgroundDrag.previewFrameId = frameId;
-};
-
-export const stopBackgroundDrag = ({ state }) => {
-  state.backgroundDrag = undefined;
-};
-
-export const selectBackgroundDrag = ({ state }) => state.backgroundDrag;
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =

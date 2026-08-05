@@ -138,11 +138,11 @@ steps:
       - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const sceneEditor = deepQuery(document, 'rvn-scene-editor-lexical'); const metrics = sceneEditor?.store?.selectBackgroundTransformEditor?.()?.selectedElementMetrics; return `${metrics?.width}x${metrics?.height}`; })()"
     value: "1920x1080"
   - action: waitFor
-    selector: "rvn-action-transform-editor#actionTransformEditor #backgroundDragSurface"
+    selector: "rvn-action-transform-editor#actionTransformEditor #actionTransformCanvasHost canvas"
     state: visible
     timeoutMs: 10000
   - action: select
-    selector: "rvn-action-transform-editor#actionTransformEditor #backgroundDragSurface"
+    selector: "rvn-action-transform-editor#actionTransformEditor #actionTransformCanvasHost canvas"
     steps:
       - action: hover
   - action: wait
@@ -158,7 +158,7 @@ steps:
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const surface = editor?.shadowRoot?.querySelector?.('#backgroundDragSurface'); const bounds = surface?.getBoundingClientRect?.(); if (!bounds?.width) return 'missing'; const pointerId = 17; const startX = bounds.left + bounds.width / 2; const startY = bounds.top + bounds.height / 2; window.__vtActionTransformPointer = { pointerId, x: startX + bounds.width / 10, y: startY }; surface.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, pointerId, isPrimary: true, button: 0, clientX: startX, clientY: startY })); window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, composed: true, pointerId, isPrimary: true, buttons: 1, clientX: window.__vtActionTransformPointer.x, clientY: window.__vtActionTransformPointer.y })); return 'dispatched'; })()"
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const canvas = editor?.getCanvasRoot?.()?.querySelector?.('canvas'); const bounds = canvas?.getBoundingClientRect?.(); if (!bounds?.width) return 'missing'; const pointerId = 17; const startX = bounds.left + bounds.width * 0.35; const startY = bounds.top + bounds.height * 0.35; const endX = startX + bounds.width / 10; window.__vtActionTransformPointer = { pointerId, x: endX, y: startY }; const pointer = { bubbles: true, composed: true, pointerId, pointerType: 'mouse', isPrimary: true, button: 0 }; canvas.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, buttons: 1, clientX: startX, clientY: startY })); canvas.dispatchEvent(new PointerEvent('pointermove', { ...pointer, buttons: 1, clientX: startX, clientY: startY })); canvas.dispatchEvent(new PointerEvent('pointermove', { ...pointer, buttons: 1, clientX: endX, clientY: startY })); return 'dispatched'; })()"
     value: "dispatched"
   - action: wait
     ms: 250
@@ -166,15 +166,23 @@ steps:
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const sceneEditor = deepQuery(document, 'rvn-scene-editor-lexical'); const xField = deepQuery(editor?.shadowRoot, '#groupItem0x0x0'); const hits = sceneEditor?.deps?.graphicsService?.hitTestElementBounds?.({ x: 960, y: 540 }) ?? []; const background = hits.flatMap((hit) => hit.path ?? []).find((entry) => entry.id === 'bg-cg-background-container'); const nextX = Number(xField?.textContent?.trim()); const boundsX = Number(background?.bounds?.x); const transformMoved = Math.abs(nextX - window.__vtActionTransformX - 192) < 0.01; const previewMoved = Math.abs(boundsX - window.__vtActionTransformBoundsX - 192) < 0.01; window.__vtActionTransformX = nextX; return String(transformMoved && previewMoved); })()"
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const sceneEditor = deepQuery(document, 'rvn-scene-editor-lexical'); const hits = sceneEditor?.deps?.graphicsService?.hitTestElementBounds?.({ x: 960, y: 540 }) ?? []; const background = hits.flatMap((hit) => hit.path ?? []).find((entry) => entry.id === 'bg-cg-background-container'); const boundsX = Number(background?.bounds?.x); return String(Math.abs(boundsX - window.__vtActionTransformBoundsX - 192) < 0.01); })()"
     value: "true"
-  - action: screenshot
   - action: assert
     type: js
     fn: eval
     args:
-      - "(() => { const pointer = window.__vtActionTransformPointer; if (!pointer) return 'missing'; window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true, pointerId: pointer.pointerId, isPrimary: true, button: 0, clientX: pointer.x, clientY: pointer.y })); return 'released'; })()"
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const canvas = editor?.getCanvasRoot?.()?.querySelector?.('canvas'); const pointer = window.__vtActionTransformPointer; if (!canvas || !pointer) return 'missing'; canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true, pointerId: pointer.pointerId, pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0, clientX: pointer.x, clientY: pointer.y })); return 'released'; })()"
     value: "released"
+  - action: wait
+    ms: 250
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const xField = deepQuery(editor?.shadowRoot, '#groupItem0x0x0'); const nextX = Number(xField?.textContent?.trim()); const moved = Math.abs(nextX - window.__vtActionTransformX - 192) < 0.01; window.__vtActionTransformX = nextX; return String(moved); })()"
+    value: "true"
+  - action: screenshot
   - action: keypress
     key: ArrowRight
   - action: wait

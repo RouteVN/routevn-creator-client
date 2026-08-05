@@ -1800,11 +1800,47 @@ describe("graphicsService", () => {
     });
   });
 
-  it("keeps deferred engine renders suppressed for editor-owned canvases", async () => {
+  it("suppresses only initialization renders for editor-owned canvases", async () => {
     let effectsHandlerOptions;
     createEffectsHandlerMock.mockImplementation((options) => {
       effectsHandlerOptions = options;
       return vi.fn();
+    });
+    const systemState = {
+      contexts: [
+        {
+          currentPointerMode: "read",
+        },
+      ],
+    };
+    const handleActions = vi.fn(() => {
+      effectsHandlerOptions.routeGraphics.render({
+        id: "interaction-render",
+        elements: [],
+        audio: [],
+        animations: [],
+      });
+    });
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(() => {
+        effectsHandlerOptions.routeGraphics.render({
+          id: "initialization-render",
+          elements: [],
+          audio: [],
+          animations: [],
+        });
+      }),
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [],
+        audio: [],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      selectSystemState: vi.fn(() => systemState),
+      handleActions,
     });
 
     const { createGraphicsService } = await import(
@@ -1838,17 +1874,28 @@ describe("graphicsService", () => {
         suppressRenderEffects: true,
       },
     );
-    routeGraphicsInstance.render.mockClear();
 
-    effectsHandlerOptions.routeGraphics.render({
-      id: "deferred-render",
+    expect(routeGraphicsInstance.render).not.toHaveBeenCalled();
+    expect(onRenderState).not.toHaveBeenCalled();
+
+    service.engineHandleActions({ nextLine: true });
+
+    expect(handleActions).toHaveBeenCalledWith({ nextLine: true }, undefined);
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith({
+      id: "interaction-render",
       elements: [],
       audio: [],
       animations: [],
     });
-
-    expect(routeGraphicsInstance.render).not.toHaveBeenCalled();
-    expect(onRenderState).not.toHaveBeenCalled();
+    expect(onRenderState).toHaveBeenCalledWith({
+      renderState: {
+        id: "interaction-render",
+        elements: [],
+        audio: [],
+        animations: [],
+      },
+      systemState,
+    });
   });
 
   it("ignores delayed render effects from a replaced engine", async () => {
