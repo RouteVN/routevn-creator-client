@@ -6,7 +6,7 @@ import {
   selectViewData,
   setValues,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N } from "../support/i18n.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const CONSTANTS = yaml.load(
@@ -57,8 +57,8 @@ describe("layoutEditPanel transform mode", () => {
       viewData.config.sections[0].items;
     expect(positionGroup.fields.map((field) => field.name)).toEqual(["x", "y"]);
     expect(positionGroup.fields.map((field) => field.label)).toEqual([
-      undefined,
-      undefined,
+      EN_I18N.layoutEditPanel.positionXLabel,
+      EN_I18N.layoutEditPanel.positionYLabel,
     ]);
     expect(scaleGroup.stacked).toBe(true);
     expect(anchorRotationGroup.stacked).toBe(true);
@@ -73,6 +73,39 @@ describe("layoutEditPanel transform mode", () => {
       "scaleY",
       "anchor",
       "rotation",
+    ]);
+  });
+
+  it("localizes position labels and center anchor options", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: {
+        mode: "transform",
+        projectResolution: { width: 1920, height: 1080 },
+        layoutsData: EMPTY_TREE,
+        charactersData: EMPTY_TREE,
+      },
+      constants: CONSTANTS,
+      i18n: JA_I18N,
+    });
+    const [positionGroup, _scaleGroup, anchorRotationGroup] =
+      viewData.config.sections[0].items;
+    const anchorField = anchorRotationGroup.fields.find(
+      ({ name }) => name === "anchor",
+    );
+
+    expect(positionGroup.fields.map(({ label }) => label)).toEqual([
+      JA_I18N.layoutEditPanel.positionXLabel,
+      JA_I18N.layoutEditPanel.positionYLabel,
+    ]);
+    expect(
+      anchorField.options
+        .filter(({ value }) => value.y === 0.5 && value.x !== 0.5)
+        .map(({ label }) => label),
+    ).toEqual([
+      JA_I18N.layoutEditPanel.anchorCenterLeft,
+      JA_I18N.layoutEditPanel.anchorCenterRight,
     ]);
   });
 });

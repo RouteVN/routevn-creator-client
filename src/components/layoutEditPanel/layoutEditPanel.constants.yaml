@@ -49,11 +49,13 @@ transformSections:
         fields:
           - type: clickable-value
             svg: x
+            label: Position X
             name: x
             value: "${values.x}"
             popoverForm: *numberPopoverForm
           - type: clickable-value
             svg: y
+            label: Position Y
             name: y
             value: "${values.y}"
             popoverForm: *numberPopoverForm
