@@ -528,6 +528,8 @@ template:
                               - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
                                   - 'rtgl-view d=v pos=rel style="${timelineCanvasStyle} min-height: 100%;"':
                                       - $if !activeTimelineEmpty:
+                                          - 'rtgl-view data-timeline-property-column-fill=true pos=abs style="inset: 0; pointer-events: none; z-index: 5;"':
+                                              - 'rtgl-view h=f w=104 bgc=bg style="min-width: 104px; position: sticky; left: 0;"': null
                                           - 'rtgl-view pos=abs bgc=su style="${timelineUsedAreaStyle}"': null
                                           - rvn-keyframe-timeline#updateTimeline editable=true ?showRuler=true ?interactiveRuler=true side=update ?indicatorVisible=${timelinePlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} timelineDuration=${timelineDisplayDuration} usedDuration=${activeTimelineDuration} :properties=${updateProperties} :defaultValues=${updateTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
                                       - $if activeTimelineEmpty:
@@ -542,6 +544,8 @@ template:
                               - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
                                   - 'rtgl-view d=v g=md pos=rel style="${timelineCanvasStyle} min-height: 100%;"':
                                       - $if !activeTimelineEmpty:
+                                          - 'rtgl-view data-timeline-property-column-fill=true pos=abs style="inset: 0; pointer-events: none; z-index: 5;"':
+                                              - 'rtgl-view h=f w=104 bgc=bg style="min-width: 104px; position: sticky; left: 0;"': null
                                           - 'rtgl-view pos=abs bgc=su style="${timelineUsedAreaStyle}"': null
                                           - 'rtgl-view w=f bgc=bg style="position: sticky; top: 0; z-index: 7;"':
                                               - rvn-keyframe-timeline#transitionRuler ?showRuler=true ?showTracks=false ?interactiveRuler=true ?indicatorVisible=${timelinePlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} timelineDuration=${timelineDisplayDuration} usedDuration=${activeTimelineDuration}: null

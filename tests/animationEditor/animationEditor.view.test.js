@@ -324,6 +324,12 @@ describe("animationEditor view", () => {
         /rtgl-view pos=abs bgc=su style="\$\{timelineUsedAreaStyle\}"/g,
       ),
     ).toHaveLength(2);
+    expect(view.match(/data-timeline-property-column-fill=true/g)).toHaveLength(
+      2,
+    );
+    expect(view).toContain(
+      'rtgl-view h=f w=104 bgc=bg style="min-width: 104px; position: sticky; left: 0;"',
+    );
     expect(view).not.toContain("timelineZoomPercent");
     expect(view).not.toContain("d=v h=f pos=rel");
     expect(view).toContain("$if timelinePlayheadVisible");
