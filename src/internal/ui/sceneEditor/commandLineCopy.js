@@ -146,6 +146,7 @@ export const localizeCommandLineFormField = (field = {}, copy = {}) => {
 export const localizeCommandLineForm = (form = {}, copy = {}) => {
   const localizedForm = {
     ...form,
+    rowStackAt: "lg",
     title: localizeCommandLineText(form.title, copy),
     description: localizeCommandLineText(form.description, copy),
   };

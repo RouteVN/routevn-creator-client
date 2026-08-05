@@ -68,6 +68,27 @@ describe("commandLineScreen.store", () => {
       }),
     );
     expect(viewData.form.fields[0].required).toBeUndefined();
+    expect(viewData.form.fields[1]).toMatchObject({
+      $when: "transitionAnimationId",
+      type: "row",
+      fields: [
+        {
+          name: "playbackSpeed",
+          label: "Playback Speed",
+          type: "slider-with-input",
+          min: 0.01,
+          max: 4,
+          step: 0.01,
+          required: true,
+        },
+        {
+          name: "playbackContinuity",
+          label: "Continuity",
+          type: "segmented-control",
+          clearable: false,
+        },
+      ],
+    });
     expect(viewData.form.fields.at(-1)).toEqual({
       type: "section",
       id: "options",

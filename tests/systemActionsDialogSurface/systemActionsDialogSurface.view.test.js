@@ -12,12 +12,13 @@ describe("systemActionsDialogSurface view", () => {
     );
 
     expect(dialogSurfaceView).toContain(
-      "rtgl-dialog#dialog ?open=${open} layout=fixed bare",
+      "rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}",
     );
     expect(dialogSurfaceView).toContain("$if fullscreen");
     expect(dialogSurfaceView).toContain(
       "left: ${fullscreenHorizontalInset}; top: var(--rvn-window-content-offset, 0px); right: 0; bottom: 0;",
     );
+    expect(dialogSurfaceView.match(/p=\$\{dialogPadding\}/g)).toHaveLength(4);
     expect(dialogSurfaceView).toContain(
       'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"',
     );
@@ -29,6 +30,12 @@ describe("systemActionsDialogSurface view", () => {
     );
     expect(dialogSurfaceView).toContain(
       "top: calc(var(--rvn-window-content-offset, 0px) + ${panelVerticalInset}); bottom: ${panelVerticalInset};",
+    );
+    expect(dialogSurfaceView).toContain(
+      "height: calc(100vh - var(--rvn-window-content-offset, 0px) - ${panelVerticalInset} - ${panelVerticalInset});",
+    );
+    expect(dialogSurfaceView).toContain(
+      "max-height: ${panelMaxHeight}; margin-block: auto;",
     );
     expect(dialogSurfaceView).toContain("pos=fix bgc=bg bw=xs bc=bo br=md");
     expect(

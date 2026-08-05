@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { selectItems as selectItemsBase } from "../../src/components/commandLineActions/commandLineActions.store.js";
+import {
+  selectItems as selectItemsBase,
+  selectViewData,
+} from "../../src/components/commandLineActions/commandLineActions.store.js";
 import { PRESENTATION_ACTION_MODE_ORDER } from "../../src/internal/presentationActionOrder.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -27,6 +30,15 @@ const getSectionModes = (items, label) => {
 };
 
 describe("commandLineActions.store", () => {
+  it("provides the standard localized Actions breadcrumb", () => {
+    expect(
+      selectViewData({
+        props: { actionsType: "presentation" },
+        i18n: EN_I18N,
+      }).breadcrumb,
+    ).toEqual([{ id: "actions", label: "Actions" }]);
+  });
+
   it("uses the canonical presentation action order", () => {
     const modes = selectItems({
       props: {
@@ -47,6 +59,19 @@ describe("commandLineActions.store", () => {
     }).find((item) => item.mode === "character");
 
     expect(characterAction?.label).toBe("Character Sprites");
+  });
+
+  it("distinguishes the visual icon from the background icon", () => {
+    const items = selectItems({
+      props: {
+        actionsType: "presentation",
+      },
+    });
+    const backgroundAction = items.find((item) => item.mode === "background");
+    const visualAction = items.find((item) => item.mode === "visual");
+
+    expect(backgroundAction?.icon).toBe("image");
+    expect(visualAction?.icon).toBe("stacked-images");
   });
 
   it("uses settings icons for generic system actions", () => {

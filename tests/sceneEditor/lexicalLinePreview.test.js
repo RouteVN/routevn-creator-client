@@ -339,4 +339,30 @@ describe("lexical scene document editor line previews", () => {
       restoreDomGlobals();
     }
   });
+
+  it("distinguishes visual placeholders from background placeholders", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorPrototype = LexicalSceneDocumentEditorElement.prototype;
+      const previewItems = editorPrototype.createPreviewItems.call(
+        editorPrototype,
+        {
+          background: {},
+          visual: { items: [] },
+        },
+      );
+
+      expect(
+        Array.from(previewItems.querySelectorAll("rtgl-svg")).map((icon) =>
+          icon.getAttribute("svg"),
+        ),
+      ).toEqual(["image", "stacked-images"]);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
 });

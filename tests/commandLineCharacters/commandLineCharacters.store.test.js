@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addCharacter,
   createInitialState,
   moveCharacter,
   selectViewData,
@@ -17,6 +18,7 @@ import {
   updateCharacterCustomTransformEnabled,
   updateCharacterOpacity,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const createSpriteSelectState = () => {
   const state = createInitialState();
@@ -175,7 +177,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.defaultValues.characters[0]).toMatchObject({
       id: "character-hero",
@@ -199,7 +201,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
   it("orders sprite group tabs with the top preview layer first", () => {
     const state = createSpriteSelectState();
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.spriteSelectionTabs).toEqual([
       {
@@ -220,7 +222,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
 
     setMode({ state }, { mode: "current" });
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.defaultValues.characters[0].showSpriteGroupBoxes).toBe(
       true,
@@ -282,7 +284,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(
       viewData.selectedCharacters.map((character) => character.id),
@@ -321,10 +323,12 @@ describe("commandLineCharacters.store sprite group filtering", () => {
       "character-hero",
     ]);
     expect(
-      selectViewData({ state }).defaultValues.characters.map((character) => ({
-        id: character.id,
-        characterIndex: character.characterIndex,
-      })),
+      selectViewData({ state, i18n: EN_I18N }).defaultValues.characters.map(
+        (character) => ({
+          id: character.id,
+          characterIndex: character.characterIndex,
+        }),
+      ),
     ).toEqual([
       {
         id: "character-hero",
@@ -335,6 +339,45 @@ describe("commandLineCharacters.store sprite group filtering", () => {
         characterIndex: 0,
       },
     ]);
+  });
+
+  it("adds a new character at the bottom of the displayed character list", () => {
+    const state = createInitialState();
+
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            hero: { id: "hero", type: "character", name: "Hero" },
+            rival: { id: "rival", type: "character", name: "Rival" },
+            newcomer: {
+              id: "newcomer",
+              type: "character",
+              name: "Newcomer",
+            },
+          },
+          tree: [{ id: "hero" }, { id: "rival" }, { id: "newcomer" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      { characters: [{ id: "hero" }, { id: "rival" }] },
+    );
+
+    addCharacter({ state }, { id: "newcomer" });
+
+    expect(state.selectedCharacters.map((character) => character.id)).toEqual([
+      "newcomer",
+      "hero",
+      "rival",
+    ]);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).defaultValues.characters.map(
+        (character) => character.id,
+      ),
+    ).toEqual(["rival", "hero", "newcomer"]);
   });
 
   it("normalizes character opacity and blur controls", () => {
@@ -384,7 +427,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
       repeatEdgePixels: false,
     });
 
-    let viewData = selectViewData({ state });
+    let viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.defaultValues.characters[0]).toMatchObject({
       opacity: 0.6,
       blurEnabled: true,
@@ -426,7 +469,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
       repeatEdgePixels: false,
     });
 
-    viewData = selectViewData({ state });
+    viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.defaultValues.characters[0]).toMatchObject({
       opacity: 0,
       blurEnabled: true,
@@ -459,7 +502,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
     );
     setMode({ state }, { mode: "current" });
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.defaultValues.characters[0].spritePreviewFileIds).toEqual([
       "file-body",
@@ -545,7 +588,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
       },
     );
 
-    let viewData = selectViewData({ state });
+    let viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.defaultValues.characters[0]).toMatchObject({
       hasSpritePreview: true,
       spritePreviewFileIds: ["file-expression-sheet"],
@@ -574,7 +617,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
     setSelectedCharacterIndex({ state }, { index: 0 });
     setSelectedSpriteGroupId({ state }, { spriteGroupId: "expression" });
 
-    viewData = selectViewData({ state });
+    viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.spriteGroups).toHaveLength(1);
     expect(viewData.spriteGroups[0].children).toEqual([
       expect.objectContaining({
@@ -595,7 +638,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
     const state = createSpriteSelectState();
     setSelectedSpriteGroupId({ state }, { spriteGroupId: "face" });
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.spriteItems.map((item) => item.id)).toEqual([
       "folder-variants",
@@ -610,7 +653,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
     const state = createSpriteSelectState();
     setSelectedSpriteGroupId({ state }, { spriteGroupId: "body" });
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     const visibleSpriteIds = viewData.spriteGroups.flatMap((group) =>
       group.children.map((item) => item.id),
     );
@@ -704,19 +747,19 @@ describe("commandLineCharacters.store custom transforms", () => {
       },
     );
 
-    expect(selectViewData({ state }).defaultValues.characters[0]).toMatchObject(
-      {
-        transformId: "character-center",
-        customTransform: true,
-        x: 980,
-        y: 560,
-        scaleX: 1.25,
-        scaleY: 1.25,
-        customTransformDetails: expect.arrayContaining([
-          { label: "Position", value: "980, 560" },
-          { label: "Scale", value: "1.25 x 1.25" },
-        ]),
-      },
-    );
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).defaultValues.characters[0],
+    ).toMatchObject({
+      transformId: "character-center",
+      customTransform: true,
+      x: 980,
+      y: 560,
+      scaleX: 1.25,
+      scaleY: 1.25,
+      customTransformDetails: expect.arrayContaining([
+        { label: "Position", value: "980, 560" },
+        { label: "Scale", value: "1.25 x 1.25" },
+      ]),
+    });
   });
 });

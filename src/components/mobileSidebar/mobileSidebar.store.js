@@ -124,6 +124,12 @@ const settingsItems = [
     path: "/project/appearance",
     icon: "sun",
   },
+  {
+    id: "language",
+    label: "Language",
+    path: "/project/language",
+    icon: "website",
+  },
 ];
 
 const assetsSections = [

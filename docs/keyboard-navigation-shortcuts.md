@@ -36,6 +36,7 @@ pressed within 1.5 seconds.
 | `g w s`  | Web Server       | `/project/releases/web-server` |
 | `g a b`  | About            | `/project/about`               |
 | `g a p`  | Appearance       | `/project/appearance`          |
+| `g s l`  | Language         | `/project/language`            |
 
 The sequence:
 

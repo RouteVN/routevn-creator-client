@@ -63,6 +63,7 @@ export const startDurationResize = (
     startDuration,
     delay: resolvedStartDelay,
     duration: startDuration,
+    startTimelineDuration: timelineDuration,
     timelineDuration,
     trackWidth,
   };
@@ -70,11 +71,13 @@ export const startDurationResize = (
 
 export const setDurationResizeTiming = (
   { state },
-  { delay, duration } = {},
+  { delay, duration, timelineDuration } = {},
 ) => {
   if (state.durationResize) {
     state.durationResize.delay = delay;
     state.durationResize.duration = duration;
+    state.durationResize.timelineDuration =
+      timelineDuration ?? state.durationResize.timelineDuration;
   }
 };
 
@@ -96,6 +99,7 @@ export const startKeyframeMove = (
     startDelay,
     startFollowingDelay,
     duration,
+    propertyDuration,
     timelineDuration,
     trackWidth,
   } = {},
@@ -117,6 +121,8 @@ export const startKeyframeMove = (
     followingDelay: resolvedStartFollowingDelay,
     duration,
     dragged: false,
+    propertyDuration,
+    startTimelineDuration: timelineDuration,
     timelineDuration,
     trackWidth,
   };
@@ -130,11 +136,14 @@ export const markKeyframeMoveDragged = ({ state }, _payload = {}) => {
 
 export const setKeyframeMoveTiming = (
   { state },
-  { delay, followingDelay } = {},
+  { delay, followingDelay, timelineDuration } = {},
 ) => {
   if (state.keyframeMove) {
     state.keyframeMove.delay = delay;
     state.keyframeMove.followingDelay = followingDelay;
+    if (timelineDuration > state.keyframeMove.timelineDuration) {
+      state.keyframeMove.timelineDuration = timelineDuration;
+    }
   }
 };
 
@@ -148,6 +157,67 @@ export const clearKeyframeMove = (
 
 export const selectKeyframeMove = ({ state }) => {
   return state.keyframeMove;
+};
+
+const resolveKeyframeTiming = ({
+  state,
+  propertyName,
+  index,
+  keyframe,
+} = {}) => {
+  const durationResize = state.durationResize;
+  const keyframeMove = state.keyframeMove;
+  const isResizingKeyframe =
+    durationResize?.property === propertyName && durationResize.index === index;
+  const isMovingKeyframe =
+    keyframeMove?.property === propertyName && keyframeMove.index === index;
+  const isFollowingMovingKeyframe =
+    keyframeMove?.property === propertyName &&
+    keyframeMove.index + 1 === index &&
+    keyframeMove.followingDelay !== undefined;
+
+  return {
+    delay: isMovingKeyframe
+      ? Math.max(0, Number(keyframeMove.delay) || 0)
+      : isFollowingMovingKeyframe
+        ? Math.max(0, Number(keyframeMove.followingDelay) || 0)
+        : isResizingKeyframe
+          ? Math.max(0, Number(durationResize.delay) || 0)
+          : Math.max(0, parseFloat(keyframe.delay) || 0),
+    duration: isMovingKeyframe
+      ? keyframeMove.duration
+      : isResizingKeyframe
+        ? durationResize.duration
+        : parseFloat(keyframe.duration) || 1000,
+  };
+};
+
+const getPreviewPropertiesDuration = ({ state, props } = {}) => {
+  return Object.entries(props.properties ?? {}).reduce(
+    (maxDuration, [propertyName, propertyConfig]) => {
+      const propertyDuration = propertyConfig.auto
+        ? Number(propertyConfig.auto.duration) || 0
+        : (propertyConfig.keyframes ?? []).reduce(
+            (duration, keyframe, index) => {
+              const timing = resolveKeyframeTiming({
+                state,
+                propertyName,
+                index,
+                keyframe,
+              });
+              return duration + timing.delay + timing.duration;
+            },
+            0,
+          );
+
+      return Math.max(maxDuration, propertyDuration);
+    },
+    0,
+  );
+};
+
+export const selectPreviewUsedDuration = ({ state, props }) => {
+  return getPreviewPropertiesDuration({ state, props });
 };
 
 export const selectKeyframeClickSuppressed = ({ state }) => {
@@ -237,11 +307,11 @@ const createRulerTick = ({
 
   if (showLabel) {
     if (leftPercent <= 0) {
-      labelStyle = "top: 10px; left: 0; pointer-events: none;";
+      labelStyle = "top: 22px; left: 0; pointer-events: none;";
     } else if (leftPercent >= 100) {
-      labelStyle = "top: 10px; right: 0; pointer-events: none;";
+      labelStyle = "top: 22px; right: 0; pointer-events: none;";
     } else {
-      labelStyle = `top: 10px; left: ${leftPercent}%; transform: translateX(-50%); pointer-events: none;`;
+      labelStyle = `top: 22px; left: ${leftPercent}%; transform: translateX(-50%); pointer-events: none;`;
     }
   }
 
@@ -249,20 +319,20 @@ const createRulerTick = ({
     id: `tick-${timeMs}`,
     label: showLabel ? formatRulerTimeLabel(timeMs) : undefined,
     labelStyle,
-    tickStyle: `top: ${isMajor ? 32 : 37}px; left: ${leftPercent}%; width: ${isMajor ? 2 : 1}px; height: ${isMajor ? 12 : 7}px; transform: translateX(-${isMajor ? 1 : 0.5}px); pointer-events: none;`,
+    tickStyle: `top: ${isMajor ? 40 : 45}px; left: ${leftPercent}%; width: ${isMajor ? 2 : 1}px; height: ${isMajor ? 12 : 7}px; transform: translateX(-${isMajor ? 1 : 0.5}px); pointer-events: none;`,
   };
 };
 
 const createHoverIndicatorLabelStyle = (leftPercent) => {
   if (leftPercent <= 0) {
-    return "top: -10px; left: 0; pointer-events: none; z-index: 4; white-space: nowrap;";
+    return "top: 4px; left: 0; pointer-events: none; z-index: 10; white-space: nowrap;";
   }
 
   if (leftPercent >= 100) {
-    return "top: -10px; right: 0; pointer-events: none; z-index: 4; white-space: nowrap;";
+    return "top: 4px; right: 0; pointer-events: none; z-index: 10; white-space: nowrap;";
   }
 
-  return `top: -10px; left: ${leftPercent}%; transform: translateX(-50%); pointer-events: none; z-index: 4; white-space: nowrap;`;
+  return `top: 4px; left: ${leftPercent}%; transform: translateX(-50%); pointer-events: none; z-index: 10; white-space: nowrap;`;
 };
 
 const createRulerTicks = (durationMs) => {
@@ -302,10 +372,11 @@ const createRulerTicks = (durationMs) => {
     });
   }
 
-  upsertTick({
-    timeMs: durationMs,
+  const endpointTimeMs = Math.round(durationMs);
+  ticksByTime.set(endpointTimeMs, {
+    timeMs: endpointTimeMs,
     isMajor: true,
-    showLabel: true,
+    showLabel: false,
   });
 
   return Array.from(ticksByTime.values())
@@ -336,35 +407,6 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       state.hoverTarget?.mode === "empty"
     );
   };
-  const resolveKeyframeTiming = ({ propertyName, index, keyframe } = {}) => {
-    const durationResize = state.durationResize;
-    const keyframeMove = state.keyframeMove;
-    const isResizingKeyframe =
-      durationResize?.property === propertyName &&
-      durationResize.index === index;
-    const isMovingKeyframe =
-      keyframeMove?.property === propertyName && keyframeMove.index === index;
-    const isFollowingMovingKeyframe =
-      keyframeMove?.property === propertyName &&
-      keyframeMove.index + 1 === index &&
-      keyframeMove.followingDelay !== undefined;
-
-    return {
-      delay: isMovingKeyframe
-        ? Math.max(0, Number(keyframeMove.delay) || 0)
-        : isFollowingMovingKeyframe
-          ? Math.max(0, Number(keyframeMove.followingDelay) || 0)
-          : isResizingKeyframe
-            ? Math.max(0, Number(durationResize.delay) || 0)
-            : Math.max(0, parseFloat(keyframe.delay) || 0),
-      duration: isMovingKeyframe
-        ? keyframeMove.duration
-        : isResizingKeyframe
-          ? durationResize.duration
-          : parseFloat(keyframe.duration) || 1000,
-    };
-  };
-
   let selectedProperties = [];
   if (props.properties) {
     selectedProperties = Object.keys(props.properties).map((propertyName) => {
@@ -394,7 +436,6 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         thumbnailFileId: propertyConfig.thumbnailFileId,
         thumbnailName: propertyConfig.thumbnailName ?? propertyName,
         initialValue: autoConfig ? "" : isDefault ? "D" : value,
-        initialValueInteractive: !autoConfig,
         trackMode: autoConfig ? "auto" : "keyframes",
         keyframes: propertyConfig.keyframes,
         auto: autoConfig
@@ -407,22 +448,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     });
   }
 
-  let maxDuration = 0;
-  if (selectedProperties.length > 0) {
-    selectedProperties.forEach((property) => {
-      const propertyDuration = property.auto
-        ? getPropertyDuration(property)
-        : (property.keyframes ?? []).reduce((sum, keyframe, index) => {
-            const timing = resolveKeyframeTiming({
-              propertyName: property.name,
-              index,
-              keyframe,
-            });
-            return sum + timing.delay + timing.duration;
-          }, 0);
-      maxDuration = Math.max(maxDuration, propertyDuration);
-    });
-  }
+  const maxDuration = getPreviewPropertiesDuration({ state, props });
   const interactionTimelineDuration = Number(
     state.durationResize?.timelineDuration ??
       state.keyframeMove?.timelineDuration,
@@ -433,6 +459,20 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       : Number(props.timelineDuration) > 0
         ? Number(props.timelineDuration)
         : maxDuration;
+  const requestedUsedDuration = Number(props.usedDuration);
+  const interactionActive = Boolean(state.durationResize || state.keyframeMove);
+  const usedDuration =
+    interactionActive || !Number.isFinite(requestedUsedDuration)
+      ? maxDuration
+      : Math.max(0, requestedUsedDuration, maxDuration);
+  const usedDurationPercent =
+    resolvedTimelineDuration > 0
+      ? clamp((usedDuration / resolvedTimelineDuration) * 100, 0, 100)
+      : 0;
+  const usedDurationVisible = usedDurationPercent > 0;
+  const usedDurationStyle = usedDurationVisible
+    ? `left: 0; top: 0; bottom: 0; width: ${usedDurationPercent.toFixed(2)}%; pointer-events: none; z-index: 0;`
+    : "";
   const totalDuration =
     resolvedTimelineDuration > 0 ? `${resolvedTimelineDuration}ms` : "0ms";
   const externalIndicatorTimeMs = Number(attrs.indicatorTimeMs);
@@ -492,7 +532,6 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         propertyName: property.name,
         trackMode: property.trackMode,
       });
-      nextProperty.initialValueCursor = "default";
       nextProperty.emptyLabelVisible = true;
 
       return nextProperty;
@@ -508,6 +547,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         const effectiveKeyframes = property.keyframes.map(
           (keyframe, keyframeIndex) => {
             const timing = resolveKeyframeTiming({
+              state,
               propertyName: property.name,
               index: keyframeIndex,
               keyframe,
@@ -591,10 +631,6 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         propertyName: property.name,
         trackMode: property.trackMode,
       });
-      nextProperty.initialValueCursor =
-        attrs.editable && property.initialValueInteractive
-          ? "pointer"
-          : "default";
       nextProperty.emptyLabelVisible = resolveEmptyLabelVisible({
         propertyName: property.name,
       });
@@ -612,10 +648,6 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         propertyName: property.name,
         trackMode: property.trackMode,
       }),
-      initialValueCursor:
-        attrs.editable && property.initialValueInteractive
-          ? "pointer"
-          : "default",
       emptyLabelVisible: resolveEmptyLabelVisible({
         propertyName: property.name,
       }),
@@ -632,6 +664,9 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     rulerIndicatorVisible,
     playheadIndicatorTimeLabel,
     playheadIndicatorLabelStyle,
+    usedDurationVisible,
+    usedDuration,
+    usedDurationStyle,
     editable: attrs.editable,
   };
 

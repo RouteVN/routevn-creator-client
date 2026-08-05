@@ -294,6 +294,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     dialogVariant,
     actionsDialogFullscreen: transformEditorOpen,
     actionsDialogFullscreenHorizontalInset: "0px",
+    actionsDialogPadding: "none",
     actionsDialogWidth: state.isTouchMode
       ? "100%"
       : transformEditorOpen

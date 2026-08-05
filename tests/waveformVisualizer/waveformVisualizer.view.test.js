@@ -10,10 +10,9 @@ const viewSource = readFileSync(
 );
 
 describe("waveformVisualizer.view", () => {
-  it("keys the waveform by its latest rendered size", () => {
-    expect(viewSource).toContain(
-      "rtgl-waveform id=${waveformRenderKey} :waveformData=${waveformData}",
-    );
+  it("owns the resizable waveform canvas", () => {
+    expect(viewSource).toContain("canvas#waveformCanvas");
+    expect(viewSource).not.toContain("rtgl-waveform");
     expect(viewSource).toContain("rtgl-view#waveformContainer");
   });
 });

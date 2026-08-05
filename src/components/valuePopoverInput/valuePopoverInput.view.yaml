@@ -1,0 +1,29 @@
+refs:
+  trigger:
+    eventListeners:
+      click:
+        handler: handleTriggerClick
+      keydown:
+        handler: handleTriggerKeyDown
+  popover:
+    eventListeners:
+      close:
+        handler: handlePopoverClose
+  input:
+    eventListeners:
+      value-input:
+        handler: handleInputChange
+      keydown:
+        handler: handleInputKeyDown
+  submit:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+template:
+  - rtgl-view#trigger role=button tabindex=${triggerTabIndex} aria-disabled=${disabled} aria-haspopup=dialog w=f h=f d=h av=c cur=${triggerCursor}:
+      - rtgl-text c=${valueColor}: ${value}
+  - rtgl-popover#popover ?open=${isOpen} x=${position.x} y=${position.y} place=bs content-g=md content-w=240 content-ph=md content-pv=md:
+      - rtgl-text: ${label}
+      - rtgl-input#input w=f value=${tempValue} placeholder=${placeholder} ?disabled=${disabled}: null
+      - rtgl-view w=f ah=e:
+          - rtgl-button#submit s=sm v=pr ?disabled=${disabled}: ${submitLabel}

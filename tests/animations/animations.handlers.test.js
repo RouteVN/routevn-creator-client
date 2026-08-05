@@ -6,6 +6,7 @@ import {
   handleImportAnimationClick,
   handleImportFormActionClick,
 } from "../../src/pages/animations/animations.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const originalFetch = globalThis.fetch;
 
@@ -282,6 +283,18 @@ describe("animations.handlers", () => {
             },
           },
         },
+        mask: [
+          {
+            kind: "single",
+            imageId: "mask-first",
+            progressDuration: 1000,
+          },
+          {
+            kind: "single",
+            imageId: "mask-second",
+            progressDuration: 1000,
+          },
+        ],
       },
     };
     let previewRequestId;
@@ -299,9 +312,24 @@ describe("animations.handlers", () => {
       projectService: {
         getRepositoryState: vi.fn(() => ({
           images: {
-            items: {},
+            items: {
+              "mask-first": {
+                id: "mask-first",
+                type: "image",
+                fileId: "mask-first.png",
+              },
+              "mask-second": {
+                id: "mask-second",
+                type: "image",
+                fileId: "mask-second.png",
+              },
+            },
           },
           files: {},
+        })),
+        getFileContent: vi.fn(async (fileId) => ({
+          url: `asset://${fileId}`,
+          type: "image/png",
         })),
       },
       refs: {
@@ -329,7 +357,18 @@ describe("animations.handlers", () => {
         selectPreviewRuntime: vi.fn(() => ({})),
         setPreviewRuntime: vi.fn(),
         selectImagesData: vi.fn(() => ({
-          items: {},
+          items: {
+            "mask-first": {
+              id: "mask-first",
+              type: "image",
+              fileId: "mask-first.png",
+            },
+            "mask-second": {
+              id: "mask-second",
+              type: "image",
+              fileId: "mask-second.png",
+            },
+          },
           tree: [],
         })),
         selectAnimationPreviewFrameId: vi.fn(() => undefined),
@@ -355,6 +394,16 @@ describe("animations.handlers", () => {
     });
 
     expect(deps.graphicsService.render).toHaveBeenCalledTimes(4);
+    expect(deps.graphicsService.loadAssets).toHaveBeenCalledWith({
+      "mask-first.png": {
+        type: "image/png",
+        url: "asset://mask-first.png",
+      },
+      "mask-second.png": {
+        type: "image/png",
+        url: "asset://mask-second.png",
+      },
+    });
     expect(deps.graphicsService.render.mock.calls[0][0].animations).toEqual([]);
     expect(
       deps.graphicsService.render.mock.calls[1][0].animations[0].type,
@@ -392,6 +441,7 @@ describe("animations.handlers", () => {
     await handleImportFormActionClick(
       {
         appService,
+        i18n: EN_I18N,
         projectService: {},
         render: vi.fn(),
         store: {},
@@ -459,6 +509,7 @@ describe("animations.handlers", () => {
     await handleImportFormActionClick(
       {
         appService,
+        i18n: EN_I18N,
         projectService: {},
         render: vi.fn(),
         store,
@@ -502,11 +553,18 @@ describe("animations.handlers", () => {
               name: "Mask Animation",
               animation: {
                 type: "transition",
-                mask: {
-                  kind: "single",
-                  imageId: "image.mask",
-                  channel: "alpha",
-                },
+                mask: [
+                  {
+                    kind: "single",
+                    imageId: "image.mask",
+                    channel: "alpha",
+                  },
+                  {
+                    kind: "single",
+                    imageId: "image.mask.secondary",
+                    channel: "red",
+                  },
+                ],
               },
             },
           },
@@ -520,12 +578,22 @@ describe("animations.handlers", () => {
               name: "Mask",
               fileId: "file.mask",
             },
+            "image.mask.secondary": {
+              id: "image.mask.secondary",
+              type: "image",
+              name: "Secondary Mask",
+              fileId: "file.mask.secondary",
+            },
           },
         },
       },
       files: {
         "file.mask": {
           url: "https://example.com/mask.png",
+          mimeType: "image/png",
+        },
+        "file.mask.secondary": {
+          url: "https://example.com/mask-secondary.png",
           mimeType: "image/png",
         },
       },
@@ -541,6 +609,7 @@ describe("animations.handlers", () => {
     await handleImportFormActionClick(
       {
         appService,
+        i18n: EN_I18N,
         projectService: {},
         render: vi.fn(),
         store,
@@ -604,11 +673,18 @@ describe("animations.handlers", () => {
               name: "Mask Animation",
               animation: {
                 type: "transition",
-                mask: {
-                  kind: "single",
-                  imageId: "image.mask",
-                  channel: "alpha",
-                },
+                mask: [
+                  {
+                    kind: "single",
+                    imageId: "image.mask",
+                    channel: "alpha",
+                  },
+                  {
+                    kind: "single",
+                    imageId: "image.mask.secondary",
+                    channel: "red",
+                  },
+                ],
               },
             },
           },
@@ -622,6 +698,12 @@ describe("animations.handlers", () => {
               name: "Mask",
               fileId: "file.mask",
             },
+            "image.mask.secondary": {
+              id: "image.mask.secondary",
+              type: "image",
+              name: "Secondary Mask",
+              fileId: "file.mask.secondary",
+            },
           },
         },
       },
@@ -629,6 +711,11 @@ describe("animations.handlers", () => {
         "file.mask": {
           url: "https://example.com/mask.png",
           name: "mask.png",
+          mimeType: "image/png",
+        },
+        "file.mask.secondary": {
+          url: "https://example.com/mask-secondary.png",
+          name: "mask-secondary.png",
           mimeType: "image/png",
         },
       },
@@ -662,9 +749,10 @@ describe("animations.handlers", () => {
       clearPreviewRuntime: vi.fn(),
     };
     const projectService = {
-      importImageFile: vi.fn(async () => ({
-        imageId: "project-image-mask",
-      })),
+      importImageFile: vi
+        .fn()
+        .mockResolvedValueOnce({ imageId: "project-image-mask" })
+        .mockResolvedValueOnce({ imageId: "project-image-mask-secondary" }),
       createAnimation: vi.fn(async (input) => {
         importedAnimations.push(input);
         return input.animationId;
@@ -700,6 +788,7 @@ describe("animations.handlers", () => {
     await handleImportFormActionClick(
       {
         appService,
+        i18n: EN_I18N,
         projectService,
         refs: {
           fileExplorer: {
@@ -723,6 +812,7 @@ describe("animations.handlers", () => {
       },
     );
 
+    expect(projectService.importImageFile).toHaveBeenCalledTimes(2);
     expect(projectService.importImageFile).toHaveBeenCalledWith({
       file: expect.objectContaining({
         name: "mask.png",
@@ -763,9 +853,14 @@ describe("animations.handlers", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           animation: expect.objectContaining({
-            mask: expect.objectContaining({
-              imageId: "project-image-mask",
-            }),
+            mask: [
+              expect.objectContaining({
+                imageId: "project-image-mask",
+              }),
+              expect.objectContaining({
+                imageId: "project-image-mask-secondary",
+              }),
+            ],
           }),
         }),
         parentId: "folder-animation",

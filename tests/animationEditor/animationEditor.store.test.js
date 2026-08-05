@@ -11,14 +11,19 @@ import {
   commitPendingTransitionMask,
   createInitialState,
   clearSelectedKeyframe,
+  clearTimelineUsedDurationPreview,
   clearTimelineSelection,
+  closePropertyRemoveConfirmDialog,
   deleteKeyframe,
   deleteProperty,
+  disableTransitionMask,
   enableTransitionMask,
+  extendTimelineDisplayDuration,
   moveKeyframeLeft,
   moveKeyframeRight,
   nudgeTimelineZoom,
   openDialog,
+  openPropertyRemoveConfirmDialog,
   selectAnimationRenderStateWithAnimations,
   selectAnimationResetState,
   selectPreviewDurationMs,
@@ -29,6 +34,7 @@ import {
   selectTimelinePanClickSuppressed,
   selectTimelinePanMode,
   selectTimelinePlayheadVisible,
+  selectTransitionMasks,
   selectViewData,
   setImages,
   setPopover,
@@ -51,6 +57,7 @@ import {
   stopTimelinePan,
   setTimelinePanMode,
   setTimelineScrollMetrics,
+  setTimelineUsedDurationPreview,
   setTimelineZoom,
   setTransitionMaskChannel,
   setTransitionMaskImage,
@@ -85,6 +92,58 @@ describe("animationEditor.store", () => {
 
     openDialog({ state }, { dialogType: "update" });
     expect(selectSelectedEditorTab({ state })).toBe("tween");
+  });
+
+  it("hides empty transition property categories", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      activeTimelineEmpty: true,
+      previousTimelineVisible: false,
+      nextTimelineVisible: false,
+      maskTimelineVisible: false,
+    });
+
+    state.tweenBySection.prev.alpha = { keyframes: [] };
+    state.tweenBySection.next.x = { keyframes: [] };
+    enableTransitionMask({ state });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      activeTimelineEmpty: false,
+      previousTimelineVisible: true,
+      nextTimelineVisible: true,
+      maskTimelineVisible: true,
+    });
+  });
+
+  it("shows the empty timeline action until an update property is added", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+
+    expect(selectViewData({ state, i18n: EN_I18N }).activeTimelineEmpty).toBe(
+      true,
+    );
+
+    state.tweenBySection.update.alpha = { keyframes: [] };
+
+    expect(selectViewData({ state, i18n: EN_I18N }).activeTimelineEmpty).toBe(
+      false,
+    );
+  });
+
+  it("exposes property removal confirmation state", () => {
+    const state = createInitialState();
+
+    openPropertyRemoveConfirmDialog({ state });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).propertyRemoveConfirmDialogOpen,
+    ).toBe(true);
+
+    closePropertyRemoveConfirmDialog({ state });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).propertyRemoveConfirmDialogOpen,
+    ).toBe(false);
   });
 
   it("limits the preview canvas to half the viewport height", () => {
@@ -172,21 +231,62 @@ describe("animationEditor.store", () => {
     expect(viewData.timelinePlayheadStyle).toContain(
       "left: calc(104px + (100% - 104px) * 0.5)",
     );
+    expect(viewData.timelinePlayheadStyle).toContain("z-index: 8");
   });
 
-  it("positions the playhead against the minimum one-second timeline scale", () => {
+  it("fills the measured timeline viewport", () => {
     const state = createInitialState();
     state.tweenBySection.update.x = {
       keyframes: [{ duration: 500, value: 10 }],
     };
+    setTimelineScrollMetrics({ state }, { scrollLeft: 0, viewportWidth: 704 });
     setPreviewPlayhead({ state }, { timeMs: 500, visible: true });
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.timelineDisplayDuration).toBe(1000);
-    expect(viewData.timelinePlayheadStyle).toContain(
-      "left: calc(104px + (100% - 104px) * 0.5)",
+    expect(viewData.timelineDisplayDuration).toBe(3000);
+    expect(viewData.activeTimelineDuration).toBe(500);
+    expect(viewData.timelineUsedAreaStyle).toContain(
+      "width: calc((100% - 104px) * 0.16666666666666666)",
     );
+    expect(viewData.timelinePlayheadStyle).toContain(
+      "left: calc(104px + (100% - 104px) * 0.16666666666666666)",
+    );
+  });
+
+  it("expands and shrinks the used timeline area during interaction", () => {
+    const state = createInitialState();
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 1000, value: 10 }],
+    };
+    setTimelineScrollMetrics({ state }, { scrollLeft: 0, viewportWidth: 704 });
+
+    setTimelineUsedDurationPreview(
+      { state },
+      { side: "update", duration: 2400 },
+    );
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      activeTimelineDuration: 2400,
+      timelineUsedAreaStyle: expect.stringContaining(
+        "width: calc((100% - 104px) * 0.8)",
+      ),
+    });
+
+    setTimelineUsedDurationPreview(
+      { state },
+      { side: "update", duration: 500 },
+    );
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      activeTimelineDuration: 500,
+      timelineUsedAreaStyle: expect.stringContaining(
+        "width: calc((100% - 104px) * 0.16666666666666666)",
+      ),
+    });
+
+    clearTimelineUsedDurationPreview({ state });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).activeTimelineDuration,
+    ).toBe(1000);
   });
 
   it("hides the playhead while it is behind the sticky property column", () => {
@@ -227,7 +327,7 @@ describe("animationEditor.store", () => {
       timelineZoomMax: 4,
       timelineZoomStep: 0.125,
       timelinePixelsPerSecond: 525,
-      timelineCanvasStyle: "width: 1679px; min-width: 104px; flex-shrink: 0;",
+      timelineCanvasStyle: "width: 1679px; min-width: 100%; flex-shrink: 0;",
       timelineDisplayDuration: 3000,
       timelineZoomLabel: "Timeline zoom",
     });
@@ -247,8 +347,29 @@ describe("animationEditor.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       timelineZoom: 1,
       timelinePixelsPerSecond: 200,
-      timelineCanvasStyle: "width: 504px; min-width: 104px; flex-shrink: 0;",
+      timelineCanvasStyle: "width: 504px; min-width: 100%; flex-shrink: 0;",
       timelineDisplayDuration: 2000,
+      activeTimelineDuration: 2000,
+    });
+  });
+
+  it("extends the ruler beyond the viewport-filled duration", () => {
+    const state = createInitialState();
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 1000, value: 10 }],
+    };
+    setTimelineScrollMetrics({ state }, { scrollLeft: 0, viewportWidth: 704 });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      timelineCanvasStyle: "width: 704px; min-width: 100%; flex-shrink: 0;",
+      timelineDisplayDuration: 3000,
+    });
+
+    extendTimelineDisplayDuration({ state }, { duration: 4000 });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      timelineCanvasStyle: "width: 904px; min-width: 100%; flex-shrink: 0;",
+      timelineDisplayDuration: 4000,
     });
   });
 
@@ -308,12 +429,41 @@ describe("animationEditor.store", () => {
     expect(viewData.selectedKeyframeDetailFields).toEqual([
       { type: "text", label: "Timeline", value: "Update" },
       { type: "text", label: "Property", value: "Position X" },
-      { type: "text", label: "Delay (ms)", value: 125 },
-      { type: "text", label: "Duration (ms)", value: 450 },
-      { type: "text", label: "Easing", value: "Ease Out Bounce" },
-      { type: "text", label: "Value", value: 120 },
-      { type: "text", label: "Value type", value: "Relative" },
+      { type: "slot", label: "Delay (ms)", slot: "keyframe-delay" },
+      {
+        type: "slot",
+        label: "Duration (ms)",
+        slot: "keyframe-duration",
+      },
+      { type: "slot", label: "Easing", slot: "keyframe-easing" },
+      { type: "slot", label: "Value", slot: "keyframe-value" },
+      {
+        type: "slot",
+        label: "Value type",
+        slot: "keyframe-value-type",
+      },
     ]);
+    expect(viewData.selectedKeyframeEditor).toMatchObject({
+      delay: 125,
+      delayLabel: "Delay (ms)",
+      duration: 450,
+      durationLabel: "Duration (ms)",
+      easing: "easeOutBounce",
+      relative: true,
+      relativeOptions: [
+        { label: "Absolute", value: false },
+        { label: "Relative", value: true },
+      ],
+      value: 120,
+      valueLabel: "Value",
+      valueStep: 0.01,
+      valueUsesPopover: true,
+    });
+    expect(viewData.selectedKeyframeEditor.valueSlider).toBeUndefined();
+    expect(viewData.selectedKeyframeEditor.easingOptions).toContainEqual({
+      label: "Ease Out Bounce",
+      value: "easeOutBounce",
+    });
     expect(selectSelectedKeyframeFormValues({ state })).toEqual({
       delay: 125,
       duration: 450,
@@ -336,6 +486,18 @@ describe("animationEditor.store", () => {
       relative: false,
       value: -12.5,
     });
+
+    state.tweenBySection.update.alpha = {
+      keyframes: [{ duration: 500, easing: "linear", value: 0.5 }],
+    };
+    setSelectedKeyframe(
+      { state },
+      { side: "update", property: "alpha", index: 0 },
+    );
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).selectedKeyframeEditor
+        .valueSlider,
+    ).toEqual({ min: 0, max: 1, step: 0.01 });
   });
 
   it("shows selected property details and keeps property and keyframe selection exclusive", () => {
@@ -359,8 +521,28 @@ describe("animationEditor.store", () => {
     expect(viewData.selectedPropertyDetailFields).toEqual([
       { type: "text", label: "Timeline", value: "Outgoing" },
       { type: "text", label: "Property", value: "Alpha" },
-      { type: "text", label: "Initial value", value: 0.5 },
+      {
+        type: "slot",
+        label: "Initial value",
+        slot: "property-initial-value",
+      },
     ]);
+    expect(viewData.selectedPropertyEditor).toEqual({
+      hasInitialValue: true,
+      initialValue: 0.5,
+      initialValueLabel: "Initial value",
+      initialValueSlider: { min: 0, max: 1, step: 0.01 },
+      initialValueStep: "any",
+      initialValueUsesPopover: false,
+    });
+    expect(viewData.useDefaultValueButtonLabel).toBe("Use Default Value");
+
+    delete state.tweenBySection.prev.alpha.initialValue;
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.selectedPropertyEditor).toMatchObject({
+      hasInitialValue: false,
+      initialValue: 1,
+    });
 
     setSelectedKeyframe(
       { state },
@@ -518,7 +700,7 @@ describe("animationEditor.store", () => {
     );
   });
 
-  it("shows Mask in the transition Add menu until a mask exists", () => {
+  it("keeps Mask in the transition Add menu when masks already exist", () => {
     const state = createInitialState();
     openDialog({ state }, { dialogType: "transition" });
     for (const property of TRANSITION_PROPERTY_KEYS) {
@@ -539,8 +721,14 @@ describe("animationEditor.store", () => {
 
     enableTransitionMask({ state });
     const enabledViewData = selectViewData({ state, i18n: EN_I18N });
-    expect(enabledViewData.addPropertySideMenuItems).toEqual([]);
-    expect(enabledViewData.transitionAddPropertyButtonVisible).toBe(false);
+    expect(enabledViewData.addPropertySideMenuItems).toEqual([
+      {
+        label: "Mask",
+        type: "item",
+        value: "mask",
+      },
+    ]);
+    expect(enabledViewData.transitionAddPropertyButtonVisible).toBe(true);
   });
 
   it("keeps Mask out of the touch Add Property side control", () => {
@@ -565,6 +753,39 @@ describe("animationEditor.store", () => {
       { label: "Outgoing", type: "item", value: "prev" },
       { label: "Incoming", type: "item", value: "next" },
     ]);
+  });
+
+  it("offers initial-value editing from a touch keyframed-property menu", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    setUiConfig({ state }, { uiConfig: { id: "touch", inputMode: "touch" } });
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 1000, easing: "linear", value: 0 }],
+    };
+    setPopover(
+      { state },
+      {
+        mode: "propertyNameMenu",
+        payload: { side: "update", property: "x" },
+      },
+    );
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).keyframeDropdownItems,
+    ).toContainEqual({
+      label: "Edit Initial Value",
+      type: "item",
+      value: "edit-initial-value",
+    });
+
+    state.tweenBySection.update.x = {
+      auto: { duration: 1000, easing: "linear" },
+    };
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).keyframeDropdownItems,
+    ).not.toContainEqual(
+      expect.objectContaining({ value: "edit-initial-value" }),
+    );
   });
 
   it("exposes an existing mask for inline editing without a dialog", () => {
@@ -632,6 +853,58 @@ describe("animationEditor.store", () => {
 
     clearTimelineSelection({ state });
     expect(selectViewData({ state, i18n: EN_I18N }).selectedMask).toBe(false);
+  });
+
+  it("loads, selects, edits, previews, and removes multiple masks", () => {
+    const state = createInitialState();
+    setImages(
+      { state },
+      {
+        images: {
+          tree: [],
+          items: {
+            first: { type: "image", fileId: "first.png" },
+            second: { type: "image", fileId: "second.png" },
+          },
+        },
+      },
+    );
+    openDialog(
+      { state },
+      {
+        dialogType: "transition",
+        editMode: true,
+        itemData: {
+          animation: {
+            type: "transition",
+            mask: [
+              { kind: "single", imageId: "first" },
+              { kind: "single", imageId: "second" },
+            ],
+          },
+        },
+      },
+    );
+
+    expect(selectTransitionMasks({ state })).toHaveLength(2);
+    expect(selectViewData({ state, i18n: EN_I18N }).maskTimelineRows).toEqual([
+      expect.objectContaining({ index: 0, side: "mask:0" }),
+      expect.objectContaining({ index: 1, side: "mask:1" }),
+    ]);
+
+    setSelectedMask({ state }, { index: 1 });
+    setTransitionMaskChannel({ state }, { channel: "alpha" });
+    expect(state.additionalTransitionMasks[0].channel).toBe("alpha");
+    expect(
+      selectAnimationRenderStateWithAnimations({ state }).animations[0].mask,
+    ).toEqual([
+      expect.objectContaining({ texture: "first.png" }),
+      expect.objectContaining({ texture: "second.png", channel: "alpha" }),
+    ]);
+
+    disableTransitionMask({ state });
+    expect(selectTransitionMasks({ state })).toHaveLength(1);
+    expect(state.transitionMask.imageId).toBe("first");
   });
 
   it("adds, selects, moves, resizes, and protects mask progress keyframes", () => {
@@ -936,7 +1209,7 @@ describe("animationEditor.store", () => {
     expect(state.transitionMask.channel).toBe("red");
   });
 
-  it("allows negative two-decimal position keyframe values", () => {
+  it("uses unbounded position, rotation, and scale keyframe inputs", () => {
     const state = createInitialState();
     setProjectResolution(
       { state },
@@ -976,16 +1249,29 @@ describe("animationEditor.store", () => {
       i18n: EN_I18N,
     }).addKeyframeForm.fields.find((field) => field.name === "value");
 
-    expect(xField).toMatchObject({
-      min: -1920,
-      max: 1920,
-      step: 0.01,
-    });
-    expect(yField).toMatchObject({
-      min: -1080,
-      max: 1080,
-      step: 0.01,
-    });
+    expect(xField).toMatchObject({ type: "input-number", step: 0.01 });
+    expect(yField).toMatchObject({ type: "input-number", step: 0.01 });
+    expect(xField).not.toHaveProperty("min");
+    expect(xField).not.toHaveProperty("max");
+    expect(yField).not.toHaveProperty("min");
+    expect(yField).not.toHaveProperty("max");
+
+    for (const property of ["rotation", "scaleX", "scaleY"]) {
+      setPopover(
+        { state },
+        {
+          mode: "addKeyframe",
+          payload: { property },
+        },
+      );
+      const valueField = selectViewData({
+        state,
+        i18n: EN_I18N,
+      }).addKeyframeForm.fields.find((field) => field.name === "value");
+      expect(valueField.type).toBe("input-number");
+      expect(valueField).not.toHaveProperty("min");
+      expect(valueField).not.toHaveProperty("max");
+    }
   });
 
   it("exposes supported update properties with tuned value ranges", () => {
@@ -1028,16 +1314,16 @@ describe("animationEditor.store", () => {
       },
     );
     viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(
-      viewData.addPropertyForm.fields.find(
-        (field) => field.name === "initialValue",
-      ),
-    ).toMatchObject({
+    const rotationInitialValueField = viewData.addPropertyForm.fields.find(
+      (field) => field.name === "initialValue",
+    );
+    expect(rotationInitialValueField).toMatchObject({
       defaultValue: 0,
-      min: -360,
-      max: 360,
+      type: "input-number",
       step: 1,
     });
+    expect(rotationInitialValueField).not.toHaveProperty("min");
+    expect(rotationInitialValueField).not.toHaveProperty("max");
 
     updatePopoverFormValues(
       { state },
@@ -1252,6 +1538,27 @@ describe("animationEditor.store", () => {
       { duration: 900, value: 1, easing: "linear" },
     ]);
     expect(nextState.pendingTransitionMask).toBeUndefined();
+  });
+
+  it("appends each newly committed mask", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+
+    for (const imageId of ["first", "second"]) {
+      startPendingTransitionMask({ state });
+      setPopover({ state }, { mode: "addMask" });
+      setTransitionMaskImage({ state }, { imageId });
+      commitPendingTransitionMask({ state });
+      setPopover({ state }, { mode: "none" });
+    }
+
+    expect(
+      selectTransitionMasks({ state }).map((mask) => mask.imageId),
+    ).toEqual(["first", "second"]);
+    expect(state.selectedMaskIndex).toBe(1);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).maskTimelineRows,
+    ).toHaveLength(2);
   });
 
   it("includes the mask image data in the read-only mask panel", () => {

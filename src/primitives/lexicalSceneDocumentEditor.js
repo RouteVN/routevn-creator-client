@@ -8636,7 +8636,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           stack.append(
             this.createMediaThumb({
               fileId: visual.fileId,
-              placeholderIcon: "image",
+              placeholderIcon: "stacked-images",
               size: "visual",
             }),
           );
@@ -8644,7 +8644,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       } else {
         stack.append(
           this.createMediaThumb({
-            placeholderIcon: "image",
+            placeholderIcon: "stacked-images",
             size: "visual",
           }),
         );

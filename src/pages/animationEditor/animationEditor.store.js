@@ -53,6 +53,7 @@ const TIMELINE_BASE_PIXELS_PER_SECOND = 200;
 const TIMELINE_MIN_DISPLAY_DURATION_MS = 1000;
 const TIMELINE_PROPERTY_COLUMN_WIDTH = 104;
 const MASK_PROGRESS_PROPERTY = "progress";
+const MASK_SIDE_PREFIX = "mask";
 const DEFAULT_EDITOR_TAB = "tween";
 const EDITOR_TAB_IDS = new Set([DEFAULT_EDITOR_TAB, "preview"]);
 
@@ -87,45 +88,35 @@ const createPropertyFieldConfig = (
     x: {
       label: copy.positionXPropertyLabel ?? "Position X",
       defaultValue: width / 2,
-      slider: {
-        min: -width,
-        max: width,
+      input: {
         step: 0.01,
       },
     },
     y: {
       label: copy.positionYPropertyLabel ?? "Position Y",
       defaultValue: height / 2,
-      slider: {
-        min: -height,
-        max: height,
+      input: {
         step: 0.01,
       },
     },
     scaleX: {
       label: copy.scaleXPropertyLabel ?? "Scale X",
       defaultValue: 1,
-      slider: {
-        min: 0,
-        max: 5,
+      input: {
         step: 0.01,
       },
     },
     scaleY: {
       label: copy.scaleYPropertyLabel ?? "Scale Y",
       defaultValue: 1,
-      slider: {
-        min: 0,
-        max: 5,
+      input: {
         step: 0.01,
       },
     },
     rotation: {
       label: copy.rotationPropertyLabel ?? "Rotation",
       defaultValue: 0,
-      slider: {
-        min: -360,
-        max: 360,
+      input: {
         step: 1,
       },
       tooltip: {
@@ -707,6 +698,24 @@ const createSliderField = ({
     };
   }
 
+  if (config.input) {
+    const field = {
+      name,
+      type: "input-number",
+      label: label ?? fallbackLabel,
+    };
+    Object.assign(field, config.input);
+
+    if (required) {
+      field.required = true;
+    }
+    if (config.tooltip) {
+      field.tooltip = config.tooltip;
+    }
+
+    return field;
+  }
+
   const field = {
     name,
     type: "slider-with-input",
@@ -1105,9 +1114,79 @@ const createEmptyMaskPanelData = (copy = {}) => ({
   compositeItems: [],
 });
 
+const isMaskSide = (side) => {
+  return side === MASK_SIDE_PREFIX || side?.startsWith(`${MASK_SIDE_PREFIX}:`);
+};
+
+const getMaskIndexFromSide = (side, fallbackIndex = 0) => {
+  if (side === MASK_SIDE_PREFIX) {
+    return fallbackIndex;
+  }
+
+  const index = Number.parseInt(side?.slice(MASK_SIDE_PREFIX.length + 1), 10);
+  return Number.isInteger(index) && index >= 0 ? index : fallbackIndex;
+};
+
+const createMaskSide = (index) => `${MASK_SIDE_PREFIX}:${index}`;
+
+const getTransitionMasks = (state) => {
+  const masks = [];
+  if (state.transitionMask) {
+    masks.push(state.transitionMask);
+  }
+  masks.push(...(state.additionalTransitionMasks ?? []));
+  return masks;
+};
+
+const getTransitionMask = (state, index = state.selectedMaskIndex ?? 0) => {
+  if (index === 0) {
+    return state.transitionMask;
+  }
+
+  return state.additionalTransitionMasks?.[index - 1];
+};
+
+const setTransitionMaskAtIndex = (state, index, mask) => {
+  if (index === 0) {
+    state.transitionMask = mask;
+    return;
+  }
+
+  state.additionalTransitionMasks[index - 1] = mask;
+};
+
+const appendTransitionMask = (state, mask) => {
+  if (!state.transitionMask) {
+    state.transitionMask = mask;
+    return 0;
+  }
+
+  state.additionalTransitionMasks.push(mask);
+  return state.additionalTransitionMasks.length;
+};
+
+const removeTransitionMaskAtIndex = (state, index) => {
+  if (index === 0) {
+    state.transitionMask = state.additionalTransitionMasks.shift();
+    return;
+  }
+
+  state.additionalTransitionMasks.splice(index - 1, 1);
+};
+
+const getTransitionMaskValue = (state) => {
+  const masks = getTransitionMasks(state);
+  if (masks.length === 0) {
+    return undefined;
+  }
+
+  return masks.length === 1 ? masks[0] : masks;
+};
+
 const getSectionProperties = (state, side) => {
-  if (side === "mask") {
-    const progress = state.transitionMask?.progress;
+  if (isMaskSide(side)) {
+    const maskIndex = getMaskIndexFromSide(side, state.selectedMaskIndex ?? 0);
+    const progress = getTransitionMask(state, maskIndex)?.progress;
     return progress ? { [MASK_PROGRESS_PROPERTY]: progress } : {};
   }
 
@@ -1126,10 +1205,6 @@ const getDefaultInitialValues = (state) => {
   return createDefaultInitialValuesByProperty(getPropertyFieldConfig(state));
 };
 
-const getTransitionMask = (state) => {
-  return state.transitionMask;
-};
-
 const getMaskEditorTransitionMask = (state) => {
   return state.popover.mode === "addMask"
     ? state.pendingTransitionMask
@@ -1142,7 +1217,7 @@ const setMaskEditorTransitionMask = (state, mask) => {
     return;
   }
 
-  state.transitionMask = mask;
+  setTransitionMaskAtIndex(state, state.selectedMaskIndex ?? 0, mask);
 };
 
 const cloneMaskProgress = (progress) => {
@@ -1175,6 +1250,7 @@ const cloneTransitionMask = (mask = {}) => {
   nextMask.sample = mask.sample;
   nextMask.softness = mask.softness;
   nextMask.invert = mask.invert;
+  nextMask.delay = mask.delay;
   nextMask.progress = cloneMaskProgress(mask.progress);
   nextMask.progressDelay = mask.progressDelay;
   nextMask.progressDuration = mask.progressDuration;
@@ -1182,34 +1258,8 @@ const cloneTransitionMask = (mask = {}) => {
   return nextMask;
 };
 
-const getPersistedTransitionMask = (state) => {
-  if (!state.editItemId) {
-    return undefined;
-  }
-
-  return state.data?.items?.[state.editItemId]?.animation?.mask;
-};
-
-const getUnsupportedPersistedTransitionMask = (state) => {
-  if (state.dialogType !== "transition" || state.transitionMaskRemoved) {
-    return undefined;
-  }
-
-  const persistedMask = getPersistedTransitionMask(state);
-  if (
-    !persistedMask?.kind ||
-    isEditableTransitionMaskKind(persistedMask.kind)
-  ) {
-    return undefined;
-  }
-
-  return persistedMask;
-};
-
 const getEffectiveTransitionMask = (state) => {
-  return (
-    getTransitionMask(state) ?? getUnsupportedPersistedTransitionMask(state)
-  );
+  return getTransitionMaskValue(state);
 };
 
 const getImageItems = (state) => {
@@ -1287,6 +1337,7 @@ export const createInitialState = () => ({
   selectedKeyframe: undefined,
   selectedProperty: undefined,
   selectedMask: false,
+  selectedMaskIndex: undefined,
   timelinePan: undefined,
   timelinePanClickSuppressed: false,
   timelinePanHovered: false,
@@ -1294,11 +1345,14 @@ export const createInitialState = () => ({
   timelineZoom: TIMELINE_ZOOM_DEFAULT,
   timelineScrollLeft: 0,
   timelineViewportWidth: undefined,
+  timelineDisplayDurationOverrideMs: undefined,
+  timelineUsedDurationPreview: undefined,
   dialogType: "update",
   targetGroupId: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   tweenBySection: createEmptyTweenBySection(),
   transitionMask: undefined,
+  additionalTransitionMasks: [],
   pendingTransitionMask: undefined,
   dialogDefaultValues: {
     name: "",
@@ -1327,6 +1381,7 @@ export const createInitialState = () => ({
   isTouchMode: false,
   isPreviewDialogOpen: false,
   maskRemoveConfirmDialogOpen: false,
+  propertyRemoveConfirmDialogOpen: false,
   popover: {
     mode: "none",
     x: undefined,
@@ -1337,7 +1392,6 @@ export const createInitialState = () => ({
   imageSelectorDialog: createInitialImageSelectorDialogState(),
   fullImagePreviewVisible: false,
   fullImagePreviewImageId: undefined,
-  transitionMaskRemoved: false,
 });
 
 export const setItems = ({ state }, { data } = {}) => {
@@ -1395,6 +1449,41 @@ export const nudgeTimelineZoom = ({ state }, { delta } = {}) => {
 
 export const selectTimelineZoom = ({ state }) => {
   return state.timelineZoom;
+};
+
+export const selectTimelineViewportWidth = ({ state }) => {
+  return state.timelineViewportWidth;
+};
+
+export const extendTimelineDisplayDuration = ({ state }, { duration } = {}) => {
+  const numericDuration = Number(duration);
+  if (!Number.isFinite(numericDuration) || numericDuration <= 0) {
+    return;
+  }
+
+  state.timelineDisplayDurationOverrideMs = Math.max(
+    state.timelineDisplayDurationOverrideMs ?? 0,
+    numericDuration,
+  );
+};
+
+export const setTimelineUsedDurationPreview = (
+  { state },
+  { side, duration } = {},
+) => {
+  const numericDuration = Number(duration);
+  if (!side || !Number.isFinite(numericDuration) || numericDuration < 0) {
+    return;
+  }
+
+  state.timelineUsedDurationPreview = {
+    side,
+    duration: numericDuration,
+  };
+};
+
+export const clearTimelineUsedDurationPreview = ({ state }, _payload = {}) => {
+  state.timelineUsedDurationPreview = undefined;
 };
 
 export const setTimelinePanHovered = ({ state }, { hovered } = {}) => {
@@ -1484,15 +1573,25 @@ const cloneTweenBySectionFromItem = (itemData, dialogType) => {
   return tweenBySection;
 };
 
-const cloneTransitionMaskFromItem = (state, itemData, dialogType) => {
+const cloneTransitionMasksFromItem = (state, itemData, dialogType) => {
   if (dialogType !== "transition") {
-    return undefined;
+    return [];
   }
 
-  return normalizeTransitionMaskForEditor(
-    itemData?.animation?.mask,
-    getImageItems(state),
-  );
+  const persistedMask = itemData?.animation?.mask;
+  const persistedMasks = Array.isArray(persistedMask)
+    ? persistedMask
+    : persistedMask
+      ? [persistedMask]
+      : [];
+
+  return persistedMasks.map((mask) => {
+    if (!isEditableTransitionMaskKind(mask.kind)) {
+      return structuredClone(mask);
+    }
+
+    return normalizeTransitionMaskForEditor(mask, getImageItems(state));
+  });
 };
 
 export const openDialog = (
@@ -1507,9 +1606,13 @@ export const openDialog = (
   state.selectedKeyframe = undefined;
   state.selectedProperty = undefined;
   state.selectedMask = false;
+  state.selectedMaskIndex = undefined;
+  state.timelineDisplayDurationOverrideMs = undefined;
+  state.timelineUsedDurationPreview = undefined;
+  state.maskRemoveConfirmDialogOpen = false;
+  state.propertyRemoveConfirmDialogOpen = false;
   state.editMode = Boolean(editMode);
   state.editItemId = itemId;
-  state.transitionMaskRemoved = false;
   state.pendingTransitionMask = undefined;
   state.previewImages = normalizeAnimationPreviewData(itemData?.preview);
 
@@ -1523,11 +1626,13 @@ export const openDialog = (
       itemData,
       resolvedDialogType,
     );
-    state.transitionMask = cloneTransitionMaskFromItem(
+    const transitionMasks = cloneTransitionMasksFromItem(
       state,
       itemData,
       resolvedDialogType,
     );
+    state.transitionMask = transitionMasks[0];
+    state.additionalTransitionMasks = transitionMasks.slice(1);
     return;
   }
 
@@ -1541,7 +1646,7 @@ export const openDialog = (
   };
   state.tweenBySection = createEmptyTweenBySection();
   state.transitionMask = undefined;
-  state.transitionMaskRemoved = false;
+  state.additionalTransitionMasks = [];
 };
 
 export const selectTargetGroupId = ({ state }) => {
@@ -1605,8 +1710,12 @@ const resolveDialogSide = (state, side) => {
 
 const getMutableSectionProperties = (state, side) => {
   const resolvedSide = resolveDialogSide(state, side);
-  if (resolvedSide === "mask") {
-    const progress = state.transitionMask?.progress;
+  if (isMaskSide(resolvedSide)) {
+    const maskIndex = getMaskIndexFromSide(
+      resolvedSide,
+      state.selectedMaskIndex ?? 0,
+    );
+    const progress = getTransitionMask(state, maskIndex)?.progress;
     return progress ? { [MASK_PROGRESS_PROPERTY]: progress } : {};
   }
 
@@ -1625,6 +1734,7 @@ export const setSelectedKeyframe = (
 ) => {
   state.selectedProperty = undefined;
   state.selectedMask = false;
+  state.selectedMaskIndex = undefined;
   const resolvedSide = resolveDialogSide(state, side);
   const resolvedIndex = Number(index);
   const keyframe = getSectionProperties(state, resolvedSide)[property]
@@ -1656,6 +1766,7 @@ export const setSelectedProperty = ({ state }, { side, property } = {}) => {
 
   state.selectedKeyframe = undefined;
   state.selectedMask = false;
+  state.selectedMaskIndex = undefined;
   state.selectedProperty = selectedProperty
     ? { side: resolvedSide, property }
     : undefined;
@@ -1665,29 +1776,40 @@ export const selectSelectedProperty = ({ state }) => {
   return state.selectedProperty;
 };
 
-export const setSelectedMask = ({ state }, _payload = {}) => {
+export const setSelectedMask = ({ state }, { index, side } = {}) => {
   state.selectedKeyframe = undefined;
   state.selectedProperty = undefined;
+  const maskIndex = Number.isInteger(Number(index))
+    ? Number(index)
+    : getMaskIndexFromSide(side, state.selectedMaskIndex ?? 0);
   state.selectedMask =
     state.dialogType === "transition" &&
-    Boolean(getEffectiveTransitionMask(state));
+    Boolean(getTransitionMask(state, maskIndex));
+  state.selectedMaskIndex = state.selectedMask ? maskIndex : undefined;
 };
 
 export const selectSelectedMask = ({ state }) => {
   return state.selectedMask;
 };
 
+export const selectSelectedMaskIndex = ({ state }) => {
+  return state.selectedMaskIndex;
+};
+
 export const clearTimelineSelection = ({ state }, _payload = {}) => {
   state.selectedKeyframe = undefined;
   state.selectedProperty = undefined;
   state.selectedMask = false;
+  state.selectedMaskIndex = undefined;
 };
 
 export const selectTimelineSelection = ({ state }) => {
   return (
     state.selectedKeyframe ??
     state.selectedProperty ??
-    (state.selectedMask ? { type: "mask" } : undefined)
+    (state.selectedMask
+      ? { type: "mask", index: state.selectedMaskIndex }
+      : undefined)
   );
 };
 
@@ -2216,7 +2338,7 @@ export const deleteKeyframe = ({ state }, { side, property, index } = {}) => {
   if (!Array.isArray(keyframes)) {
     return;
   }
-  if (resolvedSide === "mask" && keyframes.length <= 1) {
+  if (isMaskSide(resolvedSide) && keyframes.length <= 1) {
     return;
   }
 
@@ -2240,7 +2362,7 @@ export const deleteProperty = ({ state }, { side, property } = {}) => {
   const resolvedSide = resolveDialogSide(state, side);
   const properties = getMutableSectionProperties(state, side);
 
-  if (!property || !properties || resolvedSide === "mask") {
+  if (!property || !properties || isMaskSide(resolvedSide)) {
     return;
   }
 
@@ -2383,13 +2505,13 @@ export const updateAutoProperty = (
 };
 
 export const enableTransitionMask = ({ state }, _payload = {}) => {
-  state.transitionMask = createDefaultTransitionMask();
-  state.transitionMaskRemoved = false;
+  if (!state.transitionMask) {
+    state.transitionMask = createDefaultTransitionMask();
+  }
 };
 
 export const startPendingTransitionMask = ({ state }, _payload = {}) => {
   state.pendingTransitionMask = createDefaultTransitionMask();
-  state.transitionMaskRemoved = false;
 };
 
 export const commitPendingTransitionMask = ({ state }, _payload = {}) => {
@@ -2397,19 +2519,28 @@ export const commitPendingTransitionMask = ({ state }, _payload = {}) => {
     return;
   }
 
-  state.transitionMask = cloneTransitionMask(state.pendingTransitionMask);
+  state.selectedMaskIndex = appendTransitionMask(
+    state,
+    cloneTransitionMask(state.pendingTransitionMask),
+  );
+  state.selectedMask = true;
   state.pendingTransitionMask = undefined;
-  state.transitionMaskRemoved = false;
 };
 
 export const disableTransitionMask = ({ state }, _payload = {}) => {
-  state.transitionMask = undefined;
-  state.transitionMaskRemoved = true;
+  removeTransitionMaskAtIndex(state, state.selectedMaskIndex ?? 0);
   state.selectedMask = false;
+  state.selectedMaskIndex = undefined;
+  state.selectedKeyframe = undefined;
+  state.selectedProperty = undefined;
 };
 
 export const selectTransitionMask = ({ state }) => {
   return getTransitionMask(state);
+};
+
+export const selectTransitionMasks = ({ state }) => {
+  return getTransitionMasks(state);
 };
 
 export const selectHasEffectiveTransitionMask = ({ state }) => {
@@ -2418,10 +2549,6 @@ export const selectHasEffectiveTransitionMask = ({ state }) => {
 
 export const selectMaskEditorTransitionMask = ({ state }) => {
   return getMaskEditorTransitionMask(state);
-};
-
-export const selectTransitionMaskRemoved = ({ state }) => {
-  return state.transitionMaskRemoved === true;
 };
 
 export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
@@ -3025,24 +3152,31 @@ export const closeMaskRemoveConfirmDialog = ({ state }, _payload = {}) => {
   state.maskRemoveConfirmDialogOpen = false;
 };
 
+export const openPropertyRemoveConfirmDialog = ({ state }, _payload = {}) => {
+  state.propertyRemoveConfirmDialogOpen = true;
+};
+
+export const closePropertyRemoveConfirmDialog = ({ state }, _payload = {}) => {
+  state.propertyRemoveConfirmDialogOpen = false;
+};
+
 const buildTransitionMaskPanelDataForMask = (
   state,
   transitionMask,
-  unsupportedPersistedMask,
   copy = {},
 ) => {
-  if (!transitionMask && !unsupportedPersistedMask) {
+  if (!transitionMask) {
     return createEmptyMaskPanelData(copy);
   }
 
-  if (unsupportedPersistedMask) {
+  if (!isEditableTransitionMaskKind(transitionMask.kind)) {
     return {
       ...createEmptyMaskPanelData(copy),
       enabled: true,
       unsupported: true,
-      unsupportedKind: unsupportedPersistedMask.kind,
+      unsupportedKind: transitionMask.kind,
       unsupportedMessage: `${
-        unsupportedPersistedMask.kind
+        transitionMask.kind
       } ${copy.unsupportedMaskMessageSuffix ?? "masks are hidden for now"}`,
       unsupportedDescription:
         copy.unsupportedMaskDescription ??
@@ -3124,7 +3258,6 @@ const buildTransitionMaskPanelData = (state, copy = {}) => {
   return buildTransitionMaskPanelDataForMask(
     state,
     getTransitionMask(state),
-    getUnsupportedPersistedTransitionMask(state),
     copy,
   );
 };
@@ -3154,7 +3287,6 @@ const buildMaskEditorPanelData = (state, copy = {}) => {
     return buildTransitionMaskPanelDataForMask(
       state,
       state.pendingTransitionMask,
-      undefined,
       copy,
     );
   }
@@ -3185,19 +3317,31 @@ const buildSelectedKeyframePanelData = (
       ? (copy.outTimelineLabel ?? "Outgoing")
       : side === "next"
         ? (copy.inTimelineLabel ?? "Incoming")
-        : side === "mask"
+        : isMaskSide(side)
           ? (copy.maskTitle ?? "Mask")
           : (copy.updateType ?? "Update");
   const easing = keyframe.easing ?? "linear";
-  const easingLabel =
-    createEasingOptions(copy).find((option) => option.value === easing)
-      ?.label ?? formatEasingLabel(easing);
-  const valueTypeLabel =
-    keyframe.relative === true
-      ? (copy.relativeValueType ?? "Relative")
-      : (copy.absoluteValueType ?? "Absolute");
+  const valueSlider = propertyFieldConfig[property]?.slider;
   return {
     id: `${side}:${property}:${index}`,
+    editor: {
+      delay: keyframe.delay ?? 0,
+      delayLabel: copy.delayMsLabel ?? "Delay (ms)",
+      duration: keyframe.duration,
+      durationLabel: copy.durationMsLabel ?? "Duration (ms)",
+      easing,
+      easingOptions: createEasingOptions(copy),
+      relative: keyframe.relative ?? false,
+      relativeOptions: [
+        { label: copy.absoluteValueType ?? "Absolute", value: false },
+        { label: copy.relativeValueType ?? "Relative", value: true },
+      ],
+      value: keyframe.value,
+      valueLabel: copy.valueLabel ?? "Value",
+      valueStep: propertyFieldConfig[property]?.input?.step ?? "any",
+      valueSlider,
+      valueUsesPopover: Boolean(propertyFieldConfig[property]?.input),
+    },
     fields: [
       {
         type: "text",
@@ -3210,29 +3354,29 @@ const buildSelectedKeyframePanelData = (
         value: propertyFieldConfig[property]?.label ?? property,
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.delayMsLabel ?? "Delay (ms)",
-        value: keyframe.delay ?? 0,
+        slot: "keyframe-delay",
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.durationMsLabel ?? "Duration (ms)",
-        value: keyframe.duration,
+        slot: "keyframe-duration",
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.easingLabel ?? "Easing",
-        value: easingLabel,
+        slot: "keyframe-easing",
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.valueLabel ?? "Value",
-        value: keyframe.value,
+        slot: "keyframe-value",
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.valueTypeLabel ?? "Value type",
-        value: valueTypeLabel,
+        slot: "keyframe-value-type",
       },
     ],
   };
@@ -3259,13 +3403,17 @@ const buildSelectedPropertyPanelData = (
       ? (copy.outTimelineLabel ?? "Outgoing")
       : side === "next"
         ? (copy.inTimelineLabel ?? "Incoming")
-        : side === "mask"
+        : isMaskSide(side)
           ? (copy.maskTitle ?? "Mask")
           : (copy.updateType ?? "Update");
   const hasInitialValue =
     propertyConfig.initialValue !== undefined &&
     propertyConfig.initialValue !== "";
   const autoConfig = propertyConfig.auto;
+  const initialValue = hasInitialValue
+    ? propertyConfig.initialValue
+    : (propertyFieldConfig[property]?.defaultValue ?? 0);
+  const initialValueSlider = propertyFieldConfig[property]?.slider;
   const fields = [
     {
       type: "text",
@@ -3277,13 +3425,19 @@ const buildSelectedPropertyPanelData = (
       label: copy.propertyLabel ?? "Property",
       value: propertyFieldConfig[property]?.label ?? property,
     },
-    {
-      type: "text",
-      label: copy.initialValueLabel ?? "Initial value",
-      value: hasInitialValue
-        ? propertyConfig.initialValue
-        : (copy.defaultLabel ?? "Default"),
-    },
+    autoConfig
+      ? {
+          type: "text",
+          label: copy.initialValueLabel ?? "Initial value",
+          value: hasInitialValue
+            ? propertyConfig.initialValue
+            : (copy.defaultLabel ?? "Default"),
+        }
+      : {
+          type: "slot",
+          label: copy.initialValueLabel ?? "Initial value",
+          slot: "property-initial-value",
+        },
   ];
 
   if (autoConfig) {
@@ -3306,17 +3460,37 @@ const buildSelectedPropertyPanelData = (
 
   return {
     id: `${side}:${property}`,
+    editor: autoConfig
+      ? undefined
+      : {
+          hasInitialValue,
+          initialValue,
+          initialValueLabel: copy.initialValueLabel ?? "Initial value",
+          initialValueSlider,
+          initialValueStep: propertyFieldConfig[property]?.input?.step ?? "any",
+          initialValueUsesPopover: Boolean(
+            propertyFieldConfig[property]?.input,
+          ),
+        },
     fields,
   };
 };
 
 const createTimelineMetrics = ({ state, activeTimelineDuration }) => {
+  const timelinePixelsPerSecond = Math.round(
+    TIMELINE_BASE_PIXELS_PER_SECOND * state.timelineZoom,
+  );
+  const viewportTimelineDuration =
+    state.timelineViewportWidth > TIMELINE_PROPERTY_COLUMN_WIDTH
+      ? ((state.timelineViewportWidth - TIMELINE_PROPERTY_COLUMN_WIDTH) /
+          timelinePixelsPerSecond) *
+        1000
+      : 0;
   const timelineDisplayDuration = Math.max(
     TIMELINE_MIN_DISPLAY_DURATION_MS,
     activeTimelineDuration,
-  );
-  const timelinePixelsPerSecond = Math.round(
-    TIMELINE_BASE_PIXELS_PER_SECOND * state.timelineZoom,
+    viewportTimelineDuration,
+    state.timelineDisplayDurationOverrideMs ?? 0,
   );
   const timelineCanvasWidth = Math.round(
     TIMELINE_PROPERTY_COLUMN_WIDTH +
@@ -3350,15 +3524,40 @@ const createTimelineMetrics = ({ state, activeTimelineDuration }) => {
 };
 
 const getActiveTimelineDuration = (state) => {
+  const preview = state.timelineUsedDurationPreview;
   if (state.dialogType !== "transition") {
-    return getPropertiesDuration(getSectionProperties(state, "update"));
+    return preview?.side === "update"
+      ? preview.duration
+      : getPropertiesDuration(getSectionProperties(state, "update"));
   }
 
-  return getTransitionTimelineDuration({
-    prevProperties: getSectionProperties(state, "prev"),
-    nextProperties: getSectionProperties(state, "next"),
-    mask: getEffectiveTransitionMask(state),
-  });
+  const previousDuration =
+    preview?.side === "prev"
+      ? preview.duration
+      : getPropertiesDuration(getSectionProperties(state, "prev"));
+  const nextDuration =
+    preview?.side === "next"
+      ? preview.duration
+      : getPropertiesDuration(getSectionProperties(state, "next"));
+  const maskDuration = getTransitionMasks(state).reduce(
+    (maxDuration, mask, index) => {
+      const side = createMaskSide(index);
+      if (preview?.side !== side) {
+        return Math.max(maxDuration, getTransitionTimelineDuration({ mask }));
+      }
+
+      const committedProgressDuration = getPropertiesDuration(
+        getSectionProperties(state, side),
+      );
+      const committedMaskDuration = getTransitionTimelineDuration({ mask });
+      const previewMaskDuration =
+        committedMaskDuration - committedProgressDuration + preview.duration;
+      return Math.max(maxDuration, previewMaskDuration);
+    },
+    0,
+  );
+
+  return Math.max(previousDuration, nextDuration, maskDuration);
 };
 
 export const selectTimelinePlayheadVisible = ({ state }) => {
@@ -3384,15 +3583,9 @@ export const selectViewData = ({ state, i18n }) => {
   const updateProperties = getSectionProperties(state, "update");
   const previousProperties = getSectionProperties(state, "prev");
   const nextProperties = getSectionProperties(state, "next");
-  const transitionTimelineDuration = getTransitionTimelineDuration({
-    prevProperties: previousProperties,
-    nextProperties,
-    mask: getEffectiveTransitionMask(state),
-  });
-  const activeTimelineDuration =
-    dialogType === "transition"
-      ? transitionTimelineDuration
-      : getPropertiesDuration(updateProperties);
+  const activeTimelineDuration = getActiveTimelineDuration(state);
+  const transitionTimelineDuration =
+    dialogType === "transition" ? activeTimelineDuration : 0;
   const {
     timelineCanvasWidth,
     timelineDisplayDuration,
@@ -3404,8 +3597,13 @@ export const selectViewData = ({ state, i18n }) => {
     state.previewPlayheadVisible &&
     activeTimelineDuration > 0 &&
     timelinePlayheadWithinViewport;
+  const timelineUsedAreaRatio =
+    timelineDisplayDuration > 0
+      ? Math.min(1, activeTimelineDuration / timelineDisplayDuration)
+      : 0;
+  const timelineUsedAreaStyle = `top: 0; bottom: 0; left: 104px; width: calc((100% - 104px) * ${timelineUsedAreaRatio}); pointer-events: none; z-index: 0;`;
   const timelinePlayheadStyle = timelinePlayheadVisible
-    ? `top: 10px; bottom: 0; left: calc(104px + (100% - 104px) * ${timelinePlayheadRatio}); width: 1px; transform: translateX(-0.5px); pointer-events: none; z-index: 5;`
+    ? `top: 10px; bottom: 0; left: calc(104px + (100% - 104px) * ${timelinePlayheadRatio}); width: 1px; transform: translateX(-0.5px); pointer-events: none; z-index: 8;`
     : "";
   const updateTimelineDefaultValues = createTimelineDefaultValues(
     UPDATE_PROPERTY_KEYS,
@@ -3434,7 +3632,7 @@ export const selectViewData = ({ state, i18n }) => {
     createTransitionAddPropertySideMenuItems({
       previousAvailable: previousAddPropertyOptions.length > 0,
       nextAvailable: nextAddPropertyOptions.length > 0,
-      maskAvailable: !getEffectiveTransitionMask(state),
+      maskAvailable: true,
       copy,
     });
   const transitionPropertySideOptions =
@@ -3457,32 +3655,57 @@ export const selectViewData = ({ state, i18n }) => {
   const transitionMaskPanel = buildTransitionMaskPanelData(state, copy);
   const maskEditorPanel = buildMaskEditorPanelData(state, copy);
   const selectedMask = state.selectedMask && transitionMaskPanel.enabled;
-  const maskProgress = getSectionProperties(state, "mask")[
-    MASK_PROGRESS_PROPERTY
-  ];
-  const maskTimelineImage =
-    transitionMaskPanel.singleImage ?? transitionMaskPanel.imageItems[0] ?? {};
-  const maskTimelineRow = transitionMaskPanel.enabled
-    ? {
-        editable: !transitionMaskPanel.unsupported && Boolean(maskProgress),
-        image: maskTimelineImage,
-        imageBorderColor: selectedMask ? "pr" : "bo",
-        label: copy.maskTitle ?? "Mask",
-        selected: selectedMask,
-      }
-    : undefined;
-  const maskTimelineProperties = maskTimelineRow?.editable
-    ? {
-        [MASK_PROGRESS_PROPERTY]: {
-          ...maskProgress,
-          selected: selectedMask,
-          thumbnail: true,
-          thumbnailBorderColor: maskTimelineRow.imageBorderColor,
-          thumbnailFileId: maskTimelineImage.previewFileId,
-          thumbnailName: maskTimelineImage.name ?? maskTimelineRow.label,
-        },
-      }
-    : {};
+  const maskTimelineRows = getTransitionMasks(state).map(
+    (transitionMask, index) => {
+      const side = createMaskSide(index);
+      const panel = buildTransitionMaskPanelDataForMask(
+        state,
+        transitionMask,
+        copy,
+      );
+      const progress = getSectionProperties(state, side)[
+        MASK_PROGRESS_PROPERTY
+      ];
+      const rowSelected =
+        state.selectedMask && state.selectedMaskIndex === index;
+      const image = panel.singleImage ?? panel.imageItems[0] ?? {};
+      const imageBorderColor = rowSelected ? "pr" : "bo";
+      const label = copy.maskTitle ?? "Mask";
+      const editable = !panel.unsupported && Boolean(progress);
+      const properties = editable
+        ? {
+            [MASK_PROGRESS_PROPERTY]: {
+              ...progress,
+              selected: rowSelected,
+              thumbnail: true,
+              thumbnailBorderColor: imageBorderColor,
+              thumbnailFileId: image.previewFileId,
+              thumbnailName: image.name ?? label,
+            },
+          }
+        : {};
+
+      return {
+        editable,
+        image,
+        imageBorderColor,
+        index,
+        label,
+        properties,
+        selected: rowSelected,
+        side,
+      };
+    },
+  );
+  const maskTimelineRow = maskTimelineRows[0];
+  const maskTimelineProperties = maskTimelineRow?.properties ?? {};
+  const previousTimelineVisible = Object.keys(previousProperties).length > 0;
+  const nextTimelineVisible = Object.keys(nextProperties).length > 0;
+  const maskTimelineVisible = maskTimelineRows.length > 0;
+  const activeTimelineEmpty =
+    dialogType === "transition"
+      ? !previousTimelineVisible && !nextTimelineVisible && !maskTimelineVisible
+      : Object.keys(updateProperties).length === 0;
   const previewPanel = buildPreviewPanelData(state, copy);
   const selectedKeyframePanel = buildSelectedKeyframePanelData(
     state,
@@ -3500,7 +3723,21 @@ export const selectViewData = ({ state, i18n }) => {
 
   const keyframeDropdownItems = (() => {
     if (state.popover.mode !== "keyframeMenu") {
-      return localizeMenuItems(propertyNameDropdownItems, copy);
+      const propertyMenuItems = localizeMenuItems(
+        propertyNameDropdownItems,
+        copy,
+      );
+      if (state.popover.mode !== "propertyNameMenu") {
+        return propertyMenuItems;
+      }
+
+      const { side, property } = state.popover.payload;
+      const propertyConfig = getSectionProperties(state, side)[property];
+      return propertyConfig?.auto
+        ? propertyMenuItems.filter(
+            (item) => item.value !== "edit-initial-value",
+          )
+        : propertyMenuItems;
     }
 
     const { side, property, index } = state.popover.payload;
@@ -3513,7 +3750,7 @@ export const selectViewData = ({ state, i18n }) => {
     return localizeMenuItems(baseKeyframeDropdownItems, copy).filter((item) => {
       if (
         item.value === "delete-keyframe" &&
-        side === "mask" &&
+        isMaskSide(side) &&
         keyframes.length <= 1
       ) {
         return false;
@@ -3656,18 +3893,20 @@ export const selectViewData = ({ state, i18n }) => {
     previewLoopButtonVariant: state.previewLoopEnabled ? "pr" : "ol",
     timelinePlayheadVisible,
     timelinePlayheadStyle,
+    timelineUsedAreaStyle,
     timelineZoom: state.timelineZoom,
     timelineZoomMin: TIMELINE_ZOOM_MIN,
     timelineZoomMax: TIMELINE_ZOOM_MAX,
     timelineZoomStep: TIMELINE_ZOOM_STEP,
     timelinePixelsPerSecond,
-    timelineCanvasStyle: `width: ${timelineCanvasWidth}px; min-width: ${TIMELINE_PROPERTY_COLUMN_WIDTH}px; flex-shrink: 0;${state.timelinePanMode ? " pointer-events: none; user-select: none;" : ""}`,
+    timelineCanvasStyle: `width: ${timelineCanvasWidth}px; min-width: 100%; flex-shrink: 0;${state.timelinePanMode ? " pointer-events: none; user-select: none;" : ""}`,
     timelinePanCursor: state.timelinePan
       ? "grabbing"
       : state.timelinePanMode
         ? "grab"
         : "default",
     timelineDisplayDuration,
+    activeTimelineDuration,
     dialogTypeLabel:
       dialogType === "transition"
         ? (copy.transitionType ?? "Transition")
@@ -3682,14 +3921,21 @@ export const selectViewData = ({ state, i18n }) => {
     updateProperties,
     previousProperties,
     nextProperties,
+    previousTimelineVisible,
+    nextTimelineVisible,
     selectedKeyframe: state.selectedKeyframe,
     selectedProperty: state.selectedProperty,
     selectedKeyframeDetailId: selectedKeyframePanel?.id,
     selectedKeyframeDetailFields: selectedKeyframePanel?.fields ?? [],
+    selectedKeyframeEditor: selectedKeyframePanel?.editor,
     selectedPropertyDetailId: selectedPropertyPanel?.id,
     selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
+    selectedPropertyEditor: selectedPropertyPanel?.editor,
     selectedMask,
     maskTimelineRow,
+    maskTimelineRows,
+    maskTimelineVisible,
+    activeTimelineEmpty,
     maskTimelineProperties,
     maskTimelineDefaultValues: { [MASK_PROGRESS_PROPERTY]: 0 },
     updateTimelineDefaultValues,
@@ -3762,6 +4008,7 @@ export const selectViewData = ({ state, i18n }) => {
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     isPreviewDialogOpen: state.isPreviewDialogOpen,
     maskRemoveConfirmDialogOpen: state.maskRemoveConfirmDialogOpen,
+    propertyRemoveConfirmDialogOpen: state.propertyRemoveConfirmDialogOpen,
     showRightPanel: !state.isTouchMode,
     selectedEditorTab: state.selectedEditorTab,
     editorTabs: [
@@ -3801,6 +4048,7 @@ export const selectViewData = ({ state, i18n }) => {
       getMaskEditorTransitionMask(state),
     ),
     addButton: copy.addButton ?? "Add",
+    addPropertyButtonLabel: copy.addPropertyButton ?? "Add Property",
     addMaskButton: copy.addMaskButton ?? "Add Mask",
     addMaskTitle: copy.addMaskTitle ?? "Add Mask",
     cancelButton: copy.cancelButton ?? "Cancel",
@@ -3808,10 +4056,17 @@ export const selectViewData = ({ state, i18n }) => {
     doneButton: copy.doneButton ?? "Done",
     deletePropertyButtonLabel:
       copy.deletePropertyButtonLabel ?? "Delete property",
-    editButton: copy.editMenuItem ?? "Edit",
+    propertyRemoveConfirmMessage:
+      copy.propertyRemoveConfirmMessage ??
+      "Delete this animation property? This cannot be undone.",
+    propertyRemoveConfirmTitle:
+      copy.propertyRemoveConfirmTitle ?? "Delete Property",
     editPreviewButton: copy.editPreviewButton ?? "Edit Preview",
+    editKeyframeButtonLabel: copy.editKeyframeMenuItem ?? "Edit keyframe",
     imageLabel: copy.imageLabel ?? "Image",
     initialValueLabel: copy.initialValueLabel ?? "Initial value",
+    useDefaultValueButtonLabel:
+      copy.useDefaultValueSource ?? "Use Default Value",
     inTimelineLabel: copy.inTimelineLabel ?? "Incoming",
     invertLabel: copy.invertLabel ?? "Invert",
     detailsPanelTitle: selectedMask

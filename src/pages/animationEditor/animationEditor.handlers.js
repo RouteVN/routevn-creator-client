@@ -1,3 +1,4 @@
+import { auditTime, filter, tap } from "rxjs";
 import { generateId } from "../../internal/id.js";
 import {
   createAnimationEditorPayload,
@@ -5,6 +6,7 @@ import {
   resolveAnimationEditorPayload,
 } from "../../internal/animationEditorRoute.js";
 import {
+  isEditableTransitionMaskKind,
   isTransitionMaskComplete,
   serializeTransitionMask,
 } from "../../internal/animationMasks.js";
@@ -165,6 +167,10 @@ const invalidatePreview = ({ store } = {}) => {
 };
 
 const collectRuntimeMaskTextureIds = (mask = {}) => {
+  if (Array.isArray(mask)) {
+    return mask.flatMap(collectRuntimeMaskTextureIds);
+  }
+
   if (!mask) {
     return [];
   }
@@ -424,20 +430,20 @@ const getAnimationItem = ({ repositoryState, animationId } = {}) => {
   return item?.type === "animation" ? item : undefined;
 };
 
-const resolvePersistedTransitionMask = ({ store, serializedMask } = {}) => {
-  if (store.selectTransitionMaskRemoved()) {
+const serializeTransitionMasksForPersistence = (masks = []) => {
+  const serializedMasks = masks
+    .map((mask) => {
+      return isEditableTransitionMaskKind(mask.kind)
+        ? serializeTransitionMask(mask)
+        : structuredClone(mask);
+    })
+    .filter(Boolean);
+
+  if (serializedMasks.length === 0) {
     return undefined;
   }
 
-  if (serializedMask) {
-    return serializedMask;
-  }
-
-  if (!store.selectEditMode()) {
-    return undefined;
-  }
-
-  return structuredClone(store.selectEditItemData()?.animation?.mask);
+  return serializedMasks.length === 1 ? serializedMasks[0] : serializedMasks;
 };
 
 const createAnimationPersistSnapshot = ({ copy, store } = {}) => {
@@ -447,13 +453,9 @@ const createAnimationPersistSnapshot = ({ copy, store } = {}) => {
   if (dialogType === "transition") {
     const prevTween = normalizeTween(store.selectProperties({ side: "prev" }));
     const nextTween = normalizeTween(store.selectProperties({ side: "next" }));
-    const serializedTransitionMask = serializeTransitionMask(
-      store.selectTransitionMask(),
+    const transitionMask = serializeTransitionMasksForPersistence(
+      store.selectTransitionMasks(),
     );
-    const transitionMask = resolvePersistedTransitionMask({
-      store,
-      serializedMask: serializedTransitionMask,
-    });
 
     animationData = {
       type: "transition",
@@ -788,7 +790,7 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
 };
 
 const mountTimelinePanSubscriptions = (deps) => {
-  const { browserEventsClient } = deps;
+  const { browserEventsClient, subject } = deps;
   const cleanupSubscriptions = [
     browserEventsClient.subscribeWindowEvent({
       type: "keydown",
@@ -810,10 +812,24 @@ const mountTimelinePanSubscriptions = (deps) => {
       type: "blur",
       listener: () => handleTimelinePanWindowBlur(deps),
     }),
+    browserEventsClient.subscribeWindowEvent({
+      type: "resize",
+      listener: () => handleTimelineViewportResize(deps),
+    }),
   ];
+  const panelResizeSubscription = subject
+    .pipe(
+      filter(({ action }) =>
+        ["panel-resize", "panel-resize-end"].includes(action),
+      ),
+      auditTime(0),
+      tap(() => handleTimelineViewportResize(deps)),
+    )
+    .subscribe();
 
   return () => {
     cleanupSubscriptions.forEach((cleanup) => cleanup());
+    panelResizeSubscription.unsubscribe();
   };
 };
 
@@ -853,6 +869,7 @@ export const handleAfterMount = async (deps) => {
   const { projectService } = deps;
   await projectService.ensureRepository();
   await syncEditorState({ deps });
+  handleTimelineViewportResize(deps);
 };
 
 export const handleBackClick = async (deps) => {
@@ -986,15 +1003,14 @@ export const handleClosePreviewDialog = (deps) => {
   render();
 };
 
-export const handleAddPropertiesClick = (deps, payload) => {
+const openAddProperties = (deps, { side, x, y } = {}) => {
   const { render, store } = deps;
-  const side = payload._event.currentTarget?.dataset?.side;
 
   if (!side && store.selectDialogType() === "transition") {
     store.setPopover({
       mode: "addPropertySideMenu",
-      x: payload._event.clientX,
-      y: payload._event.clientY,
+      x,
+      y,
       payload: {},
     });
     render();
@@ -1003,13 +1019,37 @@ export const handleAddPropertiesClick = (deps, payload) => {
 
   store.setPopover({
     mode: "addProperty",
-    x: payload._event.clientX,
-    y: payload._event.clientY,
+    x,
+    y,
     payload: {
       side: side ?? "update",
     },
   });
   render();
+};
+
+export const handleAddPropertiesClick = (deps, payload) => {
+  const event = payload._event;
+  openAddProperties(deps, {
+    side: event.currentTarget?.dataset?.side,
+    x: event.clientX,
+    y: event.clientY,
+  });
+};
+
+export const handleEmptyTimelineAddPropertiesKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  const rect = event.currentTarget.getBoundingClientRect();
+  openAddProperties(deps, {
+    side: event.currentTarget.dataset.side,
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  });
 };
 
 export const handleTimelineZoomChange = (deps, payload) => {
@@ -1088,6 +1128,7 @@ export const handleTimelineZoomOut = (deps) => {
 export const handleTimelineScroll = (deps, payload) => {
   const { render, store } = deps;
   const wasPlayheadVisible = store.selectTimelinePlayheadVisible();
+  const previousViewportWidth = store.selectTimelineViewportWidth();
   const timelineViewport = payload._event.currentTarget;
 
   store.setTimelineScrollMetrics({
@@ -1095,9 +1136,47 @@ export const handleTimelineScroll = (deps, payload) => {
     viewportWidth: timelineViewport.clientWidth,
   });
 
-  if (wasPlayheadVisible !== store.selectTimelinePlayheadVisible()) {
+  if (
+    previousViewportWidth !== timelineViewport.clientWidth ||
+    wasPlayheadVisible !== store.selectTimelinePlayheadVisible()
+  ) {
     render();
   }
+};
+
+export const handleTimelineViewportResize = (deps) => {
+  const { refs, render, store } = deps;
+  const timelineViewport = refs.timelineScrollContainer;
+  if (
+    !timelineViewport ||
+    timelineViewport.clientWidth === store.selectTimelineViewportWidth()
+  ) {
+    return;
+  }
+
+  store.setTimelineScrollMetrics({
+    scrollLeft: timelineViewport.scrollLeft,
+    viewportWidth: timelineViewport.clientWidth,
+  });
+  render();
+};
+
+export const handleTimelineDurationExtend = (deps, payload) => {
+  const { render, store } = deps;
+  const { duration } = payload._event.detail;
+  store.extendTimelineDisplayDuration({ duration });
+  render();
+};
+
+export const handleTimelineUsedDurationPreview = (deps, payload) => {
+  const { render, store } = deps;
+  const { active, duration, side } = payload._event.detail;
+  if (active) {
+    store.setTimelineUsedDurationPreview({ side, duration });
+  } else {
+    store.clearTimelineUsedDurationPreview({});
+  }
+  render();
 };
 
 export const handleTimelinePanPointerEnter = (deps) => {
@@ -1489,6 +1568,72 @@ const commitSelectedKeyframeChange = (deps) => {
   queueEditorAutosave({ deps });
 };
 
+export const handleSelectedKeyframeDelayChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeDelay({
+    delay: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeDurationChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeDuration({
+    duration: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeEasingChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeEasing({
+    easing: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeValueChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeValue({
+    value: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeRelativeChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeRelative({
+    relative: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+const commitSelectedPropertyInitialValue = (deps, initialValue) => {
+  const { render, store } = deps;
+  const selectedProperty = store.selectSelectedProperty();
+  if (!selectedProperty) {
+    return;
+  }
+
+  const { side, property } = selectedProperty;
+  store.updateInitialValue({
+    side,
+    property,
+    initialValue,
+  });
+  invalidatePreview({ store });
+  render();
+  queueEditorAutosave({ deps });
+};
+
+export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
+  commitSelectedPropertyInitialValue(deps, resolveValueChange(payload));
+};
+
+export const handleSelectedPropertyUseDefaultClick = (deps) => {
+  commitSelectedPropertyInitialValue(deps, undefined);
+};
+
 const openSelectedMaskNumberPopover = (deps, payload, { mode, value } = {}) => {
   const { render, store } = deps;
   const event = payload._event;
@@ -1515,6 +1660,10 @@ export const handleSelectedMaskSoftnessClick = (deps, payload) => {
 
 export const handleSelectedMaskInitialValueClick = (deps, payload) => {
   const { store } = deps;
+  const side = payload._event.detail?.side;
+  if (side?.startsWith("mask:")) {
+    store.setSelectedMask({ side });
+  }
   openSelectedMaskNumberPopover(deps, payload, {
     mode: "editSelectedMaskInitialValue",
     value: store.selectMaskEditorTransitionMask()?.progress?.initialValue ?? 0,
@@ -1628,8 +1777,8 @@ export const handleAutoTrackClick = (deps, payload) => {
 export const handlePropertyNameClick = (deps, payload) => {
   const { render, store } = deps;
   const { property, side, x, y } = payload._event.detail;
-  if (side === "mask") {
-    selectMaskTimelineRow(deps, { clientX: x, clientY: y });
+  if (side === "mask" || side?.startsWith("mask:")) {
+    selectMaskTimelineRow(deps, { clientX: x, clientY: y }, { side });
     return;
   }
 
@@ -1650,9 +1799,9 @@ export const handlePropertyNameClick = (deps, payload) => {
   render();
 };
 
-const selectMaskTimelineRow = (deps, event) => {
+const selectMaskTimelineRow = (deps, event, { index, side } = {}) => {
   const { render, store } = deps;
-  store.setSelectedMask({});
+  store.setSelectedMask({ index, side });
   if (store.selectIsTouchMode()) {
     store.setPopover({
       mode: "editMask",
@@ -1667,7 +1816,13 @@ const selectMaskTimelineRow = (deps, event) => {
 };
 
 export const handleMaskTimelineRowClick = (deps, payload) => {
-  selectMaskTimelineRow(deps, payload._event);
+  const event = payload._event;
+  const index = Number.parseInt(event.currentTarget?.dataset?.maskIndex, 10);
+  const selection = {};
+  if (Number.isInteger(index)) {
+    selection.index = index;
+  }
+  selectMaskTimelineRow(deps, event, selection);
 };
 
 export const handleMaskTimelineRowKeyDown = (deps, payload) => {
@@ -1678,13 +1833,48 @@ export const handleMaskTimelineRowKeyDown = (deps, payload) => {
 
   event.preventDefault();
   event.stopPropagation();
-  selectMaskTimelineRow(deps, event);
+  const index = Number.parseInt(event.currentTarget?.dataset?.maskIndex, 10);
+  const selection = {};
+  if (Number.isInteger(index)) {
+    selection.index = index;
+  }
+  selectMaskTimelineRow(deps, event, selection);
 };
 
 export const handleSelectedPropertyDeleteClick = (deps) => {
   const { render, store } = deps;
   const selectedProperty = store.selectSelectedProperty();
   if (!selectedProperty) {
+    return;
+  }
+
+  if (["prev", "next"].includes(selectedProperty.side)) {
+    store.closePopover();
+    store.openPropertyRemoveConfirmDialog({});
+    render();
+    return;
+  }
+
+  store.deleteProperty(selectedProperty);
+  store.closePopover();
+  invalidatePreview({ store });
+  render();
+  queueEditorAutosave({ deps });
+};
+
+export const handlePropertyRemoveConfirmDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closePropertyRemoveConfirmDialog({});
+  render();
+};
+
+export const handlePropertyRemoveConfirmClick = (deps) => {
+  const { render, store } = deps;
+  const selectedProperty = store.selectSelectedProperty();
+
+  store.closePropertyRemoveConfirmDialog({});
+  if (!selectedProperty) {
+    render();
     return;
   }
 
@@ -1706,7 +1896,23 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
   if (value === "edit") {
     openSelectedKeyframeEditDialog(deps, { x, y });
     return;
+  } else if (value === "edit-initial-value") {
+    store.setPopover({
+      mode: "editInitialValue",
+      x,
+      y,
+      payload: { side, property },
+    });
+    render();
+    return;
   } else if (value === "delete-property") {
+    if (["prev", "next"].includes(side)) {
+      store.setSelectedProperty({ side, property });
+      store.closePopover();
+      store.openPropertyRemoveConfirmDialog({});
+      render();
+      return;
+    }
     store.deleteProperty({ side, property });
     store.closePopover();
     didMutate = true;
@@ -1845,20 +2051,6 @@ export const handleRulerTimeScrub = async (deps, payload) => {
   if (didChangePreviewState) {
     render();
   }
-};
-
-export const handleInitialValueClick = (deps, payload) => {
-  const { render, store } = deps;
-  store.setPopover({
-    mode: "editInitialValue",
-    x: payload._event.detail.x,
-    y: payload._event.detail.y,
-    payload: {
-      side: payload._event.detail.side,
-      property: payload._event.detail.property,
-    },
-  });
-  render();
 };
 
 const updatePopoverFieldValue = ({ store, detail } = {}) => {

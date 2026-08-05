@@ -33,6 +33,7 @@ export const selectViewData = ({ state, props }) => {
     dialogWidth,
     dialogSize: selectDialogSize(dialogWidth),
     dialogHeight: props.dialogHeight ?? "80vh",
+    dialogPadding: props.dialogPadding === "none" ? "none" : "lg",
     panelWidth: props.panelWidth ?? "50vw",
     suppressClose:
       state.suppressClose === true || isBooleanPropEnabled(props.suppressClose),
@@ -41,5 +42,6 @@ export const selectViewData = ({ state, props }) => {
     panelHorizontalInset: "96px",
     panelWidthReduction: "64px",
     panelVerticalInset: "32px",
+    panelMaxHeight: "800px",
   };
 };

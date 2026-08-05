@@ -1,5 +1,6 @@
 const ROUTEVN_CREATOR_DOCS_BASE_URL = "https://routevn.com/en/creator/docs";
 
+export const ROUTEVN_CONTACT_URL = "https://routevn.com/en/contact/";
 export const ROUTEVN_CREATOR_DOCS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/introduction/`;
 export const ROUTEVN_CREATOR_DOCS_PAGE_INDEX_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/page-index/`;
 
@@ -30,6 +31,7 @@ const creatorDocsPathByRoutePattern = {
   "/project/releases/web-server": "/web-server/",
   "/project/about": "/page-index/#settings",
   "/project/appearance": "/page-index/#settings",
+  "/project/language": "/page-index/#settings",
   "/project/user": "/page-index/#settings",
 };
 

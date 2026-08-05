@@ -135,12 +135,12 @@ refs:
       value-change:
         handler: handleBlurFieldChange
 template:
-  - 'rtgl-view w=f h=f p=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+  - 'rtgl-view w=f h=f pv=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
       - $if mode == 'current':
-          - rtgl-view d=h g=md:
+          - rtgl-view d=h g=md w=f ph=lg:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-view g=md w=f:
+              - rtgl-view g=md w=f p=lg:
                   - $for visualGroup, groupIndex in defaultValues.visualGroups:
                       - rtgl-view g=sm w=f:
                           - rtgl-text s=sm c=fg: ${visualGroup.label}
@@ -222,16 +222,16 @@ template:
                                               - rtgl-text s=sm c=mu-fg: ${animationPlaybackContinuityLabel}
                                               - rtgl-segmented-control#animationPlaybackContinuity${groupIndex}x${i} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.animationPlaybackContinuity} :options=${defaultValues.animationPlaybackContinuityOptions}: null
                   - rtgl-button#addVisualButton v=ol w=f mt=md: ${addVisualButtonLabel}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: ${submitButtonLabel}
       - $if mode == 'resource-select':
-          - rtgl-view d=h g=md:
+          - rtgl-view d=h g=md w=f ph=lg:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-          - rtgl-view d=h w=f av=c g=md:
+          - rtgl-view d=h w=f av=c g=md ph=lg:
               - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null
               - rtgl-view w=1fg: null
               - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
-          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
+          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=lg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=${resourceItems}: null
               - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
@@ -268,7 +268,7 @@ template:
                                                   - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
                                                       - rtgl-text s=sm c=mu-fg: ${item.resourceTypeLabel}
                                               - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
   - rtgl-popover#addVisualPopover ?open=${addVisualPopover.isOpen} x=${addVisualPopover.position.x} y=${addVisualPopover.position.y} place=bs:
       - rtgl-form#addVisualForm key=${addVisualPopover.key} slot=content :defaultValues=${addVisualDefaultValues} :form=${addVisualForm} w=320 p=none: null

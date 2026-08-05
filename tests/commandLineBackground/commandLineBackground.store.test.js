@@ -15,7 +15,6 @@ import {
   setSelectedResource,
   setTempSelectedResource,
   setSelectedTransform,
-  showAnimationOption,
 } from "../../src/components/commandLineBackground/commandLineBackground.store.js";
 
 const TEST_I18N = {
@@ -31,13 +30,6 @@ const createEmptyCollection = () => ({
   items: {},
   tree: [],
 });
-
-const selectOptionFields = (viewData, optionId) => {
-  const optionsSection = viewData.dialogueForm.form.fields.find(
-    (field) => field.id === "options",
-  );
-  return optionsSection.fields.find((field) => field.id === optionId)?.fields;
-};
 
 describe("commandLineBackground.store", () => {
   it("keeps optional background fields hidden until they are added", () => {
@@ -128,7 +120,8 @@ describe("commandLineBackground.store", () => {
     const transformRow = viewData.dialogueForm.form.fields.find(
       (field) => field.type === "row",
     );
-    const [transformModeField, transformField] = transformRow.fields;
+    const [transformModeField, transformField, transformSpacerField] =
+      transformRow.fields;
     const animationField = viewData.dialogueForm.form.fields.find(
       (field) => field.name === "animationId",
     );
@@ -168,7 +161,24 @@ describe("commandLineBackground.store", () => {
         },
       ],
     });
-    expect(animationField).toBeUndefined();
+    expect(transformSpacerField).toMatchObject({
+      $when: "customTransform == true",
+      type: "slot",
+      slot: "transformSpacer",
+    });
+    expect(animationField).toMatchObject({
+      name: "animationId",
+      label: "Animation",
+      type: "select",
+      clearable: true,
+      placeholder: "Select animation",
+    });
+    expect(
+      viewData.dialogueForm.form.fields.indexOf(animationField),
+    ).toBeGreaterThan(viewData.dialogueForm.form.fields.indexOf(transformRow));
+    expect(
+      viewData.dialogueForm.form.fields.indexOf(animationField),
+    ).toBeLessThan(viewData.dialogueForm.form.fields.indexOf(optionsSection));
     expect(opacityField).toBeUndefined();
     expect(colorField).toBeUndefined();
     expect(blurField).toBeUndefined();
@@ -265,7 +275,7 @@ describe("commandLineBackground.store", () => {
     );
 
     const viewData = selectViewData({ state });
-    const animationFields = selectOptionFields(viewData, "animation");
+    const animationFields = viewData.dialogueForm.form.fields;
     const animationField = animationFields.find(
       (field) => field.name === "animationId",
     );
@@ -280,9 +290,9 @@ describe("commandLineBackground.store", () => {
     );
 
     expect(animationField).toMatchObject({
+      label: "Animation",
       type: "select",
-      noClear: true,
-      required: true,
+      clearable: true,
       options: [
         {
           value: "bg-pan",
@@ -380,10 +390,9 @@ describe("commandLineBackground.store", () => {
       },
     );
 
-    const loopField = selectOptionFields(
-      selectViewData({ state }),
-      "animation",
-    ).find((field) => field.name === "playbackLoop");
+    const loopField = selectViewData({ state }).dialogueForm.form.fields.find(
+      (field) => field.name === "playbackLoop",
+    );
 
     expect(loopField).toMatchObject({
       disabled: true,
@@ -419,7 +428,7 @@ describe("commandLineBackground.store", () => {
       },
     );
 
-    const fields = selectOptionFields(selectViewData({ state }), "animation");
+    const fields = selectViewData({ state }).dialogueForm.form.fields;
 
     expect(
       fields.find((field) => field.name === "playbackSpeed"),
@@ -474,6 +483,9 @@ describe("commandLineBackground.store", () => {
     const transformField = transformRow.fields.find(
       (field) => field.name === "transformId",
     );
+    const transformSpacerField = transformRow.fields.find(
+      (field) => field.slot === "transformSpacer",
+    );
     const customTransformSlot = viewData.dialogueForm.form.fields.find(
       (field) => field.slot === "custom-transform",
     );
@@ -481,6 +493,10 @@ describe("commandLineBackground.store", () => {
     expect(viewData.dialogueForm.defaultValues.customTransform).toBe(true);
     expect(transformField).toMatchObject({
       $when: "customTransform == false",
+    });
+    expect(transformSpacerField).toMatchObject({
+      $when: "customTransform == true",
+      type: "slot",
     });
     expect(customTransformSlot).toMatchObject({
       $when: "customTransform == true",
@@ -684,7 +700,6 @@ describe("commandLineBackground.store", () => {
     setSelectedColor({ state }, { colorId: "color-night" });
     setSelectedOpacity({ state }, { opacity: 1 });
     setSelectedBlur({ state }, { blur: {} });
-    showAnimationOption({ state });
 
     const viewData = selectViewData({ state });
     const optionsSection = viewData.dialogueForm.form.fields.at(-1);

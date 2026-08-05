@@ -526,13 +526,6 @@ export const handleOptionsSectionAction = async (deps, payload) => {
     return;
   }
 
-  if (sectionId === "animation" && actionId === "remove") {
-    store.removeAnimationOption();
-    render();
-    dispatchTemporaryPresentationStateChange(deps);
-    return;
-  }
-
   if (sectionId !== "options" || actionId !== "add") {
     return;
   }
@@ -560,13 +553,6 @@ export const handleOptionsSectionAction = async (deps, payload) => {
       key: "blur",
     });
   }
-  if (!store.selectAnimationOptionEnabled()) {
-    items.push({
-      type: "item",
-      label: localizeCommandLineText("Animation", copy),
-      key: "animation",
-    });
-  }
   if (items.length === 0) {
     return;
   }
@@ -587,8 +573,6 @@ export const handleOptionsSectionAction = async (deps, payload) => {
     render();
     dispatchTemporaryPresentationStateChange(deps);
     return;
-  } else if (result?.item?.key === "animation") {
-    store.showAnimationOption();
   } else {
     return;
   }

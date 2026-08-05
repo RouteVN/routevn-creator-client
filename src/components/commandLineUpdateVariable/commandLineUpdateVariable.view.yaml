@@ -52,12 +52,12 @@ refs:
       item-click:
         handler: handleDropdownMenuClickItem
 template:
-  - rtgl-view w=f h=f p=lg:
+  - rtgl-view w=f h=f pv=lg:
       - $if mode == 'current' && initiated:
-          - rtgl-view d=h g=md:
+          - rtgl-view d=h g=md w=f ph=lg:
               - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-view g=md mt=md w=f:
+              - rtgl-view g=md mt=md w=f p=lg:
                   - $for operation, i in operations:
                       - rtgl-view#operation${i} data-operation-id=${operation.id} cur=pointer d=h av=c ah=c g=md p=md bgc=mu h-bgc=ac br=md w=f:
                           - rtgl-text s=sm: '${operation.variableName}:'
@@ -65,13 +65,13 @@ template:
                           - $if operation.op != 'toggle':
                               - rtgl-text s=sm: ${operation.displayValue}
                   - rtgl-button#addOperationButton v=ol w=f mt=md: ${addOperationButton}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton ?disabled=${!hasOperations}: ${submitButton}
       - $if mode == 'edit' && initiated:
-          - rtgl-view d=h g=md:
+          - rtgl-view d=h g=md w=f ph=lg:
               - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-view g=md mt=md w=f:
+              - rtgl-view g=md mt=md w=f p=lg:
                   - rtgl-text s=sm c=mu-fg mb=sm: ${variableLabel}
                   - rtgl-select#variableSelect w=f :selectedValue=${tempOperation.variableId} :options=${variableOptions} placeholder="${variablePlaceholder}": null
                   - $if tempOperation.variableId:
@@ -92,6 +92,6 @@ template:
                   - $if showValueField && valueInputType == 'string' && !showEnumValueSelect:
                       - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
                       - rtgl-input#valueInput w=f placeholder="${valueTextPlaceholder}" value=${tempOperation.value}: null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#saveOperationButton ?disabled=${!canSaveOperation}: ${saveOperationButton}
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

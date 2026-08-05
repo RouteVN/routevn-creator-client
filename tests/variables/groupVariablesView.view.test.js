@@ -81,4 +81,20 @@ describe("groupVariablesView view", () => {
     expect(view).not.toContain("rvn-computed-conditional-editor");
     expect(view).not.toContain("addVariableDialog");
   });
+
+  it("scrolls long computed forms through a constrained wrapper", () => {
+    expect(view).toContain(
+      'rtgl-view#computedFormScrollContainer w=1fg h=f sv style="min-width: 0; min-height: 0;"',
+    );
+    expect(view).toContain('rtgl-view slot="operation" d=v w=f g=sm pb=lg');
+    expect(view).toContain(
+      "rtgl-form#computedForm key=computed-${dialogKey} :defaultValues=${defaultValues} :form=${computedForm} :context=${context}",
+    );
+    expect(view).not.toContain(
+      "rtgl-form#computedForm key=computed-${dialogKey} :defaultValues=${defaultValues} :form=${computedForm} w=1fg h=f",
+    );
+    expect(view).not.toContain(
+      'rtgl-form#computedForm key=computed-${dialogKey} :defaultValues=${defaultValues} :form=${computedForm} :context=${context} style="min-width: 0; overflow-y: auto;"',
+    );
+  });
 });

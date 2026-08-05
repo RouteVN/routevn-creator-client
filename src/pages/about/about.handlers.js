@@ -1,3 +1,4 @@
+import { ROUTEVN_CONTACT_URL } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 
 export const handleBeforeMount = (deps) => {
@@ -33,4 +34,9 @@ export const handleClickSocialButton = async (deps, payload) => {
   const id = _event.currentTarget?.dataset?.id;
   const social = store.selectSocial({ id });
   appService.openUrl(social.href);
+};
+
+export const handleClickContactButton = (deps) => {
+  const { appService } = deps;
+  appService.openUrl(ROUTEVN_CONTACT_URL);
 };

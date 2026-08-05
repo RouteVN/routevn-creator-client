@@ -53,6 +53,9 @@ describe("systemActions view", () => {
       "fileId=${visualData.spritesheetFileId}",
     );
     expect(systemActionsView).toContain(
+      "rtgl-svg svg=stacked-images wh=24",
+    );
+    expect(systemActionsView).toContain(
       'rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer style="order: ${presentationActionOrder.dialogue}; min-height: 36px;"',
     );
     expect(systemActionsView).toContain(
@@ -122,6 +125,9 @@ describe("systemActions view", () => {
     );
     expect(systemActionsView).toContain(
       "fullscreen-horizontal-inset=${actionsDialogFullscreenHorizontalInset}",
+    );
+    expect(systemActionsView).toContain(
+      ":dialogPadding=${actionsDialogPadding}",
     );
     expect(systemActionsView).toContain("overflow-x: hidden");
     expect(sceneEditorLexicalView).toContain(

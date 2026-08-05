@@ -92,11 +92,12 @@ refs:
       item-click:
         handler: handleDropdownMenuClickItem
 template:
-  - rtgl-view w=f h=f p=lg:
+  - rtgl-view w=f h=f pv=lg:
       - $if mode == 'current' && initiated:
-          - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
+          - rtgl-view w=f ph=lg:
+              - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-view g=md mt=md w=f:
+              - rtgl-view g=md mt=md w=f p=lg:
                   - rtgl-text s=sm c=mu-fg: ${branchesLabel}
                   - $for branch in branches:
                       - rtgl-view#conditionalBranch${branch.id} data-branch-id=${branch.id} cur=pointer d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f:
@@ -114,12 +115,13 @@ template:
                           - 'rtgl-button#branchMenuButtonDefault data-branch-id=${defaultBranch.id} sq s=sm v=gh pre=ellipsis title="${branchMenuButtonLabel}" aria-label="${branchMenuButtonLabel}" aria-haspopup=menu aria-keyshortcuts="${defaultBranch.menuKeyShortcuts}"': null
                   - $if !hasDefaultBranch:
                       - rtgl-button#addDefaultButton v=ol w=f: ${addDefaultBranchButton}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton ?disabled=${!hasBranches}: ${submitButton}
       - $if mode == 'editBranch' && initiated:
-          - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
+          - rtgl-view w=f ph=lg:
+              - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-view g=md mt=md w=f:
+              - rtgl-view g=md mt=md w=f p=lg:
                   - $if !isEditingDefault:
                       - rtgl-view g=md w=f:
                           - rtgl-text s=sm c=mu-fg: ${conditionLabel}
@@ -166,6 +168,6 @@ template:
                   - rtgl-view g=md w=f:
                       - rtgl-text s=sm c=mu-fg: ${actionsLabel}
                       - rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes} :allowedModes=${branchActionAllowedModes} :showEmbeddedClose=${false}: null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#saveBranchButton ?disabled=${!canSaveBranch}: ${saveButtonPrefix} ${editBranchTitle}
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

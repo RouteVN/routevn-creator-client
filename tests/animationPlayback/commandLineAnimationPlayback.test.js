@@ -399,12 +399,13 @@ describe("command line animation playback", () => {
       playbackSpeed: 1.25,
       playbackContinuity: "persistent",
     });
-    expect(screenView.form.fields.map((field) => field.name)).toEqual(
+    const screenFieldNames = screenView.form.fields
+      .flatMap((field) => (field.type === "row" ? field.fields : [field]))
+      .map((field) => field.name);
+    expect(screenFieldNames).toEqual(
       expect.arrayContaining(["playbackSpeed", "playbackContinuity"]),
     );
-    expect(screenView.form.fields.map((field) => field.name)).not.toContain(
-      "playbackLoop",
-    );
+    expect(screenFieldNames).not.toContain("playbackLoop");
   });
 
   it("remounts conditional transition forms with initialized playback values", () => {

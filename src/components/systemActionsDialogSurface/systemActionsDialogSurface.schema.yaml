@@ -13,6 +13,11 @@ propsSchema:
       type: string
     dialogHeight:
       type: string
+    dialogPadding:
+      type: string
+      enum:
+        - lg
+        - none
     panelWidth:
       type: string
     fullscreen:

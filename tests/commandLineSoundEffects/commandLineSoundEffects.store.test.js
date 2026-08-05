@@ -104,7 +104,12 @@ describe("commandLineSoundEffects.store", () => {
         },
       ],
     });
-    expect(state.selectedChannelId).toBe("UI");
+    expect(state.selectedChannelId).toBeUndefined();
+    expect(
+      selectViewData({ state, i18n }).channels.map(
+        (channel) => channel.channelBorderColor,
+      ),
+    ).toEqual(["bo", "bo"]);
 
     moveChannel({ state }, { channelId: "UI", direction: "up" });
     expect(state.channels.map((channel) => channel.id)).toEqual([
@@ -114,7 +119,7 @@ describe("commandLineSoundEffects.store", () => {
 
     removeChannel({ state }, { channelId: "UI" });
     expect(state.channels.map((channel) => channel.id)).toEqual(["Weather"]);
-    expect(state.selectedChannelId).toBe("Weather");
+    expect(state.selectedChannelId).toBeUndefined();
   });
 
   it("loads canonical channels and lays out overlapping clips in lanes", () => {

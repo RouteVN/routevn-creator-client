@@ -11,6 +11,10 @@ refs:
     eventListeners:
       click:
         handler: handleClickSocialButton
+  contactButton:
+    eventListeners:
+      click:
+        handler: handleClickContactButton
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f style="min-width: 0; min-height: 0;"':
@@ -42,3 +46,11 @@ template:
                                   - rtgl-button#socialButton${i} data-id="${item.id}" v=se pre=${item.svg} w=f: ${item.label}
                                 $else:
                                   - rtgl-button#socialButton${i} data-id="${item.id}" v=se pre=${item.svg}: ${item.label}
+                  - rtgl-view g=md:
+                      - rtgl-text s=h4: ${contactTitle}
+                      - rtgl-text s=sm c=mu-fg: ${contactDescription}
+                      - rtgl-view d=h:
+                          - $if isTouchMode:
+                              - rtgl-button#contactButton v=se pre=chat w=f: ${contactButton}
+                            $else:
+                              - rtgl-button#contactButton v=se pre=chat: ${contactButton}

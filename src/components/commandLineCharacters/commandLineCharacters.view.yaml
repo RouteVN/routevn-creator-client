@@ -7,14 +7,12 @@ refs:
     eventListeners:
       click:
         handler: handleRemoveCharacterClick
-  .characterRow:
-    eventListeners:
-      contextmenu:
-        handler: handleCharacterContextMenu
   characterSpriteBox*:
     eventListeners:
       click:
         handler: handleCharacterClick
+      contextmenu:
+        handler: handleCharacterContextMenu
   baseFileExplorer:
     eventListeners:
       item-click:
@@ -56,6 +54,8 @@ refs:
         handler: handleFormExtra
       form-change:
         handler: handleFormChange
+      form-section-action:
+        handler: handleFormSectionAction
   dropdownMenu:
     eventListeners:
       close:
@@ -98,10 +98,10 @@ refs:
     eventListeners:
       value-input:
         handler: handleOpacityInput
-  blurToggle*:
+  removeCharacterOpacity*:
     eventListeners:
-      value-change:
-        handler: handleBlurToggleChange
+      click:
+        handler: handleRemoveCharacterOpacityClick
   blurX*:
     eventListeners:
       value-input:
@@ -144,88 +144,75 @@ styles:
     background-repeat: repeat
     background-size: 24px 24px
 template:
-  - 'rtgl-view w=f h=f p=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+  - 'rtgl-view w=f h=f pv=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
       - $if mode == 'current':
-          - rtgl-view d=h g=md:
+          - rtgl-view d=h g=md w=f ph=lg:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
               - rtgl-view g=md w=f:
-                  - rtgl-form#form :form=${form} :defaultValues=${defaultValues} p=none mb=120:
-                      - rtgl-view#charactersContainer slot=characters g=md w=f:
-                          - $for character, i in defaultValues.characters:
-                              - rtgl-view#character${i}.characterRow data-index=${character.characterIndex} data-character-id=${character.id} d=h g=md av=t pv=md br=md w=f:
-                                  - 'rtgl-view#characterSpriteBox${i} data-index=${character.characterIndex} cur=pointer bw=xs bc=bo h-bc=ac br=sm style="align-self: flex-start; flex: 0 0 auto;"':
-                                      - rtgl-view p=md g=md br=md:
-                                          - $if character.hasSpritePreview:
-                                              - 'div.commandLineCharacterThumbnailTransparencyGrid style="display: block; width: 200px; height: 120px; overflow: hidden; border-radius: 4px;"':
-                                                  - rvn-stacked-file-images :layers=${character.spritePreviewLayers} w=f h=f br=sm spritesheetBr=none spritesheetCheckerCellSize=6 showSpritesheetCheckerboard=false lazy: null
-                                            $else:
-                                              - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                  - rtgl-text s=sm c=mu-fg: ${noSpriteLabel}
-                                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${character.displayName}
-                                  - rtgl-view w=1fg g=sm:
-                                      - rtgl-text s=sm c=mu-fg: ${transformLabel}
-                                      - rtgl-segmented-control#customTransformMode${i} data-index=${character.characterIndex} w=f no-clear :selectedValue=${character.customTransform} :options=${defaultValues.transformModeOptions}: null
-                                      - $if character.customTransform:
-                                          - rtgl-view d=h av=c w=f g=md:
-                                              - rtgl-view d=h av=c w=1fg g=sm wrap:
-                                                  - $for item, j in character.customTransformDetails:
-                                                      - 'rtgl-view#customTransformChip${i}x${j} data-index=${character.characterIndex} d=h av=c g=sm bw=xs bc=bo h-bc=pr br=full bgc=mu ph=md pv=sm cur=pointer style="max-width: 220px; box-sizing: border-box;"':
-                                                          - rtgl-text s=xs c=mu-fg ellipsis: ${item.label}
-                                                          - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums; white-space: nowrap;"': ${item.value}
-                                              - rtgl-button#customTransformButton${i} data-index=${character.characterIndex} data-target-name="${character.displayName}" v=se: ${editButtonLabel}
-                                        $else:
-                                          - rtgl-text s=sm c=mu-fg: ${predefinedTransformLabel}
-                                          - rtgl-select#transform${i} data-index=${character.characterIndex} key=${character.transformId} :options=${defaultValues.transformOptions} :selectedValue=${character.transformId} w=f no-clear: null
-                                      - rtgl-text s=sm c=mu-fg: ${opacityLabel}
-                                      - rtgl-slider-input#opacity${i} data-index=${character.characterIndex} key=${character.id} min=0 max=1 step=0.01 w=f value=${character.opacity}: null
-                                      - rtgl-text s=sm c=mu-fg: ${blurLabel}
-                                      - rtgl-segmented-control#blurToggle${i} data-index=${character.characterIndex} w=f no-clear :selectedValue=${character.blurEnabled} :options=${defaultValues.blurToggleOptions}: null
-                                      - $if character.blurEnabled:
-                                          - rtgl-view d=h wrap g=sm w=f:
-                                              - rtgl-view w=90 g=xs:
-                                                  - rtgl-text s=xs c=mu-fg: X
-                                                  - rtgl-input#blurX${i} data-index=${character.characterIndex} data-blur-field=x type=number w=f value=${character.blur.x}: null
-                                              - rtgl-view w=90 g=xs:
-                                                  - rtgl-text s=xs c=mu-fg: Y
-                                                  - rtgl-input#blurY${i} data-index=${character.characterIndex} data-blur-field=y type=number w=f value=${character.blur.y}: null
-                                              - rtgl-view w=90 g=xs:
-                                                  - rtgl-text s=xs c=mu-fg: ${qualityLabel}
-                                                  - rtgl-input#blurQuality${i} data-index=${character.characterIndex} data-blur-field=quality type=number min=1 step=1 w=f value=${character.blur.quality}: null
-                                              - rtgl-view w=120 g=xs:
-                                                  - rtgl-text s=xs c=mu-fg: ${kernelLabel}
-                                                  - rtgl-select#blurKernelSize${i} data-index=${character.characterIndex} data-blur-field=kernelSize w=f no-clear :selectedValue=${character.blur.kernelSize} :options=${defaultValues.blurKernelSizeOptions}: null
-                                              - rtgl-view w=160 g=xs:
-                                                  - rtgl-text s=xs c=mu-fg: ${repeatEdgeLabel}
-                                                  - rtgl-segmented-control#blurRepeatEdgePixels${i} data-index=${character.characterIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${character.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}: null
-                                      - rtgl-text s=sm c=mu-fg: ${animationLabel}
-                                      - rtgl-select#animation${i} data-index=${character.characterIndex} key=${character.animationId} :options=${defaultValues.animationOptions} :selectedValue=${character.animationId} w=f placeholder=${selectAnimationPlaceholder}: null
-                                      - $if character.animationId:
-                                          - rtgl-text s=sm c=mu-fg: ${animationPlaybackSpeedLabel}
-                                          - rtgl-input#animationPlaybackSpeed${i} data-index=${character.characterIndex} type=number min=0.01 step=0.1 w=f value=${character.animationPlaybackSpeed}: null
-                                          - $if character.animationMode == 'update':
-                                              - rtgl-text s=sm c=mu-fg: ${animationPlaybackLoopLabel}
-                                              - rtgl-segmented-control#animationPlaybackLoop${i} data-index=${character.characterIndex} w=f no-clear ?disabled=${character.animationLoopDisabled} :selectedValue=${character.animationPlaybackLoop} :options=${defaultValues.animationPlaybackLoopOptions}: null
-                                              - $if !character.animationCanLoop:
-                                                  - rtgl-text s=xs c=mu-fg: ${animationPlaybackLoopDisabledDescription}
-                                          - rtgl-text s=sm c=mu-fg: ${animationPlaybackContinuityLabel}
-                                          - rtgl-segmented-control#animationPlaybackContinuity${i} data-index=${character.characterIndex} w=f no-clear :selectedValue=${character.animationPlaybackContinuity} :options=${defaultValues.animationPlaybackContinuityOptions}: null
-                                      - $if character.showSpriteGroupBoxes:
-                                          - rtgl-text s=sm c=mu-fg: ${spriteGroupsLabel}
-                                          - rtgl-view d=h wrap g=xs w=f:
-                                              - $for spriteGroup, j in character.spriteGroupBoxes:
-                                                  - 'rtgl-view.characterSpriteGroupBox data-index=${character.characterIndex} data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
-                                                      - rtgl-text s=xs: ${spriteGroup.name}
+                  - rtgl-form#form key=${formKey} :form=${form} :defaultValues=${defaultValues} p=lg:
+                      - $for character, i in defaultValues.characters:
+                          - 'rtgl-view#characterSpriteBox${i}.characterRow slot=${character.spriteFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} cur=pointer bw=xs bc=bo h-bc=ac br=sm style="align-self: flex-start; flex: 0 0 auto;"':
+                              - rtgl-view p=md g=md br=md:
+                                  - $if character.hasSpritePreview:
+                                      - 'div.commandLineCharacterThumbnailTransparencyGrid style="display: block; width: 200px; height: 120px; overflow: hidden; border-radius: 4px;"':
+                                          - rvn-stacked-file-images :layers=${character.spritePreviewLayers} w=f h=f br=sm spritesheetBr=none spritesheetCheckerCellSize=6 showSpritesheetCheckerboard=false lazy: null
+                                    $else:
+                                      - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                          - rtgl-text s=sm c=mu-fg: ${noSpriteLabel}
+                                  - rtgl-text s=xs c=mu-fg ellipsis w=200: ${character.displayName}
+                          - 'rtgl-view.characterRow slot=${character.transformModeFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} w=f':
+                              - rtgl-segmented-control#customTransformMode${i} data-index=${character.characterIndex} w=f no-clear :selectedValue=${character.customTransform} :options=${defaultValues.transformModeOptions}: null
+                          - $if !character.customTransform:
+                              - 'rtgl-select#transform${i} slot=${character.predefinedTransformFormSlot} data-index=${character.characterIndex} key=${character.transformId} :options=${defaultValues.transformOptions} :selectedValue=${character.transformId} w=f no-clear': null
+                          - $if character.customTransform:
+                              - 'rtgl-view.characterRow slot=${character.customTransformFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} d=h av=c w=f g=md':
+                                  - rtgl-view d=h av=c w=1fg g=sm wrap:
+                                      - $for item, j in character.customTransformDetails:
+                                          - 'rtgl-view#customTransformChip${i}x${j} data-index=${character.characterIndex} d=h av=c g=sm bw=xs bc=bo h-bc=pr br=full bgc=mu ph=md pv=sm cur=pointer style="max-width: 220px; box-sizing: border-box;"':
+                                              - rtgl-text s=xs c=mu-fg ellipsis: ${item.label}
+                                              - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums; white-space: nowrap;"': ${item.value}
+                                  - rtgl-button#customTransformButton${i} data-index=${character.characterIndex} data-target-name="${character.displayName}" v=se: ${editButtonLabel}
+                          - 'rtgl-view.characterRow slot=${character.animationFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} w=f':
+                              - rtgl-select#animation${i} data-index=${character.characterIndex} key=${character.animationId} :options=${defaultValues.animationOptions} :selectedValue=${character.animationId} w=f placeholder=${selectAnimationPlaceholder}: null
+                          - $if character.animationId:
+                              - 'rtgl-view.characterRow slot=${character.playbackSpeedFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} w=f':
+                                  - rtgl-slider-input#animationPlaybackSpeed${i} data-index=${character.characterIndex} min=0.01 max=4 step=0.01 w=f value=${character.animationPlaybackSpeed}: null
+                              - 'rtgl-view.characterRow slot=${character.playbackContinuityFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} w=f':
+                                  - rtgl-segmented-control#animationPlaybackContinuity${i} data-index=${character.characterIndex} w=f no-clear :selectedValue=${character.animationPlaybackContinuity} :options=${defaultValues.animationPlaybackContinuityOptions}: null
+                              - $if character.animationMode == 'update':
+                                  - 'rtgl-view.characterRow slot=${character.playbackLoopFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} g=xs w=f':
+                                      - rtgl-segmented-control#animationPlaybackLoop${i} data-index=${character.characterIndex} w=f no-clear ?disabled=${character.animationLoopDisabled} :selectedValue=${character.animationPlaybackLoop} :options=${defaultValues.animationPlaybackLoopOptions}: null
+                                      - $if !character.animationCanLoop:
+                                          - rtgl-text s=xs c=mu-fg: ${animationPlaybackLoopDisabledDescription}
+                          - $if character.opacityOptionEnabled:
+                              - 'rtgl-view.characterRow slot=${character.opacityFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} g=md w=f':
+                                  - rtgl-view d=h av=c w=f g=md:
+                                      - rtgl-text w=1fg: ${opacityLabel}
+                                      - 'rtgl-button#removeCharacterOpacity${i} data-index=${character.characterIndex} sq s=sm v=gh pre=x title="${removeOpacityLabel}" aria-label="${removeOpacityLabel}"': null
+                                  - rtgl-slider-input#opacity${i} data-index=${character.characterIndex} key=${character.id} min=0 max=1 step=0.01 w=f value=${character.opacity}: null
+                          - $if character.blurOptionEnabled:
+                              - 'rtgl-input-number#blurX${i} slot=${character.blurXFormSlot} data-index=${character.characterIndex} data-blur-field=x min=0 w=f value=${character.blur.x}': null
+                              - 'rtgl-input-number#blurY${i} slot=${character.blurYFormSlot} data-index=${character.characterIndex} data-blur-field=y min=0 w=f value=${character.blur.y}': null
+                              - 'rtgl-input-number#blurQuality${i} slot=${character.blurQualityFormSlot} data-index=${character.characterIndex} data-blur-field=quality min=1 step=1 w=f value=${character.blur.quality}': null
+                              - 'rtgl-select#blurKernelSize${i} slot=${character.blurKernelSizeFormSlot} data-index=${character.characterIndex} data-blur-field=kernelSize w=f no-clear :selectedValue=${character.blur.kernelSize} :options=${defaultValues.blurKernelSizeOptions}': null
+                              - 'rtgl-segmented-control#blurRepeatEdgePixels${i} slot=${character.blurRepeatEdgePixelsFormSlot} data-index=${character.characterIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${character.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}': null
+                          - $if character.showSpriteGroupBoxes:
+                              - 'rtgl-view.characterRow slot=${character.spriteGroupsFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} d=h wrap g=xs w=f':
+                                  - $for spriteGroup, j in character.spriteGroupBoxes:
+                                      - 'rtgl-view.characterSpriteGroupBox data-index=${character.characterIndex} data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
+                                          - rtgl-text s=xs: ${spriteGroup.name}
                   - rtgl-button#addCharacterButton v=ol w=f mt=md: ${addCharacterButtonLabel}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+                  - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: ${submitButtonLabel}
       - $if mode == 'character-select':
-          - rtgl-view d=h g=md:
+          - rtgl-view d=h g=md w=f ph=lg:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-          - rtgl-view d=h w=f av=c g=md:
+          - rtgl-view d=h w=f av=c g=md ph=lg:
               - rtgl-view w=1fg: null
               - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
-          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
+          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=lg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
               - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
@@ -246,14 +233,15 @@ template:
                                                   - rtgl-text s=sm c=mu-fg: ${noAvatarLabel}
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
       - $if mode == 'sprite-select':
-          - rtgl-view d=h g=md:
+          - rtgl-view d=h g=md w=f ph=lg:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - $if showSpriteGroupTabs:
-              - rtgl-tabs#spriteGroupTabs :items=${spriteSelectionTabs} selected-tab=${selectedSpriteGroupId}: null
-          - rtgl-view d=h w=f av=c g=md:
+              - rtgl-view w=f ph=lg:
+                  - rtgl-tabs#spriteGroupTabs :items=${spriteSelectionTabs} selected-tab=${selectedSpriteGroupId}: null
+          - rtgl-view d=h w=f av=c g=md ph=lg:
               - rtgl-view w=1fg: null
               - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
-          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
+          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=lg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=${spriteItems}: null
               - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
@@ -272,7 +260,7 @@ template:
                                               - 'div.commandLineCharacterThumbnailTransparencyGrid style="display: block; width: 200px; height: 120px; overflow: hidden; border-radius: 4px;"':
                                                   - rvn-file-image fileId=${item.previewFileId} w=f h=f br=sm: null
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
   - $if fullImagePreviewVisible:
       - rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
