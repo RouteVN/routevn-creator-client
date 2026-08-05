@@ -7,6 +7,17 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("about store", () => {
+  it("shows the localized contact section", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      contactTitle: "Contact Us",
+      contactDescription:
+        "Have feedback, a comment, a bug report, or a feature request? Get in touch with us.",
+      contactButton: "Contact Us",
+    });
+  });
+
   it("uses the navbar inset for touch-mode body padding", () => {
     const state = createInitialState();
 

@@ -52,7 +52,7 @@ projectsPage:
   invalidProjectEntryImportAgain: "该项目条目无效。请从列表中移除后重新导入项目。"
   invalidProjectEntryRefresh: "该项目条目无效。请刷新项目页面后重试。"
   languageLabel: "语言"
-  languageMenuItem: "语言（Beta）"
+  languageMenuItem: "语言"
   languageTitle: "语言"
   lightThemeName: "浅色"
   loadingMessage: "正在加载..."
@@ -538,6 +538,7 @@ resourceTypes:
   videos: "视频"
   about: "关于"
   appearance: "外观"
+  language: "语言"
   versions: "版本"
   webServer: "Web 服务器"
 colorsPage:
@@ -2166,6 +2167,9 @@ aboutPage:
   appVersionText: "RouteVN Creator {appVersion}"
   checkForUpdatesButton: "检查更新"
   communityTitle: "社区"
+  contactButton: "联系我们"
+  contactDescription: "如果你有反馈、意见、问题报告或功能建议，欢迎联系我们。"
+  contactTitle: "联系我们"
   title: "关于"
   versionInformationTitle: "版本信息"
 settingsUserPage:
@@ -2177,3 +2181,7 @@ appearancePage:
   lightThemeName: "浅色"
   themesTitle: "主题"
   title: "外观"
+settingsLanguagePage:
+  description: "选择 RouteVN Creator 使用的语言。"
+  failedChangeLanguage: "无法更改语言。请重试。"
+  title: "语言"

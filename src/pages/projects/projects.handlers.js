@@ -16,48 +16,14 @@ import {
 import { createProjectRoutePayload } from "../../internal/localProjectRoute.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import {
+  activateAppLocale,
+  DEFAULT_APP_LOCALE,
+  resolveAppLocale,
+} from "../../internal/ui/appLocale.js";
+import {
   formatProjectsPageCopy,
   selectProjectsPageCopy,
 } from "./support/projectsPageCopy.js";
-
-const APP_LOCALE_CONFIG_KEY = "app.locale";
-const DEFAULT_PROJECTS_LOCALE = "en";
-
-const getAvailableLocales = (localeService) => {
-  return localeService?.available?.() ?? ["en", "ja", "zh-hans"];
-};
-
-const resolveProjectsLocale = ({ appService, localeService } = {}) => {
-  const availableLocales = getAvailableLocales(localeService);
-  const storedLocale = appService?.getUserConfig?.(APP_LOCALE_CONFIG_KEY);
-  const currentLocale = localeService?.current?.();
-  const locale = storedLocale ?? currentLocale ?? DEFAULT_PROJECTS_LOCALE;
-
-  return availableLocales.includes(locale) ? locale : DEFAULT_PROJECTS_LOCALE;
-};
-
-const activateProjectsLocale = async ({
-  appService,
-  localeService,
-  store,
-  locale,
-  persist = true,
-} = {}) => {
-  const availableLocales = getAvailableLocales(localeService);
-  const nextLocale = availableLocales.includes(locale)
-    ? locale
-    : DEFAULT_PROJECTS_LOCALE;
-
-  await localeService?.set?.(nextLocale);
-  const activeLocale = localeService?.current?.() ?? nextLocale;
-
-  store.setCurrentLocale({ locale: activeLocale });
-  if (persist) {
-    appService?.setUserConfig?.(APP_LOCALE_CONFIG_KEY, activeLocale);
-  }
-
-  return activeLocale;
-};
 
 const mapCloudProject = (project, copy) => {
   const projectId = project?.id;
@@ -114,13 +80,13 @@ const loadCloudProjects = async ({
 
 export const handleAfterMount = async (deps) => {
   const { appService, apiService, store, render, locale } = deps;
-  await activateProjectsLocale({
+  const activeLocale = await activateAppLocale({
     appService,
     localeService: locale,
-    store,
-    locale: resolveProjectsLocale({ appService, localeService: locale }),
+    locale: resolveAppLocale({ appService, localeService: locale }),
     persist: false,
   });
+  store.setCurrentLocale({ locale: activeLocale });
   const copy = selectProjectsPageCopy(deps.i18n);
   const platform = appService.getPlatform();
   const showCloudProjects = store.selectShowCloudProjects();
@@ -579,7 +545,7 @@ export const handleAppVersionMenuClickItem = async (deps, payload) => {
 
   if (item.value === "language") {
     store.openLanguageDialog({
-      locale: resolveProjectsLocale({ appService, localeService: locale }),
+      locale: resolveAppLocale({ appService, localeService: locale }),
     });
     render();
     return;
@@ -630,15 +596,15 @@ export const handleLanguageFormAction = async (deps, payload) => {
     return;
   }
 
-  const selectedLocale = detail?.values?.locale ?? DEFAULT_PROJECTS_LOCALE;
+  const selectedLocale = detail?.values?.locale ?? DEFAULT_APP_LOCALE;
 
   try {
-    await activateProjectsLocale({
+    const activeLocale = await activateAppLocale({
       appService,
       localeService: locale,
-      store,
       locale: selectedLocale,
     });
+    store.setCurrentLocale({ locale: activeLocale });
     store.closeLanguageDialog();
     render();
   } catch {

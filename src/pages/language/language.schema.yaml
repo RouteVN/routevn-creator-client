@@ -1,0 +1,4 @@
+componentName: rvn-language
+propsSchema:
+  type: object
+  properties: {}

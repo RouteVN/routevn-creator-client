@@ -73,6 +73,11 @@ export const selectViewData = ({ state, i18n }) => {
     ),
     checkForUpdatesButton: copy.checkForUpdatesButton ?? "Check for Updates",
     communityTitle: copy.communityTitle ?? "Community",
+    contactTitle: copy.contactTitle ?? "Contact Us",
+    contactDescription:
+      copy.contactDescription ??
+      "Have feedback, a comment, a bug report, or a feature request? Get in touch with us.",
+    contactButton: copy.contactButton ?? "Contact Us",
   };
 };
 

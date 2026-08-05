@@ -52,7 +52,7 @@ projectsPage:
   invalidProjectEntryImportAgain: "This project entry is invalid. Remove it from the list and import the project again."
   invalidProjectEntryRefresh: "This project entry is invalid. Refresh the projects page and try again."
   languageLabel: "Language"
-  languageMenuItem: "Language (Beta)"
+  languageMenuItem: "Language"
   languageTitle: "Language"
   lightThemeName: "Light"
   loadingMessage: "Loading..."
@@ -538,6 +538,7 @@ resourceTypes:
   videos: "Videos"
   about: "About"
   appearance: "Appearance"
+  language: "Language"
   versions: "Versions"
   webServer: "Web Server"
 colorsPage:
@@ -2166,6 +2167,9 @@ aboutPage:
   appVersionText: "RouteVN Creator {appVersion}"
   checkForUpdatesButton: "Check for Updates"
   communityTitle: "Community"
+  contactButton: "Contact Us"
+  contactDescription: "Have feedback, a comment, a bug report, or a feature request? Get in touch with us."
+  contactTitle: "Contact Us"
   title: "About"
   versionInformationTitle: "Version Information"
 settingsUserPage:
@@ -2177,3 +2181,7 @@ appearancePage:
   lightThemeName: "Light"
   themesTitle: "Themes"
   title: "Appearance"
+settingsLanguagePage:
+  description: "Choose the language used by RouteVN Creator."
+  failedChangeLanguage: "Could not change the language. Please try again."
+  title: "Language"

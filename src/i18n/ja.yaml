@@ -52,7 +52,7 @@ projectsPage:
   invalidProjectEntryImportAgain: "このプロジェクト項目は無効です。一覧から削除して、もう一度プロジェクトを取り込んでください。"
   invalidProjectEntryRefresh: "このプロジェクト項目は無効です。プロジェクトページを更新して、もう一度お試しください。"
   languageLabel: "言語"
-  languageMenuItem: "言語（ベータ版）"
+  languageMenuItem: "言語"
   languageTitle: "言語"
   lightThemeName: "ライト"
   loadingMessage: "読み込み中..."
@@ -538,6 +538,7 @@ resourceTypes:
   videos: "動画"
   about: "情報"
   appearance: "外観"
+  language: "言語"
   versions: "バージョン"
   webServer: "Webサーバー"
 colorsPage:
@@ -2166,6 +2167,9 @@ aboutPage:
   appVersionText: "RouteVN Creator {appVersion}"
   checkForUpdatesButton: "アップデートを確認"
   communityTitle: "コミュニティ"
+  contactButton: "お問い合わせ"
+  contactDescription: "ご意見、ご感想、不具合の報告、機能のご要望がありましたら、お問い合わせください。"
+  contactTitle: "お問い合わせ"
   title: "情報"
   versionInformationTitle: "バージョン情報"
 settingsUserPage:
@@ -2177,3 +2181,7 @@ appearancePage:
   lightThemeName: "ライト"
   themesTitle: "テーマ"
   title: "外観"
+settingsLanguagePage:
+  description: "RouteVN Creatorで使用する言語を選択します。"
+  failedChangeLanguage: "言語を変更できませんでした。もう一度お試しください。"
+  title: "言語"

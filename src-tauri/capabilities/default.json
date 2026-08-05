@@ -49,16 +49,7 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         {
-          "url": "https://routevn.com/discord"
-        },
-        {
-          "url": "https://routevn.com/creator/*"
-        },
-        {
-          "url": "https://routevn.com/en/creator/download/"
-        },
-        {
-          "url": "https://routevn.com/en/creator/docs/*"
+          "url": "https://routevn.com/*"
         },
         {
           "url": "https://x.com/routevn"

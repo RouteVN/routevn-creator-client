@@ -154,7 +154,7 @@ describe("projects.store addProject", () => {
 
   it("opens the app version menu with a check update action", () => {
     const state = createInitialState();
-    expect(EN_I18N.projectsPage.languageMenuItem).toBe("Language (Beta)");
+    expect(EN_I18N.projectsPage.languageMenuItem).toBe("Language");
     const items = [
       {
         label: EN_I18N.projectsPage.checkUpdateMenuItem,
@@ -229,11 +229,11 @@ describe("projects.store addProject", () => {
             },
             {
               value: "ja",
-              label: "日本語",
+              label: "日本語 (Beta)",
             },
             {
               value: "zh-hans",
-              label: "简体中文",
+              label: "简体中文 (Beta)",
             },
           ],
         },
