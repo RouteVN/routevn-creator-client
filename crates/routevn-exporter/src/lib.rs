@@ -1206,8 +1206,17 @@ pub fn create_package_bin(
     assets: Vec<ZipAssetInput>,
     instructions_json: String,
 ) -> Result<PackageBinExportResult, String> {
+    create_package_bin_with_progress(assets, instructions_json, None)
+}
+
+pub fn create_package_bin_with_progress(
+    assets: Vec<ZipAssetInput>,
+    instructions_json: String,
+    on_progress: Option<&ZipExportProgressCallback<'_>>,
+) -> Result<PackageBinExportResult, String> {
     let mut package_bin = Vec::new();
-    let stats = write_package_bin_contents(&mut package_bin, &assets, &instructions_json, None)?;
+    let stats =
+        write_package_bin_contents(&mut package_bin, &assets, &instructions_json, on_progress)?;
 
     Ok(PackageBinExportResult {
         package_bin,

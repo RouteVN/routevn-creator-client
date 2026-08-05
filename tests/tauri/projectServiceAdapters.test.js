@@ -484,6 +484,7 @@ describe("tauri project service adapters preflight reads", () => {
   });
 
   it("preflights and invokes universal macOS application export", async () => {
+    const onProgress = vi.fn();
     mocked.exists.mockResolvedValue(true);
     mocked.resolveResource.mockResolvedValue(
       "/resources/player-templates/macos/RouteVNPlayerTemplate.app.zip",
@@ -526,6 +527,7 @@ describe("tauri project service adapters preflight reads", () => {
         createMacosApplicationExportOptions({
           projectData: { bundleMetadata: { project: { namespace: "demo" } } },
           fileEntries: [{ fileId: "image-1", mimeType: "image/png" }],
+          options: { onProgress },
         }),
       ),
     ).resolves.toMatchObject({ outputPath: "/exports/Game.app.zip" });
@@ -544,6 +546,7 @@ describe("tauri project service adapters preflight reads", () => {
         copyright: "Copyright © 2026 Studio One",
         category: "public.app-category.games",
         iconPng: [1, 2, 3],
+        onProgress: mocked.channels[0],
         assets: [
           {
             id: "image-1",
@@ -553,6 +556,7 @@ describe("tauri project service adapters preflight reads", () => {
         ],
       }),
     );
+    expect(mocked.channels[0].messageHandler).toBe(onProgress);
   });
 
   it("rejects unsupported project icon bytes before macOS export", async () => {

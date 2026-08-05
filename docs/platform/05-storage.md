@@ -63,8 +63,8 @@ Current app-owned keys:
   - platform application name, icon, and identifier plus publisher,
     description, and copyright
 - `platformDetails.macos`
-  - platform application name, icon, and identifier plus publisher,
-    description, copyright, and category
+  - platform application name, icon, and identifier
+  - Version and Build Number are supplied for each export rather than stored
 - `creatorVersion`
 
 Important details:
@@ -77,6 +77,9 @@ Important details:
 - the macOS `applicationIdentifier` starts blank, is required and editable,
   and controls both the exported app identity and save-data location; builds
   using different identifiers do not share saves
+- macOS Version and Build Number are per-export inputs, not persisted Platform
+  Details; Version is prefilled from the selected release name and Build Number
+  must be entered manually for each export
 - the Web `applicationIdentifier` starts blank, is required and editable, and
   controls the exported browser save-data identity; changing it selects a
   different save bucket

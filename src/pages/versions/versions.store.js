@@ -7,9 +7,6 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
 
-// TODO: Show native export actions again when Windows and macOS releases are ready.
-const NATIVE_EXPORTS_VISIBLE = false;
-
 const findVersionById = (versions, versionId) => {
   if (!versionId) {
     return undefined;
@@ -60,10 +57,7 @@ const createDropdownMenuItems = (copy = {}) => [
   { label: copy.deleteMenuItem ?? "Delete", type: "item", value: "delete" },
 ];
 
-const formatConfirmationValue = (value, copy) => {
-  const normalized = String(value ?? "").trim();
-  return normalized || (copy.notSetLabel ?? "Not set");
-};
+const formatConfirmationValue = (value) => String(value ?? "").trim();
 
 const getExportConfirmationTitle = (exportType, copy) => {
   if (exportType === "windows-executable") {
@@ -96,6 +90,45 @@ const getExportConfirmationButtonLabel = (exportType, copy) => {
   return copy.exportWebButton ?? "Export Web";
 };
 
+const createMacosExportForm = (copy = {}) => ({
+  fields: [
+    {
+      type: "row",
+      fields: [
+        {
+          name: "version",
+          type: "input-text",
+          label: copy.macosExportVersionLabel ?? "Version",
+          description:
+            copy.macosExportVersionDescription ??
+            "Version shown in Finder and About. Use three numeric components, for example 1.2.0.",
+          required: true,
+        },
+        {
+          name: "buildNumber",
+          type: "input-text",
+          label: copy.macosExportBuildNumberLabel ?? "Build Number",
+          description:
+            copy.macosExportBuildNumberDescription ??
+            "Positive integer identifying this build. Enter it manually for each export.",
+          required: true,
+        },
+      ],
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.exportMacosApplicationButton ?? "Export macOS App",
+      },
+    ],
+  },
+});
+
 const buildExportConfirmationFields = (
   confirmation,
   copy,
@@ -106,12 +139,12 @@ const buildExportConfirmationFields = (
     {
       type: "text",
       label: copy.releaseVersionLabel ?? "Release Version",
-      value: formatConfirmationValue(confirmation.versionName, copy),
+      value: formatConfirmationValue(confirmation.versionName),
     },
     {
       type: "text",
       label: platformDetailsCopy.applicationNameLabel ?? "Application Name",
-      value: formatConfirmationValue(applicationInfo.applicationName, copy),
+      value: formatConfirmationValue(applicationInfo.applicationName),
     },
     {
       type: "slot",
@@ -128,43 +161,28 @@ const buildExportConfirmationFields = (
           "Bundle Identifier")
         : (platformDetailsCopy.applicationIdentifierLabel ??
           "Application Identifier"),
-    value: formatConfirmationValue(applicationInfo.applicationIdentifier, copy),
+    value: formatConfirmationValue(applicationInfo.applicationIdentifier),
   });
 
-  if (
-    confirmation.platform === "windows" ||
-    confirmation.platform === "macos"
-  ) {
+  if (confirmation.platform === "windows") {
     fields.push(
       {
         type: "text",
         label:
-          confirmation.platform === "windows"
-            ? (platformDetailsCopy.windowsPublisherLabel ??
-              "Company / Publisher")
-            : (platformDetailsCopy.macosPublisherLabel ??
-              "Developer / Publisher"),
-        value: formatConfirmationValue(applicationInfo.publisher, copy),
+          platformDetailsCopy.windowsPublisherLabel ?? "Company / Publisher",
+        value: formatConfirmationValue(applicationInfo.publisher),
       },
       {
         type: "text",
         label: platformDetailsCopy.descriptionLabel ?? "Description",
-        value: formatConfirmationValue(applicationInfo.description, copy),
+        value: formatConfirmationValue(applicationInfo.description),
       },
       {
         type: "text",
         label: platformDetailsCopy.copyrightLabel ?? "Copyright",
-        value: formatConfirmationValue(applicationInfo.copyright, copy),
+        value: formatConfirmationValue(applicationInfo.copyright),
       },
     );
-  }
-
-  if (confirmation.platform === "macos") {
-    fields.push({
-      type: "text",
-      label: platformDetailsCopy.categoryLabel ?? "Application Category",
-      value: formatConfirmationValue(applicationInfo.category, copy),
-    });
   }
 
   return fields;
@@ -317,6 +335,7 @@ export const selectExportConfirmation = ({ state }) => {
     exportType: state.exportConfirmation.exportType,
     platform: state.exportConfirmation.platform,
     versionId: state.exportConfirmation.versionId,
+    versionName: state.exportConfirmation.versionName,
     applicationInfo: state.exportConfirmation.applicationInfo,
   };
 };
@@ -420,6 +439,9 @@ export const selectViewData = ({ state, i18n }) => {
       state.exportConfirmation.exportType,
       copy,
     ),
+    showMacosExportForm:
+      state.exportConfirmation.exportType === "macos-application",
+    macosExportForm: createMacosExportForm(copy),
     exportConfirmationKey: `${state.exportConfirmation.exportType ?? "none"}-${state.exportConfirmation.versionId ?? "none"}`,
     title: copy.title ?? "Versions",
     createButton: copy.createButton ?? "New Version",
@@ -432,17 +454,13 @@ export const selectViewData = ({ state, i18n }) => {
       copy.exportWindowsInstallerButton ?? "Export Windows Installer",
     exportMacosApplicationButton:
       copy.exportMacosApplicationButton ?? "Export macOS App",
-    canExportWindowsExecutable:
-      NATIVE_EXPORTS_VISIBLE && state.platform === "tauri",
+    canExportWindowsExecutable: state.platform === "tauri",
     canExportWindowsInstaller:
-      NATIVE_EXPORTS_VISIBLE &&
-      state.platform === "tauri" &&
-      state.windowsExportAvailability.installer,
+      state.platform === "tauri" && state.windowsExportAvailability.installer,
     canExportMacosApplication:
-      NATIVE_EXPORTS_VISIBLE &&
-      ((state.platform === "tauri" &&
+      (state.platform === "tauri" &&
         state.macosExportAvailability.hostSupported) ||
-        state.visualTestMode),
+      state.visualTestMode,
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     resourceCategory: "releases",
     resourceType: "versions",

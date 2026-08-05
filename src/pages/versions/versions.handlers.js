@@ -9,7 +9,11 @@ import {
 import { createBundleInstructions } from "../../deps/services/shared/projectExportService.js";
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
 import { sanitizeArtifactFileName } from "../../internal/artifactFileName.js";
-import { createMacosNativeVersion } from "../../internal/nativeApplicationVersion.js";
+import {
+  createMacosNativeVersion,
+  isValidMacosApplicationVersion,
+  isValidMacosBuildNumber,
+} from "../../internal/nativeApplicationVersion.js";
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
 import { validatePlatformDetails } from "../../internal/platformDetailsValidation.js";
 
@@ -330,10 +334,7 @@ const getPlatformDetailsValidationMessage = (code, copy) => {
       "The macOS bundle identifier is invalid. Update it in Platform Details before exporting."
     );
   }
-  return (
-    copy.platformDetailsMacosCategoryInvalid ??
-    "The macOS application category is invalid. Update it in Platform Details before exporting."
-  );
+  return copy.platformDetailsLoadFailed ?? "Platform details are invalid.";
 };
 
 const requirePlatformDetailsForExport = async ({
@@ -740,7 +741,7 @@ const prepareExportConfirmation = async (
   payload,
   { exportType, platform },
 ) => {
-  const { store, render, projectService, appService, i18n } = deps;
+  const { store, refs, render, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
   payload._event.stopPropagation();
   const versionId = resolveVersionIdFromPayload(payload);
@@ -773,6 +774,17 @@ const prepareExportConfirmation = async (
     applicationInfo,
   });
   render();
+
+  if (exportType === "macos-application") {
+    const { macosExportForm } = refs;
+    macosExportForm.reset();
+    macosExportForm.setValues({
+      values: {
+        version: version.name ?? "",
+        buildNumber: "",
+      },
+    });
+  }
 };
 
 export const handleDownloadZipClick = (deps, payload) =>
@@ -892,6 +904,40 @@ const createBundleProgressView = ({ copy, progress } = {}) => {
 
   return {
     status: copy.bundlePreparingProjectStatus ?? "Preparing project data...",
+    progress: {},
+  };
+};
+
+const createMacosApplicationProgressView = ({ copy, progress } = {}) => {
+  const statusByPhase = {
+    prepareApplication:
+      copy.macosPreparingApplicationStatus ?? "Preparing application...",
+    encryptPayload:
+      copy.macosEncryptingPayloadStatus ?? "Encrypting package...",
+    signApplication:
+      copy.macosSigningApplicationStatus ?? "Signing application...",
+    verifyApplication:
+      copy.macosVerifyingApplicationStatus ?? "Verifying application...",
+    archiveApplication:
+      copy.macosArchivingApplicationStatus ?? "Archiving application...",
+    verifyArchive:
+      copy.macosVerifyingArchiveStatus ?? "Verifying application archive...",
+    finalizeApplication:
+      copy.macosFinalizingApplicationStatus ?? "Finalizing application...",
+  };
+  const status = statusByPhase[progress?.phase];
+  if (!status) {
+    return createBundleProgressView({ copy, progress });
+  }
+
+  const elapsed = formatBundleElapsedTime(progress?.elapsedMs);
+  return {
+    status: elapsed
+      ? formatI18nCopy(copy.bundleElapsedStatus ?? "{status} · {elapsed}", {
+          status,
+          elapsed,
+        })
+      : status,
     progress: {},
   };
 };
@@ -1289,7 +1335,7 @@ const runWindowsInstallerExport = async (deps, confirmation) => {
 const runMacosApplicationExport = async (deps, confirmation) => {
   const { store, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
-  const { versionId, applicationInfo } = confirmation;
+  const { versionId, applicationInfo, nativeVersion } = confirmation;
   const projectId = appService.getPayload().p ?? "";
   const version = store.selectVersion(versionId);
   if (!version) {
@@ -1327,21 +1373,6 @@ const runMacosApplicationExport = async (deps, confirmation) => {
     return;
   }
 
-  let nativeVersion;
-  try {
-    nativeVersion = createMacosNativeVersion(version.actionIndex);
-  } catch (error) {
-    appService.showAlert({
-      message: formatI18nCopy(
-        copy.failedSaveMacosApplication ??
-          "Failed to save macOS application: {message}",
-        { message: getMacosExportErrorMessage(error) },
-      ),
-      title: copy.errorTitle ?? "Error",
-    });
-    return;
-  }
-
   const applicationName = getVersionZipName({
     appService,
     projectId,
@@ -1373,7 +1404,10 @@ const runMacosApplicationExport = async (deps, confirmation) => {
       copy.macosApplicationInProgressMessage ??
       "Please wait while the macOS application is being created...",
     title: copy.macosApplicationInProgressTitle ?? "macOS export in progress",
+    status: copy.bundlePreparingProjectStatus ?? "Preparing project data...",
+    progress: {},
   });
+  await progressDialog.waitForPaint();
 
   try {
     const { projectInfo, transformedData, fileEntries } =
@@ -1383,6 +1417,13 @@ const runMacosApplicationExport = async (deps, confirmation) => {
         projectService,
         version,
       });
+    const exportOptions = {
+      onProgress: (progress) => {
+        progressDialog.update(
+          createMacosApplicationProgressView({ copy, progress }),
+        );
+      },
+    };
     const result = await projectService.createMacosApplicationToPath(
       transformedData,
       fileEntries,
@@ -1392,12 +1433,9 @@ const runMacosApplicationExport = async (deps, confirmation) => {
         shortVersion: nativeVersion.shortVersion,
         bundleVersion: nativeVersion.bundleVersion,
         applicationIdentifier: applicationInfo.applicationIdentifier,
-        publisher: applicationInfo.publisher,
-        description: applicationInfo.description,
-        copyright: applicationInfo.copyright,
-        category: applicationInfo.category,
         iconFileId: applicationInfo.iconFileId,
       },
+      exportOptions,
     );
     const savedPath = result?.outputPath ?? outputPath;
     progressDialog.close();
@@ -1439,6 +1477,9 @@ const runMacosApplicationExport = async (deps, confirmation) => {
 export const handleExportConfirmationConfirm = async (deps) => {
   const { store, render } = deps;
   const confirmation = store.selectExportConfirmation();
+  if (confirmation.exportType === "macos-application") {
+    return;
+  }
   store.closeExportConfirmation();
   render();
 
@@ -1454,9 +1495,50 @@ export const handleExportConfirmationConfirm = async (deps) => {
     await runWindowsInstallerExport(deps, confirmation);
     return;
   }
-  if (confirmation.exportType === "macos-application") {
-    await runMacosApplicationExport(deps, confirmation);
+};
+
+export const handleMacosExportFormAction = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
   }
+
+  const copy = selectVersionsPageCopy(i18n);
+  const version = values.version.trim();
+  const buildNumber = values.buildNumber.trim();
+  let message;
+  if (!version) {
+    message =
+      copy.macosExportVersionRequired ??
+      "Version is required for macOS export.";
+  } else if (!isValidMacosApplicationVersion(version)) {
+    message =
+      copy.macosExportVersionInvalid ??
+      "Version must contain three numeric components, for example 1.2.0.";
+  } else if (!buildNumber) {
+    message =
+      copy.macosExportBuildNumberRequired ??
+      "Build number is required for macOS export.";
+  } else if (!isValidMacosBuildNumber(buildNumber)) {
+    message =
+      copy.macosExportBuildNumberInvalid ??
+      "Build number must be a positive integer.";
+  }
+
+  if (message) {
+    appService.showAlert({
+      message,
+      title: copy.warningTitle ?? "Warning",
+    });
+    return;
+  }
+
+  const confirmation = store.selectExportConfirmation();
+  const nativeVersion = createMacosNativeVersion(version, buildNumber);
+  store.closeExportConfirmation();
+  render();
+  await runMacosApplicationExport(deps, { ...confirmation, nativeVersion });
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {

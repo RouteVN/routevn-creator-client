@@ -19,6 +19,7 @@ import {
 } from "../src/internal/runtime/graphicsEngineRuntime.js";
 import { resolveBundleAssetMimeType } from "../src/internal/bundleRuntimeAssets.js";
 import { createBundleRangeReader as createPackageBinRangeReader } from "../src/deps/services/shared/projectExportService.js";
+import { installPlayerAudioUnlock } from "./playerAudioUnlock.js";
 import { waitForPlayerStart } from "./playerStartGate.js";
 
 const MAX_DIAGNOSTIC_EVENTS = 24;
@@ -863,6 +864,10 @@ const prepareEngine = async ({ jsonData, bundleReader, bundleMetadata }) => {
         height: screenHeight,
       });
     });
+
+  installPlayerAudioUnlock({
+    resumeAudio: () => routeGraphics.resumeAudio(),
+  });
 
   canvasContainer?.appendChild(routeGraphics.canvas);
 

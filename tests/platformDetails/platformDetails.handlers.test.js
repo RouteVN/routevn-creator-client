@@ -445,6 +445,39 @@ describe("platformDetails handlers", () => {
     ).not.toHaveBeenCalled();
   });
 
+  it("persists only the current macOS platform metadata", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "edit",
+      platform: "macos",
+    });
+    deps.store.selectPlatformEditIconFileId.mockReturnValue("mac-icon-1");
+    const applicationInfo = {
+      applicationName: "Project One",
+      iconFileId: "mac-icon-1",
+      applicationIdentifier: "com.example.project-one",
+    };
+    deps.projectService.updateCurrentPlatformDetails.mockResolvedValue(
+      applicationInfo,
+    );
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: applicationInfo.applicationName,
+            applicationIdentifier: applicationInfo.applicationIdentifier,
+          },
+        },
+      },
+    });
+
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("macos", applicationInfo);
+  });
+
   it("does not create Web platform details without an application identifier", async () => {
     const deps = createDeps();
     deps.store.selectPlatformDialogState.mockReturnValue({

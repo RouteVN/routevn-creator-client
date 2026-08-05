@@ -56,6 +56,10 @@ import { isMacosHost } from "../../clients/tauri/platform.js";
 import { normalizeExportFileEntries } from "../shared/projectExportService.js";
 import { requireNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
+import {
+  isValidMacosApplicationVersion,
+  isValidMacosBuildNumber,
+} from "../../../internal/nativeApplicationVersion.js";
 import { getImageDimensions } from "../../clients/web/fileProcessors.js";
 import {
   filterTemplateFileIds,
@@ -176,12 +180,12 @@ const normalizeMacosApplicationMetadata = ({
   if (!normalizedTitle) {
     throw new Error("Project title is required for macOS application export.");
   }
-  if (!/^\d+\.\d+\.\d+$/.test(shortVersion ?? "")) {
+  if (!isValidMacosApplicationVersion(shortVersion)) {
     throw new Error(
       "The macOS short version must contain three numeric components.",
     );
   }
-  if (!/^[1-9]\d*$/.test(bundleVersion ?? "")) {
+  if (!isValidMacosBuildNumber(bundleVersion)) {
     throw new Error("The macOS bundle version must be a positive integer.");
   }
 
@@ -914,6 +918,10 @@ export const createTauriProjectServiceAdapters = ({
       getCurrentReference,
     });
     const templatePath = await resolveMacosPlayerTemplatePath(options);
+    const progressChannel = new Channel();
+    if (options.onProgress) {
+      progressChannel.onmessage = options.onProgress;
+    }
     const result = await invoke("export_macos_application", {
       templatePath,
       outputPath,
@@ -928,6 +936,7 @@ export const createTauriProjectServiceAdapters = ({
       copyright: metadata.copyright,
       category: metadata.category,
       iconPng,
+      onProgress: progressChannel,
     });
     return result;
   };

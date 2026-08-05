@@ -111,6 +111,27 @@ describe("platformDetails.store", () => {
       applicationName: "macOS Project",
       applicationIdentifier: "com.example.macos-project",
     });
+    expect(state.platformApplicationInfo.macos).not.toHaveProperty(
+      "applicationVersion",
+    );
+    for (const field of ["publisher", "description", "copyright", "category"]) {
+      expect(state.platformApplicationInfo.macos).not.toHaveProperty(field);
+    }
+    expect(viewData.platformDetailFields).toHaveLength(3);
+
+    openPlatformEditDialog({ state });
+    const editViewData = selectViewData({ state, i18n: EN_I18N });
+    expect(editViewData.platformEditDefaultValues).not.toHaveProperty(
+      "applicationVersion",
+    );
+    expect(editViewData.platformEditForm.fields).not.toContainEqual(
+      expect.objectContaining({ name: "applicationVersion" }),
+    );
+    expect(
+      editViewData.platformEditForm.fields
+        .map((field) => field.name)
+        .filter(Boolean),
+    ).toEqual(["applicationName", "applicationIdentifier"]);
   });
 
   it("prefills platform edit state independently", () => {

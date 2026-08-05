@@ -8,6 +8,7 @@ import {
   handleDownloadZipClick,
   handleExportConfirmationClose,
   handleExportConfirmationConfirm,
+  handleMacosExportFormAction,
   handleMobileDetailSheetClose,
   handleVersionFormAction,
 } from "../../src/pages/versions/versions.handlers.js";
@@ -116,6 +117,12 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       })),
     },
     i18n: EN_I18N,
+    refs: {
+      macosExportForm: {
+        reset: vi.fn(),
+        setValues: vi.fn(),
+      },
+    },
     store: {
       selectEditingVersionId: vi.fn(() => editingVersionId),
       selectVersion: vi.fn((versionId) =>
@@ -151,6 +158,21 @@ const createVersionClickPayload = (versionId = "version-1") => ({
 const chooseAndConfirmExport = async (handler, deps) => {
   await handler(deps, createVersionClickPayload());
   await handleExportConfirmationConfirm(deps);
+};
+
+const chooseAndSubmitMacosExport = async (
+  deps,
+  values = { version: "2.4.1", buildNumber: "258" },
+) => {
+  await handleDownloadMacosApplicationClick(deps, createVersionClickPayload());
+  await handleMacosExportFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values,
+      },
+    },
+  });
 };
 
 describe("versions lifecycle", () => {
@@ -1096,7 +1118,7 @@ describe("versions macOS export handlers", () => {
       hostSupported: true,
     });
 
-    await chooseAndConfirmExport(handleDownloadMacosApplicationClick, deps);
+    await chooseAndSubmitMacosExport(deps);
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1125,7 +1147,7 @@ describe("versions macOS export handlers", () => {
         "Command get_macos_export_host_capabilities not found",
     });
 
-    await chooseAndConfirmExport(handleDownloadMacosApplicationClick, deps);
+    await chooseAndSubmitMacosExport(deps);
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1139,7 +1161,7 @@ describe("versions macOS export handlers", () => {
     ).not.toHaveBeenCalled();
   });
 
-  it("uses the release action index and configured macOS application identifier", async () => {
+  it("prefills the version name and exports with manually entered native versions", async () => {
     const repository = {
       loadState: vi.fn(async () => structuredClone(initialProjectData)),
       loadEvents: vi.fn(async () => []),
@@ -1155,13 +1177,48 @@ describe("versions macOS export handlers", () => {
       copyright: "Copyright © 2026 Release Studio",
       category: "public.app-category.games",
     });
+    deps.projectService.createMacosApplicationToPath.mockImplementation(
+      async (_projectData, _fileEntries, outputPath, _metadata, options) => {
+        options.onProgress({
+          phase: "scanAssets",
+          current: 1,
+          total: 2,
+          elapsedMs: 1200,
+        });
+        options.onProgress({
+          phase: "signApplication",
+          current: 0,
+          total: 0,
+          elapsedMs: 2400,
+        });
+        return { outputPath };
+      },
+    );
 
-    await chooseAndConfirmExport(handleDownloadMacosApplicationClick, deps);
+    await chooseAndSubmitMacosExport(deps);
 
     expect(deps.projectService.createMacosApplicationToPath).toHaveBeenCalled();
+    expect(deps.refs.macosExportForm.reset).toHaveBeenCalledTimes(1);
+    expect(deps.refs.macosExportForm.setValues).toHaveBeenCalledWith({
+      values: {
+        version: "Version 1",
+        buildNumber: "",
+      },
+    });
     expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
-      message: "Please wait while the macOS application is being created...",
-      title: "macOS export in progress",
+      message: EN_I18N.versionsPage.macosApplicationInProgressMessage,
+      progress: {},
+      status: EN_I18N.versionsPage.bundlePreparingProjectStatus,
+      title: EN_I18N.versionsPage.macosApplicationInProgressTitle,
+    });
+    expect(deps.progressDialog.waitForPaint).toHaveBeenCalledTimes(1);
+    expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      progress: { current: 1, total: 2 },
+      status: "Scanning assets... 1 / 2 · 1s",
+    });
+    expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      progress: {},
+      status: "Signing application... · 2s",
     });
     expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     expect(deps.projectService.promptMacosApplicationPath).toHaveBeenCalledWith(
@@ -1171,14 +1228,42 @@ describe("versions macOS export handlers", () => {
       deps.projectService.createMacosApplicationToPath.mock.calls[0][3],
     ).toEqual({
       title: "Mac Edition",
-      shortVersion: "1.0.3",
-      bundleVersion: "4",
+      shortVersion: "2.4.1",
+      bundleVersion: "258",
       applicationIdentifier: "com.example.mac-edition",
-      publisher: "Release Studio",
-      description: "macOS release",
-      copyright: "Copyright © 2026 Release Studio",
-      category: "public.app-category.games",
       iconFileId: "mac-icon",
     });
+    expect(
+      deps.projectService.createMacosApplicationToPath.mock.calls[0][4],
+    ).toEqual({ onProgress: expect.any(Function) });
+  });
+
+  it("requires a manually entered build number for every macOS export", async () => {
+    const repository = {
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+
+    await handleDownloadMacosApplicationClick(
+      deps,
+      createVersionClickPayload(),
+    );
+    await handleMacosExportFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: { version: "2.4.1", buildNumber: "" },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.macosExportBuildNumberRequired,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+    expect(deps.store.closeExportConfirmation).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.createMacosApplicationToPath,
+    ).not.toHaveBeenCalled();
   });
 });

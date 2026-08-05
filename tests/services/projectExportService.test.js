@@ -142,8 +142,8 @@ describe("projectExportService", () => {
     const getCurrentReference = vi.fn(() => ({
       projectPath: "/tmp/project-1",
     }));
-    const getFileContent = vi.fn();
     const onProgress = vi.fn();
+    const getFileContent = vi.fn();
     const service = createProjectExportService({
       fileAdapter: {
         downloadBundle: vi.fn(),
@@ -211,6 +211,7 @@ describe("projectExportService", () => {
     const getCurrentReference = vi.fn(() => ({
       projectPath: "/tmp/project-1",
     }));
+    const onProgress = vi.fn();
     const service = createProjectExportService({
       fileAdapter: {
         promptMacosApplicationPath,
@@ -246,6 +247,7 @@ describe("projectExportService", () => {
           category: "public.app-category.games",
           iconFileId: "icon-1",
         },
+        { onProgress },
       ),
     ).resolves.toEqual({ outputPath: "/tmp/Game.app.zip" });
     expect(createMacosApplicationToPath).toHaveBeenCalledWith({
@@ -261,7 +263,7 @@ describe("projectExportService", () => {
       copyright: "Copyright © 2026 Studio One",
       category: "public.app-category.games",
       iconFileId: "icon-1",
-      options: {},
+      options: { onProgress },
       getCurrentReference,
     });
   });

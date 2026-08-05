@@ -121,14 +121,10 @@ const createPlatformDetailsPatch = ({ platform, values, iconFileId }) => {
 
   patch.applicationIdentifier = values.applicationIdentifier.trim();
 
-  if (platform === "windows" || platform === "macos") {
+  if (platform === "windows") {
     patch.publisher = values.publisher.trim();
     patch.description = values.description.trim();
     patch.copyright = values.copyright.trim();
-  }
-
-  if (platform === "macos") {
-    patch.category = values.category.trim();
   }
 
   return patch;
@@ -159,7 +155,7 @@ const getValidationMessage = (copy, code) => {
   if (code === "macos-identifier-invalid") {
     return copy.macosApplicationIdentifierInvalid;
   }
-  return copy.macosCategoryInvalid;
+  return copy.failedSavePlatformMessage;
 };
 
 export const handlePlatformEditFormAction = async (deps, payload = {}) => {

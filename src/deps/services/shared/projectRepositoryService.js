@@ -197,13 +197,6 @@ export const createProjectRepositoryService = ({
       platformDetails.copyright = "";
     }
 
-    if (platform === "macos") {
-      platformDetails.publisher = "";
-      platformDetails.description = "";
-      platformDetails.copyright = "";
-      platformDetails.category = "";
-    }
-
     return platformDetails;
   };
 
@@ -217,10 +210,17 @@ export const createProjectRepositoryService = ({
     }
 
     if (platform === "macos") {
-      normalized.publisher = platformDetails?.publisher ?? "";
-      normalized.description = platformDetails?.description ?? "";
-      normalized.copyright = platformDetails?.copyright ?? "";
-      normalized.category = platformDetails?.category ?? "";
+      for (const field of [
+        "applicationVersion",
+        "publisher",
+        "description",
+        "copyright",
+        "category",
+      ]) {
+        if (Object.hasOwn(platformDetails, field)) {
+          normalized[field] = platformDetails[field];
+        }
+      }
     }
 
     return normalized;

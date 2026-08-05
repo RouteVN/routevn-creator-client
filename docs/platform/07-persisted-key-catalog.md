@@ -149,10 +149,6 @@ Current keys:
     - `applicationName`
     - `iconFileId`
     - `applicationIdentifier`
-    - `publisher`
-    - `description`
-    - `copyright`
-    - `category`
   - no platform record exists until the user adds that platform from Platform
     Details and submits its create form
   - the create form is prefilled from the current project name; cancelling it
@@ -166,11 +162,16 @@ Current keys:
   - the Windows identifier starts blank and is optional; the macOS identifier
     starts blank, is required and editable, and controls the exported app and
     save-data identity
+  - macOS Version and Build Number are intentionally not persisted here; they
+    are required per-export inputs
+  - older macOS publisher, description, copyright, category, and application
+    version fields are retained unchanged but hidden from the current UI and
+    ignored by export
   - platform export is blocked until the corresponding platform record exists
     and passes validation
   - after preflight passes, every export shows the selected version and the
-    platform record in a read-only confirmation dialog; save-path selection
-    and bundle creation start only after the user confirms
+    platform record in a confirmation dialog; macOS export additionally asks
+    for Version and Build Number before save-path selection and bundle creation
   - image deletion treats each native platform `iconFileId` as a live
     reference and is blocked while the image file is used by a native platform
     details record

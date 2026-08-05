@@ -51,6 +51,10 @@ refs:
     eventListeners:
       click:
         handler: handleExportConfirmationConfirm
+  macosExportForm:
+    eventListeners:
+      form-action:
+        handler: handleMacosExportFormAction
   dropdownMenu:
     eventListeners:
       close:
@@ -135,12 +139,15 @@ template:
               - rtgl-view d=v g=xs:
                   - rtgl-text s=lg: ${exportConfirmationTitle}
                   - rtgl-text c=mu-fg: ${exportConfirmationMessage}
-              - 'rtgl-view w=f sv style="max-height: 60vh;"':
+              - 'rtgl-view w=f sv style="max-height: 50vh;"':
                   - rvn-detail-view#exportConfirmationDetail key=${exportConfirmationKey} w=f :fields=${exportConfirmationFields} :fillHeight=${false}:
                       - $if exportConfirmationIconFileId:
                           - rvn-file-image slot=export-confirmation-icon fileId=${exportConfirmationIconFileId} w=96 h=96 bw=xs bc=bo br=md: null
                         $else:
                           - rtgl-image slot=export-confirmation-icon src="/public/project_logo_placeholder.png" w=96 h=96 bw=xs bc=bo br=md: null
-              - rtgl-view w=f d=h ah=e av=c g=sm:
-                  - rtgl-button#exportConfirmationConfirmButton v=pr pre=download: ${exportConfirmationConfirmLabel}
+              - $if showMacosExportForm:
+                  - rtgl-form#macosExportForm :form=${macosExportForm} w=f: null
+                $else:
+                  - rtgl-view w=f d=h ah=e av=c g=sm:
+                      - rtgl-button#exportConfirmationConfirmButton v=pr pre=download: ${exportConfirmationConfirmLabel}
   - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=${dropdownMenu.items}: null

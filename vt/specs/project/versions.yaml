@@ -34,6 +34,32 @@ steps:
       - action: clear
       - action: write
         value: Covers project versions create and edit flows.
+  - action: select
+    selector: "#iconPlaceholder"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#rtglVtFilePickerInput"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#rtglVtFilePickerInput"
+    steps:
+      - action: upload
+        files:
+          - crates/routevn-packager/fixtures/sample-icon.png
+  - action: waitFor
+    selector: "#iconCropDialog #confirmButton:not([disabled])"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#iconCropDialog #confirmButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#iconCropDialog #dialog"
+    state: hidden
+    timeoutMs: 5000
   - action: wait
     ms: 250
   - action: select
@@ -56,10 +82,48 @@ steps:
     timeoutMs: 10000
   - action: wait
     ms: 500
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/releases/platform-details
+  - action: waitFor
+    selector: rvn-platform-details
+    state: attached
+    timeoutMs: 10000
   - action: select
-    selector: "#sidebar [data-item-id='release']"
+    selector: "#addPlatformButton"
     steps:
       - action: click
+  - action: waitFor
+    selector: "rtgl-dropdown-menu#addPlatformMenu [role='menuitem']:has-text('macOS')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-dropdown-menu#addPlatformMenu [role='menuitem']:has-text('macOS')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#platformEditDialog"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#platformEditDialog rtgl-input#field2 input"
+    steps:
+      - action: clear
+      - action: write
+        value: com.example.vt-versions
+  - action: select
+    selector: "#platformEditDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#platformEditDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/releases/versions
   - action: waitFor
     selector: rvn-versions
     state: attached
@@ -68,7 +132,7 @@ steps:
     type: url
     value: /project/releases/versions
   - action: wait
-    ms: 450
+    ms: 4500
   - action: screenshot
   - action: select
     selector: "#saveVersionBtn"
@@ -106,12 +170,33 @@ steps:
     state: visible
     timeoutMs: 10000
   - action: waitFor
-    selector: "#detailDownloadBtn"
+    selector: "#detailMacosApplicationBtn"
     state: visible
     timeoutMs: 5000
   - action: wait
     ms: 500
   - action: screenshot
+  - action: select
+    selector: "#detailMacosApplicationBtn"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#exportConfirmationDialog"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#macosExportForm rtgl-input#field0 input"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#exportConfirmationDialog"
+    state: hidden
+    timeoutMs: 5000
   - action: select
     selector: "#detailHeader"
     steps:
@@ -146,5 +231,31 @@ steps:
     timeoutMs: 10000
   - action: wait
     ms: 500
+  - action: screenshot
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/releases/platform-details
+  - action: waitFor
+    selector: rvn-platform-details
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#platformEditButton"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 450
+  - action: screenshot
+  - action: select
+    selector: "#platformEditButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#platformEditDialog"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
   - action: screenshot
 ---

@@ -164,10 +164,6 @@ describe("projectRepositoryService platform details", () => {
       applicationName: "Project One",
       iconFileId: "project-icon-1",
       applicationIdentifier: "",
-      publisher: "",
-      description: "",
-      copyright: "",
-      category: "",
     });
     await expect(
       harness.service.createCurrentPlatformDetails("web"),
@@ -276,13 +272,14 @@ describe("projectRepositoryService platform details", () => {
     expect(harness.getPlatformDetails("web")).not.toHaveProperty("iconFileId");
   });
 
-  it("preserves and updates the editable macOS application identifier", async () => {
+  it("preserves hidden macOS metadata while updating the identifier", async () => {
     const harness = createHarness({
       platformDetails: {
         macos: {
           applicationName: "Mac Project",
           iconFileId: "mac-icon-1",
           applicationIdentifier: "com.changed.mac-project",
+          applicationVersion: "2.4.1",
           publisher: "Studio One",
           description: "Mac release",
           copyright: "Copyright Studio One",
@@ -298,15 +295,27 @@ describe("projectRepositoryService platform details", () => {
     });
     expect(harness.getPlatformDetails("macos")).toMatchObject({
       applicationIdentifier: "com.changed.mac-project",
+      applicationVersion: "2.4.1",
+      publisher: "Studio One",
+      description: "Mac release",
+      copyright: "Copyright Studio One",
+      category: "public.app-category.games",
     });
+    expect(harness.store.app.set).not.toHaveBeenCalledWith(
+      "platformDetails.macos",
+      expect.anything(),
+    );
 
     await harness.service.updateCurrentPlatformDetails("macos", {
       applicationIdentifier: "com.another.changed-identity",
-      description: "Updated Mac release",
     });
     expect(harness.getPlatformDetails("macos")).toMatchObject({
       applicationIdentifier: "com.another.changed-identity",
-      description: "Updated Mac release",
+      applicationVersion: "2.4.1",
+      publisher: "Studio One",
+      description: "Mac release",
+      copyright: "Copyright Studio One",
+      category: "public.app-category.games",
     });
   });
 

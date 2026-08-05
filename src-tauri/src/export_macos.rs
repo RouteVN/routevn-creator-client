@@ -1,4 +1,8 @@
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
 use serde::Serialize;
+use tauri::ipc::Channel;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -63,8 +67,30 @@ pub async fn export_macos_application(
     copyright: Option<String>,
     category: Option<String>,
     icon_png: Vec<u8>,
+    on_progress: Channel<routevn_exporter::ZipExportProgress>,
 ) -> Result<ExportMacosApplicationResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
+        let export_started = Instant::now();
+        let progress_state = Mutex::new((String::new(), Instant::now()));
+        let progress_callback = |mut progress: routevn_exporter::ZipExportProgress| {
+            let now = Instant::now();
+            progress.elapsed_ms =
+                u64::try_from(export_started.elapsed().as_millis()).unwrap_or(u64::MAX);
+            let Ok(mut state) = progress_state.lock() else {
+                return;
+            };
+            let phase_changed = state.0 != progress.phase;
+            let phase_complete = progress.total > 0 && progress.current == progress.total;
+            let interval_elapsed = now.duration_since(state.1) >= Duration::from_millis(150);
+            if !phase_changed && !phase_complete && !interval_elapsed {
+                return;
+            }
+
+            state.0.clone_from(&progress.phase);
+            state.1 = now;
+            drop(state);
+            let _ = on_progress.send(progress);
+        };
         export_macos_application_sync(
             template_path,
             output_path,
@@ -79,6 +105,7 @@ pub async fn export_macos_application(
             copyright,
             category,
             icon_png,
+            Some(&progress_callback),
         )
     })
     .await
@@ -101,6 +128,7 @@ fn export_macos_application_sync(
     _copyright: Option<String>,
     _category: Option<String>,
     _icon_png: Vec<u8>,
+    _on_progress: Option<&routevn_exporter::ZipExportProgressCallback<'_>>,
 ) -> Result<ExportMacosApplicationResult, String> {
     Err(format!(
         "macOS application export is supported only on macOS hosts; current host is {}.",
@@ -149,6 +177,7 @@ mod macos {
         copyright: Option<String>,
         category: Option<String>,
         icon_png: Vec<u8>,
+        on_progress: Option<&routevn_exporter::ZipExportProgressCallback<'_>>,
     ) -> Result<ExportMacosApplicationResult, String> {
         let metadata = MacosApplicationMetadata {
             title,
@@ -161,6 +190,7 @@ mod macos {
             category,
         };
         validate_metadata(&metadata)?;
+        emit_progress(on_progress, "prepareApplication", 0, 0);
         ensure_required_tools()?;
 
         if icon_png.is_empty() {
@@ -232,13 +262,18 @@ mod macos {
         stamp_info_plist(&application_path, &metadata, &application_name)?;
         stamp_icon(&application_path, &icon_png, temp.path())?;
 
-        let package_bin = routevn_exporter::create_package_bin(assets, instructions_json)
-            .map_err(|error| format!("Failed to create RouteVN package payload: {error}"))?;
+        let package_bin = routevn_exporter::create_package_bin_with_progress(
+            assets,
+            instructions_json,
+            on_progress,
+        )
+        .map_err(|error| format!("Failed to create RouteVN package payload: {error}"))?;
         let package_bin_bytes = package_bin.package_bin.len() as u64;
         let package_resource_path = application_path
             .join("Contents")
             .join("Resources")
             .join(PACKAGE_RESOURCE_NAME);
+        emit_progress(on_progress, "encryptPayload", 0, 0);
         let (key, nonce) = routevn_packager::payload::generate_payload_key_material();
         let payload_outcome =
             routevn_packager::payload::write_standalone_chunked_encrypted_payload(
@@ -252,7 +287,9 @@ mod macos {
             )
             .map_err(|error| format!("Failed to encrypt the macOS player payload: {error}"))?;
 
+        emit_progress(on_progress, "signApplication", 0, 0);
         sign_application_inside_out(&application_path)?;
+        emit_progress(on_progress, "verifyApplication", 0, 0);
         verify_application(&application_path, &metadata)?;
 
         let part_path = part_path_for(&output_path);
@@ -264,6 +301,7 @@ mod macos {
                 )
             })?;
         }
+        emit_progress(on_progress, "archiveApplication", 0, 0);
         run_tool(
             "/usr/bin/ditto",
             [
@@ -279,8 +317,10 @@ mod macos {
             ],
             "archive the macOS application",
         )?;
+        emit_progress(on_progress, "verifyArchive", 0, 0);
         verify_archive(&part_path, &metadata, temp.path())?;
 
+        emit_progress(on_progress, "finalizeApplication", 0, 0);
         fs::rename(&part_path, &output_path).map_err(|error| {
             format!(
                 "Failed to finalize the macOS application export {}: {error}",
@@ -294,6 +334,22 @@ mod macos {
             encrypted_payload_bytes: payload_outcome.footer.encrypted_len,
             stats: package_bin.stats,
         })
+    }
+
+    fn emit_progress(
+        on_progress: Option<&routevn_exporter::ZipExportProgressCallback<'_>>,
+        phase: &str,
+        current: u64,
+        total: u64,
+    ) {
+        if let Some(on_progress) = on_progress {
+            on_progress(routevn_exporter::ZipExportProgress {
+                phase: phase.to_string(),
+                current,
+                total,
+                elapsed_ms: 0,
+            });
+        }
     }
 
     fn validate_metadata(metadata: &MacosApplicationMetadata) -> Result<(), String> {
@@ -341,7 +397,10 @@ mod macos {
         let components = value.split('.').collect::<Vec<_>>();
         components.len() == component_count
             && components.iter().all(|component| {
-                !component.is_empty() && component.bytes().all(|b| b.is_ascii_digit())
+                !component.is_empty()
+                    && component.bytes().all(|byte| byte.is_ascii_digit())
+                    && component.parse::<u64>().is_ok()
+                    && (*component == "0" || !component.starts_with('0'))
             })
             && components
                 .last()
@@ -823,6 +882,7 @@ mod macos {
             .as_dictionary()
             .ok_or_else(|| "The exported macOS player Info.plist is invalid.".to_string())?;
         let expected = [
+            ("CFBundleDisplayName", metadata.title.trim()),
             (
                 "CFBundleIdentifier",
                 metadata.application_identifier.as_str(),
@@ -988,7 +1048,7 @@ mod macos {
         use std::path::{Path, PathBuf};
 
         use super::{
-            MacosApplicationMetadata, export_macos_application_sync,
+            MacosApplicationMetadata, export_macos_application_sync, is_numeric_version,
             is_valid_application_identifier, sanitize_application_name, stamp_icon,
             validate_metadata,
         };
@@ -1012,6 +1072,12 @@ mod macos {
 
         #[test]
         fn validates_export_versions() {
+            assert!(is_numeric_version("1.0.7", 3));
+            assert!(!is_numeric_version("01.0.7", 3));
+            assert!(!is_numeric_version("18446744073709551616.0.7", 3));
+            assert!(is_numeric_version("8", 1));
+            assert!(!is_numeric_version("0", 1));
+            assert!(!is_numeric_version("08", 1));
             assert!(
                 validate_metadata(&MacosApplicationMetadata {
                     title: "Game".to_string(),
@@ -1059,6 +1125,10 @@ mod macos {
             let icon_png = include_bytes!("../icons/128x128.png").to_vec();
             let application_identifier =
                 format!("vn.routevn.player.acceptance-{}", std::process::id());
+            let progress_updates = std::sync::Mutex::new(Vec::new());
+            let on_progress = |progress: routevn_exporter::ZipExportProgress| {
+                progress_updates.lock().unwrap().push(progress.phase);
+            };
 
             let result = export_macos_application_sync(
                 template_path.display().to_string(),
@@ -1074,6 +1144,7 @@ mod macos {
                 Some("Copyright 2026 Acceptance Studio".to_string()),
                 Some("public.app-category.games".to_string()),
                 icon_png,
+                Some(&on_progress),
             )
             .unwrap();
 
@@ -1081,6 +1152,24 @@ mod macos {
             assert!(output_path.is_file());
             assert!(result.package_bin_bytes > 0);
             assert!(result.encrypted_payload_bytes > 0);
+            let progress_updates = progress_updates.into_inner().unwrap();
+            for expected_phase in [
+                "prepareApplication",
+                "scanAssets",
+                "optimizeImages",
+                "writePackage",
+                "encryptPayload",
+                "signApplication",
+                "verifyApplication",
+                "archiveApplication",
+                "verifyArchive",
+                "finalizeApplication",
+            ] {
+                assert!(
+                    progress_updates.iter().any(|phase| phase == expected_phase),
+                    "missing macOS export progress phase: {expected_phase}"
+                );
+            }
 
             let launch_directory = temp.path().join("launch");
             std::fs::create_dir_all(&launch_directory).unwrap();

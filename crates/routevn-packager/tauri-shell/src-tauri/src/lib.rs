@@ -85,11 +85,69 @@ fn is_valid_application_identifier(value: &str) -> bool {
 }
 
 #[cfg(target_os = "macos")]
-fn read_macos_application_identifier(executable_path: &Path) -> Result<String, String> {
+#[derive(Debug, PartialEq, Eq)]
+struct MacosApplicationMetadata {
+    identifier: String,
+    title: Option<String>,
+    version: Option<String>,
+}
+
+#[cfg(target_os = "macos")]
+fn parse_macos_application_metadata(
+    dictionary: &plist::Dictionary,
+) -> Result<MacosApplicationMetadata, String> {
+    let identifier = dictionary
+        .get("CFBundleIdentifier")
+        .and_then(plist::Value::as_string)
+        .ok_or_else(|| "The macOS application is missing CFBundleIdentifier.".to_string())?;
+
+    if !is_valid_application_identifier(identifier) {
+        return Err("The macOS application has an invalid CFBundleIdentifier.".to_string());
+    }
+
+    let title = dictionary
+        .get("CFBundleDisplayName")
+        .or_else(|| dictionary.get("CFBundleName"))
+        .and_then(plist::Value::as_string)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| "The macOS application is missing its display name.".to_string())?;
+    let version = dictionary
+        .get("CFBundleShortVersionString")
+        .and_then(plist::Value::as_string)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| "The macOS application is missing its version.".to_string())?;
+
+    let version_components = version.split('.').collect::<Vec<_>>();
+    if version_components.len() != 3
+        || !version_components.iter().all(|component| {
+            (*component == "0"
+                || (!component.starts_with('0')
+                    && component.bytes().all(|byte| byte.is_ascii_digit())))
+                && component.parse::<u64>().is_ok()
+        })
+    {
+        return Err("The macOS application has an invalid version.".to_string());
+    }
+
+    Ok(MacosApplicationMetadata {
+        identifier: identifier.to_string(),
+        title: Some(title.to_string()),
+        version: Some(version.to_string()),
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn read_macos_application_metadata(
+    executable_path: &Path,
+) -> Result<MacosApplicationMetadata, String> {
     if cfg!(debug_assertions) {
         if let Ok(identifier) = std::env::var("ROUTEVN_PLAYER_APPLICATION_IDENTIFIER") {
             if is_valid_application_identifier(&identifier) {
-                return Ok(identifier);
+                return Ok(MacosApplicationMetadata {
+                    identifier,
+                    title: None,
+                    version: None,
+                });
             }
             return Err(
                 "ROUTEVN_PLAYER_APPLICATION_IDENTIFIER is not a valid application identifier."
@@ -109,17 +167,11 @@ fn read_macos_application_identifier(executable_path: &Path) -> Result<String, S
             info_plist_path.display()
         )
     })?;
-    let identifier = info
+    let dictionary = info
         .as_dictionary()
-        .and_then(|dictionary| dictionary.get("CFBundleIdentifier"))
-        .and_then(plist::Value::as_string)
-        .ok_or_else(|| "The macOS application is missing CFBundleIdentifier.".to_string())?;
+        .ok_or_else(|| "The macOS application Info.plist is not a dictionary.".to_string())?;
 
-    if !is_valid_application_identifier(identifier) {
-        return Err("The macOS application has an invalid CFBundleIdentifier.".to_string());
-    }
-
-    Ok(identifier.to_string())
+    parse_macos_application_metadata(dictionary)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -130,8 +182,19 @@ pub fn run() {
     {
         let executable_path =
             std::env::current_exe().expect("failed to locate the macOS player executable");
-        context.config_mut().identifier = read_macos_application_identifier(&executable_path)
+        let metadata = read_macos_application_metadata(&executable_path)
             .expect("failed to load the macOS player application identity");
+        context.config_mut().identifier = metadata.identifier;
+        if let Some(title) = metadata.title {
+            context.config_mut().product_name = Some(title.clone());
+            context.package_info_mut().name = title;
+        }
+        if let Some(version) = metadata.version {
+            context.config_mut().version = Some(version.clone());
+            context.package_info_mut().version = version
+                .parse()
+                .expect("failed to load the macOS player application version");
+        }
     }
 
     tauri::Builder::default()
@@ -162,12 +225,37 @@ mod tests {
     use super::resolve_embedded_package_path_from_executable;
 
     #[cfg(target_os = "macos")]
+    use super::{MacosApplicationMetadata, parse_macos_application_metadata};
+
+    #[cfg(target_os = "macos")]
     #[test]
     fn resolves_macos_package_from_application_resources() {
         let executable = Path::new("/Applications/Game.app/Contents/MacOS/Game");
         assert_eq!(
             resolve_embedded_package_path_from_executable(executable).unwrap(),
             Path::new("/Applications/Game.app/Contents/Resources/routevn-package.bin")
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn reads_exported_name_version_and_identifier_for_tauri_runtime_metadata() {
+        let mut dictionary = plist::Dictionary::new();
+        dictionary.insert(
+            "CFBundleIdentifier".to_string(),
+            "com.example.project-one".into(),
+        );
+        dictionary.insert("CFBundleDisplayName".to_string(), "Project One".into());
+        dictionary.insert("CFBundleName".to_string(), "Ignored Name".into());
+        dictionary.insert("CFBundleShortVersionString".to_string(), "2.4.1".into());
+
+        assert_eq!(
+            parse_macos_application_metadata(&dictionary).unwrap(),
+            MacosApplicationMetadata {
+                identifier: "com.example.project-one".to_string(),
+                title: Some("Project One".to_string()),
+                version: Some("2.4.1".to_string()),
+            }
         );
     }
 

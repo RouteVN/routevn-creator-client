@@ -98,7 +98,7 @@ describe("platform details validation", () => {
     ).toEqual({ valid: false, code: "web-identifier-invalid" });
   });
 
-  it("requires a valid macOS identifier and validates an optional category", () => {
+  it("requires a valid macOS identifier", () => {
     expect(
       validatePlatformDetails({
         platform: "macos",
@@ -106,7 +106,6 @@ describe("platform details validation", () => {
           applicationName: "Project One",
           iconFileId: "mac-icon",
           applicationIdentifier: "",
-          category: "",
         },
       }),
     ).toEqual({ valid: false, code: "macos-identifier-required" });
@@ -117,18 +116,6 @@ describe("platform details validation", () => {
           applicationName: "Project One",
           iconFileId: "mac-icon",
           applicationIdentifier: "com.example.game",
-          category: "games",
-        },
-      }),
-    ).toEqual({ valid: false, code: "macos-category-invalid" });
-    expect(
-      validatePlatformDetails({
-        platform: "macos",
-        applicationInfo: {
-          applicationName: "Project One",
-          iconFileId: "mac-icon",
-          applicationIdentifier: "com.example.game",
-          category: "public.app-category.games",
         },
       }),
     ).toEqual({ valid: true });

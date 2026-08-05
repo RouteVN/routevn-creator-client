@@ -58,15 +58,32 @@ This makes the bundle identifier and the native SQLite location agree:
 The user must keep the identifier stable across releases that should share
 saves. Changing it intentionally creates a different app/save identity.
 
-Native versions are derived deterministically from the selected version's
-non-negative `actionIndex`:
+The export confirmation requires two release-specific values. Version is
+prefilled from the selected RouteVN version name and must contain three numeric
+components. Build Number starts blank and must be entered manually as a
+positive integer for every export. These values are not stored in macOS
+Platform Details:
 
 ```text
-CFBundleShortVersionString = 1.0.<actionIndex>
-CFBundleVersion            = <actionIndex + 1>
+CFBundleShortVersionString = <entered Version>
+CFBundleVersion            = <entered Build Number>
 ```
 
-Release display names are not copied into native version fields.
+If a free-form RouteVN version name is not already a three-component numeric
+version, the user must edit the prefilled value before export. No build number
+is inferred from project history.
+
+macOS Platform Details currently contains only application name, icon, and
+bundle identifier. Publisher, description, copyright, and application category
+are intentionally omitted from the product UI and export workflow until those
+optional metadata fields have a defined product workflow. Existing stored
+values are preserved unchanged while hidden.
+
+The player also replaces Tauri's compiled template package name and version
+with `CFBundleDisplayName` and `CFBundleShortVersionString` before the native
+menu is created. The macOS About dialog therefore shows the exported
+application name and configured version instead of `RouteVN Shell` and the
+template crate version.
 
 ## Package Resource
 
@@ -82,6 +99,11 @@ footer to:
 The shell resolves this resource on macOS while retaining the existing current
 executable source on Windows. JavaScript metadata and ranged-read commands are
 the same on both platforms.
+
+The exported runtime registers capture-phase pointer, touch, and keyboard
+listeners that resume its Web Audio context directly from a native user
+interaction. This preserves automatic player startup while allowing packaged
+MP3, Ogg, WAV, and other supported audio to play under WebKit's audio policy.
 
 ## Export Transaction
 
@@ -102,6 +124,11 @@ The native exporter:
 10. creates a sibling `.part` archive with `ditto`, expands and validates it,
     then atomically renames it to the selected destination
 
+The native command reports elapsed-time progress throughout those stages. Asset
+scanning, image optimization, and package writing use determinate counts; app
+preparation, encryption, signing, verification, and archiving use named
+indeterminate stages in the same managed progress dialog as Web export.
+
 Icon assembly first builds the standard iconset and uses `iconutil`. A direct
 system `sips` ICNS conversion is retained as a compatibility fallback for
 macOS hosts where `iconutil` rejects an otherwise valid generated iconset.
@@ -119,8 +146,8 @@ The shared project export facade exposes:
 
 The Versions page refreshes real host/template/tool availability and shows the
 macOS action only for a capable Tauri host. Destination cancellation is a
-no-op; active export uses the shared progress state and stable localized toast
-messages.
+no-op; active export forwards native progress through the shared service to the
+managed progress dialog and uses stable localized toast messages.
 
 ## Canonical Implementation Areas
 

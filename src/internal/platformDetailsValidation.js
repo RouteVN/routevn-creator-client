@@ -1,7 +1,5 @@
 import { isValidNativeApplicationIdentifier } from "./nativeApplicationIdentifier.js";
 
-const MACOS_CATEGORY_PATTERN =
-  /^public\.app-category\.[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const WEB_APPLICATION_IDENTIFIER_PATTERN = /^(?=.*[A-Za-z0-9])[A-Za-z0-9.-]+$/;
 
 export const validatePlatformDetails = ({ platform, applicationInfo } = {}) => {
@@ -47,12 +45,6 @@ export const validatePlatformDetails = ({ platform, applicationInfo } = {}) => {
       !isValidNativeApplicationIdentifier(applicationInfo.applicationIdentifier)
     ) {
       return { valid: false, code: "macos-identifier-invalid" };
-    }
-    if (
-      applicationInfo.category &&
-      !MACOS_CATEGORY_PATTERN.test(applicationInfo.category)
-    ) {
-      return { valid: false, code: "macos-category-invalid" };
     }
   }
 

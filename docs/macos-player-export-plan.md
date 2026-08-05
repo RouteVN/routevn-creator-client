@@ -376,24 +376,18 @@ packaging change and is not required to make the first macOS export usable.
 
 ## Native Version Contract
 
-Release names remain free-form product text and must not be copied into native
-version fields. For the initial macOS export, derive both native values from the
-version's non-negative integer `actionIndex`:
+The macOS export confirmation collects both native version values per export.
+Version is prefilled from the selected free-form release name and Build Number
+starts blank so the user must enter it manually:
 
 ```text
-CFBundleShortVersionString = 1.0.<actionIndex>
-CFBundleVersion            = <actionIndex + 1>
+CFBundleShortVersionString = <entered Version>
+CFBundleVersion            = <entered Build Number>
 ```
 
-This produces Apple's required three-integer user-visible version and a
-positive numeric build version without adding a new release form field. The
-mapping is deterministic for a saved version and later versions naturally
-increase as the project action index advances. Reject missing, negative,
-non-integer, or unsafe values before opening the native export command.
-
-If the product later adds explicit semantic release versions, that is a data
-model and UI migration. It must replace this mapping deliberately rather than
-changing existing exports implicitly.
+Reject missing or non-three-component versions and missing, zero, non-integer,
+or out-of-range build numbers before opening the native export command. These
+values are not persisted in macOS Platform Details.
 
 ## Service And UI Work
 
@@ -466,7 +460,7 @@ export.
 - add and backfill `projectInfo.nativeApplicationIdentifier`
 - preserve the field through every platform adapter and project import path
 - document the identifier format and native ownership
-- add the shared `actionIndex` to macOS version mapping
+- add shared validation for manually entered macOS versions and build numbers
 
 Gate: two projects receive different valid identifiers; reopening, renaming,
 and exporting the same project preserves its identifier and version mapping.

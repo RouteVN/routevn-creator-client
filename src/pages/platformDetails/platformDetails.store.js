@@ -20,13 +20,6 @@ const createPlatformApplicationInfo = (platform) => {
     applicationInfo.copyright = "";
   }
 
-  if (platform === "macos") {
-    applicationInfo.publisher = "";
-    applicationInfo.description = "";
-    applicationInfo.copyright = "";
-    applicationInfo.category = "";
-  }
-
   return applicationInfo;
 };
 
@@ -36,7 +29,6 @@ const createPlatformEditDefaultValues = () => ({
   description: "",
   publisher: "",
   copyright: "",
-  category: "",
 });
 
 const getPlatformTitle = (platform, copy) => {
@@ -105,14 +97,11 @@ const buildPlatformDetailFields = (platform, applicationInfo, copy) => {
         : copy.applicationIdentifierLabel,
   });
 
-  if (platform === "windows" || platform === "macos") {
+  if (platform === "windows") {
     fields.push(
       {
         type: "text",
-        label:
-          platform === "windows"
-            ? copy.windowsPublisherLabel
-            : copy.macosPublisherLabel,
+        label: copy.windowsPublisherLabel,
         value: applicationInfo.publisher,
       },
       {
@@ -126,14 +115,6 @@ const buildPlatformDetailFields = (platform, applicationInfo, copy) => {
         value: applicationInfo.copyright,
       },
     );
-  }
-
-  if (platform === "macos") {
-    fields.push({
-      type: "text",
-      label: copy.categoryLabel,
-      value: applicationInfo.category,
-    });
   }
 
   return fields;
@@ -170,15 +151,12 @@ const createPlatformEditForm = (platform, mode, copy) => {
     required: platform !== "windows",
   });
 
-  if (platform === "windows" || platform === "macos") {
+  if (platform === "windows") {
     fields.push(
       {
         name: "publisher",
         type: "input-text",
-        label:
-          platform === "windows"
-            ? copy.windowsPublisherLabel
-            : copy.macosPublisherLabel,
+        label: copy.windowsPublisherLabel,
         description: copy[`${platform}PublisherDescription`],
         required: false,
       },
@@ -197,16 +175,6 @@ const createPlatformEditForm = (platform, mode, copy) => {
         required: false,
       },
     );
-  }
-
-  if (platform === "macos") {
-    fields.push({
-      name: "category",
-      type: "input-text",
-      label: copy.categoryLabel,
-      description: copy.macosCategoryDescription,
-      required: false,
-    });
   }
 
   return {
@@ -352,14 +320,10 @@ export const setPlatformApplicationInfo = (
     target.iconFileId = applicationInfo?.iconFileId ?? undefined;
   }
 
-  if (platform === "windows" || platform === "macos") {
+  if (platform === "windows") {
     target.publisher = applicationInfo?.publisher ?? "";
     target.description = applicationInfo?.description ?? "";
     target.copyright = applicationInfo?.copyright ?? "";
-  }
-
-  if (platform === "macos") {
-    target.category = applicationInfo?.category ?? "";
   }
 
   if (!state.selectedPlatform) {
@@ -407,11 +371,15 @@ const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
     applicationInfo.applicationName;
   state.platformEditDefaultValues.applicationIdentifier =
     applicationInfo.applicationIdentifier ?? "";
-  state.platformEditDefaultValues.description =
-    applicationInfo.description ?? "";
-  state.platformEditDefaultValues.publisher = applicationInfo.publisher ?? "";
-  state.platformEditDefaultValues.copyright = applicationInfo.copyright ?? "";
-  state.platformEditDefaultValues.category = applicationInfo.category ?? "";
+  state.platformEditDefaultValues.description = "";
+  state.platformEditDefaultValues.publisher = "";
+  state.platformEditDefaultValues.copyright = "";
+  if (platform === "windows") {
+    state.platformEditDefaultValues.description =
+      applicationInfo.description ?? "";
+    state.platformEditDefaultValues.publisher = applicationInfo.publisher ?? "";
+    state.platformEditDefaultValues.copyright = applicationInfo.copyright ?? "";
+  }
   state.platformEditIconFileId =
     platform === "web" ? undefined : applicationInfo.iconFileId;
 };
