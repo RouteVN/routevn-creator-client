@@ -114,11 +114,17 @@ template:
                                   - rtgl-view w=f p=md:
                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${selectedResource.name}
                         $else:
-                          - 'rtgl-view#backgroundImage w=355 bw=xs bc=bo h-bc=ac br=md bgc=mu av=c ah=c cur=pointer slot=background style="aspect-ratio: 16 / 9;"':
-                              - rtgl-text s=md c=mu-fg: ${selectBackgroundLabel}
+                          - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=bo h-bc=ac br=md:
+                              - 'rtgl-view br=md w=200 pos=rel overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                                  - 'rtgl-view w=f bgc=mu style="aspect-ratio: 16 / 9; overflow: hidden;"': null
+                                  - rtgl-view w=f p=md:
+                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${selectBackgroundLabel}
                     $else:
-                      - 'rtgl-view#backgroundImage w=355 bw=xs bc=bo h-bc=ac br=md bgc=mu av=c ah=c cur=pointer slot=background style="aspect-ratio: 16 / 9;"':
-                          - rtgl-text s=md c=mu-fg: ${selectBackgroundLabel}
+                      - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=bo h-bc=ac br=md:
+                          - 'rtgl-view br=md w=200 pos=rel overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                              - 'rtgl-view w=f bgc=mu style="aspect-ratio: 16 / 9; overflow: hidden;"': null
+                              - rtgl-view w=f p=md:
+                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${selectBackgroundLabel}
                   - 'rtgl-view#customTransformButton slot=custom-transform data-target-name="${selectedResource.name}" role=button tabindex=0 aria-label="${transformEditorTitle}" w=f p=md bw=xs bc=bo h-bc=pr br=md bgc=bg cur=pointer style="box-sizing: border-box;"':
                       - rtgl-grid cols=2 g=md w=f:
                           - $for item, i in customTransformDetails:
