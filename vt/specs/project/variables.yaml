@@ -75,20 +75,28 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog"
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Variable')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Variable')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#variableDialog"
     state: visible
     timeoutMs: 5000
   - action: wait
     ms: 250
   - action: screenshot
   - action: select
-    selector: "#addVariableDialog rtgl-input#field0 input"
+    selector: "#variableDialog rtgl-input[data-field-name='name'] input"
     steps:
       - action: clear
       - action: write
         value: playerName
   - action: select
-    selector: "#addVariableDialog rtgl-button[data-action-id='submit']"
+    selector: "#variableDialog rtgl-button[data-action-id='submit']"
     steps:
       - action: click
   - action: waitFor
@@ -113,7 +121,7 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog[open]"
+    selector: "#variableDialog[open]"
     state: attached
     timeoutMs: 5000
   - action: wait
@@ -122,7 +130,7 @@ steps:
   - action: keypress
     key: Escape
   - action: waitFor
-    selector: "#addVariableDialog"
+    selector: "#variableDialog"
     state: hidden
     timeoutMs: 10000
   - action: select
@@ -170,52 +178,60 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog"
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Variable')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Variable')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#variableDialog"
     state: visible
     timeoutMs: 5000
   - action: wait
     ms: 250
   - action: select
-    selector: "#addVariableDialog rtgl-input#field0 input"
+    selector: "#variableDialog rtgl-input[data-field-name='name'] input"
     steps:
       - action: clear
       - action: write
         value: score
   - action: waitFor
-    selector: "#addVariableDialog rtgl-select#field4 [data-testid='select-button']"
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] [data-testid='select-button']"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#addVariableDialog rtgl-select#field4 [data-testid='select-button']"
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] [data-testid='select-button']"
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog rtgl-select#field4 #option1"
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] #option1"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#addVariableDialog rtgl-select#field4 #option1"
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] #option1"
     steps:
       - action: click
   - action: wait
     ms: 250
   - action: waitFor
-    selector: "#addVariableDialog rtgl-input-number#field5 input"
+    selector: "#variableDialog rtgl-input-number[data-field-name='default'] input"
     state: attached
     timeoutMs: 5000
   - action: select
-    selector: "#addVariableDialog rtgl-input-number#field5 input"
+    selector: "#variableDialog rtgl-input-number[data-field-name='default'] input"
     steps:
       - action: clear
       - action: write
         value: "42"
   - action: screenshot
   - action: select
-    selector: "#addVariableDialog rtgl-button[data-action-id='submit']"
+    selector: "#variableDialog rtgl-button[data-action-id='submit']"
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog"
+    selector: "#variableDialog"
     state: hidden
     timeoutMs: 10000
   - action: select
@@ -263,7 +279,7 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog[open]"
+    selector: "#variableDialog[open]"
     state: attached
     timeoutMs: 5000
   - action: wait
@@ -272,7 +288,7 @@ steps:
   - action: keypress
     key: Escape
   - action: waitFor
-    selector: "#addVariableDialog"
+    selector: "#variableDialog"
     state: hidden
     timeoutMs: 10000
   - action: select
@@ -302,60 +318,68 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog"
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Variable')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Variable')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#variableDialog"
     state: visible
     timeoutMs: 5000
   - action: wait
     ms: 250
   - action: select
-    selector: "#addVariableDialog rtgl-input#field0 input"
+    selector: "#variableDialog rtgl-input[data-field-name='name'] input"
     steps:
       - action: clear
       - action: write
         value: hasKey
   - action: waitFor
-    selector: "#addVariableDialog rtgl-select#field4 [data-testid='select-button']"
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] [data-testid='select-button']"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#addVariableDialog rtgl-select#field4 [data-testid='select-button']"
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] [data-testid='select-button']"
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog rtgl-select#field4 #option2"
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] #option2"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#addVariableDialog rtgl-select#field4 #option2"
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] #option2"
     steps:
       - action: click
   - action: wait
     ms: 250
   - action: waitFor
-    selector: "#addVariableDialog rtgl-select#field5 [data-testid='select-button']"
+    selector: "#variableDialog rtgl-select[data-field-name='default'] [data-testid='select-button']"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#addVariableDialog rtgl-select#field5 [data-testid='select-button']"
+    selector: "#variableDialog rtgl-select[data-field-name='default'] [data-testid='select-button']"
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog rtgl-select#field5 #option0"
+    selector: "#variableDialog rtgl-select[data-field-name='default'] #option0"
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "#addVariableDialog rtgl-select#field5 #option0"
+    selector: "#variableDialog rtgl-select[data-field-name='default'] #option0"
     steps:
       - action: click
   - action: wait
     ms: 250
   - action: screenshot
   - action: select
-    selector: "#addVariableDialog rtgl-button[data-action-id='submit']"
+    selector: "#variableDialog rtgl-button[data-action-id='submit']"
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog"
+    selector: "#variableDialog"
     state: hidden
     timeoutMs: 10000
   - action: select
@@ -403,7 +427,7 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#addVariableDialog[open]"
+    selector: "#variableDialog[open]"
     state: attached
     timeoutMs: 5000
   - action: wait
