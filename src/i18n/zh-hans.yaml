@@ -738,6 +738,8 @@ animationEditorPage:
   defaultLabel: "默认"
   delayMsLabel: "延迟（ms）"
   deletePropertyButtonLabel: "删除属性"
+  propertyRemoveConfirmMessage: "要删除这个动画属性吗？此操作无法撤消。"
+  propertyRemoveConfirmTitle: "删除属性"
   deleteKeyframeMenuItem: "删除关键帧"
   doneButton: "完成"
   durationMsLabel: "时长（ms）"

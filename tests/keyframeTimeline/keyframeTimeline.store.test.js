@@ -208,10 +208,58 @@ describe("keyframeTimeline easing curves", () => {
     expect(viewData.selectedProperties[0]).toMatchObject({
       backgroundColor: "bg",
       hoverBackgroundColor: "bg",
-      initialValueCursor: "default",
       rowCursor: "default",
       keyframes: [{ cursor: "default" }],
     });
+  });
+
+  it("highlights the used duration within a longer displayed timeline", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        properties: {
+          x: {
+            keyframes: [{ duration: 1000, value: 100 }],
+          },
+        },
+        showRuler: true,
+        timelineDuration: 3000,
+        usedDuration: 1000,
+      },
+    });
+
+    expect(viewData.usedDurationVisible).toBe(true);
+    expect(viewData.usedDurationStyle).toContain("width: 33.33%");
+  });
+
+  it("previews used-duration expansion and shrink while resizing", () => {
+    const state = createInitialState();
+    state.durationResize = {
+      property: "x",
+      index: 0,
+      delay: 0,
+      duration: 1500,
+      timelineDuration: 3000,
+    };
+    const props = {
+      properties: {
+        x: {
+          keyframes: [{ duration: 1000, value: 100 }],
+        },
+      },
+      showRuler: true,
+      timelineDuration: 3000,
+      usedDuration: 1000,
+    };
+
+    expect(selectViewData({ state, props }).usedDurationStyle).toContain(
+      "width: 50.00%",
+    );
+
+    state.durationResize.duration = 500;
+    expect(selectViewData({ state, props }).usedDurationStyle).toContain(
+      "width: 16.67%",
+    );
   });
 
   it("renders decorative SVG paths without replacing keyframe click targets", () => {
@@ -221,6 +269,11 @@ describe("keyframeTimeline easing curves", () => {
     );
 
     expect(view).toContain("data-keyframe=true");
+    expect(view).toContain(
+      "p=xs bgc=${keyframe.backgroundColor} bw=xs br=md",
+    );
+    expect(view).toContain("data-keyframe-slot=true h=f pos=rel style=");
+    expect(view).not.toContain("data-keyframe-slot=true h=f pos=rel bgc=");
     expect(view).toContain("handler: handleRulerScrubStart");
     expect(view).toContain("handler: handleKeyframeMoveStart");
     expect(view).toContain("handler: handleKeyframeMove");
@@ -228,6 +281,18 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).not.toContain("handler: handlePropertyNameRightClick");
     expect(view).not.toContain("property-name-right-click");
     expect(view).toContain("handler: handlePropertyNameKeyDown");
+    expect(view).not.toContain("handler: handleInitialValueClick");
+    expect(view).not.toContain("data-interactive=${property.initialValueInteractive}");
+    expect(
+      view.match(/rtgl-view pos=abs bgc=su style="\$\{usedDurationStyle\}"/g),
+    ).toHaveLength(1);
+    expect(view).toContain(
+      "data-keyframe-track=true data-property=${property.name} data-track-mode=${property.trackMode} d=h w=f h=24 bgc=mu",
+    );
+    expect(view).not.toContain(
+      "data-track-mode=${property.trackMode} d=h w=f h=24 bgc=mu br=sm g=xs",
+    );
+    expect(view).toContain('style="${usedDurationStyle}"');
     expect(view).toContain("$if property.thumbnail:");
     expect(view).toContain(
       "rtgl-view#propertyName${pIndex}.keyframeTimelinePropertyRow",
@@ -247,7 +312,7 @@ describe("keyframeTimeline easing curves", () => {
     );
     expect(view).toMatch(/w=104 bgc=bg bwr=xs bc=bo[^\n]+position: sticky/);
     expect(view).toContain("left: 0; z-index: 6");
-    expect(view).toMatch(/data-keyframe=true[^\n]+br=lg/);
+    expect(view).toMatch(/data-keyframe=true[^\n]+br=md/);
     expect(view).toMatch(/data-keyframe-slot=true[^\n]+flex-shrink: 0/);
     expect(view).toMatch(
       /data-keyframe=true[^\n]+top: 2px; bottom: 2px; left: \$\{keyframe.delayPercent\}%; right: 0/,
@@ -528,6 +593,29 @@ describe("keyframeTimeline easing curves", () => {
 
     expect(viewData.rulerIndicatorVisible).toBe(true);
     expect(viewData.playheadIndicatorTimeLabel).toBe("500 ms");
+    expect(viewData.playheadIndicatorLabelStyle).toContain("top: 4px");
+    expect(viewData.playheadIndicatorLabelStyle).toContain("z-index: 10");
+  });
+
+  it("keeps the exact endpoint unlabeled on the ruler", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        showRuler: true,
+        timelineDuration: 5200,
+        properties: {
+          x: {
+            keyframes: [{ duration: 1000, value: 10 }],
+          },
+        },
+      },
+    });
+
+    expect(viewData.rulerTicks.at(-1)).toMatchObject({
+      id: "tick-5200",
+      label: undefined,
+    });
+    expect(viewData.rulerTicks.some((tick) => tick.label === "5s")).toBe(true);
   });
 });
 

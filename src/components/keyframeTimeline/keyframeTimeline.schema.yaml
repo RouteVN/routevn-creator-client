@@ -24,6 +24,9 @@ propsSchema:
     timelineDuration:
       type: number
       description: Optional shared duration in milliseconds used for timeline sizing
+    usedDuration:
+      type: number
+      description: Actual used duration in milliseconds highlighted within the displayed timeline
     showTotalDuration:
       type: boolean
       description: Whether the timeline should render its duration header

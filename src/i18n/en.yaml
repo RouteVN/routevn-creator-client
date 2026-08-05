@@ -738,6 +738,8 @@ animationEditorPage:
   defaultLabel: "Default"
   delayMsLabel: "Delay (ms)"
   deletePropertyButtonLabel: "Delete property"
+  propertyRemoveConfirmMessage: "Delete this animation property? This cannot be undone."
+  propertyRemoveConfirmTitle: "Delete Property"
   deleteKeyframeMenuItem: "Delete keyframe"
   doneButton: "Done"
   durationMsLabel: "Duration (ms)"

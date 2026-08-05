@@ -11,15 +11,19 @@ import {
   commitPendingTransitionMask,
   createInitialState,
   clearSelectedKeyframe,
+  clearTimelineUsedDurationPreview,
   clearTimelineSelection,
+  closePropertyRemoveConfirmDialog,
   deleteKeyframe,
   deleteProperty,
   disableTransitionMask,
   enableTransitionMask,
+  extendTimelineDisplayDuration,
   moveKeyframeLeft,
   moveKeyframeRight,
   nudgeTimelineZoom,
   openDialog,
+  openPropertyRemoveConfirmDialog,
   selectAnimationRenderStateWithAnimations,
   selectAnimationResetState,
   selectPreviewDurationMs,
@@ -53,6 +57,7 @@ import {
   stopTimelinePan,
   setTimelinePanMode,
   setTimelineScrollMetrics,
+  setTimelineUsedDurationPreview,
   setTimelineZoom,
   setTransitionMaskChannel,
   setTransitionMaskImage,
@@ -87,6 +92,58 @@ describe("animationEditor.store", () => {
 
     openDialog({ state }, { dialogType: "update" });
     expect(selectSelectedEditorTab({ state })).toBe("tween");
+  });
+
+  it("hides empty transition property categories", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      activeTimelineEmpty: true,
+      previousTimelineVisible: false,
+      nextTimelineVisible: false,
+      maskTimelineVisible: false,
+    });
+
+    state.tweenBySection.prev.alpha = { keyframes: [] };
+    state.tweenBySection.next.x = { keyframes: [] };
+    enableTransitionMask({ state });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      activeTimelineEmpty: false,
+      previousTimelineVisible: true,
+      nextTimelineVisible: true,
+      maskTimelineVisible: true,
+    });
+  });
+
+  it("shows the empty timeline action until an update property is added", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+
+    expect(selectViewData({ state, i18n: EN_I18N }).activeTimelineEmpty).toBe(
+      true,
+    );
+
+    state.tweenBySection.update.alpha = { keyframes: [] };
+
+    expect(selectViewData({ state, i18n: EN_I18N }).activeTimelineEmpty).toBe(
+      false,
+    );
+  });
+
+  it("exposes property removal confirmation state", () => {
+    const state = createInitialState();
+
+    openPropertyRemoveConfirmDialog({ state });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).propertyRemoveConfirmDialogOpen,
+    ).toBe(true);
+
+    closePropertyRemoveConfirmDialog({ state });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).propertyRemoveConfirmDialogOpen,
+    ).toBe(false);
   });
 
   it("limits the preview canvas to half the viewport height", () => {
@@ -174,20 +231,61 @@ describe("animationEditor.store", () => {
     expect(viewData.timelinePlayheadStyle).toContain(
       "left: calc(104px + (100% - 104px) * 0.5)",
     );
+    expect(viewData.timelinePlayheadStyle).toContain("z-index: 8");
   });
 
-  it("positions the playhead against the minimum one-second timeline scale", () => {
+  it("fills the measured timeline viewport", () => {
     const state = createInitialState();
     state.tweenBySection.update.x = {
       keyframes: [{ duration: 500, value: 10 }],
     };
+    setTimelineScrollMetrics({ state }, { scrollLeft: 0, viewportWidth: 704 });
     setPreviewPlayhead({ state }, { timeMs: 500, visible: true });
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.timelineDisplayDuration).toBe(1000);
+    expect(viewData.timelineDisplayDuration).toBe(3000);
+    expect(viewData.activeTimelineDuration).toBe(500);
+    expect(viewData.timelineUsedAreaStyle).toContain(
+      "width: calc((100% - 104px) * 0.16666666666666666)",
+    );
     expect(viewData.timelinePlayheadStyle).toContain(
-      "left: calc(104px + (100% - 104px) * 0.5)",
+      "left: calc(104px + (100% - 104px) * 0.16666666666666666)",
+    );
+  });
+
+  it("expands and shrinks the used timeline area during interaction", () => {
+    const state = createInitialState();
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 1000, value: 10 }],
+    };
+    setTimelineScrollMetrics({ state }, { scrollLeft: 0, viewportWidth: 704 });
+
+    setTimelineUsedDurationPreview(
+      { state },
+      { side: "update", duration: 2400 },
+    );
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      activeTimelineDuration: 2400,
+      timelineUsedAreaStyle: expect.stringContaining(
+        "width: calc((100% - 104px) * 0.8)",
+      ),
+    });
+
+    setTimelineUsedDurationPreview(
+      { state },
+      { side: "update", duration: 500 },
+    );
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      activeTimelineDuration: 500,
+      timelineUsedAreaStyle: expect.stringContaining(
+        "width: calc((100% - 104px) * 0.16666666666666666)",
+      ),
+    });
+
+    clearTimelineUsedDurationPreview({ state });
+    expect(selectViewData({ state, i18n: EN_I18N }).activeTimelineDuration).toBe(
+      1000,
     );
   });
 
@@ -229,7 +327,7 @@ describe("animationEditor.store", () => {
       timelineZoomMax: 4,
       timelineZoomStep: 0.125,
       timelinePixelsPerSecond: 525,
-      timelineCanvasStyle: "width: 1679px; min-width: 104px; flex-shrink: 0;",
+      timelineCanvasStyle: "width: 1679px; min-width: 100%; flex-shrink: 0;",
       timelineDisplayDuration: 3000,
       timelineZoomLabel: "Timeline zoom",
     });
@@ -249,8 +347,29 @@ describe("animationEditor.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       timelineZoom: 1,
       timelinePixelsPerSecond: 200,
-      timelineCanvasStyle: "width: 504px; min-width: 104px; flex-shrink: 0;",
+      timelineCanvasStyle: "width: 504px; min-width: 100%; flex-shrink: 0;",
       timelineDisplayDuration: 2000,
+      activeTimelineDuration: 2000,
+    });
+  });
+
+  it("extends the ruler beyond the viewport-filled duration", () => {
+    const state = createInitialState();
+    state.tweenBySection.update.x = {
+      keyframes: [{ duration: 1000, value: 10 }],
+    };
+    setTimelineScrollMetrics({ state }, { scrollLeft: 0, viewportWidth: 704 });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      timelineCanvasStyle: "width: 704px; min-width: 100%; flex-shrink: 0;",
+      timelineDisplayDuration: 3000,
+    });
+
+    extendTimelineDisplayDuration({ state }, { duration: 4000 });
+
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      timelineCanvasStyle: "width: 904px; min-width: 100%; flex-shrink: 0;",
+      timelineDisplayDuration: 4000,
     });
   });
 
@@ -402,8 +521,19 @@ describe("animationEditor.store", () => {
     expect(viewData.selectedPropertyDetailFields).toEqual([
       { type: "text", label: "Timeline", value: "Outgoing" },
       { type: "text", label: "Property", value: "Alpha" },
-      { type: "text", label: "Initial value", value: 0.5 },
+      {
+        type: "slot",
+        label: "Initial value",
+        slot: "property-initial-value",
+      },
     ]);
+    expect(viewData.selectedPropertyEditor).toEqual({
+      initialValue: 0.5,
+      initialValueLabel: "Initial value",
+      initialValueSlider: { min: 0, max: 1, step: 0.01 },
+      initialValueStep: "any",
+      initialValueUsesPopover: false,
+    });
 
     setSelectedKeyframe(
       { state },

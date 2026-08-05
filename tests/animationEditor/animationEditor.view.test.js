@@ -108,22 +108,29 @@ describe("animationEditor view", () => {
       'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"',
     );
     expect(view).toContain("handler: handleSelectedPropertyDeleteClick");
+    expect(view).toContain("rtgl-dialog#propertyRemoveConfirmDialog");
+    expect(view).toContain("?open=${propertyRemoveConfirmDialogOpen}");
+    expect(view).toContain("handler: handlePropertyRemoveConfirmDialogClose");
+    expect(view).toContain("handler: handlePropertyRemoveConfirmClick");
     expect(view).toContain("rtgl-text s=sm c=mu-fg ta=c: ${noSelectionLabel}");
     expect(view).not.toContain("${selectTimelineItemPrompt}");
     expect(view).toContain("rtgl-button#editSelectedKeyframeButton");
     expect(view).toContain("rtgl-select#selectedKeyframeEasingSelect");
     expect(view).toContain("handler: handleSelectedKeyframeEasingChange");
     expect(view).toContain(
-      "rtgl-popover-input#selectedKeyframeDelay slot=keyframe-delay",
+      "data-popover-input-field=true slot=keyframe-delay",
     );
     expect(view).toContain(
-      "rtgl-popover-input#selectedKeyframeDuration slot=keyframe-duration",
+      "rtgl-popover-input#selectedKeyframeDelay value=${selectedKeyframeEditor.delay}",
+    );
+    expect(view).toContain(
+      "data-popover-input-field=true slot=keyframe-duration",
     );
     expect(view).toContain(
       "rtgl-slider-input#selectedKeyframeValue slot=keyframe-value",
     );
     expect(view).toContain(
-      "rtgl-popover-input#selectedKeyframeValuePopover slot=keyframe-value",
+      "data-popover-input-field=true slot=keyframe-value",
     );
     expect(view).toContain(
       "rtgl-segmented-control#selectedKeyframeRelative slot=keyframe-value-type",
@@ -152,6 +159,17 @@ describe("animationEditor view", () => {
     expect(view).not.toContain("rtgl-view#animationMaskPanel");
     expect(view).toContain("rtgl-view#animationPreviewPanel");
     expect(view).toContain("rtgl-view#maskTimelineCategory");
+    expect(view).toContain("$if previousTimelineVisible");
+    expect(view).toContain("$if nextTimelineVisible");
+    expect(view).toContain("$if maskTimelineVisible");
+    expect(view).toContain("$if activeTimelineEmpty");
+    expect(view.match(/\$if !activeTimelineEmpty/g)).toHaveLength(2);
+    expect(view).toContain("rtgl-view#emptyTimelineAddPropertiesButton");
+    expect(view).toContain("w=f h=200 av=c ah=c g=md bw=xs bc=bo br=md");
+    expect(view).toContain("rtgl-svg svg=plus wh=24");
+    expect(view).toContain("rtgl-text: ${addPropertyButtonLabel}");
+    expect(view).toContain("handler: handleAddPropertiesClick");
+    expect(view).toContain("handler: handleEmptyTimelineAddPropertiesKeyDown");
     expect(view).toContain("rtgl-text s=sm c=mu-fg: ${maskTitle}");
     expect(view).toContain("rtgl-view w=72 av=c ah=s pl=sm");
     expect(view).not.toContain("rtgl-view w=72 av=c ah=c");
@@ -166,9 +184,6 @@ describe("animationEditor view", () => {
     const maskTimelineListeners = view.slice(
       view.indexOf("  maskKeyframeTimeline*:"),
       view.indexOf("  addPropertyPopover:"),
-    );
-    expect(maskTimelineListeners).toContain(
-      "handler: handleSelectedMaskInitialValueClick",
     );
     expect(maskTimelineListeners).not.toContain(
       "handler: handleInitialValueClick",
@@ -185,6 +200,16 @@ describe("animationEditor view", () => {
     expect(view).toContain("handler: handleSelectedMaskSoftnessClick");
     expect(view).toContain("rtgl-view#selectedMaskInitialValue");
     expect(view).toContain("handler: handleSelectedMaskInitialValueClick");
+    expect(view).toContain(
+      "rtgl-slider-input#selectedPropertyInitialValue slot=property-initial-value",
+    );
+    expect(view).toContain(
+      "data-popover-input-field=true slot=property-initial-value",
+    );
+    expect(view.match(/data-popover-input-field=true/g)).toHaveLength(4);
+    expect(view).toContain(
+      "handler: handleSelectedPropertyInitialValueChange",
+    );
     expect(view).not.toContain("rtgl-view#selectedMaskProgressDuration");
     expect(view).not.toContain(
       "handler: handleSelectedMaskProgressDurationClick",
@@ -278,6 +303,8 @@ describe("animationEditor view", () => {
     expect(view).toContain("handler: handleTimelinePanStart");
     expect(view).toContain("handler: handleTimelinePanMove");
     expect(view).toContain("handler: handleTimelinePanEnd");
+    expect(view).toContain("handler: handleTimelineDurationExtend");
+    expect(view).toContain("handler: handleTimelineUsedDurationPreview");
     expect(view).toContain("cur=${timelinePanCursor}");
     expect(view).not.toContain(
       'timelineScrollContainer w=f style="min-width: 0; overflow-x: auto',
@@ -291,8 +318,13 @@ describe("animationEditor view", () => {
       'rtgl-view w=f bgc=bg style="position: sticky; top: 0; z-index: 7;"',
     );
     expect(view).toContain("timelineDuration=${timelineDisplayDuration}");
+    expect(view).toContain("usedDuration=${activeTimelineDuration}");
+    expect(
+      view.match(
+        /rtgl-view pos=abs bgc=su style="\$\{timelineUsedAreaStyle\}"/g,
+      ),
+    ).toHaveLength(2);
     expect(view).not.toContain("timelineZoomPercent");
-    expect(view).not.toContain("min-width: 100%");
     expect(view).not.toContain("d=v h=f pos=rel");
     expect(view).toContain("$if timelinePlayheadVisible");
     expect(view).toContain('style="${timelinePlayheadStyle}"');

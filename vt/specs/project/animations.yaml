@@ -326,6 +326,36 @@ steps:
     state: visible
     timeoutMs: 5000
   - action: select
+    selector: "#previousTimeline #propertyName0[role='button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#selectedPropertyDetails"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#selectedPropertyDeleteButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#propertyRemoveConfirmDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "#propertyRemoveConfirmButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#propertyRemoveConfirmDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#previousTimeline"
+    state: hidden
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
     selector: "#maskTrackRow0 #propertyName0[role='button']"
     steps:
       - action: focus
@@ -334,5 +364,58 @@ steps:
   - action: waitFor
     selector: "#selectedMaskDetails"
     state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#selectedMaskDeleteButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#maskRemoveConfirmDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#maskRemoveConfirmButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#maskTimelineCategory"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "#nextTimeline #propertyName0[role='button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#selectedPropertyDetails"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#selectedPropertyDeleteButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#propertyRemoveConfirmDialog[open]"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#propertyRemoveConfirmButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#nextTimeline"
+    state: hidden
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "#emptyTimelineAddPropertiesButton"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "#emptyTimelineAddPropertiesButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-dropdown-menu#addPropertySideMenu"
+    state: visible
     timeoutMs: 5000
 ---

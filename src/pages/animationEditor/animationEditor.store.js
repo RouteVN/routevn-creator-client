@@ -1345,6 +1345,8 @@ export const createInitialState = () => ({
   timelineZoom: TIMELINE_ZOOM_DEFAULT,
   timelineScrollLeft: 0,
   timelineViewportWidth: undefined,
+  timelineDisplayDurationOverrideMs: undefined,
+  timelineUsedDurationPreview: undefined,
   dialogType: "update",
   targetGroupId: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
@@ -1379,6 +1381,7 @@ export const createInitialState = () => ({
   isTouchMode: false,
   isPreviewDialogOpen: false,
   maskRemoveConfirmDialogOpen: false,
+  propertyRemoveConfirmDialogOpen: false,
   popover: {
     mode: "none",
     x: undefined,
@@ -1446,6 +1449,41 @@ export const nudgeTimelineZoom = ({ state }, { delta } = {}) => {
 
 export const selectTimelineZoom = ({ state }) => {
   return state.timelineZoom;
+};
+
+export const selectTimelineViewportWidth = ({ state }) => {
+  return state.timelineViewportWidth;
+};
+
+export const extendTimelineDisplayDuration = ({ state }, { duration } = {}) => {
+  const numericDuration = Number(duration);
+  if (!Number.isFinite(numericDuration) || numericDuration <= 0) {
+    return;
+  }
+
+  state.timelineDisplayDurationOverrideMs = Math.max(
+    state.timelineDisplayDurationOverrideMs ?? 0,
+    numericDuration,
+  );
+};
+
+export const setTimelineUsedDurationPreview = (
+  { state },
+  { side, duration } = {},
+) => {
+  const numericDuration = Number(duration);
+  if (!side || !Number.isFinite(numericDuration) || numericDuration < 0) {
+    return;
+  }
+
+  state.timelineUsedDurationPreview = {
+    side,
+    duration: numericDuration,
+  };
+};
+
+export const clearTimelineUsedDurationPreview = ({ state }, _payload = {}) => {
+  state.timelineUsedDurationPreview = undefined;
 };
 
 export const setTimelinePanHovered = ({ state }, { hovered } = {}) => {
@@ -1569,6 +1607,10 @@ export const openDialog = (
   state.selectedProperty = undefined;
   state.selectedMask = false;
   state.selectedMaskIndex = undefined;
+  state.timelineDisplayDurationOverrideMs = undefined;
+  state.timelineUsedDurationPreview = undefined;
+  state.maskRemoveConfirmDialogOpen = false;
+  state.propertyRemoveConfirmDialogOpen = false;
   state.editMode = Boolean(editMode);
   state.editItemId = itemId;
   state.pendingTransitionMask = undefined;
@@ -3110,6 +3152,14 @@ export const closeMaskRemoveConfirmDialog = ({ state }, _payload = {}) => {
   state.maskRemoveConfirmDialogOpen = false;
 };
 
+export const openPropertyRemoveConfirmDialog = ({ state }, _payload = {}) => {
+  state.propertyRemoveConfirmDialogOpen = true;
+};
+
+export const closePropertyRemoveConfirmDialog = ({ state }, _payload = {}) => {
+  state.propertyRemoveConfirmDialogOpen = false;
+};
+
 const buildTransitionMaskPanelDataForMask = (
   state,
   transitionMask,
@@ -3360,6 +3410,10 @@ const buildSelectedPropertyPanelData = (
     propertyConfig.initialValue !== undefined &&
     propertyConfig.initialValue !== "";
   const autoConfig = propertyConfig.auto;
+  const initialValue = hasInitialValue
+    ? propertyConfig.initialValue
+    : (propertyFieldConfig[property]?.defaultValue ?? 0);
+  const initialValueSlider = propertyFieldConfig[property]?.slider;
   const fields = [
     {
       type: "text",
@@ -3371,13 +3425,19 @@ const buildSelectedPropertyPanelData = (
       label: copy.propertyLabel ?? "Property",
       value: propertyFieldConfig[property]?.label ?? property,
     },
-    {
-      type: "text",
-      label: copy.initialValueLabel ?? "Initial value",
-      value: hasInitialValue
-        ? propertyConfig.initialValue
-        : (copy.defaultLabel ?? "Default"),
-    },
+    autoConfig
+      ? {
+          type: "text",
+          label: copy.initialValueLabel ?? "Initial value",
+          value: hasInitialValue
+            ? propertyConfig.initialValue
+            : (copy.defaultLabel ?? "Default"),
+        }
+      : {
+          type: "slot",
+          label: copy.initialValueLabel ?? "Initial value",
+          slot: "property-initial-value",
+        },
   ];
 
   if (autoConfig) {
@@ -3400,17 +3460,36 @@ const buildSelectedPropertyPanelData = (
 
   return {
     id: `${side}:${property}`,
+    editor: autoConfig
+      ? undefined
+      : {
+          initialValue,
+          initialValueLabel: copy.initialValueLabel ?? "Initial value",
+          initialValueSlider,
+          initialValueStep: propertyFieldConfig[property]?.input?.step ?? "any",
+          initialValueUsesPopover: Boolean(
+            propertyFieldConfig[property]?.input,
+          ),
+        },
     fields,
   };
 };
 
 const createTimelineMetrics = ({ state, activeTimelineDuration }) => {
+  const timelinePixelsPerSecond = Math.round(
+    TIMELINE_BASE_PIXELS_PER_SECOND * state.timelineZoom,
+  );
+  const viewportTimelineDuration =
+    state.timelineViewportWidth > TIMELINE_PROPERTY_COLUMN_WIDTH
+      ? ((state.timelineViewportWidth - TIMELINE_PROPERTY_COLUMN_WIDTH) /
+          timelinePixelsPerSecond) *
+        1000
+      : 0;
   const timelineDisplayDuration = Math.max(
     TIMELINE_MIN_DISPLAY_DURATION_MS,
     activeTimelineDuration,
-  );
-  const timelinePixelsPerSecond = Math.round(
-    TIMELINE_BASE_PIXELS_PER_SECOND * state.timelineZoom,
+    viewportTimelineDuration,
+    state.timelineDisplayDurationOverrideMs ?? 0,
   );
   const timelineCanvasWidth = Math.round(
     TIMELINE_PROPERTY_COLUMN_WIDTH +
@@ -3444,15 +3523,40 @@ const createTimelineMetrics = ({ state, activeTimelineDuration }) => {
 };
 
 const getActiveTimelineDuration = (state) => {
+  const preview = state.timelineUsedDurationPreview;
   if (state.dialogType !== "transition") {
-    return getPropertiesDuration(getSectionProperties(state, "update"));
+    return preview?.side === "update"
+      ? preview.duration
+      : getPropertiesDuration(getSectionProperties(state, "update"));
   }
 
-  return getTransitionTimelineDuration({
-    prevProperties: getSectionProperties(state, "prev"),
-    nextProperties: getSectionProperties(state, "next"),
-    mask: getEffectiveTransitionMask(state),
-  });
+  const previousDuration =
+    preview?.side === "prev"
+      ? preview.duration
+      : getPropertiesDuration(getSectionProperties(state, "prev"));
+  const nextDuration =
+    preview?.side === "next"
+      ? preview.duration
+      : getPropertiesDuration(getSectionProperties(state, "next"));
+  const maskDuration = getTransitionMasks(state).reduce(
+    (maxDuration, mask, index) => {
+      const side = createMaskSide(index);
+      if (preview?.side !== side) {
+        return Math.max(maxDuration, getTransitionTimelineDuration({ mask }));
+      }
+
+      const committedProgressDuration = getPropertiesDuration(
+        getSectionProperties(state, side),
+      );
+      const committedMaskDuration = getTransitionTimelineDuration({ mask });
+      const previewMaskDuration =
+        committedMaskDuration - committedProgressDuration + preview.duration;
+      return Math.max(maxDuration, previewMaskDuration);
+    },
+    0,
+  );
+
+  return Math.max(previousDuration, nextDuration, maskDuration);
 };
 
 export const selectTimelinePlayheadVisible = ({ state }) => {
@@ -3478,15 +3582,9 @@ export const selectViewData = ({ state, i18n }) => {
   const updateProperties = getSectionProperties(state, "update");
   const previousProperties = getSectionProperties(state, "prev");
   const nextProperties = getSectionProperties(state, "next");
-  const transitionTimelineDuration = getTransitionTimelineDuration({
-    prevProperties: previousProperties,
-    nextProperties,
-    mask: getEffectiveTransitionMask(state),
-  });
-  const activeTimelineDuration =
-    dialogType === "transition"
-      ? transitionTimelineDuration
-      : getPropertiesDuration(updateProperties);
+  const activeTimelineDuration = getActiveTimelineDuration(state);
+  const transitionTimelineDuration =
+    dialogType === "transition" ? activeTimelineDuration : 0;
   const {
     timelineCanvasWidth,
     timelineDisplayDuration,
@@ -3498,8 +3596,13 @@ export const selectViewData = ({ state, i18n }) => {
     state.previewPlayheadVisible &&
     activeTimelineDuration > 0 &&
     timelinePlayheadWithinViewport;
+  const timelineUsedAreaRatio =
+    timelineDisplayDuration > 0
+      ? Math.min(1, activeTimelineDuration / timelineDisplayDuration)
+      : 0;
+  const timelineUsedAreaStyle = `top: 0; bottom: 0; left: 104px; width: calc((100% - 104px) * ${timelineUsedAreaRatio}); pointer-events: none; z-index: 0;`;
   const timelinePlayheadStyle = timelinePlayheadVisible
-    ? `top: 10px; bottom: 0; left: calc(104px + (100% - 104px) * ${timelinePlayheadRatio}); width: 1px; transform: translateX(-0.5px); pointer-events: none; z-index: 5;`
+    ? `top: 10px; bottom: 0; left: calc(104px + (100% - 104px) * ${timelinePlayheadRatio}); width: 1px; transform: translateX(-0.5px); pointer-events: none; z-index: 8;`
     : "";
   const updateTimelineDefaultValues = createTimelineDefaultValues(
     UPDATE_PROPERTY_KEYS,
@@ -3595,6 +3698,13 @@ export const selectViewData = ({ state, i18n }) => {
   );
   const maskTimelineRow = maskTimelineRows[0];
   const maskTimelineProperties = maskTimelineRow?.properties ?? {};
+  const previousTimelineVisible = Object.keys(previousProperties).length > 0;
+  const nextTimelineVisible = Object.keys(nextProperties).length > 0;
+  const maskTimelineVisible = maskTimelineRows.length > 0;
+  const activeTimelineEmpty =
+    dialogType === "transition"
+      ? !previousTimelineVisible && !nextTimelineVisible && !maskTimelineVisible
+      : Object.keys(updateProperties).length === 0;
   const previewPanel = buildPreviewPanelData(state, copy);
   const selectedKeyframePanel = buildSelectedKeyframePanelData(
     state,
@@ -3768,18 +3878,20 @@ export const selectViewData = ({ state, i18n }) => {
     previewLoopButtonVariant: state.previewLoopEnabled ? "pr" : "ol",
     timelinePlayheadVisible,
     timelinePlayheadStyle,
+    timelineUsedAreaStyle,
     timelineZoom: state.timelineZoom,
     timelineZoomMin: TIMELINE_ZOOM_MIN,
     timelineZoomMax: TIMELINE_ZOOM_MAX,
     timelineZoomStep: TIMELINE_ZOOM_STEP,
     timelinePixelsPerSecond,
-    timelineCanvasStyle: `width: ${timelineCanvasWidth}px; min-width: ${TIMELINE_PROPERTY_COLUMN_WIDTH}px; flex-shrink: 0;${state.timelinePanMode ? " pointer-events: none; user-select: none;" : ""}`,
+    timelineCanvasStyle: `width: ${timelineCanvasWidth}px; min-width: 100%; flex-shrink: 0;${state.timelinePanMode ? " pointer-events: none; user-select: none;" : ""}`,
     timelinePanCursor: state.timelinePan
       ? "grabbing"
       : state.timelinePanMode
         ? "grab"
         : "default",
     timelineDisplayDuration,
+    activeTimelineDuration,
     dialogTypeLabel:
       dialogType === "transition"
         ? (copy.transitionType ?? "Transition")
@@ -3794,6 +3906,8 @@ export const selectViewData = ({ state, i18n }) => {
     updateProperties,
     previousProperties,
     nextProperties,
+    previousTimelineVisible,
+    nextTimelineVisible,
     selectedKeyframe: state.selectedKeyframe,
     selectedProperty: state.selectedProperty,
     selectedKeyframeDetailId: selectedKeyframePanel?.id,
@@ -3801,9 +3915,12 @@ export const selectViewData = ({ state, i18n }) => {
     selectedKeyframeEditor: selectedKeyframePanel?.editor,
     selectedPropertyDetailId: selectedPropertyPanel?.id,
     selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
+    selectedPropertyEditor: selectedPropertyPanel?.editor,
     selectedMask,
     maskTimelineRow,
     maskTimelineRows,
+    maskTimelineVisible,
+    activeTimelineEmpty,
     maskTimelineProperties,
     maskTimelineDefaultValues: { [MASK_PROGRESS_PROPERTY]: 0 },
     updateTimelineDefaultValues,
@@ -3876,6 +3993,7 @@ export const selectViewData = ({ state, i18n }) => {
     fullImagePreviewImageId: state.fullImagePreviewImageId,
     isPreviewDialogOpen: state.isPreviewDialogOpen,
     maskRemoveConfirmDialogOpen: state.maskRemoveConfirmDialogOpen,
+    propertyRemoveConfirmDialogOpen: state.propertyRemoveConfirmDialogOpen,
     showRightPanel: !state.isTouchMode,
     selectedEditorTab: state.selectedEditorTab,
     editorTabs: [
@@ -3915,6 +4033,7 @@ export const selectViewData = ({ state, i18n }) => {
       getMaskEditorTransitionMask(state),
     ),
     addButton: copy.addButton ?? "Add",
+    addPropertyButtonLabel: copy.addPropertyButton ?? "Add Property",
     addMaskButton: copy.addMaskButton ?? "Add Mask",
     addMaskTitle: copy.addMaskTitle ?? "Add Mask",
     cancelButton: copy.cancelButton ?? "Cancel",
@@ -3922,6 +4041,11 @@ export const selectViewData = ({ state, i18n }) => {
     doneButton: copy.doneButton ?? "Done",
     deletePropertyButtonLabel:
       copy.deletePropertyButtonLabel ?? "Delete property",
+    propertyRemoveConfirmMessage:
+      copy.propertyRemoveConfirmMessage ??
+      "Delete this animation property? This cannot be undone.",
+    propertyRemoveConfirmTitle:
+      copy.propertyRemoveConfirmTitle ?? "Delete Property",
     editPreviewButton: copy.editPreviewButton ?? "Edit Preview",
     editKeyframeButtonLabel: copy.editKeyframeMenuItem ?? "Edit keyframe",
     imageLabel: copy.imageLabel ?? "Image",

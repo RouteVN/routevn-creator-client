@@ -1,5 +1,6 @@
 const DURATION_RESIZE_SNAP_MS = 100;
 const DEFAULT_KEYFRAME_DURATION_MS = 1000;
+const TIMELINE_EXTENSION_STEP_MS = 1000;
 
 const clamp = (value, min, max) => {
   return Math.min(Math.max(value, min), max);
@@ -37,6 +38,44 @@ const resolveTimelineDuration = (props = {}) => {
   }
 
   return maxDuration;
+};
+
+const getKeyframesDuration = (keyframes = []) => {
+  return keyframes.reduce((sum, keyframe) => {
+    return (
+      sum +
+      Math.max(0, parseFloat(keyframe.delay) || 0) +
+      (parseFloat(keyframe.duration) || DEFAULT_KEYFRAME_DURATION_MS)
+    );
+  }, 0);
+};
+
+const dispatchTimelineDurationExtendEvent = ({
+  dispatchEvent,
+  duration,
+} = {}) => {
+  dispatchEvent(
+    new CustomEvent("timeline-duration-extend", {
+      detail: { duration },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+const dispatchTimelineUsedDurationPreviewEvent = ({
+  active,
+  dispatchEvent,
+  duration,
+  side,
+} = {}) => {
+  dispatchEvent(
+    new CustomEvent("timeline-used-duration-preview", {
+      detail: { active, duration, side },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 const dispatchRulerScrubEvent = ({
@@ -571,6 +610,7 @@ export const handleKeyframeMoveStart = (deps, payload) => {
     startDelay,
     startFollowingDelay,
     duration: startDuration,
+    propertyDuration: getKeyframesDuration(keyframes),
     timelineDuration,
     trackWidth,
   });
@@ -584,7 +624,7 @@ export const handleKeyframeMoveStart = (deps, payload) => {
 };
 
 export const handleKeyframeMove = (deps, payload) => {
-  const { render, store } = deps;
+  const { dispatchEvent, props, render, store } = deps;
   const event = payload._event;
   const keyframeMove = store.selectKeyframeMove();
   if (!keyframeMove || keyframeMove.pointerId !== event.pointerId) {
@@ -598,7 +638,8 @@ export const handleKeyframeMove = (deps, payload) => {
     store.markKeyframeMoveDragged({});
   }
   const deltaDelay =
-    (deltaX / keyframeMove.trackWidth) * keyframeMove.timelineDuration;
+    (deltaX / keyframeMove.trackWidth) *
+    (keyframeMove.startTimelineDuration ?? keyframeMove.timelineDuration);
   const snappedDelay =
     Math.round(
       (keyframeMove.startDelay + deltaDelay) / DURATION_RESIZE_SNAP_MS,
@@ -612,9 +653,29 @@ export const handleKeyframeMove = (deps, payload) => {
     keyframeMove.startFollowingDelay === undefined
       ? undefined
       : keyframeMove.startFollowingDelay - (delay - keyframeMove.startDelay);
-  store.setKeyframeMoveTiming({
+  const timing = {
     delay,
     followingDelay,
+  };
+  if (keyframeMove.startFollowingDelay === undefined) {
+    const movedPropertyDuration =
+      keyframeMove.propertyDuration + delay - keyframeMove.startDelay;
+    if (movedPropertyDuration >= keyframeMove.timelineDuration) {
+      timing.timelineDuration =
+        (Math.floor(movedPropertyDuration / TIMELINE_EXTENSION_STEP_MS) + 1) *
+        TIMELINE_EXTENSION_STEP_MS;
+      dispatchTimelineDurationExtendEvent({
+        dispatchEvent,
+        duration: timing.timelineDuration,
+      });
+    }
+  }
+  store.setKeyframeMoveTiming(timing);
+  dispatchTimelineUsedDurationPreviewEvent({
+    active: true,
+    dispatchEvent,
+    duration: store.selectPreviewUsedDuration(),
+    side: props.side,
   });
   render();
 };
@@ -645,11 +706,17 @@ export const handleKeyframeMoveEnd = (deps, payload) => {
       index: keyframeMove.index,
     });
   }
+  dispatchTimelineUsedDurationPreviewEvent({
+    active: false,
+    dispatchEvent,
+    duration: undefined,
+    side: props.side,
+  });
   render();
 };
 
 export const handleKeyframeMoveCancel = (deps, payload) => {
-  const { render, store } = deps;
+  const { dispatchEvent, props, render, store } = deps;
   const event = payload._event;
   const keyframeMove = store.selectKeyframeMove();
   if (!keyframeMove || keyframeMove.pointerId !== event.pointerId) {
@@ -658,6 +725,12 @@ export const handleKeyframeMoveCancel = (deps, payload) => {
 
   event.stopPropagation();
   store.clearKeyframeMove({});
+  dispatchTimelineUsedDurationPreviewEvent({
+    active: false,
+    dispatchEvent,
+    duration: undefined,
+    side: props.side,
+  });
   render();
 };
 
@@ -705,7 +778,7 @@ export const handleDurationResizeStart = (deps, payload) => {
 };
 
 export const handleDurationResizeMove = (deps, payload) => {
-  const { render, store } = deps;
+  const { dispatchEvent, props, render, store } = deps;
   const event = payload._event;
   const durationResize = store.selectDurationResize();
   if (!durationResize || durationResize.pointerId !== event.pointerId) {
@@ -716,7 +789,8 @@ export const handleDurationResizeMove = (deps, payload) => {
   event.stopPropagation();
   const deltaX = event.clientX - durationResize.startX;
   const deltaDuration =
-    (deltaX / durationResize.trackWidth) * durationResize.timelineDuration;
+    (deltaX / durationResize.trackWidth) *
+    (durationResize.startTimelineDuration ?? durationResize.timelineDuration);
   let delay = durationResize.startDelay;
   let duration;
 
@@ -743,6 +817,23 @@ export const handleDurationResizeMove = (deps, payload) => {
   }
 
   store.setDurationResizeTiming({ delay, duration });
+  const usedDuration = store.selectPreviewUsedDuration();
+  if (usedDuration > durationResize.timelineDuration) {
+    const timelineDuration =
+      (Math.floor(usedDuration / TIMELINE_EXTENSION_STEP_MS) + 1) *
+      TIMELINE_EXTENSION_STEP_MS;
+    store.setDurationResizeTiming({ delay, duration, timelineDuration });
+    dispatchTimelineDurationExtendEvent({
+      dispatchEvent,
+      duration: timelineDuration,
+    });
+  }
+  dispatchTimelineUsedDurationPreviewEvent({
+    active: true,
+    dispatchEvent,
+    duration: usedDuration,
+    side: props.side,
+  });
   render();
 };
 
@@ -766,11 +857,17 @@ export const handleDurationResizeEnd = (deps, payload) => {
     side: props.side,
     index: durationResize.index,
   });
+  dispatchTimelineUsedDurationPreviewEvent({
+    active: false,
+    dispatchEvent,
+    duration: undefined,
+    side: props.side,
+  });
   render();
 };
 
 export const handleDurationResizeCancel = (deps, payload) => {
-  const { render, store } = deps;
+  const { dispatchEvent, props, render, store } = deps;
   const event = payload._event;
   const durationResize = store.selectDurationResize();
   if (!durationResize || durationResize.pointerId !== event.pointerId) {
@@ -779,6 +876,12 @@ export const handleDurationResizeCancel = (deps, payload) => {
 
   event.stopPropagation();
   store.clearDurationResize({});
+  dispatchTimelineUsedDurationPreviewEvent({
+    active: false,
+    dispatchEvent,
+    duration: undefined,
+    side: props.side,
+  });
   render();
 };
 
@@ -833,31 +936,4 @@ export const handlePropertyNameKeyDown = (deps, payload) => {
     x: rect.left + rect.width / 2,
     y: rect.top + rect.height / 2,
   });
-};
-
-export const handleInitialValueClick = (deps, payload) => {
-  const { dispatchEvent, props } = deps;
-  const target = payload._event.currentTarget;
-  if (target?.dataset?.interactive !== "true") {
-    return;
-  }
-
-  payload._event.stopPropagation();
-
-  const property =
-    target?.dataset?.property || target?.id?.replace("initialValue", "") || "";
-  const side = props?.side;
-
-  dispatchEvent(
-    new CustomEvent("initial-value-click", {
-      detail: {
-        property,
-        side,
-        x: payload._event.clientX,
-        y: payload._event.clientY,
-      },
-      bubbles: true,
-      composed: true,
-    }),
-  );
 };

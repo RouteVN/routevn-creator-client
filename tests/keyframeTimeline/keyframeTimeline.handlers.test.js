@@ -412,9 +412,14 @@ describe("keyframeTimeline.handlers", () => {
         durationResize = undefined;
       }),
       selectDurationResize: vi.fn(() => durationResize),
-      setDurationResizeTiming: vi.fn(({ delay, duration }) => {
+      selectPreviewUsedDuration: vi.fn(
+        () => durationResize.delay + durationResize.duration,
+      ),
+      setDurationResizeTiming: vi.fn(({ delay, duration, timelineDuration }) => {
         durationResize.delay = delay;
         durationResize.duration = duration;
+        durationResize.timelineDuration =
+          timelineDuration ?? durationResize.timelineDuration;
       }),
       startDurationResize: vi.fn((resize) => {
         durationResize = {
@@ -491,8 +496,11 @@ describe("keyframeTimeline.handlers", () => {
       duration: 1100,
     });
     expect(releasePointerCapture).toHaveBeenCalledWith(7);
-    expect(dispatchEvent).toHaveBeenCalledOnce();
-    expect(dispatchEvent.mock.calls[0][0]).toMatchObject({
+    expect(
+      dispatchEvent.mock.calls.find(
+        ([event]) => event.type === "keyframe-duration-change",
+      )[0],
+    ).toMatchObject({
       type: "keyframe-duration-change",
       detail: {
         delay: 0,
@@ -502,6 +510,18 @@ describe("keyframeTimeline.handlers", () => {
         index: 0,
       },
     });
+    expect(
+      dispatchEvent.mock.calls.find(
+        ([event]) => event.type === "timeline-duration-extend",
+      )[0],
+    ).toMatchObject({
+      detail: { duration: 2000 },
+    });
+    expect(
+      dispatchEvent.mock.calls.filter(
+        ([event]) => event.type === "timeline-used-duration-preview",
+      ),
+    ).toHaveLength(2);
     expect(store.clearDurationResize).toHaveBeenCalledWith({});
   });
 
@@ -539,9 +559,14 @@ describe("keyframeTimeline.handlers", () => {
         durationResize = undefined;
       }),
       selectDurationResize: vi.fn(() => durationResize),
-      setDurationResizeTiming: vi.fn(({ delay, duration }) => {
+      selectPreviewUsedDuration: vi.fn(
+        () => durationResize.delay + durationResize.duration,
+      ),
+      setDurationResizeTiming: vi.fn(({ delay, duration, timelineDuration }) => {
         durationResize.delay = delay;
         durationResize.duration = duration;
+        durationResize.timelineDuration =
+          timelineDuration ?? durationResize.timelineDuration;
       }),
       startDurationResize: vi.fn((resize) => {
         durationResize = {
@@ -632,7 +657,11 @@ describe("keyframeTimeline.handlers", () => {
       [{ delay: 900, duration: 100 }],
       [{ delay: 400, duration: 600 }],
     ]);
-    expect(dispatchEvent.mock.calls[0][0]).toMatchObject({
+    expect(
+      dispatchEvent.mock.calls.find(
+        ([event]) => event.type === "keyframe-duration-change",
+      )[0],
+    ).toMatchObject({
       type: "keyframe-duration-change",
       detail: {
         delay: 400,
@@ -660,6 +689,7 @@ describe("keyframeTimeline.handlers", () => {
       }),
       selectKeyframeClickSuppressed: vi.fn(() => keyframeClickSuppressed),
       selectKeyframeMove: vi.fn(() => keyframeMove),
+      selectPreviewUsedDuration: vi.fn(() => 1600),
       setKeyframeMoveTiming: vi.fn(({ delay, followingDelay }) => {
         keyframeMove.delay = delay;
         keyframeMove.followingDelay = followingDelay;
@@ -758,7 +788,11 @@ describe("keyframeTimeline.handlers", () => {
       [{ delay: 500, followingDelay: 0 }],
     ]);
     expect(releasePointerCapture).toHaveBeenCalledWith(11);
-    expect(dispatchEvent.mock.calls[1][0]).toMatchObject({
+    expect(
+      dispatchEvent.mock.calls.find(
+        ([event]) => event.type === "keyframe-duration-change",
+      )[0],
+    ).toMatchObject({
       type: "keyframe-duration-change",
       detail: {
         delay: 500,
@@ -782,7 +816,98 @@ describe("keyframeTimeline.handlers", () => {
       },
     });
 
-    expect(dispatchEvent).toHaveBeenCalledTimes(2);
+    expect(dispatchEvent).toHaveBeenCalledTimes(5);
     expect(store.clearKeyframeClickSuppression).toHaveBeenCalledWith({});
+  });
+
+  it("extends the timeline when the last keyframe is dragged past its end", () => {
+    let keyframeMove;
+    const store = {
+      markKeyframeMoveDragged: vi.fn(() => {
+        keyframeMove.dragged = true;
+      }),
+      selectKeyframeMove: vi.fn(() => keyframeMove),
+      selectPreviewUsedDuration: vi.fn(
+        () =>
+          keyframeMove.propertyDuration +
+          keyframeMove.delay -
+          keyframeMove.startDelay,
+      ),
+      setKeyframeMoveTiming: vi.fn((timing) => {
+        keyframeMove.delay = timing.delay;
+        keyframeMove.followingDelay = timing.followingDelay;
+        keyframeMove.timelineDuration =
+          timing.timelineDuration ?? keyframeMove.timelineDuration;
+      }),
+      startKeyframeMove: vi.fn((move) => {
+        keyframeMove = {
+          ...move,
+          delay: move.startDelay,
+          dragged: false,
+          followingDelay: move.startFollowingDelay,
+          startTimelineDuration: move.timelineDuration,
+        };
+      }),
+    };
+    const dispatchEvent = vi.fn();
+    const render = vi.fn();
+    const trackElement = {
+      getBoundingClientRect: () => ({ width: 600 }),
+    };
+    const keyframeElement = {
+      closest: vi.fn(() => trackElement),
+      dataset: { property: "x", index: "0" },
+      setPointerCapture: vi.fn(),
+    };
+    const deps = {
+      dispatchEvent,
+      props: {
+        editable: true,
+        side: "update",
+        timelineDuration: 3000,
+        properties: {
+          x: {
+            keyframes: [{ duration: 1000 }],
+          },
+        },
+      },
+      render,
+      store,
+    };
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    handleKeyframeMoveStart(deps, {
+      _event: {
+        button: 0,
+        clientX: 100,
+        currentTarget: keyframeElement,
+        pointerId: 12,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+    handleKeyframeMove(deps, {
+      _event: {
+        clientX: 520,
+        pointerId: 12,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(store.setKeyframeMoveTiming).toHaveBeenCalledWith({
+      delay: 2100,
+      followingDelay: undefined,
+      timelineDuration: 4000,
+    });
+    expect(dispatchEvent.mock.calls[1][0]).toMatchObject({
+      type: "timeline-duration-extend",
+      detail: { duration: 4000 },
+    });
+    expect(dispatchEvent.mock.calls[2][0]).toMatchObject({
+      type: "timeline-used-duration-preview",
+      detail: { active: true, duration: 3100, side: "update" },
+    });
   });
 });

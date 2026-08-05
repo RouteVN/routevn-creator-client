@@ -738,6 +738,8 @@ animationEditorPage:
   defaultLabel: "デフォルト"
   delayMsLabel: "遅延（ms）"
   deletePropertyButtonLabel: "プロパティを削除"
+  propertyRemoveConfirmMessage: "このアニメーションプロパティを削除しますか？この操作は元に戻せません。"
+  propertyRemoveConfirmTitle: "プロパティを削除"
   deleteKeyframeMenuItem: "キーフレームを削除"
   doneButton: "完了"
   durationMsLabel: "時間（ms）"

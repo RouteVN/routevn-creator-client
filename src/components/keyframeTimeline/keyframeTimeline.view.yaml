@@ -49,10 +49,6 @@ refs:
         handler: handlePropertyNameClick
       keydown:
         handler: handlePropertyNameKeyDown
-  initialValue*:
-    eventListeners:
-      click:
-        handler: handleInitialValueClick
 styles:
   ".keyframeTimelinePropertyRow:focus-visible":
     outline: "2px solid var(--ring)"
@@ -63,10 +59,12 @@ template:
           - rtgl-view d=v w=f g=xs:
               - $if showRuler:
                   - 'rtgl-view d=h w=f av=e bgc=bg style="position: sticky; top: 0; z-index: 7;"':
-                      - 'rtgl-view d=h h=48 w=104 bgc=bg bwr=xs bc=bo style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
+                      - 'rtgl-view d=h h=56 w=104 bgc=bg bwr=xs bc=bo style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
                           - rtgl-view w=72: null
                           - rtgl-view h=24 w=24 mr=sm ml=sm: null
-                      - 'rtgl-view#rulerTrack w=f h=48 pos=rel style="min-width: 0; overflow: visible; cursor: ew-resize; touch-action: none;"':
+                      - 'rtgl-view#rulerTrack w=f h=56 pos=rel style="min-width: 0; overflow: visible; cursor: ew-resize; touch-action: none;"':
+                          - $if usedDurationVisible:
+                              - 'rtgl-view pos=abs bgc=su style="${usedDurationStyle}"': null
                           - $if rulerIndicatorVisible:
                               - 'rtgl-view pos=abs style="${playheadIndicatorLabelStyle}"':
                                   - rtgl-text s=xs c=fg: ${playheadIndicatorTimeLabel}
@@ -89,8 +87,8 @@ template:
                                     $else:
                                       - rtgl-text s=xs c=${property.nameColor}: ${property.name}
                               - 'rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm pos=rel style="z-index: 2;"':
-                                  - rtgl-text#initialValue${pIndex} data-property=${property.name} data-interactive=${property.initialValueInteractive} s=xs cur=${property.initialValueCursor}: ${property.initialValue}
-                          - 'rtgl-view#track${pIndex} data-keyframe-track=true data-property=${property.name} data-track-mode=${property.trackMode} d=h w=f h=24 bgc=mu br=sm g=xs pos=rel style="min-width: 0; overflow: hidden; cursor: ${property.trackCursor};"':
+                                  - rtgl-text s=xs: ${property.initialValue}
+                          - 'rtgl-view#track${pIndex} data-keyframe-track=true data-property=${property.name} data-track-mode=${property.trackMode} d=h w=f h=24 bgc=mu br=sm pos=rel style="min-width: 0; overflow: hidden; cursor: ${property.trackCursor};"':
                               - $if property.valueCurvePath:
                                   - 'svg data-value-curve=${property.name} aria-hidden=true viewBox="0 0 100 20" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.72; z-index: 3;"':
                                       - 'path d="${property.valueCurvePath}" fill="none" stroke="var(--accent-foreground)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"': null
@@ -109,7 +107,7 @@ template:
                                           - 'rtgl-view data-keyframe-slot=true h=f pos=rel style="width: ${keyframe.widthPercent}%; flex-shrink: 0;"':
                                               - $if keyframe.delay > 0:
                                                   - 'rtgl-view pos=abs bgc=mu style="top: 0; bottom: 0; left: 0; width: ${keyframe.delayPercent}%; pointer-events: none; z-index: 2;"': null
-                                              - 'rtgl-view#keyframe${pIndex}x${j} data-keyframe=true data-selected=${keyframe.selected} aria-selected=${keyframe.selected} data-property=${property.name} data-index=${j} d=h p=xs bgc=${keyframe.backgroundColor} bw=xs br=lg ah=e av=e pos=abs title="${keyframe.easingLabel}" style="top: 2px; bottom: 2px; left: ${keyframe.delayPercent}%; right: 0; overflow: hidden; box-sizing: border-box; border-color: ${keyframe.borderColor}; z-index: 2; cursor: ${keyframe.cursor}; touch-action: none;"':
+                                              - 'rtgl-view#keyframe${pIndex}x${j} data-keyframe=true data-selected=${keyframe.selected} aria-selected=${keyframe.selected} data-property=${property.name} data-index=${j} d=h p=xs bgc=${keyframe.backgroundColor} bw=xs br=md ah=e av=e pos=abs title="${keyframe.easingLabel}" style="top: 2px; bottom: 2px; left: ${keyframe.delayPercent}%; right: 0; overflow: hidden; box-sizing: border-box; border-color: ${keyframe.borderColor}; z-index: 2; cursor: ${keyframe.cursor}; touch-action: none;"':
                                                   - $if editable:
                                                       - 'rtgl-view#durationHandleLeft${pIndex}x${j} data-keyframe-duration-handle=left data-resize-edge=left data-property=${property.name} data-index=${j} pos=abs style="top: 0; bottom: 0; left: 0; width: 7px; cursor: ew-resize; touch-action: none; z-index: 3;"':
                                                           - 'rtgl-view pos=abs bgc=fg style="top: 5px; bottom: 5px; left: 6px; width: 1px; pointer-events: none;"': null

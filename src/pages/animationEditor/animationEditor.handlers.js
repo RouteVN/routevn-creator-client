@@ -811,6 +811,10 @@ const mountTimelinePanSubscriptions = (deps) => {
       type: "blur",
       listener: () => handleTimelinePanWindowBlur(deps),
     }),
+    browserEventsClient.subscribeWindowEvent({
+      type: "resize",
+      listener: () => handleTimelineViewportResize(deps),
+    }),
   ];
 
   return () => {
@@ -854,6 +858,7 @@ export const handleAfterMount = async (deps) => {
   const { projectService } = deps;
   await projectService.ensureRepository();
   await syncEditorState({ deps });
+  handleTimelineViewportResize(deps);
 };
 
 export const handleBackClick = async (deps) => {
@@ -987,15 +992,14 @@ export const handleClosePreviewDialog = (deps) => {
   render();
 };
 
-export const handleAddPropertiesClick = (deps, payload) => {
+const openAddProperties = (deps, { side, x, y } = {}) => {
   const { render, store } = deps;
-  const side = payload._event.currentTarget?.dataset?.side;
 
   if (!side && store.selectDialogType() === "transition") {
     store.setPopover({
       mode: "addPropertySideMenu",
-      x: payload._event.clientX,
-      y: payload._event.clientY,
+      x,
+      y,
       payload: {},
     });
     render();
@@ -1004,13 +1008,37 @@ export const handleAddPropertiesClick = (deps, payload) => {
 
   store.setPopover({
     mode: "addProperty",
-    x: payload._event.clientX,
-    y: payload._event.clientY,
+    x,
+    y,
     payload: {
       side: side ?? "update",
     },
   });
   render();
+};
+
+export const handleAddPropertiesClick = (deps, payload) => {
+  const event = payload._event;
+  openAddProperties(deps, {
+    side: event.currentTarget?.dataset?.side,
+    x: event.clientX,
+    y: event.clientY,
+  });
+};
+
+export const handleEmptyTimelineAddPropertiesKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  const rect = event.currentTarget.getBoundingClientRect();
+  openAddProperties(deps, {
+    side: event.currentTarget.dataset.side,
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  });
 };
 
 export const handleTimelineZoomChange = (deps, payload) => {
@@ -1089,6 +1117,7 @@ export const handleTimelineZoomOut = (deps) => {
 export const handleTimelineScroll = (deps, payload) => {
   const { render, store } = deps;
   const wasPlayheadVisible = store.selectTimelinePlayheadVisible();
+  const previousViewportWidth = store.selectTimelineViewportWidth();
   const timelineViewport = payload._event.currentTarget;
 
   store.setTimelineScrollMetrics({
@@ -1096,9 +1125,47 @@ export const handleTimelineScroll = (deps, payload) => {
     viewportWidth: timelineViewport.clientWidth,
   });
 
-  if (wasPlayheadVisible !== store.selectTimelinePlayheadVisible()) {
+  if (
+    previousViewportWidth !== timelineViewport.clientWidth ||
+    wasPlayheadVisible !== store.selectTimelinePlayheadVisible()
+  ) {
     render();
   }
+};
+
+export const handleTimelineViewportResize = (deps) => {
+  const { refs, render, store } = deps;
+  const timelineViewport = refs.timelineScrollContainer;
+  if (
+    !timelineViewport ||
+    timelineViewport.clientWidth === store.selectTimelineViewportWidth()
+  ) {
+    return;
+  }
+
+  store.setTimelineScrollMetrics({
+    scrollLeft: timelineViewport.scrollLeft,
+    viewportWidth: timelineViewport.clientWidth,
+  });
+  render();
+};
+
+export const handleTimelineDurationExtend = (deps, payload) => {
+  const { render, store } = deps;
+  const { duration } = payload._event.detail;
+  store.extendTimelineDisplayDuration({ duration });
+  render();
+};
+
+export const handleTimelineUsedDurationPreview = (deps, payload) => {
+  const { render, store } = deps;
+  const { active, duration, side } = payload._event.detail;
+  if (active) {
+    store.setTimelineUsedDurationPreview({ side, duration });
+  } else {
+    store.clearTimelineUsedDurationPreview({});
+  }
+  render();
 };
 
 export const handleTimelinePanPointerEnter = (deps) => {
@@ -1530,6 +1597,24 @@ export const handleSelectedKeyframeRelativeChange = (deps, payload) => {
   commitSelectedKeyframeChange(deps);
 };
 
+export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
+  const { render, store } = deps;
+  const selectedProperty = store.selectSelectedProperty();
+  if (!selectedProperty) {
+    return;
+  }
+
+  const { side, property } = selectedProperty;
+  store.updateInitialValue({
+    side,
+    property,
+    initialValue: resolveValueChange(payload),
+  });
+  invalidatePreview({ store });
+  render();
+  queueEditorAutosave({ deps });
+};
+
 const openSelectedMaskNumberPopover = (deps, payload, { mode, value } = {}) => {
   const { render, store } = deps;
   const event = payload._event;
@@ -1744,6 +1829,36 @@ export const handleSelectedPropertyDeleteClick = (deps) => {
     return;
   }
 
+  if (["prev", "next"].includes(selectedProperty.side)) {
+    store.closePopover();
+    store.openPropertyRemoveConfirmDialog({});
+    render();
+    return;
+  }
+
+  store.deleteProperty(selectedProperty);
+  store.closePopover();
+  invalidatePreview({ store });
+  render();
+  queueEditorAutosave({ deps });
+};
+
+export const handlePropertyRemoveConfirmDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closePropertyRemoveConfirmDialog({});
+  render();
+};
+
+export const handlePropertyRemoveConfirmClick = (deps) => {
+  const { render, store } = deps;
+  const selectedProperty = store.selectSelectedProperty();
+
+  store.closePropertyRemoveConfirmDialog({});
+  if (!selectedProperty) {
+    render();
+    return;
+  }
+
   store.deleteProperty(selectedProperty);
   store.closePopover();
   invalidatePreview({ store });
@@ -1763,6 +1878,13 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
     openSelectedKeyframeEditDialog(deps, { x, y });
     return;
   } else if (value === "delete-property") {
+    if (["prev", "next"].includes(side)) {
+      store.setSelectedProperty({ side, property });
+      store.closePopover();
+      store.openPropertyRemoveConfirmDialog({});
+      render();
+      return;
+    }
     store.deleteProperty({ side, property });
     store.closePopover();
     didMutate = true;
@@ -1901,20 +2023,6 @@ export const handleRulerTimeScrub = async (deps, payload) => {
   if (didChangePreviewState) {
     render();
   }
-};
-
-export const handleInitialValueClick = (deps, payload) => {
-  const { render, store } = deps;
-  store.setPopover({
-    mode: "editInitialValue",
-    x: payload._event.detail.x,
-    y: payload._event.detail.y,
-    payload: {
-      side: payload._event.detail.side,
-      property: payload._event.detail.property,
-    },
-  });
-  render();
 };
 
 const updatePopoverFieldValue = ({ store, detail } = {}) => {

@@ -14,6 +14,7 @@ import {
   handleEditorSurfaceClick,
   handleEditorTabClick,
   handleEditorTabKeyDown,
+  handleEmptyTimelineAddPropertiesKeyDown,
   handleKeyframeClick,
   handleKeyframeSelect,
   handleKeyframeDurationChange,
@@ -23,6 +24,8 @@ import {
   handleMaskTimelineRowKeyDown,
   handleMaskRemoveRequestClick,
   handleOpenAddMaskClick,
+  handlePropertyRemoveConfirmClick,
+  handlePropertyRemoveConfirmDialogClose,
   handlePropertyNameClick,
   handlePreviewImageClick,
   handleReplayAnimation,
@@ -34,6 +37,7 @@ import {
   handleSelectedKeyframeEditClick,
   handleSelectedKeyframeRelativeChange,
   handleSelectedKeyframeValueChange,
+  handleSelectedPropertyInitialValueChange,
   handleSelectedMaskNumberConfirmClick,
   handleSelectedMaskNumberFieldKeyDown,
   handleSelectedMaskNumberInputChange,
@@ -53,6 +57,9 @@ import {
   handleTimelinePanPointerEnter,
   handleTimelinePanStart,
   handleTimelineScroll,
+  handleTimelineDurationExtend,
+  handleTimelineUsedDurationPreview,
+  handleTimelineViewportResize,
   handleTogglePreviewLoop,
 } from "../../src/pages/animationEditor/animationEditor.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -102,8 +109,8 @@ describe("animationEditor.handlers", () => {
         uiConfig: { mode: "desktop" },
       });
       expect(unregisterBeforeNavigation).toHaveBeenCalledOnce();
-      expect(browserEventsClient.subscribeWindowEvent).toHaveBeenCalledTimes(3);
-      expect(cleanupWindowEvent).toHaveBeenCalledTimes(3);
+      expect(browserEventsClient.subscribeWindowEvent).toHaveBeenCalledTimes(4);
+      expect(cleanupWindowEvent).toHaveBeenCalledTimes(4);
       expect(store.setPreviewPlaybackRequestId).toHaveBeenCalledWith({
         requestId: undefined,
       });
@@ -200,6 +207,7 @@ describe("animationEditor.handlers", () => {
         .fn()
         .mockReturnValueOnce(true)
         .mockReturnValueOnce(false),
+      selectTimelineViewportWidth: vi.fn(() => 280),
       setTimelineScrollMetrics: vi.fn(),
     };
     const render = vi.fn();
@@ -214,6 +222,70 @@ describe("animationEditor.handlers", () => {
       viewportWidth: 300,
     });
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("measures the timeline viewport and extends its display duration", () => {
+    const store = {
+      extendTimelineDisplayDuration: vi.fn(),
+      selectTimelineViewportWidth: vi.fn(() => 600),
+      setTimelineScrollMetrics: vi.fn(),
+    };
+    const render = vi.fn();
+    const timelineScrollContainer = {
+      clientWidth: 704,
+      scrollLeft: 25,
+    };
+
+    handleTimelineViewportResize({
+      refs: { timelineScrollContainer },
+      render,
+      store,
+    });
+    handleTimelineDurationExtend(
+      { render, store },
+      { _event: { detail: { duration: 4000 } } },
+    );
+
+    expect(store.setTimelineScrollMetrics).toHaveBeenCalledWith({
+      scrollLeft: 25,
+      viewportWidth: 704,
+    });
+    expect(store.extendTimelineDisplayDuration).toHaveBeenCalledWith({
+      duration: 4000,
+    });
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("tracks and clears the live used-duration preview", () => {
+    const store = {
+      clearTimelineUsedDurationPreview: vi.fn(),
+      setTimelineUsedDurationPreview: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleTimelineUsedDurationPreview(
+      { render, store },
+      {
+        _event: {
+          detail: { active: true, duration: 2400, side: "update" },
+        },
+      },
+    );
+    handleTimelineUsedDurationPreview(
+      { render, store },
+      {
+        _event: {
+          detail: { active: false, duration: undefined, side: "update" },
+        },
+      },
+    );
+
+    expect(store.setTimelineUsedDurationPreview).toHaveBeenCalledWith({
+      duration: 2400,
+      side: "update",
+    });
+    expect(store.clearTimelineUsedDurationPreview).toHaveBeenCalledWith({});
+    expect(render).toHaveBeenCalledTimes(2);
   });
 
   it("pans the timeline horizontally while Space is held", () => {
@@ -423,13 +495,32 @@ describe("animationEditor.handlers", () => {
     expect(store.setPopover).not.toHaveBeenCalled();
   });
 
-  it("deletes the selected property from the detail header", () => {
+  it("opens confirmation before deleting an outgoing property", () => {
     const selectedProperty = { side: "prev", property: "alpha" };
+    const store = {
+      closePopover: vi.fn(),
+      deleteProperty: vi.fn(),
+      openPropertyRemoveConfirmDialog: vi.fn(),
+      selectSelectedProperty: vi.fn(() => selectedProperty),
+    };
+    const render = vi.fn();
+
+    handleSelectedPropertyDeleteClick({ store, render });
+
+    expect(store.openPropertyRemoveConfirmDialog).toHaveBeenCalledWith({});
+    expect(store.closePopover).toHaveBeenCalledOnce();
+    expect(store.deleteProperty).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("deletes an update property without confirmation", () => {
+    const selectedProperty = { side: "update", property: "alpha" };
     const store = {
       ...createIdleAutosaveMocks(),
       bumpPreviewRenderVersion: vi.fn(),
       closePopover: vi.fn(),
       deleteProperty: vi.fn(),
+      openPropertyRemoveConfirmDialog: vi.fn(),
       queueAutosave: vi.fn(),
       selectPreviewPlaybackFrameId: vi.fn(() => undefined),
       selectSelectedProperty: vi.fn(() => selectedProperty),
@@ -440,9 +531,48 @@ describe("animationEditor.handlers", () => {
     handleSelectedPropertyDeleteClick({ store, render });
 
     expect(store.deleteProperty).toHaveBeenCalledWith(selectedProperty);
+    expect(store.openPropertyRemoveConfirmDialog).not.toHaveBeenCalled();
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledOnce();
+    expect(store.queueAutosave).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("deletes the selected transition property after confirmation", () => {
+    const selectedProperty = { side: "next", property: "x" };
+    const store = {
+      ...createIdleAutosaveMocks(),
+      bumpPreviewRenderVersion: vi.fn(),
+      closePopover: vi.fn(),
+      closePropertyRemoveConfirmDialog: vi.fn(),
+      deleteProperty: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      selectSelectedProperty: vi.fn(() => selectedProperty),
+      stopPreviewPlayback: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handlePropertyRemoveConfirmClick({ store, render });
+
+    expect(store.closePropertyRemoveConfirmDialog).toHaveBeenCalledWith({});
+    expect(store.deleteProperty).toHaveBeenCalledWith(selectedProperty);
     expect(store.closePopover).toHaveBeenCalledOnce();
     expect(store.bumpPreviewRenderVersion).toHaveBeenCalledOnce();
     expect(store.queueAutosave).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("closes property deletion confirmation without deleting", () => {
+    const store = {
+      closePropertyRemoveConfirmDialog: vi.fn(),
+      deleteProperty: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handlePropertyRemoveConfirmDialogClose({ store, render });
+
+    expect(store.closePropertyRemoveConfirmDialog).toHaveBeenCalledWith({});
+    expect(store.deleteProperty).not.toHaveBeenCalled();
     expect(render).toHaveBeenCalledOnce();
   });
 
@@ -845,6 +975,36 @@ describe("animationEditor.handlers", () => {
     expect(render).toHaveBeenCalledTimes(5);
   });
 
+  it("commits the selected property's initial value from the right panel", () => {
+    const store = {
+      bumpPreviewRenderVersion: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      selectSelectedProperty: vi.fn(() => ({
+        side: "update",
+        property: "x",
+      })),
+      stopPreviewPlayback: vi.fn(),
+      updateInitialValue: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleSelectedPropertyInitialValueChange(
+      { render, store },
+      { _event: { detail: { value: -25.5 } } },
+    );
+
+    expect(store.updateInitialValue).toHaveBeenCalledWith({
+      side: "update",
+      property: "x",
+      initialValue: -25.5,
+    });
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
+    expect(store.queueAutosave).toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
   it.each([
     ["add-left", 2],
     ["add-right", 3],
@@ -903,6 +1063,45 @@ describe("animationEditor.handlers", () => {
       expect(render).toHaveBeenCalled();
     },
   );
+
+  it("opens confirmation for a transition property context-menu deletion", () => {
+    const store = {
+      closePopover: vi.fn(),
+      deleteProperty: vi.fn(),
+      openPropertyRemoveConfirmDialog: vi.fn(),
+      selectPopover: vi.fn(() => ({
+        x: 120,
+        y: 160,
+        payload: {
+          side: "next",
+          property: "x",
+          index: "2",
+        },
+      })),
+      setSelectedProperty: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleKeyframeDropdownItemClick(
+      { store, render },
+      {
+        _event: {
+          detail: {
+            item: { value: "delete-property" },
+          },
+        },
+      },
+    );
+
+    expect(store.setSelectedProperty).toHaveBeenCalledWith({
+      side: "next",
+      property: "x",
+    });
+    expect(store.openPropertyRemoveConfirmDialog).toHaveBeenCalledWith({});
+    expect(store.closePopover).toHaveBeenCalledOnce();
+    expect(store.deleteProperty).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
+  });
 
   it("opens the number popover for selected mask softness", () => {
     const store = {
@@ -1252,6 +1451,72 @@ describe("animationEditor.handlers", () => {
       payload: {},
     });
     expect(render).toHaveBeenCalled();
+  });
+
+  it("opens Add Property from the empty update timeline", () => {
+    const store = {
+      selectDialogType: vi.fn(() => "update"),
+      setPopover: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleAddPropertiesClick(
+      { store, render },
+      {
+        _event: {
+          clientX: 320,
+          clientY: 240,
+          currentTarget: {
+            dataset: { side: "update" },
+          },
+        },
+      },
+    );
+
+    expect(store.setPopover).toHaveBeenCalledWith({
+      mode: "addProperty",
+      x: 320,
+      y: 240,
+      payload: { side: "update" },
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens the transition Add menu from the empty timeline keyboard action", () => {
+    const store = {
+      selectDialogType: vi.fn(() => "transition"),
+      setPopover: vi.fn(),
+    };
+    const render = vi.fn();
+    const preventDefault = vi.fn();
+
+    handleEmptyTimelineAddPropertiesKeyDown(
+      { store, render },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {},
+            getBoundingClientRect: () => ({
+              left: 100,
+              top: 200,
+              width: 400,
+              height: 200,
+            }),
+          },
+          key: "Enter",
+          preventDefault,
+        },
+      },
+    );
+
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(store.setPopover).toHaveBeenCalledWith({
+      mode: "addPropertySideMenu",
+      x: 300,
+      y: 300,
+      payload: {},
+    });
+    expect(render).toHaveBeenCalledOnce();
   });
 
   it("opens Add Mask from the transition Add menu", () => {
