@@ -61,6 +61,19 @@ describe("commandLineActions.store", () => {
     expect(characterAction?.label).toBe("Character Sprites");
   });
 
+  it("distinguishes the visual icon from the background icon", () => {
+    const items = selectItems({
+      props: {
+        actionsType: "presentation",
+      },
+    });
+    const backgroundAction = items.find((item) => item.mode === "background");
+    const visualAction = items.find((item) => item.mode === "visual");
+
+    expect(backgroundAction?.icon).toBe("image");
+    expect(visualAction?.icon).toBe("stacked-images");
+  });
+
   it("uses settings icons for generic system actions", () => {
     const items = selectItems({
       props: {

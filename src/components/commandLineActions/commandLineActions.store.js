@@ -193,7 +193,7 @@ const PRESENTATION_ACTION_SECTIONS = [
     {
       id: "8",
       label: "Visuals",
-      icon: "image",
+      icon: "stacked-images",
       mode: "visual",
     },
   ]),
