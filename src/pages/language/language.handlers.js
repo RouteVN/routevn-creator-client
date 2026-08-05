@@ -51,7 +51,13 @@ export const handleLanguageChange = async (deps, payload) => {
       locale: nextLocale,
     });
     if (activeLocale !== nextLocale) {
-      store.setCurrentLocale({ locale: activeLocale });
+      await activateAppLocale({
+        appService,
+        localeService: locale,
+        locale: previousLocale,
+        persist: false,
+      });
+      throw new Error("Selected locale fell back to another locale");
     }
     render();
   } catch {

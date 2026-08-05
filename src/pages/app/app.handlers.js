@@ -530,6 +530,7 @@ const targetPathBySequence = {
   ws: "/project/releases/web-server",
   ab: "/project/about",
   ap: "/project/appearance",
+  sl: "/project/language",
 };
 
 const targetSequencePrefixes = new Set(

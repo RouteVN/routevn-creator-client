@@ -122,4 +122,32 @@ describe("settings language handlers", () => {
     });
     expect(deps.render).toHaveBeenCalledTimes(2);
   });
+
+  it("reports a locale fallback without replacing the saved preference", async () => {
+    const deps = createDeps();
+    deps.locale.set.mockResolvedValue(undefined);
+    deps.locale.current.mockReturnValue("en");
+
+    await handleLanguageChange(deps, {
+      _event: {
+        detail: {
+          value: "ja",
+        },
+      },
+    });
+
+    expect(deps.locale.set).toHaveBeenNthCalledWith(1, "ja");
+    expect(deps.locale.set).toHaveBeenNthCalledWith(2, "en");
+    expect(deps.appService.setUserConfig).not.toHaveBeenCalled();
+    expect(deps.store.setCurrentLocale).toHaveBeenNthCalledWith(1, {
+      locale: "ja",
+    });
+    expect(deps.store.setCurrentLocale).toHaveBeenNthCalledWith(2, {
+      locale: "en",
+    });
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "Could not change the language. Please try again.",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(2);
+  });
 });

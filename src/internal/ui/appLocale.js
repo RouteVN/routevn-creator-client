@@ -37,7 +37,7 @@ export const activateAppLocale = async ({
   await localeService?.set?.(nextLocale);
   const activeLocale = localeService?.current?.() ?? nextLocale;
 
-  if (persist) {
+  if (persist && activeLocale === nextLocale) {
     appService?.setUserConfig?.(APP_LOCALE_CONFIG_KEY, activeLocale);
   }
 
