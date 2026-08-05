@@ -184,7 +184,7 @@ describe("versions store export actions", () => {
         id: "submit",
         variant: "pr",
         validate: true,
-        label: "Export macOS App",
+        label: "Export macOS App (Beta)",
       },
     ]);
     expect(selectExportConfirmation({ state }).versionName).toBe("Version 1");
@@ -208,6 +208,12 @@ describe("versions store export actions", () => {
 
     expect(viewData.canExportWindowsExecutable).toBe(true);
     expect(viewData.canExportWindowsInstaller).toBe(false);
+    expect(viewData.exportWindowsExecutableButton).toBe(
+      "Export Windows EXE (Beta)",
+    );
+    expect(viewData.exportWindowsInstallerButton).toBe(
+      "Export Windows Installer (Beta)",
+    );
   });
 
   it("shows Windows installer export when it is available", () => {

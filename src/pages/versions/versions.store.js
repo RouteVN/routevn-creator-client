@@ -79,13 +79,15 @@ const getExportConfirmationTitle = (exportType, copy) => {
 
 const getExportConfirmationButtonLabel = (exportType, copy) => {
   if (exportType === "windows-executable") {
-    return copy.exportWindowsExecutableButton ?? "Export Windows EXE";
+    return copy.exportWindowsExecutableButton ?? "Export Windows EXE (Beta)";
   }
   if (exportType === "windows-installer") {
-    return copy.exportWindowsInstallerButton ?? "Export Windows Installer";
+    return (
+      copy.exportWindowsInstallerButton ?? "Export Windows Installer (Beta)"
+    );
   }
   if (exportType === "macos-application") {
-    return copy.exportMacosApplicationButton ?? "Export macOS App";
+    return copy.exportMacosApplicationButton ?? "Export macOS App (Beta)";
   }
   return copy.exportWebButton ?? "Export Web";
 };
@@ -123,7 +125,7 @@ const createMacosExportForm = (copy = {}) => ({
         id: "submit",
         variant: "pr",
         validate: true,
-        label: copy.exportMacosApplicationButton ?? "Export macOS App",
+        label: copy.exportMacosApplicationButton ?? "Export macOS App (Beta)",
       },
     ],
   },
@@ -449,11 +451,11 @@ export const selectViewData = ({ state, i18n }) => {
     noVersionsMessage: copy.noVersionsMessage ?? "No versions",
     exportWebButton: copy.exportWebButton ?? "Export Web",
     exportWindowsExecutableButton:
-      copy.exportWindowsExecutableButton ?? "Export Windows EXE",
+      copy.exportWindowsExecutableButton ?? "Export Windows EXE (Beta)",
     exportWindowsInstallerButton:
-      copy.exportWindowsInstallerButton ?? "Export Windows Installer",
+      copy.exportWindowsInstallerButton ?? "Export Windows Installer (Beta)",
     exportMacosApplicationButton:
-      copy.exportMacosApplicationButton ?? "Export macOS App",
+      copy.exportMacosApplicationButton ?? "Export macOS App (Beta)",
     canExportWindowsExecutable: state.platform === "tauri",
     canExportWindowsInstaller:
       state.platform === "tauri" && state.windowsExportAvailability.installer,
