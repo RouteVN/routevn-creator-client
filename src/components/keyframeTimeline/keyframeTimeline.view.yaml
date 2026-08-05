@@ -81,7 +81,7 @@ template:
                           - 'rtgl-view data-selected=${property.selected} d=h h=24 w=104 bgc=${property.backgroundColor} h-bgc=${property.hoverBackgroundColor} bwr=xs bc=bo av=c cur=${property.rowCursor} style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
                               - $if editable:
                                   - 'rtgl-view#propertyName${pIndex}.keyframeTimelinePropertyRow data-property=${property.name} role=button tabindex=0 aria-pressed="${property.selected}" aria-label="${property.thumbnailName}" w=f h=f pos=abs cur=pointer style="inset: 0; z-index: 0;"': null
-                              - 'rtgl-view w=72 av=c d=h ah=c pos=rel style="z-index: 1; pointer-events: none;"':
+                              - 'rtgl-view w=72 av=c d=h ah=s pl=sm pos=rel style="z-index: 1; pointer-events: none;"':
                                   - $if property.thumbnail:
                                       - 'rtgl-view w=28 h=18 bw=xs bc=${property.thumbnailBorderColor} br=sm overflow=hidden title="${property.thumbnailName}"':
                                           - $if property.thumbnailFileId:

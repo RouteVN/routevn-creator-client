@@ -232,6 +232,8 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).toContain(
       "rtgl-view#propertyName${pIndex}.keyframeTimelinePropertyRow",
     );
+    expect(view).toContain("rtgl-view w=72 av=c d=h ah=s pl=sm pos=rel");
+    expect(view).not.toContain("rtgl-view w=72 av=c d=h ah=c pos=rel");
     expect(view).toContain("$if editable:");
     expect(view).toContain(
       "w=104 bgc=${property.backgroundColor} h-bgc=${property.hoverBackgroundColor}",

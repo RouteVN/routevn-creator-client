@@ -500,19 +500,19 @@ template:
                                           - rvn-keyframe-timeline#transitionRuler ?showRuler=true ?showTracks=false ?interactiveRuler=true ?indicatorVisible=${timelinePlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} timelineDuration=${timelineDisplayDuration}: null
                                       - rtgl-view d=v w=f g=xs:
                                           - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
-                                              - rtgl-view w=72 av=c ah=c:
+                                              - rtgl-view w=72 av=c ah=s pl=sm:
                                                   - rtgl-text s=sm c=mu-fg: ${outTimelineLabel}
                                               - rtgl-view h=24 w=24 mr=sm ml=sm: null
                                           - rvn-keyframe-timeline#previousTimeline editable=true side=prev ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDisplayDuration} :properties=${previousProperties} :defaultValues=${transitionTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
                                       - rtgl-view d=v w=f g=xs:
                                           - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
-                                              - rtgl-view w=72 av=c ah=c:
+                                              - rtgl-view w=72 av=c ah=s pl=sm:
                                                   - rtgl-text s=sm c=mu-fg: ${inTimelineLabel}
                                               - rtgl-view h=24 w=24 mr=sm ml=sm: null
                                           - rvn-keyframe-timeline#nextTimeline editable=true side=next ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDisplayDuration} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
                                       - rtgl-view d=v w=f g=xs:
                                           - 'rtgl-view#maskTimelineCategory d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
-                                              - rtgl-view w=72 av=c ah=c:
+                                              - rtgl-view w=72 av=c ah=s pl=sm:
                                                   - rtgl-text s=sm c=mu-fg: ${maskTitle}
                                               - rtgl-view h=24 w=24 mr=sm ml=sm: null
                                           - $for maskTimelineRow, i in maskTimelineRows:
@@ -522,7 +522,7 @@ template:
                                                 $else:
                                                   - 'rtgl-view#unsupportedMaskTimelineRow${i} data-timeline-selection-surface=true data-mask-index=${maskTimelineRow.index} data-selected=${maskTimelineRow.selected} role=button tabindex=0 aria-label="${maskTimelineRow.label}" aria-pressed="${maskTimelineRow.selected}" d=h w=f h=24 av=c cur=pointer':
                                                       - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
-                                                          - rtgl-view w=72 av=c ah=c:
+                                                          - rtgl-view w=72 av=c ah=s pl=sm:
                                                               - 'rtgl-view w=28 h=18 bw=xs bc=${maskTimelineRow.imageBorderColor} br=sm overflow=hidden title="${maskTimelineRow.image.name}"':
                                                                   - $if maskTimelineRow.image.previewFileId:
                                                                       - rvn-file-image w=f h=f fileId=${maskTimelineRow.image.previewFileId}: null

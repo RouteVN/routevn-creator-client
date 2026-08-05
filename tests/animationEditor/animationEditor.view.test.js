@@ -153,6 +153,8 @@ describe("animationEditor view", () => {
     expect(view).toContain("rtgl-view#animationPreviewPanel");
     expect(view).toContain("rtgl-view#maskTimelineCategory");
     expect(view).toContain("rtgl-text s=sm c=mu-fg: ${maskTitle}");
+    expect(view).toContain("rtgl-view w=72 av=c ah=s pl=sm");
+    expect(view).not.toContain("rtgl-view w=72 av=c ah=c");
     expect(view).toContain("$for maskTimelineRow, i in maskTimelineRows");
     expect(view).toContain("rtgl-view#maskTrackRow${i}");
     expect(view).toContain(
