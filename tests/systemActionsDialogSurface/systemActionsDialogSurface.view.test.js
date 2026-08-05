@@ -14,6 +14,10 @@ describe("systemActionsDialogSurface view", () => {
     expect(dialogSurfaceView).toContain(
       "rtgl-dialog#dialog ?open=${open} layout=fixed bare",
     );
+    expect(dialogSurfaceView).toContain("$if fullscreen");
+    expect(dialogSurfaceView).toContain(
+      "left: ${fullscreenHorizontalInset}; top: var(--rvn-window-content-offset, 0px); right: 0; bottom: 0;",
+    );
     expect(dialogSurfaceView).toContain(
       'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"',
     );
@@ -29,8 +33,8 @@ describe("systemActionsDialogSurface view", () => {
     expect(dialogSurfaceView).toContain("pos=fix bgc=bg bw=xs bc=bo br=md");
     expect(
       dialogSurfaceView.match(/slot=content tabindex=-1 autofocus/g),
-    ).toHaveLength(3);
-    expect(dialogSurfaceView.match(/outline: none;/g)).toHaveLength(3);
+    ).toHaveLength(4);
+    expect(dialogSurfaceView.match(/outline: none;/g)).toHaveLength(4);
     expect(dialogSurfaceView).toContain("z-index: 2002;");
     expect(dialogSurfaceView).not.toContain("handleDocumentKeyDown");
   });

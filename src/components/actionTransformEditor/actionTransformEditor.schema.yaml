@@ -1,0 +1,32 @@
+componentName: rvn-action-transform-editor
+propsSchema:
+  type: object
+  properties:
+    transform:
+      type: object
+    targetName:
+      type: string
+    targetType:
+      type: string
+      enum:
+        - background
+        - visual
+        - character
+    canvasAspectRatio:
+      type: string
+    projectResolution:
+      type: object
+    selectedElementMetrics:
+      type: object
+events:
+  transform-change:
+    type: object
+  done:
+    type: object
+methods:
+  type: object
+  properties:
+    getCanvasRoot:
+      description: Returns the mounted canvas used by the action transform preview.
+      params: []
+      returns: object

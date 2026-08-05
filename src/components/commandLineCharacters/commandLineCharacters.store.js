@@ -331,7 +331,6 @@ export const createInitialState = () => ({
   fullImagePreviewAtlas: undefined,
   fullImagePreviewAnimation: undefined,
   fullImagePreviewKey: undefined,
-  customTransformEditorOpen: false,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -466,29 +465,6 @@ const resolveSelectedSpriteGroupId = ({
   }
 
   return orderSpriteSelectionGroupsTopFirst(spriteSelectionGroups)[0]?.id;
-};
-
-const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
-  const editor = props.backgroundTransformEditor ?? {};
-  const transform = normalizeBackgroundTransformEditorTransform(
-    editor.transform,
-  );
-  const metrics = editor.metrics ?? {
-    x: formatBackgroundTransformEditorMetric(transform.x),
-    y: formatBackgroundTransformEditorMetric(transform.y),
-    scaleX: formatBackgroundTransformEditorMetric(transform.scaleX),
-    scaleY: formatBackgroundTransformEditorMetric(transform.scaleY),
-    rotation: formatBackgroundTransformEditorMetric(transform.rotation),
-  };
-
-  return {
-    isOpen: state.customTransformEditorOpen === true || editor.isOpen === true,
-    canvasAspectRatio: editor.canvasAspectRatio ?? "16 / 9",
-    previewMaxWidth:
-      editor.previewMaxWidth ??
-      "min(100vw, calc((100vh - 122px) * 1.7777777778))",
-    metrics,
-  };
 };
 
 export const addCharacter = ({ state }, { id, transformId } = {}) => {
@@ -630,18 +606,6 @@ export const updateCharacterCustomTransform = (
 
   character.transformId = character.transformId ?? getDefaultTransformId(state);
   applyCharacterInlineTransform(character, transform);
-};
-
-export const openCustomTransformEditor = ({ state }, _payload = {}) => {
-  state.customTransformEditorOpen = true;
-};
-
-export const closeCustomTransformEditor = ({ state }, _payload = {}) => {
-  state.customTransformEditorOpen = false;
-};
-
-export const selectCustomTransformEditorOpen = ({ state }) => {
-  return state.customTransformEditorOpen === true;
 };
 
 export const updateCharacterAnimation = (
@@ -1126,7 +1090,7 @@ const form = {
   ],
 };
 
-export const selectViewData = ({ state, props = {}, i18n }) => {
+export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
   const matchesSearch = (item) => {
@@ -1477,10 +1441,6 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     fullImagePreviewAtlas: state.fullImagePreviewAtlas,
     fullImagePreviewAnimation: state.fullImagePreviewAnimation,
     fullImagePreviewKey: state.fullImagePreviewKey,
-    backgroundTransformEditor: createBackgroundTransformEditorViewData({
-      state,
-      props,
-    }),
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     form: localizeCommandLineForm(form, copy),
     defaultValues,

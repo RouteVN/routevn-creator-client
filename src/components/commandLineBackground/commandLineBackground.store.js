@@ -159,7 +159,6 @@ export const createInitialState = () => ({
   colorItems: createEmptyCollection(),
   customTransformEnabled: false,
   selectedCustomTransform: undefined,
-  customTransformEditorOpen: false,
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   selectedSpritesheetAnimationName: undefined,
@@ -476,18 +475,6 @@ export const selectCustomTransform = ({ state }) => {
   return state.selectedCustomTransform;
 };
 
-export const openCustomTransformEditor = ({ state }, _payload = {}) => {
-  state.customTransformEditorOpen = true;
-};
-
-export const closeCustomTransformEditor = ({ state }, _payload = {}) => {
-  state.customTransformEditorOpen = false;
-};
-
-export const selectCustomTransformEditorOpen = ({ state }) => {
-  return state.customTransformEditorOpen === true;
-};
-
 export const setSelectedColor = ({ state }, { colorId } = {}) => {
   state.selectedColorId =
     typeof colorId === "string" && colorId.length > 0 ? colorId : undefined;
@@ -737,29 +724,6 @@ const selectResourceById = (
   };
 };
 
-const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
-  const editor = props.backgroundTransformEditor ?? {};
-  const transform = normalizeBackgroundTransformEditorTransform(
-    editor.transform ?? state.selectedCustomTransform,
-  );
-  const metrics = editor.metrics ?? {
-    x: formatBackgroundTransformEditorMetric(transform.x),
-    y: formatBackgroundTransformEditorMetric(transform.y),
-    scaleX: formatBackgroundTransformEditorMetric(transform.scaleX),
-    scaleY: formatBackgroundTransformEditorMetric(transform.scaleY),
-    rotation: formatBackgroundTransformEditorMetric(transform.rotation),
-  };
-
-  return {
-    isOpen: state.customTransformEditorOpen === true || editor.isOpen === true,
-    canvasAspectRatio: editor.canvasAspectRatio ?? "16 / 9",
-    previewMaxWidth:
-      editor.previewMaxWidth ??
-      "min(100vw, calc((100vh - 122px) * 1.7777777778))",
-    metrics,
-  };
-};
-
 const createCustomTransformDetails = ({ state }) => {
   const transform = normalizeBackgroundTransformEditorTransform(
     state.selectedCustomTransform,
@@ -774,10 +738,22 @@ const createCustomTransformDetails = ({ state }) => {
       label: "Scale",
       value: `${formatBackgroundTransformEditorMetric(transform.scaleX)} x ${formatBackgroundTransformEditorMetric(transform.scaleY)}`,
     },
+    {
+      label: "Anchor",
+      value: `${formatBackgroundTransformEditorMetric(transform.anchorX)}, ${formatBackgroundTransformEditorMetric(transform.anchorY)}`,
+    },
+    {
+      label: "Rotation",
+      value: `${formatBackgroundTransformEditorMetric(transform.rotation)}°`,
+    },
+    {
+      label: "Origin",
+      value: `${formatBackgroundTransformEditorMetric(transform.originX)}, ${formatBackgroundTransformEditorMetric(transform.originY)}`,
+    },
   ];
 };
 
-export const selectViewData = ({ state, props = {}, i18n }) => {
+export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const itemsMap = {
     image: state.imageItems,
@@ -1169,10 +1145,6 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     fullSpritesheetPreviewAtlas: state.fullSpritesheetPreviewAtlas,
     fullSpritesheetPreviewAnimation: state.fullSpritesheetPreviewAnimation,
     fullSpritesheetPreviewKey: state.fullSpritesheetPreviewKey,
-    backgroundTransformEditor: createBackgroundTransformEditorViewData({
-      state,
-      props,
-    }),
     searchQuery: state.searchQuery,
     searchPlaceholder: localizeCommandLineText("Search...", copy),
     dialogueForm: {
@@ -1187,9 +1159,6 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
         state.customTransformEnabled ? "custom-transform" : "preset-transform",
         state.selectedTransformId ?? "none",
         JSON.stringify(state.selectedCustomTransform ?? {}),
-        state.customTransformEditorOpen
-          ? "custom-transform-editor-open"
-          : "custom-transform-editor-closed",
         state.opacityOptionEnabled ? "opacity-option" : "no-opacity-option",
         state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
         state.selectedBlurEnabled ? "blur" : "no-blur",

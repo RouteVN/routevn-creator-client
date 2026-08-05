@@ -8,6 +8,11 @@ import { getLayoutEditorItemResizeEdges } from "../../../internal/layoutEditorEl
 import { getFontFaceWeightDescriptor } from "../../../internal/fontCapabilities.js";
 import { toHierarchyStructure } from "../../../internal/project/tree.js";
 import {
+  createTransformSelectionAnchor,
+  createTransformSelectionHitArea,
+  createTransformSelectionResizeHandle,
+} from "../../../internal/transformSelectionChrome.js";
+import {
   createLayoutEditorSelectionElementMapper,
   extractLayoutEditorSelectionOccurrences,
 } from "./layoutEditorCanvasSelection.js";
@@ -27,10 +32,7 @@ const OVERLAY_OUTER_BORDER = {
   width: 1,
   alpha: 1,
 };
-const OVERLAY_FILL = {
-  color: "#ffffff",
-  alpha: 0.001,
-};
+const OVERLAY_FILL = "transparent";
 const OVERLAY_ANCHOR_CIRCLE_FILL = {
   type: "radial-gradient",
   innerCenter: { x: 0.5, y: 0.5 },
@@ -40,9 +42,9 @@ const OVERLAY_ANCHOR_CIRCLE_FILL = {
   coordinateSpace: "local",
   stops: [
     { offset: 0, color: "#ffffff" },
-    { offset: 0.75, color: "#ffffff" },
+    { offset: 0.74, color: "#ffffff" },
     { offset: 0.75, color: OVERLAY_INNER_COLOR },
-    { offset: 1, color: OVERLAY_INNER_COLOR },
+    { offset: 0.99, color: OVERLAY_INNER_COLOR },
     { offset: 1, color: "transparent" },
   ],
 };
@@ -353,34 +355,17 @@ const getElementAnchorRatios = (element = {}) => {
 };
 
 const buildOverlayRect = ({ element, overlayId, draggable }) => {
-  if (!hasRenderableBounds(element)) {
-    return undefined;
-  }
-
-  const overlayRect = {
+  const overlayRect = createTransformSelectionHitArea({
     id: overlayId,
-    type: "rect",
-    x: 0,
-    y: 0,
     width: element.width,
     height: element.height,
     fill: OVERLAY_FILL,
-  };
+    draggable: false,
+  });
 
-  if (draggable) {
+  if (overlayRect && draggable) {
     overlayRect.hover = {
       cursor: "all-scroll",
-    };
-    overlayRect.drag = {
-      start: {
-        payload: {},
-      },
-      move: {
-        payload: {},
-      },
-      end: {
-        payload: {},
-      },
     };
   }
 
@@ -447,18 +432,18 @@ const buildOverlayAnchorMarker = ({
     return undefined;
   }
 
-  const { x: originX, y: originY } = getElementOrigin(element);
+  const { anchorX, anchorY } = getElementAnchorRatios(element);
   const anchorSize = OVERLAY_ANCHOR_SIZE * canvasUnitsPerCssPixel;
 
-  return {
+  return createTransformSelectionAnchor({
     id: `${overlayId}-anchor`,
-    type: "rect",
-    x: originX - anchorSize / 2,
-    y: originY - anchorSize / 2,
-    width: anchorSize,
-    height: anchorSize,
+    width: element.width,
+    height: element.height,
+    anchorX,
+    anchorY,
+    size: anchorSize,
     fill: OVERLAY_ANCHOR_CIRCLE_FILL,
-  };
+  });
 };
 
 const transformOverlayPoint = (point, element = {}) => {
@@ -542,43 +527,15 @@ const buildOverlayResizeHandle = ({
     return undefined;
   }
 
-  const vertical = edge === "left" || edge === "right";
   const resizeHandleSize = OVERLAY_RESIZE_HANDLE_SIZE * canvasUnitsPerCssPixel;
-  const resizeHandle = {
+  return createTransformSelectionResizeHandle({
     id: `${overlayId}-resize-${edge}`,
-    type: "rect",
-    x:
-      edge === "left"
-        ? -resizeHandleSize / 2
-        : edge === "right"
-          ? element.width - resizeHandleSize / 2
-          : 0,
-    y:
-      edge === "top"
-        ? -resizeHandleSize / 2
-        : edge === "bottom"
-          ? element.height - resizeHandleSize / 2
-          : 0,
-    width: vertical ? resizeHandleSize : element.width,
-    height: vertical ? element.height : resizeHandleSize,
+    width: element.width,
+    height: element.height,
+    edge,
+    size: resizeHandleSize,
     fill: OVERLAY_FILL,
-    hover: {
-      cursor: vertical ? "ew-resize" : "ns-resize",
-    },
-    drag: {
-      start: {
-        payload: {},
-      },
-      move: {
-        payload: {},
-      },
-      end: {
-        payload: {},
-      },
-    },
-  };
-
-  return resizeHandle;
+  });
 };
 
 const buildOverlayResizeHandles = ({

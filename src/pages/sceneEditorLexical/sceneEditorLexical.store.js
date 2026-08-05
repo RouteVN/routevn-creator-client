@@ -15,10 +15,7 @@ import {
   constructProjectData,
   getSectionPresentation,
 } from "../../internal/project/projection.js";
-import {
-  formatBackgroundTransformEditorMetric,
-  normalizeBackgroundTransformEditorTransform,
-} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import { normalizeBackgroundTransformEditorTransform } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 import {
   emitSceneEditorTiming,
   getSceneEditorTimingDurationMs,
@@ -716,6 +713,7 @@ export const createInitialState = () => ({
     itemIndex: undefined,
     item: undefined,
     targetId: undefined,
+    targetName: undefined,
     suppressNextActionsDialogClose: false,
   },
   sectionLineChanges: {},
@@ -929,6 +927,7 @@ export const openBackgroundTransformEditor = (
     itemIndex,
     item,
     targetId,
+    targetName,
   } = {},
 ) => {
   state.backgroundTransformEditor.isOpen = true;
@@ -941,6 +940,7 @@ export const openBackgroundTransformEditor = (
   state.backgroundTransformEditor.itemIndex = itemIndex;
   state.backgroundTransformEditor.item = item ? toPlainObject(item) : undefined;
   state.backgroundTransformEditor.targetId = targetId;
+  state.backgroundTransformEditor.targetName = targetName;
   state.backgroundTransformEditor.transform =
     normalizeBackgroundTransformEditorTransform(transform);
   state.backgroundTransformEditor.dragStartPosition = undefined;
@@ -1691,6 +1691,15 @@ const selectCanvasAspectRatio = ({ state }) => {
   return formatProjectResolutionAspectRatio(projectResolution);
 };
 
+const selectProjectResolution = ({ state }) => {
+  return state.repositoryState?.project?.resolution
+    ? requireProjectResolution(
+        state.repositoryState.project.resolution,
+        "Project resolution",
+      )
+    : DEFAULT_PROJECT_RESOLUTION;
+};
+
 const selectCanvasAspectRatioWidthMultiplier = ({ state }) => {
   const projectResolution = state.repositoryState?.project?.resolution
     ? requireProjectResolution(
@@ -1777,24 +1786,19 @@ const selectBackgroundTransformEditorViewData = ({ state }) => {
   const transform = normalizeBackgroundTransformEditorTransform(
     editor.transform,
   );
-  const widthMultiplier = selectCanvasAspectRatioWidthMultiplier({ state });
 
   return {
     isOpen: editor.isOpen === true,
     transform,
-    previewMaxWidth: `min(100vw, calc((100vh - 122px) * ${widthMultiplier}))`,
     canvasAspectRatio: selectCanvasAspectRatio({ state }),
+    projectResolution: selectProjectResolution({ state }),
+    selectedElementMetrics: editor.selectedElementMetrics,
+    targetName: editor.targetName,
+    targetType: editor.targetType,
     suppressNextActionsDialogClose:
       editor.suppressNextActionsDialogClose === true,
     suppressActionsDialogClose:
       editor.isOpen === true || editor.suppressNextActionsDialogClose === true,
-    metrics: {
-      x: formatBackgroundTransformEditorMetric(transform.x),
-      y: formatBackgroundTransformEditorMetric(transform.y),
-      scaleX: formatBackgroundTransformEditorMetric(transform.scaleX),
-      scaleY: formatBackgroundTransformEditorMetric(transform.scaleY),
-      rotation: formatBackgroundTransformEditorMetric(transform.rotation),
-    },
   };
 };
 

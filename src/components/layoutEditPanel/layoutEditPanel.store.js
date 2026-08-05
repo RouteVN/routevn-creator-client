@@ -136,6 +136,8 @@ const STATIC_LABEL_COPY_KEYS = {
   Position: "positionSection",
   Ratio: "ratioLabel",
   Rotation: "rotationLabel",
+  "Scale X": "scaleXLabel",
+  "Scale Y": "scaleYLabel",
   Revealing: "revealingLabel",
   Right: "rightOption",
   Scroll: "scrollSection",
@@ -1743,6 +1745,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     getLayoutEditPanelSections({
       constants,
       resourceType: props.resourceType,
+      mode: props.mode,
     }),
     {
       itemType: props.itemType,

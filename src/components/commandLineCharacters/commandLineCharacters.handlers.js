@@ -388,7 +388,7 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();
   payload?._event?.stopImmediatePropagation?.();
-  const { dispatchEvent, store, render } = deps;
+  const { dispatchEvent, store } = deps;
   const index = getCharacterIndexFromEvent(payload._event);
   const character = store.selectSelectedCharacters()?.[index];
   if (index === undefined || !character) {
@@ -396,8 +396,6 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
   }
 
   const item = buildCharacterItemsFromState(store)[index];
-  store.openCustomTransformEditor?.();
-  render();
   dispatchEvent(
     new CustomEvent("action-transform-customize", {
       detail: {
@@ -405,6 +403,7 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
         actionKey: "character",
         itemIndex: index,
         item,
+        targetName: payload._event.currentTarget?.dataset?.targetName,
         action: buildCharacterDataFromState(store, {
           includeTemporarySprites: true,
         }).character,
@@ -412,49 +411,6 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
       bubbles: true,
       composed: true,
     }),
-  );
-};
-
-export const handleSetCustomTransform = (deps, { index, transform } = {}) => {
-  const { store, render } = deps;
-  store.updateCharacterCustomTransform({ index, transform });
-  store.closeCustomTransformEditor?.();
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
-export const handleCustomTransformDoneButtonClick = (deps, payload) => {
-  payload?._event?.preventDefault?.();
-  payload?._event?.stopPropagation?.();
-  payload?._event?.stopImmediatePropagation?.();
-  const { dispatchEvent, store, render } = deps;
-  store.closeCustomTransformEditor?.();
-  render();
-  dispatchEvent(
-    new CustomEvent("action-transform-editor-done", {
-      detail: {},
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleCancelCustomTransformEditor = (deps, payload) => {
-  payload?._event?.preventDefault?.();
-  payload?._event?.stopPropagation?.();
-  payload?._event?.stopImmediatePropagation?.();
-  const { store, render } = deps;
-
-  store.closeCustomTransformEditor?.();
-  render?.();
-};
-
-export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
-  const canvasHost = refs?.backgroundTransformPreviewCanvasHost;
-  return (
-    canvasHost?.getCanvasRoot?.() ||
-    canvasHost?.shadowRoot?.querySelector?.("#canvas") ||
-    canvasHost?.querySelector?.("#canvas")
   );
 };
 

@@ -5,6 +5,7 @@ import {
   createLayoutEditorSelectionElementMapper,
   extractLayoutEditorSelectionOccurrences,
   resolveLayoutEditorCanvasHitPath,
+  selectLayoutEditorCanvasClick,
   selectLayoutEditorCanvasHit,
   selectLayoutEditorCanvasHover,
   selectNextLayoutEditorCanvasHit,
@@ -150,9 +151,26 @@ describe("layoutEditorCanvasSelection", () => {
         selectedItemId: "unrelated",
       }),
     ).toMatchObject({ itemId: "b" });
+    expect(
+      selectLayoutEditorCanvasClick(hitResolution, { selectedItemId: "a" }),
+    ).toMatchObject({ itemId: "a" });
+    expect(
+      selectLayoutEditorCanvasClick(hitResolution, { selectedItemId: "b" }),
+    ).toMatchObject({ itemId: "b" });
+    expect(
+      selectLayoutEditorCanvasClick(hitResolution, {
+        selectedItemId: "unrelated",
+      }),
+    ).toMatchObject({ itemId: "a" });
+    expect(
+      selectLayoutEditorCanvasClick(hitResolution, {
+        deepSelect: true,
+        selectedItemId: "a",
+      }),
+    ).toMatchObject({ itemId: "c" });
   });
 
-  it("does not hover an ancestor while the selected descendant is under the pointer", () => {
+  it("suppresses hover inside the selected hierarchy unless deep select is active", () => {
     const hitResolution = {
       blocked: false,
       path: [
@@ -175,6 +193,11 @@ describe("layoutEditorCanvasSelection", () => {
       itemId: "text",
       occurrenceId: "text-instance",
     });
+    expect(
+      selectLayoutEditorCanvasHover(hitResolution, {
+        selectedOccurrenceId: "outer-instance",
+      }),
+    ).toBeUndefined();
   });
 
   it("lets editor chrome own the gesture and skips other unowned branches", () => {

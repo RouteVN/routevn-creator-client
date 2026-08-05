@@ -1,12 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  handleCancelCustomTransformEditor,
   handleBeforeMount,
   handleButtonSelectClick,
   handleCustomTransformButtonClick,
   handleCustomTransformButtonKeyDown,
-  handleCustomTransformDoneButtonClick,
-  handleGetBackgroundTransformPreviewCanvasRoot,
   handleFormInputChange,
   handleOptionsSectionAction,
   handleResourceItemClick,
@@ -23,7 +20,6 @@ import {
   selectBackgroundColorOptionEnabled,
   selectCustomTransform,
   selectCustomTransformEnabled,
-  selectCustomTransformEditorOpen,
   selectMode,
   selectOpacityOptionEnabled,
   selectPendingResourceId,
@@ -43,8 +39,6 @@ import {
   selectSelectedTransformResource,
   selectTab,
   selectTempSelectedResource,
-  closeCustomTransformEditor,
-  openCustomTransformEditor,
   setBackgroundLoop,
   setCustomTransform,
   setCustomTransformEnabled,
@@ -86,8 +80,6 @@ const createStoreApi = (state) => ({
     selectBackgroundColorOptionEnabled({ state }),
   selectCustomTransform: () => selectCustomTransform({ state }),
   selectCustomTransformEnabled: () => selectCustomTransformEnabled({ state }),
-  selectCustomTransformEditorOpen: () =>
-    selectCustomTransformEditorOpen({ state }),
   selectMode: () => selectMode({ state }),
   selectOpacityOptionEnabled: () => selectOpacityOptionEnabled({ state }),
   selectPendingResourceId: () => selectPendingResourceId({ state }),
@@ -112,10 +104,6 @@ const createStoreApi = (state) => ({
     selectSelectedTransformResource({ state }),
   selectTab: () => selectTab({ state }),
   selectTempSelectedResource: () => selectTempSelectedResource({ state }),
-  closeCustomTransformEditor: (payload) =>
-    closeCustomTransformEditor({ state }, payload),
-  openCustomTransformEditor: (payload) =>
-    openCustomTransformEditor({ state }, payload),
   setBackgroundLoop: (payload) => setBackgroundLoop({ state }, payload),
   setCustomTransform: (payload) => setCustomTransform({ state }, payload),
   setCustomTransformEnabled: (payload) =>
@@ -1525,7 +1513,7 @@ describe("commandLineBackground.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
-  it("opens the local transform editor and emits customize from inside the background command line", () => {
+  it("requests the dedicated transform editor from inside the background command line", () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
@@ -1533,6 +1521,11 @@ describe("commandLineBackground.handlers", () => {
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
       stopImmediatePropagation: vi.fn(),
+      currentTarget: {
+        dataset: {
+          targetName: "School",
+        },
+      },
     };
 
     setRepositoryCollections(state);
@@ -1564,8 +1557,7 @@ describe("commandLineBackground.handlers", () => {
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
     expect(event.stopPropagation).toHaveBeenCalledTimes(1);
     expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
-    expect(selectCustomTransformEditorOpen({ state })).toBe(true);
-    expect(render).toHaveBeenCalledTimes(1);
+    expect(render).not.toHaveBeenCalled();
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
     expect(dispatchEvent.mock.calls[0][0].type).toBe(
       "background-transform-customize",
@@ -1575,10 +1567,11 @@ describe("commandLineBackground.handlers", () => {
         resourceId: "bg-school",
         transformId: "bg-center",
       },
+      targetName: "School",
     });
   });
 
-  it("opens the local transform editor from the summary box with the keyboard", () => {
+  it("requests the dedicated transform editor from the summary box with the keyboard", () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
@@ -1587,6 +1580,11 @@ describe("commandLineBackground.handlers", () => {
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
       stopImmediatePropagation: vi.fn(),
+      currentTarget: {
+        dataset: {
+          targetName: "School",
+        },
+      },
     };
 
     handleCustomTransformButtonKeyDown(
@@ -1599,93 +1597,9 @@ describe("commandLineBackground.handlers", () => {
     );
 
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
-    expect(selectCustomTransformEditorOpen({ state })).toBe(true);
-    expect(render).toHaveBeenCalledTimes(1);
+    expect(render).not.toHaveBeenCalled();
     expect(dispatchEvent.mock.calls[0][0].type).toBe(
       "background-transform-customize",
     );
-  });
-
-  it("closes the local transform editor and emits done without submitting the command line", () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const dispatchEvent = vi.fn();
-    const event = {
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
-      stopImmediatePropagation: vi.fn(),
-    };
-
-    openCustomTransformEditor({ state });
-
-    handleCustomTransformDoneButtonClick(
-      {
-        store: createStoreApi(state),
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: event,
-      },
-    );
-
-    expect(event.preventDefault).toHaveBeenCalledTimes(1);
-    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
-    expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
-    expect(selectCustomTransformEditorOpen({ state })).toBe(false);
-    expect(render).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent.mock.calls[0][0].type).toBe(
-      "background-transform-editor-done",
-    );
-    expect(dispatchEvent.mock.calls[0][0].bubbles).toBe(true);
-    expect(dispatchEvent.mock.calls[0][0].composed).toBe(true);
-  });
-
-  it("cancels the local transform editor without saving", () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const dispatchEvent = vi.fn();
-    const event = {
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
-      stopImmediatePropagation: vi.fn(),
-    };
-
-    openCustomTransformEditor({ state });
-
-    handleCancelCustomTransformEditor(
-      {
-        store: createStoreApi(state),
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: event,
-      },
-    );
-
-    expect(event.preventDefault).toHaveBeenCalledTimes(1);
-    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
-    expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
-    expect(selectCustomTransformEditorOpen({ state })).toBe(false);
-    expect(render).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent).not.toHaveBeenCalled();
-  });
-
-  it("exposes the nested background transform preview canvas root", () => {
-    const canvasRoot = {};
-    const getCanvasRoot = vi.fn(() => canvasRoot);
-
-    expect(
-      handleGetBackgroundTransformPreviewCanvasRoot({
-        refs: {
-          backgroundTransformPreviewCanvasHost: {
-            getCanvasRoot,
-          },
-        },
-      }),
-    ).toBe(canvasRoot);
-    expect(getCanvasRoot).toHaveBeenCalledTimes(1);
   });
 });

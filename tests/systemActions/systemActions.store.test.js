@@ -20,6 +20,25 @@ const selectViewData = (deps) =>
   selectViewDataBase({ ...deps, i18n: TEST_I18N });
 
 describe("systemActions.store", () => {
+  it("expands the dialog for the dedicated action transform editor", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: {
+        dialogVariant: "scene-editor-left",
+        backgroundTransformEditor: {
+          isOpen: true,
+        },
+      },
+    });
+
+    expect(viewData.actionsDialogFullscreen).toBe(true);
+    expect(viewData.actionsDialogFullscreenHorizontalInset).toBe("0px");
+    expect(viewData.actionsDialogWidth).toBe("100%");
+    expect(viewData.actionsDialogHeight).toBe("100vh");
+    expect(viewData.actionsDialogPanelWidth).toBe("100vw");
+  });
+
   it("uses the canonical presentation action order for state cards", () => {
     const state = createInitialState();
 

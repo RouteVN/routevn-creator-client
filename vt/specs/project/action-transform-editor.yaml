@@ -1,0 +1,202 @@
+---
+title: Action Transform Editor Workflow
+description: Covers opening, keyboard editing, previewing, and closing the custom transform editor from a scene background action.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: Project One
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input#field1 input
+    steps:
+      - action: clear
+      - action: write
+        value: Action transform editor coverage.
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-select#field2 [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-form#createProjectForm rtgl-select#field2 #option1"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-select#field2 #option1"
+    steps:
+      - action: click
+  - action: select
+    selector: "#createProjectSubmitButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "#sidebar [data-item-id='scenes']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-scenes
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#whiteboard #itemRef0"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#mapAddHintClose"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mapAddHintClose"
+    steps:
+      - action: click
+  - action: select
+    selector: "#whiteboard #itemRef0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: rvn-scene-editor-lexical
+    state: attached
+    timeoutMs: 20000
+  - action: waitFor
+    selector: 'rvn-lexical-scene-document-editor .editor-paragraph[data-selected="true"][data-mode="block"]'
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions-dialog-surface rtgl-dialog[open][bare]"
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions #action4"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='customTransform']"
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='customTransform'] #option1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground #customTransformButton"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground #customTransformButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-action-transform-editor#actionTransformEditor"
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-action-transform-editor#actionTransformEditor #actionTransformCanvasHost canvas"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: visible
+    selector: "rvn-action-transform-editor#actionTransformEditor rvn-layout-edit-panel#transformInspector #groupItem0x0x0"
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const sceneEditor = deepQuery(document, 'rvn-scene-editor-lexical'); const metrics = sceneEditor?.store?.selectBackgroundTransformEditor?.()?.selectedElementMetrics; return `${metrics?.width}x${metrics?.height}`; })()"
+    value: "1920x1080"
+  - action: waitFor
+    selector: "rvn-action-transform-editor#actionTransformEditor #backgroundDragSurface"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-action-transform-editor#actionTransformEditor #backgroundDragSurface"
+    steps:
+      - action: hover
+  - action: wait
+    ms: 100
+  - action: screenshot
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const sceneEditor = deepQuery(document, 'rvn-scene-editor-lexical'); const xField = deepQuery(editor?.shadowRoot, '#groupItem0x0x0'); const hits = sceneEditor?.deps?.graphicsService?.hitTestElementBounds?.({ x: 960, y: 540 }) ?? []; const background = hits.flatMap((hit) => hit.path ?? []).find((entry) => entry.id === 'bg-cg-background-container'); window.__vtActionTransformX = Number(xField?.textContent?.trim()); window.__vtActionTransformBoundsX = Number(background?.bounds?.x); return Number.isFinite(window.__vtActionTransformX) && Number.isFinite(window.__vtActionTransformBoundsX) ? 'ready' : 'missing'; })()"
+    value: "ready"
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const surface = editor?.shadowRoot?.querySelector?.('#backgroundDragSurface'); const bounds = surface?.getBoundingClientRect?.(); if (!bounds?.width) return 'missing'; const pointerId = 17; const startX = bounds.left + bounds.width / 2; const startY = bounds.top + bounds.height / 2; window.__vtActionTransformPointer = { pointerId, x: startX + bounds.width / 10, y: startY }; surface.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, pointerId, isPrimary: true, button: 0, clientX: startX, clientY: startY })); window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, composed: true, pointerId, isPrimary: true, buttons: 1, clientX: window.__vtActionTransformPointer.x, clientY: window.__vtActionTransformPointer.y })); return 'dispatched'; })()"
+    value: "dispatched"
+  - action: wait
+    ms: 250
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const sceneEditor = deepQuery(document, 'rvn-scene-editor-lexical'); const xField = deepQuery(editor?.shadowRoot, '#groupItem0x0x0'); const hits = sceneEditor?.deps?.graphicsService?.hitTestElementBounds?.({ x: 960, y: 540 }) ?? []; const background = hits.flatMap((hit) => hit.path ?? []).find((entry) => entry.id === 'bg-cg-background-container'); const nextX = Number(xField?.textContent?.trim()); const boundsX = Number(background?.bounds?.x); const transformMoved = Math.abs(nextX - window.__vtActionTransformX - 192) < 0.01; const previewMoved = Math.abs(boundsX - window.__vtActionTransformBoundsX - 192) < 0.01; window.__vtActionTransformX = nextX; return String(transformMoved && previewMoved); })()"
+    value: "true"
+  - action: screenshot
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const pointer = window.__vtActionTransformPointer; if (!pointer) return 'missing'; window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true, pointerId: pointer.pointerId, isPrimary: true, button: 0, clientX: pointer.x, clientY: pointer.y })); return 'released'; })()"
+    value: "released"
+  - action: keypress
+    key: ArrowRight
+  - action: wait
+    ms: 250
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const editor = deepQuery(document, 'rvn-action-transform-editor#actionTransformEditor'); const xField = deepQuery(editor?.shadowRoot, '#groupItem0x0x0'); return String(Number(xField?.textContent?.trim()) === window.__vtActionTransformX + 1); })()"
+    value: "true"
+  - action: select
+    selector: "rvn-action-transform-editor#actionTransformEditor #doneButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground #customTransformButton"
+    state: visible
+    timeoutMs: 10000
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-system-actions-dialog-surface rtgl-dialog[open]"
+    state: hidden
+    timeoutMs: 10000
+---

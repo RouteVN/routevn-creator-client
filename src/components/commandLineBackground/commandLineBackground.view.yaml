@@ -49,11 +49,6 @@ refs:
         handler: handleCustomTransformButtonClick
       keydown:
         handler: handleCustomTransformButtonKeyDown
-  backgroundTransformPreviewCanvasHost: {}
-  backgroundTransformEditorDoneButton:
-    eventListeners:
-      click:
-        handler: handleCustomTransformDoneButtonClick
   backgroundImage:
     eventListeners:
       click:
@@ -124,7 +119,7 @@ template:
                     $else:
                       - 'rtgl-view#backgroundImage w=355 bw=xs bc=bo h-bc=ac br=md bgc=mu av=c ah=c cur=pointer slot=background style="aspect-ratio: 16 / 9;"':
                           - rtgl-text s=md c=mu-fg: ${selectBackgroundLabel}
-                  - 'rtgl-view#customTransformButton slot=custom-transform role=button tabindex=0 aria-label="${transformEditorTitle}" w=f p=md bw=xs bc=bo h-bc=pr br=md bgc=bg cur=pointer style="box-sizing: border-box;"':
+                  - 'rtgl-view#customTransformButton slot=custom-transform data-target-name="${selectedResource.name}" role=button tabindex=0 aria-label="${transformEditorTitle}" w=f p=md bw=xs bc=bo h-bc=pr br=md bgc=bg cur=pointer style="box-sizing: border-box;"':
                       - rtgl-grid cols=2 g=md w=f:
                           - $for item, i in customTransformDetails:
                               - rtgl-view d=h av=c g=sm:
@@ -132,27 +127,6 @@ template:
                                   - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums;"': ${item.value}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: ${submitButtonLabel}
-      - $if backgroundTransformEditor.isOpen:
-          - 'rtgl-view pos=abs edge=f z=20 bgc=bg d=v style="pointer-events: auto; min-width: 0; min-height: 0;"':
-              - rtgl-view h=48 bwb=xs w=f d=h av=c ph=md g=md:
-                  - rtgl-text s=sm w=1fg: ${transformEditorTitle}
-                  - rtgl-button#backgroundTransformEditorDoneButton v=pr: ${doneButtonLabel}
-              - 'rtgl-view w=f h=1fg ah=c av=c style="min-width: 0; min-height: 0;"':
-                  - 'rtgl-view h=f style="width: ${backgroundTransformEditor.previewMaxWidth}; max-width: 100%; min-width: 0; min-height: 0;"':
-                      - rvn-scene-editor-preview-canvas#backgroundTransformPreviewCanvasHost canvas-aspect-ratio="${backgroundTransformEditor.canvasAspectRatio}": null
-              - rtgl-view w=f bwt=xs d=h av=c ph=md pv=sm g=lg bgc=bg wrap:
-                  - rtgl-view d=h av=c g=xs:
-                      - rtgl-text s=xs c=mu-fg: x
-                      - rtgl-text s=sm: ${backgroundTransformEditor.metrics.x}
-                  - rtgl-view d=h av=c g=xs:
-                      - rtgl-text s=xs c=mu-fg: y
-                      - rtgl-text s=sm: ${backgroundTransformEditor.metrics.y}
-                  - rtgl-view d=h av=c g=xs:
-                      - rtgl-text s=xs c=mu-fg: scaleX
-                      - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleX}
-                  - rtgl-view d=h av=c g=xs:
-                      - rtgl-text s=xs c=mu-fg: scaleY
-                      - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleY}
       - $if mode == 'gallery':
           - rtgl-view d=h w=f av=c g=md:
               - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null

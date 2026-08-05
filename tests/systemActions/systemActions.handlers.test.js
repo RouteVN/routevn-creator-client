@@ -14,12 +14,13 @@ import {
   handleActionItemClick,
   handleAddActionButtonClicked,
   handleBackgroundTransformCustomize,
-  handleBackgroundTransformEditorDone,
   handleGetBackgroundTransformPreviewCanvasRoot,
   handleEmbeddedCloseClick,
   handleOnUpdate,
   handleCommandLineSubmit,
   handleTemporaryPresentationStateChange,
+  handleTransformEditorChange,
+  handleTransformEditorDone,
   handleSetBackgroundCustomTransform,
   handleSetActionCustomTransform,
   open,
@@ -372,12 +373,54 @@ describe("systemActions.handlers", () => {
     });
   });
 
-  it("keeps the background command editor open when applying a custom transform", () => {
+  it("relays dedicated transform updates and routes Done by target type", () => {
+    const dispatchedEvents = [];
+    const stopPropagation = vi.fn();
+    const deps = {
+      props: {
+        backgroundTransformEditor: {
+          targetType: "visual",
+        },
+      },
+      dispatchEvent: (event) => dispatchedEvents.push(event),
+    };
+
+    handleTransformEditorChange(deps, {
+      _event: {
+        stopPropagation,
+        detail: {
+          transform: {
+            x: 100,
+            y: 200,
+          },
+        },
+      },
+    });
+    handleTransformEditorDone(deps, {
+      _event: {
+        stopPropagation,
+      },
+    });
+
+    expect(stopPropagation).toHaveBeenCalledTimes(2);
+    expect(dispatchedEvents.map((event) => event.type)).toEqual([
+      "background-transform-editor-change",
+      "action-transform-editor-done",
+    ]);
+    expect(dispatchedEvents[0].detail).toEqual({
+      transform: {
+        x: 100,
+        y: 200,
+      },
+    });
+  });
+
+  it("updates the system-actions draft when applying a background custom transform", () => {
     const state = createInitialState();
     const dispatchedEvents = [];
-    const setChildCustomTransform = vi.fn();
-    const updateActionsSpy = vi.fn();
-    const render = vi.fn();
+    const updateActionsSpy = vi.fn((actions) =>
+      updateActions({ state }, actions),
+    );
 
     updateActions(
       { state },
@@ -391,13 +434,6 @@ describe("systemActions.handlers", () => {
 
     handleSetBackgroundCustomTransform(
       {
-        refs: {
-          commandLineBackground: {
-            transformedHandlers: {
-              handleSetCustomTransform: setChildCustomTransform,
-            },
-          },
-        },
         store: {
           selectAction: () => selectAction({ state }),
           updateActions: updateActionsSpy,
@@ -438,14 +474,9 @@ describe("systemActions.handlers", () => {
       originY: 128,
     };
 
-    expect(selectAction({ state }).background).toEqual({
-      resourceId: "bg-school",
-      transformId: "bg-center",
-    });
-    expect(updateActionsSpy).not.toHaveBeenCalled();
-    expect(render).not.toHaveBeenCalled();
-    expect(setChildCustomTransform).toHaveBeenCalledWith({
-      transform: nextBackground,
+    expect(selectAction({ state }).background).toEqual(nextBackground);
+    expect(updateActionsSpy).toHaveBeenCalledWith({
+      background: nextBackground,
     });
     expect(dispatchedEvents).toHaveLength(1);
     expect(dispatchedEvents[0].type).toBe(
@@ -461,7 +492,6 @@ describe("systemActions.handlers", () => {
   it("uses the transform editor action snapshot when applying a visual custom transform", () => {
     const state = createInitialState();
     const dispatchedEvents = [];
-    const setChildCustomTransform = vi.fn();
     const transform = {
       x: 320,
       y: 180,
@@ -506,15 +536,9 @@ describe("systemActions.handlers", () => {
 
     handleSetActionCustomTransform(
       {
-        refs: {
-          commandLineVisual: {
-            transformedHandlers: {
-              handleSetCustomTransform: setChildCustomTransform,
-            },
-          },
-        },
         store: {
           selectAction: () => selectAction({ state }),
+          updateActions: (actions) => updateActions({ state }, actions),
         },
         dispatchEvent: (event) => {
           dispatchedEvents.push(event);
@@ -529,10 +553,13 @@ describe("systemActions.handlers", () => {
       },
     );
 
-    expect(setChildCustomTransform).toHaveBeenCalledWith({
-      index: 1,
-      transform,
-    });
+    expect(selectAction({ state }).visual.items).toEqual([
+      editorAction.items[0],
+      {
+        ...editorAction.items[1],
+        ...transform,
+      },
+    ]);
     expect(dispatchedEvents).toHaveLength(1);
     expect(dispatchedEvents[0].detail.presentationState.visual.items).toEqual([
       editorAction.items[0],
@@ -658,6 +685,8 @@ describe("systemActions.handlers", () => {
     expect(handleSuppressClose).toHaveBeenCalledTimes(1);
     expect(dispatchedEvents).toHaveLength(1);
     expect(dispatchedEvents[0].type).toBe("background-transform-customize");
+    expect(dispatchedEvents[0].bubbles).toBe(true);
+    expect(dispatchedEvents[0].composed).toBe(true);
     expect(dispatchedEvents[0].detail).toEqual({
       background: {
         resourceId: "bg-title",
@@ -710,9 +739,6 @@ describe("systemActions.handlers", () => {
 
   it("turns suppressed dialog close requests into transform editor cancel", () => {
     const dispatchedEvents = [];
-    const handleCancelBackground = vi.fn();
-    const handleCancelCharacters = vi.fn();
-    const handleCancelVisual = vi.fn();
     const setSuppressDialogClose = vi.fn();
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
@@ -722,23 +748,6 @@ describe("systemActions.handlers", () => {
         props: {
           backgroundTransformEditor: {
             isOpen: true,
-          },
-        },
-        refs: {
-          commandLineBackground: {
-            transformedHandlers: {
-              handleCancelCustomTransformEditor: handleCancelBackground,
-            },
-          },
-          commandLineCharacters: {
-            transformedHandlers: {
-              handleCancelCustomTransformEditor: handleCancelCharacters,
-            },
-          },
-          commandLineVisual: {
-            transformedHandlers: {
-              handleCancelCustomTransformEditor: handleCancelVisual,
-            },
           },
         },
         store: {
@@ -758,9 +767,6 @@ describe("systemActions.handlers", () => {
 
     expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(stopPropagation).toHaveBeenCalledTimes(1);
-    expect(handleCancelBackground).toHaveBeenCalledTimes(1);
-    expect(handleCancelCharacters).toHaveBeenCalledTimes(1);
-    expect(handleCancelVisual).toHaveBeenCalledTimes(1);
     expect(setSuppressDialogClose).toHaveBeenCalledWith({
       suppressDialogClose: true,
     });
@@ -919,45 +925,15 @@ describe("systemActions.handlers", () => {
     });
   });
 
-  it("forwards background transform editor Done from the nested background command line", () => {
-    const dispatchedEvents = [];
-    const stopPropagation = vi.fn();
-
-    handleBackgroundTransformEditorDone(
-      {
-        dispatchEvent: (event) => {
-          dispatchedEvents.push(event);
-        },
-      },
-      {
-        _event: {
-          stopPropagation,
-          detail: {
-            done: true,
-          },
-        },
-      },
-    );
-
-    expect(stopPropagation).toHaveBeenCalledTimes(1);
-    expect(dispatchedEvents).toHaveLength(1);
-    expect(dispatchedEvents[0].type).toBe("background-transform-editor-done");
-    expect(dispatchedEvents[0].detail).toEqual({
-      done: true,
-    });
-  });
-
-  it("exposes the nested background command line transform preview canvas root", () => {
+  it("exposes the dedicated transform editor preview canvas root", () => {
     const canvasRoot = {};
     const getCanvasRoot = vi.fn(() => canvasRoot);
 
     expect(
       handleGetBackgroundTransformPreviewCanvasRoot({
         refs: {
-          commandLineBackground: {
-            transformedHandlers: {
-              handleGetBackgroundTransformPreviewCanvasRoot: getCanvasRoot,
-            },
+          actionTransformEditor: {
+            getCanvasRoot,
           },
         },
       }),

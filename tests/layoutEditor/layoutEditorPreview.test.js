@@ -64,6 +64,7 @@ describe("layoutEditorPreview", () => {
       y: 19,
       width: 102,
       height: 42,
+      fill: "transparent",
       border: {
         color: "#ffffff",
         width: 2,
@@ -75,6 +76,7 @@ describe("layoutEditorPreview", () => {
       y: 21,
       width: 98,
       height: 38,
+      fill: "transparent",
       border: {
         color: "#b3b3b3",
         width: 2,
@@ -107,6 +109,8 @@ describe("layoutEditorPreview", () => {
     const [selectionOuter, selectionInner, , selectionAnchor] =
       selectionOverlays[0].children;
 
+    expect(selectionOuter.fill).toBe("transparent");
+    expect(selectionInner.fill).toBe("transparent");
     expect(selectionOuter.border.width).toBe(2);
     expect(selectionInner.border.width).toBe(2);
     expect(selectionAnchor).toMatchObject({
@@ -903,11 +907,10 @@ describe("layoutEditorPreview", () => {
       height: 40,
     });
     expect(overlays[0].children[2].border).toBeUndefined();
-    expect(overlays[0].children[2].drag).toEqual({
-      start: { payload: {} },
-      move: { payload: {} },
-      end: { payload: {} },
+    expect(overlays[0].children[2].hover).toEqual({
+      cursor: "all-scroll",
     });
+    expect(overlays[0].children[2].drag).toBeUndefined();
     expect(overlays[0].children[7]).toEqual({
       id: "selected-border-anchor",
       type: "rect",
@@ -924,9 +927,9 @@ describe("layoutEditorPreview", () => {
         coordinateSpace: "local",
         stops: [
           { offset: 0, color: "#ffffff" },
-          { offset: 0.75, color: "#ffffff" },
+          { offset: 0.74, color: "#ffffff" },
           { offset: 0.75, color: "#b3b3b3" },
-          { offset: 1, color: "#b3b3b3" },
+          { offset: 0.99, color: "#b3b3b3" },
           { offset: 1, color: "transparent" },
         ],
       },

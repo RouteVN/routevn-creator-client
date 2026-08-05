@@ -4,6 +4,11 @@ propsSchema:
   properties:
     values:
       type: object
+    mode:
+      type: string
+      enum:
+        - layout
+        - transform
     imagesData:
       type: object
     soundsData:

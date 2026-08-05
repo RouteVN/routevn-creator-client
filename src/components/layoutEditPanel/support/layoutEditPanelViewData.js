@@ -203,7 +203,15 @@ const toLayoutActionItems = (values, hiddenActionModes, copy = {}) => {
   );
 };
 
-export const getLayoutEditPanelSections = ({ constants, resourceType }) => {
+export const getLayoutEditPanelSections = ({
+  constants,
+  resourceType,
+  mode,
+}) => {
+  if (mode === "transform") {
+    return constants.transformSections || [];
+  }
+
   return resourceType === "controls"
     ? constants.controlSections || []
     : constants.layoutSections || [];
@@ -394,6 +402,7 @@ export const selectLayoutEditPanelFieldPopoverForm = (
   const sections = getLayoutEditPanelSections({
     constants,
     resourceType: props.resourceType,
+    mode: props.mode,
   });
 
   return findFieldPopoverFormInSections(sections, name);

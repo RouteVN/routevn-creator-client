@@ -177,15 +177,33 @@ export const selectLayoutEditorCanvasHover = (
   hitResolution,
   { deepSelect = false, selectedOccurrenceId } = {},
 ) => {
-  const selectedOccurrenceIsUnderPointer = hitResolution?.path?.some(
+  const selectedOccurrenceIndex = hitResolution?.path?.findIndex(
     ({ occurrenceId }) => occurrenceId === selectedOccurrenceId,
   );
 
-  if (!deepSelect && selectedOccurrenceIsUnderPointer) {
+  if (!deepSelect && selectedOccurrenceIndex >= 0) {
     return undefined;
   }
 
   return selectLayoutEditorCanvasHit(hitResolution, { deepSelect });
+};
+
+export const selectLayoutEditorCanvasClick = (
+  hitResolution,
+  { deepSelect = false, selectedItemId } = {},
+) => {
+  if (deepSelect) {
+    return selectLayoutEditorCanvasHit(hitResolution, { deepSelect: true });
+  }
+
+  const selectedIndex = hitResolution?.path?.findIndex(
+    ({ itemId }) => itemId === selectedItemId,
+  );
+  if (selectedIndex >= 0) {
+    return hitResolution.path[selectedIndex];
+  }
+
+  return selectLayoutEditorCanvasHit(hitResolution);
 };
 
 export const selectNextLayoutEditorCanvasHit = (

@@ -141,15 +141,36 @@ export const handleBackgroundTransformCustomize = (deps, payload) => {
   deps.dispatchEvent(
     new CustomEvent("background-transform-customize", {
       detail: toPlainObject(payload?._event?.detail),
+      bubbles: true,
+      composed: true,
     }),
   );
 };
 
-export const handleBackgroundTransformEditorDone = (deps, payload) => {
+export const handleTransformEditorChange = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   deps.dispatchEvent(
-    new CustomEvent("background-transform-editor-done", {
+    new CustomEvent("background-transform-editor-change", {
       detail: toPlainObject(payload?._event?.detail),
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleTransformEditorDone = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const targetType = deps.props?.backgroundTransformEditor?.targetType;
+  const eventName =
+    targetType && targetType !== "background"
+      ? "action-transform-editor-done"
+      : "background-transform-editor-done";
+
+  deps.dispatchEvent(
+    new CustomEvent(eventName, {
+      detail: {},
+      bubbles: true,
+      composed: true,
     }),
   );
 };
@@ -164,36 +185,22 @@ export const handleActionTransformCustomize = (deps, payload) => {
   deps.dispatchEvent(
     new CustomEvent("action-transform-customize", {
       detail: toPlainObject(payload?._event?.detail),
+      bubbles: true,
+      composed: true,
     }),
   );
-};
-
-export const handleActionTransformEditorDone = (deps, payload) => {
-  payload?._event?.stopPropagation?.();
-  deps.dispatchEvent(
-    new CustomEvent("action-transform-editor-done", {
-      detail: toPlainObject(payload?._event?.detail),
-    }),
-  );
-};
-
-const closeEmbeddedTransformEditors = (refs = {}) => {
-  refs?.commandLineBackground?.transformedHandlers?.handleCancelCustomTransformEditor?.();
-  refs?.commandLineCharacters?.transformedHandlers?.handleCancelCustomTransformEditor?.();
-  refs?.commandLineVisual?.transformedHandlers?.handleCancelCustomTransformEditor?.();
 };
 
 export const handleActionsDialogCloseRequest = (deps, payload) => {
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();
 
-  const { props, refs, store } = deps;
+  const { props, store } = deps;
   if (props?.backgroundTransformEditor?.isOpen !== true) {
     return;
   }
 
   store?.setSuppressDialogClose?.({ suppressDialogClose: true });
-  closeEmbeddedTransformEditors(refs);
   deps.dispatchEvent(
     new CustomEvent("background-transform-editor-cancel", {
       detail: {},
@@ -204,25 +211,22 @@ export const handleActionsDialogCloseRequest = (deps, payload) => {
 };
 
 export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
-  return (
-    refs?.commandLineBackground?.transformedHandlers?.handleGetBackgroundTransformPreviewCanvasRoot?.() ||
-    refs?.commandLineVisual?.transformedHandlers?.handleGetBackgroundTransformPreviewCanvasRoot?.() ||
-    refs?.commandLineCharacters?.transformedHandlers?.handleGetBackgroundTransformPreviewCanvasRoot?.()
-  );
+  return refs?.actionTransformEditor?.getCanvasRoot?.();
 };
 
 export const handleSetBackgroundCustomTransform = (
   deps,
   { background, transform } = {},
 ) => {
-  const { refs, store } = deps;
+  const { store } = deps;
   const nextBackground = createBackgroundWithInlineTransform(
     background ?? store.selectAction().background,
     transform,
   );
 
-  refs?.commandLineBackground?.transformedHandlers?.handleSetCustomTransform?.({
-    transform: nextBackground,
+  store.updateActions({
+    ...store.selectAction(),
+    background: nextBackground,
   });
   dispatchTemporaryPresentationStateChange(deps, {
     background: nextBackground,
@@ -245,7 +249,7 @@ export const handleSetActionCustomTransform = (
   deps,
   { targetType, itemIndex, item, transform, action: actionSnapshot } = {},
 ) => {
-  const { refs, store } = deps;
+  const { store } = deps;
   const actionKey = targetType === "character" ? "character" : "visual";
   const action = toPlainObject(
     actionSnapshot ?? store.selectAction()?.[actionKey],
@@ -263,19 +267,13 @@ export const handleSetActionCustomTransform = (
   });
   items[resolvedIndex] = nextItem;
 
-  if (actionKey === "character") {
-    refs?.commandLineCharacters?.transformedHandlers?.handleSetCustomTransform?.(
-      {
-        index: resolvedIndex,
-        transform,
-      },
-    );
-  } else {
-    refs?.commandLineVisual?.transformedHandlers?.handleSetCustomTransform?.({
-      index: resolvedIndex,
-      transform,
-    });
-  }
+  store.updateActions({
+    ...store.selectAction(),
+    [actionKey]: {
+      ...action,
+      items,
+    },
+  });
 
   dispatchTemporaryPresentationStateChange(deps, {
     [actionKey]: {

@@ -21,6 +21,17 @@ opacityPopoverForm: &opacityPopoverForm
         variant: pr
         label: Submit
 
+scalePopoverForm: &scalePopoverForm
+  fields:
+    - name: value
+      type: input-number
+      step: 0.01
+  actions:
+    buttons:
+      - id: submit
+        variant: pr
+        label: Submit
+
 textPopoverForm: &textPopoverForm
   fields:
     - name: value
@@ -30,6 +41,85 @@ textPopoverForm: &textPopoverForm
       - id: submit
         variant: pr
         label: Submit
+
+transformSections:
+  - label: Transform
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            svg: x
+            name: x
+            value: "${values.x}"
+            popoverForm: *numberPopoverForm
+          - type: clickable-value
+            svg: y
+            name: y
+            value: "${values.y}"
+            popoverForm: *numberPopoverForm
+      - type: group
+        stacked: true
+        fields:
+          - type: clickable-value
+            label: Scale X
+            name: scaleX
+            value: "${values.scaleX}"
+            popoverForm: *scalePopoverForm
+          - type: clickable-value
+            label: Scale Y
+            name: scaleY
+            value: "${values.scaleY}"
+            popoverForm: *scalePopoverForm
+      - type: group
+        stacked: true
+        fields:
+          - type: anchor-grid
+            label: Anchor
+            name: anchor
+            value: "${values.anchor}"
+            options:
+              - label: Top Left
+                value:
+                  x: 0
+                  y: 0
+              - label: Top Center
+                value:
+                  x: 0.5
+                  y: 0
+              - label: Top Right
+                value:
+                  x: 1
+                  y: 0
+              - label: Center Left
+                value:
+                  x: 0
+                  y: 0.5
+              - label: Center
+                value:
+                  x: 0.5
+                  y: 0.5
+              - label: Center Right
+                value:
+                  x: 1
+                  y: 0.5
+              - label: Bottom Left
+                value:
+                  x: 0
+                  y: 1
+              - label: Bottom Center
+                value:
+                  x: 0.5
+                  y: 1
+              - label: Bottom Right
+                value:
+                  x: 1
+                  y: 1
+          - type: clickable-value
+            label: Rotation
+            name: rotation
+            value: "${values.rotation}"
+            metaValue: °
+            popoverForm: *numberPopoverForm
 
 layoutSections:
   - label: Transform

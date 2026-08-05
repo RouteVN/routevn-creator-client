@@ -1,3 +1,9 @@
+import {
+  createTransformSelectionAnchor,
+  createTransformSelectionHitArea,
+  createTransformSelectionResizeHandle,
+} from "../../transformSelectionChrome.js";
+
 const BACKGROUND_TRANSFORM_EDITOR_TRANSFORM_ID =
   "__background_transform_editor__";
 
@@ -60,19 +66,13 @@ const DEFAULT_TRANSFORM = {
 
 const OVERLAY_BORDER = {
   color: "#ffffff",
-  width: 2,
+  width: 4,
   alpha: 1,
 };
 
-const OVERLAY_FILL = {
-  color: "#ffffff",
-  alpha: 0.001,
-};
+const OVERLAY_FILL = "transparent";
 
-const OVERLAY_ANCHOR_FILL = {
-  color: "#ffffff",
-  alpha: 1,
-};
+const OVERLAY_ANCHOR_FILL = "#ffffff";
 
 const OVERLAY_ANCHOR_BORDER = {
   color: "#111111",
@@ -232,15 +232,10 @@ const applyActionItemTransformEditorToLine = (
 ) => {
   const actionKey = getActionKeyForTransformEditorTarget(editorState);
   if (actionKey === "background") {
-    const inlineBackground = createBackgroundWithInlineTransform(
+    selectedLine.actions.background = createBackgroundWithInlineTransform(
       selectedLine.actions?.background,
       editorState.transform,
     );
-
-    selectedLine.actions.background = {
-      ...inlineBackground,
-      transformId: BACKGROUND_TRANSFORM_EDITOR_TRANSFORM_ID,
-    };
     return;
   }
 
@@ -288,8 +283,13 @@ export const createProjectDataWithBackgroundTransformEditor = (
 
   nextProjectData.resources = nextResources;
   nextResources.transforms = nextTransforms;
-  nextTransforms[BACKGROUND_TRANSFORM_EDITOR_TRANSFORM_ID] =
-    normalizeBackgroundTransformEditorTransform(editorState.transform);
+  if (
+    getTransformEditorTargetType(editorState) !==
+    TRANSFORM_EDITOR_TARGET_TYPE.BACKGROUND
+  ) {
+    nextTransforms[BACKGROUND_TRANSFORM_EDITOR_TRANSFORM_ID] =
+      normalizeBackgroundTransformEditorTransform(editorState.transform);
+  }
 
   nextSelectedLine.actions = toPlainObject(nextSelectedLine.actions);
   applyActionItemTransformEditorToLine(nextSelectedLine, editorState);
@@ -405,36 +405,21 @@ const getTransformEditorAnchorRatios = (editorState = {}, element = {}) => {
 };
 
 const buildOverlayRect = ({ element, draggable }) => {
-  if (!hasRenderableBounds(element)) {
-    return undefined;
-  }
-
-  const overlayRect = {
+  const width = getRenderableWidth(element);
+  const height = getRenderableHeight(element);
+  const inset = Math.min(OVERLAY_BORDER.width, width / 4, height / 4);
+  const overlayRect = createTransformSelectionHitArea({
     id: "selected-border",
-    type: "rect",
-    x: 0,
-    y: 0,
-    width: getRenderableWidth(element),
-    height: getRenderableHeight(element),
+    width: width - inset * 2,
+    height: height - inset * 2,
     fill: OVERLAY_FILL,
     border: OVERLAY_BORDER,
-  };
+    draggable,
+  });
 
-  if (draggable) {
-    overlayRect.hover = {
-      cursor: "all-scroll",
-    };
-    overlayRect.drag = {
-      start: {
-        payload: {},
-      },
-      move: {
-        payload: {},
-      },
-      end: {
-        payload: {},
-      },
-    };
+  if (overlayRect) {
+    overlayRect.x = inset;
+    overlayRect.y = inset;
   }
 
   return overlayRect;
@@ -454,16 +439,16 @@ const buildOverlayAnchorMarker = ({ element, anchorRatios }) => {
     ? anchorRatios.anchorY
     : getElementAnchorRatios(element).anchorY;
 
-  return {
+  return createTransformSelectionAnchor({
     id: "selected-border-anchor",
-    type: "rect",
-    x: width * anchorX - OVERLAY_ANCHOR_SIZE / 2,
-    y: height * anchorY - OVERLAY_ANCHOR_SIZE / 2,
-    width: OVERLAY_ANCHOR_SIZE,
-    height: OVERLAY_ANCHOR_SIZE,
+    height,
+    width,
+    anchorX,
+    anchorY,
+    size: OVERLAY_ANCHOR_SIZE,
     fill: OVERLAY_ANCHOR_FILL,
     border: OVERLAY_ANCHOR_BORDER,
-  };
+  });
 };
 
 const buildOverlayResizeHandle = ({ element, edge }) => {
@@ -471,43 +456,14 @@ const buildOverlayResizeHandle = ({ element, edge }) => {
     return undefined;
   }
 
-  const width = getRenderableWidth(element);
-  const height = getRenderableHeight(element);
-  const vertical = edge === "left" || edge === "right";
-
-  return {
+  return createTransformSelectionResizeHandle({
     id: `selected-border-resize-${edge}`,
-    type: "rect",
-    x:
-      edge === "left"
-        ? -OVERLAY_RESIZE_HANDLE_SIZE / 2
-        : edge === "right"
-          ? width - OVERLAY_RESIZE_HANDLE_SIZE / 2
-          : 0,
-    y:
-      edge === "top"
-        ? -OVERLAY_RESIZE_HANDLE_SIZE / 2
-        : edge === "bottom"
-          ? height - OVERLAY_RESIZE_HANDLE_SIZE / 2
-          : 0,
-    width: vertical ? OVERLAY_RESIZE_HANDLE_SIZE : width,
-    height: vertical ? height : OVERLAY_RESIZE_HANDLE_SIZE,
+    width: getRenderableWidth(element),
+    height: getRenderableHeight(element),
+    edge,
+    size: OVERLAY_RESIZE_HANDLE_SIZE,
     fill: OVERLAY_FILL,
-    hover: {
-      cursor: vertical ? "ew-resize" : "ns-resize",
-    },
-    drag: {
-      start: {
-        payload: {},
-      },
-      move: {
-        payload: {},
-      },
-      end: {
-        payload: {},
-      },
-    },
-  };
+  });
 };
 
 const buildOverlayResizeHandles = ({ element }) => {
@@ -628,6 +584,42 @@ const getTransformEditorTargetIds = (editorState = {}) => {
   return getActionItemTargetIds(editorState);
 };
 
+const createBackgroundBoundsSamplePoints = ({ width, height }) => {
+  const xValues = [1, width / 2, width - 1];
+  const yValues = [1, height / 2, height - 1];
+
+  return yValues.flatMap((y) => xValues.map((x) => ({ x, y })));
+};
+
+export const selectBackgroundTransformEditorRenderedBounds = ({
+  graphicsService,
+  editorState = {},
+  projectResolution = {},
+} = {}) => {
+  const width = Number(projectResolution.width);
+  const height = Number(projectResolution.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height)) {
+    return undefined;
+  }
+
+  const targetIds = getTransformEditorTargetIds(editorState);
+  const samplePoints = createBackgroundBoundsSamplePoints({ width, height });
+
+  for (const point of samplePoints) {
+    const hits = graphicsService?.hitTestElementBounds?.(point) ?? [];
+    for (const targetId of targetIds) {
+      for (const hit of hits) {
+        const target = hit.path?.find((entry) => entry.id === targetId);
+        if (target?.bounds?.corners?.length === 4) {
+          return target.bounds;
+        }
+      }
+    }
+  }
+
+  return undefined;
+};
+
 const selectPrimaryMatchingPath = (matchingPaths, targetIds) => {
   const pathsWithBounds = matchingPaths.filter((path) =>
     hasRenderableBounds(path[path.length - 1]),
@@ -642,13 +634,59 @@ const selectPrimaryMatchingPath = (matchingPaths, targetIds) => {
     }
   }
 
-  return pathsWithBounds[0];
+  if (pathsWithBounds[0]) {
+    return pathsWithBounds[0];
+  }
+
+  for (const targetId of targetIds) {
+    const exactMatch = matchingPaths.find(
+      (path) => path[path.length - 1]?.id === targetId,
+    );
+    if (exactMatch) {
+      return exactMatch;
+    }
+  }
+
+  return matchingPaths[0];
+};
+
+const applyLayoutBackgroundBounds = (path, parsedElements) => {
+  const element = path?.[path.length - 1];
+  if (
+    !element ||
+    hasRenderableBounds(element) ||
+    element.id !== "bg-cg-background-container"
+  ) {
+    return path;
+  }
+
+  const backgroundColorPath = collectMatchingPaths(
+    parsedElements,
+    BACKGROUND_COLOR_TARGET_IDS,
+  ).find((candidatePath) =>
+    hasRenderableBounds(candidatePath[candidatePath.length - 1]),
+  );
+  const backgroundColor = backgroundColorPath?.[backgroundColorPath.length - 1];
+  if (!backgroundColor) {
+    return path;
+  }
+
+  return [
+    ...path.slice(0, -1),
+    {
+      ...element,
+      width: getRenderableWidth(backgroundColor),
+      height: getRenderableHeight(backgroundColor),
+    },
+  ];
 };
 
 const selectBackgroundElementPath = (parsedElements, editorState = {}) => {
   const targetIds = getTransformEditorTargetIds(editorState);
   const matchingPaths = collectMatchingPaths(parsedElements, targetIds);
-  return selectPrimaryMatchingPath(matchingPaths, targetIds);
+  const selectedPath = selectPrimaryMatchingPath(matchingPaths, targetIds);
+
+  return applyLayoutBackgroundBounds(selectedPath, parsedElements);
 };
 
 const toSelectedElementMetrics = (path, editorState = {}) => {
@@ -679,7 +717,123 @@ const toSelectedElementMetrics = (path, editorState = {}) => {
       : Number.isFinite(element.scaleY)
         ? element.scaleY
         : 1,
+    renderedX: Number.isFinite(element.x) ? element.x : 0,
+    renderedY: Number.isFinite(element.y) ? element.y : 0,
+    renderedOriginX: Number.isFinite(element.originX) ? element.originX : 0,
+    renderedOriginY: Number.isFinite(element.originY) ? element.originY : 0,
+    renderedRotation: Number.isFinite(element.rotation) ? element.rotation : 0,
+    renderedScaleX: Number.isFinite(element.scaleX) ? element.scaleX : 1,
+    renderedScaleY: Number.isFinite(element.scaleY) ? element.scaleY : 1,
   };
+};
+
+const createTransformEditorRenderStateId = (renderState, editorState) => {
+  const targetType = getTransformEditorTargetType(editorState);
+  const targetIds = getTransformEditorTargetIds(editorState);
+  const transform = normalizeBackgroundTransformEditorTransform(
+    editorState.transform,
+  );
+  const transformKey = BACKGROUND_TRANSFORM_FIELDS.map(
+    (field) => transform[field],
+  ).join(",");
+
+  return `${renderState.id ?? "scene-editor"}:action-transform:${targetType}:${targetIds.join(",")}:${transformKey}`;
+};
+
+const addOverlayToRenderedElements = ({ elements, path, overlayElement }) => {
+  if (!overlayElement) {
+    return elements;
+  }
+
+  if (path.length <= 1) {
+    return [...elements, overlayElement];
+  }
+
+  const ancestorId = path[0]?.id;
+  let appended = false;
+  const nextElements = elements.map((element) => {
+    if (appended || element?.id !== ancestorId) {
+      return element;
+    }
+
+    appended = true;
+    return {
+      ...element,
+      children: [...toElementList(element.children), overlayElement],
+    };
+  });
+
+  return appended ? nextElements : [...elements, overlayElement];
+};
+
+const updateElementById = (elements, targetId, updateElement) => {
+  let updated = false;
+  const visit = (element) => {
+    if (updated || !element || typeof element !== "object") {
+      return element;
+    }
+
+    if (element.id === targetId) {
+      updated = true;
+      return updateElement(element);
+    }
+
+    if (!Array.isArray(element.children)) {
+      return element;
+    }
+
+    const children = element.children.map(visit);
+    return updated ? { ...element, children } : element;
+  };
+
+  const nextElements = toElementList(elements).map(visit);
+  return { elements: nextElements, updated };
+};
+
+const translateTransformEditorTarget = (
+  elements,
+  editorState,
+  { x, y } = {},
+) => {
+  for (const targetId of getTransformEditorTargetIds(editorState)) {
+    const result = updateElementById(elements, targetId, (element) => ({
+      ...element,
+      x: (Number.isFinite(element.x) ? element.x : 0) + x,
+      y: (Number.isFinite(element.y) ? element.y : 0) + y,
+    }));
+    if (result.updated) {
+      return result.elements;
+    }
+  }
+
+  return elements;
+};
+
+export const createBackgroundTransformEditorPositionPreviewCanvasState = ({
+  renderState = {},
+  graphicsService,
+  editorState = {},
+  startTransform = {},
+} = {}) => {
+  const transform = normalizeBackgroundTransformEditorTransform(
+    editorState.transform,
+  );
+  const initialTransform =
+    normalizeBackgroundTransformEditorTransform(startTransform);
+  const elements = translateTransformEditorTarget(
+    renderState.elements,
+    editorState,
+    {
+      x: transform.x - initialTransform.x,
+      y: transform.y - initialTransform.y,
+    },
+  );
+
+  return createBackgroundTransformEditorCanvasState({
+    renderState: { ...renderState, elements },
+    graphicsService,
+    editorState,
+  });
 };
 
 export const createBackgroundTransformEditorCanvasState = ({
@@ -693,25 +847,34 @@ export const createBackgroundTransformEditorCanvasState = ({
   const parsedState = graphicsService?.parse?.({
     elements: renderedElements,
   });
-  const selectedPath = selectBackgroundElementPath(
+  const initialSelectedPath = selectBackgroundElementPath(
     parsedState?.elements,
     editorState,
   );
+  const selectedPath = initialSelectedPath;
+  const overlayPath =
+    selectedPath?.length > 1 ? selectedPath.slice(1) : selectedPath;
   const overlayElement = selectedPath
     ? buildOverlayTree({
-        path: selectedPath,
+        path: overlayPath,
         draggable: true,
         editorState,
       })
     : undefined;
+  const elementsWithOverlay = addOverlayToRenderedElements({
+    elements: renderedElements,
+    path: selectedPath ?? [],
+    overlayElement,
+  });
 
   return {
     renderState: {
       ...renderState,
+      id: createTransformEditorRenderStateId(renderState, editorState),
       global: stripRenderStateGlobalInteractions(renderState.global),
       audio: [],
       animations: [],
-      elements: [...renderedElements, overlayElement].filter(Boolean),
+      elements: elementsWithOverlay,
     },
     selectedElementMetrics: toSelectedElementMetrics(selectedPath, editorState),
   };

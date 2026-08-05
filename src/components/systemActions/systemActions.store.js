@@ -203,6 +203,9 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
   });
   const hiddenModes = getHiddenModes(attrs);
   const allowedModes = getAllowedModes(attrs);
+  const backgroundTransformEditor = attrs.backgroundTransformEditor ?? {};
+  const transformEditorOpen = backgroundTransformEditor.isOpen === true;
+  const dialogVariant = getDialogVariant(attrs);
 
   const repositoryState = state.repositoryState;
   const choiceLayouts = Object.entries(repositoryState.layouts?.items || {})
@@ -288,19 +291,31 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
         ? PRESENTATION_ACTION_CSS_ORDER
         : NEUTRAL_PRESENTATION_ACTION_CSS_ORDER,
     showEmbeddedClose: shouldShowEmbeddedClose(attrs),
-    dialogVariant: getDialogVariant(attrs),
-    actionsDialogWidth: state.isTouchMode ? "100%" : "800",
-    actionsDialogHeight: state.isTouchMode ? "100vh" : "80vh",
+    dialogVariant,
+    actionsDialogFullscreen: transformEditorOpen,
+    actionsDialogFullscreenHorizontalInset: "0px",
+    actionsDialogWidth: state.isTouchMode
+      ? "100%"
+      : transformEditorOpen
+        ? "100%"
+        : "800",
+    actionsDialogHeight: state.isTouchMode
+      ? "100vh"
+      : transformEditorOpen
+        ? "100vh"
+        : "80vh",
     actionsDialogPanelWidth: state.isTouchMode
       ? "100vw"
-      : (attrs.dialogPanelWidth ?? "50vw"),
+      : transformEditorOpen
+        ? "100vw"
+        : (attrs.dialogPanelWidth ?? "50vw"),
     hiddenModes,
     allowedModes,
     suppressDialogClose:
       state.suppressDialogClose === true ||
       parseBooleanProp(attrs.suppressDialogClose, false) ||
       attrs.backgroundTransformEditor?.suppressActionsDialogClose === true,
-    backgroundTransformEditor: attrs.backgroundTransformEditor ?? {},
+    backgroundTransformEditor,
     isRuntimeActionMode: isRuntimeActionMode(state.mode),
     nextLineLabel: localizeCommandLineText("Next Line", copy),
     toggleAutoModeLabel: localizeCommandLineText("Toggle Auto Mode", copy),

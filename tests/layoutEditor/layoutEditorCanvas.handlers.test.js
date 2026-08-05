@@ -295,6 +295,24 @@ describe("layoutEditorCanvas pointer selection", () => {
     });
   });
 
+  it("does not render child hover chrome inside the selected parent", () => {
+    const deps = createDeps({ selectedItemId: "parent" });
+
+    handleCanvasPointerMove(deps, {
+      _event: {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 30,
+        clientY: 30,
+        metaKey: false,
+        ctrlKey: false,
+      },
+    });
+
+    expect(deps.store.selectHoveredSelection()).toBeUndefined();
+    expect(deps.graphicsService.render).not.toHaveBeenCalled();
+  });
+
   it("tracks touch movement without rendering hover chrome", () => {
     const deps = createDeps();
     const pointerEvent = {
@@ -435,6 +453,214 @@ describe("layoutEditorCanvas pointer selection", () => {
     expect(event.stopPropagation).not.toHaveBeenCalled();
   });
 
+  it("keeps the selected parent on a single click over its child", () => {
+    const deps = createDeps({ selectedItemId: "parent" });
+    deps.graphicsService.hitTestElementBounds.mockReturnValue([
+      {
+        path: [
+          {
+            id: "selected-border-group",
+            type: "container",
+            bounds: bounds(0, 0, 100, 100),
+          },
+          {
+            id: "selected-border",
+            type: "rect",
+            bounds: bounds(0, 0, 100, 100),
+          },
+        ],
+      },
+      ...createNestedContentHits(),
+    ]);
+
+    runClick(deps);
+
+    expect(deps.dispatchEvent.mock.calls[0][0].detail).toEqual({
+      itemId: "parent",
+      occurrenceId: "parent",
+    });
+  });
+
+  it("drags the selected parent when the pointer starts over its child", async () => {
+    const deps = createDeps({ selectedItemId: "parent" });
+    deps.store.setHoveredSelection({
+      selection: {
+        itemId: "child",
+        occurrenceId: "child",
+        bounds: bounds(20, 20, 40, 40),
+      },
+    });
+    const currentTarget = {
+      setPointerCapture: vi.fn(),
+    };
+    const pointerEvent = {
+      button: 0,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: "mouse",
+      currentTarget,
+      clientX: 30,
+      clientY: 30,
+      metaKey: false,
+      ctrlKey: false,
+    };
+
+    handleCanvasPointerDown(deps, { _event: pointerEvent });
+    await handleCanvasPointerMove(deps, {
+      _event: {
+        ...pointerEvent,
+        clientX: 40,
+        clientY: 35,
+      },
+    });
+
+    expect(deps.store.selectPointerGesture()).toMatchObject({
+      directDragItemId: "parent",
+    });
+    expect(deps.store.selectPendingUpdatedItem()).toMatchObject({
+      id: "parent",
+      x: 10,
+      y: 5,
+    });
+  });
+
+  it("renders drag previews from cached canvas state", async () => {
+    const deps = createDeps({ selectedItemId: "parent" });
+    const parsedElements = [
+      {
+        id: "parent",
+        type: "container",
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        children: [
+          {
+            id: "child",
+            type: "rect",
+            x: 20,
+            y: 20,
+            width: 40,
+            height: 40,
+          },
+        ],
+      },
+    ];
+    deps.store.setCanvasRenderState({
+      elements: parsedElements,
+      baseElements: parsedElements,
+      parsedElements,
+      canvasUnitsPerCssPixel: 1,
+    });
+    deps.graphicsService.render.mockClear();
+    deps.projectService.ensureRepository.mockClear();
+    const currentTarget = {
+      setPointerCapture: vi.fn(),
+    };
+    const pointerEvent = {
+      button: 0,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: "mouse",
+      currentTarget,
+      clientX: 30,
+      clientY: 30,
+      metaKey: false,
+      ctrlKey: false,
+    };
+
+    handleCanvasPointerDown(deps, { _event: pointerEvent });
+    deps.graphicsService.render.mockClear();
+    deps.projectService.ensureRepository.mockClear();
+    await handleCanvasPointerMove(deps, {
+      _event: {
+        ...pointerEvent,
+        clientX: 40,
+        clientY: 35,
+      },
+    });
+
+    expect(deps.projectService.ensureRepository).not.toHaveBeenCalled();
+    expect(deps.graphicsService.render).toHaveBeenCalled();
+    const lastRender = deps.graphicsService.render.mock.calls.at(-1)[0];
+    expect(lastRender.elements[0]).toMatchObject({
+      id: "parent",
+      x: 10,
+      y: 5,
+    });
+    expect(
+      deps.dispatchEvent.mock.calls
+        .map(([event]) => event)
+        .find(({ type }) => type === "drag-update"),
+    ).toMatchObject({
+      detail: {
+        itemId: "parent",
+      },
+    });
+  });
+
+  it("moves the selected item from its center after crossing the drag threshold", async () => {
+    const deps = createDeps({ selectedItemId: "parent" });
+    deps.graphicsService.hitTestElementBounds.mockReturnValue([
+      {
+        path: [
+          {
+            id: "selected-border-group",
+            type: "container",
+            bounds: bounds(0, 0, 100, 100),
+          },
+          {
+            id: "selected-border",
+            type: "rect",
+            bounds: bounds(0, 0, 100, 100),
+          },
+        ],
+      },
+      {
+        path: [
+          {
+            id: "parent",
+            type: "container",
+            bounds: bounds(0, 0, 100, 100),
+          },
+        ],
+      },
+    ]);
+    const currentTarget = {
+      setPointerCapture: vi.fn(),
+      releasePointerCapture: vi.fn(),
+    };
+    const pointerEvent = {
+      button: 0,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: "mouse",
+      currentTarget,
+      clientX: 30,
+      clientY: 30,
+      metaKey: false,
+      ctrlKey: false,
+    };
+
+    handleCanvasPointerDown(deps, { _event: pointerEvent });
+    await handleCanvasPointerMove(deps, {
+      _event: {
+        ...pointerEvent,
+        clientX: 40,
+        clientY: 35,
+      },
+    });
+
+    expect(deps.store.selectPointerGesture()).toMatchObject({
+      directDragItemId: "parent",
+    });
+    expect(deps.store.selectDragging()).toMatchObject({
+      isDragging: true,
+      dragMode: "move",
+    });
+    expect(currentTarget.setPointerCapture).toHaveBeenCalledWith(1);
+  });
+
   it.each([
     {
       caseName: "moves the outermost parent before a hover indicator is shown",
@@ -540,7 +766,7 @@ describe("layoutEditorCanvas pointer selection", () => {
       itemId: "child",
     });
 
-    const doubleClickDeps = createDeps();
+    const doubleClickDeps = createDeps({ selectedItemId: "parent" });
     runClick(doubleClickDeps, { clickCount: 1 });
     doubleClickDeps.graphicsService.hitTestElementBounds.mockImplementationOnce(
       () => [
@@ -564,8 +790,11 @@ describe("layoutEditorCanvas pointer selection", () => {
     runClick(doubleClickDeps, { clickCount: 2 });
     handleCanvasDoubleClick(doubleClickDeps);
 
-    expect(doubleClickDeps.dispatchEvent).toHaveBeenCalledTimes(2);
-    expect(doubleClickDeps.dispatchEvent.mock.calls[1][0].detail).toEqual({
+    const selectionEvents = doubleClickDeps.dispatchEvent.mock.calls
+      .map(([event]) => event)
+      .filter(({ type }) => type === "selection-change");
+    expect(selectionEvents).toHaveLength(2);
+    expect(selectionEvents[1].detail).toEqual({
       itemId: "child",
       occurrenceId: "child",
     });

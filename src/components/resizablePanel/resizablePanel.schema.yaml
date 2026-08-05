@@ -27,4 +27,5 @@ propsSchema:
       enum:
         - file-explorer
         - detail-panel
+        - transform-editor
       description: Type of panel for userConfig key differentiation

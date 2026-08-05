@@ -233,10 +233,7 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();
   payload?._event?.stopImmediatePropagation?.();
-  const { dispatchEvent, store, render } = deps;
-
-  store.openCustomTransformEditor?.();
-  render?.();
+  const { dispatchEvent, store } = deps;
 
   if (typeof dispatchEvent !== "function") {
     return;
@@ -245,11 +242,11 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
   const background = buildBackgroundDataFromState(store, {
     includeTemporaryResource: true,
   });
-
   dispatchEvent(
     new CustomEvent("background-transform-customize", {
       detail: {
         background,
+        targetName: payload._event.currentTarget?.dataset?.targetName,
       },
       bubbles: true,
       composed: true,
@@ -264,54 +261,6 @@ export const handleCustomTransformButtonKeyDown = (deps, payload) => {
   }
 
   handleCustomTransformButtonClick(deps, payload);
-};
-
-export const handleSetCustomTransform = (deps, { transform } = {}) => {
-  const { store, render } = deps;
-  store.setCustomTransformEnabled?.({
-    enabled: true,
-  });
-  store.setCustomTransform?.({
-    transform,
-  });
-  render?.();
-};
-
-export const handleCustomTransformDoneButtonClick = (deps, payload) => {
-  payload?._event?.preventDefault?.();
-  payload?._event?.stopPropagation?.();
-  payload?._event?.stopImmediatePropagation?.();
-  const { dispatchEvent, store, render } = deps;
-
-  store.closeCustomTransformEditor?.();
-  render?.();
-
-  dispatchEvent?.(
-    new CustomEvent("background-transform-editor-done", {
-      detail: {},
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-export const handleCancelCustomTransformEditor = (deps, payload) => {
-  payload?._event?.preventDefault?.();
-  payload?._event?.stopPropagation?.();
-  payload?._event?.stopImmediatePropagation?.();
-  const { store, render } = deps;
-
-  store.closeCustomTransformEditor?.();
-  render?.();
-};
-
-export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
-  const canvasHost = refs?.backgroundTransformPreviewCanvasHost;
-  return (
-    canvasHost?.getCanvasRoot?.() ||
-    canvasHost?.shadowRoot?.querySelector?.("#canvas") ||
-    canvasHost?.querySelector?.("#canvas")
-  );
 };
 
 export const handleBeforeMount = (deps) => {

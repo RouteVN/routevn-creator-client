@@ -15,6 +15,10 @@ propsSchema:
       type: string
     panelWidth:
       type: string
+    fullscreen:
+      type: boolean
+    fullscreenHorizontalInset:
+      type: string
     suppressClose:
       type: boolean
 events:

@@ -500,7 +500,6 @@ export const createInitialState = () => ({
   fullSpritesheetPreviewAtlas: undefined,
   fullSpritesheetPreviewAnimation: undefined,
   fullSpritesheetPreviewKey: undefined,
-  customTransformEditorOpen: false,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -611,29 +610,6 @@ const clearVisualInlineTransform = (visual) => {
   if (!visual.transformId) {
     visual.transformId = nextVisual.transformId;
   }
-};
-
-const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
-  const editor = props.backgroundTransformEditor ?? {};
-  const transform = normalizeBackgroundTransformEditorTransform(
-    editor.transform,
-  );
-  const metrics = editor.metrics ?? {
-    x: formatBackgroundTransformEditorMetric(transform.x),
-    y: formatBackgroundTransformEditorMetric(transform.y),
-    scaleX: formatBackgroundTransformEditorMetric(transform.scaleX),
-    scaleY: formatBackgroundTransformEditorMetric(transform.scaleY),
-    rotation: formatBackgroundTransformEditorMetric(transform.rotation),
-  };
-
-  return {
-    isOpen: state.customTransformEditorOpen === true || editor.isOpen === true,
-    canvasAspectRatio: editor.canvasAspectRatio ?? "16 / 9",
-    previewMaxWidth:
-      editor.previewMaxWidth ??
-      "min(100vw, calc((100vh - 122px) * 1.7777777778))",
-    metrics,
-  };
 };
 
 export const addVisual = (
@@ -758,18 +734,6 @@ export const updateVisualCustomTransform = (
 
   visual.transformId = visual.transformId ?? getDefaultTransformId(state);
   applyVisualInlineTransform(visual, transform);
-};
-
-export const openCustomTransformEditor = ({ state }, _payload = {}) => {
-  state.customTransformEditorOpen = true;
-};
-
-export const closeCustomTransformEditor = ({ state }, _payload = {}) => {
-  state.customTransformEditorOpen = false;
-};
-
-export const selectCustomTransformEditorOpen = ({ state }) => {
-  return state.customTransformEditorOpen === true;
 };
 
 export const updateVisualAnimation = (
@@ -1154,7 +1118,7 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
   });
 };
 
-export const selectViewData = ({ state, props = {}, i18n }) => {
+export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const activeResourceType = getActiveResourceType(state);
   const activeResourceCollection =
@@ -1428,10 +1392,6 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     fullSpritesheetPreviewAtlas: state.fullSpritesheetPreviewAtlas,
     fullSpritesheetPreviewAnimation: state.fullSpritesheetPreviewAnimation,
     fullSpritesheetPreviewKey: state.fullSpritesheetPreviewKey,
-    backgroundTransformEditor: createBackgroundTransformEditorViewData({
-      state,
-      props,
-    }),
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     defaultValues,
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),

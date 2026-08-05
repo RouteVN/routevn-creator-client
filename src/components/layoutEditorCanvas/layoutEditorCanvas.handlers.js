@@ -10,6 +10,7 @@ import {
   canResizeLayoutEditorItemWidth,
 } from "../../internal/layoutEditorElementRegistry.js";
 import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
+import { createTransformKeyboardIntent } from "../../internal/transformKeyboard.js";
 import {
   createLayoutEditorAssetReferences,
   createLayoutEditorHoverOverlay,
@@ -19,7 +20,7 @@ import {
 } from "./support/layoutEditorCanvasRender.js";
 import {
   resolveLayoutEditorCanvasHitPath,
-  selectLayoutEditorCanvasHit,
+  selectLayoutEditorCanvasClick,
   selectLayoutEditorCanvasHover,
   selectNextLayoutEditorCanvasHit,
 } from "./support/layoutEditorCanvasSelection.js";
@@ -607,6 +608,137 @@ const renderCachedCanvasChrome = (
   return true;
 };
 
+const updateCanvasElementsByOccurrence = (
+  elements,
+  occurrenceIds,
+  updateElement,
+) => {
+  let updateCount = 0;
+  const visit = (element) => {
+    if (!element || typeof element !== "object") {
+      return element;
+    }
+
+    let nextElement = element;
+    if (occurrenceIds.has(element.id)) {
+      nextElement = updateElement(element);
+      updateCount += 1;
+    }
+
+    if (Array.isArray(element.children)) {
+      const children = element.children.map(visit);
+      if (children.some((child, index) => child !== element.children[index])) {
+        nextElement = { ...nextElement, children };
+      }
+    }
+
+    return nextElement;
+  };
+
+  return {
+    elements: elements.map(visit),
+    updateCount,
+  };
+};
+
+const createTransientCanvasItemUpdater = ({ updatedItem, dragging } = {}) => {
+  const dragStart = dragging?.dragStartPosition;
+  if (!updatedItem || !dragStart) {
+    return undefined;
+  }
+
+  const deltaX = Number.isFinite(updatedItem.x)
+    ? updatedItem.x - (dragStart.itemStartX ?? updatedItem.x)
+    : 0;
+  const deltaY = Number.isFinite(updatedItem.y)
+    ? updatedItem.y - (dragStart.itemStartY ?? updatedItem.y)
+    : 0;
+  const deltaWidth = Number.isFinite(updatedItem.width)
+    ? updatedItem.width - (dragStart.itemStartWidth ?? updatedItem.width)
+    : 0;
+  const deltaHeight = Number.isFinite(updatedItem.height)
+    ? updatedItem.height - (dragStart.itemStartHeight ?? updatedItem.height)
+    : 0;
+  const rotationDelta = Number.isFinite(dragStart.rotationDelta)
+    ? dragStart.rotationDelta
+    : 0;
+
+  return (element) => {
+    const nextElement = { ...element };
+    if (deltaX !== 0) {
+      nextElement.x = (Number.isFinite(element.x) ? element.x : 0) + deltaX;
+    }
+    if (deltaY !== 0) {
+      nextElement.y = (Number.isFinite(element.y) ? element.y : 0) + deltaY;
+    }
+    if (deltaWidth !== 0 && Number.isFinite(element.width)) {
+      nextElement.width = element.width + deltaWidth;
+    }
+    if (deltaHeight !== 0 && Number.isFinite(element.height)) {
+      nextElement.height = element.height + deltaHeight;
+    }
+    if (rotationDelta !== 0) {
+      nextElement.rotation =
+        (Number.isFinite(element.rotation) ? element.rotation : 0) +
+        rotationDelta;
+    }
+    return nextElement;
+  };
+};
+
+const renderTransientCanvasItem = (deps, updatedItem) => {
+  const { baseElements, parsedElements, canvasUnitsPerCssPixel } =
+    deps.store.selectCanvasRenderState();
+  const { occurrencesById, occurrenceIdsByOwner } =
+    deps.store.selectSelectionOccurrenceState();
+  const occurrenceIds = new Set(occurrenceIdsByOwner[updatedItem.id] ?? []);
+  const updateElement = createTransientCanvasItemUpdater({
+    updatedItem,
+    dragging: deps.store.selectDragging(),
+  });
+  if (
+    baseElements.length === 0 ||
+    parsedElements.length === 0 ||
+    occurrenceIds.size === 0 ||
+    !updateElement
+  ) {
+    return false;
+  }
+
+  const nextBaseState = updateCanvasElementsByOccurrence(
+    baseElements,
+    occurrenceIds,
+    updateElement,
+  );
+  const nextParsedState = updateCanvasElementsByOccurrence(
+    parsedElements,
+    occurrenceIds,
+    updateElement,
+  );
+  if (nextBaseState.updateCount === 0 || nextParsedState.updateCount === 0) {
+    return false;
+  }
+
+  const { elements, selectedElementMetrics } =
+    createLayoutEditorSelectionRenderState({
+      baseElements: nextBaseState.elements,
+      parsedElements: nextParsedState.elements,
+      selectedItemId: updatedItem.id,
+      selectedOccurrenceId: deps.store.selectSelectedOccurrenceId(),
+      occurrencesById,
+      occurrenceIdsByOwner,
+      selectedItem: updatedItem,
+      disableMoveDrag: deps.props.disableMoveDrag === true,
+      canvasUnitsPerCssPixel,
+    });
+  deps.graphicsService.render({ elements, animations: [] });
+  dispatchSelectedElementMetrics(deps, {
+    itemId: updatedItem.id,
+    metrics: selectedElementMetrics,
+  });
+  return true;
+};
+
 const dispatchCanvasSelection = (deps, selection) => {
   const shouldRefreshSelectedOccurrence =
     selection?.itemId === deps.props.selectedItemId &&
@@ -638,6 +770,14 @@ const dispatchCanvasSelection = (deps, selection) => {
 };
 
 const selectCanvasPointerDragTarget = (deps, { event, hitResolution } = {}) => {
+  const selectedOccurrenceId = deps.store.selectResolvedSelectedOccurrenceId();
+  const selectedSelection = hitResolution.path?.find(
+    ({ occurrenceId }) => occurrenceId === selectedOccurrenceId,
+  );
+  if (selectedSelection && !isDeepSelectModifierActive(event)) {
+    return selectedSelection;
+  }
+
   const hoveredSelection = deps.store.selectHoveredSelection();
   const hoveredSelectionIsUnderPointer = hitResolution.path?.some(
     ({ itemId, occurrenceId }) => {
@@ -651,10 +791,17 @@ const selectCanvasPointerDragTarget = (deps, { event, hitResolution } = {}) => {
     return hoveredSelection;
   }
 
-  return selectLayoutEditorCanvasHover(hitResolution, {
+  const hoverSelection = selectLayoutEditorCanvasHover(hitResolution, {
     deepSelect: isDeepSelectModifierActive(event),
-    selectedOccurrenceId: deps.store.selectResolvedSelectedOccurrenceId(),
+    selectedOccurrenceId,
   });
+  if (hoverSelection) {
+    return hoverSelection;
+  }
+
+  return hitResolution.path?.find(
+    ({ occurrenceId }) => occurrenceId === selectedOccurrenceId,
+  );
 };
 
 const startCanvasPointerSelectionDrag = (
@@ -719,39 +866,36 @@ export const applyCanvasItemKeyboardChange = ({
     return item;
   }
 
-  let change;
-
-  if (key === "ArrowUp") {
-    if (resize && !canResizeLayoutEditorItemHeight(item)) {
-      return item;
-    }
-    change = resize
-      ? { height: Math.round(item.height - unit) }
-      : { y: Math.round(item.y - unit) };
-  } else if (key === "ArrowDown") {
-    if (resize && !canResizeLayoutEditorItemHeight(item)) {
-      return item;
-    }
-    change = resize
-      ? { height: Math.round(item.height + unit) }
-      : { y: Math.round(item.y + unit) };
-  } else if (key === "ArrowLeft") {
-    if (resize && !canResizeLayoutEditorItemWidth(item)) {
-      return item;
-    }
-    change = resize
-      ? { width: Math.round(item.width - unit) }
-      : { x: Math.round(item.x - unit) };
-  } else if (key === "ArrowRight") {
-    if (resize && !canResizeLayoutEditorItemWidth(item)) {
-      return item;
-    }
-    change = resize
-      ? { width: Math.round(item.width + unit) }
-      : { x: Math.round(item.x + unit) };
-  } else {
+  const intent = createTransformKeyboardIntent({ key, resize, unit });
+  if (!intent) {
     return item;
   }
+
+  if (
+    intent.type === "resize" &&
+    intent.axis === "x" &&
+    !canResizeLayoutEditorItemWidth(item)
+  ) {
+    return item;
+  }
+
+  if (
+    intent.type === "resize" &&
+    intent.axis === "y" &&
+    !canResizeLayoutEditorItemHeight(item)
+  ) {
+    return item;
+  }
+
+  const fieldName =
+    intent.type === "resize"
+      ? intent.axis === "x"
+        ? "width"
+        : "height"
+      : intent.axis;
+  const change = {
+    [fieldName]: Math.round(item[fieldName] + intent.delta),
+  };
 
   return {
     ...item,
@@ -1150,8 +1294,9 @@ export const handleCanvasClick = (deps, payload) => {
       hitResolution: clickGesture.hitResolution,
     },
   });
-  const selection = selectLayoutEditorCanvasHit(clickGesture.hitResolution, {
+  const selection = selectLayoutEditorCanvasClick(clickGesture.hitResolution, {
     deepSelect: isDeepSelectModifierActive(event),
+    selectedItemId: clickGesture.selectedItemIdAtStart,
   });
   dispatchCanvasSelection(deps, selection);
 };
@@ -1338,10 +1483,12 @@ const handleBorderDragMove = async (deps, payload = {}) => {
   }
 
   deps.store.setPendingUpdatedItem({ updatedItem });
-  await renderLayoutEditorCanvas(deps, deps.props, {
-    updatedItem,
-    reason: "border-drag-move",
-  });
+  if (!renderTransientCanvasItem(deps, updatedItem)) {
+    await renderLayoutEditorCanvas(deps, deps.props, {
+      updatedItem,
+      reason: "border-drag-move",
+    });
+  }
   dispatchCanvasItemEvent(deps, "drag-update", updatedItem);
 };
 

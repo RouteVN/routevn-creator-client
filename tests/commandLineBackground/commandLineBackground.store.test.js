@@ -489,6 +489,9 @@ describe("commandLineBackground.store", () => {
     expect(viewData.customTransformDetails).toEqual([
       { label: "Position", value: "100, 120" },
       { label: "Scale", value: "1.2 x 1.2" },
+      { label: "Anchor", value: "0.5, 0.5" },
+      { label: "Rotation", value: "0°" },
+      { label: "Origin", value: "320, 180" },
     ]);
   });
 
@@ -704,41 +707,6 @@ describe("commandLineBackground.store", () => {
     const viewData = selectViewData({ state });
 
     expect(viewData.dialogueForm.defaultValues.blurKernelSize).toBe(11);
-  });
-
-  it("passes background transform editor view data through to the nested preview", () => {
-    const state = createInitialState();
-
-    const viewData = selectViewData({
-      state,
-      props: {
-        backgroundTransformEditor: {
-          isOpen: true,
-          canvasAspectRatio: "4 / 3",
-          previewMaxWidth: "640px",
-          metrics: {
-            x: "10.00",
-            y: "20.00",
-            scaleX: "1.20",
-            scaleY: "1.20",
-            rotation: "8.00",
-          },
-        },
-      },
-    });
-
-    expect(viewData.backgroundTransformEditor).toEqual({
-      isOpen: true,
-      canvasAspectRatio: "4 / 3",
-      previewMaxWidth: "640px",
-      metrics: {
-        x: "10.00",
-        y: "20.00",
-        scaleX: "1.20",
-        scaleY: "1.20",
-        rotation: "8.00",
-      },
-    });
   });
 
   it("selects a spritesheet animation and exposes its animated preview", () => {

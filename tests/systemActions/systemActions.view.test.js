@@ -117,12 +117,21 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       ":suppressClose=${suppressDialogClose}",
     );
+    expect(systemActionsView).toContain(
+      ":fullscreen=${actionsDialogFullscreen}",
+    );
+    expect(systemActionsView).toContain(
+      "fullscreen-horizontal-inset=${actionsDialogFullscreenHorizontalInset}",
+    );
     expect(systemActionsView).toContain("overflow-x: hidden");
     expect(sceneEditorLexicalView).toContain(
       "dialog-variant=scene-editor-left",
     );
     expect(systemActionsView).toContain(
-      ":backgroundTransformEditor=${backgroundTransformEditor}",
+      "rvn-action-transform-editor#actionTransformEditor",
+    );
+    expect(systemActionsView).not.toContain(
+      'rvn-command-line-background#commandLineBackground data-mode="background" :background=${actions.background} :backgroundTransformEditor=',
     );
     expect(sceneEditorLexicalView).toContain(
       ":backgroundTransformEditor=${backgroundTransformEditor}",

@@ -1800,6 +1800,114 @@ describe("graphicsService", () => {
     });
   });
 
+  it("keeps deferred engine renders suppressed for editor-owned canvases", async () => {
+    let effectsHandlerOptions;
+    createEffectsHandlerMock.mockImplementation((options) => {
+      effectsHandlerOptions = options;
+      return vi.fn();
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    const onRenderState = vi.fn();
+    service.initRouteEngine(
+      {
+        screen: { width: 1920, height: 1080 },
+        story: { scenes: {} },
+        resources: {},
+      },
+      {
+        onRenderState,
+        suppressRenderEffects: true,
+      },
+    );
+    routeGraphicsInstance.render.mockClear();
+
+    effectsHandlerOptions.routeGraphics.render({
+      id: "deferred-render",
+      elements: [],
+      audio: [],
+      animations: [],
+    });
+
+    expect(routeGraphicsInstance.render).not.toHaveBeenCalled();
+    expect(onRenderState).not.toHaveBeenCalled();
+  });
+
+  it("ignores delayed render effects from a replaced engine", async () => {
+    const effectsHandlerOptions = [];
+    createEffectsHandlerMock.mockImplementation((options) => {
+      effectsHandlerOptions.push(options);
+      return vi.fn();
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    const projectData = {
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    };
+    service.initRouteEngine(projectData);
+    service.initRouteEngine(projectData);
+    routeGraphicsInstance.render.mockClear();
+
+    effectsHandlerOptions[0].routeGraphics.render({
+      id: "stale-render",
+      elements: [],
+      audio: [],
+      animations: [],
+    });
+
+    expect(routeGraphicsInstance.render).not.toHaveBeenCalled();
+    expect(effectsHandlerOptions[0].getEngine()).toBeUndefined();
+
+    effectsHandlerOptions[1].routeGraphics.render({
+      id: "current-render",
+      elements: [],
+      audio: [],
+      animations: [],
+    });
+
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "current-render" }),
+    );
+  });
+
   it("sanitizes invalid interaction sound volumes before direct renders", async () => {
     const { createGraphicsService } = await import(
       "../../src/deps/services/graphicsService.js"

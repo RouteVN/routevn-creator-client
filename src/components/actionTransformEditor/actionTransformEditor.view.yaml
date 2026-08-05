@@ -1,0 +1,59 @@
+refs:
+  window:
+    eventListeners:
+      keydown:
+        handler: handleWindowKeyDown
+      pointermove:
+        handler: handleWindowPointerMove
+      pointerup:
+        handler: handleWindowPointerUp
+      pointercancel:
+        handler: handleWindowPointerUp
+  doneButton:
+    eventListeners:
+      click:
+        handler: handleDoneClick
+  transformInspector:
+    eventListeners:
+      update:
+        handler: handleInspectorUpdate
+  actionTransformCanvasHost: {}
+  backgroundDragSurface:
+    eventListeners:
+      pointerdown:
+        handler: handleBackgroundPointerDown
+template:
+  - 'rtgl-view w=f h=f d=v bgc=bg style="min-width: 0; min-height: 0; overflow: hidden;"':
+      - 'rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo g=md style="flex: 0 0 auto;"':
+          - rtgl-text w=1fg ellipsis=true: ${title}
+          - rtgl-button#doneButton v=pr: ${doneButton}
+      - $if isTouchMode:
+          - 'rtgl-view w=f h=1fg d=v style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=f p=md bgc=bg ah=c style="flex: 0 0 auto; min-width: 0;"':
+                  - 'div style="position: relative; width: ${canvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; overflow: hidden;"':
+                      - 'rvn-scene-editor-preview-canvas#actionTransformCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
+                      - $if isBackgroundTarget:
+                          - 'div#backgroundDragSurface role=button aria-label="${targetTypeLabel}" tabindex=0 style="position: absolute; inset: 0; z-index: 3; cursor: ${backgroundDragCursor}; touch-action: none; user-select: none;"': null
+              - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
+                  - rvn-layout-edit-panel#transformInspector mode=transform :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :values=${inspectorValues}: null
+                  - 'rtgl-view h=25vh style="flex-shrink: 0;"': null
+        $else:
+          - 'rtgl-view w=f h=1fg d=h style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=220 h=f d=v p=md g=lg bwr=xs bc=bo style="box-sizing: border-box; flex: 0 0 auto; min-width: 0;"':
+                  - rtgl-view g=sm w=f:
+                      - rtgl-text s=sm: ${targetTitle}
+                      - 'rtgl-view w=f p=md g=xs bw=xs bc=bo br=md bgc=mu style="box-sizing: border-box;"':
+                          - rtgl-text s=xs c=mu-fg: ${targetTypeLabel}
+                          - rtgl-text s=sm w=f ellipsis=true: ${targetName}
+              - 'rtgl-view w=1fg h=f bgc=bg av=s ah=c style="min-width: 0; min-height: 0; overflow: auto; box-sizing: border-box;"':
+                  - 'div style="position: relative; width: ${canvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; overflow: hidden;"':
+                      - 'rvn-scene-editor-preview-canvas#actionTransformCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
+                      - $if isBackgroundTarget:
+                          - 'div#backgroundDragSurface role=button aria-label="${targetTypeLabel}" tabindex=0 style="position: absolute; inset: 0; z-index: 3; cursor: ${backgroundDragCursor}; touch-action: none; user-select: none;"': null
+              - rvn-resizable-panel panel-type=transform-editor w=300 min-w=240 max-w=500 resize-side=left:
+                  - 'rtgl-view slot=content w=f h=f d=v style="min-width: 0; min-height: 0;"':
+                      - 'rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo style="flex: 0 0 auto;"':
+                          - rtgl-text s=sm w=1fg ellipsis=true: ${targetName}
+                      - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
+                          - rvn-layout-edit-panel#transformInspector mode=transform :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :values=${inspectorValues}: null
+                          - 'rtgl-view h=25vh style="flex-shrink: 0;"': null

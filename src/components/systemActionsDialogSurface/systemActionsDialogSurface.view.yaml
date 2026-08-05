@@ -10,7 +10,13 @@ refs:
       close:
         handler: handleSurfaceClose
 template:
-  - $if isSceneEditorLeft:
+  - $if fullscreen:
+      - rtgl-dialog#dialog ?open=${open} layout=fixed bare:
+          - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
+              - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
+              - 'rtgl-view pos=fix bgc=bg style="left: ${fullscreenHorizontalInset}; top: var(--rvn-window-content-offset, 0px); right: 0; bottom: 0; min-width: 0; min-height: 0; overflow: hidden; z-index: 2002;"':
+                  - slot name=content: null
+    $elif isSceneEditorLeft:
       - rtgl-dialog#dialog ?open=${open} layout=fixed bare:
           - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
               - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null

@@ -22,11 +22,14 @@ export const selectSuppressClose = ({ state }) => {
 export const selectViewData = ({ state, props }) => {
   const variant = normalizeVariant(props.variant);
   const dialogWidth = props.dialogWidth ?? "800";
+  const fullscreen = isBooleanPropEnabled(props.fullscreen);
 
   return {
     open: props.open === true,
     variant,
     isSceneEditorLeft: variant === "scene-editor-left",
+    fullscreen,
+    fullscreenHorizontalInset: props.fullscreenHorizontalInset ?? "0px",
     dialogWidth,
     dialogSize: selectDialogSize(dialogWidth),
     dialogHeight: props.dialogHeight ?? "80vh",

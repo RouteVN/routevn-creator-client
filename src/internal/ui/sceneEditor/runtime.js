@@ -31,8 +31,10 @@ import {
 import { prepareRuntimeInteractionExecution } from "../../runtime/graphicsEngineRuntime.js";
 import { getFontFaceWeightDescriptor } from "../../fontCapabilities.js";
 import {
+  ACTION_TRANSFORM_TARGET_TYPES,
   createBackgroundTransformEditorCanvasState,
   createProjectDataWithBackgroundTransformEditor,
+  selectBackgroundTransformEditorRenderedBounds,
 } from "./backgroundTransformEditor.js";
 import {
   debugLog,
@@ -1255,16 +1257,36 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     await attachGraphicsCanvasToMountedRoot(deps, 2);
     const canvasPaintStartedAt = shouldMeasure ? getDebugNow() : 0;
     if (backgroundTransformEditorOpen) {
+      const backgroundTransformEditor =
+        store.selectBackgroundTransformEditor?.();
       const backgroundTransformCanvasState =
         createBackgroundTransformEditorCanvasState({
           renderState: currentRenderState,
           graphicsService,
-          editorState: store.selectBackgroundTransformEditor?.(),
+          editorState: backgroundTransformEditor,
         });
-      store.setBackgroundTransformEditorSelectedElementMetrics?.({
-        metrics: backgroundTransformCanvasState.selectedElementMetrics,
-      });
-      graphicsService.render(backgroundTransformCanvasState.renderState);
+      if (
+        backgroundTransformEditor?.targetType ===
+        ACTION_TRANSFORM_TARGET_TYPES.BACKGROUND
+      ) {
+        graphicsService.render(backgroundTransformCanvasState.renderState);
+        const renderedBounds = selectBackgroundTransformEditorRenderedBounds({
+          graphicsService,
+          editorState: backgroundTransformEditor,
+          projectResolution: renderProjectData.screen,
+        });
+        store.setBackgroundTransformEditorSelectedElementMetrics?.({
+          metrics: {
+            ...backgroundTransformCanvasState.selectedElementMetrics,
+            renderedBounds,
+          },
+        });
+      } else {
+        store.setBackgroundTransformEditorSelectedElementMetrics?.({
+          metrics: backgroundTransformCanvasState.selectedElementMetrics,
+        });
+        graphicsService.render(backgroundTransformCanvasState.renderState);
+      }
     } else {
       graphicsService.engineRenderCurrentState({
         preserveAnimationPlayback,

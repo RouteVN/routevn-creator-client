@@ -88,6 +88,8 @@ const WHEEL_INCREMENT_FIELD_CONFIG = {
   gapX: { step: 1, fastStep: 10 },
   gapY: { step: 1, fastStep: 10 },
   rotation: { defaultValue: 0, step: 1, fastStep: 15 },
+  scaleX: { defaultValue: 1, step: 0.01, fastStep: 0.1 },
+  scaleY: { defaultValue: 1, step: 0.01, fastStep: 0.1 },
   opacity: {
     defaultValue: 1,
     step: 0.01,
@@ -725,6 +727,7 @@ export const handleOnUpdate = (deps, payload) => {
 
   if (
     oldProps?.key === newProps?.key &&
+    oldProps?.mode === newProps?.mode &&
     valuesEquivalent &&
     oldProps?.projectResolution === newProps?.projectResolution &&
     oldProps?.layoutsData === newProps?.layoutsData &&
@@ -787,9 +790,16 @@ export const handleGroupItemClick = (deps, payload) => {
   const { _event } = payload;
   const name = _event.currentTarget.dataset.name;
   const popoverForm = store.selectFieldPopoverForm({ name });
+  const bounds = _event.currentTarget.getBoundingClientRect?.();
+  const x = Number.isFinite(_event.clientX)
+    ? _event.clientX
+    : (bounds?.left ?? 0) + (bounds?.width ?? 0) / 2;
+  const y = Number.isFinite(_event.clientY)
+    ? _event.clientY
+    : (bounds?.bottom ?? 0);
   store.openPopoverForm({
-    x: _event.clientX,
-    y: _event.clientY,
+    x,
+    y,
     name,
     form: popoverForm,
     projectResolution: props.projectResolution,
@@ -797,6 +807,16 @@ export const handleGroupItemClick = (deps, payload) => {
   });
 
   render();
+};
+
+export const handleGroupItemKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  handleGroupItemClick(deps, payload);
 };
 
 export const handleGroupItemWheel = (deps, payload) => {

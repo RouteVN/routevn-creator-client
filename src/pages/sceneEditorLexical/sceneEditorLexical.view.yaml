@@ -109,6 +109,8 @@ refs:
         handler: handleBackgroundTransformCustomize
       background-transform-editor-done:
         handler: handleBackgroundTransformEditorDone
+      background-transform-editor-change:
+        handler: handleBackgroundTransformEditorChange
       background-transform-editor-cancel:
         handler: handleBackgroundTransformEditorCancel
       action-transform-customize:
@@ -218,8 +220,8 @@ template:
                       - rtgl-view w=1fg: null
                       - 'rtgl-text#sceneTextStats s=xs c=mu-fg style="white-space: nowrap;"': ${sceneTextStatsLabel}
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
-                      - $if backgroundTransformEditor.isOpen == false:
-                          - 'rtgl-view w=f style="min-width: 0;"':
+                      - 'rtgl-view w=f style="min-width: 0;"':
+                          - $if backgroundTransformEditor.isOpen == false:
                               - 'div style="position: relative; width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto;"':
                                   - 'rvn-scene-editor-preview-canvas#previewCanvasHost style="display: block; width: 100%;" canvas-aspect-ratio="${canvasAspectRatio}"': null
                                   - $if isSceneAssetLoading:

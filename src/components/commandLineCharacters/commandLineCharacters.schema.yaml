@@ -2,8 +2,6 @@ componentName: rvn-command-line-characters
 propsSchema:
   type: object
   properties:
-    backgroundTransformEditor:
-      type: object
     character:
       type: object
       properties:

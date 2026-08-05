@@ -623,6 +623,7 @@ export const createGraphicsService = async ({
   let routeGraphicsInitPromise;
   let destroyRuntimePromise;
   let engine;
+  let engineGeneration = 0;
   let assetBufferManager;
   let loadedAssetTypes = new Map();
   let enableGlobalKeyboardBindings = true;
@@ -1535,6 +1536,7 @@ export const createGraphicsService = async ({
 
     const activeRouteGraphics = routeGraphics;
     routeGraphics = undefined;
+    engineGeneration += 1;
     engine = undefined;
     routeEngineProjectData = undefined;
     enableGlobalKeyboardBindings = true;
@@ -2202,6 +2204,8 @@ export const createGraphicsService = async ({
     hasLoadedAsset,
     initRouteEngine: (projectData, options = {}) => {
       const routeEngineTicker = ensureTicker();
+      engineGeneration += 1;
+      const currentEngineGeneration = engineGeneration;
       routeEngineProjectData = projectData;
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
@@ -2222,10 +2226,15 @@ export const createGraphicsService = async ({
             (namespace ? undefined : createNoopRouteEnginePersistence()));
 
       const handlePendingEffects = createEffectsHandler({
-        getEngine: () => engine,
+        getEngine: () =>
+          currentEngineGeneration === engineGeneration ? engine : undefined,
         routeGraphics: {
           render: (renderState) => {
-            if (suppressedEngineRenderEffects > 0) {
+            if (
+              currentEngineGeneration !== engineGeneration ||
+              suppressRenderEffects ||
+              suppressedEngineRenderEffects > 0
+            ) {
               return;
             }
             renderEngineState(renderState);

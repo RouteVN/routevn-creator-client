@@ -164,6 +164,38 @@ steps:
   - action: wait
     ms: 300
   - action: screenshot
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas'); const target = canvas?.deps?.graphicsService?.hitTestElementBounds?.({ x: 532, y: 933 })?.flatMap((hit) => hit.path ?? []).find((entry) => entry.id === 'Q9ufAe6Z2hyD'); const canvasElement = canvas?.shadowRoot?.querySelector?.('#canvas canvas'); const canvasBounds = canvasElement?.getBoundingClientRect?.(); if (!target?.bounds || !canvasBounds?.width) return 'missing-target'; const projectX = target.bounds.x + target.bounds.width / 2; const projectY = target.bounds.y + target.bounds.height / 2; const clientX = canvasBounds.left + projectX / 1920 * canvasBounds.width; const clientY = canvasBounds.top + projectY / 1080 * canvasBounds.height; window.__vtLayoutChildPointer = { clientX, clientY }; const pointer = { bubbles: true, composed: true, pointerId: 41, pointerType: 'mouse', isPrimary: true, button: 0, clientX, clientY }; canvasElement.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, buttons: 1 })); canvasElement.dispatchEvent(new PointerEvent('pointerup', { ...pointer, buttons: 0 })); canvasElement.dispatchEvent(new PointerEvent('click', { ...pointer, detail: 1 })); return 'clicked'; })()"
+    value: "clicked"
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas'); return String(canvas?.props?.selectedItemId === 'AtgPkS3X9ZBF'); })()"
+    value: "true"
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas'); const canvasElement = canvas?.shadowRoot?.querySelector?.('#canvas canvas'); const position = window.__vtLayoutChildPointer; if (!canvasElement || !position) return 'missing-target'; const pointer = { bubbles: true, composed: true, pointerId: 42, pointerType: 'mouse', isPrimary: true, button: 0, clientX: position.clientX, clientY: position.clientY }; canvasElement.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, buttons: 1 })); canvasElement.dispatchEvent(new PointerEvent('pointerup', { ...pointer, buttons: 0 })); canvasElement.dispatchEvent(new PointerEvent('click', { ...pointer, detail: 2 })); canvasElement.dispatchEvent(new MouseEvent('dblclick', { ...pointer, detail: 2 })); return 'double-clicked'; })()"
+    value: "double-clicked"
+  - action: wait
+    ms: 300
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const findById = (elements, id) => { for (const element of Array.isArray(elements) ? elements : []) { if (element?.id === id) return element; const child = findById(element?.children, id); if (child) return child; } }; const canvas = deepQuery(document, 'rvn-layout-editor-canvas#layoutEditorCanvas'); const elements = canvas?.store?.selectCanvasRenderState?.()?.elements; const overlay = findById(elements, 'selected-border-outer'); const moveSurface = findById(elements, 'selected-border'); return String(canvas?.props?.selectedItemId === 'Q9ufAe6Z2hyD' && overlay?.border?.width > 0 && overlay?.fill === 'transparent' && moveSurface?.drag === undefined); })()"
+    value: "true"
+  - action: select
+    selector: "#fileExplorer [data-item-id='AtgPkS3X9ZBF'] rtgl-text"
+    steps:
+      - action: click
+  - action: wait
+    ms: 300
   - action: select
     selector: "#layoutEditPanel [data-name='rotation']"
     steps:

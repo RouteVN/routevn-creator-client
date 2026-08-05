@@ -1,4 +1,4 @@
-import { filter, fromEvent, tap } from "rxjs";
+import { filter, tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { generateId } from "../../internal/id.js";
 import { captureCanvasImage } from "../../internal/runtime/graphicsEngineRuntime.js";
@@ -34,6 +34,7 @@ import {
 } from "../../internal/ui/sceneEditor/runtime.js";
 import {
   createActionItemWithInlineTransform,
+  createBackgroundTransformEditorPositionPreviewCanvasState,
   createBackgroundWithInlineTransform,
   normalizeBackgroundTransformEditorTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
@@ -59,8 +60,6 @@ const FONT_SIZE_CONFIG_KEY = "sceneEditor.fontSize";
 const SCENE_EDITOR_FONT_SIZES = new Set(["xs", "sm", "md", "lg", "xl"]);
 const BACKGROUND_TRANSFORM_RESIZE_TARGET_PREFIX = "selected-border-resize-";
 const MIN_BACKGROUND_TRANSFORM_SCALE = 0.01;
-const BACKGROUND_TRANSFORM_KEYBOARD_NUDGE = 1;
-const BACKGROUND_TRANSFORM_KEYBOARD_LARGE_NUDGE = 10;
 const SCENE_EDITOR_SELECTION_URL_SYNC_THROTTLE_MS = 250;
 const SCENE_EDITOR_TEXT_CANVAS_RENDER_DEBOUNCE_MS = 100;
 const SCENE_TEXT_STATS_REFRESH_DEBOUNCE_MS = 400;
@@ -928,23 +927,40 @@ const BACKGROUND_TRANSFORM_EDITOR_RENDER_PAYLOAD = {
   skipAudio: true,
 };
 
-const requestBackgroundTransformEditorCanvasRender = (subject) => {
-  subject?.dispatch?.(
-    "sceneEditor.renderCanvas",
-    BACKGROUND_TRANSFORM_EDITOR_RENDER_PAYLOAD,
-  );
+const requestBackgroundTransformEditorCanvasRender = (
+  subject,
+  renderPayload = {},
+) => {
+  subject?.dispatch?.("sceneEditor.renderCanvas", {
+    ...BACKGROUND_TRANSFORM_EDITOR_RENDER_PAYLOAD,
+    ...renderPayload,
+  });
 };
 
-const renderBackgroundTransformEditorCanvasNow = (deps) => {
-  void renderSceneEditorState(
-    deps,
-    BACKGROUND_TRANSFORM_EDITOR_RENDER_PAYLOAD,
-  ).catch((error) => {
-    console.error(
-      "[sceneEditor] Background transform preview render failed",
-      error,
-    );
-  });
+const renderBackgroundTransformPositionPreview = (
+  deps,
+  { transform, startTransform } = {},
+) => {
+  const { graphicsService, store } = deps;
+  const renderState = graphicsService?.engineSelectRenderState?.();
+  if (!renderState || !startTransform) {
+    return false;
+  }
+
+  const editorState = {
+    ...store.selectBackgroundTransformEditor?.(),
+    transform,
+  };
+  const canvasState = createBackgroundTransformEditorPositionPreviewCanvasState(
+    {
+      renderState,
+      graphicsService,
+      editorState,
+      startTransform,
+    },
+  );
+  graphicsService.render(canvasState.renderState);
+  return true;
 };
 
 const getRepositoryItemById = (collection, itemId) => {
@@ -1287,99 +1303,9 @@ const applyBackgroundTransformDragChange = ({
 
   return normalizeBackgroundTransformEditorTransform({
     ...transform,
-    x: dragStartPosition.transformStartX + x - dragStartPosition.x,
-    y: dragStartPosition.transformStartY + y - dragStartPosition.y,
+    x: Math.round(dragStartPosition.transformStartX + x - dragStartPosition.x),
+    y: Math.round(dragStartPosition.transformStartY + y - dragStartPosition.y),
   });
-};
-
-const isBackgroundTransformKeyboardMoveKey = (key) => {
-  return (
-    key === "ArrowUp" ||
-    key === "ArrowDown" ||
-    key === "ArrowLeft" ||
-    key === "ArrowRight"
-  );
-};
-
-export const applyBackgroundTransformKeyboardPositionChange = ({
-  transform,
-  key,
-  unit = BACKGROUND_TRANSFORM_KEYBOARD_NUDGE,
-} = {}) => {
-  if (!isBackgroundTransformKeyboardMoveKey(key)) {
-    return transform;
-  }
-
-  const normalizedTransform =
-    normalizeBackgroundTransformEditorTransform(transform);
-  const moveUnit = Number.isFinite(Number(unit))
-    ? Number(unit)
-    : BACKGROUND_TRANSFORM_KEYBOARD_NUDGE;
-
-  if (key === "ArrowUp") {
-    return normalizeBackgroundTransformEditorTransform({
-      ...normalizedTransform,
-      y: normalizedTransform.y - moveUnit,
-    });
-  }
-
-  if (key === "ArrowDown") {
-    return normalizeBackgroundTransformEditorTransform({
-      ...normalizedTransform,
-      y: normalizedTransform.y + moveUnit,
-    });
-  }
-
-  if (key === "ArrowLeft") {
-    return normalizeBackgroundTransformEditorTransform({
-      ...normalizedTransform,
-      x: normalizedTransform.x - moveUnit,
-    });
-  }
-
-  return normalizeBackgroundTransformEditorTransform({
-    ...normalizedTransform,
-    x: normalizedTransform.x + moveUnit,
-  });
-};
-
-export const handleBackgroundTransformEditorKeyDown = (deps, event) => {
-  const { render, store } = deps;
-  if (!store.selectIsBackgroundTransformEditorOpen?.()) {
-    return false;
-  }
-
-  if (
-    event?.defaultPrevented ||
-    event?.isComposing ||
-    event?.ctrlKey ||
-    event?.metaKey ||
-    event?.altKey ||
-    !isBackgroundTransformKeyboardMoveKey(event?.key)
-  ) {
-    return false;
-  }
-
-  event.preventDefault?.();
-  event.stopPropagation?.();
-  event.stopImmediatePropagation?.();
-
-  const editor = store.selectBackgroundTransformEditor?.();
-  const updatedTransform = applyBackgroundTransformKeyboardPositionChange({
-    transform: editor?.transform,
-    key: event.key,
-    unit: event.shiftKey
-      ? BACKGROUND_TRANSFORM_KEYBOARD_LARGE_NUDGE
-      : BACKGROUND_TRANSFORM_KEYBOARD_NUDGE,
-  });
-
-  store.clearBackgroundTransformEditorDragStartPosition?.();
-  store.setBackgroundTransformEditorTransform?.({
-    transform: updatedTransform,
-  });
-  render();
-  requestBackgroundTransformEditorCanvasRender(deps.subject);
-  return true;
 };
 
 const handleBackgroundTransformBorderDragStart = (deps, payload = {}) => {
@@ -1395,7 +1321,7 @@ const handleBackgroundTransformBorderDragStart = (deps, payload = {}) => {
 };
 
 const handleBackgroundTransformBorderDragMove = (deps, payload = {}) => {
-  const { store, render } = deps;
+  const { store, subject } = deps;
   if (!store.selectIsBackgroundTransformEditorOpen?.()) {
     return;
   }
@@ -1455,8 +1381,9 @@ const handleBackgroundTransformBorderDragMove = (deps, payload = {}) => {
   store.setBackgroundTransformEditorTransform?.({
     transform: updatedTransform,
   });
-  render();
-  renderBackgroundTransformEditorCanvasNow(deps);
+  requestBackgroundTransformEditorCanvasRender(subject, {
+    debounceMs: 0,
+  });
 };
 
 const handleBackgroundTransformBorderDragEnd = (deps) => {
@@ -1465,15 +1392,15 @@ const handleBackgroundTransformBorderDragEnd = (deps) => {
   }
 
   deps.store.clearBackgroundTransformEditorDragStartPosition?.();
-  requestBackgroundTransformEditorCanvasRender(deps.subject);
+  deps.render();
+  requestBackgroundTransformEditorCanvasRender(deps.subject, {
+    debounceMs: 0,
+  });
 };
 
 const mountBackgroundTransformEditorSubscriptions = (deps) => {
   const { subject } = deps;
   const streams = [
-    fromEvent(window, "keydown", { capture: true }).pipe(
-      tap((event) => handleBackgroundTransformEditorKeyDown(deps, event)),
-    ),
     subject.pipe(
       filter(({ action }) => action === "border-drag-start"),
       tap(({ payload }) =>
@@ -1497,7 +1424,7 @@ const mountBackgroundTransformEditorSubscriptions = (deps) => {
 
 export const handleBackgroundTransformCustomize = (deps, payload) => {
   payload?._event?.stopPropagation?.();
-  const { refs, store, render, subject } = deps;
+  const { store, render, subject } = deps;
   const background = toPlainObject(payload?._event?.detail?.background);
   const transform = selectInitialBackgroundTransformEditorTransform(
     store,
@@ -1511,11 +1438,42 @@ export const handleBackgroundTransformCustomize = (deps, payload) => {
   });
   store.openBackgroundTransformEditor?.({
     background,
+    targetName: payload?._event?.detail?.targetName,
     transform,
   });
   render();
-  reopenBackgroundCommandLine({ refs, store, background });
-  requestBackgroundTransformEditorCanvasRender(subject);
+  requestBackgroundTransformEditorCanvasRender(subject, {
+    skipRender: false,
+  });
+};
+
+export const handleBackgroundTransformEditorChange = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { store, render, subject } = deps;
+  const transient = payload?._event?.detail?.transient === true;
+  const transform = normalizeBackgroundTransformEditorTransform(
+    payload?._event?.detail?.transform,
+  );
+
+  store.clearBackgroundTransformEditorDragStartPosition?.();
+  store.setBackgroundTransformEditorTransform?.({ transform });
+  if (
+    transient &&
+    renderBackgroundTransformPositionPreview(deps, {
+      transform,
+      startTransform: payload?._event?.detail?.startTransform,
+    })
+  ) {
+    return;
+  }
+
+  if (!transient) {
+    render();
+  }
+  requestBackgroundTransformEditorCanvasRender(subject, {
+    debounceMs: 0,
+    skipRender: false,
+  });
 };
 
 const closeActionTransformEditor = (deps, payload) => {
@@ -1655,7 +1613,7 @@ export const handleBackgroundTransformEditorCancel = (deps, payload) => {
 
 export const handleActionTransformCustomize = (deps, payload) => {
   payload?._event?.stopPropagation?.();
-  const { refs, store, render, subject } = deps;
+  const { store, render, subject } = deps;
   const detail = toPlainObject(payload?._event?.detail);
   const targetType = detail.targetType === "character" ? "character" : "visual";
   const actionKey = detail.actionKey === "character" ? "character" : "visual";
@@ -1685,15 +1643,10 @@ export const handleActionTransformCustomize = (deps, payload) => {
     itemIndex,
     item,
     targetId,
+    targetName: detail.targetName,
     transform,
   });
   render();
-  reopenActionTransformCommandLine({
-    refs,
-    store,
-    actionKey,
-    action,
-  });
   requestBackgroundTransformEditorCanvasRender(subject);
 };
 

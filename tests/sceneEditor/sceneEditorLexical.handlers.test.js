@@ -1,14 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  applyBackgroundTransformKeyboardPositionChange,
   applyBackgroundTransformResizeChange,
   handleActionsDialogClose,
   handleActionTransformCustomize,
   handleAddActionsButtonClick,
   handleBackgroundTransformCustomize,
   handleBackgroundTransformEditorCancel,
+  handleBackgroundTransformEditorChange,
   handleBackgroundTransformEditorCloseClick,
-  handleBackgroundTransformEditorKeyDown,
   handleCommandLineSubmit,
   handleDownloadCanvasClick,
   handleDropdownMenuClickItem,
@@ -805,96 +804,6 @@ describe("sceneEditorLexical.handlers transform editor resize", () => {
       scaleY: 3,
     });
   });
-
-  it("nudges transform position with arrow keys", () => {
-    const transform = {
-      x: 100,
-      y: 120,
-      anchorX: 0.5,
-      anchorY: 0.5,
-      scaleX: 1,
-      scaleY: 1,
-      rotation: 0,
-      originX: 960,
-      originY: 540,
-    };
-
-    expect(
-      applyBackgroundTransformKeyboardPositionChange({
-        transform,
-        key: "ArrowUp",
-      }),
-    ).toMatchObject({
-      x: 100,
-      y: 119,
-    });
-    expect(
-      applyBackgroundTransformKeyboardPositionChange({
-        transform,
-        key: "ArrowRight",
-        unit: 10,
-      }),
-    ).toMatchObject({
-      x: 110,
-      y: 120,
-    });
-  });
-
-  it("captures arrow keys while the transform editor is open", () => {
-    const event = {
-      key: "ArrowDown",
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
-      stopImmediatePropagation: vi.fn(),
-    };
-    const setBackgroundTransformEditorTransform = vi.fn();
-    const deps = {
-      store: {
-        selectIsBackgroundTransformEditorOpen: vi.fn(() => true),
-        selectBackgroundTransformEditor: vi.fn(() => ({
-          transform: {
-            x: 100,
-            y: 120,
-            anchorX: 0.5,
-            anchorY: 0.5,
-            scaleX: 1,
-            scaleY: 1,
-            rotation: 0,
-            originX: 960,
-            originY: 540,
-          },
-        })),
-        clearBackgroundTransformEditorDragStartPosition: vi.fn(),
-        setBackgroundTransformEditorTransform,
-      },
-      render: vi.fn(),
-      subject: {
-        dispatch: vi.fn(),
-      },
-    };
-
-    const didHandle = handleBackgroundTransformEditorKeyDown(deps, event);
-
-    expect(didHandle).toBe(true);
-    expect(event.preventDefault).toHaveBeenCalledTimes(1);
-    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
-    expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
-    expect(setBackgroundTransformEditorTransform).toHaveBeenCalledWith({
-      transform: expect.objectContaining({
-        x: 100,
-        y: 121,
-      }),
-    });
-    expect(deps.render).toHaveBeenCalledTimes(1);
-    expect(deps.subject.dispatch).toHaveBeenCalledWith(
-      "sceneEditor.renderCanvas",
-      {
-        skipRender: true,
-        skipAnimations: true,
-        skipAudio: true,
-      },
-    );
-  });
 });
 
 describe("sceneEditorLexical.handlers actions dialog", () => {
@@ -982,6 +891,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
   it("opens the background transform editor from the predefined transform when stale inline fields are present", () => {
     const openBackgroundTransformEditor = vi.fn();
     const open = vi.fn();
+    const dispatch = vi.fn();
 
     handleBackgroundTransformCustomize(
       {
@@ -1033,7 +943,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         },
         render: vi.fn(),
         subject: {
-          dispatch: vi.fn(),
+          dispatch,
         },
       },
       {
@@ -1075,11 +985,156 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         scaleY: 1,
       }),
     });
-    expect(open).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mode: "background",
+    expect(open).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith("sceneEditor.renderCanvas", {
+      skipRender: false,
+      skipAnimations: true,
+      skipAudio: true,
+    });
+  });
+
+  it("applies dedicated transform editor updates to the scene preview", () => {
+    const setBackgroundTransformEditorTransform = vi.fn();
+    const deps = {
+      store: {
+        clearBackgroundTransformEditorDragStartPosition: vi.fn(),
+        setBackgroundTransformEditorTransform,
+      },
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    handleBackgroundTransformEditorChange(deps, {
+      _event: {
+        stopPropagation: vi.fn(),
+        detail: {
+          transform: {
+            x: 320,
+            y: 180,
+            scaleX: 1.2,
+            scaleY: 0.8,
+          },
+        },
+      },
+    });
+
+    expect(setBackgroundTransformEditorTransform).toHaveBeenCalledWith({
+      transform: expect.objectContaining({
+        x: 320,
+        y: 180,
+        scaleX: 1.2,
+        scaleY: 0.8,
       }),
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      {
+        skipRender: false,
+        skipAnimations: true,
+        skipAudio: true,
+        debounceMs: 0,
+      },
     );
+  });
+
+  it("does not rerender the full editor for transient transform drag updates", () => {
+    const deps = {
+      store: {
+        clearBackgroundTransformEditorDragStartPosition: vi.fn(),
+        setBackgroundTransformEditorTransform: vi.fn(),
+      },
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    handleBackgroundTransformEditorChange(deps, {
+      _event: {
+        stopPropagation: vi.fn(),
+        detail: {
+          transient: true,
+          transform: {
+            x: 321,
+            y: 181,
+          },
+        },
+      },
+    });
+
+    expect(deps.store.setBackgroundTransformEditorTransform).toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      {
+        skipRender: false,
+        skipAnimations: true,
+        skipAudio: true,
+        debounceMs: 0,
+      },
+    );
+  });
+
+  it("renders transient background movement without rebuilding the engine", () => {
+    const editor = {
+      isOpen: true,
+      targetType: "background",
+      background: { resourceId: "background-sprite" },
+      transform: { x: 100, y: 120 },
+    };
+    const renderCanvas = vi.fn();
+    const deps = {
+      store: {
+        clearBackgroundTransformEditorDragStartPosition: vi.fn(),
+        setBackgroundTransformEditorTransform: vi.fn(({ transform }) => {
+          editor.transform = transform;
+        }),
+        selectBackgroundTransformEditor: vi.fn(() => editor),
+      },
+      graphicsService: {
+        engineSelectRenderState: vi.fn(() => ({
+          id: "scene-editor",
+          elements: [
+            {
+              id: "bg-cg-background-sprite",
+              type: "rect",
+              x: 10,
+              y: 20,
+              width: 1920,
+              height: 1080,
+            },
+          ],
+        })),
+        parse: vi.fn(({ elements }) => ({ elements })),
+        render: renderCanvas,
+      },
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    handleBackgroundTransformEditorChange(deps, {
+      _event: {
+        stopPropagation: vi.fn(),
+        detail: {
+          transient: true,
+          startTransform: { x: 100, y: 120 },
+          transform: { x: 300, y: 220 },
+        },
+      },
+    });
+
+    expect(renderCanvas).toHaveBeenCalledTimes(1);
+    expect(renderCanvas.mock.calls[0][0].elements[0]).toMatchObject({
+      x: 210,
+      y: 120,
+    });
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(deps.subject.dispatch).not.toHaveBeenCalled();
   });
 
   it("closes only the background transform editor when Done is clicked", () => {
@@ -1678,12 +1733,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         item: action.items[0],
       }),
     );
-    expect(open).toHaveBeenCalledWith({
-      mode: "visual",
-      actions: {
-        visual: action,
-      },
-    });
+    expect(open).not.toHaveBeenCalled();
   });
 
   it("clears temporary presentation state and refreshes the canvas when the actions dialog closes", () => {
