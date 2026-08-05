@@ -5,8 +5,8 @@ refs:
         handler: handleActionClick
 template:
   - 'rtgl-view w=f h=f pv=lg br=md d=v style="min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden;"':
-      - rtgl-view w=f ph=lg:
-          - rtgl-text s=sm c=mu-fg: Actions
+      - rtgl-view w=f h=24 av=c ph=lg:
+          - rtgl-breadcrumb :items=${breadcrumb}: null
       - 'rtgl-view h=1fg w=f mt=lg sv style="min-width: 0; min-height: 0;"':
           - 'rtgl-view w=f d=v g=sm ph=lg style="min-width: 0; box-sizing: border-box;"':
               - $for item, i in items:

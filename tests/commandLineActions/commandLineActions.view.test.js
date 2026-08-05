@@ -26,5 +26,11 @@ describe("commandLineActions view", () => {
     expect(commandLineActionsView).toContain(
       'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"',
     );
+    expect(commandLineActionsView).toContain(
+      "rtgl-view w=f h=24 av=c ph=lg:\n          - rtgl-breadcrumb :items=${breadcrumb}: null",
+    );
+    expect(commandLineActionsView).not.toContain(
+      "rtgl-text s=sm c=mu-fg: Actions",
+    );
   });
 });

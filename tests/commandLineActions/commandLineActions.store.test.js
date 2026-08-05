@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { selectItems as selectItemsBase } from "../../src/components/commandLineActions/commandLineActions.store.js";
+import {
+  selectItems as selectItemsBase,
+  selectViewData,
+} from "../../src/components/commandLineActions/commandLineActions.store.js";
 import { PRESENTATION_ACTION_MODE_ORDER } from "../../src/internal/presentationActionOrder.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -27,6 +30,15 @@ const getSectionModes = (items, label) => {
 };
 
 describe("commandLineActions.store", () => {
+  it("provides the standard localized Actions breadcrumb", () => {
+    expect(
+      selectViewData({
+        props: { actionsType: "presentation" },
+        i18n: EN_I18N,
+      }).breadcrumb,
+    ).toEqual([{ id: "actions", label: "Actions" }]);
+  });
+
   it("uses the canonical presentation action order", () => {
     const modes = selectItems({
       props: {

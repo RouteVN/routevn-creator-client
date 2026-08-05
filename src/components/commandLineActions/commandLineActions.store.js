@@ -1,9 +1,17 @@
 import { RUNTIME_ACTION_ITEMS } from "../../internal/runtimeActions.js";
 import { PRESENTATION_ACTION_MODE_ORDER } from "../../internal/presentationActionOrder.js";
 import {
+  localizeCommandLineBreadcrumb,
   localizeCommandLineItems,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+
+const ACTIONS_BREADCRUMB = [
+  {
+    id: "actions",
+    label: "Actions",
+  },
+];
 
 const createSection = (label, items) => ({
   label,
@@ -337,6 +345,7 @@ export const selectViewData = ({ props: attrs, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
 
   return {
+    breadcrumb: localizeCommandLineBreadcrumb(ACTIONS_BREADCRUMB, copy),
     items: localizeCommandLineItems(getActionItems(attrs), copy),
   };
 };
