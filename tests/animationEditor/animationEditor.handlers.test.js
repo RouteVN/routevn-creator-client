@@ -28,7 +28,12 @@ import {
   handleReplayAnimation,
   handleRulerTimeScrub,
   handleSavePreviewClick,
+  handleSelectedKeyframeDelayChange,
+  handleSelectedKeyframeDurationChange,
+  handleSelectedKeyframeEasingChange,
   handleSelectedKeyframeEditClick,
+  handleSelectedKeyframeRelativeChange,
+  handleSelectedKeyframeValueChange,
   handleSelectedMaskNumberConfirmClick,
   handleSelectedMaskNumberFieldKeyDown,
   handleSelectedMaskNumberInputChange,
@@ -786,6 +791,58 @@ describe("animationEditor.handlers", () => {
     expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
     expect(store.queueAutosave).toHaveBeenCalled();
     expect(render).toHaveBeenCalled();
+  });
+
+  it("commits inline selected-keyframe field changes", () => {
+    const store = {
+      bumpPreviewRenderVersion: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      setSelectedKeyframeDelay: vi.fn(),
+      setSelectedKeyframeDuration: vi.fn(),
+      setSelectedKeyframeEasing: vi.fn(),
+      setSelectedKeyframeRelative: vi.fn(),
+      setSelectedKeyframeValue: vi.fn(),
+      stopPreviewPlayback: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+    const deps = { store, render };
+
+    handleSelectedKeyframeDelayChange(deps, {
+      _event: { detail: { value: 125 } },
+    });
+    handleSelectedKeyframeDurationChange(deps, {
+      _event: { detail: { value: 750 } },
+    });
+    handleSelectedKeyframeEasingChange(deps, {
+      _event: { detail: { value: "easeInQuad" } },
+    });
+    handleSelectedKeyframeValueChange(deps, {
+      _event: { detail: { value: -12.5 } },
+    });
+    handleSelectedKeyframeRelativeChange(deps, {
+      _event: { detail: { value: true } },
+    });
+
+    expect(store.setSelectedKeyframeDelay).toHaveBeenCalledWith({
+      delay: 125,
+    });
+    expect(store.setSelectedKeyframeDuration).toHaveBeenCalledWith({
+      duration: 750,
+    });
+    expect(store.setSelectedKeyframeEasing).toHaveBeenCalledWith({
+      easing: "easeInQuad",
+    });
+    expect(store.setSelectedKeyframeValue).toHaveBeenCalledWith({
+      value: -12.5,
+    });
+    expect(store.setSelectedKeyframeRelative).toHaveBeenCalledWith({
+      relative: true,
+    });
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledTimes(5);
+    expect(store.queueAutosave).toHaveBeenCalledTimes(5);
+    expect(render).toHaveBeenCalledTimes(5);
   });
 
   it.each([

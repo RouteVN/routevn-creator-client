@@ -5,6 +5,7 @@ import {
   resolveAnimationEditorPayload,
 } from "../../internal/animationEditorRoute.js";
 import {
+  isEditableTransitionMaskKind,
   isTransitionMaskComplete,
   serializeTransitionMask,
 } from "../../internal/animationMasks.js";
@@ -165,6 +166,10 @@ const invalidatePreview = ({ store } = {}) => {
 };
 
 const collectRuntimeMaskTextureIds = (mask = {}) => {
+  if (Array.isArray(mask)) {
+    return mask.flatMap(collectRuntimeMaskTextureIds);
+  }
+
   if (!mask) {
     return [];
   }
@@ -424,20 +429,20 @@ const getAnimationItem = ({ repositoryState, animationId } = {}) => {
   return item?.type === "animation" ? item : undefined;
 };
 
-const resolvePersistedTransitionMask = ({ store, serializedMask } = {}) => {
-  if (store.selectTransitionMaskRemoved()) {
+const serializeTransitionMasksForPersistence = (masks = []) => {
+  const serializedMasks = masks
+    .map((mask) => {
+      return isEditableTransitionMaskKind(mask.kind)
+        ? serializeTransitionMask(mask)
+        : structuredClone(mask);
+    })
+    .filter(Boolean);
+
+  if (serializedMasks.length === 0) {
     return undefined;
   }
 
-  if (serializedMask) {
-    return serializedMask;
-  }
-
-  if (!store.selectEditMode()) {
-    return undefined;
-  }
-
-  return structuredClone(store.selectEditItemData()?.animation?.mask);
+  return serializedMasks.length === 1 ? serializedMasks[0] : serializedMasks;
 };
 
 const createAnimationPersistSnapshot = ({ copy, store } = {}) => {
@@ -447,13 +452,9 @@ const createAnimationPersistSnapshot = ({ copy, store } = {}) => {
   if (dialogType === "transition") {
     const prevTween = normalizeTween(store.selectProperties({ side: "prev" }));
     const nextTween = normalizeTween(store.selectProperties({ side: "next" }));
-    const serializedTransitionMask = serializeTransitionMask(
-      store.selectTransitionMask(),
+    const transitionMask = serializeTransitionMasksForPersistence(
+      store.selectTransitionMasks(),
     );
-    const transitionMask = resolvePersistedTransitionMask({
-      store,
-      serializedMask: serializedTransitionMask,
-    });
 
     animationData = {
       type: "transition",
@@ -1489,6 +1490,46 @@ const commitSelectedKeyframeChange = (deps) => {
   queueEditorAutosave({ deps });
 };
 
+export const handleSelectedKeyframeDelayChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeDelay({
+    delay: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeDurationChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeDuration({
+    duration: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeEasingChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeEasing({
+    easing: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeValueChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeValue({
+    value: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
+export const handleSelectedKeyframeRelativeChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeRelative({
+    relative: resolveValueChange(payload),
+  });
+  commitSelectedKeyframeChange(deps);
+};
+
 const openSelectedMaskNumberPopover = (deps, payload, { mode, value } = {}) => {
   const { render, store } = deps;
   const event = payload._event;
@@ -1515,6 +1556,10 @@ export const handleSelectedMaskSoftnessClick = (deps, payload) => {
 
 export const handleSelectedMaskInitialValueClick = (deps, payload) => {
   const { store } = deps;
+  const side = payload._event.detail?.side;
+  if (side?.startsWith("mask:")) {
+    store.setSelectedMask({ side });
+  }
   openSelectedMaskNumberPopover(deps, payload, {
     mode: "editSelectedMaskInitialValue",
     value: store.selectMaskEditorTransitionMask()?.progress?.initialValue ?? 0,
@@ -1628,8 +1673,8 @@ export const handleAutoTrackClick = (deps, payload) => {
 export const handlePropertyNameClick = (deps, payload) => {
   const { render, store } = deps;
   const { property, side, x, y } = payload._event.detail;
-  if (side === "mask") {
-    selectMaskTimelineRow(deps, { clientX: x, clientY: y });
+  if (side === "mask" || side?.startsWith("mask:")) {
+    selectMaskTimelineRow(deps, { clientX: x, clientY: y }, { side });
     return;
   }
 
@@ -1650,9 +1695,9 @@ export const handlePropertyNameClick = (deps, payload) => {
   render();
 };
 
-const selectMaskTimelineRow = (deps, event) => {
+const selectMaskTimelineRow = (deps, event, { index, side } = {}) => {
   const { render, store } = deps;
-  store.setSelectedMask({});
+  store.setSelectedMask({ index, side });
   if (store.selectIsTouchMode()) {
     store.setPopover({
       mode: "editMask",
@@ -1667,7 +1712,13 @@ const selectMaskTimelineRow = (deps, event) => {
 };
 
 export const handleMaskTimelineRowClick = (deps, payload) => {
-  selectMaskTimelineRow(deps, payload._event);
+  const event = payload._event;
+  const index = Number.parseInt(event.currentTarget?.dataset?.maskIndex, 10);
+  const selection = {};
+  if (Number.isInteger(index)) {
+    selection.index = index;
+  }
+  selectMaskTimelineRow(deps, event, selection);
 };
 
 export const handleMaskTimelineRowKeyDown = (deps, payload) => {
@@ -1678,7 +1729,12 @@ export const handleMaskTimelineRowKeyDown = (deps, payload) => {
 
   event.preventDefault();
   event.stopPropagation();
-  selectMaskTimelineRow(deps, event);
+  const index = Number.parseInt(event.currentTarget?.dataset?.maskIndex, 10);
+  const selection = {};
+  if (Number.isInteger(index)) {
+    selection.index = index;
+  }
+  selectMaskTimelineRow(deps, event, selection);
 };
 
 export const handleSelectedPropertyDeleteClick = (deps) => {

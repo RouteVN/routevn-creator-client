@@ -154,7 +154,7 @@ refs:
         handler: handlePropertyNameClick
       initial-value-click:
         handler: handleInitialValueClick
-  maskTimeline:
+  maskTimeline*:
     eventListeners:
       add-keyframe:
         handler: handleAddKeyframeFromTimeline
@@ -222,10 +222,30 @@ refs:
         handler: handleEditInitialValueFormSubmit
       form-change:
         handler: handleEditInitialValueFormChange
-  editSelectedKeyframeButton:
+  selectedKeyframeDelay:
     eventListeners:
-      click:
-        handler: handleSelectedKeyframeEditClick
+      value-change:
+        handler: handleSelectedKeyframeDelayChange
+  selectedKeyframeDuration:
+    eventListeners:
+      value-change:
+        handler: handleSelectedKeyframeDurationChange
+  selectedKeyframeEasingSelect:
+    eventListeners:
+      value-change:
+        handler: handleSelectedKeyframeEasingChange
+  selectedKeyframeValue:
+    eventListeners:
+      value-input:
+        handler: handleSelectedKeyframeValueChange
+  selectedKeyframeValuePopover:
+    eventListeners:
+      value-change:
+        handler: handleSelectedKeyframeValueChange
+  selectedKeyframeRelative:
+    eventListeners:
+      value-change:
+        handler: handleSelectedKeyframeRelativeChange
   selectedMaskInitialValue:
     eventListeners:
       click:
@@ -266,7 +286,7 @@ refs:
     eventListeners:
       click:
         handler: handleDisableMaskClick
-  unsupportedMaskTimelineRow:
+  unsupportedMaskTimelineRow*:
     eventListeners:
       click:
         handler: handleMaskTimelineRowClick
@@ -411,7 +431,7 @@ styles:
   ".animationEditorTab:focus-visible":
     outline: "2px solid var(--ring)"
     outline-offset: 2px
-  "#unsupportedMaskTimelineRow:focus-visible":
+  '[id^="unsupportedMaskTimelineRow"]:focus-visible':
     outline: "2px solid var(--ring)"
     outline-offset: 2px
   "#selectedMaskSoftness:focus-visible":
@@ -491,12 +511,12 @@ template:
                                               - rtgl-view w=72 av=c ah=c:
                                                   - rtgl-text s=sm c=mu-fg: ${maskTitle}
                                               - rtgl-view h=24 w=24 mr=sm ml=sm: null
-                                          - $if maskTimelineRow:
+                                          - $for maskTimelineRow, i in maskTimelineRows:
                                               - $if maskTimelineRow.editable:
-                                                  - rtgl-view#maskTimelineRow data-timeline-selection-surface=true w=f:
-                                                      - rvn-keyframe-timeline#maskTimeline editable=true side=mask ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDisplayDuration} :properties=${maskTimelineProperties} :defaultValues=${maskTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
+                                                  - rtgl-view#maskTimelineRow${i} data-timeline-selection-surface=true w=f:
+                                                      - rvn-keyframe-timeline#maskTimeline${i} editable=true side=${maskTimelineRow.side} ?showRuler=false ?showTotalDuration=false timelineDuration=${timelineDisplayDuration} :properties=${maskTimelineRow.properties} :defaultValues=${maskTimelineDefaultValues} :selectedKeyframe=${selectedKeyframe} :selectedProperty=${selectedProperty}: null
                                                 $else:
-                                                  - 'rtgl-view#unsupportedMaskTimelineRow data-timeline-selection-surface=true data-selected=${maskTimelineRow.selected} role=button tabindex=0 aria-label="${maskTimelineRow.label}" aria-pressed="${maskTimelineRow.selected}" d=h w=f h=24 av=c cur=pointer':
+                                                  - 'rtgl-view#unsupportedMaskTimelineRow${i} data-timeline-selection-surface=true data-mask-index=${maskTimelineRow.index} data-selected=${maskTimelineRow.selected} role=button tabindex=0 aria-label="${maskTimelineRow.label}" aria-pressed="${maskTimelineRow.selected}" d=h w=f h=24 av=c cur=pointer':
                                                       - 'rtgl-view d=h h=24 w=104 bgc=bg bwr=xs bc=bo av=c style="min-width: 104px; flex-shrink: 0; position: sticky; left: 0; z-index: 6;"':
                                                           - rtgl-view w=72 av=c ah=c:
                                                               - 'rtgl-view w=28 h=18 bw=xs bc=${maskTimelineRow.imageBorderColor} br=sm overflow=hidden title="${maskTimelineRow.image.name}"':
@@ -542,9 +562,17 @@ template:
                               - 'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"': null
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if selectedKeyframeDetailId:
-                          - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} w=f :fields=${selectedKeyframeDetailFields} :fillHeight=${false}: null
-                          - rtgl-view d=h w=f ah=e ph=md pb=md:
-                              - rtgl-button#editSelectedKeyframeButton pre=edit s=sm: ${editButton}
+                          - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} w=f :fields=${selectedKeyframeDetailFields} :fillHeight=${false}:
+                              - 'rtgl-popover-input#selectedKeyframeDelay slot=keyframe-delay value=${selectedKeyframeEditor.delay} label="${selectedKeyframeEditor.delayLabel}"': null
+                              - 'rtgl-popover-input#selectedKeyframeDuration slot=keyframe-duration value=${selectedKeyframeEditor.duration} label="${selectedKeyframeEditor.durationLabel}"': null
+                              - rtgl-select#selectedKeyframeEasingSelect slot=keyframe-easing w=f no-clear :selectedValue=${selectedKeyframeEditor.easing} :options=${selectedKeyframeEditor.easingOptions}: null
+                              - $if selectedKeyframeEditor.valueSlider:
+                                  - rtgl-slider-input#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f value=${selectedKeyframeEditor.value} min=${selectedKeyframeEditor.valueSlider.min} max=${selectedKeyframeEditor.valueSlider.max} step=${selectedKeyframeEditor.valueSlider.step}: null
+                                $elif selectedKeyframeEditor.valueUsesPopover:
+                                  - 'rtgl-popover-input#selectedKeyframeValuePopover slot=keyframe-value value=${selectedKeyframeEditor.value} label="${selectedKeyframeEditor.valueLabel}"': null
+                                $else:
+                                  - rtgl-input-number#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f step=${selectedKeyframeEditor.valueStep} value=${selectedKeyframeEditor.value}: null
+                              - rtgl-segmented-control#selectedKeyframeRelative slot=keyframe-value-type w=f no-clear :selectedValue=${selectedKeyframeEditor.relative} :options=${selectedKeyframeEditor.relativeOptions}: null
                         $elif selectedPropertyDetailId:
                           - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} w=f :fields=${selectedPropertyDetailFields} :fillHeight=${false}: null
                         $elif selectedMask:

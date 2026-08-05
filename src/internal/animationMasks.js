@@ -236,6 +236,10 @@ export const normalizeTransitionMaskForEditor = (mask, imageItems = {}) => {
 };
 
 export const isTransitionMaskComplete = (mask) => {
+  if (Array.isArray(mask)) {
+    return mask.length > 0 && mask.every(isTransitionMaskComplete);
+  }
+
   if (!mask || !TRANSITION_MASK_KINDS.has(mask.kind)) {
     return false;
   }
@@ -268,6 +272,11 @@ export const isTransitionMaskComplete = (mask) => {
 };
 
 export const serializeTransitionMask = (mask) => {
+  if (Array.isArray(mask)) {
+    const serializedMasks = mask.map(serializeTransitionMask).filter(Boolean);
+    return serializedMasks.length > 0 ? serializedMasks : undefined;
+  }
+
   if (!isTransitionMaskComplete(mask)) {
     return undefined;
   }
@@ -325,6 +334,13 @@ export const serializeTransitionMask = (mask) => {
 };
 
 export const compileTransitionMaskForRuntime = (mask, imageItems = {}) => {
+  if (Array.isArray(mask)) {
+    const runtimeMasks = mask
+      .map((item) => compileTransitionMaskForRuntime(item, imageItems))
+      .filter(Boolean);
+    return runtimeMasks.length > 0 ? runtimeMasks : undefined;
+  }
+
   if (!mask || !TRANSITION_MASK_KINDS.has(mask.kind)) {
     return undefined;
   }
@@ -417,6 +433,14 @@ export const compileTransitionMaskForRuntime = (mask, imageItems = {}) => {
 };
 
 export const collectTransitionMaskImageIds = (mask, imageItems = {}) => {
+  if (Array.isArray(mask)) {
+    return Array.from(
+      new Set(
+        mask.flatMap((item) => collectTransitionMaskImageIds(item, imageItems)),
+      ),
+    );
+  }
+
   if (!mask || !TRANSITION_MASK_KINDS.has(mask.kind)) {
     return [];
   }
@@ -446,6 +470,12 @@ export const collectTransitionMaskImageIds = (mask, imageItems = {}) => {
 };
 
 export const getTransitionMaskDuration = (mask = {}) => {
+  if (Array.isArray(mask)) {
+    return mask.reduce((duration, item) => {
+      return Math.max(duration, getTransitionMaskDuration(item));
+    }, 0);
+  }
+
   if (!mask || !TRANSITION_MASK_KINDS.has(mask.kind)) {
     return 0;
   }
