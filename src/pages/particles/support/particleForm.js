@@ -769,7 +769,7 @@ const createParticleFieldsByTab = ({ tagOptions = [], copy = {} } = {}) => {
           copy.faceVelocityDescription ??
           "Turn each particle so it points in the direction it is moving.",
         options: createFaceVelocityOptions(copy),
-        required: true,
+        required: false,
         clearable: false,
       },
     ],
@@ -1136,6 +1136,10 @@ export const buildParticlePayload = ({
   modules.appearance = {
     ...modules.appearance,
   };
+
+  if (modules.movement.faceVelocity) {
+    delete modules.appearance.rotation;
+  }
 
   if (
     areFieldsEqual(values, baseValues, ["textureImageId"]) &&
