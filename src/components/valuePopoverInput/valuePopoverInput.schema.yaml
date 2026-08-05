@@ -1,0 +1,18 @@
+componentName: rvn-value-popover-input
+propsSchema:
+  type: object
+  properties:
+    value:
+      type: string
+    placeholder:
+      type: string
+    label:
+      type: string
+    disabled:
+      type: boolean
+      default: false
+events:
+  value-change: {}
+methods:
+  type: object
+  properties: {}

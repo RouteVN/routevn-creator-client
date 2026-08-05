@@ -121,7 +121,7 @@ describe("animationEditor view", () => {
       "data-popover-input-field=true slot=keyframe-delay",
     );
     expect(view).toContain(
-      "rtgl-popover-input#selectedKeyframeDelay value=${selectedKeyframeEditor.delay}",
+      "rvn-value-popover-input#selectedKeyframeDelay value=${selectedKeyframeEditor.delay}",
     );
     expect(view).toContain(
       "data-popover-input-field=true slot=keyframe-duration",
@@ -207,6 +207,7 @@ describe("animationEditor view", () => {
       "data-popover-input-field=true slot=property-initial-value",
     );
     expect(view.match(/data-popover-input-field=true/g)).toHaveLength(4);
+    expect(view.match(/rvn-value-popover-input#/g)).toHaveLength(4);
     expect(view).toContain(
       "handler: handleSelectedPropertyInitialValueChange",
     );
