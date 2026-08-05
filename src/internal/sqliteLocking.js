@@ -12,13 +12,21 @@ export const isSqliteLockError = (error) => {
     return false;
   }
 
-  if (error.code === 5 || error.code === "SQLITE_BUSY") {
+  // 5 = SQLITE_BUSY, 6 = SQLITE_LOCKED. Both are retryable contention errors.
+  if (
+    error.code === 5 ||
+    error.code === 6 ||
+    error.code === "SQLITE_BUSY" ||
+    error.code === "SQLITE_LOCKED"
+  ) {
     return true;
   }
 
   const message = String(error?.message ?? error).toLowerCase();
   return (
     message.includes("database is locked") ||
+    message.includes("database table is locked") ||
+    message.includes("database schema is locked") ||
     message.includes("database busy") ||
     message.includes("database is busy") ||
     message.includes("sqlite_busy") ||

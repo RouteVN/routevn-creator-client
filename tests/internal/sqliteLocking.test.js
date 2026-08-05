@@ -80,6 +80,18 @@ describe("sqliteLocking", () => {
     expect(operation).toHaveBeenCalledTimes(1);
   });
 
+  it("does not retry unrelated resources that are locked", async () => {
+    const operation = vi
+      .fn()
+      .mockRejectedValue(new Error("resource is locked"));
+
+    expect(isSqliteLockError(new Error("resource is locked"))).toBe(false);
+    await expect(withSqliteLockRetry(operation)).rejects.toThrow(
+      "resource is locked",
+    );
+    expect(operation).toHaveBeenCalledTimes(1);
+  });
+
   it("can recover a missing transaction after a retried lock", async () => {
     vi.useFakeTimers();
     const operation = vi
