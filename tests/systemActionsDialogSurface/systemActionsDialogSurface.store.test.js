@@ -18,6 +18,7 @@ describe("systemActionsDialogSurface.store", () => {
       dialogWidth: "800",
       dialogSize: undefined,
       dialogHeight: "80vh",
+      dialogPadding: "lg",
       panelWidth: "50vw",
       suppressClose: false,
       overlayHorizontalInset: "64px",
@@ -27,6 +28,15 @@ describe("systemActionsDialogSurface.store", () => {
       panelVerticalInset: "32px",
       panelMaxHeight: "800px",
     });
+  });
+
+  it("passes through padding-free dialogs", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: { dialogPadding: "none" },
+    });
+
+    expect(viewData.dialogPadding).toBe("none");
   });
 
   it("uses the md dialog size for touch-width content", () => {

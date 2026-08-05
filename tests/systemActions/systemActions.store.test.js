@@ -4,6 +4,7 @@ import {
   selectActionsData,
   selectViewData as selectViewDataBase,
   setAuthoredDialogueWasCleared,
+  setMode,
   setUiConfig,
   setRepositoryState,
   updateActions,
@@ -1686,11 +1687,21 @@ describe("systemActions.store", () => {
     });
 
     expect(defaultViewData.dialogVariant).toBe("default");
+    expect(defaultViewData.actionsDialogPadding).toBe("none");
     expect(defaultViewData.actionsDialogPanelWidth).toBe("50vw");
     expect(sceneViewData.dialogVariant).toBe("scene-editor-left");
     expect(sceneViewData.actionsDialogPanelWidth).toBe(
       "calc((100vw - 64px) / 2)",
     );
+  });
+
+  it("keeps action dialog padding removed after changing modes", () => {
+    const state = createInitialState();
+    setMode({ state }, { mode: "dialogue" });
+
+    const viewData = selectViewData({ state, props: {} });
+
+    expect(viewData.actionsDialogPadding).toBe("none");
   });
 
   it("uses slot-relative dialog width in touch mode", () => {

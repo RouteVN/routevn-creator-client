@@ -12,8 +12,9 @@ describe("systemActionsDialogSurface view", () => {
     );
 
     expect(dialogSurfaceView).toContain(
-      "rtgl-dialog#dialog ?open=${open} layout=fixed bare",
+      "rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}",
     );
+    expect(dialogSurfaceView.match(/p=\$\{dialogPadding\}/g)).toHaveLength(3);
     expect(dialogSurfaceView).toContain(
       'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"',
     );

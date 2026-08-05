@@ -117,6 +117,9 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       ":suppressClose=${suppressDialogClose}",
     );
+    expect(systemActionsView).toContain(
+      ":dialogPadding=${actionsDialogPadding}",
+    );
     expect(systemActionsView).toContain("overflow-x: hidden");
     expect(sceneEditorLexicalView).toContain(
       "dialog-variant=scene-editor-left",

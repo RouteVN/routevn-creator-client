@@ -11,7 +11,7 @@ refs:
         handler: handleSurfaceClose
 template:
   - $if isSceneEditorLeft:
-      - rtgl-dialog#dialog ?open=${open} layout=fixed bare:
+      - rtgl-dialog#dialog ?open=${open} layout=fixed bare p=${dialogPadding}:
           - 'rtgl-view slot=content tabindex=-1 autofocus pos=rel wh=f style="min-width: 0; min-height: 0; overflow: hidden; outline: none;"':
               - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
               - 'rtgl-view pos=fix style="left: ${overlayHorizontalInset}; top: var(--rvn-window-content-offset, 0px); bottom: 0; width: ${panelWidth}; z-index: 2001; background: ${overlayBackground}; pointer-events: none;"': null
@@ -19,10 +19,10 @@ template:
                   - slot name=content: null
     $else:
       - $if dialogSize:
-          - rtgl-dialog#dialog ?open=${open} s=${dialogSize}:
+          - rtgl-dialog#dialog ?open=${open} s=${dialogSize} p=${dialogPadding}:
               - 'rtgl-view slot=content tabindex=-1 autofocus w=${dialogWidth} h=${dialogHeight} pos=rel style="min-width: 0; min-height: 0; max-width: 100%; box-sizing: border-box; overflow-x: hidden; touch-action: pan-y; outline: none;"':
                   - slot name=content: null
         $else:
-          - rtgl-dialog#dialog ?open=${open}:
+          - rtgl-dialog#dialog ?open=${open} p=${dialogPadding}:
               - 'rtgl-view slot=content tabindex=-1 autofocus w=${dialogWidth} h=${dialogHeight} pos=rel style="min-width: 0; min-height: 0; max-width: 100%; box-sizing: border-box; overflow-x: hidden; touch-action: pan-y; outline: none;"':
                   - slot name=content: null

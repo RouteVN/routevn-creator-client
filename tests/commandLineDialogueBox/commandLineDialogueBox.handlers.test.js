@@ -212,8 +212,13 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(view).toContain("handler: handleRemoveCustomTextSpeedClick");
     expect(view).toContain("rtgl-slider-input#textSpeed");
     expect(view).toContain("handler: handleTextSpeedChange");
+    expect(view).toContain("rtgl-view w=f h=f pv=lg:");
+    expect(view).toContain("rtgl-view w=f ph=lg:");
+    expect(view).toContain(
+      'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"',
+    );
     expect(view).toContain("rtgl-form#dialogueForm");
-    expect(view).toContain("w=f p=none:");
+    expect(view).toContain("w=f p=lg:");
     expect(view).toContain(
       'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"',
     );

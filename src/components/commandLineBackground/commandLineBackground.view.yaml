@@ -76,12 +76,12 @@ styles:
     background-repeat: repeat
     background-size: 12px 12px
 template:
-  - 'rtgl-view w=f h=f p=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-      - rtgl-view d=h g=md: null
-      - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
+  - 'rtgl-view w=f h=f pv=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+      - rtgl-view w=f ph=lg:
+          - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-form#form key=${dialogueForm.key} :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues} p=none:
+              - rtgl-form#form key=${dialogueForm.key} :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues} p=lg:
                   - $if selectedResource:
                       - $if selectedResource.resourceType == 'image':
                           - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=md:
@@ -131,7 +131,7 @@ template:
                                   - rtgl-text s=sm c=mu-fg: ${item.label}
                                   - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums;"': ${item.value}
               - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: ${submitButtonLabel}
       - $if backgroundTransformEditor.isOpen:
           - 'rtgl-view pos=abs edge=f z=20 bgc=bg d=v style="pointer-events: auto; min-width: 0; min-height: 0;"':
@@ -155,11 +155,11 @@ template:
                       - rtgl-text s=xs c=mu-fg: scaleY
                       - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleY}
       - $if mode == 'gallery':
-          - rtgl-view d=h w=f av=c g=md:
+          - rtgl-view d=h w=f av=c g=md ph=lg:
               - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null
               - rtgl-view w=1fg: null
               - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
-          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
+          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=lg style="min-height: 0;"':
               - $if showImageSelectorFileExplorer:
                   - rtgl-view h=f w=1fg sv:
                       - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
@@ -204,7 +204,7 @@ template:
                                                       - rtgl-icon icon=play s=xl c=fg: null
                                               - rtgl-view w=f p=md:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: ${selectButtonLabel}
 
   - $if fullImagePreviewVisible || fullSpritesheetPreviewVisible:
