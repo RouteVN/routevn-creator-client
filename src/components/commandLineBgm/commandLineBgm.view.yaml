@@ -227,7 +227,7 @@ template:
           - $if mode == 'current':
               - 'rtgl-view h=1fg sv w=f g=lg style="min-height: 0;"':
                   - rtgl-view w=f ph=lg:
-                      - 'rtgl-view#editorChannel.bgmChannel w=f d=v pos=rel bgc=bg bw=xs bc=bo h-bc=ac br=sm style="height: ${channelHeightPx}px;"':
+                      - 'rtgl-view#editorChannel.bgmChannel w=f d=v pos=rel bgc=bg bw=xs bc=bo br=sm style="height: ${channelHeightPx}px;"':
                           - div.bgmChannelHeader:
                               - span: ${channelLabel}
                               - span: ${channelDurationLabel}
