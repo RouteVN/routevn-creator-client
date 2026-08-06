@@ -279,7 +279,7 @@ steps:
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const bgm = deepQuery(document, 'rvn-command-line-bgm#commandLineBgm'); const channel = deepQuery(bgm?.shadowRoot, '#bgmChannel'); if (!channel) return false; const style = getComputedStyle(channel); return channel.matches(':hover') && channel.getAttribute('h-bc') === 'pr' && style.borderTopWidth !== '0px' && style.borderColor === style.getPropertyValue('--primary').trim(); })()"
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const bgm = deepQuery(document, 'rvn-command-line-bgm#commandLineBgm'); const channel = deepQuery(bgm?.shadowRoot, '#bgmChannel'); const emptyState = channel?.querySelector('rtgl-view[h=\"126\"]'); if (!channel || !emptyState) return false; const style = getComputedStyle(channel); return channel.matches(':hover') && channel.getAttribute('bgc') === 'bg' && channel.getAttribute('h-bgc') === 'mu' && emptyState.getAttribute('bgc') === null && style.backgroundColor === style.getPropertyValue('--muted').trim() && style.borderTopWidth !== '0px' && style.borderColor === style.getPropertyValue('--primary').trim(); })()"
     value: true
   - action: screenshot
   - action: select

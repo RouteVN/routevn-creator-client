@@ -197,12 +197,12 @@ template:
           - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - 'rtgl-view h=1fg sv w=f g=lg mt=lg style="min-height: 0;"':
           - rtgl-view w=f g=md ph=lg:
-              - 'rtgl-view#bgmChannel.bgmChannel.bgmChannelPreview w=f d=v pos=rel bgc=mu bw=xs bc=${channelBorderColor} h-bc=pr br=sm cur=pointer tabindex=0 role=button aria-label="${editChannelLabel}" style="height: ${channelHeightPx}px;"':
+              - 'rtgl-view#bgmChannel.bgmChannel.bgmChannelPreview w=f d=v pos=rel bgc=bg h-bgc=mu bw=xs bc=${channelBorderColor} h-bc=pr br=sm cur=pointer tabindex=0 role=button aria-label="${editChannelLabel}" style="height: ${channelHeightPx}px;"':
                   - div.bgmChannelHeader:
                       - span: ${channelLabel}
                       - span: ${channelDurationLabel}
                   - $if sounds.length == 0:
-                      - rtgl-view w=f h=126 bgc=bg bwb=xs bc=bo av=c ah=c:
+                      - rtgl-view w=f h=126 bwb=xs bc=bo av=c ah=c:
                           - rtgl-text s=sm c=mu-fg: ${emptyAudioLabel}
                     $else:
                       - 'rtgl-view.bgmTimelineTrack w=f pos=rel style="height: ${timelineHeightPx}px; min-width: 100%;"':
