@@ -403,6 +403,7 @@ export const selectViewData = ({ state, i18n }) => {
       channelIndex,
       sounds,
       channelBorderColor: channelSelected ? "pr" : "bo",
+      channelHoverBorderColor: channelSelected ? "pr" : "ac",
       durationLabel: formatAudioDurationMs(timeline.channelDurationMs),
       timelineDurationMs: timeline.timelineDurationMs,
       timelineHeightPx: timeline.timelineHeightPx,

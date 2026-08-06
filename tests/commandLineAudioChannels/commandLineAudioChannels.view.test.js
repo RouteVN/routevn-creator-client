@@ -41,8 +41,12 @@ describe("command-line audio channel views", () => {
       expect(mainView).toContain("#channelForm");
       expect(mainView).toContain(channelTarget);
       expect(mainView).toContain("cur=pointer");
-      expect(mainView).toContain("bgc=bg h-bgc=mu");
-      expect(mainView).toContain("h-bc=pr");
+      const channelView = mainView
+        .split("\n")
+        .find((line) => line.includes(channelTarget));
+      expect(channelView).toContain("bgc=bg");
+      expect(channelView).not.toContain("h-bgc=");
+      expect(channelView).toContain("h-bc=${channel");
       expect(mainView).toContain("#channelPreviewSound");
       expect(mainView).not.toContain("#editChannelButton");
       expect(mainView).not.toContain("#soundClip");
