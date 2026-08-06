@@ -294,6 +294,10 @@ steps:
     selector: "rvn-command-line-bgm#commandLineBgm #emptyAddButton"
     state: visible
     timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #channelEditorConfirmButton"
+    state: visible
+    timeoutMs: 5000
   - action: screenshot
   - action: select
     selector: "rvn-command-line-bgm#commandLineBgm #emptyAddButton"
@@ -358,8 +362,10 @@ steps:
   - action: wait
     ms: 300
   - action: screenshot
-  - action: keypress
-    key: Escape
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #channelEditorConfirmButton"
+    steps:
+      - action: click
   - action: waitFor
     selector: "rvn-command-line-bgm#commandLineBgm #channelEditorDialog[open]"
     state: hidden
@@ -412,9 +418,15 @@ steps:
     selector: "rvn-command-line-voice#commandLineVoice #emptyAddButton"
     state: visible
     timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-command-line-voice#commandLineVoice #channelEditorConfirmButton"
+    state: visible
+    timeoutMs: 5000
   - action: screenshot
-  - action: keypress
-    key: Escape
+  - action: select
+    selector: "rvn-command-line-voice#commandLineVoice #channelEditorConfirmButton"
+    steps:
+      - action: click
   - action: waitFor
     selector: "rvn-command-line-voice#commandLineVoice #channelEditorDialog[open]"
     state: hidden
@@ -473,6 +485,10 @@ steps:
     timeoutMs: 5000
   - action: waitFor
     selector: "rvn-command-line-sound-effects#commandLineSoundEffects #emptyAddButton0"
+    state: visible
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #channelEditorConfirmButton"
     state: visible
     timeoutMs: 5000
   - action: screenshot

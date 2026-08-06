@@ -276,6 +276,7 @@ export const selectViewData = ({ state, i18n }) => {
     timelineHeightPx: timeline.timelineHeightPx,
     channelHeightPx: timeline.timelineHeightPx + 24,
     channelEditorTitle: channelName,
+    confirmButtonLabel: localizeCommandLineText("Confirm", copy),
     editChannelLabel: localizeCommandLineText("Edit Channel", copy),
     emptyAudioLabel: localizeCommandLineText("No audio", copy),
     addAudioLabel: localizeCommandLineText("Add voice audio", copy),

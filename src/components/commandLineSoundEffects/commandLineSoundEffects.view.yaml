@@ -11,6 +11,10 @@ refs:
     eventListeners:
       close:
         handler: handleChannelEditorClose
+  channelEditorConfirmButton:
+    eventListeners:
+      click:
+        handler: handleChannelEditorClose
   addChannelButton:
     eventListeners:
       click:
@@ -319,5 +323,8 @@ template:
           - $if showAudioPlayer:
               - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: 0px; right: 0px;"':
                   - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null
+          - $if mode == 'current':
+              - 'rtgl-view d=h av=c ah=e w=f ph=lg style="flex: 0 0 auto;"':
+                  - rtgl-button#channelEditorConfirmButton v=pr: ${confirmButtonLabel}
   - rtgl-popover#addChannelPopover ?open=${addChannelPopover.isOpen} x=${addChannelPopover.position.x} y=${addChannelPopover.position.y} place=bs:
       - rtgl-form#addChannelForm key=${addChannelPopover.key} slot=content :defaultValues=${addChannelDefaultValues} :form=${addChannelForm} w=320: null

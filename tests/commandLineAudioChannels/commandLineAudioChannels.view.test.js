@@ -54,6 +54,8 @@ describe("command-line audio channel views", () => {
       expect(mainView).not.toContain("#insertBeforeButton");
 
       expect(editorView).toContain("#soundForm");
+      expect(editorView).toContain("#channelEditorConfirmButton v=pr");
+      expect(editorView).toContain("${confirmButtonLabel}");
       const editorChannelView = editorView
         .split("\n")
         .find((line) => line.includes("#editorChannel"));

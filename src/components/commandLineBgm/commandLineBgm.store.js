@@ -340,6 +340,7 @@ export const selectViewData = ({ state, i18n }) => {
     channelHeightPx: timeline.timelineHeightPx + 24,
     audioLabel: localizeCommandLineText("Audio", copy),
     channelEditorTitle: channelName,
+    confirmButtonLabel: localizeCommandLineText("Confirm", copy),
     editChannelLabel: localizeCommandLineText("Edit Channel", copy),
     emptyAudioLabel: localizeCommandLineText("No audio", copy),
     addAudioLabel: localizeCommandLineText("Add BGM audio", copy),

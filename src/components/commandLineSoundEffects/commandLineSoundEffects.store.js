@@ -459,6 +459,7 @@ export const selectViewData = ({ state, i18n }) => {
       volume: selectedChannel?.volume ?? DEFAULT_CHANNEL_VOLUME,
     },
     channelEditorTitle: editorChannel?.id ?? "",
+    confirmButtonLabel: localizeCommandLineText("Confirm", copy),
     editChannelLabel: localizeCommandLineText("Edit Channel", copy),
     emptyAudioLabel: localizeCommandLineText("No audio", copy),
     addChannelPopover: state.addChannelPopover,
