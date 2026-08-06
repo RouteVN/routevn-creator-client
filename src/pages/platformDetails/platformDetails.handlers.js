@@ -121,11 +121,14 @@ const createPlatformDetailsPatch = ({ platform, values, iconFileId }) => {
 
   patch.applicationIdentifier = values.applicationIdentifier.trim();
 
-  if (platform === "windows") {
-    patch.publisher = values.publisher.trim();
-    patch.description = values.description.trim();
-    patch.copyright = values.copyright.trim();
-  }
+  // TODO: Restore optional Windows release metadata when these fields return
+  // to the Platform Details UI. Omitting them from the patch preserves any
+  // existing stored values while the fields are hidden.
+  // if (platform === "windows") {
+  //   patch.publisher = values.publisher.trim();
+  //   patch.description = values.description.trim();
+  //   patch.copyright = values.copyright.trim();
+  // }
 
   return patch;
 };

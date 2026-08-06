@@ -403,6 +403,19 @@ describe("projectRepositoryService platform details", () => {
       description: "Windows description",
       copyright: "Copyright Example Publisher",
     });
+
+    await harness.service.updateCurrentPlatformDetails("windows", {
+      applicationName: "Windows Project Renamed",
+    });
+
+    expect(harness.getPlatformDetails("windows")).toEqual({
+      applicationName: "Windows Project Renamed",
+      iconFileId: "windows-icon-1",
+      applicationIdentifier: "com.example.windows-project",
+      publisher: "Example Publisher",
+      description: "Windows description",
+      copyright: "Copyright Example Publisher",
+    });
     expect(harness.getPlatformDetails("web").applicationName).toBe(
       "Web Project",
     );

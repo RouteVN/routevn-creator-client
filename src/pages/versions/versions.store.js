@@ -166,26 +166,27 @@ const buildExportConfirmationFields = (
     value: formatConfirmationValue(applicationInfo.applicationIdentifier),
   });
 
-  if (confirmation.platform === "windows") {
-    fields.push(
-      {
-        type: "text",
-        label:
-          platformDetailsCopy.windowsPublisherLabel ?? "Company / Publisher",
-        value: formatConfirmationValue(applicationInfo.publisher),
-      },
-      {
-        type: "text",
-        label: platformDetailsCopy.descriptionLabel ?? "Description",
-        value: formatConfirmationValue(applicationInfo.description),
-      },
-      {
-        type: "text",
-        label: platformDetailsCopy.copyrightLabel ?? "Copyright",
-        value: formatConfirmationValue(applicationInfo.copyright),
-      },
-    );
-  }
+  // TODO: Restore optional Windows release metadata in export confirmation.
+  // if (confirmation.platform === "windows") {
+  //   fields.push(
+  //     {
+  //       type: "text",
+  //       label:
+  //         platformDetailsCopy.windowsPublisherLabel ?? "Company / Publisher",
+  //       value: formatConfirmationValue(applicationInfo.publisher),
+  //     },
+  //     {
+  //       type: "text",
+  //       label: platformDetailsCopy.descriptionLabel ?? "Description",
+  //       value: formatConfirmationValue(applicationInfo.description),
+  //     },
+  //     {
+  //       type: "text",
+  //       label: platformDetailsCopy.copyrightLabel ?? "Copyright",
+  //       value: formatConfirmationValue(applicationInfo.copyright),
+  //     },
+  //   );
+  // }
 
   return fields;
 };
