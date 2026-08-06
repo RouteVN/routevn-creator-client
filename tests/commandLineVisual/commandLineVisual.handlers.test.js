@@ -7,6 +7,8 @@ import {
   handleBlurFieldInput,
   handleBlurToggleChange,
   handleButtonSelectClick,
+  handleCustomTransformButtonClick,
+  handleCustomTransformButtonKeyDown,
   handleDropdownMenuClickItem,
   handleFileExplorerItemClick,
   handleLayerChange,
@@ -1060,5 +1062,119 @@ describe("commandLineVisual.handlers animation controls", () => {
     expect(selectMode({ state })).toBe("resource-select");
     expect(selectTab({ state })).toBe("video");
     expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("requests the shared transform editor from the custom transform summary", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const event = {
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+      currentTarget: {
+        dataset: {
+          index: "0",
+          targetName: "Visual One",
+        },
+      },
+    };
+
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            transformId: "visual-center",
+            layer: 50,
+          },
+        ],
+      },
+    );
+
+    handleCustomTransformButtonClick(
+      {
+        store: createStoreApi(state),
+        dispatchEvent,
+      },
+      { _event: event },
+    );
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(
+      "action-transform-customize",
+    );
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      targetType: "visual",
+      actionKey: "visual",
+      itemIndex: 0,
+      item: {
+        id: "visual-1",
+        resourceId: "visual-image",
+        resourceType: "image",
+        transformId: "visual-center",
+        layer: 50,
+      },
+      targetName: "Visual One",
+      action: {
+        items: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            transformId: "visual-center",
+            layer: 50,
+          },
+        ],
+      },
+    });
+  });
+
+  it("opens the custom transform summary with the keyboard", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const event = {
+      key: "Enter",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+      currentTarget: {
+        dataset: {
+          index: "0",
+          targetName: "Visual One",
+        },
+      },
+    };
+
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+          },
+        ],
+      },
+    );
+
+    handleCustomTransformButtonKeyDown(
+      {
+        store: createStoreApi(state),
+        dispatchEvent,
+      },
+      { _event: event },
+    );
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(
+      "action-transform-customize",
+    );
   });
 });

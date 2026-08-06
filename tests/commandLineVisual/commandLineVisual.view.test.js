@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("commandLineVisual view", () => {
-  it("keeps the custom transform Edit button inside its horizontal row", () => {
+  it("uses the same accessible transform summary card as Background", () => {
     const view = readFileSync(
       new URL(
         "../../src/components/commandLineVisual/commandLineVisual.view.yaml",
@@ -10,18 +10,15 @@ describe("commandLineVisual view", () => {
       ),
       "utf8",
     );
-    const lines = view.split("\n");
-    const rowIndex = lines.findIndex((line) =>
-      line.includes("- rtgl-view d=h av=c w=f g=md:"),
-    );
-    const buttonIndex = lines.findIndex((line) =>
-      line.includes("- rtgl-button#customTransformButton${groupIndex}"),
-    );
-    expect(rowIndex).toBeGreaterThan(-1);
-    expect(buttonIndex).toBeGreaterThan(rowIndex);
 
-    const rowIndent = lines[rowIndex].match(/^\s*/)[0].length;
-    const buttonIndent = lines[buttonIndex].match(/^\s*/)[0].length;
-    expect(buttonIndent).toBe(rowIndent + 4);
+    expect(view).toContain("customTransformButton*:");
+    expect(view).toContain("handler: handleCustomTransformButtonClick");
+    expect(view).toContain("handler: handleCustomTransformButtonKeyDown");
+    expect(view).toContain(
+      'rtgl-view#customTransformButton${visual.controlId} slot=${visual.customTransformFormSlot} data-index=${visual.visualIndex} data-target-name="${visual.displayName}" role=button tabindex=0 aria-label="${transformEditorTitle}"',
+    );
+    expect(view).toContain("rtgl-grid cols=2 g=md w=f:");
+    expect(view).toContain("$for item, j in visual.customTransformDetails:");
+    expect(view).not.toContain("backgroundTransformEditor");
   });
 });
