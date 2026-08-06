@@ -348,6 +348,25 @@ describe("systemActions.store", () => {
     expect(preview.bgm).toEqual({ name: "Stop BGM" });
   });
 
+  it("recognizes an empty-object BGM action as an explicit stop", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: { bgm: {} },
+        presentationState: {
+          bgm: {
+            sounds: [{ id: "previous-clip", resourceId: "previous" }],
+          },
+        },
+      },
+    });
+
+    expect(actions.bgm).toEqual({});
+    expect(preview.bgm).toEqual({ name: "Stop BGM" });
+  });
+
   it("preserves and previews sounds across canonical SFX channels", () => {
     const state = createInitialState();
     const sfx = {
@@ -397,6 +416,68 @@ describe("systemActions.store", () => {
 
     expect(actions.sfx).toEqual(sfx);
     expect(preview.sfx).toEqual({ names: "Rain, Confirm" });
+  });
+
+  it("surfaces inherited persistent SFX channels from presentation state", () => {
+    const state = createInitialState();
+    const sfx = {
+      channels: [
+        {
+          id: "Weather",
+          applyMode: "persistent",
+          sounds: [{ id: "rain-clip", resourceId: "rain" }],
+        },
+      ],
+    };
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          sounds: {
+            items: {
+              rain: { id: "rain", type: "sound", name: "Rain" },
+            },
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {},
+        presentationState: { sfx },
+      },
+    });
+
+    expect(actions.sfx).toEqual(sfx);
+    expect(preview.sfx).toEqual({ names: "Rain" });
+  });
+
+  it("keeps an authored SFX stop-all action visible", () => {
+    const state = createInitialState();
+    const sfx = { channels: [] };
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: { sfx },
+        presentationState: {
+          sfx: {
+            channels: [
+              {
+                id: "Weather",
+                applyMode: "persistent",
+                sounds: [{ id: "rain-clip", resourceId: "rain" }],
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(actions.sfx).toEqual(sfx);
+    expect(preview.sfx).toEqual({ names: "Stop Sound Effects" });
   });
 
   it("preserves and previews voice actions from repository voices", () => {

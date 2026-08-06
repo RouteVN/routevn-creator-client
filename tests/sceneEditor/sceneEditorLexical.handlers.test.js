@@ -1941,6 +1941,47 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     });
   });
 
+  it("stops inherited persistent SFX when deleting its presentation card", async () => {
+    const saveError = new Error("stop after assertion");
+    const updateLineActions = vi.fn(async () => {
+      throw saveError;
+    });
+    const store = {
+      selectSelectedLine: vi.fn(() => ({
+        id: "line-1",
+        actions: {
+          dialogue: { content: [{ text: "Still raining" }] },
+        },
+      })),
+      selectDraftSection: vi.fn(() => undefined),
+    };
+
+    await expect(
+      handleSystemActionsActionDelete(
+        {
+          store,
+          render: vi.fn(),
+          subject: { dispatch: vi.fn() },
+          projectService: { updateLineActions },
+        },
+        {
+          _event: {
+            detail: { actionType: "sfx" },
+          },
+        },
+      ),
+    ).rejects.toThrow("stop after assertion");
+
+    expect(updateLineActions).toHaveBeenCalledWith({
+      lineId: "line-1",
+      data: {
+        dialogue: { content: [{ text: "Still raining" }] },
+        sfx: { channels: [] },
+      },
+      replace: true,
+    });
+  });
+
   it("preserves dialogue content behind a clear marker when deleting from the line menu", async () => {
     const saveError = new Error("stop after assertion");
     const updateLineDialogueAction = vi.fn(async () => {

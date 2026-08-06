@@ -667,8 +667,8 @@ export const selectActionsData = ({ props, state, copy }) => {
     : undefined;
   const authoredBgmStops =
     authoredBgm &&
-    Array.isArray(authoredBgm.sounds) &&
-    authoredBgm.sounds.length === 0;
+    (Object.keys(authoredBgm).length === 0 ||
+      (Array.isArray(authoredBgm.sounds) && authoredBgm.sounds.length === 0));
   const bgmAction = authoredBgmStops
     ? authoredBgm
     : (effectiveBgm ?? authoredBgm);
@@ -706,22 +706,33 @@ export const selectActionsData = ({ props, state, copy }) => {
   }
 
   // Sound Effects
-  if (actions.sfx?.items || actions.sfx?.channels) {
-    const soundEffects = Array.isArray(actions.sfx.channels)
-      ? actions.sfx.channels.flatMap((channel) => channel.sounds ?? [])
-      : actions.sfx.items;
+  const authoredSfx = isPlainObject(actions.sfx) ? actions.sfx : undefined;
+  const effectiveSfx = isPlainObject(presentationState.sfx)
+    ? presentationState.sfx
+    : undefined;
+  const authoredSfxStopsAll =
+    (Array.isArray(authoredSfx?.channels) &&
+      authoredSfx.channels.length === 0) ||
+    (Array.isArray(authoredSfx?.items) && authoredSfx.items.length === 0);
+  const sfxAction = authoredSfxStopsAll
+    ? authoredSfx
+    : (effectiveSfx ?? authoredSfx);
+  if (Array.isArray(sfxAction?.items) || Array.isArray(sfxAction?.channels)) {
+    const soundEffects = Array.isArray(sfxAction.channels)
+      ? sfxAction.channels.flatMap((channel) => channel.sounds ?? [])
+      : sfxAction.items;
     const soundEffectsData = soundEffects.map((sfx) => ({
       ...sfx,
       sound: sounds[sfx.resourceId],
     }));
     const names = soundEffectsData
-      .map((sfx) => sfx.sound?.name || "")
+      .map((sfx) => sfx.sound?.name ?? sfx.resourceId ?? "")
       .filter((name) => name !== "")
       .join(", ");
 
-    actionsObject.sfx = actions.sfx;
+    actionsObject.sfx = sfxAction;
     preview.sfx = {
-      names,
+      names: names || localizeCommandLineText("Stop Sound Effects", copy),
     };
   }
 

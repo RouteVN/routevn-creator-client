@@ -254,6 +254,7 @@ export const createInitialState = () => ({
   mode: "current",
   items: { items: {}, tree: [] },
   channels: [],
+  initialPersistentChannelIds: [],
   selectedChannelId: undefined,
   editingChannelId: undefined,
   selectedSoundId: undefined,
@@ -278,7 +279,18 @@ export const createInitialState = () => ({
 
 export const selectChannels = ({ state }) => state.channels;
 
-export const selectSfx = ({ state }) => ({ channels: state.channels });
+export const selectSfx = ({ state }) => {
+  const channels = [...state.channels];
+  const channelIds = new Set(channels.map((channel) => channel.id));
+
+  for (const channelId of state.initialPersistentChannelIds) {
+    if (!channelIds.has(channelId)) {
+      channels.push({ id: channelId, sounds: [] });
+    }
+  }
+
+  return { channels };
+};
 
 export const selectSelectedChannelId = ({ state }) => {
   return state.selectedChannelId;
@@ -541,6 +553,9 @@ export const setRepositoryState = ({ state }, { sounds } = {}) => {
 
 export const setSfx = ({ state }, { sfx } = {}) => {
   state.channels = normalizeSfxChannels(sfx);
+  state.initialPersistentChannelIds = state.channels
+    .filter((channel) => channel.applyMode === "persistent")
+    .map((channel) => channel.id);
   state.selectedChannelId = undefined;
   state.editingChannelId = undefined;
   state.selectedSoundId = undefined;

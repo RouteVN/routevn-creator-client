@@ -148,6 +148,36 @@ describe("commandLineSoundEffects.store", () => {
     expect(state.selectedChannelId).toBeUndefined();
   });
 
+  it("submits stop entries for removed persistent channels only", () => {
+    const state = createInitialState();
+    setSfx(
+      { state },
+      {
+        sfx: {
+          channels: [
+            {
+              id: "Weather",
+              applyMode: "persistent",
+              sounds: [{ id: "rain-clip", resourceId: "rain" }],
+            },
+            {
+              id: "UI",
+              applyMode: "singleLine",
+              sounds: [{ id: "confirm-clip", resourceId: "confirm" }],
+            },
+          ],
+        },
+      },
+    );
+
+    removeChannel({ state }, { channelId: "Weather" });
+    removeChannel({ state }, { channelId: "UI" });
+
+    expect(selectSfx({ state })).toEqual({
+      channels: [{ id: "Weather", sounds: [] }],
+    });
+  });
+
   it("edits one channel's sounds without submitting the draft", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });

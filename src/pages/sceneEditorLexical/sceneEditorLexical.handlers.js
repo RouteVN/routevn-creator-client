@@ -3799,7 +3799,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
     return;
   }
   // Create a new actions object with the action cleared
-  // For inherited actions (visual, character, background), we set a "clear" value
+  // For inherited actions, we set a "clear" value
   // to override inherited state. For non-inherited actions, we delete the key.
   const newActions = structuredClone(selectedLine.actions || {});
   if (actionType === "visual") {
@@ -3814,6 +3814,9 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   } else if (actionType === "bgm") {
     // Clear inherited BGM by writing an explicit empty action
     newActions.bgm = {};
+  } else if (actionType === "sfx") {
+    // Stop every active persistent SFX channel
+    newActions.sfx = { channels: [] };
   } else if (actionType === "control") {
     newActions.control = {};
   } else {

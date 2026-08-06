@@ -2113,6 +2113,7 @@ commandLinePage:
   "Single line": "単一行"
   "Slot Id": "スロットID"
   "Sound Effects": "効果音"
+  "Stop Sound Effects": "効果音を停止"
   "Speaker": "話者"
   "Speaker Name": "話者名"
   "Dialogue sprite": "会話スプライト"
