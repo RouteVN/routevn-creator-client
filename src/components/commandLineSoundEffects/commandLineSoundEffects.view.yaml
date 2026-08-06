@@ -113,6 +113,8 @@ styles:
     box-shadow: none
     outline: none
   ".sfxTimelineTrack":
+    border-top: "1px solid var(--border)"
+    box-sizing: border-box
     min-width: 100%
     position: relative
   ".sfxTimelineContent":
@@ -189,13 +191,18 @@ styles:
     color: var(--muted-foreground)
     cursor: pointer
     display: flex
-    flex: "0 0 126px"
+    flex: "1 1 0"
     font-family: inherit
     font-size: 30px
-    height: 100%
+    height: auto
     justify-content: center
+    min-height: "0"
     padding: "0"
     width: 100%
+  ".sfxEmptyAddIcon":
+    display: block
+    line-height: "1"
+    transform: translateY(-16px)
   ".sfxEmptyAdd:hover":
     color: var(--foreground)
   ".sfxEmptyAdd:focus-visible":
@@ -203,7 +210,6 @@ styles:
     outline: none
   ".sfxChannelHeader":
     align-items: center
-    border-bottom: "1px solid var(--border)"
     display: flex
     flex: "0 0 32px"
     height: 32px
@@ -233,7 +239,8 @@ template:
                                   - span: ${channel.id}
                                   - span: ${channel.durationLabel}
                           - $if channel.sounds.length == 0:
-                              - 'div.sfxEmptyAdd aria-hidden=true': "+"
+                              - 'div.sfxEmptyAdd aria-hidden=true':
+                                  - span.sfxEmptyAddIcon: "+"
                             $else:
                               - 'rtgl-view.sfxTimelineTrack w=f pos=rel style="height: ${channel.timelineHeightPx}px; min-width: 100%;"':
                                   - 'rtgl-view.sfxTimelineContent w=f h=f pos=rel style="box-sizing: border-box; min-width: 0;"':
@@ -255,7 +262,7 @@ template:
               - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
       - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
           - rtgl-button#submitButton: ${submitButtonLabel}
-  - rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg close-button:
+  - rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=md close-button:
       - 'rtgl-view slot=content d=v w=f h=80vh g=lg style="min-width: 0; min-height: 0; overflow: hidden;"':
           - rtgl-text s=lg: ${channelEditorTitle}
           - $if mode == 'current':
@@ -268,7 +275,8 @@ template:
                                       - span: ${editorChannel.id}
                                       - span: ${editorChannel.durationLabel}
                               - $if editorChannel.sounds.length == 0:
-                                  - 'button#emptyAddButton0.sfxEmptyAdd type=button data-channel-id="${editorChannel.id}" aria-label="${addSoundLabel}"': "+"
+                                  - 'button#emptyAddButton0.sfxEmptyAdd type=button data-channel-id="${editorChannel.id}" aria-label="${addSoundLabel}"':
+                                      - span.sfxEmptyAddIcon: "+"
                                 $else:
                                   - 'rtgl-view.sfxTimelineTrack data-timeline-track=true data-timeline-duration-ms=${editorChannel.timelineDurationMs} w=f pos=rel style="height: ${editorChannel.timelineHeightPx}px; min-width: 100%;"':
                                       - 'rtgl-view.sfxTimelineContent w=f h=f pos=rel style="box-sizing: border-box; min-width: 0;"':

@@ -2,6 +2,23 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("commandLineSoundEffects view", () => {
+  it("uses the medium size for the sound effect editor dialog", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/commandLineSoundEffects/commandLineSoundEffects.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain(
+      "rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=md close-button:",
+    );
+    expect(view).not.toContain(
+      "rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg",
+    );
+  });
+
   it("makes the whole channel the editor target", () => {
     const view = readFileSync(
       new URL(
@@ -47,10 +64,37 @@ describe("commandLineSoundEffects view", () => {
       view.indexOf('  ".sfxEmptyAdd:hover":', emptyAddStyleStart),
     );
 
-    expect(mainView).toContain('div.sfxEmptyAdd aria-hidden=true\': "+"');
+    expect(mainView).toContain("div.sfxEmptyAdd aria-hidden=true':");
+    expect(mainView).toContain('span.sfxEmptyAddIcon: "+"');
     expect(mainView).not.toContain("${emptyAudioLabel}");
     expect(emptyAddStyles).toContain("align-items: center");
+    expect(emptyAddStyles).toContain('flex: "1 1 0"');
+    expect(emptyAddStyles).toContain("height: auto");
     expect(emptyAddStyles).toContain("justify-content: center");
+    expect(emptyAddStyles).toContain('min-height: "0"');
+    expect(emptyAddStyles).not.toContain("height: 100%");
+
+    const emptyAddIconStyleStart = view.indexOf('  ".sfxEmptyAddIcon":');
+    const emptyAddIconStyles = view.slice(
+      emptyAddIconStyleStart,
+      view.indexOf('  ".sfxEmptyAdd:hover":', emptyAddIconStyleStart),
+    );
+    const channelHeaderStyleStart = view.indexOf('  ".sfxChannelHeader":');
+    const channelHeaderStyles = view.slice(
+      channelHeaderStyleStart,
+      view.indexOf('  ".sfxChannelLabel":', channelHeaderStyleStart),
+    );
+    const timelineTrackStyleStart = view.indexOf('  ".sfxTimelineTrack":');
+    const timelineTrackStyles = view.slice(
+      timelineTrackStyleStart,
+      view.indexOf('  ".sfxTimelineContent":', timelineTrackStyleStart),
+    );
+
+    expect(emptyAddIconStyles).toContain("transform: translateY(-16px)");
+    expect(channelHeaderStyles).not.toContain("border-bottom");
+    expect(timelineTrackStyles).toContain(
+      'border-top: "1px solid var(--border)"',
+    );
   });
 
   it("renders channel controls before the add button and bottom scroll space", () => {
