@@ -102,7 +102,18 @@ describe("Windows player runtime persistence host", () => {
 
     await persistence.saveGlobalDeviceVariables({ textSpeed: 42 });
     await persistence.saveGlobalAccountVariables({ routeUnlocked: true });
-    await persistence.saveGlobalRuntime({ skipUnseenText: false });
+    const globalRuntime = {
+      dialogueTextSpeed: 50,
+      autoForwardDelay: 1_000,
+      autoForwardSpeed: 75,
+      skipUnseenText: false,
+      skipTransitionsAndAnimations: false,
+      soundVolume: 50,
+      musicVolume: 50,
+      muteAll: false,
+      localizationPackageId: "ja",
+    };
+    await persistence.saveGlobalRuntime(globalRuntime);
     await persistence.applyScopedDataUpdates([
       {
         scope: "device",
@@ -130,7 +141,7 @@ describe("Windows player runtime persistence host", () => {
     expect(db.set.mock.calls).toEqual([
       ["globalDeviceVariables", { textSpeed: 42 }],
       ["globalAccountVariables", { routeUnlocked: true }],
-      ["globalRuntime", { skipUnseenText: false }],
+      ["globalRuntime", globalRuntime],
     ]);
     expect(db.applyBatch).toHaveBeenLastCalledWith({
       puts: [
@@ -148,6 +159,7 @@ describe("Windows player runtime persistence host", () => {
         },
       ],
     });
+    expect(values.get("globalRuntime")).toEqual(globalRuntime);
     expect(values.get("globalDeviceVariables")).toEqual({ textSpeed: 60 });
   });
 

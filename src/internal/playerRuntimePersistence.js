@@ -250,11 +250,13 @@ const validateGlobalRuntime = (value, label) => {
     [
       "dialogueTextSpeed",
       "autoForwardDelay",
+      "autoForwardSpeed",
       "skipUnseenText",
       "skipTransitionsAndAnimations",
       "soundVolume",
       "musicVolume",
       "muteAll",
+      "localizationPackageId",
     ],
     label,
   );
@@ -262,6 +264,7 @@ const validateGlobalRuntime = (value, label) => {
   [
     "dialogueTextSpeed",
     "autoForwardDelay",
+    "autoForwardSpeed",
     "soundVolume",
     "musicVolume",
   ].forEach((field) => {
@@ -270,7 +273,7 @@ const validateGlobalRuntime = (value, label) => {
     }
     const number = requireNumber(runtime[field], `${label}.${field}`);
     if (
-      ["soundVolume", "musicVolume"].includes(field) &&
+      ["autoForwardSpeed", "soundVolume", "musicVolume"].includes(field) &&
       (number < 0 || number > 100)
     ) {
       throw new Error(`${label}.${field} must be between 0 and 100`);
@@ -284,6 +287,16 @@ const validateGlobalRuntime = (value, label) => {
       }
     },
   );
+
+  if (
+    Object.hasOwn(runtime, "localizationPackageId") &&
+    runtime.localizationPackageId !== null
+  ) {
+    requireString(
+      runtime.localizationPackageId,
+      `${label}.localizationPackageId`,
+    );
+  }
 };
 
 const validateViewedRegistryId = (value, label) => {

@@ -440,17 +440,19 @@ database.
 
 ## `globalRuntime` Value
 
-This row stores only the seven durable global runtime preferences:
+This row stores only the nine durable global runtime preferences:
 
-| Field                          | Type    | Default | Additional validation            |
-| ------------------------------ | ------- | ------: | -------------------------------- |
-| `dialogueTextSpeed`            | Number  |    `50` | Finite JSON number               |
-| `autoForwardDelay`             | Number  |  `1000` | Finite JSON number               |
-| `skipUnseenText`               | Boolean | `false` | None                             |
-| `skipTransitionsAndAnimations` | Boolean | `false` | None                             |
-| `soundVolume`                  | Number  |    `50` | From `0` through `100` inclusive |
-| `musicVolume`                  | Number  |    `50` | From `0` through `100` inclusive |
-| `muteAll`                      | Boolean | `false` | None                             |
+| Field                          | Type           | Default | Additional validation            |
+| ------------------------------ | -------------- | ------: | -------------------------------- |
+| `dialogueTextSpeed`            | Number         |    `50` | Finite JSON number               |
+| `autoForwardDelay`             | Number         |  `1000` | Finite JSON number               |
+| `autoForwardSpeed`             | Number         |    `50` | From `0` through `100` inclusive |
+| `skipUnseenText`               | Boolean        | `false` | None                             |
+| `skipTransitionsAndAnimations` | Boolean        | `false` | None                             |
+| `soundVolume`                  | Number         |    `50` | From `0` through `100` inclusive |
+| `musicVolume`                  | Number         |    `50` | From `0` through `100` inclusive |
+| `muteAll`                      | Boolean        | `false` | None                             |
+| `localizationPackageId`        | String or null |  `null` | None                             |
 
 Canonical full value:
 
@@ -458,18 +460,20 @@ Canonical full value:
 {
   "dialogueTextSpeed": 50,
   "autoForwardDelay": 1000,
+  "autoForwardSpeed": 50,
   "skipUnseenText": false,
   "skipTransitionsAndAnimations": false,
   "soundVolume": 50,
   "musicVolume": 50,
-  "muteAll": false
+  "muteAll": false,
+  "localizationPackageId": null
 }
 ```
 
 The root object is closed. Unknown fields are rejected. Individual fields may
 be absent for an empty or older imported record; Route Engine fills absent
 fields from the defaults above. Current Route Engine full-snapshot writes
-include all seven fields.
+include all nine fields.
 
 Transient fields are intentionally invalid here, including:
 

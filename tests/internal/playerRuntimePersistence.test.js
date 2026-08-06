@@ -50,11 +50,13 @@ describe("player runtime persistence key/value contract", () => {
       validatePlayerPersistenceValue(GLOBAL_RUNTIME_KEY, {
         dialogueTextSpeed: 50,
         autoForwardDelay: 1_000,
+        autoForwardSpeed: 50,
         skipUnseenText: false,
         skipTransitionsAndAnimations: false,
         soundVolume: 50,
         musicVolume: 50,
         muteAll: false,
+        localizationPackageId: null,
       }),
     ).not.toThrow();
     expect(() =>
@@ -70,6 +72,21 @@ describe("player runtime persistence key/value contract", () => {
     expect(variableSnapshot.profile.tags).toEqual(["reader", null]);
     expect(saveSlotPersistenceKey("1")).toBe("saveSlots:1");
     expect(saveSlotPersistenceKey("auto")).toBe("saveSlots:auto");
+  });
+
+  it("accepts auto-forward speed boundaries and localization selections", () => {
+    expect(() =>
+      validatePlayerPersistenceValue(GLOBAL_RUNTIME_KEY, {
+        autoForwardSpeed: 0,
+        localizationPackageId: null,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      validatePlayerPersistenceValue(GLOBAL_RUNTIME_KEY, {
+        autoForwardSpeed: 100,
+        localizationPackageId: "ja",
+      }),
+    ).not.toThrow();
   });
 
   it("omits undefined optional BGM fields from engine save-slot snapshots", () => {
@@ -208,6 +225,21 @@ describe("player runtime persistence key/value contract", () => {
       ],
       [
         GLOBAL_RUNTIME_KEY,
+        { autoForwardSpeed: "fast" },
+        ".autoForwardSpeed must be a finite JSON number",
+      ],
+      [
+        GLOBAL_RUNTIME_KEY,
+        { autoForwardSpeed: -1 },
+        ".autoForwardSpeed must be between 0 and 100",
+      ],
+      [
+        GLOBAL_RUNTIME_KEY,
+        { autoForwardSpeed: 101 },
+        ".autoForwardSpeed must be between 0 and 100",
+      ],
+      [
+        GLOBAL_RUNTIME_KEY,
         { soundVolume: -1 },
         ".soundVolume must be between 0 and 100",
       ],
@@ -217,6 +249,11 @@ describe("player runtime persistence key/value contract", () => {
         ".musicVolume must be between 0 and 100",
       ],
       [GLOBAL_RUNTIME_KEY, { muteAll: 0 }, ".muteAll must be a JSON boolean"],
+      [
+        GLOBAL_RUNTIME_KEY,
+        { localizationPackageId: 1 },
+        ".localizationPackageId must be a JSON string",
+      ],
       [ACCOUNT_VIEWED_REGISTRY_KEY, [], "must be a JSON object"],
       [
         ACCOUNT_VIEWED_REGISTRY_KEY,
