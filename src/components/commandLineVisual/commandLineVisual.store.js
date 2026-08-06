@@ -361,11 +361,20 @@ const createVisualsForm = (visuals = []) => ({
     return {
       type: "section",
       id: visual.formSectionId,
-      label: visual.displayName,
       fields,
     };
   }),
 });
+
+const createLocalizedVisualsForm = (visuals = [], copy = {}) => {
+  const form = localizeCommandLineForm(createVisualsForm(visuals), copy);
+
+  for (const [index, visual] of visuals.entries()) {
+    form.fields[index].label = visual.displayName;
+  }
+
+  return form;
+};
 
 const isHierarchyCollection = (value) =>
   !!value &&
@@ -1589,10 +1598,7 @@ export const selectViewData = ({ state, i18n }) => {
     fullSpritesheetPreviewAnimation: state.fullSpritesheetPreviewAnimation,
     fullSpritesheetPreviewKey: state.fullSpritesheetPreviewKey,
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
-    form: localizeCommandLineForm(
-      createVisualsForm(defaultValues.visuals),
-      copy,
-    ),
+    form: createLocalizedVisualsForm(defaultValues.visuals, copy),
     formKey:
       defaultValues.visuals
         .map((visual) =>

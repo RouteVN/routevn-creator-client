@@ -7,7 +7,7 @@ import {
   setExistingVisuals,
   setImages,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N } from "../support/i18n.js";
 
 describe("commandLineVisual sections", () => {
   it("creates a named form section with two-column rows for each visual", () => {
@@ -132,5 +132,42 @@ describe("commandLineVisual sections", () => {
     );
     expect(view).toContain("rtgl-grid cols=2 g=md w=f:");
     expect(view).not.toContain("backgroundTransformEditor");
+  });
+
+  it("preserves user-authored visual names while localizing static labels", () => {
+    const state = createInitialState();
+    setImages(
+      { state },
+      {
+        images: {
+          items: {
+            "visual-one": {
+              id: "visual-one",
+              type: "image",
+              name: "Visuals",
+              fileId: "file-one",
+            },
+          },
+          tree: [{ id: "visual-one" }],
+        },
+      },
+    );
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-item-one",
+            resourceId: "visual-one",
+            resourceType: "image",
+          },
+        ],
+      },
+    );
+
+    const [section] = selectViewData({ state, i18n: JA_I18N }).form.fields;
+
+    expect(section.label).toBe("Visuals");
+    expect(section.fields[0].fields[0].label).toBe("表示素材");
   });
 });
