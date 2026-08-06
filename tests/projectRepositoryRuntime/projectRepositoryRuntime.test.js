@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  createProjectRepository,
   createProjectCreateRepositoryEvent,
+  createRepositoryCommandEvent,
   initialProjectData,
 } from "../../src/deps/services/shared/projectRepository.js";
 import {
@@ -18,6 +20,8 @@ import {
   mainScenePartitionFor,
   scenePartitionFor,
 } from "../../src/deps/services/shared/collab/partitions.js";
+import { COMMAND_TYPES } from "../../src/internal/project/commands.js";
+import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
 
 const createBatchedReducer = (reduceEventToState) => {
   return ({ repositoryState, events }) => {
@@ -1053,6 +1057,206 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     await expect(repository.loadEvents()).resolves.toHaveLength(2);
     expect(repository.getState()).toEqual({
       appliedCount: 2,
+    });
+  });
+
+  it("applies a thumbnail file and particle after a checkpoint cursor exceeds replayed history", async () => {
+    const projectId = "project-1";
+    const bootstrapEvent = createProjectCreateRepositoryEvent({
+      projectId,
+      state: initialProjectData,
+      commandId: "project-create-1",
+      clientTs: 1,
+    });
+    const loadEvents = vi.fn(async () => [structuredClone(bootstrapEvent)]);
+    const savedMainCheckpoints = [];
+    const repository = await createProjectRepository({
+      projectId,
+      store: {
+        loadMaterializedViewCheckpoint: async () => ({
+          viewName: MAIN_VIEW_NAME,
+          viewVersion: "1",
+          partition: "m",
+          lastCommittedId: 2,
+          value: createMainProjectionState(initialProjectData),
+        }),
+        saveMaterializedViewCheckpoint: async (checkpoint) => {
+          savedMainCheckpoints.push(structuredClone(checkpoint));
+        },
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      initialRevision: 2,
+      historyStats: {
+        committedCount: 1,
+        latestCommittedId: 1,
+        draftCount: 1,
+        latestDraftClock: 1,
+      },
+      loadEvents,
+    });
+    const createEvent = ({ id, type, payload, clientTs }) =>
+      createRepositoryCommandEvent({
+        command: {
+          id,
+          projectId,
+          partition: "m",
+          type,
+          payload,
+          actor: {
+            userId: "user-1",
+            clientId: "client-1",
+          },
+          clientTs,
+        },
+      });
+
+    await repository.addEvent(
+      createEvent({
+        id: "file-create-1",
+        type: COMMAND_TYPES.FILE_CREATE,
+        payload: {
+          fileId: "particle-thumbnail-1",
+          data: {
+            mimeType: "image/webp",
+            size: 123,
+            sha256: "particle-thumbnail-sha256",
+          },
+        },
+        clientTs: 2,
+      }),
+    );
+
+    expect(repository.getState().files.items["particle-thumbnail-1"]).toEqual({
+      id: "particle-thumbnail-1",
+      mimeType: "image/webp",
+      size: 123,
+      sha256: "particle-thumbnail-sha256",
+    });
+
+    const particleData = createParticlePreset({ presetId: "snow" });
+    particleData.thumbnailFileId = "particle-thumbnail-1";
+    await expect(
+      repository.addEvent(
+        createEvent({
+          id: "particle-create-1",
+          type: COMMAND_TYPES.PARTICLE_CREATE,
+          payload: {
+            particleId: "particle-1",
+            data: particleData,
+            parentId: null,
+            index: 0,
+          },
+          clientTs: 3,
+        }),
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(repository.getState().particles.items["particle-1"]).toMatchObject({
+      id: "particle-1",
+      thumbnailFileId: "particle-thumbnail-1",
+    });
+    expect(repository.getRevision()).toBe(4);
+    expect(loadEvents).toHaveBeenCalledTimes(1);
+    await expect(repository.loadEvents()).resolves.toHaveLength(3);
+
+    await repository.flushMainCheckpoint();
+
+    expect(savedMainCheckpoints.at(-1)).toMatchObject({
+      lastCommittedId: 4,
+      value: {
+        files: {
+          items: {
+            "particle-thumbnail-1": {
+              id: "particle-thumbnail-1",
+            },
+          },
+        },
+        particles: {
+          items: {
+            "particle-1": {
+              id: "particle-1",
+              thumbnailFileId: "particle-thumbnail-1",
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("keeps batch event revisions ahead of a checkpoint cursor after filtered history", async () => {
+    const loadEvents = vi.fn(async () => [
+      {
+        id: "event-1",
+        type: "resource.update",
+        partition: "m",
+        payload: {},
+      },
+    ]);
+    const savedMainCheckpoints = [];
+    const reduceEventToState = ({ repositoryState, event }) => ({
+      appliedIds: [...(repositoryState?.appliedIds || []), event.id],
+    });
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        loadMaterializedViewCheckpoint: async () => ({
+          viewName: MAIN_VIEW_NAME,
+          viewVersion: "1",
+          partition: "m",
+          lastCommittedId: 3,
+          value: {
+            appliedIds: ["event-1"],
+          },
+        }),
+        saveMaterializedViewCheckpoint: async (checkpoint) => {
+          savedMainCheckpoints.push(structuredClone(checkpoint));
+        },
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      initialRevision: 3,
+      historyStats: {
+        committedCount: 1,
+        latestCommittedId: 1,
+        draftCount: 2,
+        latestDraftClock: 2,
+      },
+      loadEvents,
+      createInitialState: () => ({
+        appliedIds: [],
+      }),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducer(reduceEventToState),
+    });
+
+    await repository.addEvents([
+      {
+        id: "event-2",
+        type: "resource.update",
+        partition: "m",
+        payload: {},
+      },
+      {
+        id: "event-3",
+        type: "resource.update",
+        partition: "m",
+        payload: {},
+      },
+    ]);
+
+    expect(repository.getState()).toEqual({
+      appliedIds: ["event-1", "event-2", "event-3"],
+    });
+    expect(repository.getRevision()).toBe(5);
+    expect(loadEvents).toHaveBeenCalledTimes(1);
+    await expect(repository.loadEvents()).resolves.toHaveLength(3);
+
+    await repository.flushMainCheckpoint();
+
+    expect(savedMainCheckpoints.at(-1)).toMatchObject({
+      lastCommittedId: 5,
+      value: {
+        appliedIds: ["event-1", "event-2", "event-3"],
+      },
     });
   });
 

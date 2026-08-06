@@ -539,6 +539,13 @@ export const createProjectRepositoryRuntime = async ({
   let activeHydrationProgress;
   const hasDraftHistory = Number(historyStats?.draftCount || 0) > 0;
 
+  const advanceCurrentRevision = () => {
+    // Replayed history may omit preserved invalid drafts even though the
+    // checkpoint revision still includes their positions.
+    currentRevision = Math.max(currentRevision + 1, events.length);
+    return currentRevision;
+  };
+
   const toProgressValue = (value) => {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue)) {
@@ -1498,11 +1505,11 @@ export const createProjectRepositoryRuntime = async ({
       }
 
       events.push(structuredClone(event));
-      currentRevision = events.length;
+      const committedId = advanceCurrentRevision();
 
       const committedEvent = toCommittedProjectEvent({
         event,
-        committedId: currentRevision,
+        committedId,
         projectId,
       });
 
@@ -1534,10 +1541,10 @@ export const createProjectRepositoryRuntime = async ({
       const committedEvents = [];
       for (const event of nextEvents) {
         events.push(structuredClone(event));
-        currentRevision = events.length;
+        const committedId = advanceCurrentRevision();
         const committedEvent = toCommittedProjectEvent({
           event,
-          committedId: currentRevision,
+          committedId,
           projectId,
         });
         committedEvents.push(committedEvent);
