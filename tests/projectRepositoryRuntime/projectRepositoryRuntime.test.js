@@ -1132,6 +1132,8 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
       size: 123,
       sha256: "particle-thumbnail-sha256",
     });
+    const versionRevision = repository.getRevision();
+    expect(versionRevision).toBe(3);
 
     const particleData = createParticlePreset({ presetId: "snow" });
     particleData.thumbnailFileId = "particle-thumbnail-1";
@@ -1155,6 +1157,20 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
       id: "particle-1",
       thumbnailFileId: "particle-thumbnail-1",
     });
+    const versionState = await repository.loadState(versionRevision);
+    expect(versionState).toMatchObject({
+      files: {
+        items: {
+          "particle-thumbnail-1": {
+            id: "particle-thumbnail-1",
+          },
+        },
+      },
+    });
+    expect(versionState.particles.items["particle-1"]).toBeUndefined();
+    expect(
+      repository.getState(versionRevision).particles.items["particle-1"],
+    ).toBeUndefined();
     expect(repository.getRevision()).toBe(4);
     expect(loadEvents).toHaveBeenCalledTimes(1);
     await expect(repository.loadEvents()).resolves.toHaveLength(3);
@@ -1249,6 +1265,9 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     expect(repository.getRevision()).toBe(5);
     expect(loadEvents).toHaveBeenCalledTimes(1);
     await expect(repository.loadEvents()).resolves.toHaveLength(3);
+    await expect(repository.loadState(4)).resolves.toEqual({
+      appliedIds: ["event-1", "event-2"],
+    });
 
     await repository.flushMainCheckpoint();
 

@@ -634,9 +634,23 @@ describe("webRepositoryAdapter", () => {
       clientTs: 120,
       createdAt: 120,
     };
+    const validDraft = {
+      ...duplicateDraft,
+      id: "tag-draft-valid",
+      payload: {
+        ...duplicateDraft.payload,
+        tagId: "image-tag-3",
+        data: {
+          type: "tag",
+          name: "Foreground",
+        },
+      },
+      clientTs: 130,
+      createdAt: 130,
+    };
     const rawClientStore = createRawClientStoreStub({
       committed: [committedEvent, committedTagCreate],
-      drafts: [duplicateDraft],
+      drafts: [duplicateDraft, validDraft],
       cursor: 2,
     });
     const adapter = await createInsiemeWebStoreAdapter(projectId, {
@@ -651,10 +665,17 @@ describe("webRepositoryAdapter", () => {
     ).resolves.toEqual([
       expect.objectContaining({
         type: "project.create",
+        repositoryRevision: 1,
       }),
       expect.objectContaining({
         type: "tag.create",
         id: "tag-committed-1",
+        repositoryRevision: 2,
+      }),
+      expect.objectContaining({
+        type: "tag.create",
+        id: "tag-draft-valid",
+        repositoryRevision: 4,
       }),
     ]);
 

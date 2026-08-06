@@ -536,6 +536,27 @@ export const createProjectRepositoryRuntime = async ({
   let currentRevision = Number.isFinite(Number(initialRevision))
     ? Math.max(0, Math.floor(Number(initialRevision)))
     : events.length;
+  const createEventRevisions = (source = []) => {
+    let previousRevision = 0;
+    return source.map((event, index) => {
+      const explicitRevision = Number(event?.repositoryRevision);
+      const fallbackRevision = index + 1;
+      const revision = Number.isFinite(explicitRevision)
+        ? Math.max(
+            previousRevision + 1,
+            Math.floor(explicitRevision),
+            fallbackRevision,
+          )
+        : Math.max(previousRevision + 1, fallbackRevision);
+      previousRevision = revision;
+      return revision;
+    });
+  };
+  let eventRevisions = createEventRevisions(events);
+  currentRevision = Math.max(
+    currentRevision,
+    eventRevisions.at(-1) ?? events.length,
+  );
   let activeHydrationProgress;
   const hasDraftHistory = Number(historyStats?.draftCount || 0) > 0;
 
@@ -544,6 +565,48 @@ export const createProjectRepositoryRuntime = async ({
     // checkpoint revision still includes their positions.
     currentRevision = Math.max(currentRevision + 1, events.length);
     return currentRevision;
+  };
+
+  const resolveEventCountAtRevision = (untilRevision) => {
+    const parsedRevision = Number(untilRevision);
+    const targetRevision = Number.isFinite(parsedRevision)
+      ? Math.max(0, Math.floor(parsedRevision))
+      : currentRevision;
+    let lowerIndex = 0;
+    let upperIndex = eventRevisions.length;
+
+    while (lowerIndex < upperIndex) {
+      const middleIndex = Math.floor((lowerIndex + upperIndex) / 2);
+      if (eventRevisions[middleIndex] <= targetRevision) {
+        lowerIndex = middleIndex + 1;
+      } else {
+        upperIndex = middleIndex;
+      }
+    }
+
+    return lowerIndex;
+  };
+
+  const listLoadedEventsAfterRevision = ({ sinceCommittedId, limit } = {}) => {
+    const parsedRevision = Number(sinceCommittedId);
+    const revision = Number.isFinite(parsedRevision)
+      ? Math.max(0, Math.floor(parsedRevision))
+      : 0;
+    const startIndex = resolveEventCountAtRevision(revision);
+    const safeLimit =
+      Number.isInteger(limit) && limit > 0
+        ? limit
+        : Math.max(0, events.length - startIndex);
+
+    return events
+      .slice(startIndex, startIndex + safeLimit)
+      .map((event, index) =>
+        toCommittedProjectEvent({
+          event,
+          committedId: eventRevisions[startIndex + index],
+          projectId,
+        }),
+      );
   };
 
   const toProgressValue = (value) => {
@@ -576,8 +639,12 @@ export const createProjectRepositoryRuntime = async ({
         events = Array.isArray(loadedEvents)
           ? loadedEvents.map((event) => structuredClone(event))
           : [];
+        eventRevisions = createEventRevisions(events);
         hasLoadedEvents = true;
-        currentRevision = Math.max(currentRevision, events.length);
+        currentRevision = Math.max(
+          currentRevision,
+          eventRevisions.at(-1) ?? events.length,
+        );
         return events;
       })
       .catch((error) => {
@@ -690,7 +757,7 @@ export const createProjectRepositoryRuntime = async ({
       }),
     ],
     getLatestCommittedId: async () =>
-      hasLoadedEvents ? events.length : currentRevision,
+      hasLoadedEvents ? (eventRevisions.at(-1) ?? 0) : currentRevision,
     listCommittedAfter: async ({ sinceCommittedId, limit }) => {
       if (!hasLoadedEvents && !hasDraftHistory) {
         const committedBatch = await store.listCommittedAfter({
@@ -706,23 +773,10 @@ export const createProjectRepositoryRuntime = async ({
       }
 
       await ensureEventHistoryLoaded();
-      const startIndex = Math.max(
-        0,
-        Number.isFinite(Number(sinceCommittedId))
-          ? Math.floor(Number(sinceCommittedId))
-          : 0,
-      );
-      const safeLimit =
-        Number.isInteger(limit) && limit > 0 ? limit : events.length;
-      const batch = events
-        .slice(startIndex, startIndex + safeLimit)
-        .map((event, index) =>
-          toCommittedProjectEvent({
-            event,
-            committedId: startIndex + index + 1,
-            projectId,
-          }),
-        );
+      const batch = listLoadedEventsAfterRevision({
+        sinceCommittedId,
+        limit,
+      });
 
       reportHydrationProgressFromBatch(batch);
       return batch;
@@ -920,23 +974,7 @@ export const createProjectRepositoryRuntime = async ({
     }
 
     await ensureEventHistoryLoaded();
-    const startIndex = Math.max(
-      0,
-      Number.isFinite(Number(sinceCommittedId))
-        ? Math.floor(Number(sinceCommittedId))
-        : 0,
-    );
-    const safeLimit =
-      Number.isInteger(limit) && limit > 0 ? limit : events.length;
-    return events
-      .slice(startIndex, startIndex + safeLimit)
-      .map((event, index) =>
-        toCommittedProjectEvent({
-          event,
-          committedId: startIndex + index + 1,
-          projectId,
-        }),
-      );
+    return listLoadedEventsAfterRevision({ sinceCommittedId, limit });
   };
 
   const listSceneOverviewEventsAfterFromRepository = async ({
@@ -995,15 +1033,10 @@ export const createProjectRepositoryRuntime = async ({
       return tailEvents;
     }
 
-    return events
-      .slice(startIndex, startIndex + safeLimit)
-      .map((event, index) =>
-        toCommittedProjectEvent({
-          event,
-          committedId: startIndex + index + 1,
-          projectId,
-        }),
-      );
+    return listLoadedEventsAfterRevision({
+      sinceCommittedId,
+      limit: safeLimit,
+    });
   };
 
   const loadState = async (untilEventIndex) => {
@@ -1013,7 +1046,7 @@ export const createProjectRepositoryRuntime = async ({
         : await ensureEventHistoryLoaded();
       return replayEventsToRepositoryState({
         events: replayEvents,
-        untilEventIndex,
+        untilEventIndex: resolveEventCountAtRevision(untilEventIndex),
         createInitialState,
         reduceEventToState,
         reduceEventsToState,
@@ -1401,7 +1434,7 @@ export const createProjectRepositoryRuntime = async ({
       // that replay result directly avoids one more full clone during export.
       return replayEventsToRepositoryState({
         events,
-        untilEventIndex,
+        untilEventIndex: resolveEventCountAtRevision(untilEventIndex),
         createInitialState,
         reduceEventToState,
         reduceEventsToState,
@@ -1506,6 +1539,7 @@ export const createProjectRepositoryRuntime = async ({
 
       events.push(structuredClone(event));
       const committedId = advanceCurrentRevision();
+      eventRevisions.push(committedId);
 
       const committedEvent = toCommittedProjectEvent({
         event,
@@ -1542,6 +1576,7 @@ export const createProjectRepositoryRuntime = async ({
       for (const event of nextEvents) {
         events.push(structuredClone(event));
         const committedId = advanceCurrentRevision();
+        eventRevisions.push(committedId);
         const committedEvent = toCommittedProjectEvent({
           event,
           committedId,

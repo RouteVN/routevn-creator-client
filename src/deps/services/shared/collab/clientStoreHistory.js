@@ -37,7 +37,10 @@ export const areRepositoryHistoryStatsEqual = (left, right) => {
   );
 };
 
-export const toRepositoryEvent = (item, { created, projectId } = {}) => {
+export const toRepositoryEvent = (
+  item,
+  { created, projectId, repositoryRevision } = {},
+) => {
   if (typeof item?.partition !== "string" || item.partition.length === 0) {
     throw new Error("Stored collab row is missing partition");
   }
@@ -51,7 +54,7 @@ export const toRepositoryEvent = (item, { created, projectId } = {}) => {
     throw new Error("Stored collab row is missing projectId");
   }
 
-  return {
+  const repositoryEvent = {
     id: item.id,
     partition: item.partition,
     projectId: resolvedProjectId,
@@ -67,6 +70,15 @@ export const toRepositoryEvent = (item, { created, projectId } = {}) => {
     meta: item.meta ? structuredClone(item.meta) : {},
     ...(created !== undefined ? { serverTs: created } : {}),
   };
+
+  if (Number.isFinite(Number(repositoryRevision))) {
+    repositoryEvent.repositoryRevision = Math.max(
+      0,
+      Math.floor(Number(repositoryRevision)),
+    );
+  }
+
+  return repositoryEvent;
 };
 
 export const assertRepositoryEventShape = (event) => {
@@ -306,10 +318,11 @@ export const loadRepositoryEventsFromClientStore = async ({
   };
 
   const events = [];
-  for (const committedEvent of committed) {
+  for (const [committedIndex, committedEvent] of committed.entries()) {
     const nextEvent = toRepositoryEvent(committedEvent, {
       created: committedEvent.serverTs,
       projectId,
+      repositoryRevision: committedIndex + 1,
     });
     assertRepositoryEventShape(nextEvent);
     events.push(nextEvent);
@@ -333,10 +346,11 @@ export const loadRepositoryEventsFromClientStore = async ({
     });
   }
 
-  const draftEvents = drafts.map((draft) => {
+  const draftEvents = drafts.map((draft, draftIndex) => {
     const nextEvent = toRepositoryEvent(draft, {
       created: draft.createdAt,
       projectId,
+      repositoryRevision: committed.length + draftIndex + 1,
     });
     assertRepositoryEventShape(nextEvent);
     return nextEvent;
