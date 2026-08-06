@@ -7,25 +7,28 @@ const componentViews = [
     "commandLineBgm/commandLineBgm.view.yaml",
     "#bgmChannel",
     ".bgmSoundClip",
+    "h-bc=${channelHoverBorderColor}",
   ],
   [
     "Voice",
     "commandLineVoice/commandLineVoice.view.yaml",
     "#voiceChannel",
     ".voiceSoundClip",
+    "h-bc=${channelHoverBorderColor}",
   ],
   [
     "SFX",
     "commandLineSoundEffects/commandLineSoundEffects.view.yaml",
     "#sfxChannel",
     ".sfxSoundClip",
+    "h-bc=${channel.channelHoverBorderColor}",
   ],
 ];
 
 describe("command-line audio channel views", () => {
   it.each(componentViews)(
     "keeps %s sound controls inside the channel editor",
-    (_name, relativePath, channelTarget) => {
+    (_name, relativePath, channelTarget, _soundClass, hoverBinding) => {
       const view = readFileSync(
         new URL(`../../src/components/${relativePath}`, import.meta.url),
         "utf8",
@@ -41,6 +44,7 @@ describe("command-line audio channel views", () => {
       expect(mainView).toContain("#channelForm");
       expect(mainView).toContain(channelTarget);
       expect(mainView).toContain("cur=pointer");
+      expect(mainView).toContain(hoverBinding);
       expect(mainView).toContain("#channelPreviewSound");
       expect(mainView).not.toContain("#editChannelButton");
       expect(mainView).not.toContain("#soundClip");
