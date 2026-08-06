@@ -1,16 +1,18 @@
 import { spawn } from "node:child_process";
 
-const scripts = [
+// Hand-rolled node suites: domain/runtime/collab/integration coverage.
+const nodeScripts = [
   "scripts/test-route-engine-project-data.js",
   "scripts/test-collab-adapters.js",
   "scripts/test-integration.js",
   "scripts/test-convergence.js",
   "scripts/test-smoke.js",
+  "scripts/test-export-bundle-pipeline.js",
 ];
 
-const runScript = (scriptPath) =>
+const run = (command, args) =>
   new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [scriptPath], {
+    const child = spawn(command, args, {
       stdio: "inherit",
       env: process.env,
     });
@@ -23,15 +25,20 @@ const runScript = (scriptPath) =>
       }
       reject(
         new Error(
-          `Test script failed: ${scriptPath} (${signal || `exit ${code}`})`,
+          `Test command failed: ${command} ${args.join(" ")} (${signal || `exit ${code}`})`,
         ),
       );
     });
   });
 
-for (const scriptPath of scripts) {
+for (const scriptPath of nodeScripts) {
   console.log(`Running ${scriptPath}`);
-  await runScript(scriptPath);
+  await run(process.execPath, [scriptPath]);
 }
+
+// The vitest suite (tests/**) is the bulk of the coverage: component stores,
+// handlers, rendered views, and the Puty sqlite storage scenarios.
+console.log("Running vitest (tests/**)");
+await run("bunx", ["vitest", "run"]);
 
 console.log("All tests: PASS");

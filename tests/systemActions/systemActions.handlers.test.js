@@ -25,6 +25,7 @@ import {
   handleSetActionCustomTransform,
   open,
 } from "../../src/components/systemActions/systemActions.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("systemActions.handlers", () => {
   it("announces the selected line before opening the add-action dialog", () => {
@@ -146,6 +147,7 @@ describe("systemActions.handlers", () => {
     );
 
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectAction: () => selectAction({ state }),
         setAuthoredDialogueWasCleared: (payload) =>
@@ -193,6 +195,7 @@ describe("systemActions.handlers", () => {
     );
 
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectAction: () => selectAction({ state }),
         setAuthoredDialogueWasCleared: (payload) =>
@@ -243,6 +246,7 @@ describe("systemActions.handlers", () => {
     );
 
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectAction: () => selectAction({ state }),
         setAuthoredDialogueWasCleared: (payload) =>
@@ -301,6 +305,7 @@ describe("systemActions.handlers", () => {
     let stopPropagationCalled = false;
 
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectAction: () => selectAction({ state }),
         updateActions: (payload) => updateActions({ state }, payload),
@@ -607,6 +612,7 @@ describe("systemActions.handlers", () => {
     const stopPropagation = vi.fn();
 
     const deps = {
+      i18n: EN_I18N,
       props: {
         suppressDialogClose: true,
       },
@@ -701,6 +707,7 @@ describe("systemActions.handlers", () => {
     const stopPropagation = vi.fn();
 
     const deps = {
+      i18n: EN_I18N,
       props: {},
       store: {
         selectSuppressDialogClose: vi.fn(() => true),
@@ -779,6 +786,7 @@ describe("systemActions.handlers", () => {
     const state = createInitialState();
 
     const deps = {
+      i18n: EN_I18N,
       store: {
         hideActionsDialog: () => {
           state.isActionsDialogOpen = false;
@@ -820,6 +828,7 @@ describe("systemActions.handlers", () => {
     );
 
     const deps = {
+      i18n: EN_I18N,
       props: {
         actions: {
           pushOverlay: {
@@ -852,6 +861,7 @@ describe("systemActions.handlers", () => {
     const state = createInitialState();
 
     const deps = {
+      i18n: EN_I18N,
       props: {
         actions: {
           pushOverlay: {
@@ -896,6 +906,7 @@ describe("systemActions.handlers", () => {
   it("keeps an authored dialogue clear marker when syncing editable content", () => {
     const state = createInitialState();
     const deps = {
+      i18n: EN_I18N,
       props: {
         actions: {
           dialogue: {

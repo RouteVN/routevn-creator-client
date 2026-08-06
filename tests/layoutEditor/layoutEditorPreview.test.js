@@ -226,6 +226,221 @@ describe("layoutEditorPreview", () => {
               },
             },
           },
+          remaining: {
+            type: "variable",
+            variableType: "number",
+            scope: "context",
+            computed: {
+              expr: {
+                sub: [
+                  { var: "variables.score" },
+                  { var: "runtime.musicVolume" },
+                ],
+              },
+            },
+          },
+          product: {
+            type: "variable",
+            variableType: "number",
+            scope: "context",
+            computed: {
+              expr: {
+                mul: [{ var: "variables.score" }, 3],
+              },
+            },
+          },
+          quotient: {
+            type: "variable",
+            variableType: "number",
+            scope: "context",
+            computed: {
+              expr: {
+                div: [
+                  { var: "runtime.musicVolume" },
+                  { var: "variables.score" },
+                ],
+              },
+            },
+          },
+          lower: {
+            type: "variable",
+            variableType: "number",
+            scope: "context",
+            computed: {
+              expr: {
+                min: [
+                  { var: "variables.score" },
+                  { var: "runtime.musicVolume" },
+                ],
+              },
+            },
+          },
+          higher: {
+            type: "variable",
+            variableType: "number",
+            scope: "context",
+            computed: {
+              expr: {
+                max: [
+                  { var: "variables.score" },
+                  { var: "runtime.musicVolume" },
+                ],
+              },
+            },
+          },
+          equal: {
+            type: "variable",
+            variableType: "boolean",
+            scope: "context",
+            computed: {
+              expr: {
+                eq: [{ var: "variables.score" }, 8],
+              },
+            },
+          },
+          notEqual: {
+            type: "variable",
+            variableType: "boolean",
+            scope: "context",
+            computed: {
+              expr: {
+                neq: [
+                  { var: "variables.score" },
+                  { var: "runtime.musicVolume" },
+                ],
+              },
+            },
+          },
+          greaterThan: {
+            type: "variable",
+            variableType: "boolean",
+            scope: "context",
+            computed: {
+              expr: {
+                gt: [{ var: "variables.score" }, 5],
+              },
+            },
+          },
+          greaterOrEqual: {
+            type: "variable",
+            variableType: "boolean",
+            scope: "context",
+            computed: {
+              expr: {
+                gte: [{ var: "variables.score" }, 8],
+              },
+            },
+          },
+          lessThan: {
+            type: "variable",
+            variableType: "boolean",
+            scope: "context",
+            computed: {
+              expr: {
+                lt: [
+                  { var: "variables.score" },
+                  { var: "runtime.musicVolume" },
+                ],
+              },
+            },
+          },
+          lessOrEqual: {
+            type: "variable",
+            variableType: "boolean",
+            scope: "context",
+            computed: {
+              expr: {
+                lte: [{ var: "variables.score" }, 8],
+              },
+            },
+          },
+          conjunction: {
+            type: "variable",
+            variableType: "boolean",
+            scope: "context",
+            computed: {
+              expr: {
+                and: [
+                  { gte: [{ var: "variables.score" }, 8] },
+                  {
+                    lt: [
+                      { var: "variables.score" },
+                      { var: "runtime.musicVolume" },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          disjunction: {
+            type: "variable",
+            variableType: "boolean",
+            scope: "context",
+            computed: {
+              expr: {
+                or: [false, { eq: [{ var: "variables.score" }, 8] }],
+              },
+            },
+          },
+          negated: {
+            type: "variable",
+            variableType: "boolean",
+            scope: "context",
+            computed: {
+              expr: {
+                not: [
+                  {
+                    eq: [
+                      { var: "variables.score" },
+                      { var: "runtime.musicVolume" },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          rank: {
+            type: "variable",
+            variableType: "string",
+            scope: "context",
+            computed: {
+              branches: [
+                {
+                  when: {
+                    gte: [{ var: "variables.score" }, 10],
+                  },
+                  expr: "High",
+                },
+                {
+                  when: {
+                    gte: [{ var: "variables.score" }, 5],
+                  },
+                  expr: "Medium",
+                },
+              ],
+              default: {
+                expr: "Low",
+              },
+            },
+          },
+          fallback: {
+            type: "variable",
+            variableType: "string",
+            scope: "context",
+            computed: {
+              branches: [
+                {
+                  when: {
+                    gt: [{ var: "variables.score" }, 100],
+                  },
+                  expr: "Exceptional",
+                },
+              ],
+              default: {
+                expr: "Available",
+              },
+            },
+          },
         },
       },
       previewVariableValues: {
@@ -237,6 +452,22 @@ describe("layoutEditorPreview", () => {
     expect(previewData.variables).toMatchObject({
       score: 8,
       total: 28,
+      remaining: -12,
+      product: 24,
+      quotient: 2.5,
+      lower: 8,
+      higher: 20,
+      equal: true,
+      notEqual: true,
+      greaterThan: true,
+      greaterOrEqual: true,
+      lessThan: true,
+      lessOrEqual: true,
+      conjunction: true,
+      disjunction: true,
+      negated: true,
+      rank: "Medium",
+      fallback: "Available",
     });
   });
 

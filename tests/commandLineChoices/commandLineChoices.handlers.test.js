@@ -94,6 +94,7 @@ describe("commandLineChoices.handlers", () => {
     handleChoiceFormChange(
       {
         store,
+        i18n: EN_I18N,
         render,
         dispatchEvent,
         props: {
@@ -158,6 +159,7 @@ describe("commandLineChoices.handlers", () => {
     setEditingIndex({ state }, { index: 0 });
 
     const deps = {
+      i18n: EN_I18N,
       store,
       render,
       dispatchEvent,
@@ -248,6 +250,7 @@ describe("commandLineChoices.handlers", () => {
 
     handleCancelEditClick({
       store,
+      i18n: EN_I18N,
       render,
       dispatchEvent,
       props: {
@@ -297,9 +300,9 @@ describe("commandLineChoices.handlers", () => {
 
     handleSaveChoiceClick({
       store,
+      i18n: EN_I18N,
       render,
       dispatchEvent,
-      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -382,9 +385,9 @@ describe("commandLineChoices.handlers", () => {
 
     handleSaveChoiceClick({
       store,
+      i18n: EN_I18N,
       render,
       dispatchEvent,
-      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -428,8 +431,8 @@ describe("commandLineChoices.handlers", () => {
 
     handleSubmitClick({
       dispatchEvent,
-      store: createStoreApi(state),
       i18n: EN_I18N,
+      store: createStoreApi(state),
       appService: {
         showAlert: vi.fn(),
       },
@@ -482,6 +485,7 @@ describe("commandLineChoices.handlers", () => {
     );
 
     const deps = {
+      i18n: EN_I18N,
       store,
       render,
       dispatchEvent,

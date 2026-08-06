@@ -1,0 +1,4 @@
+componentName: demo-parent
+propsSchema:
+  type: object
+  properties: {}

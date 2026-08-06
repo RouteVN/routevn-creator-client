@@ -1,0 +1,6 @@
+componentName: demo-child
+propsSchema:
+  type: object
+  properties:
+    label:
+      type: string

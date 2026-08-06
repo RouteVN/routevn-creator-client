@@ -15,6 +15,7 @@ import {
   handleSectionActionClick,
   handleSpriteBlurFormAction,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
@@ -45,6 +46,7 @@ const createStoreApi = (state) => ({
 });
 
 const createDeps = (state) => ({
+  i18n: EN_I18N,
   state,
   store: createStoreApi(state),
   appService: {
@@ -70,6 +72,7 @@ describe("layoutEditPanel sprite blur section", () => {
     );
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: createProps("sprite"),
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,
@@ -86,6 +89,7 @@ describe("layoutEditPanel sprite blur section", () => {
     });
 
     const saveLoadSpriteViewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: createProps("sprite-ref-save-load-slot-image"),
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,
@@ -118,6 +122,7 @@ describe("layoutEditPanel sprite blur section", () => {
     );
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: createProps("sprite"),
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,

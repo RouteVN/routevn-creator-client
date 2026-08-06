@@ -5,6 +5,7 @@ import {
   handleLayoutFormActionClick,
   handleLayoutItemClick,
 } from "../../src/pages/layouts/layouts.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("createLayoutTemplate", () => {
   const projectResolution = {
@@ -79,10 +80,12 @@ describe("createLayoutTemplate", () => {
   it("creates layouts with empty elements and metadata", async () => {
     const createLayoutItem = vi.fn(async () => "layout-1");
     const deps = {
+      i18n: EN_I18N,
       store: {
         getState: () => ({
           targetGroupId: "group-1",
         }),
+        selectTargetGroupId: () => "group-1",
         closeAddDialog: vi.fn(),
         setItems: vi.fn(),
         setTagsData: vi.fn(),
@@ -149,6 +152,7 @@ describe("createLayoutTemplate", () => {
     let selectedItemId;
     const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectSelectedItemId: vi.fn(() => selectedItemId),
         setSelectedItemId: vi.fn(({ itemId } = {}) => {
@@ -193,6 +197,7 @@ describe("createLayoutTemplate", () => {
     };
     const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectSelectedItemId: vi.fn(() => "layout-1"),
         setSelectedItemId: vi.fn(),
@@ -227,6 +232,7 @@ describe("createLayoutTemplate", () => {
   it("duplicates a layout and selects the duplicate", async () => {
     const duplicateLayoutItem = vi.fn(async () => "layout-copy");
     const deps = {
+      i18n: EN_I18N,
       store: {
         setItems: vi.fn(),
         setTagsData: vi.fn(),

@@ -69,6 +69,7 @@ const createDeps = () => {
           state.previewInputFieldValues[name] = fieldValue;
         },
         selectPreviewData: () => ({}),
+        selectDialogueDefaultValues: () => state.dialogueDefaultValues,
       },
       render: vi.fn(),
       dispatchEvent: vi.fn(),

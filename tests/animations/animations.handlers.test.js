@@ -17,6 +17,7 @@ describe("animations.handlers", () => {
 
   it("clears selection and preview runtime from a resource background click", async () => {
     const deps = {
+      i18n: EN_I18N,
       store: {
         setSelectedFolderId: vi.fn(),
         setSelectedItemId: vi.fn(),
@@ -45,6 +46,7 @@ describe("animations.handlers", () => {
 
   it("selects an animation from the catalog without logging", () => {
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectSelectedItemId: vi.fn(() => undefined),
         setSelectedItemId: vi.fn(),
@@ -85,6 +87,7 @@ describe("animations.handlers", () => {
     });
 
     const deps = {
+      i18n: EN_I18N,
       store: {
         selectSelectedItemId: vi.fn(() => undefined),
         setSelectedItemId: vi.fn(),
@@ -145,6 +148,7 @@ describe("animations.handlers", () => {
     };
     let previewRequestId;
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showToast: vi.fn(),
       },
@@ -299,6 +303,7 @@ describe("animations.handlers", () => {
     };
     let previewRequestId;
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showToast: vi.fn(),
       },

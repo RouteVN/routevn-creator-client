@@ -7,6 +7,7 @@ import {
   setValues,
   setVariablesData,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
@@ -68,6 +69,7 @@ describe("layoutEditPanel text content", () => {
     );
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: createProps("text"),
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,
@@ -130,6 +132,7 @@ describe("layoutEditPanel text content", () => {
     );
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: createProps("text"),
       constants: LAYOUT_EDIT_PANEL_CONSTANTS,

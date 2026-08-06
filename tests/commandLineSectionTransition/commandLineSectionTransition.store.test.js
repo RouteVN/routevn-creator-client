@@ -73,11 +73,11 @@ describe("commandLineSectionTransition.store", () => {
     );
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: {
         currentSceneId: "scene-1",
       },
-      i18n: EN_I18N,
     });
 
     expect(viewData.context.transitionAnimationOptions).toEqual([

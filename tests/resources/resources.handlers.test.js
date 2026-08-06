@@ -35,6 +35,7 @@ describe("resources handlers", () => {
     expect(dispatch).toHaveBeenCalledWith("redirect", {
       path: "/project/images",
       payload: currentPayload,
+      historyMode: "replace",
     });
   });
 });

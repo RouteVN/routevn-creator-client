@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
+  selectCancelActions,
+  selectConfirmActions,
   setCancelActions,
   setConfirmActions,
 } from "../../src/components/commandLineShowConfirmDialog/commandLineShowConfirmDialog.store.js";
@@ -20,6 +22,8 @@ const createDeps = () => {
       getState: () => state,
       setConfirmActions: (payload) => setConfirmActions({ state }, payload),
       setCancelActions: (payload) => setCancelActions({ state }, payload),
+      selectConfirmActions: () => selectConfirmActions({ state }),
+      selectCancelActions: () => selectCancelActions({ state }),
     },
     render: vi.fn(),
   };

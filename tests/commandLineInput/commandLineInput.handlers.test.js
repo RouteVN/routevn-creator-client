@@ -18,6 +18,7 @@ import {
   startEditingField,
   updateEditFieldConfig,
 } from "../../src/components/commandLineInput/commandLineInput.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const inputLayout = {
   id: "profile-form-layout",
@@ -94,12 +95,14 @@ describe("commandLineInput.handlers", () => {
 
     handleBeforeMount({
       props,
+      i18n: EN_I18N,
       store,
     });
 
     handleFieldRowClick(
       {
         render,
+        i18n: EN_I18N,
         store,
       },
       {
@@ -117,6 +120,7 @@ describe("commandLineInput.handlers", () => {
       {
         dispatchEvent,
         render,
+        i18n: EN_I18N,
         store,
       },
       {
@@ -172,6 +176,7 @@ describe("commandLineInput.handlers", () => {
       {
         dispatchEvent,
         render,
+        i18n: EN_I18N,
         store,
       },
       {
@@ -191,6 +196,7 @@ describe("commandLineInput.handlers", () => {
 
     handleBeforeMount({
       props,
+      i18n: EN_I18N,
       store,
     });
 
@@ -200,6 +206,7 @@ describe("commandLineInput.handlers", () => {
           showAlert: vi.fn(),
         },
         dispatchEvent,
+        i18n: EN_I18N,
         store,
       },
       {
@@ -251,6 +258,7 @@ describe("commandLineInput.handlers", () => {
           fields: {},
         },
       },
+      i18n: EN_I18N,
       store,
     });
 
@@ -260,6 +268,7 @@ describe("commandLineInput.handlers", () => {
           showAlert,
         },
         dispatchEvent,
+        i18n: EN_I18N,
         store,
       },
       {
@@ -291,12 +300,14 @@ describe("commandLineInput.handlers", () => {
           fields: {},
         },
       },
+      i18n: EN_I18N,
       store,
     });
 
     handleFieldRowClick(
       {
         render,
+        i18n: EN_I18N,
         store,
       },
       {
@@ -317,6 +328,7 @@ describe("commandLineInput.handlers", () => {
         },
         dispatchEvent,
         render,
+        i18n: EN_I18N,
         store,
       },
       {

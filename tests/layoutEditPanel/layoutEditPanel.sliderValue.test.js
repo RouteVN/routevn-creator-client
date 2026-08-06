@@ -42,12 +42,13 @@ describe("layoutEditPanel slider values", () => {
   });
 
   it("updates slider initialValue when a runtime value is selected", () => {
+    // `musicVolume` defaults to 50, so the range must widen past this max.
     const deps = createDeps({
       values: {
         type: "slider",
         initialValue: 0,
         min: 0,
-        max: 100,
+        max: 10,
       },
     });
 
@@ -66,14 +67,14 @@ describe("layoutEditPanel slider values", () => {
 
     expect(deps.state.values.sliderRuntimeValueId).toBe("musicVolume");
     expect(deps.state.values.min).toBe(0);
-    expect(deps.state.values.max).toBe(500);
+    expect(deps.state.values.max).toBe(50);
     expect(deps.state.values.initialValue).toBe("${runtime.musicVolume}");
     expect(
       deps.dispatchEvent.mock.calls.map(([event]) => event.detail),
     ).toEqual([
       expect.objectContaining({
         name: "max",
-        value: 500,
+        value: 50,
       }),
       expect.objectContaining({
         name: "initialValue",

@@ -1,10 +1,10 @@
-name: Lint
+name: CI
 on:
   pull_request:
   workflow_dispatch:
 
 jobs:
-  lint-and-build:
+  lint-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,5 +29,64 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      # Node integration suites + the full vitest suite (tests/**).
+      - name: Test
+        run: bun run test
+
       - name: Build Web
         run: bun run build:web
+
+  visual:
+    runs-on: ubuntu-latest
+    env:
+      RTGL_VT_IMAGE: routevn-vt:sha256-85769959d834eaf984210f4b2f1f7de07677e81578c98d86680ba116c03a7d45
+      RTGL_VT_IMAGE_DIGEST: docker.io/han4wluc/rtgl@sha256:85769959d834eaf984210f4b2f1f7de07677e81578c98d86680ba116c03a7d45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.4
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Web
+        run: bun run build:web
+
+      # Pinned Playwright image; ~1GB compressed, so cache it between runs.
+      - name: Cache VT Docker image
+        id: vt-image-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/vt-image.tar
+          key: vt-image-sha256-85769959d834eaf984210f4b2f1f7de07677e81578c98d86680ba116c03a7d45
+
+      - name: Load cached VT image
+        if: steps.vt-image-cache.outputs.cache-hit == 'true'
+        run: docker load --input /tmp/vt-image.tar
+
+      - name: Pull and cache VT image
+        if: steps.vt-image-cache.outputs.cache-hit != 'true'
+        run: |
+          docker pull "$RTGL_VT_IMAGE_DIGEST"
+          docker tag "$RTGL_VT_IMAGE_DIGEST" "$RTGL_VT_IMAGE"
+          docker save --output /tmp/vt-image.tar "$RTGL_VT_IMAGE"
+
+      - name: Visual regression
+        env:
+          RTGL_VT_CONCURRENCY: "4"
+        run: bash ./scripts/run-vt-docker.sh vt screenshot
+
+      - name: Build VT report
+        if: always()
+        run: bash ./scripts/run-vt-docker.sh vt report
+
+      - name: Upload VT report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vt-report
+          path: .rettangoli/vt/_site/
+          include-hidden-files: true
+          if-no-files-found: warn

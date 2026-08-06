@@ -1,0 +1,10 @@
+template:
+  - div.child:
+      - h3: ${name}
+      - p.role: role=${role}
+      - p.year: memberSince=${year}
+      - p.fn: fnResult=${callable}
+      - p.attr: label=${label}
+      - ul:
+          - $for tag, i in tags:
+              - li: ${tag.label}
