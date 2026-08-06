@@ -5,7 +5,7 @@ export const EMPTY_TREE = {
 
 export const ANIMATION_RESOURCE_CATEGORY = "animatedAssets";
 export const ANIMATION_SELECTED_RESOURCE_ID = "animations";
-export const PREVIEW_BG_COLOR = "#4a4a4a";
+export const PREVIEW_BG_COLOR = "#000000";
 export const PREVIEW_UPDATE_ELEMENT_ID = "preview-element";
 export const PREVIEW_TRANSITION_ELEMENT_ID = "preview-transition-element";
 export const PREVIEW_TRANSITION_PREV_FILL = "#ffffff";

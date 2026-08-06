@@ -46,7 +46,7 @@ import {
 } from "./animationEditor.constants.js";
 import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy.js";
 
-const TIMELINE_ZOOM_DEFAULT = 1;
+const TIMELINE_ZOOM_DEFAULT = 2;
 const TIMELINE_ZOOM_MIN = 0.25;
 const TIMELINE_ZOOM_MAX = 4;
 const TIMELINE_BASE_PIXELS_PER_SECOND = 200;

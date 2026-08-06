@@ -246,13 +246,13 @@ describe("animationEditor.store", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.timelineDisplayDuration).toBe(3000);
+    expect(viewData.timelineDisplayDuration).toBe(1500);
     expect(viewData.activeTimelineDuration).toBe(500);
     expect(viewData.timelineUsedAreaStyle).toContain(
-      "width: calc((100% - 104px) * 0.16666666666666666)",
+      "width: calc((100% - 104px) * 0.3333333333333333)",
     );
     expect(viewData.timelinePlayheadStyle).toContain(
-      "left: calc(104px + (100% - 104px) * 0.16666666666666666)",
+      "left: calc(104px + (100% - 104px) * 0.3333333333333333)",
     );
   });
 
@@ -270,7 +270,7 @@ describe("animationEditor.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       activeTimelineDuration: 2400,
       timelineUsedAreaStyle: expect.stringContaining(
-        "width: calc((100% - 104px) * 0.8)",
+        "width: calc((100% - 104px) * 1)",
       ),
     });
 
@@ -281,7 +281,7 @@ describe("animationEditor.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       activeTimelineDuration: 500,
       timelineUsedAreaStyle: expect.stringContaining(
-        "width: calc((100% - 104px) * 0.16666666666666666)",
+        "width: calc((100% - 104px) * 0.3333333333333333)",
       ),
     });
 
@@ -300,7 +300,7 @@ describe("animationEditor.store", () => {
 
     setTimelineScrollMetrics(
       { state },
-      { scrollLeft: 125, viewportWidth: 300 },
+      { scrollLeft: 225, viewportWidth: 300 },
     );
 
     expect(selectTimelinePlayheadVisible({ state })).toBe(false);
@@ -309,7 +309,10 @@ describe("animationEditor.store", () => {
       timelinePlayheadStyle: "",
     });
 
-    setTimelineScrollMetrics({ state }, { scrollLeft: 75, viewportWidth: 300 });
+    setTimelineScrollMetrics(
+      { state },
+      { scrollLeft: 175, viewportWidth: 300 },
+    );
 
     expect(selectTimelinePlayheadVisible({ state })).toBe(true);
   });
@@ -340,16 +343,16 @@ describe("animationEditor.store", () => {
     expect(state.timelineZoom).toBe(0.25);
   });
 
-  it("uses 200 pixels per second at the default timeline zoom", () => {
+  it("uses 400 pixels per second at the default timeline zoom", () => {
     const state = createInitialState();
     state.tweenBySection.update.x = {
       keyframes: [{ duration: 2000, value: 10 }],
     };
 
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
-      timelineZoom: 1,
-      timelinePixelsPerSecond: 200,
-      timelineCanvasStyle: "width: 504px; min-width: 100%; flex-shrink: 0;",
+      timelineZoom: 2,
+      timelinePixelsPerSecond: 400,
+      timelineCanvasStyle: "width: 904px; min-width: 100%; flex-shrink: 0;",
       timelineDisplayDuration: 2000,
       activeTimelineDuration: 2000,
     });
@@ -364,13 +367,13 @@ describe("animationEditor.store", () => {
 
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       timelineCanvasStyle: "width: 704px; min-width: 100%; flex-shrink: 0;",
-      timelineDisplayDuration: 3000,
+      timelineDisplayDuration: 1500,
     });
 
     extendTimelineDisplayDuration({ state }, { duration: 4000 });
 
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
-      timelineCanvasStyle: "width: 904px; min-width: 100%; flex-shrink: 0;",
+      timelineCanvasStyle: "width: 1704px; min-width: 100%; flex-shrink: 0;",
       timelineDisplayDuration: 4000,
     });
   });
@@ -2013,6 +2016,19 @@ describe("animationEditor.store", () => {
     );
 
     expect(renderTransitionElement).toMatchObject({
+      type: "rect",
+      fill: "#000000",
+    });
+  });
+
+  it("uses black as the default preview background", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+
+    const renderState = selectAnimationRenderStateWithAnimations({ state });
+
+    expect(renderState.elements[0]).toMatchObject({
+      id: "bg",
       type: "rect",
       fill: "#000000",
     });
