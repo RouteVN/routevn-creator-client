@@ -2,12 +2,23 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const componentViews = [
-  ["BGM", "commandLineBgm/commandLineBgm.view.yaml", "#bgmChannel"],
-  ["Voice", "commandLineVoice/commandLineVoice.view.yaml", "#voiceChannel"],
+  [
+    "BGM",
+    "commandLineBgm/commandLineBgm.view.yaml",
+    "#bgmChannel",
+    ".bgmSoundClip",
+  ],
+  [
+    "Voice",
+    "commandLineVoice/commandLineVoice.view.yaml",
+    "#voiceChannel",
+    ".voiceSoundClip",
+  ],
   [
     "SFX",
     "commandLineSoundEffects/commandLineSoundEffects.view.yaml",
     "#sfxChannel",
+    ".sfxSoundClip",
   ],
 ];
 
@@ -41,6 +52,25 @@ describe("command-line audio channel views", () => {
       expect(editorView).toContain("#emptyAddButton");
       expect(editorView).toContain("#insertBeforeButton");
       expect(editorView).not.toContain("#channelForm");
+    },
+  );
+
+  it.each(componentViews)(
+    "removes the native focus treatment from %s audio clips",
+    (_name, relativePath, _channelTarget, soundClass) => {
+      const view = readFileSync(
+        new URL(`../../src/components/${relativePath}`, import.meta.url),
+        "utf8",
+      );
+      const focusStyleStart = view.indexOf(`  "${soundClass}:focus-visible":`);
+      const focusStyles = view.slice(
+        focusStyleStart,
+        view.indexOf('\n  "', focusStyleStart + 3),
+      );
+
+      expect(focusStyleStart).toBeGreaterThan(-1);
+      expect(focusStyles).toContain("box-shadow: none");
+      expect(focusStyles).toContain("outline: none");
     },
   );
 });

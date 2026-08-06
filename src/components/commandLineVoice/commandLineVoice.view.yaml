@@ -105,7 +105,8 @@ styles:
   ".voiceSoundDragSurface:active":
     cursor: grabbing
   ".voiceSoundClip:focus-visible":
-    box-shadow: 0 0 0 2px var(--ring) inset
+    box-shadow: none
+    outline: none
   ".voiceInsertZone":
     appearance: none
     background: transparent

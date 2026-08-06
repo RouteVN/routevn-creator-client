@@ -124,7 +124,8 @@ styles:
   ".bgmSoundDragSurface:active":
     cursor: grabbing
   ".bgmSoundClip:focus-visible":
-    box-shadow: 0 0 0 2px var(--ring) inset
+    box-shadow: none
+    outline: none
   ".bgmInsertZone":
     appearance: none
     background: transparent
