@@ -116,4 +116,86 @@ steps:
   - action: wait
     ms: 250
   - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#platformEditDialog"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "#addPlatformButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-dropdown-menu#addPlatformMenu [role='menuitem']:has-text('Windows')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-dropdown-menu#addPlatformMenu [role='menuitem']:has-text('Windows')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#platformEditDialog"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "#platformEditDialog rtgl-input#field2 input"
+    steps:
+      - action: clear
+      - action: write
+        value: com.example.project-one.windows
+  - action: select
+    selector: "#platformEditDialogIcon"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#rtglVtFilePickerInput"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#rtglVtFilePickerInput"
+    steps:
+      - action: upload
+        files:
+          - crates/routevn-packager/fixtures/sample-icon.png
+  - action: waitFor
+    selector: "#platformEditIconCropDialog #confirmButton:not([disabled])"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "#platformEditIconCropDialog #confirmButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#platformEditIconCropDialog #dialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#platformEditDialogIcon rvn-file-image[fileid]"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "#platformEditDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#platformEditDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#platformApplicationIdentifier:has-text('com.example.project-one.windows')"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 250
+  - action: screenshot
 ---
