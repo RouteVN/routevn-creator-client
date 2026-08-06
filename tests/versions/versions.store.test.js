@@ -190,6 +190,39 @@ describe("versions store export actions", () => {
     expect(selectExportConfirmation({ state }).versionName).toBe("Version 1");
   });
 
+  it("hides optional Windows metadata in the export confirmation", () => {
+    const state = createInitialState();
+
+    openExportConfirmation(
+      { state },
+      {
+        exportType: "windows-executable",
+        platform: "windows",
+        versionId: "version-1",
+        versionName: "Version 1",
+        applicationInfo: {
+          applicationName: "Windows Edition",
+          applicationIdentifier: "com.example.windows-edition",
+          iconFileId: "windows-icon",
+          publisher: "Example Publisher",
+          description: "Windows description",
+          copyright: "Copyright Example Publisher",
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(
+      viewData.exportConfirmationFields.map((field) => field.label),
+    ).toEqual([
+      "Release Version",
+      "Application Name",
+      "Icon",
+      "Application Identifier",
+    ]);
+  });
+
   it("shows Windows EXE export in Tauri without hiding it behind resource preflight", () => {
     const state = createInitialState();
 

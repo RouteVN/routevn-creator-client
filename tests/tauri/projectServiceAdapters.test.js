@@ -28,6 +28,7 @@ const mocked = vi.hoisted(() => ({
   applyCommandToRepository: vi.fn(),
   commandToSyncEvent: vi.fn(),
   fileTypeFromBuffer: vi.fn(),
+  createSquareCroppedImageFile: vi.fn(),
   getImageDimensions: vi.fn(),
 }));
 
@@ -36,6 +37,7 @@ vi.mock("file-type", () => ({
 }));
 
 vi.mock("../../src/deps/clients/web/fileProcessors.js", () => ({
+  createSquareCroppedImageFile: mocked.createSquareCroppedImageFile,
   getImageDimensions: mocked.getImageDimensions,
 }));
 
@@ -211,6 +213,7 @@ describe("tauri project service adapters preflight reads", () => {
     mocked.applyCommandToRepository.mockReset();
     mocked.commandToSyncEvent.mockReset();
     mocked.fileTypeFromBuffer.mockReset();
+    mocked.createSquareCroppedImageFile.mockReset();
     mocked.getImageDimensions.mockReset();
 
     mocked.join.mockImplementation(async (...parts) => parts.join("/"));
@@ -222,6 +225,9 @@ describe("tauri project service adapters preflight reads", () => {
       mime: "image/png",
     });
     mocked.getImageDimensions.mockResolvedValue({ width: 512, height: 512 });
+    mocked.createSquareCroppedImageFile.mockImplementation(
+      async () => new Blob([Uint8Array.from([4, 5, 6])], { type: "image/png" }),
+    );
     mocked.createWebSocketTransport.mockReturnValue({
       kind: "transport",
     });
@@ -439,11 +445,21 @@ describe("tauri project service adapters preflight reads", () => {
       "/resources/player-templates/windows/RouteVNPlayerTemplate.exe",
     );
     mocked.readFile.mockResolvedValue(Uint8Array.from([1, 2, 3]));
-    mocked.invoke.mockResolvedValue({ outputPath: "/exports/Game.exe" });
+    mocked.invoke.mockImplementation(async (command, payload) => {
+      if (command === "export_windows_portable_executable") {
+        payload.onProgress.messageHandler({
+          phase: "encryptPayload",
+          current: 0,
+          total: 0,
+        });
+      }
+      return { outputPath: "/exports/Game.exe" };
+    });
     const { fileAdapter } = createTauriProjectServiceAdapters({
       collabLog: () => {},
       creatorVersion: 2,
     });
+    const onProgress = vi.fn();
     const options = {
       projectData: { bundleMetadata: { project: { namespace: "demo" } } },
       fileEntries: [{ fileId: "image-1", mimeType: "image/png" }],
@@ -455,6 +471,7 @@ describe("tauri project service adapters preflight reads", () => {
       description: "A visual novel",
       copyright: "Copyright © 2026 Studio One",
       iconFileId: "icon-1",
+      options: { onProgress },
       getCurrentReference: () => ({
         projectPath: "/projects/demo",
         cacheKey: "/projects/demo",
@@ -467,19 +484,72 @@ describe("tauri project service adapters preflight reads", () => {
       outputPath: "/exports/Game Setup.exe",
     });
 
-    const expectedMetadata = expect.objectContaining({
+    const expectedMetadata = {
       applicationIdentifier: "vn.routevn.player.game",
       publisher: "Studio One",
       description: "A visual novel",
       copyright: "Copyright © 2026 Studio One",
-    });
+    };
     expect(mocked.invoke).toHaveBeenCalledWith(
       "export_windows_portable_executable",
-      expectedMetadata,
+      expect.objectContaining({
+        ...expectedMetadata,
+        onProgress: mocked.channels[0],
+      }),
     );
     expect(mocked.invoke).toHaveBeenCalledWith(
       "export_windows_installer_from_project",
-      expectedMetadata,
+      expect.objectContaining(expectedMetadata),
+    );
+    expect(mocked.channels).toHaveLength(1);
+    expect(onProgress).toHaveBeenCalledWith({
+      phase: "encryptPayload",
+      current: 0,
+      total: 0,
+    });
+    const installerPayload = mocked.invoke.mock.calls.find(
+      ([command]) => command === "export_windows_installer_from_project",
+    )[1];
+    expect(installerPayload).not.toHaveProperty("onProgress");
+  });
+
+  it("normalizes oversized Windows application icons to a 256px PNG", async () => {
+    mocked.exists.mockResolvedValue(true);
+    mocked.resolveResource.mockResolvedValue(
+      "/resources/player-templates/windows/RouteVNPlayerTemplate.exe",
+    );
+    mocked.readFile.mockResolvedValue(Uint8Array.from([1, 2, 3]));
+    mocked.getImageDimensions.mockResolvedValue({ width: 512, height: 512 });
+    mocked.invoke.mockResolvedValue({ outputPath: "/exports/Game.exe" });
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await fileAdapter.createWindowsPortableExecutableToPath({
+      projectData: { bundleMetadata: { project: { namespace: "demo" } } },
+      fileEntries: [],
+      outputPath: "/exports/Game.exe",
+      title: "Game",
+      version: "1.0.0.4",
+      applicationIdentifier: "vn.routevn.player.game",
+      iconFileId: "icon-1",
+      getCurrentReference: () => ({
+        projectPath: "/projects/demo",
+        cacheKey: "/projects/demo",
+      }),
+    });
+
+    expect(mocked.createSquareCroppedImageFile).toHaveBeenCalledWith({
+      file: expect.any(Blob),
+      sourceX: 0,
+      sourceY: 0,
+      sourceSize: 512,
+      outputSize: 256,
+    });
+    expect(mocked.invoke).toHaveBeenCalledWith(
+      "export_windows_portable_executable",
+      expect.objectContaining({ iconPng: [4, 5, 6] }),
     );
   });
 

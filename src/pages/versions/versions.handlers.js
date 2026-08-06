@@ -948,6 +948,33 @@ const createMacosApplicationProgressView = ({ copy, progress } = {}) => {
   };
 };
 
+const createWindowsExecutableProgressView = ({ copy, progress } = {}) => {
+  const statusByPhase = {
+    prepareExecutable:
+      copy.windowsPreparingExecutableStatus ?? "Preparing executable...",
+    encryptPayload:
+      copy.windowsEncryptingPayloadStatus ??
+      "Encrypting application payload...",
+    finalizeExecutable:
+      copy.windowsFinalizingExecutableStatus ?? "Finalizing executable...",
+  };
+  const status = statusByPhase[progress?.phase];
+  if (!status) {
+    return createBundleProgressView({ copy, progress });
+  }
+
+  const elapsed = formatBundleElapsedTime(progress?.elapsedMs);
+  return {
+    status: elapsed
+      ? formatI18nCopy(copy.bundleElapsedStatus ?? "{status} · {elapsed}", {
+          status,
+          elapsed,
+        })
+      : status,
+    progress: {},
+  };
+};
+
 const runWebExport = async (deps, confirmation) => {
   const { store, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
@@ -1142,7 +1169,9 @@ const runWindowsExecutableExport = async (deps, confirmation) => {
     status: copy.windowsExecutableProgressStatus ?? "Creating executable...",
     title:
       copy.windowsExecutableInProgressTitle ?? "Windows export in progress",
+    progress: {},
   });
+  await progressDialog.waitForPaint();
 
   try {
     const { projectInfo, transformedData, fileEntries } =
@@ -1152,6 +1181,13 @@ const runWindowsExecutableExport = async (deps, confirmation) => {
         projectService,
         version,
       });
+    const exportOptions = {
+      onProgress: (progress) => {
+        progressDialog.update(
+          createWindowsExecutableProgressView({ copy, progress }),
+        );
+      },
+    };
     const result = await projectService.createWindowsPortableExecutableToPath(
       transformedData,
       fileEntries,
@@ -1165,6 +1201,7 @@ const runWindowsExecutableExport = async (deps, confirmation) => {
         copyright: applicationInfo.copyright,
         iconFileId: applicationInfo.iconFileId,
       },
+      exportOptions,
     );
     const savedPath = result?.outputPath ?? outputPath;
 

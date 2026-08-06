@@ -298,12 +298,14 @@ describe("projectExportService", () => {
       copyright: "Copyright © 2026 Studio One",
       iconFileId: "icon-1",
     };
+    const onProgress = vi.fn();
 
     await service.createWindowsPortableExecutableToPath(
       { projectData: {} },
       [{ fileId: "image-1", mimeType: "image/png" }],
       "/tmp/Game.exe",
       metadata,
+      { onProgress },
     );
     await service.createWindowsInstallerToPath(
       { projectData: {} },
@@ -317,13 +319,16 @@ describe("projectExportService", () => {
       fileEntries: [{ id: "image-1", mimeType: "image/png" }],
       outputPath: expect.any(String),
       ...metadata,
-      options: {},
       getCurrentReference,
     };
-    expect(createWindowsPortableExecutableToPath).toHaveBeenCalledWith(
-      expectedPayload,
-    );
-    expect(createWindowsInstallerToPath).toHaveBeenCalledWith(expectedPayload);
+    expect(createWindowsPortableExecutableToPath).toHaveBeenCalledWith({
+      ...expectedPayload,
+      options: { onProgress },
+    });
+    expect(createWindowsInstallerToPath).toHaveBeenCalledWith({
+      ...expectedPayload,
+      options: {},
+    });
   });
 
   it("normalizes export file entries into stable id/mime objects", () => {

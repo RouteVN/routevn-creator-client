@@ -1041,6 +1041,9 @@ describe("commandLineVisual.store custom transforms", () => {
       customTransformDetails: expect.arrayContaining([
         { label: "Position", value: "1000, 600" },
         { label: "Scale", value: "1.5 x 1.5" },
+        { label: "Anchor", value: "0.5, 0.5" },
+        { label: "Rotation", value: "10°" },
+        { label: "Origin", value: "100, 80" },
       ]),
     });
   });

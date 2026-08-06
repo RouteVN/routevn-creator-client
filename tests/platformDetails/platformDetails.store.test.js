@@ -19,6 +19,7 @@ describe("platformDetails.store", () => {
     expect(viewData).toMatchObject({
       canAddPlatform: true,
       hasPlatformDetails: false,
+      platformEditIconOutputSize: 256,
       platformTabs: [],
       selectedPlatform: undefined,
     });
@@ -101,10 +102,47 @@ describe("platformDetails.store", () => {
         name: "applicationIdentifier",
         required: true,
         description:
-          EN_I18N.platformDetailsPage
-            .windowsApplicationIdentifierDescription,
+          EN_I18N.platformDetailsPage.windowsApplicationIdentifierDescription,
       }),
     );
+    expect(
+      viewData.platformEditForm.fields
+        .map((field) => field.name)
+        .filter(Boolean),
+    ).toEqual(["applicationName", "applicationIdentifier"]);
+    for (const field of ["publisher", "description", "copyright"]) {
+      expect(viewData.platformEditDefaultValues).not.toHaveProperty(field);
+    }
+  });
+
+  it("hides optional Windows metadata without projecting stored values", () => {
+    const state = createInitialState();
+    setPlatformApplicationInfo(
+      { state },
+      {
+        platform: "windows",
+        applicationInfo: {
+          applicationName: "Windows Project",
+          iconFileId: "windows-icon-1",
+          applicationIdentifier: "com.example.windows-project",
+          publisher: "Example Publisher",
+          description: "Windows description",
+          copyright: "Copyright Example Publisher",
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.platformDetailFields).toHaveLength(3);
+    expect(viewData.platformDetailFields.map((field) => field.label)).toEqual([
+      "Application Name",
+      "Icon",
+      "Application Identifier",
+    ]);
+    for (const field of ["publisher", "description", "copyright"]) {
+      expect(state.platformApplicationInfo.windows).not.toHaveProperty(field);
+    }
   });
 
   it("shows native platform details in the visible tabs", () => {

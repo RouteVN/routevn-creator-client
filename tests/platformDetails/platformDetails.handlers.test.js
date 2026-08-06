@@ -162,7 +162,7 @@ describe("platformDetails handlers", () => {
     });
   });
 
-  it("persists independently customized Windows platform details", async () => {
+  it("preserves hidden Windows metadata by omitting it from edit patches", async () => {
     const deps = createDeps();
     const applicationInfo = {
       applicationName: "Windows Project",
@@ -183,9 +183,6 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: " Windows Project ",
             applicationIdentifier: " com.example.windows-project ",
-            publisher: " Example Publisher ",
-            description: " Windows description ",
-            copyright: " Copyright Example Publisher ",
           },
         },
       },
@@ -193,7 +190,11 @@ describe("platformDetails handlers", () => {
 
     expect(
       deps.projectService.updateCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("windows", applicationInfo);
+    ).toHaveBeenCalledWith("windows", {
+      applicationName: "Windows Project",
+      iconFileId: "windows-icon-1",
+      applicationIdentifier: "com.example.windows-project",
+    });
     expect(deps.store.setPlatformApplicationInfo).toHaveBeenCalledWith({
       platform: "windows",
       applicationInfo,
@@ -248,8 +249,7 @@ describe("platformDetails handlers", () => {
     });
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message:
-        EN_I18N.platformDetailsPage.windowsApplicationIdentifierRequired,
+      message: EN_I18N.platformDetailsPage.windowsApplicationIdentifierRequired,
       title: EN_I18N.platformDetailsPage.warningTitle,
     });
     expect(

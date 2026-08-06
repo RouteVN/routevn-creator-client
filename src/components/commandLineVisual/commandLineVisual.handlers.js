@@ -320,6 +320,11 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   payload?._event?.stopImmediatePropagation?.();
   const { dispatchEvent, store } = deps;
+
+  if (typeof dispatchEvent !== "function") {
+    return;
+  }
+
   const index = getIndexFromEvent(payload._event);
   const visual = store.selectSelectedVisuals()?.[index];
   if (index === undefined || !visual) {
@@ -343,6 +348,15 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
       composed: true,
     }),
   );
+};
+
+export const handleCustomTransformButtonKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  handleCustomTransformButtonClick(deps, payload);
 };
 
 export const handleAnimationChange = (deps, payload) => {

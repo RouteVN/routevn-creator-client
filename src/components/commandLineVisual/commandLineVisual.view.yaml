@@ -82,10 +82,8 @@ refs:
     eventListeners:
       click:
         handler: handleCustomTransformButtonClick
-  customTransformChip*:
-    eventListeners:
-      click:
-        handler: handleCustomTransformButtonClick
+      keydown:
+        handler: handleCustomTransformButtonKeyDown
   animation*:
     eventListeners:
       value-change:
@@ -139,89 +137,68 @@ template:
       - $if mode == 'current':
           - rtgl-view d=h g=md w=f ph=lg:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-              - rtgl-view g=md w=f p=lg:
+          - 'rtgl-view h=1fg sv w=f g=md style="min-height: 0;"':
+              - rtgl-form#form key=${formKey} :form=${form} :defaultValues=${defaultValues} p=lg:
                   - $for visualGroup, groupIndex in defaultValues.visualGroups:
-                      - rtgl-view g=sm w=f:
-                          - rtgl-text s=sm c=fg: ${visualGroup.label}
-                          - rtgl-view g=md w=f:
-                              - $for visual, i in visualGroup.visuals:
-                                  - rtgl-view#visualItem${groupIndex}x${i} data-index=${visual.visualIndex} data-visual-id=${visual.id} d=h g=md av=t p=md br=md w=f:
-                                      - 'rtgl-view#visualImage${groupIndex}x${i} data-index=${visual.visualIndex} cur=pointer bw=xs bc=bo h-bc=ac br=sm style="align-self: flex-start; flex: 0 0 auto;"':
-                                          - rtgl-view p=md g=md br=md:
-                                              - $if visual.resourceType == 'video':
-                                                  - rtgl-view pos=rel w=200 h=120:
-                                                      - $if visual.fileId:
-                                                          - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
-                                                        $else:
-                                                          - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                              - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
-                                                      - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
-                                                          - rtgl-icon icon=play s=xl c=fg: null
-                                                $elif visual.resourceType == 'spritesheet':
-                                                  - rvn-spritesheet-preview key=${visual.spritesheetPreviewKey} previewKey=${visual.spritesheetPreviewKey} fileId=${visual.spritesheetFileId} :atlas=${visual.spritesheetAtlas} :animation=${visual.spritesheetAnimation} w=200 h=120 emptyLabel=${noThumbnailLabel}: null
-                                                $elif visual.resourceType == 'layout':
-                                                  - $if visual.fileId:
-                                                      - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
-                                                    $else:
-                                                      - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                          - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
-                                                $elif visual.fileId:
+                      - $for visual, i in visualGroup.visuals:
+                          - 'rtgl-view#visualItem${visual.controlId} slot=${visual.previewFormSlot} data-index=${visual.visualIndex} data-visual-id=${visual.id} style="align-self: flex-start; flex: 0 0 auto;"':
+                              - 'rtgl-view#visualImage${visual.controlId} data-index=${visual.visualIndex} cur=pointer bw=xs bc=bo h-bc=ac br=sm':
+                                  - rtgl-view p=md g=md br=md:
+                                      - $if visual.resourceType == 'video':
+                                          - rtgl-view pos=rel w=200 h=120:
+                                              - $if visual.fileId:
                                                   - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
                                                 $else:
                                                   - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                      - rtgl-text s=sm c=mu-fg: ${noResourceLabel}
-                                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${visual.displayName}
-                                      - rtgl-view w=1fg g=sm:
-                                          - rtgl-text s=sm c=mu-fg: ${layerLabel}
-                                          - rtgl-select#layer${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.layer} :options=${defaultValues.layerOptions} :selectedValue=${visual.layer} w=f no-clear: null
-                                          - rtgl-text s=sm c=mu-fg: ${opacityLabel}
-                                          - rtgl-slider-input#opacity${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.id} min=0 max=1 step=0.01 w=f value=${visual.opacity}: null
-                                          - rtgl-text s=sm c=mu-fg: ${blurLabel}
-                                          - rtgl-segmented-control#blurToggle${groupIndex}x${i} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.blurEnabled} :options=${defaultValues.blurToggleOptions}: null
-                                          - $if visual.blurEnabled:
-                                              - rtgl-view d=h wrap g=sm w=f:
-                                                  - rtgl-view w=90 g=xs:
-                                                      - rtgl-text s=xs c=mu-fg: X
-                                                      - rtgl-input#blurX${groupIndex}x${i} data-index=${visual.visualIndex} data-blur-field=x type=number w=f value=${visual.blur.x}: null
-                                                  - rtgl-view w=90 g=xs:
-                                                      - rtgl-text s=xs c=mu-fg: Y
-                                                      - rtgl-input#blurY${groupIndex}x${i} data-index=${visual.visualIndex} data-blur-field=y type=number w=f value=${visual.blur.y}: null
-                                                  - rtgl-view w=90 g=xs:
-                                                      - rtgl-text s=xs c=mu-fg: ${qualityLabel}
-                                                      - rtgl-input#blurQuality${groupIndex}x${i} data-index=${visual.visualIndex} data-blur-field=quality type=number min=1 step=1 w=f value=${visual.blur.quality}: null
-                                                  - rtgl-view w=120 g=xs:
-                                                      - rtgl-text s=xs c=mu-fg: ${kernelLabel}
-                                                      - rtgl-select#blurKernelSize${groupIndex}x${i} data-index=${visual.visualIndex} data-blur-field=kernelSize w=f no-clear :selectedValue=${visual.blur.kernelSize} :options=${defaultValues.blurKernelSizeOptions}: null
-                                                  - rtgl-view w=160 g=xs:
-                                                      - rtgl-text s=xs c=mu-fg: ${repeatEdgeLabel}
-                                                      - rtgl-segmented-control#blurRepeatEdgePixels${groupIndex}x${i} data-index=${visual.visualIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${visual.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}: null
-                                          - rtgl-text s=sm c=mu-fg: ${transformLabel}
-                                          - rtgl-segmented-control#customTransformMode${groupIndex}x${i} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.customTransform} :options=${defaultValues.transformModeOptions}: null
-                                          - $if visual.customTransform:
-                                              - rtgl-view d=h av=c w=f g=md:
-                                                  - rtgl-view d=h av=c w=1fg g=sm wrap:
-                                                      - $for item, j in visual.customTransformDetails:
-                                                          - 'rtgl-view#customTransformChip${groupIndex}x${i}x${j} data-index=${visual.visualIndex} d=h av=c g=sm bw=xs bc=bo h-bc=pr br=full bgc=mu ph=md pv=sm cur=pointer style="max-width: 220px; box-sizing: border-box;"':
-                                                              - rtgl-text s=xs c=mu-fg ellipsis: ${item.label}
-                                                              - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums; white-space: nowrap;"': ${item.value}
-                                                  - rtgl-button#customTransformButton${groupIndex}x${i} data-index=${visual.visualIndex} data-target-name="${visual.displayName}" v=se: ${editButtonLabel}
+                                                      - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
+                                              - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
+                                                  - rtgl-icon icon=play s=xl c=fg: null
+                                        $elif visual.resourceType == 'spritesheet':
+                                          - rvn-spritesheet-preview key=${visual.spritesheetPreviewKey} previewKey=${visual.spritesheetPreviewKey} fileId=${visual.spritesheetFileId} :atlas=${visual.spritesheetAtlas} :animation=${visual.spritesheetAnimation} w=200 h=120 emptyLabel=${noThumbnailLabel}: null
+                                        $elif visual.resourceType == 'layout':
+                                          - $if visual.fileId:
+                                              - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
                                             $else:
-                                              - rtgl-text s=sm c=mu-fg: ${predefinedTransformLabel}
-                                              - rtgl-select#transform${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.transformId} :options=${defaultValues.transformOptions} :selectedValue=${visual.transformId} w=f no-clear: null
-                                          - rtgl-text s=sm c=mu-fg: ${animationLabel}
-                                          - rtgl-select#animation${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.animationId} :options=${defaultValues.animationOptions} :selectedValue=${visual.animationId} w=f placeholder=${selectAnimationPlaceholder}: null
-                                          - $if visual.animationId:
-                                              - rtgl-text s=sm c=mu-fg: ${animationPlaybackSpeedLabel}
-                                              - rtgl-input#animationPlaybackSpeed${groupIndex}x${i} data-index=${visual.visualIndex} type=number min=0.01 step=0.1 w=f value=${visual.animationPlaybackSpeed}: null
-                                              - $if visual.animationMode == 'update':
-                                                  - rtgl-text s=sm c=mu-fg: ${animationPlaybackLoopLabel}
-                                                  - rtgl-segmented-control#animationPlaybackLoop${groupIndex}x${i} data-index=${visual.visualIndex} w=f no-clear ?disabled=${visual.animationLoopDisabled} :selectedValue=${visual.animationPlaybackLoop} :options=${defaultValues.animationPlaybackLoopOptions}: null
-                                                  - $if !visual.animationCanLoop:
-                                                      - rtgl-text s=xs c=mu-fg: ${animationPlaybackLoopDisabledDescription}
-                                              - rtgl-text s=sm c=mu-fg: ${animationPlaybackContinuityLabel}
-                                              - rtgl-segmented-control#animationPlaybackContinuity${groupIndex}x${i} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.animationPlaybackContinuity} :options=${defaultValues.animationPlaybackContinuityOptions}: null
+                                              - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                                  - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
+                                        $elif visual.fileId:
+                                          - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
+                                        $else:
+                                          - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                              - rtgl-text s=sm c=mu-fg: ${noResourceLabel}
+                                      - rtgl-text s=xs c=mu-fg ellipsis w=200: ${visual.displayName}
+                          - 'rtgl-select#layer${visual.controlId} slot=${visual.layerFormSlot} data-index=${visual.visualIndex} key=${visual.layer} :options=${defaultValues.layerOptions} :selectedValue=${visual.layer} w=f no-clear': null
+                          - 'rtgl-view slot=${visual.transformModeFormSlot} data-index=${visual.visualIndex} w=f':
+                              - rtgl-segmented-control#customTransformMode${visual.controlId} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.customTransform} :options=${defaultValues.transformModeOptions}: null
+                          - $if !visual.customTransform:
+                              - 'rtgl-select#transform${visual.controlId} slot=${visual.predefinedTransformFormSlot} data-index=${visual.visualIndex} key=${visual.transformId} :options=${defaultValues.transformOptions} :selectedValue=${visual.transformId} w=f no-clear': null
+                          - $if visual.customTransform:
+                              - 'rtgl-view#customTransformButton${visual.controlId} slot=${visual.customTransformFormSlot} data-index=${visual.visualIndex} data-target-name="${visual.displayName}" role=button tabindex=0 aria-label="${transformEditorTitle}" w=f p=md bw=xs bc=bo h-bc=pr br=md bgc=bg cur=pointer style="box-sizing: border-box;"':
+                                  - rtgl-grid cols=2 g=md w=f:
+                                      - $for item, j in visual.customTransformDetails:
+                                          - rtgl-view d=h av=c g=sm:
+                                              - rtgl-text s=sm c=mu-fg: ${item.label}
+                                              - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums;"': ${item.value}
+                          - 'rtgl-select#animation${visual.controlId} slot=${visual.animationFormSlot} data-index=${visual.visualIndex} key=${visual.animationId} :options=${defaultValues.animationOptions} :selectedValue=${visual.animationId} w=f placeholder=${selectAnimationPlaceholder}': null
+                          - $if visual.animationId:
+                              - 'rtgl-input#animationPlaybackSpeed${visual.controlId} slot=${visual.playbackSpeedFormSlot} data-index=${visual.visualIndex} type=number min=0.01 step=0.1 w=f value=${visual.animationPlaybackSpeed}': null
+                              - 'rtgl-segmented-control#animationPlaybackContinuity${visual.controlId} slot=${visual.playbackContinuityFormSlot} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.animationPlaybackContinuity} :options=${defaultValues.animationPlaybackContinuityOptions}': null
+                              - $if visual.animationMode == 'update':
+                                  - 'rtgl-view slot=${visual.playbackLoopFormSlot} data-index=${visual.visualIndex} g=xs w=f':
+                                      - rtgl-segmented-control#animationPlaybackLoop${visual.controlId} data-index=${visual.visualIndex} w=f no-clear ?disabled=${visual.animationLoopDisabled} :selectedValue=${visual.animationPlaybackLoop} :options=${defaultValues.animationPlaybackLoopOptions}: null
+                                      - $if !visual.animationCanLoop:
+                                          - rtgl-text s=xs c=mu-fg: ${animationPlaybackLoopDisabledDescription}
+                          - 'rtgl-slider-input#opacity${visual.controlId} slot=${visual.opacityFormSlot} data-index=${visual.visualIndex} key=${visual.id} min=0 max=1 step=0.01 w=f value=${visual.opacity}': null
+                          - 'rtgl-segmented-control#blurToggle${visual.controlId} slot=${visual.blurToggleFormSlot} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.blurEnabled} :options=${defaultValues.blurToggleOptions}': null
+                          - $if visual.blurEnabled:
+                              - 'rtgl-input#blurX${visual.controlId} slot=${visual.blurXFormSlot} data-index=${visual.visualIndex} data-blur-field=x type=number w=f value=${visual.blur.x}': null
+                              - 'rtgl-input#blurY${visual.controlId} slot=${visual.blurYFormSlot} data-index=${visual.visualIndex} data-blur-field=y type=number w=f value=${visual.blur.y}': null
+                              - 'rtgl-input#blurQuality${visual.controlId} slot=${visual.blurQualityFormSlot} data-index=${visual.visualIndex} data-blur-field=quality type=number min=1 step=1 w=f value=${visual.blur.quality}': null
+                              - 'rtgl-select#blurKernelSize${visual.controlId} slot=${visual.blurKernelSizeFormSlot} data-index=${visual.visualIndex} data-blur-field=kernelSize w=f no-clear :selectedValue=${visual.blur.kernelSize} :options=${defaultValues.blurKernelSizeOptions}': null
+                              - 'rtgl-segmented-control#blurRepeatEdgePixels${visual.controlId} slot=${visual.blurRepeatEdgePixelsFormSlot} data-index=${visual.visualIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${visual.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}': null
+              - rtgl-view w=f ph=lg:
                   - rtgl-button#addVisualButton v=ol w=f mt=md: ${addVisualButtonLabel}
+              - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
           - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: ${submitButtonLabel}
       - $if mode == 'resource-select':

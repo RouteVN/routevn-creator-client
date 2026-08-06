@@ -71,8 +71,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
           applicationInfo.applicationIdentifier = "web-project-one";
         }
         if (platform === "windows") {
-          applicationInfo.applicationIdentifier =
-            "com.example.windows-project";
+          applicationInfo.applicationIdentifier = "com.example.windows-project";
           applicationInfo.publisher = "Studio One";
           applicationInfo.description = "Project description";
           applicationInfo.copyright = "";
@@ -861,8 +860,7 @@ describe("versions Windows export handlers", () => {
 
     expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message:
-        EN_I18N.versionsPage.platformDetailsWindowsIdentifierRequired,
+      message: EN_I18N.versionsPage.platformDetailsWindowsIdentifierRequired,
       title: EN_I18N.versionsPage.warningTitle,
     });
   });
@@ -919,6 +917,29 @@ describe("versions Windows export handlers", () => {
       description: "Windows release",
       copyright: "Copyright © 2026 Release Studio",
     });
+    deps.projectService.createWindowsPortableExecutableToPath.mockImplementation(
+      async (_projectData, _fileEntries, outputPath, _metadata, options) => {
+        options.onProgress({
+          phase: "scanAssets",
+          current: 1,
+          total: 2,
+          elapsedMs: 1200,
+        });
+        options.onProgress({
+          phase: "encryptPayload",
+          current: 0,
+          total: 0,
+          elapsedMs: 2400,
+        });
+        options.onProgress({
+          phase: "finalizeExecutable",
+          current: 0,
+          total: 0,
+          elapsedMs: 3100,
+        });
+        return { outputPath };
+      },
+    );
 
     await chooseAndConfirmExport(handleDownloadWindowsExecutableClick, deps);
 
@@ -927,8 +948,22 @@ describe("versions Windows export handlers", () => {
     ).toHaveBeenCalled();
     expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
       message: "Please wait while the Windows executable is being created...",
+      progress: {},
       status: "Creating executable...",
       title: "Windows export in progress",
+    });
+    expect(deps.progressDialog.waitForPaint).toHaveBeenCalledTimes(1);
+    expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      progress: { current: 1, total: 2 },
+      status: "Scanning assets... 1 / 2 · 1s",
+    });
+    expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      progress: {},
+      status: "Encrypting application payload... · 2s",
+    });
+    expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      progress: {},
+      status: "Finalizing executable... · 3s",
     });
     expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
     expect(
@@ -946,6 +981,10 @@ describe("versions Windows export handlers", () => {
       copyright: "Copyright © 2026 Release Studio",
       iconFileId: "windows-icon",
     });
+    expect(
+      deps.projectService.createWindowsPortableExecutableToPath.mock
+        .calls[0][4],
+    ).toEqual({ onProgress: expect.any(Function) });
   });
 
   it("uses a numeric Windows file version instead of the release display name for installer export", async () => {

@@ -60,7 +60,10 @@ import {
   isValidMacosApplicationVersion,
   isValidMacosBuildNumber,
 } from "../../../internal/nativeApplicationVersion.js";
-import { getImageDimensions } from "../../clients/web/fileProcessors.js";
+import {
+  createSquareCroppedImageFile,
+  getImageDimensions,
+} from "../../clients/web/fileProcessors.js";
 import {
   filterTemplateFileIds,
   resolveTemplateFontsForLanguage,
@@ -72,6 +75,12 @@ const WINDOWS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/windows/RouteVNPlayerTemplate.exe";
 const MACOS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/macos/RouteVNPlayerTemplate.app.zip";
+const WINDOWS_APPLICATION_ICON_SIZE = 256;
+const WINDOWS_ICON_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
 const MACOS_ICON_MIME_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -539,7 +548,45 @@ export const createTauriProjectServiceAdapters = ({
       throw new Error("Project icon is required for Windows export.");
     }
 
-    return Array.from(iconBytes);
+    const imageType = await fileTypeFromBuffer(iconBytes).catch(
+      () => undefined,
+    );
+    if (!WINDOWS_ICON_MIME_TYPES.has(imageType?.mime)) {
+      throw new Error(
+        "Project icon must be a PNG, JPEG, or WebP image for Windows export.",
+      );
+    }
+
+    const iconBlob = new Blob([iconBytes], { type: imageType.mime });
+    const dimensions = await getImageDimensions(iconBlob).catch(
+      () => undefined,
+    );
+    if (
+      !Number.isFinite(dimensions?.width) ||
+      dimensions.width <= 0 ||
+      !Number.isFinite(dimensions?.height) ||
+      dimensions.height <= 0
+    ) {
+      throw new Error("Project icon could not be decoded for Windows export.");
+    }
+
+    if (
+      imageType.mime === "image/png" &&
+      dimensions.width === WINDOWS_APPLICATION_ICON_SIZE &&
+      dimensions.height === WINDOWS_APPLICATION_ICON_SIZE
+    ) {
+      return Array.from(iconBytes);
+    }
+
+    const sourceSize = Math.min(dimensions.width, dimensions.height);
+    const normalizedIcon = await createSquareCroppedImageFile({
+      file: iconBlob,
+      sourceX: (dimensions.width - sourceSize) / 2,
+      sourceY: (dimensions.height - sourceSize) / 2,
+      sourceSize,
+      outputSize: WINDOWS_APPLICATION_ICON_SIZE,
+    });
+    return Array.from(new Uint8Array(await normalizedIcon.arrayBuffer()));
   };
 
   const readMacosApplicationIconBytes = async ({
@@ -818,6 +865,10 @@ export const createTauriProjectServiceAdapters = ({
       getCurrentReference,
     });
     const templatePath = await resolveWindowsPlayerTemplatePath(options);
+    const progressChannel = new Channel();
+    if (options.onProgress) {
+      progressChannel.onmessage = options.onProgress;
+    }
     const result = await invoke("export_windows_portable_executable", {
       templatePath,
       outputPath,
@@ -830,6 +881,7 @@ export const createTauriProjectServiceAdapters = ({
       description: metadata.description,
       copyright: metadata.copyright,
       iconPng,
+      onProgress: progressChannel,
     });
 
     return result;

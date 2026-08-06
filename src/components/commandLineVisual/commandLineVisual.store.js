@@ -192,6 +192,190 @@ const createAddVisualForm = ({ transformOptions, layerOptions } = {}) => ({
   },
 });
 
+const createVisualFormSlots = (visualIndex) => {
+  const prefix = `visual-${visualIndex}`;
+  return {
+    formSectionId: prefix,
+    previewFormSlot: `${prefix}-preview`,
+    layerFormSlot: `${prefix}-layer`,
+    transformModeFormSlot: `${prefix}-transform-mode`,
+    predefinedTransformFormSlot: `${prefix}-predefined-transform`,
+    transformSpacerFormSlot: `${prefix}-transform-spacer`,
+    customTransformFormSlot: `${prefix}-custom-transform`,
+    animationFormSlot: `${prefix}-animation`,
+    playbackSpeedFormSlot: `${prefix}-playback-speed`,
+    playbackContinuityFormSlot: `${prefix}-playback-continuity`,
+    playbackLoopFormSlot: `${prefix}-playback-loop`,
+    playbackLoopSpacerFormSlot: `${prefix}-playback-loop-spacer`,
+    opacityFormSlot: `${prefix}-opacity`,
+    blurToggleFormSlot: `${prefix}-blur-toggle`,
+    blurXFormSlot: `${prefix}-blur-x`,
+    blurYFormSlot: `${prefix}-blur-y`,
+    blurQualityFormSlot: `${prefix}-blur-quality`,
+    blurKernelSizeFormSlot: `${prefix}-blur-kernel-size`,
+    blurRepeatEdgePixelsFormSlot: `${prefix}-blur-repeat-edge-pixels`,
+  };
+};
+
+const createVisualsForm = (visuals = []) => ({
+  fields: visuals.map((visual) => {
+    const fields = [
+      {
+        type: "row",
+        fields: [
+          {
+            type: "slot",
+            slot: visual.previewFormSlot,
+            label: "Visuals",
+          },
+          {
+            type: "slot",
+            slot: visual.layerFormSlot,
+            label: "Layer",
+          },
+        ],
+      },
+      {
+        type: "row",
+        fields: [
+          {
+            type: "slot",
+            slot: visual.transformModeFormSlot,
+            label: "Transform",
+          },
+          {
+            type: "slot",
+            slot: visual.customTransform
+              ? visual.transformSpacerFormSlot
+              : visual.predefinedTransformFormSlot,
+            label: visual.customTransform ? undefined : "Predefined Transform",
+          },
+        ],
+      },
+    ];
+
+    if (visual.customTransform) {
+      fields.push({
+        type: "slot",
+        slot: visual.customTransformFormSlot,
+      });
+    }
+
+    fields.push({
+      type: "slot",
+      slot: visual.animationFormSlot,
+      label: "Animation",
+    });
+
+    if (visual.animationId) {
+      fields.push({
+        type: "row",
+        fields: [
+          {
+            type: "slot",
+            slot: visual.playbackSpeedFormSlot,
+            label: "Playback Speed",
+          },
+          {
+            type: "slot",
+            slot: visual.playbackContinuityFormSlot,
+            label: "Continuity",
+          },
+        ],
+      });
+    }
+
+    if (visual.animationId && visual.animationMode === "update") {
+      fields.push({
+        type: "row",
+        fields: [
+          {
+            type: "slot",
+            slot: visual.playbackLoopFormSlot,
+            label: "Loop",
+          },
+          {
+            type: "slot",
+            slot: visual.playbackLoopSpacerFormSlot,
+          },
+        ],
+      });
+    }
+
+    fields.push({
+      type: "row",
+      fields: [
+        {
+          type: "slot",
+          slot: visual.opacityFormSlot,
+          label: "Opacity",
+        },
+        {
+          type: "slot",
+          slot: visual.blurToggleFormSlot,
+          label: "Blur",
+        },
+      ],
+    });
+
+    if (visual.blurEnabled) {
+      fields.push(
+        {
+          type: "row",
+          fields: [
+            {
+              type: "slot",
+              slot: visual.blurXFormSlot,
+              label: "Blur X",
+            },
+            {
+              type: "slot",
+              slot: visual.blurYFormSlot,
+              label: "Blur Y",
+            },
+          ],
+        },
+        {
+          type: "row",
+          fields: [
+            {
+              type: "slot",
+              slot: visual.blurQualityFormSlot,
+              label: "Quality",
+            },
+            {
+              type: "slot",
+              slot: visual.blurKernelSizeFormSlot,
+              label: "Kernel Size",
+            },
+          ],
+        },
+        {
+          type: "slot",
+          slot: visual.blurRepeatEdgePixelsFormSlot,
+          label: "Repeat Edge Pixels",
+        },
+      );
+    }
+
+    return {
+      type: "section",
+      id: visual.formSectionId,
+      fields,
+    };
+  }),
+});
+
+const createLocalizedVisualsForm = (visuals = [], copy = {}) => {
+  const form = localizeCommandLineForm(createVisualsForm(visuals), copy);
+
+  for (const [index, visual] of visuals.entries()) {
+    form.fields[index].label = visual.displayName;
+  }
+
+  return form;
+};
+
 const isHierarchyCollection = (value) =>
   !!value &&
   typeof value === "object" &&
@@ -588,6 +772,18 @@ const createCustomTransformDetails = (visual = {}) => {
     {
       label: "Scale",
       value: `${formatBackgroundTransformEditorMetric(transform.scaleX)} x ${formatBackgroundTransformEditorMetric(transform.scaleY)}`,
+    },
+    {
+      label: "Anchor",
+      value: `${formatBackgroundTransformEditorMetric(transform.anchorX)}, ${formatBackgroundTransformEditorMetric(transform.anchorY)}`,
+    },
+    {
+      label: "Rotation",
+      value: `${formatBackgroundTransformEditorMetric(transform.rotation)}°`,
+    },
+    {
+      label: "Origin",
+      value: `${formatBackgroundTransformEditorMetric(transform.originX)}, ${formatBackgroundTransformEditorMetric(transform.originY)}`,
     },
   ];
 };
@@ -1331,7 +1527,16 @@ export const selectViewData = ({ state, i18n }) => {
       layer: option.value,
       visuals,
     };
-  }).filter((group) => group.visuals.length > 0);
+  })
+    .filter((group) => group.visuals.length > 0)
+    .map((group, groupIndex) => ({
+      ...group,
+      visuals: group.visuals.map((visual, visualIndex) => ({
+        ...visual,
+        controlId: `${groupIndex}x${visualIndex}`,
+        ...createVisualFormSlots(visual.visualIndex),
+      })),
+    }));
 
   const defaultValues = {
     visualGroups,
@@ -1393,6 +1598,22 @@ export const selectViewData = ({ state, i18n }) => {
     fullSpritesheetPreviewAnimation: state.fullSpritesheetPreviewAnimation,
     fullSpritesheetPreviewKey: state.fullSpritesheetPreviewKey,
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
+    form: createLocalizedVisualsForm(defaultValues.visuals, copy),
+    formKey:
+      defaultValues.visuals
+        .map((visual) =>
+          [
+            visual.visualIndex,
+            visual.id,
+            visual.displayName,
+            visual.layer,
+            visual.customTransform ? "custom-transform" : "preset-transform",
+            visual.animationId ?? "no-animation",
+            visual.animationMode,
+            visual.blurEnabled ? "blur" : "no-blur",
+          ].join(":"),
+        )
+        .join("|") || "no-visuals",
     defaultValues,
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     addVisualPopover: {
@@ -1411,28 +1632,6 @@ export const selectViewData = ({ state, i18n }) => {
     addVisualDefaultValues,
     noThumbnailLabel: localizeCommandLineText("No thumbnail", copy),
     noResourceLabel: localizeCommandLineText("No Resource", copy),
-    layerLabel: localizeCommandLineText("Layer", copy),
-    opacityLabel: localizeCommandLineText("Opacity", copy),
-    blurLabel: localizeCommandLineText("Blur", copy),
-    qualityLabel: localizeCommandLineText("Quality", copy),
-    kernelLabel: localizeCommandLineText("Kernel", copy),
-    repeatEdgeLabel: localizeCommandLineText("Repeat Edge", copy),
-    transformLabel: localizeCommandLineText("Transform", copy),
-    editButtonLabel: localizeCommandLineText("Edit", copy),
-    predefinedTransformLabel: localizeCommandLineText(
-      "Predefined Transform",
-      copy,
-    ),
-    animationLabel: localizeCommandLineText("Animation", copy),
-    animationPlaybackSpeedLabel: localizeCommandLineText(
-      "Playback Speed",
-      copy,
-    ),
-    animationPlaybackLoopLabel: localizeCommandLineText("Loop", copy),
-    animationPlaybackContinuityLabel: localizeCommandLineText(
-      "Continuity",
-      copy,
-    ),
     animationPlaybackLoopDisabledDescription: localizeCommandLineText(
       "loopingRequiresKeyframesDescription",
       copy,
@@ -1445,6 +1644,5 @@ export const selectViewData = ({ state, i18n }) => {
     submitButtonLabel: localizeCommandLineText("Submit", copy),
     selectButtonLabel: localizeCommandLineText("Select", copy),
     transformEditorTitle: localizeCommandLineText("Transform", copy),
-    doneButtonLabel: localizeCommandLineText("Done", copy),
   };
 };

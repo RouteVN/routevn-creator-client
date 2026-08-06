@@ -1,5 +1,7 @@
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
+const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
+
 const PLATFORM_IDS = ["web", "windows", "macos"];
 
 const createPlatformApplicationInfo = (platform) => {
@@ -14,11 +16,13 @@ const createPlatformApplicationInfo = (platform) => {
     applicationInfo.iconFileId = undefined;
   }
 
-  if (platform === "windows") {
-    applicationInfo.publisher = "";
-    applicationInfo.description = "";
-    applicationInfo.copyright = "";
-  }
+  // TODO: Restore optional Windows release metadata when these fields return
+  // to the Platform Details UI.
+  // if (platform === "windows") {
+  //   applicationInfo.publisher = "";
+  //   applicationInfo.description = "";
+  //   applicationInfo.copyright = "";
+  // }
 
   return applicationInfo;
 };
@@ -26,9 +30,10 @@ const createPlatformApplicationInfo = (platform) => {
 const createPlatformEditDefaultValues = () => ({
   applicationName: "",
   applicationIdentifier: "",
-  description: "",
-  publisher: "",
-  copyright: "",
+  // TODO: Restore with the optional Windows release metadata fields.
+  // description: "",
+  // publisher: "",
+  // copyright: "",
 });
 
 const getPlatformTitle = (platform, copy) => {
@@ -71,7 +76,7 @@ const getPlatformTabLabel = (platform, copy) => {
   return copy.webTabLabel;
 };
 
-const buildPlatformDetailFields = (platform, applicationInfo, copy) => {
+const buildPlatformDetailFields = (platform, _applicationInfo, copy) => {
   const fields = [
     {
       type: "slot",
@@ -97,25 +102,26 @@ const buildPlatformDetailFields = (platform, applicationInfo, copy) => {
         : copy.applicationIdentifierLabel,
   });
 
-  if (platform === "windows") {
-    fields.push(
-      {
-        type: "text",
-        label: copy.windowsPublisherLabel,
-        value: applicationInfo.publisher,
-      },
-      {
-        type: "text",
-        label: copy.descriptionLabel,
-        value: applicationInfo.description,
-      },
-      {
-        type: "text",
-        label: copy.copyrightLabel,
-        value: applicationInfo.copyright,
-      },
-    );
-  }
+  // TODO: Restore optional Windows release metadata in the read-only details.
+  // if (platform === "windows") {
+  //   fields.push(
+  //     {
+  //       type: "text",
+  //       label: copy.windowsPublisherLabel,
+  //       value: _applicationInfo.publisher,
+  //     },
+  //     {
+  //       type: "text",
+  //       label: copy.descriptionLabel,
+  //       value: _applicationInfo.description,
+  //     },
+  //     {
+  //       type: "text",
+  //       label: copy.copyrightLabel,
+  //       value: _applicationInfo.copyright,
+  //     },
+  //   );
+  // }
 
   return fields;
 };
@@ -151,31 +157,32 @@ const createPlatformEditForm = (platform, mode, copy) => {
     required: true,
   });
 
-  if (platform === "windows") {
-    fields.push(
-      {
-        name: "publisher",
-        type: "input-text",
-        label: copy.windowsPublisherLabel,
-        description: copy[`${platform}PublisherDescription`],
-        required: false,
-      },
-      {
-        name: "description",
-        type: "input-textarea",
-        label: copy.descriptionLabel,
-        description: copy[`${platform}DescriptionDescription`],
-        required: false,
-      },
-      {
-        name: "copyright",
-        type: "input-text",
-        label: copy.copyrightLabel,
-        description: copy[`${platform}CopyrightDescription`],
-        required: false,
-      },
-    );
-  }
+  // TODO: Restore optional Windows release metadata in the edit form.
+  // if (platform === "windows") {
+  //   fields.push(
+  //     {
+  //       name: "publisher",
+  //       type: "input-text",
+  //       label: copy.windowsPublisherLabel,
+  //       description: copy[`${platform}PublisherDescription`],
+  //       required: false,
+  //     },
+  //     {
+  //       name: "description",
+  //       type: "input-textarea",
+  //       label: copy.descriptionLabel,
+  //       description: copy[`${platform}DescriptionDescription`],
+  //       required: false,
+  //     },
+  //     {
+  //       name: "copyright",
+  //       type: "input-text",
+  //       label: copy.copyrightLabel,
+  //       description: copy[`${platform}CopyrightDescription`],
+  //       required: false,
+  //     },
+  //   );
+  // }
 
   return {
     title:
@@ -289,6 +296,7 @@ export const selectViewData = ({ state, i18n }) => {
     platformDialogKey: `${formMode}-${formPlatform ?? "none"}`,
     platformEditIconFileId: state.platformEditIconFileId,
     platformEditIconCropFile: state.platformEditIconCropFile,
+    platformEditIconOutputSize: PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
     isPlatformEditDialogOpen: state.isPlatformEditDialogOpen,
     isPlatformEditIconCropDialogOpen: state.isPlatformEditIconCropDialogOpen,
     showPlatformApplicationIcon: state.selectedPlatform !== "web",
@@ -320,11 +328,12 @@ export const setPlatformApplicationInfo = (
     target.iconFileId = applicationInfo?.iconFileId ?? undefined;
   }
 
-  if (platform === "windows") {
-    target.publisher = applicationInfo?.publisher ?? "";
-    target.description = applicationInfo?.description ?? "";
-    target.copyright = applicationInfo?.copyright ?? "";
-  }
+  // TODO: Restore optional Windows release metadata in the UI projection.
+  // if (platform === "windows") {
+  //   target.publisher = applicationInfo?.publisher ?? "";
+  //   target.description = applicationInfo?.description ?? "";
+  //   target.copyright = applicationInfo?.copyright ?? "";
+  // }
 
   if (!state.selectedPlatform) {
     state.selectedPlatform = platform;
@@ -371,15 +380,18 @@ const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
     applicationInfo.applicationName;
   state.platformEditDefaultValues.applicationIdentifier =
     applicationInfo.applicationIdentifier ?? "";
-  state.platformEditDefaultValues.description = "";
-  state.platformEditDefaultValues.publisher = "";
-  state.platformEditDefaultValues.copyright = "";
-  if (platform === "windows") {
-    state.platformEditDefaultValues.description =
-      applicationInfo.description ?? "";
-    state.platformEditDefaultValues.publisher = applicationInfo.publisher ?? "";
-    state.platformEditDefaultValues.copyright = applicationInfo.copyright ?? "";
-  }
+  // TODO: Restore optional Windows release metadata in dialog defaults.
+  // state.platformEditDefaultValues.description = "";
+  // state.platformEditDefaultValues.publisher = "";
+  // state.platformEditDefaultValues.copyright = "";
+  // if (platform === "windows") {
+  //   state.platformEditDefaultValues.description =
+  //     applicationInfo.description ?? "";
+  //   state.platformEditDefaultValues.publisher =
+  //     applicationInfo.publisher ?? "";
+  //   state.platformEditDefaultValues.copyright =
+  //     applicationInfo.copyright ?? "";
+  // }
   state.platformEditIconFileId =
     platform === "web" ? undefined : applicationInfo.iconFileId;
 };
