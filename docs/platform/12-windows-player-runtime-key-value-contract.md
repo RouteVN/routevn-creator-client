@@ -247,6 +247,7 @@ Each `contexts` entry must satisfy the complete context contract below.
 | `views`              |      Yes | Array whose entries are JSON objects                         |
 | `bgm`                |      Yes | JSON object; optional `resourceId` must be a string          |
 | `variables`          |      Yes | Variable map defined below                                   |
+| `dialogueHistory`    |       No | Closed dialogue-history object defined below                 |
 | `runtime`            |       No | Closed context-runtime object defined below                  |
 | `rollback`           |      Yes | Closed rollback-state object defined below                   |
 
@@ -301,6 +302,25 @@ boolean, or object variable. Route Engine validates that configured type before
 it emits persistence updates. The Windows JavaScript adapter validates the
 complete allowed JSON value domain and rejects `null` or non-JSON values.
 
+### Dialogue History
+
+`dialogueHistory` is optional for compatibility with older save slots. If
+present, it is closed and all three fields are required:
+
+| Field               | Required | Type and rule                                               |
+| ------------------- | -------: | ----------------------------------------------------------- |
+| `entries`           |      Yes | Array of closed dialogue-history entry objects              |
+| `currentLength`     |      Yes | JavaScript-safe integer from `0` through `entries.length`   |
+| `checkpointLengths` |      Yes | Chronological array with one length per rollback checkpoint |
+
+Each history entry requires non-empty string `sectionId` and `lineId` fields.
+It may include the boolean `appendToPrevious` field. No other entry fields are
+accepted.
+
+Each `checkpointLengths` value must be a JavaScript-safe integer from `0`
+through `entries.length`. Values must be chronological, and the array length
+must equal the rollback timeline length.
+
 ### Context Runtime
 
 `runtime` is optional. If present, it is closed and all three fields are
@@ -331,22 +351,44 @@ Rollback-state fields:
 
 Rollback-checkpoint fields:
 
-| Field             | Required | Type and rule                  |
-| ----------------- | -------: | ------------------------------ |
-| `sectionId`       |      Yes | Non-empty string               |
-| `lineId`          |      Yes | Non-empty string               |
-| `rollbackPolicy`  |       No | String                         |
-| `executedActions` |       No | Array of closed action objects |
+| Field                  | Required | Type and rule                                     |
+| ---------------------- | -------: | ------------------------------------------------- |
+| `sectionId`            |      Yes | Non-empty string                                  |
+| `lineId`               |      Yes | Non-empty string                                  |
+| `rollbackPolicy`       |       No | String                                            |
+| `returnable`           |       No | Boolean                                           |
+| `executedActions`      |       No | Array of closed action objects                    |
+| `randomOutcomeVersion` |       No | Integer; exactly `1`; requires `randomOutcomes`   |
+| `randomOutcomes`       |       No | Array of closed random-outcome objects; versioned |
 
 Each `executedActions` entry requires a non-empty string `type`. It may also
 contain `payload`, whose value may be any syntactically valid JSON value. No
 other action fields are accepted.
+
+Each `randomOutcomes` entry is closed and has these required fields:
+
+| Field     | Type and rule                                            |
+| --------- | -------------------------------------------------------- |
+| `path`    | Non-empty string                                         |
+| `ordinal` | Non-negative JavaScript-safe integer                     |
+| `type`    | Exactly `integer` or `weighted`                          |
+| `result`  | Closed result object matching `type`, as described below |
+
+An `integer` result contains exactly `{ "type": "integer", "value": n }`,
+where `n` is a JavaScript-safe integer. A `weighted` result contains exactly
+`{ "type": "weighted", "outcomeIndex": n }`, where `n` is a
+JavaScript-safe integer from `0` through `999`.
+
+`randomOutcomeVersion` and `randomOutcomes` must either both be present or both
+be absent. A checkpoint must not contain duplicate `path` and `ordinal` pairs.
 
 All rollback objects are closed. Additional rules:
 
 - `timeline` must not be empty.
 - `sectionId`, `lineId`, and action `type` must be non-empty strings.
 - Optional `rollbackPolicy` must be a string.
+- Optional `returnable` must be a boolean. `false` marks an internal transient
+  control-flow checkpoint that rollback navigation must skip.
 - `currentIndex` must identify an entry in `timeline`.
 - `replayStartIndex` must be a non-negative JavaScript-safe integer. It may be
   greater than `currentIndex` for Route Engine's compatibility anchor, which
@@ -354,6 +396,8 @@ All rollback objects are closed. Additional rules:
 - The checkpoint at `currentIndex` must have the same `sectionId` and `lineId`
   as the context's read pointer.
 - `executedActions[].payload` may be any syntactically valid JSON value.
+- Optional random-outcome metadata must use version `1` and satisfy the closed
+  outcome and result contracts above.
 
 ## `globalDeviceVariables` Value
 

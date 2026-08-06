@@ -1,5 +1,7 @@
 const SAVE_FORMAT_VERSION = 1;
 const SAVE_SLOT_KEY_PREFIX = "saveSlots:";
+const RANDOM_OUTCOME_VERSION = 1;
+const MAX_WEIGHTED_OUTCOME_INDEX = 999;
 const OPTIONAL_SAVE_CONTEXT_BGM_FIELDS = new Set([
   "resourceId",
   "startDelayMs",
@@ -423,11 +425,89 @@ const validateContextRuntime = (value, label) => {
   );
 };
 
+const validateRandomOutcomeResult = (value, outcomeType, label) => {
+  const result = requirePlainObject(value, label);
+  if (outcomeType === "integer") {
+    rejectUnknownFields(result, ["type", "value"], label);
+    if (requireField(result, "type", label) !== "integer") {
+      throw new Error(`${label}.type must match the random outcome type`);
+    }
+    requireSafeInteger(requireField(result, "value", label), `${label}.value`);
+    return;
+  }
+
+  rejectUnknownFields(result, ["type", "outcomeIndex"], label);
+  if (requireField(result, "type", label) !== "weighted") {
+    throw new Error(`${label}.type must match the random outcome type`);
+  }
+  const outcomeIndex = requireSafeInteger(
+    requireField(result, "outcomeIndex", label),
+    `${label}.outcomeIndex`,
+  );
+  if (outcomeIndex < 0 || outcomeIndex > MAX_WEIGHTED_OUTCOME_INDEX) {
+    throw new Error(
+      `${label}.outcomeIndex must be between 0 and ${MAX_WEIGHTED_OUTCOME_INDEX}`,
+    );
+  }
+};
+
+const validateRandomOutcomes = (value, label) => {
+  const ordinalsByPath = new Map();
+  requireArray(value, label).forEach((value, index) => {
+    const outcomeLabel = `${label}[${index}]`;
+    const outcome = requirePlainObject(value, outcomeLabel);
+    rejectUnknownFields(
+      outcome,
+      ["path", "ordinal", "type", "result"],
+      outcomeLabel,
+    );
+    const path = requireField(outcome, "path", outcomeLabel);
+    requireNonEmptyString(path, `${outcomeLabel}.path`);
+    const ordinal = requireSafeInteger(
+      requireField(outcome, "ordinal", outcomeLabel),
+      `${outcomeLabel}.ordinal`,
+    );
+    if (ordinal < 0) {
+      throw new Error(`${outcomeLabel}.ordinal must not be negative`);
+    }
+
+    const outcomeType = requireField(outcome, "type", outcomeLabel);
+    if (outcomeType !== "integer" && outcomeType !== "weighted") {
+      throw new Error(`${outcomeLabel}.type must be "integer" or "weighted"`);
+    }
+    validateRandomOutcomeResult(
+      requireField(outcome, "result", outcomeLabel),
+      outcomeType,
+      `${outcomeLabel}.result`,
+    );
+
+    let ordinals = ordinalsByPath.get(path);
+    if (!ordinals) {
+      ordinals = new Set();
+      ordinalsByPath.set(path, ordinals);
+    }
+    if (ordinals.has(ordinal)) {
+      throw new Error(
+        `${outcomeLabel} duplicates random outcome ${path}#${ordinal}`,
+      );
+    }
+    ordinals.add(ordinal);
+  });
+};
+
 const validateRollbackCheckpoint = (value, label) => {
   const checkpoint = requirePlainObject(value, label);
   rejectUnknownFields(
     checkpoint,
-    ["sectionId", "lineId", "rollbackPolicy", "executedActions"],
+    [
+      "sectionId",
+      "lineId",
+      "rollbackPolicy",
+      "returnable",
+      "executedActions",
+      "randomOutcomeVersion",
+      "randomOutcomes",
+    ],
     label,
   );
   requireNonEmptyString(
@@ -440,6 +520,9 @@ const validateRollbackCheckpoint = (value, label) => {
   );
   if (Object.hasOwn(checkpoint, "rollbackPolicy")) {
     requireString(checkpoint.rollbackPolicy, `${label}.rollbackPolicy`);
+  }
+  if (Object.hasOwn(checkpoint, "returnable")) {
+    requireBoolean(checkpoint.returnable, `${label}.returnable`);
   }
   if (Object.hasOwn(checkpoint, "executedActions")) {
     requireArray(
@@ -454,6 +537,29 @@ const validateRollbackCheckpoint = (value, label) => {
         `${entryLabel}.type`,
       );
     });
+  }
+
+  const hasRandomOutcomeVersion = Object.hasOwn(
+    checkpoint,
+    "randomOutcomeVersion",
+  );
+  const hasRandomOutcomes = Object.hasOwn(checkpoint, "randomOutcomes");
+  if (hasRandomOutcomeVersion && !hasRandomOutcomes) {
+    requireField(checkpoint, "randomOutcomes", label);
+  }
+  if (hasRandomOutcomes && !hasRandomOutcomeVersion) {
+    requireField(checkpoint, "randomOutcomeVersion", label);
+  }
+  if (hasRandomOutcomeVersion) {
+    if (checkpoint.randomOutcomeVersion !== RANDOM_OUTCOME_VERSION) {
+      throw new Error(
+        `${label}.randomOutcomeVersion must be ${RANDOM_OUTCOME_VERSION}`,
+      );
+    }
+    validateRandomOutcomes(
+      checkpoint.randomOutcomes,
+      `${label}.randomOutcomes`,
+    );
   }
 };
 
