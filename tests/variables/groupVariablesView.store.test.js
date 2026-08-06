@@ -77,6 +77,8 @@ describe("groupVariablesView.store", () => {
 
     expect(storedView.isVariableDialogOpen).toBe(true);
     expect(storedView.isComputedDialogOpen).toBe(false);
+    expect(storedView.variableSubmitLabel).toBe("Add");
+    expect(storedView.variableForm.actions.buttons).toEqual([]);
     expect(
       storedView.variableForm.fields.find((field) => field.name === "name"),
     ).not.toHaveProperty("tooltip");
@@ -116,6 +118,8 @@ describe("groupVariablesView.store", () => {
 
     expect(computedView.isVariableDialogOpen).toBe(false);
     expect(computedView.isComputedDialogOpen).toBe(true);
+    expect(computedView.computedSubmitLabel).toBe("Add");
+    expect(computedView.computedForm.actions.buttons).toEqual([]);
     expect(
       computedView.computedForm.fields.map((field) => field.name),
     ).not.toContain("valueSource");
@@ -134,6 +138,48 @@ describe("groupVariablesView.store", () => {
       computedView.context.variableTypeOptions.map((option) => option.value),
     ).toEqual(["string", "number", "boolean"]);
     expect(computedView.operationBlock).toBeUndefined();
+  });
+
+  it("uses a short update label in both edit dialogs", () => {
+    const storedState = createInitialState();
+    openEditDialog(
+      { state: storedState },
+      {
+        groupId: "folder-1",
+        itemId: "variable-1",
+        defaultValues: {
+          valueSource: "variable",
+          variableType: "string",
+        },
+      },
+    );
+    const storedView = selectViewData({
+      state: storedState,
+      props: { flatGroups: [] },
+      i18n: TEST_I18N,
+    });
+
+    const computedState = createInitialState();
+    openEditDialog(
+      { state: computedState },
+      {
+        groupId: "folder-1",
+        itemId: "computed-1",
+        defaultValues: {
+          valueSource: "computed",
+          variableType: "number",
+          computed: { expr: { add: [1, 2] } },
+        },
+      },
+    );
+    const computedView = selectViewData({
+      state: computedState,
+      props: { flatGroups: [] },
+      i18n: TEST_I18N,
+    });
+
+    expect(storedView.variableSubmitLabel).toBe("Update");
+    expect(computedView.computedSubmitLabel).toBe("Update");
   });
 
   it("keeps examples attached while the computed operation changes", () => {
@@ -2156,7 +2202,8 @@ describe("groupVariablesView.store", () => {
 
     expect(viewData.flatGroups[0].children[0]).toMatchObject({
       isComputed: true,
-      default: "If",
+      scope: "",
+      default: "",
     });
   });
 
@@ -2202,7 +2249,8 @@ describe("groupVariablesView.store", () => {
 
       expect(viewData.flatGroups[0].children[0]).toMatchObject({
         isComputed: true,
-        default: operationLabel,
+        scope: "",
+        default: "",
       });
     },
   );

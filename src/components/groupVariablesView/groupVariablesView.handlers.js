@@ -1543,3 +1543,33 @@ export const handleFormActionClick = (deps, payload) => {
     }
   }
 };
+
+export const handleVariableSubmitClick = (deps) => {
+  if (deps.props.readonly === true) {
+    return;
+  }
+
+  handleFormActionClick(deps, {
+    _event: {
+      detail: {
+        actionId: "submit",
+        values: getVariableFormValues(deps),
+      },
+    },
+  });
+};
+
+export const handleVariableFormKeyDown = (deps, payload) => {
+  const event = payload._event;
+  const isTextarea = event
+    .composedPath()
+    .some((element) =>
+      ["TEXTAREA", "RTGL-TEXTAREA"].includes(element?.tagName),
+    );
+  if (event.key !== "Enter" || event.shiftKey || isTextarea) {
+    return;
+  }
+
+  event.preventDefault();
+  handleVariableSubmitClick(deps);
+};

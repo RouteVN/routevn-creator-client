@@ -24,7 +24,6 @@ import {
   COMPUTED_LITERAL_TYPES,
   COMPUTED_OPERATION_TYPES,
   canAddComputedOperationOperand,
-  getComputedExpressionOperationType,
   getComputedOperationDefinition,
   getComputedOperationLabel,
   isComputedLiteralValue,
@@ -418,7 +417,7 @@ const createVariableForm = (copy = {}) => ({
       {
         id: "submit",
         variant: "pr",
-        label: copy.addVariableButton ?? "Add Variable",
+        label: copy.addVariableButton ?? "Add",
       },
     ],
   },
@@ -1684,21 +1683,13 @@ export const selectViewData = ({ state, props, i18n }) => {
         }
 
         const isComputed = item.computed !== undefined;
-        const isConditional = Array.isArray(item.computed?.branches);
-        const operationType = getComputedExpressionOperationType(
-          item.computed?.expr,
-        );
         const variableType = item.variableType || "string";
         const storedDefault =
           variableType === "number" &&
           (item.default === undefined || item.default === "")
             ? 0
             : (item.default ?? "");
-        let defaultValue = isComputed
-          ? isConditional
-            ? (copy.computedOperatorIf ?? "If")
-            : getComputedOperationLabel(operationType, copy)
-          : storedDefault;
+        let defaultValue = isComputed ? "" : storedDefault;
         if (typeof defaultValue === "boolean") {
           defaultValue = getBooleanLabel(defaultValue, copy);
         }
@@ -1707,9 +1698,7 @@ export const selectViewData = ({ state, props, i18n }) => {
           id: item.id,
           name: item.name,
           description: item.description ?? "",
-          scope: isComputed
-            ? (copy.computedTemporaryLabel ?? "Temporary")
-            : getScopeLabel(scope, copy),
+          scope: isComputed ? "" : getScopeLabel(scope, copy),
           variableType: getVariableTypeLabel(variableType, copy),
           default: defaultValue,
           isComputed,
@@ -1759,7 +1748,7 @@ export const selectViewData = ({ state, props, i18n }) => {
         (button) => button.id === "submit",
       );
       if (submitButton) {
-        submitButton.label = copy.updateVariableButton ?? "Update Variable";
+        submitButton.label = copy.updateVariableButton ?? "Update";
       }
     });
     const computedSubmitButton = computedForm.actions?.buttons?.find(
@@ -1777,10 +1766,18 @@ export const selectViewData = ({ state, props, i18n }) => {
       (button) => button.id === "submit",
     );
     if (computedSubmitButton) {
-      computedSubmitButton.label =
-        copy.addComputedVariableButton ?? "Add Computed Variable";
+      computedSubmitButton.label = copy.addComputedVariableButton ?? "Add";
     }
   }
+
+  const variableSubmitLabel =
+    variableForm.actions?.buttons?.find((button) => button.id === "submit")
+      ?.label ?? "Submit";
+  const computedSubmitLabel =
+    computedForm.actions?.buttons?.find((button) => button.id === "submit")
+      ?.label ?? "Submit";
+  variableForm.actions.buttons = [];
+  computedForm.actions.buttons = [];
 
   const enumValueOptions = buildVariableEnumOptions(defaultValues.enumValues);
   const variableTypeOptions = [
@@ -2059,6 +2056,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     defaultValues: defaultValues,
     variableForm,
     computedForm,
+    variableSubmitLabel,
+    computedSubmitLabel,
     conditionalBuilder,
     dialogKey,
     dialogMode: state.dialogMode,

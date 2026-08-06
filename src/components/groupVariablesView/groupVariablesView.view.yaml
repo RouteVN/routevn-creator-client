@@ -57,6 +57,8 @@ refs:
         handler: handleCloseDialog
   variableForm:
     eventListeners:
+      keydown:
+        handler: handleVariableFormKeyDown
       form-action:
         handler: handleFormActionClick
       form-change:
@@ -65,12 +67,22 @@ refs:
         handler: handleFormAddOptionClick
   computedForm:
     eventListeners:
+      keydown:
+        handler: handleVariableFormKeyDown
       form-action:
         handler: handleFormActionClick
       form-change:
         handler: handleDialogFormChange
       add-option-click:
         handler: handleFormAddOptionClick
+  variableSubmitButton:
+    eventListeners:
+      click:
+        handler: handleVariableSubmitClick
+  computedSubmitButton:
+    eventListeners:
+      click:
+        handler: handleVariableSubmitClick
   addComputedExampleButton:
     eventListeners:
       click:
@@ -322,21 +334,24 @@ template:
               - 'rtgl-view w=f h="${scrollBottomPadding}" style="flex-shrink: 0;"': null
   - $if !readonly:
       - rtgl-dialog#variableDialog s=md ?open=${isVariableDialogOpen}:
-          - rtgl-view slot=content g=md:
-              - rtgl-form#variableForm key=variable-${dialogKey} :defaultValues=${defaultValues} :form=${variableForm} w=f :context=${context}:
-                  - 'rtgl-view slot="enum-values" d=v w=f g=sm':
-                      - $if enumValues.length > 0:
-                          - rtgl-view d=h wrap g=sm w=f:
-                              - $for option, i in enumValues:
-                                  - rtgl-view#enumValueItemRef${i} data-index=${option.index} d=h av=c g=xs ph=md pv=xs bw=xs bc=bo br=md bgc=bg h-bgc=mu cur=context-menu:
-                                      - rtgl-text s=sm: ${option.label}
-                        $else:
-                          - rtgl-text s=sm c=mu-fg: ${noValuesYetMessage}
-                      - rtgl-view d=h w=f:
-                          - rtgl-button#enumAddValueButton s=sm v=se pre=plus: ${addValueButton}
+          - 'rtgl-view slot=content d=v w=f style="max-height: 70vh; min-height: 0; overflow: hidden;"':
+              - 'rtgl-view w=f sv style="min-height: 0; max-height: calc(70vh - 57px);"':
+                  - rtgl-form#variableForm key=variable-${dialogKey} :defaultValues=${defaultValues} :form=${variableForm} w=f :context=${context}:
+                      - 'rtgl-view slot="enum-values" d=v w=f g=sm':
+                          - $if enumValues.length > 0:
+                              - rtgl-view d=h wrap g=sm w=f:
+                                  - $for option, i in enumValues:
+                                      - rtgl-view#enumValueItemRef${i} data-index=${option.index} d=h av=c g=xs ph=md pv=xs bw=xs bc=bo br=md bgc=bg h-bgc=mu cur=context-menu:
+                                          - rtgl-text s=sm: ${option.label}
+                            $else:
+                              - rtgl-text s=sm c=mu-fg: ${noValuesYetMessage}
+                          - rtgl-view d=h w=f:
+                              - rtgl-button#enumAddValueButton s=sm v=se pre=plus: ${addValueButton}
+              - 'rtgl-view d=h w=f ah=e p=md bgc=bg style="flex-shrink: 0; box-sizing: border-box;"':
+                  - rtgl-button#variableSubmitButton v=pr: ${variableSubmitLabel}
       - rtgl-dialog#computedDialog s=lg ?open=${isComputedDialogOpen}:
-          - 'rtgl-view slot=content d=h g=lg w=f h=70vh style="min-width: 0; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view#computedFormScrollContainer w=1fg h=f sv style="min-width: 0; min-height: 0;"':
+          - 'rtgl-view slot=content w=f h=70vh style="display: grid; grid-template-columns: minmax(0, 1fr) 1px 280px; grid-template-rows: minmax(0, 1fr) auto; column-gap: var(--spacing-lg); min-width: 0; min-height: 0; overflow: hidden;"':
+              - 'rtgl-view#computedFormScrollContainer w=1fg h=f sv style="grid-column: 1; grid-row: 1; min-width: 0; min-height: 0;"':
                   - 'rtgl-form#computedForm key=computed-${dialogKey} :defaultValues=${defaultValues} :form=${computedForm} :context=${context}':
                       - 'rtgl-view slot="operation" d=v w=f g=sm pb=lg':
                           - rtgl-view d=h w=f av=c g=sm:
@@ -411,8 +426,8 @@ template:
                                           - 'rtgl-button#addConditionalNodeDefault data-target-kind=default s=sm v=se pre=plus w=f': ${conditionalAddResultLabel}
                             $else:
                               - rtgl-button#addOperationButton v=se pre=plus w=f: ${addOperationLabel}
-              - rtgl-view w=1 h=f bgc=bo: null
-              - 'rtgl-view w=280 h=f d=v g=md style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=1 h=f bgc=bo style="grid-column: 2; grid-row: 1 / span 2;"': null
+              - 'rtgl-view w=280 h=f d=v g=md style="grid-column: 3; grid-row: 1 / span 2; min-width: 0; min-height: 0;"':
                   - rtgl-view d=h w=f av=c g=sm:
                       - rtgl-text w=1fg s=lg fw=b: ${computedExamplesLabel}
                       - 'rtgl-button#addComputedExampleButton sq v=se pre=plus aria-label="${computedExampleAddLabel}" title="${computedExampleAddLabel}"': null
@@ -432,6 +447,8 @@ template:
                     $else:
                       - rtgl-view w=f h=1fg av=c ah=c:
                           - rtgl-text s=sm c=mu-fg: ${computedNoExamplesMessage}
+              - 'rtgl-view d=h ah=e p=md bgc=bg style="grid-column: 1; grid-row: 2; box-sizing: border-box;"':
+                  - rtgl-button#computedSubmitButton v=pr: ${computedSubmitLabel}
       - rtgl-dialog#computedExampleDialog s=md ?open=${computedExampleDialog.isOpen}:
           - rtgl-view slot=content g=md:
               - rtgl-form#computedExampleForm key=${computedExampleDialog.key} :defaultValues=${computedExampleDefaultValues} :form=${computedExampleForm} w=f:

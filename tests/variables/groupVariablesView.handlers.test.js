@@ -16,6 +16,8 @@ import {
   handleEditOperationVariableClick,
   handleEditOperationValueClick,
   handleFormActionClick,
+  handleVariableFormKeyDown,
+  handleVariableSubmitClick,
   handleMoveConditionalBranchClick,
   handleOperandSourceMenuClose,
   handleOperandSourceMenuClick,
@@ -54,6 +56,93 @@ const createDropdownMenuRef = () => {
 };
 
 describe("groupVariablesView.handlers", () => {
+  const createVariableSubmitDeps = () => {
+    const defaultValues = {
+      name: "",
+      valueSource: "variable",
+      scope: "context",
+      variableType: "number",
+      default: 0,
+    };
+    const dispatchEvent = vi.fn();
+    return {
+      deps: {
+        appService: { showAlert: vi.fn() },
+        dispatchEvent,
+        i18n: { resourcePages: {}, variablesPage: {} },
+        props: { flatGroups: [] },
+        refs: {
+          variableForm: {
+            getValues: vi.fn(() => ({
+              name: "Score",
+              valueSource: "variable",
+              scope: "context",
+              variableType: "number",
+              default: 10,
+            })),
+          },
+        },
+        store: {
+          selectDefaultValues: vi.fn(() => defaultValues),
+          selectSubmitContext: vi.fn(() => ({
+            targetGroupId: "folder-1",
+            dialogMode: "add",
+            editingItemId: undefined,
+            defaultValues,
+          })),
+        },
+      },
+      dispatchEvent,
+    };
+  };
+
+  it("submits the active form from the pinned dialog action", () => {
+    const { deps, dispatchEvent } = createVariableSubmitDeps();
+
+    handleVariableSubmitClick(deps);
+
+    expect(dispatchEvent).toHaveBeenCalledOnce();
+    expect(dispatchEvent.mock.calls[0][0]).toMatchObject({
+      type: "variable-created",
+      detail: {
+        groupId: "folder-1",
+        name: "Score",
+        scope: "context",
+        variableType: "number",
+        default: 10,
+      },
+    });
+  });
+
+  it("submits on Enter but keeps textarea Enter available", () => {
+    const first = createVariableSubmitDeps();
+    const preventDefault = vi.fn();
+
+    handleVariableFormKeyDown(first.deps, {
+      _event: {
+        key: "Enter",
+        shiftKey: false,
+        composedPath: () => [{ tagName: "RTGL-INPUT" }],
+        preventDefault,
+      },
+    });
+
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(first.dispatchEvent).toHaveBeenCalledOnce();
+
+    const second = createVariableSubmitDeps();
+    handleVariableFormKeyDown(second.deps, {
+      _event: {
+        key: "Enter",
+        shiftKey: false,
+        composedPath: () => [{ tagName: "RTGL-TEXTAREA" }],
+        preventDefault: vi.fn(),
+      },
+    });
+
+    expect(second.dispatchEvent).not.toHaveBeenCalled();
+  });
+
   it("opens a computed dialog from the Add dropdown selection", async () => {
     const openAddDialog = vi.fn();
     const render = vi.fn();

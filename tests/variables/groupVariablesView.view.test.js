@@ -84,7 +84,7 @@ describe("groupVariablesView view", () => {
 
   it("scrolls long computed forms through a constrained wrapper", () => {
     expect(view).toContain(
-      'rtgl-view#computedFormScrollContainer w=1fg h=f sv style="min-width: 0; min-height: 0;"',
+      'rtgl-view#computedFormScrollContainer w=1fg h=f sv style="grid-column: 1; grid-row: 1; min-width: 0; min-height: 0;"',
     );
     expect(view).toContain('rtgl-view slot="operation" d=v w=f g=sm pb=lg');
     expect(view).toContain(
@@ -96,5 +96,34 @@ describe("groupVariablesView view", () => {
     expect(view).not.toContain(
       'rtgl-form#computedForm key=computed-${dialogKey} :defaultValues=${defaultValues} :form=${computedForm} :context=${context} style="min-width: 0; overflow-y: auto;"',
     );
+  });
+
+  it("keeps variable and computed submit actions visible below scrolling content", () => {
+    expect(view).toContain(
+      'rtgl-view w=f sv style="min-height: 0; max-height: calc(70vh - 57px);"',
+    );
+    expect(view).toContain(
+      "rtgl-button#variableSubmitButton v=pr: ${variableSubmitLabel}",
+    );
+    expect(view).toContain(
+      'rtgl-view slot=content w=f h=70vh style="display: grid; grid-template-columns: minmax(0, 1fr) 1px 280px; grid-template-rows: minmax(0, 1fr) auto; column-gap: var(--spacing-lg); min-width: 0; min-height: 0; overflow: hidden;"',
+    );
+    expect(view).toContain(
+      'style="grid-column: 1; grid-row: 2; box-sizing: border-box;"',
+    );
+    expect(view).toContain(
+      "rtgl-button#computedSubmitButton v=pr: ${computedSubmitLabel}",
+    );
+    expect(view).toContain("handler: handleVariableSubmitClick");
+    expect(view).toContain("handler: handleVariableFormKeyDown");
+    const variableFooter = view
+      .split("\n")
+      .find((line) => line.includes("d=h w=f ah=e p=md bgc=bg"));
+    const computedFooter = view
+      .split("\n")
+      .find((line) => line.includes('style="grid-column: 1; grid-row: 2;'));
+
+    expect(variableFooter).not.toContain("bwt=");
+    expect(computedFooter).not.toContain("bwt=");
   });
 });
