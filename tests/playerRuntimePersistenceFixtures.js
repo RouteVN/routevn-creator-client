@@ -33,6 +33,18 @@ export const createSaveSlot = (
           menuPage: "",
           menuEntryPoint: "",
         },
+        dialogueHistory: {
+          entries: [
+            { sectionId: "section-1", lineId: "line-1" },
+            {
+              sectionId: "section-1",
+              lineId,
+              appendToPrevious: true,
+            },
+          ],
+          currentLength: 2,
+          checkpointLengths: [1, 2],
+        },
         rollback: {
           currentIndex: 1,
           isRestoring: false,

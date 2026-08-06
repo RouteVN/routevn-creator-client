@@ -505,6 +505,77 @@ const validateRollback = (value, readPointer, label) => {
       `${label}.timeline[currentIndex] must match the context read pointer`,
     );
   }
+
+  return rollback;
+};
+
+const validateDialogueHistory = (value, rollbackTimelineLength, label) => {
+  const dialogueHistory = requirePlainObject(value, label);
+  rejectUnknownFields(
+    dialogueHistory,
+    ["entries", "currentLength", "checkpointLengths"],
+    label,
+  );
+
+  const entries = requireArray(
+    requireField(dialogueHistory, "entries", label),
+    `${label}.entries`,
+  );
+  entries.forEach((value, index) => {
+    const entryLabel = `${label}.entries[${index}]`;
+    const entry = requirePlainObject(value, entryLabel);
+    rejectUnknownFields(
+      entry,
+      ["sectionId", "lineId", "appendToPrevious"],
+      entryLabel,
+    );
+    requireNonEmptyString(
+      requireField(entry, "sectionId", entryLabel),
+      `${entryLabel}.sectionId`,
+    );
+    requireNonEmptyString(
+      requireField(entry, "lineId", entryLabel),
+      `${entryLabel}.lineId`,
+    );
+    if (Object.hasOwn(entry, "appendToPrevious")) {
+      requireBoolean(entry.appendToPrevious, `${entryLabel}.appendToPrevious`);
+    }
+  });
+
+  const currentLength = requireSafeInteger(
+    requireField(dialogueHistory, "currentLength", label),
+    `${label}.currentLength`,
+  );
+  if (currentLength < 0 || currentLength > entries.length) {
+    throw new Error(
+      `${label}.currentLength must be between 0 and the dialogue history entry count`,
+    );
+  }
+
+  const checkpointLengths = requireArray(
+    requireField(dialogueHistory, "checkpointLengths", label),
+    `${label}.checkpointLengths`,
+  );
+  if (checkpointLengths.length !== rollbackTimelineLength) {
+    throw new Error(
+      `${label}.checkpointLengths must contain one entry per rollback checkpoint`,
+    );
+  }
+
+  let previousLength = 0;
+  checkpointLengths.forEach((value, index) => {
+    const checkpointLabel = `${label}.checkpointLengths[${index}]`;
+    const checkpointLength = requireSafeInteger(value, checkpointLabel);
+    if (checkpointLength < 0 || checkpointLength > entries.length) {
+      throw new Error(
+        `${checkpointLabel} must be between 0 and the dialogue history entry count`,
+      );
+    }
+    if (checkpointLength < previousLength) {
+      throw new Error(`${label}.checkpointLengths must be chronological`);
+    }
+    previousLength = checkpointLength;
+  });
 };
 
 const validateSaveContext = (value, label) => {
@@ -518,6 +589,7 @@ const validateSaveContext = (value, label) => {
       "views",
       "bgm",
       "variables",
+      "dialogueHistory",
       "runtime",
       "rollback",
     ],
@@ -558,11 +630,18 @@ const validateSaveContext = (value, label) => {
   if (Object.hasOwn(context, "runtime")) {
     validateContextRuntime(context.runtime, `${label}.runtime`);
   }
-  validateRollback(
+  const rollback = validateRollback(
     requireField(context, "rollback", label),
     readPointer,
     `${label}.rollback`,
   );
+  if (Object.hasOwn(context, "dialogueHistory")) {
+    validateDialogueHistory(
+      context.dialogueHistory,
+      rollback.timeline.length,
+      `${label}.dialogueHistory`,
+    );
+  }
 };
 
 const saveSlotIdStorageKey = (value, label) => {

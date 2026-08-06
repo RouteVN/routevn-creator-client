@@ -100,6 +100,21 @@ describe("player runtime persistence key/value contract", () => {
     );
   });
 
+  it("accepts optional engine dialogue history and checkpoint-less entries", () => {
+    const slot = createSaveSlot(1);
+    slot.state.contexts[0].dialogueHistory.entries.push({
+      sectionId: "section-2",
+      lineId: "jump-target",
+    });
+    slot.state.contexts[0].dialogueHistory.currentLength = 3;
+
+    expect(() => snapshotSaveSlots({ 1: slot })).not.toThrow();
+
+    const legacySlot = createSaveSlot(2);
+    delete legacySlot.state.contexts[0].dialogueHistory;
+    expect(() => snapshotSaveSlots({ 2: legacySlot })).not.toThrow();
+  });
+
   it("rejects unsupported or empty physical keys", () => {
     expect(() => validatePlayerPersistenceValue("saveSlots", {})).toThrow(
       "Unsupported runtime persistence key: saveSlots",
@@ -339,6 +354,78 @@ describe("player runtime persistence key/value contract", () => {
           slot.state.contexts[0].runtime.saveLoadPagination = 0;
         },
         message: ".saveLoadPagination must be at least 1",
+      },
+      {
+        name: "dialogue history object",
+        mutate: (slot) => {
+          slot.state.contexts[0].dialogueHistory = [];
+        },
+        message: ".dialogueHistory must be a JSON object",
+      },
+      {
+        name: "closed dialogue history",
+        mutate: (slot) => {
+          slot.state.contexts[0].dialogueHistory.unknown = true;
+        },
+        message: ".dialogueHistory.unknown is not supported",
+      },
+      {
+        name: "dialogue history entries",
+        mutate: (slot) => {
+          slot.state.contexts[0].dialogueHistory.entries = {};
+        },
+        message: ".dialogueHistory.entries must be a JSON array",
+      },
+      {
+        name: "dialogue history entry fields",
+        mutate: (slot) => {
+          slot.state.contexts[0].dialogueHistory.entries[0].extra = true;
+        },
+        message: ".dialogueHistory.entries[0].extra is not supported",
+      },
+      {
+        name: "dialogue history entry ids",
+        mutate: (slot) => {
+          slot.state.contexts[0].dialogueHistory.entries[0].sectionId = "";
+        },
+        message: ".sectionId must be a non-empty JSON string",
+      },
+      {
+        name: "dialogue history append flag",
+        mutate: (slot) => {
+          slot.state.contexts[0].dialogueHistory.entries[1].appendToPrevious =
+            "true";
+        },
+        message: ".appendToPrevious must be a JSON boolean",
+      },
+      {
+        name: "dialogue history current length",
+        mutate: (slot) => {
+          slot.state.contexts[0].dialogueHistory.currentLength = 3;
+        },
+        message: ".currentLength must be between 0",
+      },
+      {
+        name: "dialogue history checkpoint count",
+        mutate: (slot) => {
+          slot.state.contexts[0].dialogueHistory.checkpointLengths = [1];
+        },
+        message:
+          ".checkpointLengths must contain one entry per rollback checkpoint",
+      },
+      {
+        name: "dialogue history checkpoint length",
+        mutate: (slot) => {
+          slot.state.contexts[0].dialogueHistory.checkpointLengths[1] = 3;
+        },
+        message: ".checkpointLengths[1] must be between 0",
+      },
+      {
+        name: "dialogue history checkpoint chronology",
+        mutate: (slot) => {
+          slot.state.contexts[0].dialogueHistory.checkpointLengths = [2, 1];
+        },
+        message: ".checkpointLengths must be chronological",
       },
       {
         name: "rollback timeline",
