@@ -107,7 +107,7 @@ styles:
     cursor: pointer
     outline: none
   ".sfxChannelPreview:focus-visible":
-    box-shadow: none
+    box-shadow: 0 0 0 2px var(--ring) inset
     outline: none
   ".sfxChannelPreview:active":
     box-shadow: none
@@ -147,7 +147,7 @@ styles:
   ".sfxSoundDragSurface:active":
     cursor: grabbing
   ".sfxSoundClip:focus-visible":
-    box-shadow: none
+    box-shadow: 0 0 0 2px var(--ring) inset
     outline: none
   ".sfxInsertZone":
     appearance: none

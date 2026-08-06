@@ -454,7 +454,7 @@ export const selectViewData = ({ state, i18n }) => {
     return {
       ...channel,
       channelIndex,
-      channelFormKey: `channel-${channelIndex}`,
+      channelFormKey: `channel-${channel.id}-${channel.loop}`,
       sounds,
       showControls: sounds.length > 0,
       channelDefaultValues: {

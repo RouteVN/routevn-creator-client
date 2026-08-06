@@ -314,6 +314,7 @@ export const selectViewData = ({ state, i18n }) => {
     form: localizeCommandLineForm(form, copy),
     defaultValues,
     channelForm: localizeCommandLineForm(CHANNEL_FORM, copy),
+    channelFormKey: `channel-${state.voice.loop}`,
     channelDefaultValues: {
       interruption: state.voice.interruption,
       loop: state.voice.loop,

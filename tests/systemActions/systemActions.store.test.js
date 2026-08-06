@@ -323,6 +323,31 @@ describe("systemActions.store", () => {
     expect(preview.bgm).toMatchObject({ id: "intro", name: "Intro" });
   });
 
+  it("keeps an authored empty BGM action visible as a stop action", () => {
+    const state = createInitialState();
+    const bgm = {
+      interruption: "immediate",
+      loop: true,
+      volume: 75,
+      sounds: [],
+    };
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: { bgm },
+        presentationState: {
+          bgm: {
+            sounds: [{ id: "previous-clip", resourceId: "previous" }],
+          },
+        },
+      },
+    });
+
+    expect(actions.bgm).toEqual(bgm);
+    expect(preview.bgm).toEqual({ name: "Stop BGM" });
+  });
+
   it("preserves and previews sounds across canonical SFX channels", () => {
     const state = createInitialState();
     const sfx = {

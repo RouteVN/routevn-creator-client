@@ -75,6 +75,7 @@ describe("commandLineVoice.store", () => {
     expect(viewData.channelDurationLabel).toBe("0:00");
     expect(viewData.hasSelection).toBe(false);
     expect(viewData.showChannelControls).toBe(false);
+    expect(viewData.channelFormKey).toBe("channel-false");
     expect(viewData.channelBorderColor).toBe("bo");
     expect(viewData.selectionHeading).toBe("");
     expect(viewData.selectionName).toBe("");
@@ -280,10 +281,14 @@ describe("commandLineVoice.store", () => {
     updateChannel({ state }, { values: { loop: true } });
     expect(selectVoicePayload({ state }).loop).toBe(true);
     expect(selectVoicePayload({ state }).sounds[0].loop).toBe(false);
+    expect(selectViewData({ state, i18n }).channelFormKey).toBe("channel-true");
 
     updateSound({ state }, { soundId: "intro-clip", values: { loop: true } });
     expect(selectVoicePayload({ state }).loop).toBe(false);
     expect(selectVoicePayload({ state }).sounds[0].loop).toBe(true);
+    expect(selectViewData({ state, i18n }).channelFormKey).toBe(
+      "channel-false",
+    );
   });
 
   it("places inserted Voice sounds without reflowing after removal", () => {

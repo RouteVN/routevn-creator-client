@@ -118,11 +118,29 @@ describe("commandLineSoundEffects.store", () => {
         (channel) => channel.channelBorderColor,
       ),
     ).toEqual(["bo", "bo"]);
+    expect(
+      selectViewData({ state, i18n }).channels.map((channel) => ({
+        id: channel.id,
+        formKey: channel.channelFormKey,
+      })),
+    ).toEqual([
+      { id: "Weather", formKey: "channel-Weather-false" },
+      { id: "UI", formKey: "channel-UI-false" },
+    ]);
 
     moveChannel({ state }, { channelId: "UI", direction: "up" });
     expect(state.channels.map((channel) => channel.id)).toEqual([
       "UI",
       "Weather",
+    ]);
+    expect(
+      selectViewData({ state, i18n }).channels.map((channel) => ({
+        id: channel.id,
+        formKey: channel.channelFormKey,
+      })),
+    ).toEqual([
+      { id: "UI", formKey: "channel-UI-false" },
+      { id: "Weather", formKey: "channel-Weather-false" },
     ]);
 
     removeChannel({ state }, { channelId: "UI" });
@@ -254,7 +272,9 @@ describe("commandLineSoundEffects.store", () => {
     setSelectedChannel({ state }, { channelId: "Weather" });
     const channelSelection = selectViewData({ state, i18n });
     expect(channelSelection.channels[0].showControls).toBe(true);
-    expect(channelSelection.channels[0].channelFormKey).toBe("channel-0");
+    expect(channelSelection.channels[0].channelFormKey).toBe(
+      "channel-Weather-false",
+    );
     expect(channelSelection.channels[0].channelBorderColor).toBe("pr");
     expect(channelSelection.channels[0].channelHoverBorderColor).toBe("pr");
     expect(channelSelection.selectionHeading).toBe("Channel");
@@ -443,6 +463,9 @@ describe("commandLineSoundEffects.store", () => {
 
     expect(state.channels[0].loop).toBe(true);
     expect(state.channels[0].sounds[0].loop).toBe(false);
+    expect(selectViewData({ state, i18n }).channels[0].channelFormKey).toBe(
+      "channel-Weather-true",
+    );
 
     updateSound(
       { state },
@@ -454,10 +477,16 @@ describe("commandLineSoundEffects.store", () => {
     );
     expect(state.channels[0].loop).toBe(false);
     expect(state.channels[0].sounds[0].loop).toBe(true);
+    expect(selectViewData({ state, i18n }).channels[0].channelFormKey).toBe(
+      "channel-Weather-false",
+    );
 
     updateChannel({ state }, { channelId: "Weather", values: { loop: true } });
     expect(state.channels[0].loop).toBe(true);
     expect(state.channels[0].sounds[0].loop).toBe(false);
+    expect(selectViewData({ state, i18n }).channels[0].channelFormKey).toBe(
+      "channel-Weather-true",
+    );
   });
 
   it("updates an SFX channel apply mode", () => {

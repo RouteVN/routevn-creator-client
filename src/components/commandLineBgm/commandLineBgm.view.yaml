@@ -94,7 +94,7 @@ styles:
     cursor: pointer
     outline: none
   ".bgmChannelPreview:focus-visible":
-    box-shadow: none
+    box-shadow: 0 0 0 2px var(--ring) inset
     outline: none
   ".bgmChannelPreview:active":
     box-shadow: none
@@ -130,7 +130,7 @@ styles:
   ".bgmSoundDragSurface:active":
     cursor: grabbing
   ".bgmSoundClip:focus-visible":
-    box-shadow: none
+    box-shadow: 0 0 0 2px var(--ring) inset
     outline: none
   ".bgmInsertZone":
     appearance: none

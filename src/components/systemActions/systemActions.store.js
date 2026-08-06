@@ -661,12 +661,26 @@ export const selectActionsData = ({ props, state, copy }) => {
     preview.layout = layoutsItems[presentationState.layout.resourceId];
   }
 
-  if (presentationState.bgm) {
-    actionsObject.bgm = presentationState.bgm;
+  const authoredBgm = isPlainObject(actions.bgm) ? actions.bgm : undefined;
+  const effectiveBgm = isPlainObject(presentationState.bgm)
+    ? presentationState.bgm
+    : undefined;
+  const authoredBgmStops =
+    authoredBgm &&
+    Array.isArray(authoredBgm.sounds) &&
+    authoredBgm.sounds.length === 0;
+  const bgmAction = authoredBgmStops
+    ? authoredBgm
+    : (effectiveBgm ?? authoredBgm);
+  if (bgmAction) {
+    actionsObject.bgm = bgmAction;
     const bgmResourceId =
-      presentationState.bgm.sounds?.[0]?.resourceId ??
-      presentationState.bgm.resourceId;
-    preview.bgm = sounds[bgmResourceId];
+      bgmAction.sounds?.[0]?.resourceId ?? bgmAction.resourceId;
+    preview.bgm = sounds[bgmResourceId] ?? {
+      name: authoredBgmStops
+        ? localizeCommandLineText("Stop BGM", copy)
+        : (bgmResourceId ?? localizeCommandLineText("BGM", copy)),
+    };
   }
 
   const voiceAction = isPlainObject(actions.voice)

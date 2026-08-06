@@ -73,7 +73,7 @@ styles:
     cursor: pointer
     outline: none
   ".voiceChannelPreview:focus-visible":
-    box-shadow: none
+    box-shadow: 0 0 0 2px var(--ring) inset
     outline: none
   ".voiceChannelPreview:active":
     box-shadow: none
@@ -109,7 +109,7 @@ styles:
   ".voiceSoundDragSurface:active":
     cursor: grabbing
   ".voiceSoundClip:focus-visible":
-    box-shadow: none
+    box-shadow: 0 0 0 2px var(--ring) inset
     outline: none
   ".voiceInsertZone":
     appearance: none
@@ -205,7 +205,7 @@ template:
               - rtgl-view w=f g=md:
                   - rtgl-view w=f ph=lg:
                       - rtgl-text s=md: ${channelLabel}
-                  - rtgl-form#channelForm key=channel :form=${channelForm} :defaultValues=${channelDefaultValues} p=lg: null
+                  - rtgl-form#channelForm key=${channelFormKey} :form=${channelForm} :defaultValues=${channelDefaultValues} p=lg: null
                   - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
       - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
           - rtgl-button#submitButton: Submit

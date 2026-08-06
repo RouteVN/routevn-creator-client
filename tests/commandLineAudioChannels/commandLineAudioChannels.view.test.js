@@ -118,22 +118,55 @@ describe("command-line audio channel views", () => {
     expect(emptyAddStyles).toContain("justify-content: center");
   });
 
+  it("remounts Voice and SFX channel forms from their state-derived keys", () => {
+    const voiceView = readFileSync(
+      new URL(
+        "../../src/components/commandLineVoice/commandLineVoice.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const sfxView = readFileSync(
+      new URL(
+        "../../src/components/commandLineSoundEffects/commandLineSoundEffects.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(voiceView).toContain("rtgl-form#channelForm key=${channelFormKey}");
+    expect(sfxView).toContain(
+      'rtgl-form#channelForm${i} data-channel-id="${channel.id}" key=${channel.channelFormKey}',
+    );
+  });
+
   it.each(componentViews)(
-    "removes the native focus treatment from %s audio clips",
-    (_name, relativePath, _channelTarget, soundClass) => {
+    "shows a custom keyboard focus ring on %s channels and audio clips",
+    (_name, relativePath, channelTarget, soundClass) => {
       const view = readFileSync(
         new URL(`../../src/components/${relativePath}`, import.meta.url),
         "utf8",
       );
-      const focusStyleStart = view.indexOf(`  "${soundClass}:focus-visible":`);
-      const focusStyles = view.slice(
-        focusStyleStart,
-        view.indexOf('\n  "', focusStyleStart + 3),
-      );
+      const channelClass = channelTarget
+        .replace("#bgmChannel", ".bgmChannelPreview")
+        .replace("#voiceChannel", ".voiceChannelPreview")
+        .replace("#sfxChannel", ".sfxChannelPreview");
 
-      expect(focusStyleStart).toBeGreaterThan(-1);
-      expect(focusStyles).toContain("box-shadow: none");
-      expect(focusStyles).toContain("outline: none");
+      for (const focusClass of [channelClass, soundClass]) {
+        const focusStyleStart = view.indexOf(
+          `  "${focusClass}:focus-visible":`,
+        );
+        const focusStyles = view.slice(
+          focusStyleStart,
+          view.indexOf('\n  "', focusStyleStart + 3),
+        );
+
+        expect(focusStyleStart).toBeGreaterThan(-1);
+        expect(focusStyles).toContain(
+          "box-shadow: 0 0 0 2px var(--ring) inset",
+        );
+        expect(focusStyles).toContain("outline: none");
+      }
     },
   );
 });
