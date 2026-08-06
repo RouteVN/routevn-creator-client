@@ -95,15 +95,15 @@ template:
                       - rtgl-svg svg=screen wh=24: null
                       - rtgl-text s=sm: ${preview.screen.label}
               - $if preview.bgm:
-                  - 'rtgl-view#actionItemBgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.bgm};"':
+                  - 'rtgl-view#actionItemBgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac bw=xs bc=bo h-bc=ac br=md h=36 w=f cur=pointer style="box-sizing: border-box; order: ${presentationActionOrder.bgm};"':
                       - rtgl-svg svg=music wh=24: null
                       - rtgl-text s=sm: ${preview.bgm.name}
               - $if preview.voice:
-                  - 'rtgl-view#actionItemVoice data-mode=voice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.voice};"':
+                  - 'rtgl-view#actionItemVoice data-mode=voice g=md d=h av=c ph=md bgc=mu h-bgc=ac bw=xs bc=bo h-bc=ac br=md h=36 w=f cur=pointer style="box-sizing: border-box; order: ${presentationActionOrder.voice};"':
                       - rtgl-svg svg=microphone wh=24: null
                       - rtgl-text s=sm w=1fg ellipsis=true: ${preview.voice.name}
               - $if preview.sfx:
-                  - 'rtgl-view#actionItemSfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.sfx};"':
+                  - 'rtgl-view#actionItemSfx data-mode=sfx g=md d=h av=c ph=md bgc=mu h-bgc=ac bw=xs bc=bo h-bc=ac br=md h=36 w=f cur=pointer style="box-sizing: border-box; order: ${presentationActionOrder.sfx};"':
                       - rtgl-svg svg=audio wh=24: null
                       - rtgl-text s=sm: ${preview.sfx.names}
               - $if preview.character:

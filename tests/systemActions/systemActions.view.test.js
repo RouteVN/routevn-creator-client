@@ -32,6 +32,18 @@ describe("systemActions view", () => {
     );
     expect(systemActionsView).toContain("rtgl-view#actionItemVoice");
     expect(systemActionsView).toContain("rtgl-svg svg=microphone wh=24");
+    ["Bgm", "Voice", "Sfx"].forEach((actionName) => {
+      const actionStart = systemActionsView.indexOf(
+        `rtgl-view#actionItem${actionName}`,
+      );
+      const actionMarkup = systemActionsView.slice(
+        actionStart,
+        systemActionsView.indexOf("':", actionStart),
+      );
+
+      expect(actionStart).toBeGreaterThan(-1);
+      expect(actionMarkup).toContain("bw=xs bc=bo h-bc=ac");
+    });
     expect(systemActionsView).not.toContain(
       'rtgl-button#voicePreviewButton sq v=ol pre=play title="${previewVoiceLabel}" aria-label="${previewVoiceLabel}"',
     );
@@ -52,9 +64,7 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       "fileId=${visualData.spritesheetFileId}",
     );
-    expect(systemActionsView).toContain(
-      "rtgl-svg svg=stacked-images wh=24",
-    );
+    expect(systemActionsView).toContain("rtgl-svg svg=stacked-images wh=24");
     expect(systemActionsView).toContain(
       'rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer style="order: ${presentationActionOrder.dialogue}; min-height: 36px;"',
     );
