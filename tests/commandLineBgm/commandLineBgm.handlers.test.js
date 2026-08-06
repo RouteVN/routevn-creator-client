@@ -186,8 +186,12 @@ describe("commandLineBgm.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("deletes the BGM action from the channel context menu", async () => {
-    const dispatchEvent = vi.fn();
+  it("clears BGM from the channel context menu without leaving the page", async () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    store.insertSound({ id: "intro-clip", resourceId: "intro", index: 0 });
+    store.updateChannel({ values: { interruption: "loopEnd", volume: 40 } });
     const showDropdownMenu = vi.fn().mockResolvedValue({
       item: { key: "delete" },
     });
@@ -197,7 +201,8 @@ describe("commandLineBgm.handlers", () => {
     await handleChannelContextMenu(
       {
         appService: { showDropdownMenu },
-        dispatchEvent,
+        store,
+        render,
         i18n,
       },
       {
@@ -218,17 +223,15 @@ describe("commandLineBgm.handlers", () => {
       y: 240,
       place: "bs",
     });
-    expect(dispatchEvent).toHaveBeenCalledTimes(2);
-    expect(dispatchEvent.mock.calls[0][0]).toMatchObject({
-      type: "action-delete",
-      detail: { actionType: "bgm" },
-      bubbles: true,
-      composed: true,
+    expect(store.selectBgm()).toEqual({
+      interruption: "immediate",
+      loop: true,
+      volume: 75,
+      sounds: [],
     });
-    expect(dispatchEvent.mock.calls[1][0]).toMatchObject({
-      type: "back-to-actions",
-      detail: {},
-    });
+    expect(state.mode).toBe("current");
+    expect(state.isChannelEditorOpen).toBe(false);
+    expect(render).toHaveBeenCalledOnce();
   });
 
   it("keeps the sound selected when a post-drag click targets the channel", () => {

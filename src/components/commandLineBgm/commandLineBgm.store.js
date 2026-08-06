@@ -361,7 +361,6 @@ export const selectViewData = ({ state, i18n }) => {
     channelEditorTitle: channelName,
     confirmButtonLabel: localizeCommandLineText("Confirm", copy),
     editChannelLabel: localizeCommandLineText("Edit Channel", copy),
-    emptyAudioLabel: localizeCommandLineText("No audio", copy),
     addAudioLabel: localizeCommandLineText("Add BGM audio", copy),
     addBeforeLabel: localizeCommandLineText("Add audio before", copy),
     addAfterLabel: localizeCommandLineText("Add audio after", copy),
@@ -399,6 +398,19 @@ export const setBgm = ({ state }, { bgm } = {}) => {
   state.isChannelEditorOpen = false;
   state.selectedSoundId = undefined;
   state.pendingReplacementSoundId = undefined;
+};
+
+export const clearBgm = ({ state }, _payload = {}) => {
+  state.bgm = normalizeBgm();
+  state.mode = "current";
+  state.channelSelected = false;
+  state.isChannelEditorOpen = false;
+  state.selectedSoundId = undefined;
+  state.soundDrag = undefined;
+  state.pendingInsertIndex = 0;
+  state.tempSelectedResourceId = undefined;
+  state.pendingReplacementSoundId = undefined;
+  closeAudioPlayer({ state });
 };
 
 export const setMode = ({ state }, { mode } = {}) => {

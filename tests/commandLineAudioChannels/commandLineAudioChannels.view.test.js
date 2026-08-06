@@ -92,6 +92,32 @@ describe("command-line audio channel views", () => {
     );
   });
 
+  it("shows a centered plus in an empty BGM channel preview", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/commandLineBgm/commandLineBgm.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const templateStart = view.indexOf("template:");
+    const editorStart = view.indexOf(
+      "  - rtgl-dialog#channelEditorDialog",
+      templateStart,
+    );
+    const mainView = view.slice(templateStart, editorStart);
+    const emptyAddStyleStart = view.indexOf('  ".bgmEmptyAdd":');
+    const emptyAddStyles = view.slice(
+      emptyAddStyleStart,
+      view.indexOf('  ".bgmEmptyAdd:hover":', emptyAddStyleStart),
+    );
+
+    expect(mainView).toContain('div.bgmEmptyAdd aria-hidden=true\': "+"');
+    expect(mainView).not.toContain("${emptyAudioLabel}");
+    expect(emptyAddStyles).toContain("align-items: center");
+    expect(emptyAddStyles).toContain("justify-content: center");
+  });
+
   it.each(componentViews)(
     "removes the native focus treatment from %s audio clips",
     (_name, relativePath, _channelTarget, soundClass) => {

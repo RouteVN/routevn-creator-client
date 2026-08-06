@@ -93,7 +93,7 @@ export const handleChannelKeyDown = (deps, payload) => {
 };
 
 export const handleChannelContextMenu = async (deps, payload) => {
-  const { appService, dispatchEvent, i18n } = deps;
+  const { appService, store, render, i18n } = deps;
   const { _event: event } = payload;
   event.preventDefault();
   event.stopPropagation();
@@ -116,14 +116,8 @@ export const handleChannelContextMenu = async (deps, payload) => {
     return;
   }
 
-  dispatchEvent(
-    new CustomEvent("action-delete", {
-      detail: { actionType: "bgm" },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-  dispatchEvent(new CustomEvent("back-to-actions", { detail: {} }));
+  store.clearBgm();
+  render();
 };
 
 export const handleChannelEditorClose = (deps) => {
