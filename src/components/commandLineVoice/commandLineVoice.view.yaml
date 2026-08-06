@@ -209,7 +209,7 @@ template:
           - rtgl-text s=lg: ${channelEditorTitle}
           - 'rtgl-view h=1fg sv w=f g=lg style="min-height: 0;"':
               - rtgl-view w=f ph=lg:
-                  - 'rtgl-view.voiceChannel w=f d=v pos=rel bgc=mu bw=xs bc=bo br=sm style="height: ${channelHeightPx}px;"':
+                  - 'rtgl-view#editorChannel.voiceChannel w=f d=v pos=rel bgc=bg bw=xs bc=bo h-bc=ac br=sm style="height: ${channelHeightPx}px;"':
                       - div.voiceChannelHeader:
                           - span: ${channelLabel}
                           - span: ${channelDurationLabel}

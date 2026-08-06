@@ -259,7 +259,7 @@ template:
               - 'rtgl-view h=1fg sv w=f g=lg style="min-height: 0;"':
                   - $if editorChannel:
                       - rtgl-view w=f ph=lg:
-                          - 'rtgl-view#editorChannel.sfxChannel w=f d=v pos=rel bgc=mu bw=xs bc=bo br=sm style="height: ${editorChannel.channelHeightPx}px;"':
+                          - 'rtgl-view#editorChannel.sfxChannel w=f d=v pos=rel bgc=bg bw=xs bc=bo h-bc=ac br=sm style="height: ${editorChannel.channelHeightPx}px;"':
                               - rtgl-view.sfxChannelHeader d=h w=f:
                                   - div.sfxChannelLabel:
                                       - span: ${editorChannel.id}
