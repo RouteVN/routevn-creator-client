@@ -199,6 +199,7 @@ describe("commandLineSoundEffects.handlers", () => {
     expect(state.channels).toEqual([
       {
         id: "Weather",
+        applyMode: "singleLine",
         interruption: "immediate",
         loop: false,
         volume: 75,
@@ -303,12 +304,22 @@ describe("commandLineSoundEffects.handlers", () => {
       {
         _event: {
           currentTarget: { dataset: { channelId: "UI" } },
-          detail: { values: { loop: true, volume: 60 } },
+          detail: {
+            values: { applyMode: "persistent", loop: true, volume: 60 },
+          },
         },
       },
     );
-    expect(state.channels[0]).toMatchObject({ loop: false, volume: 75 });
-    expect(state.channels[1]).toMatchObject({ loop: true, volume: 60 });
+    expect(state.channels[0]).toMatchObject({
+      applyMode: "singleLine",
+      loop: false,
+      volume: 75,
+    });
+    expect(state.channels[1]).toMatchObject({
+      applyMode: "persistent",
+      loop: true,
+      volume: 60,
+    });
 
     store.insertSound({
       channelId: "Weather",
@@ -550,6 +561,7 @@ describe("commandLineSoundEffects.handlers", () => {
         channels: [
           {
             id: "Weather",
+            applyMode: "singleLine",
             interruption: "immediate",
             loop: false,
             volume: 75,

@@ -96,6 +96,7 @@ describe("commandLineSoundEffects.store", () => {
       channels: [
         {
           id: "Weather",
+          applyMode: "singleLine",
           interruption: "immediate",
           loop: false,
           volume: 75,
@@ -103,6 +104,7 @@ describe("commandLineSoundEffects.store", () => {
         },
         {
           id: "UI",
+          applyMode: "singleLine",
           interruption: "immediate",
           loop: false,
           volume: 75,
@@ -175,6 +177,7 @@ describe("commandLineSoundEffects.store", () => {
           channels: [
             {
               id: "Weather",
+              applyMode: "persistent",
               volume: 80,
               sounds: [
                 {
@@ -258,8 +261,11 @@ describe("commandLineSoundEffects.store", () => {
     expect(channelSelection.selectionName).toBe("Weather");
     expect(channelSelection.channelForm.fields).toMatchObject([
       {
-        name: "loop",
-        type: "segmented-control",
+        type: "row",
+        fields: [
+          { name: "loop", type: "segmented-control" },
+          { name: "applyMode", type: "segmented-control" },
+        ],
       },
       {
         type: "row",
@@ -269,11 +275,16 @@ describe("commandLineSoundEffects.store", () => {
         ],
       },
     ]);
-    expect(channelSelection.channelForm.fields[0].options).toEqual([
+    expect(channelSelection.channelForm.fields[0].fields[0].options).toEqual([
       { value: false, label: "Don't Loop" },
       { value: true, label: "Loop" },
     ]);
+    expect(channelSelection.channelForm.fields[0].fields[1].options).toEqual([
+      { value: "singleLine", label: "Single Line" },
+      { value: "persistent", label: "Persistent" },
+    ]);
     expect(channelSelection.channels[0].channelDefaultValues).toEqual({
+      applyMode: "persistent",
       interruption: "immediate",
       loop: false,
       volume: 80,
@@ -387,6 +398,7 @@ describe("commandLineSoundEffects.store", () => {
       channels: [
         {
           id: "default",
+          applyMode: "singleLine",
           interruption: "immediate",
           loop: false,
           volume: 100,
@@ -446,6 +458,25 @@ describe("commandLineSoundEffects.store", () => {
     updateChannel({ state }, { channelId: "Weather", values: { loop: true } });
     expect(state.channels[0].loop).toBe(true);
     expect(state.channels[0].sounds[0].loop).toBe(false);
+  });
+
+  it("updates an SFX channel apply mode", () => {
+    const state = createInitialState();
+    addChannel({ state }, { id: "Weather" });
+
+    expect(state.channels[0].applyMode).toBe("singleLine");
+
+    updateChannel(
+      { state },
+      { channelId: "Weather", values: { applyMode: "persistent" } },
+    );
+    expect(state.channels[0].applyMode).toBe("persistent");
+
+    updateChannel(
+      { state },
+      { channelId: "Weather", values: { applyMode: "unsupported" } },
+    );
+    expect(state.channels[0].applyMode).toBe("singleLine");
   });
 
   it("places inserted sounds without reflowing the channel after removal", () => {

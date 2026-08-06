@@ -46,6 +46,9 @@ propsSchema:
               interruption:
                 type: string
                 enum: [immediate, loopEnd]
+              applyMode:
+                type: string
+                enum: [singleLine, persistent]
               sounds:
                 type: array
                 items:

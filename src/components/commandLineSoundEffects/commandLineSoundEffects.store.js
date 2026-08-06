@@ -18,6 +18,7 @@ import {
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const DEFAULT_CHANNEL_VOLUME = 75;
+const DEFAULT_CHANNEL_APPLY_MODE = "singleLine";
 const DEFAULT_SOUND_VOLUME = 100;
 const DEFAULT_LEGACY_SOUND_VOLUME = 75;
 const LEGACY_CHANNEL_ID = "default";
@@ -31,6 +32,9 @@ const normalizeVolume = (volume, fallback) => {
   const nextVolume = parsedVolume > 100 ? parsedVolume / 10 : parsedVolume;
   return Math.max(0, Math.min(100, Math.round(nextVolume)));
 };
+
+const normalizeChannelApplyMode = (applyMode) =>
+  applyMode === "persistent" ? "persistent" : DEFAULT_CHANNEL_APPLY_MODE;
 
 const normalizeSounds = (
   sounds = [],
@@ -73,6 +77,7 @@ const normalizeChannel = (
 ) => {
   const normalizedChannel = {
     id: String(channel.id ?? "").trim(),
+    applyMode: normalizeChannelApplyMode(channel.applyMode),
     interruption: normalizeAudioChannelInterruption(channel.interruption),
     loop: channel.loop ?? false,
     volume: normalizeVolume(channel.volume, defaultChannelVolume),
@@ -133,12 +138,26 @@ const normalizeSfxChannels = (sfx = {}) => {
 const CHANNEL_FORM = {
   fields: [
     {
-      name: "loop",
-      description: "Loop",
-      type: "segmented-control",
-      options: [
-        { value: false, label: "Don't Loop" },
-        { value: true, label: "Loop" },
+      type: "row",
+      fields: [
+        {
+          name: "loop",
+          description: "Loop",
+          type: "segmented-control",
+          options: [
+            { value: false, label: "Don't Loop" },
+            { value: true, label: "Loop" },
+          ],
+        },
+        {
+          name: "applyMode",
+          description: "Apply Mode",
+          type: "segmented-control",
+          options: [
+            { value: "singleLine", label: "Single Line" },
+            { value: "persistent", label: "Persistent" },
+          ],
+        },
       ],
     },
     {
@@ -439,6 +458,7 @@ export const selectViewData = ({ state, i18n }) => {
       sounds,
       showControls: sounds.length > 0,
       channelDefaultValues: {
+        applyMode: channel.applyMode,
         interruption: channel.interruption,
         loop: channel.loop,
         volume: channel.volume,
@@ -624,6 +644,9 @@ export const updateChannel = ({ state }, { channelId, values = {} } = {}) => {
     channel.interruption = normalizeAudioChannelInterruption(
       values.interruption,
     );
+  }
+  if (values.applyMode !== undefined) {
+    channel.applyMode = normalizeChannelApplyMode(values.applyMode);
   }
   if (values.loop !== undefined) {
     channel.loop = values.loop;
