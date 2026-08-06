@@ -27,6 +27,32 @@ describe("commandLineSoundEffects view", () => {
     expect(view).not.toContain("editChannelButton");
   });
 
+  it("shows a plus affordance for an empty channel preview", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/commandLineSoundEffects/commandLineSoundEffects.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const templateStart = view.indexOf("template:");
+    const editorStart = view.indexOf(
+      "  - rtgl-dialog#channelEditorDialog",
+      templateStart,
+    );
+    const mainView = view.slice(templateStart, editorStart);
+    const emptyAddStyleStart = view.indexOf('  ".sfxEmptyAdd":');
+    const emptyAddStyles = view.slice(
+      emptyAddStyleStart,
+      view.indexOf('  ".sfxEmptyAdd:hover":', emptyAddStyleStart),
+    );
+
+    expect(mainView).toContain('div.sfxEmptyAdd aria-hidden=true\': "+"');
+    expect(mainView).not.toContain("${emptyAudioLabel}");
+    expect(emptyAddStyles).toContain("align-items: center");
+    expect(emptyAddStyles).toContain("justify-content: center");
+  });
+
   it("renders channel controls before the add button and bottom scroll space", () => {
     const view = readFileSync(
       new URL(

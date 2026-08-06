@@ -180,6 +180,7 @@ styles:
   ".sfxInsertAfter":
     right: "0"
   ".sfxEmptyAdd":
+    align-items: center
     appearance: none
     background: var(--background)
     border: "0"
@@ -187,10 +188,12 @@ styles:
     box-sizing: border-box
     color: var(--muted-foreground)
     cursor: pointer
+    display: flex
     flex: "0 0 126px"
     font-family: inherit
     font-size: 30px
     height: 100%
+    justify-content: center
     padding: "0"
     width: 100%
   ".sfxEmptyAdd:hover":
@@ -230,8 +233,7 @@ template:
                                   - span: ${channel.id}
                                   - span: ${channel.durationLabel}
                           - $if channel.sounds.length == 0:
-                              - rtgl-view w=f h=126 bwb=xs bc=${channel.channelBorderColor} av=c ah=c:
-                                  - rtgl-text s=sm c=mu-fg: ${emptyAudioLabel}
+                              - 'div.sfxEmptyAdd aria-hidden=true': "+"
                             $else:
                               - 'rtgl-view.sfxTimelineTrack w=f pos=rel style="height: ${channel.timelineHeightPx}px; min-width: 100%;"':
                                   - 'rtgl-view.sfxTimelineContent w=f h=f pos=rel style="box-sizing: border-box; min-width: 0;"':

@@ -490,7 +490,6 @@ export const selectViewData = ({ state, i18n }) => {
     channelEditorTitle: editorChannel?.id ?? "",
     confirmButtonLabel: localizeCommandLineText("Confirm", copy),
     editChannelLabel: localizeCommandLineText("Edit Channel", copy),
-    emptyAudioLabel: localizeCommandLineText("No audio", copy),
     addChannelPopover: state.addChannelPopover,
     addChannelForm: localizeCommandLineForm(ADD_CHANNEL_FORM, copy),
     addChannelDefaultValues: { name: "" },
