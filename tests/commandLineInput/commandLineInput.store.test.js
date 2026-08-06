@@ -12,6 +12,7 @@ import {
   startEditingField,
   updateEditFieldConfig,
 } from "../../src/components/commandLineInput/commandLineInput.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const inputLayout = {
   id: "profile-form-layout",
@@ -85,6 +86,7 @@ describe("commandLineInput.store", () => {
     );
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: {
         layouts,
@@ -140,6 +142,7 @@ describe("commandLineInput.store", () => {
     );
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: {
         layouts,
@@ -246,6 +249,7 @@ describe("commandLineInput.store", () => {
     );
 
     const viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: {
         layouts,
@@ -331,6 +335,7 @@ describe("commandLineInput.store", () => {
     startEditingField({ state }, { field: "name" });
 
     let viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: {
         layouts,
@@ -346,6 +351,7 @@ describe("commandLineInput.store", () => {
     );
 
     viewData = selectViewData({
+      i18n: EN_I18N,
       state,
       props: {
         layouts,

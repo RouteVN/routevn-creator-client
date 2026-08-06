@@ -36,7 +36,7 @@ describe("userConfigService", () => {
     expect(service.getUserConfig("auth.user")).toEqual({
       id: "user-1",
     });
-    expect(service.getUserConfig("groupImagesView.zoomLevel")).toBe(1);
+    expect(service.getUserConfig("groupImagesView.itemsPerRow")).toBe(6);
 
     service.setUserConfig("sceneEditor.showLineNumbers", false);
     expect(service.getUserConfig("sceneEditor.showLineNumbers")).toBe(false);
@@ -74,7 +74,7 @@ describe("userConfigService", () => {
     await service.initUserConfig();
 
     expect(onLoadError).toHaveBeenCalledTimes(1);
-    expect(service.getUserConfig("groupImagesView.zoomLevel")).toBe(1);
+    expect(service.getUserConfig("groupImagesView.itemsPerRow")).toBe(6);
     expect(service.getUserConfig("auth.user")).toBe(undefined);
   });
 
@@ -120,10 +120,12 @@ describe("userConfigService", () => {
 
     await vi.advanceTimersByTimeAsync(10);
 
-    expect(db.set).toHaveBeenLastCalledWith(USER_CONFIG_DB_KEY, {
-      groupImagesView: {
-        zoomLevel: 1,
-      },
-    });
+    // Assert the cleared keys are gone rather than pinning the whole default
+    // config, so adding a new default does not break this test.
+    const [, persisted] = db.set.mock.lastCall;
+    expect(persisted.auth).toBe(undefined);
+    expect(persisted.scenesMap?.selectedSceneIdByProject?.["project-1"]).toBe(
+      undefined,
+    );
   });
 });

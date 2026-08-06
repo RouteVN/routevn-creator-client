@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
+import { withSelectors } from "../support/storeFake.js";
+import * as charactersStore from "../../src/pages/characters/characters.store.js";
 import {
   handleAddCharacterClick,
   handleCharacterItemClick,
@@ -250,7 +252,7 @@ describe("characters name variable", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           editItemId: "character-hero",
           editAvatarFileId: undefined,
@@ -262,7 +264,7 @@ describe("characters name variable", () => {
         setSpriteTagsByCharacterId: vi.fn(),
         setItems: vi.fn(),
         closeEditDialog: vi.fn(),
-      },
+      }, charactersStore),
       projectService: {
         updateCharacter: vi.fn(() => Promise.resolve({ valid: true })),
         getRepositoryState: vi.fn(() => ({
@@ -311,7 +313,7 @@ describe("characters name variable", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           editItemId: "character-hero",
           editAvatarFileId: undefined,
@@ -350,7 +352,7 @@ describe("characters name variable", () => {
         setSpriteTagsByCharacterId: vi.fn(),
         setItems: vi.fn(),
         closeEditDialog: vi.fn(),
-      },
+      }, charactersStore),
       projectService: {
         updateCharacter: vi.fn(() => Promise.resolve({ valid: true })),
         getRepositoryState: vi.fn(() => ({
@@ -404,7 +406,7 @@ describe("characters name variable", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           editItemId: "character-hero",
           editAvatarFileId: undefined,
@@ -416,7 +418,7 @@ describe("characters name variable", () => {
         setSpriteTagsByCharacterId: vi.fn(),
         setItems: vi.fn(),
         closeEditDialog: vi.fn(),
-      },
+      }, charactersStore),
       projectService: {
         updateCharacter: vi.fn(() => Promise.resolve({ valid: true })),
         getRepositoryState: vi.fn(() => ({
@@ -461,7 +463,7 @@ describe("characters sprite group tag scope", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           dialogSpriteGroups: [
             {
@@ -471,7 +473,7 @@ describe("characters sprite group tag scope", () => {
             },
           ],
         })),
-      },
+      }, charactersStore)
     };
 
     await handleDialogFormActionClick(deps, {
@@ -500,7 +502,7 @@ describe("characters sprite group tag scope", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           editItemId: "character-hero",
           editAvatarFileId: undefined,
@@ -535,7 +537,7 @@ describe("characters sprite group tag scope", () => {
             },
           },
         })),
-      },
+      }, charactersStore),
       projectService: {
         updateCharacter: vi.fn(),
       },
@@ -631,7 +633,7 @@ describe("characters sprite group dialog", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           spriteGroupDialogTarget: "edit",
           editItemId: "character-hero",
@@ -650,7 +652,7 @@ describe("characters sprite group dialog", () => {
         })),
         addSpriteGroup: vi.fn(),
         closeSpriteGroupDialog: vi.fn(),
-      },
+      }, charactersStore),
       render: vi.fn(),
     };
 
@@ -682,7 +684,7 @@ describe("characters sprite group dialog", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           spriteGroupDialogTarget: "edit",
           spriteGroupDialogIndex: 0,
@@ -710,7 +712,7 @@ describe("characters sprite group dialog", () => {
         addSpriteGroup: vi.fn(),
         updateSpriteGroup: vi.fn(),
         closeSpriteGroupDialog: vi.fn(),
-      },
+      }, charactersStore),
       render: vi.fn(),
     };
 
@@ -744,7 +746,7 @@ describe("characters sprite group dialog", () => {
       appService: {
         showAlert: vi.fn(),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           spriteGroupDialogTarget: "edit",
           editItemId: "character-hero",
@@ -763,7 +765,7 @@ describe("characters sprite group dialog", () => {
         })),
         addSpriteGroup: vi.fn(),
         closeSpriteGroupDialog: vi.fn(),
-      },
+      }, charactersStore),
       render: vi.fn(),
     };
 
@@ -843,7 +845,7 @@ describe("characters sprite group removal guard", () => {
           },
         })),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           editItemId: "character-hero",
           editSpriteGroups: [
@@ -860,7 +862,7 @@ describe("characters sprite group removal guard", () => {
         })),
         hideSpriteGroupDropdownMenu: vi.fn(),
         removeSpriteGroup: vi.fn(),
-      },
+      }, charactersStore),
       render: vi.fn(),
     };
 
@@ -892,7 +894,7 @@ describe("characters sprite group removal guard", () => {
       projectService: {
         getRepositoryState: vi.fn(),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           spriteGroupDropdownMenu: {
             target: "edit",
@@ -901,7 +903,7 @@ describe("characters sprite group removal guard", () => {
         })),
         hideSpriteGroupDropdownMenu: vi.fn(),
         moveSpriteGroup: vi.fn(),
-      },
+      }, charactersStore),
       render: vi.fn(),
     };
 
@@ -936,7 +938,7 @@ describe("characters sprite group removal guard", () => {
           },
         })),
       },
-      store: {
+      store: withSelectors({
         getState: vi.fn(() => ({
           editItemId: "character-hero",
           editSpriteGroups: [
@@ -953,7 +955,7 @@ describe("characters sprite group removal guard", () => {
         })),
         hideSpriteGroupDropdownMenu: vi.fn(),
         removeSpriteGroup: vi.fn(),
-      },
+      }, charactersStore),
       render: vi.fn(),
     };
 

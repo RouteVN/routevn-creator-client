@@ -32,6 +32,16 @@ static/bundle/player-runtime-persistence-host.js
 /crates/routevn-exporter/Cargo.lock
 /crates/*/target
 
+# Local test/browser scratch output
+/.playwright/
+/.playwright-cli/
+/test-results/
+/tmp/
+/ssr-poc/node_modules/
+/ssr-poc/hydration/build/
+/ssr-poc/out/
+/ssr-poc/shots/
+
 # Generated setup file
 src/setup.js
 .DS_Store

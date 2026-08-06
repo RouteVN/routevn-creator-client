@@ -1,0 +1,4 @@
+template:
+  - div.parent:
+      # property-form: objects, arrays, Dates, functions
+      - demo-child :user=${user} :tags=${tags} :onPick=${onPick} label=static-attr: null

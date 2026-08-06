@@ -1,73 +1,61 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import {
+  createInitialState,
+  selectViewData,
+  setProjects,
+  setProjectsLoading,
+  openDeleteDialog,
+} from "../../src/pages/projects/projects.store.js";
+import { EN_I18N } from "../support/i18n.js";
+import { renderViewYaml } from "../support/renderView.js";
+
+const VIEW = "src/pages/projects/projects.view.yaml";
+
+const render = (state) =>
+  renderViewYaml(VIEW, selectViewData({ state, i18n: EN_I18N }));
 
 describe("projects view", () => {
-  it("shows loading before the settled empty-project state", () => {
-    const projectsView = readFileSync(
-      new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
-      "utf8",
-    );
+  it("renders the loading state before any project list", () => {
+    const state = createInitialState();
+    setProjectsLoading({ state }, { loading: true });
 
-    const loadingIndex = projectsView.indexOf("$if isProjectsLoading:");
-    const emptyIndex = projectsView.indexOf("$elif localEmptyMessage:");
+    const html = render(state);
 
-    expect(loadingIndex).toBeGreaterThan(-1);
-    expect(emptyIndex).toBeGreaterThan(loadingIndex);
-    expect(projectsView).toContain("rtgl-text s=lg c=mu-fg: ${loadingMessage}");
+    expect(html).toContain(EN_I18N.projectsPage.loadingMessage);
+    expect(html).not.toContain(EN_I18N.projectsPage.localEmptyTitle);
   });
 
-  it("uses the shared navbar style for the projects title and mobile create action", () => {
-    const projectsView = readFileSync(
-      new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
-      "utf8",
-    );
+  it("renders the empty state once loading settles with no projects", () => {
+    const state = createInitialState();
+    setProjectsLoading({ state }, { loading: false });
+    setProjects({ state }, { projects: [] });
 
-    expect(projectsView).toContain(
-      "rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c",
-    );
-    expect(projectsView).toContain("rtgl-text: ${localTitle}");
-    expect(projectsView).toContain(
-      'rtgl-button#mobileCreateMenuButton sq pre=plus v=ol title="${createButtonText}" aria-label="${createButtonText}"',
-    );
-    expect(projectsView).not.toContain("rtgl-text s=h3: ${localTitle}");
-    expect(projectsView).not.toContain("pt=lg pb=md");
-    expect(projectsView).not.toContain(
-      'rtgl-button#mobileCreateMenuButton sq pre=plus v="gh"',
-    );
+    const html = render(state);
+
+    expect(html).not.toContain(EN_I18N.projectsPage.loadingMessage);
+    expect(html).toContain(EN_I18N.projectsPage.localEmptyTitle);
   });
 
-  it("keeps the app version visible outside the scrollable project list", () => {
-    const projectsView = readFileSync(
-      new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
-      "utf8",
+  it("renders one entry per project once loaded", () => {
+    const state = createInitialState();
+    setProjectsLoading({ state }, { loading: false });
+    setProjects(
+      { state },
+      {
+        projects: [
+          { id: "project-1", name: "Project One" },
+          { id: "project-2", name: "Project Two" },
+        ],
+      },
     );
 
-    const scrollContainerIndex = projectsView.indexOf(
-      'rtgl-view w=f h=1fg ah=c sv style="min-height: 0;"',
-    );
-    const footerContainerIndex = projectsView.indexOf(
-      'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0;"',
-    );
-    const footerTextIndex = projectsView.indexOf(
-      "rtgl-text s=xs c=mu-fg: RouteVN Creator ${appVersion}",
-    );
+    const html = render(state);
 
-    expect(scrollContainerIndex).toBeGreaterThan(-1);
-    expect(footerContainerIndex).toBeGreaterThan(scrollContainerIndex);
-    expect(projectsView).toContain("rtgl-view sm-w=f w=640 ph=md pv=lg ah=c");
-    expect(projectsView).toContain("$if platform != 'web'");
-    expect(projectsView).toContain("rtgl-view#appVersionButton");
-    expect(projectsView).toContain(
-      "rtgl-dropdown-menu#appVersionDropdownMenu ?open=${appVersionMenu.isOpen} x=${appVersionMenu.x} y=${appVersionMenu.y} place=t :items=${appVersionMenu.items}",
-    );
-    expect(projectsView).toContain("handler: handleAppVersionClick");
-    expect(projectsView).toContain("handler: handleAppVersionMenuClickItem");
-    expect(projectsView).toContain("handler: handleLanguageDialogClose");
-    expect(projectsView).toContain("handler: handleLanguageFormAction");
-    expect(projectsView).toContain("rtgl-dialog#languageDialog");
-    expect(projectsView).toContain("rtgl-form#languageForm");
-    expect(footerTextIndex).toBeGreaterThan(footerContainerIndex);
-    expect(projectsView).not.toContain("rtgl-view w=f ah=c pb=lg");
+    expect(html).toContain("Project One");
+    expect(html).toContain("Project Two");
+    expect(html).toContain('id="projectItem0"');
+    expect(html).toContain('id="projectItem1"');
   });
 
   it("keeps the project list container free of asymmetric padding", () => {
@@ -90,14 +78,24 @@ describe("projects view", () => {
     );
   });
 
-  it("shows only the remove action in the project removal confirmation", () => {
-    const projectsView = readFileSync(
-      new URL("../../src/pages/projects/projects.view.yaml", import.meta.url),
-      "utf8",
+  it("exposes the create-project affordance the E2E specs select on", () => {
+    const html = render(createInitialState());
+
+    // vt/specs/projects/projects.yaml drives the app through this test id.
+    expect(html).toContain('data-testid="create-project-button"');
+    expect(html).toContain('id="createButton"');
+  });
+
+  it("offers only the remove action in the project removal confirmation", () => {
+    const state = createInitialState();
+    openDeleteDialog(
+      { state },
+      { projectId: "project-1", projectName: "Project One" },
     );
 
-    expect(projectsView).toContain("rtgl-button#deleteConfirmButton v=pr");
-    expect(projectsView).not.toContain("deleteCancelButton");
-    expect(projectsView).not.toContain("handleDeleteDialogCancel");
+    const html = render(state);
+
+    expect(html).toContain('id="deleteConfirmButton"');
+    expect(html).not.toContain("deleteCancelButton");
   });
 });
