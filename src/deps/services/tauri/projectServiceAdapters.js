@@ -818,6 +818,10 @@ export const createTauriProjectServiceAdapters = ({
       getCurrentReference,
     });
     const templatePath = await resolveWindowsPlayerTemplatePath(options);
+    const progressChannel = new Channel();
+    if (options.onProgress) {
+      progressChannel.onmessage = options.onProgress;
+    }
     const result = await invoke("export_windows_portable_executable", {
       templatePath,
       outputPath,
@@ -830,6 +834,7 @@ export const createTauriProjectServiceAdapters = ({
       description: metadata.description,
       copyright: metadata.copyright,
       iconPng,
+      onProgress: progressChannel,
     });
 
     return result;

@@ -1,5 +1,8 @@
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+use tauri::ipc::Channel;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -105,8 +108,30 @@ pub async fn export_windows_portable_executable(
     description: Option<String>,
     copyright: Option<String>,
     icon_png: Vec<u8>,
+    on_progress: Channel<routevn_exporter::ZipExportProgress>,
 ) -> Result<ExportWindowsPortableExecutableResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
+        let export_started = Instant::now();
+        let progress_state = Mutex::new((String::new(), Instant::now()));
+        let progress_callback = |mut progress: routevn_exporter::ZipExportProgress| {
+            let now = Instant::now();
+            progress.elapsed_ms =
+                u64::try_from(export_started.elapsed().as_millis()).unwrap_or(u64::MAX);
+            let Ok(mut state) = progress_state.lock() else {
+                return;
+            };
+            let phase_changed = state.0 != progress.phase;
+            let phase_complete = progress.total > 0 && progress.current == progress.total;
+            let interval_elapsed = now.duration_since(state.1) >= Duration::from_millis(150);
+            if !phase_changed && !phase_complete && !interval_elapsed {
+                return;
+            }
+
+            state.0.clone_from(&progress.phase);
+            state.1 = now;
+            drop(state);
+            let _ = on_progress.send(progress);
+        };
         export_windows_portable_executable_sync(
             template_path,
             output_path,
@@ -119,6 +144,7 @@ pub async fn export_windows_portable_executable(
             description,
             copyright,
             icon_png,
+            Some(&progress_callback),
         )
     })
     .await
@@ -251,6 +277,7 @@ fn export_windows_portable_executable_sync(
     description: Option<String>,
     copyright: Option<String>,
     icon_png: Vec<u8>,
+    on_progress: Option<&routevn_exporter::ZipExportProgressCallback<'_>>,
 ) -> Result<ExportWindowsPortableExecutableResult, String> {
     let metadata = WindowsExecutableMetadata {
         title,
@@ -261,14 +288,17 @@ fn export_windows_portable_executable_sync(
         copyright,
     };
     validate_windows_executable_metadata(&metadata)?;
+    emit_progress(on_progress, "prepareExecutable", 0, 0);
     let temp = tempfile::tempdir().map_err(|error| {
         format!("Failed to create temporary Windows portable export workspace: {error}")
     })?;
     let branded_template_path =
         stamp_branded_windows_template(&template_path, &output_path, &metadata, &icon_png, &temp)?;
-    let package_bin = routevn_exporter::create_package_bin(assets, instructions_json)
-        .map_err(|e| format!("Failed to create RouteVN package payload: {e}"))?;
+    let package_bin =
+        routevn_exporter::create_package_bin_with_progress(assets, instructions_json, on_progress)
+            .map_err(|e| format!("Failed to create RouteVN package payload: {e}"))?;
     let package_bin_bytes = package_bin.package_bin.len() as u64;
+    emit_progress(on_progress, "encryptPayload", 0, 0);
     let (key, nonce) = routevn_packager::payload::generate_payload_key_material();
     let outcome = routevn_packager::payload::append_chunked_encrypted_payload(
         routevn_packager::payload::AppendChunkedPayloadRequest {
@@ -281,6 +311,7 @@ fn export_windows_portable_executable_sync(
         },
     )
     .map_err(|e| e.to_string())?;
+    emit_progress(on_progress, "finalizeExecutable", 0, 0);
 
     Ok(ExportWindowsPortableExecutableResult {
         output_path: outcome.output_path.display().to_string(),
@@ -288,6 +319,22 @@ fn export_windows_portable_executable_sync(
         encrypted_payload_bytes: outcome.footer.encrypted_len,
         stats: package_bin.stats,
     })
+}
+
+fn emit_progress(
+    on_progress: Option<&routevn_exporter::ZipExportProgressCallback<'_>>,
+    phase: &str,
+    current: u64,
+    total: u64,
+) {
+    if let Some(on_progress) = on_progress {
+        on_progress(routevn_exporter::ZipExportProgress {
+            phase: phase.to_string(),
+            current,
+            total,
+            elapsed_ms: 0,
+        });
+    }
 }
 
 fn export_windows_installer_sync(
