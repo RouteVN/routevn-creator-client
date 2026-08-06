@@ -19,6 +19,7 @@ describe("platformDetails.store", () => {
     expect(viewData).toMatchObject({
       canAddPlatform: true,
       hasPlatformDetails: false,
+      platformEditIconOutputSize: 256,
       platformTabs: [],
       selectedPlatform: undefined,
     });
@@ -101,8 +102,7 @@ describe("platformDetails.store", () => {
         name: "applicationIdentifier",
         required: true,
         description:
-          EN_I18N.platformDetailsPage
-            .windowsApplicationIdentifierDescription,
+          EN_I18N.platformDetailsPage.windowsApplicationIdentifierDescription,
       }),
     );
   });

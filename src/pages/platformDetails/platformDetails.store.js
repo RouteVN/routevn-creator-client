@@ -1,5 +1,7 @@
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
+const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
+
 const PLATFORM_IDS = ["web", "windows", "macos"];
 
 const createPlatformApplicationInfo = (platform) => {
@@ -289,6 +291,7 @@ export const selectViewData = ({ state, i18n }) => {
     platformDialogKey: `${formMode}-${formPlatform ?? "none"}`,
     platformEditIconFileId: state.platformEditIconFileId,
     platformEditIconCropFile: state.platformEditIconCropFile,
+    platformEditIconOutputSize: PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
     isPlatformEditDialogOpen: state.isPlatformEditDialogOpen,
     isPlatformEditIconCropDialogOpen: state.isPlatformEditIconCropDialogOpen,
     showPlatformApplicationIcon: state.selectedPlatform !== "web",
