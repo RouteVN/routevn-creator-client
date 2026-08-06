@@ -75,7 +75,6 @@ describe("commandLineVoice.store", () => {
     expect(viewData.channelDurationLabel).toBe("0:00");
     expect(viewData.hasSelection).toBe(false);
     expect(viewData.channelBorderColor).toBe("bo");
-    expect(viewData.channelHoverBorderColor).toBe("ac");
     expect(viewData.selectionHeading).toBe("");
     expect(viewData.selectionName).toBe("");
 
@@ -83,7 +82,6 @@ describe("commandLineVoice.store", () => {
     const selectedViewData = selectViewData({ state, i18n });
     expect(selectedViewData.hasSelection).toBe(true);
     expect(selectedViewData.channelBorderColor).toBe("pr");
-    expect(selectedViewData.channelHoverBorderColor).toBe("pr");
     expect(selectedViewData.selectionHeading).toBe("Channel");
     expect(selectedViewData.selectionName).toBe("Voice Channel");
     expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([

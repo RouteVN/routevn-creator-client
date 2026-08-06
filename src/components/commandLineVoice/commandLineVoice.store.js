@@ -269,7 +269,6 @@ export const selectViewData = ({ state, i18n }) => {
     hasSoundSelection: selectedSound !== undefined,
     hasSelection,
     channelBorderColor: channelSelected ? "pr" : "bo",
-    channelHoverBorderColor: channelSelected ? "pr" : "ac",
     channelLabel: channelName,
     channelDurationLabel: formatAudioDurationMs(timeline.channelDurationMs),
     timelineDurationMs: timeline.timelineDurationMs,
