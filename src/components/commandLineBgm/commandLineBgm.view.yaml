@@ -11,6 +11,8 @@ refs:
     eventListeners:
       click:
         handler: handleChannelClick
+      contextmenu:
+        handler: handleChannelContextMenu
       keydown:
         handler: handleChannelKeyDown
   channelEditorDialog:
@@ -220,9 +222,10 @@ template:
                                       - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
                                           - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
                                           - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
-          - rtgl-view w=f ph=lg:
-              - rtgl-form#channelForm key=channel :form=${channelForm} :defaultValues=${channelDefaultValues} p=none: null
-          - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
+          - $if showChannelControls:
+              - rtgl-view w=f ph=lg:
+                  - rtgl-form#channelForm key=channel :form=${channelForm} :defaultValues=${channelDefaultValues} p=none: null
+              - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
       - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
           - rtgl-button#submitButton: Submit
   - rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg close-button:

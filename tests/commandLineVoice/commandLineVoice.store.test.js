@@ -74,6 +74,7 @@ describe("commandLineVoice.store", () => {
     expect(viewData.channelLabel).toBe("Voice Channel");
     expect(viewData.channelDurationLabel).toBe("0:00");
     expect(viewData.hasSelection).toBe(false);
+    expect(viewData.showChannelControls).toBe(false);
     expect(viewData.channelBorderColor).toBe("bo");
     expect(viewData.selectionHeading).toBe("");
     expect(viewData.selectionName).toBe("");
@@ -133,6 +134,7 @@ describe("commandLineVoice.store", () => {
     updateSound({ state }, { soundId: "intro-clip", values: { volume: 40 } });
     const editorViewData = selectViewData({ state, i18n });
     expect(editorViewData.hasSoundSelection).toBe(true);
+    expect(editorViewData.showChannelControls).toBe(true);
     expect(editorViewData.form.fields).toMatchObject([
       {
         type: "row",

@@ -92,6 +92,40 @@ export const handleChannelKeyDown = (deps, payload) => {
   handleChannelClick(deps, payload);
 };
 
+export const handleChannelContextMenu = async (deps, payload) => {
+  const { appService, dispatchEvent, i18n } = deps;
+  const { _event: event } = payload;
+  event.preventDefault();
+  event.stopPropagation();
+
+  const copy = selectCommandLineCopy(i18n);
+  const result = await appService.showDropdownMenu({
+    items: [
+      {
+        type: "item",
+        label: localizeCommandLineText("Delete", copy),
+        key: "delete",
+      },
+    ],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+
+  if (result?.item?.key !== "delete") {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("action-delete", {
+      detail: { actionType: "bgm" },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  dispatchEvent(new CustomEvent("back-to-actions", { detail: {} }));
+};
+
 export const handleChannelEditorClose = (deps) => {
   const { store, render } = deps;
   store.closeChannelEditor();

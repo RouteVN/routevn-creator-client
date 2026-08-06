@@ -83,6 +83,7 @@ describe("commandLineBgm.store", () => {
       sounds: [],
     });
     expect(viewData.hasSelection).toBe(false);
+    expect(viewData.showChannelControls).toBe(false);
     expect(viewData.channelBorderColor).toBe("bo");
     expect(viewData.selectionHeading).toBe("");
     expect(viewData.selectionName).toBe("");
@@ -141,6 +142,7 @@ describe("commandLineBgm.store", () => {
     updateSound({ state }, { soundId: "intro-clip", values: { volume: 35 } });
     const editorViewData = selectViewData({ state, i18n });
     expect(editorViewData.hasSoundSelection).toBe(true);
+    expect(editorViewData.showChannelControls).toBe(true);
     expect(editorViewData.form.fields).toMatchObject([
       {
         type: "row",

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleButtonSelectClick,
   handleChannelClick,
+  handleChannelContextMenu,
   handleEdgeAddClick,
   handleEmptyAddClick,
   handleFormChange,
@@ -183,6 +184,51 @@ describe("commandLineBgm.handlers", () => {
     expect(state.selectedSoundId).toBeUndefined();
     expect(blurActiveElement).toHaveBeenCalledOnce();
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("deletes the BGM action from the channel context menu", async () => {
+    const dispatchEvent = vi.fn();
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "delete" },
+    });
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    await handleChannelContextMenu(
+      {
+        appService: { showDropdownMenu },
+        dispatchEvent,
+        i18n,
+      },
+      {
+        _event: {
+          clientX: 120,
+          clientY: 240,
+          preventDefault,
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(showDropdownMenu).toHaveBeenCalledWith({
+      items: [{ type: "item", label: "Delete", key: "delete" }],
+      x: 120,
+      y: 240,
+      place: "bs",
+    });
+    expect(dispatchEvent).toHaveBeenCalledTimes(2);
+    expect(dispatchEvent.mock.calls[0][0]).toMatchObject({
+      type: "action-delete",
+      detail: { actionType: "bgm" },
+      bubbles: true,
+      composed: true,
+    });
+    expect(dispatchEvent.mock.calls[1][0]).toMatchObject({
+      type: "back-to-actions",
+      detail: {},
+    });
   });
 
   it("keeps the sound selected when a post-drag click targets the channel", () => {

@@ -284,6 +284,7 @@ export const selectViewData = ({ state, i18n }) => {
 
   return {
     sounds,
+    showChannelControls: sounds.length > 0,
     isChannelEditorOpen: state.isChannelEditorOpen,
     hasSoundSelection: selectedSound !== undefined,
     hasSelection,

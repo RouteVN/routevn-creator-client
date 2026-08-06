@@ -247,7 +247,7 @@ template:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
                                                   - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
               - 'rtgl-button#addChannelButton v=ol w=f mt=md style="flex: 0 0 auto;"': ${addChannelButtonLabel}
-          - $if hasSelection:
+          - $if showChannelControls:
               - 'rtgl-view w=f g=md style="flex: 0 0 auto;"':
                   - rtgl-view w=f ph=lg:
                       - rtgl-text s=md: ${selectionHeading}

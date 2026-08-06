@@ -39,6 +39,7 @@ describe("command-line audio channel views", () => {
       const editorView = view.slice(editorStart);
 
       expect(mainView).toContain("#channelForm");
+      expect(mainView).toContain("$if showChannelControls");
       expect(mainView).toContain(channelTarget);
       expect(mainView).toContain("cur=pointer");
       const channelView = mainView

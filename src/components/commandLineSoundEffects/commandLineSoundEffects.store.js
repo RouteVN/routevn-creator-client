@@ -462,6 +462,7 @@ export const selectViewData = ({ state, i18n }) => {
     isChannelEditorOpen: editorChannel !== undefined,
     hasSoundSelection: selectedSound !== undefined,
     hasSelection,
+    showChannelControls: (selectedChannel?.sounds.length ?? 0) > 0,
     selectionHeading: hasSelection
       ? localizeCommandLineText(selectedSound ? "Audio" : "Channel", copy)
       : "",

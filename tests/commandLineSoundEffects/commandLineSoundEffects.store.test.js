@@ -81,6 +81,7 @@ describe("commandLineSoundEffects.store", () => {
     expect(selectSfx({ state })).toEqual({ channels: [] });
     expect(viewData.channels).toEqual([]);
     expect(viewData.hasSelection).toBe(false);
+    expect(viewData.showChannelControls).toBe(false);
     expect(viewData.addChannelButtonLabel).toBe("+ Add Channel");
   });
 
@@ -247,6 +248,7 @@ describe("commandLineSoundEffects.store", () => {
 
     setSelectedChannel({ state }, { channelId: "Weather" });
     const channelSelection = selectViewData({ state, i18n });
+    expect(channelSelection.showChannelControls).toBe(true);
     expect(channelSelection.channels[0].channelBorderColor).toBe("pr");
     expect(channelSelection.channels[0].channelHoverBorderColor).toBe("pr");
     expect(channelSelection.selectionHeading).toBe("Channel");

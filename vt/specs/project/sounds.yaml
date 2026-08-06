@@ -271,6 +271,12 @@ steps:
     timeoutMs: 10000
   - action: wait
     ms: 300
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const bgm = deepQuery(document, 'rvn-command-line-bgm#commandLineBgm'); return !deepQuery(bgm?.shadowRoot, '#channelForm'); })()"
+    value: true
   - action: select
     selector: "rvn-command-line-bgm#commandLineBgm #bgmChannel"
     steps:
@@ -380,8 +386,8 @@ steps:
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const bgm = deepQuery(document, 'rvn-command-line-bgm#commandLineBgm'); return Boolean(deepQuery(bgm?.shadowRoot, \"rtgl-form#channelForm [data-field-name='loop']\")); })()"
-    value: false
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const bgm = deepQuery(document, 'rvn-command-line-bgm#commandLineBgm'); return Boolean(deepQuery(bgm?.shadowRoot, '#channelForm')) && !deepQuery(bgm?.shadowRoot, \"rtgl-form#channelForm [data-field-name='loop']\"); })()"
+    value: true
   - action: screenshot
   - action: keypress
     key: Escape
