@@ -266,11 +266,24 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-bgm#commandLineBgm #emptyAddButton"
+    selector: "rvn-command-line-bgm#commandLineBgm #bgmChannel"
     state: visible
     timeoutMs: 10000
   - action: wait
     ms: 300
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-bgm#commandLineBgm #bgmChannel"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #channelEditorDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #emptyAddButton"
+    state: visible
+    timeoutMs: 5000
   - action: screenshot
   - action: select
     selector: "rvn-command-line-bgm#commandLineBgm #emptyAddButton"
@@ -295,12 +308,8 @@ steps:
   - action: wait
     ms: 300
   - action: screenshot
-  - action: waitFor
-    selector: "rvn-command-line-bgm#commandLineBgm rtgl-form#form rtgl-segmented-control[data-field-name='loop']"
-    state: visible
-    timeoutMs: 5000
   - action: select
-    selector: "rvn-command-line-bgm#commandLineBgm rtgl-form#form rtgl-segmented-control[data-field-name='loop'] #option0"
+    selector: "rvn-command-line-bgm#commandLineBgm rtgl-form#soundForm rtgl-segmented-control[data-field-name='loop'] #option0"
     steps:
       - action: click
   - action: assert
@@ -339,27 +348,122 @@ steps:
   - action: wait
     ms: 300
   - action: screenshot
-  - action: select
-    selector: "rvn-command-line-bgm#commandLineBgm rtgl-form#form rtgl-input-number#field0 input"
-    steps:
-      - action: clear
-      - action: write
-        value: "0"
-      - action: blur
-  - action: wait
-    ms: 300
-  - action: screenshot
-  - action: select
-    selector: "rvn-command-line-bgm#commandLineBgm #channelSelectButton"
-    steps:
-      - action: click
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #channelEditorDialog[open]"
+    state: hidden
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm #channelPreviewSound1"
+    state: visible
+    timeoutMs: 5000
   - action: wait
     ms: 250
   - action: assert
     type: js
     fn: eval
     args:
-      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const bgm = deepQuery(document, 'rvn-command-line-bgm#commandLineBgm'); return Boolean(deepQuery(bgm?.shadowRoot, \"rtgl-form#form [data-field-name='loop']\")); })()"
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const bgm = deepQuery(document, 'rvn-command-line-bgm#commandLineBgm'); return Boolean(deepQuery(bgm?.shadowRoot, \"rtgl-form#channelForm [data-field-name='loop']\")); })()"
     value: false
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-command-line-bgm#commandLineBgm"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-system-actions#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-actions#commandLineActions [data-action-id='30']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions [data-action-id='30']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-voice#commandLineVoice #voiceChannel"
+    state: visible
+    timeoutMs: 10000
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-voice#commandLineVoice #voiceChannel"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-voice#commandLineVoice #channelEditorDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-command-line-voice#commandLineVoice #emptyAddButton"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-command-line-voice#commandLineVoice #channelEditorDialog[open]"
+    state: hidden
+    timeoutMs: 5000
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "rvn-command-line-voice#commandLineVoice"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-system-actions#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-actions#commandLineActions [data-action-id='6']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions [data-action-id='6']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #addChannelButton"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #addChannelButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects rtgl-form#addChannelForm rtgl-input#field0 input"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects rtgl-form#addChannelForm rtgl-input#field0 input"
+    steps:
+      - action: write
+        value: Channel One
+  - action: select
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects rtgl-form#addChannelForm rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #sfxChannel0"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #sfxChannel0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #channelEditorDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #emptyAddButton0"
+    state: visible
+    timeoutMs: 5000
   - action: screenshot
 ---

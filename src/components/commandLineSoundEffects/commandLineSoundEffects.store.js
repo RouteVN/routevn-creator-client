@@ -202,11 +202,13 @@ export const createInitialState = () => ({
   items: { items: {}, tree: [] },
   channels: [],
   selectedChannelId: undefined,
+  editingChannelId: undefined,
   selectedSoundId: undefined,
   soundDrag: undefined,
   suppressChannelClickUntil: 0,
   pendingChannelId: undefined,
   pendingInsertIndex: 0,
+  pendingReplacementSoundId: undefined,
   tempSelectedResourceId: undefined,
   searchQuery: "",
   addChannelPopover: {
@@ -231,6 +233,8 @@ export const selectSelectedChannelId = ({ state }) => {
 
 export const selectSelectedSoundId = ({ state }) => state.selectedSoundId;
 
+export const selectEditingChannelId = ({ state }) => state.editingChannelId;
+
 export const selectSoundDrag = ({ state }) => state.soundDrag;
 
 export const selectShouldSuppressChannelClick = (
@@ -247,6 +251,10 @@ export const selectPendingChannelId = ({ state }) => state.pendingChannelId;
 
 export const selectPendingInsertIndex = ({ state }) => {
   return state.pendingInsertIndex;
+};
+
+export const selectPendingReplacementSoundId = ({ state }) => {
+  return state.pendingReplacementSoundId;
 };
 
 export const selectTempSelectedResourceId = ({ state }) => {
@@ -365,12 +373,13 @@ export const selectViewData = ({ state, i18n }) => {
     const timeline = timelines[channelIndex];
     const channelSelected =
       channel.id === state.selectedChannelId &&
+      state.editingChannelId === undefined &&
       state.selectedSoundId === undefined;
     const sounds = timeline.sounds.map((timelineSound) => {
       const { sound, durationMs } = timelineSound;
       const resource = soundResourceById.get(sound.resourceId);
       const isSelected =
-        channel.id === state.selectedChannelId &&
+        channel.id === state.editingChannelId &&
         sound.id === state.selectedSoundId;
 
       return {
@@ -398,14 +407,17 @@ export const selectViewData = ({ state, i18n }) => {
       durationLabel: formatAudioDurationMs(timeline.channelDurationMs),
       timelineDurationMs: timeline.timelineDurationMs,
       timelineHeightPx: timeline.timelineHeightPx,
-      channelHeightPx: timeline.timelineHeightPx + 24,
+      channelHeightPx: timeline.timelineHeightPx + 32,
     };
   });
 
   const selectedChannel = channels.find(
     (channel) => channel.id === state.selectedChannelId,
   );
-  const selectedSound = selectedChannel?.sounds.find(
+  const editorChannel = channels.find(
+    (channel) => channel.id === state.editingChannelId,
+  );
+  const selectedSound = editorChannel?.sounds.find(
     (sound) => sound.id === state.selectedSoundId,
   );
   const hasSelection = selectedChannel !== undefined;
@@ -427,6 +439,9 @@ export const selectViewData = ({ state, i18n }) => {
     items: folderItems,
     groups,
     channels,
+    editorChannel,
+    isChannelEditorOpen: editorChannel !== undefined,
+    hasSoundSelection: selectedSound !== undefined,
     hasSelection,
     selectionHeading: hasSelection
       ? localizeCommandLineText(selectedSound ? "Audio" : "Channel", copy)
@@ -437,6 +452,15 @@ export const selectViewData = ({ state, i18n }) => {
       : `channel-${selectedChannel?.id ?? "none"}`,
     form: localizeCommandLineForm(form, copy),
     defaultValues,
+    channelForm: localizeCommandLineForm(CHANNEL_FORM, copy),
+    channelDefaultValues: {
+      interruption:
+        selectedChannel?.interruption ?? normalizeAudioChannelInterruption(),
+      volume: selectedChannel?.volume ?? DEFAULT_CHANNEL_VOLUME,
+    },
+    channelEditorTitle: editorChannel?.id ?? "",
+    editChannelLabel: localizeCommandLineText("Edit Channel", copy),
+    emptyAudioLabel: localizeCommandLineText("No audio", copy),
     addChannelPopover: state.addChannelPopover,
     addChannelForm: localizeCommandLineForm(ADD_CHANNEL_FORM, copy),
     addChannelDefaultValues: { name: "" },
@@ -469,7 +493,10 @@ export const setRepositoryState = ({ state }, { sounds } = {}) => {
 export const setSfx = ({ state }, { sfx } = {}) => {
   state.channels = normalizeSfxChannels(sfx);
   state.selectedChannelId = undefined;
+  state.editingChannelId = undefined;
   state.selectedSoundId = undefined;
+  state.pendingChannelId = undefined;
+  state.pendingReplacementSoundId = undefined;
 };
 
 export const addChannel = ({ state }, { id } = {}) => {
@@ -503,6 +530,9 @@ export const removeChannel = ({ state }, { channelId } = {}) => {
     state.selectedChannelId = state.channels[nextSelectedIndex]?.id;
     state.selectedSoundId = undefined;
   }
+  if (state.editingChannelId === channelId) {
+    state.editingChannelId = undefined;
+  }
 };
 
 export const moveChannel = ({ state }, { channelId, direction } = {}) => {
@@ -530,6 +560,29 @@ export const setSelectedChannel = ({ state }, { channelId } = {}) => {
 export const setSelectedSound = ({ state }, { channelId, soundId } = {}) => {
   state.selectedChannelId = channelId;
   state.selectedSoundId = soundId;
+};
+
+export const openChannelEditor = ({ state }, { channelId } = {}) => {
+  if (!state.channels.some((channel) => channel.id === channelId)) {
+    return;
+  }
+
+  state.mode = "current";
+  state.selectedChannelId = channelId;
+  state.editingChannelId = channelId;
+  state.selectedSoundId = undefined;
+  state.addChannelPopover.isOpen = false;
+};
+
+export const closeChannelEditor = ({ state }, _payload = {}) => {
+  state.mode = "current";
+  state.editingChannelId = undefined;
+  state.selectedSoundId = undefined;
+  state.soundDrag = undefined;
+  state.pendingChannelId = undefined;
+  state.tempSelectedResourceId = undefined;
+  state.pendingReplacementSoundId = undefined;
+  closeAudioPlayer({ state });
 };
 
 export const updateChannel = ({ state }, { channelId, values = {} } = {}) => {
@@ -726,9 +779,35 @@ export const removeSound = ({ state }, { channelId, soundId } = {}) => {
   state.selectedSoundId = undefined;
 };
 
+export const replaceSoundResource = (
+  { state },
+  { channelId, soundId, resourceId } = {},
+) => {
+  const channel = state.channels.find((item) => item.id === channelId);
+  const sound = channel?.sounds.find((item) => item.id === soundId);
+  if (!sound) {
+    return;
+  }
+
+  sound.resourceId = resourceId;
+  state.selectedChannelId = channel.id;
+  state.selectedSoundId = sound.id;
+  state.tempSelectedResourceId = undefined;
+  state.pendingReplacementSoundId = undefined;
+  closeAudioPlayer({ state });
+};
+
 export const setPendingInsertion = ({ state }, { channelId, index } = {}) => {
   state.pendingChannelId = channelId;
   state.pendingInsertIndex = index;
+};
+
+export const setPendingReplacement = (
+  { state },
+  { channelId, soundId } = {},
+) => {
+  state.pendingChannelId = channelId;
+  state.pendingReplacementSoundId = soundId;
 };
 
 export const setTempSelectedResource = ({ state }, { resourceId } = {}) => {

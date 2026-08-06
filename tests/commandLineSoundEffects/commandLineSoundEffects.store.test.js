@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import * as sfxStore from "../../src/components/commandLineSoundEffects/commandLineSoundEffects.store.js";
 import {
   addChannel,
+  closeChannelEditor,
   connectSoundToPrevious,
   createInitialState,
   finishSoundDrag,
   insertSound,
   moveChannel,
+  openChannelEditor,
   removeChannel,
   removeSound,
   selectSfx,
@@ -17,6 +19,7 @@ import {
   setSfx,
   startSoundDrag,
   updateSoundDrag,
+  updateSound,
 } from "../../src/components/commandLineSoundEffects/commandLineSoundEffects.store.js";
 
 const sounds = {
@@ -122,6 +125,43 @@ describe("commandLineSoundEffects.store", () => {
     expect(state.selectedChannelId).toBeUndefined();
   });
 
+  it("edits one channel's sounds without submitting the draft", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+    setSfx(
+      { state },
+      {
+        sfx: {
+          channels: [
+            {
+              id: "Weather",
+              sounds: [{ id: "rain-clip", resourceId: "rain" }],
+            },
+          ],
+        },
+      },
+    );
+
+    openChannelEditor({ state }, { channelId: "Weather" });
+    expect(selectViewData({ state, i18n })).toMatchObject({
+      isChannelEditorOpen: true,
+      hasSoundSelection: false,
+      channelEditorTitle: "Weather",
+    });
+
+    setSelectedSound({ state }, { channelId: "Weather", soundId: "rain-clip" });
+    updateSound(
+      { state },
+      { channelId: "Weather", soundId: "rain-clip", values: { volume: 45 } },
+    );
+    expect(selectViewData({ state, i18n }).hasSoundSelection).toBe(true);
+
+    closeChannelEditor({ state });
+    expect(selectViewData({ state, i18n }).isChannelEditorOpen).toBe(false);
+    expect(selectSfx({ state }).channels[0].sounds[0].volume).toBe(45);
+    expect(state.selectedSoundId).toBeUndefined();
+  });
+
   it("loads canonical channels and lays out overlapping clips in lanes", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });
@@ -176,7 +216,7 @@ describe("commandLineSoundEffects.store", () => {
 
     const channelView = unselectedViewData.channels[0];
     expect(channelView.durationLabel).toBe("0:06");
-    expect(channelView.channelHeightPx).toBe(276);
+    expect(channelView.channelHeightPx).toBe(284);
     expect(
       channelView.sounds.map((sound) => ({
         durationLabel: sound.durationLabel,
@@ -215,11 +255,21 @@ describe("commandLineSoundEffects.store", () => {
       "interruption",
       "volume",
     ]);
+    expect(
+      channelSelection.channelForm.fields.map(({ name, type }) => ({
+        name,
+        type,
+      })),
+    ).toEqual([
+      { name: "interruption", type: "segmented-control" },
+      { name: "volume", type: "slider-with-input" },
+    ]);
     expect(channelSelection.defaultValues).toEqual({
       interruption: "immediate",
       volume: 80,
     });
 
+    openChannelEditor({ state }, { channelId: "Weather" });
     setSelectedSound({ state }, { channelId: "Weather", soundId: "rain-clip" });
     const soundSelection = selectViewData({ state, i18n });
     expect(soundSelection.selectionHeading).toBe("Audio");

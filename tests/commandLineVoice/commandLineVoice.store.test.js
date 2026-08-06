@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import * as voiceStore from "../../src/components/commandLineVoice/commandLineVoice.store.js";
 import {
   clearSelectedSound,
+  closeChannelEditor,
   connectSoundToPrevious,
   createInitialState,
   insertSound,
+  openChannelEditor,
   removeSound,
   selectSelectedSoundId,
   selectViewData,
@@ -94,6 +96,50 @@ describe("commandLineVoice.store", () => {
       loop: false,
       volume: 100,
     });
+    expect(
+      selectedViewData.channelForm.fields.map(({ name, type }) => ({
+        name,
+        type,
+      })),
+    ).toEqual([
+      { name: "loop", type: "segmented-control" },
+      { name: "interruption", type: "segmented-control" },
+      { name: "volume", type: "slider-with-input" },
+    ]);
+    expect(selectedViewData.editChannelLabel).toBe("Edit Channel");
+  });
+
+  it("edits sounds in the channel editor without submitting the draft", () => {
+    const state = createInitialState();
+    setVoice(
+      { state },
+      {
+        voice: {
+          sounds: [{ id: "intro-clip", resourceId: "intro" }],
+        },
+      },
+    );
+
+    openChannelEditor({ state });
+    expect(selectViewData({ state, i18n })).toMatchObject({
+      isChannelEditorOpen: true,
+      hasSoundSelection: false,
+    });
+
+    setSelectedSound({ state }, { soundId: "intro-clip" });
+    updateSound({ state }, { soundId: "intro-clip", values: { volume: 40 } });
+    const editorViewData = selectViewData({ state, i18n });
+    expect(editorViewData.hasSoundSelection).toBe(true);
+    expect(editorViewData.form.fields.map((field) => field.name)).toEqual([
+      "startDelayMs",
+      "loop",
+      "volume",
+    ]);
+
+    closeChannelEditor({ state });
+    expect(selectViewData({ state, i18n }).isChannelEditorOpen).toBe(false);
+    expect(selectVoicePayload({ state }).sounds[0].volume).toBe(40);
+    expect(selectSelectedSoundId({ state })).toBeUndefined();
   });
 
   it("migrates a legacy Voice sound without losing its start delay", () => {

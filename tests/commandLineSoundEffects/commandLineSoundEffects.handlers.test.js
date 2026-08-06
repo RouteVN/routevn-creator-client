@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleAddChannelFormAction,
   handleButtonSelectClick,
+  handleChannelClick,
   handleChannelContextMenu,
   handleFormChange,
   handleSoundKeyDown,
@@ -43,6 +44,11 @@ const i18n = {
 const soundContextMenuItems = [
   {
     type: "item",
+    label: "Replace Audio",
+    key: "replace",
+  },
+  {
+    type: "item",
     label: "Insert Sound Before",
     key: "insert-before",
   },
@@ -72,6 +78,33 @@ const createState = () => {
 };
 
 describe("commandLineSoundEffects.handlers", () => {
+  it("opens a channel editor when any part of the channel is clicked", () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const stopPropagation = vi.fn();
+    const blurActiveElement = vi.fn();
+    store.addChannel({ id: "Channel One" });
+
+    handleChannelClick(
+      { store, render, appService: { blurActiveElement } },
+      {
+        _event: {
+          currentTarget: { dataset: { channelId: "Channel One" } },
+          target: {},
+          timeStamp: 100,
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(state.selectedChannelId).toBe("Channel One");
+    expect(state.editingChannelId).toBe("Channel One");
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(blurActiveElement).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
   it("ignores sound keydowns bubbled from insertion buttons", () => {
     const state = createState();
     const store = createStore(state);
@@ -126,7 +159,7 @@ describe("commandLineSoundEffects.handlers", () => {
       {
         store,
         render,
-        refs: { form: { setValues: vi.fn() } },
+        refs: { soundForm: { setValues: vi.fn() } },
       },
       {
         _event: {
@@ -170,7 +203,7 @@ describe("commandLineSoundEffects.handlers", () => {
         sounds: [],
       },
     ]);
-    expect(state.selectedChannelId).toBeUndefined();
+    expect(state.selectedChannelId).toBe("Weather");
     expect(render).toHaveBeenCalledOnce();
 
     handleAddChannelFormAction(deps, {
@@ -335,6 +368,68 @@ describe("commandLineSoundEffects.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
+  it("replaces only the audio resource for an individual sound", async () => {
+    const state = createState();
+    const store = createStore(state);
+    const render = vi.fn();
+    store.addChannel({ id: "Weather" });
+    store.insertSound({
+      channelId: "Weather",
+      id: "rain-clip",
+      resourceId: "rain",
+      index: 0,
+    });
+    store.updateSound({
+      channelId: "Weather",
+      soundId: "rain-clip",
+      values: { startDelayMs: 750, loop: true, volume: 35 },
+    });
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "replace" },
+    });
+
+    await handleSoundContextMenu(
+      {
+        store,
+        render,
+        appService: { showDropdownMenu },
+        i18n,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: { channelId: "Weather", soundId: "rain-clip" },
+          },
+          clientX: 120,
+          clientY: 240,
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(state.mode).toBe("gallery");
+    expect(state.pendingChannelId).toBe("Weather");
+    expect(state.pendingReplacementSoundId).toBe("rain-clip");
+
+    store.setTempSelectedResource({ resourceId: "replacement-rain" });
+    handleButtonSelectClick({ store, render });
+
+    expect(state.mode).toBe("current");
+    expect(state.channels[0].sounds).toEqual([
+      {
+        id: "rain-clip",
+        resourceId: "replacement-rain",
+        startDelayMs: 750,
+        loop: true,
+        volume: 35,
+      },
+    ]);
+    expect(state.selectedChannelId).toBe("Weather");
+    expect(state.selectedSoundId).toBe("rain-clip");
+    expect(state.pendingReplacementSoundId).toBeUndefined();
+  });
+
   it("connects an SFX clip and shifts later clips in its channel", async () => {
     const state = createState();
     const store = createStore(state);
@@ -377,7 +472,7 @@ describe("commandLineSoundEffects.handlers", () => {
       {
         store,
         render,
-        refs: { form: { setValues } },
+        refs: { soundForm: { setValues } },
         appService: { showDropdownMenu },
         i18n,
       },

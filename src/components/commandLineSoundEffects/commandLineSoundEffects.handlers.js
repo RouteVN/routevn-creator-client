@@ -32,7 +32,7 @@ const syncSelectedSoundForm = ({ refs, store }) => {
     return;
   }
 
-  refs.form.setValues({
+  refs.soundForm.setValues({
     values: {
       startDelayMs: sound.startDelayMs,
       loop: sound.loop,
@@ -42,7 +42,15 @@ const syncSelectedSoundForm = ({ refs, store }) => {
 };
 
 const openSfxGallery = ({ store, render, channelId, index }) => {
+  store.setPendingReplacement({ channelId: undefined, soundId: undefined });
   store.setPendingInsertion({ channelId, index });
+  store.setTempSelectedResource({ resourceId: undefined });
+  store.setMode({ mode: "gallery" });
+  render();
+};
+
+const openSfxReplacementGallery = ({ store, render, channelId, soundId }) => {
+  store.setPendingReplacement({ channelId, soundId });
   store.setTempSelectedResource({ resourceId: undefined });
   store.setMode({ mode: "gallery" });
   render();
@@ -119,7 +127,7 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleChannelClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
   const { _event: event } = payload;
   if (
     store.selectShouldSuppressChannelClick({
@@ -128,16 +136,10 @@ export const handleChannelClick = (deps, payload) => {
   ) {
     return;
   }
-  if (
-    event.currentTarget?.classList?.contains("sfxChannel") &&
-    event.target !== event.currentTarget
-  ) {
-    return;
-  }
-
   event.stopPropagation();
+  appService.blurActiveElement();
   const channelId = event.currentTarget.dataset.channelId;
-  store.setSelectedChannel({ channelId });
+  store.openChannelEditor({ channelId });
   render();
 };
 
@@ -149,6 +151,12 @@ export const handleChannelKeyDown = (deps, payload) => {
 
   event.preventDefault();
   handleChannelClick(deps, payload);
+};
+
+export const handleChannelEditorClose = (deps) => {
+  const { store, render } = deps;
+  store.closeChannelEditor();
+  render();
 };
 
 export const handleChannelContextMenu = async (deps, payload) => {
@@ -260,6 +268,11 @@ export const handleSoundContextMenu = async (deps, payload) => {
   items.push(
     {
       type: "item",
+      label: localizeCommandLineText("Replace Audio", copy),
+      key: "replace",
+    },
+    {
+      type: "item",
       label: localizeCommandLineText("Insert Sound Before", copy),
       key: "insert-before",
     },
@@ -286,6 +299,10 @@ export const handleSoundContextMenu = async (deps, payload) => {
     store.connectSoundToPrevious({ channelId, soundId });
     render();
     syncSelectedSoundForm(deps);
+    return;
+  }
+  if (actionKey === "replace") {
+    openSfxReplacementGallery({ store, render, channelId, soundId });
     return;
   }
   if (actionKey === "insert-before") {
@@ -374,6 +391,7 @@ export const handleAddChannelFormAction = (deps, payload) => {
   }
 
   store.addChannel({ id: channelId });
+  store.setSelectedChannel({ channelId });
   store.hideAddChannelPopover();
   render();
 };
@@ -499,12 +517,21 @@ export const handleButtonSelectClick = (deps) => {
     return;
   }
 
-  store.insertSound({
-    channelId,
-    id: generateId(),
-    resourceId,
-    index: store.selectPendingInsertIndex(),
-  });
+  const replacementSoundId = store.selectPendingReplacementSoundId();
+  if (replacementSoundId) {
+    store.replaceSoundResource({
+      channelId,
+      soundId: replacementSoundId,
+      resourceId,
+    });
+  } else {
+    store.insertSound({
+      channelId,
+      id: generateId(),
+      resourceId,
+      index: store.selectPendingInsertIndex(),
+    });
+  }
   store.setMode({ mode: "current" });
   render();
 };

@@ -151,7 +151,9 @@ export const createInitialState = () => ({
   items: { items: {}, tree: [] },
   tempSelectedResourceId: undefined,
   pendingInsertIndex: 0,
+  pendingReplacementSoundId: undefined,
   channelSelected: false,
+  isChannelEditorOpen: false,
   selectedSoundId: undefined,
   soundDrag: undefined,
   suppressChannelClickUntil: 0,
@@ -167,6 +169,10 @@ export const createInitialState = () => ({
 export const selectBgm = ({ state }) => state.bgm;
 
 export const selectSelectedSoundId = ({ state }) => state.selectedSoundId;
+
+export const selectIsChannelEditorOpen = ({ state }) => {
+  return state.isChannelEditorOpen;
+};
 
 export const selectSoundDrag = ({ state }) => state.soundDrag;
 
@@ -186,6 +192,10 @@ export const selectSelectedSound = ({ state }) => {
 
 export const selectPendingInsertIndex = ({ state }) => {
   return state.pendingInsertIndex;
+};
+
+export const selectPendingReplacementSoundId = ({ state }) => {
+  return state.pendingReplacementSoundId;
 };
 
 export const selectTempSelectedResourceId = ({ state }) => {
@@ -275,7 +285,8 @@ export const selectViewData = ({ state, i18n }) => {
   const sounds = timeline.sounds.map((timelineSound) => {
     const { sound, durationMs } = timelineSound;
     const resource = soundResourceById.get(sound.resourceId);
-    const isSelected = sound.id === state.selectedSoundId;
+    const isSelected =
+      state.isChannelEditorOpen && sound.id === state.selectedSoundId;
     return {
       ...sound,
       name: resource?.name ?? sound.resourceId,
@@ -294,7 +305,10 @@ export const selectViewData = ({ state, i18n }) => {
   const selectedSound = sounds.find(
     (sound) => sound.id === state.selectedSoundId,
   );
-  const channelSelected = state.channelSelected && selectedSound === undefined;
+  const channelSelected =
+    !state.isChannelEditorOpen &&
+    state.channelSelected &&
+    selectedSound === undefined;
   const hasSelection = channelSelected || selectedSound !== undefined;
   const channelName = localizeCommandLineText("BGM Channel", copy);
   const form = selectedSound ? SOUND_FORM : CHANNEL_FORM;
@@ -314,6 +328,8 @@ export const selectViewData = ({ state, i18n }) => {
     items: folderItems,
     groups,
     sounds,
+    isChannelEditorOpen: state.isChannelEditorOpen,
+    hasSoundSelection: selectedSound !== undefined,
     hasSelection,
     channelBorderColor: channelSelected ? "pr" : "bo",
     channelHoverBorderColor: channelSelected ? "pr" : "ac",
@@ -323,6 +339,9 @@ export const selectViewData = ({ state, i18n }) => {
     timelineHeightPx: timeline.timelineHeightPx,
     channelHeightPx: timeline.timelineHeightPx + 24,
     audioLabel: localizeCommandLineText("Audio", copy),
+    channelEditorTitle: channelName,
+    editChannelLabel: localizeCommandLineText("Edit Channel", copy),
+    emptyAudioLabel: localizeCommandLineText("No audio", copy),
     addAudioLabel: localizeCommandLineText("Add BGM audio", copy),
     addBeforeLabel: localizeCommandLineText("Add audio before", copy),
     addAfterLabel: localizeCommandLineText("Add audio after", copy),
@@ -337,6 +356,11 @@ export const selectViewData = ({ state, i18n }) => {
         : "none",
     form: localizeCommandLineForm(form, copy),
     defaultValues,
+    channelForm: localizeCommandLineForm(CHANNEL_FORM, copy),
+    channelDefaultValues: {
+      interruption: state.bgm.interruption,
+      volume: state.bgm.volume,
+    },
     tempSelectedResourceId: state.tempSelectedResourceId,
     searchQuery: state.searchQuery,
     searchPlaceholder: localizeCommandLineText("Search...", copy),
@@ -352,7 +376,9 @@ export const selectViewData = ({ state, i18n }) => {
 export const setBgm = ({ state }, { bgm } = {}) => {
   state.bgm = normalizeBgm(bgm);
   state.channelSelected = false;
+  state.isChannelEditorOpen = false;
   state.selectedSoundId = undefined;
+  state.pendingReplacementSoundId = undefined;
 };
 
 export const setMode = ({ state }, { mode } = {}) => {
@@ -364,8 +390,26 @@ export const setRepositoryState = ({ state }, { sounds } = {}) => {
 };
 
 export const clearSelectedSound = ({ state }, _payload = {}) => {
-  state.channelSelected = true;
+  state.channelSelected = !state.isChannelEditorOpen;
   state.selectedSoundId = undefined;
+};
+
+export const openChannelEditor = ({ state }, _payload = {}) => {
+  state.mode = "current";
+  state.channelSelected = false;
+  state.isChannelEditorOpen = true;
+  state.selectedSoundId = undefined;
+};
+
+export const closeChannelEditor = ({ state }, _payload = {}) => {
+  state.mode = "current";
+  state.channelSelected = false;
+  state.isChannelEditorOpen = false;
+  state.selectedSoundId = undefined;
+  state.soundDrag = undefined;
+  state.tempSelectedResourceId = undefined;
+  state.pendingReplacementSoundId = undefined;
+  closeAudioPlayer({ state });
 };
 
 export const setSelectedSound = ({ state }, { soundId } = {}) => {
@@ -510,12 +554,33 @@ export const insertSound = (
 export const removeSound = ({ state }, { soundId } = {}) => {
   state.bgm.sounds = state.bgm.sounds.filter((sound) => sound.id !== soundId);
   syncBgmChannelLoop(state.bgm);
-  state.channelSelected = true;
+  state.channelSelected = !state.isChannelEditorOpen;
   state.selectedSoundId = undefined;
+};
+
+export const replaceSoundResource = (
+  { state },
+  { soundId, resourceId } = {},
+) => {
+  const sound = state.bgm.sounds.find((item) => item.id === soundId);
+  if (!sound) {
+    return;
+  }
+
+  sound.resourceId = resourceId;
+  state.channelSelected = false;
+  state.selectedSoundId = sound.id;
+  state.tempSelectedResourceId = undefined;
+  state.pendingReplacementSoundId = undefined;
+  closeAudioPlayer({ state });
 };
 
 export const setPendingInsertIndex = ({ state }, { index } = {}) => {
   state.pendingInsertIndex = index;
+};
+
+export const setPendingReplacement = ({ state }, { soundId } = {}) => {
+  state.pendingReplacementSoundId = soundId;
 };
 
 export const setTempSelectedResource = ({ state }, { resourceId } = {}) => {

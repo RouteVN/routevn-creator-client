@@ -137,6 +137,17 @@ const pickAndInsertVoice = async (deps, index) => {
   render();
 };
 
+const pickAndReplaceVoice = async (deps, soundId) => {
+  const voiceId = await pickAndCreateVoice(deps);
+  if (!voiceId) {
+    return;
+  }
+
+  const { store, render } = deps;
+  store.replaceSoundResource({ soundId, resourceId: voiceId });
+  render();
+};
+
 const selectSoundFromEvent = (store, event) => {
   const soundId = event.currentTarget.dataset.soundId;
   store.setSelectedSound({ soundId });
@@ -154,7 +165,7 @@ const syncSelectedSoundForm = ({ refs, store }) => {
     return;
   }
 
-  refs.form.setValues({
+  refs.soundForm.setValues({
     values: {
       startDelayMs: sound.startDelayMs,
       loop: sound.loop,
@@ -176,7 +187,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleChannelClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
   const { _event: event } = payload;
   if (
     store.selectShouldSuppressChannelClick({
@@ -185,15 +196,9 @@ export const handleChannelClick = (deps, payload) => {
   ) {
     return;
   }
-  if (
-    event.currentTarget?.classList?.contains("voiceChannel") &&
-    event.target !== event.currentTarget
-  ) {
-    return;
-  }
-
   event.stopPropagation();
-  store.clearSelectedSound();
+  appService.blurActiveElement();
+  store.openChannelEditor();
   render();
 };
 
@@ -205,6 +210,12 @@ export const handleChannelKeyDown = (deps, payload) => {
 
   event.preventDefault();
   handleChannelClick(deps, payload);
+};
+
+export const handleChannelEditorClose = (deps) => {
+  const { store, render } = deps;
+  store.closeChannelEditor();
+  render();
 };
 
 export const handleSoundClick = (deps, payload) => {
@@ -306,6 +317,11 @@ export const handleSoundContextMenu = async (deps, payload) => {
   items.push(
     {
       type: "item",
+      label: localizeCommandLineText("Replace Audio", copy),
+      key: "replace",
+    },
+    {
+      type: "item",
       label: localizeCommandLineText("Insert Sound Before", copy),
       key: "insert-before",
     },
@@ -332,6 +348,10 @@ export const handleSoundContextMenu = async (deps, payload) => {
     store.connectSoundToPrevious({ soundId });
     render();
     syncSelectedSoundForm(deps);
+    return;
+  }
+  if (actionKey === "replace") {
+    await pickAndReplaceVoice(deps, soundId);
     return;
   }
   if (actionKey === "insert-before") {

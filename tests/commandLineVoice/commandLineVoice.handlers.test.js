@@ -18,6 +18,11 @@ const i18n = {
 const contextMenuItems = [
   {
     type: "item",
+    label: "Replace Audio",
+    key: "replace",
+  },
+  {
+    type: "item",
     label: "Insert Sound Before",
     key: "insert-before",
   },
@@ -202,19 +207,22 @@ describe("commandLineVoice.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
-  it("selects the whole Voice channel from its header", () => {
+  it("opens the Voice channel editor from its channel", () => {
     const state = voiceStore.createInitialState();
     const store = createStore(state);
     const render = vi.fn();
+    const blurActiveElement = vi.fn();
     store.insertSound({ id: "clip", resourceId: "voice-1", index: 0 });
 
     handleChannelClick(
-      { store, render },
+      { store, render, appService: { blurActiveElement } },
       { _event: { stopPropagation: vi.fn() } },
     );
 
-    expect(state.channelSelected).toBe(true);
+    expect(state.isChannelEditorOpen).toBe(true);
+    expect(state.channelSelected).toBe(false);
     expect(state.selectedSoundId).toBeUndefined();
+    expect(blurActiveElement).toHaveBeenCalledOnce();
     expect(render).toHaveBeenCalledOnce();
   });
 
@@ -294,7 +302,7 @@ describe("commandLineVoice.handlers", () => {
       {
         appService: { showDropdownMenu },
         i18n,
-        refs: { form: { setValues } },
+        refs: { soundForm: { setValues } },
         render,
         store,
       },
@@ -358,6 +366,41 @@ describe("commandLineVoice.handlers", () => {
       voiceId,
       "existing",
     ]);
+  });
+
+  it("replaces only the audio resource through the file picker", async () => {
+    const state = voiceStore.createInitialState();
+    const { deps, appService, projectService } = createUploadDeps(state);
+    deps.store.insertSound({ id: "existing", resourceId: "old", index: 0 });
+    deps.store.updateSound({
+      soundId: "existing",
+      values: { startDelayMs: 750, loop: true, volume: 35 },
+    });
+    appService.showDropdownMenu.mockResolvedValue({
+      item: { key: "replace" },
+    });
+
+    await handleSoundContextMenu(deps, {
+      _event: {
+        currentTarget: { dataset: { soundId: "existing" } },
+        clientX: 120,
+        clientY: 240,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      },
+    });
+
+    const { voiceId } = projectService.createVoice.mock.calls[0][0];
+    expect(state.voice.sounds).toEqual([
+      {
+        id: "existing",
+        resourceId: voiceId,
+        startDelayMs: 750,
+        loop: true,
+        volume: 35,
+      },
+    ]);
+    expect(state.selectedSoundId).toBe("existing");
   });
 
   it("submits the canonical Voice channel", () => {

@@ -1,8 +1,16 @@
 refs:
-  form:
+  channelForm:
     eventListeners:
       form-change:
         handler: handleFormChange
+  soundForm:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
+  channelEditorDialog:
+    eventListeners:
+      close:
+        handler: handleChannelEditorClose
   addChannelButton:
     eventListeners:
       click:
@@ -23,10 +31,6 @@ refs:
         handler: handleChannelContextMenu
       keydown:
         handler: handleChannelKeyDown
-  channelSelectButton*:
-    eventListeners:
-      click:
-        handler: handleChannelClick
   emptyAddButton*:
     eventListeners:
       click:
@@ -91,6 +95,19 @@ styles:
     min-width: "0"
     overflow-x: auto
     overflow-y: hidden
+  ".sfxChannelPreview":
+    cursor: pointer
+    outline: none
+  ".sfxChannelPreview:focus":
+    box-shadow: none
+    cursor: pointer
+    outline: none
+  ".sfxChannelPreview:focus-visible":
+    box-shadow: none
+    outline: none
+  ".sfxChannelPreview:active":
+    box-shadow: none
+    outline: none
   ".sfxTimelineTrack":
     min-width: 100%
     position: relative
@@ -159,10 +176,13 @@ styles:
     right: "0"
   ".sfxEmptyAdd":
     appearance: none
-    background: transparent
+    background: var(--background)
     border: "0"
+    border-bottom: "1px solid var(--border)"
+    box-sizing: border-box
     color: var(--muted-foreground)
     cursor: pointer
+    flex: "0 0 126px"
     font-family: inherit
     font-size: 30px
     height: 100%
@@ -177,102 +197,126 @@ styles:
     align-items: center
     border-bottom: "1px solid var(--border)"
     display: flex
-    flex: "0 0 24px"
-    height: 24px
+    flex: "0 0 32px"
+    height: 32px
     width: 100%
-  ".sfxChannelSelect":
+  ".sfxChannelLabel":
     align-items: center
-    appearance: none
-    background: transparent
-    border: "0"
+    box-sizing: border-box
     color: var(--muted-foreground)
-    cursor: pointer
     display: flex
     flex: "1 1 auto"
-    font-family: inherit
     font-size: 12px
-    height: 24px
+    height: 32px
     justify-content: space-between
     min-width: "0"
     padding: "0 8px"
-    text-align: left
-    width: 100%
-  ".sfxChannelSelect:hover":
-    color: var(--foreground)
-  ".sfxChannelSelect:focus-visible":
-    box-shadow: 0 0 0 2px var(--ring) inset
-    outline: none
 template:
   - rtgl-view w=f h=f pv=lg:
       - rtgl-view w=f ph=lg:
           - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-      - $if mode == 'current':
-          - 'rtgl-view h=1fg sv w=f g=lg mt=lg style="min-height: 0;"':
-              - rtgl-view w=f g=lg ph=lg:
-                  - $for channel, i in channels:
-                      - 'rtgl-view#sfxChannel${i}.sfxChannel data-channel-id=${channel.id} w=f d=v pos=rel bgc=mu bw=xs bc=${channel.channelBorderColor} h-bc=${channel.channelHoverBorderColor} br=sm tabindex=0 role=group aria-label="${channel.id}" style="height: ${channel.channelHeightPx}px; flex-basis: ${channel.channelHeightPx}px;"':
-                          - rtgl-view.sfxChannelHeader w=f:
-                              - 'button#channelSelectButton${i}.sfxChannelSelect type=button data-channel-id=${channel.id} aria-label="${channel.id}"':
-                                  - span: ${channel.id}
-                                  - span: ${channel.durationLabel}
-                          - $if channel.sounds.length == 0:
-                              - 'rtgl-view w=f h=126 bgc=bg bwb=xs bc=${channel.channelBorderColor} style="min-height: 0;"':
-                                  - 'button#emptyAddButton${i}.sfxEmptyAdd type=button data-channel-id=${channel.id} aria-label="${addSoundLabel}"': "+"
-                            $else:
-                              - 'rtgl-view.sfxTimelineTrack data-timeline-track=true data-timeline-duration-ms=${channel.timelineDurationMs} w=f pos=rel style="height: ${channel.timelineHeightPx}px; min-width: 100%;"':
-                                  - 'rtgl-view.sfxTimelineContent w=f h=f pos=rel style="box-sizing: border-box; min-width: 0;"':
-                                      - $for sound, j in channel.sounds:
-                                          - 'rtgl-view#soundClip${i}x${j}.sfxSoundClip data-channel-id=${channel.id} data-sound-id=${sound.id} d=v pos=abs overflow=hidden bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="box-sizing: border-box; min-width: 56px; left: ${sound.leftPercent}%; top: ${sound.topPx}px; width: ${sound.widthPercent}%; height: 126px;"':
-                                              - rtgl-view.sfxSoundClipContent d=v w=f h=f:
-                                                  - div.sfxSoundWaveformArea:
-                                                      - $if sound.waveformDataFileId:
-                                                          - rvn-waveform-visualizer waveformDataFileId=${sound.waveformDataFileId} w=f h=94: null
-                                                        $else:
-                                                          - rtgl-view w=f h=94 av=c ah=c:
-                                                              - rtgl-text s=sm c=mu-fg: No waveform
-                                                      - 'div#soundDragSurface${i}x${j}.sfxSoundDragSurface data-channel-id=${channel.id} data-sound-id=${sound.id}': null
-                                                      - 'button#insertBeforeButton${i}x${j}.sfxInsertZone.sfxInsertBefore type=button data-channel-id=${channel.id} data-insert-index=${sound.insertBeforeIndex} aria-label="${addBeforeLabel}"': "+"
-                                                      - 'button#insertAfterButton${i}x${j}.sfxInsertZone.sfxInsertAfter type=button data-channel-id=${channel.id} data-insert-index=${sound.insertAfterIndex} aria-label="${addAfterLabel}"': "+"
-                                                  - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
-                                                      - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
-                                                      - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
-                  - 'rtgl-button#addChannelButton v=ol w=f mt=md style="flex: 0 0 auto;"': ${addChannelButtonLabel}
-              - $if hasSelection:
-                  - 'rtgl-view w=f g=md style="flex: 0 0 auto;"':
+      - 'rtgl-view h=1fg sv w=f g=lg mt=lg style="min-height: 0;"':
+          - rtgl-view w=f g=lg ph=lg:
+              - $for channel, i in channels:
+                  - 'rtgl-view#sfxChannel${i}.sfxChannel.sfxChannelPreview data-channel-id="${channel.id}" w=f d=v pos=rel bgc=mu bw=xs bc=bo br=sm cur=pointer tabindex=0 role=button aria-label="${editChannelLabel}: ${channel.id}" style="height: ${channel.channelHeightPx}px; flex-basis: ${channel.channelHeightPx}px;"':
+                      - rtgl-view.sfxChannelHeader d=h w=f:
+                          - div.sfxChannelLabel:
+                              - span: ${channel.id}
+                              - span: ${channel.durationLabel}
+                      - $if channel.sounds.length == 0:
+                          - rtgl-view w=f h=126 bgc=bg bwb=xs bc=${channel.channelBorderColor} av=c ah=c:
+                              - rtgl-text s=sm c=mu-fg: ${emptyAudioLabel}
+                        $else:
+                          - 'rtgl-view.sfxTimelineTrack w=f pos=rel style="height: ${channel.timelineHeightPx}px; min-width: 100%;"':
+                              - 'rtgl-view.sfxTimelineContent w=f h=f pos=rel style="box-sizing: border-box; min-width: 0;"':
+                                  - $for sound, j in channel.sounds:
+                                      - 'rtgl-view#channelPreviewSound${i}x${j}.sfxSoundClip d=v pos=abs overflow=hidden bw=xs bc=bo style="box-sizing: border-box; min-width: 56px; left: ${sound.leftPercent}%; top: ${sound.topPx}px; width: ${sound.widthPercent}%; height: 126px;"':
+                                          - rtgl-view.sfxSoundClipContent d=v w=f h=f:
+                                              - div.sfxSoundWaveformArea:
+                                                  - $if sound.waveformDataFileId:
+                                                      - rvn-waveform-visualizer waveformDataFileId=${sound.waveformDataFileId} w=f h=94: null
+                                                    $else:
+                                                      - rtgl-view w=f h=94 av=c ah=c:
+                                                          - rtgl-text s=sm c=mu-fg: No waveform
+                                              - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
+                                                  - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
+                                                  - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
+              - 'rtgl-button#addChannelButton v=ol w=f mt=md style="flex: 0 0 auto;"': ${addChannelButtonLabel}
+          - $if hasSelection:
+              - 'rtgl-view w=f g=md style="flex: 0 0 auto;"':
+                  - rtgl-view w=f ph=lg:
+                      - rtgl-text s=md: ${selectionHeading}
+                      - rtgl-text s=sm c=mu-fg: ${selectionName}
+                  - rtgl-form#channelForm key=${selectionKey} :form=${channelForm} :defaultValues=${channelDefaultValues} p=lg: null
+                  - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
+      - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
+          - rtgl-button#submitButton: ${submitButtonLabel}
+  - rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg close-button:
+      - 'rtgl-view slot=content d=v w=f h=80vh g=lg style="min-width: 0; min-height: 0; overflow: hidden;"':
+          - rtgl-text s=lg: ${channelEditorTitle}
+          - $if mode == 'current':
+              - 'rtgl-view h=1fg sv w=f g=lg style="min-height: 0;"':
+                  - $if editorChannel:
                       - rtgl-view w=f ph=lg:
-                          - rtgl-text s=md: ${selectionHeading}
-                          - rtgl-text s=sm c=mu-fg: ${selectionName}
-                      - rtgl-form#form key=${selectionKey} :form=${form} :defaultValues=${defaultValues} p=lg: null
-                      - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
-              - rtgl-button#submitButton: ${submitButtonLabel}
-      - $if mode == 'gallery':
-          - rtgl-view d=h w=f av=c g=md ph=lg:
-              - rtgl-view w=1fg: null
-              - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
-          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=lg style="min-height: 0;"':
-              - rtgl-view h=f w=1fg sv:
-                  - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
-              - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
-                  - $for group, i in groups:
-                      - rtgl-view data-group-id=${group.id} g=md:
-                          - rtgl-view d=h av=c g=md:
-                              - rtgl-svg svg=folder wh=16: null
-                              - rtgl-text: ${group.fullLabel}
-                          - rtgl-view d=h w=f wrap g=lg:
-                              - $for item, j in group.children:
-                                  - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
-                                      - rtgl-view p=md g=md br=md:
-                                          - $if item.waveformDataFileId:
-                                              - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=200 h=120: null
-                                            $else:
-                                              - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                                  - rtgl-text s=sm c=mu-fg: No waveform
-                                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
-              - rtgl-button#buttonSelect: ${selectButtonLabel}
+                          - 'rtgl-view#editorChannel.sfxChannel w=f d=v pos=rel bgc=mu bw=xs bc=bo br=sm style="height: ${editorChannel.channelHeightPx}px;"':
+                              - rtgl-view.sfxChannelHeader d=h w=f:
+                                  - div.sfxChannelLabel:
+                                      - span: ${editorChannel.id}
+                                      - span: ${editorChannel.durationLabel}
+                              - $if editorChannel.sounds.length == 0:
+                                  - 'button#emptyAddButton0.sfxEmptyAdd type=button data-channel-id="${editorChannel.id}" aria-label="${addSoundLabel}"': "+"
+                                $else:
+                                  - 'rtgl-view.sfxTimelineTrack data-timeline-track=true data-timeline-duration-ms=${editorChannel.timelineDurationMs} w=f pos=rel style="height: ${editorChannel.timelineHeightPx}px; min-width: 100%;"':
+                                      - 'rtgl-view.sfxTimelineContent w=f h=f pos=rel style="box-sizing: border-box; min-width: 0;"':
+                                          - $for sound, j in editorChannel.sounds:
+                                              - 'rtgl-view#soundClip0x${j}.sfxSoundClip data-channel-id="${editorChannel.id}" data-sound-id="${sound.id}" d=v pos=abs overflow=hidden bw=xs bc=${sound.itemBorderColor} h-bc=${sound.itemHoverBorderColor} cur=pointer tabindex=0 role=button aria-label="${sound.name}" style="box-sizing: border-box; min-width: 56px; left: ${sound.leftPercent}%; top: ${sound.topPx}px; width: ${sound.widthPercent}%; height: 126px;"':
+                                                  - rtgl-view.sfxSoundClipContent d=v w=f h=f:
+                                                      - div.sfxSoundWaveformArea:
+                                                          - $if sound.waveformDataFileId:
+                                                              - rvn-waveform-visualizer waveformDataFileId=${sound.waveformDataFileId} w=f h=94: null
+                                                            $else:
+                                                              - rtgl-view w=f h=94 av=c ah=c:
+                                                                  - rtgl-text s=sm c=mu-fg: No waveform
+                                                          - 'div#soundDragSurface0x${j}.sfxSoundDragSurface data-channel-id="${editorChannel.id}" data-sound-id="${sound.id}"': null
+                                                          - 'button#insertBeforeButton0x${j}.sfxInsertZone.sfxInsertBefore type=button data-channel-id="${editorChannel.id}" data-insert-index=${sound.insertBeforeIndex} aria-label="${addBeforeLabel}"': "+"
+                                                          - 'button#insertAfterButton0x${j}.sfxInsertZone.sfxInsertAfter type=button data-channel-id="${editorChannel.id}" data-insert-index=${sound.insertAfterIndex} aria-label="${addAfterLabel}"': "+"
+                                                      - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
+                                                          - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
+                                                          - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
+                  - $if hasSoundSelection:
+                      - rtgl-view w=f g=md:
+                          - rtgl-view w=f ph=lg:
+                              - rtgl-text s=md: ${selectionHeading}
+                              - rtgl-text s=sm c=mu-fg: ${selectionName}
+                          - rtgl-form#soundForm key=${selectionKey} :form=${form} :defaultValues=${defaultValues} p=lg: null
+                          - 'rtgl-view h=160 aria-hidden=true style="flex: 0 0 160px;"': null
+            $elif mode == 'gallery':
+              - rtgl-view d=h w=f av=c g=md ph=lg:
+                  - rtgl-view w=1fg: null
+                  - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
+              - 'rtgl-view d=h w=f g=lg h=1fg ph=lg style="min-height: 0;"':
+                  - rtgl-view h=f w=1fg sv:
+                      - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
+                  - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
+                      - $for group, i in groups:
+                          - rtgl-view data-group-id=${group.id} g=md:
+                              - rtgl-view d=h av=c g=md:
+                                  - rtgl-svg svg=folder wh=16: null
+                                  - rtgl-text: ${group.fullLabel}
+                              - rtgl-view d=h w=f wrap g=lg:
+                                  - $for item, j in group.children:
+                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
+                                          - rtgl-view p=md g=md br=md:
+                                              - $if item.waveformDataFileId:
+                                                  - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=200 h=120: null
+                                                $else:
+                                                  - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                                      - rtgl-text s=sm c=mu-fg: No waveform
+                                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
+              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=lg style="flex: 0 0 auto;"':
+                  - rtgl-button#buttonSelect: ${selectButtonLabel}
+          - $if showAudioPlayer:
+              - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: 0px; right: 0px;"':
+                  - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null
   - rtgl-popover#addChannelPopover ?open=${addChannelPopover.isOpen} x=${addChannelPopover.position.x} y=${addChannelPopover.position.y} place=bs:
       - rtgl-form#addChannelForm key=${addChannelPopover.key} slot=content :defaultValues=${addChannelDefaultValues} :form=${addChannelForm} w=320: null
-  - $if showAudioPlayer:
-      - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: 0px; right: 0px;"':
-          - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null

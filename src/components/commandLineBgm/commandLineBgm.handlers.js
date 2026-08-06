@@ -12,7 +12,15 @@ import {
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
 const openBgmGallery = ({ store, render, index }) => {
+  store.setPendingReplacement({ soundId: undefined });
   store.setPendingInsertIndex({ index });
+  store.setTempSelectedResource({ resourceId: undefined });
+  store.setMode({ mode: "gallery" });
+  render();
+};
+
+const openBgmReplacementGallery = ({ store, render, soundId }) => {
+  store.setPendingReplacement({ soundId });
   store.setTempSelectedResource({ resourceId: undefined });
   store.setMode({ mode: "gallery" });
   render();
@@ -35,7 +43,7 @@ const syncSelectedSoundForm = ({ refs, store }) => {
     return;
   }
 
-  refs.form.setValues({
+  refs.soundForm.setValues({
     values: {
       startDelayMs: sound.startDelayMs,
       loop: sound.loop,
@@ -59,7 +67,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleChannelClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
   const { _event: event } = payload;
   if (
     store.selectShouldSuppressChannelClick({
@@ -68,15 +76,9 @@ export const handleChannelClick = (deps, payload) => {
   ) {
     return;
   }
-  if (
-    event.currentTarget?.classList?.contains("bgmChannel") &&
-    event.target !== event.currentTarget
-  ) {
-    return;
-  }
-
   event.stopPropagation();
-  store.clearSelectedSound();
+  appService.blurActiveElement();
+  store.openChannelEditor();
   render();
 };
 
@@ -88,6 +90,12 @@ export const handleChannelKeyDown = (deps, payload) => {
 
   event.preventDefault();
   handleChannelClick(deps, payload);
+};
+
+export const handleChannelEditorClose = (deps) => {
+  const { store, render } = deps;
+  store.closeChannelEditor();
+  render();
 };
 
 export const handleSoundClick = (deps, payload) => {
@@ -189,6 +197,11 @@ export const handleSoundContextMenu = async (deps, payload) => {
   items.push(
     {
       type: "item",
+      label: localizeCommandLineText("Replace Audio", copy),
+      key: "replace",
+    },
+    {
+      type: "item",
       label: localizeCommandLineText("Insert Sound Before", copy),
       key: "insert-before",
     },
@@ -215,6 +228,10 @@ export const handleSoundContextMenu = async (deps, payload) => {
     store.connectSoundToPrevious({ soundId });
     render();
     syncSelectedSoundForm(deps);
+    return;
+  }
+  if (actionKey === "replace") {
+    openBgmReplacementGallery({ store, render, soundId });
     return;
   }
   if (actionKey === "insert-before") {
@@ -380,11 +397,19 @@ export const handleButtonSelectClick = (deps) => {
     return;
   }
 
-  store.insertSound({
-    id: generateId(),
-    resourceId,
-    index: store.selectPendingInsertIndex(),
-  });
+  const replacementSoundId = store.selectPendingReplacementSoundId();
+  if (replacementSoundId) {
+    store.replaceSoundResource({
+      soundId: replacementSoundId,
+      resourceId,
+    });
+  } else {
+    store.insertSound({
+      id: generateId(),
+      resourceId,
+      index: store.selectPendingInsertIndex(),
+    });
+  }
   store.setMode({ mode: "current" });
   render();
 };

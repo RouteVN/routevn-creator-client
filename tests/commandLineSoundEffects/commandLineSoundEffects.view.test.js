@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("commandLineSoundEffects view", () => {
-  it("makes the channel header a full-width pointer target", () => {
+  it("makes the whole channel the editor target", () => {
     const view = readFileSync(
       new URL(
         "../../src/components/commandLineSoundEffects/commandLineSoundEffects.view.yaml",
@@ -10,15 +10,20 @@ describe("commandLineSoundEffects view", () => {
       ),
       "utf8",
     );
-    const channelSelectStart = view.indexOf('  ".sfxChannelSelect":');
-    const channelSelectStyles = view.slice(
-      channelSelectStart,
-      view.indexOf('  ".sfxChannelSelect:hover":', channelSelectStart),
+    const channelPreviewStart = view.indexOf('  ".sfxChannelPreview":');
+    const channelPreviewStyles = view.slice(
+      channelPreviewStart,
+      view.indexOf(
+        '  ".sfxChannelPreview:focus-visible":',
+        channelPreviewStart,
+      ),
     );
 
-    expect(view).toContain("rtgl-view.sfxChannelHeader w=f:");
-    expect(channelSelectStart).toBeGreaterThan(-1);
-    expect(channelSelectStyles).toContain("cursor: pointer");
-    expect(channelSelectStyles).toContain("width: 100%");
+    expect(view).toContain("rtgl-view.sfxChannelHeader d=h w=f:");
+    expect(view).toContain(".sfxChannel.sfxChannelPreview");
+    expect(view).toContain("role=button");
+    expect(channelPreviewStart).toBeGreaterThan(-1);
+    expect(channelPreviewStyles).toContain("cursor: pointer");
+    expect(view).not.toContain("editChannelButton");
   });
 });
