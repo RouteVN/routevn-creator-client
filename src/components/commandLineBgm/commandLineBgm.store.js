@@ -131,8 +131,8 @@ const SOUND_FORM = {
       description: "Loop",
       type: "segmented-control",
       options: [
-        { value: true, label: "Loop" },
         { value: false, label: "Don't Loop" },
+        { value: true, label: "Loop" },
       ],
     },
     {

@@ -286,6 +286,10 @@ describe("commandLineSoundEffects.store", () => {
       min: 0,
       step: 10,
     });
+    expect(soundSelection.form.fields[1].options).toEqual([
+      { value: false, label: "Don't Loop" },
+      { value: true, label: "Loop" },
+    ]);
     expect(soundSelection.defaultValues).toEqual({
       startDelayMs: 0,
       loop: true,
