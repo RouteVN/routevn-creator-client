@@ -240,7 +240,7 @@ template:
               - $if hasSoundSelection:
                   - rtgl-view w=f g=md:
                       - rtgl-form#soundForm key=${selectionKey} :form=${form} :defaultValues=${defaultValues} p=lg: null
-                      - 'rtgl-view h=160 aria-hidden=true style="flex: 0 0 160px;"': null
+                      - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
           - $if showAudioPlayer:
               - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: 0px; right: 0px;"':
                   - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null
