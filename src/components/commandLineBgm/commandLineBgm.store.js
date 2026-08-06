@@ -94,15 +94,6 @@ const normalizeBgm = (bgm = {}) => {
 const CHANNEL_FORM = {
   fields: [
     {
-      name: "loop",
-      description: "Loop",
-      type: "segmented-control",
-      options: [
-        { value: true, label: "Loop" },
-        { value: false, label: "Don't Loop" },
-      ],
-    },
-    {
       name: "interruption",
       description: "Interruption",
       type: "segmented-control",
@@ -311,7 +302,6 @@ export const selectViewData = ({ state, i18n }) => {
       }
     : {
         interruption: state.bgm.interruption,
-        loop: state.bgm.loop,
         volume: state.bgm.volume,
       };
 
@@ -385,14 +375,6 @@ export const updateChannel = ({ state }, { values = {} } = {}) => {
       values.interruption,
     );
   }
-  if (values.loop !== undefined) {
-    state.bgm.loop = values.loop;
-    if (values.loop) {
-      state.bgm.sounds.forEach((sound) => {
-        sound.loop = false;
-      });
-    }
-  }
   if (values.volume !== undefined) {
     state.bgm.volume = normalizeVolume(values.volume, DEFAULT_CHANNEL_VOLUME);
   }
@@ -406,9 +388,7 @@ export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
 
   if (values.loop !== undefined) {
     sound.loop = values.loop;
-    if (values.loop) {
-      state.bgm.loop = false;
-    }
+    state.bgm.loop = !state.bgm.sounds.some((item) => item.loop);
   }
   if (values.volume !== undefined) {
     sound.volume = normalizeVolume(values.volume, DEFAULT_SOUND_VOLUME);

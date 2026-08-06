@@ -13,7 +13,6 @@ import {
   setRepositoryState,
   setSelectedSound,
   startSoundDrag,
-  updateChannel,
   updateSound,
   updateSoundDrag,
   finishSoundDrag,
@@ -97,13 +96,11 @@ describe("commandLineBgm.store", () => {
     expect(selectedViewData.selectionHeading).toBe("Channel");
     expect(selectedViewData.selectionName).toBe("BGM Channel");
     expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([
-      "loop",
       "interruption",
       "volume",
     ]);
     expect(selectedViewData.defaultValues).toEqual({
       interruption: "immediate",
-      loop: true,
       volume: 75,
     });
   });
@@ -230,7 +227,7 @@ describe("commandLineBgm.store", () => {
     });
   });
 
-  it("keeps whole-channel and individual sound loops mutually exclusive", () => {
+  it("uses the channel loop by default unless an individual sound loops", () => {
     const state = createInitialState();
     setBgm(
       { state },
@@ -242,9 +239,10 @@ describe("commandLineBgm.store", () => {
       },
     );
 
+    expect(selectBgm({ state }).loop).toBe(false);
     expect(selectBgm({ state }).sounds[0].loop).toBe(true);
 
-    updateChannel({ state }, { values: { loop: true } });
+    updateSound({ state }, { soundId: "intro-clip", values: { loop: false } });
     expect(selectBgm({ state }).loop).toBe(true);
     expect(selectBgm({ state }).sounds[0].loop).toBe(false);
 

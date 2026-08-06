@@ -93,7 +93,6 @@ describe("commandLineBgm.handlers", () => {
           detail: {
             values: {
               interruption: "loopEnd",
-              loop: false,
               volume: 60,
             },
           },
@@ -103,7 +102,7 @@ describe("commandLineBgm.handlers", () => {
 
     expect(state.bgm).toEqual({
       interruption: "loopEnd",
-      loop: false,
+      loop: true,
       volume: 60,
       sounds: [],
     });
