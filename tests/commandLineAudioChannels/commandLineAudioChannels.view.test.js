@@ -7,21 +7,18 @@ const componentViews = [
     "commandLineBgm/commandLineBgm.view.yaml",
     "#bgmChannel",
     ".bgmSoundClip",
-    ".bgmChannelPreview:hover",
   ],
   [
     "Voice",
     "commandLineVoice/commandLineVoice.view.yaml",
     "#voiceChannel",
     ".voiceSoundClip",
-    ".voiceChannelPreview:hover",
   ],
   [
     "SFX",
     "commandLineSoundEffects/commandLineSoundEffects.view.yaml",
     "#sfxChannel",
     ".sfxSoundClip",
-    ".sfxChannelPreview:hover",
   ],
 ];
 
@@ -44,6 +41,7 @@ describe("command-line audio channel views", () => {
       expect(mainView).toContain("#channelForm");
       expect(mainView).toContain(channelTarget);
       expect(mainView).toContain("cur=pointer");
+      expect(mainView).toContain("h-bc=ac");
       expect(mainView).toContain("#channelPreviewSound");
       expect(mainView).not.toContain("#editChannelButton");
       expect(mainView).not.toContain("#soundClip");
@@ -55,24 +53,6 @@ describe("command-line audio channel views", () => {
       expect(editorView).toContain("#emptyAddButton");
       expect(editorView).toContain("#insertBeforeButton");
       expect(editorView).not.toContain("#channelForm");
-    },
-  );
-
-  it.each(componentViews)(
-    "changes the full outer %s channel border on hover",
-    (_name, relativePath, _channelTarget, _soundClass, hoverSelector) => {
-      const view = readFileSync(
-        new URL(`../../src/components/${relativePath}`, import.meta.url),
-        "utf8",
-      );
-      const hoverStyleStart = view.indexOf(`  "${hoverSelector}":`);
-      const hoverStyles = view.slice(
-        hoverStyleStart,
-        view.indexOf('\n  "', hoverStyleStart + 3),
-      );
-
-      expect(hoverStyleStart).toBeGreaterThan(-1);
-      expect(hoverStyles).toContain("border-color: var(--accent)");
     },
   );
 

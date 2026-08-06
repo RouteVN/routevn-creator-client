@@ -98,8 +98,6 @@ styles:
   ".sfxChannelPreview":
     cursor: pointer
     outline: none
-  ".sfxChannelPreview:hover":
-    border-color: var(--accent)
   ".sfxChannelPreview:focus":
     box-shadow: none
     cursor: pointer
@@ -221,7 +219,7 @@ template:
       - 'rtgl-view h=1fg sv w=f g=lg mt=lg style="min-height: 0;"':
           - rtgl-view w=f g=lg ph=lg:
               - $for channel, i in channels:
-                  - 'rtgl-view#sfxChannel${i}.sfxChannel.sfxChannelPreview data-channel-id="${channel.id}" w=f d=v pos=rel bgc=mu bw=xs bc=${channel.channelBorderColor} br=sm cur=pointer tabindex=0 role=button aria-label="${editChannelLabel}: ${channel.id}" style="height: ${channel.channelHeightPx}px; flex-basis: ${channel.channelHeightPx}px;"':
+                  - 'rtgl-view#sfxChannel${i}.sfxChannel.sfxChannelPreview data-channel-id="${channel.id}" w=f d=v pos=rel bgc=mu bw=xs bc=${channel.channelBorderColor} h-bc=ac br=sm cur=pointer tabindex=0 role=button aria-label="${editChannelLabel}: ${channel.id}" style="height: ${channel.channelHeightPx}px; flex-basis: ${channel.channelHeightPx}px;"':
                       - rtgl-view.sfxChannelHeader d=h w=f:
                           - div.sfxChannelLabel:
                               - span: ${channel.id}

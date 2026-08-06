@@ -83,8 +83,6 @@ styles:
   ".bgmChannelPreview":
     cursor: pointer
     outline: none
-  ".bgmChannelPreview:hover":
-    border-color: var(--accent)
   ".bgmChannelPreview:focus":
     box-shadow: none
     cursor: pointer
@@ -197,7 +195,7 @@ template:
           - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - 'rtgl-view h=1fg sv w=f g=lg mt=lg style="min-height: 0;"':
           - rtgl-view w=f g=md ph=lg:
-              - 'rtgl-view#bgmChannel.bgmChannel.bgmChannelPreview w=f d=v pos=rel bgc=mu bw=xs bc=${channelBorderColor} br=sm cur=pointer tabindex=0 role=button aria-label="${editChannelLabel}" style="height: ${channelHeightPx}px;"':
+              - 'rtgl-view#bgmChannel.bgmChannel.bgmChannelPreview w=f d=v pos=rel bgc=mu bw=xs bc=${channelBorderColor} h-bc=ac br=sm cur=pointer tabindex=0 role=button aria-label="${editChannelLabel}" style="height: ${channelHeightPx}px;"':
                   - div.bgmChannelHeader:
                       - span: ${channelLabel}
                       - span: ${channelDurationLabel}
