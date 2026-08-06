@@ -42,12 +42,17 @@ describe("animationEditor view", () => {
     expect(view).toContain("rtgl-dialog#addPropertyDialog");
     expect(view).toContain("rtgl-dialog#addKeyframeDialog");
     expect(view).toContain("rtgl-dialog#editKeyframeDialog");
+    expect(view).toContain("rtgl-dialog#editAutoDialog");
     expect(view).toContain("?open=${showAddPropertyDialog}");
     expect(view).toContain("?open=${showAddKeyframeDialog}");
     expect(view).toContain("?open=${showEditKeyframeDialog}");
+    expect(view).toContain("?open=${showEditAutoDialog}");
     expect(view).not.toContain("$if popover.mode == 'addProperty'");
     expect(view).not.toContain("$if popover.mode == 'addKeyframe'");
     expect(view).not.toContain("$if popover.mode == 'editKeyframe'");
+    expect(view).not.toContain("$if popover.mode == 'editAuto'");
+    expect(view).toContain("auto-duration-change:");
+    expect(view).toContain("handler: handleAutoDurationChange");
   });
 
   it("keeps the mask image selector compact with a fixed preview ratio", () => {
@@ -206,8 +211,14 @@ describe("animationEditor view", () => {
     expect(view).toContain(
       "rtgl-button#selectedPropertyUseDefault s=sm v=se w=f",
     );
-    expect(view.match(/data-popover-input-field=true/g)).toHaveLength(4);
-    expect(view.match(/rvn-value-popover-input#/g)).toHaveLength(4);
+    expect(view).toContain(
+      "rvn-value-popover-input#selectedPropertyAutoDuration",
+    );
+    expect(view).toContain("rtgl-select#selectedPropertyAutoEasing");
+    expect(view).toContain("handler: handleSelectedPropertyAutoDurationChange");
+    expect(view).toContain("handler: handleSelectedPropertyAutoEasingChange");
+    expect(view.match(/data-popover-input-field=true/g)).toHaveLength(5);
+    expect(view.match(/rvn-value-popover-input#/g)).toHaveLength(5);
     expect(view).toContain("handler: handleSelectedPropertyInitialValueChange");
     expect(view).toContain("handler: handleSelectedPropertyUseDefaultClick");
     expect(view).not.toContain("rtgl-view#selectedMaskProgressDuration");

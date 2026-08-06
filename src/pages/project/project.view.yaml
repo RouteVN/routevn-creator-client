@@ -150,6 +150,7 @@ template:
                               - rtgl-text s=sm w=1fg: ${i18n.projectPage.totalLabel}
                               - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${totalLineCount}
                               - 'rtgl-text s=sm w=1fg style="font-variant-numeric: tabular-nums;"': ${totalTextCount}
+          - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:

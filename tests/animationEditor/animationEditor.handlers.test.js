@@ -8,6 +8,8 @@ import {
   handleAddPropertySideMenuItemClick,
   handleAddPropertyFormChange,
   handleAddPropertyFormSubmit,
+  handleAutoDurationChange,
+  handleAutoTrackClick,
   handleBeforeMount,
   handleConfirmMaskImageSelection,
   handleEditKeyframeFormSubmit,
@@ -39,6 +41,8 @@ import {
   handleSelectedKeyframeRelativeChange,
   handleSelectedKeyframeValueChange,
   handleSelectedPropertyInitialValueChange,
+  handleSelectedPropertyAutoDurationChange,
+  handleSelectedPropertyAutoEasingChange,
   handleSelectedPropertyUseDefaultClick,
   handleSelectedMaskNumberConfirmClick,
   handleSelectedMaskNumberFieldKeyDown,
@@ -1051,6 +1055,139 @@ describe("animationEditor.handlers", () => {
       side: "update",
       property: "x",
       initialValue: -25.5,
+    });
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
+    expect(store.queueAutosave).toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("selects an auto tween for editing in the desktop details panel", () => {
+    const store = {
+      closePopover: vi.fn(),
+      selectIsTouchMode: vi.fn(() => false),
+      setPopover: vi.fn(),
+      setSelectedProperty: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleAutoTrackClick(
+      { render, store },
+      {
+        _event: {
+          detail: {
+            property: "alpha",
+            side: "update",
+            x: 120,
+            y: 160,
+          },
+        },
+      },
+    );
+
+    expect(store.setSelectedProperty).toHaveBeenCalledWith({
+      side: "update",
+      property: "alpha",
+    });
+    expect(store.closePopover).toHaveBeenCalledWith();
+    expect(store.setPopover).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens the auto-tween editor as a dialog on touch", () => {
+    const store = {
+      closePopover: vi.fn(),
+      selectIsTouchMode: vi.fn(() => true),
+      setPopover: vi.fn(),
+      setSelectedProperty: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleAutoTrackClick(
+      { render, store },
+      {
+        _event: {
+          detail: {
+            property: "alpha",
+            side: "update",
+            x: 120,
+            y: 160,
+          },
+        },
+      },
+    );
+
+    expect(store.setPopover).toHaveBeenCalledWith({
+      mode: "editAuto",
+      x: 120,
+      y: 160,
+      payload: { side: "update", property: "alpha" },
+    });
+    expect(store.closePopover).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("commits inline auto-tween field changes", () => {
+    const store = {
+      bumpPreviewRenderVersion: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      setSelectedPropertyAutoDuration: vi.fn(),
+      setSelectedPropertyAutoEasing: vi.fn(),
+      stopPreviewPlayback: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+    const deps = { render, store };
+
+    handleSelectedPropertyAutoDurationChange(deps, {
+      _event: { detail: { value: 1250 } },
+    });
+    handleSelectedPropertyAutoEasingChange(deps, {
+      _event: { detail: { value: "easeOutQuad" } },
+    });
+
+    expect(store.setSelectedPropertyAutoDuration).toHaveBeenCalledWith({
+      duration: 1250,
+    });
+    expect(store.setSelectedPropertyAutoEasing).toHaveBeenCalledWith({
+      easing: "easeOutQuad",
+    });
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledTimes(2);
+    expect(store.queueAutosave).toHaveBeenCalledTimes(2);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("commits an auto tween duration resized on the timeline", () => {
+    const store = {
+      bumpPreviewRenderVersion: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      setSelectedProperty: vi.fn(),
+      setSelectedPropertyAutoDuration: vi.fn(),
+      stopPreviewPlayback: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleAutoDurationChange(
+      { render, store },
+      {
+        _event: {
+          detail: {
+            duration: 1400,
+            property: "alpha",
+            side: "update",
+          },
+        },
+      },
+    );
+
+    expect(store.setSelectedProperty).toHaveBeenCalledWith({
+      side: "update",
+      property: "alpha",
+    });
+    expect(store.setSelectedPropertyAutoDuration).toHaveBeenCalledWith({
+      duration: 1400,
     });
     expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
     expect(store.queueAutosave).toHaveBeenCalled();

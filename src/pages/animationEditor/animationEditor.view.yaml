@@ -128,6 +128,8 @@ refs:
         handler: handleKeyframeSelect
       keyframe-duration-change:
         handler: handleKeyframeDurationChange
+      auto-duration-change:
+        handler: handleAutoDurationChange
       timeline-duration-extend:
         handler: handleTimelineDurationExtend
       timeline-used-duration-preview:
@@ -218,6 +220,10 @@ refs:
     eventListeners:
       close:
         handler: handleClosePopover
+  editAutoDialog:
+    eventListeners:
+      close:
+        handler: handleClosePopover
   maskDialog:
     eventListeners:
       close:
@@ -288,6 +294,14 @@ refs:
     eventListeners:
       click:
         handler: handleSelectedPropertyUseDefaultClick
+  selectedPropertyAutoDuration:
+    eventListeners:
+      value-change:
+        handler: handleSelectedPropertyAutoDurationChange
+  selectedPropertyAutoEasing:
+    eventListeners:
+      value-change:
+        handler: handleSelectedPropertyAutoEasingChange
   selectedMaskInitialValue:
     eventListeners:
       click:
@@ -643,16 +657,21 @@ template:
                               - rtgl-segmented-control#selectedKeyframeRelative slot=keyframe-value-type w=f no-clear :selectedValue=${selectedKeyframeEditor.relative} :options=${selectedKeyframeEditor.relativeOptions}: null
                         $elif selectedPropertyDetailId:
                           - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} w=f :fields=${selectedPropertyDetailFields} :fillHeight=${false}:
-                              - rtgl-view slot=property-initial-value d=v w=f g=xs:
-                                  - $if selectedPropertyEditor && selectedPropertyEditor.initialValueSlider:
-                                      - rtgl-slider-input#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.initialValue} min=${selectedPropertyEditor.initialValueSlider.min} max=${selectedPropertyEditor.initialValueSlider.max} step=${selectedPropertyEditor.initialValueSlider.step}: null
-                                    $elif selectedPropertyEditor && selectedPropertyEditor.initialValueUsesPopover:
-                                      - 'rtgl-view data-popover-input-field=true w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
-                                          - 'rvn-value-popover-input#selectedPropertyInitialValuePopover value=${selectedPropertyEditor.initialValue} label="${selectedPropertyEditor.initialValueLabel}"': null
-                                    $elif selectedPropertyEditor:
-                                      - rtgl-input-number#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f step=${selectedPropertyEditor.initialValueStep} value=${selectedPropertyEditor.initialValue}: null
-                                  - $if selectedPropertyEditor && selectedPropertyEditor.hasInitialValue:
-                                      - rtgl-button#selectedPropertyUseDefault s=sm v=se w=f: ${useDefaultValueButtonLabel}
+                              - $if selectedPropertyEditor && selectedPropertyEditor.auto:
+                                  - 'rtgl-view data-popover-input-field=true slot=property-auto-duration w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
+                                      - 'rvn-value-popover-input#selectedPropertyAutoDuration value=${selectedPropertyEditor.duration} label="${selectedPropertyEditor.durationLabel}"': null
+                                  - rtgl-select#selectedPropertyAutoEasing slot=property-auto-easing w=f no-clear :selectedValue=${selectedPropertyEditor.easing} :options=${selectedPropertyEditor.easingOptions}: null
+                                $else:
+                                  - rtgl-view slot=property-initial-value d=v w=f g=xs:
+                                      - $if selectedPropertyEditor && selectedPropertyEditor.initialValueSlider:
+                                          - rtgl-slider-input#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.initialValue} min=${selectedPropertyEditor.initialValueSlider.min} max=${selectedPropertyEditor.initialValueSlider.max} step=${selectedPropertyEditor.initialValueSlider.step}: null
+                                        $elif selectedPropertyEditor && selectedPropertyEditor.initialValueUsesPopover:
+                                          - 'rtgl-view data-popover-input-field=true w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
+                                              - 'rvn-value-popover-input#selectedPropertyInitialValuePopover value=${selectedPropertyEditor.initialValue} label="${selectedPropertyEditor.initialValueLabel}"': null
+                                        $elif selectedPropertyEditor:
+                                          - rtgl-input-number#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f step=${selectedPropertyEditor.initialValueStep} value=${selectedPropertyEditor.initialValue}: null
+                                      - $if selectedPropertyEditor && selectedPropertyEditor.hasInitialValue:
+                                          - rtgl-button#selectedPropertyUseDefault s=sm v=se w=f: ${useDefaultValueButtonLabel}
                         $elif selectedMask:
                           - rtgl-view#selectedMaskDetails data-timeline-selection-surface=true d=v w=f g=md p=md pb=xl:
                               - $if maskEditorPanel.unsupported:
@@ -695,9 +714,6 @@ template:
       - $if showAddKeyframePopover:
           - rtgl-view slot=content:
               - rtgl-form#addKeyframeForm :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues}: null
-      - $if popover.mode == 'editAuto':
-          - rtgl-view slot=content:
-              - rtgl-form#editAutoForm :form=${editAutoForm} :defaultValues=${editAutoDefaultValues}: null
       - $if popover.mode == 'editInitialValue':
           - rtgl-view slot=content:
               - rtgl-form#editInitialValueForm :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null
@@ -718,6 +734,9 @@ template:
   - $if showEditKeyframeDialog:
       - rtgl-dialog#editKeyframeDialog ?open=${showEditKeyframeDialog} s=sm:
           - rtgl-form#editKeyframeForm slot=content :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues} w=f: null
+  - $if showEditAutoDialog:
+      - rtgl-dialog#editAutoDialog ?open=${showEditAutoDialog} s=sm:
+          - rtgl-form#editAutoForm slot=content :form=${editAutoForm} :defaultValues=${editAutoDefaultValues}: null
   - rtgl-dialog#maskDialog ?open=${popover.maskDialogIsOpen} s=sm:
       - $if popover.mode == 'addMask' || popover.mode == 'editMask':
           - 'rtgl-view slot=content d=v w=f g=md style="max-width: calc(100vw - 32px);"':

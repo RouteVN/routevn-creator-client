@@ -51,6 +51,8 @@ import {
   setSelectedKeyframeValue,
   setSelectedMask,
   setSelectedProperty,
+  setSelectedPropertyAutoDuration,
+  setSelectedPropertyAutoEasing,
   startPreviewPlayback,
   startTimelinePan,
   stopPreviewPlayback,
@@ -561,6 +563,68 @@ describe("animationEditor.store", () => {
     expect(viewData.selectedKeyframe).toBeUndefined();
     expect(viewData.detailsPanelTitle).toBeUndefined();
     expect(viewData.noSelectionLabel).toBe("No selection");
+  });
+
+  it("edits a selected auto tween in the property details panel", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.alpha = {
+      auto: { duration: 1000, easing: "linear" },
+    };
+
+    setSelectedProperty({ state }, { side: "update", property: "alpha" });
+
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.selectedPropertyDetailFields).toEqual([
+      { type: "text", label: "Timeline", value: "Update" },
+      { type: "text", label: "Property", value: "Alpha" },
+      {
+        type: "slot",
+        label: "Duration (ms)",
+        slot: "property-auto-duration",
+      },
+      {
+        type: "slot",
+        label: "Easing",
+        slot: "property-auto-easing",
+      },
+    ]);
+    expect(viewData.selectedPropertyEditor).toMatchObject({
+      auto: true,
+      duration: 1000,
+      durationLabel: "Duration (ms)",
+      easing: "linear",
+    });
+
+    setSelectedPropertyAutoDuration({ state }, { duration: 1250.8 });
+    setSelectedPropertyAutoEasing({ state }, { easing: "easeOutQuad" });
+
+    expect(state.tweenBySection.update.alpha.auto).toEqual({
+      duration: 1250,
+      easing: "easeOutQuad",
+    });
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.selectedPropertyEditor).toMatchObject({
+      duration: 1250,
+      easing: "easeOutQuad",
+    });
+  });
+
+  it("uses a dialog instead of a popover for touch auto-tween editing", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    setUiConfig({ state }, { uiConfig: { id: "touch", inputMode: "touch" } });
+    setPopover(
+      { state },
+      {
+        mode: "editAuto",
+        payload: { side: "update", property: "alpha" },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.showEditAutoDialog).toBe(true);
+    expect(viewData.popover.popoverIsOpen).toBe(false);
   });
 
   it("keeps a single keyframe selected through timeline mutations", () => {

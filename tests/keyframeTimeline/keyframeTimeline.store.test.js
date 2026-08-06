@@ -187,7 +187,34 @@ describe("keyframeTimeline easing curves", () => {
       easing: "easeInOutElastic",
       easingLabel: "Ease In Out Elastic",
     });
+    expect(autoProperty).toMatchObject({
+      initialValue: "auto",
+      initialValueColor: "mu",
+    });
     expect(autoProperty.valueCurvePath).toBeUndefined();
+  });
+
+  it("localizes the auto indicator beside the property name", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        properties: {
+          alpha: {
+            auto: { duration: 1000, easing: "linear" },
+          },
+        },
+      },
+      i18n: {
+        animationEditorPage: {
+          autoTweenMode: "Automatic",
+        },
+      },
+    });
+
+    expect(viewData.selectedProperties[0]).toMatchObject({
+      initialValue: "automatic",
+      initialValueColor: "mu",
+    });
   });
 
   it("uses non-interactive cursors for read-only keyframes", () => {
@@ -269,12 +296,12 @@ describe("keyframeTimeline easing curves", () => {
     );
 
     expect(view).toContain("data-keyframe=true");
-    expect(view).toContain(
-      "p=xs bgc=${keyframe.backgroundColor} bw=xs br=md",
-    );
+    expect(view).toContain("p=xs bgc=${keyframe.backgroundColor} bw=xs br=md");
     expect(view).toContain("data-keyframe-slot=true h=f pos=rel style=");
     expect(view).not.toContain("data-keyframe-slot=true h=f pos=rel bgc=");
     expect(view).toContain("handler: handleRulerScrubStart");
+    expect(view).toContain("cursor: ${rulerCursor}");
+    expect(view).not.toContain("cursor: ew-resize; touch-action: none;\"':");
     expect(view).toContain("handler: handleKeyframeMoveStart");
     expect(view).toContain("handler: handleKeyframeMove");
     expect(view).toContain("handler: handleKeyframeMoveEnd");
@@ -282,7 +309,9 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).not.toContain("property-name-right-click");
     expect(view).toContain("handler: handlePropertyNameKeyDown");
     expect(view).not.toContain("handler: handleInitialValueClick");
-    expect(view).not.toContain("data-interactive=${property.initialValueInteractive}");
+    expect(view).not.toContain(
+      "data-interactive=${property.initialValueInteractive}",
+    );
     expect(
       view.match(/rtgl-view pos=abs bgc=su style="\$\{usedDurationStyle\}"/g),
     ).toHaveLength(1);
@@ -324,6 +353,9 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).toMatch(
       /data-keyframe-duration-handle=right[^\n]+cursor: ew-resize/,
     );
+    expect(view).toMatch(
+      /durationHandleAuto[^\n]+data-track-mode=auto[^\n]+cursor: ew-resize/,
+    );
     expect(view.indexOf("$if editable:")).toBeLessThan(
       view.indexOf("data-keyframe-duration-handle=left"),
     );
@@ -331,8 +363,13 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).toContain("top: 5px; bottom: 5px; left: 6px; width: 1px");
     expect(view).toContain("top: 5px; bottom: 5px; right: 6px; width: 1px");
     expect(view).toMatch(
-      /rtgl-text[^\n]+ta=e[^\n]+left: 10px; right: 13px[^\n]+keyframe.value/,
+      /rtgl-text\.keyframeTimelineKeyframeValue[^\n]+ta=e ellipsis[^\n]+left: 10px; right: 13px[^\n]+keyframe.value/,
     );
+    expect(view).toContain("container-type: inline-size");
+    expect(view).toContain("@container (max-width: 40px)");
+    expect(view).toContain('".keyframeTimelineKeyframeValue":');
+    expect(view).toContain("display: none");
+    expect(view).not.toContain("property.auto.label");
     expect(view).not.toContain("property.hoverTarget.mode != 'empty'");
     expect(view).toContain("data-value-curve=${property.name}");
     expect(view).toContain('d="${property.valueCurvePath}"');
@@ -491,6 +528,37 @@ describe("keyframeTimeline easing curves", () => {
     ]);
   });
 
+  it("previews an auto tween duration being resized", () => {
+    const state = createInitialState();
+    state.durationResize = {
+      mode: "auto",
+      property: "alpha",
+      delay: 0,
+      duration: 1500,
+      timelineDuration: 2000,
+    };
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        editable: true,
+        side: "update",
+        timelineDuration: 2000,
+        properties: {
+          alpha: {
+            auto: { duration: 1000, easing: "linear" },
+          },
+        },
+      },
+    });
+
+    expect(viewData.selectedProperties[0].auto).toMatchObject({
+      duration: 1500,
+      widthPercent: "75.00",
+    });
+    expect(viewData.usedDurationStyle).toContain("width: 75.00%");
+  });
+
   it("previews delay and duration while the start marker is resized", () => {
     const state = createInitialState();
     state.durationResize = {
@@ -595,6 +663,20 @@ describe("keyframeTimeline easing curves", () => {
     expect(viewData.playheadIndicatorTimeLabel).toBe("500 ms");
     expect(viewData.playheadIndicatorLabelStyle).toContain("top: 4px");
     expect(viewData.playheadIndicatorLabelStyle).toContain("z-index: 10");
+  });
+
+  it("uses the resize cursor only for an interactive ruler", () => {
+    const state = createInitialState();
+
+    expect(
+      selectViewData({ state, props: { showRuler: true } }).rulerCursor,
+    ).toBe("default");
+    expect(
+      selectViewData({
+        state,
+        props: { interactiveRuler: true, showRuler: true },
+      }).rulerCursor,
+    ).toBe("ew-resize");
   });
 
   it("keeps the exact endpoint unlabeled on the ruler", () => {

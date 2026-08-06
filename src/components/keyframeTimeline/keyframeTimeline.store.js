@@ -44,6 +44,7 @@ export const startDurationResize = (
     pointerId,
     property,
     index,
+    mode = "keyframes",
     edge,
     startX,
     startDelay,
@@ -57,6 +58,7 @@ export const startDurationResize = (
     pointerId,
     property,
     index: Number(index),
+    mode,
     edge,
     startX,
     startDelay: resolvedStartDelay,
@@ -168,7 +170,9 @@ const resolveKeyframeTiming = ({
   const durationResize = state.durationResize;
   const keyframeMove = state.keyframeMove;
   const isResizingKeyframe =
-    durationResize?.property === propertyName && durationResize.index === index;
+    durationResize?.mode !== "auto" &&
+    durationResize?.property === propertyName &&
+    durationResize.index === index;
   const isMovingKeyframe =
     keyframeMove?.property === propertyName && keyframeMove.index === index;
   const isFollowingMovingKeyframe =
@@ -195,8 +199,13 @@ const resolveKeyframeTiming = ({
 const getPreviewPropertiesDuration = ({ state, props } = {}) => {
   return Object.entries(props.properties ?? {}).reduce(
     (maxDuration, [propertyName, propertyConfig]) => {
+      const isResizingAuto =
+        state.durationResize?.mode === "auto" &&
+        state.durationResize.property === propertyName;
       const propertyDuration = propertyConfig.auto
-        ? Number(propertyConfig.auto.duration) || 0
+        ? isResizingAuto
+          ? Number(state.durationResize.duration) || 0
+          : Number(propertyConfig.auto.duration) || 0
         : (propertyConfig.keyframes ?? []).reduce(
             (duration, keyframe, index) => {
               const timing = resolveKeyframeTiming({
@@ -391,7 +400,8 @@ const createRulerTicks = (durationMs) => {
     );
 };
 
-export const selectViewData = ({ state, props, props: attrs }) => {
+export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
+  const autoLabel = i18n.animationEditorPage?.autoTweenMode ?? "Auto";
   const showRuler = attrs.showRuler === true;
   const showTracks = attrs.showTracks !== false;
   const resolveTrackCursor = ({ propertyName, trackMode } = {}) => {
@@ -435,7 +445,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         thumbnailBorderColor: propertyConfig.thumbnailBorderColor ?? "bo",
         thumbnailFileId: propertyConfig.thumbnailFileId,
         thumbnailName: propertyConfig.thumbnailName ?? propertyName,
-        initialValue: autoConfig ? "" : isDefault ? "D" : value,
+        initialValue: autoConfig
+          ? autoLabel.toLocaleLowerCase()
+          : isDefault
+            ? "D"
+            : value,
+        initialValueColor: autoConfig ? "mu" : selected ? "ac-fg" : "fg",
         trackMode: autoConfig ? "auto" : "keyframes",
         keyframes: propertyConfig.keyframes,
         auto: autoConfig
@@ -511,7 +526,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       const nextProperty = {
         ...property,
       };
-      const propertyDuration = getPropertyDuration(property);
+      const isResizingAuto =
+        state.durationResize?.mode === "auto" &&
+        state.durationResize.property === property.name;
+      const propertyDuration = isResizingAuto
+        ? Number(state.durationResize.duration) || 0
+        : getPropertyDuration(property);
       const autoWidthPercent =
         resolvedTimelineDuration > 0
           ? (propertyDuration / resolvedTimelineDuration) * 100
@@ -519,8 +539,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
 
       nextProperty.auto = {
         ...property.auto,
+        duration: propertyDuration,
         easingLabel: formatEasingLabel(property.auto.easing),
-        label: `Auto ${propertyDuration}ms ${formatEasingLabel(property.auto.easing)}`,
         widthPercent: autoWidthPercent.toFixed(2),
       };
       nextProperty.fillerWidthPercent = Math.max(
@@ -660,6 +680,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     showTotalDuration: attrs.showTotalDuration !== false,
     showRuler,
     showTracks,
+    rulerCursor: attrs.interactiveRuler === true ? "ew-resize" : "default",
     rulerTicks,
     rulerIndicatorVisible,
     playheadIndicatorTimeLabel,

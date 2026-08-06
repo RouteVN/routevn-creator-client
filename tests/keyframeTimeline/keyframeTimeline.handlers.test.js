@@ -415,12 +415,14 @@ describe("keyframeTimeline.handlers", () => {
       selectPreviewUsedDuration: vi.fn(
         () => durationResize.delay + durationResize.duration,
       ),
-      setDurationResizeTiming: vi.fn(({ delay, duration, timelineDuration }) => {
-        durationResize.delay = delay;
-        durationResize.duration = duration;
-        durationResize.timelineDuration =
-          timelineDuration ?? durationResize.timelineDuration;
-      }),
+      setDurationResizeTiming: vi.fn(
+        ({ delay, duration, timelineDuration }) => {
+          durationResize.delay = delay;
+          durationResize.duration = duration;
+          durationResize.timelineDuration =
+            timelineDuration ?? durationResize.timelineDuration;
+        },
+      ),
       startDurationResize: vi.fn((resize) => {
         durationResize = {
           ...resize,
@@ -525,6 +527,117 @@ describe("keyframeTimeline.handlers", () => {
     expect(store.clearDurationResize).toHaveBeenCalledWith({});
   });
 
+  it("drags an auto tween end handle to change its duration", () => {
+    let durationResize;
+    const store = {
+      clearDurationResize: vi.fn(() => {
+        durationResize = undefined;
+      }),
+      selectDurationResize: vi.fn(() => durationResize),
+      selectPreviewUsedDuration: vi.fn(() => durationResize.duration),
+      setDurationResizeTiming: vi.fn(
+        ({ delay, duration, timelineDuration }) => {
+          durationResize.delay = delay;
+          durationResize.duration = duration;
+          durationResize.timelineDuration =
+            timelineDuration ?? durationResize.timelineDuration;
+        },
+      ),
+      startDurationResize: vi.fn((resize) => {
+        durationResize = {
+          ...resize,
+          delay: resize.startDelay,
+          duration: resize.startDuration,
+        };
+      }),
+    };
+    const dispatchEvent = vi.fn();
+    const render = vi.fn();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+    const handleElement = {
+      dataset: {
+        property: "alpha",
+        index: "0",
+        resizeEdge: "right",
+        trackMode: "auto",
+      },
+      closest: vi.fn(() => ({
+        getBoundingClientRect: () => ({ width: 400 }),
+      })),
+      releasePointerCapture: vi.fn(),
+      setPointerCapture: vi.fn(),
+    };
+    const deps = {
+      dispatchEvent,
+      props: {
+        editable: true,
+        side: "update",
+        timelineDuration: 2000,
+        properties: {
+          alpha: {
+            auto: { duration: 1000, easing: "linear" },
+          },
+        },
+      },
+      render,
+      store,
+    };
+
+    handleDurationResizeStart(deps, {
+      _event: {
+        button: 0,
+        clientX: 100,
+        currentTarget: handleElement,
+        pointerId: 8,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+    handleDurationResizeMove(deps, {
+      _event: {
+        clientX: 120,
+        pointerId: 8,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+    handleDurationResizeEnd(deps, {
+      _event: {
+        currentTarget: handleElement,
+        pointerId: 8,
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(store.startDurationResize).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "auto",
+        property: "alpha",
+        startDelay: 0,
+        startDuration: 1000,
+      }),
+    );
+    expect(
+      dispatchEvent.mock.calls.find(
+        ([event]) => event.type === "auto-duration-change",
+      )[0],
+    ).toMatchObject({
+      type: "auto-duration-change",
+      detail: {
+        duration: 1100,
+        property: "alpha",
+        side: "update",
+      },
+    });
+    expect(
+      dispatchEvent.mock.calls.find(
+        ([event]) => event.type === "keyframe-duration-change",
+      ),
+    ).toBeUndefined();
+  });
+
   it("ignores non-primary pointer resize starts", () => {
     const store = {
       startDurationResize: vi.fn(),
@@ -562,12 +675,14 @@ describe("keyframeTimeline.handlers", () => {
       selectPreviewUsedDuration: vi.fn(
         () => durationResize.delay + durationResize.duration,
       ),
-      setDurationResizeTiming: vi.fn(({ delay, duration, timelineDuration }) => {
-        durationResize.delay = delay;
-        durationResize.duration = duration;
-        durationResize.timelineDuration =
-          timelineDuration ?? durationResize.timelineDuration;
-      }),
+      setDurationResizeTiming: vi.fn(
+        ({ delay, duration, timelineDuration }) => {
+          durationResize.delay = delay;
+          durationResize.duration = duration;
+          durationResize.timelineDuration =
+            timelineDuration ?? durationResize.timelineDuration;
+        },
+      ),
       startDurationResize: vi.fn((resize) => {
         durationResize = {
           ...resize,

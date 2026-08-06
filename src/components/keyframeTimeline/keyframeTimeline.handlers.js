@@ -189,6 +189,21 @@ const dispatchKeyframeDurationChangeEvent = ({
   );
 };
 
+const dispatchAutoDurationChangeEvent = ({
+  dispatchEvent,
+  duration,
+  property,
+  side,
+} = {}) => {
+  dispatchEvent(
+    new CustomEvent("auto-duration-change", {
+      detail: { duration, property, side },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 const dispatchKeyframeClickEvent = ({
   dispatchEvent,
   property,
@@ -746,14 +761,22 @@ export const handleDurationResizeStart = (deps, payload) => {
   const trackWidth = trackElement?.getBoundingClientRect?.().width;
   const property = handleElement.dataset.property;
   const index = Number(handleElement.dataset.index);
+  const mode = handleElement.dataset.trackMode ?? "keyframes";
   const edge = handleElement.dataset.resizeEdge ?? "right";
-  const startDelay = Math.max(
-    0,
-    parseFloat(props.properties?.[property]?.keyframes?.[index]?.delay) || 0,
-  );
+  const startDelay =
+    mode === "auto"
+      ? 0
+      : Math.max(
+          0,
+          parseFloat(props.properties?.[property]?.keyframes?.[index]?.delay) ||
+            0,
+        );
   const startDuration =
-    parseFloat(props.properties?.[property]?.keyframes?.[index]?.duration) ||
-    1000;
+    mode === "auto"
+      ? parseFloat(props.properties?.[property]?.auto?.duration) || 1000
+      : parseFloat(
+          props.properties?.[property]?.keyframes?.[index]?.duration,
+        ) || 1000;
   const timelineDuration = resolveTimelineDuration(props);
 
   if (!(trackWidth > 0) || !(timelineDuration > 0)) {
@@ -767,6 +790,7 @@ export const handleDurationResizeStart = (deps, payload) => {
     pointerId: event.pointerId,
     property,
     index,
+    mode,
     edge,
     startX: event.clientX,
     startDelay,
@@ -849,14 +873,23 @@ export const handleDurationResizeEnd = (deps, payload) => {
   event.stopPropagation();
   event.currentTarget.releasePointerCapture?.(event.pointerId);
   store.clearDurationResize({});
-  dispatchKeyframeDurationChangeEvent({
-    dispatchEvent,
-    delay: durationResize.delay,
-    duration: durationResize.duration,
-    property: durationResize.property,
-    side: props.side,
-    index: durationResize.index,
-  });
+  if (durationResize.mode === "auto") {
+    dispatchAutoDurationChangeEvent({
+      dispatchEvent,
+      duration: durationResize.duration,
+      property: durationResize.property,
+      side: props.side,
+    });
+  } else {
+    dispatchKeyframeDurationChangeEvent({
+      dispatchEvent,
+      delay: durationResize.delay,
+      duration: durationResize.duration,
+      property: durationResize.property,
+      side: props.side,
+      index: durationResize.index,
+    });
+  }
   dispatchTimelineUsedDurationPreviewEvent({
     active: false,
     dispatchEvent,

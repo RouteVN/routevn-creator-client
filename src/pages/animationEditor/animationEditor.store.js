@@ -1776,6 +1776,34 @@ export const selectSelectedProperty = ({ state }) => {
   return state.selectedProperty;
 };
 
+const getMutableSelectedAutoTween = (state) => {
+  const selectedProperty = state.selectedProperty;
+  if (!selectedProperty) {
+    return undefined;
+  }
+
+  const { side, property } = selectedProperty;
+  return getMutableSectionProperties(state, side)[property]?.auto;
+};
+
+export const setSelectedPropertyAutoDuration = (
+  { state },
+  { duration } = {},
+) => {
+  const auto = getMutableSelectedAutoTween(state);
+  const nextDuration = Number.parseInt(duration, 10);
+  if (auto && Number.isFinite(nextDuration) && nextDuration >= 1) {
+    auto.duration = nextDuration;
+  }
+};
+
+export const setSelectedPropertyAutoEasing = ({ state }, { easing } = {}) => {
+  const auto = getMutableSelectedAutoTween(state);
+  if (auto) {
+    auto.easing = easing;
+  }
+};
+
 export const setSelectedMask = ({ state }, { index, side } = {}) => {
   state.selectedKeyframe = undefined;
   state.selectedProperty = undefined;
@@ -3425,43 +3453,39 @@ const buildSelectedPropertyPanelData = (
       label: copy.propertyLabel ?? "Property",
       value: propertyFieldConfig[property]?.label ?? property,
     },
-    autoConfig
-      ? {
-          type: "text",
-          label: copy.initialValueLabel ?? "Initial value",
-          value: hasInitialValue
-            ? propertyConfig.initialValue
-            : (copy.defaultLabel ?? "Default"),
-        }
-      : {
-          type: "slot",
-          label: copy.initialValueLabel ?? "Initial value",
-          slot: "property-initial-value",
-        },
   ];
 
   if (autoConfig) {
     fields.push(
       {
-        type: "text",
+        type: "slot",
         label: copy.durationMsLabel ?? "Duration (ms)",
-        value: autoConfig.duration,
+        slot: "property-auto-duration",
       },
       {
-        type: "text",
+        type: "slot",
         label: copy.easingLabel ?? "Easing",
-        value: getOptionLabel(
-          createEasingOptions(copy),
-          autoConfig.easing ?? "linear",
-        ),
+        slot: "property-auto-easing",
       },
     );
+  } else {
+    fields.push({
+      type: "slot",
+      label: copy.initialValueLabel ?? "Initial value",
+      slot: "property-initial-value",
+    });
   }
 
   return {
     id: `${side}:${property}`,
     editor: autoConfig
-      ? undefined
+      ? {
+          auto: true,
+          duration: autoConfig.duration,
+          durationLabel: copy.durationMsLabel ?? "Duration (ms)",
+          easing: autoConfig.easing ?? "linear",
+          easingOptions: createEasingOptions(copy),
+        }
       : {
           hasInitialValue,
           initialValue,
@@ -3876,6 +3900,8 @@ export const selectViewData = ({ state, i18n }) => {
   const showAddKeyframeDialog =
     state.isTouchMode && state.popover.mode === "addKeyframe";
   const showEditKeyframeDialog = state.popover.mode === "editKeyframe";
+  const showEditAutoDialog =
+    state.isTouchMode && state.popover.mode === "editAuto";
   const showSelectedMaskSoftnessPopover =
     state.popover.mode === "editSelectedMaskSoftness";
   const showSelectedMaskInitialValuePopover =
@@ -3991,7 +4017,7 @@ export const selectViewData = ({ state, i18n }) => {
     popover: {
       ...state.popover,
       popoverIsOpen:
-        ["editAuto", "editInitialValue"].includes(state.popover.mode) ||
+        state.popover.mode === "editInitialValue" ||
         showAddPropertyPopover ||
         showAddKeyframePopover,
       maskDialogIsOpen: ["addMask", "editMask"].includes(state.popover.mode),
@@ -4040,6 +4066,7 @@ export const selectViewData = ({ state, i18n }) => {
     showAddPropertyDialog,
     showAddKeyframeDialog,
     showEditKeyframeDialog,
+    showEditAutoDialog,
     selectedMaskNumberPopoverIsOpen:
       showSelectedMaskInitialValuePopover || showSelectedMaskSoftnessPopover,
     showSelectedMaskInitialValuePopover,

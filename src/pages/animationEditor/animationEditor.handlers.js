@@ -1558,10 +1558,18 @@ export const handleKeyframeDurationChange = (deps, payload) => {
     payload._event.detail;
   store.setSelectedKeyframe({ side, property, index });
   store.setSelectedKeyframeTiming({ delay, duration, followingDelay });
-  commitSelectedKeyframeChange(deps);
+  commitTimelineChange(deps);
 };
 
-const commitSelectedKeyframeChange = (deps) => {
+export const handleAutoDurationChange = (deps, payload) => {
+  const { store } = deps;
+  const { duration, property, side } = payload._event.detail;
+  store.setSelectedProperty({ side, property });
+  store.setSelectedPropertyAutoDuration({ duration });
+  commitTimelineChange(deps);
+};
+
+const commitTimelineChange = (deps) => {
   const { render, store } = deps;
   invalidatePreview({ store });
   render();
@@ -1573,7 +1581,7 @@ export const handleSelectedKeyframeDelayChange = (deps, payload) => {
   store.setSelectedKeyframeDelay({
     delay: resolveValueChange(payload),
   });
-  commitSelectedKeyframeChange(deps);
+  commitTimelineChange(deps);
 };
 
 export const handleSelectedKeyframeDurationChange = (deps, payload) => {
@@ -1581,7 +1589,7 @@ export const handleSelectedKeyframeDurationChange = (deps, payload) => {
   store.setSelectedKeyframeDuration({
     duration: resolveValueChange(payload),
   });
-  commitSelectedKeyframeChange(deps);
+  commitTimelineChange(deps);
 };
 
 export const handleSelectedKeyframeEasingChange = (deps, payload) => {
@@ -1589,7 +1597,7 @@ export const handleSelectedKeyframeEasingChange = (deps, payload) => {
   store.setSelectedKeyframeEasing({
     easing: resolveValueChange(payload),
   });
-  commitSelectedKeyframeChange(deps);
+  commitTimelineChange(deps);
 };
 
 export const handleSelectedKeyframeValueChange = (deps, payload) => {
@@ -1597,7 +1605,7 @@ export const handleSelectedKeyframeValueChange = (deps, payload) => {
   store.setSelectedKeyframeValue({
     value: resolveValueChange(payload),
   });
-  commitSelectedKeyframeChange(deps);
+  commitTimelineChange(deps);
 };
 
 export const handleSelectedKeyframeRelativeChange = (deps, payload) => {
@@ -1605,7 +1613,7 @@ export const handleSelectedKeyframeRelativeChange = (deps, payload) => {
   store.setSelectedKeyframeRelative({
     relative: resolveValueChange(payload),
   });
-  commitSelectedKeyframeChange(deps);
+  commitTimelineChange(deps);
 };
 
 const commitSelectedPropertyInitialValue = (deps, initialValue) => {
@@ -1632,6 +1640,22 @@ export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
 
 export const handleSelectedPropertyUseDefaultClick = (deps) => {
   commitSelectedPropertyInitialValue(deps, undefined);
+};
+
+export const handleSelectedPropertyAutoDurationChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedPropertyAutoDuration({
+    duration: resolveValueChange(payload),
+  });
+  commitTimelineChange(deps);
+};
+
+export const handleSelectedPropertyAutoEasingChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedPropertyAutoEasing({
+    easing: resolveValueChange(payload),
+  });
+  commitTimelineChange(deps);
 };
 
 const openSelectedMaskNumberPopover = (deps, payload, { mode, value } = {}) => {
@@ -1762,13 +1786,22 @@ export const handleSelectedMaskNumberInputKeyDown = (deps, payload) => {
 
 export const handleAutoTrackClick = (deps, payload) => {
   const { render, store } = deps;
+  const { property, side, x, y } = payload._event.detail;
+  store.setSelectedProperty({ side, property });
+
+  if (!store.selectIsTouchMode()) {
+    store.closePopover();
+    render();
+    return;
+  }
+
   store.setPopover({
     mode: "editAuto",
-    x: payload._event.detail.x,
-    y: payload._event.detail.y,
+    x,
+    y,
     payload: {
-      side: payload._event.detail.side,
-      property: payload._event.detail.property,
+      side,
+      property,
     },
   });
   render();
