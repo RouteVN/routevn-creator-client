@@ -77,6 +77,21 @@ describe("command-line audio channel views", () => {
     },
   );
 
+  it("aligns the BGM editor title with its channel card", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/commandLineBgm/commandLineBgm.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).toContain("rtgl-view w=f ph=lg:");
+    expect(view).toContain(
+      "rtgl-text#channelEditorTitle s=lg: ${channelEditorTitle}",
+    );
+  });
+
   it.each(componentViews)(
     "removes the native focus treatment from %s audio clips",
     (_name, relativePath, _channelTarget, soundClass) => {

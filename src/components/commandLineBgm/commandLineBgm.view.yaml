@@ -230,7 +230,8 @@ template:
           - rtgl-button#submitButton: Submit
   - rtgl-dialog#channelEditorDialog ?open=${isChannelEditorOpen} s=lg close-button:
       - 'rtgl-view slot=content d=v w=f h=80vh g=lg style="min-width: 0; min-height: 0; overflow: hidden;"':
-          - rtgl-text s=lg: ${channelEditorTitle}
+          - rtgl-view w=f ph=lg:
+              - rtgl-text#channelEditorTitle s=lg: ${channelEditorTitle}
           - $if mode == 'current':
               - 'rtgl-view h=1fg sv w=f g=lg style="min-height: 0;"':
                   - rtgl-view w=f ph=lg:
