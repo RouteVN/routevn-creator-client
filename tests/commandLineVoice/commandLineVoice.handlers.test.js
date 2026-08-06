@@ -173,7 +173,7 @@ describe("commandLineVoice.handlers", () => {
     ]);
   });
 
-  it("updates channel controls or only the selected clip timing and volume", () => {
+  it("updates channel controls or only the selected clip controls", () => {
     const state = voiceStore.createInitialState();
     const store = createStore(state);
     const render = vi.fn();
@@ -189,13 +189,15 @@ describe("commandLineVoice.handlers", () => {
       { store, render },
       {
         _event: {
-          detail: { values: { startDelayMs: 750, volume: 35 } },
+          detail: { values: { startDelayMs: 750, loop: true, volume: 35 } },
         },
       },
     );
 
     expect(state.voice.volume).toBe(70);
+    expect(state.voice.loop).toBe(false);
     expect(state.voice.sounds[0].startDelayMs).toBe(750);
+    expect(state.voice.sounds[0].loop).toBe(true);
     expect(state.voice.sounds[0].volume).toBe(35);
     expect(render).toHaveBeenCalledTimes(2);
   });
@@ -326,6 +328,7 @@ describe("commandLineVoice.handlers", () => {
     expect(setValues).toHaveBeenCalledWith({
       values: {
         startDelayMs: 2000,
+        loop: false,
         volume: 100,
       },
     });

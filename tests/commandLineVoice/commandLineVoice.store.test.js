@@ -14,6 +14,8 @@ import {
   setSelectedSound,
   setVoice,
   startSoundDrag,
+  updateChannel,
+  updateSound,
   updateSoundDrag,
 } from "../../src/components/commandLineVoice/commandLineVoice.store.js";
 
@@ -187,6 +189,7 @@ describe("commandLineVoice.store", () => {
     expect(selectedViewData.selectionName).toBe("Intro");
     expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([
       "startDelayMs",
+      "loop",
       "volume",
     ]);
     expect(selectedViewData.form.fields[0]).toMatchObject({
@@ -198,8 +201,32 @@ describe("commandLineVoice.store", () => {
     });
     expect(selectedViewData.defaultValues).toEqual({
       startDelayMs: 0,
+      loop: false,
       volume: 90,
     });
+  });
+
+  it("keeps whole-channel and individual Voice loops mutually exclusive", () => {
+    const state = createInitialState();
+    setVoice(
+      { state },
+      {
+        voice: {
+          loop: false,
+          sounds: [{ id: "intro-clip", resourceId: "intro", loop: true }],
+        },
+      },
+    );
+
+    expect(selectVoicePayload({ state }).sounds[0].loop).toBe(true);
+
+    updateChannel({ state }, { values: { loop: true } });
+    expect(selectVoicePayload({ state }).loop).toBe(true);
+    expect(selectVoicePayload({ state }).sounds[0].loop).toBe(false);
+
+    updateSound({ state }, { soundId: "intro-clip", values: { loop: true } });
+    expect(selectVoicePayload({ state }).loop).toBe(false);
+    expect(selectVoicePayload({ state }).sounds[0].loop).toBe(true);
   });
 
   it("places inserted Voice sounds without reflowing after removal", () => {

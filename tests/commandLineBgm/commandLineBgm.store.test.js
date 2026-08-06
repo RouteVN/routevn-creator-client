@@ -13,6 +13,8 @@ import {
   setRepositoryState,
   setSelectedSound,
   startSoundDrag,
+  updateChannel,
+  updateSound,
   updateSoundDrag,
   finishSoundDrag,
 } from "../../src/components/commandLineBgm/commandLineBgm.store.js";
@@ -211,6 +213,7 @@ describe("commandLineBgm.store", () => {
     expect(selectedViewData.selectionName).toBe("Intro");
     expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([
       "startDelayMs",
+      "loop",
       "volume",
     ]);
     expect(selectedViewData.form.fields[0]).toMatchObject({
@@ -222,8 +225,32 @@ describe("commandLineBgm.store", () => {
     });
     expect(selectedViewData.defaultValues).toEqual({
       startDelayMs: 0,
+      loop: false,
       volume: 90,
     });
+  });
+
+  it("keeps whole-channel and individual sound loops mutually exclusive", () => {
+    const state = createInitialState();
+    setBgm(
+      { state },
+      {
+        bgm: {
+          loop: false,
+          sounds: [{ id: "intro-clip", resourceId: "intro", loop: true }],
+        },
+      },
+    );
+
+    expect(selectBgm({ state }).sounds[0].loop).toBe(true);
+
+    updateChannel({ state }, { values: { loop: true } });
+    expect(selectBgm({ state }).loop).toBe(true);
+    expect(selectBgm({ state }).sounds[0].loop).toBe(false);
+
+    updateSound({ state }, { soundId: "intro-clip", values: { loop: true } });
+    expect(selectBgm({ state }).loop).toBe(false);
+    expect(selectBgm({ state }).sounds[0].loop).toBe(true);
   });
 
   it("places inserted sounds sequentially without reflowing after removal", () => {

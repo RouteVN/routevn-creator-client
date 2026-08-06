@@ -110,7 +110,7 @@ describe("commandLineBgm.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("updates only the selected clip timing and volume", () => {
+  it("updates only the selected clip timing, loop, and volume", () => {
     const state = createState();
     const store = createStore(state);
     const render = vi.fn();
@@ -120,13 +120,15 @@ describe("commandLineBgm.handlers", () => {
       { store, render },
       {
         _event: {
-          detail: { values: { startDelayMs: 750, volume: 35 } },
+          detail: { values: { startDelayMs: 750, loop: true, volume: 35 } },
         },
       },
     );
 
     expect(state.bgm.volume).toBe(75);
+    expect(state.bgm.loop).toBe(false);
     expect(state.bgm.sounds[0].startDelayMs).toBe(750);
+    expect(state.bgm.sounds[0].loop).toBe(true);
     expect(state.bgm.sounds[0].volume).toBe(35);
     expect(render).toHaveBeenCalledOnce();
   });
@@ -392,6 +394,7 @@ describe("commandLineBgm.handlers", () => {
     expect(setValues).toHaveBeenCalledWith({
       values: {
         startDelayMs: 2000,
+        loop: false,
         volume: 100,
       },
     });

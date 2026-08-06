@@ -33,19 +33,9 @@ export const prepareRenderStateAudioChannelsForGraphics = ({
     }
 
     changed = true;
-    const children = Array.isArray(element.children)
-      ? element.children.map((child) => {
-          if (child?.type !== "sound" || child.loop === false) {
-            return child;
-          }
-          return { ...child, loop: false };
-        })
-      : element.children;
-
     return {
       ...element,
       loop: channelLoopByRenderId.get(element.id),
-      children,
     };
   });
 

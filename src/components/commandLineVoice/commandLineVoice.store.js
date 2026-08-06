@@ -47,7 +47,7 @@ const normalizeSounds = (sounds = []) => {
     const normalizedSound = {
       id,
       resourceId: sound.resourceId,
-      loop: false,
+      loop: sound.loop ?? false,
       volume: normalizeVolume(sound.volume, DEFAULT_SOUND_VOLUME),
       startDelayMs: normalizeAudioStartDelayMs(sound.startDelayMs),
     };
@@ -79,6 +79,12 @@ const normalizeVoice = (voice = {}) => {
         startDelayMs: voice.startDelayMs,
       },
     ]);
+  }
+
+  if (normalizedVoice.loop) {
+    normalizedVoice.sounds.forEach((sound) => {
+      sound.loop = false;
+    });
   }
 
   sortAudioSoundsByStartDelay(normalizedVoice.sounds);
@@ -124,6 +130,15 @@ const SOUND_FORM = {
       type: "input-duration",
       min: 0,
       step: 10,
+    },
+    {
+      name: "loop",
+      description: "Loop",
+      type: "segmented-control",
+      options: [
+        { value: true, label: "Loop" },
+        { value: false, label: "Don't Loop" },
+      ],
     },
     {
       name: "volume",
@@ -230,6 +245,7 @@ export const selectViewData = ({ state, i18n }) => {
   const defaultValues = selectedSound
     ? {
         startDelayMs: selectedSound.startDelayMs,
+        loop: selectedSound.loop,
         volume: selectedSound.volume,
       }
     : {
@@ -299,6 +315,11 @@ export const updateChannel = ({ state }, { values = {} } = {}) => {
   }
   if (values.loop !== undefined) {
     state.voice.loop = values.loop;
+    if (values.loop) {
+      state.voice.sounds.forEach((sound) => {
+        sound.loop = false;
+      });
+    }
   }
   if (values.volume !== undefined) {
     state.voice.volume = normalizeVolume(values.volume, DEFAULT_CHANNEL_VOLUME);
@@ -311,6 +332,12 @@ export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
     return;
   }
 
+  if (values.loop !== undefined) {
+    sound.loop = values.loop;
+    if (values.loop) {
+      state.voice.loop = false;
+    }
+  }
   if (values.volume !== undefined) {
     sound.volume = normalizeVolume(values.volume, DEFAULT_SOUND_VOLUME);
   }

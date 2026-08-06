@@ -157,6 +157,7 @@ const syncSelectedSoundForm = ({ refs, store }) => {
   refs.form.setValues({
     values: {
       startDelayMs: sound.startDelayMs,
+      loop: sound.loop,
       volume: sound.volume,
     },
   });
