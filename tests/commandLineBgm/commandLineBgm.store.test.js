@@ -95,22 +95,27 @@ describe("commandLineBgm.store", () => {
     expect(selectedViewData.channelBorderColor).toBe("pr");
     expect(selectedViewData.selectionHeading).toBe("Channel");
     expect(selectedViewData.selectionName).toBe("BGM Channel");
-    expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([
-      "interruption",
-      "volume",
+    expect(selectedViewData.form.fields).toMatchObject([
+      {
+        type: "row",
+        fields: [
+          { name: "interruption", type: "segmented-control" },
+          { name: "volume", type: "slider-with-input" },
+        ],
+      },
     ]);
     expect(selectedViewData.defaultValues).toEqual({
       interruption: "immediate",
       volume: 75,
     });
-    expect(
-      selectedViewData.channelForm.fields.map(({ name, type }) => ({
-        name,
-        type,
-      })),
-    ).toEqual([
-      { name: "interruption", type: "segmented-control" },
-      { name: "volume", type: "slider-with-input" },
+    expect(selectedViewData.channelForm.fields).toMatchObject([
+      {
+        type: "row",
+        fields: [
+          { name: "interruption", type: "segmented-control" },
+          { name: "volume", type: "slider-with-input" },
+        ],
+      },
     ]);
     expect(selectedViewData.editChannelLabel).toBe("Edit Channel");
   });

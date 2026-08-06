@@ -103,21 +103,26 @@ const CHANNEL_FORM = {
       ],
     },
     {
-      name: "interruption",
-      description: "Interruption",
-      type: "segmented-control",
-      options: [
-        { value: "immediate", label: "Immediate" },
-        { value: "loopEnd", label: "Loop End" },
+      type: "row",
+      fields: [
+        {
+          name: "interruption",
+          description: "Interruption",
+          type: "segmented-control",
+          options: [
+            { value: "immediate", label: "Immediate" },
+            { value: "loopEnd", label: "Loop End" },
+          ],
+        },
+        {
+          name: "volume",
+          description: "Volume",
+          type: "slider-with-input",
+          min: 0,
+          max: 100,
+          step: 1,
+        },
       ],
-    },
-    {
-      name: "volume",
-      description: "Volume",
-      type: "slider-with-input",
-      min: 0,
-      max: 100,
-      step: 1,
     },
   ],
 };

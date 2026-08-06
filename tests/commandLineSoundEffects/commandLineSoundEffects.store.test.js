@@ -251,18 +251,23 @@ describe("commandLineSoundEffects.store", () => {
     expect(channelSelection.channels[0].channelHoverBorderColor).toBe("pr");
     expect(channelSelection.selectionHeading).toBe("Channel");
     expect(channelSelection.selectionName).toBe("Weather");
-    expect(channelSelection.form.fields.map((field) => field.name)).toEqual([
-      "interruption",
-      "volume",
+    expect(channelSelection.form.fields).toMatchObject([
+      {
+        type: "row",
+        fields: [
+          { name: "interruption", type: "segmented-control" },
+          { name: "volume", type: "slider-with-input" },
+        ],
+      },
     ]);
-    expect(
-      channelSelection.channelForm.fields.map(({ name, type }) => ({
-        name,
-        type,
-      })),
-    ).toEqual([
-      { name: "interruption", type: "segmented-control" },
-      { name: "volume", type: "slider-with-input" },
+    expect(channelSelection.channelForm.fields).toMatchObject([
+      {
+        type: "row",
+        fields: [
+          { name: "interruption", type: "segmented-control" },
+          { name: "volume", type: "slider-with-input" },
+        ],
+      },
     ]);
     expect(channelSelection.defaultValues).toEqual({
       interruption: "immediate",

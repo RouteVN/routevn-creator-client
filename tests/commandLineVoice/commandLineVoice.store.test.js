@@ -84,25 +84,30 @@ describe("commandLineVoice.store", () => {
     expect(selectedViewData.channelBorderColor).toBe("pr");
     expect(selectedViewData.selectionHeading).toBe("Channel");
     expect(selectedViewData.selectionName).toBe("Voice Channel");
-    expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([
-      "loop",
-      "interruption",
-      "volume",
+    expect(selectedViewData.form.fields).toMatchObject([
+      { name: "loop", type: "segmented-control" },
+      {
+        type: "row",
+        fields: [
+          { name: "interruption", type: "segmented-control" },
+          { name: "volume", type: "slider-with-input" },
+        ],
+      },
     ]);
     expect(selectedViewData.defaultValues).toEqual({
       interruption: "immediate",
       loop: false,
       volume: 100,
     });
-    expect(
-      selectedViewData.channelForm.fields.map(({ name, type }) => ({
-        name,
-        type,
-      })),
-    ).toEqual([
+    expect(selectedViewData.channelForm.fields).toMatchObject([
       { name: "loop", type: "segmented-control" },
-      { name: "interruption", type: "segmented-control" },
-      { name: "volume", type: "slider-with-input" },
+      {
+        type: "row",
+        fields: [
+          { name: "interruption", type: "segmented-control" },
+          { name: "volume", type: "slider-with-input" },
+        ],
+      },
     ]);
     expect(selectedViewData.editChannelLabel).toBe("Edit Channel");
   });
