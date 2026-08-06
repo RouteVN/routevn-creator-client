@@ -498,4 +498,45 @@ steps:
     state: visible
     timeoutMs: 5000
   - action: screenshot
+  - action: select
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #emptyAddButton0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #resourceItem0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #resourceItem0x0"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #buttonSelect"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #soundClip0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #channelEditorConfirmButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #channelEditorDialog[open]"
+    state: hidden
+    timeoutMs: 5000
+  - action: waitFor
+    selector: "rvn-command-line-sound-effects#commandLineSoundEffects #channelForm0"
+    state: attached
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { const direct = root?.querySelector?.(selector); if (direct) return direct; for (const node of root?.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const sfx = deepQuery(document, 'rvn-command-line-sound-effects#commandLineSoundEffects'); const form = deepQuery(sfx?.shadowRoot, '#channelForm0'); const addButton = deepQuery(sfx?.shadowRoot, '#addChannelButton'); return Boolean(deepQuery(form?.shadowRoot, \"[data-field-name='loop']\") && deepQuery(form?.shadowRoot, \"[data-field-name='interruption']\") && deepQuery(form?.shadowRoot, \"[data-field-name='volume']\") && addButton && form.getBoundingClientRect().bottom <= addButton.getBoundingClientRect().top); })()"
+    value: true
+  - action: wait
+    ms: 300
+  - action: screenshot
 ---

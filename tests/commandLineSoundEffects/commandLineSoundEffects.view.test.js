@@ -26,4 +26,28 @@ describe("commandLineSoundEffects view", () => {
     expect(channelPreviewStyles).toContain("cursor: pointer");
     expect(view).not.toContain("editChannelButton");
   });
+
+  it("renders controls with each populated channel before the add button", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/commandLineSoundEffects/commandLineSoundEffects.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const templateStart = view.indexOf("template:");
+    const editorStart = view.indexOf(
+      "  - rtgl-dialog#channelEditorDialog",
+      templateStart,
+    );
+    const mainView = view.slice(templateStart, editorStart);
+    const channelFormIndex = mainView.indexOf("#channelForm${i}");
+    const addChannelButtonIndex = mainView.indexOf("#addChannelButton");
+
+    expect(mainView).toContain("$if channel.showControls");
+    expect(mainView).toContain('data-channel-id="${channel.id}"');
+    expect(channelFormIndex).toBeGreaterThan(-1);
+    expect(addChannelButtonIndex).toBeGreaterThan(channelFormIndex);
+    expect(mainView).not.toContain("$if showChannelControls");
+  });
 });

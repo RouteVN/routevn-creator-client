@@ -343,15 +343,19 @@ export const handleFormChange = (deps, payload) => {
   const values = payload._event.detail.values;
   const channelId = store.selectSelectedChannelId();
   const soundId = store.selectSelectedSoundId();
-  if (!channelId) {
+  if (!channelId || soundId === undefined) {
     return;
   }
 
-  if (soundId === undefined) {
-    store.updateChannel({ channelId, values });
-  } else {
-    store.updateSound({ channelId, soundId, values });
-  }
+  store.updateSound({ channelId, soundId, values });
+  render();
+};
+
+export const handleChannelFormChange = (deps, payload) => {
+  const { render, store } = deps;
+  const channelId = payload._event.currentTarget.dataset.channelId;
+  const values = payload._event.detail.values;
+  store.updateChannel({ channelId, values });
   render();
 };
 

@@ -7,25 +7,28 @@ const componentViews = [
     "commandLineBgm/commandLineBgm.view.yaml",
     "#bgmChannel",
     ".bgmSoundClip",
+    "$if showChannelControls",
   ],
   [
     "Voice",
     "commandLineVoice/commandLineVoice.view.yaml",
     "#voiceChannel",
     ".voiceSoundClip",
+    "$if showChannelControls",
   ],
   [
     "SFX",
     "commandLineSoundEffects/commandLineSoundEffects.view.yaml",
     "#sfxChannel",
     ".sfxSoundClip",
+    "$if channel.showControls",
   ],
 ];
 
 describe("command-line audio channel views", () => {
   it.each(componentViews)(
     "keeps %s sound controls inside the channel editor",
-    (_name, relativePath, channelTarget) => {
+    (_name, relativePath, channelTarget, _soundClass, controlsCondition) => {
       const view = readFileSync(
         new URL(`../../src/components/${relativePath}`, import.meta.url),
         "utf8",
@@ -39,7 +42,7 @@ describe("command-line audio channel views", () => {
       const editorView = view.slice(editorStart);
 
       expect(mainView).toContain("#channelForm");
-      expect(mainView).toContain("$if showChannelControls");
+      expect(mainView).toContain(controlsCondition);
       expect(mainView).toContain(channelTarget);
       expect(mainView).toContain("cur=pointer");
       const channelView = mainView

@@ -4,6 +4,7 @@ import {
   handleButtonSelectClick,
   handleChannelClick,
   handleChannelContextMenu,
+  handleChannelFormChange,
   handleFormChange,
   handleSoundKeyDown,
   handleSoundContextMenu,
@@ -199,6 +200,7 @@ describe("commandLineSoundEffects.handlers", () => {
       {
         id: "Weather",
         interruption: "immediate",
+        loop: false,
         volume: 75,
         sounds: [],
       },
@@ -288,18 +290,25 @@ describe("commandLineSoundEffects.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("updates the selected channel or sound controls", () => {
+  it("updates each channel form independently from selected sound controls", () => {
     const state = createState();
     const store = createStore(state);
     const render = vi.fn();
     store.addChannel({ id: "Weather" });
+    store.addChannel({ id: "UI" });
     store.setSelectedChannel({ channelId: "Weather" });
 
-    handleFormChange(
+    handleChannelFormChange(
       { store, render },
-      { _event: { detail: { values: { volume: 60 } } } },
+      {
+        _event: {
+          currentTarget: { dataset: { channelId: "UI" } },
+          detail: { values: { loop: true, volume: 60 } },
+        },
+      },
     );
-    expect(state.channels[0].volume).toBe(60);
+    expect(state.channels[0]).toMatchObject({ loop: false, volume: 75 });
+    expect(state.channels[1]).toMatchObject({ loop: true, volume: 60 });
 
     store.insertSound({
       channelId: "Weather",
@@ -318,7 +327,9 @@ describe("commandLineSoundEffects.handlers", () => {
       },
     );
 
-    expect(state.channels[0].volume).toBe(60);
+    expect(state.channels[0].volume).toBe(75);
+    expect(state.channels[0].loop).toBe(false);
+    expect(state.channels[1].loop).toBe(true);
     expect(state.channels[0].sounds[0]).toMatchObject({
       startDelayMs: 750,
       loop: true,
@@ -540,6 +551,7 @@ describe("commandLineSoundEffects.handlers", () => {
           {
             id: "Weather",
             interruption: "immediate",
+            loop: false,
             volume: 75,
             sounds: [
               {

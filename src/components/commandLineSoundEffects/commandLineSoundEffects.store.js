@@ -74,6 +74,7 @@ const normalizeChannel = (
   const normalizedChannel = {
     id: String(channel.id ?? "").trim(),
     interruption: normalizeAudioChannelInterruption(channel.interruption),
+    loop: channel.loop ?? false,
     volume: normalizeVolume(channel.volume, defaultChannelVolume),
     sounds: normalizeSounds(channel.sounds, {
       defaultVolume: defaultSoundVolume,
@@ -83,6 +84,11 @@ const normalizeChannel = (
     if (channel[field] !== undefined) {
       normalizedChannel[field] = channel[field];
     }
+  }
+  if (normalizedChannel.loop) {
+    normalizedChannel.sounds.forEach((sound) => {
+      sound.loop = false;
+    });
   }
   sortAudioSoundsByStartDelay(normalizedChannel.sounds);
   return normalizedChannel;
@@ -126,6 +132,15 @@ const normalizeSfxChannels = (sfx = {}) => {
 
 const CHANNEL_FORM = {
   fields: [
+    {
+      name: "loop",
+      description: "Loop",
+      type: "segmented-control",
+      options: [
+        { value: false, label: "Don't Loop" },
+        { value: true, label: "Loop" },
+      ],
+    },
     {
       type: "row",
       fields: [
@@ -420,7 +435,14 @@ export const selectViewData = ({ state, i18n }) => {
     return {
       ...channel,
       channelIndex,
+      channelFormKey: `channel-${channelIndex}`,
       sounds,
+      showControls: sounds.length > 0,
+      channelDefaultValues: {
+        interruption: channel.interruption,
+        loop: channel.loop,
+        volume: channel.volume,
+      },
       channelBorderColor: channelSelected ? "pr" : "bo",
       channelHoverBorderColor: channelSelected ? "pr" : "ac",
       durationLabel: formatAudioDurationMs(timeline.channelDurationMs),
@@ -440,18 +462,11 @@ export const selectViewData = ({ state, i18n }) => {
     (sound) => sound.id === state.selectedSoundId,
   );
   const hasSelection = selectedChannel !== undefined;
-  const form = selectedSound ? SOUND_FORM : CHANNEL_FORM;
-  const defaultValues = selectedSound
-    ? {
-        startDelayMs: selectedSound.startDelayMs,
-        loop: selectedSound.loop,
-        volume: selectedSound.volume,
-      }
-    : {
-        interruption:
-          selectedChannel?.interruption ?? normalizeAudioChannelInterruption(),
-        volume: selectedChannel?.volume ?? DEFAULT_CHANNEL_VOLUME,
-      };
+  const defaultValues = {
+    startDelayMs: selectedSound?.startDelayMs,
+    loop: selectedSound?.loop,
+    volume: selectedSound?.volume,
+  };
 
   return {
     mode: state.mode,
@@ -462,7 +477,6 @@ export const selectViewData = ({ state, i18n }) => {
     isChannelEditorOpen: editorChannel !== undefined,
     hasSoundSelection: selectedSound !== undefined,
     hasSelection,
-    showChannelControls: (selectedChannel?.sounds.length ?? 0) > 0,
     selectionHeading: hasSelection
       ? localizeCommandLineText(selectedSound ? "Audio" : "Channel", copy)
       : "",
@@ -470,14 +484,9 @@ export const selectViewData = ({ state, i18n }) => {
     selectionKey: selectedSound
       ? `sound-${selectedChannel.id}-${selectedSound.id}`
       : `channel-${selectedChannel?.id ?? "none"}`,
-    form: localizeCommandLineForm(form, copy),
+    form: localizeCommandLineForm(SOUND_FORM, copy),
     defaultValues,
     channelForm: localizeCommandLineForm(CHANNEL_FORM, copy),
-    channelDefaultValues: {
-      interruption:
-        selectedChannel?.interruption ?? normalizeAudioChannelInterruption(),
-      volume: selectedChannel?.volume ?? DEFAULT_CHANNEL_VOLUME,
-    },
     channelEditorTitle: editorChannel?.id ?? "",
     confirmButtonLabel: localizeCommandLineText("Confirm", copy),
     editChannelLabel: localizeCommandLineText("Edit Channel", copy),
@@ -617,6 +626,14 @@ export const updateChannel = ({ state }, { channelId, values = {} } = {}) => {
       values.interruption,
     );
   }
+  if (values.loop !== undefined) {
+    channel.loop = values.loop;
+    if (values.loop) {
+      channel.sounds.forEach((sound) => {
+        sound.loop = false;
+      });
+    }
+  }
   if (values.volume !== undefined) {
     channel.volume = normalizeVolume(values.volume, DEFAULT_CHANNEL_VOLUME);
   }
@@ -635,6 +652,10 @@ export const updateSound = (
 
   if (values.loop !== undefined) {
     sound.loop = values.loop;
+    if (values.loop) {
+      const channel = state.channels.find((item) => item.id === channelId);
+      channel.loop = false;
+    }
   }
   if (values.volume !== undefined) {
     sound.volume = normalizeVolume(values.volume, DEFAULT_SOUND_VOLUME);

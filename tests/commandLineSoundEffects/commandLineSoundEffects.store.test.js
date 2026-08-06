@@ -19,6 +19,7 @@ import {
   setSfx,
   startSoundDrag,
   updateSoundDrag,
+  updateChannel,
   updateSound,
 } from "../../src/components/commandLineSoundEffects/commandLineSoundEffects.store.js";
 
@@ -81,7 +82,6 @@ describe("commandLineSoundEffects.store", () => {
     expect(selectSfx({ state })).toEqual({ channels: [] });
     expect(viewData.channels).toEqual([]);
     expect(viewData.hasSelection).toBe(false);
-    expect(viewData.showChannelControls).toBe(false);
     expect(viewData.addChannelButtonLabel).toBe("+ Add Channel");
   });
 
@@ -97,12 +97,14 @@ describe("commandLineSoundEffects.store", () => {
         {
           id: "Weather",
           interruption: "immediate",
+          loop: false,
           volume: 75,
           sounds: [],
         },
         {
           id: "UI",
           interruption: "immediate",
+          loop: false,
           volume: 75,
           sounds: [],
         },
@@ -248,22 +250,18 @@ describe("commandLineSoundEffects.store", () => {
 
     setSelectedChannel({ state }, { channelId: "Weather" });
     const channelSelection = selectViewData({ state, i18n });
-    expect(channelSelection.showChannelControls).toBe(true);
+    expect(channelSelection.channels[0].showControls).toBe(true);
+    expect(channelSelection.channels[0].channelFormKey).toBe("channel-0");
     expect(channelSelection.channels[0].channelBorderColor).toBe("pr");
     expect(channelSelection.channels[0].channelHoverBorderColor).toBe("pr");
     expect(channelSelection.selectionHeading).toBe("Channel");
     expect(channelSelection.selectionName).toBe("Weather");
-    expect(channelSelection.form.fields).toMatchObject([
-      {
-        type: "row",
-        fields: [
-          { name: "interruption", type: "segmented-control" },
-          { name: "volume", type: "slider-with-input" },
-        ],
-      },
-    ]);
     expect(channelSelection.channelForm.fields).toMatchObject([
       {
+        name: "loop",
+        type: "segmented-control",
+      },
+      {
         type: "row",
         fields: [
           { name: "interruption", type: "segmented-control" },
@@ -271,8 +269,13 @@ describe("commandLineSoundEffects.store", () => {
         ],
       },
     ]);
-    expect(channelSelection.defaultValues).toEqual({
+    expect(channelSelection.channelForm.fields[0].options).toEqual([
+      { value: false, label: "Don't Loop" },
+      { value: true, label: "Loop" },
+    ]);
+    expect(channelSelection.channels[0].channelDefaultValues).toEqual({
       interruption: "immediate",
+      loop: false,
       volume: 80,
     });
 
@@ -385,6 +388,7 @@ describe("commandLineSoundEffects.store", () => {
         {
           id: "default",
           interruption: "immediate",
+          loop: false,
           volume: 100,
           sounds: [
             {
@@ -405,6 +409,43 @@ describe("commandLineSoundEffects.store", () => {
         },
       ],
     });
+  });
+
+  it("keeps channel and individual sound loops mutually exclusive", () => {
+    const state = createInitialState();
+    setRepositoryState({ state }, { sounds });
+    setSfx(
+      { state },
+      {
+        sfx: {
+          channels: [
+            {
+              id: "Weather",
+              loop: true,
+              sounds: [{ id: "rain-clip", resourceId: "rain", loop: true }],
+            },
+          ],
+        },
+      },
+    );
+
+    expect(state.channels[0].loop).toBe(true);
+    expect(state.channels[0].sounds[0].loop).toBe(false);
+
+    updateSound(
+      { state },
+      {
+        channelId: "Weather",
+        soundId: "rain-clip",
+        values: { loop: true },
+      },
+    );
+    expect(state.channels[0].loop).toBe(false);
+    expect(state.channels[0].sounds[0].loop).toBe(true);
+
+    updateChannel({ state }, { channelId: "Weather", values: { loop: true } });
+    expect(state.channels[0].loop).toBe(true);
+    expect(state.channels[0].sounds[0].loop).toBe(false);
   });
 
   it("places inserted sounds without reflowing the channel after removal", () => {
