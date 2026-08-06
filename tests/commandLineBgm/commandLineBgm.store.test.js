@@ -251,6 +251,34 @@ describe("commandLineBgm.store", () => {
     expect(selectBgm({ state }).sounds[0].loop).toBe(true);
   });
 
+  it("restores the channel loop after removing the final looping sound", () => {
+    const state = createInitialState();
+    setBgm(
+      { state },
+      {
+        bgm: {
+          loop: false,
+          sounds: [
+            { id: "first-loop", resourceId: "intro", loop: true },
+            { id: "second-loop", resourceId: "theme", loop: true },
+            { id: "remaining-clip", resourceId: "intro", loop: false },
+          ],
+        },
+      },
+    );
+
+    removeSound({ state }, { soundId: "first-loop" });
+    expect(selectBgm({ state }).loop).toBe(false);
+
+    removeSound({ state }, { soundId: "second-loop" });
+    expect(selectBgm({ state }).loop).toBe(true);
+    expect(selectBgm({ state }).sounds).toHaveLength(1);
+    expect(selectBgm({ state }).sounds[0]).toMatchObject({
+      id: "remaining-clip",
+      loop: false,
+    });
+  });
+
   it("places inserted sounds sequentially without reflowing after removal", () => {
     const state = createInitialState();
     setRepositoryState({ state }, { sounds });

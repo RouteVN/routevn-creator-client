@@ -60,6 +60,10 @@ const normalizeSounds = (sounds = []) => {
   });
 };
 
+const syncBgmChannelLoop = (bgm) => {
+  bgm.loop = !bgm.sounds.some((sound) => sound.loop);
+};
+
 const normalizeBgm = (bgm = {}) => {
   const normalizedBgm = {
     interruption: normalizeAudioChannelInterruption(bgm.interruption),
@@ -388,7 +392,7 @@ export const updateSound = ({ state }, { soundId, values = {} } = {}) => {
 
   if (values.loop !== undefined) {
     sound.loop = values.loop;
-    state.bgm.loop = !state.bgm.sounds.some((item) => item.loop);
+    syncBgmChannelLoop(state.bgm);
   }
   if (values.volume !== undefined) {
     sound.volume = normalizeVolume(values.volume, DEFAULT_SOUND_VOLUME);
@@ -497,6 +501,7 @@ export const insertSound = (
   });
   state.bgm.sounds.splice(insertIndex, 0, sound);
   sortAudioSoundsByStartDelay(state.bgm.sounds);
+  syncBgmChannelLoop(state.bgm);
   state.channelSelected = false;
   state.selectedSoundId = sound.id;
   state.tempSelectedResourceId = undefined;
@@ -504,6 +509,7 @@ export const insertSound = (
 
 export const removeSound = ({ state }, { soundId } = {}) => {
   state.bgm.sounds = state.bgm.sounds.filter((sound) => sound.id !== soundId);
+  syncBgmChannelLoop(state.bgm);
   state.channelSelected = true;
   state.selectedSoundId = undefined;
 };
