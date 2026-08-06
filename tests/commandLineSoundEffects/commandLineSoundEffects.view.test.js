@@ -27,7 +27,7 @@ describe("commandLineSoundEffects view", () => {
     expect(view).not.toContain("editChannelButton");
   });
 
-  it("renders controls with each populated channel before the add button", () => {
+  it("renders channel controls before the add button and bottom scroll space", () => {
     const view = readFileSync(
       new URL(
         "../../src/components/commandLineSoundEffects/commandLineSoundEffects.view.yaml",
@@ -43,11 +43,13 @@ describe("commandLineSoundEffects view", () => {
     const mainView = view.slice(templateStart, editorStart);
     const channelFormIndex = mainView.indexOf("#channelForm${i}");
     const addChannelButtonIndex = mainView.indexOf("#addChannelButton");
+    const bottomSpacerIndex = mainView.indexOf("h=240 aria-hidden=true");
 
     expect(mainView).toContain("$if channel.showControls");
     expect(mainView).toContain('data-channel-id="${channel.id}"');
     expect(channelFormIndex).toBeGreaterThan(-1);
     expect(addChannelButtonIndex).toBeGreaterThan(channelFormIndex);
+    expect(bottomSpacerIndex).toBeGreaterThan(addChannelButtonIndex);
     expect(mainView).not.toContain("$if showChannelControls");
   });
 });
