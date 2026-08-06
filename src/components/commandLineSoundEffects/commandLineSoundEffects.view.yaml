@@ -290,9 +290,6 @@ template:
                                                           - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
                   - $if hasSoundSelection:
                       - rtgl-view w=f g=md:
-                          - rtgl-view w=f ph=lg:
-                              - rtgl-text s=md: ${selectionHeading}
-                              - rtgl-text s=sm c=mu-fg: ${selectionName}
                           - rtgl-form#soundForm key=${selectionKey} :form=${form} :defaultValues=${defaultValues} p=lg: null
                           - 'rtgl-view h=160 aria-hidden=true style="flex: 0 0 160px;"': null
             $elif mode == 'gallery':

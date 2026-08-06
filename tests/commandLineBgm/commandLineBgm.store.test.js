@@ -141,10 +141,21 @@ describe("commandLineBgm.store", () => {
     updateSound({ state }, { soundId: "intro-clip", values: { volume: 35 } });
     const editorViewData = selectViewData({ state, i18n });
     expect(editorViewData.hasSoundSelection).toBe(true);
-    expect(editorViewData.form.fields.map((field) => field.name)).toEqual([
-      "startDelayMs",
-      "loop",
-      "volume",
+    expect(editorViewData.form.fields).toMatchObject([
+      {
+        type: "row",
+        fields: [
+          { name: "startDelayMs", type: "input-duration" },
+          { type: "slot", slot: "startDelaySpacer" },
+        ],
+      },
+      {
+        type: "row",
+        fields: [
+          { name: "loop", type: "segmented-control" },
+          { name: "volume", type: "slider-with-input" },
+        ],
+      },
     ]);
 
     closeChannelEditor({ state });
@@ -256,12 +267,7 @@ describe("commandLineBgm.store", () => {
     const selectedViewData = selectViewData({ state, i18n });
     expect(selectedViewData.selectionHeading).toBe("Audio");
     expect(selectedViewData.selectionName).toBe("Intro");
-    expect(selectedViewData.form.fields.map((field) => field.name)).toEqual([
-      "startDelayMs",
-      "loop",
-      "volume",
-    ]);
-    expect(selectedViewData.form.fields[0]).toMatchObject({
+    expect(selectedViewData.form.fields[0].fields[0]).toMatchObject({
       name: "startDelayMs",
       label: "Start Delay",
       type: "input-duration",

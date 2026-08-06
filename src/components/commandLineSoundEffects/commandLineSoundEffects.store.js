@@ -154,28 +154,42 @@ const CHANNEL_FORM = {
 const SOUND_FORM = {
   fields: [
     {
-      name: "startDelayMs",
-      label: "Start Delay",
-      type: "input-duration",
-      min: 0,
-      step: 10,
-    },
-    {
-      name: "loop",
-      description: "Loop",
-      type: "segmented-control",
-      options: [
-        { value: false, label: "Don't Loop" },
-        { value: true, label: "Loop" },
+      type: "row",
+      fields: [
+        {
+          name: "startDelayMs",
+          label: "Start Delay",
+          type: "input-duration",
+          min: 0,
+          step: 10,
+        },
+        {
+          type: "slot",
+          slot: "startDelaySpacer",
+        },
       ],
     },
     {
-      name: "volume",
-      description: "Volume",
-      type: "slider-with-input",
-      min: 0,
-      max: 100,
-      step: 1,
+      type: "row",
+      fields: [
+        {
+          name: "loop",
+          description: "Loop",
+          type: "segmented-control",
+          options: [
+            { value: false, label: "Don't Loop" },
+            { value: true, label: "Loop" },
+          ],
+        },
+        {
+          name: "volume",
+          description: "Volume",
+          type: "slider-with-input",
+          min: 0,
+          max: 100,
+          step: 1,
+        },
+      ],
     },
   ],
 };

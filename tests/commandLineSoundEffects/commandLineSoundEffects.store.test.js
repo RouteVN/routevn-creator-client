@@ -279,19 +279,30 @@ describe("commandLineSoundEffects.store", () => {
     const soundSelection = selectViewData({ state, i18n });
     expect(soundSelection.selectionHeading).toBe("Audio");
     expect(soundSelection.selectionName).toBe("Rain");
-    expect(soundSelection.form.fields.map((field) => field.name)).toEqual([
-      "startDelayMs",
-      "loop",
-      "volume",
+    expect(soundSelection.form.fields).toMatchObject([
+      {
+        type: "row",
+        fields: [
+          { name: "startDelayMs", type: "input-duration" },
+          { type: "slot", slot: "startDelaySpacer" },
+        ],
+      },
+      {
+        type: "row",
+        fields: [
+          { name: "loop", type: "segmented-control" },
+          { name: "volume", type: "slider-with-input" },
+        ],
+      },
     ]);
-    expect(soundSelection.form.fields[0]).toMatchObject({
+    expect(soundSelection.form.fields[0].fields[0]).toMatchObject({
       name: "startDelayMs",
       label: "Start Delay",
       type: "input-duration",
       min: 0,
       step: 10,
     });
-    expect(soundSelection.form.fields[1].options).toEqual([
+    expect(soundSelection.form.fields[1].fields[0].options).toEqual([
       { value: false, label: "Don't Loop" },
       { value: true, label: "Loop" },
     ]);
