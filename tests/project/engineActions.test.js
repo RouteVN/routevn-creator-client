@@ -87,7 +87,7 @@ describe("normalizeLineActions", () => {
     });
   });
 
-  it("removes stale inline background transform fields when a transformId is selected", () => {
+  it("removes stale numeric background transforms and preserves flip overrides", () => {
     expect(
       normalizeLineActions({
         background: {
@@ -99,6 +99,8 @@ describe("normalizeLineActions", () => {
           anchorY: 0.5,
           scaleX: 1.2,
           scaleY: 1.2,
+          flipX: false,
+          flipY: true,
           rotation: 0,
           originX: 960,
           originY: 540,
@@ -108,6 +110,8 @@ describe("normalizeLineActions", () => {
       background: {
         resourceId: "bg-school",
         transformId: "bg-center",
+        flipX: false,
+        flipY: true,
       },
     });
   });

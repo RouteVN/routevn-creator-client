@@ -1985,6 +1985,8 @@ commandLinePage:
   failedLoadAudioWaveform: "音声波形を読み込めませんでした。"
   failedUploadVoice: "ボイスをアップロードできませんでした。"
   "Fields": "フィールド"
+  "Flip X": "X軸反転"
+  "Flip Y": "Y軸反転"
   "Foreground": "前景"
   "General": "汎用"
   "Greater Than": "より大きい"
