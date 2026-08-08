@@ -1985,6 +1985,8 @@ commandLinePage:
   failedLoadAudioWaveform: "无法加载音频波形。"
   failedUploadVoice: "无法上传语音。"
   "Fields": "字段"
+  "Flip X": "X 轴翻转"
+  "Flip Y": "Y 轴翻转"
   "Foreground": "前景"
   "General": "通用"
   "Greater Than": "大于"

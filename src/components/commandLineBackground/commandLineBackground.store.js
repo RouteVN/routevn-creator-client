@@ -170,6 +170,10 @@ export const createInitialState = () => ({
   backgroundColorOptionEnabled: false,
   selectedOpacity: undefined,
   opacityOptionEnabled: false,
+  selectedFlipX: undefined,
+  flipXOptionEnabled: false,
+  selectedFlipY: undefined,
+  flipYOptionEnabled: false,
   selectedBlurEnabled: false,
   selectedBlurExplicit: false,
   selectedBlur: { ...DEFAULT_BACKGROUND_BLUR },
@@ -513,6 +517,52 @@ export const removeOpacityOption = ({ state }) => {
 
 export const selectOpacityOptionEnabled = ({ state }) => {
   return state.opacityOptionEnabled;
+};
+
+export const setSelectedFlipX = ({ state }, { flipX } = {}) => {
+  state.selectedFlipX = flipX === true || flipX === "true";
+  state.flipXOptionEnabled = true;
+};
+
+export const selectSelectedFlipX = ({ state }) => {
+  return state.selectedFlipX;
+};
+
+export const showFlipXOption = ({ state }) => {
+  state.flipXOptionEnabled = true;
+  state.selectedFlipX = true;
+};
+
+export const removeFlipXOption = ({ state }) => {
+  state.flipXOptionEnabled = false;
+  state.selectedFlipX = undefined;
+};
+
+export const selectFlipXOptionEnabled = ({ state }) => {
+  return state.flipXOptionEnabled;
+};
+
+export const setSelectedFlipY = ({ state }, { flipY } = {}) => {
+  state.selectedFlipY = flipY === true || flipY === "true";
+  state.flipYOptionEnabled = true;
+};
+
+export const selectSelectedFlipY = ({ state }) => {
+  return state.selectedFlipY;
+};
+
+export const showFlipYOption = ({ state }) => {
+  state.flipYOptionEnabled = true;
+  state.selectedFlipY = true;
+};
+
+export const removeFlipYOption = ({ state }) => {
+  state.flipYOptionEnabled = false;
+  state.selectedFlipY = undefined;
+};
+
+export const selectFlipYOptionEnabled = ({ state }) => {
+  return state.flipYOptionEnabled;
 };
 
 export const setSelectedBlur = ({ state }, { blur } = {}) => {
@@ -1001,6 +1051,52 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     });
   }
+  if (state.flipXOptionEnabled) {
+    optionFields.push({
+      type: "section",
+      id: "flip-x",
+      label: "Flip X",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          name: "flipX",
+          type: "segmented-control",
+          clearable: false,
+          options: [
+            { value: false, label: "No" },
+            { value: true, label: "Yes" },
+          ],
+        },
+      ],
+    });
+  }
+  if (state.flipYOptionEnabled) {
+    optionFields.push({
+      type: "section",
+      id: "flip-y",
+      label: "Flip Y",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          name: "flipY",
+          type: "segmented-control",
+          clearable: false,
+          options: [
+            { value: false, label: "No" },
+            { value: true, label: "Yes" },
+          ],
+        },
+      ],
+    });
+  }
   if (state.selectedBlurEnabled) {
     optionFields.push({
       type: "section",
@@ -1076,6 +1172,8 @@ export const selectViewData = ({ state, i18n }) => {
   const allOptionsVisible =
     state.backgroundColorOptionEnabled &&
     state.opacityOptionEnabled &&
+    state.flipXOptionEnabled &&
+    state.flipYOptionEnabled &&
     state.selectedBlurEnabled;
   if (!allOptionsVisible) {
     optionsSection.action = {
@@ -1096,6 +1194,8 @@ export const selectViewData = ({ state, i18n }) => {
     customTransform: state.customTransformEnabled,
     transformId: state.selectedTransformId,
     opacity: state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
+    flipX: state.selectedFlipX,
+    flipY: state.selectedFlipY,
     playbackContinuity: state.selectedAnimationPlaybackContinuity,
     playbackSpeed: state.selectedAnimationPlaybackSpeed,
     playbackLoop: state.selectedAnimationLoop,
@@ -1150,6 +1250,10 @@ export const selectViewData = ({ state, i18n }) => {
         JSON.stringify(state.selectedCustomTransform ?? {}),
         state.opacityOptionEnabled ? "opacity-option" : "no-opacity-option",
         state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
+        state.flipXOptionEnabled ? "flip-x-option" : "no-flip-x-option",
+        state.selectedFlipX ? "flip-x" : "no-flip-x",
+        state.flipYOptionEnabled ? "flip-y-option" : "no-flip-y-option",
+        state.selectedFlipY ? "flip-y" : "no-flip-y",
         state.selectedBlurEnabled ? "blur" : "no-blur",
         state.selectedBlur.x,
         state.selectedBlur.y,

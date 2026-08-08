@@ -1985,6 +1985,8 @@ commandLinePage:
   failedLoadAudioWaveform: "Failed to load audio waveform."
   failedUploadVoice: "Failed to upload voice."
   "Fields": "Fields"
+  "Flip X": "Flip X"
+  "Flip Y": "Flip Y"
   "Foreground": "Foreground"
   "General": "General"
   "Greater Than": "Greater Than"

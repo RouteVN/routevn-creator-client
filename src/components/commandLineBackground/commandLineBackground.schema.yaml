@@ -51,6 +51,10 @@ propsSchema:
           type: number
         scaleY:
           type: number
+        flipX:
+          type: boolean
+        flipY:
+          type: boolean
         rotation:
           type: number
         originX:
