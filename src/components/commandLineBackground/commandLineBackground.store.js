@@ -22,6 +22,14 @@ import {
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
+  BACKGROUND_SHADER_ADJUSTMENTS,
+  createBackgroundShaderAdjustmentFilter,
+  createInitialBackgroundShaderAdjustments,
+  getBackgroundShaderAdjustment,
+  getBackgroundShaderAdjustmentValue,
+  normalizeBackgroundShaderAdjustmentValue,
+} from "./support/backgroundShaderAdjustments.js";
 
 const tabs = [
   {
@@ -170,6 +178,8 @@ export const createInitialState = () => ({
   backgroundColorOptionEnabled: false,
   selectedOpacity: undefined,
   opacityOptionEnabled: false,
+  backgroundFilters: undefined,
+  backgroundShaderAdjustments: createInitialBackgroundShaderAdjustments(),
   selectedBlurEnabled: false,
   selectedBlurExplicit: false,
   selectedBlur: { ...DEFAULT_BACKGROUND_BLUR },
@@ -513,6 +523,106 @@ export const removeOpacityOption = ({ state }) => {
 
 export const selectOpacityOptionEnabled = ({ state }) => {
   return state.opacityOptionEnabled;
+};
+
+export const setBackgroundFilters = ({ state }, { filters } = {}) => {
+  state.backgroundFilters = Array.isArray(filters)
+    ? structuredClone(filters)
+    : undefined;
+
+  for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+    const value = getBackgroundShaderAdjustmentValue(
+      state.backgroundFilters,
+      adjustment.id,
+    );
+    state.backgroundShaderAdjustments[adjustment.id].enabled =
+      value !== undefined;
+    state.backgroundShaderAdjustments[adjustment.id].value =
+      value ?? adjustment.defaultValue;
+  }
+};
+
+export const selectBackgroundFilters = ({ state }) => {
+  return state.backgroundFilters;
+};
+
+export const setSelectedBackgroundShaderAdjustment = (
+  { state },
+  { adjustmentId, value } = {},
+) => {
+  const adjustment = getBackgroundShaderAdjustment(adjustmentId);
+  const normalizedValue = normalizeBackgroundShaderAdjustmentValue(
+    adjustmentId,
+    value,
+  );
+  state.backgroundShaderAdjustments[adjustmentId].value = normalizedValue;
+  state.backgroundShaderAdjustments[adjustmentId].enabled = true;
+
+  if (!Array.isArray(state.backgroundFilters)) {
+    state.backgroundFilters = [];
+  }
+
+  const filterIndex = state.backgroundFilters.findIndex(
+    (filter) => filter?.id === adjustment.filterId,
+  );
+  const filter = createBackgroundShaderAdjustmentFilter(
+    adjustmentId,
+    normalizedValue,
+  );
+  if (filterIndex >= 0) {
+    state.backgroundFilters[filterIndex] = filter;
+    return;
+  }
+
+  state.backgroundFilters.push(filter);
+};
+
+export const selectBackgroundShaderAdjustmentValue = (
+  { state },
+  { adjustmentId } = {},
+) => {
+  return state.backgroundShaderAdjustments[adjustmentId].value;
+};
+
+export const showBackgroundShaderAdjustmentOption = (
+  { state },
+  { adjustmentId } = {},
+) => {
+  setSelectedBackgroundShaderAdjustment(
+    { state },
+    {
+      adjustmentId,
+      value: state.backgroundShaderAdjustments[adjustmentId].value,
+    },
+  );
+};
+
+export const removeBackgroundShaderAdjustmentOption = (
+  { state },
+  { adjustmentId } = {},
+) => {
+  const adjustment = getBackgroundShaderAdjustment(adjustmentId);
+  state.backgroundShaderAdjustments[adjustmentId].enabled = false;
+  state.backgroundShaderAdjustments[adjustmentId].value =
+    adjustment.defaultValue;
+
+  if (!Array.isArray(state.backgroundFilters)) {
+    state.backgroundFilters = [];
+    return;
+  }
+
+  for (let index = state.backgroundFilters.length - 1; index >= 0; index -= 1) {
+    if (state.backgroundFilters[index]?.id === adjustment.filterId) {
+      state.backgroundFilters.splice(index, 1);
+    }
+  }
+};
+
+export const selectBackgroundShaderAdjustmentOptionEnabled = (
+  { state },
+  { adjustmentId } = {},
+) => {
+  return state.backgroundShaderAdjustments[adjustmentId].enabled;
 };
 
 export const setSelectedBlur = ({ state }, { blur } = {}) => {
@@ -1001,6 +1111,31 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     });
   }
+  for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+    if (!state.backgroundShaderAdjustments[adjustment.id].enabled) {
+      continue;
+    }
+
+    optionFields.push({
+      type: "section",
+      id: adjustment.id,
+      label: adjustment.label,
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          name: adjustment.id,
+          type: "slider-with-input",
+          min: adjustment.min,
+          max: adjustment.max,
+          step: adjustment.step,
+        },
+      ],
+    });
+  }
   if (state.selectedBlurEnabled) {
     optionFields.push({
       type: "section",
@@ -1076,6 +1211,9 @@ export const selectViewData = ({ state, i18n }) => {
   const allOptionsVisible =
     state.backgroundColorOptionEnabled &&
     state.opacityOptionEnabled &&
+    BACKGROUND_SHADER_ADJUSTMENTS.every(
+      (adjustment) => state.backgroundShaderAdjustments[adjustment.id].enabled,
+    ) &&
     state.selectedBlurEnabled;
   if (!allOptionsVisible) {
     optionsSection.action = {
@@ -1107,6 +1245,18 @@ export const selectViewData = ({ state, i18n }) => {
     blurKernelSize: state.selectedBlur.kernelSize,
     blurRepeatEdgePixels: state.selectedBlur.repeatEdgePixels,
   };
+  for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+    defaultValues[adjustment.id] =
+      state.backgroundShaderAdjustments[adjustment.id].value;
+  }
+  const shaderAdjustmentKeyParts = BACKGROUND_SHADER_ADJUSTMENTS.flatMap(
+    (adjustment) => [
+      state.backgroundShaderAdjustments[adjustment.id].enabled
+        ? `${adjustment.id}-option`
+        : `no-${adjustment.id}-option`,
+      state.backgroundShaderAdjustments[adjustment.id].value,
+    ],
+  );
   return {
     mode: state.mode,
     tab: state.tab,
@@ -1150,6 +1300,7 @@ export const selectViewData = ({ state, i18n }) => {
         JSON.stringify(state.selectedCustomTransform ?? {}),
         state.opacityOptionEnabled ? "opacity-option" : "no-opacity-option",
         state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
+        ...shaderAdjustmentKeyParts,
         state.selectedBlurEnabled ? "blur" : "no-blur",
         state.selectedBlur.x,
         state.selectedBlur.y,
