@@ -9,6 +9,7 @@ import {
   selectTempSelectedResource,
   selectViewData as selectViewDataBase,
   setRepositoryState,
+  setBackgroundFilters,
   setCustomTransform,
   setCustomTransformEnabled,
   setSelectedAnimation,
@@ -632,6 +633,61 @@ describe("commandLineBackground.store", () => {
       );
       expect(filter.source.webgpu.source).toContain(`${uniformName}: f32`);
     }
+  });
+
+  it("keeps shader adjustments in canonical order regardless of editing history", () => {
+    const customFilter = {
+      id: "customFilter",
+      type: "shader",
+      parameters: {
+        strength: 0.5,
+      },
+      source: {
+        webgl: {
+          fragment: "custom-webgl",
+        },
+        webgpu: {
+          source: "custom-webgpu",
+        },
+      },
+    };
+    const createFiltersForOrder = (adjustments) => {
+      const state = createInitialState();
+      setBackgroundFilters({ state }, { filters: [customFilter] });
+
+      for (const adjustment of adjustments) {
+        setSelectedBackgroundShaderAdjustment(
+          { state },
+          {
+            adjustmentId: adjustment.id,
+            value: adjustment.defaultValue,
+          },
+        );
+      }
+
+      return selectBackgroundFilters({ state });
+    };
+
+    const canonicalFilters = createFiltersForOrder(
+      BACKGROUND_SHADER_ADJUSTMENTS,
+    );
+    const reverseHistoryFilters = createFiltersForOrder(
+      [...BACKGROUND_SHADER_ADJUSTMENTS].reverse(),
+    );
+    const loadedState = createInitialState();
+    setBackgroundFilters(
+      { state: loadedState },
+      { filters: [...canonicalFilters].reverse() },
+    );
+
+    expect(reverseHistoryFilters).toEqual(canonicalFilters);
+    expect(selectBackgroundFilters({ state: loadedState })).toEqual(
+      canonicalFilters,
+    );
+    expect(canonicalFilters.map((filter) => filter.id)).toEqual([
+      customFilter.id,
+      ...BACKGROUND_SHADER_ADJUSTMENTS.map((adjustment) => adjustment.filterId),
+    ]);
   });
 
   it("shows a selected background color as an inline option select", () => {

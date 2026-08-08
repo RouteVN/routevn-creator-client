@@ -130,6 +130,12 @@ const BACKGROUND_SHADER_ADJUSTMENTS_BY_ID = Object.fromEntries(
     adjustment,
   ]),
 );
+const BACKGROUND_SHADER_ADJUSTMENTS_BY_FILTER_ID = Object.fromEntries(
+  BACKGROUND_SHADER_ADJUSTMENTS.map((adjustment) => [
+    adjustment.filterId,
+    adjustment,
+  ]),
+);
 
 const toUniformName = (parameterName) => {
   return `u${parameterName[0].toUpperCase()}${parameterName.slice(1)}`;
@@ -231,6 +237,30 @@ export const createInitialBackgroundShaderAdjustments = () => {
 
 export const getBackgroundShaderAdjustment = (adjustmentId) => {
   return BACKGROUND_SHADER_ADJUSTMENTS_BY_ID[adjustmentId];
+};
+
+export const orderBackgroundShaderAdjustmentFilters = (filters) => {
+  const otherFilters = [];
+  const filtersByAdjustmentId = Object.fromEntries(
+    BACKGROUND_SHADER_ADJUSTMENTS.map((adjustment) => [adjustment.id, []]),
+  );
+
+  for (const filter of filters) {
+    const adjustment = BACKGROUND_SHADER_ADJUSTMENTS_BY_FILTER_ID[filter?.id];
+    if (!adjustment || filter.type !== "shader") {
+      otherFilters.push(filter);
+      continue;
+    }
+
+    filtersByAdjustmentId[adjustment.id].push(filter);
+  }
+
+  const orderedFilters = [...otherFilters];
+  for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+    orderedFilters.push(...filtersByAdjustmentId[adjustment.id]);
+  }
+
+  return orderedFilters;
 };
 
 export const normalizeBackgroundShaderAdjustmentValue = (

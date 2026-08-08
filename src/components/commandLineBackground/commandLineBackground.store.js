@@ -29,6 +29,7 @@ import {
   getBackgroundShaderAdjustment,
   getBackgroundShaderAdjustmentValue,
   normalizeBackgroundShaderAdjustmentValue,
+  orderBackgroundShaderAdjustmentFilters,
 } from "./support/backgroundShaderAdjustments.js";
 
 const tabs = [
@@ -527,7 +528,7 @@ export const selectOpacityOptionEnabled = ({ state }) => {
 
 export const setBackgroundFilters = ({ state }, { filters } = {}) => {
   state.backgroundFilters = Array.isArray(filters)
-    ? structuredClone(filters)
+    ? orderBackgroundShaderAdjustmentFilters(structuredClone(filters))
     : undefined;
 
   for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
@@ -571,10 +572,13 @@ export const setSelectedBackgroundShaderAdjustment = (
   );
   if (filterIndex >= 0) {
     state.backgroundFilters[filterIndex] = filter;
-    return;
+  } else {
+    state.backgroundFilters.push(filter);
   }
 
-  state.backgroundFilters.push(filter);
+  state.backgroundFilters = orderBackgroundShaderAdjustmentFilters(
+    state.backgroundFilters,
+  );
 };
 
 export const selectBackgroundShaderAdjustmentValue = (
