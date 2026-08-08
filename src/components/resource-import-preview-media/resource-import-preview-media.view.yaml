@@ -1,0 +1,10 @@
+refs:
+  video:
+    eventListeners:
+      canplay:
+        handler: handleVideoCanPlay
+template:
+  - $if kind == 'video':
+      - 'video#video key=${src} src="${src}" autoplay=true muted=true loop=true playsinline=true preload=metadata aria-label="${label}" style="display: block; width: 100%; height: 100%; object-fit: contain; background: #000;"': null
+    $else:
+      - 'img src="${src}" alt="${label}" style="display: block; width: 100%; height: 100%; object-fit: contain; background: #000;"': null

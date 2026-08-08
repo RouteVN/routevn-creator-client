@@ -524,5 +524,15 @@ export const createInsiemeWebStoreAdapter = async (
         request.onerror = (event) => reject(event.target.error);
       });
     },
+
+    async deleteFile(id) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("files", "readwrite");
+        const store = transaction.objectStore("files");
+        const request = store.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.error);
+      });
+    },
   };
 };

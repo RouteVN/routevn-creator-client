@@ -22,6 +22,25 @@ Collaboration:
 4. If they cannot keep working safely, they should degrade explicitly instead of
    editing against stale state.
 
+## Import Package Compatibility
+
+`routevn.import-pack.v1` is a package transport schema, not a creator-model or
+project-format version. The current importer requires that exact schema and
+does not accept raw collections or unversioned resource objects on its public
+URL path.
+
+Version 1 does not declare creator-model minimum/maximum fields. Instead, the
+client validates every normalized target resource with its installed
+creator-model and preflights the complete file/tag/image/resource command
+sequence before mutation. A package that uses fields or values unsupported by
+the installed model fails as an invalid imported resource; the importer does
+not coerce it or persist compatibility metadata.
+
+If package authors later need explicit model ranges or migrations, that is a
+new import-package schema decision (for example, a v2 envelope). It must not
+reuse the project `creatorVersion`, command-envelope `schemaVersion`, or model
+`SCHEMA_VERSION` as if those values were interchangeable.
+
 ## Current Verdict
 
 ### Single-user

@@ -2,6 +2,7 @@ import { createProjectAssetService } from "./projectAssetService.js";
 import { createProjectCollabCore } from "./projectCollabCore.js";
 import { createProjectExportService } from "./projectExportService.js";
 import { createProjectRepositoryService } from "./projectRepositoryService.js";
+import { createResourcePackageImportService } from "./resourcePackageImportService.js";
 import { importImageFile as importProjectImageFile } from "./resourceImports.js";
 import {
   checkProjectResourceUsage,
@@ -117,6 +118,17 @@ export const createProjectServiceCore = ({
     const repository = repositoryService.getCachedRepository();
     return repository.getRevision();
   };
+
+  const resourcePackageImportService = createResourcePackageImportService({
+    idGenerator,
+    getCurrentProjectId,
+    getRepositoryState,
+    getRepositoryRevision,
+    assetService,
+    commandApi: collabService.commandApi,
+    logEvent: (event, details) =>
+      collabLog?.("info", `resourceImport.${event}`, details),
+  });
 
   const selectLayoutsRequiringSchemaUpgrade = (state) =>
     Object.entries(state?.layouts?.items || {})
@@ -586,6 +598,13 @@ export const createProjectServiceCore = ({
     getDomainState,
     getRepositoryState,
     getRepositoryRevision,
+    createResourceImportPlan:
+      resourcePackageImportService.createResourceImportPlan,
+    validateResourceImportPlan:
+      resourcePackageImportService.validateResourceImportPlan,
+    executeResourceImportPlan:
+      resourcePackageImportService.executeResourceImportPlan,
+    cancelResourceImport: resourcePackageImportService.cancelResourceImport,
     loadRepositoryState,
     setActiveSceneId,
     clearActiveSceneId,

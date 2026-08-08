@@ -75,16 +75,44 @@ export const createProjectAssetService = ({
   getStoreByProject,
   resolveFileMetadata,
 }) => {
+  const resourceImportFileIdsByPlan = new Map();
+
+  const getResourceImportFileEntry = (planId, projectReference) => {
+    if (!planId) return undefined;
+    let entry = resourceImportFileIdsByPlan.get(planId);
+    if (!entry) {
+      entry = {
+        fileIds: new Set(),
+        projectReference: projectReference
+          ? { ...projectReference }
+          : undefined,
+      };
+      resourceImportFileIdsByPlan.set(planId, entry);
+    }
+    return entry;
+  };
+
+  const trackResourceImportFileId = (planId, fileId, projectReference) => {
+    if (!fileId) return;
+    getResourceImportFileEntry(planId, projectReference)?.fileIds.add(fileId);
+  };
+
   const shouldSkipImageThumbnail = (options = {}) =>
     options?.skipImageThumbnail === true;
 
-  const storeRawFile = async ({ file, bytes, projectId, projectPath } = {}) => {
+  const storeRawFile = async ({
+    file,
+    bytes,
+    projectId,
+    projectPath,
+    targetFileId,
+  } = {}) => {
     return fileAdapter.storeFile({
       file,
       bytes,
       projectId,
       projectPath,
-      idGenerator,
+      idGenerator: targetFileId ? () => targetFileId : idGenerator,
       getCurrentStore,
       getCurrentReference,
       getStoreByProject,
@@ -97,9 +125,11 @@ export const createProjectAssetService = ({
     timings,
     projectId,
     projectPath,
+    targetFileId,
+    onStoredFileId,
   } = {}) => {
     const fileBytes = bytes ?? (await file.arrayBuffer());
-    const [stored, sha256] = await Promise.all([
+    const [storedResult, hashResult] = await Promise.allSettled([
       (async () => {
         const storeStartedAt = getNow();
         const result = await storeRawFile({
@@ -107,7 +137,9 @@ export const createProjectAssetService = ({
           bytes: fileBytes,
           projectId,
           projectPath,
+          targetFileId,
         });
+        onStoredFileId?.(result.fileId);
         if (timings) {
           timings.storeDurationMs = getDurationMs(storeStartedAt);
         }
@@ -122,6 +154,10 @@ export const createProjectAssetService = ({
         return result;
       })(),
     ]);
+    if (storedResult.status === "rejected") throw storedResult.reason;
+    if (hashResult.status === "rejected") throw hashResult.reason;
+    const stored = storedResult.value;
+    const sha256 = hashResult.value;
 
     return {
       ...stored,
@@ -158,10 +194,22 @@ export const createProjectAssetService = ({
     const fileType = detectFileType(file);
 
     if (fileType === "image") {
-      const [dimensions, stored] = await Promise.all([
+      const [dimensionsResult, storedResult] = await Promise.allSettled([
         getImageDimensions(file),
-        storeFileWithRecord({ file }),
+        storeFileWithRecord({
+          file,
+          projectId: options.projectId,
+          projectPath: options.projectPath,
+          targetFileId: options.targetFileId,
+          onStoredFileId: options.onStoredFileId,
+        }),
       ]);
+      if (storedResult.status === "rejected") throw storedResult.reason;
+      if (dimensionsResult.status === "rejected") {
+        throw dimensionsResult.reason;
+      }
+      const stored = storedResult.value;
+      const dimensions = dimensionsResult.value;
 
       if (shouldSkipImageThumbnail(options)) {
         return {
@@ -180,6 +228,10 @@ export const createProjectAssetService = ({
       });
       const thumbnailResult = await storeFileWithRecord({
         file: thumbnailData.blob,
+        projectId: options.projectId,
+        projectPath: options.projectPath,
+        targetFileId: options.targetThumbnailFileId,
+        onStoredFileId: options.onStoredFileId,
       });
       return {
         ...stored,
@@ -312,7 +364,10 @@ export const createProjectAssetService = ({
       };
     }
 
-    const stored = await storeRawFile({ file });
+    const stored = await storeRawFile({
+      file,
+      targetFileId: options.targetFileId,
+    });
     return {
       ...stored,
       type: "generic",
@@ -321,10 +376,11 @@ export const createProjectAssetService = ({
   };
 
   return {
-    async storeFile({ file, bytes } = {}) {
+    async storeFile({ file, bytes, targetFileId } = {}) {
       const stored = await storeFileWithRecord({
         file,
         bytes,
+        targetFileId,
       });
 
       return {
@@ -369,6 +425,96 @@ export const createProjectAssetService = ({
         },
       );
       return results.filter((result) => result.success);
+    },
+
+    async stageResourceImportFile({
+      planId,
+      projectId: targetProjectId,
+      file,
+      fileId,
+      thumbnailFileId,
+      processImage = false,
+    } = {}) {
+      const currentProjectReference = planId
+        ? getCurrentReference?.()
+        : undefined;
+      const projectReference = currentProjectReference
+        ? { ...currentProjectReference }
+        : targetProjectId
+          ? {
+              projectId: targetProjectId,
+              repositoryProjectId: targetProjectId,
+            }
+          : undefined;
+      const projectId =
+        targetProjectId ??
+        projectReference?.repositoryProjectId ??
+        projectReference?.projectId;
+      const projectPath = projectReference?.projectPath;
+      getResourceImportFileEntry(planId, projectReference);
+      if (processImage) {
+        const result = await processFile(file, {
+          projectId,
+          projectPath,
+          targetFileId: fileId,
+          targetThumbnailFileId: thumbnailFileId,
+          onStoredFileId: (storedFileId) =>
+            trackResourceImportFileId(planId, storedFileId, projectReference),
+        });
+        const staged = {
+          success: true,
+          file,
+          displayName: file.name.replace(/\.[^.]+$/, ""),
+          ...result,
+        };
+        for (const record of staged.fileRecords ?? []) {
+          trackResourceImportFileId(planId, record.id, projectReference);
+        }
+        return staged;
+      }
+
+      const stored = await storeFileWithRecord({
+        file,
+        projectId,
+        projectPath,
+        targetFileId: fileId,
+        onStoredFileId: (storedFileId) =>
+          trackResourceImportFileId(planId, storedFileId, projectReference),
+      });
+      const staged = {
+        success: true,
+        file,
+        displayName: file.name.replace(/\.[^.]+$/, ""),
+        ...stored,
+        type: "generic",
+        fileRecords: [stored.fileRecord],
+      };
+      trackResourceImportFileId(planId, stored.fileRecord.id, projectReference);
+      return staged;
+    },
+
+    async discardResourceImportFiles({ planId, fileIds = [] } = {}) {
+      const entry = planId
+        ? resourceImportFileIdsByPlan.get(planId)
+        : undefined;
+      const trackedFileIds = [...(entry?.fileIds ?? [])];
+      const resolvedFileIds = [...new Set([...fileIds, ...trackedFileIds])];
+      if (typeof fileAdapter.deleteStoredFiles !== "function") {
+        return { deletedFileIds: [], retainedFileIds: resolvedFileIds };
+      }
+      await fileAdapter.deleteStoredFiles({
+        fileIds: resolvedFileIds,
+        projectReference: entry?.projectReference,
+        getCurrentStore,
+        getCurrentReference,
+        getStoreByProject,
+      });
+      if (planId) resourceImportFileIdsByPlan.delete(planId);
+      return { deletedFileIds: resolvedFileIds, retainedFileIds: [] };
+    },
+
+    finalizeResourceImportFiles({ planId } = {}) {
+      if (planId) resourceImportFileIdsByPlan.delete(planId);
     },
 
     async getFileContent(fileId) {

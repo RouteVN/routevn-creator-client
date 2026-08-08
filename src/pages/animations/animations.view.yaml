@@ -77,12 +77,10 @@ refs:
         handler: handleFileExplorerKeyboardScopeKeyDown
   importDialog:
     eventListeners:
-      close:
+      import-cancelled:
         handler: handleImportDialogClose
-  importForm:
-    eventListeners:
-      form-action:
-        handler: handleImportFormActionClick
+      import-complete:
+        handler: handleResourceImportComplete
   addDialog:
     eventListeners:
       close:
@@ -216,8 +214,7 @@ template:
                           - rtgl-text: ${selectedItemDuration}
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#importDialog ?open=${isImportDialogOpen} s=md:
-      - rtgl-form#importForm key=${importDialogKey} slot=content :defaultValues=${importDialogDefaultValues} :form=${importForm} w=f: null
+  - rvn-resource-import-dialog#importDialog :open=${isImportDialogOpen} expectedResourceType=animations :projectResolution=${projectResolution}: null
   - rtgl-dialog#addDialog ?open=${isAddDialogOpen} s=md:
       - rtgl-form#addForm key=${isAddDialogOpen} slot=content :defaultValues=${addFormDefaults} :form=${addForm} w=f: null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:

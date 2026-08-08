@@ -1,0 +1,243 @@
+---
+file: ./insiemeStorageScenario.js
+group: import package storage
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: persists the complete import resource command sequence
+in:
+  - projectId: project-one-import
+    projectName: Project One
+    projectDescription: Import package storage scenario
+    actor:
+      userId: user-project-one
+      clientId: client-project-one
+    commands:
+      - id: cmd-import-image-folder
+        partition: m
+        type: image.create
+        clientTs: 1301
+        payload:
+          imageId: folder-images
+          data:
+            type: folder
+            name: Images
+          parentId:
+          index: 0
+      - id: cmd-import-transform-folder
+        partition: m
+        type: transform.create
+        clientTs: 1302
+        payload:
+          transformId: folder-transforms
+          data:
+            type: folder
+            name: Transforms
+          parentId:
+          index: 0
+      - id: cmd-import-file
+        partition: m
+        type: file.create
+        clientTs: 1303
+        payload:
+          fileId: file-import
+          data:
+            mimeType: image/png
+            size: 68
+            sha256: sha256-import-file
+      - id: cmd-import-thumbnail
+        partition: m
+        type: file.create
+        clientTs: 1304
+        payload:
+          fileId: file-import-thumbnail
+          data:
+            mimeType: image/webp
+            size: 42
+            sha256: sha256-import-thumbnail
+      - id: cmd-import-tag
+        partition: m
+        type: tag.create
+        clientTs: 1305
+        payload:
+          scopeKey: transforms
+          tagId: tag-import
+          data:
+            type: tag
+            name: Motion
+            color: "#64748b"
+      - id: cmd-import-image
+        partition: m
+        type: image.create
+        clientTs: 1306
+        payload:
+          imageId: image-import
+          data:
+            type: image
+            name: Image One
+            description: ""
+            fileId: file-import
+            thumbnailFileId: file-import-thumbnail
+            width: 1
+            height: 1
+            tagIds: []
+          parentId: folder-images
+          index: 0
+      - id: cmd-import-transform
+        partition: m
+        type: transform.create
+        clientTs: 1307
+        payload:
+          transformId: transform-import
+          data:
+            type: transform
+            name: Transform One
+            description: ""
+            tagIds:
+              - tag-import
+            x: 100
+            'y': 120
+            scaleX: 1
+            scaleY: 1
+            anchorX: 0.5
+            anchorY: 0.5
+            rotation: 0
+            preview:
+              background:
+                imageId: image-import
+          parentId: folder-transforms
+          index: 0
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-import-image-folder
+      projectId: project-one-import
+      userId: user-project-one
+      partition: m
+      schemaVersion: 1
+      type: image.create
+      payload:
+        imageId: folder-images
+        data:
+          type: folder
+          name: Images
+        parentId:
+        index: 0
+      meta:
+        clientTs: 1301
+    - committedId: 2
+      id: cmd-import-transform-folder
+      projectId: project-one-import
+      userId: user-project-one
+      partition: m
+      schemaVersion: 1
+      type: transform.create
+      payload:
+        transformId: folder-transforms
+        data:
+          type: folder
+          name: Transforms
+        parentId:
+        index: 0
+      meta:
+        clientTs: 1302
+    - committedId: 3
+      id: cmd-import-file
+      projectId: project-one-import
+      userId: user-project-one
+      partition: m
+      schemaVersion: 1
+      type: file.create
+      payload:
+        fileId: file-import
+        data:
+          mimeType: image/png
+          size: 68
+          sha256: sha256-import-file
+      meta:
+        clientTs: 1303
+    - committedId: 4
+      id: cmd-import-thumbnail
+      projectId: project-one-import
+      userId: user-project-one
+      partition: m
+      schemaVersion: 1
+      type: file.create
+      payload:
+        fileId: file-import-thumbnail
+        data:
+          mimeType: image/webp
+          size: 42
+          sha256: sha256-import-thumbnail
+      meta:
+        clientTs: 1304
+    - committedId: 5
+      id: cmd-import-tag
+      projectId: project-one-import
+      userId: user-project-one
+      partition: m
+      schemaVersion: 1
+      type: tag.create
+      payload:
+        scopeKey: transforms
+        tagId: tag-import
+        data:
+          type: tag
+          name: Motion
+          color: "#64748b"
+      meta:
+        clientTs: 1305
+    - committedId: 6
+      id: cmd-import-image
+      projectId: project-one-import
+      userId: user-project-one
+      partition: m
+      schemaVersion: 1
+      type: image.create
+      payload:
+        imageId: image-import
+        data:
+          type: image
+          name: Image One
+          description: ""
+          fileId: file-import
+          thumbnailFileId: file-import-thumbnail
+          width: 1
+          height: 1
+          tagIds: []
+        parentId: folder-images
+        index: 0
+      meta:
+        clientTs: 1306
+    - committedId: 7
+      id: cmd-import-transform
+      projectId: project-one-import
+      userId: user-project-one
+      partition: m
+      schemaVersion: 1
+      type: transform.create
+      payload:
+        transformId: transform-import
+        data:
+          type: transform
+          name: Transform One
+          description: ""
+          tagIds:
+            - tag-import
+          x: 100
+          'y': 120
+          scaleX: 1
+          scaleY: 1
+          anchorX: 0.5
+          anchorY: 0.5
+          rotation: 0
+          preview:
+            background:
+              imageId: image-import
+        parentId: folder-transforms
+        index: 0
+      meta:
+        clientTs: 1307

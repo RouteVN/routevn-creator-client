@@ -95,12 +95,10 @@ refs:
         handler: handleTransformFormAddOptionClick
   importDialog:
     eventListeners:
-      close:
+      import-cancelled:
         handler: handleImportDialogClose
-  importForm:
-    eventListeners:
-      form-action:
-        handler: handleImportFormActionClick
+      import-complete:
+        handler: handleResourceImportComplete
   transformPreviewImageButton*:
     eventListeners:
       click:
@@ -244,8 +242,7 @@ template:
                       - rtgl-tag-select#detailTagSelect slot="transform-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#importDialog ?open=${isImportDialogOpen} s=md:
-      - rtgl-form#importForm key=${importDialogKey} slot=content :defaultValues=${importDialogDefaultValues} :form=${importForm} w=f: null
+  - rvn-resource-import-dialog#importDialog :open=${isImportDialogOpen} expectedResourceType=transforms: null
   - rtgl-dialog#transformDialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot="content" d=h lg-d=v ah=c g=lg w=f:
           - $if isDialogOpen:

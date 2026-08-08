@@ -68,6 +68,53 @@ describe("projectAssetService", () => {
     expect(mocked.extractImageThumbnail).not.toHaveBeenCalled();
   });
 
+  it("tracks a stored import blob when image decoding fails before staging returns", async () => {
+    const deleteStoredFiles = vi.fn(async () => {});
+    let projectReference = {
+      projectId: "project-one",
+      repositoryProjectId: "project-one",
+    };
+    mocked.detectFileType.mockReturnValue("image");
+    mocked.getImageDimensions.mockRejectedValue(new Error("invalid image"));
+    const service = createProjectAssetService({
+      idGenerator: () => "generated-id",
+      fileAdapter: {
+        storeFile: vi.fn(async () => ({ fileId: "file-original" })),
+        deleteStoredFiles,
+        getFileContent: vi.fn(),
+        getFileByProjectId: vi.fn(),
+      },
+      getCurrentStore: vi.fn(),
+      getCurrentReference: () => projectReference,
+      getStoreByProject: vi.fn(),
+    });
+
+    await expect(
+      service.stageResourceImportFile({
+        planId: "plan-one",
+        file: new File(["invalid"], "image.png", { type: "image/png" }),
+        fileId: "file-original",
+        thumbnailFileId: "file-thumbnail",
+        processImage: true,
+      }),
+    ).rejects.toThrow("invalid image");
+    projectReference = {
+      projectId: "project-two",
+      repositoryProjectId: "project-two",
+    };
+    await service.discardResourceImportFiles({ planId: "plan-one" });
+
+    expect(deleteStoredFiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fileIds: ["file-original"],
+        projectReference: {
+          projectId: "project-one",
+          repositoryProjectId: "project-one",
+        },
+      }),
+    );
+  });
+
   it("delegates getFileByProjectId through the stable file-adapter contract", async () => {
     const fileBlob = new Blob(["icon"], { type: "image/png" });
     const getStoreByProject = vi.fn();

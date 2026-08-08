@@ -1,0 +1,95 @@
+{
+  "schema": "routevn.import-pack.v1",
+  "package": {
+    "id": "test.transforms",
+    "name": "Transform Test Pack",
+    "version": "1.0.0",
+    "description": "Two transforms sharing one replaceable preview image.",
+    "publisher": "RouteVN Test Fixtures"
+  },
+  "primary": {
+    "resourceType": "transforms",
+    "id": "transform.primary"
+  },
+  "repository": {
+    "files": {
+      "items": {
+        "file.pixel": {
+          "id": "file.pixel",
+          "mimeType": "image/png",
+          "size": 68,
+          "sha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+          "source": {
+            "url": "../files/pixel.png"
+          }
+        }
+      }
+    },
+    "images": {
+      "items": {
+        "image.pixel": {
+          "id": "image.pixel",
+          "type": "image",
+          "name": "Preview Pixel",
+          "description": "A replaceable package image.",
+          "fileId": "file.pixel",
+          "width": 1,
+          "height": 1
+        }
+      },
+      "tree": [{ "id": "image.pixel" }]
+    },
+    "transforms": {
+      "items": {
+        "transform.secondary": {
+          "id": "transform.secondary",
+          "type": "transform",
+          "name": "Test Offset",
+          "description": "Secondary resource",
+          "tagIds": ["tag.motion"],
+          "x": 100,
+          "y": 120,
+          "scaleX": 1,
+          "scaleY": 1,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "rotation": 0,
+          "preview": {
+            "target": { "imageId": "image.pixel" }
+          }
+        },
+        "transform.primary": {
+          "id": "transform.primary",
+          "type": "transform",
+          "name": "Test Center",
+          "description": "Primary resource",
+          "tagIds": ["tag.motion"],
+          "x": 960,
+          "y": 540,
+          "scaleX": 1,
+          "scaleY": 1,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "rotation": 0,
+          "preview": {
+            "background": { "imageId": "image.pixel" }
+          }
+        }
+      },
+      "tree": [{ "id": "transform.secondary" }, { "id": "transform.primary" }]
+    },
+    "tags": {
+      "transforms": {
+        "items": {
+          "tag.motion": {
+            "id": "tag.motion",
+            "type": "tag",
+            "name": "Motion",
+            "color": "#64748b"
+          }
+        },
+        "tree": [{ "id": "tag.motion" }]
+      }
+    }
+  }
+}
