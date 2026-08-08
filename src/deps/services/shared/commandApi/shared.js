@@ -103,6 +103,7 @@ export const createCommandApiShared = ({
 
   const createCommandWithContext = ({
     context,
+    commandId,
     scope: _scope,
     type,
     payload,
@@ -119,7 +120,7 @@ export const createCommandApiShared = ({
           );
 
     return createCommandEnvelope({
-      id: createId(),
+      id: commandId ?? createId(),
       projectId: context.projectId,
       partition: resolvedPartition,
       type,
@@ -260,6 +261,7 @@ export const createCommandApiShared = ({
     const normalizedCommands = (commands || []).map((entry) =>
       createCommandWithContext({
         context,
+        commandId: entry.commandId,
         scope: entry.scope,
         type: entry.type,
         payload: entry.payload,
@@ -285,34 +287,43 @@ export const createCommandApiShared = ({
     }
 
     const localApplyCommands = structuredClone(normalizedCommands);
-    const submitResult =
-      await context.session.submitCommands(normalizedCommands);
-    if (submitResult?.valid === false) {
-      return submitResult;
+    let submitted = false;
+    try {
+      const submitResult =
+        await context.session.submitCommands(normalizedCommands);
+      if (submitResult?.valid === false) {
+        return submitResult;
+      }
+      submitted = true;
+
+      const applyResult = await applyCommandsToRepository({
+        repository: context.repository,
+        commands: localApplyCommands,
+        projectId: context.projectId,
+      });
+
+      await flushRepositoryMainCheckpointBestEffort({
+        repository: context.repository,
+        projectId: context.projectId,
+      });
+
+      advanceContextStateWithCommands({
+        context,
+        commands: localApplyCommands,
+      });
+
+      return {
+        valid: true,
+        commandIds: localApplyCommands.map((command) => command.id),
+        eventCount: applyResult.events.length,
+        applyMode: applyResult.mode,
+      };
+    } catch (error) {
+      if (submitted) {
+        error.commitOutcome = "unknown";
+      }
+      throw error;
     }
-
-    const applyResult = await applyCommandsToRepository({
-      repository: context.repository,
-      commands: localApplyCommands,
-      projectId: context.projectId,
-    });
-
-    await flushRepositoryMainCheckpointBestEffort({
-      repository: context.repository,
-      projectId: context.projectId,
-    });
-
-    advanceContextStateWithCommands({
-      context,
-      commands: localApplyCommands,
-    });
-
-    return {
-      valid: true,
-      commandIds: localApplyCommands.map((command) => command.id),
-      eventCount: applyResult.events.length,
-      applyMode: applyResult.mode,
-    };
   };
 
   const buildMissingFileCommands = ({ context, fileRecords = [] } = {}) => {

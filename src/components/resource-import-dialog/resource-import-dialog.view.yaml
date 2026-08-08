@@ -1,0 +1,155 @@
+refs:
+  dialog:
+    eventListeners:
+      close:
+        handler: handleDialogClose
+  workflowForm:
+    eventListeners:
+      form-action:
+        handler: handleFormAction
+  resourceSelectionCheckbox*:
+    eventListeners:
+      value-change:
+        handler: handleResourceSelectionChange
+  imageCustomizeButton*:
+    eventListeners:
+      click:
+        handler: handleImageCustomize
+  imageUseDefaultButton*:
+    eventListeners:
+      click:
+        handler: handleImageUseDefault
+  imageSelectorDialog:
+    eventListeners:
+      close:
+        handler: handleImageSelectorClose
+  replacementImageSelector:
+    eventListeners:
+      image-selected:
+        handler: handleReplacementImageSelected
+  confirmImageSelection:
+    eventListeners:
+      click:
+        handler: handleConfirmImageReplacement
+  cancelProgressButton:
+    eventListeners:
+      click:
+        handler: handleCancelProgress
+template:
+  - 'rtgl-dialog#dialog ?open=${open} s=md aria-label="${dialogAriaLabel}"':
+      - rtgl-view slot=content d=v w=f g=md:
+          - $if errorMessage:
+              - rtgl-view w=f p=md bgc=de br=md role=alert aria-live=assertive:
+                  - rtgl-text c=de-fg: ${errorMessage}
+          - $if isBusy && isSourceStep:
+              - rtgl-view w=f h=180 av=c ah=c d=v g=md:
+                  - rtgl-text: ${progressLabel}
+          - $if !isBusy && !isProgressStep:
+              - rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext}:
+                  - $if isReviewStep:
+                      - rtgl-view slot=package-summary d=v w=f g=md:
+                          - rtgl-view d=v w=f g=xs:
+                              - rtgl-text s=lg: ${packageName}
+                              - rtgl-text c=mu-fg: ${packageVersion}
+                              - $if packageDescription:
+                                  - rtgl-text: ${packageDescription}
+                              - $if packagePublisher:
+                                  - 'rtgl-text s=sm c=mu-fg': '${publisherLabel}: ${packagePublisher}'
+                              - $if packageSource:
+                                  - 'rtgl-text s=sm c=mu-fg': '${sourceLabel}: ${packageSource}'
+                              - $if isItemStep:
+                                  - rtgl-text s=sm c=mu-fg: ${knownDownloadBytes} ${bytesLabel}
+                                  - $if hasUnknownDownloadSize:
+                                      - rtgl-text s=sm c=mu-fg: ${unknownSizeLabel}
+                          - $if warnings.length > 0:
+                              - rtgl-view d=v w=f g=xs p=md bgc=wa br=md:
+                                  - rtgl-text c=wa-fg: ${warningsLabel}
+                                  - $for warning, i in warnings:
+                                      - rtgl-text s=sm c=wa-fg: ${warning.message}
+                          - $if unsupportedResourceTypes.length > 0:
+                              - rtgl-view d=v w=f g=xs p=md bgc=mu br=md:
+                                  - rtgl-text c=mu-fg: ${unsupportedLabel}
+                                  - $for resourceType, i in unsupportedResourceTypes:
+                                      - rtgl-text s=sm c=mu-fg: ${resourceType}
+                  - $if isSelectionStep:
+                      - $for resource, i in resources:
+                          - 'rtgl-view slot=${resource.selectionSlot} d=h w=f av=c g=md p=md bgc=bg bw=xs bc=bo br=md style="box-sizing: border-box;"':
+                              - 'rtgl-checkbox#resourceSelectionCheckbox${i} data-resource-index=${i} ?checked=${resource.selected} aria-label="${resource.selectionLabel}"': null
+                              - $if resource.previewUrl:
+                                  - 'rtgl-view w=160 h=90 overflow=hidden bw=xs bc=bo br=md bgc=mu style="flex: 0 0 160px; box-sizing: border-box;"':
+                                      - 'rvn-resource-import-preview-media src="${resource.previewUrl}" kind=${resource.previewKind} label="${resource.name}"': null
+                                $else:
+                                  - rtgl-view w=160 h=90 av=c ah=c bw=xs bc=bo br=md bgc=mu:
+                                      - rtgl-svg svg=image wh=24 c=mu-fg: null
+                              - rtgl-view d=v w=1fg g=xs:
+                                  - rtgl-view d=h av=c g=xs:
+                                      - rtgl-text s=md: ${resource.name}
+                                      - $if resource.primary:
+                                          - rtgl-text s=sm c=mu-fg: (${primaryLabel})
+                                  - $if resource.description:
+                                      - rtgl-text s=sm c=mu-fg: ${resource.description}
+                  - $if isItemStep:
+                      - rtgl-view slot=resource-preview d=v w=f g=sm:
+                          - 'rtgl-view w=240 h=135 overflow=hidden bw=xs bc=bo br=md bgc=mu style="max-width: 100%; box-sizing: border-box;"':
+                              - $if currentResource.previewUrl:
+                                  - 'rvn-resource-import-preview-media src="${currentResource.previewUrl}" kind=${currentResource.previewKind} label="${currentResource.name}"': null
+                                $else:
+                                  - rtgl-view w=f h=f av=c ah=c:
+                                      - rtgl-svg svg=image wh=32 c=mu-fg: null
+                          - $if currentResource.description:
+                              - rtgl-text s=sm c=mu-fg: ${currentResource.description}
+                      - $if animationTimeline:
+                          - rtgl-view slot=animation-timeline-preview d=v w=f g=sm:
+                              - rtgl-text s=sm c=mu-fg: ${timelinePreviewLabel}
+                              - 'rtgl-view d=v w=f g=sm p=sm bw=xs bc=bo br=md bgc=bg style="box-sizing: border-box; overflow-x: auto;"':
+                                  - $if animationTimeline.isTransition:
+                                      - rvn-keyframe-timeline w=f ?showRuler=true ?showTracks=false timelineDuration=${animationTimeline.timelineDuration}: null
+                                      - $if animationTimeline.hasPreviousProperties:
+                                          - rtgl-view d=v w=f g=xs:
+                                              - rtgl-text s=xs c=mu-fg: ${timelineOutLabel}
+                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${animationTimeline.timelineDuration} :properties=${animationTimeline.previousProperties} :defaultValues=${animationTimeline.defaultValues}: null
+                                      - $if animationTimeline.hasNextProperties:
+                                          - rtgl-view d=v w=f g=xs:
+                                              - rtgl-text s=xs c=mu-fg: ${timelineInLabel}
+                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${animationTimeline.timelineDuration} :properties=${animationTimeline.nextProperties} :defaultValues=${animationTimeline.defaultValues}: null
+                                      - $if animationTimeline.hasMaskProperties:
+                                          - rtgl-view d=v w=f g=xs:
+                                              - rtgl-text s=xs c=mu-fg: ${timelineMaskLabel}
+                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${animationTimeline.timelineDuration} :properties=${animationTimeline.maskProperties} :defaultValues=${animationTimeline.defaultValues}: null
+                                    $else:
+                                      - rvn-keyframe-timeline w=f ?showRuler=true :properties=${animationTimeline.updateProperties} :defaultValues=${animationTimeline.defaultValues}: null
+                      - $if currentImages.length > 0:
+                          - rtgl-view slot=image-resources d=v w=f g=md:
+                              - rtgl-text s=md: ${imageResourcesLabel}
+                              - $for image, i in currentImages:
+                                  - 'rtgl-view d=v w=f g=md p=md bgc=bg bw=xs bc=bo br=md style="box-sizing: border-box;"':
+                                      - rtgl-view d=h w=f av=c g=md wrap:
+                                          - $if image.customized && image.replacementImageId:
+                                              - 'rtgl-view w=160 h=90 overflow=hidden bw=xs bc=bo br=md bgc=mu style="flex: 0 0 160px;"':
+                                                  - rvn-file-image w=f h=f imageId=${image.replacementImageId} source=thumbnail: null
+                                            $elif image.previewUrl:
+                                              - 'rtgl-image src="${image.previewUrl}" alt="${image.name}" w=160 h=90 of=con bw=xs bc=bo br=md bgc=mu style="flex: 0 0 160px;"': null
+                                            $else:
+                                              - 'rtgl-view w=160 h=90 av=c ah=c bw=xs bc=bo br=md bgc=mu style="flex: 0 0 160px;"':
+                                                  - rtgl-svg svg=image wh=24 c=mu-fg: null
+                                          - rtgl-view d=v w=1fg g=xs:
+                                              - rtgl-text s=md: ${image.name}
+                                              - $if image.description:
+                                                  - rtgl-text s=sm c=mu-fg: ${image.description}
+                                          - rtgl-view d=h ah=e av=c g=sm wrap:
+                                              - 'rtgl-button#imageCustomizeButton${i} data-image-index=${image.imageIndex} s=sm v=se': ${customizeImageButton}
+                                              - $if image.customized:
+                                                  - 'rtgl-button#imageUseDefaultButton${i} data-image-index=${image.imageIndex} s=sm v=gh': ${useDefaultImageButton}
+          - $if isProgressStep:
+              - rtgl-view w=f h=220 av=c ah=c d=v g=md role=status aria-live=polite:
+                  - rtgl-text s=lg: ${progressLabel}
+                  - rtgl-text c=mu-fg: ${progressCountLabel} (${progressPercent}%)
+                  - rtgl-button#cancelProgressButton v=se: ${cancelButton}
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl aria-label="${imageSelectorTitle}":
+      - $if imageSelectorDialog.open:
+          - rtgl-view slot=content d=v w=f g=md:
+              - rtgl-text s=lg: ${imageSelectorTitle}
+              - 'rtgl-view w=f h=70vh style="min-width: 0; min-height: 0;"':
+                  - rvn-image-selector#replacementImageSelector key=${imageSelectorDialog.imageIndex} selectedImageId=${imageSelectorDialog.selectedImageId}: null
+              - rtgl-view d=h g=sm w=f ah=e:
+                  - rtgl-button#confirmImageSelection variant=pr: ${selectButton}

@@ -1,0 +1,12 @@
+componentName: rvn-resource-import-preview-media
+propsSchema:
+  type: object
+  properties:
+    src:
+      type: string
+    kind:
+      type: string
+      enum: [image, video]
+    label:
+      type: string
+  required: [src, kind]

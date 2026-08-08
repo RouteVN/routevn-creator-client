@@ -601,6 +601,7 @@ export const selectViewData = (context) => {
 
   return {
     ...viewData,
+    projectResolution: context.state.projectResolution,
     flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
   };
 };

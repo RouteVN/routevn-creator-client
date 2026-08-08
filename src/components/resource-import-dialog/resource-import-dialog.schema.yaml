@@ -1,0 +1,27 @@
+componentName: rvn-resource-import-dialog
+propsSchema:
+  type: object
+  properties:
+    open:
+      type: boolean
+    expectedResourceType:
+      type: string
+      enum:
+        - animations
+        - transforms
+    targetParentId:
+      type: string
+    projectResolution:
+      type: object
+      properties:
+        width:
+          type: number
+        height:
+          type: number
+events:
+  import-cancelled: {}
+  import-complete:
+    type: object
+methods:
+  type: object
+  properties: {}

@@ -816,6 +816,19 @@ export const handleImportDialogClose = (deps) => {
   render();
 };
 
+export const handleResourceImportComplete = async (deps, payload) => {
+  const { appService, store, render } = deps;
+  const copy = selectCopy(deps);
+  const result = payload._event.detail;
+  store.closeImportDialog();
+  clearImportVisibilityFilters(store);
+  showImportSuccess(appService, result.importedCount, copy);
+  render();
+  await handleDataChanged(deps, {
+    selectedItemId: result.primaryResourceId,
+  });
+};
+
 export const handleImportFormActionClick = async (deps, payload) => {
   const { appService, projectService, store, render } = deps;
   const copy = selectCopy(deps);

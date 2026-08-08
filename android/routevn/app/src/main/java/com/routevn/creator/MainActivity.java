@@ -811,6 +811,21 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public String deleteProjectFile(String payloadJson) {
+            try {
+                JSONObject payload = new JSONObject(payloadJson);
+                return bridgeSuccess(
+                    deleteProjectFileBytes(
+                        payload.getString("projectId"),
+                        payload.getString("fileId")
+                    )
+                );
+            } catch (Exception error) {
+                return bridgeFailure(error);
+            }
+        }
+
+        @JavascriptInterface
         public String readProjectFile(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
@@ -1275,6 +1290,27 @@ public class MainActivity extends Activity {
             "mimeType",
             resolveProjectFileMimeType(safeProjectId, safeFileId, file)
         );
+        return result;
+    }
+
+    private JSONObject deleteProjectFileBytes(String projectId, String fileId)
+        throws Exception {
+        String safeProjectId = safePathSegment(projectId);
+        String safeFileId = safePathSegment(fileId);
+        File projectRoot = getProjectRoot(safeProjectId);
+        File file = resolveSafeRelativeFile(new File(projectRoot, "files"), safeFileId);
+        File metadataFile = resolveSafeRelativeFile(
+            new File(projectRoot, "file-metadata"),
+            safeFileId + ".mime"
+        );
+        if (file.exists() && !file.delete()) {
+            throw new IllegalStateException("Project file could not be deleted.");
+        }
+        if (metadataFile.exists() && !metadataFile.delete()) {
+            throw new IllegalStateException("Project file metadata could not be deleted.");
+        }
+        JSONObject result = new JSONObject();
+        result.put("deleted", true);
         return result;
     }
 

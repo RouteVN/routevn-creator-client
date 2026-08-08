@@ -65,6 +65,32 @@ pages/components/primitives
 -> deps/clients
 ```
 
+### Resource Import Lifecycle
+
+The production package importer emits safe lifecycle records through its
+injected logging callback. `projectServiceCore` currently routes these records
+through the existing collaboration logger with the `resourceImport.` prefix.
+
+Current events:
+
+- `resourceImport.plan.started`
+- `resourceImport.plan.completed`
+- `resourceImport.plan.failed`
+- `resourceImport.execution.started`
+- `resourceImport.execution.completed`
+- `resourceImport.execution.failed`
+- `resourceImport.execution.cancelled`
+- `resourceImport.execution.recovered`
+- `resourceImport.cleanup.started`
+- `resourceImport.cleanup.completed`
+- `resourceImport.cleanup.failed`
+
+Allowed fields are stable codes and aggregate values such as resource/image/file
+counts, known/downloaded bytes, expected resource type, and plan/operation ids.
+Do not add manifest or file URLs, URL query strings, authorization headers,
+package/resource names, manifest bodies, file bytes, or absolute local paths.
+Logging callback failures are caught and must never change import behavior.
+
 ## Logging Interface
 
 App code should use a small stable logger API:
@@ -618,7 +644,7 @@ sinks/transports.
    `apiService`, `graphicsService`, and the pending queue service.
 9. Convert the initial high-value failure boundaries.
 10. Initialize `tauri-plugin-log`, add JavaScript bindings, and add
-   `log:default` capability.
+    `log:default` capability.
 11. Add server support for `observability.captureEvent`.
 12. Add support/debug UI for locating or exporting local desktop logs.
 

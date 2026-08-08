@@ -713,6 +713,21 @@ export const createAndroidProjectServiceAdapters = ({
       };
     },
 
+    deleteStoredFiles: async ({
+      fileIds,
+      projectReference,
+      getCurrentReference,
+    }) => {
+      const reference = projectReference ?? getCurrentReference();
+      const projectId = reference?.repositoryProjectId || reference?.projectId;
+      for (const fileId of fileIds) {
+        callAndroidBridge("deleteProjectFile", {
+          projectId,
+          fileId: assertSafeProjectFileId(fileId),
+        });
+      }
+    },
+
     getFileContent: async ({ fileId, fileMetadata, getCurrentReference }) => {
       const reference = getCurrentReference();
       const projectId = reference?.repositoryProjectId || reference?.projectId;

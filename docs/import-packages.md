@@ -5,6 +5,9 @@
 This document defines the initial RouteVN import package shape and the asset
 store import-link flow.
 
+The implementation and release-hardening work is tracked in
+[Import Packages Production Readiness Checklist](./import-packages-production-readiness.md).
+
 Import packages let users import reusable project resources from a copied URL.
 The first implementation can support one resource type at a time, but the
 package shape should stay general enough for images, sounds, videos, fonts,
@@ -100,11 +103,35 @@ extend the normal file metadata with import-only `source` data.
 `source.url` may be absolute or relative to the manifest URL. If `sha256` is
 present, the importer should verify the downloaded bytes.
 
+## Resource Preview Media
+
+Animation and transform items may reference package-only preview media with
+`previewMediaFileId`. The id must reference a record in
+`repository.files.items` whose MIME type is `image/jpeg`, `image/png`,
+`image/webp`, or `video/mp4`.
+
+```json
+{
+  "id": "animation.transition",
+  "type": "animation",
+  "name": "Transition",
+  "previewMediaFileId": "file.transition-preview",
+  "animation": { "type": "update", "tween": {} }
+}
+```
+
+Preview media is displayed in a 16:9 frame during import review. MP4 previews
+autoplay muted, loop, and play inline. `previewMediaFileId` is import-only
+metadata: it is not persisted on the imported resource and is not downloaded
+as a project asset unless another retained resource field also references that
+file.
+
 ## Folders
 
-Packages should not create destination folders by default. The import flow asks
-the user to choose a destination folder for each imported resource type and for
-file-backed dependencies such as images or sounds.
+The import flow asks the user to choose an existing destination folder or name
+a new destination folder for each imported resource type and for file-backed
+dependencies such as images or sounds. A requested new folder is created at the
+collection root in the same atomic command batch as the imported resources.
 
 ```json
 {
@@ -130,17 +157,19 @@ file-backed dependencies such as images or sounds.
 
 Default import behavior:
 
-- show only existing project folders as destination choices
-- require a real destination folder for each imported resource type
+- offer existing project folders and an explicit `New Folder` choice
+- default to `New Folder` when the collection has no existing folders
+- require a folder name when creating a destination
 - append imported items to the selected folder
 - do not add a synthetic `Root` folder option
-- do not create a package root folder
+- do not create or mirror a package folder tree automatically
 - skip resource types with no imported items
 - do not move existing project resources selected as substitutions
 
 Package folders may still be present in future generalized packages, but the
-first importer should treat them as package organization only unless a later
-flow explicitly supports folder creation or merging.
+first importer treats them as package organization only. The user-selected new
+destination is a single project folder, not a recreation or merge of the
+package tree.
 
 ## Media Substitution
 
@@ -178,9 +207,13 @@ Expected flow:
 2. The user copies an import link for one asset or pack.
 3. The user pastes the link into RouteVN Creator.
 4. The client fetches the import package manifest.
-5. The client shows an import review flow.
-6. The user confirms placement, renames, and media substitutions.
-7. The client imports the resolved resources into the current project.
+5. For a multi-resource package, the client shows a visual selection page with
+   a preview for each resource. A one-resource package skips this page.
+6. The client shows one customization page per selected resource, including its
+   package preview, name, and referenced-media choices.
+7. The user moves through the selected resources with Next, chooses placement
+   on the final page, and submits all choices together.
+8. The client imports the resolved resources into the current project.
 
 Basic URL contract:
 
@@ -221,6 +254,40 @@ later with authorization headers if needed.
 The client should not rely on browser cookies from the asset store page,
 especially in the desktop app.
 
+## Publisher HTTP Requirements
+
+Package publishers should expose a stable GET endpoint that can be fetched from
+RouteVN Creator's supported web and desktop origins.
+
+- Return the manifest with `Content-Type: application/json` (a JSON `+json`
+  type is also accepted).
+- Enable CORS for the RouteVN Creator origin. Public development fixtures may
+  use `Access-Control-Allow-Origin: *`; authenticated production endpoints
+  should allow only the intended app origins.
+- Redirects are allowed, but every final manifest and file URL must still use
+  HTTPS. HTTP is accepted only for localhost test servers.
+- Relative file URLs are resolved against the final manifest URL after
+  redirects.
+- File responses should return the MIME type declared by the manifest, or
+  `application/octet-stream`. Contradictory declared/response types are
+  rejected.
+- Do not require third-party cookies. Use public URLs or package-scoped signed
+  manifest/file URLs.
+- Keep signed URL expiry long enough for review plus download. An expired link
+  returns the normal authorization/not-found import error and can be retried
+  with a newly issued link.
+- Support request cancellation and avoid caching personalized manifests unless
+  the URL is safely content-addressed. The client itself requests `no-store`.
+- Stay within the documented client limits below. `Content-Length` helps the
+  client reject oversized responses early, but streaming limits are enforced
+  even when the header is absent or incorrect.
+
+The local fixture server in this repository is an executable publisher example:
+
+```bash
+bun run serve:import-test-data
+```
+
 ## Validation
 
 The client should treat import links as untrusted network input:
@@ -241,20 +308,77 @@ Recommended initial errors:
 - `A package file has an unsupported type.`
 - `A package file failed integrity validation.`
 
-## MVP Scope
+## Production Decisions
 
-The first implementation can support a narrow path:
+The production URL workflow uses these rules:
 
-- paste an absolute `http` or `https` package URL
-- import transform packages and animation packages by URL
-- accept either a full import package, a resource collection, or a single
-  resource item for the supported resource type
-- let the user choose the destination resource folder before importing
-- download image dependencies and let the user choose the destination image
-  folder when image dependencies exist
-- rewrite imported transform preview image references and animation mask image
-  references to the newly imported images
-- skip substitutions and generalized multi-resource import for now
+- the public URL path requires `routevn.import-pack.v1`; raw collections and
+  single resource objects are not accepted
+- HTTPS is required, except that HTTP is accepted for `localhost`, `127.0.0.1`,
+  and `::1` test servers
+- redirects are accepted only when their final URL passes the same policy
+- signed package and file URLs are supported; the client does not send asset
+  store cookies or account authorization headers
+- all animations or transforms in the requested collection are shown in review
+  and selected by default; `primary` is shown and committed first
+- resource previews prefer `previewMediaFileId`; when it is absent, the client
+  uses the first referenced package image with a resolvable file URL, then a
+  neutral fallback
+- re-import creates a new copy without overwriting an existing same-name
+  resource
+- tags are reused by case-insensitive name in the matching scope or created in
+  the same atomic import batch
+- import receipts are not persisted in project state in v1
+- referenced package tags, images, and files must be present and valid
+- users may select an existing destination or create one named folder per
+  imported collection; new folders use plan-stable ids and are committed in the
+  same atomic batch, while package folder trees remain organizational only
 
-Future iterations can broaden this to package-level folder import, existing
-resource substitution, and additional resource types.
+Current limits are 2 MiB per manifest, 100 files, 50 MiB per file, 200 MiB per
+import, 500 resources per collection, 32 tree levels, three parallel downloads,
+a 15 second manifest timeout, and a 30 second file timeout.
+
+## Current Production Flow
+
+The animations and transforms pages use one shared workflow:
+
+1. Load and validate a strict package manifest.
+2. If the package contains multiple target resources, review visual previews
+   and select which resources to import. Skip this page for one target resource.
+3. Customize each selected resource on its own page. The page shows the resource
+   preview, rename field, and previews for its referenced images.
+4. For each referenced image, either import the package image or replace it with
+   an existing project image. Replaced media is not downloaded.
+5. On the last selected resource, choose existing or new destination folders
+   and submit all accumulated choices together.
+6. Download selected files with bounded streaming and SHA-256 verification.
+7. Process and stage images and derived thumbnails under the plan id.
+8. Preflight and submit file, destination-folder, tag, image, and
+   target-resource commands as one command batch.
+9. Delete staged blobs after cancellation or pre-commit failure. If commit
+   confirmation is interrupted, retain blobs and allow an idempotent retry to
+   recognize an already committed plan.
+
+The implementation currently supports animation and transform target resources
+with image dependencies. Other repository roots are reported as skipped content
+in the review plan rather than imported implicitly.
+
+## Local Test Server
+
+Run the deterministic import-package server with:
+
+```bash
+bun run serve:import-test-data
+```
+
+It listens on `http://127.0.0.1:4179` by default. Override the bind values with
+`ROUTEVN_IMPORT_TEST_HOST` and `ROUTEVN_IMPORT_TEST_PORT`.
+
+Useful URLs:
+
+- `/import/transforms` and `/import/animations`: redirecting import links
+- `/manifests/transforms.json`: two transforms sharing one replaceable image
+- `/manifests/animations.json`: two animations with a replaceable mask image
+- `/manifests/integrity-failure.json`: deliberate SHA-256 failure
+- `/files/slow-pixel.png`: delayed file response for cancellation testing
+- `/status/401`, `/status/404`, `/status/500`: stable HTTP failure cases

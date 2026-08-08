@@ -136,6 +136,27 @@ same time.
 | Project icon upload (settings)      | `image/*`                | `square`                              | project settings dialog                    |
 | Text styles add-font dialog         | `.ttf`, `.otf`, `.woff2` | format + weight metadata              | matches the Fonts page                     |
 
+### Import Packages
+
+Animation and transform import packages may create image dependencies. This
+network-backed surface follows the Images page policy and accepts only JPEG,
+PNG, and WebP (`image/jpeg`, `image/png`, and `image/webp`).
+
+The import path enforces the policy in layers:
+
+1. The manifest must declare file MIME metadata.
+2. A contradictory HTTP response content type is rejected before staging.
+3. The resolved MIME type must be one of the supported image MIME types.
+4. SHA-256 is verified when the package provides it.
+5. Normal image decoding and dimension extraction must succeed before the
+   atomic resource command batch is submitted.
+6. Any original or derived blob stored before a decoding/thumbnail failure is
+   tracked by the import plan and deleted through the platform file adapter.
+
+Package image replacement is also validated through the same workflow: when a
+user maps a package image to an existing project image, the package file is not
+downloaded or stored.
+
 ## Current Code Locations
 
 ### Surface Filters
@@ -174,6 +195,10 @@ same time.
 - pending upload reconciliation: `src/internal/ui/resourcePages/media/createMediaPageStore.js`,
   `src/internal/ui/resourcePages/media/processPendingUploads.js`,
   `src/deps/services/shared/projectServiceCore.js`
+- import package network and staging enforcement:
+  `src/deps/clients/importPackageClient.js`,
+  `src/deps/services/shared/resourcePackageImportService.js`,
+  `src/deps/services/shared/projectAssetService.js`
 
 ## Maintenance Checklist
 
