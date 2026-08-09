@@ -7,6 +7,10 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import {
+  COMMAND_LINE_SHADER_ADJUSTMENTS,
+  getCommandLineShaderAdjustment,
+} from "../../internal/commandLineShaderAdjustments.js";
 
 const createEmptyCollection = () => ({
   items: {},
@@ -130,6 +134,7 @@ const buildBackgroundDataFromState = (
   const selectedCustomTransform = store.selectCustomTransform?.();
   const selectedColorId = store.selectSelectedColor();
   const selectedOpacity = store.selectSelectedOpacity();
+  const backgroundFilters = store.selectBackgroundFilters();
   const selectedBlur = store.selectSelectedBlurActionValue();
   const selectedAnimationMode = store.selectSelectedAnimationMode();
   const selectedAnimationId = store.selectSelectedAnimation();
@@ -164,6 +169,10 @@ const buildBackgroundDataFromState = (
 
   if (hasBackgroundTarget && selectedOpacity !== undefined) {
     backgroundData.opacity = selectedOpacity;
+  }
+
+  if (hasBackgroundTarget && backgroundFilters !== undefined) {
+    backgroundData.filters = backgroundFilters;
   }
 
   if (hasBackgroundTarget && selectedBlur !== undefined) {
@@ -279,6 +288,7 @@ export const handleBeforeMount = (deps) => {
     animationName,
     colorId,
     opacity,
+    filters,
     blur,
     transformId,
     animations: backgroundAnimations,
@@ -299,6 +309,10 @@ export const handleBeforeMount = (deps) => {
     store.setSelectedOpacity({
       opacity,
     });
+  }
+
+  if (filters !== undefined) {
+    store.setBackgroundFilters({ filters });
   }
 
   if (blur !== undefined) {
@@ -504,6 +518,7 @@ export const handleBackgroundImageRightClick = async (deps, payload) => {
 export const handleOptionsSectionAction = async (deps, payload) => {
   const { appService, i18n, render, store } = deps;
   const { actionId, position, sectionId } = payload._event.detail;
+  const shaderAdjustment = getCommandLineShaderAdjustment(sectionId);
 
   if (sectionId === "background-color" && actionId === "remove") {
     store.setSelectedColor({ colorId: undefined });
@@ -514,6 +529,15 @@ export const handleOptionsSectionAction = async (deps, payload) => {
 
   if (sectionId === "opacity" && actionId === "remove") {
     store.removeOpacityOption();
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (shaderAdjustment && actionId === "remove") {
+    store.removeBackgroundShaderAdjustmentOption({
+      adjustmentId: shaderAdjustment.id,
+    });
     render();
     dispatchTemporaryPresentationStateChange(deps);
     return;
@@ -546,6 +570,21 @@ export const handleOptionsSectionAction = async (deps, payload) => {
       key: "opacity",
     });
   }
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+    if (
+      store.selectBackgroundShaderAdjustmentOptionEnabled({
+        adjustmentId: adjustment.id,
+      })
+    ) {
+      continue;
+    }
+
+    items.push({
+      type: "item",
+      label: localizeCommandLineText(adjustment.label, copy),
+      key: adjustment.id,
+    });
+  }
   if (!store.selectSelectedBlur()) {
     items.push({
       type: "item",
@@ -563,11 +602,18 @@ export const handleOptionsSectionAction = async (deps, payload) => {
     y: position.y,
     place: "be",
   });
+  const selectedShaderAdjustment = getCommandLineShaderAdjustment(
+    result?.item?.key,
+  );
 
   if (result?.item?.key === "background-color") {
     store.showBackgroundColorOption();
   } else if (result?.item?.key === "opacity") {
     store.showOpacityOption();
+  } else if (selectedShaderAdjustment) {
+    store.showBackgroundShaderAdjustmentOption({
+      adjustmentId: selectedShaderAdjustment.id,
+    });
   } else if (result?.item?.key === "blur") {
     store.showBlurOption();
     render();
@@ -718,6 +764,17 @@ export const handleFormInputChange = (deps, payload) => {
   if (name === "opacity") {
     store.setSelectedOpacity({
       opacity: fieldValue,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  const shaderAdjustment = getCommandLineShaderAdjustment(name);
+  if (shaderAdjustment) {
+    store.setSelectedBackgroundShaderAdjustment({
+      adjustmentId: shaderAdjustment.id,
+      value: fieldValue,
     });
     render();
     dispatchTemporaryPresentationStateChange(deps);

@@ -11,9 +11,11 @@ import {
   handleCustomTransformButtonKeyDown,
   handleDropdownMenuClickItem,
   handleFileExplorerItemClick,
+  handleFormSectionAction,
   handleLayerChange,
   handleOpacityInput,
   handleResourceItemClick,
+  handleShaderAdjustmentInput,
   handleSpritesheetSelected,
   handleSubmitClick,
   handleTabClick,
@@ -30,6 +32,7 @@ import {
   moveVisual,
   openAddVisualPopover,
   removeVisual,
+  removeVisualShaderAdjustmentOption,
   selectDefaultTransformId,
   selectDefaultVisualLayer,
   selectDropdownMenuType,
@@ -39,6 +42,7 @@ import {
   selectPendingVisualTransformId,
   selectSelectedVisuals,
   selectSelectedVisualIndex,
+  selectVisualShaderAdjustmentOptionEnabled,
   selectTab,
   selectTempSelectedResourceId,
   selectTempSelectedAnimationName,
@@ -53,12 +57,14 @@ import {
   setTempSelectedResourceId,
   setTransforms,
   showDropdownMenu,
+  showVisualShaderAdjustmentOption,
   updateVisualResource,
   updateVisualAnimation,
   updateVisualBlurEnabled,
   updateVisualBlurField,
   updateVisualLayer,
   updateVisualOpacity,
+  updateVisualShaderAdjustment,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
 
 const TEST_I18N = {
@@ -80,6 +86,8 @@ const createStoreApi = (state) => ({
   moveVisual: (payload) => moveVisual({ state }, payload),
   openAddVisualPopover: (payload) => openAddVisualPopover({ state }, payload),
   removeVisual: (payload) => removeVisual({ state }, payload),
+  removeVisualShaderAdjustmentOption: (payload) =>
+    removeVisualShaderAdjustmentOption({ state }, payload),
   selectDefaultTransformId: () => selectDefaultTransformId({ state }),
   selectDefaultVisualLayer: () => selectDefaultVisualLayer({ state }),
   selectDropdownMenuType: () => selectDropdownMenuType({ state }),
@@ -90,6 +98,8 @@ const createStoreApi = (state) => ({
     selectPendingVisualTransformId({ state }),
   selectSelectedVisualIndex: () => selectSelectedVisualIndex({ state }),
   selectSelectedVisuals: () => selectSelectedVisuals({ state }),
+  selectVisualShaderAdjustmentOptionEnabled: (payload) =>
+    selectVisualShaderAdjustmentOptionEnabled({ state }, payload),
   selectTab: () => selectTab({ state }),
   selectTempSelectedResourceId: () => selectTempSelectedResourceId({ state }),
   selectTempSelectedAnimationName: () =>
@@ -106,12 +116,16 @@ const createStoreApi = (state) => ({
   setTempSelectedResourceId: (payload) =>
     setTempSelectedResourceId({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
+  showVisualShaderAdjustmentOption: (payload) =>
+    showVisualShaderAdjustmentOption({ state }, payload),
   updateVisualAnimation: (payload) => updateVisualAnimation({ state }, payload),
   updateVisualBlurEnabled: (payload) =>
     updateVisualBlurEnabled({ state }, payload),
   updateVisualBlurField: (payload) => updateVisualBlurField({ state }, payload),
   updateVisualLayer: (payload) => updateVisualLayer({ state }, payload),
   updateVisualOpacity: (payload) => updateVisualOpacity({ state }, payload),
+  updateVisualShaderAdjustment: (payload) =>
+    updateVisualShaderAdjustment({ state }, payload),
   updateVisualResource: (payload) => updateVisualResource({ state }, payload),
 });
 
@@ -1176,5 +1190,76 @@ describe("commandLineVisual.handlers animation controls", () => {
     expect(dispatchEvent.mock.calls[0][0].type).toBe(
       "action-transform-customize",
     );
+  });
+
+  it("previews and submits per-visual shader adjustments", async () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const render = vi.fn();
+    const store = createStoreApi(state);
+    const customFilter = {
+      id: "customFilter",
+      type: "shader",
+      parameters: { strength: 0.5 },
+      source: {},
+    };
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            filters: [customFilter],
+          },
+        ],
+      },
+    );
+
+    handleShaderAdjustmentInput(
+      { dispatchEvent, render, store },
+      {
+        _event: {
+          currentTarget: {
+            dataset: { index: "0", adjustmentId: "brightness" },
+          },
+          detail: { value: "0.3" },
+        },
+      },
+    );
+
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "saturation" },
+    });
+    await handleFormSectionAction(
+      {
+        appService: { showDropdownMenu },
+        dispatchEvent,
+        i18n: TEST_I18N,
+        render,
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "add",
+            position: { x: 20, y: 30 },
+            sectionId: "visual-0",
+          },
+        },
+      },
+    );
+    handleSubmitClick({ dispatchEvent, store });
+
+    expect(showDropdownMenu.mock.calls[0][0].items).not.toContainEqual(
+      expect.objectContaining({ key: "brightness" }),
+    );
+    expect(
+      selectSelectedVisuals({ state })[0].filters.map(({ id }) => id),
+    ).toEqual(["customFilter", "backgroundBrightness", "backgroundSaturation"]);
+    expect(
+      dispatchEvent.mock.calls.at(-1)[0].detail.visual.items[0].filters,
+    ).toEqual(selectSelectedVisuals({ state })[0].filters);
   });
 });

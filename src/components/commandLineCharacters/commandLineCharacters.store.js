@@ -26,6 +26,14 @@ import {
   normalizeCommandLineItemOpacity,
 } from "../../internal/commandLineItemEffects.js";
 import {
+  createCommandLineShaderAdjustmentControls,
+  getCommandLineShaderAdjustment,
+  getCommandLineShaderAdjustmentValue,
+  orderCommandLineShaderAdjustmentFilters,
+  removeCommandLineShaderAdjustmentFilter,
+  setCommandLineShaderAdjustmentFilter,
+} from "../../internal/commandLineShaderAdjustments.js";
+import {
   BACKGROUND_TRANSFORM_FIELDS,
   createActionItemWithInlineTransform,
   formatBackgroundTransformEditorMetric,
@@ -282,6 +290,11 @@ const normalizeSelectedCharacter = (character = {}, animations = {}) => {
   nextCharacter.opacityOptionEnabled =
     nextCharacter.opacityOptionEnabled ?? nextCharacter.opacity !== undefined;
   nextCharacter.blurOptionEnabled = Boolean(nextCharacter.blur);
+  if (Array.isArray(nextCharacter.filters)) {
+    nextCharacter.filters = orderCommandLineShaderAdjustmentFilters(
+      nextCharacter.filters,
+    );
+  }
   const selectedAnimationId = nextCharacter?.animations?.resourceId;
   const selectedAnimationMode = getAnimationModeById(
     animations,
@@ -801,6 +814,69 @@ export const updateCharacterBlurField = (
   });
 };
 
+export const updateCharacterShaderAdjustment = (
+  { state },
+  { index, adjustmentId, value } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  if (!character || !getCommandLineShaderAdjustment(adjustmentId)) {
+    return;
+  }
+
+  character.filters = setCommandLineShaderAdjustmentFilter(
+    character.filters,
+    adjustmentId,
+    value,
+  );
+};
+
+export const showCharacterShaderAdjustmentOption = (
+  { state },
+  { index, adjustmentId } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
+  if (!character || !adjustment) {
+    return;
+  }
+
+  const value =
+    getCommandLineShaderAdjustmentValue(character.filters, adjustmentId) ??
+    adjustment.defaultValue;
+  character.filters = setCommandLineShaderAdjustmentFilter(
+    character.filters,
+    adjustmentId,
+    value,
+  );
+};
+
+export const removeCharacterShaderAdjustmentOption = (
+  { state },
+  { index, adjustmentId } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  if (!character || !getCommandLineShaderAdjustment(adjustmentId)) {
+    return;
+  }
+
+  character.filters = removeCommandLineShaderAdjustmentFilter(
+    character.filters,
+    adjustmentId,
+  );
+};
+
+export const selectCharacterShaderAdjustmentOptionEnabled = (
+  { state },
+  { index, adjustmentId } = {},
+) => {
+  return (
+    getCommandLineShaderAdjustmentValue(
+      state.selectedCharacters[index]?.filters,
+      adjustmentId,
+    ) !== undefined
+  );
+};
+
 export const updateCharacterSprite = ({ state }, { index, spriteId } = {}) => {
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].sprites = [
@@ -1109,6 +1185,7 @@ export const selectCharactersWithRepositoryData = ({ state, copy }) => {
         animationMode: char.animationMode,
         opacityOptionEnabled: char.opacityOptionEnabled,
         opacity: char.opacity,
+        filters: char.filters,
         blurOptionEnabled: char.blurOptionEnabled,
         blur: char.blur,
         spriteGroups: spriteSelectionGroups,
@@ -1141,6 +1218,7 @@ export const selectCharactersWithRepositoryData = ({ state, copy }) => {
       animationMode: char.animationMode,
       opacityOptionEnabled: char.opacityOptionEnabled,
       opacity: char.opacity,
+      filters: char.filters,
       blurOptionEnabled: char.blurOptionEnabled,
       blur: char.blur,
       spriteGroups: spriteSelectionGroups,
@@ -1325,6 +1403,30 @@ const createCharactersForm = (characters = []) => ({
       });
     }
 
+    for (const adjustment of character.shaderAdjustments) {
+      if (!adjustment.enabled) {
+        continue;
+      }
+
+      fields.push({
+        type: "section",
+        id: `${character.formSectionId}-${adjustment.id}`,
+        label: adjustment.label,
+        separator: false,
+        action: {
+          id: "remove",
+          icon: "x",
+          label: "Remove",
+        },
+        fields: [
+          {
+            type: "slot",
+            slot: adjustment.formSlot,
+          },
+        ],
+      });
+    }
+
     if (character.showSpriteGroupBoxes) {
       fields.push({
         type: "slot",
@@ -1338,7 +1440,9 @@ const createCharactersForm = (characters = []) => ({
       id: character.formSectionId,
       label: character.displayName,
       action:
-        character.opacityOptionEnabled && character.blurOptionEnabled
+        character.opacityOptionEnabled &&
+        character.blurOptionEnabled &&
+        character.shaderAdjustments.every((adjustment) => adjustment.enabled)
           ? undefined
           : {
               id: "add",
@@ -1646,6 +1750,9 @@ export const selectViewData = ({ state, i18n }) => {
         blur: normalizeCommandLineItemBlur(
           char.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
         ),
+        shaderAdjustments: createCommandLineShaderAdjustmentControls(
+          char.filters,
+        ),
       };
     },
   );
@@ -1654,10 +1761,18 @@ export const selectViewData = ({ state, i18n }) => {
   const displayedCharacters = characterControls
     .slice()
     .reverse()
-    .map((character) => ({
-      ...character,
-      ...createCharacterFormSlots(character.characterIndex),
-    }));
+    .map((character) => {
+      const formSlots = createCharacterFormSlots(character.characterIndex);
+
+      return {
+        ...character,
+        ...formSlots,
+        shaderAdjustments: character.shaderAdjustments.map((adjustment) => ({
+          ...adjustment,
+          formSlot: `${formSlots.formSectionId}-${adjustment.id}`,
+        })),
+      };
+    });
   const defaultValues = {
     characters: displayedCharacters,
     transformOptions,
@@ -1724,6 +1839,9 @@ export const selectViewData = ({ state, i18n }) => {
             character.opacityOptionEnabled ? "opacity" : "no-opacity",
             character.blurOptionEnabled ? "blur-option" : "no-blur-option",
             character.blurEnabled ? "blur" : "no-blur",
+            ...character.shaderAdjustments
+              .filter((adjustment) => adjustment.enabled)
+              .map((adjustment) => adjustment.id),
             character.showSpriteGroupBoxes ? "sprite-groups" : "no-groups",
           ].join(":"),
         )

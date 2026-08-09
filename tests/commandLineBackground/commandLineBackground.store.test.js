@@ -1,21 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  selectBackgroundFilters,
+  selectBackgroundShaderAdjustmentOptionEnabled,
+  selectBackgroundShaderAdjustmentValue,
   selectSelectedResource,
   selectSelectedBlurActionValue,
   selectTempSelectedResource,
   selectViewData as selectViewDataBase,
   setRepositoryState,
+  setBackgroundFilters,
   setCustomTransform,
   setCustomTransformEnabled,
   setSelectedAnimation,
   setSelectedBlur,
+  setSelectedBackgroundShaderAdjustment,
   setSelectedColor,
   setSelectedOpacity,
   setSelectedResource,
   setTempSelectedResource,
   setSelectedTransform,
 } from "../../src/components/commandLineBackground/commandLineBackground.store.js";
+import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
 
 const TEST_I18N = {
   resourcePages: {},
@@ -546,6 +552,146 @@ describe("commandLineBackground.store", () => {
     });
   });
 
+  it("exposes the common inline shader adjustment options", () => {
+    const state = createInitialState();
+    const values = {
+      brightness: 0.35,
+      contrast: 0.4,
+      saturation: -0.25,
+      hue: 90,
+      grayscale: 0.3,
+      sepia: 0.45,
+      invert: 0.6,
+    };
+
+    for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+      setSelectedBackgroundShaderAdjustment(
+        { state },
+        {
+          adjustmentId: adjustment.id,
+          value: values[adjustment.id],
+        },
+      );
+    }
+
+    const viewData = selectViewData({ state });
+    const optionsSection = viewData.dialogueForm.form.fields.at(-1);
+    const filters = selectBackgroundFilters({ state });
+
+    expect(filters).toHaveLength(COMMAND_LINE_SHADER_ADJUSTMENTS.length);
+    for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+      const value = values[adjustment.id];
+      const uniformName = `u${adjustment.id[0].toUpperCase()}${adjustment.id.slice(1)}`;
+      const section = optionsSection.fields.find(
+        (field) => field.id === adjustment.id,
+      );
+      const filter = filters.find(
+        (candidate) => candidate.id === adjustment.filterId,
+      );
+
+      expect(
+        selectBackgroundShaderAdjustmentOptionEnabled(
+          { state },
+          { adjustmentId: adjustment.id },
+        ),
+      ).toBe(true);
+      expect(
+        selectBackgroundShaderAdjustmentValue(
+          { state },
+          { adjustmentId: adjustment.id },
+        ),
+      ).toBe(value);
+      expect(section).toEqual({
+        type: "section",
+        id: adjustment.id,
+        label: adjustment.label,
+        action: {
+          id: "remove",
+          icon: "x",
+          label: "Remove",
+        },
+        fields: [
+          {
+            name: adjustment.id,
+            type: "slider-with-input",
+            min: adjustment.min,
+            max: adjustment.max,
+            step: adjustment.step,
+          },
+        ],
+      });
+      expect(viewData.dialogueForm.defaultValues[adjustment.id]).toBe(value);
+      expect(filter).toMatchObject({
+        id: adjustment.filterId,
+        type: "shader",
+        parameters: {
+          [adjustment.id]: value,
+        },
+      });
+      expect(filter.source.webgl.fragment).toContain(
+        `uniform float ${uniformName}`,
+      );
+      expect(filter.source.webgpu.source).toContain(`${uniformName}: f32`);
+    }
+  });
+
+  it("keeps shader adjustments in canonical order regardless of editing history", () => {
+    const customFilter = {
+      id: "customFilter",
+      type: "shader",
+      parameters: {
+        strength: 0.5,
+      },
+      source: {
+        webgl: {
+          fragment: "custom-webgl",
+        },
+        webgpu: {
+          source: "custom-webgpu",
+        },
+      },
+    };
+    const createFiltersForOrder = (adjustments) => {
+      const state = createInitialState();
+      setBackgroundFilters({ state }, { filters: [customFilter] });
+
+      for (const adjustment of adjustments) {
+        setSelectedBackgroundShaderAdjustment(
+          { state },
+          {
+            adjustmentId: adjustment.id,
+            value: adjustment.defaultValue,
+          },
+        );
+      }
+
+      return selectBackgroundFilters({ state });
+    };
+
+    const canonicalFilters = createFiltersForOrder(
+      COMMAND_LINE_SHADER_ADJUSTMENTS,
+    );
+    const reverseHistoryFilters = createFiltersForOrder(
+      [...COMMAND_LINE_SHADER_ADJUSTMENTS].reverse(),
+    );
+    const loadedState = createInitialState();
+    setBackgroundFilters(
+      { state: loadedState },
+      { filters: [...canonicalFilters].reverse() },
+    );
+
+    expect(reverseHistoryFilters).toEqual(canonicalFilters);
+    expect(selectBackgroundFilters({ state: loadedState })).toEqual(
+      canonicalFilters,
+    );
+    expect(canonicalFilters.map((filter) => filter.id)).toEqual([
+      customFilter.id,
+      ...COMMAND_LINE_SHADER_ADJUSTMENTS.map(
+        (adjustment) => adjustment.filterId,
+      ),
+    ]);
+  });
+
   it("shows a selected background color as an inline option select", () => {
     const state = createInitialState();
     setRepositoryState(
@@ -699,6 +845,15 @@ describe("commandLineBackground.store", () => {
 
     setSelectedColor({ state }, { colorId: "color-night" });
     setSelectedOpacity({ state }, { opacity: 1 });
+    for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+      setSelectedBackgroundShaderAdjustment(
+        { state },
+        {
+          adjustmentId: adjustment.id,
+          value: adjustment.defaultValue,
+        },
+      );
+    }
     setSelectedBlur({ state }, { blur: {} });
 
     const viewData = selectViewData({ state });

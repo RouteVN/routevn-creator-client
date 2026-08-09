@@ -110,7 +110,7 @@ describe("commandLineVisual sections", () => {
       "utf8",
     );
 
-    expect(view).toContain("rtgl-form#form key=${formKey}");
+    expect(view).toContain('rtgl-form#form key="${formKey}"');
     expect(view).toContain("slot=${visual.previewFormSlot}");
     expect(view).toContain("slot=${visual.layerFormSlot}");
     expect(view).toContain("slot=${visual.transformModeFormSlot}");
@@ -126,6 +126,8 @@ describe("commandLineVisual sections", () => {
     expect(view).toContain("slot=${visual.blurQualityFormSlot}");
     expect(view).toContain("slot=${visual.blurKernelSizeFormSlot}");
     expect(view).toContain("slot=${visual.blurRepeatEdgePixelsFormSlot}");
+    expect(view).toContain("slot=${adjustment.formSlot}");
+    expect(view).toContain("handler: handleShaderAdjustmentInput");
     expect(view).toContain("handler: handleCustomTransformButtonKeyDown");
     expect(view).toContain(
       'data-target-name="${visual.displayName}" role=button tabindex=0',

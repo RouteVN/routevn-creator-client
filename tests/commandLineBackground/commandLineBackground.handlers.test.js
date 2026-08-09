@@ -13,10 +13,14 @@ import {
 } from "../../src/components/commandLineBackground/commandLineBackground.handlers.js";
 import {
   createInitialState,
+  removeBackgroundShaderAdjustmentOption,
   removeOpacityOption,
   selectAnimationOptionEnabled,
+  selectBackgroundFilters,
   selectBackgroundLoop,
   selectBackgroundColorOptionEnabled,
+  selectBackgroundShaderAdjustmentOptionEnabled,
+  selectBackgroundShaderAdjustmentValue,
   selectCustomTransform,
   selectCustomTransformEnabled,
   selectMode,
@@ -39,6 +43,7 @@ import {
   selectTab,
   selectTempSelectedResource,
   setBackgroundLoop,
+  setBackgroundFilters,
   setCustomTransform,
   setCustomTransformEnabled,
   setMode,
@@ -52,11 +57,13 @@ import {
   setSelectedAnimationMode,
   setSelectedBlur,
   setSelectedBlurField,
+  setSelectedBackgroundShaderAdjustment,
   setSelectedColor,
   setSelectedOpacity,
   setSelectedResource,
   setSelectedTransform,
   showBackgroundColorOption,
+  showBackgroundShaderAdjustmentOption,
   showBlurOption,
   showOpacityOption,
   setTab,
@@ -70,11 +77,18 @@ const createEmptyCollection = () => ({
 });
 
 const createStoreApi = (state) => ({
+  removeBackgroundShaderAdjustmentOption: (payload) =>
+    removeBackgroundShaderAdjustmentOption({ state }, payload),
   removeOpacityOption: (payload) => removeOpacityOption({ state }, payload),
   selectAnimationOptionEnabled: () => selectAnimationOptionEnabled({ state }),
+  selectBackgroundFilters: () => selectBackgroundFilters({ state }),
   selectBackgroundLoop: () => selectBackgroundLoop({ state }),
   selectBackgroundColorOptionEnabled: () =>
     selectBackgroundColorOptionEnabled({ state }),
+  selectBackgroundShaderAdjustmentOptionEnabled: (payload) =>
+    selectBackgroundShaderAdjustmentOptionEnabled({ state }, payload),
+  selectBackgroundShaderAdjustmentValue: (payload) =>
+    selectBackgroundShaderAdjustmentValue({ state }, payload),
   selectCustomTransform: () => selectCustomTransform({ state }),
   selectCustomTransformEnabled: () => selectCustomTransformEnabled({ state }),
   selectMode: () => selectMode({ state }),
@@ -102,6 +116,7 @@ const createStoreApi = (state) => ({
   selectTab: () => selectTab({ state }),
   selectTempSelectedResource: () => selectTempSelectedResource({ state }),
   setBackgroundLoop: (payload) => setBackgroundLoop({ state }, payload),
+  setBackgroundFilters: (payload) => setBackgroundFilters({ state }, payload),
   setCustomTransform: (payload) => setCustomTransform({ state }, payload),
   setCustomTransformEnabled: (payload) =>
     setCustomTransformEnabled({ state }, payload),
@@ -119,6 +134,8 @@ const createStoreApi = (state) => ({
     setSelectedAnimationMode({ state }, payload),
   setSelectedBlur: (payload) => setSelectedBlur({ state }, payload),
   setSelectedBlurField: (payload) => setSelectedBlurField({ state }, payload),
+  setSelectedBackgroundShaderAdjustment: (payload) =>
+    setSelectedBackgroundShaderAdjustment({ state }, payload),
   setSelectedColor: (payload) => setSelectedColor({ state }, payload),
   setSelectedOpacity: (payload) => setSelectedOpacity({ state }, payload),
   setSelectedResource: (payload) => setSelectedResource({ state }, payload),
@@ -129,6 +146,8 @@ const createStoreApi = (state) => ({
   setUiConfig: (payload) => setUiConfig({ state }, payload),
   showBackgroundColorOption: (payload) =>
     showBackgroundColorOption({ state }, payload),
+  showBackgroundShaderAdjustmentOption: (payload) =>
+    showBackgroundShaderAdjustmentOption({ state }, payload),
   showBlurOption: (payload) => showBlurOption({ state }, payload),
   showOpacityOption: (payload) => showOpacityOption({ state }, payload),
 });
@@ -243,6 +262,22 @@ describe("commandLineBackground.handlers", () => {
           resourceId: "bg-school",
           transformId: "bg-center",
           opacity: 0.5,
+          filters: [
+            {
+              id: "backgroundBrightness",
+              type: "shader",
+              parameters: {
+                brightness: -0.25,
+              },
+            },
+            {
+              id: "backgroundSaturation",
+              type: "shader",
+              parameters: {
+                saturation: 0.4,
+              },
+            },
+          ],
           blur: {
             x: 6,
             y: 9,
@@ -266,6 +301,30 @@ describe("commandLineBackground.handlers", () => {
     expect(selectPendingResourceId({ state })).toBe("bg-school");
     expect(selectSelectedTransform({ state })).toBe("bg-center");
     expect(selectSelectedOpacity({ state })).toBe(0.5);
+    expect(
+      selectBackgroundShaderAdjustmentValue(
+        { state },
+        { adjustmentId: "brightness" },
+      ),
+    ).toBe(-0.25);
+    expect(
+      selectBackgroundShaderAdjustmentOptionEnabled(
+        { state },
+        { adjustmentId: "brightness" },
+      ),
+    ).toBe(true);
+    expect(
+      selectBackgroundShaderAdjustmentValue(
+        { state },
+        { adjustmentId: "saturation" },
+      ),
+    ).toBe(0.4);
+    expect(
+      selectBackgroundShaderAdjustmentOptionEnabled(
+        { state },
+        { adjustmentId: "saturation" },
+      ),
+    ).toBe(true);
     expect(selectSelectedBlur({ state })).toEqual({
       x: 6,
       y: 9,
@@ -733,6 +792,122 @@ describe("commandLineBackground.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
+  it("previews, submits, and removes the brightness shader without replacing other filters", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const existingFilter = {
+      id: "existingTint",
+      type: "shader",
+      parameters: {
+        amount: 0.2,
+      },
+      source: {
+        webgl: {
+          fragment: "existing WebGL source",
+        },
+        webgpu: {
+          source: "existing WebGPU source",
+        },
+      },
+    };
+
+    setRepositoryCollections(state);
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+    setBackgroundFilters({ state }, { filters: [existingFilter] });
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "brightness",
+            value: "0.35",
+          },
+        },
+      },
+    );
+
+    expect(
+      selectBackgroundShaderAdjustmentValue(
+        { state },
+        { adjustmentId: "brightness" },
+      ),
+    ).toBe(0.35);
+    expect(
+      selectBackgroundShaderAdjustmentOptionEnabled(
+        { state },
+        { adjustmentId: "brightness" },
+      ),
+    ).toBe(true);
+    const previewFilters =
+      dispatchEvent.mock.calls[0][0].detail.presentationState.background
+        .filters;
+    expect(previewFilters[0]).toEqual(existingFilter);
+    expect(previewFilters[1]).toMatchObject({
+      id: "backgroundBrightness",
+      type: "shader",
+      parameters: {
+        brightness: 0.35,
+      },
+    });
+    expect(previewFilters[1].source.webgl.fragment).toContain("uBrightness");
+    expect(previewFilters[1].source.webgpu.source).toContain(
+      "shaderUniforms.uBrightness",
+    );
+
+    handleSubmitClick(
+      {
+        dispatchEvent,
+        store: createStoreApi(state),
+      },
+      {},
+    );
+
+    expect(dispatchEvent.mock.calls[1][0].detail.background.filters).toEqual(
+      previewFilters,
+    );
+
+    await handleOptionsSectionAction(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "brightness",
+            actionId: "remove",
+          },
+        },
+      },
+    );
+
+    expect(
+      selectBackgroundShaderAdjustmentOptionEnabled(
+        { state },
+        { adjustmentId: "brightness" },
+      ),
+    ).toBe(false);
+    expect(selectBackgroundFilters({ state })).toEqual([existingFilter]);
+    expect(
+      dispatchEvent.mock.calls[2][0].detail.presentationState.background
+        .filters,
+    ).toEqual([existingFilter]);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
   it("adds the inline blur fields from the options section menu", async () => {
     const state = createInitialState();
     const render = vi.fn();
@@ -778,6 +953,41 @@ describe("commandLineBackground.handlers", () => {
         },
         {
           type: "item",
+          label: "Brightness",
+          key: "brightness",
+        },
+        {
+          type: "item",
+          label: "Contrast",
+          key: "contrast",
+        },
+        {
+          type: "item",
+          label: "Saturation",
+          key: "saturation",
+        },
+        {
+          type: "item",
+          label: "Hue",
+          key: "hue",
+        },
+        {
+          type: "item",
+          label: "Grayscale",
+          key: "grayscale",
+        },
+        {
+          type: "item",
+          label: "Sepia",
+          key: "sepia",
+        },
+        {
+          type: "item",
+          label: "Invert",
+          key: "invert",
+        },
+        {
+          type: "item",
           label: "Blur",
           key: "blur",
         },
@@ -795,6 +1005,59 @@ describe("commandLineBackground.handlers", () => {
     });
     expect(render).toHaveBeenCalledTimes(1);
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds a shader adjustment from the options section menu", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "contrast" },
+    });
+
+    await handleOptionsSectionAction(
+      {
+        appService: { showDropdownMenu },
+        i18n: {
+          resourcePages: {},
+          sceneEditorPage: {},
+          commandLinePage: {},
+        },
+        store: createStoreApi(state),
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "options",
+            actionId: "add",
+            position: { x: 120, y: 240 },
+          },
+        },
+      },
+    );
+
+    expect(
+      selectBackgroundShaderAdjustmentOptionEnabled(
+        { state },
+        { adjustmentId: "contrast" },
+      ),
+    ).toBe(true);
+    expect(
+      selectBackgroundShaderAdjustmentValue(
+        { state },
+        { adjustmentId: "contrast" },
+      ),
+    ).toBe(0);
+    expect(selectBackgroundFilters({ state })).toMatchObject([
+      {
+        id: "backgroundContrast",
+        type: "shader",
+        parameters: {
+          contrast: 0,
+        },
+      },
+    ]);
+    expect(render).toHaveBeenCalledTimes(1);
   });
 
   it("adds background color as a required inline select and removes its section", async () => {
@@ -980,6 +1243,41 @@ describe("commandLineBackground.handlers", () => {
           type: "item",
           label: "Opacity",
           key: "opacity",
+        },
+        {
+          type: "item",
+          label: "Brightness",
+          key: "brightness",
+        },
+        {
+          type: "item",
+          label: "Contrast",
+          key: "contrast",
+        },
+        {
+          type: "item",
+          label: "Saturation",
+          key: "saturation",
+        },
+        {
+          type: "item",
+          label: "Hue",
+          key: "hue",
+        },
+        {
+          type: "item",
+          label: "Grayscale",
+          key: "grayscale",
+        },
+        {
+          type: "item",
+          label: "Sepia",
+          key: "sepia",
+        },
+        {
+          type: "item",
+          label: "Invert",
+          key: "invert",
         },
         {
           type: "item",
