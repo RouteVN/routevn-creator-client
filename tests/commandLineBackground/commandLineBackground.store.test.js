@@ -21,7 +21,7 @@ import {
   setTempSelectedResource,
   setSelectedTransform,
 } from "../../src/components/commandLineBackground/commandLineBackground.store.js";
-import { BACKGROUND_SHADER_ADJUSTMENTS } from "../../src/components/commandLineBackground/support/backgroundShaderAdjustments.js";
+import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
 
 const TEST_I18N = {
   resourcePages: {},
@@ -564,7 +564,7 @@ describe("commandLineBackground.store", () => {
       invert: 0.6,
     };
 
-    for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+    for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
       setSelectedBackgroundShaderAdjustment(
         { state },
         {
@@ -578,8 +578,8 @@ describe("commandLineBackground.store", () => {
     const optionsSection = viewData.dialogueForm.form.fields.at(-1);
     const filters = selectBackgroundFilters({ state });
 
-    expect(filters).toHaveLength(BACKGROUND_SHADER_ADJUSTMENTS.length);
-    for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+    expect(filters).toHaveLength(COMMAND_LINE_SHADER_ADJUSTMENTS.length);
+    for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
       const value = values[adjustment.id];
       const uniformName = `u${adjustment.id[0].toUpperCase()}${adjustment.id.slice(1)}`;
       const section = optionsSection.fields.find(
@@ -669,10 +669,10 @@ describe("commandLineBackground.store", () => {
     };
 
     const canonicalFilters = createFiltersForOrder(
-      BACKGROUND_SHADER_ADJUSTMENTS,
+      COMMAND_LINE_SHADER_ADJUSTMENTS,
     );
     const reverseHistoryFilters = createFiltersForOrder(
-      [...BACKGROUND_SHADER_ADJUSTMENTS].reverse(),
+      [...COMMAND_LINE_SHADER_ADJUSTMENTS].reverse(),
     );
     const loadedState = createInitialState();
     setBackgroundFilters(
@@ -686,7 +686,9 @@ describe("commandLineBackground.store", () => {
     );
     expect(canonicalFilters.map((filter) => filter.id)).toEqual([
       customFilter.id,
-      ...BACKGROUND_SHADER_ADJUSTMENTS.map((adjustment) => adjustment.filterId),
+      ...COMMAND_LINE_SHADER_ADJUSTMENTS.map(
+        (adjustment) => adjustment.filterId,
+      ),
     ]);
   });
 
@@ -843,7 +845,7 @@ describe("commandLineBackground.store", () => {
 
     setSelectedColor({ state }, { colorId: "color-night" });
     setSelectedOpacity({ state }, { opacity: 1 });
-    for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+    for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
       setSelectedBackgroundShaderAdjustment(
         { state },
         {

@@ -13,7 +13,9 @@ import {
   handleCharacterSpriteGroupBoxClick,
   handleCustomTransformButtonKeyDown,
   handleDropdownMenuClickItem,
+  handleFormSectionAction,
   handleOpacityInput,
+  handleShaderAdjustmentInput,
   handleSpriteItemClick,
   handleSpriteItemDoubleClick,
   handleSpriteGroupTabClick,
@@ -27,6 +29,9 @@ import {
   createInitialState,
   moveCharacter,
   removeCharacter,
+  removeCharacterShaderAdjustmentOption,
+  selectCharacterBlurOptionEnabled,
+  selectCharacterOpacityOptionEnabled,
   selectCurrentSpriteSelectionGroups,
   selectCurrentSpriteItemById,
   selectAddCharacterTransformDropdownItems,
@@ -37,6 +42,7 @@ import {
   selectPendingCharacterTransformId,
   selectSelectedCharacterIndex,
   selectSelectedCharacters,
+  selectCharacterShaderAdjustmentOptionEnabled,
   selectSelectedSpriteGroupId,
   selectSpriteSelectionGroupsForCharacterIndex,
   selectTempSelectedSpriteIds,
@@ -57,8 +63,12 @@ import {
   updateCharacterBlurEnabled,
   updateCharacterBlurField,
   updateCharacterOpacity,
+  updateCharacterShaderAdjustment,
   showDropdownMenu,
   showFullImagePreview,
+  showCharacterShaderAdjustmentOption,
+  showCharacterBlurOption,
+  showCharacterOpacityOption,
   showAddCharacterTransformDropdownMenu,
   updateCharacterSprites,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
@@ -75,6 +85,12 @@ const createStoreApi = (state) => ({
   },
   moveCharacter: (payload) => moveCharacter({ state }, payload),
   removeCharacter: (payload) => removeCharacter({ state }, payload),
+  removeCharacterShaderAdjustmentOption: (payload) =>
+    removeCharacterShaderAdjustmentOption({ state }, payload),
+  selectCharacterBlurOptionEnabled: (payload) =>
+    selectCharacterBlurOptionEnabled({ state }, payload),
+  selectCharacterOpacityOptionEnabled: (payload) =>
+    selectCharacterOpacityOptionEnabled({ state }, payload),
   selectAddCharacterTransformDropdownItems: () =>
     selectAddCharacterTransformDropdownItems({ state }),
   selectCurrentSpriteSelectionGroups: () =>
@@ -90,6 +106,8 @@ const createStoreApi = (state) => ({
     selectPendingCharacterTransformId({ state }),
   selectSelectedCharacterIndex: () => selectSelectedCharacterIndex({ state }),
   selectSelectedCharacters: () => selectSelectedCharacters({ state }),
+  selectCharacterShaderAdjustmentOptionEnabled: (payload) =>
+    selectCharacterShaderAdjustmentOptionEnabled({ state }, payload),
   selectSelectedSpriteGroupId: () => selectSelectedSpriteGroupId({ state }),
   selectSpriteSelectionGroupsForCharacterIndex: (payload) =>
     selectSpriteSelectionGroupsForCharacterIndex({ state }, payload),
@@ -112,6 +130,12 @@ const createStoreApi = (state) => ({
     showAddCharacterTransformDropdownMenu({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
   showFullImagePreview: (payload) => showFullImagePreview({ state }, payload),
+  showCharacterShaderAdjustmentOption: (payload) =>
+    showCharacterShaderAdjustmentOption({ state }, payload),
+  showCharacterBlurOption: (payload) =>
+    showCharacterBlurOption({ state }, payload),
+  showCharacterOpacityOption: (payload) =>
+    showCharacterOpacityOption({ state }, payload),
   updateCharacterAnimation: (payload) =>
     updateCharacterAnimation({ state }, payload),
   updateCharacterBlurEnabled: (payload) =>
@@ -120,6 +144,8 @@ const createStoreApi = (state) => ({
     updateCharacterBlurField({ state }, payload),
   updateCharacterOpacity: (payload) =>
     updateCharacterOpacity({ state }, payload),
+  updateCharacterShaderAdjustment: (payload) =>
+    updateCharacterShaderAdjustment({ state }, payload),
   updateCharacterSprites: (payload) =>
     updateCharacterSprites({ state }, payload),
 });
@@ -1876,5 +1902,78 @@ describe("commandLineCharacters.handlers", () => {
     expect(selectMode({ state })).toBe("current");
     expect(selectSelectedCharacterIndex({ state })).toBeUndefined();
     expect(selectTempSelectedSpriteIds({ state })).toEqual({});
+  });
+
+  it("previews and submits per-character shader adjustments", async () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const render = vi.fn();
+    const store = createStoreApi(state);
+    const customFilter = {
+      id: "customFilter",
+      type: "shader",
+      parameters: { strength: 0.5 },
+      source: {},
+    };
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            filters: [customFilter],
+          },
+        ],
+      },
+    );
+
+    handleShaderAdjustmentInput(
+      { dispatchEvent, render, store },
+      {
+        _event: {
+          currentTarget: {
+            dataset: { index: "0", adjustmentId: "brightness" },
+          },
+          detail: { value: "0.3" },
+        },
+      },
+    );
+
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "saturation" },
+    });
+    await handleFormSectionAction(
+      {
+        appService: { showDropdownMenu },
+        dispatchEvent,
+        i18n: {
+          resourcePages: {},
+          sceneEditorPage: {},
+          commandLinePage: {},
+        },
+        render,
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "add",
+            position: { x: 20, y: 30 },
+            sectionId: "character-0",
+          },
+        },
+      },
+    );
+    handleSubmitClick({ dispatchEvent, store });
+
+    expect(showDropdownMenu.mock.calls[0][0].items).not.toContainEqual(
+      expect.objectContaining({ key: "brightness" }),
+    );
+    expect(
+      selectSelectedCharacters({ state })[0].filters.map(({ id }) => id),
+    ).toEqual(["customFilter", "backgroundBrightness", "backgroundSaturation"]);
+    expect(
+      dispatchEvent.mock.calls.at(-1)[0].detail.character.items[0].filters,
+    ).toEqual(selectSelectedCharacters({ state })[0].filters);
   });
 });

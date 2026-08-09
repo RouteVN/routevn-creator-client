@@ -126,6 +126,8 @@ describe("commandLineVisual sections", () => {
     expect(view).toContain("slot=${visual.blurQualityFormSlot}");
     expect(view).toContain("slot=${visual.blurKernelSizeFormSlot}");
     expect(view).toContain("slot=${visual.blurRepeatEdgePixelsFormSlot}");
+    expect(view).toContain("slot=${adjustment.formSlot}");
+    expect(view).toContain("handler: handleShaderAdjustmentInput");
     expect(view).toContain("handler: handleCustomTransformButtonKeyDown");
     expect(view).toContain(
       'data-target-name="${visual.displayName}" role=button tabindex=0',

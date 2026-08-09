@@ -26,6 +26,14 @@ import {
   normalizeCommandLineItemOpacity,
 } from "../../internal/commandLineItemEffects.js";
 import {
+  createCommandLineShaderAdjustmentControls,
+  getCommandLineShaderAdjustment,
+  getCommandLineShaderAdjustmentValue,
+  orderCommandLineShaderAdjustmentFilters,
+  removeCommandLineShaderAdjustmentFilter,
+  setCommandLineShaderAdjustmentFilter,
+} from "../../internal/commandLineShaderAdjustments.js";
+import {
   BACKGROUND_TRANSFORM_FIELDS,
   createActionItemWithInlineTransform,
   formatBackgroundTransformEditorMetric,
@@ -358,9 +366,40 @@ const createVisualsForm = (visuals = []) => ({
       );
     }
 
+    for (const adjustment of visual.shaderAdjustments) {
+      if (!adjustment.enabled) {
+        continue;
+      }
+
+      fields.push({
+        type: "section",
+        id: `${visual.formSectionId}-${adjustment.id}`,
+        label: adjustment.label,
+        separator: false,
+        action: {
+          id: "remove",
+          icon: "x",
+          label: "Remove",
+        },
+        fields: [
+          {
+            type: "slot",
+            slot: adjustment.formSlot,
+          },
+        ],
+      });
+    }
+
     return {
       type: "section",
       id: visual.formSectionId,
+      action: visual.shaderAdjustments.every((adjustment) => adjustment.enabled)
+        ? undefined
+        : {
+            id: "add",
+            icon: "plus",
+            label: "Add option",
+          },
       fields,
     };
   }),
@@ -501,6 +540,11 @@ const normalizeSelectedVisual = (visual = {}, animations = {}) => {
     });
   }
   nextVisual.layer = normalizeVisualLayer(nextVisual.layer);
+  if (Array.isArray(nextVisual.filters)) {
+    nextVisual.filters = orderCommandLineShaderAdjustmentFilters(
+      nextVisual.filters,
+    );
+  }
 
   return nextVisual;
 };
@@ -1057,6 +1101,69 @@ export const updateVisualBlurField = (
   });
 };
 
+export const updateVisualShaderAdjustment = (
+  { state },
+  { index, adjustmentId, value } = {},
+) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual || !getCommandLineShaderAdjustment(adjustmentId)) {
+    return;
+  }
+
+  visual.filters = setCommandLineShaderAdjustmentFilter(
+    visual.filters,
+    adjustmentId,
+    value,
+  );
+};
+
+export const showVisualShaderAdjustmentOption = (
+  { state },
+  { index, adjustmentId } = {},
+) => {
+  const visual = state.selectedVisuals[index];
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
+  if (!visual || !adjustment) {
+    return;
+  }
+
+  const value =
+    getCommandLineShaderAdjustmentValue(visual.filters, adjustmentId) ??
+    adjustment.defaultValue;
+  visual.filters = setCommandLineShaderAdjustmentFilter(
+    visual.filters,
+    adjustmentId,
+    value,
+  );
+};
+
+export const removeVisualShaderAdjustmentOption = (
+  { state },
+  { index, adjustmentId } = {},
+) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual || !getCommandLineShaderAdjustment(adjustmentId)) {
+    return;
+  }
+
+  visual.filters = removeCommandLineShaderAdjustmentFilter(
+    visual.filters,
+    adjustmentId,
+  );
+};
+
+export const selectVisualShaderAdjustmentOptionEnabled = (
+  { state },
+  { index, adjustmentId } = {},
+) => {
+  return (
+    getCommandLineShaderAdjustmentValue(
+      state.selectedVisuals[index]?.filters,
+      adjustmentId,
+    ) !== undefined
+  );
+};
+
 export const updateVisualResource = (
   { state },
   { index, resourceId, resourceType, animationName } = {},
@@ -1513,6 +1620,9 @@ export const selectViewData = ({ state, i18n }) => {
       blur: normalizeCommandLineItemBlur(
         visual.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
       ),
+      shaderAdjustments: createCommandLineShaderAdjustmentControls(
+        visual.filters,
+      ),
     };
   });
   const visualGroups = VISUAL_LAYER_DISPLAY_OPTIONS.map((option) => {
@@ -1531,11 +1641,19 @@ export const selectViewData = ({ state, i18n }) => {
     .filter((group) => group.visuals.length > 0)
     .map((group, groupIndex) => ({
       ...group,
-      visuals: group.visuals.map((visual, visualIndex) => ({
-        ...visual,
-        controlId: `${groupIndex}x${visualIndex}`,
-        ...createVisualFormSlots(visual.visualIndex),
-      })),
+      visuals: group.visuals.map((visual, visualIndex) => {
+        const formSlots = createVisualFormSlots(visual.visualIndex);
+
+        return {
+          ...visual,
+          controlId: `${groupIndex}x${visualIndex}`,
+          ...formSlots,
+          shaderAdjustments: visual.shaderAdjustments.map((adjustment) => ({
+            ...adjustment,
+            formSlot: `${formSlots.formSectionId}-${adjustment.id}`,
+          })),
+        };
+      }),
     }));
 
   const defaultValues = {
@@ -1611,6 +1729,9 @@ export const selectViewData = ({ state, i18n }) => {
             visual.animationId ?? "no-animation",
             visual.animationMode,
             visual.blurEnabled ? "blur" : "no-blur",
+            ...visual.shaderAdjustments
+              .filter((adjustment) => adjustment.enabled)
+              .map((adjustment) => adjustment.id),
           ].join(":"),
         )
         .join("|") || "no-visuals",

@@ -23,14 +23,14 @@ import {
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
-  BACKGROUND_SHADER_ADJUSTMENTS,
-  createBackgroundShaderAdjustmentFilter,
-  createInitialBackgroundShaderAdjustments,
-  getBackgroundShaderAdjustment,
-  getBackgroundShaderAdjustmentValue,
-  normalizeBackgroundShaderAdjustmentValue,
-  orderBackgroundShaderAdjustmentFilters,
-} from "./support/backgroundShaderAdjustments.js";
+  COMMAND_LINE_SHADER_ADJUSTMENTS,
+  createCommandLineShaderAdjustmentFilter,
+  createInitialCommandLineShaderAdjustments,
+  getCommandLineShaderAdjustment,
+  getCommandLineShaderAdjustmentValue,
+  normalizeCommandLineShaderAdjustmentValue,
+  orderCommandLineShaderAdjustmentFilters,
+} from "../../internal/commandLineShaderAdjustments.js";
 
 const tabs = [
   {
@@ -180,7 +180,7 @@ export const createInitialState = () => ({
   selectedOpacity: undefined,
   opacityOptionEnabled: false,
   backgroundFilters: undefined,
-  backgroundShaderAdjustments: createInitialBackgroundShaderAdjustments(),
+  backgroundShaderAdjustments: createInitialCommandLineShaderAdjustments(),
   selectedBlurEnabled: false,
   selectedBlurExplicit: false,
   selectedBlur: { ...DEFAULT_BACKGROUND_BLUR },
@@ -528,11 +528,11 @@ export const selectOpacityOptionEnabled = ({ state }) => {
 
 export const setBackgroundFilters = ({ state }, { filters } = {}) => {
   state.backgroundFilters = Array.isArray(filters)
-    ? orderBackgroundShaderAdjustmentFilters(structuredClone(filters))
+    ? orderCommandLineShaderAdjustmentFilters(structuredClone(filters))
     : undefined;
 
-  for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
-    const value = getBackgroundShaderAdjustmentValue(
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+    const value = getCommandLineShaderAdjustmentValue(
       state.backgroundFilters,
       adjustment.id,
     );
@@ -551,8 +551,8 @@ export const setSelectedBackgroundShaderAdjustment = (
   { state },
   { adjustmentId, value } = {},
 ) => {
-  const adjustment = getBackgroundShaderAdjustment(adjustmentId);
-  const normalizedValue = normalizeBackgroundShaderAdjustmentValue(
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
+  const normalizedValue = normalizeCommandLineShaderAdjustmentValue(
     adjustmentId,
     value,
   );
@@ -566,7 +566,7 @@ export const setSelectedBackgroundShaderAdjustment = (
   const filterIndex = state.backgroundFilters.findIndex(
     (filter) => filter?.id === adjustment.filterId,
   );
-  const filter = createBackgroundShaderAdjustmentFilter(
+  const filter = createCommandLineShaderAdjustmentFilter(
     adjustmentId,
     normalizedValue,
   );
@@ -576,7 +576,7 @@ export const setSelectedBackgroundShaderAdjustment = (
     state.backgroundFilters.push(filter);
   }
 
-  state.backgroundFilters = orderBackgroundShaderAdjustmentFilters(
+  state.backgroundFilters = orderCommandLineShaderAdjustmentFilters(
     state.backgroundFilters,
   );
 };
@@ -605,7 +605,7 @@ export const removeBackgroundShaderAdjustmentOption = (
   { state },
   { adjustmentId } = {},
 ) => {
-  const adjustment = getBackgroundShaderAdjustment(adjustmentId);
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
   state.backgroundShaderAdjustments[adjustmentId].enabled = false;
   state.backgroundShaderAdjustments[adjustmentId].value =
     adjustment.defaultValue;
@@ -1115,7 +1115,7 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     });
   }
-  for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
     if (!state.backgroundShaderAdjustments[adjustment.id].enabled) {
       continue;
     }
@@ -1215,7 +1215,7 @@ export const selectViewData = ({ state, i18n }) => {
   const allOptionsVisible =
     state.backgroundColorOptionEnabled &&
     state.opacityOptionEnabled &&
-    BACKGROUND_SHADER_ADJUSTMENTS.every(
+    COMMAND_LINE_SHADER_ADJUSTMENTS.every(
       (adjustment) => state.backgroundShaderAdjustments[adjustment.id].enabled,
     ) &&
     state.selectedBlurEnabled;
@@ -1249,11 +1249,11 @@ export const selectViewData = ({ state, i18n }) => {
     blurKernelSize: state.selectedBlur.kernelSize,
     blurRepeatEdgePixels: state.selectedBlur.repeatEdgePixels,
   };
-  for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
     defaultValues[adjustment.id] =
       state.backgroundShaderAdjustments[adjustment.id].value;
   }
-  const shaderAdjustmentKeyParts = BACKGROUND_SHADER_ADJUSTMENTS.flatMap(
+  const shaderAdjustmentKeyParts = COMMAND_LINE_SHADER_ADJUSTMENTS.flatMap(
     (adjustment) => [
       state.backgroundShaderAdjustments[adjustment.id].enabled
         ? `${adjustment.id}-option`
