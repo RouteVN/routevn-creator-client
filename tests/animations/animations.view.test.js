@@ -13,6 +13,12 @@ describe("animations view", () => {
     expect(
       catalogView.match(/:defaultValues=\$\{item\.timelineDefaultValues\}/g),
     ).toHaveLength(3);
+    expect(catalogView).toContain(
+      "$for maskTimelineRow in item.maskTimelineRows",
+    );
+    expect(catalogView).toContain(
+      ":properties=${maskTimelineRow.properties} :defaultValues=${item.maskTimelineDefaultValues}",
+    );
   });
 
   it("uses edit, duplicate, and delete icons in the mobile detail sheet", () => {

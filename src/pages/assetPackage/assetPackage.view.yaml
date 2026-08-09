@@ -1,0 +1,106 @@
+refs:
+  createPackageButton:
+    eventListeners:
+      click:
+        handler: handleCreatePackageButtonClick
+  createPackageDialog:
+    eventListeners:
+      close:
+        handler: handleCreatePackageDialogClose
+  addPackageResourceButton:
+    eventListeners:
+      click:
+        handler: handleAddPackageResourceButtonClick
+  addSectionImageButton*:
+    eventListeners:
+      click:
+        handler: handleAddSectionImageButtonClick
+  resourceTypeMenu:
+    eventListeners:
+      close:
+        handler: handleResourceTypeMenuClose
+      item-click:
+        handler: handleResourceTypeMenuItemClick
+  folderNameDialog:
+    eventListeners:
+      close:
+        handler: handleFolderNameDialogClose
+  folderNameForm:
+    eventListeners:
+      form-action:
+        handler: handleFolderNameFormAction
+  imageSelectorDialog:
+    eventListeners:
+      close:
+        handler: handleImageSelectorCancel
+  baseFileExplorer:
+    eventListeners:
+      item-click:
+        handler: handleFileExplorerClickItem
+  imageSelector:
+    eventListeners:
+      image-selected:
+        handler: handleImageSelected
+  confirmImageSelection:
+    eventListeners:
+      click:
+        handler: handleImageSelectorSubmit
+  cancelImageSelection:
+    eventListeners:
+      click:
+        handler: handleImageSelectorCancel
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+          - $if showExplorerPanel:
+              - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+                  - rtgl-view slot="content" w=f h=f:
+                      - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+          - 'rtgl-view w=1fg h=f p=${contentPadding} d=v style="min-width: 0; min-height: 0;"':
+              - $if isTouchMode:
+                  - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+                      - rtgl-view w=f d=h av=c g=md wrap:
+                          - rtgl-view av=c g=sm d=h w=1fg:
+                              - rtgl-text: ${title}
+                $else:
+                  - rtgl-text s=h2: ${title}
+              - 'rtgl-view w=f h=1fg mt=${contentBodyMarginTop} p=${contentBodyPadding} sv style="min-width: 0; min-height: 0;"':
+                  - rtgl-view w=560 sm-w=f g=lg:
+                      - rtgl-text s=sm c=mu-fg: ${description}
+                      - rtgl-button#createPackageButton s=sm v=pr: ${createPackageButton}
+  - rtgl-dialog#createPackageDialog ?open=${createPackageDialogOpen} s=md:
+      - rtgl-form#createPackageForm slot=content :form=${createPackageForm} w=f:
+          - rtgl-view slot=resources w=f d=v g=md:
+              - $for section, i in resourceSections:
+                  - rtgl-view w=f d=v g=md:
+                      - rtgl-view w=f d=h av=c g=sm:
+                          - rtgl-svg svg=folder wh=16 c=mu-fg: null
+                          - rtgl-text s=sm w=1fg: ${section.name}
+                          - rtgl-text s=xs c=mu-fg: ${section.typeLabel}
+                      - $if section.images.length > 0:
+                          - rtgl-view w=f d=v g=md:
+                              - $for image, imageIndex in section.images:
+                                  - 'rtgl-view w=f d=h av=s g=md p=md bgc=bg bw=xs bc=bo br=md style="box-sizing: border-box;"':
+                                      - 'rtgl-view w=160 h=90 overflow=hidden br=md bgc=mu style="flex: 0 0 160px; box-sizing: border-box;"':
+                                          - rvn-file-image imageId=${image.imageId} source=thumbnail w=f h=f: null
+                                      - 'rtgl-view d=v w=1fg g=xs pv=sm style="box-sizing: border-box;"':
+                                          - rtgl-text s=md: ${image.title}
+                                          - $if image.description:
+                                              - rtgl-text s=sm c=mu-fg: ${image.description}
+                      - $if section.type == "images":
+                          - 'rtgl-button#addSectionImageButton${i} data-section-id="${section.id}" w=f v=ol pre=plus aria-label="${addImageButtonLabel}" title="${addImageButtonLabel}"': null
+              - 'rtgl-button#addPackageResourceButton w=f v=ol pre=plus aria-label="${addResourceButtonLabel}" title="${addResourceButtonLabel}"': null
+  - rtgl-dropdown-menu#resourceTypeMenu :items=${resourceTypeMenuItems} ?open=${resourceTypeMenu.isOpen} x=${resourceTypeMenu.x} y=${resourceTypeMenu.y}: null
+  - rtgl-dialog#folderNameDialog ?open=${folderNameDialog.open} s=sm:
+      - rtgl-form#folderNameForm key=${folderNameDialog.formKey} slot=content :defaultValues=${folderNameDefaultValues} :form=${folderNameForm} w=f: null
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
+      - rtgl-view slot=content d=v w=f g=md:
+          - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
+              - $if showImageSelectorFileExplorer:
+                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                      - rvn-base-file-explorer#baseFileExplorer :items=${fileExplorerItems} shrinkable: null
+              - 'rtgl-view w=1fg h=f style="min-width: 0;"':
+                  - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
+          - rtgl-view d=h g=sm w=f ah=e:
+              - rtgl-button#cancelImageSelection v=se: ${cancelButton}
+              - rtgl-button#confirmImageSelection v=pr: ${selectImageButton}

@@ -11,6 +11,7 @@ import {
   formatAnimationDurationLabel,
   toAnimationDisplayItem,
 } from "../../internal/animationDisplay.js";
+import { normalizeTransitionMaskForEditor } from "../../internal/animationMasks.js";
 import {
   createDefaultInitialValuesByProperty,
   createPropertyFieldConfig,
@@ -24,6 +25,8 @@ const EMPTY_TREE = {
   items: {},
   tree: [],
 };
+
+const MASK_PROGRESS_PROPERTY = "progress";
 
 const getAnimationTypeLabel = (animationType, copy = {}) => {
   return animationType === "transition"
@@ -258,11 +261,48 @@ const createAnimationCenterItemContextMenuItems = (copy = {}) => [
   },
 ];
 
+const createMaskTimelineRows = (item, imagesData, copy = {}) => {
+  const sourceMask = item?.animation?.mask;
+  const masks = Array.isArray(sourceMask)
+    ? sourceMask
+    : sourceMask
+      ? [sourceMask]
+      : [];
+  const imageItems = imagesData?.items ?? {};
+
+  return masks
+    .map((mask, index) => {
+      const normalizedMask = normalizeTransitionMaskForEditor(mask, imageItems);
+      if (!normalizedMask?.progress) {
+        return undefined;
+      }
+
+      const maskLabel = copy.maskTitle ?? "Mask";
+      const imageId = normalizedMask.imageId;
+      const imageItem = imageItems[imageId];
+      return {
+        label: masks.length > 1 ? `${maskLabel} ${index + 1}` : maskLabel,
+        properties: {
+          [MASK_PROGRESS_PROPERTY]: {
+            ...normalizedMask.progress,
+            thumbnail: true,
+            thumbnailBorderColor: "bo",
+            thumbnailFileId: imageItem?.thumbnailFileId ?? imageItem?.fileId,
+            thumbnailName: imageItem?.name ?? imageId ?? maskLabel,
+          },
+        },
+      };
+    })
+    .filter(Boolean);
+};
+
 const buildCatalogItem = (item, { copy = {}, state } = {}) => {
   const displayItem = toAnimationDisplayItem(item);
   return {
     ...displayItem,
     animationTypeLabel: getAnimationTypeLabel(displayItem.animationType, copy),
+    maskTimelineRows: createMaskTimelineRows(item, state.imagesData, copy),
+    maskTimelineDefaultValues: { [MASK_PROGRESS_PROPERTY]: 0 },
     timelineDefaultValues: createDefaultInitialValuesByProperty(
       createPropertyFieldConfig(state.projectResolution),
     ),

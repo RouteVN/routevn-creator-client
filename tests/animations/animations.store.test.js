@@ -188,4 +188,78 @@ describe("animations.store", () => {
       y: 360,
     });
   });
+
+  it("supplies normalized mask progress keyframes to transition catalog timelines", () => {
+    const state = createInitialState();
+    setImagesData(
+      { state },
+      {
+        imagesData: {
+          items: {
+            "mask-image": {
+              id: "mask-image",
+              type: "image",
+              name: "Wipe Mask",
+              fileId: "mask.png",
+              thumbnailFileId: "mask-thumbnail.png",
+            },
+          },
+          tree: [{ id: "mask-image" }],
+        },
+      },
+    );
+    setItems(
+      { state },
+      {
+        data: {
+          items: {
+            wipe: {
+              id: "wipe",
+              type: "animation",
+              name: "Wipe",
+              animation: {
+                type: "transition",
+                mask: {
+                  kind: "single",
+                  imageId: "mask-image",
+                  progressDuration: 1000,
+                  progressEasing: "linear",
+                },
+              },
+            },
+          },
+          tree: [{ id: "wipe" }],
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    const animationItem = viewData.catalogGroups
+      .flatMap((group) => group.children)
+      .find((item) => item.id === "wipe");
+
+    expect(animationItem.maskTimelineRows).toEqual([
+      {
+        label: "Mask",
+        properties: {
+          progress: {
+            initialValue: 0,
+            keyframes: [
+              {
+                duration: 1000,
+                value: 1,
+                easing: "linear",
+              },
+            ],
+            thumbnail: true,
+            thumbnailBorderColor: "bo",
+            thumbnailFileId: "mask-thumbnail.png",
+            thumbnailName: "Wipe Mask",
+          },
+        },
+      },
+    ]);
+    expect(animationItem.maskTimelineDefaultValues).toEqual({ progress: 0 });
+    expect(animationItem.transitionTimelineDuration).toBe(1000);
+  });
 });

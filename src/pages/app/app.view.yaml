@@ -70,6 +70,8 @@ template:
                   - rvn-appearance: []
                 $elif currentRoutePattern == "/project/language":
                   - rvn-language: []
+                $elif currentRoutePattern == "/project/asset-package":
+                  - rvn-asset-package: []
                 $elif currentRoutePattern == "/project/user":
                   - rvn-settings-user: []
                 $elif currentRoutePattern == "/project/colors":

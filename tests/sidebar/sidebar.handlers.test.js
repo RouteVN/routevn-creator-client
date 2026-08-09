@@ -98,7 +98,7 @@ describe("sidebar.handlers", () => {
     expect(
       selectViewData({
         state,
-        props: { currentRoute: "/project/language" },
+        props: { currentRoute: "/project/asset-package" },
       }).selectedItemId,
     ).toBe("settings");
   });

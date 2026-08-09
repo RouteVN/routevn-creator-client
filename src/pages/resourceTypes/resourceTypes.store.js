@@ -96,6 +96,11 @@ const settingsItems = [
     name: "Language",
     path: "/project/language",
   },
+  {
+    id: "assetPackage",
+    name: "Asset Package",
+    path: "/project/asset-package",
+  },
   // {
   //   id: "user",
   //   name: "User",

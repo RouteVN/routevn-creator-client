@@ -207,6 +207,10 @@ template:
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: In
                                                               - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties} :defaultValues=${item.timelineDefaultValues}: null
+                                                          - $for maskTimelineRow in item.maskTimelineRows:
+                                                              - rtgl-view d=v w=f g=xs:
+                                                                  - rtgl-text s=xs c=mu-fg: ${maskTimelineRow.label}
+                                                                  - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${maskTimelineRow.properties} :defaultValues=${item.maskTimelineDefaultValues}: null
                                                     $else:
                                                       - rvn-keyframe-timeline w=f ?showRuler=true :properties=${item.updateProperties} :defaultValues=${item.timelineDefaultValues}: null
                                             $else:
