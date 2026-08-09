@@ -3,6 +3,7 @@ import {
   addCharacter,
   createInitialState,
   moveCharacter,
+  removeCharacterShaderAdjustmentOption,
   selectViewData,
   setAnimations,
   setExistingCharacters,
@@ -17,7 +18,9 @@ import {
   updateCharacterCustomTransform,
   updateCharacterCustomTransformEnabled,
   updateCharacterOpacity,
+  updateCharacterShaderAdjustment,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
+import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const createSpriteSelectState = () => {
@@ -475,6 +478,92 @@ describe("commandLineCharacters.store sprite group filtering", () => {
       blurEnabled: true,
       blur: selectedCharacter.blur,
     });
+  });
+
+  it("manages canonically ordered shader adjustments for each character", () => {
+    const state = createInitialState();
+    const customFilter = {
+      id: "customFilter",
+      type: "shader",
+      parameters: { strength: 0.5 },
+      source: {},
+    };
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            filters: [customFilter],
+          },
+        ],
+      },
+    );
+
+    for (const adjustment of [...COMMAND_LINE_SHADER_ADJUSTMENTS].reverse()) {
+      updateCharacterShaderAdjustment(
+        { state },
+        {
+          index: 0,
+          adjustmentId: adjustment.id,
+          value: adjustment.defaultValue,
+        },
+      );
+    }
+
+    const character = state.selectedCharacters[0];
+    expect(character.filters.map((filter) => filter.id)).toEqual([
+      customFilter.id,
+      ...COMMAND_LINE_SHADER_ADJUSTMENTS.map(
+        (adjustment) => adjustment.filterId,
+      ),
+    ]);
+
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(
+      viewData.defaultValues.characters[0].shaderAdjustments.every(
+        (adjustment) => adjustment.enabled,
+      ),
+    ).toBe(true);
+    expect(
+      viewData.form.fields[0].fields
+        .filter((field) => field.type === "section")
+        .map((field) => field.id),
+    ).toEqual(
+      COMMAND_LINE_SHADER_ADJUSTMENTS.map(
+        (adjustment) => `character-0-${adjustment.id}`,
+      ),
+    );
+    expect(viewData.form.fields[0].action).toMatchObject({ id: "add" });
+
+    removeCharacterShaderAdjustmentOption(
+      { state },
+      { index: 0, adjustmentId: "saturation" },
+    );
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(
+      viewData.defaultValues.characters[0].shaderAdjustments.find(
+        (adjustment) => adjustment.id === "saturation",
+      ).enabled,
+    ).toBe(false);
+    expect(character.filters.map((filter) => filter.id)).not.toContain(
+      "backgroundSaturation",
+    );
   });
 
   it("builds stacked preview file ids for multipart characters in group order", () => {

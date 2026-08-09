@@ -120,6 +120,10 @@ refs:
     eventListeners:
       value-change:
         handler: handleBlurFieldChange
+  shaderAdjustment*:
+    eventListeners:
+      value-input:
+        handler: handleShaderAdjustmentInput
   .characterSpriteGroupBox:
     eventListeners:
       click:
@@ -192,6 +196,9 @@ template:
                               - 'rtgl-input-number#blurQuality${i} slot=${character.blurQualityFormSlot} data-index=${character.characterIndex} data-blur-field=quality min=1 step=1 w=f value=${character.blur.quality}': null
                               - 'rtgl-select#blurKernelSize${i} slot=${character.blurKernelSizeFormSlot} data-index=${character.characterIndex} data-blur-field=kernelSize w=f no-clear :selectedValue=${character.blur.kernelSize} :options=${defaultValues.blurKernelSizeOptions}': null
                               - 'rtgl-segmented-control#blurRepeatEdgePixels${i} slot=${character.blurRepeatEdgePixelsFormSlot} data-index=${character.characterIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${character.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}': null
+                          - $for adjustment, adjustmentIndex in character.shaderAdjustments:
+                              - $if adjustment.enabled:
+                                  - 'rtgl-slider-input#shaderAdjustment${i}x${adjustmentIndex} slot=${adjustment.formSlot} data-index=${character.characterIndex} data-adjustment-id=${adjustment.id} min=${adjustment.min} max=${adjustment.max} step=${adjustment.step} w=f value=${adjustment.value}': null
                           - $if character.showSpriteGroupBoxes:
                               - 'rtgl-view.characterRow slot=${character.spriteGroupsFormSlot} data-index=${character.characterIndex} data-character-id=${character.id} d=h wrap g=xs w=f':
                                   - $for spriteGroup, j in character.spriteGroupBoxes:

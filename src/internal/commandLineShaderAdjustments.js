@@ -20,7 +20,7 @@ const createHueOperation = ({ uniformExpression, vectorType, webgl }) => {
   rgb = rotated;`;
 };
 
-export const BACKGROUND_SHADER_ADJUSTMENTS = Object.freeze([
+export const COMMAND_LINE_SHADER_ADJUSTMENTS = Object.freeze([
   {
     id: "brightness",
     filterId: "backgroundBrightness",
@@ -124,14 +124,14 @@ export const BACKGROUND_SHADER_ADJUSTMENTS = Object.freeze([
   },
 ]);
 
-const BACKGROUND_SHADER_ADJUSTMENTS_BY_ID = Object.fromEntries(
-  BACKGROUND_SHADER_ADJUSTMENTS.map((adjustment) => [
+const COMMAND_LINE_SHADER_ADJUSTMENTS_BY_ID = Object.fromEntries(
+  COMMAND_LINE_SHADER_ADJUSTMENTS.map((adjustment) => [
     adjustment.id,
     adjustment,
   ]),
 );
-const BACKGROUND_SHADER_ADJUSTMENTS_BY_FILTER_ID = Object.fromEntries(
-  BACKGROUND_SHADER_ADJUSTMENTS.map((adjustment) => [
+const COMMAND_LINE_SHADER_ADJUSTMENTS_BY_FILTER_ID = Object.fromEntries(
+  COMMAND_LINE_SHADER_ADJUSTMENTS.map((adjustment) => [
     adjustment.filterId,
     adjustment,
   ]),
@@ -223,9 +223,9 @@ fn mainFragment(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
 }`;
 };
 
-export const createInitialBackgroundShaderAdjustments = () => {
+export const createInitialCommandLineShaderAdjustments = () => {
   return Object.fromEntries(
-    BACKGROUND_SHADER_ADJUSTMENTS.map((adjustment) => [
+    COMMAND_LINE_SHADER_ADJUSTMENTS.map((adjustment) => [
       adjustment.id,
       {
         enabled: false,
@@ -235,18 +235,18 @@ export const createInitialBackgroundShaderAdjustments = () => {
   );
 };
 
-export const getBackgroundShaderAdjustment = (adjustmentId) => {
-  return BACKGROUND_SHADER_ADJUSTMENTS_BY_ID[adjustmentId];
+export const getCommandLineShaderAdjustment = (adjustmentId) => {
+  return COMMAND_LINE_SHADER_ADJUSTMENTS_BY_ID[adjustmentId];
 };
 
-export const orderBackgroundShaderAdjustmentFilters = (filters) => {
+export const orderCommandLineShaderAdjustmentFilters = (filters) => {
   const otherFilters = [];
   const filtersByAdjustmentId = Object.fromEntries(
-    BACKGROUND_SHADER_ADJUSTMENTS.map((adjustment) => [adjustment.id, []]),
+    COMMAND_LINE_SHADER_ADJUSTMENTS.map((adjustment) => [adjustment.id, []]),
   );
 
   for (const filter of filters) {
-    const adjustment = BACKGROUND_SHADER_ADJUSTMENTS_BY_FILTER_ID[filter?.id];
+    const adjustment = COMMAND_LINE_SHADER_ADJUSTMENTS_BY_FILTER_ID[filter?.id];
     if (!adjustment || filter.type !== "shader") {
       otherFilters.push(filter);
       continue;
@@ -256,18 +256,18 @@ export const orderBackgroundShaderAdjustmentFilters = (filters) => {
   }
 
   const orderedFilters = [...otherFilters];
-  for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
     orderedFilters.push(...filtersByAdjustmentId[adjustment.id]);
   }
 
   return orderedFilters;
 };
 
-export const normalizeBackgroundShaderAdjustmentValue = (
+export const normalizeCommandLineShaderAdjustmentValue = (
   adjustmentId,
   value,
 ) => {
-  const adjustment = getBackgroundShaderAdjustment(adjustmentId);
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
   const parsedValue = Number(value);
   if (!Number.isFinite(parsedValue)) {
     return adjustment.defaultValue;
@@ -276,9 +276,12 @@ export const normalizeBackgroundShaderAdjustmentValue = (
   return Math.max(adjustment.min, Math.min(adjustment.max, parsedValue));
 };
 
-export const createBackgroundShaderAdjustmentFilter = (adjustmentId, value) => {
-  const adjustment = getBackgroundShaderAdjustment(adjustmentId);
-  const normalizedValue = normalizeBackgroundShaderAdjustmentValue(
+export const createCommandLineShaderAdjustmentFilter = (
+  adjustmentId,
+  value,
+) => {
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
+  const normalizedValue = normalizeCommandLineShaderAdjustmentValue(
     adjustmentId,
     value,
   );
@@ -300,12 +303,12 @@ export const createBackgroundShaderAdjustmentFilter = (adjustmentId, value) => {
   };
 };
 
-export const getBackgroundShaderAdjustmentValue = (filters, adjustmentId) => {
+export const getCommandLineShaderAdjustmentValue = (filters, adjustmentId) => {
   if (!Array.isArray(filters)) {
     return undefined;
   }
 
-  const adjustment = getBackgroundShaderAdjustment(adjustmentId);
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
   const filter = filters.find(
     (candidate) =>
       candidate?.id === adjustment.filterId && candidate.type === "shader",
@@ -314,8 +317,63 @@ export const getBackgroundShaderAdjustmentValue = (filters, adjustmentId) => {
     return undefined;
   }
 
-  return normalizeBackgroundShaderAdjustmentValue(
+  return normalizeCommandLineShaderAdjustmentValue(
     adjustmentId,
     filter.parameters?.[adjustment.id],
   );
+};
+
+export const createCommandLineShaderAdjustmentControls = (filters) => {
+  return COMMAND_LINE_SHADER_ADJUSTMENTS.map((adjustment) => {
+    const value = getCommandLineShaderAdjustmentValue(filters, adjustment.id);
+
+    return {
+      id: adjustment.id,
+      label: adjustment.label,
+      min: adjustment.min,
+      max: adjustment.max,
+      step: adjustment.step,
+      enabled: value !== undefined,
+      value: value ?? adjustment.defaultValue,
+    };
+  });
+};
+
+export const setCommandLineShaderAdjustmentFilter = (
+  filters,
+  adjustmentId,
+  value,
+) => {
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
+  const nextFilter = createCommandLineShaderAdjustmentFilter(
+    adjustmentId,
+    value,
+  );
+  const nextFilters = Array.isArray(filters) ? [...filters] : [];
+  const filterIndex = nextFilters.findIndex(
+    (filter) => filter?.id === adjustment.filterId && filter.type === "shader",
+  );
+
+  if (filterIndex >= 0) {
+    nextFilters[filterIndex] = nextFilter;
+  } else {
+    nextFilters.push(nextFilter);
+  }
+
+  return orderCommandLineShaderAdjustmentFilters(nextFilters);
+};
+
+export const removeCommandLineShaderAdjustmentFilter = (
+  filters,
+  adjustmentId,
+) => {
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
+  const nextFilters = Array.isArray(filters)
+    ? filters.filter(
+        (filter) =>
+          filter?.id !== adjustment.filterId || filter.type !== "shader",
+      )
+    : [];
+
+  return orderCommandLineShaderAdjustmentFilters(nextFilters);
 };

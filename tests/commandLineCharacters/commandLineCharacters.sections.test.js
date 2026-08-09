@@ -171,7 +171,7 @@ describe("commandLineCharacters sections", () => {
       true,
     );
     [section] = selectViewData({ state, i18n: EN_I18N }).form.fields;
-    expect(section.action).toBeUndefined();
+    expect(section.action).toMatchObject({ id: "add", icon: "plus" });
     expect(section.fields.at(-1)).toMatchObject({
       type: "section",
       id: "character-0-blur",

@@ -8,9 +8,9 @@ import {
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import {
-  BACKGROUND_SHADER_ADJUSTMENTS,
-  getBackgroundShaderAdjustment,
-} from "./support/backgroundShaderAdjustments.js";
+  COMMAND_LINE_SHADER_ADJUSTMENTS,
+  getCommandLineShaderAdjustment,
+} from "../../internal/commandLineShaderAdjustments.js";
 
 const createEmptyCollection = () => ({
   items: {},
@@ -518,7 +518,7 @@ export const handleBackgroundImageRightClick = async (deps, payload) => {
 export const handleOptionsSectionAction = async (deps, payload) => {
   const { appService, i18n, render, store } = deps;
   const { actionId, position, sectionId } = payload._event.detail;
-  const shaderAdjustment = getBackgroundShaderAdjustment(sectionId);
+  const shaderAdjustment = getCommandLineShaderAdjustment(sectionId);
 
   if (sectionId === "background-color" && actionId === "remove") {
     store.setSelectedColor({ colorId: undefined });
@@ -570,7 +570,7 @@ export const handleOptionsSectionAction = async (deps, payload) => {
       key: "opacity",
     });
   }
-  for (const adjustment of BACKGROUND_SHADER_ADJUSTMENTS) {
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
     if (
       store.selectBackgroundShaderAdjustmentOptionEnabled({
         adjustmentId: adjustment.id,
@@ -602,7 +602,7 @@ export const handleOptionsSectionAction = async (deps, payload) => {
     y: position.y,
     place: "be",
   });
-  const selectedShaderAdjustment = getBackgroundShaderAdjustment(
+  const selectedShaderAdjustment = getCommandLineShaderAdjustment(
     result?.item?.key,
   );
 
@@ -770,7 +770,7 @@ export const handleFormInputChange = (deps, payload) => {
     return;
   }
 
-  const shaderAdjustment = getBackgroundShaderAdjustment(name);
+  const shaderAdjustment = getCommandLineShaderAdjustment(name);
   if (shaderAdjustment) {
     store.setSelectedBackgroundShaderAdjustment({
       adjustmentId: shaderAdjustment.id,
