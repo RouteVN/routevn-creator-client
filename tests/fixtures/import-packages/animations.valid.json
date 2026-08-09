@@ -4,6 +4,7 @@
     "id": "test.animations",
     "name": "Animation Test Pack",
     "version": "1.0.0",
+    "defaultFolderName": "Test Animations",
     "description": "A transition animation with a replaceable mask image.",
     "publisher": "RouteVN Test Fixtures"
   },

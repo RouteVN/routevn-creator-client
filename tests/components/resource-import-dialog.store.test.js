@@ -7,6 +7,8 @@ import {
   openImageSelector,
   openItemStep,
   selectViewData,
+  setAllResourcesSelected,
+  setResourceSelected,
   setSelectedReplacementImage,
   setPlan,
   syncFromProps,
@@ -38,7 +40,11 @@ const createRepositoryState = () => ({
 });
 
 const createMultiResourcePlan = () => ({
-  package: { name: "Pack", version: "1.0.0" },
+  package: {
+    name: "Pack",
+    version: "1.0.0",
+    defaultFolderName: "Imported Transforms",
+  },
   resources: [
     {
       sourceId: "source.one",
@@ -82,10 +88,18 @@ describe("resource-import-dialog.store", () => {
   it("provides a concrete placeholder for the source URL input", () => {
     const state = createInitialState();
     const view = selectViewData({ state, i18n: {} });
+    expect(view.form.fields[0]).toEqual({
+      type: "slot",
+      slot: "source-description",
+    });
     expect(
       view.form.fields.find((field) => field.name === "url"),
     ).toMatchObject({
       placeholder: "https://example.com/import/package.json",
+    });
+    expect(view).toMatchObject({
+      assetStoreLinkLabel: "Browse the Asset Store",
+      assetStoreUrl: "http://localhost:3003/en/creator/asset-store/",
     });
   });
 
@@ -110,6 +124,10 @@ describe("resource-import-dialog.store", () => {
           previewUrl: "https://example.com/transform-one.png",
           selected: true,
           selectionLabel: "Import Transform One",
+          selectionBorderColor: "pr",
+          selectionHoverBorderColor: "pr",
+          selectionStatus: "Selected",
+          selectionStatusColor: "pr",
         }),
         expect.objectContaining({
           selectionSlot: "resource-selection-1",
@@ -121,6 +139,7 @@ describe("resource-import-dialog.store", () => {
     expect(view.form.fields).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ slot: "package-summary", type: "slot" }),
+        expect.objectContaining({ slot: "selection-controls", type: "slot" }),
         expect.objectContaining({
           slot: "resource-selection-0",
           type: "slot",
@@ -141,7 +160,30 @@ describe("resource-import-dialog.store", () => {
       id: "select-continue",
       label: "Continue",
     });
+    expect(view).toMatchObject({
+      allResourcesSelected: true,
+      selectionToggleAllLabel: "Deselect All",
+    });
     expect(view.warnings).toEqual([]);
+
+    setResourceSelected({ state }, { resourceIndex: 0, selected: false });
+    expect(selectViewData({ state, i18n: {} }).resources[0]).toMatchObject({
+      selected: false,
+      selectionBorderColor: "bo",
+      selectionHoverBorderColor: "ac",
+      selectionStatus: "Not selected",
+      selectionStatusColor: "mu-fg",
+    });
+    expect(selectViewData({ state, i18n: {} })).toMatchObject({
+      allResourcesSelected: false,
+      selectionToggleAllLabel: "Select All",
+    });
+
+    setAllResourcesSelected({ state }, { selected: true });
+    expect(selectViewData({ state, i18n: {} })).toMatchObject({
+      allResourcesSelected: true,
+      selectionToggleAllLabel: "Deselect All",
+    });
   });
 
   it("customizes selected resources one by one and submits from the last item", () => {
@@ -177,20 +219,100 @@ describe("resource-import-dialog.store", () => {
       expect.arrayContaining([
         expect.objectContaining({ slot: "resource-preview", type: "slot" }),
         expect.objectContaining({
-          name: "resource_0_name",
-          type: "input-text",
+          type: "row",
+          fields: [
+            expect.objectContaining({
+              name: "resource_0_name",
+              label: "Resource Name",
+              type: "input-text",
+            }),
+            expect.objectContaining({
+              name: "resource_0_description",
+              label: "Resource Description",
+              type: "input-textarea",
+              rows: 3,
+            }),
+          ],
         }),
-        expect.objectContaining({ slot: "image-resources", type: "slot" }),
+        expect.objectContaining({
+          slot: "image-resources-header",
+          type: "slot",
+        }),
+        expect.objectContaining({
+          slot: "image-resources-list",
+          type: "slot",
+        }),
       ]),
     );
     expect(
       firstView.form.fields.some((field) => field.name === "image_0_mode"),
     ).toBe(false);
     expect(
-      firstView.form.fields.some(
-        (field) => field.name === "resourceDestinationMode",
+      firstView.form.fields.find((field) =>
+        field.fields?.some(
+          (nestedField) => nestedField.name === "resourceDestinationMode",
+        ),
       ),
+    ).toMatchObject({ type: "row" });
+    expect(
+      firstView.form.fields.map(
+        (field) => field.slot ?? field.name ?? field.fields?.[0]?.name,
+      ),
+    ).toEqual([
+      "resource-preview",
+      "resource_0_name",
+      "resourceDestinationMode",
+      "image-resources-header",
+      "imageDestinationMode",
+      "image-resources-list",
+    ]);
+    const firstRenderedForm = selectRenderedForm({
+      state: { formValues: firstView.defaultValues },
+      props: { form: firstView.form, context: firstView.formContext },
+    });
+    const firstRenderedFields = firstRenderedForm.fields.flatMap(
+      (field) => field.fields ?? [field],
+    );
+    expect(
+      firstRenderedFields.some((field) => field.name === "resourceParentId"),
     ).toBe(false);
+    expect(
+      firstRenderedFields.some((field) => field.name === "imageParentId"),
+    ).toBe(false);
+    expect(firstView.defaultValues).toMatchObject({
+      resource_0_name: "Transform One",
+      resource_0_description: "First transform",
+      resourceDestinationMode: "new",
+      resourceNewFolderName: "Imported Transforms",
+      imageDestinationMode: "new",
+      imageNewFolderName: "Imported Transforms",
+    });
+    const destinationModeFields = firstView.form.fields
+      .flatMap((field) => field.fields ?? [field])
+      .filter((field) => field.name?.endsWith("DestinationMode"));
+    expect(destinationModeFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "resourceDestinationMode",
+          options: [
+            { label: "New Folder", value: "new" },
+            { label: "Existing Folder", value: "existing" },
+          ],
+        }),
+        expect.objectContaining({
+          name: "imageDestinationMode",
+          options: [
+            { label: "New Folder", value: "new" },
+            { label: "Existing Folder", value: "existing" },
+          ],
+        }),
+      ]),
+    );
+    expect(
+      destinationModeFields.find(
+        (field) => field.name === "imageDestinationMode",
+      ),
+    ).not.toHaveProperty("description");
     expect(firstView.form.actions.buttons.at(-1)).toMatchObject({
       id: "next",
       label: "Next",
@@ -199,7 +321,14 @@ describe("resource-import-dialog.store", () => {
     openItemStep(
       { state },
       {
-        values: { resource_0_name: "Renamed Transform" },
+        values: {
+          resource_0_name: "Renamed Transform",
+          resource_0_description: "Updated description",
+          resourceDestinationMode: "new",
+          resourceNewFolderName: "Custom Transforms",
+          imageDestinationMode: "new",
+          imageNewFolderName: "Custom Images",
+        },
         resourceIndex: 1,
       },
     );
@@ -213,6 +342,15 @@ describe("resource-import-dialog.store", () => {
       label: "Submit All",
     });
     expect(lastView.formContext.resource_0_name).toBe("Renamed Transform");
+    expect(lastView.formContext.resource_0_description).toBe(
+      "Updated description",
+    );
+    expect(lastView.formContext).toMatchObject({
+      resourceDestinationMode: "new",
+      resourceNewFolderName: "Custom Transforms",
+      imageDestinationMode: "new",
+      imageNewFolderName: "Custom Images",
+    });
     const resourceDestinationRow = lastView.form.fields.find((field) =>
       field.fields?.some(
         (nestedField) => nestedField.name === "resourceDestinationMode",
@@ -244,20 +382,19 @@ describe("resource-import-dialog.store", () => {
       (field) => field.fields ?? [field],
     );
     expect(
-      renderedFields.find((field) => field.name === "resourceParentId")
-        ?.options,
-    ).toEqual([{ label: "Folder", value: "folder" }]);
-    expect(
-      renderedFields.find((field) => field.name === "imageParentId")?.options,
-    ).toEqual([{ label: "Images", value: "imageFolder" }]);
+      renderedFields.some((field) => field.name === "resourceParentId"),
+    ).toBe(false);
+    expect(renderedFields.some((field) => field.name === "imageParentId")).toBe(
+      false,
+    );
     expect(
       renderedForm.fields
         .filter((field) => field.type === "row")
         .map((field) => field.fields.map((nestedField) => nestedField.name)),
     ).toEqual(
       expect.arrayContaining([
-        ["resourceDestinationMode", "resourceParentId"],
-        ["imageDestinationMode", "imageParentId"],
+        ["resourceDestinationMode", "resourceNewFolderName"],
+        ["imageDestinationMode", "imageNewFolderName"],
       ]),
     );
   });

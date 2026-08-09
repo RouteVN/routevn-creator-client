@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleBeforeMount,
   handleDurationResizeEnd,
   handleDurationResizeMove,
   handleDurationResizeStart,
@@ -12,11 +13,46 @@ import {
   handleRulerScrubEnd,
   handleRulerScrubMove,
   handleRulerScrubStart,
+  handleRulerScrubWindowBlur,
   handleTrackClick,
   handleTrackMouseMove,
 } from "../../src/components/keyframeTimeline/keyframeTimeline.handlers.js";
 
 describe("keyframeTimeline.handlers", () => {
+  it("keeps ruler scrubbing active through window pointer events", () => {
+    const listeners = {};
+    const removeEventListener = vi.fn();
+    vi.stubGlobal("window", {
+      addEventListener: vi.fn((type, listener) => {
+        listeners[type] = listener;
+      }),
+      removeEventListener,
+    });
+    const store = {
+      selectRulerScrub: vi.fn(() => undefined),
+    };
+
+    try {
+      const unmount = handleBeforeMount({
+        dispatchEvent: vi.fn(),
+        props: {},
+        render: vi.fn(),
+        store,
+      });
+
+      expect(Object.keys(listeners)).toEqual([
+        "pointermove",
+        "pointerup",
+        "pointercancel",
+        "blur",
+      ]);
+      unmount();
+      expect(removeEventListener).toHaveBeenCalledTimes(4);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("shows the add target on empty tracks and delay gaps between keyframes", () => {
     let hoverTarget;
     const store = {
@@ -286,8 +322,8 @@ describe("keyframeTimeline.handlers", () => {
         rulerScrub = undefined;
       }),
       selectRulerScrub: vi.fn(() => rulerScrub),
-      startRulerScrub: vi.fn(({ leftPercent, pointerId }) => {
-        rulerScrub = { leftPercent, pointerId };
+      startRulerScrub: vi.fn((scrub) => {
+        rulerScrub = scrub;
       }),
       updateRulerScrub: vi.fn(({ leftPercent }) => {
         rulerScrub.leftPercent = leftPercent;
@@ -296,12 +332,8 @@ describe("keyframeTimeline.handlers", () => {
     const dispatchEvent = vi.fn();
     const render = vi.fn();
     const preventDefault = vi.fn();
-    const setPointerCapture = vi.fn();
-    const releasePointerCapture = vi.fn();
     const rulerElement = {
       getBoundingClientRect: () => ({ left: 100, width: 400 }),
-      releasePointerCapture,
-      setPointerCapture,
     };
     const deps = {
       dispatchEvent,
@@ -340,8 +372,6 @@ describe("keyframeTimeline.handlers", () => {
       },
     });
 
-    expect(setPointerCapture).toHaveBeenCalledWith(3);
-    expect(releasePointerCapture).toHaveBeenCalledWith(3);
     expect(dispatchEvent.mock.calls.map(([event]) => event.detail)).toEqual([
       {
         committed: false,
@@ -363,6 +393,99 @@ describe("keyframeTimeline.handlers", () => {
       },
     ]);
     expect(store.clearRulerScrub).toHaveBeenCalledWith({});
+  });
+
+  it("keeps ruler scrubbing active after leaving and re-entering its range", () => {
+    let rulerScrub;
+    const store = {
+      clearRulerScrub: vi.fn(() => {
+        rulerScrub = undefined;
+      }),
+      selectRulerScrub: vi.fn(() => rulerScrub),
+      startRulerScrub: vi.fn((scrub) => {
+        rulerScrub = scrub;
+      }),
+      updateRulerScrub: vi.fn(({ leftPercent }) => {
+        rulerScrub.leftPercent = leftPercent;
+      }),
+    };
+    const dispatchEvent = vi.fn();
+    const preventDefault = vi.fn();
+    const deps = {
+      dispatchEvent,
+      props: {
+        interactiveRuler: true,
+        side: "update",
+        timelineDuration: 1000,
+      },
+      render: vi.fn(),
+      store,
+    };
+
+    handleRulerScrubStart(deps, {
+      _event: {
+        button: 0,
+        clientX: 200,
+        currentTarget: {
+          getBoundingClientRect: () => ({ left: 100, width: 400 }),
+        },
+        pointerId: 3,
+        preventDefault,
+      },
+    });
+    handleRulerScrubMove(deps, {
+      _event: {
+        clientX: 600,
+        pointerId: 3,
+        preventDefault,
+      },
+    });
+    handleRulerScrubMove(deps, {
+      _event: {
+        clientX: 300,
+        pointerId: 3,
+        preventDefault,
+      },
+    });
+
+    expect(dispatchEvent.mock.calls.map(([event]) => event.detail)).toEqual([
+      {
+        committed: false,
+        side: "update",
+        timeMs: 250,
+        leftPercent: 25,
+      },
+      {
+        committed: false,
+        side: "update",
+        timeMs: 1000,
+        leftPercent: 100,
+      },
+      {
+        committed: false,
+        side: "update",
+        timeMs: 500,
+        leftPercent: 50,
+      },
+    ]);
+    expect(store.clearRulerScrub).not.toHaveBeenCalled();
+    expect(store.selectRulerScrub()).toMatchObject({
+      leftPercent: 50,
+      pointerId: 3,
+    });
+  });
+
+  it("clears an active ruler scrub when the window loses focus", () => {
+    const store = {
+      clearRulerScrub: vi.fn(),
+      selectRulerScrub: vi.fn(() => ({ pointerId: 3 })),
+    };
+    const render = vi.fn();
+
+    handleRulerScrubWindowBlur({ render, store });
+
+    expect(store.clearRulerScrub).toHaveBeenCalledWith({});
+    expect(render).toHaveBeenCalledOnce();
   });
 
   it("selects an edge keyframe instead of treating it as an add action", () => {

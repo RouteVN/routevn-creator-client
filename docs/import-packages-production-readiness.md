@@ -158,8 +158,8 @@ Import action
 -> create normalized import plan with destination ids
 -> validate creator-model command plan
 -> for multiple resources, review previews and choose which ones to import
--> customize each selected resource with its preview, name, and media choices
--> choose existing/new destinations on the final item and submit all
+-> customize each selected resource with its preview, name, description, destinations, and media choices
+-> submit all from the final item
 -> stage and verify files with progress
 -> revalidate destinations and current project revision
 -> submit one resource command batch
@@ -530,17 +530,20 @@ Show users exactly what will happen and collect all choices before execution.
 - [ ] For multi-item packages, start with a visual resource-selection page; skip
       that page when the package contains only one matching resource.
 - [ ] Show each selected resource on its own customization page with a package
-      preview, rename field, referenced-media previews, Back, and Next.
-- [ ] Put destination choices and Submit All on the final selected resource and
-      preserve all earlier choices in the submitted payload.
+      preview, name and description fields, referenced-media previews, Back,
+      and Next.
+- [ ] Put destination choices on each selected resource, put Submit All on the
+      final selected resource, and preserve all earlier choices in the submitted
+      payload.
 - [ ] Let users select/deselect resources when dependency rules allow it.
-- [ ] Let users rename imported resources before execution.
+- [ ] Let users edit imported resource names and descriptions before execution.
 - [ ] Let users choose an existing destination folder or name a new folder for
       every imported resource type.
 - [ ] Let users choose an existing destination folder or name a new folder for
       imported images.
-- [ ] Default to the explicit new-folder path when no eligible destination
-      folder exists; never silently fall back to root.
+- [ ] Show New Folder before Existing Folder, default to New Folder, and seed
+      its name from `package.defaultFolderName`; never silently fall back to
+      root.
 - [ ] Validate new folder names and create requested folders in the same atomic
       batch as their imported children.
 - [ ] Add media choices for import, existing-resource substitution, or skip

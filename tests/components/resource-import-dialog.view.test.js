@@ -10,20 +10,50 @@ const viewSource = readFileSync(
 );
 
 describe("resource-import-dialog.view", () => {
+  it("links the source description to the asset store", () => {
+    expect(viewSource).toContain("slot=source-description");
+    expect(viewSource).toContain("rtgl-text#assetStoreLink");
+    expect(viewSource).toContain("href=${assetStoreUrl}");
+    expect(viewSource).toContain("new-tab");
+  });
+
   it("renders preview media in bounded 16:9 frames", () => {
     expect(viewSource).toContain("rvn-resource-import-preview-media");
     expect(viewSource).toContain("w=160 h=90");
     expect(viewSource).toContain("w=240 h=135");
   });
 
+  it("uses the whole resource card as the selection control", () => {
+    expect(viewSource).toContain("slot=selection-controls");
+    expect(viewSource).toContain("selectionToggleAllButton");
+    expect(viewSource).toContain("${selectionToggleAllLabel}");
+    expect(viewSource).toContain("rtgl-view#resourceSelectionCard");
+    expect(viewSource).toContain("role=button tabindex=0");
+    expect(viewSource).toContain('aria-pressed="${resource.selected}"');
+    expect(viewSource).toContain("${resource.selectionStatus}");
+    expect(viewSource).toContain("bgc=bg");
+    expect(viewSource).toContain("bc=${resource.selectionBorderColor}");
+    expect(viewSource).toContain("h-bc=${resource.selectionHoverBorderColor}");
+    expect(viewSource).not.toContain("selectionBackgroundColor");
+    expect(viewSource).not.toContain("rtgl-checkbox");
+    expect(viewSource).toContain(
+      'w=160 h=90 overflow=hidden br=md bgc=mu style="flex: 0 0 160px; box-sizing: border-box;"',
+    );
+    expect(viewSource).not.toContain(
+      'w=160 h=90 overflow=hidden bw=xs bc=bo br=md bgc=mu style="flex: 0 0 160px; box-sizing: border-box;"',
+    );
+  });
+
   it("renders read-only animation and transition mask timelines", () => {
     expect(viewSource).toContain("slot=animation-timeline-preview");
     expect(viewSource).toContain("rvn-keyframe-timeline");
     expect(viewSource).toContain("animationTimeline.maskProperties");
+    expect(viewSource).not.toContain("currentResource.description");
   });
 
   it("opens the project image selector directly from image resource cards", () => {
-    expect(viewSource).toContain("slot=image-resources");
+    expect(viewSource).toContain("slot=image-resources-header");
+    expect(viewSource).toContain("slot=image-resources-list");
     expect(viewSource).toContain("imageCustomizeButton");
     expect(viewSource).toContain("imageUseDefaultButton");
     expect(viewSource).toContain("imageSelectorDialog");

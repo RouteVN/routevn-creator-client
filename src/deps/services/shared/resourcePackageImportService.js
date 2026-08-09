@@ -156,6 +156,7 @@ const validateReviewChoices = ({
   selectedResources,
   resourceChoices,
   resourceNames,
+  resourceDescriptions,
 }) => {
   if (selectedResources.length === 0) {
     throw new ResourceImportPlanError(
@@ -169,6 +170,15 @@ const validateReviewChoices = ({
       throw new ResourceImportPlanError(
         "resource_name_required",
         "Imported resource names cannot be empty.",
+        { resourceId: resource.sourceId },
+      );
+    }
+    const description =
+      resourceDescriptions[resource.sourceId] ?? resource.description;
+    if (typeof description !== "string") {
+      throw new ResourceImportPlanError(
+        "resource_description_invalid",
+        "Imported resource descriptions must be text.",
         { resourceId: resource.sourceId },
       );
     }
@@ -343,6 +353,7 @@ export const createResourcePackageImportService = ({
       selectedResourceIds,
       resourceChoices = {},
       resourceNames = {},
+      resourceDescriptions = {},
       resourceDestination,
       imageDestination,
       resourceParentId,
@@ -368,6 +379,7 @@ export const createResourcePackageImportService = ({
           selectedResources,
           resourceChoices,
           resourceNames,
+          resourceDescriptions,
         });
         resolveDestinationChoice({
           choice: resourceDestination,
@@ -402,6 +414,7 @@ export const createResourcePackageImportService = ({
       selectedResourceIds,
       resourceChoices = {},
       resourceNames = {},
+      resourceDescriptions = {},
       resourceDestination,
       imageDestination,
       resourceParentId,
@@ -453,6 +466,7 @@ export const createResourcePackageImportService = ({
           selectedResources,
           resourceChoices,
           resourceNames,
+          resourceDescriptions,
         });
 
         const usedImages = plan.images.filter((image) =>
@@ -652,6 +666,7 @@ export const createResourcePackageImportService = ({
           plan: { ...plan, resources: selectedResources },
           resourceChoices,
           resourceNames,
+          resourceDescriptions,
           fileIdMap: actualFileIds,
         });
         const selectedTagIds = new Set(

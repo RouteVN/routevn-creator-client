@@ -20,8 +20,17 @@ export const selectHoverTarget = ({ state }) => {
   return state.hoverTarget;
 };
 
-export const startRulerScrub = ({ state }, { leftPercent, pointerId } = {}) => {
-  state.rulerScrub = { leftPercent, pointerId };
+export const startRulerScrub = (
+  { state },
+  { leftPercent, pointerId, timelineDuration, trackLeft, trackWidth } = {},
+) => {
+  state.rulerScrub = {
+    leftPercent,
+    pointerId,
+    timelineDuration,
+    trackLeft,
+    trackWidth,
+  };
 };
 
 export const updateRulerScrub = ({ state }, { leftPercent } = {}) => {

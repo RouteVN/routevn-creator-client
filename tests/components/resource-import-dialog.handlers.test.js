@@ -1,12 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleAssetStoreLink,
   handleConfirmImageReplacement,
   handleFormAction,
   handleImageCustomize,
   handleImageSelectorClose,
   handleImageUseDefault,
   handleReplacementImageSelected,
-  handleResourceSelectionChange,
+  handleResourceSelectionKeyDown,
+  handleResourceSelectionToggle,
+  handleSelectionToggleAll,
 } from "../../src/components/resource-import-dialog/resource-import-dialog.handlers.js";
 
 const createDeps = () => {
@@ -26,6 +29,9 @@ const createDeps = () => {
       i18n: {},
       render: vi.fn(),
       dispatchEvent: vi.fn(),
+      appService: {
+        openUrl: vi.fn(),
+      },
       store: {
         selectStep: vi.fn(() => "item"),
         selectPlan: vi.fn(() => plan),
@@ -36,6 +42,7 @@ const createDeps = () => {
         openSourceStep: vi.fn(),
         saveReviewValues: vi.fn(),
         setResourceSelected: vi.fn(),
+        setAllResourcesSelected: vi.fn(),
         openImageSelector: vi.fn(),
         closeImageSelector: vi.fn(),
         setSelectedReplacementImage: vi.fn(),
@@ -54,11 +61,30 @@ const createDeps = () => {
 };
 
 describe("resource-import-dialog.handlers", () => {
+  it("opens the asset store through the app URL service", () => {
+    const { deps } = createDeps();
+    const url = "http://localhost:3003/en/creator/asset-store/";
+    const preventDefault = vi.fn();
+
+    handleAssetStoreLink(deps, {
+      _event: {
+        preventDefault,
+        currentTarget: {
+          getAttribute: vi.fn(() => url),
+        },
+      },
+    });
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(deps.appService.openUrl).toHaveBeenCalledWith(url);
+  });
+
   it("maps the accumulated wizard values into validation and execution", async () => {
     const { deps } = createDeps();
     const values = {
       resource_0_include: true,
       resource_0_name: "Renamed Transform",
+      resource_0_description: "Updated description",
       resourceDestinationMode: "new",
       resourceNewFolderName: "Imported Transforms",
       image_0_mode: "import",
@@ -75,6 +101,9 @@ describe("resource-import-dialog.handlers", () => {
     const expectedChoices = {
       selectedResourceIds: ["transform.source"],
       resourceNames: { "transform.source": "Renamed Transform" },
+      resourceDescriptions: {
+        "transform.source": "Updated description",
+      },
       resourceChoices: { "image.source": { mode: "import" } },
       resourceDestination: {
         mode: "create",
@@ -120,18 +149,70 @@ describe("resource-import-dialog.handlers", () => {
     });
   });
 
-  it("updates a resource choice from the checkbox inside its card", () => {
+  it("toggles a resource choice from the selection card", () => {
     const { deps } = createDeps();
 
-    handleResourceSelectionChange(deps, {
+    handleResourceSelectionToggle(deps, {
       _event: {
-        currentTarget: { dataset: { resourceIndex: "1" } },
-        detail: { value: false },
+        currentTarget: {
+          dataset: { resourceIndex: "1" },
+          getAttribute: vi.fn(() => "true"),
+        },
       },
     });
 
     expect(deps.store.setResourceSelected).toHaveBeenCalledWith({
       resourceIndex: 1,
+      selected: false,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("toggles a resource choice with Enter or Space", () => {
+    const { deps } = createDeps();
+    const currentTarget = {
+      dataset: { resourceIndex: "0" },
+      getAttribute: vi.fn(() => "false"),
+    };
+    const enterEvent = {
+      currentTarget,
+      key: "Enter",
+      preventDefault: vi.fn(),
+    };
+    const spaceEvent = {
+      currentTarget,
+      key: " ",
+      preventDefault: vi.fn(),
+    };
+
+    handleResourceSelectionKeyDown(deps, { _event: enterEvent });
+    handleResourceSelectionKeyDown(deps, { _event: spaceEvent });
+
+    expect(enterEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(spaceEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(deps.store.setResourceSelected).toHaveBeenNthCalledWith(1, {
+      resourceIndex: 0,
+      selected: true,
+    });
+    expect(deps.store.setResourceSelected).toHaveBeenNthCalledWith(2, {
+      resourceIndex: 0,
+      selected: true,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("toggles all resource choices from the selection control", () => {
+    const { deps } = createDeps();
+
+    handleSelectionToggleAll(deps, {
+      _event: {
+        currentTarget: {
+          dataset: { allSelected: "true" },
+        },
+      },
+    });
+
+    expect(deps.store.setAllResourcesSelected).toHaveBeenCalledWith({
       selected: false,
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
@@ -171,7 +252,10 @@ describe("resource-import-dialog.handlers", () => {
       resource_0_include: true,
       resource_1_include: true,
     });
-    const values = { resource_0_name: "Updated Transform" };
+    const values = {
+      resource_0_name: "Updated Transform",
+      resource_0_description: "Updated description",
+    };
 
     await handleFormAction(deps, {
       _event: {

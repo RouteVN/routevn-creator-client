@@ -51,6 +51,13 @@ const emitCancelled = ({ dispatchEvent }) => {
   dispatchEvent(new CustomEvent("import-cancelled"));
 };
 
+export const handleAssetStoreLink = (deps, payload) => {
+  const { appService } = deps;
+  const { _event } = payload;
+  _event.preventDefault();
+  appService.openUrl(_event.currentTarget.getAttribute("href"));
+};
+
 export const handleDialogClose = (deps) => {
   const { projectService, store } = deps;
   const operationId = store.selectOperationId();
@@ -61,10 +68,13 @@ export const handleDialogClose = (deps) => {
 const buildReviewPayload = ({ plan, values }) => {
   const selectedResourceIds = [];
   const resourceNames = {};
+  const resourceDescriptions = {};
   plan.resources.forEach((resource, index) => {
     if (values[`resource_${index}_include`] === true) {
       selectedResourceIds.push(resource.sourceId);
       resourceNames[resource.sourceId] = values[`resource_${index}_name`];
+      resourceDescriptions[resource.sourceId] =
+        values[`resource_${index}_description`];
     }
   });
   const resourceChoices = {};
@@ -76,7 +86,12 @@ const buildReviewPayload = ({ plan, values }) => {
         values[`image_${index}_existingId`];
     }
   });
-  return { selectedResourceIds, resourceNames, resourceChoices };
+  return {
+    selectedResourceIds,
+    resourceNames,
+    resourceDescriptions,
+    resourceChoices,
+  };
 };
 
 const importsSelectedPackageImages = ({ plan, choices }) => {
@@ -286,13 +301,31 @@ export const handleFormAction = async (deps, payload) => {
   }
 };
 
-export const handleResourceSelectionChange = (deps, payload) => {
+const toggleResourceSelection = (deps, payload) => {
   const { store, render } = deps;
-  const resourceIndex = Number(
-    payload._event.currentTarget.dataset.resourceIndex,
-  );
-  const { value } = payload._event.detail;
-  store.setResourceSelected({ resourceIndex, selected: value });
+  const { currentTarget } = payload._event;
+  const resourceIndex = Number(currentTarget.dataset.resourceIndex);
+  const selected = currentTarget.getAttribute("aria-pressed") !== "true";
+  store.setResourceSelected({ resourceIndex, selected });
+  render();
+};
+
+export const handleResourceSelectionToggle = (deps, payload) => {
+  toggleResourceSelection(deps, payload);
+};
+
+export const handleResourceSelectionKeyDown = (deps, payload) => {
+  const { _event } = payload;
+  if (_event.key !== "Enter" && _event.key !== " ") return;
+  _event.preventDefault();
+  toggleResourceSelection(deps, payload);
+};
+
+export const handleSelectionToggleAll = (deps, payload) => {
+  const { store, render } = deps;
+  const { currentTarget } = payload._event;
+  const selected = currentTarget.dataset.allSelected !== "true";
+  store.setAllResourcesSelected({ selected });
   render();
 };
 

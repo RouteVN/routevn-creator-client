@@ -11,13 +11,18 @@ import {
   handleAutoDurationChange,
   handleAutoTrackClick,
   handleBeforeMount,
+  handleCaptureAnimationCanvas,
+  handleCaptureAnimationCanvasShortcutKeyDown,
   handleConfirmMaskImageSelection,
+  handleCopyAnimationJsonShortcutKeyDown,
   handleEditKeyframeFormSubmit,
   handleEditorPopoverPositioned,
   handleEditorSurfaceClick,
   handleEditorTabClick,
   handleEditorTabKeyDown,
   handleEmptyTimelineAddPropertiesKeyDown,
+  handleExportAnimationVideo,
+  handleExportAnimationVideoShortcutKeyDown,
   handleKeyframeClick,
   handleKeyframeSelect,
   handleKeyframeDurationChange,
@@ -124,6 +129,316 @@ describe("animationEditor.handlers", () => {
       });
       expect(cancelAnimationFrame).toHaveBeenCalledWith(42);
       expect(store.stopPreviewPlayback).toHaveBeenCalledWith({});
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("copies the live animation item JSON after y is pressed twice quickly", async () => {
+    let shortcutStartedAt;
+    const copyText = vi.fn(async () => {});
+    const showToast = vi.fn();
+    const store = {
+      selectAnimationDescription: vi.fn(() => "Latest description"),
+      selectAnimationJsonCopyShortcutStartedAt: vi.fn(() => shortcutStartedAt),
+      selectAnimationName: vi.fn(() => "Fade Fast"),
+      selectDialogType: vi.fn(() => "update"),
+      selectEditItemData: vi.fn(() => ({
+        id: "animation-1",
+        type: "animation",
+        parentId: "group-1",
+        tags: ["cinematic"],
+        name: "Fade",
+        description: "Old description",
+        animation: { type: "update", tween: {} },
+      })),
+      selectEditItemId: vi.fn(() => "animation-1"),
+      selectEditMode: vi.fn(() => true),
+      selectProperties: vi.fn(() => ({
+        alpha: {
+          keyframes: [
+            {
+              duration: 250,
+              easing: "linear",
+              value: 0,
+            },
+          ],
+        },
+      })),
+      selectTargetGroupId: vi.fn(() => undefined),
+      setAnimationJsonCopyShortcutStartedAt: vi.fn(({ timestamp }) => {
+        shortcutStartedAt = timestamp;
+      }),
+    };
+    const createKeyEvent = (timeStamp) => ({
+      key: "y",
+      timeStamp,
+      target: { tagName: "DIV" },
+      preventDefault: vi.fn(),
+    });
+    const firstEvent = createKeyEvent(100);
+    const secondEvent = createKeyEvent(450);
+    const deps = {
+      appService: { copyText, showToast },
+      i18n: EN_I18N,
+      store,
+    };
+
+    await handleCopyAnimationJsonShortcutKeyDown(deps, {
+      _event: firstEvent,
+    });
+    expect(copyText).not.toHaveBeenCalled();
+
+    await handleCopyAnimationJsonShortcutKeyDown(deps, {
+      _event: secondEvent,
+    });
+
+    expect(secondEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(JSON.parse(copyText.mock.calls[0][0])).toEqual({
+      id: "animation-1",
+      type: "animation",
+      parentId: "group-1",
+      tags: ["cinematic"],
+      name: "Fade Fast",
+      description: "Latest description",
+      animation: {
+        type: "update",
+        tween: {
+          alpha: {
+            keyframes: [
+              {
+                duration: 250,
+                value: 0,
+                easing: "linear",
+                relative: false,
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(showToast).toHaveBeenCalledWith({
+      message: "Animation JSON copied.",
+    });
+    expect(shortcutStartedAt).toBeUndefined();
+  });
+
+  it("does not complete the yy shortcut after its window or in a text field", async () => {
+    let shortcutStartedAt;
+    const copyText = vi.fn();
+    const store = {
+      selectAnimationJsonCopyShortcutStartedAt: vi.fn(() => shortcutStartedAt),
+      setAnimationJsonCopyShortcutStartedAt: vi.fn(({ timestamp }) => {
+        shortcutStartedAt = timestamp;
+      }),
+    };
+    const deps = {
+      appService: { copyText, showToast: vi.fn() },
+      i18n: EN_I18N,
+      store,
+    };
+
+    await handleCopyAnimationJsonShortcutKeyDown(deps, {
+      _event: { key: "y", timeStamp: 100, target: { tagName: "DIV" } },
+    });
+    await handleCopyAnimationJsonShortcutKeyDown(deps, {
+      _event: { key: "y", timeStamp: 601, target: { tagName: "DIV" } },
+    });
+    expect(copyText).not.toHaveBeenCalled();
+    expect(shortcutStartedAt).toBe(601);
+
+    await handleCopyAnimationJsonShortcutKeyDown(deps, {
+      _event: { key: "y", timeStamp: 700, target: { tagName: "TEXTAREA" } },
+    });
+    expect(copyText).not.toHaveBeenCalled();
+    expect(shortcutStartedAt).toBeUndefined();
+  });
+
+  it("recognizes vv as the animation video export shortcut", async () => {
+    let shortcutStartedAt;
+    const store = {
+      selectAnimationVideoShortcutStartedAt: vi.fn(() => shortcutStartedAt),
+      setAnimationVideoShortcutStartedAt: vi.fn(({ timestamp }) => {
+        shortcutStartedAt = timestamp;
+      }),
+    };
+    const createKeyEvent = (timeStamp) => ({
+      key: "v",
+      timeStamp,
+      target: { tagName: "DIV" },
+      preventDefault: vi.fn(),
+    });
+    const firstEvent = createKeyEvent(100);
+    const secondEvent = createKeyEvent(450);
+    const deps = {
+      appService: {},
+      i18n: EN_I18N,
+      store,
+    };
+
+    await handleExportAnimationVideoShortcutKeyDown(deps, {
+      _event: firstEvent,
+    });
+    await handleExportAnimationVideoShortcutKeyDown(deps, {
+      _event: secondEvent,
+    });
+
+    expect(secondEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(shortcutStartedAt).toBeUndefined();
+  });
+
+  it("recognizes cc as the current canvas capture shortcut", async () => {
+    let shortcutStartedAt;
+    const store = {
+      selectAnimationCanvasCaptureShortcutStartedAt: vi.fn(
+        () => shortcutStartedAt,
+      ),
+      setAnimationCanvasCaptureShortcutStartedAt: vi.fn(({ timestamp }) => {
+        shortcutStartedAt = timestamp;
+      }),
+    };
+    const createKeyEvent = (timeStamp) => ({
+      key: "c",
+      timeStamp,
+      target: { tagName: "DIV" },
+      preventDefault: vi.fn(),
+    });
+    const firstEvent = createKeyEvent(100);
+    const secondEvent = createKeyEvent(450);
+    const deps = {
+      appService: {},
+      i18n: EN_I18N,
+      store,
+    };
+
+    await handleCaptureAnimationCanvasShortcutKeyDown(deps, {
+      _event: firstEvent,
+    });
+    await handleCaptureAnimationCanvasShortcutKeyDown(deps, {
+      _event: secondEvent,
+    });
+
+    expect(secondEvent.preventDefault).toHaveBeenCalledOnce();
+    expect(shortcutStartedAt).toBeUndefined();
+  });
+
+  it("captures and saves the canvas at its current animation frame", async () => {
+    const imageDataUrl = "data:image/png;base64,Y3VycmVudC1mcmFtZQ==";
+    const saveFilePicker = vi.fn(async (_blob, fileName) => fileName);
+    const showToast = vi.fn();
+    let captureInProgress = false;
+    const store = {
+      selectAnimationCanvasCaptureInProgress: vi.fn(() => captureInProgress),
+      selectAnimationName: vi.fn(() => "Fade / Out"),
+      setAnimationCanvasCaptureInProgress: vi.fn(({ inProgress }) => {
+        captureInProgress = inProgress;
+      }),
+    };
+    const graphicsService = {
+      extractBase64: vi.fn(async () => imageDataUrl),
+    };
+
+    await handleCaptureAnimationCanvas({
+      appService: { saveFilePicker, showToast },
+      graphicsService,
+      i18n: EN_I18N,
+      store,
+    });
+
+    expect(graphicsService.extractBase64).toHaveBeenCalledWith();
+    expect(saveFilePicker).toHaveBeenCalledOnce();
+    const [image, fileName, options] = saveFilePicker.mock.calls[0];
+    expect(image.type).toBe("image/png");
+    expect(await image.text()).toBe("current-frame");
+    expect(fileName).toBe("Fade - Out.png");
+    expect(options).toEqual({
+      title: "Save animation canvas",
+      filters: [{ name: "PNG Image", extensions: ["png"] }],
+    });
+    expect(showToast).toHaveBeenCalledWith({
+      message: "Animation canvas captured.",
+      status: "success",
+    });
+    expect(captureInProgress).toBe(false);
+  });
+
+  it("records and saves one complete animation preview from the canvas", async () => {
+    const video = new Blob(["video-data"], { type: "video/webm" });
+    const stopRecording = vi.fn(async () => video);
+    const saveFilePicker = vi.fn(async (_blob, fileName) => fileName);
+    const showToast = vi.fn();
+    let playbackRequestId;
+    let exportInProgress = false;
+    const store = {
+      markPreviewPrepared: vi.fn(),
+      selectAnimationName: vi.fn(() => "Fade / Out"),
+      selectAnimationRenderStateWithAnimations: vi.fn(() => ({
+        elements: [],
+        animations: [],
+      })),
+      selectAnimationResetState: vi.fn(() => ({
+        elements: [],
+        animations: [],
+      })),
+      selectAnimationVideoExportInProgress: vi.fn(() => exportInProgress),
+      selectPreviewDurationMs: vi.fn(() => 5),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      selectPreviewPlaybackRequestId: vi.fn(() => playbackRequestId),
+      selectPreviewPlaybackStartedAtMs: vi.fn(() => undefined),
+      selectPreviewPlaybackDurationMs: vi.fn(() => undefined),
+      setAnimationVideoExportInProgress: vi.fn(({ inProgress }) => {
+        exportInProgress = inProgress;
+      }),
+      setPreviewPlaybackMode: vi.fn(),
+      setPreviewPlaybackRequestId: vi.fn(({ requestId }) => {
+        playbackRequestId = requestId;
+      }),
+      startPreviewPlayback: vi.fn(),
+      stopPreviewPlayback: vi.fn(),
+    };
+    const graphicsService = {
+      render: vi.fn(async () => {}),
+      setAnimationPlaybackMode: vi.fn(),
+      setAnimationTime: vi.fn(),
+      startCanvasVideoRecording: vi.fn(() => ({ stop: stopRecording })),
+    };
+    const requestAnimationFrame = vi.fn((callback) => {
+      callback(0);
+      return 1;
+    });
+    vi.stubGlobal("requestAnimationFrame", requestAnimationFrame);
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    try {
+      await handleExportAnimationVideo({
+        appService: { saveFilePicker, showToast },
+        graphicsService,
+        i18n: EN_I18N,
+        projectService: {},
+        render: vi.fn(),
+        store,
+      });
+
+      expect(graphicsService.startCanvasVideoRecording).toHaveBeenCalledWith({
+        frameRate: 60,
+      });
+      expect(store.startPreviewPlayback).toHaveBeenCalledWith(
+        expect.objectContaining({ durationMs: 5, timeMs: 0 }),
+      );
+      expect(stopRecording).toHaveBeenCalledOnce();
+      expect(saveFilePicker).toHaveBeenCalledWith(video, "Fade - Out.webm", {
+        title: "Save animation video",
+        filters: [{ name: "WebM Video", extensions: ["webm"] }],
+      });
+      expect(showToast).toHaveBeenNthCalledWith(1, {
+        message: "Recording animation video…",
+        status: "info",
+      });
+      expect(showToast).toHaveBeenNthCalledWith(2, {
+        message: "Animation video exported.",
+        status: "success",
+      });
+      expect(exportInProgress).toBe(false);
     } finally {
       vi.unstubAllGlobals();
     }
@@ -2337,6 +2652,7 @@ describe("animationEditor.handlers", () => {
       selectPreviewPlaybackMode: vi.fn(() => "auto"),
       selectPreviewPreparedVersion: vi.fn(() => undefined),
       selectPreviewRenderVersion: vi.fn(() => 1),
+      selectPreviewDurationMs: vi.fn(() => 1000),
       setPreviewPlaybackMode: vi.fn(),
       markPreviewPrepared: vi.fn(),
       selectAnimationResetState: vi.fn(() => resetState),
@@ -2738,6 +3054,7 @@ describe("animationEditor.handlers", () => {
       selectPreviewPlaybackMode: vi.fn(() => "manual"),
       selectPreviewPreparedVersion: vi.fn(() => 1),
       selectPreviewRenderVersion: vi.fn(() => 1),
+      selectPreviewDurationMs: vi.fn(() => 1000),
     };
     const graphicsService = {
       setAnimationTime: vi.fn(),
@@ -2768,6 +3085,41 @@ describe("animationEditor.handlers", () => {
     });
     expect(graphicsService.setAnimationTime).toHaveBeenCalledWith(420);
     expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the preview seekable after ruler scrubbing reaches the endpoint", async () => {
+    const store = {
+      setPreviewPlaybackRequestId: vi.fn(),
+      setPreviewPlayhead: vi.fn(),
+      selectPreviewPlaying: vi.fn(() => false),
+      selectPreviewPlaybackMode: vi.fn(() => "manual"),
+      selectPreviewPreparedVersion: vi.fn(() => 1),
+      selectPreviewRenderVersion: vi.fn(() => 1),
+      selectPreviewDurationMs: vi.fn(() => 1000),
+    };
+    const graphicsService = {
+      setAnimationTime: vi.fn(),
+    };
+    const deps = {
+      graphicsService,
+      render: vi.fn(),
+      store,
+    };
+
+    await handleRulerTimeScrub(deps, {
+      _event: { detail: { timeMs: 1000 } },
+    });
+    await handleRulerTimeScrub(deps, {
+      _event: { detail: { timeMs: 500 } },
+    });
+
+    expect(
+      store.setPreviewPlayhead.mock.calls.map(([payload]) => payload),
+    ).toEqual([
+      { timeMs: 1000, visible: true },
+      { timeMs: 500, visible: true },
+    ]);
+    expect(graphicsService.setAnimationTime.mock.calls).toEqual([[999], [500]]);
   });
 
   it("cancels pending preview playback when timeline scrubbing begins", async () => {
@@ -2849,6 +3201,7 @@ describe("animationEditor.handlers", () => {
       selectPreviewPlaybackMode: vi.fn(() => "manual"),
       selectPreviewPreparedVersion: vi.fn(() => 1),
       selectPreviewRenderVersion: vi.fn(() => 1),
+      selectPreviewDurationMs: vi.fn(() => 1000),
     };
     const graphicsService = {
       setAnimationTime: vi.fn(),

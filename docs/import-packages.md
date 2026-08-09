@@ -25,6 +25,7 @@ An import package is a wrapper around a partial repository.
     "id": "example.fx-pack",
     "name": "FX Pack",
     "version": "1.0.0",
+    "defaultFolderName": "FX Resources",
     "description": "Particles, textures, and transition animations."
   },
   "repository": {
@@ -157,8 +158,10 @@ collection root in the same atomic command batch as the imported resources.
 
 Default import behavior:
 
-- offer existing project folders and an explicit `New Folder` choice
-- default to `New Folder` when the collection has no existing folders
+- show `New Folder` before `Existing Folder` when existing folders are available
+- default to `New Folder` even when the collection has existing folders
+- seed new resource and dependency folder names from
+  `package.defaultFolderName`, falling back to `package.name`
 - require a folder name when creating a destination
 - append imported items to the selected folder
 - do not add a synthetic `Root` folder option
@@ -346,11 +349,11 @@ The animations and transforms pages use one shared workflow:
 2. If the package contains multiple target resources, review visual previews
    and select which resources to import. Skip this page for one target resource.
 3. Customize each selected resource on its own page. The page shows the resource
-   preview, rename field, and previews for its referenced images.
+   preview, editable name and description fields, destination controls, and
+   previews for its referenced images.
 4. For each referenced image, either import the package image or replace it with
    an existing project image. Replaced media is not downloaded.
-5. On the last selected resource, choose existing or new destination folders
-   and submit all accumulated choices together.
+5. On the last selected resource, submit all accumulated choices together.
 6. Download selected files with bounded streaming and SHA-256 verification.
 7. Process and stage images and derived thumbnails under the plan id.
 8. Preflight and submit file, destination-folder, tag, image, and

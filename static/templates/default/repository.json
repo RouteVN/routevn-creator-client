@@ -383,15 +383,15 @@
         "id": "Wt2LWBPXdux2",
         "type": "image",
         "mimeType": "image/png",
-        "size": 227435,
-        "sha256": "5f0fb0fadb5f99e92d4ae5902574465f1ebf4d2fd6915f106200483f73b767c6"
+        "size": 324934,
+        "sha256": "f11e69168532ba39dd358e52c65c7a5808c6aa3444eb0aa7dc91a105a7100881"
       },
       "oVd6cHn2uKUk": {
         "id": "oVd6cHn2uKUk",
         "type": "image",
         "mimeType": "image/png",
-        "size": 17628,
-        "sha256": "5dbdcf2313c58e74cbbb80ac6ffa4fb7e1aa3bea210d877bcacece769cdb9c6b"
+        "size": 18670,
+        "sha256": "364141bbd0010b311977f7ac0b6f3e43fca59805a84f39d1c6405383de996170"
       },
       "zoHtXFvnrjzi": {
         "id": "zoHtXFvnrjzi",
@@ -759,7 +759,7 @@
         "id": "ZvJUEaaujuQj",
         "type": "image",
         "name": "swipe",
-        "width": 1908,
+        "width": 1920,
         "height": 1080,
         "fileId": "Wt2LWBPXdux2",
         "thumbnailFileId": "oVd6cHn2uKUk"

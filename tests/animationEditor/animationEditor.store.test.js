@@ -26,6 +26,11 @@ import {
   openPropertyRemoveConfirmDialog,
   selectAnimationRenderStateWithAnimations,
   selectAnimationResetState,
+  selectAnimationJsonCopyShortcutStartedAt,
+  selectAnimationCanvasCaptureInProgress,
+  selectAnimationCanvasCaptureShortcutStartedAt,
+  selectAnimationVideoExportInProgress,
+  selectAnimationVideoShortcutStartedAt,
   selectPreviewDurationMs,
   selectPreviewData,
   selectSelectedEditorTab,
@@ -37,6 +42,11 @@ import {
   selectTransitionMasks,
   selectViewData,
   setImages,
+  setAnimationJsonCopyShortcutStartedAt,
+  setAnimationCanvasCaptureInProgress,
+  setAnimationCanvasCaptureShortcutStartedAt,
+  setAnimationVideoExportInProgress,
+  setAnimationVideoShortcutStartedAt,
   setPopover,
   setPreviewPlayhead,
   setPreviewImage,
@@ -71,6 +81,46 @@ import {
 import { EN_I18N } from "../support/i18n.js";
 
 describe("animationEditor.store", () => {
+  it("tracks the first y press for the animation JSON shortcut", () => {
+    const state = createInitialState();
+
+    expect(selectAnimationJsonCopyShortcutStartedAt({ state })).toBeUndefined();
+
+    setAnimationJsonCopyShortcutStartedAt({ state }, { timestamp: 120 });
+    expect(selectAnimationJsonCopyShortcutStartedAt({ state })).toBe(120);
+
+    setAnimationJsonCopyShortcutStartedAt({ state }, { timestamp: undefined });
+    expect(selectAnimationJsonCopyShortcutStartedAt({ state })).toBeUndefined();
+  });
+
+  it("tracks the vv shortcut and animation video export state", () => {
+    const state = createInitialState();
+
+    expect(selectAnimationVideoShortcutStartedAt({ state })).toBeUndefined();
+    expect(selectAnimationVideoExportInProgress({ state })).toBe(false);
+
+    setAnimationVideoShortcutStartedAt({ state }, { timestamp: 240 });
+    setAnimationVideoExportInProgress({ state }, { inProgress: true });
+
+    expect(selectAnimationVideoShortcutStartedAt({ state })).toBe(240);
+    expect(selectAnimationVideoExportInProgress({ state })).toBe(true);
+  });
+
+  it("tracks the cc shortcut and animation canvas capture state", () => {
+    const state = createInitialState();
+
+    expect(
+      selectAnimationCanvasCaptureShortcutStartedAt({ state }),
+    ).toBeUndefined();
+    expect(selectAnimationCanvasCaptureInProgress({ state })).toBe(false);
+
+    setAnimationCanvasCaptureShortcutStartedAt({ state }, { timestamp: 240 });
+    setAnimationCanvasCaptureInProgress({ state }, { inProgress: true });
+
+    expect(selectAnimationCanvasCaptureShortcutStartedAt({ state })).toBe(240);
+    expect(selectAnimationCanvasCaptureInProgress({ state })).toBe(true);
+  });
+
   it("defaults to Timeline and exposes Timeline and Preview tabs", () => {
     const state = createInitialState();
 

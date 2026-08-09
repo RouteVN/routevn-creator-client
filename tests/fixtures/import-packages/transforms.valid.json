@@ -4,6 +4,7 @@
     "id": "test.transforms",
     "name": "Transform Test Pack",
     "version": "1.0.0",
+    "defaultFolderName": "Test Transforms",
     "description": "Two transforms sharing one replaceable preview image.",
     "publisher": "RouteVN Test Fixtures"
   },

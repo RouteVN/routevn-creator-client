@@ -1,5 +1,6 @@
 import { auditTime, filter, tap } from "rxjs";
 import { generateId } from "../../internal/id.js";
+import { sanitizeArtifactFileName } from "../../internal/artifactFileName.js";
 import {
   createAnimationEditorPayload,
   getAnimationEditorBackPath,
@@ -23,6 +24,7 @@ import {
   clearScheduledAnimationEditorAutosave,
   scheduleAnimationEditorAutosave,
 } from "./support/animationEditorAutosave.js";
+import { animationCanvasDataUrlToBlob } from "./support/animationEditorCanvasExport.js";
 import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy.js";
 
 const normalizeTween = (properties = {}) => {
@@ -71,6 +73,7 @@ const getEditorPayload = (appService) => {
 };
 
 const DEFAULT_NEW_ANIMATION_NAME = "New Animation";
+const DOUBLE_KEY_SHORTCUT_WINDOW_MS = 500;
 
 const selectCopy = ({ i18n } = {}) => selectAnimationEditorPageCopy(i18n);
 
@@ -371,6 +374,12 @@ const ensureManualPreviewAtTime = async ({
     return;
   }
 
+  const durationMs = store.selectPreviewDurationMs();
+  const runtimeTimeMs =
+    durationMs > 0 && timeMs >= durationMs
+      ? Math.max(0, durationMs - 1)
+      : timeMs;
+
   const needsPreparation =
     store.selectPreviewPlaybackMode() !== "manual" ||
     store.selectPreviewPreparedVersion() !== store.selectPreviewRenderVersion();
@@ -381,7 +390,7 @@ const ensureManualPreviewAtTime = async ({
       store,
     });
     graphicsService.setAnimationPlaybackMode("manual");
-    graphicsService.setAnimationTime(timeMs);
+    graphicsService.setAnimationTime(runtimeTimeMs);
     await renderPreviewAnimationState({
       graphicsService,
       projectService,
@@ -393,7 +402,7 @@ const ensureManualPreviewAtTime = async ({
     store.markPreviewPrepared({});
   }
 
-  graphicsService.setAnimationTime(timeMs);
+  graphicsService.setAnimationTime(runtimeTimeMs);
   return needsPreparation;
 };
 
@@ -571,6 +580,37 @@ const createAnimationPersistFingerprint = (snapshot) => {
     description: snapshot.description,
     animation: snapshot.animationData,
   });
+};
+
+const createAnimationClipboardItem = ({ copy, store } = {}) => {
+  const snapshot = createAnimationPersistSnapshot({ copy, store });
+  const item = structuredClone(store.selectEditItemData() ?? {});
+  item.type = "animation";
+
+  if (snapshot.editItemId) {
+    item.id = snapshot.editItemId;
+  }
+
+  item.name = snapshot.name;
+  item.description = snapshot.description;
+  item.animation = snapshot.animationData;
+  return item;
+};
+
+const getAnimationVideoFileConfig = ({ blob, name } = {}) => {
+  const mp4 = blob.type.startsWith("video/mp4");
+  const extension = mp4 ? "mp4" : "webm";
+  const fileName = sanitizeArtifactFileName(name, {
+    fallback: "animation",
+  });
+
+  return {
+    fileName: `${fileName}.${extension}`,
+    filter: {
+      name: mp4 ? "MP4 Video" : "WebM Video",
+      extensions: [extension],
+    },
+  };
 };
 
 const waitForAutosaveIdle = async ({ store } = {}) => {
@@ -795,10 +835,20 @@ const mountTimelinePanSubscriptions = (deps) => {
     browserEventsClient.subscribeWindowEvent({
       type: "keydown",
       options: { capture: true },
-      listener: (event) =>
+      listener: (event) => {
+        handleCopyAnimationJsonShortcutKeyDown(deps, {
+          _event: event,
+        });
+        handleExportAnimationVideoShortcutKeyDown(deps, {
+          _event: event,
+        });
+        handleCaptureAnimationCanvasShortcutKeyDown(deps, {
+          _event: event,
+        });
         handleTimelinePanKeyDown(deps, {
           _event: event,
-        }),
+        });
+      },
     }),
     browserEventsClient.subscribeWindowEvent({
       type: "keyup",
@@ -831,6 +881,154 @@ const mountTimelinePanSubscriptions = (deps) => {
     cleanupSubscriptions.forEach((cleanup) => cleanup());
     panelResizeSubscription.unsubscribe();
   };
+};
+
+export const handleCopyAnimationJsonShortcutKeyDown = async (deps, payload) => {
+  const { appService, store } = deps;
+  const event = payload._event;
+  const copy = selectCopy(deps);
+
+  if (
+    isTextEntryEvent(event) ||
+    event.isComposing ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey
+  ) {
+    store.setAnimationJsonCopyShortcutStartedAt({ timestamp: undefined });
+    return;
+  }
+
+  if (event.repeat) {
+    return;
+  }
+
+  if (event.key?.toLowerCase() !== "y") {
+    store.setAnimationJsonCopyShortcutStartedAt({ timestamp: undefined });
+    return;
+  }
+
+  const timestamp = event.timeStamp;
+  const startedAt = store.selectAnimationJsonCopyShortcutStartedAt();
+  const elapsedMs = timestamp - startedAt;
+  const shortcutComplete =
+    startedAt !== undefined &&
+    elapsedMs >= 0 &&
+    elapsedMs <= DOUBLE_KEY_SHORTCUT_WINDOW_MS;
+
+  if (!shortcutComplete) {
+    store.setAnimationJsonCopyShortcutStartedAt({ timestamp });
+    return;
+  }
+
+  store.setAnimationJsonCopyShortcutStartedAt({ timestamp: undefined });
+  event.preventDefault();
+
+  try {
+    const item = createAnimationClipboardItem({ copy, store });
+    await appService.copyText(JSON.stringify(item, null, 2));
+    appService.showToast({
+      message: copy.animationJsonCopied ?? "Animation JSON copied.",
+    });
+  } catch {
+    appService.showToast({
+      message: copy.failedCopyAnimationJson ?? "Failed to copy animation JSON.",
+    });
+  }
+};
+
+export const handleExportAnimationVideoShortcutKeyDown = async (
+  deps,
+  payload,
+) => {
+  const { store } = deps;
+  const event = payload._event;
+
+  if (
+    isTextEntryEvent(event) ||
+    event.isComposing ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey
+  ) {
+    store.setAnimationVideoShortcutStartedAt({ timestamp: undefined });
+    return;
+  }
+
+  if (event.repeat) {
+    return;
+  }
+
+  if (event.key?.toLowerCase() !== "v") {
+    store.setAnimationVideoShortcutStartedAt({ timestamp: undefined });
+    return;
+  }
+
+  const timestamp = event.timeStamp;
+  const startedAt = store.selectAnimationVideoShortcutStartedAt();
+  const elapsedMs = timestamp - startedAt;
+  const shortcutComplete =
+    startedAt !== undefined &&
+    elapsedMs >= 0 &&
+    elapsedMs <= DOUBLE_KEY_SHORTCUT_WINDOW_MS;
+
+  if (!shortcutComplete) {
+    store.setAnimationVideoShortcutStartedAt({ timestamp });
+    return;
+  }
+
+  store.setAnimationVideoShortcutStartedAt({ timestamp: undefined });
+  event.preventDefault();
+  await handleExportAnimationVideo(deps);
+};
+
+export const handleCaptureAnimationCanvasShortcutKeyDown = async (
+  deps,
+  payload,
+) => {
+  const { store } = deps;
+  const event = payload._event;
+
+  if (
+    isTextEntryEvent(event) ||
+    event.isComposing ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey
+  ) {
+    store.setAnimationCanvasCaptureShortcutStartedAt({
+      timestamp: undefined,
+    });
+    return;
+  }
+
+  if (event.repeat) {
+    return;
+  }
+
+  if (event.key?.toLowerCase() !== "c") {
+    store.setAnimationCanvasCaptureShortcutStartedAt({
+      timestamp: undefined,
+    });
+    return;
+  }
+
+  const timestamp = event.timeStamp;
+  const startedAt = store.selectAnimationCanvasCaptureShortcutStartedAt();
+  const elapsedMs = timestamp - startedAt;
+  const shortcutComplete =
+    startedAt !== undefined &&
+    elapsedMs >= 0 &&
+    elapsedMs <= DOUBLE_KEY_SHORTCUT_WINDOW_MS;
+
+  if (!shortcutComplete) {
+    store.setAnimationCanvasCaptureShortcutStartedAt({ timestamp });
+    return;
+  }
+
+  store.setAnimationCanvasCaptureShortcutStartedAt({ timestamp: undefined });
+  event.preventDefault();
+  await handleCaptureAnimationCanvas(deps);
 };
 
 export const handleBeforeMount = (deps) => {
@@ -2709,6 +2907,166 @@ export const handleReplayAnimation = async (deps) => {
     store,
   });
   render();
+};
+
+export const handleExportAnimationVideo = async (deps) => {
+  const { appService, graphicsService, projectService, render, store } = deps;
+  const copy = selectCopy(deps);
+  if (!graphicsService || store.selectAnimationVideoExportInProgress()) {
+    return;
+  }
+
+  const durationMs = store.selectPreviewDurationMs();
+  if (durationMs <= 0) {
+    appService.showToast({
+      message:
+        copy.failedExportAnimationVideo ?? "Failed to export animation video.",
+      status: "error",
+    });
+    return;
+  }
+
+  store.setAnimationVideoExportInProgress({ inProgress: true });
+  appService.showToast({
+    message: copy.recordingAnimationVideo ?? "Recording animation video…",
+    status: "info",
+  });
+
+  let recording;
+  try {
+    const playbackRequestId = generateId();
+    store.setPreviewPlaybackRequestId({ requestId: playbackRequestId });
+    const isCurrentPlaybackRequest = () =>
+      store.selectPreviewPlaybackRequestId() === playbackRequestId;
+    const prepared = await preparePreviewPlaybackAtStart({
+      graphicsService,
+      projectService,
+      startTimeMs: 0,
+      store,
+      shouldContinue: isCurrentPlaybackRequest,
+    });
+    if (!prepared || !isCurrentPlaybackRequest()) {
+      return;
+    }
+
+    graphicsService.setAnimationPlaybackMode("manual");
+    const rendered = await renderPreviewAnimationState({
+      graphicsService,
+      projectService,
+      store,
+      shouldContinue: isCurrentPlaybackRequest,
+    });
+    if (!rendered || !isCurrentPlaybackRequest()) {
+      return;
+    }
+
+    graphicsService.setAnimationTime(0);
+    recording = graphicsService.startCanvasVideoRecording({ frameRate: 60 });
+    await waitForPreviewPaint();
+    if (!isCurrentPlaybackRequest()) {
+      return;
+    }
+
+    store.startPreviewPlayback({
+      startedAtMs: performance.now(),
+      durationMs,
+      timeMs: 0,
+    });
+    schedulePreviewPlaybackIndicatorFrame({
+      graphicsService,
+      render,
+      store,
+    });
+    render();
+
+    await new Promise((resolve) => {
+      globalThis.setTimeout(resolve, durationMs);
+    });
+    if (!isCurrentPlaybackRequest()) {
+      return;
+    }
+
+    stopPreviewPlaybackIndicator({ preservePlayhead: true, store });
+    graphicsService.setAnimationTime(durationMs);
+    await waitForPreviewPaint();
+    const video = await recording.stop();
+    recording = undefined;
+    const { fileName, filter } = getAnimationVideoFileConfig({
+      blob: video,
+      name: store.selectAnimationName(),
+    });
+    const savedPath = await appService.saveFilePicker(video, fileName, {
+      title: copy.saveAnimationVideoTitle ?? "Save animation video",
+      filters: [filter],
+    });
+    if (!savedPath) {
+      return;
+    }
+
+    appService.showToast({
+      message: copy.animationVideoExported ?? "Animation video exported.",
+      status: "success",
+    });
+  } catch {
+    appService.showToast({
+      message:
+        copy.failedExportAnimationVideo ?? "Failed to export animation video.",
+      status: "error",
+    });
+  } finally {
+    store.setPreviewPlaybackRequestId({ requestId: undefined });
+    stopPreviewPlaybackIndicator({ preservePlayhead: true, store });
+    if (recording) {
+      await recording.stop().catch(() => {});
+    }
+    store.setAnimationVideoExportInProgress({ inProgress: false });
+    render();
+  }
+};
+
+export const handleCaptureAnimationCanvas = async (deps) => {
+  const { appService, graphicsService, store } = deps;
+  const copy = selectCopy(deps);
+  if (!graphicsService || store.selectAnimationCanvasCaptureInProgress()) {
+    return;
+  }
+
+  store.setAnimationCanvasCaptureInProgress({ inProgress: true });
+  try {
+    const imageDataUrl = await graphicsService.extractBase64();
+    const image = animationCanvasDataUrlToBlob(imageDataUrl);
+    const animationName = sanitizeArtifactFileName(
+      store.selectAnimationName(),
+      {
+        fallback: "animation",
+      },
+    );
+    const savedPath = await appService.saveFilePicker(
+      image,
+      `${animationName}.png`,
+      {
+        title: copy.saveAnimationCanvasTitle ?? "Save animation canvas",
+        filters: [{ name: "PNG Image", extensions: ["png"] }],
+      },
+    );
+    if (!savedPath) {
+      return;
+    }
+
+    appService.showToast({
+      message: copy.animationCanvasCaptured ?? "Animation canvas captured.",
+      status: "success",
+    });
+  } catch {
+    appService.showToast({
+      message:
+        copy.failedCaptureAnimationCanvas ??
+        "Failed to capture animation canvas.",
+      status: "error",
+    });
+  } finally {
+    store.setAnimationCanvasCaptureInProgress({ inProgress: false });
+  }
 };
 
 export const handleTogglePreviewLoop = (deps) => {

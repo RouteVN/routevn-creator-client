@@ -143,6 +143,9 @@ describe("resourcePackageImportService", () => {
           projectResourceId: "image.existing",
         },
       },
+      resourceDescriptions: {
+        "transform.primary": "Updated primary description",
+      },
     });
     expect(result.valid).toBe(true);
     expect(importClient.downloadFile).not.toHaveBeenCalled();
@@ -153,6 +156,9 @@ describe("resourcePackageImportService", () => {
     expect(commit.existingImageIds).toEqual(["image.existing"]);
     expect(commit.resources[0].data.preview.background.imageId).toBe(
       "image.existing",
+    );
+    expect(commit.resources[0].data.description).toBe(
+      "Updated primary description",
     );
     expect(commit.resources[1].data.preview.target.imageId).toBe(
       "image.existing",

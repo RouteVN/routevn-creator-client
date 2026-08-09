@@ -12,6 +12,7 @@ const PACKAGE_KEYS = new Set([
   "description",
   "publisher",
   "source",
+  "defaultFolderName",
 ]);
 const PRIMARY_KEYS = new Set(["resourceType", "id"]);
 const REPOSITORY_KEYS = new Set([
@@ -371,6 +372,11 @@ export const validateResourceImportManifest = (
   assertString(manifest.package.description, "package.package.description");
   assertString(manifest.package.publisher, "package.package.publisher");
   assertString(manifest.package.source, "package.package.source");
+  assertString(
+    manifest.package.defaultFolderName,
+    "package.package.defaultFolderName",
+    { nonEmpty: true },
+  );
 
   if (manifest.primary !== undefined) {
     assertPlainObject(manifest.primary, "package.primary");
@@ -929,6 +935,7 @@ export const rewriteResourceImportPlanReferences = ({
   plan,
   resourceChoices = {},
   resourceNames = {},
+  resourceDescriptions = {},
   fileIdMap = new Map(),
 } = {}) => {
   const imageIds = new Map(
@@ -951,6 +958,9 @@ export const rewriteResourceImportPlanReferences = ({
     });
     if (resourceNames[resource.sourceId] !== undefined) {
       data.name = resourceNames[resource.sourceId].trim();
+    }
+    if (resourceDescriptions[resource.sourceId] !== undefined) {
+      data.description = resourceDescriptions[resource.sourceId].trim();
     }
     return { ...resource, data };
   });

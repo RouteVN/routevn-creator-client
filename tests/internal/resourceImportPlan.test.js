@@ -55,6 +55,7 @@ const createPlan = (manifest, expectedResourceType = "transforms") => {
 describe("resourceImportPlan", () => {
   it("plans all transforms, puts primary first, and deduplicates dependencies", () => {
     const plan = createPlan(fixture("transforms.valid.json"));
+    expect(plan.package.defaultFolderName).toBe("Test Transforms");
     expect(plan.resources.map((resource) => resource.sourceId)).toEqual([
       "transform.primary",
       "transform.secondary",
@@ -113,8 +114,12 @@ describe("resourceImportPlan", () => {
       resourceNames: {
         "transform.primary": "Renamed Primary",
       },
+      resourceDescriptions: {
+        "transform.primary": "Updated description",
+      },
     });
     expect(resources[0].data.name).toBe("Renamed Primary");
+    expect(resources[0].data.description).toBe("Updated description");
     expect(resources[0].data.preview.background.imageId).toBe("project-image");
     expect(resources[1].data.preview.target.imageId).toBe("project-image");
   });
@@ -156,6 +161,12 @@ describe("resourceImportPlan", () => {
     transformManifest.repository.transforms.items["transform.primary"].name =
       "";
     expect(() => createPlan(transformManifest)).toThrow("must be valid text");
+
+    const emptyFolderNameManifest = fixture("transforms.valid.json");
+    emptyFolderNameManifest.package.defaultFolderName = "";
+    expect(() => createPlan(emptyFolderNameManifest)).toThrow(
+      "package.package.defaultFolderName must be valid text",
+    );
 
     const animationManifest = fixture("animations.valid.json");
     animationManifest.repository.animations.items[

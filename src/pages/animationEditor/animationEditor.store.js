@@ -1360,6 +1360,11 @@ export const createInitialState = () => ({
   },
   editMode: false,
   editItemId: undefined,
+  animationJsonCopyShortcutStartedAt: undefined,
+  animationCanvasCaptureShortcutStartedAt: undefined,
+  animationCanvasCaptureInProgress: false,
+  animationVideoShortcutStartedAt: undefined,
+  animationVideoExportInProgress: false,
   autosaveVersion: 0,
   autosavePersistedVersion: 0,
   autosaveInFlight: false,
@@ -1667,6 +1672,61 @@ export const selectEditItemData = ({ state }) => {
   }
 
   return state.data?.items?.[state.editItemId];
+};
+
+export const setAnimationJsonCopyShortcutStartedAt = (
+  { state },
+  { timestamp } = {},
+) => {
+  state.animationJsonCopyShortcutStartedAt = timestamp;
+};
+
+export const selectAnimationJsonCopyShortcutStartedAt = ({ state }) => {
+  return state.animationJsonCopyShortcutStartedAt;
+};
+
+export const setAnimationCanvasCaptureShortcutStartedAt = (
+  { state },
+  { timestamp } = {},
+) => {
+  state.animationCanvasCaptureShortcutStartedAt = timestamp;
+};
+
+export const selectAnimationCanvasCaptureShortcutStartedAt = ({ state }) => {
+  return state.animationCanvasCaptureShortcutStartedAt;
+};
+
+export const setAnimationCanvasCaptureInProgress = (
+  { state },
+  { inProgress } = {},
+) => {
+  state.animationCanvasCaptureInProgress = inProgress ?? false;
+};
+
+export const selectAnimationCanvasCaptureInProgress = ({ state }) => {
+  return state.animationCanvasCaptureInProgress;
+};
+
+export const setAnimationVideoShortcutStartedAt = (
+  { state },
+  { timestamp } = {},
+) => {
+  state.animationVideoShortcutStartedAt = timestamp;
+};
+
+export const selectAnimationVideoShortcutStartedAt = ({ state }) => {
+  return state.animationVideoShortcutStartedAt;
+};
+
+export const setAnimationVideoExportInProgress = (
+  { state },
+  { inProgress } = {},
+) => {
+  state.animationVideoExportInProgress = inProgress ?? false;
+};
+
+export const selectAnimationVideoExportInProgress = ({ state }) => {
+  return state.animationVideoExportInProgress;
 };
 
 export const selectDialogType = ({ state }) => {

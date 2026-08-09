@@ -14,6 +14,7 @@ const SOURCE_STEP = "source";
 const SELECTION_STEP = "selection";
 const ITEM_STEP = "item";
 const PROGRESS_STEP = "progress";
+const ASSET_STORE_URL = "http://localhost:3003/en/creator/asset-store/";
 
 const createImageSelectorDialogState = () => ({
   open: false,
@@ -25,12 +26,13 @@ const sourceForm = (copy) => ({
   title: copy.title ?? "Import Package",
   fields: [
     {
+      type: "slot",
+      slot: "source-description",
+    },
+    {
       name: "url",
       type: "input-text",
       label: copy.urlLabel ?? "Import URL",
-      description:
-        copy.urlDescription ??
-        "Paste the HTTPS import link supplied by the package publisher.",
       placeholder:
         copy.urlPlaceholder ?? "https://example.com/import/package.json",
       required: {
@@ -169,26 +171,22 @@ const createImportedImageCondition = ({ plan, selectedResourceIndexes }) => {
 };
 
 const createDestinationModeOptions = ({ options, copy }) => {
-  const destinationOptions = [];
+  const destinationOptions = [
+    {
+      label: copy.newFolderOption ?? "New Folder",
+      value: "new",
+    },
+  ];
   if (options.length > 0) {
     destinationOptions.push({
       label: copy.existingFolderOption ?? "Existing Folder",
       value: "existing",
     });
   }
-  destinationOptions.push({
-    label: copy.newFolderOption ?? "New Folder",
-    value: "new",
-  });
   return destinationOptions;
 };
 
-const appendDestinationFields = ({
-  fields,
-  state,
-  copy,
-  importedImageCondition,
-}) => {
+const appendResourceDestinationFields = ({ fields, state, copy }) => {
   const resourceFolderLabel =
     state.expectedResourceType === "animations"
       ? (copy.animationFolderLabel ?? "Animation Folder")
@@ -233,7 +231,14 @@ const appendDestinationFields = ({
       },
     ],
   });
+};
 
+const appendImageDestinationFields = ({
+  fields,
+  state,
+  copy,
+  importedImageCondition,
+}) => {
   if (!importedImageCondition) return;
   fields.push({
     $when: importedImageCondition,
@@ -243,9 +248,6 @@ const appendDestinationFields = ({
         name: "imageDestinationMode",
         type: "segmented-control",
         label: copy.imageDestinationLabel ?? "Imported Image Destination",
-        description:
-          copy.imageFolderDescription ??
-          "Used only for package images that are not replaced.",
         noClear: true,
         required: true,
         options: createDestinationModeOptions({
@@ -284,6 +286,10 @@ const selectionForm = ({ state, copy }) => {
       name: "packageSummary",
       type: "slot",
       slot: "package-summary",
+    },
+    {
+      type: "slot",
+      slot: "selection-controls",
     },
   ];
 
@@ -338,19 +344,31 @@ const itemForm = ({ state, copy }) => {
     fields.push({ type: "slot", slot: "animation-timeline-preview" });
   }
   fields.push({
-    name: `resource_${state.currentResourceIndex}_name`,
-    type: "input-text",
-    label: copy.resourceNameLabel ?? "Resource Name",
-    placeholder: copy.resourceNamePlaceholder ?? "Enter a resource name",
-    required: true,
+    type: "row",
+    fields: [
+      {
+        name: `resource_${state.currentResourceIndex}_name`,
+        type: "input-text",
+        label: copy.resourceNameLabel ?? "Resource Name",
+        placeholder: copy.resourceNamePlaceholder ?? "Enter a resource name",
+        required: true,
+      },
+      {
+        name: `resource_${state.currentResourceIndex}_description`,
+        type: "input-textarea",
+        label: copy.resourceDescriptionLabel ?? "Resource Description",
+        placeholder:
+          copy.resourceDescriptionPlaceholder ?? "Enter a resource description",
+        rows: 3,
+      },
+    ],
   });
 
-  if (resourceImages.length > 0) {
-    fields.push({ type: "slot", slot: "image-resources" });
-  }
+  appendResourceDestinationFields({ fields, state, copy });
 
-  if (isLast) {
-    appendDestinationFields({
+  if (resourceImages.length > 0) {
+    fields.push({ type: "slot", slot: "image-resources-header" });
+    appendImageDestinationFields({
       fields,
       state,
       copy,
@@ -359,6 +377,7 @@ const itemForm = ({ state, copy }) => {
         selectedResourceIndexes,
       }),
     });
+    fields.push({ type: "slot", slot: "image-resources-list" });
   }
 
   const title = (copy.customizeResourceTitle ?? "Customize {name}").replace(
@@ -398,18 +417,19 @@ const createReviewValues = ({ plan, state }) => {
   )
     ? state.targetParentId
     : state.resourceFolderOptions[0]?.value;
+  const defaultFolderName = plan.package.defaultFolderName ?? plan.package.name;
   const values = {
-    resourceDestinationMode: resourceParentId ? "existing" : "new",
+    resourceDestinationMode: "new",
     resourceParentId,
-    resourceNewFolderName: plan.package.name,
-    imageDestinationMode:
-      state.imageFolderOptions.length > 0 ? "existing" : "new",
+    resourceNewFolderName: defaultFolderName,
+    imageDestinationMode: "new",
     imageParentId: state.imageFolderOptions[0]?.value,
-    imageNewFolderName: plan.package.name,
+    imageNewFolderName: defaultFolderName,
   };
   plan.resources.forEach((resource, index) => {
     values[`resource_${index}_include`] = true;
     values[`resource_${index}_name`] = resource.name;
+    values[`resource_${index}_description`] = resource.description ?? "";
   });
   plan.images.forEach((_image, index) => {
     values[`image_${index}_customized`] = false;
@@ -547,6 +567,12 @@ export const setResourceSelected = (
   state.reviewValues[`resource_${resourceIndex}_include`] = selected === true;
 };
 
+export const setAllResourcesSelected = ({ state }, { selected } = {}) => {
+  state.plan.resources.forEach((_resource, index) => {
+    state.reviewValues[`resource_${index}_include`] = selected === true;
+  });
+};
+
 export const openImageSelector = ({ state }, { imageIndex } = {}) => {
   state.imageSelectorDialog.open = true;
   state.imageSelectorDialog.imageIndex = imageIndex;
@@ -628,6 +654,12 @@ export const selectViewData = ({ state, i18n = {} }) => {
   };
   const isSelectionStep = state.step === SELECTION_STEP;
   const isItemStep = state.step === ITEM_STEP;
+  const allResourcesSelected =
+    (plan?.resources.length ?? 0) > 0 &&
+    plan.resources.every(
+      (_resource, index) =>
+        state.reviewValues[`resource_${index}_include`] === true,
+    );
   const currentResource = isItemStep
     ? plan?.resources[state.currentResourceIndex]
     : undefined;
@@ -653,6 +685,10 @@ export const selectViewData = ({ state, i18n = {} }) => {
     isSourceStep: state.step === SOURCE_STEP,
     isSelectionStep,
     isItemStep,
+    allResourcesSelected,
+    selectionToggleAllLabel: allResourcesSelected
+      ? (copy.deselectAllButton ?? "Deselect All")
+      : (copy.selectAllButton ?? "Select All"),
     isReviewStep: isSelectionStep || isItemStep,
     isProgressStep: state.step === PROGRESS_STEP,
     isBusy: state.isBusy,
@@ -666,21 +702,36 @@ export const selectViewData = ({ state, i18n = {} }) => {
       isSelectionStep || isItemStep ? state.reviewValues : state.sourceValues,
     formContext: state.reviewValues,
     errorMessage: state.error?.message,
+    sourceDescription:
+      copy.urlDescription ??
+      "Paste the HTTPS import link supplied by the package publisher.",
+    assetStoreLinkLabel: copy.assetStoreLinkLabel ?? "Browse the Asset Store",
+    assetStoreUrl: ASSET_STORE_URL,
     packageName: plan?.package?.name,
     packageVersion: plan?.package?.version,
     packageDescription: plan?.package?.description,
     packagePublisher: plan?.package?.publisher,
     packageSource: plan?.package?.source,
     resources:
-      plan?.resources.map((resource, index) => ({
-        ...resource,
-        selectionSlot: `resource-selection-${index}`,
-        selectionLabel: (copy.includeResource ?? "Import {name}").replace(
-          "{name}",
-          getResourceLabel(resource, index, copy),
-        ),
-        selected: state.reviewValues[`resource_${index}_include`] === true,
-      })) ?? [],
+      plan?.resources.map((resource, index) => {
+        const selected =
+          state.reviewValues[`resource_${index}_include`] === true;
+        return {
+          ...resource,
+          selectionSlot: `resource-selection-${index}`,
+          selectionLabel: (copy.includeResource ?? "Import {name}").replace(
+            "{name}",
+            getResourceLabel(resource, index, copy),
+          ),
+          selected,
+          selectionBorderColor: selected ? "pr" : "bo",
+          selectionHoverBorderColor: selected ? "pr" : "ac",
+          selectionStatus: selected
+            ? (copy.selectedStatus ?? "Selected")
+            : (copy.notSelectedStatus ?? "Not selected"),
+          selectionStatusColor: selected ? "pr" : "mu-fg",
+        };
+      }) ?? [],
     currentResource,
     currentImages,
     imageSelectorDialog: state.imageSelectorDialog,

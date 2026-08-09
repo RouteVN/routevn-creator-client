@@ -300,6 +300,8 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).toContain("data-keyframe-slot=true h=f pos=rel style=");
     expect(view).not.toContain("data-keyframe-slot=true h=f pos=rel bgc=");
     expect(view).toContain("handler: handleRulerScrubStart");
+    expect(view).not.toContain("handler: handleRulerScrubMove");
+    expect(view).not.toContain("handler: handleRulerScrubEnd");
     expect(view).toContain("cursor: ${rulerCursor}");
     expect(view).not.toContain("cursor: ew-resize; touch-action: none;\"':");
     expect(view).toContain("handler: handleKeyframeMoveStart");

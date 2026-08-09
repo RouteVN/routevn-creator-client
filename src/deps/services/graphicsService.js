@@ -17,6 +17,7 @@ import {
   loadGraphicsEnginePlugins,
 } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
+import { startCanvasVideoRecording } from "../clients/canvasVideoRecorder.js";
 import { loadFontBuffer } from "./shared/fontLoader.js";
 
 const selectLoopingUpdateAnimations = (animations = []) => {
@@ -2200,6 +2201,12 @@ export const createGraphicsService = async ({
       }
 
       return await routeGraphics.extractBase64(label);
+    },
+    startCanvasVideoRecording: (options = {}) => {
+      return startCanvasVideoRecording({
+        ...options,
+        canvas: routeGraphics?.canvas,
+      });
     },
     hasLoadedAsset,
     initRouteEngine: (projectData, options = {}) => {
