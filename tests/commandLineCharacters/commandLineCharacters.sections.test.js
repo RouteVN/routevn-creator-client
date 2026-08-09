@@ -266,7 +266,7 @@ describe("commandLineCharacters sections", () => {
       "utf8",
     );
 
-    expect(view).toContain("rtgl-form#form key=${formKey}");
+    expect(view).toContain('rtgl-form#form key="${formKey}"');
     expect(view).toContain("handler: handleFormSectionAction");
     expect(view).toMatch(
       /characterSpriteBox\*:[\s\S]*?contextmenu:[\s\S]*?handler: handleCharacterContextMenu/,

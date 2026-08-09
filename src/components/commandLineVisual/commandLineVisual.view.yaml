@@ -146,7 +146,7 @@ template:
           - rtgl-view d=h g=md w=f ph=lg:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f g=md style="min-height: 0;"':
-              - rtgl-form#form key=${formKey} :form=${form} :defaultValues=${defaultValues} p=lg:
+              - 'rtgl-form#form key="${formKey}" :form=${form} :defaultValues=${defaultValues} p=lg':
                   - $for visualGroup, groupIndex in defaultValues.visualGroups:
                       - $for visual, i in visualGroup.visuals:
                           - 'rtgl-view#visualItem${visual.controlId} slot=${visual.previewFormSlot} data-index=${visual.visualIndex} data-visual-id=${visual.id} style="align-self: flex-start; flex: 0 0 auto;"':
