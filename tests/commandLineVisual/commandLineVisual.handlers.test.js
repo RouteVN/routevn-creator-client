@@ -32,6 +32,7 @@ import {
   moveVisual,
   openAddVisualPopover,
   removeVisual,
+  removeVisualFlipOption,
   removeVisualShaderAdjustmentOption,
   selectDefaultTransformId,
   selectDefaultVisualLayer,
@@ -42,6 +43,7 @@ import {
   selectPendingVisualTransformId,
   selectSelectedVisuals,
   selectSelectedVisualIndex,
+  selectVisualFlipOptionEnabled,
   selectVisualShaderAdjustmentOptionEnabled,
   selectTab,
   selectTempSelectedResourceId,
@@ -57,6 +59,7 @@ import {
   setTempSelectedResourceId,
   setTransforms,
   showDropdownMenu,
+  showVisualFlipOption,
   showVisualShaderAdjustmentOption,
   updateVisualResource,
   updateVisualAnimation,
@@ -86,6 +89,8 @@ const createStoreApi = (state) => ({
   moveVisual: (payload) => moveVisual({ state }, payload),
   openAddVisualPopover: (payload) => openAddVisualPopover({ state }, payload),
   removeVisual: (payload) => removeVisual({ state }, payload),
+  removeVisualFlipOption: (payload) =>
+    removeVisualFlipOption({ state }, payload),
   removeVisualShaderAdjustmentOption: (payload) =>
     removeVisualShaderAdjustmentOption({ state }, payload),
   selectDefaultTransformId: () => selectDefaultTransformId({ state }),
@@ -98,6 +103,8 @@ const createStoreApi = (state) => ({
     selectPendingVisualTransformId({ state }),
   selectSelectedVisualIndex: () => selectSelectedVisualIndex({ state }),
   selectSelectedVisuals: () => selectSelectedVisuals({ state }),
+  selectVisualFlipOptionEnabled: (payload) =>
+    selectVisualFlipOptionEnabled({ state }, payload),
   selectVisualShaderAdjustmentOptionEnabled: (payload) =>
     selectVisualShaderAdjustmentOptionEnabled({ state }, payload),
   selectTab: () => selectTab({ state }),
@@ -116,6 +123,7 @@ const createStoreApi = (state) => ({
   setTempSelectedResourceId: (payload) =>
     setTempSelectedResourceId({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
+  showVisualFlipOption: (payload) => showVisualFlipOption({ state }, payload),
   showVisualShaderAdjustmentOption: (payload) =>
     showVisualShaderAdjustmentOption({ state }, payload),
   updateVisualAnimation: (payload) => updateVisualAnimation({ state }, payload),
@@ -1261,5 +1269,94 @@ describe("commandLineVisual.handlers animation controls", () => {
     expect(
       dispatchEvent.mock.calls.at(-1)[0].detail.visual.items[0].filters,
     ).toEqual(selectSelectedVisuals({ state })[0].filters);
+  });
+
+  it("adds, previews, submits, and removes per-visual flip options", async () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const render = vi.fn();
+    const store = createStoreApi(state);
+    const showDropdownMenu = vi
+      .fn()
+      .mockResolvedValueOnce({ item: { key: "flip-x" } })
+      .mockResolvedValueOnce({ item: { key: "flip-y" } });
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+          },
+        ],
+      },
+    );
+
+    const deps = {
+      appService: { showDropdownMenu },
+      dispatchEvent,
+      i18n: TEST_I18N,
+      render,
+      store,
+    };
+    const addPayload = {
+      _event: {
+        detail: {
+          actionId: "add",
+          position: { x: 20, y: 30 },
+          sectionId: "visual-0",
+        },
+      },
+    };
+
+    await handleFormSectionAction(deps, addPayload);
+    await handleFormSectionAction(deps, addPayload);
+
+    expect(showDropdownMenu.mock.calls[0][0].items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "flip-x", label: "Flip X" }),
+        expect.objectContaining({ key: "flip-y", label: "Flip Y" }),
+      ]),
+    );
+    expect(showDropdownMenu.mock.calls[1][0].items).not.toContainEqual(
+      expect.objectContaining({ key: "flip-x" }),
+    );
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      flipX: true,
+      flipY: true,
+    });
+    expect(dispatchEvent.mock.calls[1][0].detail).toMatchObject({
+      presentationState: {
+        visual: {
+          items: [{ flipX: true, flipY: true }],
+        },
+      },
+    });
+
+    handleSubmitClick({ dispatchEvent, store });
+    expect(dispatchEvent.mock.calls[2][0].detail).toMatchObject({
+      visual: {
+        items: [{ flipX: true, flipY: true }],
+      },
+    });
+
+    await handleFormSectionAction(deps, {
+      _event: {
+        detail: {
+          actionId: "remove",
+          sectionId: "visual-0-flip-x",
+        },
+      },
+    });
+    expect(selectSelectedVisuals({ state })[0].flipX).toBeUndefined();
+    expect(selectSelectedVisuals({ state })[0].flipY).toBe(true);
+    expect(dispatchEvent.mock.calls[3][0].detail).toMatchObject({
+      presentationState: {
+        visual: {
+          items: [{ flipY: true }],
+        },
+      },
+    });
   });
 });

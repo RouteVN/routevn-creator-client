@@ -330,29 +330,15 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='flipX']"
+    selector: "rvn-command-line-background#commandLineBackground rtgl-form#form rtgl-button[data-section-id='flip-x'][data-section-action-id='remove']"
     state: visible
     timeoutMs: 5000
-  - action: assert
-    type: attribute
-    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='flipX'] #option1"
-    name: aria-pressed
-    value: "true"
-  - action: select
-    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='flipX'] #option0"
-    steps:
-      - action: click
-  - action: assert
-    type: attribute
-    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='flipX'] #option0"
-    name: aria-pressed
-    value: "true"
   - action: select
     selector: "rvn-command-line-background#commandLineBackground rtgl-form#form rtgl-button[data-section-id='flip-x'][data-section-action-id='remove']"
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-background#commandLineBackground rtgl-segmented-control[data-field-name='flipX']"
+    selector: "rvn-command-line-background#commandLineBackground rtgl-form#form rtgl-button[data-section-id='flip-x'][data-section-action-id='remove']"
     state: hidden
     timeoutMs: 5000
   - action: select

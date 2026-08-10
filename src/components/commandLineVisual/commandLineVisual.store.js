@@ -14,6 +14,7 @@ import {
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
 import {
+  COMMAND_LINE_ITEM_FLIP_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
@@ -24,6 +25,7 @@ import {
   normalizeCommandLineItemBlurWithField,
   normalizeCommandLineItemEffects,
   normalizeCommandLineItemOpacity,
+  getCommandLineItemFlipOption,
 } from "../../internal/commandLineItemEffects.js";
 import {
   createCommandLineShaderAdjustmentControls,
@@ -366,6 +368,25 @@ const createVisualsForm = (visuals = []) => ({
       );
     }
 
+    for (const flipOption of visual.flipOptions) {
+      if (!flipOption.enabled) {
+        continue;
+      }
+
+      fields.push({
+        type: "section",
+        id: `${visual.formSectionId}-${flipOption.id}`,
+        label: flipOption.label,
+        separator: false,
+        action: {
+          id: "remove",
+          icon: "x",
+          label: "Remove",
+        },
+        fields: [],
+      });
+    }
+
     for (const adjustment of visual.shaderAdjustments) {
       if (!adjustment.enabled) {
         continue;
@@ -393,13 +414,15 @@ const createVisualsForm = (visuals = []) => ({
     return {
       type: "section",
       id: visual.formSectionId,
-      action: visual.shaderAdjustments.every((adjustment) => adjustment.enabled)
-        ? undefined
-        : {
-            id: "add",
-            icon: "plus",
-            label: "Add option",
-          },
+      action:
+        visual.flipOptions.every((option) => option.enabled) &&
+        visual.shaderAdjustments.every((adjustment) => adjustment.enabled)
+          ? undefined
+          : {
+              id: "add",
+              icon: "plus",
+              label: "Add option",
+            },
       fields,
     };
   }),
@@ -1101,6 +1124,36 @@ export const updateVisualBlurField = (
   });
 };
 
+export const showVisualFlipOption = ({ state }, { index, optionId } = {}) => {
+  const visual = state.selectedVisuals[index];
+  const option = getCommandLineItemFlipOption(optionId);
+  if (!visual || !option) {
+    return;
+  }
+
+  visual[option.fieldName] = true;
+};
+
+export const removeVisualFlipOption = ({ state }, { index, optionId } = {}) => {
+  const visual = state.selectedVisuals[index];
+  const option = getCommandLineItemFlipOption(optionId);
+  if (!visual || !option) {
+    return;
+  }
+
+  delete visual[option.fieldName];
+};
+
+export const selectVisualFlipOptionEnabled = (
+  { state },
+  { index, optionId } = {},
+) => {
+  const option = getCommandLineItemFlipOption(optionId);
+  return (
+    !!option && state.selectedVisuals[index]?.[option.fieldName] !== undefined
+  );
+};
+
 export const updateVisualShaderAdjustment = (
   { state },
   { index, adjustmentId, value } = {},
@@ -1620,6 +1673,10 @@ export const selectViewData = ({ state, i18n }) => {
       blur: normalizeCommandLineItemBlur(
         visual.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
       ),
+      flipOptions: COMMAND_LINE_ITEM_FLIP_OPTIONS.map((option) => ({
+        ...option,
+        enabled: visual[option.fieldName] !== undefined,
+      })),
       shaderAdjustments: createCommandLineShaderAdjustmentControls(
         visual.filters,
       ),
@@ -1729,6 +1786,9 @@ export const selectViewData = ({ state, i18n }) => {
             visual.animationId ?? "no-animation",
             visual.animationMode,
             visual.blurEnabled ? "blur" : "no-blur",
+            ...visual.flipOptions
+              .filter((option) => option.enabled)
+              .map((option) => option.id),
             ...visual.shaderAdjustments
               .filter((adjustment) => adjustment.enabled)
               .map((adjustment) => adjustment.id),

@@ -8,11 +8,13 @@ import {
   hideAddVisualPopover,
   moveVisual,
   openAddVisualPopover,
+  removeVisualFlipOption,
   removeVisualShaderAdjustmentOption,
   selectDefaultVisualLayer,
   selectPendingVisualLayer,
   selectPendingVisualTransformId,
   selectSelectedVisuals,
+  selectVisualFlipOptionEnabled,
   selectViewData as selectViewDataBase,
   setAnimations,
   setExistingVisuals,
@@ -25,6 +27,7 @@ import {
   setTempSelectedResourceId,
   setTransforms,
   setVideos,
+  showVisualFlipOption,
   showDropdownMenu,
   updateVisualAnimation,
   updateVisualBlurEnabled,
@@ -439,6 +442,60 @@ describe("commandLineVisual.store animation controls", () => {
     });
   });
 
+  it("manages header-only flip options for each visual", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+          },
+        ],
+      },
+    );
+
+    showVisualFlipOption({ state }, { index: 0, optionId: "flip-x" });
+    showVisualFlipOption({ state }, { index: 0, optionId: "flip-y" });
+
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      flipX: true,
+      flipY: true,
+    });
+    expect(
+      selectVisualFlipOptionEnabled(
+        { state },
+        { index: 0, optionId: "flip-x" },
+      ),
+    ).toBe(true);
+
+    const viewData = selectViewData({ state });
+    const flipSections = viewData.form.fields[0].fields.filter((field) =>
+      ["visual-0-flip-x", "visual-0-flip-y"].includes(field.id),
+    );
+    expect(flipSections).toEqual([
+      expect.objectContaining({
+        id: "visual-0-flip-x",
+        label: "Flip X",
+        action: expect.objectContaining({ id: "remove" }),
+        fields: [],
+      }),
+      expect.objectContaining({
+        id: "visual-0-flip-y",
+        label: "Flip Y",
+        action: expect.objectContaining({ id: "remove" }),
+        fields: [],
+      }),
+    ]);
+
+    removeVisualFlipOption({ state }, { index: 0, optionId: "flip-x" });
+    expect(selectSelectedVisuals({ state })[0].flipX).toBeUndefined();
+    expect(selectSelectedVisuals({ state })[0].flipY).toBe(true);
+  });
+
   it("manages canonically ordered shader adjustments for each visual", () => {
     const state = createInitialState();
     const customFilter = {
@@ -500,7 +557,7 @@ describe("commandLineVisual.store animation controls", () => {
         (adjustment) => `visual-0-${adjustment.id}`,
       ),
     );
-    expect(viewData.form.fields[0].action).toBeUndefined();
+    expect(viewData.form.fields[0].action).toMatchObject({ id: "add" });
 
     removeVisualShaderAdjustmentOption(
       { state },

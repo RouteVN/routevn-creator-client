@@ -50,6 +50,10 @@ propsSchema:
                 type: number
                 minimum: 0
                 maximum: 1
+              flipX:
+                type: boolean
+              flipY:
+                type: boolean
               filters:
                 type: array
                 items:
