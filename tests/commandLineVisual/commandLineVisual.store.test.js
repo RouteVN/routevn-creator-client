@@ -8,6 +8,7 @@ import {
   hideAddVisualPopover,
   moveVisual,
   openAddVisualPopover,
+  removeVisualShaderAdjustmentOption,
   selectDefaultVisualLayer,
   selectPendingVisualLayer,
   selectPendingVisualTransformId,
@@ -33,7 +34,9 @@ import {
   updateVisualLayer,
   updateVisualOpacity,
   updateVisualResource,
+  updateVisualShaderAdjustment,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
+import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
 
 const TEST_I18N = {
   resourcePages: {},
@@ -434,6 +437,85 @@ describe("commandLineVisual.store animation controls", () => {
       blurEnabled: true,
       blur: selectedVisual.blur,
     });
+  });
+
+  it("manages canonically ordered shader adjustments for each visual", () => {
+    const state = createInitialState();
+    const customFilter = {
+      id: "customFilter",
+      type: "shader",
+      parameters: { strength: 0.5 },
+      source: {},
+    };
+    setRepositoryCollections(state);
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            filters: [customFilter],
+          },
+        ],
+      },
+    );
+
+    for (const adjustment of [...COMMAND_LINE_SHADER_ADJUSTMENTS].reverse()) {
+      updateVisualShaderAdjustment(
+        { state },
+        {
+          index: 0,
+          adjustmentId: adjustment.id,
+          value: adjustment.defaultValue,
+        },
+      );
+    }
+
+    const visual = selectSelectedVisuals({ state })[0];
+    expect(visual.filters.map((filter) => filter.id)).toEqual([
+      customFilter.id,
+      ...COMMAND_LINE_SHADER_ADJUSTMENTS.map(
+        (adjustment) => adjustment.filterId,
+      ),
+    ]);
+    expect(visual.filters[1].source.webgl.fragment).toContain("uBrightness");
+    expect(visual.filters[1].source.webgpu.source).toContain(
+      "shaderUniforms.uBrightness",
+    );
+
+    let viewData = selectViewData({ state });
+    expect(
+      viewData.defaultValues.visuals[0].shaderAdjustments.every(
+        (adjustment) => adjustment.enabled,
+      ),
+    ).toBe(true);
+    expect(
+      viewData.form.fields[0].fields
+        .filter((field) => field.type === "section")
+        .map((field) => field.id),
+    ).toEqual(
+      COMMAND_LINE_SHADER_ADJUSTMENTS.map(
+        (adjustment) => `visual-0-${adjustment.id}`,
+      ),
+    );
+    expect(viewData.form.fields[0].action).toBeUndefined();
+
+    removeVisualShaderAdjustmentOption(
+      { state },
+      { index: 0, adjustmentId: "saturation" },
+    );
+    viewData = selectViewData({ state });
+    expect(
+      viewData.defaultValues.visuals[0].shaderAdjustments.find(
+        (adjustment) => adjustment.id === "saturation",
+      ).enabled,
+    ).toBe(false);
+    expect(viewData.form.fields[0].action).toMatchObject({ id: "add" });
+    expect(visual.filters.map((filter) => filter.id)).not.toContain(
+      "backgroundSaturation",
+    );
   });
 
   it("builds add visual popover form options and tracks pending values", () => {

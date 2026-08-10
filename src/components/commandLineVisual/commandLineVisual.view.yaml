@@ -70,6 +70,10 @@ refs:
         handler: handleDropdownMenuClose
       item-click:
         handler: handleDropdownMenuClickItem
+  form:
+    eventListeners:
+      form-section-action:
+        handler: handleFormSectionAction
   transform*:
     eventListeners:
       value-change:
@@ -132,13 +136,17 @@ refs:
     eventListeners:
       value-change:
         handler: handleBlurFieldChange
+  shaderAdjustment*:
+    eventListeners:
+      value-input:
+        handler: handleShaderAdjustmentInput
 template:
   - 'rtgl-view w=f h=f pv=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
       - $if mode == 'current':
           - rtgl-view d=h g=md w=f ph=lg:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f g=md style="min-height: 0;"':
-              - rtgl-form#form key=${formKey} :form=${form} :defaultValues=${defaultValues} p=lg:
+              - 'rtgl-form#form key="${formKey}" :form=${form} :defaultValues=${defaultValues} p=lg':
                   - $for visualGroup, groupIndex in defaultValues.visualGroups:
                       - $for visual, i in visualGroup.visuals:
                           - 'rtgl-view#visualItem${visual.controlId} slot=${visual.previewFormSlot} data-index=${visual.visualIndex} data-visual-id=${visual.id} style="align-self: flex-start; flex: 0 0 auto;"':
@@ -196,6 +204,9 @@ template:
                               - 'rtgl-input#blurQuality${visual.controlId} slot=${visual.blurQualityFormSlot} data-index=${visual.visualIndex} data-blur-field=quality type=number min=1 step=1 w=f value=${visual.blur.quality}': null
                               - 'rtgl-select#blurKernelSize${visual.controlId} slot=${visual.blurKernelSizeFormSlot} data-index=${visual.visualIndex} data-blur-field=kernelSize w=f no-clear :selectedValue=${visual.blur.kernelSize} :options=${defaultValues.blurKernelSizeOptions}': null
                               - 'rtgl-segmented-control#blurRepeatEdgePixels${visual.controlId} slot=${visual.blurRepeatEdgePixelsFormSlot} data-index=${visual.visualIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${visual.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}': null
+                          - $for adjustment, adjustmentIndex in visual.shaderAdjustments:
+                              - $if adjustment.enabled:
+                                  - 'rtgl-slider-input#shaderAdjustment${visual.controlId}x${adjustmentIndex} slot=${adjustment.formSlot} data-index=${visual.visualIndex} data-adjustment-id=${adjustment.id} min=${adjustment.min} max=${adjustment.max} step=${adjustment.step} w=f value=${adjustment.value}': null
               - rtgl-view w=f ph=lg:
                   - rtgl-button#addVisualButton v=ol w=f mt=md: ${addVisualButtonLabel}
               - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null

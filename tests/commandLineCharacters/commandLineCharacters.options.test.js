@@ -3,6 +3,7 @@ import {
   handleFormSectionAction,
   handleRemoveCharacterOpacityClick,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.handlers.js";
+import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
 import { EN_I18N } from "../support/i18n.js";
 
 describe("commandLineCharacters character options", () => {
@@ -15,6 +16,9 @@ describe("commandLineCharacters character options", () => {
     const store = {
       selectCharacterOpacityOptionEnabled: vi.fn().mockReturnValue(false),
       selectCharacterBlurOptionEnabled: vi.fn().mockReturnValue(false),
+      selectCharacterShaderAdjustmentOptionEnabled: vi
+        .fn()
+        .mockReturnValue(false),
       showCharacterOpacityOption: vi.fn(),
       showCharacterBlurOption,
     };
@@ -41,6 +45,11 @@ describe("commandLineCharacters character options", () => {
       items: [
         { type: "item", label: "Opacity", key: "opacity" },
         { type: "item", label: "Blur", key: "blur" },
+        ...COMMAND_LINE_SHADER_ADJUSTMENTS.map((adjustment) => ({
+          type: "item",
+          label: adjustment.label,
+          key: adjustment.id,
+        })),
       ],
       x: 120,
       y: 240,
@@ -92,6 +101,32 @@ describe("commandLineCharacters character options", () => {
     );
 
     expect(removeCharacterBlurOption).toHaveBeenCalledWith({ index: 0 });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes a shader adjustment through its nested section action", async () => {
+    const render = vi.fn();
+    const removeCharacterShaderAdjustmentOption = vi.fn();
+
+    await handleFormSectionAction(
+      {
+        render,
+        store: { removeCharacterShaderAdjustmentOption },
+      },
+      {
+        _event: {
+          detail: {
+            sectionId: "character-2-saturation",
+            actionId: "remove",
+          },
+        },
+      },
+    );
+
+    expect(removeCharacterShaderAdjustmentOption).toHaveBeenCalledWith({
+      index: 2,
+      adjustmentId: "saturation",
+    });
     expect(render).toHaveBeenCalledTimes(1);
   });
 });

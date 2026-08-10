@@ -121,11 +121,11 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu #option0"
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Image")'
     state: visible
     timeoutMs: 5000
   - action: select
-    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu #option0"
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Image")'
     steps:
       - action: click
   - action: waitFor
@@ -248,5 +248,148 @@ steps:
   - action: waitFor
     selector: rvn-characters
     state: attached
+    timeoutMs: 10000
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/scenes
+  - action: waitFor
+    selector: rvn-scenes
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#whiteboard #itemRef0"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#mapAddHintClose"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mapAddHintClose"
+    steps:
+      - action: click
+  - action: select
+    selector: "#whiteboard #itemRef0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: rvn-scene-editor-lexical
+    state: attached
+    timeoutMs: 20000
+  - action: wait
+    ms: 1200
+  - action: select
+    selector: "rvn-system-actions#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-actions#commandLineActions [data-action-id='7']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions [data-action-id='7']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-characters#commandLineCharacters #addCharacterButton"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-characters#commandLineCharacters #addCharacterButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: 'rvn-command-line-characters#commandLineCharacters rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Bottom Left")'
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: 'rvn-command-line-characters#commandLineCharacters rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Bottom Left")'
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-characters#commandLineCharacters #characterItem0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-characters#commandLineCharacters #characterItem0x0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-characters#commandLineCharacters #spriteItem0x0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-characters#commandLineCharacters #spriteItem0x0"
+    steps:
+      - action: click
+  - action: select
+    selector: "rvn-command-line-characters#commandLineCharacters #buttonSelect"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-characters#commandLineCharacters #characterSpriteBox0"
+    state: visible
+    timeoutMs: 10000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const characters = deepQuery(document, 'rvn-command-line-characters#commandLineCharacters'); if (!characters) return 'missing'; window.__vtCharacterShaderPreview = undefined; characters.addEventListener('temporary-presentation-state-change', (event) => { window.__vtCharacterShaderPreview = event.detail?.presentationState?.character?.items?.[0]?.filters; }); return 'ready'; })()"
+    value: ready
+  - action: select
+    selector: "rvn-command-line-characters#commandLineCharacters rtgl-form#form rtgl-button[data-section-id='character-0'][data-section-action-id='add']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Brightness")'
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Brightness")'
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-characters#commandLineCharacters rtgl-slider-input[data-adjustment-id='brightness'] input"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-characters#commandLineCharacters rtgl-slider-input[data-adjustment-id='brightness'] input"
+    steps:
+      - action: clear
+      - action: write
+        value: "-0.2"
+  - action: keypress
+    key: Tab
+  - action: wait
+    ms: 300
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const filter = window.__vtCharacterShaderPreview?.find((item) => item.id === 'backgroundBrightness'); return `${filter?.parameters?.brightness}:${filter?.type}:${Boolean(filter?.source?.webgl?.fragment)}:${Boolean(filter?.source?.webgpu?.source)}`; })()"
+    value: "-0.2:shader:true:true"
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-characters#commandLineCharacters rtgl-form#form rtgl-button[data-section-id='character-0-brightness'][data-section-action-id='remove']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-characters#commandLineCharacters rtgl-slider-input[data-adjustment-id='brightness']"
+    state: hidden
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "String(window.__vtCharacterShaderPreview?.some((item) => item.id === 'backgroundBrightness') ?? false)"
+    value: "false"
+  - action: select
+    selector: "rvn-command-line-characters#commandLineCharacters #submitButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions#systemActions #actionItemCharacter"
+    state: visible
     timeoutMs: 10000
 ---

@@ -3,6 +3,10 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import {
+  COMMAND_LINE_SHADER_ADJUSTMENTS,
+  getCommandLineShaderAdjustment,
+} from "../../internal/commandLineShaderAdjustments.js";
 
 const getCharacterIndexFromEvent = (event) => {
   const index = Number.parseInt(event?.currentTarget?.dataset?.index, 10);
@@ -13,14 +17,19 @@ const getEventValue = (event) =>
   event?.detail?.value ?? event?.currentTarget?.value ?? event?.target?.value;
 
 const parseCharacterSectionId = (sectionId) => {
-  const match = /^character-(\d+)(?:-(blur))?$/.exec(sectionId ?? "");
+  const match = /^character-(\d+)(?:-([a-z]+))?$/.exec(sectionId ?? "");
   if (!match) {
+    return undefined;
+  }
+
+  const option = match[2];
+  if (option && option !== "blur" && !getCommandLineShaderAdjustment(option)) {
     return undefined;
   }
 
   return {
     characterIndex: Number.parseInt(match[1], 10),
-    option: match[2],
+    option,
   };
 };
 
@@ -235,6 +244,10 @@ const buildCharacterItemsFromState = (
 
     if (char.blur !== undefined) {
       item.blur = char.blur === null ? null : { ...char.blur };
+    }
+
+    if (Array.isArray(char.filters)) {
+      item.filters = structuredClone(char.filters);
     }
 
     if (shouldUseTemporarySprites && index === selectedCharacterIndex) {
@@ -545,6 +558,24 @@ export const handleBlurFieldInput = (deps, payload) => {
 
 export const handleBlurFieldChange = handleBlurFieldInput;
 
+export const handleShaderAdjustmentInput = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+  const adjustmentId = payload._event.currentTarget?.dataset?.adjustmentId;
+
+  if (index === undefined || !getCommandLineShaderAdjustment(adjustmentId)) {
+    return;
+  }
+
+  store.updateCharacterShaderAdjustment({
+    index,
+    adjustmentId,
+    value: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
 export const handleRemoveCharacterOpacityClick = (deps, payload) => {
   const { store, render } = deps;
   const index = getCharacterIndexFromEvent(payload._event);
@@ -615,6 +646,15 @@ export const handleFormSectionAction = async (deps, payload) => {
     dispatchTemporaryPresentationStateChange(deps);
     return;
   }
+  if (actionId === "remove" && getCommandLineShaderAdjustment(option)) {
+    store.removeCharacterShaderAdjustmentOption({
+      index: characterIndex,
+      adjustmentId: option,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
   if (actionId !== "add" || option) {
     return;
   }
@@ -635,6 +675,22 @@ export const handleFormSectionAction = async (deps, payload) => {
       key: "blur",
     });
   }
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+    if (
+      store.selectCharacterShaderAdjustmentOptionEnabled({
+        index: characterIndex,
+        adjustmentId: adjustment.id,
+      })
+    ) {
+      continue;
+    }
+
+    items.push({
+      type: "item",
+      label: localizeCommandLineText(adjustment.label, copy),
+      key: adjustment.id,
+    });
+  }
   if (items.length === 0) {
     return;
   }
@@ -650,6 +706,11 @@ export const handleFormSectionAction = async (deps, payload) => {
     store.showCharacterOpacityOption({ index: characterIndex });
   } else if (result?.item?.key === "blur") {
     store.showCharacterBlurOption({ index: characterIndex });
+  } else if (getCommandLineShaderAdjustment(result?.item?.key)) {
+    store.showCharacterShaderAdjustmentOption({
+      index: characterIndex,
+      adjustmentId: result.item.key,
+    });
   } else {
     return;
   }

@@ -360,6 +360,58 @@ steps:
     selector: "rvn-command-line-visual#commandLineVisual #visualItem0x0"
     state: visible
     timeoutMs: 10000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; const visual = deepQuery(document, 'rvn-command-line-visual#commandLineVisual'); if (!visual) return 'missing'; window.__vtVisualShaderPreview = undefined; visual.addEventListener('temporary-presentation-state-change', (event) => { window.__vtVisualShaderPreview = event.detail?.presentationState?.visual?.items?.[0]?.filters; }); return 'ready'; })()"
+    value: ready
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual rtgl-form#form rtgl-button[data-section-id='visual-0'][data-section-action-id='add']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Brightness")'
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: 'rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role="menuitem"]:has-text("Brightness")'
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-visual#commandLineVisual rtgl-slider-input[data-adjustment-id='brightness'] input"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual rtgl-slider-input[data-adjustment-id='brightness'] input"
+    steps:
+      - action: clear
+      - action: write
+        value: "0.25"
+  - action: keypress
+    key: Tab
+  - action: wait
+    ms: 300
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const filter = window.__vtVisualShaderPreview?.find((item) => item.id === 'backgroundBrightness'); return `${filter?.parameters?.brightness}:${filter?.type}:${Boolean(filter?.source?.webgl?.fragment)}:${Boolean(filter?.source?.webgpu?.source)}`; })()"
+    value: "0.25:shader:true:true"
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual rtgl-form#form rtgl-button[data-section-id='visual-0-brightness'][data-section-action-id='remove']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-visual#commandLineVisual rtgl-slider-input[data-adjustment-id='brightness']"
+    state: hidden
+    timeoutMs: 5000
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "String(window.__vtVisualShaderPreview?.some((item) => item.id === 'backgroundBrightness') ?? false)"
+    value: "false"
   - action: select
     selector: "rvn-command-line-visual#commandLineVisual #animation0x0 [data-testid='select-button']"
     steps:
