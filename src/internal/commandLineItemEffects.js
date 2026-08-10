@@ -11,6 +11,10 @@ export const getCommandLineItemFlipOption = (optionId) => {
   );
 };
 
+export const normalizeCommandLineItemFlip = (value) => {
+  return value === true || value === "true";
+};
+
 export const DEFAULT_COMMAND_LINE_ITEM_BLUR = {
   x: 6,
   y: 9,
@@ -146,6 +150,14 @@ export const normalizeCommandLineItemEffects = (item = {}) => {
     ...item,
   };
   const opacity = normalizeCommandLineItemOpacity(nextItem.opacity);
+
+  for (const option of COMMAND_LINE_ITEM_FLIP_OPTIONS) {
+    if (nextItem[option.fieldName] !== undefined) {
+      nextItem[option.fieldName] = normalizeCommandLineItemFlip(
+        nextItem[option.fieldName],
+      );
+    }
+  }
 
   if (opacity === undefined) {
     delete nextItem.opacity;

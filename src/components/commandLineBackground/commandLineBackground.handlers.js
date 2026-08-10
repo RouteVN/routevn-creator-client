@@ -173,11 +173,11 @@ const buildBackgroundDataFromState = (
     backgroundData.opacity = selectedOpacity;
   }
 
-  if (hasBackgroundTarget && store.selectFlipXOptionEnabled()) {
+  if (hasBackgroundTarget && selectedFlipX !== undefined) {
     backgroundData.flipX = selectedFlipX;
   }
 
-  if (hasBackgroundTarget && store.selectFlipYOptionEnabled()) {
+  if (hasBackgroundTarget && selectedFlipY !== undefined) {
     backgroundData.flipY = selectedFlipY;
   }
 

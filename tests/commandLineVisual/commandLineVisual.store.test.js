@@ -492,8 +492,14 @@ describe("commandLineVisual.store animation controls", () => {
     ]);
 
     removeVisualFlipOption({ state }, { index: 0, optionId: "flip-x" });
-    expect(selectSelectedVisuals({ state })[0].flipX).toBeUndefined();
+    expect(selectSelectedVisuals({ state })[0].flipX).toBe(false);
     expect(selectSelectedVisuals({ state })[0].flipY).toBe(true);
+    expect(
+      selectVisualFlipOptionEnabled(
+        { state },
+        { index: 0, optionId: "flip-x" },
+      ),
+    ).toBe(false);
   });
 
   it("manages canonically ordered shader adjustments for each visual", () => {

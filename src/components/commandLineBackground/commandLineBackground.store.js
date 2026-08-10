@@ -532,7 +532,7 @@ export const selectOpacityOptionEnabled = ({ state }) => {
 
 export const setSelectedFlipX = ({ state }, { flipX } = {}) => {
   state.selectedFlipX = flipX === true || flipX === "true";
-  state.flipXOptionEnabled = true;
+  state.flipXOptionEnabled = state.selectedFlipX;
 };
 
 export const selectSelectedFlipX = ({ state }) => {
@@ -546,7 +546,7 @@ export const showFlipXOption = ({ state }) => {
 
 export const removeFlipXOption = ({ state }) => {
   state.flipXOptionEnabled = false;
-  state.selectedFlipX = undefined;
+  state.selectedFlipX = false;
 };
 
 export const selectFlipXOptionEnabled = ({ state }) => {
@@ -555,7 +555,7 @@ export const selectFlipXOptionEnabled = ({ state }) => {
 
 export const setSelectedFlipY = ({ state }, { flipY } = {}) => {
   state.selectedFlipY = flipY === true || flipY === "true";
-  state.flipYOptionEnabled = true;
+  state.flipYOptionEnabled = state.selectedFlipY;
 };
 
 export const selectSelectedFlipY = ({ state }) => {
@@ -569,7 +569,7 @@ export const showFlipYOption = ({ state }) => {
 
 export const removeFlipYOption = ({ state }) => {
   state.flipYOptionEnabled = false;
-  state.selectedFlipY = undefined;
+  state.selectedFlipY = false;
 };
 
 export const selectFlipYOptionEnabled = ({ state }) => {

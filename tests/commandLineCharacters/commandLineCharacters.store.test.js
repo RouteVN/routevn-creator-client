@@ -542,8 +542,14 @@ describe("commandLineCharacters.store sprite group filtering", () => {
     ]);
 
     removeCharacterFlipOption({ state }, { index: 0, optionId: "flip-x" });
-    expect(state.selectedCharacters[0].flipX).toBeUndefined();
+    expect(state.selectedCharacters[0].flipX).toBe(false);
     expect(state.selectedCharacters[1].flipY).toBe(true);
+    expect(
+      selectCharacterFlipOptionEnabled(
+        { state },
+        { index: 0, optionId: "flip-x" },
+      ),
+    ).toBe(false);
   });
 
   it("manages canonically ordered shader adjustments for each character", () => {

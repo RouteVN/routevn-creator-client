@@ -758,7 +758,7 @@ describe("commandLineBackground.store", () => {
     expect(viewData.dialogueForm.defaultValues.colorId).toBe("color-night");
   });
 
-  it("shows flip options without redundant segmented controls", () => {
+  it("shows only enabled flips without redundant segmented controls", () => {
     const state = createInitialState();
 
     setSelectedFlipX({ state }, { flipX: true });
@@ -783,11 +783,7 @@ describe("commandLineBackground.store", () => {
       },
       fields: [],
     });
-    expect(flipYSection).toMatchObject({
-      type: "section",
-      label: "Flip Y",
-      fields: [],
-    });
+    expect(flipYSection).toBeUndefined();
     expect(viewData.dialogueForm.defaultValues).toMatchObject({
       flipX: true,
       flipY: false,

@@ -1141,7 +1141,7 @@ export const removeVisualFlipOption = ({ state }, { index, optionId } = {}) => {
     return;
   }
 
-  delete visual[option.fieldName];
+  visual[option.fieldName] = false;
 };
 
 export const selectVisualFlipOptionEnabled = (
@@ -1149,9 +1149,7 @@ export const selectVisualFlipOptionEnabled = (
   { index, optionId } = {},
 ) => {
   const option = getCommandLineItemFlipOption(optionId);
-  return (
-    !!option && state.selectedVisuals[index]?.[option.fieldName] !== undefined
-  );
+  return !!option && state.selectedVisuals[index]?.[option.fieldName] === true;
 };
 
 export const updateVisualShaderAdjustment = (
@@ -1675,7 +1673,7 @@ export const selectViewData = ({ state, i18n }) => {
       ),
       flipOptions: COMMAND_LINE_ITEM_FLIP_OPTIONS.map((option) => ({
         ...option,
-        enabled: visual[option.fieldName] !== undefined,
+        enabled: visual[option.fieldName] === true,
       })),
       shaderAdjustments: createCommandLineShaderAdjustmentControls(
         visual.filters,

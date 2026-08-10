@@ -1349,13 +1349,20 @@ describe("commandLineVisual.handlers animation controls", () => {
         },
       },
     });
-    expect(selectSelectedVisuals({ state })[0].flipX).toBeUndefined();
+    expect(selectSelectedVisuals({ state })[0].flipX).toBe(false);
     expect(selectSelectedVisuals({ state })[0].flipY).toBe(true);
     expect(dispatchEvent.mock.calls[3][0].detail).toMatchObject({
       presentationState: {
         visual: {
-          items: [{ flipY: true }],
+          items: [{ flipX: false, flipY: true }],
         },
+      },
+    });
+
+    handleSubmitClick({ dispatchEvent, store });
+    expect(dispatchEvent.mock.calls[4][0].detail).toMatchObject({
+      visual: {
+        items: [{ flipX: false, flipY: true }],
       },
     });
   });

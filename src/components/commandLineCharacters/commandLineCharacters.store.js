@@ -839,7 +839,7 @@ export const removeCharacterFlipOption = (
     return;
   }
 
-  delete character[option.fieldName];
+  character[option.fieldName] = false;
 };
 
 export const selectCharacterFlipOptionEnabled = (
@@ -848,8 +848,7 @@ export const selectCharacterFlipOptionEnabled = (
 ) => {
   const option = getCommandLineItemFlipOption(optionId);
   return (
-    !!option &&
-    state.selectedCharacters[index]?.[option.fieldName] !== undefined
+    !!option && state.selectedCharacters[index]?.[option.fieldName] === true
   );
 };
 
@@ -1815,7 +1814,7 @@ export const selectViewData = ({ state, i18n }) => {
         ),
         flipOptions: COMMAND_LINE_ITEM_FLIP_OPTIONS.map((option) => ({
           ...option,
-          enabled: char[option.fieldName] !== undefined,
+          enabled: char[option.fieldName] === true,
         })),
         shaderAdjustments: createCommandLineShaderAdjustmentControls(
           char.filters,

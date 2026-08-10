@@ -2062,13 +2062,20 @@ describe("commandLineCharacters.handlers", () => {
         },
       },
     });
-    expect(selectSelectedCharacters({ state })[0].flipX).toBeUndefined();
+    expect(selectSelectedCharacters({ state })[0].flipX).toBe(false);
     expect(selectSelectedCharacters({ state })[0].flipY).toBe(true);
     expect(dispatchEvent.mock.calls[3][0].detail).toMatchObject({
       presentationState: {
         character: {
-          items: [{ flipY: true }],
+          items: [{ flipX: false, flipY: true }],
         },
+      },
+    });
+
+    handleSubmitClick({ dispatchEvent, store });
+    expect(dispatchEvent.mock.calls[4][0].detail).toMatchObject({
+      character: {
+        items: [{ flipX: false, flipY: true }],
       },
     });
   });

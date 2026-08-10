@@ -373,7 +373,7 @@ describe("commandLineBackground.handlers", () => {
       },
     });
 
-    expect(selectFlipXOptionEnabled({ state })).toBe(true);
+    expect(selectFlipXOptionEnabled({ state })).toBe(false);
     expect(selectSelectedFlipX({ state })).toBe(false);
     expect(selectFlipYOptionEnabled({ state })).toBe(true);
     expect(selectSelectedFlipY({ state })).toBe(true);
@@ -1471,14 +1471,28 @@ describe("commandLineBackground.handlers", () => {
     );
 
     expect(selectFlipXOptionEnabled({ state })).toBe(false);
-    expect(selectSelectedFlipX({ state })).toBeUndefined();
+    expect(selectSelectedFlipX({ state })).toBe(false);
     expect(dispatchEvent.mock.calls[4][0].detail).toEqual({
       presentationState: {
         background: {
           resourceId: "bg-school",
+          flipX: false,
           flipY: true,
           transformId: "bg-center",
         },
+      },
+    });
+
+    handleSubmitClick({
+      dispatchEvent,
+      store: createStoreApi(state),
+    });
+    expect(dispatchEvent.mock.calls[5][0].detail).toEqual({
+      background: {
+        resourceId: "bg-school",
+        flipX: false,
+        flipY: true,
+        transformId: "bg-center",
       },
     });
   });
