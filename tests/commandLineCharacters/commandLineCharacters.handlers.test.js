@@ -29,8 +29,10 @@ import {
   createInitialState,
   moveCharacter,
   removeCharacter,
+  removeCharacterFlipOption,
   removeCharacterShaderAdjustmentOption,
   selectCharacterBlurOptionEnabled,
+  selectCharacterFlipOptionEnabled,
   selectCharacterOpacityOptionEnabled,
   selectCurrentSpriteSelectionGroups,
   selectCurrentSpriteItemById,
@@ -66,6 +68,7 @@ import {
   updateCharacterShaderAdjustment,
   showDropdownMenu,
   showFullImagePreview,
+  showCharacterFlipOption,
   showCharacterShaderAdjustmentOption,
   showCharacterBlurOption,
   showCharacterOpacityOption,
@@ -85,10 +88,14 @@ const createStoreApi = (state) => ({
   },
   moveCharacter: (payload) => moveCharacter({ state }, payload),
   removeCharacter: (payload) => removeCharacter({ state }, payload),
+  removeCharacterFlipOption: (payload) =>
+    removeCharacterFlipOption({ state }, payload),
   removeCharacterShaderAdjustmentOption: (payload) =>
     removeCharacterShaderAdjustmentOption({ state }, payload),
   selectCharacterBlurOptionEnabled: (payload) =>
     selectCharacterBlurOptionEnabled({ state }, payload),
+  selectCharacterFlipOptionEnabled: (payload) =>
+    selectCharacterFlipOptionEnabled({ state }, payload),
   selectCharacterOpacityOptionEnabled: (payload) =>
     selectCharacterOpacityOptionEnabled({ state }, payload),
   selectAddCharacterTransformDropdownItems: () =>
@@ -130,6 +137,8 @@ const createStoreApi = (state) => ({
     showAddCharacterTransformDropdownMenu({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
   showFullImagePreview: (payload) => showFullImagePreview({ state }, payload),
+  showCharacterFlipOption: (payload) =>
+    showCharacterFlipOption({ state }, payload),
   showCharacterShaderAdjustmentOption: (payload) =>
     showCharacterShaderAdjustmentOption({ state }, payload),
   showCharacterBlurOption: (payload) =>
@@ -1975,5 +1984,92 @@ describe("commandLineCharacters.handlers", () => {
     expect(
       dispatchEvent.mock.calls.at(-1)[0].detail.character.items[0].filters,
     ).toEqual(selectSelectedCharacters({ state })[0].filters);
+  });
+
+  it("adds, previews, submits, and removes per-character flip options", async () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const render = vi.fn();
+    const store = createStoreApi(state);
+    const showDropdownMenu = vi
+      .fn()
+      .mockResolvedValueOnce({ item: { key: "flip-x" } })
+      .mockResolvedValueOnce({ item: { key: "flip-y" } });
+    setExistingCharacters(
+      { state },
+      {
+        characters: [{ id: "character-hero", sprites: [] }],
+      },
+    );
+
+    const deps = {
+      appService: { showDropdownMenu },
+      dispatchEvent,
+      i18n: {
+        resourcePages: {},
+        sceneEditorPage: {},
+        commandLinePage: {},
+      },
+      render,
+      store,
+    };
+    const addPayload = {
+      _event: {
+        detail: {
+          actionId: "add",
+          position: { x: 20, y: 30 },
+          sectionId: "character-0",
+        },
+      },
+    };
+
+    await handleFormSectionAction(deps, addPayload);
+    await handleFormSectionAction(deps, addPayload);
+
+    expect(showDropdownMenu.mock.calls[0][0].items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "flip-x", label: "Flip X" }),
+        expect.objectContaining({ key: "flip-y", label: "Flip Y" }),
+      ]),
+    );
+    expect(showDropdownMenu.mock.calls[1][0].items).not.toContainEqual(
+      expect.objectContaining({ key: "flip-x" }),
+    );
+    expect(selectSelectedCharacters({ state })[0]).toMatchObject({
+      flipX: true,
+      flipY: true,
+    });
+    expect(dispatchEvent.mock.calls[1][0].detail).toMatchObject({
+      presentationState: {
+        character: {
+          items: [{ flipX: true, flipY: true }],
+        },
+      },
+    });
+
+    handleSubmitClick({ dispatchEvent, store });
+    expect(dispatchEvent.mock.calls[2][0].detail).toMatchObject({
+      character: {
+        items: [{ flipX: true, flipY: true }],
+      },
+    });
+
+    await handleFormSectionAction(deps, {
+      _event: {
+        detail: {
+          actionId: "remove",
+          sectionId: "character-0-flip-x",
+        },
+      },
+    });
+    expect(selectSelectedCharacters({ state })[0].flipX).toBeUndefined();
+    expect(selectSelectedCharacters({ state })[0].flipY).toBe(true);
+    expect(dispatchEvent.mock.calls[3][0].detail).toMatchObject({
+      presentationState: {
+        character: {
+          items: [{ flipY: true }],
+        },
+      },
+    });
   });
 });

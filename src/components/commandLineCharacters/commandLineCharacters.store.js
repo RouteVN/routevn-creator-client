@@ -15,6 +15,7 @@ import {
   isCharacterSpriteResourceItem,
 } from "../../internal/characterSpritePreview.js";
 import {
+  COMMAND_LINE_ITEM_FLIP_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
   COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
   DEFAULT_COMMAND_LINE_ITEM_BLUR,
@@ -24,6 +25,7 @@ import {
   normalizeCommandLineItemBlurWithField,
   normalizeCommandLineItemEffects,
   normalizeCommandLineItemOpacity,
+  getCommandLineItemFlipOption,
 } from "../../internal/commandLineItemEffects.js";
 import {
   createCommandLineShaderAdjustmentControls,
@@ -814,6 +816,43 @@ export const updateCharacterBlurField = (
   });
 };
 
+export const showCharacterFlipOption = (
+  { state },
+  { index, optionId } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  const option = getCommandLineItemFlipOption(optionId);
+  if (!character || !option) {
+    return;
+  }
+
+  character[option.fieldName] = true;
+};
+
+export const removeCharacterFlipOption = (
+  { state },
+  { index, optionId } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  const option = getCommandLineItemFlipOption(optionId);
+  if (!character || !option) {
+    return;
+  }
+
+  delete character[option.fieldName];
+};
+
+export const selectCharacterFlipOptionEnabled = (
+  { state },
+  { index, optionId } = {},
+) => {
+  const option = getCommandLineItemFlipOption(optionId);
+  return (
+    !!option &&
+    state.selectedCharacters[index]?.[option.fieldName] !== undefined
+  );
+};
+
 export const updateCharacterShaderAdjustment = (
   { state },
   { index, adjustmentId, value } = {},
@@ -1185,6 +1224,8 @@ export const selectCharactersWithRepositoryData = ({ state, copy }) => {
         animationMode: char.animationMode,
         opacityOptionEnabled: char.opacityOptionEnabled,
         opacity: char.opacity,
+        flipX: char.flipX,
+        flipY: char.flipY,
         filters: char.filters,
         blurOptionEnabled: char.blurOptionEnabled,
         blur: char.blur,
@@ -1218,6 +1259,8 @@ export const selectCharactersWithRepositoryData = ({ state, copy }) => {
       animationMode: char.animationMode,
       opacityOptionEnabled: char.opacityOptionEnabled,
       opacity: char.opacity,
+      flipX: char.flipX,
+      flipY: char.flipY,
       filters: char.filters,
       blurOptionEnabled: char.blurOptionEnabled,
       blur: char.blur,
@@ -1403,6 +1446,25 @@ const createCharactersForm = (characters = []) => ({
       });
     }
 
+    for (const flipOption of character.flipOptions) {
+      if (!flipOption.enabled) {
+        continue;
+      }
+
+      fields.push({
+        type: "section",
+        id: `${character.formSectionId}-${flipOption.id}`,
+        label: flipOption.label,
+        separator: false,
+        action: {
+          id: "remove",
+          icon: "x",
+          label: "Remove",
+        },
+        fields: [],
+      });
+    }
+
     for (const adjustment of character.shaderAdjustments) {
       if (!adjustment.enabled) {
         continue;
@@ -1442,6 +1504,7 @@ const createCharactersForm = (characters = []) => ({
       action:
         character.opacityOptionEnabled &&
         character.blurOptionEnabled &&
+        character.flipOptions.every((option) => option.enabled) &&
         character.shaderAdjustments.every((adjustment) => adjustment.enabled)
           ? undefined
           : {
@@ -1750,6 +1813,10 @@ export const selectViewData = ({ state, i18n }) => {
         blur: normalizeCommandLineItemBlur(
           char.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
         ),
+        flipOptions: COMMAND_LINE_ITEM_FLIP_OPTIONS.map((option) => ({
+          ...option,
+          enabled: char[option.fieldName] !== undefined,
+        })),
         shaderAdjustments: createCommandLineShaderAdjustmentControls(
           char.filters,
         ),
@@ -1839,6 +1906,9 @@ export const selectViewData = ({ state, i18n }) => {
             character.opacityOptionEnabled ? "opacity" : "no-opacity",
             character.blurOptionEnabled ? "blur-option" : "no-blur-option",
             character.blurEnabled ? "blur" : "no-blur",
+            ...character.flipOptions
+              .filter((option) => option.enabled)
+              .map((option) => option.id),
             ...character.shaderAdjustments
               .filter((adjustment) => adjustment.enabled)
               .map((adjustment) => adjustment.id),

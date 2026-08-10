@@ -3,7 +3,9 @@ import {
   addCharacter,
   createInitialState,
   moveCharacter,
+  removeCharacterFlipOption,
   removeCharacterShaderAdjustmentOption,
+  selectCharacterFlipOptionEnabled,
   selectViewData,
   setAnimations,
   setExistingCharacters,
@@ -12,6 +14,7 @@ import {
   setSelectedCharacterIndex,
   setSelectedSpriteGroupId,
   setTransforms,
+  showCharacterFlipOption,
   showDropdownMenu,
   updateCharacterBlurEnabled,
   updateCharacterBlurField,
@@ -478,6 +481,69 @@ describe("commandLineCharacters.store sprite group filtering", () => {
       blurEnabled: true,
       blur: selectedCharacter.blur,
     });
+  });
+
+  it("manages header-only flips independently for duplicate character resources", () => {
+    const state = createInitialState();
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [{ id: "character-hero" }, { id: "character-hero" }],
+      },
+    );
+
+    showCharacterFlipOption({ state }, { index: 0, optionId: "flip-x" });
+    showCharacterFlipOption({ state }, { index: 1, optionId: "flip-y" });
+
+    expect(state.selectedCharacters[0]).toMatchObject({ flipX: true });
+    expect(state.selectedCharacters[0].flipY).toBeUndefined();
+    expect(state.selectedCharacters[1]).toMatchObject({ flipY: true });
+    expect(state.selectedCharacters[1].flipX).toBeUndefined();
+    expect(
+      selectCharacterFlipOptionEnabled(
+        { state },
+        { index: 1, optionId: "flip-y" },
+      ),
+    ).toBe(true);
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(
+      viewData.form.fields.map((section) =>
+        section.fields.find((field) => field.id?.includes("flip-")),
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        id: "character-1-flip-y",
+        label: "Flip Y",
+        action: expect.objectContaining({ id: "remove" }),
+        fields: [],
+      }),
+      expect.objectContaining({
+        id: "character-0-flip-x",
+        label: "Flip X",
+        action: expect.objectContaining({ id: "remove" }),
+        fields: [],
+      }),
+    ]);
+
+    removeCharacterFlipOption({ state }, { index: 0, optionId: "flip-x" });
+    expect(state.selectedCharacters[0].flipX).toBeUndefined();
+    expect(state.selectedCharacters[1].flipY).toBe(true);
   });
 
   it("manages canonically ordered shader adjustments for each character", () => {
