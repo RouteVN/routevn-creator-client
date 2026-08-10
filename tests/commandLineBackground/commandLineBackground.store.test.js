@@ -758,7 +758,7 @@ describe("commandLineBackground.store", () => {
     expect(viewData.dialogueForm.defaultValues.colorId).toBe("color-night");
   });
 
-  it("shows independent flip overrides and preserves explicit false", () => {
+  it("shows flip options without redundant segmented controls", () => {
     const state = createInitialState();
 
     setSelectedFlipX({ state }, { flipX: true });
@@ -781,27 +781,12 @@ describe("commandLineBackground.store", () => {
         icon: "x",
         label: "Remove",
       },
-      fields: [
-        {
-          name: "flipX",
-          type: "segmented-control",
-          clearable: false,
-          options: [
-            { value: false, label: "No" },
-            { value: true, label: "Yes" },
-          ],
-        },
-      ],
+      fields: [],
     });
     expect(flipYSection).toMatchObject({
       type: "section",
       label: "Flip Y",
-      fields: [
-        {
-          name: "flipY",
-          type: "segmented-control",
-        },
-      ],
+      fields: [],
     });
     expect(viewData.dialogueForm.defaultValues).toMatchObject({
       flipX: true,

@@ -1175,17 +1175,7 @@ export const selectViewData = ({ state, i18n }) => {
         icon: "x",
         label: "Remove",
       },
-      fields: [
-        {
-          name: "flipX",
-          type: "segmented-control",
-          clearable: false,
-          options: [
-            { value: false, label: "No" },
-            { value: true, label: "Yes" },
-          ],
-        },
-      ],
+      fields: [],
     });
   }
   if (state.flipYOptionEnabled) {
@@ -1198,17 +1188,7 @@ export const selectViewData = ({ state, i18n }) => {
         icon: "x",
         label: "Remove",
       },
-      fields: [
-        {
-          name: "flipY",
-          type: "segmented-control",
-          clearable: false,
-          options: [
-            { value: false, label: "No" },
-            { value: true, label: "Yes" },
-          ],
-        },
-      ],
+      fields: [],
     });
   }
   for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
