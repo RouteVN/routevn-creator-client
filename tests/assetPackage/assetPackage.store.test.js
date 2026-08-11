@@ -79,6 +79,7 @@ const CHARACTERS_DATA = {
     "character-1": {
       type: "character",
       name: "Hero",
+      nameVariableId: "",
       tagIds: ["tag-character"],
       spriteGroups: [{ tagId: "tag-sprite", name: "Pose" }],
       sprites: {
@@ -437,6 +438,7 @@ describe("asset package store", () => {
       id: "character-1",
       type: "character",
       name: "Hero",
+      nameVariableId: "",
       sprites: {
         items: {
           "sprite-1": expect.objectContaining({

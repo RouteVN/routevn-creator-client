@@ -252,6 +252,9 @@ const parseVariableReferencePath = (value) => {
 };
 
 const getAssetPackageReference = (fieldName, value) => {
+  if (value === "") {
+    return undefined;
+  }
   if (fieldName === "var" || fieldName === "target") {
     const variableReference = parseVariableReferencePath(value);
     if (variableReference) {
