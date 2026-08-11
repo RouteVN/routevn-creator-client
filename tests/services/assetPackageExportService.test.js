@@ -340,9 +340,12 @@ describe("asset package export service", () => {
       previewBlob: new Blob(["font-image"], { type: "image/png" }),
       thumbnailBlob: new Blob(["font-thumbnail"], { type: "image/png" }),
     }));
-    const renderTextStylePreview = vi.fn(
-      async () => new Blob(["text-style-image"], { type: "image/png" }),
-    );
+    const renderTextStylePreview = vi.fn(async () => ({
+      previewBlob: new Blob(["text-style-image"], { type: "image/png" }),
+      thumbnailBlob: new Blob(["text-style-thumbnail"], {
+        type: "image/png",
+      }),
+    }));
     const renderAnimationPreviews = vi.fn(async ({ animations }) =>
       animations.map(({ animationId }) => ({
         animationId,
@@ -399,6 +402,10 @@ describe("asset package export service", () => {
         .previewMediaFileId,
     ).toBe("text-style-preview.text-style.body.png");
     expect(
+      exported.repository.textStyles.items["text-style.body"]
+        .thumbnailMediaFileId,
+    ).toBe("text-style-thumbnail.text-style.body.png");
+    expect(
       exported.repository.animations.items["animation.fade"].previewMediaFileId,
     ).toBe("animation-preview.animation.fade.webm");
     expect(
@@ -431,6 +438,24 @@ describe("asset package export service", () => {
     });
     expect(
       exported.repository.files.items["font-thumbnail.font.body.png"],
+    ).toMatchObject({
+      type: "image",
+      name: "Body thumbnail.png",
+      mimeType: "image/png",
+    });
+    expect(
+      exported.repository.files.items[
+        "text-style-preview.text-style.body.png"
+      ],
+    ).toMatchObject({
+      type: "image",
+      name: "Body preview.png",
+      mimeType: "image/png",
+    });
+    expect(
+      exported.repository.files.items[
+        "text-style-thumbnail.text-style.body.png"
+      ],
     ).toMatchObject({
       type: "image",
       name: "Body thumbnail.png",

@@ -16,7 +16,7 @@ const renderDefaultSpritesheetPreview = (options) =>
 const renderDefaultFontPreview = (options) =>
   renderPreviewWith("renderFontPreviewImages", options);
 const renderDefaultTextStylePreview = (options) =>
-  renderPreviewWith("renderTextStylePreviewImage", options);
+  renderPreviewWith("renderTextStylePreviewImages", options);
 const renderDefaultAnimationPreviews = (options) =>
   renderPreviewWith("renderAnimationPreviewVideos", options);
 const renderDefaultParticlePreview = (options) =>
@@ -307,20 +307,36 @@ const addTextStylePreviews = async ({
       )
     ).filter(Boolean);
     const getColor = (colorId) => sourceColors[colorId]?.hex;
+    const preview = await renderPreview({
+      textStyle,
+      fontAssets,
+      fontFamilies: fonts.map((font) => font.fontFamily),
+      color: getColor(textStyle.colorId) ?? "#000000",
+      strokeColor: getColor(textStyle.strokeColorId),
+      shadowColor: getColor(textStyle.shadow?.colorId),
+    });
+    if (!preview?.previewBlob || !preview?.thumbnailBlob) {
+      throw new Error(
+        `Text style previews for '${textStyleId}' are incomplete.`,
+      );
+    }
     await addGeneratedPreview({
-      blob: await renderPreview({
-        textStyle,
-        fontAssets,
-        fontFamilies: fonts.map((font) => font.fontFamily),
-        color: getColor(textStyle.colorId) ?? "#000000",
-        strokeColor: getColor(textStyle.strokeColorId),
-        shadowColor: getColor(textStyle.shadow?.colorId),
-      }),
+      blob: preview.previewBlob,
       files,
       fileBytesById,
       item: textStyle,
       prefix: "text-style-preview",
       resourceId: textStyleId,
+    });
+    await addGeneratedPreview({
+      blob: preview.thumbnailBlob,
+      files,
+      fileBytesById,
+      item: textStyle,
+      prefix: "text-style-thumbnail",
+      resourceId: textStyleId,
+      itemField: "thumbnailMediaFileId",
+      nameLabel: "thumbnail",
     });
   }
 };

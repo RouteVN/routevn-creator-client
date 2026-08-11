@@ -15,6 +15,8 @@ import { startCanvasVideoRecording } from "../canvasVideoRecorder.js";
 const PREVIEW_WIDTH = 640;
 const PREVIEW_HEIGHT = 360;
 const TEXT_STYLE_PREVIEW_HEIGHT = PREVIEW_HEIGHT / 2;
+const FULL_IMAGE_PREVIEW_WIDTH = 1920;
+const FULL_IMAGE_PREVIEW_HEIGHT = 1080;
 const STATIC_ANIMATION_PREVIEW_DURATION_MS = 1000;
 const ANIMATION_PREVIEW_RECORDING_ATTEMPTS = 2;
 const PARTICLE_PREVIEW_DURATION_MS = 3000;
@@ -164,18 +166,18 @@ const decodeImage = async (blob) => {
   }
 };
 
-const cropPreviewImageHeight = async (blob, height) => {
+const cropPreviewImage = async (blob, { width, height }) => {
   const sourceImage = await decodeImage(blob);
   const sourceWidth = sourceImage.width ?? sourceImage.naturalWidth;
   const sourceHeight = sourceImage.height ?? sourceImage.naturalHeight;
-  if (height >= sourceHeight) {
+  if (width >= sourceWidth && height >= sourceHeight) {
     sourceImage.close?.();
     return blob;
   }
 
   const canvas = document.createElement("canvas");
-  canvas.width = sourceWidth;
-  canvas.height = height;
+  canvas.width = Math.min(width, sourceWidth);
+  canvas.height = Math.min(height, sourceHeight);
   const context = canvas.getContext("2d");
   if (!context) {
     sourceImage.close?.();
@@ -188,12 +190,12 @@ const cropPreviewImageHeight = async (blob, height) => {
       sourceImage,
       0,
       0,
-      sourceWidth,
-      height,
+      canvas.width,
+      canvas.height,
       0,
       0,
-      sourceWidth,
-      height,
+      canvas.width,
+      canvas.height,
     );
     return await canvasToPngBlob(canvas);
   } finally {
@@ -476,8 +478,8 @@ const getTextPreviewRenderer = async (backgroundColor) => {
 
   const routeGraphics = createRouteGraphics();
   await routeGraphics.init({
-    width: PREVIEW_WIDTH,
-    height: PREVIEW_HEIGHT,
+    width: FULL_IMAGE_PREVIEW_WIDTH,
+    height: FULL_IMAGE_PREVIEW_HEIGHT,
     backgroundColor,
     debug: true,
     animationPlaybackMode: "manual",
@@ -490,7 +492,10 @@ const getTextPreviewRenderer = async (backgroundColor) => {
 const renderTextPreviewImage = ({
   preview,
   fontAssets,
-  outputHeight = PREVIEW_HEIGHT,
+  renderWidth = FULL_IMAGE_PREVIEW_WIDTH,
+  renderHeight = FULL_IMAGE_PREVIEW_HEIGHT,
+  outputWidth = renderWidth,
+  outputHeight = renderHeight,
 }) => {
   const renderJob = textPreviewRenderQueue.then(async () => {
     const loadedFontFaces = await loadFontFaces(fontAssets);
@@ -501,13 +506,14 @@ const renderTextPreviewImage = ({
       routeGraphics.render(
         createRouteGraphicsTextPreviewState({
           preview,
-          width: PREVIEW_WIDTH,
-          height: PREVIEW_HEIGHT,
+          width: renderWidth,
+          height: renderHeight,
         }),
       );
       const blob = dataUrlToBlob(await routeGraphics.extractBase64());
-      return outputHeight < PREVIEW_HEIGHT
-        ? cropPreviewImageHeight(blob, outputHeight)
+      return outputWidth < FULL_IMAGE_PREVIEW_WIDTH ||
+        outputHeight < FULL_IMAGE_PREVIEW_HEIGHT
+        ? cropPreviewImage(blob, { width: outputWidth, height: outputHeight })
         : blob;
     } finally {
       for (const face of loadedFontFaces) {
@@ -524,6 +530,10 @@ export const renderFontPreviewImage = async ({ font, fontAsset }) => {
   const { backgroundColor, color } = resolvePageColors();
   return renderTextPreviewImage({
     fontAssets: [fontAsset],
+    renderWidth: PREVIEW_WIDTH,
+    renderHeight: PREVIEW_HEIGHT,
+    outputWidth: PREVIEW_WIDTH,
+    outputHeight: PREVIEW_HEIGHT,
     preview: {
       mode: "thumbnail",
       content: "Aa",
@@ -553,7 +563,7 @@ export const renderFontPreviewImages = async ({ font, fontAsset }) => {
     preview: {
       mode: "thumbnail",
       content: createFontPreviewGlyphText(),
-      padding: 24,
+      padding: 72,
       backgroundColor,
       horizontalAlignment: "center",
       verticalAlignment: "center",
@@ -561,7 +571,7 @@ export const renderFontPreviewImages = async ({ font, fontAsset }) => {
         align: "center",
         fill: color,
         fontFamily: [font.fileId],
-        fontSize: 32,
+        fontSize: 96,
         fontWeight: font.defaultWeight ?? "normal",
         lineHeight: 1.5,
         strokeColor: "transparent",
@@ -573,7 +583,7 @@ export const renderFontPreviewImages = async ({ font, fontAsset }) => {
   return { previewBlob, thumbnailBlob };
 };
 
-export const renderTextStylePreviewImage = async ({
+export const renderTextStylePreviewImages = async ({
   textStyle,
   fontAssets,
   fontFamilies,
@@ -606,17 +616,26 @@ export const renderTextStylePreviewImage = async ({
     };
   }
 
-  return renderTextPreviewImage({
+  const preview = {
+    mode: "thumbnail",
+    content: textStyle.previewText?.trim() || textStyle.name,
+    padding: 8,
+    backgroundColor: getContrastBackground(color),
+    textStyle: textStyleData,
+  };
+  const previewBlob = await renderTextPreviewImage({
     fontAssets,
-    outputHeight: TEXT_STYLE_PREVIEW_HEIGHT,
-    preview: {
-      mode: "thumbnail",
-      content: textStyle.previewText?.trim() || textStyle.name,
-      padding: 8,
-      backgroundColor: getContrastBackground(color),
-      textStyle: textStyleData,
-    },
+    preview,
   });
+  const thumbnailBlob = await renderTextPreviewImage({
+    fontAssets,
+    renderWidth: PREVIEW_WIDTH,
+    renderHeight: TEXT_STYLE_PREVIEW_HEIGHT,
+    outputWidth: PREVIEW_WIDTH,
+    outputHeight: TEXT_STYLE_PREVIEW_HEIGHT,
+    preview,
+  });
+  return { previewBlob, thumbnailBlob };
 };
 
 const loadGraphicsImageAssets = async ({

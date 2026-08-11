@@ -126,8 +126,8 @@ can be served directly from a static file server.
 
 Animation, transform, sound, particle, spritesheet, font, and text-style items
 may reference package-only preview media with `previewMediaFileId`. Generated
-video resources may also use `thumbnailMediaFileId` for a lower-resolution
-version of the same preview. These ids must reference records in
+previews may also use `thumbnailMediaFileId` for a smaller review image or
+video. These ids must reference records in
 `repository.files.items` whose MIME type is `image/jpeg`, `image/png`,
 `image/webp`, `video/mp4`, or `video/webm`.
 
@@ -163,9 +163,11 @@ The creator also generates package-only previews for these resources:
 - spritesheets: full-resolution and lower-resolution videos containing one
   complete cycle of the first animation, matching the page's default clip
   selection and configured FPS
-- fonts: a PNG of the existing `Aa` font preview
-- text styles: a PNG using the preview text, font, colors, stroke, and shadow
-  shown by the existing text-style preview
+- fonts: a 1920 by 1080 PNG containing the Fonts page glyph set, plus a 640 by
+  360 PNG thumbnail of the existing `Aa` preview
+- text styles: a 1920 by 1080 PNG using the preview text, font, colors, stroke,
+  and shadow shown by the existing text-style preview, plus a 640 by 180 PNG
+  thumbnail
 
 Depending on the desktop WebView's supported canvas recording codec, generated
 videos use MP4 or WebM. None of these generated files are written to the source

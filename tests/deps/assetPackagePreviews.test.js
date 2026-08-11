@@ -28,7 +28,7 @@ import {
   renderAnimationPreviewVideos,
   renderFontPreviewImage,
   renderFontPreviewImages,
-  renderTextStylePreviewImage,
+  renderTextStylePreviewImages,
 } from "../../src/deps/clients/web/assetPackagePreviews.js";
 
 describe("asset package preview client", () => {
@@ -64,6 +64,20 @@ describe("asset package preview client", () => {
         color: "oklch(0.985 0 0)",
       })),
     );
+    const sourceImage = {
+      width: 1920,
+      height: 1080,
+      close: vi.fn(),
+    };
+    vi.stubGlobal("createImageBitmap", vi.fn(async () => sourceImage));
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage: vi.fn(),
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(
+      function (callback, mimeType) {
+        callback(new Blob([`${this.width}x${this.height}`], { type: mimeType }));
+      },
+    );
     const options = {
       font: {
         fileId: "file-font",
@@ -84,7 +98,11 @@ describe("asset package preview client", () => {
     expect(createRouteGraphics).toHaveBeenCalledOnce();
     expect(renderer.init).toHaveBeenCalledOnce();
     expect(renderer.init).toHaveBeenCalledWith(
-      expect.objectContaining({ backgroundColor: "#0a0a0a" }),
+      expect.objectContaining({
+        width: 1920,
+        height: 1080,
+        backgroundColor: "#0a0a0a",
+      }),
     );
     expect(renderer.render.mock.calls[0][0].elements[0].textStyle.fill).toBe(
       "#fafafa",
@@ -115,14 +133,14 @@ describe("asset package preview client", () => {
       .map(([state]) => state.elements[0]);
     expect(glyphPreview.content).toContain("ABCDEFGHIJKLMNOPQRST");
     expect(glyphPreview.content).toContain("\\|`~");
-    expect(glyphPreview.textStyle.fontSize).toBe(32);
+    expect(glyphPreview.textStyle.fontSize).toBe(96);
     expect(thumbnailPreview.content).toBe("Aa");
   });
 
-  it("crops exported text-style screenshots to half height", async () => {
+  it("renders full-size and short text-style preview images", async () => {
     const sourceImage = {
-      width: 640,
-      height: 360,
+      width: 1920,
+      height: 1080,
       close: vi.fn(),
     };
     vi.stubGlobal("createImageBitmap", vi.fn(async () => sourceImage));
@@ -138,14 +156,15 @@ describe("asset package preview client", () => {
       },
     );
 
-    const preview = await renderTextStylePreviewImage({
+    const previews = await renderTextStylePreviewImages({
       textStyle: { name: "Body", fontSize: 24 },
       fontAssets: [],
       fontFamilies: ["sans-serif"],
       color: "#112233",
     });
 
-    expect(preview.type).toBe("image/png");
+    expect(previews.previewBlob.type).toBe("image/png");
+    expect(previews.thumbnailBlob.type).toBe("image/png");
     expect(drawImage).toHaveBeenCalledWith(
       sourceImage,
       0,
