@@ -14,7 +14,7 @@ const renderPreviewWith = async (exportName, options) => {
 const renderDefaultSpritesheetPreview = (options) =>
   renderPreviewWith("renderSpritesheetPreviewVideo", options);
 const renderDefaultFontPreview = (options) =>
-  renderPreviewWith("renderFontPreviewImage", options);
+  renderPreviewWith("renderFontPreviewImages", options);
 const renderDefaultTextStylePreview = (options) =>
   renderPreviewWith("renderTextStylePreviewImage", options);
 const renderDefaultAnimationPreviews = (options) =>
@@ -248,20 +248,34 @@ const addFontPreviews = async ({
       continue;
     }
 
-    await addGeneratedPreview({
-      blob: await renderPreview({
+    const preview = await renderPreview({
+      font,
+      fontAsset: await createFontAsset({
         font,
-        fontAsset: await createFontAsset({
-          font,
-          sourceRepository,
-          readSourceFile,
-        }),
+        sourceRepository,
+        readSourceFile,
       }),
+    });
+    if (!preview?.previewBlob || !preview?.thumbnailBlob) {
+      throw new Error(`Font previews for '${fontId}' are incomplete.`);
+    }
+    await addGeneratedPreview({
+      blob: preview.previewBlob,
       files,
       fileBytesById,
       item: font,
       prefix: "font-preview",
       resourceId: fontId,
+    });
+    await addGeneratedPreview({
+      blob: preview.thumbnailBlob,
+      files,
+      fileBytesById,
+      item: font,
+      prefix: "font-thumbnail",
+      resourceId: fontId,
+      itemField: "thumbnailMediaFileId",
+      nameLabel: "thumbnail",
     });
   }
 };

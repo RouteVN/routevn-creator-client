@@ -27,6 +27,8 @@ vi.mock("../../src/deps/clients/canvasVideoRecorder.js", () => ({
 import {
   renderAnimationPreviewVideos,
   renderFontPreviewImage,
+  renderFontPreviewImages,
+  renderTextStylePreviewImage,
 } from "../../src/deps/clients/web/assetPackagePreviews.js";
 
 describe("asset package preview client", () => {
@@ -91,6 +93,71 @@ describe("asset package preview client", () => {
     expect(renderer.destroy).not.toHaveBeenCalled();
     expect(addFont).toHaveBeenCalledTimes(2);
     expect(deleteFont).toHaveBeenCalledTimes(2);
+  });
+
+  it("renders a full font glyph image and keeps Aa as its thumbnail", async () => {
+    const result = await renderFontPreviewImages({
+      font: {
+        fileId: "file-font",
+        defaultWeight: 400,
+      },
+      fontAsset: {
+        fileId: "file-font",
+        bytes: new Uint8Array([1, 2, 3]),
+        mimeType: "font/woff2",
+      },
+    });
+
+    expect(result.previewBlob.type).toBe("image/png");
+    expect(result.thumbnailBlob.type).toBe("image/png");
+    const [glyphPreview, thumbnailPreview] = renderer.render.mock.calls
+      .slice(-2)
+      .map(([state]) => state.elements[0]);
+    expect(glyphPreview.content).toContain("ABCDEFGHIJKLMNOPQRST");
+    expect(glyphPreview.content).toContain("\\|`~");
+    expect(glyphPreview.textStyle.fontSize).toBe(32);
+    expect(thumbnailPreview.content).toBe("Aa");
+  });
+
+  it("crops exported text-style screenshots to half height", async () => {
+    const sourceImage = {
+      width: 640,
+      height: 360,
+      close: vi.fn(),
+    };
+    vi.stubGlobal("createImageBitmap", vi.fn(async () => sourceImage));
+    const drawImage = vi.fn();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage,
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(
+      function (callback, mimeType) {
+        expect(this.width).toBe(640);
+        expect(this.height).toBe(180);
+        callback(new Blob(["cropped"], { type: mimeType }));
+      },
+    );
+
+    const preview = await renderTextStylePreviewImage({
+      textStyle: { name: "Body", fontSize: 24 },
+      fontAssets: [],
+      fontFamilies: ["sans-serif"],
+      color: "#112233",
+    });
+
+    expect(preview.type).toBe("image/png");
+    expect(drawImage).toHaveBeenCalledWith(
+      sourceImage,
+      0,
+      0,
+      640,
+      180,
+      0,
+      0,
+      640,
+      180,
+    );
+    expect(sourceImage.close).toHaveBeenCalledOnce();
   });
 
   it("records animation previews through one shared graphics context", async () => {

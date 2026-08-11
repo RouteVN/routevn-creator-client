@@ -336,9 +336,10 @@ describe("asset package export service", () => {
         type: "video/webm",
       }),
     }));
-    const renderFontPreview = vi.fn(
-      async () => new Blob(["font-image"], { type: "image/png" }),
-    );
+    const renderFontPreview = vi.fn(async () => ({
+      previewBlob: new Blob(["font-image"], { type: "image/png" }),
+      thumbnailBlob: new Blob(["font-thumbnail"], { type: "image/png" }),
+    }));
     const renderTextStylePreview = vi.fn(
       async () => new Blob(["text-style-image"], { type: "image/png" }),
     );
@@ -391,6 +392,9 @@ describe("asset package export service", () => {
       exported.repository.fonts.items["font.body"].previewMediaFileId,
     ).toBe("font-preview.font.body.png");
     expect(
+      exported.repository.fonts.items["font.body"].thumbnailMediaFileId,
+    ).toBe("font-thumbnail.font.body.png");
+    expect(
       exported.repository.textStyles.items["text-style.body"]
         .previewMediaFileId,
     ).toBe("text-style-preview.text-style.body.png");
@@ -418,6 +422,20 @@ describe("asset package export service", () => {
         "spritesheet-preview.spritesheet.hero.webm"
       ].mimeType,
     ).toBe("video/webm");
+    expect(
+      exported.repository.files.items["font-preview.font.body.png"],
+    ).toMatchObject({
+      type: "image",
+      name: "Body preview.png",
+      mimeType: "image/png",
+    });
+    expect(
+      exported.repository.files.items["font-thumbnail.font.body.png"],
+    ).toMatchObject({
+      type: "image",
+      name: "Body thumbnail.png",
+      mimeType: "image/png",
+    });
     expect(
       exported.repository.files.items["particle-preview.particle.sparkle.mp4"]
         .mimeType,
