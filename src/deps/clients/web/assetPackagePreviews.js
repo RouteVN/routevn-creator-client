@@ -15,6 +15,10 @@ import { startCanvasVideoRecording } from "../canvasVideoRecorder.js";
 const PREVIEW_WIDTH = 640;
 const PREVIEW_HEIGHT = 360;
 const TEXT_STYLE_PREVIEW_HEIGHT = PREVIEW_HEIGHT / 2;
+const TEXT_STYLE_THUMBNAIL_WIDTH = Math.round((PREVIEW_WIDTH * 2) / 3);
+const TEXT_STYLE_THUMBNAIL_HEIGHT = Math.round(
+  (TEXT_STYLE_PREVIEW_HEIGHT * 2) / 3,
+);
 const FULL_IMAGE_PREVIEW_WIDTH = 1920;
 const FULL_IMAGE_PREVIEW_HEIGHT = 1080;
 const FULL_TEXT_STYLE_PREVIEW_WIDTH = FULL_IMAGE_PREVIEW_WIDTH / 2;
@@ -635,10 +639,10 @@ export const renderTextStylePreviewImages = async ({
   });
   const thumbnailBlob = await renderTextPreviewImage({
     fontAssets,
-    renderWidth: PREVIEW_WIDTH,
-    renderHeight: TEXT_STYLE_PREVIEW_HEIGHT,
-    outputWidth: PREVIEW_WIDTH,
-    outputHeight: TEXT_STYLE_PREVIEW_HEIGHT,
+    renderWidth: TEXT_STYLE_THUMBNAIL_WIDTH,
+    renderHeight: TEXT_STYLE_THUMBNAIL_HEIGHT,
+    outputWidth: TEXT_STYLE_THUMBNAIL_WIDTH,
+    outputHeight: TEXT_STYLE_THUMBNAIL_HEIGHT,
     preview,
   });
   return { previewBlob, thumbnailBlob };

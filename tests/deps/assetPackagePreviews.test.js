@@ -167,7 +167,7 @@ describe("asset package preview client", () => {
     expect(previews.thumbnailBlob.type).toBe("image/png");
     expect(outputSizes).toEqual([
       [960, 270],
-      [640, 180],
+      [427, 120],
     ]);
     expect(drawImage).toHaveBeenNthCalledWith(
       1,
@@ -186,12 +186,12 @@ describe("asset package preview client", () => {
       sourceImage,
       0,
       0,
-      640,
-      180,
+      427,
+      120,
       0,
       0,
-      640,
-      180,
+      427,
+      120,
     );
     expect(sourceImage.close).toHaveBeenCalledTimes(2);
   });
