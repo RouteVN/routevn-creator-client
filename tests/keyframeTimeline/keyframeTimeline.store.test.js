@@ -218,15 +218,21 @@ describe("keyframeTimeline easing curves", () => {
     expect(autoProperty.valueCurvePath).toBeUndefined();
   });
 
-  it("shows only explicit keyframe start values", () => {
+  it("shows and formats only explicit keyframe start values", () => {
     const viewData = selectViewData({
       state: createInitialState(),
       props: {
         properties: {
           x: {
             keyframes: [
-              { duration: 500, startValue: 0, value: 100 },
-              { duration: 500, value: 200 },
+              {
+                duration: 500,
+                relative: true,
+                startValue: 0,
+                value: -100,
+              },
+              { duration: 500, startValue: 50, value: 200 },
+              { duration: 500, value: 300 },
             ],
           },
         },
@@ -234,7 +240,13 @@ describe("keyframeTimeline easing curves", () => {
     });
 
     expect(viewData.selectedProperties[0].keyframes).toMatchObject([
-      { startValue: 0, startValueVisible: true },
+      {
+        startValue: 0,
+        startValueLabel: "Δ+0",
+        startValueVisible: true,
+        value: "Δ-100",
+      },
+      { startValueLabel: 50, startValueVisible: true, value: 200 },
       { startValueVisible: false },
     ]);
   });
@@ -414,7 +426,7 @@ describe("keyframeTimeline easing curves", () => {
     );
     expect(view).toContain("$if keyframe.startValueVisible:");
     expect(view).toMatch(
-      /rtgl-text\.keyframeTimelineKeyframeStartValue[^\n]+ta=s ellipsis[^\n]+left: 13px; right: 10px[^\n]+keyframe.startValue/,
+      /rtgl-text\.keyframeTimelineKeyframeStartValue[^\n]+ta=s ellipsis[^\n]+left: 13px; right: 10px[^\n]+keyframe.startValueLabel/,
     );
     expect(view).toContain("container-type: inline-size");
     expect(view).toContain("@container (max-width: 80px)");

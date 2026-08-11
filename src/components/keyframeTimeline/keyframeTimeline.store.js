@@ -276,6 +276,19 @@ const formatEasingLabel = (easingName) => {
     .replace(/^./, (value) => value.toUpperCase());
 };
 
+const formatKeyframeValue = ({ value, relative } = {}) => {
+  if (!relative) {
+    return value;
+  }
+
+  const numberValue = parseFloat(value);
+  if (Number.isNaN(numberValue)) {
+    return value;
+  }
+
+  return numberValue >= 0 ? `Δ+${value}` : `Δ${value}`;
+};
+
 const getPropertyDuration = (config = {}) => {
   if (config?.auto) {
     return Number(config.auto.duration) || 0;
@@ -610,22 +623,19 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
               attrs.selectedKeyframe?.side === attrs.side &&
               attrs.selectedKeyframe?.property === property.name &&
               Number(attrs.selectedKeyframe?.index) === keyframeIndex;
-            // Add prefix for relative values
-            let displayValue = keyframe.value;
-            if (keyframe.relative) {
-              // Check if value already has a sign
-              const numValue = parseFloat(keyframe.value);
-              if (!isNaN(numValue)) {
-                displayValue =
-                  numValue >= 0 ? `Δ+${keyframe.value}` : `Δ${keyframe.value}`;
-              }
-            }
             return {
               ...keyframe,
               easing: keyframe.easing ?? "linear",
               easingLabel: formatEasingLabel(keyframe.easing ?? "linear"),
+              startValueLabel: formatKeyframeValue({
+                value: keyframe.startValue,
+                relative: keyframe.relative,
+              }),
               startValueVisible: keyframe.startValue !== undefined,
-              value: displayValue,
+              value: formatKeyframeValue({
+                value: keyframe.value,
+                relative: keyframe.relative,
+              }),
               widthPercent: widthPercent.toFixed(2),
               delayPercent: delayPercent.toFixed(2),
               cursor: attrs.editable
