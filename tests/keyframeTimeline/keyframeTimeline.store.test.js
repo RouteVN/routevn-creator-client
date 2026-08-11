@@ -218,6 +218,27 @@ describe("keyframeTimeline easing curves", () => {
     expect(autoProperty.valueCurvePath).toBeUndefined();
   });
 
+  it("shows only explicit keyframe start values", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        properties: {
+          x: {
+            keyframes: [
+              { duration: 500, startValue: 0, value: 100 },
+              { duration: 500, value: 200 },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(viewData.selectedProperties[0].keyframes).toMatchObject([
+      { startValue: 0, startValueVisible: true },
+      { startValueVisible: false },
+    ]);
+  });
+
   it("localizes the auto indicator beside the property name", () => {
     const viewData = selectViewData({
       state: createInitialState(),
@@ -391,7 +412,13 @@ describe("keyframeTimeline easing curves", () => {
     expect(view).toMatch(
       /rtgl-text\.keyframeTimelineKeyframeValue[^\n]+ta=e ellipsis[^\n]+left: 10px; right: 13px[^\n]+keyframe.value/,
     );
+    expect(view).toContain("$if keyframe.startValueVisible:");
+    expect(view).toMatch(
+      /rtgl-text\.keyframeTimelineKeyframeStartValue[^\n]+ta=s ellipsis[^\n]+left: 13px; right: 10px[^\n]+keyframe.startValue/,
+    );
     expect(view).toContain("container-type: inline-size");
+    expect(view).toContain("@container (max-width: 80px)");
+    expect(view).toContain('".keyframeTimelineKeyframeStartValue":');
     expect(view).toContain("@container (max-width: 40px)");
     expect(view).toContain('".keyframeTimelineKeyframeValue":');
     expect(view).toContain("display: none");

@@ -624,6 +624,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
               ...keyframe,
               easing: keyframe.easing ?? "linear",
               easingLabel: formatEasingLabel(keyframe.easing ?? "linear"),
+              startValueVisible: keyframe.startValue !== undefined,
               value: displayValue,
               widthPercent: widthPercent.toFixed(2),
               delayPercent: delayPercent.toFixed(2),
