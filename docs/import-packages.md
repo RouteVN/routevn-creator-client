@@ -163,9 +163,10 @@ does not add a thumbnail to the source project.
 
 The creator also generates package-only previews for these resources:
 
-- animations: full-resolution and lower-resolution videos containing one
-  complete animation cycle rendered with the animation's configured preview
-  images and project resolution
+- animations: full-resolution videos containing one complete animation cycle
+  rendered with the animation's configured preview images and project
+  resolution, plus videos derived from those completed full previews and
+  scaled to fit within 640 by 360 pixels
 - particles: full-resolution and lower-resolution short videos of the existing
   particle preview
 - spritesheets: full-resolution and lower-resolution videos containing one
