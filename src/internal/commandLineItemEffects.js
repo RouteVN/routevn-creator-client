@@ -1,5 +1,20 @@
 export const DEFAULT_COMMAND_LINE_ITEM_OPACITY = 1;
 
+export const COMMAND_LINE_ITEM_FLIP_OPTIONS = [
+  { id: "flip-x", fieldName: "flipX", label: "Flip X" },
+  { id: "flip-y", fieldName: "flipY", label: "Flip Y" },
+];
+
+export const getCommandLineItemFlipOption = (optionId) => {
+  return COMMAND_LINE_ITEM_FLIP_OPTIONS.find(
+    (option) => option.id === optionId,
+  );
+};
+
+export const normalizeCommandLineItemFlip = (value) => {
+  return value === true || value === "true";
+};
+
 export const DEFAULT_COMMAND_LINE_ITEM_BLUR = {
   x: 6,
   y: 9,
@@ -135,6 +150,14 @@ export const normalizeCommandLineItemEffects = (item = {}) => {
     ...item,
   };
   const opacity = normalizeCommandLineItemOpacity(nextItem.opacity);
+
+  for (const option of COMMAND_LINE_ITEM_FLIP_OPTIONS) {
+    if (nextItem[option.fieldName] !== undefined) {
+      nextItem[option.fieldName] = normalizeCommandLineItemFlip(
+        nextItem[option.fieldName],
+      );
+    }
+  }
 
   if (opacity === undefined) {
     delete nextItem.opacity;

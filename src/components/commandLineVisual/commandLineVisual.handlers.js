@@ -2,6 +2,14 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import {
+  COMMAND_LINE_ITEM_FLIP_OPTIONS,
+  getCommandLineItemFlipOption,
+} from "../../internal/commandLineItemEffects.js";
+import {
+  COMMAND_LINE_SHADER_ADJUSTMENTS,
+  getCommandLineShaderAdjustment,
+} from "../../internal/commandLineShaderAdjustments.js";
 
 const TEMPORARY_VISUAL_PREVIEW_ID = "temporary-visual-preview";
 const DEFAULT_VISUAL_LAYER = 50;
@@ -31,6 +39,27 @@ const getIndexFromEvent = (event) => {
 
 const getEventValue = (event) =>
   event?.detail?.value ?? event?.currentTarget?.value ?? event?.target?.value;
+
+const parseVisualSectionId = (sectionId) => {
+  const match = /^visual-(\d+)(?:-(.+))?$/.exec(sectionId ?? "");
+  if (!match) {
+    return undefined;
+  }
+
+  const optionId = match[2];
+  if (
+    optionId &&
+    !getCommandLineItemFlipOption(optionId) &&
+    !getCommandLineShaderAdjustment(optionId)
+  ) {
+    return undefined;
+  }
+
+  return {
+    visualIndex: Number.parseInt(match[1], 10),
+    optionId,
+  };
+};
 
 const normalizeVisualLayer = (layer) => {
   const parsedLayer = Number(layer);
@@ -97,6 +126,18 @@ const buildVisualItem = (visual = {}) => {
 
   if (visual.blur !== undefined) {
     item.blur = visual.blur === null ? null : { ...visual.blur };
+  }
+
+  if (visual.flipX !== undefined) {
+    item.flipX = visual.flipX;
+  }
+
+  if (visual.flipY !== undefined) {
+    item.flipY = visual.flipY;
+  }
+
+  if (Array.isArray(visual.filters)) {
+    item.filters = structuredClone(visual.filters);
   }
 
   if (visual.animations?.resourceId) {
@@ -473,6 +514,124 @@ export const handleBlurFieldInput = (deps, payload) => {
 };
 
 export const handleBlurFieldChange = handleBlurFieldInput;
+
+export const handleShaderAdjustmentInput = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getIndexFromEvent(payload._event);
+  const adjustmentId = payload._event.currentTarget?.dataset?.adjustmentId;
+
+  if (index === undefined || !getCommandLineShaderAdjustment(adjustmentId)) {
+    return;
+  }
+
+  store.updateVisualShaderAdjustment({
+    index,
+    adjustmentId,
+    value: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleFormSectionAction = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { actionId, position, sectionId } = payload._event.detail;
+  const section = parseVisualSectionId(sectionId);
+  if (!section) {
+    return;
+  }
+
+  const { optionId, visualIndex } = section;
+  const flipOption = getCommandLineItemFlipOption(optionId);
+  const adjustment = getCommandLineShaderAdjustment(optionId);
+  if (actionId === "remove" && flipOption) {
+    store.removeVisualFlipOption({
+      index: visualIndex,
+      optionId: flipOption.id,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+  if (actionId === "remove" && adjustment) {
+    store.removeVisualShaderAdjustmentOption({
+      index: visualIndex,
+      adjustmentId: adjustment.id,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+  if (actionId !== "add" || optionId) {
+    return;
+  }
+
+  const copy = selectCommandLineCopy(i18n);
+  const items = [];
+  for (const option of COMMAND_LINE_ITEM_FLIP_OPTIONS) {
+    if (
+      store.selectVisualFlipOptionEnabled({
+        index: visualIndex,
+        optionId: option.id,
+      })
+    ) {
+      continue;
+    }
+
+    items.push({
+      type: "item",
+      label: localizeCommandLineText(option.label, copy),
+      key: option.id,
+    });
+  }
+  for (const shaderAdjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+    if (
+      store.selectVisualShaderAdjustmentOptionEnabled({
+        index: visualIndex,
+        adjustmentId: shaderAdjustment.id,
+      })
+    ) {
+      continue;
+    }
+
+    items.push({
+      type: "item",
+      label: localizeCommandLineText(shaderAdjustment.label, copy),
+      key: shaderAdjustment.id,
+    });
+  }
+  if (items.length === 0) {
+    return;
+  }
+
+  const result = await appService.showDropdownMenu({
+    items,
+    x: position.x,
+    y: position.y,
+    place: "be",
+  });
+  const selectedFlipOption = getCommandLineItemFlipOption(result?.item?.key);
+  if (selectedFlipOption) {
+    store.showVisualFlipOption({
+      index: visualIndex,
+      optionId: selectedFlipOption.id,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+  const selectedAdjustment = getCommandLineShaderAdjustment(result?.item?.key);
+  if (!selectedAdjustment) {
+    return;
+  }
+
+  store.showVisualShaderAdjustmentOption({
+    index: visualIndex,
+    adjustmentId: selectedAdjustment.id,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
 
 export const handleFileExplorerItemClick = (deps, payload) => {
   const { refs, store, render } = deps;

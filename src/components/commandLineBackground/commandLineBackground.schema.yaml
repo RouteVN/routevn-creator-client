@@ -15,6 +15,19 @@ propsSchema:
           type: number
           minimum: 0
           maximum: 1
+        filters:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              type:
+                type: string
+              parameters:
+                type: object
+              source:
+                type: object
         blur:
           type:
             - object
@@ -51,6 +64,10 @@ propsSchema:
           type: number
         scaleY:
           type: number
+        flipX:
+          type: boolean
+        flipY:
+          type: boolean
         rotation:
           type: number
         originX:

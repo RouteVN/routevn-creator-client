@@ -22,6 +22,15 @@ import {
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
+  COMMAND_LINE_SHADER_ADJUSTMENTS,
+  createCommandLineShaderAdjustmentFilter,
+  createInitialCommandLineShaderAdjustments,
+  getCommandLineShaderAdjustment,
+  getCommandLineShaderAdjustmentValue,
+  normalizeCommandLineShaderAdjustmentValue,
+  orderCommandLineShaderAdjustmentFilters,
+} from "../../internal/commandLineShaderAdjustments.js";
 
 const tabs = [
   {
@@ -170,6 +179,12 @@ export const createInitialState = () => ({
   backgroundColorOptionEnabled: false,
   selectedOpacity: undefined,
   opacityOptionEnabled: false,
+  selectedFlipX: undefined,
+  flipXOptionEnabled: false,
+  selectedFlipY: undefined,
+  flipYOptionEnabled: false,
+  backgroundFilters: undefined,
+  backgroundShaderAdjustments: createInitialCommandLineShaderAdjustments(),
   selectedBlurEnabled: false,
   selectedBlurExplicit: false,
   selectedBlur: { ...DEFAULT_BACKGROUND_BLUR },
@@ -513,6 +528,155 @@ export const removeOpacityOption = ({ state }) => {
 
 export const selectOpacityOptionEnabled = ({ state }) => {
   return state.opacityOptionEnabled;
+};
+
+export const setSelectedFlipX = ({ state }, { flipX } = {}) => {
+  state.selectedFlipX = flipX === true || flipX === "true";
+  state.flipXOptionEnabled = state.selectedFlipX;
+};
+
+export const selectSelectedFlipX = ({ state }) => {
+  return state.selectedFlipX;
+};
+
+export const showFlipXOption = ({ state }) => {
+  state.flipXOptionEnabled = true;
+  state.selectedFlipX = true;
+};
+
+export const removeFlipXOption = ({ state }) => {
+  state.flipXOptionEnabled = false;
+  state.selectedFlipX = false;
+};
+
+export const selectFlipXOptionEnabled = ({ state }) => {
+  return state.flipXOptionEnabled;
+};
+
+export const setSelectedFlipY = ({ state }, { flipY } = {}) => {
+  state.selectedFlipY = flipY === true || flipY === "true";
+  state.flipYOptionEnabled = state.selectedFlipY;
+};
+
+export const selectSelectedFlipY = ({ state }) => {
+  return state.selectedFlipY;
+};
+
+export const showFlipYOption = ({ state }) => {
+  state.flipYOptionEnabled = true;
+  state.selectedFlipY = true;
+};
+
+export const removeFlipYOption = ({ state }) => {
+  state.flipYOptionEnabled = false;
+  state.selectedFlipY = false;
+};
+
+export const selectFlipYOptionEnabled = ({ state }) => {
+  return state.flipYOptionEnabled;
+};
+
+export const setBackgroundFilters = ({ state }, { filters } = {}) => {
+  state.backgroundFilters = Array.isArray(filters)
+    ? orderCommandLineShaderAdjustmentFilters(structuredClone(filters))
+    : undefined;
+
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+    const value = getCommandLineShaderAdjustmentValue(
+      state.backgroundFilters,
+      adjustment.id,
+    );
+    state.backgroundShaderAdjustments[adjustment.id].enabled =
+      value !== undefined;
+    state.backgroundShaderAdjustments[adjustment.id].value =
+      value ?? adjustment.defaultValue;
+  }
+};
+
+export const selectBackgroundFilters = ({ state }) => {
+  return state.backgroundFilters;
+};
+
+export const setSelectedBackgroundShaderAdjustment = (
+  { state },
+  { adjustmentId, value } = {},
+) => {
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
+  const normalizedValue = normalizeCommandLineShaderAdjustmentValue(
+    adjustmentId,
+    value,
+  );
+  state.backgroundShaderAdjustments[adjustmentId].value = normalizedValue;
+  state.backgroundShaderAdjustments[adjustmentId].enabled = true;
+
+  if (!Array.isArray(state.backgroundFilters)) {
+    state.backgroundFilters = [];
+  }
+
+  const filterIndex = state.backgroundFilters.findIndex(
+    (filter) => filter?.id === adjustment.filterId,
+  );
+  const filter = createCommandLineShaderAdjustmentFilter(
+    adjustmentId,
+    normalizedValue,
+  );
+  if (filterIndex >= 0) {
+    state.backgroundFilters[filterIndex] = filter;
+  } else {
+    state.backgroundFilters.push(filter);
+  }
+
+  state.backgroundFilters = orderCommandLineShaderAdjustmentFilters(
+    state.backgroundFilters,
+  );
+};
+
+export const selectBackgroundShaderAdjustmentValue = (
+  { state },
+  { adjustmentId } = {},
+) => {
+  return state.backgroundShaderAdjustments[adjustmentId].value;
+};
+
+export const showBackgroundShaderAdjustmentOption = (
+  { state },
+  { adjustmentId } = {},
+) => {
+  setSelectedBackgroundShaderAdjustment(
+    { state },
+    {
+      adjustmentId,
+      value: state.backgroundShaderAdjustments[adjustmentId].value,
+    },
+  );
+};
+
+export const removeBackgroundShaderAdjustmentOption = (
+  { state },
+  { adjustmentId } = {},
+) => {
+  const adjustment = getCommandLineShaderAdjustment(adjustmentId);
+  state.backgroundShaderAdjustments[adjustmentId].enabled = false;
+  state.backgroundShaderAdjustments[adjustmentId].value =
+    adjustment.defaultValue;
+
+  if (!Array.isArray(state.backgroundFilters)) {
+    state.backgroundFilters = [];
+    return;
+  }
+
+  for (let index = state.backgroundFilters.length - 1; index >= 0; index -= 1) {
+    if (state.backgroundFilters[index]?.id === adjustment.filterId) {
+      state.backgroundFilters.splice(index, 1);
+    }
+  }
+};
+
+export const selectBackgroundShaderAdjustmentOptionEnabled = (
+  { state },
+  { adjustmentId } = {},
+) => {
+  return state.backgroundShaderAdjustments[adjustmentId].enabled;
 };
 
 export const setSelectedBlur = ({ state }, { blur } = {}) => {
@@ -1001,6 +1165,57 @@ export const selectViewData = ({ state, i18n }) => {
       ],
     });
   }
+  if (state.flipXOptionEnabled) {
+    optionFields.push({
+      type: "section",
+      id: "flip-x",
+      label: "Flip X",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [],
+    });
+  }
+  if (state.flipYOptionEnabled) {
+    optionFields.push({
+      type: "section",
+      id: "flip-y",
+      label: "Flip Y",
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [],
+    });
+  }
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+    if (!state.backgroundShaderAdjustments[adjustment.id].enabled) {
+      continue;
+    }
+
+    optionFields.push({
+      type: "section",
+      id: adjustment.id,
+      label: adjustment.label,
+      action: {
+        id: "remove",
+        icon: "x",
+        label: "Remove",
+      },
+      fields: [
+        {
+          name: adjustment.id,
+          type: "slider-with-input",
+          min: adjustment.min,
+          max: adjustment.max,
+          step: adjustment.step,
+        },
+      ],
+    });
+  }
   if (state.selectedBlurEnabled) {
     optionFields.push({
       type: "section",
@@ -1076,6 +1291,11 @@ export const selectViewData = ({ state, i18n }) => {
   const allOptionsVisible =
     state.backgroundColorOptionEnabled &&
     state.opacityOptionEnabled &&
+    state.flipXOptionEnabled &&
+    state.flipYOptionEnabled &&
+    COMMAND_LINE_SHADER_ADJUSTMENTS.every(
+      (adjustment) => state.backgroundShaderAdjustments[adjustment.id].enabled,
+    ) &&
     state.selectedBlurEnabled;
   if (!allOptionsVisible) {
     optionsSection.action = {
@@ -1096,6 +1316,8 @@ export const selectViewData = ({ state, i18n }) => {
     customTransform: state.customTransformEnabled,
     transformId: state.selectedTransformId,
     opacity: state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
+    flipX: state.selectedFlipX,
+    flipY: state.selectedFlipY,
     playbackContinuity: state.selectedAnimationPlaybackContinuity,
     playbackSpeed: state.selectedAnimationPlaybackSpeed,
     playbackLoop: state.selectedAnimationLoop,
@@ -1107,6 +1329,18 @@ export const selectViewData = ({ state, i18n }) => {
     blurKernelSize: state.selectedBlur.kernelSize,
     blurRepeatEdgePixels: state.selectedBlur.repeatEdgePixels,
   };
+  for (const adjustment of COMMAND_LINE_SHADER_ADJUSTMENTS) {
+    defaultValues[adjustment.id] =
+      state.backgroundShaderAdjustments[adjustment.id].value;
+  }
+  const shaderAdjustmentKeyParts = COMMAND_LINE_SHADER_ADJUSTMENTS.flatMap(
+    (adjustment) => [
+      state.backgroundShaderAdjustments[adjustment.id].enabled
+        ? `${adjustment.id}-option`
+        : `no-${adjustment.id}-option`,
+      state.backgroundShaderAdjustments[adjustment.id].value,
+    ],
+  );
   return {
     mode: state.mode,
     tab: state.tab,
@@ -1150,6 +1384,11 @@ export const selectViewData = ({ state, i18n }) => {
         JSON.stringify(state.selectedCustomTransform ?? {}),
         state.opacityOptionEnabled ? "opacity-option" : "no-opacity-option",
         state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
+        state.flipXOptionEnabled ? "flip-x-option" : "no-flip-x-option",
+        state.selectedFlipX ? "flip-x" : "no-flip-x",
+        state.flipYOptionEnabled ? "flip-y-option" : "no-flip-y-option",
+        state.selectedFlipY ? "flip-y" : "no-flip-y",
+        ...shaderAdjustmentKeyParts,
         state.selectedBlurEnabled ? "blur" : "no-blur",
         state.selectedBlur.x,
         state.selectedBlur.y,

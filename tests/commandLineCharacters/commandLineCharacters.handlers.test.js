@@ -13,7 +13,9 @@ import {
   handleCharacterSpriteGroupBoxClick,
   handleCustomTransformButtonKeyDown,
   handleDropdownMenuClickItem,
+  handleFormSectionAction,
   handleOpacityInput,
+  handleShaderAdjustmentInput,
   handleSpriteItemClick,
   handleSpriteItemDoubleClick,
   handleSpriteGroupTabClick,
@@ -27,6 +29,11 @@ import {
   createInitialState,
   moveCharacter,
   removeCharacter,
+  removeCharacterFlipOption,
+  removeCharacterShaderAdjustmentOption,
+  selectCharacterBlurOptionEnabled,
+  selectCharacterFlipOptionEnabled,
+  selectCharacterOpacityOptionEnabled,
   selectCurrentSpriteSelectionGroups,
   selectCurrentSpriteItemById,
   selectAddCharacterTransformDropdownItems,
@@ -37,6 +44,7 @@ import {
   selectPendingCharacterTransformId,
   selectSelectedCharacterIndex,
   selectSelectedCharacters,
+  selectCharacterShaderAdjustmentOptionEnabled,
   selectSelectedSpriteGroupId,
   selectSpriteSelectionGroupsForCharacterIndex,
   selectTempSelectedSpriteIds,
@@ -57,8 +65,13 @@ import {
   updateCharacterBlurEnabled,
   updateCharacterBlurField,
   updateCharacterOpacity,
+  updateCharacterShaderAdjustment,
   showDropdownMenu,
   showFullImagePreview,
+  showCharacterFlipOption,
+  showCharacterShaderAdjustmentOption,
+  showCharacterBlurOption,
+  showCharacterOpacityOption,
   showAddCharacterTransformDropdownMenu,
   updateCharacterSprites,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
@@ -75,6 +88,16 @@ const createStoreApi = (state) => ({
   },
   moveCharacter: (payload) => moveCharacter({ state }, payload),
   removeCharacter: (payload) => removeCharacter({ state }, payload),
+  removeCharacterFlipOption: (payload) =>
+    removeCharacterFlipOption({ state }, payload),
+  removeCharacterShaderAdjustmentOption: (payload) =>
+    removeCharacterShaderAdjustmentOption({ state }, payload),
+  selectCharacterBlurOptionEnabled: (payload) =>
+    selectCharacterBlurOptionEnabled({ state }, payload),
+  selectCharacterFlipOptionEnabled: (payload) =>
+    selectCharacterFlipOptionEnabled({ state }, payload),
+  selectCharacterOpacityOptionEnabled: (payload) =>
+    selectCharacterOpacityOptionEnabled({ state }, payload),
   selectAddCharacterTransformDropdownItems: () =>
     selectAddCharacterTransformDropdownItems({ state }),
   selectCurrentSpriteSelectionGroups: () =>
@@ -90,6 +113,8 @@ const createStoreApi = (state) => ({
     selectPendingCharacterTransformId({ state }),
   selectSelectedCharacterIndex: () => selectSelectedCharacterIndex({ state }),
   selectSelectedCharacters: () => selectSelectedCharacters({ state }),
+  selectCharacterShaderAdjustmentOptionEnabled: (payload) =>
+    selectCharacterShaderAdjustmentOptionEnabled({ state }, payload),
   selectSelectedSpriteGroupId: () => selectSelectedSpriteGroupId({ state }),
   selectSpriteSelectionGroupsForCharacterIndex: (payload) =>
     selectSpriteSelectionGroupsForCharacterIndex({ state }, payload),
@@ -112,6 +137,14 @@ const createStoreApi = (state) => ({
     showAddCharacterTransformDropdownMenu({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
   showFullImagePreview: (payload) => showFullImagePreview({ state }, payload),
+  showCharacterFlipOption: (payload) =>
+    showCharacterFlipOption({ state }, payload),
+  showCharacterShaderAdjustmentOption: (payload) =>
+    showCharacterShaderAdjustmentOption({ state }, payload),
+  showCharacterBlurOption: (payload) =>
+    showCharacterBlurOption({ state }, payload),
+  showCharacterOpacityOption: (payload) =>
+    showCharacterOpacityOption({ state }, payload),
   updateCharacterAnimation: (payload) =>
     updateCharacterAnimation({ state }, payload),
   updateCharacterBlurEnabled: (payload) =>
@@ -120,6 +153,8 @@ const createStoreApi = (state) => ({
     updateCharacterBlurField({ state }, payload),
   updateCharacterOpacity: (payload) =>
     updateCharacterOpacity({ state }, payload),
+  updateCharacterShaderAdjustment: (payload) =>
+    updateCharacterShaderAdjustment({ state }, payload),
   updateCharacterSprites: (payload) =>
     updateCharacterSprites({ state }, payload),
 });
@@ -1876,5 +1911,172 @@ describe("commandLineCharacters.handlers", () => {
     expect(selectMode({ state })).toBe("current");
     expect(selectSelectedCharacterIndex({ state })).toBeUndefined();
     expect(selectTempSelectedSpriteIds({ state })).toEqual({});
+  });
+
+  it("previews and submits per-character shader adjustments", async () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const render = vi.fn();
+    const store = createStoreApi(state);
+    const customFilter = {
+      id: "customFilter",
+      type: "shader",
+      parameters: { strength: 0.5 },
+      source: {},
+    };
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            filters: [customFilter],
+          },
+        ],
+      },
+    );
+
+    handleShaderAdjustmentInput(
+      { dispatchEvent, render, store },
+      {
+        _event: {
+          currentTarget: {
+            dataset: { index: "0", adjustmentId: "brightness" },
+          },
+          detail: { value: "0.3" },
+        },
+      },
+    );
+
+    const showDropdownMenu = vi.fn().mockResolvedValue({
+      item: { key: "saturation" },
+    });
+    await handleFormSectionAction(
+      {
+        appService: { showDropdownMenu },
+        dispatchEvent,
+        i18n: {
+          resourcePages: {},
+          sceneEditorPage: {},
+          commandLinePage: {},
+        },
+        render,
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "add",
+            position: { x: 20, y: 30 },
+            sectionId: "character-0",
+          },
+        },
+      },
+    );
+    handleSubmitClick({ dispatchEvent, store });
+
+    expect(showDropdownMenu.mock.calls[0][0].items).not.toContainEqual(
+      expect.objectContaining({ key: "brightness" }),
+    );
+    expect(
+      selectSelectedCharacters({ state })[0].filters.map(({ id }) => id),
+    ).toEqual(["customFilter", "backgroundBrightness", "backgroundSaturation"]);
+    expect(
+      dispatchEvent.mock.calls.at(-1)[0].detail.character.items[0].filters,
+    ).toEqual(selectSelectedCharacters({ state })[0].filters);
+  });
+
+  it("adds, previews, submits, and removes per-character flip options", async () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+    const render = vi.fn();
+    const store = createStoreApi(state);
+    const showDropdownMenu = vi
+      .fn()
+      .mockResolvedValueOnce({ item: { key: "flip-x" } })
+      .mockResolvedValueOnce({ item: { key: "flip-y" } });
+    setExistingCharacters(
+      { state },
+      {
+        characters: [{ id: "character-hero", sprites: [] }],
+      },
+    );
+
+    const deps = {
+      appService: { showDropdownMenu },
+      dispatchEvent,
+      i18n: {
+        resourcePages: {},
+        sceneEditorPage: {},
+        commandLinePage: {},
+      },
+      render,
+      store,
+    };
+    const addPayload = {
+      _event: {
+        detail: {
+          actionId: "add",
+          position: { x: 20, y: 30 },
+          sectionId: "character-0",
+        },
+      },
+    };
+
+    await handleFormSectionAction(deps, addPayload);
+    await handleFormSectionAction(deps, addPayload);
+
+    expect(showDropdownMenu.mock.calls[0][0].items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "flip-x", label: "Flip X" }),
+        expect.objectContaining({ key: "flip-y", label: "Flip Y" }),
+      ]),
+    );
+    expect(showDropdownMenu.mock.calls[1][0].items).not.toContainEqual(
+      expect.objectContaining({ key: "flip-x" }),
+    );
+    expect(selectSelectedCharacters({ state })[0]).toMatchObject({
+      flipX: true,
+      flipY: true,
+    });
+    expect(dispatchEvent.mock.calls[1][0].detail).toMatchObject({
+      presentationState: {
+        character: {
+          items: [{ flipX: true, flipY: true }],
+        },
+      },
+    });
+
+    handleSubmitClick({ dispatchEvent, store });
+    expect(dispatchEvent.mock.calls[2][0].detail).toMatchObject({
+      character: {
+        items: [{ flipX: true, flipY: true }],
+      },
+    });
+
+    await handleFormSectionAction(deps, {
+      _event: {
+        detail: {
+          actionId: "remove",
+          sectionId: "character-0-flip-x",
+        },
+      },
+    });
+    expect(selectSelectedCharacters({ state })[0].flipX).toBe(false);
+    expect(selectSelectedCharacters({ state })[0].flipY).toBe(true);
+    expect(dispatchEvent.mock.calls[3][0].detail).toMatchObject({
+      presentationState: {
+        character: {
+          items: [{ flipX: false, flipY: true }],
+        },
+      },
+    });
+
+    handleSubmitClick({ dispatchEvent, store });
+    expect(dispatchEvent.mock.calls[4][0].detail).toMatchObject({
+      character: {
+        items: [{ flipX: false, flipY: true }],
+      },
+    });
   });
 });

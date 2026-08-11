@@ -1,6 +1,6 @@
 ---
 title: Project Scenes Workflow
-description: Covers the scenes page, add-scene flow, scene detail, preview, scene editor, background and screen animation playback controls, and sections overview.
+description: Covers the scenes page, add-scene flow, scene detail, preview, scene editor, background flip options, background and screen animation playback controls, and sections overview.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -317,6 +317,30 @@ steps:
     selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId']"
     state: attached
     timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-form#form rtgl-button[data-section-id='options'][data-section-action-id='add']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Flip X')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Flip X')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground rtgl-form#form rtgl-button[data-section-id='flip-x'][data-section-action-id='remove']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-background#commandLineBackground rtgl-form#form rtgl-button[data-section-id='flip-x'][data-section-action-id='remove']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-background#commandLineBackground rtgl-form#form rtgl-button[data-section-id='flip-x'][data-section-action-id='remove']"
+    state: hidden
+    timeoutMs: 5000
   - action: select
     selector: "rvn-command-line-background#commandLineBackground rtgl-select[data-field-name='animationId'] [data-testid='select-button']"
     steps:
