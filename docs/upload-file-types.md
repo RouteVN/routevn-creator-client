@@ -140,16 +140,25 @@ same time.
 
 Animation and transform import packages may create image dependencies. This
 network-backed surface follows the Images page policy and accepts only JPEG,
-PNG, and WebP (`image/jpeg`, `image/png`, and `image/webp`).
+PNG, and WebP (`image/jpeg`, `image/png`, and `image/webp`). Generalized asset
+packages validate every persistent file from the resource and field that owns
+the reference:
+
+- images, spritesheets, character sprites, and image thumbnails: JPEG, PNG,
+  or WebP
+- sounds: MP3, WAV, or OGG
+- videos: MP4
+- fonts: TTF, OTF, or WOFF2
+- sound waveform metadata: JSON
 
 The import path enforces the policy in layers:
 
 1. The manifest must declare file MIME metadata.
 2. A contradictory HTTP response content type is rejected before staging.
-3. The resolved MIME type must be one of the supported image MIME types.
+3. The resolved MIME type must match the file policy for its owning resource.
 4. SHA-256 is verified when the package provides it.
-5. Normal image decoding and dimension extraction must succeed before the
-   atomic resource command batch is submitted.
+5. Normal decoding or parsing for the owning image, audio, video, font, or JSON
+   resource must succeed before the atomic resource command batch is submitted.
 6. Any original or derived blob stored before a decoding/thumbnail failure is
    tracked by the import plan and deleted through the platform file adapter.
 

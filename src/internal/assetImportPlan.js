@@ -4,6 +4,8 @@ import {
   ASSET_PACKAGE_IMPORT_CONFIGS,
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_TYPES,
+  getAssetPackageFileValidationKind,
+  isAssetPackageFileMimeTypeAllowed,
   mapAssetPackageReferences,
   visitAssetPackageReferences,
 } from "./assetPackageResources.js";
@@ -301,21 +303,57 @@ const validateManifest = (manifest) => {
   }
 };
 
-const collectReferencedFileIds = (manifest) => {
-  const fileIds = new Set();
+const collectReferencedFiles = (manifest) => {
+  const referencesByFileId = new Map();
   for (const resourceType of ASSET_PACKAGE_RESOURCE_TYPES) {
     for (const item of Object.values(
       manifest.repository[resourceType]?.items ?? {},
     )) {
       if (item.type === "folder") continue;
-      visitAssetPackageReferences(item, ({ kind, value }) => {
-        if (kind === "file") {
-          fileIds.add(value);
+      visitAssetPackageReferences(item, ({ fieldName, kind, value }) => {
+        if (kind === "project") {
+          fail(
+            "project_reference_unsupported",
+            `Project reference '${fieldName}' is not supported in asset packages.`,
+            { resourceId: item.id },
+          );
         }
+        if (kind !== "file") return;
+        const validationKind = getAssetPackageFileValidationKind({
+          resourceType,
+          fieldName,
+        });
+        if (!validationKind) {
+          fail(
+            "file_owner_unsupported",
+            `File reference '${fieldName}' is not supported for ${resourceType}.`,
+            { resourceId: item.id },
+          );
+        }
+        const validationKinds = referencesByFileId.get(value) ?? new Set();
+        validationKinds.add(validationKind);
+        referencesByFileId.set(value, validationKinds);
       });
     }
   }
-  return fileIds;
+  return referencesByFileId;
+};
+
+const assertFileMimeTypes = ({ descriptor, sourceId, validationKinds }) => {
+  for (const validationKind of validationKinds) {
+    if (
+      !isAssetPackageFileMimeTypeAllowed({
+        validationKind,
+        mimeType: descriptor.mimeType,
+      })
+    ) {
+      fail(
+        "file_type_unsupported",
+        `File '${sourceId}' has an unsupported type for ${validationKind} assets.`,
+        { resourceId: sourceId },
+      );
+    }
+  }
 };
 
 const rewriteMappedReferences = (
@@ -329,25 +367,32 @@ const rewriteMappedReferences = (
     return resourceIdBySourceId?.get(referenceId) ?? referenceId;
   });
 
-const getPreviewData = ({
-  item,
-  config,
-  files,
-  manifestUrl,
-  resolveFileUrl,
-}) => {
+const getPreviewData = ({ item, config, files }) => {
   for (const field of config.previewFileFields) {
-    const descriptor = files[item[field]];
+    const previewSourceId = item[field];
+    if (!previewSourceId) continue;
+    const descriptor = files[previewSourceId];
+    if (!descriptor) {
+      fail(
+        "file_dependency_missing",
+        `Preview media '${previewSourceId}' is missing.`,
+        { resourceId: item.id },
+      );
+    }
     const mimeType = descriptor?.mimeType?.toLowerCase();
     if (
-      !descriptor ||
-      (!PREVIEW_IMAGE_MIME_TYPES.has(mimeType) &&
-        !PREVIEW_VIDEO_MIME_TYPES.has(mimeType))
+      !PREVIEW_IMAGE_MIME_TYPES.has(mimeType) &&
+      !PREVIEW_VIDEO_MIME_TYPES.has(mimeType)
     ) {
-      continue;
+      if (field === "fileId") continue;
+      fail(
+        "preview_type_unsupported",
+        "A package preview must be a JPEG, PNG, WebP, MP4, or WebM file.",
+        { resourceId: item.id },
+      );
     }
     return {
-      previewUrl: resolveFileUrl?.({ descriptor, manifestUrl }),
+      previewSourceId,
       previewKind: PREVIEW_VIDEO_MIME_TYPES.has(mimeType) ? "video" : "image",
       previewMimeType: mimeType,
     };
@@ -370,12 +415,29 @@ const collectResourceDependencySourceIds = ({
   sourceId,
 }) => {
   const dependencySourceIds = new Set();
-  visitAssetPackageReferences(data, ({ kind, value }) => {
+  visitAssetPackageReferences(data, ({ fieldName, kind, required, value }) => {
+    if (kind === "project") {
+      fail(
+        "project_reference_unsupported",
+        `Project reference '${fieldName}' is not supported in asset packages.`,
+        { resourceId: sourceId },
+      );
+    }
     if (kind !== "resource") {
       return;
     }
     const dependency = entryByPackageSourceId.get(value);
-    if (dependency && dependency.sourceId !== sourceId) {
+    if (!dependency) {
+      if (required) {
+        fail(
+          "resource_dependency_missing",
+          `Referenced resource '${value}' is missing.`,
+          { resourceId: sourceId },
+        );
+      }
+      return;
+    }
+    if (dependency.sourceId !== sourceId) {
       dependencySourceIds.add(dependency.sourceId);
     }
   });
@@ -424,16 +486,15 @@ export const createAssetImportPlan = ({
   repositoryState,
   repositoryRevision,
   createId,
-  resolveFileUrl,
 } = {}) => {
   validateManifest(manifest);
   const planId = createId();
-  const sourceFileIds = collectReferencedFileIds(manifest);
+  const referencedFiles = collectReferencedFiles(manifest);
   const destinationFileIdBySourceId = new Map();
   const files = [];
   let knownDownloadBytes = 0;
   let hasUnknownDownloadSize = false;
-  for (const sourceId of sourceFileIds) {
+  for (const [sourceId, validationKinds] of referencedFiles) {
     const descriptor = manifest.repository.files.items[sourceId];
     if (!descriptor) {
       fail(
@@ -442,6 +503,7 @@ export const createAssetImportPlan = ({
         { resourceId: sourceId },
       );
     }
+    assertFileMimeTypes({ descriptor, sourceId, validationKinds });
     const destinationId = createId();
     destinationFileIdBySourceId.set(sourceId, destinationId);
     files.push({
@@ -449,6 +511,7 @@ export const createAssetImportPlan = ({
       destinationId,
       commandId: createId(),
       descriptor: structuredClone(descriptor),
+      validationKinds: [...validationKinds],
     });
     if (Number.isFinite(descriptor.size)) knownDownloadBytes += descriptor.size;
     else hasUnknownDownloadSize = true;
@@ -554,8 +617,6 @@ export const createAssetImportPlan = ({
         item,
         config,
         files: manifest.repository.files.items,
-        manifestUrl,
-        resolveFileUrl,
       }),
     };
     resources.push(resource);
@@ -576,6 +637,15 @@ export const createAssetImportPlan = ({
     }
   }
 
+  const previewFiles = [
+    ...new Set(
+      resources.map((resource) => resource.previewSourceId).filter(Boolean),
+    ),
+  ].map((sourceId) => ({
+    sourceId,
+    descriptor: structuredClone(manifest.repository.files.items[sourceId]),
+  }));
+
   return deepFreeze({
     assetPackage: true,
     planId,
@@ -592,6 +662,7 @@ export const createAssetImportPlan = ({
     images: [],
     tags: [],
     files,
+    previewFiles,
     warnings,
     unsupportedResourceTypes: [],
     knownDownloadBytes,

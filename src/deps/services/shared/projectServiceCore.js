@@ -607,6 +607,8 @@ export const createProjectServiceCore = ({
     getRepositoryRevision,
     createResourceImportPlan:
       resourcePackageImportService.createResourceImportPlan,
+    loadResourceImportPreview:
+      resourcePackageImportService.loadResourceImportPreview,
     validateResourceImportPlan:
       resourcePackageImportService.validateResourceImportPlan,
     executeResourceImportPlan:

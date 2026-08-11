@@ -10,10 +10,10 @@ import {
   ResourceImportPlanError,
   rewriteResourceImportPlanReferences,
 } from "../../../internal/resourceImportPlan.js";
+import { isAssetPackageFileMimeTypeAllowed } from "../../../internal/assetPackageResources.js";
 import {
   createImportPackageClient,
   ImportPackageClientError,
-  resolveImportUrl,
 } from "../../clients/importPackageClient.js";
 import { buildImageResourceDataFromUploadResult } from "./resourceImports.js";
 
@@ -22,6 +22,12 @@ const SUPPORTED_IMPORT_IMAGE_MIME_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
+const PREVIEW_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const PREVIEW_VIDEO_MIME_TYPES = new Set(["video/mp4", "video/webm"]);
 
 const createFile = ({ bytes, name, mimeType }) => {
   const blob = new Blob([bytes], { type: mimeType });
@@ -30,6 +36,17 @@ const createFile = ({ bytes, name, mimeType }) => {
   }
   Object.defineProperty(blob, "name", { value: name });
   return blob;
+};
+
+const assertAssetPackageFileMimeTypes = ({ filePlan, mimeType }) => {
+  for (const validationKind of filePlan.validationKinds ?? []) {
+    if (!isAssetPackageFileMimeTypeAllowed({ validationKind, mimeType })) {
+      throw new ImportPackageClientError(
+        "file_type_unsupported",
+        "A package file has an unsupported type.",
+      );
+    }
+  }
 };
 
 const getFileName = (descriptor, sourceId) => {
@@ -391,6 +408,7 @@ export const createResourcePackageImportService = ({
 } = {}) => {
   const plans = new Map();
   const operations = new Map();
+  const previewDownloadsByPlan = new Map();
 
   const beginOperation = (operationId) => {
     const id = operationId ?? idGenerator();
@@ -406,6 +424,10 @@ export const createResourcePackageImportService = ({
   };
 
   const endOperation = (id) => operations.delete(id);
+  const deletePlan = (planId) => {
+    plans.delete(planId);
+    previewDownloadsByPlan.delete(planId);
+  };
   const recordEvent = (event, details = {}) => {
     try {
       logEvent(event, structuredClone(details));
@@ -435,11 +457,6 @@ export const createResourcePackageImportService = ({
           repositoryState: getRepositoryState(),
           repositoryRevision: getRepositoryRevision(),
           createId: idGenerator,
-          resolveFileUrl: ({ descriptor, manifestUrl }) =>
-            resolveImportUrl(
-              descriptor.source?.url ?? descriptor.url,
-              manifestUrl,
-            ).href,
         };
         const plan = isAssetPackageManifest(
           source.manifest,
@@ -471,6 +488,83 @@ export const createResourcePackageImportService = ({
           expectedResourceType,
           code: error?.code ?? "import_failed",
         });
+        return toErrorResult(error);
+      } finally {
+        if (operation) endOperation(operation.id);
+      }
+    },
+
+    async loadResourceImportPreview({
+      planId,
+      sourceFileId,
+      operationId,
+    } = {}) {
+      let operation;
+      try {
+        const plan = plans.get(planId);
+        if (!plan) {
+          throw new ResourceImportPlanError(
+            "plan_expired",
+            "This import review has expired. Load the package again.",
+          );
+        }
+        const previewFile = plan.previewFiles?.find(
+          (file) => file.sourceId === sourceFileId,
+        );
+        if (!previewFile) {
+          throw new ResourceImportPlanError(
+            "preview_unavailable",
+            "This package preview is unavailable.",
+            { resourceId: sourceFileId },
+          );
+        }
+        const mimeType = previewFile.descriptor.mimeType.toLowerCase();
+        if (
+          !PREVIEW_IMAGE_MIME_TYPES.has(mimeType) &&
+          !PREVIEW_VIDEO_MIME_TYPES.has(mimeType)
+        ) {
+          throw new ResourceImportPlanError(
+            "preview_type_unsupported",
+            "A package preview must be a JPEG, PNG, WebP, MP4, or WebM file.",
+            { resourceId: sourceFileId },
+          );
+        }
+
+        let previewState = previewDownloadsByPlan.get(planId);
+        if (!previewState) {
+          previewState = { downloadedBytes: 0, results: new Map() };
+          previewDownloadsByPlan.set(planId, previewState);
+        }
+        const cached = previewState.results.get(sourceFileId);
+        if (cached) {
+          return { valid: true, preview: cached };
+        }
+
+        operation = beginOperation(operationId);
+        const download = await importClient.downloadFile({
+          descriptor: previewFile.descriptor,
+          manifestUrl: plan.manifestUrl,
+          signal: operation.controller.signal,
+        });
+        if (
+          previewState.downloadedBytes + download.byteLength >
+          importClient.limits.totalBytes
+        ) {
+          throw new ImportPackageClientError(
+            "download_too_large",
+            "The package exceeds the total download limit.",
+          );
+        }
+        const preview = {
+          sourceFileId,
+          bytes: download.bytes,
+          mimeType,
+          kind: PREVIEW_VIDEO_MIME_TYPES.has(mimeType) ? "video" : "image",
+        };
+        previewState.downloadedBytes += download.byteLength;
+        previewState.results.set(sourceFileId, preview);
+        return { valid: true, preview };
+      } catch (error) {
         return toErrorResult(error);
       } finally {
         if (operation) endOperation(operation.id);
@@ -644,7 +738,7 @@ export const createResourcePackageImportService = ({
           repositoryState: getRepositoryState(),
         });
         if (previousCommit) {
-          plans.delete(planId);
+          deletePlan(planId);
           committed = true;
           assetService.finalizeResourceImportFiles?.({ planId });
           recordEvent("execution.recovered", {
@@ -675,7 +769,8 @@ export const createResourcePackageImportService = ({
           completed: 0,
           total: neededFiles.length,
         });
-        let downloadedBytes = 0;
+        let downloadedBytes =
+          previewDownloadsByPlan.get(planId)?.downloadedBytes ?? 0;
         let completedDownloads = 0;
         const downloaded = await processWithConcurrency(
           neededFiles,
@@ -732,6 +827,9 @@ export const createResourcePackageImportService = ({
           );
           const mimeType =
             filePlan.descriptor.mimeType ?? entry.download.contentType;
+          if (plan.assetPackage) {
+            assertAssetPackageFileMimeTypes({ filePlan, mimeType });
+          }
           if (
             importedImage &&
             !SUPPORTED_IMPORT_IMAGE_MIME_TYPES.has(mimeType.toLowerCase())
@@ -746,6 +844,22 @@ export const createResourcePackageImportService = ({
             name: getFileName(filePlan.descriptor, filePlan.sourceId),
             mimeType,
           });
+          if (plan.assetPackage) {
+            for (const validationKind of filePlan.validationKinds ?? []) {
+              try {
+                await assetService.validateResourceImportFile({
+                  file,
+                  validationKind,
+                });
+              } catch (error) {
+                throw new ImportPackageClientError(
+                  "file_type_unsupported",
+                  "A package file has an unsupported type.",
+                  { details: { cause: error.message } },
+                );
+              }
+            }
+          }
           stagingStarted = true;
           const stageResult = await assetService.stageResourceImportFile({
             planId: plan.planId,
@@ -866,7 +980,7 @@ export const createResourcePackageImportService = ({
             repositoryState: getRepositoryState(),
           });
           if (recoveredCommit) {
-            plans.delete(planId);
+            deletePlan(planId);
             committed = true;
             assetService.finalizeResourceImportFiles?.({ planId });
             recordEvent("execution.recovered", {
@@ -883,7 +997,7 @@ export const createResourcePackageImportService = ({
         }
         committed = true;
         assetService.finalizeResourceImportFiles?.({ planId: plan.planId });
-        plans.delete(planId);
+        deletePlan(planId);
         const primary = rewrittenResources.find((resource) => resource.primary);
         emitProgress(onProgress, {
           phase: "complete",

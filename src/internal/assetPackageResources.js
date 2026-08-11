@@ -202,6 +202,29 @@ const RESOURCE_REFERENCE_FIELDS = new Set([
   "videoId",
   "videoIds",
 ]);
+const PROJECT_REFERENCE_FIELDS = new Set([
+  "lineId",
+  "lineIds",
+  "sceneId",
+  "sceneIds",
+  "sectionId",
+  "sectionIds",
+]);
+const ASSET_PACKAGE_FILE_MIME_TYPES_BY_KIND = Object.freeze({
+  audio: new Set([
+    "audio/mpeg",
+    "audio/x-mpeg",
+    "audio/mp3",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/wave",
+    "audio/ogg",
+  ]),
+  font: new Set(["font/ttf", "font/otf", "font/woff2"]),
+  image: new Set(["image/jpeg", "image/png", "image/webp"]),
+  json: new Set(["application/json", "text/json"]),
+  video: new Set(["video/mp4"]),
+});
 const OPAQUE_REFERENCE_VALUE_FIELDS = new Set([
   "enumValues",
   "examples",
@@ -275,8 +298,51 @@ export const getAssetPackageReferenceKind = (fieldName) => {
   if (RESOURCE_REFERENCE_FIELDS.has(fieldName)) {
     return "resource";
   }
+  if (PROJECT_REFERENCE_FIELDS.has(fieldName)) {
+    return "project";
+  }
   return undefined;
 };
+
+export const getAssetPackageFileValidationKind = ({
+  resourceType,
+  fieldName,
+} = {}) => {
+  if (fieldName === "waveformDataFileId") {
+    return resourceType === "sounds" ? "json" : undefined;
+  }
+  if (fieldName === "thumbnailFileId" || fieldName === "previewFileId") {
+    return "image";
+  }
+  if (fieldName !== "fileId") {
+    return undefined;
+  }
+  if (
+    resourceType === "images" ||
+    resourceType === "characters" ||
+    resourceType === "spritesheets"
+  ) {
+    return "image";
+  }
+  if (resourceType === "sounds") {
+    return "audio";
+  }
+  if (resourceType === "videos") {
+    return "video";
+  }
+  if (resourceType === "fonts") {
+    return "font";
+  }
+  return undefined;
+};
+
+export const isAssetPackageFileMimeTypeAllowed = ({
+  validationKind,
+  mimeType,
+} = {}) =>
+  ASSET_PACKAGE_FILE_MIME_TYPES_BY_KIND[validationKind]?.has(
+    mimeType?.trim().toLowerCase(),
+  ) === true;
 
 export const visitAssetPackageReferences = (value, visitor, fieldName) => {
   if (Array.isArray(value)) {

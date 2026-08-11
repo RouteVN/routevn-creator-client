@@ -204,6 +204,54 @@ describe("asset import plan", () => {
     expect(derived.dependencySourceIds).toContain("variables:variableBase");
   });
 
+  it("rejects unresolved required resource references", () => {
+    const manifest = createManifest();
+    delete manifest.repository.fonts.items["font-1"];
+    manifest.repository.fonts.tree[0].children = [];
+
+    expect(() =>
+      createAssetImportPlan({
+        manifest,
+        repositoryState: {},
+        createId: () => "generated",
+      }),
+    ).toThrow("Referenced resource 'font-1' is missing.");
+  });
+
+  it("rejects project-only scene and section references", () => {
+    const manifest = createManifest();
+    manifest.repository.controls.items["control-1"] = {
+      id: "control-1",
+      type: "control",
+      name: "Continue",
+      interaction: {
+        resetStoryAtSection: { sectionId: "section-1" },
+      },
+    };
+    manifest.repository.controls.tree[0].children = [{ id: "control-1" }];
+
+    expect(() =>
+      createAssetImportPlan({
+        manifest,
+        repositoryState: {},
+        createId: () => "generated",
+      }),
+    ).toThrow("Project reference 'sectionId' is not supported");
+  });
+
+  it("rejects file MIME types that do not match their owning resource", () => {
+    const manifest = createManifest();
+    manifest.repository.files.items["file-font"].mimeType = "text/html";
+
+    expect(() =>
+      createAssetImportPlan({
+        manifest,
+        repositoryState: {},
+        createId: () => "generated",
+      }),
+    ).toThrow("unsupported type for font assets");
+  });
+
   it("shows sound waveform previews without importing the preview PNG", () => {
     const manifest = createManifest();
     manifest.repository.files.items["file-sound"] = {
@@ -246,7 +294,7 @@ describe("asset import plan", () => {
       (resource) => resource.sourceId === "sounds:sound-1",
     );
     expect(sound).toMatchObject({
-      previewUrl: "https://example.com/files/file-waveform-preview",
+      previewSourceId: "file-waveform-preview",
       previewKind: "image",
       previewMimeType: "image/png",
     });
@@ -255,6 +303,9 @@ describe("asset import plan", () => {
       expect.arrayContaining(["file-sound", "file-waveform"]),
     );
     expect(plan.files.map((file) => file.sourceId)).not.toContain(
+      "file-waveform-preview",
+    );
+    expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
       "file-waveform-preview",
     );
   });
@@ -296,7 +347,7 @@ describe("asset import plan", () => {
       (resource) => resource.sourceId === "particles:particle-1",
     );
     expect(particle).toMatchObject({
-      previewUrl: "https://example.com/files/file-particle-thumbnail",
+      previewSourceId: "file-particle-thumbnail",
       previewKind: "video",
       previewMimeType: "video/webm",
     });
@@ -306,6 +357,9 @@ describe("asset import plan", () => {
       "file-particle-preview",
     );
     expect(plan.files.map((file) => file.sourceId)).not.toContain(
+      "file-particle-thumbnail",
+    );
+    expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
       "file-particle-thumbnail",
     );
   });

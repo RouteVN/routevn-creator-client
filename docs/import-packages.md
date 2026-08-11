@@ -76,6 +76,11 @@ transform.center -> generated-transform-id
 
 Saved project data must contain real project ids only.
 
+Scene, section, and line ids are project-owned rather than package-local
+resources. Asset packages cannot contain `sceneId`, `sectionId`, `lineId`, or
+their plural forms while story content is not packageable. The creator rejects
+such exports, and the importer rejects manifests containing them.
+
 ## Files
 
 File-backed resources point to `repository.files.items` records. File records
@@ -141,6 +146,9 @@ video. These ids must reference records in
 }
 ```
 
+Preview media is fetched through the same bounded, timed, hash-verifying client
+as imported files. The review UI requests previews only for the resource being
+customized rather than mounting every package preview on the selection page.
 Preview media is displayed in a 16:9 frame during import review. Video previews
 autoplay muted, loop, and play inline. The importer prefers
 `thumbnailMediaFileId` when present. Both preview fields are import-only
@@ -166,7 +174,7 @@ The creator also generates package-only previews for these resources:
 - fonts: a 1920 by 1080 PNG containing the Fonts page glyph set, plus a 640 by
   360 PNG thumbnail of the existing `Aa` preview
 - text styles: a 960 by 270 PNG using the preview text, font, colors, stroke,
-  and shadow shown by the existing text-style preview, plus a 640 by 180 PNG
+  and shadow shown by the existing text-style preview, plus a 427 by 120 PNG
   thumbnail
 
 Depending on the desktop WebView's supported canvas recording codec, generated

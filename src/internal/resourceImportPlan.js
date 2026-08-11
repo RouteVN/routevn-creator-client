@@ -103,7 +103,7 @@ const PREVIEW_IMAGE_MIME_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
-const PREVIEW_VIDEO_MIME_TYPE = "video/mp4";
+const PREVIEW_VIDEO_MIME_TYPES = new Set(["video/mp4", "video/webm"]);
 
 export class ResourceImportPlanError extends Error {
   constructor(code, message, { path, resourceId, details } = {}) {
@@ -667,7 +667,6 @@ export const createResourceImportPlan = ({
   repositoryState,
   repositoryRevision,
   createId,
-  resolveFileUrl,
 } = {}) => {
   validateResourceImportManifest(manifest, { expectedResourceType });
   const itemType = expectedResourceType.replace(/s$/, "");
@@ -754,12 +753,8 @@ export const createResourceImportPlan = ({
     };
     const descriptor = manifest.repository.files?.items?.[item.fileId];
     const previewMimeType = descriptor?.mimeType?.toLowerCase();
-    if (
-      descriptor &&
-      resolveFileUrl &&
-      PREVIEW_IMAGE_MIME_TYPES.has(previewMimeType)
-    ) {
-      imagePlan.previewUrl = resolveFileUrl({ descriptor, manifestUrl });
+    if (descriptor && PREVIEW_IMAGE_MIME_TYPES.has(previewMimeType)) {
+      imagePlan.previewSourceId = item.fileId;
       imagePlan.previewKind = "image";
       imagePlan.previewMimeType = previewMimeType;
     }
@@ -862,31 +857,27 @@ export const createResourceImportPlan = ({
       const previewMimeType = descriptor.mimeType.toLowerCase();
       if (
         !PREVIEW_IMAGE_MIME_TYPES.has(previewMimeType) &&
-        previewMimeType !== PREVIEW_VIDEO_MIME_TYPE
+        !PREVIEW_VIDEO_MIME_TYPES.has(previewMimeType)
       ) {
         fail(
           "preview_type_unsupported",
-          "A package preview must be a JPEG, PNG, WebP, or MP4 file.",
+          "A package preview must be a JPEG, PNG, WebP, MP4, or WebM file.",
           { resourceId: item.id },
         );
       }
-      if (resolveFileUrl) {
-        resourcePlan.previewUrl = resolveFileUrl({
-          descriptor,
-          manifestUrl,
-        });
-        resourcePlan.previewKind =
-          previewMimeType === PREVIEW_VIDEO_MIME_TYPE ? "video" : "image";
-        resourcePlan.previewMimeType = previewMimeType;
-      }
+      resourcePlan.previewSourceId = item.previewMediaFileId;
+      resourcePlan.previewKind = PREVIEW_VIDEO_MIME_TYPES.has(previewMimeType)
+        ? "video"
+        : "image";
+      resourcePlan.previewMimeType = previewMimeType;
     } else {
       const previewImageSourceIds = new Set();
       collectImageReferences(item, previewImageSourceIds);
       const previewImage = [...previewImageSourceIds]
         .map((sourceId) => imagePreviewBySourceId.get(sourceId))
-        .find((image) => image?.previewUrl);
+        .find((image) => image?.previewSourceId);
       if (previewImage) {
-        resourcePlan.previewUrl = previewImage.previewUrl;
+        resourcePlan.previewSourceId = previewImage.previewSourceId;
         resourcePlan.previewKind = "image";
         resourcePlan.previewMimeType = previewImage.previewMimeType;
       }
@@ -909,6 +900,17 @@ export const createResourceImportPlan = ({
       message: `A ${itemType} named '${resource.name}' already exists. A new copy will be created.`,
     }));
 
+  const previewFiles = [
+    ...new Set(
+      [...resources, ...images]
+        .map((resource) => resource.previewSourceId)
+        .filter(Boolean),
+    ),
+  ].map((sourceId) => ({
+    sourceId,
+    descriptor: structuredClone(manifest.repository.files.items[sourceId]),
+  }));
+
   return deepFreeze({
     planId,
     schema: manifest.schema,
@@ -923,6 +925,7 @@ export const createResourceImportPlan = ({
     images,
     tags,
     files,
+    previewFiles,
     warnings,
     unsupportedResourceTypes: Object.keys(manifest.repository).filter(
       (key) => !["files", "images", "tags", expectedResourceType].includes(key),

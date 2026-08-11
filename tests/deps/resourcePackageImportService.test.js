@@ -180,6 +180,7 @@ const createService = ({
     })),
   };
   const assetService = {
+    validateResourceImportFile: vi.fn(async () => {}),
     stageResourceImportFile: vi.fn(
       async ({ file, fileId, thumbnailFileId }) => {
         if (stageResult) return stageResult({ file, fileId, thumbnailFileId });
@@ -356,6 +357,113 @@ describe("resourcePackageImportService", () => {
     ]);
   });
 
+  it("downloads package previews through the bounded import client", async () => {
+    const { service, importClient } = createService();
+    importClient.fetchManifest.mockResolvedValue({
+      manifest: assetManifest(),
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
+    });
+    importClient.downloadFile.mockImplementation(async ({ descriptor }) => ({
+      bytes: new Uint8Array([1, 2, 3]),
+      byteLength: 3,
+      contentType: descriptor.mimeType,
+    }));
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+      expectedResourceType: "animations",
+    });
+    const video = planned.plan.resources.find(
+      (resource) => resource.resourceType === "videos",
+    );
+
+    const result = await service.loadResourceImportPreview({
+      planId: planned.plan.planId,
+      sourceFileId: video.previewSourceId,
+      operationId: "preview-operation",
+    });
+
+    expect(result).toMatchObject({
+      valid: true,
+      preview: {
+        sourceFileId: "file.video-thumbnail",
+        mimeType: "image/webp",
+        kind: "image",
+        bytes: expect.any(Uint8Array),
+      },
+    });
+    expect(importClient.downloadFile).toHaveBeenCalledWith({
+      descriptor:
+        assetManifest().repository.files.items["file.video-thumbnail"],
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
+      signal: expect.any(AbortSignal),
+    });
+  });
+
+  it("enforces the total download limit while loading previews", async () => {
+    const { service, importClient } = createService();
+    importClient.fetchManifest.mockResolvedValue({
+      manifest: assetManifest(),
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
+    });
+    importClient.downloadFile.mockResolvedValue({
+      bytes: new Uint8Array([1, 2, 3]),
+      byteLength: importClient.limits.totalBytes + 1,
+      contentType: "image/webp",
+    });
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+      expectedResourceType: "animations",
+    });
+    const video = planned.plan.resources.find(
+      (resource) => resource.resourceType === "videos",
+    );
+
+    const result = await service.loadResourceImportPreview({
+      planId: planned.plan.planId,
+      sourceFileId: video.previewSourceId,
+    });
+
+    expect(result).toMatchObject({
+      valid: false,
+      error: { code: "download_too_large" },
+    });
+  });
+
+  it("rejects corrupt generalized media before staging", async () => {
+    const { service, importClient, assetService, commandApi } = createService();
+    importClient.fetchManifest.mockResolvedValue({
+      manifest: assetManifest(),
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
+    });
+    importClient.downloadFile.mockImplementation(async ({ descriptor }) => ({
+      bytes: new Uint8Array([1, 2, 3]),
+      byteLength: 3,
+      contentType: descriptor.mimeType,
+    }));
+    assetService.validateResourceImportFile.mockRejectedValue(
+      new Error("decode failed"),
+    );
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+      expectedResourceType: "animations",
+    });
+    const image = planned.plan.resources.find(
+      (resource) => resource.resourceType === "images",
+    );
+
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+      selectedResourceIds: [image.sourceId],
+    });
+
+    expect(result).toMatchObject({
+      valid: false,
+      error: { code: "file_type_unsupported" },
+    });
+    expect(assetService.stageResourceImportFile).not.toHaveBeenCalled();
+    expect(commandApi.commitAssetImportPackage).not.toHaveBeenCalled();
+  });
+
   it("uses an existing image substitution without downloading package media", async () => {
     const { service, importClient, assetService, commandApi } = createService();
     const planned = await service.createResourceImportPlan({
@@ -363,9 +471,7 @@ describe("resourcePackageImportService", () => {
       expectedResourceType: "transforms",
       operationId: "plan-operation",
     });
-    expect(planned.plan.images[0].previewUrl).toBe(
-      "http://localhost:4179/files/pixel.png",
-    );
+    expect(planned.plan.images[0].previewSourceId).toBe("file.pixel");
     const result = await service.executeResourceImportPlan({
       planId: planned.plan.planId,
       operationId: "execute-operation",

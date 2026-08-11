@@ -36,9 +36,8 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("h-bc=${resource.selectionHoverBorderColor}");
     expect(viewSource).not.toContain("selectionBackgroundColor");
     expect(viewSource).not.toContain("rtgl-checkbox");
-    expect(viewSource).toContain(
-      'w=160 h=90 overflow=hidden br=md bgc=mu style="flex: 0 0 160px; box-sizing: border-box;"',
-    );
+    expect(viewSource).toContain("rtgl-view w=160 h=90 av=c ah=c br=md bgc=mu");
+    expect(viewSource).not.toContain("resource.previewUrl");
     expect(viewSource).not.toContain(
       'w=160 h=90 overflow=hidden bw=xs bc=bo br=md bgc=mu style="flex: 0 0 160px; box-sizing: border-box;"',
     );

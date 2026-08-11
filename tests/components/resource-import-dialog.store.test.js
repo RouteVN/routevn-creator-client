@@ -40,6 +40,7 @@ const createRepositoryState = () => ({
 });
 
 const createMultiResourcePlan = () => ({
+  planId: "plan-1",
   package: {
     name: "Pack",
     version: "1.0.0",
@@ -50,14 +51,14 @@ const createMultiResourcePlan = () => ({
       sourceId: "source.one",
       name: "Transform One",
       description: "First transform",
-      previewUrl: "https://example.com/transform-one.png",
+      previewSourceId: "file.transform-one",
       primary: true,
     },
     {
       sourceId: "source.two",
       name: "Transform Two",
       description: "Second transform",
-      previewUrl: "https://example.com/transform-two.png",
+      previewSourceId: "file.transform-two",
       previewKind: "video",
     },
   ],
@@ -65,13 +66,13 @@ const createMultiResourcePlan = () => ({
     {
       sourceId: "image.one",
       name: "Package Image One",
-      previewUrl: "https://example.com/package-image-one.png",
+      previewSourceId: "file.image-one",
       usedByResourceIds: ["source.one"],
     },
     {
       sourceId: "image.two",
       name: "Package Image Two",
-      previewUrl: "https://example.com/package-image-two.png",
+      previewSourceId: "file.image-two",
       usedByResourceIds: ["source.two"],
     },
   ],
@@ -121,7 +122,7 @@ describe("resource-import-dialog.store", () => {
       expect.arrayContaining([
         expect.objectContaining({
           selectionSlot: "resource-selection-0",
-          previewUrl: "https://example.com/transform-one.png",
+          previewSourceId: "file.transform-one",
           selected: true,
           selectionLabel: "Import Transform One",
           selectionBorderColor: "pr",
@@ -131,7 +132,7 @@ describe("resource-import-dialog.store", () => {
         }),
         expect.objectContaining({
           selectionSlot: "resource-selection-1",
-          previewUrl: "https://example.com/transform-two.png",
+          previewSourceId: "file.transform-two",
           previewKind: "video",
         }),
       ]),
@@ -206,7 +207,7 @@ describe("resource-import-dialog.store", () => {
     });
     expect(firstView.currentResource).toMatchObject({
       sourceId: "source.one",
-      previewUrl: "https://example.com/transform-one.png",
+      previewSourceId: "file.transform-one",
     });
     expect(firstView.currentImages).toEqual([
       expect.objectContaining({
@@ -476,12 +477,13 @@ describe("resource-import-dialog.store", () => {
       { state },
       {
         plan: {
+          planId: "plan-1",
           package: { name: "Starter Pack", version: "1.0.0" },
           resources: [
             {
               sourceId: "animation.source",
               name: "Animation",
-              previewUrl: "https://example.com/animation.png",
+              previewSourceId: "file.animation",
             },
           ],
           images: [],
@@ -494,9 +496,7 @@ describe("resource-import-dialog.store", () => {
     const view = selectViewData({ state, i18n: {} });
     expect(view.step).toBe("item");
     expect(view.isSelectionStep).toBe(false);
-    expect(view.currentResource.previewUrl).toBe(
-      "https://example.com/animation.png",
-    );
+    expect(view.currentResource.previewSourceId).toBe("file.animation");
     expect(view.form.fields).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ slot: "package-summary", type: "slot" }),

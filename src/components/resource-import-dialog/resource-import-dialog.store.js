@@ -710,6 +710,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
     assetStoreLinkLabel: copy.assetStoreLinkLabel ?? "Browse the Asset Store",
     assetStoreUrl: ROUTEVN_ASSET_STORE_URL,
     packageName: plan?.package?.name,
+    planId: plan?.planId,
     packageVersion: plan?.package?.version,
     packageDescription: plan?.package?.description,
     packagePublisher: plan?.package?.publisher,

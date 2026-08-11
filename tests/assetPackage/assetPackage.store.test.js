@@ -499,6 +499,41 @@ describe("asset package store", () => {
     );
   });
 
+  it("rejects transitive layouts with project-only references", () => {
+    const state = createInitialState();
+    const resourceDataByType = createResourceDataByType();
+    resourceDataByType.layouts = {
+      items: {
+        "layout-folder": { type: "folder", name: "Layouts" },
+        "layout-1": {
+          type: "layout",
+          name: "Dialogue",
+          interaction: {
+            resetStoryAtSection: { sectionId: "section-1" },
+          },
+        },
+      },
+      tree: [{ id: "layout-folder", children: [{ id: "layout-1" }] }],
+    };
+    resourceDataByType.controls = {
+      items: {
+        "control-folder": { type: "folder", name: "Controls" },
+        "control-1": {
+          type: "control",
+          name: "Continue",
+          layoutId: "layout-1",
+        },
+      },
+      tree: [{ id: "control-folder", children: [{ id: "control-1" }] }],
+    };
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.controls = ["control-folder"];
+
+    expect(() => selectAssetPackageData({ state })).toThrow(
+      "Resource 'layout-1' contains unsupported project reference 'sectionId'.",
+    );
+  });
+
   it("creates a manifest accepted by the multi-resource asset importer", () => {
     const state = createInitialState();
     setFilesData({ state }, { filesData: FILES_DATA });

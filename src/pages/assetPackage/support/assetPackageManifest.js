@@ -189,25 +189,33 @@ const includeTransitiveDependencies = ({ includedIdsByType, sourceById }) => {
   }
 
   for (let index = 0; index < pending.length; index += 1) {
-    const { item } = pending[index];
-    visitAssetPackageReferences(item, ({ kind, required, value }) => {
-      if (kind !== "resource") {
-        return;
-      }
-      const dependency = sourceById.get(value);
-      if (!dependency) {
-        if (required) {
-          throw new Error(`Referenced resource '${value}' is missing.`);
+    const { item, itemId } = pending[index];
+    visitAssetPackageReferences(
+      item,
+      ({ fieldName, kind, required, value }) => {
+        if (kind === "project") {
+          throw new Error(
+            `Resource '${itemId}' contains unsupported project reference '${fieldName}'.`,
+          );
         }
-        return;
-      }
-      const includedIds = includedIdsByType[dependency.resourceType];
-      if (includedIds.has(dependency.itemId)) {
-        return;
-      }
-      includedIds.add(dependency.itemId);
-      pending.push(dependency);
-    });
+        if (kind !== "resource") {
+          return;
+        }
+        const dependency = sourceById.get(value);
+        if (!dependency) {
+          if (required) {
+            throw new Error(`Referenced resource '${value}' is missing.`);
+          }
+          return;
+        }
+        const includedIds = includedIdsByType[dependency.resourceType];
+        if (includedIds.has(dependency.itemId)) {
+          return;
+        }
+        includedIds.add(dependency.itemId);
+        pending.push(dependency);
+      },
+    );
   }
 };
 

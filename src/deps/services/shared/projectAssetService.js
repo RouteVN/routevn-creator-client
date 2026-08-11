@@ -376,6 +376,47 @@ export const createProjectAssetService = ({
   };
 
   return {
+    async validateResourceImportFile({ file, validationKind } = {}) {
+      if (validationKind === "image") {
+        const dimensions = await getImageDimensions(file);
+        if (!dimensions) {
+          throw new Error("Unable to decode image file.");
+        }
+        return;
+      }
+      if (validationKind === "audio") {
+        await extractWaveformDataFromArrayBuffer(await file.arrayBuffer());
+        return;
+      }
+      if (validationKind === "video") {
+        const metadata = await getVideoDimensions(file);
+        if (!metadata) {
+          throw new Error("Unable to decode video file.");
+        }
+        return;
+      }
+      if (validationKind === "font") {
+        const bytes = await file.arrayBuffer();
+        const fontType = getFontFileType({ file, arrayBuffer: bytes });
+        if (!fontType) {
+          throw new Error("Unable to identify font file.");
+        }
+        const fontName = file.name.replace(/\.(ttf|otf|woff2)$/i, "");
+        const fontUrl = URL.createObjectURL(file);
+        try {
+          await loadFont(fontName, fontUrl);
+        } finally {
+          URL.revokeObjectURL(fontUrl);
+        }
+        return;
+      }
+      if (validationKind === "json") {
+        JSON.parse(new TextDecoder().decode(await file.arrayBuffer()));
+        return;
+      }
+      throw new Error(`Unsupported import file kind '${validationKind}'.`);
+    },
+
     async storeFile({ file, bytes, targetFileId } = {}) {
       const stored = await storeFileWithRecord({
         file,

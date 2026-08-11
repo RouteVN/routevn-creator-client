@@ -61,12 +61,10 @@ describe("resourceImportPlan", () => {
       "transform.secondary",
     ]);
     expect(plan.images).toHaveLength(1);
-    expect(plan.images[0].previewUrl).toBe(
-      "http://localhost:4179/files/pixel.png",
-    );
-    expect(plan.resources.map((resource) => resource.previewUrl)).toEqual([
-      "http://localhost:4179/files/pixel.png",
-      "http://localhost:4179/files/pixel.png",
+    expect(plan.images[0].previewSourceId).toBe("file.pixel");
+    expect(plan.resources.map((resource) => resource.previewSourceId)).toEqual([
+      "file.pixel",
+      "file.pixel",
     ]);
     expect(plan.images[0].usedByResourceIds).toEqual([
       "transform.primary",
@@ -130,7 +128,7 @@ describe("resourceImportPlan", () => {
     expect(plan.resources).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          previewUrl: "http://localhost:4179/files/preview.mp4",
+          previewSourceId: "file.animation-preview",
           previewKind: "video",
           previewMimeType: "video/mp4",
         }),
@@ -138,6 +136,9 @@ describe("resourceImportPlan", () => {
     );
     expect(plan.resources[0].data.previewMediaFileId).toBeUndefined();
     expect(plan.files.map((file) => file.sourceId)).toEqual(["file.mask"]);
+    expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
+      "file.animation-preview",
+    );
     expect(plan.knownDownloadBytes).toBe(68);
   });
 
@@ -146,8 +147,22 @@ describe("resourceImportPlan", () => {
     manifest.repository.files.items["file.animation-preview"].mimeType =
       "audio/mpeg";
     expect(() => createPlan(manifest, "animations")).toThrow(
-      "A package preview must be a JPEG, PNG, WebP, or MP4 file.",
+      "A package preview must be a JPEG, PNG, WebP, MP4, or WebM file.",
     );
+  });
+
+  it("accepts WebM preview media", () => {
+    const manifest = fixture("animations.valid.json");
+    manifest.repository.files.items["file.animation-preview"].mimeType =
+      "video/webm";
+
+    const plan = createPlan(manifest, "animations");
+
+    expect(plan.resources[0]).toMatchObject({
+      previewSourceId: "file.animation-preview",
+      previewKind: "video",
+      previewMimeType: "video/webm",
+    });
   });
 
   it("rejects unknown resource fields before command creation", () => {
