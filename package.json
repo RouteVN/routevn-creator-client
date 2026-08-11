@@ -23,7 +23,7 @@
     "@rettangoli/fe": "1.4.1",
     "@rettangoli/ui": "1.19.0",
     "@rettangoli/vt": "1.1.0",
-    "@routevn/creator-model": "1.12.2",
+    "@routevn/creator-model": "1.13.0",
     "@tauri-apps/api": "2.11.0",
     "@tauri-apps/plugin-dialog": "2.4.2",
     "@tauri-apps/plugin-fs": "2.5.1",
@@ -126,5 +126,8 @@
     "src/**/*.{js}": [
       "oxlint && bun prettier --write"
     ]
+  },
+  "patchedDependencies": {
+    "@routevn/creator-model@1.13.0": "patches/@routevn%2fcreator-model@1.13.0.patch"
   }
 }

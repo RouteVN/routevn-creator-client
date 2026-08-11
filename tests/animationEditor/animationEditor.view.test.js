@@ -113,9 +113,14 @@ describe("animationEditor view", () => {
       'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"',
     );
     expect(view).toContain(
-      "rtgl-button#selectedPropertyAddButton sq v=gh pre=plus aria-haspopup=menu",
+      "rtgl-button#selectedKeyframeAddButton sq v=gh pre=plus aria-haspopup=menu",
     );
-    expect(view).toContain("handler: handleSelectedPropertyAddClick");
+    expect(view).toContain(
+      'rtgl-button#selectedKeyframeDeleteButton sq v=gh pre=trash aria-label="${deleteKeyframeButtonLabel}"',
+    );
+    expect(view).toContain("handler: handleSelectedKeyframeAddClick");
+    expect(view).toContain("handler: handleSelectedKeyframeDeleteClick");
+    expect(view).not.toContain("selectedPropertyAddButton");
     expect(view).toContain("handler: handleSelectedPropertyDeleteClick");
     expect(view).toContain("rtgl-dialog#propertyRemoveConfirmDialog");
     expect(view).toContain("?open=${propertyRemoveConfirmDialogOpen}");
@@ -205,32 +210,40 @@ describe("animationEditor view", () => {
     expect(view).toContain("handler: handleSelectedMaskSoftnessClick");
     expect(view).toContain("rtgl-view#selectedMaskInitialValue");
     expect(view).toContain("handler: handleSelectedMaskInitialValueClick");
-    expect(view).toContain("rtgl-view slot=property-start-value d=v w=f g=xs");
+    expect(view).toContain("rtgl-view slot=keyframe-start-value d=v w=f g=xs");
     expect(view).toContain(
-      "rtgl-text w=1fg c=mu-fg: ${selectedPropertyEditor.startValueLabel}",
+      "rtgl-text w=1fg c=mu-fg: ${selectedKeyframeEditor.startValueLabel}",
     );
     expect(view).toContain(
-      'rtgl-button#selectedPropertyRemoveStartValueButton sq v=gh pre=x aria-label="${removeStartValueButtonLabel}"',
+      'rtgl-button#selectedKeyframeRemoveStartValueButton sq v=gh pre=x aria-label="${removeStartValueButtonLabel}"',
+    );
+    expect(view).toContain(
+      "rtgl-slider-input#selectedKeyframeStartValue key=${selectedKeyframeDetailId}",
+    );
+    expect(view).toContain(
+      "rtgl-view slot=property-initial-value d=v w=f g=xs",
     );
     expect(view).toContain(
       "rtgl-slider-input#selectedPropertyInitialValue key=${selectedPropertyDetailId}",
     );
     expect(view).toContain("data-popover-input-field=true w=f h=32");
-    expect(view).not.toContain("rtgl-button#selectedPropertyUseDefault");
+    expect(view).toContain("rtgl-button#selectedPropertyUseDefault");
     expect(view).toContain(
       "rvn-value-popover-input#selectedPropertyAutoDuration",
     );
     expect(view).toContain("rtgl-select#selectedPropertyAutoEasing");
     expect(view).toContain("handler: handleSelectedPropertyAutoDurationChange");
     expect(view).toContain("handler: handleSelectedPropertyAutoEasingChange");
-    expect(view.match(/data-popover-input-field=true/g)).toHaveLength(5);
-    expect(view.match(/rvn-value-popover-input#/g)).toHaveLength(5);
+    expect(view.match(/data-popover-input-field=true/g)).toHaveLength(6);
+    expect(view.match(/rvn-value-popover-input#/g)).toHaveLength(6);
     expect(view).toContain("handler: handleSelectedPropertyInitialValueChange");
+    expect(view).toContain("handler: handleSelectedPropertyUseDefaultClick");
     expect(view).toContain(
-      "handler: handleSelectedPropertyRemoveStartValueClick",
+      "handler: handleSelectedKeyframeRemoveStartValueClick",
     );
-    expect(view).toContain("handler: handleSelectedPropertyAddMenuItemClick");
-    expect(view).toContain("rtgl-dropdown-menu#selectedPropertyAddMenu");
+    expect(view).toContain("handler: handleSelectedKeyframeStartValueChange");
+    expect(view).toContain("handler: handleSelectedKeyframeAddMenuItemClick");
+    expect(view).toContain("rtgl-dropdown-menu#selectedKeyframeAddMenu");
     expect(view).not.toContain("rtgl-view#selectedMaskProgressDuration");
     expect(view).not.toContain(
       "handler: handleSelectedMaskProgressDurationClick",

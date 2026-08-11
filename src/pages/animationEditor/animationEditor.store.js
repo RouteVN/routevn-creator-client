@@ -2021,6 +2021,59 @@ export const setSelectedKeyframeValue = ({ state }, { value } = {}) => {
   }
 };
 
+export const setSelectedKeyframeStartValue = (
+  { state },
+  { startValue } = {},
+) => {
+  const keyframe = getMutableSelectedKeyframe(state);
+  if (!keyframe) {
+    return;
+  }
+
+  if (startValue === undefined || startValue === "") {
+    delete keyframe.startValue;
+    return;
+  }
+
+  const nextStartValue = Number(startValue);
+  if (Number.isFinite(nextStartValue)) {
+    keyframe.startValue = nextStartValue;
+  }
+};
+
+export const selectDefaultSelectedKeyframeStartValue = ({ state }) => {
+  const selectedKeyframe = state.selectedKeyframe;
+  if (!selectedKeyframe) {
+    return 0;
+  }
+
+  const { side, property, index } = selectedKeyframe;
+  const propertyConfig = getSectionProperties(state, side)[property];
+  const selectedFrame = propertyConfig?.keyframes?.[index];
+  if (!selectedFrame) {
+    return 0;
+  }
+
+  if (selectedFrame.relative) {
+    return 0;
+  }
+
+  let currentValue = Number(propertyConfig.initialValue);
+  if (!Number.isFinite(currentValue)) {
+    currentValue = getDefaultInitialValues(state)[property] ?? 0;
+  }
+
+  for (const keyframe of propertyConfig.keyframes.slice(0, index)) {
+    const value = Number(keyframe.value);
+    if (!Number.isFinite(value)) {
+      continue;
+    }
+    currentValue = keyframe.relative ? currentValue + value : value;
+  }
+
+  return currentValue;
+};
+
 export const selectSelectedKeyframeDuration = ({ state }) => {
   return getMutableSelectedKeyframe(state)?.duration;
 };
@@ -2117,6 +2170,12 @@ const createTweenAnimationsForTarget = ({
               easing: keyframe.easing ?? "linear",
               relative: keyframe.relative ?? false,
             };
+            if (
+              keyframe.startValue !== undefined &&
+              keyframe.startValue !== ""
+            ) {
+              nextKeyframe.startValue = parseFloat(keyframe.startValue);
+            }
             const delay = Math.max(0, Number(keyframe.delay) || 0);
             if (delay > 0) {
               nextKeyframe.delay = delay;
@@ -2181,6 +2240,9 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
           easing: keyframe.easing ?? "linear",
           relative: keyframe.relative ?? false,
         };
+        if (keyframe.startValue !== undefined && keyframe.startValue !== "") {
+          nextKeyframe.startValue = parseFloat(keyframe.startValue);
+        }
         const delay = Math.max(0, Number(keyframe.delay) || 0);
         if (delay > 0) {
           nextKeyframe.delay = delay;
@@ -2404,6 +2466,9 @@ export const addKeyframe = ({ state }, keyframe = {}) => {
     value: parseFloat(keyframe.value),
     relative: keyframe.relative,
   };
+  if (keyframe.startValue !== undefined && keyframe.startValue !== "") {
+    nextKeyframe.startValue = parseFloat(keyframe.startValue);
+  }
   if (keyframe.delay !== undefined) {
     nextKeyframe.delay = Math.max(0, parseInt(keyframe.delay, 10) || 0);
   }
@@ -2544,6 +2609,12 @@ export const updateKeyframe = (
     value: parseFloat(keyframe.value),
     relative: keyframe.relative,
   };
+  const currentStartValue = keyframes[index]?.startValue;
+  if (keyframe.startValue === undefined && currentStartValue !== undefined) {
+    nextKeyframe.startValue = currentStartValue;
+  } else if (keyframe.startValue !== undefined) {
+    nextKeyframe.startValue = parseFloat(keyframe.startValue);
+  }
   const currentDelay = Math.max(0, Number(keyframes[index]?.delay) || 0);
   if (keyframe.delay === undefined && currentDelay > 0) {
     nextKeyframe.delay = currentDelay;
@@ -3410,6 +3481,54 @@ const buildSelectedKeyframePanelData = (
           : (copy.updateType ?? "Update");
   const easing = keyframe.easing ?? "linear";
   const valueSlider = propertyFieldConfig[property]?.slider;
+  const hasStartValue =
+    keyframe.startValue !== undefined && keyframe.startValue !== "";
+  const fields = [
+    {
+      type: "text",
+      label: copy.timelineLabel ?? "Timeline",
+      value: timelineLabel,
+    },
+    {
+      type: "text",
+      label: copy.propertyLabel ?? "Property",
+      value: propertyFieldConfig[property]?.label ?? property,
+    },
+    {
+      type: "slot",
+      label: copy.delayMsLabel ?? "Delay (ms)",
+      slot: "keyframe-delay",
+    },
+    {
+      type: "slot",
+      label: copy.durationMsLabel ?? "Duration (ms)",
+      slot: "keyframe-duration",
+    },
+    {
+      type: "slot",
+      label: copy.easingLabel ?? "Easing",
+      slot: "keyframe-easing",
+    },
+  ];
+  if (hasStartValue) {
+    fields.push({
+      type: "slot",
+      slot: "keyframe-start-value",
+    });
+  }
+  fields.push(
+    {
+      type: "slot",
+      label: copy.valueLabel ?? "Value",
+      slot: "keyframe-value",
+    },
+    {
+      type: "slot",
+      label: copy.valueTypeLabel ?? "Value type",
+      slot: "keyframe-value-type",
+    },
+  );
+
   return {
     id: `${side}:${property}:${index}`,
     editor: {
@@ -3424,49 +3543,16 @@ const buildSelectedKeyframePanelData = (
         { label: copy.absoluteValueType ?? "Absolute", value: false },
         { label: copy.relativeValueType ?? "Relative", value: true },
       ],
+      hasStartValue,
+      startValue: keyframe.startValue,
+      startValueLabel: copy.startValueLabel ?? "Start value",
       value: keyframe.value,
       valueLabel: copy.valueLabel ?? "Value",
       valueStep: propertyFieldConfig[property]?.input?.step ?? "any",
       valueSlider,
       valueUsesPopover: Boolean(propertyFieldConfig[property]?.input),
     },
-    fields: [
-      {
-        type: "text",
-        label: copy.timelineLabel ?? "Timeline",
-        value: timelineLabel,
-      },
-      {
-        type: "text",
-        label: copy.propertyLabel ?? "Property",
-        value: propertyFieldConfig[property]?.label ?? property,
-      },
-      {
-        type: "slot",
-        label: copy.delayMsLabel ?? "Delay (ms)",
-        slot: "keyframe-delay",
-      },
-      {
-        type: "slot",
-        label: copy.durationMsLabel ?? "Duration (ms)",
-        slot: "keyframe-duration",
-      },
-      {
-        type: "slot",
-        label: copy.easingLabel ?? "Easing",
-        slot: "keyframe-easing",
-      },
-      {
-        type: "slot",
-        label: copy.valueLabel ?? "Value",
-        slot: "keyframe-value",
-      },
-      {
-        type: "slot",
-        label: copy.valueTypeLabel ?? "Value type",
-        slot: "keyframe-value-type",
-      },
-    ],
+    fields,
   };
 };
 
@@ -3528,10 +3614,11 @@ const buildSelectedPropertyPanelData = (
         slot: "property-auto-easing",
       },
     );
-  } else if (hasInitialValue) {
+  } else {
     fields.push({
       type: "slot",
-      slot: "property-start-value",
+      label: copy.initialValueLabel ?? "Initial value",
+      slot: "property-initial-value",
     });
   }
 
@@ -3548,7 +3635,7 @@ const buildSelectedPropertyPanelData = (
       : {
           hasInitialValue,
           initialValue,
-          startValueLabel: copy.startValueLabel ?? "Start value",
+          initialValueLabel: copy.initialValueLabel ?? "Initial value",
           initialValueSlider,
           initialValueStep: propertyFieldConfig[property]?.input?.step ?? "any",
           initialValueUsesPopover: Boolean(
@@ -3800,10 +3887,8 @@ export const selectViewData = ({ state, i18n }) => {
     propertyFieldConfig,
     copy,
   );
-  const selectedPropertyAddMenuItems =
-    selectedPropertyPanel?.editor &&
-    !selectedPropertyPanel.editor.auto &&
-    !selectedPropertyPanel.editor.hasInitialValue
+  const selectedKeyframeAddMenuItems =
+    selectedKeyframePanel?.editor && !selectedKeyframePanel.editor.hasStartValue
       ? [
           {
             label: copy.startValueLabel ?? "Start value",
@@ -3812,6 +3897,16 @@ export const selectViewData = ({ state, i18n }) => {
           },
         ]
       : [];
+  const selectedKeyframeCanDelete = (() => {
+    if (!state.selectedKeyframe) {
+      return false;
+    }
+
+    const { side, property } = state.selectedKeyframe;
+    const keyframes =
+      getSectionProperties(state, side)[property]?.keyframes ?? [];
+    return !isMaskSide(side) || keyframes.length > 1;
+  })();
   const imageFolderItems = toFlatItems(state.imagesData).filter(
     (item) => item.type === "folder",
   );
@@ -4025,10 +4120,11 @@ export const selectViewData = ({ state, i18n }) => {
     selectedKeyframeDetailId: selectedKeyframePanel?.id,
     selectedKeyframeDetailFields: selectedKeyframePanel?.fields ?? [],
     selectedKeyframeEditor: selectedKeyframePanel?.editor,
+    selectedKeyframeAddMenuItems,
+    selectedKeyframeCanDelete,
     selectedPropertyDetailId: selectedPropertyPanel?.id,
     selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
     selectedPropertyEditor: selectedPropertyPanel?.editor,
-    selectedPropertyAddMenuItems,
     selectedMask,
     maskTimelineRow,
     maskTimelineRows,
@@ -4097,8 +4193,8 @@ export const selectViewData = ({ state, i18n }) => {
         state.popover.mode,
       ),
       addPropertySideMenuIsOpen: state.popover.mode === "addPropertySideMenu",
-      selectedPropertyAddMenuIsOpen:
-        state.popover.mode === "selectedPropertyAddMenu",
+      selectedKeyframeAddMenuIsOpen:
+        state.popover.mode === "selectedKeyframeAddMenu",
     },
     addPropertyFormDefaultValues,
     imageSelectorDialog: state.imageSelectorDialog,
@@ -4157,6 +4253,7 @@ export const selectViewData = ({ state, i18n }) => {
     doneButton: copy.doneButton ?? "Done",
     deletePropertyButtonLabel:
       copy.deletePropertyButtonLabel ?? "Delete property",
+    deleteKeyframeButtonLabel: copy.deleteKeyframeMenuItem ?? "Delete keyframe",
     propertyRemoveConfirmMessage:
       copy.propertyRemoveConfirmMessage ??
       "Delete this animation property? This cannot be undone.",
@@ -4168,6 +4265,8 @@ export const selectViewData = ({ state, i18n }) => {
     initialValueLabel: copy.initialValueLabel ?? "Initial value",
     removeStartValueButtonLabel:
       copy.removeStartValueButtonLabel ?? "Remove start value",
+    useDefaultValueButtonLabel:
+      copy.useDefaultValueSource ?? "Use Default Value",
     inTimelineLabel: copy.inTimelineLabel ?? "Incoming",
     invertLabel: copy.invertLabel ?? "Invert",
     detailsPanelTitle: selectedMask

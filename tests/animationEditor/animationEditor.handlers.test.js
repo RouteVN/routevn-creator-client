@@ -43,14 +43,17 @@ import {
   handleSelectedKeyframeDurationChange,
   handleSelectedKeyframeEasingChange,
   handleSelectedKeyframeEditClick,
+  handleSelectedKeyframeAddClick,
+  handleSelectedKeyframeAddMenuItemClick,
+  handleSelectedKeyframeDeleteClick,
   handleSelectedKeyframeRelativeChange,
+  handleSelectedKeyframeRemoveStartValueClick,
+  handleSelectedKeyframeStartValueChange,
   handleSelectedKeyframeValueChange,
   handleSelectedPropertyInitialValueChange,
-  handleSelectedPropertyAddClick,
-  handleSelectedPropertyAddMenuItemClick,
   handleSelectedPropertyAutoDurationChange,
   handleSelectedPropertyAutoEasingChange,
-  handleSelectedPropertyRemoveStartValueClick,
+  handleSelectedPropertyUseDefaultClick,
   handleSelectedMaskNumberConfirmClick,
   handleSelectedMaskNumberFieldKeyDown,
   handleSelectedMaskNumberInputChange,
@@ -162,6 +165,7 @@ describe("animationEditor.handlers", () => {
             {
               duration: 250,
               easing: "linear",
+              startValue: 1,
               value: 0,
             },
           ],
@@ -210,6 +214,7 @@ describe("animationEditor.handlers", () => {
             keyframes: [
               {
                 duration: 250,
+                startValue: 1,
                 value: 0,
                 easing: "linear",
                 relative: false,
@@ -1305,6 +1310,7 @@ describe("animationEditor.handlers", () => {
       setSelectedKeyframeDuration: vi.fn(),
       setSelectedKeyframeEasing: vi.fn(),
       setSelectedKeyframeRelative: vi.fn(),
+      setSelectedKeyframeStartValue: vi.fn(),
       setSelectedKeyframeValue: vi.fn(),
       stopPreviewPlayback: vi.fn(),
       ...createIdleAutosaveMocks(),
@@ -1327,6 +1333,9 @@ describe("animationEditor.handlers", () => {
     handleSelectedKeyframeRelativeChange(deps, {
       _event: { detail: { value: true } },
     });
+    handleSelectedKeyframeStartValueChange(deps, {
+      _event: { detail: { value: 42 } },
+    });
 
     expect(store.setSelectedKeyframeDelay).toHaveBeenCalledWith({
       delay: 125,
@@ -1343,9 +1352,12 @@ describe("animationEditor.handlers", () => {
     expect(store.setSelectedKeyframeRelative).toHaveBeenCalledWith({
       relative: true,
     });
-    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledTimes(5);
-    expect(store.queueAutosave).toHaveBeenCalledTimes(5);
-    expect(render).toHaveBeenCalledTimes(5);
+    expect(store.setSelectedKeyframeStartValue).toHaveBeenCalledWith({
+      startValue: 42,
+    });
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledTimes(6);
+    expect(store.queueAutosave).toHaveBeenCalledTimes(6);
+    expect(render).toHaveBeenCalledTimes(6);
   });
 
   it("commits the selected property's initial value from the right panel", () => {
@@ -1511,7 +1523,7 @@ describe("animationEditor.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("removes the selected property's start value", () => {
+  it("restores the selected property's default initial value", () => {
     const store = {
       bumpPreviewRenderVersion: vi.fn(),
       queueAutosave: vi.fn(),
@@ -1526,7 +1538,7 @@ describe("animationEditor.handlers", () => {
     };
     const render = vi.fn();
 
-    handleSelectedPropertyRemoveStartValueClick({ render, store });
+    handleSelectedPropertyUseDefaultClick({ render, store });
 
     expect(store.updateInitialValue).toHaveBeenCalledWith({
       side: "prev",
@@ -1538,15 +1550,15 @@ describe("animationEditor.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("opens the selected-property add menu from the plus button", () => {
-    const selectedProperty = { side: "update", property: "x" };
+  it("opens the selected-keyframe add menu from the plus button", () => {
+    const selectedKeyframe = { side: "update", property: "x", index: 1 };
     const store = {
-      selectSelectedProperty: vi.fn(() => selectedProperty),
+      selectSelectedKeyframe: vi.fn(() => selectedKeyframe),
       setPopover: vi.fn(),
     };
     const render = vi.fn();
 
-    handleSelectedPropertyAddClick(
+    handleSelectedKeyframeAddClick(
       { render, store },
       {
         _event: {
@@ -1558,15 +1570,15 @@ describe("animationEditor.handlers", () => {
     );
 
     expect(store.setPopover).toHaveBeenCalledWith({
-      mode: "selectedPropertyAddMenu",
+      mode: "selectedKeyframeAddMenu",
       x: 120,
       y: 180,
-      payload: selectedProperty,
+      payload: selectedKeyframe,
     });
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("adds the default start value from the selected-property menu", () => {
+  it("adds the inferred start value from the selected-keyframe menu", () => {
     const store = {
       bumpPreviewRenderVersion: vi.fn(),
       closePopover: vi.fn(),
@@ -1575,29 +1587,74 @@ describe("animationEditor.handlers", () => {
       selectAutosavePersistedVersion: vi.fn(() => 1),
       selectAutosaveTimerId: vi.fn(() => undefined),
       selectAutosaveVersion: vi.fn(() => 1),
-      selectDefaultInitialValue: vi.fn(() => 960),
+      selectDefaultSelectedKeyframeStartValue: vi.fn(() => 960),
       selectPopover: vi.fn(() => ({
-        payload: { side: "update", property: "x" },
+        payload: { side: "update", property: "x", index: 1 },
       })),
       selectPreviewPlaybackFrameId: vi.fn(() => undefined),
       stopPreviewPlayback: vi.fn(),
-      updateInitialValue: vi.fn(),
+      setSelectedKeyframe: vi.fn(),
+      setSelectedKeyframeStartValue: vi.fn(),
     };
     const render = vi.fn();
 
-    handleSelectedPropertyAddMenuItemClick(
+    handleSelectedKeyframeAddMenuItemClick(
       { render, store },
       { _event: { detail: { item: { value: "start-value" } } } },
     );
 
-    expect(store.selectDefaultInitialValue).toHaveBeenCalledWith({
-      property: "x",
-    });
-    expect(store.updateInitialValue).toHaveBeenCalledWith({
+    expect(store.setSelectedKeyframe).toHaveBeenCalledWith({
       side: "update",
       property: "x",
-      initialValue: 960,
+      index: 1,
     });
+    expect(store.setSelectedKeyframeStartValue).toHaveBeenCalledWith({
+      startValue: 960,
+    });
+    expect(store.closePopover).toHaveBeenCalledOnce();
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
+    expect(store.queueAutosave).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("removes the selected keyframe's start value", () => {
+    const store = {
+      bumpPreviewRenderVersion: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      setSelectedKeyframeStartValue: vi.fn(),
+      stopPreviewPlayback: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleSelectedKeyframeRemoveStartValueClick({ render, store });
+
+    expect(store.setSelectedKeyframeStartValue).toHaveBeenCalledWith({
+      startValue: undefined,
+    });
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
+    expect(store.queueAutosave).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("deletes the selected keyframe from the detail panel", () => {
+    const selectedKeyframe = { side: "update", property: "x", index: 1 };
+    const store = {
+      bumpPreviewRenderVersion: vi.fn(),
+      closePopover: vi.fn(),
+      deleteKeyframe: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      selectSelectedKeyframe: vi.fn(() => selectedKeyframe),
+      stopPreviewPlayback: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleSelectedKeyframeDeleteClick({ render, store });
+
+    expect(store.deleteKeyframe).toHaveBeenCalledWith(selectedKeyframe);
     expect(store.closePopover).toHaveBeenCalledOnce();
     expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
     expect(store.queueAutosave).toHaveBeenCalledOnce();

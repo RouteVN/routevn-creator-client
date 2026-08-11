@@ -133,6 +133,30 @@ describe("keyframeTimeline easing curves", () => {
     expect(points.at(-1)).toEqual({ x: 100, y: 1 });
   });
 
+  it("draws an explicit keyframe start value", () => {
+    const points = readPathPoints(
+      createKeyframeValueCurvePath({
+        initialValue: 0,
+        keyframes: [
+          {
+            delay: 200,
+            duration: 800,
+            easing: "linear",
+            startValue: 0.25,
+            value: 1,
+          },
+        ],
+        timelineDuration: 1000,
+      }),
+    );
+
+    expect(points[0]).toEqual({ x: 0, y: 19 });
+    expect(points[1]).toEqual({ x: 20, y: 19 });
+    expect(points[2].x).toBe(20);
+    expect(points[2].y).toBeLessThan(19);
+    expect(points.at(-1)).toEqual({ x: 100, y: 1 });
+  });
+
   it("adds one property value path and easing labels to keyframe tracks", () => {
     const viewData = selectViewData({
       state: createInitialState(),

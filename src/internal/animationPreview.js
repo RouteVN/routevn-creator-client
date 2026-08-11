@@ -480,6 +480,12 @@ const createTweenAnimationsForTarget = ({
               easing: keyframe.easing ?? "linear",
               relative: keyframe.relative ?? false,
             };
+            if (
+              keyframe.startValue !== undefined &&
+              keyframe.startValue !== ""
+            ) {
+              nextKeyframe.startValue = parseFloat(keyframe.startValue);
+            }
             const delay = Math.max(0, Number(keyframe.delay) || 0);
             if (delay > 0) {
               nextKeyframe.delay = delay;
@@ -544,6 +550,9 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
           easing: keyframe.easing ?? "linear",
           relative: keyframe.relative ?? false,
         };
+        if (keyframe.startValue !== undefined && keyframe.startValue !== "") {
+          nextKeyframe.startValue = parseFloat(keyframe.startValue);
+        }
         const delay = Math.max(0, Number(keyframe.delay) || 0);
         if (delay > 0) {
           nextKeyframe.delay = delay;

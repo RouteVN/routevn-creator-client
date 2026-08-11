@@ -51,6 +51,9 @@ const normalizeTween = (properties = {}) => {
             easing: keyframe.easing ?? "linear",
             relative: keyframe.relative ?? false,
           };
+          if (keyframe.startValue !== undefined && keyframe.startValue !== "") {
+            normalizedKeyframe.startValue = Number(keyframe.startValue) || 0;
+          }
           const delay = Math.max(0, Number(keyframe.delay) || 0);
           if (delay > 0) {
             normalizedKeyframe.delay = delay;
@@ -1806,6 +1809,67 @@ export const handleSelectedKeyframeValueChange = (deps, payload) => {
   commitTimelineChange(deps);
 };
 
+export const handleSelectedKeyframeStartValueChange = (deps, payload) => {
+  const { store } = deps;
+  store.setSelectedKeyframeStartValue({
+    startValue: resolveValueChange(payload),
+  });
+  commitTimelineChange(deps);
+};
+
+export const handleSelectedKeyframeRemoveStartValueClick = (deps) => {
+  const { store } = deps;
+  store.setSelectedKeyframeStartValue({ startValue: undefined });
+  commitTimelineChange(deps);
+};
+
+export const handleSelectedKeyframeAddClick = (deps, payload) => {
+  const { render, store } = deps;
+  const selectedKeyframe = store.selectSelectedKeyframe();
+  if (!selectedKeyframe) {
+    return;
+  }
+
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  store.setPopover({
+    mode: "selectedKeyframeAddMenu",
+    x: rect.left,
+    y: rect.bottom,
+    payload: selectedKeyframe,
+  });
+  render();
+};
+
+export const handleSelectedKeyframeAddMenuItemClick = (deps, payload) => {
+  const { render, store } = deps;
+  if (payload._event.detail.item.value !== "start-value") {
+    return;
+  }
+
+  store.setSelectedKeyframe(store.selectPopover().payload);
+  store.setSelectedKeyframeStartValue({
+    startValue: store.selectDefaultSelectedKeyframeStartValue(),
+  });
+  store.closePopover();
+  invalidatePreview({ store });
+  render();
+  queueEditorAutosave({ deps });
+};
+
+export const handleSelectedKeyframeDeleteClick = (deps) => {
+  const { render, store } = deps;
+  const selectedKeyframe = store.selectSelectedKeyframe();
+  if (!selectedKeyframe) {
+    return;
+  }
+
+  store.deleteKeyframe(selectedKeyframe);
+  store.closePopover();
+  invalidatePreview({ store });
+  render();
+  queueEditorAutosave({ deps });
+};
+
 export const handleSelectedKeyframeRelativeChange = (deps, payload) => {
   const { store } = deps;
   store.setSelectedKeyframeRelative({
@@ -1836,43 +1900,8 @@ export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
   commitSelectedPropertyInitialValue(deps, resolveValueChange(payload));
 };
 
-export const handleSelectedPropertyRemoveStartValueClick = (deps) => {
+export const handleSelectedPropertyUseDefaultClick = (deps) => {
   commitSelectedPropertyInitialValue(deps, undefined);
-};
-
-export const handleSelectedPropertyAddClick = (deps, payload) => {
-  const { render, store } = deps;
-  const selectedProperty = store.selectSelectedProperty();
-  if (!selectedProperty) {
-    return;
-  }
-
-  const rect = payload._event.currentTarget.getBoundingClientRect();
-  store.setPopover({
-    mode: "selectedPropertyAddMenu",
-    x: rect.left,
-    y: rect.bottom,
-    payload: selectedProperty,
-  });
-  render();
-};
-
-export const handleSelectedPropertyAddMenuItemClick = (deps, payload) => {
-  const { render, store } = deps;
-  if (payload._event.detail.item.value !== "start-value") {
-    return;
-  }
-
-  const { side, property } = store.selectPopover().payload;
-  store.updateInitialValue({
-    side,
-    property,
-    initialValue: store.selectDefaultInitialValue({ property }),
-  });
-  store.closePopover();
-  invalidatePreview({ store });
-  render();
-  queueEditorAutosave({ deps });
 };
 
 export const handleSelectedPropertyAutoDurationChange = (deps, payload) => {

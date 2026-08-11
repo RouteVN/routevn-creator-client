@@ -33,6 +33,7 @@ import {
   selectAnimationVideoShortcutStartedAt,
   selectPreviewDurationMs,
   selectPreviewData,
+  selectDefaultSelectedKeyframeStartValue,
   selectSelectedEditorTab,
   selectSelectedKeyframeFormValues,
   selectTimelinePan,
@@ -57,6 +58,7 @@ import {
   setSelectedKeyframeDuration,
   setSelectedKeyframeEasing,
   setSelectedKeyframeRelative,
+  setSelectedKeyframeStartValue,
   setSelectedKeyframeTiming,
   setSelectedKeyframeValue,
   setSelectedMask,
@@ -76,6 +78,7 @@ import {
   setUiConfig,
   startPendingTransitionMask,
   togglePreviewLoop,
+  updateKeyframe,
   updatePopoverFormValues,
 } from "../../src/pages/animationEditor/animationEditor.store.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -509,6 +512,7 @@ describe("animationEditor.store", () => {
         { label: "Absolute", value: false },
         { label: "Relative", value: true },
       ],
+      hasStartValue: false,
       value: 120,
       valueLabel: "Value",
       valueStep: 0.01,
@@ -519,6 +523,11 @@ describe("animationEditor.store", () => {
       label: "Ease Out Bounce",
       value: "easeOutBounce",
     });
+    expect(viewData.selectedKeyframeAddMenuItems).toEqual([
+      { label: "Start value", type: "item", value: "start-value" },
+    ]);
+    expect(viewData.selectedKeyframeCanDelete).toBe(true);
+    expect(selectDefaultSelectedKeyframeStartValue({ state })).toBe(0);
     expect(selectSelectedKeyframeFormValues({ state })).toEqual({
       delay: 125,
       duration: 450,
@@ -528,6 +537,19 @@ describe("animationEditor.store", () => {
     });
     expect(viewData.showRightPanel).toBe(true);
     expect(viewData.selectedEditorTab).toBe("tween");
+
+    setSelectedKeyframeStartValue({ state }, { startValue: 25 });
+    const viewDataWithStartValue = selectViewData({ state, i18n: EN_I18N });
+    expect(viewDataWithStartValue.selectedKeyframeDetailFields).toContainEqual({
+      type: "slot",
+      slot: "keyframe-start-value",
+    });
+    expect(viewDataWithStartValue.selectedKeyframeEditor).toMatchObject({
+      hasStartValue: true,
+      startValue: 25,
+      startValueLabel: "Start value",
+    });
+    expect(viewDataWithStartValue.selectedKeyframeAddMenuItems).toEqual([]);
 
     setSelectedKeyframeDelay({ state }, { delay: 240.9 });
     setSelectedKeyframeDuration({ state }, { duration: 875.9 });
@@ -578,33 +600,35 @@ describe("animationEditor.store", () => {
       { type: "text", label: "Property", value: "Alpha" },
       {
         type: "slot",
-        slot: "property-start-value",
+        label: "Initial value",
+        slot: "property-initial-value",
       },
     ]);
     expect(viewData.selectedPropertyEditor).toEqual({
       hasInitialValue: true,
       initialValue: 0.5,
-      startValueLabel: "Start value",
+      initialValueLabel: "Initial value",
       initialValueSlider: { min: 0, max: 1, step: 0.01 },
       initialValueStep: "any",
       initialValueUsesPopover: false,
     });
-    expect(viewData.selectedPropertyAddMenuItems).toEqual([]);
-    expect(viewData.removeStartValueButtonLabel).toBe("Remove start value");
+    expect(viewData.useDefaultValueButtonLabel).toBe("Use Default Value");
 
     delete state.tweenBySection.prev.alpha.initialValue;
     viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.selectedPropertyDetailFields).toEqual([
       { type: "text", label: "Timeline", value: "Outgoing" },
       { type: "text", label: "Property", value: "Alpha" },
+      {
+        type: "slot",
+        label: "Initial value",
+        slot: "property-initial-value",
+      },
     ]);
     expect(viewData.selectedPropertyEditor).toMatchObject({
       hasInitialValue: false,
       initialValue: 1,
     });
-    expect(viewData.selectedPropertyAddMenuItems).toEqual([
-      { label: "Start value", type: "item", value: "start-value" },
-    ]);
 
     setSelectedKeyframe(
       { state },
@@ -792,6 +816,44 @@ describe("animationEditor.store", () => {
       "delay",
     );
     expect(state.tweenBySection.update.x.keyframes[0].duration).toBe(1000);
+  });
+
+  it("preserves a keyframe start value when the edit dialog updates it", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.x = {
+      keyframes: [
+        {
+          duration: 1000,
+          easing: "linear",
+          startValue: 25,
+          value: 100,
+        },
+      ],
+    };
+
+    updateKeyframe(
+      { state },
+      {
+        side: "update",
+        property: "x",
+        index: 0,
+        keyframe: {
+          duration: 750,
+          easing: "easeOutQuad",
+          relative: false,
+          value: 80,
+        },
+      },
+    );
+
+    expect(state.tweenBySection.update.x.keyframes[0]).toEqual({
+      duration: 750,
+      easing: "easeOutQuad",
+      relative: false,
+      startValue: 25,
+      value: 80,
+    });
   });
 
   it("offsets the following delay when a keyframe moves", () => {
@@ -1956,6 +2018,7 @@ describe("animationEditor.store", () => {
           delay: 300,
           duration: 700,
           easing: "linear",
+          startValue: -20,
           value: 10,
         },
       ],
@@ -1967,6 +2030,7 @@ describe("animationEditor.store", () => {
     expect(renderState.animations[0].tween.x.keyframes[0]).toMatchObject({
       delay: 300,
       duration: 700,
+      startValue: -20,
     });
   });
 

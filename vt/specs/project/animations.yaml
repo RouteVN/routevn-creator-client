@@ -281,6 +281,32 @@ steps:
     value: "true"
   - action: screenshot
   - action: select
+    selector: "#selectedKeyframeAddButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-dropdown-menu#selectedKeyframeAddMenu #option0"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "rtgl-dropdown-menu#selectedKeyframeAddMenu #option0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "[slot='keyframe-start-value']"
+    state: visible
+    timeoutMs: 5000
+  - action: screenshot
+  - action: select
+    selector: "#selectedKeyframeRemoveStartValueButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "[slot='keyframe-start-value']"
+    state: hidden
+    timeoutMs: 5000
+  - action: select
     selector: "#selectedKeyframeDelay #textDisplay"
     steps:
       - action: click
