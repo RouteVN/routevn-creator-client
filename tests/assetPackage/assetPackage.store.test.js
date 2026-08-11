@@ -139,6 +139,14 @@ const TEXT_STYLES_DATA = {
   tree: [{ id: "text-style-folder", children: [{ id: "text-style-1" }] }],
 };
 
+const LAYOUTS_DATA = {
+  items: {
+    "layout-folder": { type: "folder", name: "Layouts" },
+    "layout-1": { type: "layout", name: "Dialogue" },
+  },
+  tree: [{ id: "layout-folder", children: [{ id: "layout-1" }] }],
+};
+
 const FILES_DATA = {
   items: Object.fromEntries(
     [
@@ -167,6 +175,7 @@ const createResourceDataByType = () => {
   resourceDataByType.colors = COLORS_DATA;
   resourceDataByType.fonts = FONTS_DATA;
   resourceDataByType.textStyles = TEXT_STYLES_DATA;
+  resourceDataByType.layouts = LAYOUTS_DATA;
   return resourceDataByType;
 };
 
@@ -207,6 +216,15 @@ describe("asset package store", () => {
       { label: "Fonts", type: "item", value: "fonts" },
       { label: "Text Styles", type: "item", value: "textStyles" },
     ]);
+
+    openResourceFolderPicker(
+      { state },
+      { resourceType: "layouts", x: 20, y: 60 },
+    );
+    expect(state.folderPicker).toMatchObject({
+      resourceType: undefined,
+      isOpen: false,
+    });
 
     setUiConfig({ state }, { uiConfig: { id: "touch" } });
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
@@ -372,6 +390,10 @@ describe("asset package store", () => {
             {
               resourceType: "images",
               folderIds: ["folder-2", "folder-1"],
+            },
+            {
+              resourceType: "layouts",
+              folderIds: ["layout-folder"],
             },
           ],
         },

@@ -1,5 +1,4 @@
 import {
-  ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_SCHEMA_VERSION,
   normalizeAssetPackage,
@@ -10,6 +9,16 @@ import {
   isTopLevelFolder,
   selectTopLevelFolders,
 } from "./support/assetPackageManifest.js";
+
+const ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS =
+  ASSET_PACKAGE_RESOURCE_CONFIGS.filter(
+    ({ resourceType }) => resourceType !== "layouts",
+  );
+const ASSET_PACKAGE_CREATOR_RESOURCE_TYPES = new Set(
+  ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS.map(
+    ({ resourceType }) => resourceType,
+  ),
+);
 
 const createEmptyResourceData = () => ({
   items: {},
@@ -26,14 +35,16 @@ const createResourceDataByType = () =>
 
 const createSelectedFolderIdsByType = () =>
   Object.fromEntries(
-    ASSET_PACKAGE_RESOURCE_CONFIGS.map(({ resourceType }) => [
+    ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS.map(({ resourceType }) => [
       resourceType,
       [],
     ]),
   );
 
 const createResourceTypeOrder = () =>
-  ASSET_PACKAGE_RESOURCE_CONFIGS.map(({ resourceType }) => resourceType);
+  ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS.map(
+    ({ resourceType }) => resourceType,
+  );
 
 const createResourceTypeContextMenu = () => ({
   isOpen: false,
@@ -129,6 +140,10 @@ export const setAssetPackage = ({ state }, { assetPackage } = {}) => {
   const selectedResourceTypes = [];
 
   for (const { resourceType, folderIds } of normalizedAssetPackage.resources) {
+    if (!ASSET_PACKAGE_CREATOR_RESOURCE_TYPES.has(resourceType)) {
+      continue;
+    }
+
     const resourceData = state.resourceDataByType[resourceType];
     const validFolderIds = folderIds.filter((folderId) =>
       isTopLevelFolder(resourceData, folderId),
@@ -217,7 +232,7 @@ export const openResourceFolderPicker = (
 ) => {
   const resourceData = state.resourceDataByType[resourceType];
   if (
-    !ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE[resourceType] ||
+    !ASSET_PACKAGE_CREATOR_RESOURCE_TYPES.has(resourceType) ||
     !resourceData ||
     selectTopLevelFolders(resourceData).length === 0
   ) {

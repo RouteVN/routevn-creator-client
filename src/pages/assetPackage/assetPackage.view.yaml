@@ -55,7 +55,7 @@ template:
                           - rtgl-button#addResourceTypeButton v=pr pre=plus: ${i18n.assetPackagePage.addResourceTypeButton}
                           - rtgl-button#downloadAssetPackageButton v=pr pre=download: ${i18n.assetPackagePage.downloadAssetPackageButton}
                   - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
-                      - 'rtgl-view d=v g=md w=f ph=md pt=md pb=sm mb=lg style="min-width: 0;"':
+                      - 'rtgl-view d=v g=md w=f ph=md pt=md style="min-width: 0; padding-bottom: 32vh; box-sizing: border-box;"':
                           - rtgl-view w=560 sm-w=f d=v g=md:
                               - $for section, sectionIndex in selectedResourceSections:
                                   - rtgl-view w=f d=v g=sm:
