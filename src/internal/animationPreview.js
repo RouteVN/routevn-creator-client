@@ -292,6 +292,7 @@ const getUpdatePreviewSlot = (previewImages = {}) => {
 };
 
 const createPreviewBackgroundElement = ({
+  backgroundColor = ANIMATION_PREVIEW_BG_COLOR,
   imagesData,
   previewImages,
   projectResolution,
@@ -313,7 +314,7 @@ const createPreviewBackgroundElement = ({
       y: 0,
       width,
       height,
-      fill: ANIMATION_PREVIEW_BG_COLOR,
+      fill: backgroundColor,
     };
   }
 
@@ -372,6 +373,7 @@ const createPreviewContentElement = ({
 };
 
 export const createAnimationPreviewResetState = ({
+  backgroundColor,
   dialogType,
   imagesData,
   previewImages,
@@ -379,6 +381,7 @@ export const createAnimationPreviewResetState = ({
 } = {}) => {
   const elements = [
     createPreviewBackgroundElement({
+      backgroundColor,
       imagesData,
       previewImages,
       projectResolution,
@@ -575,6 +578,7 @@ export const getPropertiesDuration = (properties = {}) => {
 };
 
 export const createAnimationPreviewRenderState = ({
+  backgroundColor,
   dialogType,
   updateProperties,
   previousProperties,
@@ -597,6 +601,7 @@ export const createAnimationPreviewRenderState = ({
 
     return {
       ...createAnimationPreviewResetState({
+        backgroundColor,
         dialogType,
         imagesData,
         previewImages,
@@ -649,6 +654,7 @@ export const createAnimationPreviewRenderState = ({
   return {
     elements: [
       createPreviewBackgroundElement({
+        backgroundColor,
         imagesData,
         previewImages,
         projectResolution,
@@ -667,6 +673,7 @@ export const createAnimationPreviewRenderState = ({
 
 export const createAnimationResourcePreviewStates = ({
   animationItem,
+  backgroundColor,
   imagesData,
   projectResolution,
   includeAnimations = true,
@@ -684,12 +691,14 @@ export const createAnimationResourcePreviewStates = ({
       : {};
   const transitionMask = animationItem?.animation?.mask;
   const resetState = createAnimationPreviewResetState({
+    backgroundColor,
     dialogType,
     imagesData,
     previewImages,
     projectResolution,
   });
   const renderState = createAnimationPreviewRenderState({
+    backgroundColor,
     dialogType,
     updateProperties,
     previousProperties,

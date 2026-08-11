@@ -218,6 +218,22 @@ describe("animations.handlers", () => {
       height: 600,
     });
     expect(deps.graphicsService.render).toHaveBeenCalledTimes(2);
+    expect(deps.graphicsService.render).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        elements: expect.arrayContaining([
+          expect.objectContaining({ id: "bg", fill: "#000000" }),
+        ]),
+      }),
+    );
+    expect(deps.graphicsService.render).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        elements: expect.arrayContaining([
+          expect.objectContaining({ id: "bg", fill: "#000000" }),
+        ]),
+      }),
+    );
     expect(deps.graphicsService.setAnimationPlaybackMode).toHaveBeenCalledWith(
       "manual",
     );

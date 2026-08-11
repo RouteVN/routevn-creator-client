@@ -5,6 +5,7 @@ import { resolveResourceFileType } from "../../../internal/resourceFileMetadata.
 import { selectAnimationsPageCopy } from "./animationsPageCopy.js";
 
 const ANIMATION_PREVIEW_LOOP_PAUSE_MS = 1000;
+const ANIMATION_DETAIL_PREVIEW_BACKGROUND_COLOR = "#000000";
 
 const collectRuntimeMaskTextureIds = (mask = {}) => {
   if (Array.isArray(mask)) {
@@ -428,6 +429,7 @@ export const renderSelectedAnimationPreview = async (
     const { resetState, renderState, durationMs } =
       createAnimationResourcePreviewStates({
         animationItem: selectedAnimation,
+        backgroundColor: ANIMATION_DETAIL_PREVIEW_BACKGROUND_COLOR,
         imagesData: store.selectImagesData(),
         projectResolution,
       });
