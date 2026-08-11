@@ -364,7 +364,9 @@ const itemForm = ({ state, copy }) => {
     ],
   });
 
-  appendResourceDestinationFields({ fields, state, copy });
+  if (!state.plan.assetPackage) {
+    appendResourceDestinationFields({ fields, state, copy });
+  }
 
   if (resourceImages.length > 0) {
     fields.push({ type: "slot", slot: "image-resources-header" });

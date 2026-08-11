@@ -15,6 +15,10 @@ import { UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE } from "../../../internal/proj
 import { createNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRoute.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
+import {
+  cloneValidAssetPackage,
+  normalizeAssetPackage,
+} from "../../../internal/assetPackageResources.js";
 
 const flushRepositoryMainCheckpoint = async (repository) => {
   await repository.flushMainCheckpoint();
@@ -56,6 +60,7 @@ export const createProjectRepositoryService = ({
   const CURRENT_CREATOR_VERSION = creatorVersion;
   const CREATOR_VERSION_KEY = "creatorVersion";
   const PROJECT_INFO_KEY = "projectInfo";
+  const ASSET_PACKAGE_KEY = "assetPackage";
   const PLATFORM_DETAILS_KEYS = {
     web: "platformDetails.web",
     windows: "platformDetails.windows",
@@ -918,6 +923,41 @@ export const createProjectRepositoryService = ({
     return updateProjectInfoByProjectId(projectId, patch);
   };
 
+  const getAssetPackageByProjectId = async (projectId) => {
+    const store = await getStoreByProject(projectId);
+    await ensureCompatibleCreatorVersion(store);
+    const assetPackage = await store.app.get(ASSET_PACKAGE_KEY);
+    return assetPackage === undefined
+      ? normalizeAssetPackage()
+      : cloneValidAssetPackage(assetPackage);
+  };
+
+  const updateAssetPackageByProjectId = async (projectId, assetPackage) => {
+    const store = await getStoreByProject(projectId);
+    await ensureStoreOpenCompatible(store);
+    const validatedAssetPackage = cloneValidAssetPackage(assetPackage);
+    await store.app.set(ASSET_PACKAGE_KEY, validatedAssetPackage);
+    return validatedAssetPackage;
+  };
+
+  const getCurrentAssetPackage = async () => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+
+    return getAssetPackageByProjectId(projectId);
+  };
+
+  const updateCurrentAssetPackage = async (assetPackage) => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+
+    return updateAssetPackageByProjectId(projectId, assetPackage);
+  };
+
   const getPlatformDetailsByProjectId = async (projectId, platform) => {
     const store = await getStoreByProject(projectId);
     await ensureCompatibleCreatorVersion(store);
@@ -1410,6 +1450,10 @@ export const createProjectRepositoryService = ({
     getCurrentProjectInfo,
     updateCurrentProjectInfo,
     updateProjectInfoByProjectId,
+    getCurrentAssetPackage,
+    updateCurrentAssetPackage,
+    getAssetPackageByProjectId,
+    updateAssetPackageByProjectId,
     getCurrentPlatformDetails,
     getCurrentPlatformDetailsDefaults,
     createCurrentPlatformDetails,

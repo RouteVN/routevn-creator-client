@@ -96,11 +96,6 @@ const settingsItems = [
     name: "Language",
     path: "/project/language",
   },
-  {
-    id: "assetPackage",
-    name: "Asset Package",
-    path: "/project/asset-package",
-  },
   // {
   //   id: "user",
   //   name: "User",
@@ -123,6 +118,11 @@ const releaseItems = [
     id: "webServer",
     name: "Web Server",
     path: "/project/releases/web-server",
+  },
+  {
+    id: "assetPackage",
+    name: "Asset Package",
+    path: "/project/asset-package",
   },
 ];
 

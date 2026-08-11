@@ -1,5 +1,10 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { writeFile } from "@tauri-apps/plugin-fs";
+import { writeFile as writeFileBytes } from "@tauri-apps/plugin-fs";
+
+const writeBlobToPath = async (targetPath, blob) => {
+  await writeFileBytes(targetPath, new Uint8Array(await blob.arrayBuffer()));
+  return targetPath;
+};
 
 /**
  * @typedef {Object} FileFilter
@@ -96,11 +101,7 @@ export const createTauriFilePicker = () => {
             return null;
           }
 
-          await writeFile(
-            selected,
-            new Uint8Array(await options.arrayBuffer()),
-          );
-          return selected;
+          return writeBlobToPath(selected, options);
         }
 
         const selected = await save({
@@ -114,6 +115,10 @@ export const createTauriFilePicker = () => {
         console.error("Error opening save dialog:", error);
         throw error;
       }
+    },
+
+    async writeFile(targetPath, blob) {
+      return writeBlobToPath(targetPath, blob);
     },
   };
 };

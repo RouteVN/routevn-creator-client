@@ -259,6 +259,10 @@ export const createAppShellService = ({
       return filePicker.saveFilePicker(...args);
     },
 
+    writeFile(...args) {
+      return filePicker.writeFile(...args);
+    },
+
     isInputFocused,
 
     blurActiveElement(root = document) {

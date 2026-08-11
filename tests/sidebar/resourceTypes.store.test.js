@@ -27,7 +27,7 @@ describe("resource type navigation", () => {
     ]);
   });
 
-  it("shows all settings pages in desktop and mobile resource menus", () => {
+  it("shows settings pages in desktop and mobile resource menus", () => {
     const desktopViewData = selectDesktopResourceTypesViewData({
       props: {
         resourceCategory: "settings",
@@ -45,19 +45,18 @@ describe("resource type navigation", () => {
       "about",
       "appearance",
       "language",
-      "assetPackage",
     ]);
     expect(
       mobileSidebarViewData.sections.flatMap((section) =>
         section.items.map((item) => item.id),
       ),
-    ).toEqual(["project", "about", "appearance", "language", "assetPackage"]);
+    ).toEqual(["project", "about", "appearance", "language"]);
   });
 
-  it("localizes the asset package item in the mobile settings menu", () => {
+  it("localizes the asset package item in the mobile release menu", () => {
     const mobileSidebarViewData = selectMobileSidebarViewData({
       state: createMobileSidebarInitialState(),
-      props: { variant: "settings" },
+      props: { variant: "release" },
       i18n: JA_I18N,
     });
     const assetPackageItem = mobileSidebarViewData.sections
@@ -67,7 +66,7 @@ describe("resource type navigation", () => {
     expect(assetPackageItem.label).toBe("アセットパッケージ");
   });
 
-  it("shows platform details in desktop and mobile release menus", () => {
+  it("shows asset packages and platform details in release menus", () => {
     const desktopViewData = selectDesktopResourceTypesViewData({
       props: {
         resourceCategory: "releases",
@@ -85,11 +84,12 @@ describe("resource type navigation", () => {
       "versions",
       "platformDetails",
       "webServer",
+      "assetPackage",
     ]);
     expect(
       mobileSidebarViewData.sections.flatMap((section) =>
         section.items.map((item) => item.id),
       ),
-    ).toEqual(["versions", "platformDetails"]);
+    ).toEqual(["versions", "platformDetails", "assetPackage"]);
   });
 });

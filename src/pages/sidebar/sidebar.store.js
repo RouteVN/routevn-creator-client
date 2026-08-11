@@ -174,7 +174,6 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       currentPath === "/project/about" ||
       currentPath === "/project/appearance" ||
       currentPath === "/project/language" ||
-      currentPath === "/project/asset-package" ||
       currentPath === "/project/user"
     ) {
       const settingsItem = state.items.find(
@@ -184,6 +183,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     }
 
     if (
+      currentPath === "/project/asset-package" ||
       currentPath === "/project/releases" ||
       currentPath.startsWith("/project/releases/")
     ) {

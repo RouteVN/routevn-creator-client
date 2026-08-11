@@ -103,6 +103,12 @@ const releaseItems = [
     path: "/project/releases/platform-details",
     icon: "info",
   },
+  {
+    id: "assetPackage",
+    label: "Asset Package",
+    path: "/project/asset-package",
+    icon: "folder",
+  },
 ];
 
 const settingsItems = [
@@ -129,12 +135,6 @@ const settingsItems = [
     label: "Language",
     path: "/project/language",
     icon: "website",
-  },
-  {
-    id: "assetPackage",
-    label: "Asset Package",
-    path: "/project/asset-package",
-    icon: "folder",
   },
 ];
 

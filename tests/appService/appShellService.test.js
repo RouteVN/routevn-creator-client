@@ -27,6 +27,7 @@ const createDeps = () => {
       openFolderPicker: vi.fn(),
       openFilePicker: vi.fn(),
       saveFilePicker: vi.fn(),
+      writeFile: vi.fn(),
     },
     openUrl: vi.fn(),
     appVersion: "1.0.0",
@@ -147,6 +148,21 @@ describe("appShellService", () => {
 
     expect(result).toBe(true);
     expect(deps.globalUI.showConfirm).toHaveBeenCalledWith(options);
+  });
+
+  it("writes content to an already selected file path", async () => {
+    const deps = createDeps();
+    const service = createAppShellService(deps);
+    const blob = new Blob(["package"], { type: "application/zip" });
+    deps.filePicker.writeFile.mockResolvedValue("/tmp/asset-package.zip");
+
+    await expect(
+      service.writeFile("/tmp/asset-package.zip", blob),
+    ).resolves.toBe("/tmp/asset-package.zip");
+    expect(deps.filePicker.writeFile).toHaveBeenCalledWith(
+      "/tmp/asset-package.zip",
+      blob,
+    );
   });
 
   it("forwards payload update options to the router", () => {

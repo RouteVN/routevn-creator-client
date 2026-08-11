@@ -9,10 +9,10 @@ The implementation and release-hardening work is tracked in
 [Import Packages Production Readiness Checklist](./import-packages-production-readiness.md).
 
 Import packages let users import reusable project resources from a copied URL.
-The first implementation can support one resource type at a time, but the
-package shape should stay general enough for images, sounds, videos, fonts,
-spritesheets, transforms, animations, particles, colors, text styles, layouts,
-controls, and variables.
+Animation and transform packages import one primary resource type at a time.
+Asset packages can combine every user-facing project resource collection:
+images, sounds, videos, characters, transforms, animations, particles,
+spritesheets, colors, fonts, text styles, layouts, variables, and controls.
 
 ## Shape
 
@@ -104,12 +104,28 @@ extend the normal file metadata with import-only `source` data.
 `source.url` may be absolute or relative to the manifest URL. If `sha256` is
 present, the importer should verify the downloaded bytes.
 
+The asset package creator downloads a ZIP with this layout:
+
+```text
+package.json
+files/<package-local-file-id>
+```
+
+The creator's package information edit dialog supplies the manifest package
+`id`, `name`, `version`, and optional `description` values. The page displays
+the saved values in a read-only detail view.
+
+The `package.json` manifest uses relative `source.url` values that point to the
+corresponding entries under `files/`. After extracting the archive, the folder
+can be served directly from a static file server.
+
 ## Resource Preview Media
 
-Animation and transform items may reference package-only preview media with
-`previewMediaFileId`. The id must reference a record in
+Animation, transform, sound, particle, spritesheet, font, and text-style items
+may reference package-only preview media with `previewMediaFileId`. The id must
+reference a record in
 `repository.files.items` whose MIME type is `image/jpeg`, `image/png`,
-`image/webp`, or `video/mp4`.
+`image/webp`, `video/mp4`, or `video/webm`.
 
 ```json
 {
@@ -121,11 +137,31 @@ Animation and transform items may reference package-only preview media with
 }
 ```
 
-Preview media is displayed in a 16:9 frame during import review. MP4 previews
+Preview media is displayed in a 16:9 frame during import review. Video previews
 autoplay muted, loop, and play inline. `previewMediaFileId` is import-only
 metadata: it is not persisted on the imported resource and is not downloaded
 as a project asset unless another retained resource field also references that
 file.
+
+When the asset package creator exports sounds that have waveform metadata, it
+generates a 640 by 360 PNG waveform preview inside the ZIP and assigns it as
+the sound's `previewMediaFileId`. This changes only the exported manifest and
+does not add a thumbnail to the source project.
+
+The creator also generates package-only previews for these resources:
+
+- animations: a video containing one complete animation cycle rendered with
+  the animation's configured preview images and project resolution
+- particles: a short video of the existing particle preview
+- spritesheets: a video containing one complete cycle of the first animation,
+  matching the page's default clip selection and configured FPS
+- fonts: a PNG of the existing `Aa` font preview
+- text styles: a PNG using the preview text, font, colors, stroke, and shadow
+  shown by the existing text-style preview
+
+Depending on the desktop WebView's supported canvas recording codec, generated
+videos use MP4 or WebM. None of these generated files are written to the source
+project.
 
 ## Folders
 
@@ -156,7 +192,7 @@ collection root in the same atomic command batch as the imported resources.
 }
 ```
 
-Default import behavior:
+Default animation and transform import behavior:
 
 - show `New Folder` before `Existing Folder` when existing folders are available
 - default to `New Folder` even when the collection has existing folders
@@ -173,6 +209,15 @@ Package folders may still be present in future generalized packages, but the
 first importer treats them as package organization only. The user-selected new
 destination is a single project folder, not a recreation or merge of the
 package tree.
+
+The asset package creator exposes only top-level source folders. Selecting one
+serializes its complete subtree, including nested folders and resources, while
+preserving the selected root order and all ordering within each subtree.
+The asset package importer recreates the selected resources' complete package
+folder ancestry in each matching project collection. Package-local file and
+resource references are remapped before import, including nested references and
+dependencies between collections. All files, folders, and resources are
+committed in one atomic command batch.
 
 ## Media Substitution
 
@@ -362,9 +407,11 @@ The animations and transforms pages use one shared workflow:
    confirmation is interrupted, retain blobs and allow an idempotent retry to
    recognize an already committed plan.
 
-The implementation currently supports animation and transform target resources
-with image dependencies. Other repository roots are reported as skipped content
-in the review plan rather than imported implicitly.
+The page-specific implementation supports animation and transform target
+resources with image dependencies. Other repository roots are reported as
+skipped content in that legacy review plan rather than imported implicitly. A
+multi-resource asset package uses the generalized asset plan and supports every
+user-facing resource collection listed above.
 
 ## Local Test Server
 

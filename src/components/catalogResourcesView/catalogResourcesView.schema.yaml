@@ -91,6 +91,9 @@ propsSchema:
     importIconOnly:
       type: boolean
       description: Whether the top import action should render as an icon-only control
+    importInActionsMenu:
+      type: boolean
+      description: Whether the top import action should render inside a three-dot actions menu
     mobileLayout:
       type: boolean
       description: Whether cards should use the touch/mobile layout; column zoom controls still drive grid columns when enabled

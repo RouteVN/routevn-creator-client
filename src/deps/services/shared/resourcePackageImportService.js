@@ -1,5 +1,11 @@
 import { processWithConcurrency } from "../../../internal/processWithConcurrency.js";
 import {
+  AssetImportPlanError,
+  createAssetImportPlan,
+  isAssetPackageManifest,
+  rewriteAssetImportPlanReferences,
+} from "../../../internal/assetImportPlan.js";
+import {
   createResourceImportPlan,
   ResourceImportPlanError,
   rewriteResourceImportPlanReferences,
@@ -55,7 +61,8 @@ const toErrorResult = (error) => {
   }
   if (
     error instanceof ImportPackageClientError ||
-    error instanceof ResourceImportPlanError
+    error instanceof ResourceImportPlanError ||
+    error instanceof AssetImportPlanError
   ) {
     return {
       valid: false,
@@ -96,6 +103,113 @@ const emitProgress = (onProgress, progress) => {
   }
 };
 
+const selectPlanResources = ({ plan, selectedResourceIds }) => {
+  const selectedIds = new Set(
+    selectedResourceIds ?? plan.resources.map((resource) => resource.sourceId),
+  );
+  if (plan.assetPackage) {
+    const resourceBySourceId = new Map(
+      plan.resources.map((resource) => [resource.sourceId, resource]),
+    );
+    const pendingSourceIds = [...selectedIds];
+    while (pendingSourceIds.length > 0) {
+      const sourceId = pendingSourceIds.pop();
+      const resource = resourceBySourceId.get(sourceId);
+      for (const dependencySourceId of resource?.dependencySourceIds ?? []) {
+        if (!selectedIds.has(dependencySourceId)) {
+          selectedIds.add(dependencySourceId);
+          pendingSourceIds.push(dependencySourceId);
+        }
+      }
+    }
+  }
+  return plan.resources.filter((resource) =>
+    selectedIds.has(resource.sourceId),
+  );
+};
+
+const selectAssetPackageEntries = ({
+  plan,
+  selectedResources,
+  rewrittenResources = selectedResources,
+}) => {
+  const entryBySourceId = new Map(
+    plan.entries.map((entry) => [entry.sourceId, entry]),
+  );
+  const requiredSourceIds = new Set();
+  for (const resource of selectedResources) {
+    let entry = entryBySourceId.get(resource.sourceId);
+    while (entry) {
+      requiredSourceIds.add(entry.sourceId);
+      entry = entry.parentSourceId
+        ? entryBySourceId.get(entry.parentSourceId)
+        : undefined;
+    }
+  }
+  const rewrittenByDestinationId = new Map(
+    rewrittenResources.map((resource) => [resource.destinationId, resource]),
+  );
+  return plan.entries
+    .filter((entry) => requiredSourceIds.has(entry.sourceId))
+    .map((entry) => ({
+      ...entry,
+      data:
+        rewrittenByDestinationId.get(entry.destinationId)?.data ?? entry.data,
+    }));
+};
+
+const getCommittedAssetPlanResult = ({
+  plan,
+  selectedResources,
+  repositoryState,
+}) => {
+  const entries = selectAssetPackageEntries({ plan, selectedResources });
+  if (
+    entries.length === 0 ||
+    entries.some(
+      (entry) =>
+        repositoryState?.[entry.resourceType]?.items?.[entry.destinationId]
+          ?.type !== entry.data.type,
+    )
+  ) {
+    return undefined;
+  }
+  const primary = selectedResources.find((resource) => resource.primary);
+  return {
+    valid: true,
+    assetPackage: true,
+    planId: plan.planId,
+    commandIds: [],
+    resourceIds: selectedResources.map((resource) => resource.destinationId),
+    imageIds: selectedResources
+      .filter((resource) => resource.resourceType === "images")
+      .map((resource) => resource.destinationId),
+    soundIds: selectedResources
+      .filter((resource) => resource.resourceType === "sounds")
+      .map((resource) => resource.destinationId),
+    videoIds: selectedResources
+      .filter((resource) => resource.resourceType === "videos")
+      .map((resource) => resource.destinationId),
+    createdFolderIds: entries
+      .filter((entry) => entry.folder)
+      .map((entry) => entry.destinationId),
+    primaryResourceId:
+      primary?.destinationId ?? selectedResources[0]?.destinationId,
+    importedCount: selectedResources.length,
+    importedImageCount: selectedResources.filter(
+      (resource) => resource.resourceType === "images",
+    ).length,
+    importedSoundCount: selectedResources.filter(
+      (resource) => resource.resourceType === "sounds",
+    ).length,
+    importedVideoCount: selectedResources.filter(
+      (resource) => resource.resourceType === "videos",
+    ).length,
+    reusedImageCount: 0,
+    recoveredFromPreviousCommit: true,
+  };
+};
+
 const getCommittedPlanResult = ({
   plan,
   selectedResources,
@@ -106,6 +220,13 @@ const getCommittedPlanResult = ({
   repositoryState,
 }) => {
   if (selectedResources.length === 0) return undefined;
+  if (plan.assetPackage) {
+    return getCommittedAssetPlanResult({
+      plan,
+      selectedResources,
+      repositoryState,
+    });
+  }
   const allResourcesExist = selectedResources.every(
     (resource) =>
       repositoryState?.[plan.expectedResourceType]?.items?.[
@@ -307,10 +428,9 @@ export const createResourcePackageImportService = ({
           url,
           signal: operation.controller.signal,
         });
-        const plan = createResourceImportPlan({
+        const planOptions = {
           manifest: source.manifest,
           manifestUrl: source.manifestUrl,
-          expectedResourceType,
           projectId: getCurrentProjectId?.(),
           repositoryState: getRepositoryState(),
           repositoryRevision: getRepositoryRevision(),
@@ -320,7 +440,16 @@ export const createResourcePackageImportService = ({
               descriptor.source?.url ?? descriptor.url,
               manifestUrl,
             ).href,
-        });
+        };
+        const plan = isAssetPackageManifest(
+          source.manifest,
+          expectedResourceType,
+        )
+          ? createAssetImportPlan(planOptions)
+          : createResourceImportPlan({
+              ...planOptions,
+              expectedResourceType,
+            });
         if (plan.knownDownloadBytes > importClient.limits.totalBytes) {
           throw new ImportPackageClientError(
             "download_too_large",
@@ -367,13 +496,10 @@ export const createResourcePackageImportService = ({
             "This import review has expired. Load the package again.",
           );
         }
-        const selectedIds = new Set(
-          selectedResourceIds ??
-            plan.resources.map((resource) => resource.sourceId),
-        );
-        const selectedResources = plan.resources.filter((resource) =>
-          selectedIds.has(resource.sourceId),
-        );
+        const selectedResources = selectPlanResources({
+          plan,
+          selectedResourceIds,
+        });
         validateReviewChoices({
           plan,
           selectedResources,
@@ -381,6 +507,9 @@ export const createResourcePackageImportService = ({
           resourceNames,
           resourceDescriptions,
         });
+        if (plan.assetPackage) {
+          return { valid: true };
+        }
         resolveDestinationChoice({
           choice: resourceDestination,
           legacyParentId: resourceParentId,
@@ -453,13 +582,10 @@ export const createResourcePackageImportService = ({
           planId,
           expectedResourceType: plan.expectedResourceType,
         });
-        const selectedIds = new Set(
-          selectedResourceIds ??
-            plan.resources.map((resource) => resource.sourceId),
-        );
-        const selectedResources = plan.resources.filter((resource) =>
-          selectedIds.has(resource.sourceId),
-        );
+        const selectedResources = selectPlanResources({
+          plan,
+          selectedResourceIds,
+        });
         selectedResourcesForCleanup = selectedResources;
         validateReviewChoices({
           plan,
@@ -488,21 +614,25 @@ export const createResourcePackageImportService = ({
         ];
         importedImagesForCleanup = importedImages;
         existingImageIdsForCleanup = existingImageIds;
-        const resolvedResourceDestination = resolveDestinationChoice({
-          choice: resourceDestination,
-          legacyParentId: resourceParentId,
-          plannedDestination: plan.destinationFolders.resource,
-          label: plan.expectedResourceType,
-        });
-        const resolvedImageDestination =
-          importedImages.length > 0
-            ? resolveDestinationChoice({
-                choice: imageDestination,
-                legacyParentId: imageParentId,
-                plannedDestination: plan.destinationFolders.images,
-                label: "images",
-              })
-            : undefined;
+        let resolvedResourceDestination;
+        let resolvedImageDestination;
+        if (!plan.assetPackage) {
+          resolvedResourceDestination = resolveDestinationChoice({
+            choice: resourceDestination,
+            legacyParentId: resourceParentId,
+            plannedDestination: plan.destinationFolders.resource,
+            label: plan.expectedResourceType,
+          });
+          resolvedImageDestination =
+            importedImages.length > 0
+              ? resolveDestinationChoice({
+                  choice: imageDestination,
+                  legacyParentId: imageParentId,
+                  plannedDestination: plan.destinationFolders.images,
+                  label: "images",
+                })
+              : undefined;
+        }
 
         const previousCommit = getCommittedPlanResult({
           plan,
@@ -662,13 +792,20 @@ export const createResourcePackageImportService = ({
           const result = stageResults.get(filePlan.sourceId);
           actualFileIds.set(filePlan.destinationId, result.fileId);
         }
-        const rewrittenResources = rewriteResourceImportPlanReferences({
-          plan: { ...plan, resources: selectedResources },
-          resourceChoices,
-          resourceNames,
-          resourceDescriptions,
-          fileIdMap: actualFileIds,
-        });
+        const rewrittenResources = plan.assetPackage
+          ? rewriteAssetImportPlanReferences({
+              resources: selectedResources,
+              resourceNames,
+              resourceDescriptions,
+              fileIdMap: actualFileIds,
+            })
+          : rewriteResourceImportPlanReferences({
+              plan: { ...plan, resources: selectedResources },
+              resourceChoices,
+              resourceNames,
+              resourceDescriptions,
+              fileIdMap: actualFileIds,
+            });
         const selectedTagIds = new Set(
           rewrittenResources.flatMap((resource) => resource.data.tagIds ?? []),
         );
@@ -683,20 +820,35 @@ export const createResourcePackageImportService = ({
         });
         let commitResult;
         try {
-          commitResult = await commandApi.commitResourceImportPackage({
-            planId: plan.planId,
-            projectId: plan.projectId,
-            repositoryRevision: plan.repositoryRevision,
-            resourceType: plan.expectedResourceType,
-            resourceDestination: resolvedResourceDestination,
-            imageDestination: resolvedImageDestination,
-            fileRecords,
-            fileCommandIds,
-            images: imageCommands,
-            tags: selectedTags,
-            resources: rewrittenResources,
-            existingImageIds,
-          });
+          if (plan.assetPackage) {
+            commitResult = await commandApi.commitAssetImportPackage({
+              planId: plan.planId,
+              projectId: plan.projectId,
+              repositoryRevision: plan.repositoryRevision,
+              fileRecords,
+              fileCommandIds,
+              entries: selectAssetPackageEntries({
+                plan,
+                selectedResources,
+                rewrittenResources,
+              }),
+            });
+          } else {
+            commitResult = await commandApi.commitResourceImportPackage({
+              planId: plan.planId,
+              projectId: plan.projectId,
+              repositoryRevision: plan.repositoryRevision,
+              resourceType: plan.expectedResourceType,
+              resourceDestination: resolvedResourceDestination,
+              imageDestination: resolvedImageDestination,
+              fileRecords,
+              fileCommandIds,
+              images: imageCommands,
+              tags: selectedTags,
+              resources: rewrittenResources,
+              existingImageIds,
+            });
+          }
         } catch (error) {
           if (error?.commitOutcome === "unknown") {
             preserveStagedFiles = true;
@@ -745,7 +897,7 @@ export const createResourcePackageImportService = ({
           reusedImageCount: existingImageIds.length,
           downloadedBytes,
         });
-        return {
+        const result = {
           ...commitResult,
           primaryResourceId:
             primary?.destinationId ?? rewrittenResources[0]?.destinationId,
@@ -753,6 +905,19 @@ export const createResourcePackageImportService = ({
           importedImageCount: imageCommands.length,
           reusedImageCount: existingImageIds.length,
         };
+        if (plan.assetPackage) {
+          result.assetPackage = true;
+          result.importedImageCount = rewrittenResources.filter(
+            (resource) => resource.resourceType === "images",
+          ).length;
+          result.importedSoundCount = rewrittenResources.filter(
+            (resource) => resource.resourceType === "sounds",
+          ).length;
+          result.importedVideoCount = rewrittenResources.filter(
+            (resource) => resource.resourceType === "videos",
+          ).length;
+        }
+        return result;
       } catch (error) {
         recordEvent("execution.failed", {
           planId,

@@ -443,5 +443,15 @@ export const createIOSFilePicker = () => {
         base64: uint8ArrayToBase64(bytes),
       });
     },
+
+    async writeFile(targetUri, blob) {
+      const bytes = await readBlobBytes(blob);
+      const result = await callIOSBridge("writeFileToUri", {
+        uri: targetUri,
+        mimeType: blob.type || "application/octet-stream",
+        base64: uint8ArrayToBase64(bytes),
+      });
+      return result ?? targetUri;
+    },
   };
 };

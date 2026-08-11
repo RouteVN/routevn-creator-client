@@ -13,6 +13,114 @@ const manifest = () =>
     ),
   );
 
+const assetManifest = () => ({
+  schema: "routevn.import-pack.v1",
+  package: {
+    id: "asset.package",
+    name: "Asset Package",
+    version: "1.0.0",
+    description: "Images, sounds, and videos.",
+  },
+  repository: {
+    files: {
+      items: {
+        "file.image": {
+          id: "file.image",
+          mimeType: "image/png",
+          size: 3,
+          source: { url: "../files/image.png" },
+        },
+        "file.sound": {
+          id: "file.sound",
+          mimeType: "audio/mpeg",
+          size: 3,
+          source: { url: "../files/sound.mp3" },
+        },
+        "file.video": {
+          id: "file.video",
+          mimeType: "video/mp4",
+          size: 3,
+          source: { url: "../files/video.mp4" },
+        },
+        "file.video-thumbnail": {
+          id: "file.video-thumbnail",
+          mimeType: "image/webp",
+          size: 3,
+          source: { url: "../files/video.webp" },
+        },
+      },
+    },
+    images: {
+      items: {
+        "folder.images": {
+          id: "folder.images",
+          type: "folder",
+          name: "Images",
+        },
+        "folder.images.city": {
+          id: "folder.images.city",
+          type: "folder",
+          name: "City",
+        },
+        "image.city": {
+          id: "image.city",
+          type: "image",
+          name: "City",
+          fileId: "file.image",
+        },
+      },
+      tree: [
+        {
+          id: "folder.images",
+          children: [
+            {
+              id: "folder.images.city",
+              children: [{ id: "image.city" }],
+            },
+          ],
+        },
+      ],
+    },
+    sounds: {
+      items: {
+        "folder.sounds": {
+          id: "folder.sounds",
+          type: "folder",
+          name: "Sounds",
+        },
+        "sound.theme": {
+          id: "sound.theme",
+          type: "sound",
+          name: "Theme",
+          fileId: "file.sound",
+          duration: 1000,
+        },
+      },
+      tree: [{ id: "folder.sounds", children: [{ id: "sound.theme" }] }],
+    },
+    videos: {
+      items: {
+        "folder.videos": {
+          id: "folder.videos",
+          type: "folder",
+          name: "Videos",
+        },
+        "video.intro": {
+          id: "video.intro",
+          type: "video",
+          name: "Intro",
+          fileId: "file.video",
+          thumbnailFileId: "file.video-thumbnail",
+          duration: 2000,
+          width: 1920,
+          height: 1080,
+        },
+      },
+      tree: [{ id: "folder.videos", children: [{ id: "video.intro" }] }],
+    },
+  },
+});
+
 const repositoryState = {
   transforms: {
     items: {
@@ -45,6 +153,8 @@ const repositoryState = {
       },
     ],
   },
+  sounds: { items: {}, tree: [] },
+  videos: { items: {}, tree: [] },
   tags: {},
 };
 
@@ -68,29 +178,33 @@ const createService = ({
     })),
   };
   const assetService = {
-    stageResourceImportFile: vi.fn(async ({ fileId, thumbnailFileId }) =>
-      stageResult
-        ? stageResult({ fileId, thumbnailFileId })
-        : {
-            fileId,
-            thumbnailFileId,
-            dimensions: { width: 1, height: 1 },
-            displayName: "Pixel",
-            fileRecords: [
-              {
-                id: fileId,
-                mimeType: "image/png",
-                size: 3,
-                sha256: "file-sha",
-              },
-              {
-                id: thumbnailFileId,
-                mimeType: "image/webp",
-                size: 2,
-                sha256: "thumb-sha",
-              },
-            ],
+    stageResourceImportFile: vi.fn(
+      async ({ file, fileId, thumbnailFileId }) => {
+        if (stageResult) return stageResult({ file, fileId, thumbnailFileId });
+        const fileRecords = [
+          {
+            id: fileId,
+            mimeType: file.type,
+            size: 3,
+            sha256: "file-sha",
           },
+        ];
+        if (thumbnailFileId) {
+          fileRecords.push({
+            id: thumbnailFileId,
+            mimeType: "image/webp",
+            size: 2,
+            sha256: "thumb-sha",
+          });
+        }
+        return {
+          fileId,
+          thumbnailFileId,
+          dimensions: { width: 1, height: 1 },
+          displayName: "Pixel",
+          fileRecords,
+        };
+      },
     ),
     discardResourceImportFiles: vi.fn(async () => ({
       deletedFileIds: [],
@@ -99,6 +213,7 @@ const createService = ({
     finalizeResourceImportFiles: vi.fn(),
   };
   const commandApi = {
+    commitAssetImportPackage: vi.fn(async () => commitResult),
     commitResourceImportPackage: vi.fn(async () => commitResult),
   };
   const service = createResourcePackageImportService({
@@ -123,6 +238,122 @@ const createService = ({
 };
 
 describe("resourcePackageImportService", () => {
+  it("imports nested image, sound, and video assets from one package", async () => {
+    const { service, importClient, assetService, commandApi } = createService();
+    importClient.fetchManifest.mockResolvedValue({
+      manifest: assetManifest(),
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
+    });
+    importClient.downloadFile.mockImplementation(async ({ descriptor }) => ({
+      bytes: new Uint8Array([1, 2, 3]),
+      byteLength: 3,
+      contentType: descriptor.mimeType,
+    }));
+
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+      expectedResourceType: "transforms",
+    });
+
+    expect(planned.valid).toBe(true);
+    expect(planned.plan).toMatchObject({
+      assetPackage: true,
+      expectedResourceType: "assets",
+      resources: [
+        { type: "image", resourceType: "images", name: "City" },
+        { type: "sound", resourceType: "sounds", name: "Theme" },
+        { type: "video", resourceType: "videos", name: "Intro" },
+      ],
+    });
+    expect(planned.plan.entries.map((entry) => entry.data.name)).toEqual([
+      "Images",
+      "City",
+      "City",
+      "Sounds",
+      "Theme",
+      "Videos",
+      "Intro",
+    ]);
+
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+    });
+
+    expect(result).toMatchObject({
+      valid: true,
+      assetPackage: true,
+      importedCount: 3,
+      importedImageCount: 1,
+      importedSoundCount: 1,
+      importedVideoCount: 1,
+    });
+    expect(importClient.downloadFile).toHaveBeenCalledTimes(4);
+    expect(assetService.stageResourceImportFile).toHaveBeenCalledTimes(4);
+    expect(
+      assetService.stageResourceImportFile.mock.calls.every(
+        ([payload]) => payload.processImage === false,
+      ),
+    ).toBe(true);
+    expect(commandApi.commitResourceImportPackage).not.toHaveBeenCalled();
+    expect(commandApi.commitAssetImportPackage).toHaveBeenCalledOnce();
+    const commit = commandApi.commitAssetImportPackage.mock.calls[0][0];
+    expect(commit.entries.map((entry) => entry.data.name)).toEqual([
+      "Images",
+      "City",
+      "City",
+      "Sounds",
+      "Theme",
+      "Videos",
+      "Intro",
+    ]);
+    const video = commit.entries.find(
+      (entry) => entry.resourceType === "videos" && !entry.folder,
+    );
+    expect(video.data).toMatchObject({
+      fileId: expect.stringMatching(/^generated-/),
+      thumbnailFileId: expect.stringMatching(/^generated-/),
+    });
+  });
+
+  it("downloads only selected asset files and their folder ancestry", async () => {
+    const { service, importClient, commandApi } = createService();
+    importClient.fetchManifest.mockResolvedValue({
+      manifest: assetManifest(),
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
+    });
+    importClient.downloadFile.mockImplementation(async ({ descriptor }) => ({
+      bytes: new Uint8Array([1, 2, 3]),
+      byteLength: 3,
+      contentType: descriptor.mimeType,
+    }));
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+      expectedResourceType: "animations",
+    });
+    const video = planned.plan.resources.find(
+      (resource) => resource.resourceType === "videos",
+    );
+
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+      selectedResourceIds: [video.sourceId],
+    });
+
+    expect(result).toMatchObject({
+      valid: true,
+      importedCount: 1,
+      importedImageCount: 0,
+      importedSoundCount: 0,
+      importedVideoCount: 1,
+    });
+    expect(importClient.downloadFile).toHaveBeenCalledTimes(2);
+    const commit = commandApi.commitAssetImportPackage.mock.calls[0][0];
+    expect(commit.entries.map((entry) => entry.data.name)).toEqual([
+      "Videos",
+      "Intro",
+    ]);
+  });
+
   it("uses an existing image substitution without downloading package media", async () => {
     const { service, importClient, assetService, commandApi } = createService();
     const planned = await service.createResourceImportPlan({

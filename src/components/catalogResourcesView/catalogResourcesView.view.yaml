@@ -67,6 +67,16 @@ refs:
     eventListeners:
       click:
         handler: handleImportButtonClick
+  importActionsMenuButton:
+    eventListeners:
+      click:
+        handler: handleImportActionsMenuButtonClick
+  importActionsMenu:
+    eventListeners:
+      close:
+        handler: handleImportActionsMenuClose
+      item-click:
+        handler: handleImportActionsMenuItemClick
   groupToggle*:
     eventListeners:
       click:
@@ -96,6 +106,8 @@ template:
                   - 'rtgl-button#tagFilterButton sq pre=filter v=${tagFilterButtonVariant} aria-label="${filterButtonLabel}" title="${filterButtonLabel}"': null
               - $if showIconImportButton:
                   - 'rtgl-button#importBtn sq pre=upload v=ol aria-label="${importText}" title="${importText}"': null
+              - $if showImportActionsMenuButton:
+                  - 'rtgl-button#importActionsMenuButton sq pre=ellipsis v=ol aria-label="${importText}" title="${importText}" aria-haspopup=menu': null
               - $if showTrailingMenuButton:
                   - 'rtgl-button#menuButton sq pre=hamburger v=ol aria-label="${menuButtonLabel}" title="${menuButtonLabel}"': null
               - $if showTextImportButton:
@@ -255,3 +267,4 @@ template:
               - rtgl-slider#zoomSlider w=160 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null
               - rtgl-button#zoomIn sq v=ol: +
   - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
+  - rtgl-dropdown-menu#importActionsMenu :items=${importActionsMenu.items} ?open=${importActionsMenu.isOpen} x=${importActionsMenu.x} y=${importActionsMenu.y} place=be: null

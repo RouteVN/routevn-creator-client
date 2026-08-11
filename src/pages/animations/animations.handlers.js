@@ -822,11 +822,24 @@ export const handleResourceImportComplete = async (deps, payload) => {
   const result = payload._event.detail;
   store.closeImportDialog();
   clearImportVisibilityFilters(store);
-  showImportSuccess(appService, result.importedCount, copy);
+  if (result.assetPackage) {
+    appService.showToast({
+      message: formatI18nCopy(
+        deps.i18n.resourceImport?.assetPackageImported ??
+          "Imported {count} resources from the asset package.",
+        { count: result.importedCount },
+      ),
+      status: "success",
+    });
+  } else {
+    showImportSuccess(appService, result.importedCount, copy);
+  }
   render();
-  await handleDataChanged(deps, {
-    selectedItemId: result.primaryResourceId,
-  });
+  const dataChangedOptions = {};
+  if (!result.assetPackage) {
+    dataChangedOptions.selectedItemId = result.primaryResourceId;
+  }
+  await handleDataChanged(deps, dataChangedOptions);
 };
 
 export const handleImportFormActionClick = async (deps, payload) => {

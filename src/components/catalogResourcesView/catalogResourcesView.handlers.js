@@ -507,20 +507,54 @@ export const handleAddButtonClick = (deps, payload) => {
   );
 };
 
-export const handleImportButtonClick = (deps, payload) => {
+const dispatchImportClick = (deps, { x, y } = {}) => {
   const { dispatchEvent } = deps;
-  payload._event.stopPropagation();
 
   dispatchEvent(
     new CustomEvent("import-click", {
       detail: {
-        x: payload._event.clientX,
-        y: payload._event.clientY,
+        x: x ?? 0,
+        y: y ?? 0,
       },
       bubbles: true,
       composed: true,
     }),
   );
+};
+
+export const handleImportButtonClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  dispatchImportClick(deps, {
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+  });
+};
+
+export const handleImportActionsMenuButtonClick = (deps, payload) => {
+  const { render, store } = deps;
+  payload._event.stopPropagation();
+  store.openImportActionsMenu(
+    resolvePopoverButtonPosition(payload._event.currentTarget),
+  );
+  render();
+};
+
+export const handleImportActionsMenuClose = (deps) => {
+  const { render, store } = deps;
+  store.closeImportActionsMenu();
+  render();
+};
+
+export const handleImportActionsMenuItemClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { item } = payload._event.detail;
+  const position = store.selectImportActionsMenu();
+  store.closeImportActionsMenu();
+  render();
+
+  if (item.value === "import") {
+    dispatchImportClick(deps, position);
+  }
 };
 
 export const handleItemContextMenu = (deps, payload) => {

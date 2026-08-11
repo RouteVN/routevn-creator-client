@@ -534,6 +534,43 @@ describe("resource-import-dialog.store", () => {
     });
   });
 
+  it("preserves package folders without asking for asset destinations", () => {
+    const state = createInitialState();
+    syncFromProps(
+      { state },
+      {
+        props: { open: true, expectedResourceType: "transforms" },
+        repositoryState: createRepositoryState(),
+      },
+    );
+    const plan = createMultiResourcePlan();
+    plan.assetPackage = true;
+    plan.images = [];
+    plan.resources = plan.resources.map((resource, index) => ({
+      ...resource,
+      sourceId: `images:image.${index}`,
+      resourceType: "images",
+      type: "image",
+    }));
+    setPlan({ state }, { plan });
+    openItemStep({ state }, { resourceIndex: 0 });
+
+    const view = selectViewData({ state, i18n: {} });
+    const fields = view.form.fields.flatMap((field) => field.fields ?? [field]);
+    expect(
+      fields.some((field) => field.name === "resourceDestinationMode"),
+    ).toBe(false);
+    expect(fields.some((field) => field.name === "imageDestinationMode")).toBe(
+      false,
+    );
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "resource_0_name" }),
+        expect.objectContaining({ name: "resource_0_description" }),
+      ]),
+    );
+  });
+
   it("builds a read-only animation timeline with transition and mask tracks", () => {
     const state = createInitialState();
     syncFromProps(

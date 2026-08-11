@@ -8,6 +8,7 @@ import {
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
 import { createRenderableParticleData } from "../../internal/particles.js";
+import { createParticlePreviewState } from "../../internal/particlePreview.js";
 import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
@@ -19,7 +20,6 @@ import {
   buildParticlePayload,
   resolveParticleBaseData,
 } from "./support/particleForm.js";
-import { createParticlePreviewState } from "./support/particlePreview.js";
 import {
   DEFAULT_PARTICLE_PRESET_ID,
   PARTICLE_PRESET_OPTIONS,

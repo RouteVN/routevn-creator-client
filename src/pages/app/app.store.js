@@ -41,7 +41,7 @@ const mobileTabIdByRoutePattern = {
   "/project/about": "settings",
   "/project/appearance": "settings",
   "/project/language": "settings",
-  "/project/asset-package": "settings",
+  "/project/asset-package": "release",
   "/project/user": "settings",
 };
 

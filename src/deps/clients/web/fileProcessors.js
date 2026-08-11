@@ -1,3 +1,5 @@
+import { renderWaveformCanvas } from "../../../internal/waveformCanvas.js";
+
 // Shared file processing utilities that are storage-agnostic
 
 // Image processing utilities
@@ -352,6 +354,20 @@ export const extractWaveformDataFromArrayBuffer = async (
 export const extractWaveformData = async (audioFile, samples = 1000) => {
   const arrayBuffer = await audioFile.arrayBuffer();
   return extractWaveformDataFromArrayBuffer(arrayBuffer, samples);
+};
+
+export const createWaveformThumbnail = async ({
+  waveformData,
+  width = 640,
+  height = 360,
+} = {}) => {
+  const canvas = document.createElement("canvas");
+  try {
+    renderWaveformCanvas({ canvas, waveformData, width, height });
+    return await canvasToBlob(canvas, "image/png");
+  } finally {
+    canvas.remove();
+  }
 };
 
 const VIDEO_THUMBNAIL_EVENT_TIMEOUT_MS = 1000;

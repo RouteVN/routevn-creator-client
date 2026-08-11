@@ -22,7 +22,7 @@ import {
   resolveParticleTextureImageItem,
 } from "./support/particleForm.js";
 import { DEFAULT_PARTICLE_PRESET_ID } from "./support/particlePresets.js";
-import { formatParticleAspectRatio } from "./support/particlePreview.js";
+import { formatParticleAspectRatio } from "../../internal/particlePreview.js";
 import { selectParticlesPageCopy } from "./support/particlesPageCopy.js";
 
 const EMPTY_TREE = {

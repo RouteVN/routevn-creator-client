@@ -2,17 +2,16 @@ import {
   COMMAND_TYPES,
   getTagScopePartitionResourceType,
 } from "../../../../../internal/project/commands.js";
+import { ASSET_PACKAGE_RESOURCE_CONFIGS } from "../../../../../internal/assetPackageResources.js";
 
-const COMMAND_CONFIG = Object.freeze({
-  animations: {
-    type: COMMAND_TYPES.ANIMATION_CREATE,
-    idField: "animationId",
-  },
-  transforms: {
-    type: COMMAND_TYPES.TRANSFORM_CREATE,
-    idField: "transformId",
-  },
-});
+const COMMAND_CONFIG = Object.freeze(
+  Object.fromEntries(
+    ASSET_PACKAGE_RESOURCE_CONFIGS.map((config) => [
+      config.resourceType,
+      { type: config.commandType, idField: config.idField },
+    ]),
+  ),
+);
 const IMAGE_CONFIG = Object.freeze({
   type: COMMAND_TYPES.IMAGE_CREATE,
   idField: "imageId",
@@ -395,6 +394,113 @@ export const createImportPackageCommandApi = (shared) => ({
       reusedTagIds: tags
         .filter((tag) => tag.mode === "existing")
         .map((tag) => tag.destinationId),
+    };
+  },
+
+  async commitAssetImportPackage({
+    planId,
+    projectId,
+    repositoryRevision,
+    fileRecords = [],
+    fileCommandIds = {},
+    entries = [],
+  } = {}) {
+    const context = await shared.ensureCommandContext();
+    if (projectId !== undefined && context.projectId !== projectId) {
+      return invalid(
+        "project_changed",
+        "The project changed while the import was open. Review the import again.",
+        { planId },
+      );
+    }
+    if (
+      repositoryRevision !== undefined &&
+      context.repository.getRevision() !== repositoryRevision
+    ) {
+      return invalid(
+        "project_changed",
+        "The project changed while the import was open. Review the import again.",
+        { planId },
+      );
+    }
+
+    const includedFolderIds = new Set();
+    for (const entry of entries) {
+      const config = COMMAND_CONFIG[entry.resourceType];
+      if (!config) {
+        return invalid(
+          "unsupported_resource_type",
+          "This asset type cannot be imported.",
+        );
+      }
+      if (context.state?.[entry.resourceType]?.items?.[entry.destinationId]) {
+        return invalid(
+          "project_changed",
+          "An imported asset id now conflicts with the project. Review the import again.",
+          { resourceId: entry.destinationId },
+        );
+      }
+      if (
+        entry.parentDestinationId &&
+        !includedFolderIds.has(entry.parentDestinationId)
+      ) {
+        return invalid("invalid_tree", "An imported asset folder is missing.", {
+          resourceId: entry.destinationId,
+        });
+      }
+      if (entry.folder) includedFolderIds.add(entry.destinationId);
+    }
+
+    const commands = shared.buildMissingFileCommands({
+      context,
+      fileRecords,
+    });
+    for (const command of commands) {
+      command.commandId = fileCommandIds[command.payload.fileId];
+    }
+    for (const entry of entries) {
+      const config = COMMAND_CONFIG[entry.resourceType];
+      commands.push(
+        createResourceCommand({
+          shared,
+          context,
+          resourceType: entry.resourceType,
+          commandType: config.type,
+          idField: config.idField,
+          id: entry.destinationId,
+          data: entry.data,
+          parentId: entry.parentDestinationId,
+          index: entry.index,
+          commandId: entry.commandId,
+        }),
+      );
+    }
+
+    const result = await shared.submitCommandsWithContext({
+      context,
+      commands,
+    });
+    if (result?.valid === false) return result;
+
+    const resources = entries.filter((entry) => !entry.folder);
+    return {
+      valid: true,
+      assetPackage: true,
+      planId,
+      commandIds: result.commandIds,
+      resourceIds: resources.map((entry) => entry.destinationId),
+      imageIds: resources
+        .filter((entry) => entry.resourceType === "images")
+        .map((entry) => entry.destinationId),
+      soundIds: resources
+        .filter((entry) => entry.resourceType === "sounds")
+        .map((entry) => entry.destinationId),
+      videoIds: resources
+        .filter((entry) => entry.resourceType === "videos")
+        .map((entry) => entry.destinationId),
+      createdFolderIds: entries
+        .filter((entry) => entry.folder)
+        .map((entry) => entry.destinationId),
     };
   },
 });

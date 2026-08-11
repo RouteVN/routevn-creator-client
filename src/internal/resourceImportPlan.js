@@ -508,7 +508,8 @@ const rewriteReferences = (value, { imageIds, transformIds, fileIds }) => {
     if (
       (key === "fileId" ||
         key === "thumbnailFileId" ||
-        key === "previewFileId") &&
+        key === "previewFileId" ||
+        key === "waveformDataFileId") &&
       typeof entry === "string"
     ) {
       next[key] = fileIds.get(entry) ?? entry;

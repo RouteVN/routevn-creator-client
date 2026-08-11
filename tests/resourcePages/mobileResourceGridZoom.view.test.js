@@ -48,7 +48,6 @@ const mobileMenuResourcePages = [
 ];
 
 const mobileIconOnlyImportPages = [
-  ["animations", "animations/animations.view.yaml"],
   ["transforms", "transforms/transforms.view.yaml"],
 ];
 
@@ -122,6 +121,15 @@ describe("mobile resource grid zoom wiring", () => {
       expect(mobileBranch).toContain("menu-button-placement=trailing");
     },
   );
+
+  it("uses an animation actions menu for mobile imports", () => {
+    const mobileBranch = readMobileBranch("animations/animations.view.yaml");
+
+    expect(mobileBranch).toContain("canImport");
+    expect(mobileBranch).toContain("import-in-actions-menu");
+    expect(mobileBranch).not.toContain("import-icon-only");
+    expect(mobileBranch).toContain("menu-button-placement=trailing");
+  });
 
   it("renders catalog import icon controls between filter and trailing menu", () => {
     const catalogView = readFileSync(

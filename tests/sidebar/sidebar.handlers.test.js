@@ -100,7 +100,7 @@ describe("sidebar.handlers", () => {
         state,
         props: { currentRoute: "/project/asset-package" },
       }).selectedItemId,
-    ).toBe("settings");
+    ).toBe("release");
   });
 
   it("does not render from a redirect request before the route is committed", () => {

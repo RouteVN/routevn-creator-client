@@ -1,4 +1,5 @@
 import { createProjectAssetService } from "./projectAssetService.js";
+import { createAssetPackageExportService } from "./assetPackageExportService.js";
 import { createProjectCollabCore } from "./projectCollabCore.js";
 import { createProjectExportService } from "./projectExportService.js";
 import { createProjectRepositoryService } from "./projectRepositoryService.js";
@@ -102,6 +103,12 @@ export const createProjectServiceCore = ({
     filePicker,
     getCurrentReference: repositoryService.getCachedReference,
     getFileContent: assetService.getFileContent,
+  });
+
+  const assetPackageExportService = createAssetPackageExportService({
+    getFileContent: assetService.getFileContent,
+    getRepositoryState: () =>
+      repositoryService.getCachedRepository().getState(),
   });
 
   const getCurrentProjectId = () =>
@@ -618,6 +625,8 @@ export const createProjectServiceCore = ({
     getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
     updateCurrentProjectInfo: repositoryService.updateCurrentProjectInfo,
     updateProjectInfoById: repositoryService.updateProjectInfoByProjectId,
+    getCurrentAssetPackage: repositoryService.getCurrentAssetPackage,
+    updateCurrentAssetPackage: repositoryService.updateCurrentAssetPackage,
     getCurrentPlatformDetails: repositoryService.getCurrentPlatformDetails,
     getCurrentPlatformDetailsDefaults:
       repositoryService.getCurrentPlatformDetailsDefaults,
@@ -657,6 +666,8 @@ export const createProjectServiceCore = ({
       });
     },
     getFileContent: assetService.getFileContent,
+    createAssetPackageBundle:
+      assetPackageExportService.createAssetPackageBundle,
     downloadMetadata: assetService.downloadMetadata,
     loadFontFile: assetService.loadFontFile,
     detectFileType: assetService.detectFileType,
