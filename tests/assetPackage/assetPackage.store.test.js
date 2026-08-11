@@ -11,10 +11,8 @@ import {
   openResourceTypeContextMenu,
   selectAssetPackage,
   selectAssetPackageData,
-  selectPackageMetadata,
   selectViewData,
   setFilesData,
-  setPackageMetadata,
   setAssetPackage,
   setResourceData,
   setUiConfig,
@@ -153,13 +151,6 @@ const FILES_DATA = {
       ["file-font-1", "font/woff2"],
     ].map(([id, mimeType], index) => [id, { id, mimeType, size: index + 1 }]),
   ),
-};
-
-const PACKAGE_METADATA = {
-  id: "example.asset-package",
-  name: "Example Asset Package",
-  version: "1.0.0",
-  description: "Example resources.",
 };
 
 const createResourceDataByType = () => {
@@ -337,12 +328,6 @@ describe("asset package store", () => {
     ]);
     expect(selectAssetPackage({ state })).toEqual({
       schemaVersion: 1,
-      metadata: {
-        id: "",
-        name: "",
-        version: "",
-        description: "",
-      },
       resources: [
         { resourceType: "sounds", folderIds: ["sound-folder"] },
         { resourceType: "images", folderIds: ["folder-1"] },
@@ -395,12 +380,6 @@ describe("asset package store", () => {
 
     expect(selectAssetPackage({ state })).toEqual({
       schemaVersion: 1,
-      metadata: {
-        id: "",
-        name: "",
-        version: "",
-        description: "",
-      },
       resources: [
         { resourceType: "videos", folderIds: ["video-folder"] },
         { resourceType: "images", folderIds: ["folder-1"] },
@@ -508,10 +487,15 @@ describe("asset package store", () => {
     state.selectedFolderIdsByType.images = ["folder-3", "folder-1"];
     state.selectedFolderIdsByType.sounds = ["sound-folder"];
     state.selectedFolderIdsByType.videos = ["video-folder"];
-    setPackageMetadata({ state }, { packageMetadata: PACKAGE_METADATA });
     const manifest = createAssetPackageManifest({
       repository: selectAssetPackageData({ state }),
-      packageMetadata: selectPackageMetadata({ state }),
+    });
+    expect(manifest.package).toEqual({
+      kind: "routevn.creator.asset-package",
+      id: "",
+      name: "",
+      version: "",
+      description: "",
     });
     let id = 0;
 

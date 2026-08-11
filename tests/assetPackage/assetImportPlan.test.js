@@ -71,9 +71,10 @@ const createManifest = () => {
     schema: "routevn.import-pack.v1",
     package: {
       kind: ASSET_PACKAGE_KIND,
-      id: "example.all-resources",
-      name: "All Resources",
-      version: "1.0.0",
+      id: "",
+      name: "",
+      version: "",
+      description: "",
     },
     repository,
   };

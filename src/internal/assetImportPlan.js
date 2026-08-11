@@ -271,10 +271,10 @@ const validateManifest = (manifest) => {
       path: "package.package.kind",
     });
   }
-  for (const key of ["id", "name", "version"]) {
-    assertNonEmptyString(manifest.package[key], `package.package.${key}`);
-  }
   for (const key of [
+    "id",
+    "name",
+    "version",
     "description",
     "publisher",
     "source",

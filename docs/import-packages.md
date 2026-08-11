@@ -221,6 +221,10 @@ package tree.
 The asset package creator exposes only top-level source folders. Selecting one
 serializes its complete subtree, including nested folders and resources, while
 preserving the selected root order and all ordering within each subtree.
+Creator exports retain the explicit `routevn.creator.asset-package` package
+kind, but leave `package.id`, `package.name`, `package.version`, and
+`package.description` as empty strings. Publishing/catalog systems may supply
+that information separately without changing the creator project.
 The asset package importer recreates the selected resources' complete package
 folder ancestry in each matching project collection. Package-local file and
 resource references are remapped before import, including nested references and

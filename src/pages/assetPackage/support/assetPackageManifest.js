@@ -310,60 +310,15 @@ export class AssetPackageManifestError extends Error {
   }
 }
 
-export const createAssetPackageMetadata = (packageMetadata) => {
-  if (
-    !packageMetadata ||
-    typeof packageMetadata !== "object" ||
-    Array.isArray(packageMetadata)
-  ) {
-    throw new AssetPackageManifestError(
-      "missing_metadata",
-      "Asset package information is required.",
-    );
-  }
-  for (const key of ["id", "name", "version", "description"]) {
-    if (typeof packageMetadata[key] !== "string") {
-      throw new AssetPackageManifestError(
-        "invalid_metadata",
-        `Asset package ${key} must be text.`,
-      );
-    }
-  }
-  const metadata = {
-    kind: ASSET_PACKAGE_KIND,
-    id: packageMetadata.id.trim(),
-    name: packageMetadata.name.trim(),
-    version: packageMetadata.version.trim(),
-    description: packageMetadata.description.trim(),
-  };
-  for (const key of ["id", "name", "version"]) {
-    if (!metadata[key]) {
-      throw new AssetPackageManifestError(
-        "missing_metadata",
-        `Asset package ${key} is required.`,
-      );
-    }
-  }
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(metadata.id)) {
-    throw new AssetPackageManifestError(
-      "invalid_metadata",
-      "Asset package id is invalid.",
-    );
-  }
-  if (
-    !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(
-      metadata.version,
-    )
-  ) {
-    throw new AssetPackageManifestError(
-      "invalid_metadata",
-      "Asset package version must be a semantic version.",
-    );
-  }
-  return metadata;
-};
+export const createAssetPackageMetadata = () => ({
+  kind: ASSET_PACKAGE_KIND,
+  id: "",
+  name: "",
+  version: "",
+  description: "",
+});
 
-export const createAssetPackageManifest = ({ repository, packageMetadata }) => {
+export const createAssetPackageManifest = ({ repository }) => {
   const resourceCount = ASSET_PACKAGE_RESOURCE_TYPES.reduce(
     (count, resourceType) => {
       const itemType =
@@ -386,7 +341,7 @@ export const createAssetPackageManifest = ({ repository, packageMetadata }) => {
 
   return {
     schema: IMPORT_PACK_SCHEMA,
-    package: createAssetPackageMetadata(packageMetadata),
+    package: createAssetPackageMetadata(),
     repository: structuredClone(repository),
   };
 };

@@ -146,13 +146,6 @@ export const ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE = Object.freeze(
 export const ASSET_PACKAGE_SCHEMA_VERSION = 1;
 export const ASSET_PACKAGE_KIND = "routevn.creator.asset-package";
 
-export const EMPTY_ASSET_PACKAGE_METADATA = Object.freeze({
-  id: "",
-  name: "",
-  version: "",
-  description: "",
-});
-
 const FILE_REFERENCE_FIELDS = new Set([
   "fileId",
   "fileIds",
@@ -524,12 +517,6 @@ export const normalizeAssetPackage = (assetPackage) => {
 
   return {
     schemaVersion: ASSET_PACKAGE_SCHEMA_VERSION,
-    metadata: {
-      id: assetPackage?.metadata?.id ?? "",
-      name: assetPackage?.metadata?.name ?? "",
-      version: assetPackage?.metadata?.version ?? "",
-      description: assetPackage?.metadata?.description ?? "",
-    },
     resources,
   };
 };

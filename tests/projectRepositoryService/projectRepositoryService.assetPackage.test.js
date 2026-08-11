@@ -61,12 +61,6 @@ describe("projectRepositoryService asset package", () => {
 
     await expect(harness.service.getCurrentAssetPackage()).resolves.toEqual({
       schemaVersion: 1,
-      metadata: {
-        id: "",
-        name: "",
-        version: "",
-        description: "",
-      },
       resources: [],
     });
     expect(harness.store.app.get).toHaveBeenCalledWith("assetPackage");
@@ -76,12 +70,6 @@ describe("projectRepositoryService asset package", () => {
     const harness = createHarness();
     const assetPackage = {
       schemaVersion: 1,
-      metadata: {
-        id: "example.asset-package",
-        name: "Example Asset Package",
-        version: "1.0.0",
-        description: "Example resources.",
-      },
       resources: [
         {
           resourceType: "videos",
