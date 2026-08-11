@@ -305,4 +305,88 @@ describe("asset package preview client", () => {
     expect(stops[2]).toHaveBeenCalledOnce();
     expect(graphicsService.destroy).toHaveBeenCalledOnce();
   });
+
+  it("retries an animation after an empty canvas recording", async () => {
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = 320;
+    sourceCanvas.height = 180;
+    const thumbnailContext = {
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
+    };
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      thumbnailContext,
+    );
+
+    const emptyRecordingStop = vi.fn(async () => {
+      throw new Error("Canvas video recording is empty.");
+    });
+    const successfulRecordingStop = vi.fn(
+      async () => new Blob(["slide"], { type: "video/webm" }),
+    );
+    const graphicsService = {
+      destroy: vi.fn(async () => {}),
+      init: vi.fn(async () => {}),
+      loadAssets: vi.fn(async () => {}),
+      render: vi.fn(async () => {}),
+      setAnimationPlaybackMode: vi.fn(),
+      setAnimationTime: vi.fn(),
+      getCanvas: vi.fn(() => sourceCanvas),
+      startCanvasVideoRecording: vi
+        .fn()
+        .mockImplementationOnce(() => ({ stop: emptyRecordingStop }))
+        .mockImplementationOnce(() => ({ stop: successfulRecordingStop })),
+    };
+    createGraphicsService.mockResolvedValueOnce(graphicsService);
+    startCanvasVideoRecording.mockReset();
+    startCanvasVideoRecording
+      .mockImplementationOnce(() => ({
+        stop: vi.fn(
+          async () => new Blob(["first-thumbnail"], { type: "video/webm" }),
+        ),
+      }))
+      .mockImplementationOnce(() => ({
+        stop: vi.fn(
+          async () => new Blob(["second-thumbnail"], { type: "video/webm" }),
+        ),
+      }));
+
+    const previews = await renderAnimationPreviewVideos({
+      animations: [
+        {
+          animationId: "animation.slide",
+          animation: {
+            id: "animation.slide",
+            type: "animation",
+            name: "Slide 1s",
+            animation: {
+              type: "update",
+              tween: {
+                x: {
+                  initialValue: 0,
+                  keyframes: [{ duration: 1, value: 10 }],
+                },
+              },
+            },
+          },
+          imageAssets: [],
+        },
+      ],
+      imagesData: { items: {}, tree: [] },
+      projectResolution: { width: 320, height: 180 },
+    });
+
+    expect(previews).toEqual([
+      {
+        animationId: "animation.slide",
+        previewBlob: expect.any(Blob),
+        thumbnailBlob: expect.any(Blob),
+      },
+    ]);
+    expect(graphicsService.startCanvasVideoRecording).toHaveBeenCalledTimes(2);
+    expect(startCanvasVideoRecording).toHaveBeenCalledTimes(2);
+    expect(emptyRecordingStop).toHaveBeenCalledOnce();
+    expect(successfulRecordingStop).toHaveBeenCalledOnce();
+    expect(graphicsService.destroy).toHaveBeenCalledOnce();
+  });
 });

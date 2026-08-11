@@ -5,6 +5,10 @@ const CANVAS_VIDEO_MIME_TYPES = [
   "video/mp4;codecs=h264",
   "video/mp4",
 ];
+const RECORDER_FLUSH_TIMEOUT_MS = 150;
+
+const wait = (durationMs) =>
+  new Promise((resolve) => globalThis.setTimeout(resolve, durationMs));
 
 const selectCanvasVideoMimeType = (MediaRecorderConstructor) => {
   if (typeof MediaRecorderConstructor.isTypeSupported !== "function") {
@@ -44,9 +48,13 @@ export const startCanvasVideoRecording = ({
   let settled = false;
   let resolveRecording;
   let rejectRecording;
+  let resolveFirstChunk;
   const recording = new Promise((resolve, reject) => {
     resolveRecording = resolve;
     rejectRecording = reject;
+  });
+  const firstChunk = new Promise((resolve) => {
+    resolveFirstChunk = resolve;
   });
 
   const cleanup = () => {
@@ -67,6 +75,7 @@ export const startCanvasVideoRecording = ({
   recorder.ondataavailable = (event) => {
     if (event.data?.size > 0) {
       chunks.push(event.data);
+      resolveFirstChunk();
     }
   };
   recorder.onerror = (event) => {
@@ -97,20 +106,38 @@ export const startCanvasVideoRecording = ({
     throw error;
   }
 
-  let stopRequested = false;
+  let stopOperation;
   return {
     stop() {
-      if (!stopRequested) {
-        stopRequested = true;
-        if (recorder.state !== "inactive") {
-          try {
-            recorder.stop();
-          } catch (error) {
-            reject(error);
+      if (!stopOperation) {
+        stopOperation = (async () => {
+          if (
+            chunks.length === 0 &&
+            recorder.state === "recording" &&
+            typeof recorder.requestData === "function"
+          ) {
+            try {
+              recorder.requestData();
+              await Promise.race([firstChunk, wait(RECORDER_FLUSH_TIMEOUT_MS)]);
+            } catch {
+              // The final stop below is still required and may produce data.
+            }
           }
-        }
+
+          if (settled) {
+            return recording;
+          }
+          if (recorder.state !== "inactive") {
+            try {
+              recorder.stop();
+            } catch (error) {
+              reject(error);
+            }
+          }
+          return recording;
+        })();
       }
-      return recording;
+      return stopOperation;
     },
   };
 };

@@ -16,6 +16,7 @@ const PREVIEW_WIDTH = 640;
 const PREVIEW_HEIGHT = 360;
 const TEXT_STYLE_PREVIEW_HEIGHT = PREVIEW_HEIGHT / 2;
 const STATIC_ANIMATION_PREVIEW_DURATION_MS = 1000;
+const ANIMATION_PREVIEW_RECORDING_ATTEMPTS = 2;
 const PARTICLE_PREVIEW_DURATION_MS = 3000;
 const SPRITESHEET_PREVIEW_PADDING = 16;
 const CHECKERBOARD_CELL_SIZE = 12;
@@ -636,7 +637,7 @@ const loadGraphicsImageAssets = async ({
   }
 };
 
-const recordAnimationPreviewVideo = async ({
+const recordAnimationPreviewVideoOnce = async ({
   animation,
   imagesData,
   graphicsService,
@@ -689,6 +690,29 @@ const recordAnimationPreviewVideo = async ({
     return videos;
   } finally {
     await recording?.cancel();
+  }
+};
+
+const isEmptyCanvasVideoRecordingError = (error) =>
+  error?.message === "Canvas video recording is empty.";
+
+const recordAnimationPreviewVideo = async (options) => {
+  for (
+    let attempt = 1;
+    attempt <= ANIMATION_PREVIEW_RECORDING_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      return await recordAnimationPreviewVideoOnce(options);
+    } catch (error) {
+      if (
+        !isEmptyCanvasVideoRecordingError(error) ||
+        attempt === ANIMATION_PREVIEW_RECORDING_ATTEMPTS
+      ) {
+        throw error;
+      }
+      await waitForPaint();
+    }
   }
 };
 

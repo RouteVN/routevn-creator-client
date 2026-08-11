@@ -19,6 +19,7 @@ describe("canvasVideoRecorder", () => {
         this.stream = recordingStream;
         this.mimeType = options.mimeType;
         this.state = "inactive";
+        this.requestDataCalls = 0;
         recorderInstance = this;
       }
 
@@ -27,11 +28,15 @@ describe("canvasVideoRecorder", () => {
         this.timeslice = timeslice;
       }
 
-      stop() {
-        this.state = "inactive";
+      requestData() {
+        this.requestDataCalls += 1;
         this.ondataavailable({
           data: new Blob(["video-data"], { type: this.mimeType }),
         });
+      }
+
+      stop() {
+        this.state = "inactive";
         this.onstop();
       }
     }
@@ -47,6 +52,7 @@ describe("canvasVideoRecorder", () => {
     expect(recorderInstance.stream).toBe(stream);
     expect(recorderInstance.mimeType).toBe("video/webm;codecs=vp8");
     expect(recorderInstance.timeslice).toBe(100);
+    expect(recorderInstance.requestDataCalls).toBe(1);
     expect(video.type).toBe("video/webm;codecs=vp8");
     expect(await video.text()).toBe("video-data");
     expect(stopTrack).toHaveBeenCalledOnce();
