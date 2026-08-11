@@ -92,7 +92,7 @@ template:
                                           - $if property.thumbnailFileId:
                                               - rvn-file-image w=f h=f fileId=${property.thumbnailFileId}: null
                                     $else:
-                                      - rtgl-text s=xs c=${property.nameColor}: ${property.name}
+                                      - rtgl-text s=xs c=${property.nameColor}: ${property.label}
                               - 'rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm pos=rel style="z-index: 2;"':
                                   - 'rtgl-text s=xs c=${property.initialValueColor} ellipsis title="${property.initialValue}"': ${property.initialValue}
                           - 'rtgl-view#track${pIndex} data-keyframe-track=true data-property=${property.name} data-track-mode=${property.trackMode} d=h w=f h=24 bgc=mu br=sm pos=rel style="min-width: 0; overflow: hidden; cursor: ${property.trackCursor};"':

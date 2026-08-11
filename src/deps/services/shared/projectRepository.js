@@ -50,6 +50,7 @@ export const initialProjectData = {
   voices: createTreeCollection(),
   videos: createTreeCollection(),
   animations: createTreeCollection(),
+  audioEffects: createTreeCollection(),
   particles: createTreeCollection(),
   characters: createTreeCollection(),
   fonts: createTreeCollection(),

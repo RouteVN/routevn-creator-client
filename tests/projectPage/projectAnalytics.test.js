@@ -11,6 +11,7 @@ describe("project analytics", () => {
     ["videos", "/project/videos"],
     ["characters", "/project/characters"],
     ["transforms", "/project/transforms"],
+    ["audioEffects", "/project/audio-effects"],
     ["animations", "/project/animations"],
     ["particles", "/project/particles"],
     ["spritesheets", "/project/spritesheets"],
@@ -109,6 +110,7 @@ describe("project analytics", () => {
       {
         key: "animatedAssets",
         resources: [
+          { key: "audioEffects", count: 0 },
           { key: "animations", count: 0 },
           { key: "particles", count: 0 },
           { key: "spritesheets", count: 0 },

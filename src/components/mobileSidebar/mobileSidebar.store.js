@@ -29,6 +29,12 @@ const assetItems = [
 
 const animatedAssetItems = [
   {
+    id: "audioEffects",
+    label: "Audio Effects",
+    path: "/project/audio-effects",
+    icon: "audio",
+  },
+  {
     id: "animations",
     label: "Animations",
     path: "/project/animations",
@@ -179,6 +185,7 @@ const sectionsByVariant = {
 
 const resourceParentMapping = {
   "animation-editor": "animations",
+  "audio-effects-editor": "audioEffects",
   "character-sprites": "characters",
   "layout-editor": "layouts",
   releases: "versions",

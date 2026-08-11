@@ -207,6 +207,9 @@ const resolveInitialValue = ({ initialValue, defaultValue } = {}) => {
 };
 
 const resolveTargetValue = ({ keyframe, startValue } = {}) => {
+  if (keyframe?.value === "target") {
+    return startValue;
+  }
   const keyframeValue = resolveNumber(keyframe?.value, 0);
   return keyframe?.relative ? startValue + keyframeValue : keyframeValue;
 };
@@ -247,6 +250,9 @@ export const createKeyframeValueCurvePath = ({
   let startValue = resolveInitialValue({ initialValue, defaultValue });
 
   keyframes.forEach((keyframe) => {
+    if (keyframe.startValue !== undefined) {
+      startValue = resolveNumber(keyframe.startValue, startValue);
+    }
     const delay = Math.max(0, resolveNumber(keyframe.delay, 0));
     const duration = resolveNumber(keyframe.duration, 1000) || 1000;
     const targetValue = resolveTargetValue({ keyframe, startValue });

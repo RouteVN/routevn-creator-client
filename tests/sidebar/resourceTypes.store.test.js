@@ -7,6 +7,42 @@ import { selectViewData as selectDesktopResourceTypesViewData } from "../../src/
 import { selectViewData as selectMobileResourceTypesViewData } from "../../src/components/imagesMobileResourceTypes/imagesMobileResourceTypes.store.js";
 
 describe("resource type navigation", () => {
+  it("shows audio effects in desktop and mobile animated asset menus", () => {
+    const props = {
+      resourceCategory: "animatedAssets",
+      selectedResourceId: "audio-effects-editor",
+    };
+
+    const desktopViewData = selectDesktopResourceTypesViewData({ props });
+    const mobileViewData = selectMobileResourceTypesViewData({ props });
+    expect(desktopViewData.items.map((item) => item.id)).toEqual([
+      "audioEffects",
+      "animations",
+      "particles",
+      "spritesheets",
+    ]);
+    expect(mobileViewData.items.map((item) => item.id)).toEqual([
+      "audioEffects",
+      "animations",
+      "particles",
+      "spritesheets",
+    ]);
+
+    const mobileSidebarViewData = selectMobileSidebarViewData({
+      state: createMobileSidebarInitialState(),
+      props: { variant: "assets" },
+    });
+    const animatedSection = mobileSidebarViewData.sections.find(
+      (section) => section.id === "animated-assets",
+    );
+    expect(animatedSection.items.map((item) => item.id)).toEqual([
+      "audioEffects",
+      "animations",
+      "particles",
+      "spritesheets",
+    ]);
+  });
+
   it("shows variables in system resource menus", () => {
     const props = {
       resourceCategory: "systemConfig",

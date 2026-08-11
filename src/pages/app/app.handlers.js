@@ -517,6 +517,7 @@ const targetPathBySequence = {
   so: "/project/sounds",
   tr: "/project/transforms",
   an: "/project/animations",
+  ae: "/project/audio-effects",
   pa: "/project/particles",
   vi: "/project/videos",
   co: "/project/colors",

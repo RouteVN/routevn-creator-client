@@ -140,6 +140,15 @@ const RESOURCE_FILE_EXPLORER_API = Object.freeze({
     idField: "animationId",
     deleteField: "animationIds",
   },
+  audioEffects: {
+    createMethod: "createAudioEffect",
+    updateMethod: "updateAudioEffect",
+    moveMethod: "moveAudioEffect",
+    deleteMethod: "deleteAudioEffects",
+    duplicateMethod: "duplicateAudioEffect",
+    idField: "audioEffectId",
+    deleteField: "audioEffectIds",
+  },
   particles: {
     createMethod: "createParticle",
     updateMethod: "updateParticle",
@@ -450,6 +459,10 @@ export const createResourceFileExplorerHandlers = ({
           position: "last",
         });
         if (createdItemId?.valid === false) {
+          appService.showAlert({
+            message:
+              resolvedCopy.failedCreateFolder ?? "Failed to create folder.",
+          });
           return;
         }
       } else if (action === "new-child-folder") {
@@ -467,6 +480,10 @@ export const createResourceFileExplorerHandlers = ({
           position: "last",
         });
         if (createdItemId?.valid === false) {
+          appService.showAlert({
+            message:
+              resolvedCopy.failedCreateFolder ?? "Failed to create folder.",
+          });
           return;
         }
       } else if (action === "rename-item-confirmed") {

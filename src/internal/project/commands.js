@@ -4,6 +4,7 @@ export const RESOURCE_TYPES = Object.freeze([
   "images",
   "spritesheets",
   "animations",
+  "audioEffects",
   "particles",
   "videos",
   "sounds",
@@ -38,6 +39,7 @@ const RESOURCE_COMMAND_FAMILIES = Object.freeze([
   "voice",
   "video",
   "animation",
+  "audioEffect",
   "particle",
   "character",
   "font",
@@ -189,6 +191,7 @@ export const getTagScopePartitionResourceType = (scopeKey) => {
     scopeKey === "layouts" ||
     scopeKey === "controls" ||
     scopeKey === "animations" ||
+    scopeKey === "audioEffects" ||
     scopeKey === "particles" ||
     scopeKey === "spritesheets"
   ) {

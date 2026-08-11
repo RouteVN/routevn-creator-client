@@ -135,6 +135,10 @@ const RESOURCE_CREATE_REPLAY_DEFINITIONS = Object.freeze({
     idField: "animationId",
     collectionKey: "animations",
   },
+  "audioEffect.create": {
+    idField: "audioEffectId",
+    collectionKey: "audioEffects",
+  },
   "particle.create": {
     idField: "particleId",
     collectionKey: "particles",

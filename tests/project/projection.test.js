@@ -31,6 +31,7 @@ const createExportRepositoryState = (overrides = {}) => ({
   voices: createTreeCollection(),
   particles: createTreeCollection(),
   animations: createTreeCollection(),
+  audioEffects: createTreeCollection(),
   characters: createTreeCollection(),
   fonts: createTreeCollection(),
   colors: createTreeCollection(),
@@ -975,6 +976,129 @@ describe("constructProjectData", () => {
         targetId: "story",
         type: "transition",
       }),
+    ]);
+  });
+
+  it("projects referenced BGM audio effects into route-engine resources", () => {
+    const repositoryState = createExportRepositoryState({
+      audioEffects: createTreeCollection(
+        {
+          crossfade: {
+            id: "crossfade",
+            type: "audioEffect",
+            name: "Crossfade",
+            description: "Fade between BGM sources",
+            tagIds: ["smooth"],
+            audioEffect: {
+              type: "transition",
+              prev: {
+                fade: {
+                  delay: 0,
+                  duration: 600,
+                  easing: "easeInOutSine",
+                },
+              },
+              next: {
+                fade: {
+                  delay: 0,
+                  duration: 900,
+                  easing: "easeInOutSine",
+                },
+              },
+            },
+          },
+          unused: {
+            id: "unused",
+            type: "audioEffect",
+            name: "Unused",
+            audioEffect: {
+              type: "update",
+              tween: {
+                volume: {
+                  keyframes: [{ value: 50, duration: 100 }],
+                },
+              },
+            },
+          },
+        },
+        [{ id: "crossfade" }, { id: "unused" }],
+      ),
+      scenes: createTreeCollection(
+        {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            name: "Scene 1",
+            initialSectionId: "section-1",
+            sections: createTreeCollection(
+              {
+                "section-1": {
+                  id: "section-1",
+                  type: "section",
+                  name: "Section 1",
+                  lines: createTreeCollection(
+                    {
+                      "line-1": {
+                        id: "line-1",
+                        actions: {
+                          bgm: {
+                            audioEffects: { resourceId: "crossfade" },
+                          },
+                        },
+                      },
+                    },
+                    [{ id: "line-1" }],
+                  ),
+                },
+              },
+              [{ id: "section-1" }],
+            ),
+          },
+        },
+        [{ id: "scene-1" }],
+      ),
+    });
+
+    const projectData = constructProjectData(repositoryState);
+    expect(projectData.resources.audioEffects).toEqual({
+      crossfade: {
+        name: "Crossfade",
+        type: "transition",
+        prev: {
+          fade: {
+            delay: 0,
+            duration: 600,
+            easing: "easeInOutSine",
+          },
+        },
+        next: {
+          fade: {
+            delay: 0,
+            duration: 900,
+            easing: "easeInOutSine",
+          },
+        },
+      },
+      unused: {
+        name: "Unused",
+        type: "update",
+        tween: {
+          volume: {
+            keyframes: [{ value: 50, duration: 100 }],
+          },
+        },
+      },
+    });
+    expect(
+      projectData.story.scenes["scene-1"].sections["section-1"].lines[0].actions
+        .bgm,
+    ).toEqual({ audioEffects: { resourceId: "crossfade" } });
+
+    const usage = collectUsedResourcesForExport(repositoryState);
+    expect(usage.usedIds.audioEffects).toEqual(["crossfade"]);
+    const filteredState = buildFilteredStateForExport(repositoryState, usage);
+    expect(Object.keys(filteredState.audioEffects.items)).toEqual([
+      "crossfade",
     ]);
   });
 

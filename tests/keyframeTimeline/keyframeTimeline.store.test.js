@@ -133,12 +133,38 @@ describe("keyframeTimeline easing curves", () => {
     expect(points.at(-1)).toEqual({ x: 100, y: 1 });
   });
 
+  it("uses per-keyframe start values and keeps symbolic targets stable", () => {
+    const points = readPathPoints(
+      createKeyframeValueCurvePath({
+        defaultValue: 100,
+        keyframes: [
+          {
+            startValue: 80,
+            duration: 500,
+            easing: "linear",
+            value: 50,
+          },
+          {
+            duration: 500,
+            easing: "linear",
+            value: "target",
+          },
+        ],
+        timelineDuration: 1000,
+      }),
+    );
+
+    expect(points[0].y).toBeLessThan(points[36].y);
+    expect(points[36].y).toBe(points.at(-1).y);
+  });
+
   it("adds one property value path and easing labels to keyframe tracks", () => {
     const viewData = selectViewData({
       state: createInitialState(),
       props: {
         properties: {
           x: {
+            label: "Position X",
             initialValue: 0,
             keyframes: [
               {
@@ -163,6 +189,7 @@ describe("keyframeTimeline easing curves", () => {
     });
 
     const keyframeProperty = viewData.selectedProperties[0];
+    expect(keyframeProperty.label).toBe("Position X");
     expect(keyframeProperty.keyframes[0]).toMatchObject({
       easing: "easeOutBounce",
       easingLabel: "Ease Out Bounce",
