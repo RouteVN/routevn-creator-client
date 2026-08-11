@@ -1551,7 +1551,7 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
   });
   const {
     property,
-    useInitialValue,
+    initialValueType,
     tweenMode,
     duration,
     easing,
@@ -1566,7 +1566,7 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
 
   const finalInitialValue = useAutoTween
     ? undefined
-    : useInitialValue
+    : initialValueType === "value"
       ? submittedInitialValue !== undefined && submittedInitialValue !== ""
         ? submittedInitialValue
         : defaultInitialValue
@@ -1900,8 +1900,15 @@ export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
   commitSelectedPropertyInitialValue(deps, resolveValueChange(payload));
 };
 
-export const handleSelectedPropertyUseDefaultClick = (deps) => {
-  commitSelectedPropertyInitialValue(deps, undefined);
+export const handleSelectedPropertyInitialValueTypeChange = (deps, payload) => {
+  const { store } = deps;
+  const { property } = store.selectSelectedProperty();
+  const initialValueType = resolveValueChange(payload);
+  const initialValue =
+    initialValueType === "value"
+      ? store.selectDefaultInitialValue({ property })
+      : undefined;
+  commitSelectedPropertyInitialValue(deps, initialValue);
 };
 
 export const handleSelectedPropertyAutoDurationChange = (deps, payload) => {

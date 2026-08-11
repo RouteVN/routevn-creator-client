@@ -310,10 +310,10 @@ refs:
     eventListeners:
       value-change:
         handler: handleSelectedPropertyInitialValueChange
-  selectedPropertyUseDefault:
+  selectedPropertyInitialValueType:
     eventListeners:
-      click:
-        handler: handleSelectedPropertyUseDefaultClick
+      value-change:
+        handler: handleSelectedPropertyInitialValueTypeChange
   selectedPropertyAutoDuration:
     eventListeners:
       value-change:
@@ -704,6 +704,7 @@ template:
                                       - 'rvn-value-popover-input#selectedPropertyAutoDuration value=${selectedPropertyEditor.duration} label="${selectedPropertyEditor.durationLabel}"': null
                                   - rtgl-select#selectedPropertyAutoEasing slot=property-auto-easing w=f no-clear :selectedValue=${selectedPropertyEditor.easing} :options=${selectedPropertyEditor.easingOptions}: null
                                 $else:
+                                  - rtgl-segmented-control#selectedPropertyInitialValueType slot=property-initial-value-type w=f no-clear :selectedValue=${selectedPropertyEditor.initialValueType} :options=${selectedPropertyEditor.initialValueTypeOptions}: null
                                   - rtgl-view slot=property-initial-value d=v w=f g=xs:
                                       - $if selectedPropertyEditor && selectedPropertyEditor.initialValueSlider:
                                           - rtgl-slider-input#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.initialValue} min=${selectedPropertyEditor.initialValueSlider.min} max=${selectedPropertyEditor.initialValueSlider.max} step=${selectedPropertyEditor.initialValueSlider.step}: null
@@ -712,8 +713,6 @@ template:
                                               - 'rvn-value-popover-input#selectedPropertyInitialValuePopover value=${selectedPropertyEditor.initialValue} label="${selectedPropertyEditor.initialValueLabel}"': null
                                         $elif selectedPropertyEditor:
                                           - rtgl-input-number#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f step=${selectedPropertyEditor.initialValueStep} value=${selectedPropertyEditor.initialValue}: null
-                                      - $if selectedPropertyEditor && selectedPropertyEditor.hasInitialValue:
-                                          - rtgl-button#selectedPropertyUseDefault s=sm v=se w=f: ${useDefaultValueButtonLabel}
                         $elif selectedMask:
                           - rtgl-view#selectedMaskDetails data-timeline-selection-surface=true d=v w=f g=md p=md pb=xl:
                               - $if maskEditorPanel.unsupported:

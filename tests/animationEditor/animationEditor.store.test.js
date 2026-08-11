@@ -600,6 +600,11 @@ describe("animationEditor.store", () => {
       { type: "text", label: "Property", value: "Alpha" },
       {
         type: "slot",
+        label: "Initial value type",
+        slot: "property-initial-value-type",
+      },
+      {
+        type: "slot",
         label: "Initial value",
         slot: "property-initial-value",
       },
@@ -608,12 +613,15 @@ describe("animationEditor.store", () => {
       hasInitialValue: true,
       initialValue: 0.5,
       initialValueLabel: "Initial value",
+      initialValueType: "value",
+      initialValueTypeOptions: [
+        { label: "Default", value: "default" },
+        { label: "Value", value: "value" },
+      ],
       initialValueSlider: { min: 0, max: 1, step: 0.01 },
       initialValueStep: "any",
       initialValueUsesPopover: false,
     });
-    expect(viewData.useDefaultValueButtonLabel).toBe("Use Default Value");
-
     delete state.tweenBySection.prev.alpha.initialValue;
     viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.selectedPropertyDetailFields).toEqual([
@@ -621,13 +629,14 @@ describe("animationEditor.store", () => {
       { type: "text", label: "Property", value: "Alpha" },
       {
         type: "slot",
-        label: "Initial value",
-        slot: "property-initial-value",
+        label: "Initial value type",
+        slot: "property-initial-value-type",
       },
     ]);
     expect(viewData.selectedPropertyEditor).toMatchObject({
       hasInitialValue: false,
       initialValue: 1,
+      initialValueType: "default",
     });
 
     setSelectedKeyframe(
@@ -1477,7 +1486,6 @@ describe("animationEditor.store", () => {
     const propertyField = viewData.addPropertyForm.fields.find(
       (field) => field.name === "property",
     );
-
     expect(propertyField.options.map((option) => option.value)).toEqual([
       "alpha",
       "x",
@@ -1549,6 +1557,12 @@ describe("animationEditor.store", () => {
     const propertyField = viewData.addPropertyForm.fields.find(
       (field) => field.name === "property",
     );
+    const initialValueTypeField = viewData.addPropertyForm.fields.find(
+      (field) => field.name === "initialValueType",
+    );
+    const initialValueField = viewData.addPropertyForm.fields.find(
+      (field) => field.name === "initialValue",
+    );
 
     expect(propertyField.options.map((option) => option.value)).toEqual([
       "x",
@@ -1560,6 +1574,15 @@ describe("animationEditor.store", () => {
       "scaleY",
       "rotation",
     ]);
+    expect(initialValueTypeField).toMatchObject({
+      label: "Initial value type",
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Value", value: "value" },
+      ],
+    });
+    expect(initialValueTypeField).not.toHaveProperty("$when");
+    expect(initialValueField.$when).toBe('initialValueType == "value"');
   });
 
   it("prevents absolute and viewport translation properties from sharing a tween axis", () => {
@@ -1661,8 +1684,11 @@ describe("animationEditor.store", () => {
     const initialValueFields = addPropertyForm.fields.filter(
       (field) => field.name === "initialValue",
     );
+    const initialValueTypeField = addPropertyForm.fields.find(
+      (field) => field.name === "initialValueType",
+    );
 
-    expect(viewData.addPropertyFormKey).toBe("open:update:x:keyframes:current");
+    expect(viewData.addPropertyFormKey).toBe("open:update:x:keyframes:default");
     expect(viewData.addPropertyFormDefaultValues).toMatchObject({
       property: "x",
       initialValue: 960,
@@ -1670,7 +1696,16 @@ describe("animationEditor.store", () => {
     expect(initialValueFields).toHaveLength(1);
     expect(initialValueFields[0]).toMatchObject({
       defaultValue: 960,
-      $when: 'tweenMode != "auto" && useInitialValue == true',
+      $when: 'tweenMode != "auto" && initialValueType == "value"',
+    });
+    expect(initialValueTypeField).toMatchObject({
+      type: "segmented-control",
+      label: "Initial value type",
+      $when: 'tweenMode != "auto"',
+      options: [
+        { label: "Default", value: "default" },
+        { label: "Value", value: "value" },
+      ],
     });
   });
 

@@ -224,10 +224,13 @@ describe("animationEditor view", () => {
       "rtgl-view slot=property-initial-value d=v w=f g=xs",
     );
     expect(view).toContain(
+      "rtgl-segmented-control#selectedPropertyInitialValueType slot=property-initial-value-type w=f no-clear",
+    );
+    expect(view).toContain(
       "rtgl-slider-input#selectedPropertyInitialValue key=${selectedPropertyDetailId}",
     );
     expect(view).toContain("data-popover-input-field=true w=f h=32");
-    expect(view).toContain("rtgl-button#selectedPropertyUseDefault");
+    expect(view).not.toContain("selectedPropertyUseDefault");
     expect(view).toContain(
       "rvn-value-popover-input#selectedPropertyAutoDuration",
     );
@@ -237,7 +240,9 @@ describe("animationEditor view", () => {
     expect(view.match(/data-popover-input-field=true/g)).toHaveLength(6);
     expect(view.match(/rvn-value-popover-input#/g)).toHaveLength(6);
     expect(view).toContain("handler: handleSelectedPropertyInitialValueChange");
-    expect(view).toContain("handler: handleSelectedPropertyUseDefaultClick");
+    expect(view).toContain(
+      "handler: handleSelectedPropertyInitialValueTypeChange",
+    );
     expect(view).toContain(
       "handler: handleSelectedKeyframeRemoveStartValueClick",
     );

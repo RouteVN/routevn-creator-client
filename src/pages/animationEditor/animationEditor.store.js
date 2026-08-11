@@ -210,6 +210,7 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
   Channel: "channelLabel",
   "Custom Initial Value": "customInitialValueLabel",
   "Custom Value": "customValueSource",
+  Default: "defaultLabel",
   "Delay (ms)": "delayMsLabel",
   Delete: "deleteMenuItem",
   "Delete keyframe": "deleteKeyframeMenuItem",
@@ -228,6 +229,7 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
   In: "inTimelineLabel",
   Initial: "initialLabel",
   "Initial value": "initialValueLabel",
+  "Initial value type": "initialValueTypeLabel",
   Invert: "invertLabel",
   Keyframes: "keyframesTweenMode",
   Kind: "kindLabel",
@@ -262,7 +264,6 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
   "Update Keyframe": "updateKeyframeButton",
   "Update Value": "updateValueButton",
   "Use Default Value": "useDefaultValueSource",
-  "Use initial value": "useInitialValueLabel",
   "Relative will add the value to the previous value. Absolute will set the property value to exactly the specified value":
     "relativeValueTooltip",
   "Value Source": "valueSourceLabel",
@@ -919,8 +920,26 @@ const createAddPropertyForm = (
     initialValueField.defaultValue =
       propertyFieldConfig[property]?.defaultValue ?? 0;
     initialValueField.$when = isUpdateSide
-      ? 'tweenMode != "auto" && useInitialValue == true'
-      : "useInitialValue == true";
+      ? 'tweenMode != "auto" && initialValueType == "value"'
+      : 'initialValueType == "value"';
+  }
+  const initialValueTypeField = {
+    name: "initialValueType",
+    type: "segmented-control",
+    label: "Initial value type",
+    noClear: true,
+    tooltip: {
+      content:
+        "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
+    },
+    options: [
+      { label: "Default", value: "default" },
+      { label: "Value", value: "value" },
+    ],
+    required: true,
+  };
+  if (isUpdateSide) {
+    initialValueTypeField.$when = 'tweenMode != "auto"';
   }
   const fields = [];
 
@@ -952,27 +971,7 @@ const createAddPropertyForm = (
       options: localizeOptions(TWEEN_MODE_OPTIONS, copy),
       required: true,
     });
-    fields.push({
-      name: "useInitialValue",
-      type: "segmented-control",
-      label: "Use initial value",
-      noClear: true,
-      $when: 'tweenMode != "auto"',
-      tooltip: {
-        content:
-          "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
-      },
-      options: [
-        {
-          label: "No",
-          value: false,
-        },
-        {
-          label: "Yes",
-          value: true,
-        },
-      ],
-    });
+    fields.push(initialValueTypeField);
     const autoFields = createAutoTweenFields(copy).map((field) => ({
       ...field,
       $when: 'tweenMode == "auto"',
@@ -982,26 +981,7 @@ const createAddPropertyForm = (
     }
     fields.push(...autoFields);
   } else {
-    fields.push({
-      name: "useInitialValue",
-      type: "segmented-control",
-      label: "Use initial value",
-      noClear: true,
-      tooltip: {
-        content:
-          "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
-      },
-      options: [
-        {
-          label: "No",
-          value: false,
-        },
-        {
-          label: "Yes",
-          value: true,
-        },
-      ],
-    });
+    fields.push(initialValueTypeField);
     if (initialValueField) {
       fields.push(initialValueField);
     }
@@ -3617,9 +3597,16 @@ const buildSelectedPropertyPanelData = (
   } else {
     fields.push({
       type: "slot",
-      label: copy.initialValueLabel ?? "Initial value",
-      slot: "property-initial-value",
+      label: copy.initialValueTypeLabel ?? "Initial value type",
+      slot: "property-initial-value-type",
     });
+    if (hasInitialValue) {
+      fields.push({
+        type: "slot",
+        label: copy.initialValueLabel ?? "Initial value",
+        slot: "property-initial-value",
+      });
+    }
   }
 
   return {
@@ -3636,6 +3623,17 @@ const buildSelectedPropertyPanelData = (
           hasInitialValue,
           initialValue,
           initialValueLabel: copy.initialValueLabel ?? "Initial value",
+          initialValueType: hasInitialValue ? "value" : "default",
+          initialValueTypeOptions: [
+            {
+              label: copy.defaultLabel ?? "Default",
+              value: "default",
+            },
+            {
+              label: copy.valueLabel ?? "Value",
+              value: "value",
+            },
+          ],
           initialValueSlider,
           initialValueStep: propertyFieldConfig[property]?.input?.step ?? "any",
           initialValueUsesPopover: Boolean(
@@ -3957,7 +3955,7 @@ export const selectViewData = ({ state, i18n }) => {
 
   let addPropertyContext = {};
   let addPropertyFormDefaultValues = {
-    useInitialValue: false,
+    initialValueType: "default",
     tweenMode: "keyframes",
     duration: AUTO_TWEEN_DEFAULT_DURATION,
     easing: AUTO_TWEEN_DEFAULT_EASING,
@@ -4007,7 +4005,7 @@ export const selectViewData = ({ state, i18n }) => {
     addPropertySide,
     addPropertySelectedProperty ?? "",
     addPropertyFormDefaultValues.tweenMode ?? "",
-    addPropertyFormDefaultValues.useInitialValue ? "initial" : "current",
+    addPropertyFormDefaultValues.initialValueType ?? "default",
   ].join(":");
 
   if (state.popover.mode === "editKeyframe") {
@@ -4265,8 +4263,6 @@ export const selectViewData = ({ state, i18n }) => {
     initialValueLabel: copy.initialValueLabel ?? "Initial value",
     removeStartValueButtonLabel:
       copy.removeStartValueButtonLabel ?? "Remove start value",
-    useDefaultValueButtonLabel:
-      copy.useDefaultValueSource ?? "Use Default Value",
     inTimelineLabel: copy.inTimelineLabel ?? "Incoming",
     invertLabel: copy.invertLabel ?? "Invert",
     detailsPanelTitle: selectedMask

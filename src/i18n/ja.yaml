@@ -789,6 +789,7 @@ animationEditorPage:
   inTimelineLabel: "イン"
   initialLabel: "初期"
   initialValueLabel: "初期値"
+  initialValueTypeLabel: "初期値タイプ"
   initialValueTooltip: "アニメーション開始時のプロパティ初期値です。未設定の場合は、アニメーション開始時の要素の現在値を使います。"
   invertLabel: "反転"
   keyframesTweenMode: "キーフレーム"

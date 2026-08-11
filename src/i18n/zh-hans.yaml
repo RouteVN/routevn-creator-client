@@ -789,6 +789,7 @@ animationEditorPage:
   inTimelineLabel: "进入"
   initialLabel: "初始"
   initialValueLabel: "初始值"
+  initialValueTypeLabel: "初始值类型"
   initialValueTooltip: "动画开始时该属性的初始值。未设置时，将使用动画开始时元素的当前值。"
   invertLabel: "反相"
   keyframesTweenMode: "关键帧"

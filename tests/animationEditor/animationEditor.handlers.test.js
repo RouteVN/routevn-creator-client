@@ -51,9 +51,9 @@ import {
   handleSelectedKeyframeStartValueChange,
   handleSelectedKeyframeValueChange,
   handleSelectedPropertyInitialValueChange,
+  handleSelectedPropertyInitialValueTypeChange,
   handleSelectedPropertyAutoDurationChange,
   handleSelectedPropertyAutoEasingChange,
-  handleSelectedPropertyUseDefaultClick,
   handleSelectedMaskNumberConfirmClick,
   handleSelectedMaskNumberFieldKeyDown,
   handleSelectedMaskNumberInputChange,
@@ -1523,7 +1523,7 @@ describe("animationEditor.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("restores the selected property's default initial value", () => {
+  it("uses the selected property's default initial value type", () => {
     const store = {
       bumpPreviewRenderVersion: vi.fn(),
       queueAutosave: vi.fn(),
@@ -1538,12 +1538,49 @@ describe("animationEditor.handlers", () => {
     };
     const render = vi.fn();
 
-    handleSelectedPropertyUseDefaultClick({ render, store });
+    handleSelectedPropertyInitialValueTypeChange(
+      { render, store },
+      { _event: { detail: { value: "default" } } },
+    );
 
     expect(store.updateInitialValue).toHaveBeenCalledWith({
       side: "prev",
       property: "alpha",
       initialValue: undefined,
+    });
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
+    expect(store.queueAutosave).toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("creates a selected property value override from its default", () => {
+    const store = {
+      bumpPreviewRenderVersion: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectDefaultInitialValue: vi.fn(() => 1),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      selectSelectedProperty: vi.fn(() => ({
+        side: "prev",
+        property: "alpha",
+      })),
+      stopPreviewPlayback: vi.fn(),
+      updateInitialValue: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleSelectedPropertyInitialValueTypeChange(
+      { render, store },
+      { _event: { detail: { value: "value" } } },
+    );
+
+    expect(store.selectDefaultInitialValue).toHaveBeenCalledWith({
+      property: "alpha",
+    });
+    expect(store.updateInitialValue).toHaveBeenCalledWith({
+      side: "prev",
+      property: "alpha",
+      initialValue: 1,
     });
     expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
     expect(store.queueAutosave).toHaveBeenCalled();
@@ -2467,7 +2504,7 @@ describe("animationEditor.handlers", () => {
         },
         formValues: {
           property: "alpha",
-          useInitialValue: true,
+          initialValueType: "value",
           initialValue: 0,
           tweenMode: "keyframes",
         },
@@ -2493,7 +2530,7 @@ describe("animationEditor.handlers", () => {
           detail: {
             values: {
               property: "alpha",
-              useInitialValue: true,
+              initialValueType: "value",
               initialValue: 1,
               tweenMode: "keyframes",
             },
@@ -2520,7 +2557,7 @@ describe("animationEditor.handlers", () => {
         },
         formValues: {
           property: "alpha",
-          useInitialValue: true,
+          initialValueType: "value",
           tweenMode: "keyframes",
         },
       })),
@@ -2545,7 +2582,7 @@ describe("animationEditor.handlers", () => {
           detail: {
             values: {
               property: "alpha",
-              useInitialValue: true,
+              initialValueType: "value",
               tweenMode: "keyframes",
             },
           },
@@ -2563,12 +2600,59 @@ describe("animationEditor.handlers", () => {
     });
   });
 
+  it("omits the initial value when adding a property with the default type", () => {
+    const store = {
+      selectPopover: vi.fn(() => ({
+        payload: { side: "update" },
+        formValues: {
+          property: "alpha",
+          initialValueType: "default",
+          initialValue: 1,
+          tweenMode: "keyframes",
+        },
+      })),
+      selectDefaultInitialValue: vi.fn(() => 1),
+      addProperty: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      bumpPreviewRenderVersion: vi.fn(),
+      closePopover: vi.fn(),
+      queueAutosave: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+
+    handleAddPropertyFormSubmit(
+      { store, render: vi.fn() },
+      {
+        _event: {
+          detail: {
+            values: {
+              property: "alpha",
+              initialValueType: "default",
+              initialValue: 1,
+              tweenMode: "keyframes",
+            },
+          },
+        },
+      },
+    );
+
+    expect(store.addProperty).toHaveBeenCalledWith({
+      side: "update",
+      property: "alpha",
+      initialValue: undefined,
+      tweenMode: "keyframes",
+      autoDuration: undefined,
+      autoEasing: undefined,
+    });
+  });
+
   it("resets stale initial values when the add-property property changes", () => {
     const store = {
       selectPopover: vi.fn(() => ({
         formValues: {
           property: "alpha",
-          useInitialValue: true,
+          initialValueType: "value",
           initialValue: 0,
         },
       })),
@@ -2596,7 +2680,7 @@ describe("animationEditor.handlers", () => {
       formValues: {
         initialValue: 1,
         property: "scaleX",
-        useInitialValue: true,
+        initialValueType: "value",
       },
     });
     expect(render).toHaveBeenCalled();
@@ -2608,7 +2692,7 @@ describe("animationEditor.handlers", () => {
         formValues: {
           side: "prev",
           property: "x",
-          useInitialValue: true,
+          initialValueType: "value",
           initialValue: 12,
         },
       })),
@@ -2635,7 +2719,7 @@ describe("animationEditor.handlers", () => {
       formValues: {
         side: "next",
         property: undefined,
-        useInitialValue: true,
+        initialValueType: "value",
         initialValue: undefined,
       },
     });

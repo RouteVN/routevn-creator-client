@@ -789,6 +789,7 @@ animationEditorPage:
   inTimelineLabel: "Incoming"
   initialLabel: "Initial"
   initialValueLabel: "Initial value"
+  initialValueTypeLabel: "Initial value type"
   initialValueTooltip: "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation"
   invertLabel: "Invert"
   keyframesTweenMode: "Keyframes"
