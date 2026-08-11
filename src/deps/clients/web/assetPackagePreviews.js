@@ -23,6 +23,7 @@ const FULL_IMAGE_PREVIEW_WIDTH = 1920;
 const FULL_IMAGE_PREVIEW_HEIGHT = 1080;
 const FULL_TEXT_STYLE_PREVIEW_WIDTH = FULL_IMAGE_PREVIEW_WIDTH / 2;
 const FULL_TEXT_STYLE_PREVIEW_HEIGHT = FULL_IMAGE_PREVIEW_HEIGHT / 4;
+const ANIMATION_PREVIEW_BACKGROUND_COLOR = "#000000";
 const STATIC_ANIMATION_PREVIEW_DURATION_MS = 1000;
 const ANIMATION_PREVIEW_RECORDING_ATTEMPTS = 2;
 const ANIMATION_THUMBNAIL_LOAD_TIMEOUT_MS = 10000;
@@ -863,6 +864,7 @@ const recordAnimationPreviewVideoOnce = async ({
   const { resetState, renderState, durationMs } =
     createAnimationResourcePreviewStates({
       animationItem: animation,
+      backgroundColor: ANIMATION_PREVIEW_BACKGROUND_COLOR,
       imagesData,
       projectResolution,
     });

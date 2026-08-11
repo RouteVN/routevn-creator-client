@@ -316,6 +316,12 @@ describe("asset package preview client", () => {
     });
     expect(graphicsService.init).toHaveBeenCalledOnce();
     expect(graphicsService.render).toHaveBeenCalledTimes(6);
+    for (const [renderState] of graphicsService.render.mock.calls) {
+      expect(renderState.elements[0]).toMatchObject({
+        type: "rect",
+        fill: "#000000",
+      });
+    }
     expect(graphicsService.startCanvasVideoRecording).toHaveBeenCalledTimes(3);
     expect(renderThumbnailVideo).toHaveBeenCalledTimes(3);
     expect(previews[0].thumbnailBlob).toBe(thumbnailBlobs[0]);
