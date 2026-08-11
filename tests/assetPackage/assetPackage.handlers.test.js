@@ -418,12 +418,16 @@ describe("asset package handlers", () => {
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
-    deps.store.selectPackageMetadata.mockReturnValue({
+    const emptyPackageMetadata = {
       id: "",
       name: "",
       version: "",
       description: "",
-    });
+    };
+    deps.store.selectPackageMetadata.mockReturnValue(emptyPackageMetadata);
+    deps.store.selectPackageMetadataEditDefaultValues.mockReturnValue(
+      emptyPackageMetadata,
+    );
 
     try {
       await handleDownloadAssetPackageButtonClick(deps);
@@ -432,6 +436,12 @@ describe("asset package handlers", () => {
     }
 
     expect(deps.appService.saveFilePicker).not.toHaveBeenCalled();
+    expect(deps.store.openPackageMetadataEditDialog).toHaveBeenCalledOnce();
+    expect(deps.refs.packageMetadataEditForm.reset).toHaveBeenCalledOnce();
+    expect(deps.refs.packageMetadataEditForm.setValues).toHaveBeenCalledWith({
+      values: emptyPackageMetadata,
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Complete the package information before exporting.",
       status: "error",

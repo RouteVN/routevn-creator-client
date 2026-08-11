@@ -221,6 +221,7 @@ export const handleDownloadAssetPackageButtonClick = async (deps) => {
       error.code === "invalid_metadata"
     ) {
       message = copy.completePackageInformationBeforeExport;
+      handlePackageMetadataDetailClick(deps);
     }
     appService.showToast({
       message,
