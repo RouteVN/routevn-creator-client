@@ -310,14 +310,6 @@ export class AssetPackageManifestError extends Error {
   }
 }
 
-export const createAssetPackageMetadata = () => ({
-  kind: ASSET_PACKAGE_KIND,
-  id: "",
-  name: "",
-  version: "",
-  description: "",
-});
-
 export const createAssetPackageManifest = ({ repository }) => {
   const resourceCount = ASSET_PACKAGE_RESOURCE_TYPES.reduce(
     (count, resourceType) => {
@@ -341,7 +333,7 @@ export const createAssetPackageManifest = ({ repository }) => {
 
   return {
     schema: IMPORT_PACK_SCHEMA,
-    package: createAssetPackageMetadata(),
+    package: { kind: ASSET_PACKAGE_KIND },
     repository: structuredClone(repository),
   };
 };

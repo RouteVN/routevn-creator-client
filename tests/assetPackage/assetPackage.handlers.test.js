@@ -287,10 +287,6 @@ describe("asset package handlers", () => {
         schema: "routevn.import-pack.v1",
         package: {
           kind: "routevn.creator.asset-package",
-          id: "",
-          name: "",
-          version: "",
-          description: "",
         },
         repository: ASSET_PACKAGE_REPOSITORY,
       },

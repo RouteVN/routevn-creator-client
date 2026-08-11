@@ -492,10 +492,6 @@ describe("asset package store", () => {
     });
     expect(manifest.package).toEqual({
       kind: "routevn.creator.asset-package",
-      id: "",
-      name: "",
-      version: "",
-      description: "",
     });
     let id = 0;
 
