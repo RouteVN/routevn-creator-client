@@ -80,6 +80,8 @@ const addGeneratedPreview = async ({
   item,
   prefix,
   resourceId,
+  itemField = "previewMediaFileId",
+  nameLabel = "preview",
 }) => {
   const { extension, mimeType, type } = getPreviewMediaType(blob);
   const previewBytes = await blob.arrayBuffer();
@@ -92,13 +94,44 @@ const addGeneratedPreview = async ({
   files[previewFileId] = {
     id: previewFileId,
     type,
-    name: `${item.name} preview.${extension}`,
+    name: `${item.name} ${nameLabel}.${extension}`,
     mimeType,
     size: previewBytes.byteLength,
     source: { url: `./${getPackageFilePath(previewFileId)}` },
   };
-  item.previewMediaFileId = previewFileId;
+  item[itemField] = previewFileId;
   fileBytesById.set(previewFileId, previewBytes);
+};
+
+const addGeneratedVideoPreviews = async ({
+  preview,
+  files,
+  fileBytesById,
+  item,
+  prefix,
+  resourceId,
+}) => {
+  if (!preview?.previewBlob || !preview?.thumbnailBlob) {
+    throw new Error(`Video previews for '${resourceId}' are incomplete.`);
+  }
+  await addGeneratedPreview({
+    blob: preview.previewBlob,
+    files,
+    fileBytesById,
+    item,
+    prefix: `${prefix}-preview`,
+    resourceId,
+  });
+  await addGeneratedPreview({
+    blob: preview.thumbnailBlob,
+    files,
+    fileBytesById,
+    item,
+    prefix: `${prefix}-thumbnail`,
+    resourceId,
+    itemField: "thumbnailMediaFileId",
+    nameLabel: "thumbnail",
+  });
 };
 
 const createSourceFileReader = ({
@@ -172,16 +205,17 @@ const addSpritesheetPreviews = async ({
     const sourceFile =
       files[spritesheet.fileId] ??
       sourceRepository.files?.items?.[spritesheet.fileId];
-    await addGeneratedPreview({
-      blob: await renderPreview({
+    await addGeneratedVideoPreviews({
+      preview: await renderPreview({
         spritesheet,
         imageBytes: await readSourceFile(spritesheet.fileId),
         imageMimeType: sourceFile?.mimeType ?? "image/png",
+        projectResolution: sourceRepository.project?.resolution,
       }),
       files,
       fileBytesById,
       item: spritesheet,
-      prefix: "spritesheet-preview",
+      prefix: "spritesheet",
       resourceId: spritesheetId,
     });
   }
@@ -372,19 +406,19 @@ const addAnimationPreviews = async ({
     projectResolution: sourceRepository.project?.resolution,
   });
   const previewByAnimationId = new Map(
-    previews.map((preview) => [preview.animationId, preview.blob]),
+    previews.map((preview) => [preview.animationId, preview]),
   );
   for (const { animationId, animation } of previewInputs) {
-    const blob = previewByAnimationId.get(animationId);
-    if (!blob) {
+    const preview = previewByAnimationId.get(animationId);
+    if (!preview) {
       throw new Error(`Animation preview '${animationId}' was not generated.`);
     }
-    await addGeneratedPreview({
-      blob,
+    await addGeneratedVideoPreviews({
+      preview,
       files,
       fileBytesById,
       item: animation,
-      prefix: "animation-preview",
+      prefix: "animation",
       resourceId: animationId,
     });
   }
@@ -418,12 +452,12 @@ const addParticlePreviews = async ({
         },
       ),
     );
-    await addGeneratedPreview({
-      blob: await renderPreview({ particle, imageItems, imageAssets }),
+    await addGeneratedVideoPreviews({
+      preview: await renderPreview({ particle, imageItems, imageAssets }),
       files,
       fileBytesById,
       item: particle,
-      prefix: "particle-preview",
+      prefix: "particle",
       resourceId: particleId,
     });
   }

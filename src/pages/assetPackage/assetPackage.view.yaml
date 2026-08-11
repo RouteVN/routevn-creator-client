@@ -1,4 +1,18 @@
 refs:
+  packageMetadataDetail:
+    eventListeners:
+      click:
+        handler: handlePackageMetadataDetailClick
+      keydown:
+        handler: handlePackageMetadataDetailKeyDown
+  packageMetadataEditDialog:
+    eventListeners:
+      close:
+        handler: handlePackageMetadataEditDialogClose
+  packageMetadataEditForm:
+    eventListeners:
+      form-action:
+        handler: handlePackageMetadataEditFormAction
   addResourceTypeButton:
     eventListeners:
       click:
@@ -57,6 +71,11 @@ template:
                   - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
                       - 'rtgl-view d=v g=md w=f ph=md pt=md pb=sm mb=lg style="min-width: 0;"':
                           - rtgl-view w=560 sm-w=f d=v g=md:
+                              - 'rtgl-view#packageMetadataDetail role=button tabindex=0 w=f d=v g=xs p=sm br=sm h-bgc=mu cur=pointer':
+                                  - rtgl-text s=h4: ${packageMetadataName}
+                                  - rtgl-text s=sm c=mu-fg: ${packageMetadataSummary}
+                                  - $if packageMetadataDescription:
+                                      - rtgl-text s=sm c=mu-fg: ${packageMetadataDescription}
                               - $for section, sectionIndex in selectedResourceSections:
                                   - rtgl-view w=f d=v g=sm:
                                       - rtgl-view w=f d=h av=c:
@@ -81,3 +100,6 @@ template:
                           - rtgl-text s=sm c=mu-fg: ${folder.selectionOrder}
       - rtgl-view w=f d=h ah=e pt=sm:
           - rtgl-button#confirmResourceFolders s=sm v=pr: ${i18n.assetPackagePage.confirmButton}
+  - rtgl-dialog#packageMetadataEditDialog ?open=${packageMetadataEditDialogOpen} s=md:
+      - rtgl-view slot=content:
+          - rtgl-form#packageMetadataEditForm key=${packageMetadataEditDialogOpen} :defaultValues=${packageMetadataEditDefaultValues} :form=${packageMetadataEditForm} w=f: null

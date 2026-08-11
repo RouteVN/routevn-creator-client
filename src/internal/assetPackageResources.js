@@ -44,7 +44,11 @@ const configs = [
     itemType: "animation",
     commandType: "animation.create",
     idField: "animationId",
-    previewFileFields: ["thumbnailFileId", "previewMediaFileId"],
+    previewFileFields: [
+      "thumbnailMediaFileId",
+      "previewMediaFileId",
+      "thumbnailFileId",
+    ],
     importPriority: 90,
   },
   {
@@ -52,7 +56,11 @@ const configs = [
     itemType: "particle",
     commandType: "particle.create",
     idField: "particleId",
-    previewFileFields: ["previewMediaFileId", "thumbnailFileId"],
+    previewFileFields: [
+      "thumbnailMediaFileId",
+      "previewMediaFileId",
+      "thumbnailFileId",
+    ],
     importPriority: 100,
   },
   {
@@ -60,7 +68,12 @@ const configs = [
     itemType: "spritesheet",
     commandType: "spritesheet.create",
     idField: "spritesheetId",
-    previewFileFields: ["previewMediaFileId", "thumbnailFileId", "fileId"],
+    previewFileFields: [
+      "thumbnailMediaFileId",
+      "previewMediaFileId",
+      "thumbnailFileId",
+      "fileId",
+    ],
     importPriority: 40,
   },
   {
@@ -131,8 +144,214 @@ export const ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE = Object.freeze(
 );
 
 export const ASSET_PACKAGE_SCHEMA_VERSION = 1;
+export const ASSET_PACKAGE_KIND = "routevn.creator.asset-package";
 
-const ASSET_PACKAGE_KEYS = new Set(["schemaVersion", "resources"]);
+export const EMPTY_ASSET_PACKAGE_METADATA = Object.freeze({
+  id: "",
+  name: "",
+  version: "",
+  description: "",
+});
+
+const FILE_REFERENCE_FIELDS = new Set([
+  "fileId",
+  "fileIds",
+  "thumbnailFileId",
+  "previewFileId",
+  "waveformDataFileId",
+]);
+const RESOURCE_REFERENCE_FIELDS = new Set([
+  "animationId",
+  "animationIds",
+  "backgroundImageId",
+  "barImageId",
+  "bgmId",
+  "characterId",
+  "clickImageId",
+  "clickSoundId",
+  "clickTextStyleId",
+  "colorId",
+  "colorIds",
+  "controlId",
+  "fontId",
+  "fontIds",
+  "fragmentLayoutId",
+  "hoverBarImageId",
+  "hoverImageId",
+  "hoverSoundId",
+  "hoverTextStyleId",
+  "hoverThumbImageId",
+  "imageId",
+  "imageIds",
+  "incomingImageId",
+  "layoutId",
+  "layoutIds",
+  "nameVariableId",
+  "outgoingImageId",
+  "paginationVariableId",
+  "particleId",
+  "resourceId",
+  "revealSoundId",
+  "rightClickSoundId",
+  "soundId",
+  "soundIds",
+  "spritesheetId",
+  "sfxId",
+  "strokeColorId",
+  "target",
+  "targetImageId",
+  "textStyleId",
+  "texture",
+  "textures",
+  "thumbImageId",
+  "transformId",
+  "variableId",
+  "videoId",
+  "videoIds",
+]);
+const OPAQUE_REFERENCE_VALUE_FIELDS = new Set([
+  "enumValues",
+  "examples",
+  "value",
+]);
+
+const isOpaqueReferenceValue = (fieldName, value) => {
+  if (OPAQUE_REFERENCE_VALUE_FIELDS.has(fieldName)) {
+    return true;
+  }
+  if (fieldName !== "default") {
+    return false;
+  }
+  return !value || typeof value !== "object" || !Object.hasOwn(value, "expr");
+};
+
+const parseVariableReferencePath = (value) => {
+  const dotMatch = value.match(/^variables\.([A-Za-z_$][A-Za-z0-9_$]*)(.*)$/);
+  if (dotMatch) {
+    return {
+      resourceId: dotMatch[1],
+      format: (resourceId) =>
+        `variables[${JSON.stringify(resourceId)}]${dotMatch[2]}`,
+    };
+  }
+
+  const bracketMatch = value.match(/^variables\[("(?:\\.|[^"\\])*")\](.*)$/);
+  if (!bracketMatch) {
+    return undefined;
+  }
+  try {
+    const resourceId = JSON.parse(bracketMatch[1]);
+    return {
+      resourceId,
+      format: (nextResourceId) =>
+        `variables[${JSON.stringify(nextResourceId)}]${bracketMatch[2]}`,
+    };
+  } catch {
+    return undefined;
+  }
+};
+
+const getAssetPackageReference = (fieldName, value) => {
+  if (fieldName === "var" || fieldName === "target") {
+    const variableReference = parseVariableReferencePath(value);
+    if (variableReference) {
+      return { kind: "resource", required: true, ...variableReference };
+    }
+    if (fieldName === "var") {
+      return undefined;
+    }
+  }
+  const kind = getAssetPackageReferenceKind(fieldName);
+  return kind
+    ? {
+        kind,
+        required: !["target", "texture", "textures"].includes(fieldName),
+        resourceId: value,
+        format: (resourceId) => resourceId,
+      }
+    : undefined;
+};
+
+export const getAssetPackageReferenceKind = (fieldName) => {
+  if (FILE_REFERENCE_FIELDS.has(fieldName)) {
+    return "file";
+  }
+  if (RESOURCE_REFERENCE_FIELDS.has(fieldName)) {
+    return "resource";
+  }
+  return undefined;
+};
+
+export const visitAssetPackageReferences = (value, visitor, fieldName) => {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      visitAssetPackageReferences(item, visitor, fieldName);
+    }
+    return;
+  }
+  if (!value || typeof value !== "object") {
+    if (typeof value !== "string") {
+      return;
+    }
+    const reference = getAssetPackageReference(fieldName, value);
+    if (reference) {
+      visitor({
+        fieldName,
+        kind: reference.kind,
+        required: reference.required,
+        value: reference.resourceId,
+      });
+    }
+    return;
+  }
+  for (const [childFieldName, item] of Object.entries(value)) {
+    if (isOpaqueReferenceValue(childFieldName, item)) {
+      continue;
+    }
+    visitAssetPackageReferences(item, visitor, childFieldName);
+  }
+};
+
+export const mapAssetPackageReferences = (value, mapper, fieldName) => {
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      mapAssetPackageReferences(item, mapper, fieldName),
+    );
+  }
+  if (!value || typeof value !== "object") {
+    if (typeof value !== "string") {
+      return value;
+    }
+    const reference = getAssetPackageReference(fieldName, value);
+    if (!reference) {
+      return value;
+    }
+    return reference.format(
+      mapper({
+        fieldName,
+        kind: reference.kind,
+        required: reference.required,
+        value: reference.resourceId,
+      }),
+    );
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([childFieldName, item]) => [
+      childFieldName,
+      isOpaqueReferenceValue(childFieldName, item)
+        ? item
+        : mapAssetPackageReferences(item, mapper, childFieldName),
+    ]),
+  );
+};
+
+const ASSET_PACKAGE_KEYS = new Set(["schemaVersion", "metadata", "resources"]);
+const ASSET_PACKAGE_METADATA_KEYS = new Set([
+  "id",
+  "name",
+  "version",
+  "description",
+]);
 const ASSET_PACKAGE_RESOURCE_KEYS = new Set(["resourceType", "folderIds"]);
 
 export class AssetPackageValidationError extends Error {
@@ -188,6 +407,27 @@ export const assertValidAssetPackage = (assetPackage) => {
       "assetPackage.resources must be an array.",
       "assetPackage.resources",
     );
+  }
+  if (assetPackage.metadata !== undefined) {
+    if (!isPlainObject(assetPackage.metadata)) {
+      failAssetPackageValidation(
+        "assetPackage.metadata must be an object.",
+        "assetPackage.metadata",
+      );
+    }
+    assertAllowedKeys(
+      assetPackage.metadata,
+      ASSET_PACKAGE_METADATA_KEYS,
+      "assetPackage.metadata",
+    );
+    for (const key of ASSET_PACKAGE_METADATA_KEYS) {
+      if (typeof assetPackage.metadata[key] !== "string") {
+        failAssetPackageValidation(
+          `assetPackage.metadata.${key} must be text.`,
+          `assetPackage.metadata.${key}`,
+        );
+      }
+    }
   }
 
   const seenResourceTypes = new Set();
@@ -281,6 +521,12 @@ export const normalizeAssetPackage = (assetPackage) => {
 
   return {
     schemaVersion: ASSET_PACKAGE_SCHEMA_VERSION,
+    metadata: {
+      id: assetPackage?.metadata?.id ?? "",
+      name: assetPackage?.metadata?.name ?? "",
+      version: assetPackage?.metadata?.version ?? "",
+      description: assetPackage?.metadata?.description ?? "",
+    },
     resources,
   };
 };

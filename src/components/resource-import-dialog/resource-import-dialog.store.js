@@ -9,12 +9,12 @@ import {
 } from "../../internal/animationPreview.js";
 import { createDefaultTransitionMask } from "../../internal/animationMasks.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "../../internal/projectResolution.js";
+import { ROUTEVN_ASSET_STORE_URL } from "../../internal/routevnUrls.js";
 
 const SOURCE_STEP = "source";
 const SELECTION_STEP = "selection";
 const ITEM_STEP = "item";
 const PROGRESS_STEP = "progress";
-const ASSET_STORE_URL = "http://localhost:3003/en/creator/asset-store/";
 
 const createImageSelectorDialogState = () => ({
   open: false,
@@ -708,7 +708,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
       copy.urlDescription ??
       "Paste the HTTPS import link supplied by the package publisher.",
     assetStoreLinkLabel: copy.assetStoreLinkLabel ?? "Browse the Asset Store",
-    assetStoreUrl: ASSET_STORE_URL,
+    assetStoreUrl: ROUTEVN_ASSET_STORE_URL,
     packageName: plan?.package?.name,
     packageVersion: plan?.package?.version,
     packageDescription: plan?.package?.description,

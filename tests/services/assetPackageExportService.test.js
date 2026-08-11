@@ -330,9 +330,12 @@ describe("asset package export service", () => {
       },
       tree: [{ id: "image.animation-target" }],
     };
-    const renderSpritesheetPreview = vi.fn(
-      async () => new Blob(["spritesheet-video"], { type: "video/webm" }),
-    );
+    const renderSpritesheetPreview = vi.fn(async () => ({
+      previewBlob: new Blob(["spritesheet-video"], { type: "video/webm" }),
+      thumbnailBlob: new Blob(["spritesheet-thumbnail"], {
+        type: "video/webm",
+      }),
+    }));
     const renderFontPreview = vi.fn(
       async () => new Blob(["font-image"], { type: "image/png" }),
     );
@@ -342,12 +345,18 @@ describe("asset package export service", () => {
     const renderAnimationPreviews = vi.fn(async ({ animations }) =>
       animations.map(({ animationId }) => ({
         animationId,
-        blob: new Blob([`${animationId}-video`], { type: "video/webm" }),
+        previewBlob: new Blob([`${animationId}-video`], {
+          type: "video/webm",
+        }),
+        thumbnailBlob: new Blob([`${animationId}-thumbnail`], {
+          type: "video/webm",
+        }),
       })),
     );
-    const renderParticlePreview = vi.fn(
-      async () => new Blob(["particle-video"], { type: "video/mp4" }),
-    );
+    const renderParticlePreview = vi.fn(async () => ({
+      previewBlob: new Blob(["particle-video"], { type: "video/mp4" }),
+      thumbnailBlob: new Blob(["particle-thumbnail"], { type: "video/mp4" }),
+    }));
     const service = createAssetPackageExportService({
       getFileContent: vi.fn(async (fileId) => ({
         url: `project-file://${fileId}`,
@@ -375,6 +384,10 @@ describe("asset package export service", () => {
         .previewMediaFileId,
     ).toBe("spritesheet-preview.spritesheet.hero.webm");
     expect(
+      exported.repository.spritesheets.items["spritesheet.hero"]
+        .thumbnailMediaFileId,
+    ).toBe("spritesheet-thumbnail.spritesheet.hero.webm");
+    expect(
       exported.repository.fonts.items["font.body"].previewMediaFileId,
     ).toBe("font-preview.font.body.png");
     expect(
@@ -385,6 +398,10 @@ describe("asset package export service", () => {
       exported.repository.animations.items["animation.fade"].previewMediaFileId,
     ).toBe("animation-preview.animation.fade.webm");
     expect(
+      exported.repository.animations.items["animation.fade"]
+        .thumbnailMediaFileId,
+    ).toBe("animation-thumbnail.animation.fade.webm");
+    expect(
       exported.repository.animations.items["animation.slide"]
         .previewMediaFileId,
     ).toBe("animation-preview.animation.slide.webm");
@@ -392,6 +409,10 @@ describe("asset package export service", () => {
       exported.repository.particles.items["particle.sparkle"]
         .previewMediaFileId,
     ).toBe("particle-preview.particle.sparkle.mp4");
+    expect(
+      exported.repository.particles.items["particle.sparkle"]
+        .thumbnailMediaFileId,
+    ).toBe("particle-thumbnail.particle.sparkle.mp4");
     expect(
       exported.repository.files.items[
         "spritesheet-preview.spritesheet.hero.webm"
@@ -403,6 +424,10 @@ describe("asset package export service", () => {
     ).toBe("video/mp4");
     expect(
       exported.repository.files.items["animation-preview.animation.fade.webm"]
+        .mimeType,
+    ).toBe("video/webm");
+    expect(
+      exported.repository.files.items["animation-thumbnail.animation.fade.webm"]
         .mimeType,
     ).toBe("video/webm");
     expect(renderSpritesheetPreview).toHaveBeenCalledOnce();

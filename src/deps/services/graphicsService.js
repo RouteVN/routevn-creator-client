@@ -2208,6 +2208,7 @@ export const createGraphicsService = async ({
         canvas: routeGraphics?.canvas,
       });
     },
+    getCanvas: () => routeGraphics?.canvas,
     hasLoadedAsset,
     initRouteEngine: (projectData, options = {}) => {
       const routeEngineTicker = ensureTicker();

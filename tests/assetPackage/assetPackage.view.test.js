@@ -12,9 +12,15 @@ describe("asset package view", () => {
     );
 
     expect(assetPackageView).toContain("rvn-resource-types");
-    expect(assetPackageView).not.toContain("packageMetadataDetail");
-    expect(assetPackageView).not.toContain("packageMetadataEditDialog");
-    expect(assetPackageView).not.toContain("packageMetadataEditForm");
+    expect(assetPackageView).toContain("rtgl-view#packageMetadataDetail");
+    expect(assetPackageView).toContain("packageMetadataEditDialog");
+    expect(assetPackageView).toContain("packageMetadataEditForm");
+    expect(assetPackageView).toContain(
+      "rtgl-text s=sm c=mu-fg: ${packageMetadataSummary}",
+    );
+    expect(assetPackageView).not.toContain(
+      "rtgl-view#packageMetadataDetail bw=xs",
+    );
     expect(assetPackageView).toContain(
       'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"',
     );

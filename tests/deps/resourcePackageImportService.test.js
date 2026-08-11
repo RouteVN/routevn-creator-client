@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { createResourcePackageImportService } from "../../src/deps/services/shared/resourcePackageImportService.js";
+import { ASSET_PACKAGE_KIND } from "../../src/internal/assetPackageResources.js";
 
 const manifest = () =>
   JSON.parse(
@@ -16,6 +17,7 @@ const manifest = () =>
 const assetManifest = () => ({
   schema: "routevn.import-pack.v1",
   package: {
+    kind: ASSET_PACKAGE_KIND,
     id: "asset.package",
     name: "Asset Package",
     version: "1.0.0",

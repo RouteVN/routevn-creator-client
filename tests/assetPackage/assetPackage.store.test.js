@@ -14,6 +14,7 @@ import {
   selectPackageMetadata,
   selectViewData,
   setFilesData,
+  setPackageMetadata,
   setAssetPackage,
   setResourceData,
   setUiConfig,
@@ -98,6 +99,47 @@ const CHARACTERS_DATA = {
   tree: [{ id: "character-folder", children: [{ id: "character-1" }] }],
 };
 
+const COLORS_DATA = {
+  items: {
+    "color-folder": { type: "folder", name: "Colors" },
+    "color-1": {
+      type: "color",
+      name: "Body Color",
+      hex: "#112233",
+    },
+  },
+  tree: [{ id: "color-folder", children: [{ id: "color-1" }] }],
+};
+
+const FONTS_DATA = {
+  items: {
+    "font-folder": { type: "folder", name: "Fonts" },
+    "font-1": {
+      type: "font",
+      name: "Body Font",
+      fileId: "file-font-1",
+      fontFamily: "Body",
+    },
+  },
+  tree: [{ id: "font-folder", children: [{ id: "font-1" }] }],
+};
+
+const TEXT_STYLES_DATA = {
+  items: {
+    "text-style-folder": { type: "folder", name: "Text Styles" },
+    "text-style-1": {
+      type: "textStyle",
+      name: "Body",
+      fontId: ["font-1"],
+      colorId: "color-1",
+      fontSize: 24,
+      fontWeight: "400",
+      lineHeight: 1.5,
+    },
+  },
+  tree: [{ id: "text-style-folder", children: [{ id: "text-style-1" }] }],
+};
+
 const FILES_DATA = {
   items: Object.fromEntries(
     [
@@ -107,8 +149,16 @@ const FILES_DATA = {
       ["file-video-1", "video/mp4"],
       ["file-video-thumbnail-1", "image/webp"],
       ["file-character-sprite", "image/png"],
+      ["file-font-1", "font/woff2"],
     ].map(([id, mimeType], index) => [id, { id, mimeType, size: index + 1 }]),
   ),
+};
+
+const PACKAGE_METADATA = {
+  id: "example.asset-package",
+  name: "Example Asset Package",
+  version: "1.0.0",
+  description: "Example resources.",
 };
 
 const createResourceDataByType = () => {
@@ -122,6 +172,9 @@ const createResourceDataByType = () => {
   resourceDataByType.sounds = SOUNDS_DATA;
   resourceDataByType.videos = VIDEOS_DATA;
   resourceDataByType.characters = CHARACTERS_DATA;
+  resourceDataByType.colors = COLORS_DATA;
+  resourceDataByType.fonts = FONTS_DATA;
+  resourceDataByType.textStyles = TEXT_STYLES_DATA;
   return resourceDataByType;
 };
 
@@ -158,6 +211,9 @@ describe("asset package store", () => {
       { label: "Sounds", type: "item", value: "sounds" },
       { label: "Videos", type: "item", value: "videos" },
       { label: "Characters", type: "item", value: "characters" },
+      { label: "Colors", type: "item", value: "colors" },
+      { label: "Fonts", type: "item", value: "fonts" },
+      { label: "Text Styles", type: "item", value: "textStyles" },
     ]);
 
     setUiConfig({ state }, { uiConfig: { id: "touch" } });
@@ -280,6 +336,12 @@ describe("asset package store", () => {
     ]);
     expect(selectAssetPackage({ state })).toEqual({
       schemaVersion: 1,
+      metadata: {
+        id: "",
+        name: "",
+        version: "",
+        description: "",
+      },
       resources: [
         { resourceType: "sounds", folderIds: ["sound-folder"] },
         { resourceType: "images", folderIds: ["folder-1"] },
@@ -332,6 +394,12 @@ describe("asset package store", () => {
 
     expect(selectAssetPackage({ state })).toEqual({
       schemaVersion: 1,
+      metadata: {
+        id: "",
+        name: "",
+        version: "",
+        description: "",
+      },
       resources: [
         { resourceType: "videos", folderIds: ["video-folder"] },
         { resourceType: "images", folderIds: ["folder-1"] },
@@ -395,6 +463,39 @@ describe("asset package store", () => {
     );
   });
 
+  it("includes transitive resources required by selected folders", () => {
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
+
+    const repository = selectAssetPackageData({ state });
+
+    expect(repository.textStyles.items).toHaveProperty("text-style-1");
+    expect(repository.fonts.items).toHaveProperty("font-1");
+    expect(repository.fonts.items).toHaveProperty("font-folder");
+    expect(repository.colors.items).toHaveProperty("color-1");
+    expect(repository.colors.items).toHaveProperty("color-folder");
+    expect(repository.files.items).toHaveProperty("file-font-1");
+  });
+
+  it("rejects a selected resource with a missing dependency", () => {
+    const state = createInitialState();
+    const resourceDataByType = createResourceDataByType();
+    delete resourceDataByType.fonts.items["font-1"];
+    resourceDataByType.fonts.tree[0].children = [];
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
+
+    expect(() => selectAssetPackageData({ state })).toThrow(
+      "Referenced resource 'font-1' is missing.",
+    );
+  });
+
   it("creates a manifest accepted by the multi-resource asset importer", () => {
     const state = createInitialState();
     setFilesData({ state }, { filesData: FILES_DATA });
@@ -405,6 +506,7 @@ describe("asset package store", () => {
     state.selectedFolderIdsByType.images = ["folder-3", "folder-1"];
     state.selectedFolderIdsByType.sounds = ["sound-folder"];
     state.selectedFolderIdsByType.videos = ["video-folder"];
+    setPackageMetadata({ state }, { packageMetadata: PACKAGE_METADATA });
     const manifest = createAssetPackageManifest({
       repository: selectAssetPackageData({ state }),
       packageMetadata: selectPackageMetadata({ state }),

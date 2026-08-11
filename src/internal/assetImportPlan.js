@@ -1,13 +1,17 @@
 import { validatePayload } from "@routevn/creator-model";
 import {
+  ASSET_PACKAGE_KIND,
   ASSET_PACKAGE_IMPORT_CONFIGS,
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_TYPES,
+  mapAssetPackageReferences,
+  visitAssetPackageReferences,
 } from "./assetPackageResources.js";
 import { IMPORT_PACK_SCHEMA, isPlainObject } from "./importPackages.js";
 
 const ENVELOPE_KEYS = new Set(["schema", "package", "repository"]);
 const PACKAGE_KEYS = new Set([
+  "kind",
   "id",
   "name",
   "version",
@@ -28,7 +32,7 @@ const FILE_KEYS = new Set([
   "url",
 ]);
 const MAX_RESOURCE_COUNT = 500;
-const MAX_FILE_COUNT = 100;
+const MAX_FILE_COUNT = MAX_RESOURCE_COUNT * 4;
 const MAX_TREE_DEPTH = 32;
 const PREVIEW_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
@@ -90,6 +94,7 @@ const createResourceData = (item) => {
   delete data.fullLabel;
   delete data.resolvedTags;
   delete data.previewMediaFileId;
+  delete data.thumbnailMediaFileId;
   return data;
 };
 
@@ -261,6 +266,11 @@ const validateManifest = (manifest) => {
   }
   assertPlainObject(manifest.package, "package.package");
   assertAllowedKeys(manifest.package, PACKAGE_KEYS, "package.package");
+  if (manifest.package.kind !== ASSET_PACKAGE_KIND) {
+    fail("invalid_package_kind", "This is not a RouteVN asset package.", {
+      path: "package.package.kind",
+    });
+  }
   for (const key of ["id", "name", "version"]) {
     assertNonEmptyString(manifest.package[key], `package.package.${key}`);
   }
@@ -291,38 +301,15 @@ const validateManifest = (manifest) => {
   }
 };
 
-const visitValues = (value, visitor, key) => {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      visitValues(item, visitor, key);
-    }
-    return;
-  }
-  if (!value || typeof value !== "object") {
-    visitor(value, key);
-    return;
-  }
-  for (const [childKey, item] of Object.entries(value)) {
-    visitValues(item, visitor, childKey);
-  }
-};
-
 const collectReferencedFileIds = (manifest) => {
   const fileIds = new Set();
-  const availableFileIds = new Set(
-    Object.keys(manifest.repository.files.items),
-  );
   for (const resourceType of ASSET_PACKAGE_RESOURCE_TYPES) {
     for (const item of Object.values(
       manifest.repository[resourceType]?.items ?? {},
     )) {
       if (item.type === "folder") continue;
-      visitValues(item, (value, key) => {
-        if (
-          typeof value === "string" &&
-          key !== "previewMediaFileId" &&
-          (availableFileIds.has(value) || /fileIds?$/i.test(key ?? ""))
-        ) {
+      visitAssetPackageReferences(item, ({ kind, value }) => {
+        if (kind === "file") {
           fileIds.add(value);
         }
       });
@@ -331,41 +318,16 @@ const collectReferencedFileIds = (manifest) => {
   return fileIds;
 };
 
-const NON_REFERENCE_KEYS = new Set(["id", "name", "description"]);
-
 const rewriteMappedReferences = (
   value,
   { fileIdBySourceId, resourceIdBySourceId },
-  key,
-) => {
-  if (Array.isArray(value)) {
-    return value.map((item) =>
-      rewriteMappedReferences(
-        item,
-        { fileIdBySourceId, resourceIdBySourceId },
-        key,
-      ),
-    );
-  }
-  if (!value || typeof value !== "object") {
-    if (typeof value !== "string" || NON_REFERENCE_KEYS.has(key)) {
-      return value;
+) =>
+  mapAssetPackageReferences(value, ({ kind, value: referenceId }) => {
+    if (kind === "file") {
+      return fileIdBySourceId?.get(referenceId) ?? referenceId;
     }
-    return (
-      fileIdBySourceId?.get(value) ?? resourceIdBySourceId?.get(value) ?? value
-    );
-  }
-  return Object.fromEntries(
-    Object.entries(value).map(([childKey, item]) => [
-      childKey,
-      rewriteMappedReferences(
-        item,
-        { fileIdBySourceId, resourceIdBySourceId },
-        childKey,
-      ),
-    ]),
-  );
-};
+    return resourceIdBySourceId?.get(referenceId) ?? referenceId;
+  });
 
 const getPreviewData = ({
   item,
@@ -408,8 +370,8 @@ const collectResourceDependencySourceIds = ({
   sourceId,
 }) => {
   const dependencySourceIds = new Set();
-  visitValues(data, (value, key) => {
-    if (typeof value !== "string" || NON_REFERENCE_KEYS.has(key)) {
+  visitAssetPackageReferences(data, ({ kind, value }) => {
+    if (kind !== "resource") {
       return;
     }
     const dependency = entryByPackageSourceId.get(value);
@@ -452,21 +414,8 @@ const orderEntriesByDependencies = (entries) => {
   return ordered;
 };
 
-export const isAssetPackageManifest = (manifest, expectedResourceType) => {
-  const presentResourceTypes = ASSET_PACKAGE_RESOURCE_TYPES.filter(
-    (resourceType) => manifest?.repository?.[resourceType],
-  );
-  if (presentResourceTypes.length === 0) {
-    return false;
-  }
-  const matchesLegacyPackageShape =
-    presentResourceTypes.includes(expectedResourceType) &&
-    presentResourceTypes.every(
-      (resourceType) =>
-        resourceType === expectedResourceType || resourceType === "images",
-    );
-  return !matchesLegacyPackageShape;
-};
+export const isAssetPackageManifest = (manifest) =>
+  manifest?.package?.kind === ASSET_PACKAGE_KIND;
 
 export const createAssetImportPlan = ({
   manifest,

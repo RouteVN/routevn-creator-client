@@ -7,6 +7,9 @@ import {
   handleConfirmResourceFolders,
   handleDownloadAssetPackageButtonClick,
   handleEditResourceFoldersButtonClick,
+  handlePackageMetadataDetailClick,
+  handlePackageMetadataEditDialogClose,
+  handlePackageMetadataEditFormAction,
   handleResourceFolderOptionClick,
   handleResourceFolderPickerClose,
   handleResourceTypeContextMenuClose,
@@ -53,6 +56,7 @@ const PACKAGE_METADATA = {
 
 const SAVED_ASSET_PACKAGE = {
   schemaVersion: 1,
+  metadata: PACKAGE_METADATA,
   resources: [{ resourceType: "images", folderIds: ["image-folder-1"] }],
 };
 
@@ -87,6 +91,12 @@ const createDeps = () => ({
     getCurrentAssetPackage: vi.fn(async () => SAVED_ASSET_PACKAGE),
     updateCurrentAssetPackage: vi.fn(async (assetPackage) => assetPackage),
   },
+  refs: {
+    packageMetadataEditForm: {
+      reset: vi.fn(),
+      setValues: vi.fn(),
+    },
+  },
   render: vi.fn(),
   store: {
     closeResourceFolderPicker: vi.fn(),
@@ -97,11 +107,15 @@ const createDeps = () => ({
     openResourceTypeContextMenu: vi.fn(),
     openResourceTypeMenu: vi.fn(),
     moveResourceType: vi.fn(),
+    openPackageMetadataEditDialog: vi.fn(),
+    closePackageMetadataEditDialog: vi.fn(),
     selectResourceTypeContextMenuResourceType: vi.fn(() => "sounds"),
     selectResourceTypeMenuPosition: vi.fn(() => ({ x: 20, y: 60 })),
     selectAssetPackageData: vi.fn(() => ASSET_PACKAGE_REPOSITORY),
     selectAssetPackage: vi.fn(() => SAVED_ASSET_PACKAGE),
     selectPackageMetadata: vi.fn(() => PACKAGE_METADATA),
+    selectPackageMetadataEditDefaultValues: vi.fn(() => PACKAGE_METADATA),
+    setPackageMetadata: vi.fn(),
     setFilesData: vi.fn(),
     setAssetPackage: vi.fn(),
     setResourceData: vi.fn(),
@@ -265,6 +279,59 @@ describe("asset package handlers", () => {
     expect(deps.render).toHaveBeenCalledTimes(3);
   });
 
+  it("edits validated package information and persists it", async () => {
+    const deps = createDeps();
+    const packageMetadata = {
+      id: "example.updated-package",
+      name: "Updated Package",
+      version: "2.0.0",
+      description: "Updated resources.",
+    };
+
+    handlePackageMetadataDetailClick(deps);
+    expect(deps.store.openPackageMetadataEditDialog).toHaveBeenCalledOnce();
+    expect(deps.refs.packageMetadataEditForm.reset).toHaveBeenCalledOnce();
+    expect(deps.refs.packageMetadataEditForm.setValues).toHaveBeenCalledWith({
+      values: PACKAGE_METADATA,
+    });
+
+    await handlePackageMetadataEditFormAction(deps, {
+      _event: { detail: { actionId: "submit", values: packageMetadata } },
+    });
+    expect(deps.store.setPackageMetadata).toHaveBeenCalledWith({
+      packageMetadata,
+    });
+    expect(
+      deps.projectService.updateCurrentAssetPackage,
+    ).toHaveBeenCalledOnce();
+    expect(deps.store.closePackageMetadataEditDialog).toHaveBeenCalledOnce();
+
+    handlePackageMetadataEditDialogClose(deps);
+    expect(deps.store.closePackageMetadataEditDialog).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects invalid package information without persisting it", async () => {
+    const deps = createDeps();
+
+    await handlePackageMetadataEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: { ...PACKAGE_METADATA, version: "not-a-version" },
+        },
+      },
+    });
+
+    expect(deps.store.setPackageMetadata).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.updateCurrentAssetPackage,
+    ).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "Enter a valid package ID, name, and semantic version.",
+      status: "error",
+    });
+  });
+
   it("chooses the path before exporting and reports completion", async () => {
     const deps = createDeps();
 
@@ -292,7 +359,10 @@ describe("asset package handlers", () => {
     expect(deps.projectService.createAssetPackageBundle).toHaveBeenCalledWith({
       manifest: {
         schema: "routevn.import-pack.v1",
-        package: PACKAGE_METADATA,
+        package: {
+          kind: "routevn.creator.asset-package",
+          ...PACKAGE_METADATA,
+        },
         repository: ASSET_PACKAGE_REPOSITORY,
       },
     });
@@ -320,6 +390,52 @@ describe("asset package handlers", () => {
     expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
     expect(deps.projectService.createAssetPackageBundle).not.toHaveBeenCalled();
     expect(deps.appService.writeFile).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty package before opening the save picker", async () => {
+    const deps = createDeps();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    deps.store.selectAssetPackageData.mockReturnValue({ files: { items: {} } });
+
+    try {
+      await handleDownloadAssetPackageButtonClick(deps);
+    } finally {
+      consoleError.mockRestore();
+    }
+
+    expect(deps.appService.saveFilePicker).not.toHaveBeenCalled();
+    expect(deps.projectService.createAssetPackageBundle).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "Add at least one resource before exporting.",
+      status: "error",
+    });
+  });
+
+  it("requires package information before opening the save picker", async () => {
+    const deps = createDeps();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    deps.store.selectPackageMetadata.mockReturnValue({
+      id: "",
+      name: "",
+      version: "",
+      description: "",
+    });
+
+    try {
+      await handleDownloadAssetPackageButtonClick(deps);
+    } finally {
+      consoleError.mockRestore();
+    }
+
+    expect(deps.appService.saveFilePicker).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "Complete the package information before exporting.",
+      status: "error",
+    });
   });
 
   it("shows feedback when ZIP creation fails", async () => {

@@ -36,6 +36,90 @@ const waitForPaint = () =>
     );
   });
 
+const createThumbnailCanvas = (sourceCanvas) => {
+  const scale = Math.min(
+    PREVIEW_WIDTH / sourceCanvas.width,
+    PREVIEW_HEIGHT / sourceCanvas.height,
+    0.5,
+  );
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(sourceCanvas.width * scale));
+  canvas.height = Math.max(1, Math.round(sourceCanvas.height * scale));
+  return canvas;
+};
+
+const startDualVideoRecording = ({ sourceCanvas, startFullRecording }) => {
+  if (!sourceCanvas) {
+    throw new Error("The preview canvas is unavailable.");
+  }
+  const thumbnailCanvas = createThumbnailCanvas(sourceCanvas);
+  const thumbnailContext = thumbnailCanvas.getContext("2d");
+  if (!thumbnailContext) {
+    thumbnailCanvas.remove();
+    throw new Error("The thumbnail canvas is unavailable.");
+  }
+  let thumbnailRecording;
+  try {
+    thumbnailRecording = startCanvasVideoRecording({
+      canvas: thumbnailCanvas,
+      frameRate: 60,
+    });
+  } catch (error) {
+    thumbnailCanvas.remove();
+    throw error;
+  }
+  let fullRecording;
+  try {
+    fullRecording = startFullRecording();
+  } catch (error) {
+    thumbnailRecording.stop().catch(() => undefined);
+    thumbnailCanvas.remove();
+    throw error;
+  }
+
+  const drawThumbnail = () => {
+    thumbnailContext.clearRect(
+      0,
+      0,
+      thumbnailCanvas.width,
+      thumbnailCanvas.height,
+    );
+    thumbnailContext.drawImage(
+      sourceCanvas,
+      0,
+      0,
+      thumbnailCanvas.width,
+      thumbnailCanvas.height,
+    );
+  };
+  const stop = async () => {
+    const activeFullRecording = fullRecording;
+    const activeThumbnailRecording = thumbnailRecording;
+    fullRecording = undefined;
+    thumbnailRecording = undefined;
+    try {
+      const [previewBlob, thumbnailBlob] = await Promise.all([
+        activeFullRecording.stop(),
+        activeThumbnailRecording.stop(),
+      ]);
+      return { previewBlob, thumbnailBlob };
+    } finally {
+      thumbnailCanvas.remove();
+    }
+  };
+  const cancel = async () => {
+    await Promise.all([
+      fullRecording?.stop().catch(() => undefined),
+      thumbnailRecording?.stop().catch(() => undefined),
+    ]);
+    fullRecording = undefined;
+    thumbnailRecording = undefined;
+    thumbnailCanvas.remove();
+  };
+
+  return { cancel, drawThumbnail, stop };
+};
+
 const dataUrlToBlob = (value) => {
   const [header, body] = value.split(",", 2);
   const mimeType = header.match(/^data:([^;,]+)/)?.[1] ?? "image/png";
@@ -151,6 +235,7 @@ export const renderSpritesheetPreviewVideo = async ({
   spritesheet,
   imageBytes,
   imageMimeType,
+  projectResolution,
 }) => {
   const animation = Object.values(spritesheet.animations ?? {})[0];
   const frameCount = animation?.frames?.length ?? 0;
@@ -158,16 +243,33 @@ export const renderSpritesheetPreviewVideo = async ({
     throw new Error("A spritesheet preview animation is unavailable.");
   }
 
+  const { width, height } = requireProjectResolution(
+    projectResolution,
+    "Project resolution",
+  );
   const canvas = document.createElement("canvas");
-  canvas.width = PREVIEW_WIDTH;
-  canvas.height = PREVIEW_HEIGHT;
+  canvas.width = width;
+  canvas.height = height;
   const sourceImage = await decodeImage(
     new Blob([imageBytes], { type: imageMimeType }),
   );
-  let recording = startCanvasVideoRecording({ canvas, frameRate: 60 });
+  let recording;
   const frameDurationMs = 1000 / resolveSpritesheetAnimationFps(animation);
 
   try {
+    drawSpritesheetFrame({
+      canvas,
+      sourceImage,
+      atlas: spritesheet.jsonData,
+      animation,
+      frameOffset: 0,
+    });
+    recording = startDualVideoRecording({
+      sourceCanvas: canvas,
+      startFullRecording: () =>
+        startCanvasVideoRecording({ canvas, frameRate: 60 }),
+    });
+    recording.drawThumbnail();
     for (let frameOffset = 0; frameOffset < frameCount; frameOffset += 1) {
       drawSpritesheetFrame({
         canvas,
@@ -176,13 +278,14 @@ export const renderSpritesheetPreviewVideo = async ({
         animation,
         frameOffset,
       });
+      recording.drawThumbnail();
       await wait(Math.max(16, frameDurationMs));
     }
-    const video = await recording.stop();
+    const videos = await recording.stop();
     recording = undefined;
-    return video;
+    return videos;
   } finally {
-    await recording?.stop().catch(() => undefined);
+    await recording?.cancel();
     sourceImage.close?.();
     canvas.remove();
   }
@@ -475,22 +578,30 @@ const recordAnimationPreviewVideo = async ({
       await waitForPaint();
     }
 
-    recording = graphicsService.startCanvasVideoRecording({ frameRate: 60 });
+    const sourceCanvas = graphicsService.getCanvas();
+    recording = startDualVideoRecording({
+      sourceCanvas,
+      startFullRecording: () =>
+        graphicsService.startCanvasVideoRecording({ frameRate: 60 }),
+    });
+    recording.drawThumbnail();
     const startedAtMs = performance.now();
     let elapsedMs = 0;
     while (elapsedMs < recordingDurationMs) {
       graphicsService.setAnimationTime(elapsedMs);
       await wait(Math.min(16, recordingDurationMs - elapsedMs));
+      recording.drawThumbnail();
       elapsedMs = Math.max(0, performance.now() - startedAtMs);
     }
     graphicsService.setAnimationTime(recordingDurationMs);
     await waitForPaint();
+    recording.drawThumbnail();
 
-    const video = await recording.stop();
+    const videos = await recording.stop();
     recording = undefined;
-    return video;
+    return videos;
   } finally {
-    await recording?.stop().catch(() => undefined);
+    await recording?.cancel();
   }
 };
 
@@ -530,14 +641,16 @@ export const renderAnimationPreviewVideos = async ({
     const previews = [];
     for (const { animationId, animation } of animations) {
       try {
+        const preview = await recordAnimationPreviewVideo({
+          animation,
+          imagesData,
+          graphicsService,
+          projectResolution,
+        });
         previews.push({
           animationId,
-          blob: await recordAnimationPreviewVideo({
-            animation,
-            imagesData,
-            graphicsService,
-            projectResolution,
-          }),
+          previewBlob: preview.previewBlob,
+          thumbnailBlob: preview.thumbnailBlob,
         });
       } catch (error) {
         throw new Error(
@@ -566,7 +679,7 @@ export const renderAnimationPreviewVideo = async (options) => {
     imagesData: options.imagesData,
     projectResolution: options.projectResolution,
   });
-  return preview.blob;
+  return preview;
 };
 
 export const renderParticlePreviewVideo = async ({
@@ -593,15 +706,28 @@ export const renderParticlePreviewVideo = async ({
       objectUrls,
     });
 
-    recording = graphicsService.startCanvasVideoRecording({ frameRate: 60 });
-    graphicsService.render(createParticlePreviewState(renderableParticle));
+    await graphicsService.render(
+      createParticlePreviewState(renderableParticle),
+    );
     await waitForPaint();
-    await wait(PARTICLE_PREVIEW_DURATION_MS);
-    const video = await recording.stop();
+    recording = startDualVideoRecording({
+      sourceCanvas: graphicsService.getCanvas(),
+      startFullRecording: () =>
+        graphicsService.startCanvasVideoRecording({ frameRate: 60 }),
+    });
+    recording.drawThumbnail();
+    const startedAtMs = performance.now();
+    let elapsedMs = 0;
+    while (elapsedMs < PARTICLE_PREVIEW_DURATION_MS) {
+      await wait(Math.min(16, PARTICLE_PREVIEW_DURATION_MS - elapsedMs));
+      recording.drawThumbnail();
+      elapsedMs = Math.max(0, performance.now() - startedAtMs);
+    }
+    const videos = await recording.stop();
     recording = undefined;
-    return video;
+    return videos;
   } finally {
-    await recording?.stop().catch(() => undefined);
+    await recording?.cancel();
     await graphicsService.destroy();
     objectUrls.forEach((url) => URL.revokeObjectURL(url));
     host.remove();

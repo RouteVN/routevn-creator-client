@@ -1,6 +1,9 @@
 import { ASSET_PACKAGE_RESOURCE_CONFIGS } from "../../internal/assetPackageResources.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
-import { createAssetPackageManifest } from "./support/assetPackageManifest.js";
+import {
+  createAssetPackageManifest,
+  createAssetPackageMetadata,
+} from "./support/assetPackageManifest.js";
 
 export const handleBeforeMount = (deps) => {
   const { projectService, store, uiConfig } = deps;
@@ -32,12 +35,73 @@ const persistAssetPackage = async (deps) => {
   const { appService, i18n, projectService, store } = deps;
   try {
     await projectService.updateCurrentAssetPackage(store.selectAssetPackage());
+    return true;
   } catch {
     appService.showToast({
       message: i18n.assetPackagePage.failedSaveAssetPackage,
       status: "error",
     });
+    return false;
   }
+};
+
+export const handlePackageMetadataDetailClick = (deps) => {
+  const { refs, render, store } = deps;
+  store.openPackageMetadataEditDialog();
+  render();
+
+  const { packageMetadataEditForm } = refs;
+  packageMetadataEditForm.reset();
+  packageMetadataEditForm.setValues({
+    values: store.selectPackageMetadataEditDefaultValues(),
+  });
+};
+
+export const handlePackageMetadataDetailKeyDown = (deps, payload) => {
+  if (payload._event.key !== "Enter" && payload._event.key !== " ") {
+    return;
+  }
+  payload._event.preventDefault();
+  handlePackageMetadataDetailClick(deps);
+};
+
+export const handlePackageMetadataEditDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closePackageMetadataEditDialog();
+  render();
+};
+
+export const handlePackageMetadataEditFormAction = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  let validatedMetadata;
+  try {
+    validatedMetadata = createAssetPackageMetadata(values);
+  } catch {
+    appService.showToast({
+      message: i18n.assetPackagePage.invalidPackageInformation,
+      status: "error",
+    });
+    return;
+  }
+
+  store.setPackageMetadata({
+    packageMetadata: {
+      id: validatedMetadata.id,
+      name: validatedMetadata.name,
+      version: validatedMetadata.version,
+      description: validatedMetadata.description,
+    },
+  });
+  if (!(await persistAssetPackage(deps))) {
+    return;
+  }
+  store.closePackageMetadataEditDialog();
+  render();
 };
 
 export const handleAddResourceTypeButtonClick = (deps, payload) => {
@@ -139,6 +203,32 @@ export const handleConfirmResourceFolders = async (deps) => {
 export const handleDownloadAssetPackageButtonClick = async (deps) => {
   const { appService, i18n, projectService, store } = deps;
   const copy = i18n.assetPackagePage;
+  let manifest;
+  try {
+    const repository = store.selectAssetPackageData();
+    manifest = createAssetPackageManifest({
+      repository,
+      packageMetadata: store.selectPackageMetadata(),
+    });
+  } catch (error) {
+    console.error("[asset-package] Asset package export is invalid.", error);
+    let message = copy.failedDownloadAssetPackage;
+    if (error.code === "no_resources") {
+      message = copy.selectResourcesBeforeExport;
+    }
+    if (
+      error.code === "missing_metadata" ||
+      error.code === "invalid_metadata"
+    ) {
+      message = copy.completePackageInformationBeforeExport;
+    }
+    appService.showToast({
+      message,
+      status: "error",
+    });
+    return;
+  }
+
   let outputPath;
   try {
     outputPath = await appService.saveFilePicker({
@@ -168,12 +258,6 @@ export const handleDownloadAssetPackageButtonClick = async (deps) => {
 
   try {
     await progressDialog.waitForPaint();
-    const repository = store.selectAssetPackageData();
-    const packageMetadata = store.selectPackageMetadata();
-    const manifest = createAssetPackageManifest({
-      repository,
-      packageMetadata,
-    });
     const bundle = await projectService.createAssetPackageBundle({ manifest });
     progressDialog.update({
       status: copy.exportSavingStatus,

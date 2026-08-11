@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ASSET_PACKAGE_KIND,
   ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_RESOURCE_TYPES,
 } from "../../src/internal/assetPackageResources.js";
@@ -69,6 +70,7 @@ const createManifest = () => {
   return {
     schema: "routevn.import-pack.v1",
     package: {
+      kind: ASSET_PACKAGE_KIND,
       id: "example.all-resources",
       name: "All Resources",
       version: "1.0.0",
@@ -128,7 +130,81 @@ describe("asset import plan", () => {
       }
     }
 
+    expect(isAssetPackageManifest(manifest, "animations")).toBe(true);
+    delete manifest.package.kind;
     expect(isAssetPackageManifest(manifest, "animations")).toBe(false);
+  });
+
+  it("does not rewrite non-reference values that match resource ids", () => {
+    const manifest = createManifest();
+    manifest.repository.variables.items["variable-1"] = {
+      id: "variable-1",
+      type: "variable",
+      name: "Stored color id",
+      variableType: "string",
+      scope: "context",
+      default: "color-1",
+      value: "color-1",
+    };
+    manifest.repository.variables.tree[0].children = [{ id: "variable-1" }];
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+    });
+    const variable = plan.resources.find(
+      (resource) => resource.sourceId === "variables:variable-1",
+    );
+
+    expect(variable.data.default).toBe("color-1");
+    expect(variable.data.value).toBe("color-1");
+    expect(variable.dependencySourceIds).toEqual([]);
+  });
+
+  it("rewrites computed variable references without changing literal values", () => {
+    const manifest = createManifest();
+    manifest.repository.variables.items.variableBase = {
+      id: "variableBase",
+      type: "variable",
+      name: "Base",
+      variableType: "string",
+      scope: "context",
+      default: "color-1",
+      value: "color-1",
+    };
+    manifest.repository.variables.items.variableDerived = {
+      id: "variableDerived",
+      type: "variable",
+      name: "Derived",
+      variableType: "string",
+      computed: { expr: { var: "variables.variableBase" } },
+    };
+    manifest.repository.variables.tree[0].children = [
+      { id: "variableDerived" },
+      { id: "variableBase" },
+    ];
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+    });
+    const base = plan.resources.find(
+      (resource) => resource.sourceId === "variables:variableBase",
+    );
+    const derived = plan.resources.find(
+      (resource) => resource.sourceId === "variables:variableDerived",
+    );
+
+    expect(base.data.default).toBe("color-1");
+    expect(base.data.value).toBe("color-1");
+    expect(derived.data.computed.expr.var).toBe(
+      `variables[${JSON.stringify(base.destinationId)}]`,
+    );
+    expect(derived.dependencySourceIds).toContain("variables:variableBase");
   });
 
   it("shows sound waveform previews without importing the preview PNG", () => {
@@ -193,6 +269,11 @@ describe("asset import plan", () => {
       mimeType: "video/webm",
       source: { url: "./files/file-particle-preview" },
     };
+    manifest.repository.files.items["file-particle-thumbnail"] = {
+      id: "file-particle-thumbnail",
+      mimeType: "video/webm",
+      source: { url: "./files/file-particle-thumbnail" },
+    };
     manifest.repository.particles.items["particle-1"] = {
       ...createParticlePreset({
         presetId: "sparkle",
@@ -200,6 +281,7 @@ describe("asset import plan", () => {
       }),
       id: "particle-1",
       previewMediaFileId: "file-particle-preview",
+      thumbnailMediaFileId: "file-particle-thumbnail",
     };
     manifest.repository.particles.tree[0].children = [{ id: "particle-1" }];
     let id = 0;
@@ -217,13 +299,17 @@ describe("asset import plan", () => {
       (resource) => resource.sourceId === "particles:particle-1",
     );
     expect(particle).toMatchObject({
-      previewUrl: "https://example.com/files/file-particle-preview",
+      previewUrl: "https://example.com/files/file-particle-thumbnail",
       previewKind: "video",
       previewMimeType: "video/webm",
     });
     expect(particle.data.previewMediaFileId).toBeUndefined();
+    expect(particle.data.thumbnailMediaFileId).toBeUndefined();
     expect(plan.files.map((file) => file.sourceId)).not.toContain(
       "file-particle-preview",
+    );
+    expect(plan.files.map((file) => file.sourceId)).not.toContain(
+      "file-particle-thumbnail",
     );
   });
 });

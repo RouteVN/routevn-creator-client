@@ -34,6 +34,7 @@
           "ipc:",
           "http://ipc.localhost",
           "http://127.0.0.1:*",
+          "https:",
           "blob:",
           "data:",
           "asset:",
@@ -46,6 +47,7 @@
         "img-src": [
           "'self'",
           "http://127.0.0.1:*",
+          "https:",
           "asset:",
           "http://asset.localhost",
           "project-file:",
@@ -56,6 +58,7 @@
         "media-src": [
           "'self'",
           "http://127.0.0.1:*",
+          "https:",
           "asset:",
           "http://asset.localhost",
           "project-file:",

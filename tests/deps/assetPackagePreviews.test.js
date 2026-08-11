@@ -11,6 +11,7 @@ const renderer = vi.hoisted(() => ({
 }));
 const createRouteGraphics = vi.hoisted(() => vi.fn(() => renderer));
 const createGraphicsService = vi.hoisted(() => vi.fn());
+const startCanvasVideoRecording = vi.hoisted(() => vi.fn());
 
 vi.mock("route-graphics", () => ({
   default: createRouteGraphics,
@@ -18,6 +19,9 @@ vi.mock("route-graphics", () => ({
 }));
 vi.mock("../../src/deps/services/graphicsService.js", () => ({
   createGraphicsService,
+}));
+vi.mock("../../src/deps/clients/canvasVideoRecorder.js", () => ({
+  startCanvasVideoRecording,
 }));
 
 import {
@@ -95,6 +99,25 @@ describe("asset package preview client", () => {
       vi.fn(async () => new Blob(["slide"], { type: "video/webm" })),
       vi.fn(async () => new Blob(["static"], { type: "video/webm" })),
     ];
+    const thumbnailStops = [
+      vi.fn(async () => new Blob(["fade-thumbnail"], { type: "video/webm" })),
+      vi.fn(async () => new Blob(["slide-thumbnail"], { type: "video/webm" })),
+      vi.fn(async () => new Blob(["static-thumbnail"], { type: "video/webm" })),
+    ];
+    startCanvasVideoRecording
+      .mockImplementationOnce(() => ({ stop: thumbnailStops[0] }))
+      .mockImplementationOnce(() => ({ stop: thumbnailStops[1] }))
+      .mockImplementationOnce(() => ({ stop: thumbnailStops[2] }));
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = 320;
+    sourceCanvas.height = 180;
+    const thumbnailContext = {
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
+    };
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      thumbnailContext,
+    );
     const graphicsService = {
       destroy: vi.fn(async () => {}),
       init: vi.fn(async () => {}),
@@ -102,6 +125,7 @@ describe("asset package preview client", () => {
       render: vi.fn(async () => {}),
       setAnimationPlaybackMode: vi.fn(),
       setAnimationTime: vi.fn(),
+      getCanvas: vi.fn(() => sourceCanvas),
       startCanvasVideoRecording: vi
         .fn()
         .mockImplementationOnce(() => ({ stop: stops[0] }))
@@ -165,9 +189,21 @@ describe("asset package preview client", () => {
     });
 
     expect(previews).toEqual([
-      { animationId: "animation.fade", blob: expect.any(Blob) },
-      { animationId: "animation.slide", blob: expect.any(Blob) },
-      { animationId: "animation.static", blob: expect.any(Blob) },
+      {
+        animationId: "animation.fade",
+        previewBlob: expect.any(Blob),
+        thumbnailBlob: expect.any(Blob),
+      },
+      {
+        animationId: "animation.slide",
+        previewBlob: expect.any(Blob),
+        thumbnailBlob: expect.any(Blob),
+      },
+      {
+        animationId: "animation.static",
+        previewBlob: expect.any(Blob),
+        thumbnailBlob: expect.any(Blob),
+      },
     ]);
     expect(createGraphicsService).toHaveBeenCalledOnce();
     expect(graphicsService.init).toHaveBeenCalledWith({
@@ -178,6 +214,12 @@ describe("asset package preview client", () => {
     expect(graphicsService.init).toHaveBeenCalledOnce();
     expect(graphicsService.render).toHaveBeenCalledTimes(6);
     expect(graphicsService.startCanvasVideoRecording).toHaveBeenCalledTimes(3);
+    expect(startCanvasVideoRecording).toHaveBeenCalledTimes(3);
+    expect(startCanvasVideoRecording).toHaveBeenCalledWith({
+      canvas: expect.objectContaining({ width: 160, height: 90 }),
+      frameRate: 60,
+    });
+    expect(thumbnailContext.drawImage).toHaveBeenCalled();
     expect(graphicsService.startCanvasVideoRecording).toHaveBeenNthCalledWith(
       1,
       { frameRate: 60 },

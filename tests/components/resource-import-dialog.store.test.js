@@ -99,7 +99,7 @@ describe("resource-import-dialog.store", () => {
     });
     expect(view).toMatchObject({
       assetStoreLinkLabel: "Browse the Asset Store",
-      assetStoreUrl: "http://localhost:3003/en/creator/asset-store/",
+      assetStoreUrl: "https://routevn.com/en/creator/asset-store/",
     });
   });
 

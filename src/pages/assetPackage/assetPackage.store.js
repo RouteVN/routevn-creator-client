@@ -2,11 +2,11 @@ import {
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_SCHEMA_VERSION,
+  EMPTY_ASSET_PACKAGE_METADATA,
   normalizeAssetPackage,
 } from "../../internal/assetPackageResources.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
-  DEFAULT_ASSET_PACKAGE_METADATA,
   createAssetPackageRepository,
   isTopLevelFolder,
   selectTopLevelFolders,
@@ -113,10 +113,18 @@ export const createInitialState = () => ({
   },
   resourceTypeContextMenu: createResourceTypeContextMenu(),
   folderPicker: createFolderPicker(),
+  packageMetadata: clonePackageMetadata(EMPTY_ASSET_PACKAGE_METADATA),
+  packageMetadataEditDialogOpen: false,
+  packageMetadataEditDefaultValues: clonePackageMetadata(
+    EMPTY_ASSET_PACKAGE_METADATA,
+  ),
 });
 
-export const selectPackageMetadata = () =>
-  clonePackageMetadata(DEFAULT_ASSET_PACKAGE_METADATA);
+export const selectPackageMetadata = ({ state }) =>
+  clonePackageMetadata(state.packageMetadata);
+
+export const selectPackageMetadataEditDefaultValues = ({ state }) =>
+  clonePackageMetadata(state.packageMetadataEditDefaultValues);
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
@@ -153,12 +161,28 @@ export const setAssetPackage = ({ state }, { assetPackage } = {}) => {
   }
 
   state.selectedFolderIdsByType = selectedFolderIdsByType;
+  state.packageMetadata = clonePackageMetadata(normalizedAssetPackage.metadata);
   state.resourceTypeOrder = [
     ...selectedResourceTypes,
     ...createResourceTypeOrder().filter(
       (resourceType) => !selectedResourceTypes.includes(resourceType),
     ),
   ];
+};
+
+export const openPackageMetadataEditDialog = ({ state }) => {
+  state.packageMetadataEditDialogOpen = true;
+  state.packageMetadataEditDefaultValues = clonePackageMetadata(
+    state.packageMetadata,
+  );
+};
+
+export const closePackageMetadataEditDialog = ({ state }) => {
+  state.packageMetadataEditDialogOpen = false;
+};
+
+export const setPackageMetadata = ({ state }, { packageMetadata } = {}) => {
+  state.packageMetadata = clonePackageMetadata(packageMetadata);
 };
 
 export const openResourceTypeMenu = ({ state }, { x, y } = {}) => {
@@ -296,6 +320,7 @@ export const selectAssetPackageData = ({ state }) =>
 
 export const selectAssetPackage = ({ state }) => ({
   schemaVersion: ASSET_PACKAGE_SCHEMA_VERSION,
+  metadata: clonePackageMetadata(state.packageMetadata),
   resources: selectOrderedSelectedResourceTypes(state).map((resourceType) => ({
     resourceType,
     folderIds: [...state.selectedFolderIdsByType[resourceType]],
@@ -367,6 +392,49 @@ export const selectViewData = ({ state, i18n }) => {
       })
     : { folderOptions: [], selectedFolders: [] };
 
+  const packageMetadataComplete = ["id", "name", "version"].every(
+    (key) => state.packageMetadata[key].trim().length > 0,
+  );
+  const packageMetadataEditForm = {
+    title: copy.editPackageInformationTitle,
+    fields: [
+      {
+        name: "id",
+        type: "input-text",
+        label: copy.packageIdLabel,
+        required: true,
+      },
+      {
+        name: "name",
+        type: "input-text",
+        label: copy.packageNameLabel,
+        required: true,
+      },
+      {
+        name: "version",
+        type: "input-text",
+        label: copy.packageVersionLabel,
+        required: true,
+      },
+      {
+        name: "description",
+        type: "input-textarea",
+        label: copy.packageDescriptionLabel,
+        required: false,
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: copy.savePackageInformationButton,
+          validate: true,
+        },
+      ],
+    },
+  };
+
   return {
     ...state,
     showExplorerPanel: !state.isTouchMode,
@@ -381,5 +449,14 @@ export const selectViewData = ({ state, i18n }) => {
     resourceFolderPickerOpen:
       state.folderPicker.isOpen &&
       activeFolderViewData.folderOptions.length > 0,
+    packageMetadataComplete,
+    packageMetadataName: packageMetadataComplete
+      ? state.packageMetadata.name
+      : copy.addPackageInformation,
+    packageMetadataSummary: packageMetadataComplete
+      ? `${state.packageMetadata.id} · ${state.packageMetadata.version}`
+      : copy.packageInformationRequired,
+    packageMetadataDescription: state.packageMetadata.description,
+    packageMetadataEditForm,
   };
 };

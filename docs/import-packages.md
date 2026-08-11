@@ -113,7 +113,10 @@ files/<package-local-file-id>
 
 The creator's package information edit dialog supplies the manifest package
 `id`, `name`, `version`, and optional `description` values. The page displays
-the saved values in a read-only detail view.
+the saved values in a read-only summary. Creator-generated manifests also set
+`package.kind` to `routevn.creator.asset-package`; this explicit marker selects
+the generalized asset importer without relying on the mix of resource roots in
+the package.
 
 The `package.json` manifest uses relative `source.url` values that point to the
 corresponding entries under `files/`. After extracting the archive, the folder
@@ -122,8 +125,9 @@ can be served directly from a static file server.
 ## Resource Preview Media
 
 Animation, transform, sound, particle, spritesheet, font, and text-style items
-may reference package-only preview media with `previewMediaFileId`. The id must
-reference a record in
+may reference package-only preview media with `previewMediaFileId`. Generated
+video resources may also use `thumbnailMediaFileId` for a lower-resolution
+version of the same preview. These ids must reference records in
 `repository.files.items` whose MIME type is `image/jpeg`, `image/png`,
 `image/webp`, `video/mp4`, or `video/webm`.
 
@@ -138,10 +142,11 @@ reference a record in
 ```
 
 Preview media is displayed in a 16:9 frame during import review. Video previews
-autoplay muted, loop, and play inline. `previewMediaFileId` is import-only
-metadata: it is not persisted on the imported resource and is not downloaded
-as a project asset unless another retained resource field also references that
-file.
+autoplay muted, loop, and play inline. The importer prefers
+`thumbnailMediaFileId` when present. Both preview fields are import-only
+metadata: they are not persisted on the imported resource and are not
+downloaded as project assets unless another retained resource field also
+references the same file.
 
 When the asset package creator exports sounds that have waveform metadata, it
 generates a 640 by 360 PNG waveform preview inside the ZIP and assigns it as
@@ -150,11 +155,14 @@ does not add a thumbnail to the source project.
 
 The creator also generates package-only previews for these resources:
 
-- animations: a video containing one complete animation cycle rendered with
-  the animation's configured preview images and project resolution
-- particles: a short video of the existing particle preview
-- spritesheets: a video containing one complete cycle of the first animation,
-  matching the page's default clip selection and configured FPS
+- animations: full-resolution and lower-resolution videos containing one
+  complete animation cycle rendered with the animation's configured preview
+  images and project resolution
+- particles: full-resolution and lower-resolution short videos of the existing
+  particle preview
+- spritesheets: full-resolution and lower-resolution videos containing one
+  complete cycle of the first animation, matching the page's default clip
+  selection and configured FPS
 - fonts: a PNG of the existing `Aa` font preview
 - text styles: a PNG using the preview text, font, colors, stroke, and shadow
   shown by the existing text-style preview
@@ -216,8 +224,9 @@ preserving the selected root order and all ordering within each subtree.
 The asset package importer recreates the selected resources' complete package
 folder ancestry in each matching project collection. Package-local file and
 resource references are remapped before import, including nested references and
-dependencies between collections. All files, folders, and resources are
-committed in one atomic command batch.
+dependencies between collections. Export automatically includes the transitive
+resource and file dependencies of every selected subtree. All files, folders,
+and resources are committed in one atomic command batch.
 
 ## Media Substitution
 
