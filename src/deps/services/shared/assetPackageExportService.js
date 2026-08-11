@@ -589,7 +589,7 @@ export const createAssetPackageExportService = ({
 
     const zip = new JSZip();
     zip.file(
-      "package.json",
+      "asset-package.json",
       `${JSON.stringify(exportManifest, undefined, 2)}\n`,
     );
     for (const [fileId, bytes] of fileBytesById) {

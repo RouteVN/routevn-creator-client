@@ -96,7 +96,7 @@ describe("resource-import-dialog.store", () => {
     expect(
       view.form.fields.find((field) => field.name === "url"),
     ).toMatchObject({
-      placeholder: "https://example.com/import/package.json",
+      placeholder: "https://example.com/import/asset-package.json",
     });
     expect(view).toMatchObject({
       assetStoreLinkLabel: "Browse the Asset Store",

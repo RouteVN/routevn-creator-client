@@ -42,7 +42,7 @@ const createPlan = (manifest, expectedResourceType = "transforms") => {
   let id = 0;
   return createResourceImportPlan({
     manifest,
-    manifestUrl: "http://localhost:4179/manifests/package.json",
+    manifestUrl: "http://localhost:4179/manifests/asset-package.json",
     expectedResourceType,
     repositoryState: createRepositoryState(),
     repositoryRevision: 7,

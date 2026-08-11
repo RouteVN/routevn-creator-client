@@ -2279,7 +2279,7 @@ resourceImport:
   urlLabel: "Import URL"
   urlDescription: "Paste the HTTPS import link supplied by the package publisher."
   assetStoreLinkLabel: "Browse the Asset Store"
-  urlPlaceholder: "https://example.com/import/package.json"
+  urlPlaceholder: "https://example.com/import/asset-package.json"
   urlRequired: "Import URL is required."
   continueButton: "Review Package"
   selectResourcesTitle: "Choose Resources"

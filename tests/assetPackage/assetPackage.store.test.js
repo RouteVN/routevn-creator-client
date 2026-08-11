@@ -554,7 +554,7 @@ describe("asset package store", () => {
 
     const plan = createAssetImportPlan({
       manifest,
-      manifestUrl: "https://example.com/asset-package/package.json",
+      manifestUrl: "https://example.com/asset-package/asset-package.json",
       projectId: "project-1",
       repositoryState: createResourceDataByType(),
       repositoryRevision: 1,

@@ -2279,7 +2279,7 @@ resourceImport:
   urlLabel: "インポートURL"
   urlDescription: "パッケージ発行元から提供されたHTTPSインポートリンクを貼り付けてください。"
   assetStoreLinkLabel: "アセットストアを見る"
-  urlPlaceholder: "https://example.com/import/package.json"
+  urlPlaceholder: "https://example.com/import/asset-package.json"
   urlRequired: "インポートURLは必須です。"
   continueButton: "パッケージを確認"
   selectResourcesTitle: "リソースを選択"

@@ -34,7 +34,7 @@ const sourceForm = (copy) => ({
       type: "input-text",
       label: copy.urlLabel ?? "Import URL",
       placeholder:
-        copy.urlPlaceholder ?? "https://example.com/import/package.json",
+        copy.urlPlaceholder ?? "https://example.com/import/asset-package.json",
       required: {
         message: copy.urlRequired ?? "Import URL is required.",
       },

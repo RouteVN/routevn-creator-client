@@ -84,7 +84,7 @@ describe("asset import plan", () => {
     expect(isAssetPackageManifest(manifest, "animations")).toBe(true);
     const plan = createAssetImportPlan({
       manifest,
-      manifestUrl: "https://example.com/package.json",
+      manifestUrl: "https://example.com/asset-package.json",
       repositoryState: {},
       createId: () => `generated-${++id}`,
       resolveFileUrl: ({ descriptor, manifestUrl }) =>
@@ -283,7 +283,7 @@ describe("asset import plan", () => {
 
     const plan = createAssetImportPlan({
       manifest,
-      manifestUrl: "https://example.com/package.json",
+      manifestUrl: "https://example.com/asset-package.json",
       repositoryState: {},
       createId: () => `generated-${++id}`,
       resolveFileUrl: ({ descriptor, manifestUrl }) =>
@@ -336,7 +336,7 @@ describe("asset import plan", () => {
 
     const plan = createAssetImportPlan({
       manifest,
-      manifestUrl: "https://example.com/package.json",
+      manifestUrl: "https://example.com/asset-package.json",
       repositoryState: {},
       createId: () => `generated-${++id}`,
       resolveFileUrl: ({ descriptor, manifestUrl }) =>

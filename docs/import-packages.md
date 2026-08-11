@@ -112,7 +112,7 @@ present, the importer should verify the downloaded bytes.
 The asset package creator downloads a ZIP with this layout:
 
 ```text
-package.json
+asset-package.json
 files/<package-local-file-id>
 ```
 
@@ -123,9 +123,9 @@ the saved values in a read-only summary. Creator-generated manifests also set
 the generalized asset importer without relying on the mix of resource roots in
 the package.
 
-The `package.json` manifest uses relative `source.url` values that point to the
-corresponding entries under `files/`. After extracting the archive, the folder
-can be served directly from a static file server.
+The `asset-package.json` manifest uses relative `source.url` values that point
+to the corresponding entries under `files/`. After extracting the archive, the
+folder can be served directly from a static file server.
 
 ## Resource Preview Media
 

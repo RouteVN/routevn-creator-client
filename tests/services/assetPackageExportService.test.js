@@ -29,7 +29,7 @@ const createManifest = () => ({
 });
 
 describe("asset package export service", () => {
-  it("creates a ZIP containing package.json and the referenced file bytes", async () => {
+  it("creates a ZIP containing asset-package.json and the referenced file bytes", async () => {
     const revokeByFileId = new Map();
     const getFileContent = vi.fn(async (fileId) => {
       const revoke = vi.fn();
@@ -51,14 +51,14 @@ describe("asset package export service", () => {
     expect(bundle.type).toBe("application/zip");
     const zip = await JSZip.loadAsync(await bundle.arrayBuffer());
     expect(Object.keys(zip.files).sort()).toEqual([
+      "asset-package.json",
       "files/",
       "files/file%20image",
       "files/file-sound",
-      "package.json",
     ]);
-    expect(JSON.parse(await zip.file("package.json").async("string"))).toEqual(
-      manifest,
-    );
+    expect(
+      JSON.parse(await zip.file("asset-package.json").async("string")),
+    ).toEqual(manifest);
     expect(await zip.file("files/file%20image").async("string")).toBe(
       "bytes:project-file://file image",
     );
@@ -137,7 +137,7 @@ describe("asset package export service", () => {
     expect(renderWaveformThumbnail).toHaveBeenCalledWith({ waveformData });
     const zip = await JSZip.loadAsync(await bundle.arrayBuffer());
     const exportedManifest = JSON.parse(
-      await zip.file("package.json").async("string"),
+      await zip.file("asset-package.json").async("string"),
     );
     const previewFileId = "waveform-preview.sound.theme.png";
     expect(
@@ -382,7 +382,9 @@ describe("asset package export service", () => {
 
     expect(manifest).toEqual(sourceManifest);
     const zip = await JSZip.loadAsync(await bundle.arrayBuffer());
-    const exported = JSON.parse(await zip.file("package.json").async("string"));
+    const exported = JSON.parse(
+      await zip.file("asset-package.json").async("string"),
+    );
     expect(
       exported.repository.spritesheets.items["spritesheet.hero"]
         .previewMediaFileId,
@@ -444,9 +446,7 @@ describe("asset package export service", () => {
       mimeType: "image/png",
     });
     expect(
-      exported.repository.files.items[
-        "text-style-preview.text-style.body.png"
-      ],
+      exported.repository.files.items["text-style-preview.text-style.body.png"],
     ).toMatchObject({
       type: "image",
       name: "Body preview.png",

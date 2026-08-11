@@ -2279,7 +2279,7 @@ resourceImport:
   urlLabel: "导入链接"
   urlDescription: "粘贴资源包发布者提供的 HTTPS 导入链接。"
   assetStoreLinkLabel: "浏览资源商店"
-  urlPlaceholder: "https://example.com/import/package.json"
+  urlPlaceholder: "https://example.com/import/asset-package.json"
   urlRequired: "必须填写导入链接。"
   continueButton: "检查资源包"
   selectResourcesTitle: "选择资源"

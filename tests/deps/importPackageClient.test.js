@@ -6,14 +6,14 @@ import {
 
 describe("importPackageClient", () => {
   it("requires HTTPS except for localhost test servers", () => {
-    expect(resolveImportUrl("https://assets.example/package.json").href).toBe(
-      "https://assets.example/package.json",
-    );
-    expect(resolveImportUrl("http://localhost:4179/package.json").href).toBe(
-      "http://localhost:4179/package.json",
-    );
+    expect(
+      resolveImportUrl("https://assets.example/asset-package.json").href,
+    ).toBe("https://assets.example/asset-package.json");
+    expect(
+      resolveImportUrl("http://localhost:4179/asset-package.json").href,
+    ).toBe("http://localhost:4179/asset-package.json");
     expect(() =>
-      resolveImportUrl("http://assets.example/package.json"),
+      resolveImportUrl("http://assets.example/asset-package.json"),
     ).toThrow("must use HTTPS");
   });
 
@@ -26,7 +26,7 @@ describe("importPackageClient", () => {
     );
     const client = createImportPackageClient({ fetchImpl });
     const result = await client.fetchManifest({
-      url: "https://assets.example/package.json",
+      url: "https://assets.example/asset-package.json",
     });
     expect(result.manifest.schema).toBe("routevn.import-pack.v1");
     expect(fetchImpl).toHaveBeenCalledWith(
@@ -50,7 +50,9 @@ describe("importPackageClient", () => {
       limits: { manifestBytes: 4 },
     });
     await expect(
-      client.fetchManifest({ url: "https://assets.example/package.json" }),
+      client.fetchManifest({
+        url: "https://assets.example/asset-package.json",
+      }),
     ).rejects.toMatchObject({ code: "manifest_too_large" });
   });
 
@@ -66,7 +68,7 @@ describe("importPackageClient", () => {
     );
     const client = createImportPackageClient({ fetchImpl });
     const result = await client.downloadFile({
-      manifestUrl: "https://assets.example/packs/package.json",
+      manifestUrl: "https://assets.example/packs/asset-package.json",
       descriptor: {
         mimeType: "image/png",
         sha256,
@@ -88,7 +90,7 @@ describe("importPackageClient", () => {
     });
     await expect(
       client.downloadFile({
-        manifestUrl: "https://assets.example/package.json",
+        manifestUrl: "https://assets.example/asset-package.json",
         descriptor: {
           mimeType: "image/png",
           sha256: "0".repeat(64),
@@ -111,7 +113,9 @@ describe("importPackageClient", () => {
       limits: { manifestTimeoutMs: 5 },
     });
     await expect(
-      client.fetchManifest({ url: "https://assets.example/package.json" }),
+      client.fetchManifest({
+        url: "https://assets.example/asset-package.json",
+      }),
     ).rejects.toMatchObject({ code: "manifest_timeout", retryable: true });
   });
 });
