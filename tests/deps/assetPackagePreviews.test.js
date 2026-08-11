@@ -145,13 +145,13 @@ describe("asset package preview client", () => {
     };
     vi.stubGlobal("createImageBitmap", vi.fn(async () => sourceImage));
     const drawImage = vi.fn();
+    const outputSizes = [];
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
       drawImage,
     });
     vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(
       function (callback, mimeType) {
-        expect(this.width).toBe(640);
-        expect(this.height).toBe(180);
+        outputSizes.push([this.width, this.height]);
         callback(new Blob(["cropped"], { type: mimeType }));
       },
     );
@@ -165,7 +165,24 @@ describe("asset package preview client", () => {
 
     expect(previews.previewBlob.type).toBe("image/png");
     expect(previews.thumbnailBlob.type).toBe("image/png");
-    expect(drawImage).toHaveBeenCalledWith(
+    expect(outputSizes).toEqual([
+      [1920, 540],
+      [640, 180],
+    ]);
+    expect(drawImage).toHaveBeenNthCalledWith(
+      1,
+      sourceImage,
+      0,
+      0,
+      1920,
+      540,
+      0,
+      0,
+      1920,
+      540,
+    );
+    expect(drawImage).toHaveBeenNthCalledWith(
+      2,
       sourceImage,
       0,
       0,
@@ -176,7 +193,7 @@ describe("asset package preview client", () => {
       640,
       180,
     );
-    expect(sourceImage.close).toHaveBeenCalledOnce();
+    expect(sourceImage.close).toHaveBeenCalledTimes(2);
   });
 
   it("records animation previews through one shared graphics context", async () => {
