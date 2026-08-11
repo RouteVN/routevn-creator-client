@@ -74,6 +74,14 @@ refs:
     eventListeners:
       click:
         handler: handleSelectedPropertyDeleteClick
+  selectedPropertyAddButton:
+    eventListeners:
+      click:
+        handler: handleSelectedPropertyAddClick
+  selectedPropertyRemoveStartValueButton:
+    eventListeners:
+      click:
+        handler: handleSelectedPropertyRemoveStartValueClick
   addPropertiesButton:
     eventListeners:
       click:
@@ -290,10 +298,6 @@ refs:
     eventListeners:
       value-change:
         handler: handleSelectedPropertyInitialValueChange
-  selectedPropertyUseDefault:
-    eventListeners:
-      click:
-        handler: handleSelectedPropertyUseDefaultClick
   selectedPropertyAutoDuration:
     eventListeners:
       value-change:
@@ -338,6 +342,12 @@ refs:
         handler: handleClosePopover
       item-click:
         handler: handleAddPropertySideMenuItemClick
+  selectedPropertyAddMenu:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+      item-click:
+        handler: handleSelectedPropertyAddMenuItemClick
   disableMaskButton:
     eventListeners:
       click:
@@ -638,6 +648,8 @@ template:
                             $elif selectedMask:
                               - 'rtgl-button#selectedMaskDeleteButton sq v=gh pre=trash aria-label="${removeButton}" title="${removeButton}"': null
                             $elif selectedPropertyDetailId:
+                              - $if selectedPropertyAddMenuItems.length > 0:
+                                  - 'rtgl-button#selectedPropertyAddButton sq v=gh pre=plus aria-haspopup=menu aria-expanded="${popover.selectedPropertyAddMenuIsOpen}" aria-label="${addButton}" title="${addButton}"': null
                               - 'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"': null
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if selectedKeyframeDetailId:
@@ -662,16 +674,17 @@ template:
                                       - 'rvn-value-popover-input#selectedPropertyAutoDuration value=${selectedPropertyEditor.duration} label="${selectedPropertyEditor.durationLabel}"': null
                                   - rtgl-select#selectedPropertyAutoEasing slot=property-auto-easing w=f no-clear :selectedValue=${selectedPropertyEditor.easing} :options=${selectedPropertyEditor.easingOptions}: null
                                 $else:
-                                  - rtgl-view slot=property-initial-value d=v w=f g=xs:
+                                  - rtgl-view slot=property-start-value d=v w=f g=xs:
+                                      - rtgl-view d=h w=f av=c:
+                                          - rtgl-text w=1fg c=mu-fg: ${selectedPropertyEditor.startValueLabel}
+                                          - 'rtgl-button#selectedPropertyRemoveStartValueButton sq v=gh pre=x aria-label="${removeStartValueButtonLabel}" title="${removeStartValueButtonLabel}"': null
                                       - $if selectedPropertyEditor && selectedPropertyEditor.initialValueSlider:
                                           - rtgl-slider-input#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f value=${selectedPropertyEditor.initialValue} min=${selectedPropertyEditor.initialValueSlider.min} max=${selectedPropertyEditor.initialValueSlider.max} step=${selectedPropertyEditor.initialValueSlider.step}: null
                                         $elif selectedPropertyEditor && selectedPropertyEditor.initialValueUsesPopover:
                                           - 'rtgl-view data-popover-input-field=true w=f h=32 d=h av=c ph=md bgc=mu bw=xs bc=bg h-bc=ac br=md cur=pointer style="box-sizing: border-box;"':
-                                              - 'rvn-value-popover-input#selectedPropertyInitialValuePopover value=${selectedPropertyEditor.initialValue} label="${selectedPropertyEditor.initialValueLabel}"': null
+                                              - 'rvn-value-popover-input#selectedPropertyInitialValuePopover value=${selectedPropertyEditor.initialValue} label="${selectedPropertyEditor.startValueLabel}"': null
                                         $elif selectedPropertyEditor:
                                           - rtgl-input-number#selectedPropertyInitialValue key=${selectedPropertyDetailId} w=f step=${selectedPropertyEditor.initialValueStep} value=${selectedPropertyEditor.initialValue}: null
-                                      - $if selectedPropertyEditor && selectedPropertyEditor.hasInitialValue:
-                                          - rtgl-button#selectedPropertyUseDefault s=sm v=se w=f: ${useDefaultValueButtonLabel}
                         $elif selectedMask:
                           - rtgl-view#selectedMaskDetails data-timeline-selection-surface=true d=v w=f g=md p=md pb=xl:
                               - $if maskEditorPanel.unsupported:
@@ -829,6 +842,7 @@ template:
                   - rtgl-button#previewDialogSaveButton s=sm: ${saveButton}
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeDropdownItems} ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}: null
   - rtgl-dropdown-menu#addPropertySideMenu :items=${addPropertySideMenuItems} ?open=${popover.addPropertySideMenuIsOpen} x=${popover.x} y=${popover.y}: null
+  - rtgl-dropdown-menu#selectedPropertyAddMenu :items=${selectedPropertyAddMenuItems} ?open=${popover.selectedPropertyAddMenuIsOpen} x=${popover.x} y=${popover.y}: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
       - $if imageSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:

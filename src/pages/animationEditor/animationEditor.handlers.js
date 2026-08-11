@@ -1836,8 +1836,43 @@ export const handleSelectedPropertyInitialValueChange = (deps, payload) => {
   commitSelectedPropertyInitialValue(deps, resolveValueChange(payload));
 };
 
-export const handleSelectedPropertyUseDefaultClick = (deps) => {
+export const handleSelectedPropertyRemoveStartValueClick = (deps) => {
   commitSelectedPropertyInitialValue(deps, undefined);
+};
+
+export const handleSelectedPropertyAddClick = (deps, payload) => {
+  const { render, store } = deps;
+  const selectedProperty = store.selectSelectedProperty();
+  if (!selectedProperty) {
+    return;
+  }
+
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  store.setPopover({
+    mode: "selectedPropertyAddMenu",
+    x: rect.left,
+    y: rect.bottom,
+    payload: selectedProperty,
+  });
+  render();
+};
+
+export const handleSelectedPropertyAddMenuItemClick = (deps, payload) => {
+  const { render, store } = deps;
+  if (payload._event.detail.item.value !== "start-value") {
+    return;
+  }
+
+  const { side, property } = store.selectPopover().payload;
+  store.updateInitialValue({
+    side,
+    property,
+    initialValue: store.selectDefaultInitialValue({ property }),
+  });
+  store.closePopover();
+  invalidatePreview({ store });
+  render();
+  queueEditorAutosave({ deps });
 };
 
 export const handleSelectedPropertyAutoDurationChange = (deps, payload) => {

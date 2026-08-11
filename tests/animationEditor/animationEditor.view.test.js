@@ -112,6 +112,10 @@ describe("animationEditor view", () => {
     expect(view).toContain(
       'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"',
     );
+    expect(view).toContain(
+      "rtgl-button#selectedPropertyAddButton sq v=gh pre=plus aria-haspopup=menu",
+    );
+    expect(view).toContain("handler: handleSelectedPropertyAddClick");
     expect(view).toContain("handler: handleSelectedPropertyDeleteClick");
     expect(view).toContain("rtgl-dialog#propertyRemoveConfirmDialog");
     expect(view).toContain("?open=${propertyRemoveConfirmDialogOpen}");
@@ -201,16 +205,18 @@ describe("animationEditor view", () => {
     expect(view).toContain("handler: handleSelectedMaskSoftnessClick");
     expect(view).toContain("rtgl-view#selectedMaskInitialValue");
     expect(view).toContain("handler: handleSelectedMaskInitialValueClick");
+    expect(view).toContain("rtgl-view slot=property-start-value d=v w=f g=xs");
     expect(view).toContain(
-      "rtgl-view slot=property-initial-value d=v w=f g=xs",
+      "rtgl-text w=1fg c=mu-fg: ${selectedPropertyEditor.startValueLabel}",
+    );
+    expect(view).toContain(
+      'rtgl-button#selectedPropertyRemoveStartValueButton sq v=gh pre=x aria-label="${removeStartValueButtonLabel}"',
     );
     expect(view).toContain(
       "rtgl-slider-input#selectedPropertyInitialValue key=${selectedPropertyDetailId}",
     );
     expect(view).toContain("data-popover-input-field=true w=f h=32");
-    expect(view).toContain(
-      "rtgl-button#selectedPropertyUseDefault s=sm v=se w=f",
-    );
+    expect(view).not.toContain("rtgl-button#selectedPropertyUseDefault");
     expect(view).toContain(
       "rvn-value-popover-input#selectedPropertyAutoDuration",
     );
@@ -220,7 +226,11 @@ describe("animationEditor view", () => {
     expect(view.match(/data-popover-input-field=true/g)).toHaveLength(5);
     expect(view.match(/rvn-value-popover-input#/g)).toHaveLength(5);
     expect(view).toContain("handler: handleSelectedPropertyInitialValueChange");
-    expect(view).toContain("handler: handleSelectedPropertyUseDefaultClick");
+    expect(view).toContain(
+      "handler: handleSelectedPropertyRemoveStartValueClick",
+    );
+    expect(view).toContain("handler: handleSelectedPropertyAddMenuItemClick");
+    expect(view).toContain("rtgl-dropdown-menu#selectedPropertyAddMenu");
     expect(view).not.toContain("rtgl-view#selectedMaskProgressDuration");
     expect(view).not.toContain(
       "handler: handleSelectedMaskProgressDurationClick",

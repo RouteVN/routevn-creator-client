@@ -46,9 +46,11 @@ import {
   handleSelectedKeyframeRelativeChange,
   handleSelectedKeyframeValueChange,
   handleSelectedPropertyInitialValueChange,
+  handleSelectedPropertyAddClick,
+  handleSelectedPropertyAddMenuItemClick,
   handleSelectedPropertyAutoDurationChange,
   handleSelectedPropertyAutoEasingChange,
-  handleSelectedPropertyUseDefaultClick,
+  handleSelectedPropertyRemoveStartValueClick,
   handleSelectedMaskNumberConfirmClick,
   handleSelectedMaskNumberFieldKeyDown,
   handleSelectedMaskNumberInputChange,
@@ -1509,7 +1511,7 @@ describe("animationEditor.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("restores the selected property's default initial value", () => {
+  it("removes the selected property's start value", () => {
     const store = {
       bumpPreviewRenderVersion: vi.fn(),
       queueAutosave: vi.fn(),
@@ -1524,7 +1526,7 @@ describe("animationEditor.handlers", () => {
     };
     const render = vi.fn();
 
-    handleSelectedPropertyUseDefaultClick({ render, store });
+    handleSelectedPropertyRemoveStartValueClick({ render, store });
 
     expect(store.updateInitialValue).toHaveBeenCalledWith({
       side: "prev",
@@ -1533,6 +1535,72 @@ describe("animationEditor.handlers", () => {
     });
     expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
     expect(store.queueAutosave).toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("opens the selected-property add menu from the plus button", () => {
+    const selectedProperty = { side: "update", property: "x" };
+    const store = {
+      selectSelectedProperty: vi.fn(() => selectedProperty),
+      setPopover: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleSelectedPropertyAddClick(
+      { render, store },
+      {
+        _event: {
+          currentTarget: {
+            getBoundingClientRect: () => ({ left: 120, bottom: 180 }),
+          },
+        },
+      },
+    );
+
+    expect(store.setPopover).toHaveBeenCalledWith({
+      mode: "selectedPropertyAddMenu",
+      x: 120,
+      y: 180,
+      payload: selectedProperty,
+    });
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("adds the default start value from the selected-property menu", () => {
+    const store = {
+      bumpPreviewRenderVersion: vi.fn(),
+      closePopover: vi.fn(),
+      queueAutosave: vi.fn(),
+      selectAutosaveInFlight: vi.fn(() => false),
+      selectAutosavePersistedVersion: vi.fn(() => 1),
+      selectAutosaveTimerId: vi.fn(() => undefined),
+      selectAutosaveVersion: vi.fn(() => 1),
+      selectDefaultInitialValue: vi.fn(() => 960),
+      selectPopover: vi.fn(() => ({
+        payload: { side: "update", property: "x" },
+      })),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      updateInitialValue: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleSelectedPropertyAddMenuItemClick(
+      { render, store },
+      { _event: { detail: { item: { value: "start-value" } } } },
+    );
+
+    expect(store.selectDefaultInitialValue).toHaveBeenCalledWith({
+      property: "x",
+    });
+    expect(store.updateInitialValue).toHaveBeenCalledWith({
+      side: "update",
+      property: "x",
+      initialValue: 960,
+    });
+    expect(store.closePopover).toHaveBeenCalledOnce();
+    expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
+    expect(store.queueAutosave).toHaveBeenCalledOnce();
     expect(render).toHaveBeenCalledOnce();
   });
 

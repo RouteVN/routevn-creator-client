@@ -3528,11 +3528,10 @@ const buildSelectedPropertyPanelData = (
         slot: "property-auto-easing",
       },
     );
-  } else {
+  } else if (hasInitialValue) {
     fields.push({
       type: "slot",
-      label: copy.initialValueLabel ?? "Initial value",
-      slot: "property-initial-value",
+      slot: "property-start-value",
     });
   }
 
@@ -3549,7 +3548,7 @@ const buildSelectedPropertyPanelData = (
       : {
           hasInitialValue,
           initialValue,
-          initialValueLabel: copy.initialValueLabel ?? "Initial value",
+          startValueLabel: copy.startValueLabel ?? "Start value",
           initialValueSlider,
           initialValueStep: propertyFieldConfig[property]?.input?.step ?? "any",
           initialValueUsesPopover: Boolean(
@@ -3801,6 +3800,18 @@ export const selectViewData = ({ state, i18n }) => {
     propertyFieldConfig,
     copy,
   );
+  const selectedPropertyAddMenuItems =
+    selectedPropertyPanel?.editor &&
+    !selectedPropertyPanel.editor.auto &&
+    !selectedPropertyPanel.editor.hasInitialValue
+      ? [
+          {
+            label: copy.startValueLabel ?? "Start value",
+            type: "item",
+            value: "start-value",
+          },
+        ]
+      : [];
   const imageFolderItems = toFlatItems(state.imagesData).filter(
     (item) => item.type === "folder",
   );
@@ -4017,6 +4028,7 @@ export const selectViewData = ({ state, i18n }) => {
     selectedPropertyDetailId: selectedPropertyPanel?.id,
     selectedPropertyDetailFields: selectedPropertyPanel?.fields ?? [],
     selectedPropertyEditor: selectedPropertyPanel?.editor,
+    selectedPropertyAddMenuItems,
     selectedMask,
     maskTimelineRow,
     maskTimelineRows,
@@ -4085,6 +4097,8 @@ export const selectViewData = ({ state, i18n }) => {
         state.popover.mode,
       ),
       addPropertySideMenuIsOpen: state.popover.mode === "addPropertySideMenu",
+      selectedPropertyAddMenuIsOpen:
+        state.popover.mode === "selectedPropertyAddMenu",
     },
     addPropertyFormDefaultValues,
     imageSelectorDialog: state.imageSelectorDialog,
@@ -4152,8 +4166,8 @@ export const selectViewData = ({ state, i18n }) => {
     editKeyframeButtonLabel: copy.editKeyframeMenuItem ?? "Edit keyframe",
     imageLabel: copy.imageLabel ?? "Image",
     initialValueLabel: copy.initialValueLabel ?? "Initial value",
-    useDefaultValueButtonLabel:
-      copy.useDefaultValueSource ?? "Use Default Value",
+    removeStartValueButtonLabel:
+      copy.removeStartValueButtonLabel ?? "Remove start value",
     inTimelineLabel: copy.inTimelineLabel ?? "Incoming",
     invertLabel: copy.invertLabel ?? "Invert",
     detailsPanelTitle: selectedMask

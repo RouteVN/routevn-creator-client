@@ -578,26 +578,33 @@ describe("animationEditor.store", () => {
       { type: "text", label: "Property", value: "Alpha" },
       {
         type: "slot",
-        label: "Initial value",
-        slot: "property-initial-value",
+        slot: "property-start-value",
       },
     ]);
     expect(viewData.selectedPropertyEditor).toEqual({
       hasInitialValue: true,
       initialValue: 0.5,
-      initialValueLabel: "Initial value",
+      startValueLabel: "Start value",
       initialValueSlider: { min: 0, max: 1, step: 0.01 },
       initialValueStep: "any",
       initialValueUsesPopover: false,
     });
-    expect(viewData.useDefaultValueButtonLabel).toBe("Use Default Value");
+    expect(viewData.selectedPropertyAddMenuItems).toEqual([]);
+    expect(viewData.removeStartValueButtonLabel).toBe("Remove start value");
 
     delete state.tweenBySection.prev.alpha.initialValue;
     viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.selectedPropertyDetailFields).toEqual([
+      { type: "text", label: "Timeline", value: "Outgoing" },
+      { type: "text", label: "Property", value: "Alpha" },
+    ]);
     expect(viewData.selectedPropertyEditor).toMatchObject({
       hasInitialValue: false,
       initialValue: 1,
     });
+    expect(viewData.selectedPropertyAddMenuItems).toEqual([
+      { label: "Start value", type: "item", value: "start-value" },
+    ]);
 
     setSelectedKeyframe(
       { state },
