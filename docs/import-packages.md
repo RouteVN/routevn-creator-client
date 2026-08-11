@@ -165,7 +165,7 @@ The creator also generates package-only previews for these resources:
   selection and configured FPS
 - fonts: a 1920 by 1080 PNG containing the Fonts page glyph set, plus a 640 by
   360 PNG thumbnail of the existing `Aa` preview
-- text styles: a 1920 by 540 PNG using the preview text, font, colors, stroke,
+- text styles: a 960 by 270 PNG using the preview text, font, colors, stroke,
   and shadow shown by the existing text-style preview, plus a 640 by 180 PNG
   thumbnail
 
