@@ -354,12 +354,6 @@ RouteVN Creator's supported web and desktop origins.
   client reject oversized responses early, but streaming limits are enforced
   even when the header is absent or incorrect.
 
-The local fixture server in this repository is an executable publisher example:
-
-```bash
-bun run serve:import-test-data
-```
-
 ## Validation
 
 The client should treat import links as untrusted network input:
@@ -436,23 +430,3 @@ resources with image dependencies. Other repository roots are reported as
 skipped content in that legacy review plan rather than imported implicitly. A
 multi-resource asset package uses the generalized asset plan and supports every
 user-facing resource collection listed above.
-
-## Local Test Server
-
-Run the deterministic import-package server with:
-
-```bash
-bun run serve:import-test-data
-```
-
-It listens on `http://127.0.0.1:4179` by default. Override the bind values with
-`ROUTEVN_IMPORT_TEST_HOST` and `ROUTEVN_IMPORT_TEST_PORT`.
-
-Useful URLs:
-
-- `/import/transforms` and `/import/animations`: redirecting import links
-- `/manifests/transforms.json`: two transforms sharing one replaceable image
-- `/manifests/animations.json`: two animations with a replaceable mask image
-- `/manifests/integrity-failure.json`: deliberate SHA-256 failure
-- `/files/slow-pixel.png`: delayed file response for cancellation testing
-- `/status/401`, `/status/404`, `/status/500`: stable HTTP failure cases

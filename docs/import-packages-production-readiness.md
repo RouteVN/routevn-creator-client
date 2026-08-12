@@ -33,8 +33,8 @@ manual/device/release gates separate from code completion.
       batch, stable resource/command ids, unknown-outcome recovery, and result
       ids for post-success selection.
 - [x] Animations and transforms pages use the same shared production workflow.
-- [x] Deterministic local HTTP fixture server and success, redirect, delay,
-      status-failure, and integrity-failure data.
+- [x] Deterministic manifest fixtures covering successful and invalid package
+      data.
 - [x] Focused client, planner, service, component-store, command-batch, real
       repository-projection, and SQLite-backed Puty storage tests.
 - [ ] Release evidence: browser VT, keyboard/mobile manual validation,
@@ -120,9 +120,8 @@ The current implementation is split across these ownership boundaries:
   batch
 - `src/components/resource-import-dialog/`: shared localized source, review,
   selection, rename, replacement, progress, cancellation, and error UI
-- `scripts/import-package-test-server.js` and
-  `tests/fixtures/import-packages/`: deterministic success, redirect, delay,
-  HTTP failure, and integrity-failure data
+- `tests/fixtures/import-packages/`: deterministic manifest data used by the
+  import-plan and service tests
 
 The animations and transforms pages only open the component and handle its
 completion/cancellation events. Their former form remains covered by legacy unit

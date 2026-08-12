@@ -80,7 +80,6 @@
     "vt:accept": "bash ./scripts/run-vt-docker.sh vt accept",
     "vt:serve": "bunx serve .rettangoli/vt/_site -p 3002",
     "serve": "bunx serve _site -p 3001",
-    "serve:import-test-data": "node scripts/import-package-test-server.js",
     "lint": "oxlint && bun prettier --check src",
     "lint:fix": "oxlint && bun prettier --check --write src",
     "prepare": "husky",
