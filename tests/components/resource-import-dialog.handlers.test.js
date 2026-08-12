@@ -21,6 +21,18 @@ const createDeps = () => {
       appService: {
         openUrl: vi.fn(),
       },
+      refs: {
+        resourceSelectionGrid: {
+          querySelector: vi.fn(() => ({
+            dataset: { selected: "false" },
+            getAttribute: vi.fn((name) => {
+              if (name === "aria-pressed") return "false";
+              if (name === "bc") return "bo";
+              return undefined;
+            }),
+          })),
+        },
+      },
       store: {
         selectStep: vi.fn(() => "selection"),
         selectPlan: vi.fn(() => plan),

@@ -209,7 +209,7 @@ const describeResourceSelectionEvent = (_event) => ({
 });
 
 const toggleResourceSelection = (deps, _event) => {
-  const { store, render } = deps;
+  const { store, refs, render } = deps;
   const card = findResourceSelectionCard(_event);
   if (!card) {
     console.warn(
@@ -234,6 +234,15 @@ const toggleResourceSelection = (deps, _event) => {
       store.selectReviewValues()[`resource_${resourceIndex}_include`] === true,
   });
   render();
+  const renderedCard = refs.resourceSelectionGrid.querySelector(
+    `[data-resource-index="${resourceIndex}"]`,
+  );
+  console.info("[resource-import] Rendered resource card state.", {
+    resourceIndex,
+    ariaPressed: renderedCard?.getAttribute("aria-pressed"),
+    dataSelected: renderedCard?.dataset.selected,
+    borderColor: renderedCard?.getAttribute("bc"),
+  });
 };
 
 export const handleResourceSelectionToggle = (deps, payload) => {
