@@ -142,26 +142,10 @@ const selectionForm = ({ state, copy }) => {
     slot: "selection-controls",
   });
 
-  const resourceFields = getOrderedReviewResources({
-    plan: state.plan,
-    values: state.reviewValues,
-  }).map(({ resourceIndex }) => ({
+  fields.push({
     type: "slot",
-    slot: `resource-selection-${resourceIndex}`,
-  }));
-  for (let index = 0; index < resourceFields.length; index += 2) {
-    const rowFields = resourceFields.slice(index, index + 2);
-    if (rowFields.length === 1) {
-      rowFields.push({
-        type: "slot",
-        slot: `resource-selection-spacer-${index}`,
-      });
-    }
-    fields.push({
-      type: "row",
-      fields: rowFields,
-    });
-  }
+    slot: "resource-selection-grid",
+  });
 
   return {
     title: copy.selectResourcesTitle ?? "Choose Resources",
@@ -360,7 +344,6 @@ export const selectViewData = ({ state, i18n = {} }) => {
         ...resource,
         resourceIndex,
         typeLabel: getResourceTypeLabel({ resource, copy }),
-        selectionSlot: `resource-selection-${resourceIndex}`,
         selectionLabel: (copy.includeResource ?? "Import {name}").replace(
           "{name}",
           getResourceLabel(resource, resourceIndex, copy),

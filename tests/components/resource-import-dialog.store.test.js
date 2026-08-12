@@ -72,7 +72,6 @@ describe("resource-import-dialog.store", () => {
     expect(view.resources).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          selectionSlot: "resource-selection-0",
           previewSourceId: "file.transform-one",
           typeLabel: "Transform",
           selected: true,
@@ -83,7 +82,6 @@ describe("resource-import-dialog.store", () => {
           selectionStatusColor: "pr",
         }),
         expect.objectContaining({
-          selectionSlot: "resource-selection-1",
           previewSourceId: "file.transform-two",
           previewKind: "video",
         }),
@@ -93,13 +91,7 @@ describe("resource-import-dialog.store", () => {
       expect.arrayContaining([
         expect.objectContaining({ slot: "package-summary", type: "slot" }),
         expect.objectContaining({ slot: "selection-controls", type: "slot" }),
-        {
-          type: "row",
-          fields: [
-            { slot: "resource-selection-0", type: "slot" },
-            { slot: "resource-selection-1", type: "slot" },
-          ],
-        },
+        { slot: "resource-selection-grid", type: "slot" },
       ]),
     );
     expect(view.form.fields.some((field) => field.type === "checkbox")).toBe(
@@ -165,12 +157,6 @@ describe("resource-import-dialog.store", () => {
       selectionLocked: true,
       selectionStatus: "Required",
     });
-    expect(
-      selectViewData({ state, i18n: {} })
-        .form.fields.flatMap(({ fields = [] }) => fields)
-        .filter(({ slot }) => slot?.startsWith("resource-selection-"))
-        .map(({ slot }) => slot),
-    ).toEqual(["resource-selection-1", "resource-selection-0"]);
     setResourceSelected({ state }, { resourceIndex: 0, selected: false });
     expect(state.reviewValues.resource_0_include).toBe(true);
 
@@ -197,11 +183,8 @@ describe("resource-import-dialog.store", () => {
     const view = selectViewData({ state, i18n: {} });
     expect(view.step).toBe("selection");
     expect(view.form.fields.at(-1)).toEqual({
-      type: "row",
-      fields: [
-        { type: "slot", slot: "resource-selection-0" },
-        { type: "slot", slot: "resource-selection-spacer-0" },
-      ],
+      type: "slot",
+      slot: "resource-selection-grid",
     });
     expect(view.form.actions.buttons.at(-1).id).toBe("import");
   });
