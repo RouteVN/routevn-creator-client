@@ -2336,8 +2336,6 @@ resourceImport:
   publisherLabel: "发布者"
   sourceLabel: "来源"
   warningsLabel: "警告"
-  bytesLabel: "字节"
-  unknownSizeLabel: "以及大小未知的文件"
   preparingLabel: "正在准备导入"
   downloadingLabel: "正在下载资源包文件"
   processingLabel: "正在验证并处理文件"

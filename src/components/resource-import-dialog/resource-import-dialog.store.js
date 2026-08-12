@@ -74,28 +74,17 @@ const getRequiredDependencySourceIds = ({ plan, values }) => {
   return requiredSourceIds;
 };
 
-const getOrderedReviewResources = ({ plan, values }) => {
+const getReviewResources = ({ plan, values }) => {
   const requiredSourceIds = getRequiredDependencySourceIds({ plan, values });
-  const dependencySourceIds = new Set(
-    plan.resources.flatMap((resource) => resource.dependencySourceIds ?? []),
-  );
-  return plan.resources
-    .map((resource, resourceIndex) => {
-      const selected = values[`resource_${resourceIndex}_include`] === true;
-      return {
-        resource,
-        resourceIndex,
-        selected,
-        selectionLocked: selected && requiredSourceIds.has(resource.sourceId),
-      };
-    })
-    .sort((left, right) => {
-      const leftGroup = dependencySourceIds.has(left.resource.sourceId) ? 1 : 0;
-      const rightGroup = dependencySourceIds.has(right.resource.sourceId)
-        ? 1
-        : 0;
-      return leftGroup - rightGroup || left.resourceIndex - right.resourceIndex;
-    });
+  return plan.resources.map((resource, resourceIndex) => {
+    const selected = values[`resource_${resourceIndex}_include`] === true;
+    return {
+      resource,
+      resourceIndex,
+      selected,
+      selectionLocked: selected && requiredSourceIds.has(resource.sourceId),
+    };
+  });
 };
 
 const formatResourceType = (resourceType = "resource") => {
@@ -126,6 +115,22 @@ const getResourceTypeLabel = ({ resource, copy }) => {
   return (
     copy[copyKey] ?? formatResourceType(resource.type ?? resource.resourceType)
   );
+};
+
+const createFallbackReviewSections = (resources) => {
+  const sectionsByResourceType = new Map();
+  for (const resource of resources) {
+    let section = sectionsByResourceType.get(resource.resourceType);
+    if (!section) {
+      section = {
+        resourceType: resource.resourceType,
+        items: [{ kind: "resources", sourceIds: [] }],
+      };
+      sectionsByResourceType.set(resource.resourceType, section);
+    }
+    section.items[0].sourceIds.push(resource.sourceId);
+  }
+  return [...sectionsByResourceType.values()];
 };
 
 const selectionForm = ({ state, copy }) => {
@@ -337,7 +342,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
         state.reviewValues[`resource_${index}_include`] === true,
     );
   const resources = plan
-    ? getOrderedReviewResources({
+    ? getReviewResources({
         plan,
         values: state.reviewValues,
       }).map(({ resource, resourceIndex, selected, selectionLocked }) => ({
@@ -362,6 +367,38 @@ export const selectViewData = ({ state, i18n = {} }) => {
         selectionStatusColor: selected ? "pr" : "mu-fg",
       }))
     : [];
+  const resourceBySourceId = new Map(
+    resources.map((resource) => [resource.sourceId, resource]),
+  );
+  const reviewSections =
+    plan?.reviewSections ?? createFallbackReviewSections(resources);
+  const resourceSections = reviewSections.map((section) => {
+    const groups = section.items.map((item) => {
+      if (item.kind === "folder") {
+        return {
+          ...item,
+          indent: item.depth * 16,
+        };
+      }
+      return {
+        ...item,
+        resources: item.sourceIds.map((sourceId) =>
+          resourceBySourceId.get(sourceId),
+        ),
+      };
+    });
+    const firstResource = groups
+      .find((group) => group.kind === "resources")
+      ?.resources.at(0);
+    return {
+      resourceType: section.resourceType,
+      typeLabel: getResourceTypeLabel({
+        resource: firstResource ?? { resourceType: section.resourceType },
+        copy,
+      }),
+      groups,
+    };
+  });
 
   return {
     open: state.open,
@@ -393,14 +430,11 @@ export const selectViewData = ({ state, i18n = {} }) => {
     packagePublisher: plan?.package?.publisher,
     packageSource: plan?.package?.source,
     resources,
+    resourceSections,
     warnings,
-    knownDownloadBytes: plan?.knownDownloadBytes ?? 0,
-    hasUnknownDownloadSize: plan?.hasUnknownDownloadSize === true,
     publisherLabel: copy.publisherLabel ?? "Publisher",
     sourceLabel: copy.sourceLabel ?? "Source",
     warningsLabel: copy.warningsLabel ?? "Warnings",
-    unknownSizeLabel: copy.unknownSizeLabel ?? "plus files of unknown size",
-    bytesLabel: copy.bytesLabel ?? "bytes",
     progressLabel:
       progressLabelByPhase[state.progress.phase] ??
       copy.preparingLabel ??

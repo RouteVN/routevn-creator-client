@@ -141,6 +141,136 @@ describe("asset import plan", () => {
     );
   });
 
+  it("preserves manifest resource-type and folder order for review", () => {
+    const manifest = {
+      schema: "routevn.import-pack.v1",
+      package: { kind: ASSET_PACKAGE_KIND },
+      repository: {
+        files: { items: {} },
+        variables: {
+          items: {
+            "folder-variables-one": {
+              id: "folder-variables-one",
+              type: "folder",
+              name: "Variables One",
+            },
+            "variable-one": {
+              id: "variable-one",
+              type: "variable",
+              name: "Variable One",
+              variableType: "string",
+              scope: "context",
+              default: "one",
+              value: "one",
+            },
+            "folder-variables-two": {
+              id: "folder-variables-two",
+              type: "folder",
+              name: "Variables Two",
+            },
+            "folder-variables-nested": {
+              id: "folder-variables-nested",
+              type: "folder",
+              name: "Nested Variables",
+            },
+            "variable-two": {
+              id: "variable-two",
+              type: "variable",
+              name: "Variable Two",
+              variableType: "string",
+              scope: "context",
+              default: "two",
+              value: "two",
+            },
+          },
+          tree: [
+            {
+              id: "folder-variables-one",
+              children: [{ id: "variable-one" }],
+            },
+            {
+              id: "folder-variables-two",
+              children: [
+                {
+                  id: "folder-variables-nested",
+                  children: [{ id: "variable-two" }],
+                },
+              ],
+            },
+          ],
+        },
+        colors: {
+          items: {
+            "folder-colors": {
+              id: "folder-colors",
+              type: "folder",
+              name: "Colors Folder",
+            },
+            "color-one": {
+              id: "color-one",
+              type: "color",
+              name: "Color One",
+              hex: "#112233",
+            },
+          },
+          tree: [
+            {
+              id: "folder-colors",
+              children: [{ id: "color-one" }],
+            },
+          ],
+        },
+      },
+    };
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+    });
+
+    expect(plan.reviewSections).toEqual([
+      {
+        resourceType: "variables",
+        items: [
+          {
+            kind: "folder",
+            sourceId: "variables:folder-variables-one",
+            name: "Variables One",
+            depth: 0,
+          },
+          { kind: "resources", sourceIds: ["variables:variable-one"] },
+          {
+            kind: "folder",
+            sourceId: "variables:folder-variables-two",
+            name: "Variables Two",
+            depth: 0,
+          },
+          {
+            kind: "folder",
+            sourceId: "variables:folder-variables-nested",
+            name: "Nested Variables",
+            depth: 1,
+          },
+          { kind: "resources", sourceIds: ["variables:variable-two"] },
+        ],
+      },
+      {
+        resourceType: "colors",
+        items: [
+          {
+            kind: "folder",
+            sourceId: "colors:folder-colors",
+            name: "Colors Folder",
+            depth: 0,
+          },
+          { kind: "resources", sourceIds: ["colors:color-one"] },
+        ],
+      },
+    ]);
+  });
+
   it("does not rewrite non-reference values that match resource ids", () => {
     const manifest = createManifest();
     manifest.repository.variables.items["variable-1"] = {

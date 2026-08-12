@@ -26,9 +26,15 @@ describe("resource-import-dialog.view", () => {
 
   it("uses the whole resource card as the selection control", () => {
     expect(viewSource).toContain("slot=selection-controls");
+    expect(viewSource).toContain("rtgl-view slot=resource-selection-grid");
+    expect(viewSource).toContain("rtgl-grid cols=3 xl-cols=2 md-cols=1");
     expect(viewSource).toContain(
-      "slot=resource-selection-grid cols=3 xl-cols=2 md-cols=1",
+      "$for section, sectionIndex in resourceSections",
     );
+    expect(viewSource).toContain("${section.typeLabel}");
+    expect(viewSource).toContain("group.kind == 'folder'");
+    expect(viewSource).toContain("svg=folder");
+    expect(viewSource).toContain("${group.name}");
     expect(viewSource).toContain("selectionToggleAllButton");
     expect(viewSource).toContain("${selectionToggleAllLabel}");
     expect(viewSource).toContain("rtgl-view#resourceSelectionCard");
@@ -48,6 +54,8 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).not.toContain("rtgl-checkbox");
     expect(viewSource).toContain("rtgl-view w=160 h=90 av=c ah=c br=md bgc=mu");
     expect(viewSource).not.toContain("resource.previewUrl");
+    expect(viewSource).not.toContain("${knownDownloadBytes}");
+    expect(viewSource).not.toContain("${bytesLabel}");
     expect(viewSource).not.toContain(
       'w=160 h=90 overflow=hidden bw=xs bc=bo br=md bgc=mu style="flex: 0 0 160px; box-sizing: border-box;"',
     );

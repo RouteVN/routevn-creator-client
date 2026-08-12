@@ -2336,8 +2336,6 @@ resourceImport:
   publisherLabel: "発行元"
   sourceLabel: "ソース"
   warningsLabel: "警告"
-  bytesLabel: "バイト"
-  unknownSizeLabel: "およびサイズ不明のファイル"
   preparingLabel: "インポートを準備中"
   downloadingLabel: "パッケージファイルをダウンロード中"
   processingLabel: "ファイルを検証・処理中"

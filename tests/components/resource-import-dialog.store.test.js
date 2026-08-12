@@ -34,6 +34,27 @@ const createMultiResourcePlan = () => ({
       previewKind: "video",
     },
   ],
+  reviewSections: [
+    {
+      resourceType: "transforms",
+      items: [
+        {
+          kind: "folder",
+          sourceId: "transforms:folder-one",
+          name: "Folder One",
+          depth: 0,
+        },
+        { kind: "resources", sourceIds: ["source.one"] },
+        {
+          kind: "folder",
+          sourceId: "transforms:folder-two",
+          name: "Folder Two",
+          depth: 0,
+        },
+        { kind: "resources", sourceIds: ["source.two"] },
+      ],
+    },
+  ],
   warnings: [
     {
       code: "name_conflict",
@@ -109,6 +130,16 @@ describe("resource-import-dialog.store", () => {
       selectionToggleAllLabel: "Deselect All",
     });
     expect(view.warnings).toEqual([]);
+    expect(view.resourceSections[0]).toMatchObject({
+      resourceType: "transforms",
+      typeLabel: "Transform",
+      groups: [
+        { kind: "folder", name: "Folder One", indent: 0 },
+        { kind: "resources", resources: [{ sourceId: "source.one" }] },
+        { kind: "folder", name: "Folder Two", indent: 0 },
+        { kind: "resources", resources: [{ sourceId: "source.two" }] },
+      ],
+    });
 
     setResourceSelected({ state }, { resourceIndex: 0, selected: false });
     const deselectedView = selectViewData({ state, i18n: {} });
@@ -139,7 +170,7 @@ describe("resource-import-dialog.store", () => {
     });
   });
 
-  it("keeps selected dependencies visible and locked", () => {
+  it("keeps dependencies locked without changing manifest order", () => {
     const state = createInitialState();
     const plan = createMultiResourcePlan();
     plan.resources[1].dependencySourceIds = [plan.resources[0].sourceId];
@@ -147,15 +178,15 @@ describe("resource-import-dialog.store", () => {
     setPlan({ state }, { plan });
 
     expect(selectViewData({ state, i18n: {} }).resources[0]).toMatchObject({
-      sourceId: "source.two",
-      selected: true,
-      selectionLocked: false,
-    });
-    expect(selectViewData({ state, i18n: {} }).resources.at(-1)).toMatchObject({
       sourceId: "source.one",
       selected: true,
       selectionLocked: true,
       selectionStatus: "Required",
+    });
+    expect(selectViewData({ state, i18n: {} }).resources.at(-1)).toMatchObject({
+      sourceId: "source.two",
+      selected: true,
+      selectionLocked: false,
     });
     setResourceSelected({ state }, { resourceIndex: 0, selected: false });
     expect(state.reviewValues.resource_0_include).toBe(true);
@@ -170,7 +201,39 @@ describe("resource-import-dialog.store", () => {
       selectViewData({ state, i18n: {} }).resources.map(
         ({ sourceId }) => sourceId,
       ),
-    ).toEqual(["source.two", "source.one"]);
+    ).toEqual(["source.one", "source.two"]);
+  });
+
+  it("follows the manifest resource-type section order", () => {
+    const state = createInitialState();
+    const plan = createMultiResourcePlan();
+    plan.resources.push({
+      sourceId: "image.one",
+      resourceType: "images",
+      type: "image",
+      name: "Image One",
+    });
+    plan.reviewSections.unshift({
+      resourceType: "images",
+      items: [
+        { kind: "folder", name: "Images Folder", depth: 0 },
+        { kind: "resources", sourceIds: ["image.one"] },
+      ],
+    });
+    syncFromProps({ state }, { props: { open: true } });
+    setPlan({ state }, { plan });
+
+    const view = selectViewData({ state, i18n: {} });
+    expect(
+      view.resourceSections.map(({ resourceType }) => resourceType),
+    ).toEqual(["images", "transforms"]);
+    expect(view.resourceSections[0]).toMatchObject({
+      typeLabel: "Image",
+      groups: [
+        { kind: "folder", name: "Images Folder" },
+        { kind: "resources", resources: [{ sourceId: "image.one" }] },
+      ],
+    });
   });
 
   it("opens a one-resource package on the selection page", () => {
@@ -178,6 +241,7 @@ describe("resource-import-dialog.store", () => {
     syncFromProps({ state }, { props: { open: true } });
     const plan = createMultiResourcePlan();
     plan.resources = [plan.resources[0]];
+    plan.reviewSections[0].items = plan.reviewSections[0].items.slice(0, 2);
     setPlan({ state }, { plan });
 
     const view = selectViewData({ state, i18n: {} });

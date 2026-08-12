@@ -2336,8 +2336,6 @@ resourceImport:
   publisherLabel: "Publisher"
   sourceLabel: "Source"
   warningsLabel: "Warnings"
-  bytesLabel: "bytes"
-  unknownSizeLabel: "plus files of unknown size"
   preparingLabel: "Preparing import"
   downloadingLabel: "Downloading package files"
   processingLabel: "Validating and processing files"
