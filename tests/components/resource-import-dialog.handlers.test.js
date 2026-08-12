@@ -128,13 +128,14 @@ describe("resource-import-dialog.handlers", () => {
 
   it("toggles a resource choice from the selection card", () => {
     const { deps } = createDeps();
+    const card = {
+      dataset: { resourceIndex: "1" },
+      getAttribute: vi.fn(() => "true"),
+    };
 
     handleResourceSelectionToggle(deps, {
       _event: {
-        currentTarget: {
-          dataset: { resourceIndex: "1" },
-          getAttribute: vi.fn(() => "true"),
-        },
+        composedPath: vi.fn(() => [{}, card, {}]),
       },
     });
 
@@ -147,13 +148,14 @@ describe("resource-import-dialog.handlers", () => {
 
   it("allows a required dependency to be deselected", () => {
     const { deps } = createDeps();
+    const card = {
+      dataset: { resourceIndex: "0" },
+      getAttribute: vi.fn(() => "true"),
+    };
 
     handleResourceSelectionToggle(deps, {
       _event: {
-        currentTarget: {
-          dataset: { resourceIndex: "0" },
-          getAttribute: vi.fn(() => "true"),
-        },
+        composedPath: vi.fn(() => [card, {}]),
       },
     });
 
@@ -166,17 +168,17 @@ describe("resource-import-dialog.handlers", () => {
 
   it("toggles a resource choice with Enter or Space", () => {
     const { deps } = createDeps();
-    const currentTarget = {
+    const card = {
       dataset: { resourceIndex: "0" },
       getAttribute: vi.fn(() => "false"),
     };
     const enterEvent = {
-      currentTarget,
+      composedPath: vi.fn(() => [card, {}]),
       key: "Enter",
       preventDefault: vi.fn(),
     };
     const spaceEvent = {
-      currentTarget,
+      composedPath: vi.fn(() => [card, {}]),
       key: " ",
       preventDefault: vi.fn(),
     };
@@ -195,6 +197,19 @@ describe("resource-import-dialog.handlers", () => {
       selected: true,
     });
     expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores clicks outside a resource card", () => {
+    const { deps } = createDeps();
+
+    handleResourceSelectionToggle(deps, {
+      _event: {
+        composedPath: vi.fn(() => [{}, {}]),
+      },
+    });
+
+    expect(deps.store.setResourceSelected).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
   });
 
   it("toggles all resource choices from the selection control", () => {

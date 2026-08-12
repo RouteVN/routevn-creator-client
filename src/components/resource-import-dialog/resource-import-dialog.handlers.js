@@ -192,24 +192,31 @@ export const handleFormAction = async (deps, payload) => {
   }
 };
 
-const toggleResourceSelection = (deps, payload) => {
+const findResourceSelectionCard = (_event) =>
+  _event
+    .composedPath()
+    .find((target) => target?.dataset?.resourceIndex !== undefined);
+
+const toggleResourceSelection = (deps, _event) => {
   const { store, render } = deps;
-  const { currentTarget } = payload._event;
-  const resourceIndex = Number(currentTarget.dataset.resourceIndex);
-  const selected = currentTarget.getAttribute("aria-pressed") !== "true";
+  const card = findResourceSelectionCard(_event);
+  if (!card) return;
+  const resourceIndex = Number(card.dataset.resourceIndex);
+  const selected = card.getAttribute("aria-pressed") !== "true";
   store.setResourceSelected({ resourceIndex, selected });
   render();
 };
 
 export const handleResourceSelectionToggle = (deps, payload) => {
-  toggleResourceSelection(deps, payload);
+  toggleResourceSelection(deps, payload._event);
 };
 
 export const handleResourceSelectionKeyDown = (deps, payload) => {
   const { _event } = payload;
   if (_event.key !== "Enter" && _event.key !== " ") return;
+  if (!findResourceSelectionCard(_event)) return;
   _event.preventDefault();
-  toggleResourceSelection(deps, payload);
+  toggleResourceSelection(deps, _event);
 };
 
 export const handleSelectionToggleAll = (deps, payload) => {

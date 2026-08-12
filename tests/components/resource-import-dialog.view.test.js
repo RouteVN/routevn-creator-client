@@ -26,7 +26,9 @@ describe("resource-import-dialog.view", () => {
 
   it("uses the whole resource card as the selection control", () => {
     expect(viewSource).toContain("slot=selection-controls");
-    expect(viewSource).toContain("rtgl-view slot=resource-selection-grid");
+    expect(viewSource).toContain(
+      "rtgl-view#resourceSelectionGrid slot=resource-selection-grid",
+    );
     expect(viewSource).toContain("rtgl-grid cols=3 xl-cols=2 md-cols=1");
     expect(viewSource).toContain(
       "$for section, sectionIndex in resourceSections",
@@ -37,8 +39,12 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("${group.name}");
     expect(viewSource).toContain("selectionToggleAllButton");
     expect(viewSource).toContain("${selectionToggleAllLabel}");
-    expect(viewSource).toContain("rtgl-view#resourceSelectionCard");
+    expect(viewSource).toContain("resourceSelectionGrid:");
+    expect(viewSource).not.toContain("resourceSelectionCard*:");
     expect(viewSource).toContain("role=button tabindex=0");
+    expect(viewSource).toContain(
+      "data-resource-index=${resource.resourceIndex}",
+    );
     expect(viewSource).toContain('aria-pressed="${resource.selected}"');
     expect(viewSource).not.toContain("selectionLocked");
     expect(viewSource).not.toContain("aria-disabled");
